@@ -1,0 +1,2062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>git-lab // NAV CONSOLE</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+:root{
+  --void:#16181c; --hull:#1c1f24; --panel:#1c1f24; --panel-2:#24282e;
+  --line:#31363e; --line-hot:#454c56;
+  --text:#c4c8cd; --dim:#7d848e;
+  --cyan:#e0a458; --amber:#d98f4a; --green:#7fae5f; --red:#cf6a5a; --violet:#a67fb5;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{height:100%;}
+body{
+  background:var(--void);
+  color:var(--text); font-family:'IBM Plex Mono',monospace;
+  display:flex;flex-direction:column;padding:12px;gap:10px;overflow:hidden;
+}
+
+#bar{
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+  background:linear-gradient(180deg,var(--panel-2),var(--panel));
+  border:1px solid var(--line);border-radius:8px;padding:9px 14px;flex-shrink:0;
+}
+#bar .mark{font-family:'Orbitron',sans-serif;font-weight:700;font-size:13px;color:var(--cyan);
+  letter-spacing:1.5px;}
+#bar .sub{font-size:10.5px;color:var(--dim);}
+#bar .spacer{flex:1;}
+.toggle{display:flex;border:1px solid var(--line);border-radius:6px;overflow:hidden;}
+.toggle button{font-family:'IBM Plex Mono',monospace;font-size:11px;background:transparent;
+  color:var(--dim);border:none;padding:6px 13px;cursor:pointer;}
+.toggle button.on{background:var(--cyan);color:var(--void);font-weight:600;}
+#bar .sysbtn{font-family:inherit;font-size:11px;background:transparent;color:var(--dim);
+  border:1px solid var(--line);padding:6px 12px;border-radius:6px;cursor:pointer;}
+#bar .sysbtn:hover{color:var(--red);border-color:var(--red);}
+
+/* ---------- THEME 2: DAYLIGHT ---------- */
+body.day{
+  --void:#f4f6f9; --hull:#eaeef4; --panel:#ffffff; --panel-2:#f0f3f8;
+  --line:#d6dee8; --line-hot:#b3c2d4;
+  --text:#243447; --dim:#6b7c92;
+  --cyan:#0b7fa8; --amber:#a86a00; --green:#1a7f4b; --red:#c0392b; --violet:#7b4fc7;
+  background:
+    radial-gradient(ellipse at 20% -10%, rgba(11,127,168,.06), transparent 55%),
+    radial-gradient(ellipse at 110% 110%, rgba(123,79,199,.05), transparent 50%),
+    var(--void);
+}
+body.day #bar .mark{text-shadow:none;}
+body.day #log{background:#fbfcfe;}
+body.day .filebox,body.day .stationrow,body.day .prcard,body.day .quest{background:#f7f9fc;}
+body.day .toggle button.on{color:#fff;}
+body.day .szbtns button.on{color:#fff;}
+body.day .headflag{fill:#243447;}
+body.day .tree .here{background:rgba(11,127,168,.14);color:#0b3b52;}
+body.day #m-do{background:#f7f9fc;}
+body.day #m-prog i.now{box-shadow:0 0 8px rgba(11,127,168,.5);}
+
+/* ================= GITHUB DESKTOP VIEW (DARK) ================= */
+#gd{display:none;flex:1;flex-direction:column;min-height:0;
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;
+  background:#24292e;border:1px solid #444d56;border-radius:6px;overflow:hidden;color:#e1e4e8;
+  position:relative;}
+body.gd-on #stage{display:none;}
+body.gd-on #gd{display:flex;}
+
+/* toolbar */
+#gd-bar{display:flex;background:#1b1f23;color:#e1e4e8;flex-shrink:0;height:50px;}
+.gd-seg{flex:1;display:flex;flex-direction:column;justify-content:center;
+  padding:0 14px;border-right:1px solid #444d56;cursor:pointer;min-width:0;}
+.gd-seg:hover{background:#2f363d;}
+.gd-seg:last-child{border-right:none;}
+.gd-seg .lbl{font-size:10.5px;color:#959da5;margin-bottom:2px;}
+.gd-seg .v{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  display:flex;align-items:center;gap:6px;color:#e1e4e8;}
+.gd-seg .caret{font-size:8px;color:#959da5;margin-left:auto;}
+.gd-seg .sub{font-size:10.5px;color:#959da5;margin-top:1px;}
+
+#gd-help{flex:0 0 46px;display:flex;align-items:center;justify-content:center;
+  background:#1b1f23;border-left:1px solid #444d56;cursor:pointer;
+  color:#58a6ff;font-size:15px;font-weight:700;}
+#gd-help:hover{background:#2f363d;}
+
+/* body */
+#gd-body{flex:1;display:grid;grid-template-columns:300px 1fr;min-height:0;}
+#gd-side{background:#24292e;border-right:1px solid #444d56;display:flex;flex-direction:column;min-height:0;}
+#gd-tabs{display:flex;border-bottom:1px solid #444d56;flex-shrink:0;background:#2f363d;}
+#gd-tabs button{flex:1;background:none;border:none;padding:10px 0;font-size:12.5px;
+  font-family:inherit;color:#959da5;cursor:pointer;border-bottom:2px solid transparent;}
+#gd-tabs button.on{color:#e1e4e8;font-weight:600;border-bottom-color:#f9826c;background:#24292e;}
+#gd-tabs .cnt{background:#444d56;color:#e1e4e8;border-radius:10px;padding:1px 6px;
+  font-size:10.5px;margin-left:5px;}
+
+#gd-list{flex:1;overflow-y:auto;min-height:0;}
+.gd-file{display:flex;align-items:center;gap:9px;padding:7px 12px;font-size:12.5px;
+  border-bottom:1px solid #2f363d;cursor:pointer;color:#e1e4e8;}
+.gd-file:hover{background:#2f363d;}
+.gd-file.sel{background:#0366d6;color:#fff;}
+.gd-file .cb{width:14px;height:14px;border:1px solid #0366d6;border-radius:3px;
+  flex-shrink:0;background:#0366d6;color:#fff;
+  display:flex;align-items:center;justify-content:center;font-size:10px;}
+.gd-file.sel .cb{background:#fff;color:#0366d6;border-color:#fff;}
+.gd-file .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.gd-file .tag{font-size:12px;font-weight:700;flex-shrink:0;}
+.gd-file .tag.mod{color:#e3b341;}
+.gd-file .tag.new{color:#56d364;}
+.gd-file.sel .tag{color:#fff;}
+
+.gd-commit-row{padding:9px 12px;border-bottom:1px solid #2f363d;cursor:pointer;}
+.gd-commit-row:hover{background:#2f363d;}
+.gd-commit-row .t{font-size:12.5px;color:#e1e4e8;}
+.gd-commit-row .m{font-size:10.5px;color:#959da5;margin-top:2px;}
+
+#gd-commitbox{border-top:1px solid #444d56;padding:11px 12px;background:#2f363d;flex-shrink:0;}
+#gd-commitbox input,#gd-commitbox textarea{
+  width:100%;font-family:inherit;font-size:12.5px;padding:6px 8px;
+  border:1px solid #444d56;border-radius:5px;margin-bottom:7px;background:#1b1f23;color:#e1e4e8;}
+#gd-commitbox textarea{resize:none;height:48px;}
+#gd-commitbox input::placeholder,#gd-commitbox textarea::placeholder{color:#6a737d;}
+#gd-commitbox input:focus,#gd-commitbox textarea:focus{outline:none;border-color:#0366d6;
+  box-shadow:0 0 0 2px rgba(3,102,214,.35);}
+#gd-commit-btn{width:100%;background:#2ea44f;color:#fff;border:1px solid rgba(27,31,36,.35);
+  border-radius:6px;padding:7px;font-family:inherit;font-size:12.5px;font-weight:600;cursor:pointer;}
+#gd-commit-btn:hover{background:#2c974b;}
+#gd-commit-btn:disabled{background:#25502f;color:#8b949e;cursor:not-allowed;}
+
+/* main pane */
+#gd-main{background:#24292e;overflow-y:auto;min-height:0;padding:0;}
+.gd-diffhead{padding:8px 14px;border-bottom:1px solid #444d56;background:#2f363d;
+  font-size:12px;color:#959da5;position:sticky;top:0;}
+.gd-diff{font-family:'IBM Plex Mono',monospace;font-size:12px;}
+.gd-diff .ln{padding:2px 14px;white-space:pre-wrap;}
+.gd-diff .del{background:rgba(248,81,73,.15);color:#ffa198;}
+.gd-diff .add{background:rgba(46,160,67,.15);color:#7ee787;}
+.gd-diff .ctx{color:#959da5;}
+.gd-empty{padding:40px 20px;text-align:center;color:#959da5;font-size:13px;line-height:1.7;}
+.gd-empty .big{font-size:15px;color:#e1e4e8;margin-bottom:6px;font-weight:600;}
+
+/* dropdown */
+#gd-drop{position:absolute;background:#2f363d;border:1px solid #444d56;border-radius:6px;
+  box-shadow:0 8px 24px rgba(0,0,0,.5);min-width:240px;z-index:60;display:none;
+  font-family:-apple-system,'Segoe UI',sans-serif;overflow:hidden;}
+#gd-drop .dh{padding:8px 12px;font-size:11px;color:#959da5;border-bottom:1px solid #444d56;background:#1b1f23;}
+#gd-drop .di{padding:8px 12px;font-size:12.5px;cursor:pointer;color:#e1e4e8;display:flex;gap:8px;align-items:center;}
+#gd-drop .di:hover{background:#0366d6;color:#fff;}
+#gd-drop .di.cur{font-weight:600;}
+#gd-drop .di.act{color:#58a6ff;border-top:1px solid #444d56;}
+#gd-drop .di.act:hover{color:#fff;}
+
+/* mini terminal inside desktop view */
+#gd-term{border-top:1px solid #444d56;background:#0d1117;flex-shrink:0;height:130px;
+  display:flex;flex-direction:column;}
+#gd-term.hidden{display:none;}
+#gd-termhead{padding:5px 12px;background:#1b1f23;color:#8b949e;font-size:10.5px;
+  display:flex;justify-content:space-between;align-items:center;
+  font-family:'IBM Plex Mono',monospace;flex-shrink:0;}
+#gd-termhead button{background:none;border:none;color:#8b949e;cursor:pointer;font-size:11px;font-family:inherit;}
+#gd-log{flex:1;overflow-y:auto;padding:8px 12px;font-family:'IBM Plex Mono',monospace;
+  font-size:11.5px;color:#7ee787;line-height:1.6;min-height:0;}
+#gd-log .cmd{color:#58a6ff;}
+#gd-log .hint{color:#8b949e;}
+
+/* ---- guided tour overlay ---- */
+#tour{position:fixed;inset:0;z-index:100;display:none;}
+#tour.on{display:block;}
+#tour-dim{position:absolute;inset:0;background:rgba(0,0,0,.55);}
+#tour-hole{position:absolute;border:2px solid #58a6ff;border-radius:6px;
+  box-shadow:0 0 0 9999px rgba(0,0,0,.6),0 0 20px rgba(88,166,255,.55);
+  pointer-events:none;transition:all .3s ease;}
+#tour-card{position:absolute;background:#2f363d;border:1px solid #444d56;border-radius:8px;
+  width:330px;max-width:88vw;padding:15px 17px;box-shadow:0 12px 40px rgba(0,0,0,.6);
+  font-family:-apple-system,'Segoe UI',sans-serif;color:#e1e4e8;transition:all .3s ease;}
+#tour-card h4{font-size:13.5px;margin-bottom:8px;color:#58a6ff;}
+#tour-card p{font-size:12.5px;line-height:1.7;color:#c9d1d9;margin-bottom:8px;}
+#tour-card p b{color:#fff;}
+#tour-card .warn{background:rgba(227,179,65,.12);border-left:3px solid #e3b341;
+  padding:8px 10px;border-radius:4px;font-size:11.5px;color:#e3b341;line-height:1.6;margin-bottom:8px;}
+#tour-foot{display:flex;align-items:center;gap:8px;margin-top:11px;}
+#tour-foot .step{font-size:11px;color:#959da5;flex:1;}
+#tour-foot button{font-family:inherit;font-size:12px;padding:5px 13px;border-radius:6px;cursor:pointer;}
+#tour-next{background:#2ea44f;color:#fff;border:1px solid rgba(27,31,36,.35);font-weight:600;}
+#tour-prev,#tour-skip{background:transparent;color:#959da5;border:1px solid #444d56;}
+
+#tour-card.menu{width:420px;}
+#tour-menu{display:flex;flex-direction:column;gap:5px;max-height:60vh;overflow-y:auto;}
+.tmenu{display:flex;align-items:center;gap:11px;width:100%;text-align:left;
+  background:#24292e;border:1px solid #444d56;border-radius:6px;padding:9px 11px;
+  cursor:pointer;font-family:inherit;color:#e1e4e8;}
+.tmenu:hover{background:#31363d;border-color:#58a6ff;}
+.tmenu.done{border-color:rgba(126,231,135,.35);}
+.tmenu .tick{width:17px;height:17px;border:1px solid #444d56;border-radius:3px;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:11px;color:#24292e;}
+.tmenu.done .tick{background:#2ea44f;border-color:#2ea44f;color:#fff;}
+.tmenu .tn{display:block;font-size:12.5px;font-weight:600;}
+.tmenu .tb{display:block;font-size:11px;color:#959da5;margin-top:2px;}
+.tmenu .len{margin-left:auto;font-size:10.5px;color:#6a737d;flex-shrink:0;}
+
+#tour-card code{background:#1b1f23;padding:1px 5px;border-radius:3px;
+  font-family:'IBM Plex Mono',monospace;font-size:11.5px;color:#79c0ff;}
+
+#stage{flex:1;display:grid;grid-template-columns:minmax(300px,400px) 1fr;gap:10px;min-height:0;}
+#left,#right{display:flex;flex-direction:column;gap:10px;min-height:0;}
+
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:8px;
+  display:flex;flex-direction:column;overflow:hidden;min-height:0;}
+.phead{padding:8px 13px;border-bottom:1px solid var(--line);
+  display:flex;justify-content:space-between;align-items:center;
+  font-family:'Orbitron',sans-serif;font-size:10px;letter-spacing:1.2px;
+  color:var(--dim);background:rgba(255,255,255,.015);flex-shrink:0;}
+.phead .val{font-family:'IBM Plex Mono',monospace;letter-spacing:0;color:var(--cyan);font-size:11px;}
+
+#mission{flex-shrink:0;}
+#mission-body{padding:12px 14px;}
+#m-name{font-family:'Orbitron',sans-serif;font-size:12px;color:var(--amber);letter-spacing:.8px;margin-bottom:7px;}
+#m-text{font-size:12px;line-height:1.65;color:var(--text);margin-bottom:10px;}
+#m-text b{color:#fff;}
+#m-do{background:var(--void);border:1px solid var(--line-hot);border-left:3px solid var(--cyan);
+  border-radius:4px;padding:8px 11px;font-size:12px;color:var(--cyan);
+  display:flex;justify-content:space-between;align-items:center;gap:10px;}
+#m-do .fill{background:transparent;border:1px solid var(--line);color:var(--dim);
+  font-family:inherit;font-size:9.5px;padding:3px 8px;border-radius:4px;cursor:pointer;flex-shrink:0;}
+#m-do .fill:hover{color:var(--cyan);border-color:var(--cyan);}
+#m-prog{display:flex;gap:3px;margin-top:11px;}
+#m-prog i{flex:1;height:3px;background:var(--line);border-radius:2px;}
+#m-prog i.done{background:var(--green);}
+#m-prog i.now{background:var(--cyan);}
+#m-meta{font-size:10px;color:var(--dim);margin-top:7px;line-height:1.5;}
+
+#term{flex:1;}
+#log{flex:1;overflow-y:auto;padding:12px 14px;font-size:12px;line-height:1.65;background:var(--void);min-height:0;}
+#log div{margin-bottom:3px;word-break:break-word;}
+#log .cmd{color:var(--cyan);}
+#log .err{color:var(--red);}
+#log .ok{color:var(--green);}
+#log .warn{color:var(--amber);}
+#log .dim{color:var(--dim);}
+#irow{display:flex;align-items:center;gap:8px;padding:10px 14px;
+  border-top:1px solid var(--line);background:var(--panel-2);flex-shrink:0;}
+#irow .sig{color:var(--green);font-size:12px;white-space:nowrap;}
+#cmd{flex:1;background:transparent;border:none;outline:none;color:#e8f4ff;font-family:inherit;font-size:13px;}
+#cmd::placeholder{color:var(--dim);}
+
+#graph{flex:1;}
+#canvas{flex:1;padding:8px;min-height:0;overflow:auto;}
+svg{width:100%;height:100%;min-height:180px;}
+.nlabel{font-family:'IBM Plex Mono',monospace;font-size:10px;fill:var(--dim);}
+.edge{stroke-width:2.5;fill:none;opacity:0;}
+.edge.on{opacity:1;transition:opacity .35s ease;}
+.headflag{font-family:'Orbitron',sans-serif;font-size:9px;font-weight:700;fill:#fff;letter-spacing:.8px;}
+
+#deck{flex:1;min-height:0;}
+#graph{flex:1;min-height:0;}
+#graph.sz-s{flex:0 0 26%;}
+#graph.sz-l{flex:0 0 68%;}
+.szbtns{display:flex;gap:3px;}
+.szbtns button{
+  font-family:'IBM Plex Mono',monospace;font-size:9.5px;
+  background:transparent;color:var(--dim);border:1px solid var(--line);
+  width:20px;height:18px;border-radius:3px;cursor:pointer;line-height:1;padding:0;
+}
+.szbtns button.on{background:var(--cyan);color:var(--void);border-color:var(--cyan);font-weight:600;}
+#tabs{display:flex;border-bottom:1px solid var(--line);flex-shrink:0;overflow-x:auto;}
+#tabs button{font-family:'Orbitron',sans-serif;font-size:9.5px;letter-spacing:1px;
+  background:transparent;color:var(--dim);border:none;padding:9px 14px;cursor:pointer;
+  border-bottom:2px solid transparent;white-space:nowrap;}
+#tabs button.on{color:var(--cyan);border-bottom-color:var(--cyan);}
+#tabs .badge{display:inline-block;margin-left:5px;background:var(--amber);color:var(--void);
+  border-radius:8px;padding:1px 5px;font-size:8.5px;font-family:'IBM Plex Mono',monospace;}
+.tabpane{display:none;flex:1;overflow-y:auto;padding:12px 14px;font-size:11.5px;line-height:1.6;}
+.tabpane.on{display:block;}
+
+/* file tree */
+.tree{font-size:11.5px;line-height:1.85;}
+.tree .row{white-space:pre;}
+.tree .dir{color:var(--cyan);}
+.tree .repo{color:var(--green);}
+.tree .file{color:var(--text);}
+.tree .here{background:rgba(224,164,88,.14);border-radius:3px;padding:0 4px;color:#fff;}
+.tree .mod{color:var(--amber);}
+
+.filebox{background:var(--void);border:1px solid var(--line);border-radius:5px;
+  padding:9px 11px;font-size:11.5px;white-space:pre-wrap;line-height:1.7;margin-top:8px;}
+.filebox .marker{color:var(--red);}
+.filebox .conf-a{color:var(--cyan);}
+.filebox .conf-b{color:var(--violet);}
+.fname{color:var(--dim);font-size:10.5px;margin-top:9px;}
+.fname b{color:var(--text);}
+
+.stationrow{display:flex;justify-content:space-between;align-items:center;padding:7px 10px;
+  background:var(--void);border:1px solid var(--line);border-radius:5px;margin-bottom:6px;}
+.stationrow .nm{color:var(--text);}
+.stationrow .st{font-size:10px;color:var(--dim);}
+.stationrow .st.sync{color:var(--green);}
+.stationrow .st.ahead{color:var(--amber);}
+
+.prcard{background:var(--void);border:1px solid var(--line);border-left:3px solid var(--violet);
+  border-radius:5px;padding:10px 12px;margin-bottom:8px;}
+.prcard .t{color:#fff;font-size:12px;margin-bottom:4px;}
+.prcard .m{font-size:10px;color:var(--dim);}
+.prcard .m .open{color:var(--green);}
+.prcard .m .closed{color:var(--violet);}
+
+.empty{color:var(--dim);font-size:11px;font-style:italic;}
+
+/* quests */
+.quest{
+  display:flex;gap:10px;align-items:flex-start;
+  background:var(--void);border:1px solid var(--line);border-radius:5px;
+  padding:9px 11px;margin-bottom:6px;
+}
+.quest.done{border-color:rgba(87,227,137,.35);background:rgba(87,227,137,.05);}
+.quest .box{
+  width:16px;height:16px;border:1.5px solid var(--line-hot);border-radius:3px;
+  flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;
+  font-size:11px;color:var(--void);
+}
+.quest.done .box{background:var(--green);border-color:var(--green);}
+.quest .qt{font-size:11.5px;color:var(--text);margin-bottom:2px;}
+.quest.done .qt{color:var(--green);}
+.quest .qd{font-size:10.5px;color:var(--dim);line-height:1.5;}
+.quest .qd code{color:var(--cyan);}
+#q-summary{
+  font-size:10.5px;color:var(--dim);margin-bottom:10px;
+  padding-bottom:9px;border-bottom:1px solid var(--line);
+}
+#q-summary b{color:var(--amber);}
+.ref{margin-bottom:9px;}
+.ref code{color:var(--cyan);display:block;margin-bottom:2px;font-size:11.5px;}
+.ref span{color:var(--dim);font-size:10.5px;}
+.refhead{font-family:'Orbitron',sans-serif;font-size:9.5px;letter-spacing:1px;
+  color:var(--amber);margin:12px 0 8px;}
+.refhead:first-child{margin-top:0;}
+
+@media(max-width:860px){
+  #stage{grid-template-columns:1fr;grid-template-rows:auto 1fr;}
+}
+</style>
+</head>
+<body>
+
+<div id="bar">
+  <span class="mark">GIT-LAB</span>
+  <span class="sub">nav console // from empty folder to pull request</span>
+  <span class="spacer"></span>
+  <div class="toggle">
+    <button id="t-guided" class="on">GUIDED</button>
+    <button id="t-free">FREE FLIGHT</button>
+  </div>
+  <button class="sysbtn" id="b-view">&#9636; DESKTOP VIEW</button>
+  <button class="sysbtn" id="b-theme">&#9789; DAYLIGHT</button>
+  <button class="sysbtn" id="b-reset">PURGE &amp; RESTART</button>
+</div>
+
+<div id="stage">
+  <div id="left">
+    <div class="panel" id="mission">
+      <div class="phead"><span>MISSION BRIEFING</span><span class="val" id="m-count"></span></div>
+      <div id="mission-body">
+        <div id="m-name"></div>
+        <div id="m-text"></div>
+        <div id="m-do"><span id="m-cmd"></span><button class="fill" id="m-fill">AUTOFILL</button></div>
+        <div id="m-prog"></div>
+        <div id="m-meta"></div>
+      </div>
+    </div>
+
+    <div class="panel" id="deck">
+      <div id="tabs">
+        <button data-tab="files" class="on">FILES</button>
+        <button data-tab="quests">QUESTS <span class="badge" id="q-badge">0</span></button>
+        <button data-tab="station">STATION <span class="badge" id="st-badge" style="display:none">!</span></button>
+        <button data-tab="pr">PLANS</button>
+        <button data-tab="ref">REF</button>
+      </div>
+      <div class="tabpane on" id="pane-files"></div>
+      <div class="tabpane" id="pane-quests"></div>
+      <div class="tabpane" id="pane-station"></div>
+      <div class="tabpane" id="pane-pr"></div>
+      <div class="tabpane" id="pane-ref"></div>
+    </div>
+  </div>
+
+  <div id="right">
+    <div class="panel" id="graph">
+      <div class="phead">
+        <span>FLIGHT PATH</span>
+        <span style="display:flex;align-items:center;gap:10px;">
+          <span class="val" id="head-val">no repo</span>
+          <span class="szbtns">
+            <button data-sz="s">S</button>
+            <button data-sz="m" class="on">M</button>
+            <button data-sz="l">L</button>
+          </span>
+        </span>
+      </div>
+      <div id="canvas"><svg id="svg" preserveAspectRatio="xMinYMid meet"></svg></div>
+    </div>
+
+    <div class="panel" id="term">
+      <div class="phead"><span>CONSOLE</span><span class="val" id="repo-val">no repo</span></div>
+      <div id="log"></div>
+      <div id="irow">
+        <span class="sig" id="prompt">~</span>
+        <input id="cmd" type="text" placeholder="enter command" autocomplete="off" spellcheck="false">
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="gd">
+  <div id="gd-bar">
+    <div class="gd-seg" id="gd-repo">
+      <span class="lbl">Current repository</span>
+      <span class="v"><span id="gd-repo-name">no repository</span><span class="caret">&#9660;</span></span>
+    </div>
+    <div class="gd-seg" id="gd-branch">
+      <span class="lbl">Current branch</span>
+      <span class="v"><span id="gd-branch-name">—</span><span class="caret">&#9660;</span></span>
+    </div>
+    <div class="gd-seg" id="gd-sync">
+      <span class="v" id="gd-sync-title">Publish repository</span>
+      <span class="sub" id="gd-sync-sub">no remote configured</span>
+    </div>
+    <div id="gd-help" title="Guided tour of this screen">?</div>
+  </div>
+
+  <div id="gd-body">
+    <div id="gd-side">
+      <div id="gd-tabs">
+        <button data-gdtab="changes" class="on">Changes <span class="cnt" id="gd-chg-count">0</span></button>
+        <button data-gdtab="history">History</button>
+      </div>
+      <div id="gd-list"></div>
+      <div id="gd-commitbox">
+        <input id="gd-summary" type="text" placeholder="Summary (required)">
+        <textarea id="gd-desc" placeholder="Description"></textarea>
+        <button id="gd-commit-btn">Commit to main</button>
+      </div>
+    </div>
+    <div id="gd-main"></div>
+  </div>
+
+  <div id="gd-term">
+    <div id="gd-termhead">
+      <span>equivalent git commands — this is what the buttons above actually run</span>
+      <button id="gd-term-hide">hide</button>
+    </div>
+    <div id="gd-log"><div class="hint">click things above and watch the real commands appear here</div></div>
+  </div>
+</div>
+
+<div id="gd-drop"></div>
+
+<div id="tour">
+  <div id="tour-dim"></div>
+  <div id="tour-hole"></div>
+  <div id="tour-card">
+    <h4 id="tour-title"></h4>
+    <div id="tour-body"></div>
+    <div id="tour-foot">
+      <span class="step" id="tour-step"></span>
+      <button id="tour-skip">Skip</button>
+      <button id="tour-prev">Back</button>
+      <button id="tour-next">Next</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const NS='http://www.w3.org/2000/svg';
+const svg=document.getElementById('svg');
+const logEl=document.getElementById('log');
+const cmdEl=document.getElementById('cmd');
+const headVal=document.getElementById('head-val');
+const repoVal=document.getElementById('repo-val');
+const promptEl=document.getElementById('prompt');
+
+const PALETTES={
+  hangar:{lanes:['#e0a458','#7fae5f','#a67fb5','#6f9ec4'],merge:'#a67fb5',dim:'#7d848e'},
+  day:   {lanes:['#0b7fa8','#a86a00','#7b4fc7','#1a7f4b'],merge:'#7b4fc7',dim:'#6b7c92'}
+};
+let LANE_COLORS=PALETTES.hangar.lanes;
+function pal(){ return document.body.classList.contains('day')?PALETTES.day:PALETTES.hangar; }
+let S, guided=true, missionIdx=0, stepIdx=0, history=[], histPos=-1;
+
+/* ================= STATE ================= */
+function fresh(){
+  return {
+    fs:{ type:'dir', children:{
+      Desktop:{type:'dir',children:{}},
+      Documents:{type:'dir',children:{ 'notes.txt':{type:'file',content:'grocery list'} }},
+      Downloads:{type:'dir',children:{}}
+    }},
+    cwd:[],                 // path from home, e.g. ['Desktop','starfarer']
+    repoPath:null,          // array path where git init ran
+    inited:false,
+    commits:[], col:0,
+    branches:{}, head:'main',
+    snapshots:{},           // branch -> {file:content}
+    commitFiles:{},         // commitId -> {file:content}  (needed for undo)
+    staged:false,
+    conflict:null,          // {file, ours, theirs, branch}
+    pendingMerge:null,
+    remote:null, pushedBranches:{}, incoming:null,
+    prs:[], prSeq:0,
+    questsDone:{},
+    flags:{rmUsed:false, conflictResolved:false, readNotes:false, nestedDir:false,
+           restored:false, resetUsed:false, cloned:false}
+  };
+}
+
+/* ================= FS HELPERS ================= */
+function nodeAt(path){
+  let n=S.fs;
+  for(const p of path){ if(!n.children||!n.children[p]) return null; n=n.children[p]; }
+  return n;
+}
+function cwdNode(){ return nodeAt(S.cwd); }
+function pathStr(p){ return '~'+(p.length?'/'+p.join('/'):''); }
+function inRepo(){
+  if(!S.repoPath) return false;
+  return S.repoPath.every((seg,i)=>S.cwd[i]===seg) && S.cwd.length>=S.repoPath.length;
+}
+function repoNode(){ return S.repoPath?nodeAt(S.repoPath):null; }
+function repoFiles(){
+  const n=repoNode(); if(!n) return {};
+  const out={};
+  Object.entries(n.children).forEach(([k,v])=>{ if(v.type==='file') out[k]=v.content; });
+  return out;
+}
+function setRepoFiles(map){
+  const n=repoNode(); if(!n) return;
+  Object.keys(n.children).forEach(k=>{ if(n.children[k].type==='file') delete n.children[k]; });
+  Object.entries(map||{}).forEach(([k,v])=>{ n.children[k]={type:'file',content:v}; });
+}
+function ignoredNames(){
+  const f=repoFiles();
+  if(!('.gitignore' in f)) return [];
+  return f['.gitignore'].split(/[\s,]+/).filter(Boolean);
+}
+function isIgnored(name){
+  if(name==='.gitignore') return false;
+  return ignoredNames().some(p=>{
+    if(p.startsWith('*.')) return name.endsWith(p.slice(1));
+    return p===name;
+  });
+}
+function sameMap(a,b){
+  a=a||{}; b=b||{};
+  const ka=Object.keys(a).sort(), kb=Object.keys(b).sort();
+  if(ka.join('|')!==kb.join('|')) return false;
+  return ka.every(k=>a[k]===b[k]);
+}
+
+/* ================= LOG ================= */
+function w(html,cls){
+  const d=document.createElement('div');
+  if(cls)d.className=cls;
+  d.innerHTML=html; logEl.appendChild(d); logEl.scrollTop=logEl.scrollHeight;
+}
+function wcmd(c){ w('<span class="cmd">'+esc(pathStr(S.cwd))+' &#9656; '+esc(c)+'</span>'); }
+function esc(s){ return String(s).replace(/[<>&]/g,m=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[m])); }
+
+/* ================= GRAPH ================= */
+function laneY(l){ return 46 + l*74; }
+function colX(c){ return 62 + c*96; }
+
+function drawGraph(){
+  LANE_COLORS=pal().lanes;
+  svg.innerHTML='';
+  const maxCol=Math.max(2,S.col);
+  const maxLane=Math.max(1,Object.values(S.branches).reduce((m,b)=>Math.max(m,b.lane),0));
+  const W=colX(maxCol)+95, H=laneY(maxLane)+70;
+  svg.setAttribute('viewBox','0 0 '+W+' '+H);
+  svg.style.minWidth=Math.max(W,300)+'px';
+
+  if(!S.inited){
+    const t=document.createElementNS(NS,'text');
+    t.setAttribute('x',W/2);t.setAttribute('y',H/2);t.setAttribute('text-anchor','middle');
+    t.setAttribute('fill',pal().dim);t.setAttribute('font-size','9');
+    t.setAttribute('font-family','IBM Plex Mono');
+    t.textContent='no repository yet — make a folder, cd into it, then git init';
+    svg.appendChild(t); headVal.textContent='no repo'; return;
+  }
+  const byId={}; S.commits.forEach(c=>byId[c.id]=c);
+  S.commits.forEach(c=>c.parents.forEach(pid=>{
+    const p=byId[pid]; if(!p)return;
+    edge(colX(p.col),laneY(p.lane),colX(c.col),laneY(c.lane),
+         LANE_COLORS[c.lane%4], p.lane!==c.lane && c.type!=='merge');
+  }));
+  const headTip=S.branches[S.head]?S.branches[S.head].tip:null;
+  S.commits.forEach(c=>node(colX(c.col),laneY(c.lane),
+    c.type==='merge'?pal().merge:LANE_COLORS[c.lane%4],c.label,c.id===headTip));
+  Object.entries(S.branches).forEach(([name,b])=>{
+    const t=byId[b.tip]; if(!t)return;
+    const lbl=document.createElementNS(NS,'text');
+    lbl.setAttribute('x',colX(t.col)+22);lbl.setAttribute('y',laneY(t.lane)+4);
+    lbl.setAttribute('fill',LANE_COLORS[b.lane%4]);lbl.setAttribute('font-size','10');
+    lbl.setAttribute('font-family','IBM Plex Mono');lbl.setAttribute('font-weight','600');
+    lbl.textContent=name; svg.appendChild(lbl);
+  });
+  headVal.textContent='HEAD → '+S.head+(S.conflict?' [CONFLICT]':'');
+}
+function node(x,y,col,label,isHead){
+  const g=document.createElementNS(NS,'g');
+  const glow=document.createElementNS(NS,'circle');
+  glow.setAttribute('cx',x);glow.setAttribute('cy',y);glow.setAttribute('r',15);
+  glow.setAttribute('fill',col);glow.setAttribute('opacity',.14);g.appendChild(glow);
+  const c=document.createElementNS(NS,'circle');
+  c.setAttribute('cx',x);c.setAttribute('cy',y);c.setAttribute('r',0);c.setAttribute('fill',col);
+  g.appendChild(c);
+  const t=document.createElementNS(NS,'text');
+  t.setAttribute('x',x);t.setAttribute('y',y+27);t.setAttribute('text-anchor','middle');
+  t.setAttribute('class','nlabel');t.textContent=label;g.appendChild(t);
+  svg.appendChild(g);
+  requestAnimationFrame(()=>{c.style.transition='r .3s ease';c.setAttribute('r',9);});
+  if(isHead){
+    const f=document.createElementNS(NS,'text');
+    f.setAttribute('x',x);f.setAttribute('y',y-20);f.setAttribute('text-anchor','middle');
+    f.setAttribute('class','headflag');f.textContent='HEAD';svg.appendChild(f);
+  }
+}
+function edge(x1,y1,x2,y2,col,dash){
+  let d;
+  if(y1===y2) d=`M ${x1} ${y1} L ${x2} ${y2}`;
+  else{ const mx=(x1+x2)/2; d=`M ${x1} ${y1} C ${mx} ${y1}, ${mx} ${y2}, ${x2} ${y2}`; }
+  const p=document.createElementNS(NS,'path');
+  p.setAttribute('class','edge');p.setAttribute('d',d);p.setAttribute('stroke',col);
+  if(dash)p.setAttribute('stroke-dasharray','5 5');
+  svg.appendChild(p); requestAnimationFrame(()=>p.classList.add('on'));
+}
+
+/* ================= PANES ================= */
+function renderPanes(){
+  promptEl.textContent=pathStr(S.cwd)+' ▸';
+  repoVal.textContent=S.repoPath?('repo: '+pathStr(S.repoPath)):'no repo';
+
+  /* FILES: tree + contents */
+  const pf=document.getElementById('pane-files');
+  let h='<div class="tree">'+treeHTML(S.fs,[],0)+'</div>';
+
+  if(S.conflict){
+    h+='<div class="fname" style="color:var(--red)"><b>'+esc(S.conflict.file)+'</b> — CONFLICT</div>'+
+       '<div class="filebox">'+
+       '<span class="marker">&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD ('+esc(S.head)+')</span>\n'+
+       '<span class="conf-a">'+esc(S.conflict.ours)+'</span>\n'+
+       '<span class="marker">=======</span>\n'+
+       '<span class="conf-b">'+esc(S.conflict.theirs)+'</span>\n'+
+       '<span class="marker">&gt;&gt;&gt;&gt;&gt;&gt;&gt; '+esc(S.conflict.branch)+'</span></div>'+
+       '<div style="margin-top:7px;color:var(--amber);font-size:10.5px;">choose: <b>resolve ours</b> / <b>resolve theirs</b> / <b>resolve both</b></div>';
+  } else {
+    const files=inRepo()?repoFiles():filesInCwd();
+    const names=Object.keys(files);
+    if(names.length){
+      names.forEach(n=>{
+        h+='<div class="fname"><b>'+esc(n)+'</b></div><div class="filebox">'+
+           (files[n]?esc(files[n]):'<span style="color:var(--dim)">(empty file)</span>')+'</div>';
+      });
+    }
+  }
+  pf.innerHTML=h;
+
+  /* STATION */
+  const ps=document.getElementById('pane-station');
+  if(!S.remote){
+    ps.innerHTML='<div class="empty">no station linked — run: git remote add origin &lt;url&gt;</div>';
+    document.getElementById('st-badge').style.display='none';
+  } else {
+    let s='<div style="color:var(--dim);margin-bottom:9px;font-size:10.5px;">'+esc(S.remote.url)+'</div>';
+    Object.keys(S.branches).forEach(b=>{
+      const pushed=S.pushedBranches[b], synced=pushed===S.branches[b].tip;
+      s+='<div class="stationrow"><span class="nm">origin/'+esc(b)+'</span><span class="st '+
+         (pushed?(synced?'sync':'ahead'):'')+'">'+
+         (pushed?(synced?'in sync':'local ahead — push'):'not uploaded')+'</span></div>';
+    });
+    if(S.incoming){
+      s+='<div class="stationrow" style="border-color:var(--amber)"><span class="nm" style="color:var(--amber)">incoming: '+
+         esc(S.incoming.label)+'</span><span class="st ahead">run git pull</span></div>';
+      document.getElementById('st-badge').style.display='inline-block';
+    } else document.getElementById('st-badge').style.display='none';
+    ps.innerHTML=s;
+  }
+
+  /* PR */
+  const pp=document.getElementById('pane-pr');
+  pp.innerHTML=S.prs.length?S.prs.map(p=>
+    '<div class="prcard"><div class="t">#'+p.id+' '+esc(p.title)+'</div><div class="m">'+
+    esc(p.branch)+' → main · <span class="'+(p.state==='open'?'open':'closed')+'">'+
+    p.state.toUpperCase()+'</span></div></div>').join('')
+    :'<div class="empty">no flight plans filed — run: pr open &lt;branch&gt;</div>';
+
+  /* REF */
+  document.getElementById('pane-ref').innerHTML=
+    '<div class="refhead">FOLDERS &amp; FILES</div>'+refBlock([
+      ['pwd','print working directory — where am I right now'],
+      ['ls','list what is in this folder'],
+      ['cd &lt;folder&gt;','go into a folder'],
+      ['cd ..','go back up one level'],
+      ['mkdir &lt;name&gt;','make a new folder'],
+      ['touch &lt;file&gt;','create an empty file'],
+      ['write &lt;file&gt; &lt;text&gt;','put text into a file (stands in for a text editor)'],
+      ['cat &lt;file&gt;','print a file&#39;s contents'],
+      ['rm &lt;file&gt;','delete a file']
+    ])+
+    '<div class="refhead">LOCAL GIT</div>'+refBlock([
+      ['git init','turn the current folder into a repository'],
+      ['git status','what changed, what is staged'],
+      ['git add .','stage all changes for the next commit'],
+      ['git commit -m "msg"','save a snapshot'],
+      ['git log','list commits'],
+      ['git branch','list branches'],
+      ['git checkout -b &lt;name&gt;','create a branch and switch to it'],
+      ['git checkout &lt;name&gt;','switch branches'],
+      ['git merge &lt;name&gt;','bring a branch into this one'],
+      ['resolve ours|theirs|both','shortcut for picking a side in a conflict']
+    ])+
+    '<div class="refhead">UNDOING THINGS</div>'+refBlock([
+      ['git restore &lt;file&gt;','throw away uncommitted edits to a file'],
+      ['git reset','unstage everything (keeps your edits)'],
+      ['git reset --soft HEAD~1','delete last commit, keep changes staged'],
+      ['git reset --mixed HEAD~1','delete last commit, keep changes unstaged'],
+      ['git reset --hard HEAD~1','delete last commit AND the changes — dangerous, no recovery'],
+      ['git revert &lt;id&gt;','add a new commit that undoes an old one — safe on shared branches']
+    ])+
+    '<div class="refhead">REMOTE &amp; GITHUB</div>'+refBlock([
+      ['git clone &lt;url&gt;','download an existing project and its full history'],
+      ['git remote add origin &lt;url&gt;','link to a remote server'],
+      ['git remote -v','show linked remotes'],
+      ['git push -u origin &lt;branch&gt;','upload a branch'],
+      ['git pull','download and merge remote changes'],
+      ['pr open &lt;branch&gt;','file a pull request (lab helper)'],
+      ['pr merge &lt;id&gt;','merge a pull request (lab helper)']
+    ])+
+    '<div class="refhead">TERMINAL SHORTCUTS</div>'+refBlock([
+      ['Tab','autocomplete a command, file, folder or branch'],
+      ['Tab Tab','if several match, list them'],
+      ['&uarr; / &darr;','scroll back through commands you already ran'],
+      ['Ctrl + A','jump to start of the line'],
+      ['Ctrl + E','jump to end of the line'],
+      ['Ctrl + U','delete everything left of the cursor'],
+      ['Ctrl + K','delete everything right of the cursor'],
+      ['Ctrl + W','delete the word before the cursor'],
+      ['Ctrl + C','abandon the line you are typing'],
+      ['Ctrl + L','clear the screen'],
+      ['clear','clear the screen (typed version)']
+    ]);
+}
+function refBlock(rows){
+  return rows.map(([c,d])=>'<div class="ref"><code>'+c+'</code><span>'+d+'</span></div>').join('');
+}
+function filesInCwd(){
+  const n=cwdNode(); if(!n||!n.children) return {};
+  const out={};
+  Object.entries(n.children).forEach(([k,v])=>{ if(v.type==='file') out[k]=v.content; });
+  return out;
+}
+function treeHTML(node,path,depth){
+  let out='';
+  const pad='  '.repeat(depth);
+  const here=path.join('/')===S.cwd.join('/');
+  const isRepo=S.repoPath && path.join('/')===S.repoPath.join('/');
+  const name=depth===0?'~':path[path.length-1];
+  const cls=depth===0?'dir':(isRepo?'repo':'dir');
+  out+='<div class="row">'+pad+'<span class="'+cls+(here?' here':'')+'">'+
+       (isRepo?'&#9673; ':'&#9642; ')+esc(name)+(isRepo?'  <span style="font-size:9.5px">[git]</span>':'')+'</span></div>';
+  const kids=node.children||{};
+  Object.keys(kids).sort().forEach(k=>{
+    const child=kids[k], cp=path.concat([k]);
+    if(child.type==='dir') out+=treeHTML(child,cp,depth+1);
+  });
+  Object.keys(kids).sort().forEach(k=>{
+    if(kids[k].type==='file'){
+      const dirty=isRepo && S.snapshots[S.head] && S.snapshots[S.head][k]!==kids[k].content;
+      out+='<div class="row">'+'  '.repeat(depth+1)+
+           '<span class="'+(dirty?'mod':'file')+'">&#9643; '+esc(k)+(dirty?' *':'')+'</span></div>';
+    }
+  });
+  return out;
+}
+
+/* ================= QUESTS ================= */
+const QUESTS=[
+  { id:'q-folder', t:'Break Ground',
+    d:'Create any new folder with <code>mkdir</code>.',
+    check:()=>anyFolderMade() },
+  { id:'q-repo', t:'Claim the Hull',
+    d:'Turn a folder into a repository with <code>git init</code>.',
+    check:()=>!!S.repoPath },
+  { id:'q-readme', t:'Ship\'s Papers',
+    d:'Create a file named <code>README.md</code> in your repo. Every real project has one.',
+    check:()=>'README.md' in repoFiles() },
+  { id:'q-three', t:'Full Cargo Hold',
+    d:'Have 3 or more files in your repo at the same time.',
+    check:()=>Object.keys(repoFiles()).length>=3 },
+  { id:'q-gitignore', t:'Contraband List',
+    d:'Create a <code>.gitignore</code> file — the list of things git should ignore.',
+    check:()=>'.gitignore' in repoFiles() },
+  { id:'q-nested', t:'Deep Storage',
+    d:'Make a folder <em>inside</em> your repo folder.',
+    check:()=>S.flags.nestedDir },
+  { id:'q-rm', t:'Jettison',
+    d:'Delete a file with <code>rm</code>.',
+    check:()=>S.flags.rmUsed },
+  { id:'q-explore', t:'Curious Cat',
+    d:'Wander into <code>~/Documents</code> and read <code>notes.txt</code> with <code>cat</code>.',
+    check:()=>S.flags.readNotes },
+  { id:'q-commit5', t:'Logbook Keeper',
+    d:'Record 5 commits.',
+    check:()=>S.commits.filter(c=>c.type==='commit').length>=5 },
+  { id:'q-branch3', t:'Small Fleet',
+    d:'Have 3 branches existing at once.',
+    check:()=>Object.keys(S.branches).length>=3 },
+  { id:'q-merge', t:'Rejoined',
+    d:'Complete a merge.',
+    check:()=>S.commits.some(c=>c.type==='merge') },
+  { id:'q-conflict', t:'Battle Scars',
+    d:'Cause a merge conflict and resolve it.',
+    check:()=>S.flags.conflictResolved },
+  { id:'q-push', t:'Docked',
+    d:'Push a branch to the station.',
+    check:()=>Object.keys(S.pushedBranches).length>0 },
+  { id:'q-pr', t:'Paperwork Filed',
+    d:'Open a pull request and merge it.',
+    check:()=>S.prs.some(p=>p.state==='merged') },
+  { id:'q-restore', t:'Second Thoughts',
+    d:'Throw away an unwanted edit with <code>git restore &lt;file&gt;</code>.',
+    check:()=>S.flags.restored },
+  { id:'q-reset', t:'Rewind',
+    d:'Undo a commit with <code>git reset --soft HEAD~1</code>.',
+    check:()=>S.flags.resetUsed },
+  { id:'q-revert', t:'Honest Correction',
+    d:'Undo a commit the safe way with <code>git revert</code>.',
+    check:()=>S.commits.some(c=>c.label.startsWith('revert ')) },
+  { id:'q-ignore', t:'Nothing to See',
+    d:'Put a file in <code>.gitignore</code> and watch <code>git status</code> stop mentioning it.',
+    check:()=>ignoredNames().length>0 },
+  { id:'q-clone', t:'Joined the Crew',
+    d:'Download an existing project with <code>git clone</code>.',
+    check:()=>!!S.flags.cloned }
+];
+
+function anyFolderMade(){
+  // any dir that wasn't in the starting filesystem
+  const start={'Desktop':1,'Documents':1,'Downloads':1};
+  let found=false;
+  (function walk(node,depth){
+    Object.entries(node.children||{}).forEach(([k,v])=>{
+      if(v.type==='dir'){
+        if(!(depth===0 && start[k])) found=true;
+        walk(v,depth+1);
+      }
+    });
+  })(S.fs,0);
+  return found;
+}
+
+function checkQuests(){
+  QUESTS.forEach(q=>{
+    if(S.questsDone[q.id]) return;
+    let ok=false;
+    try{ ok=q.check(); }catch(e){ ok=false; }
+    if(ok){
+      S.questsDone[q.id]=true;
+      w('&#9670; QUEST COMPLETE — '+q.t,'ok');
+    }
+  });
+}
+
+function renderQuests(){
+  const done=QUESTS.filter(q=>S.questsDone[q.id]).length;
+  document.getElementById('q-badge').textContent=done+'/'+QUESTS.length;
+  document.getElementById('pane-quests').innerHTML=
+    '<div id="q-summary">Optional challenges — do them in any order, in guided mode or free flight. <b>'+
+    done+' of '+QUESTS.length+'</b> complete.</div>'+
+    QUESTS.map(q=>'<div class="quest'+(S.questsDone[q.id]?' done':'')+'">'+
+      '<div class="box">'+(S.questsDone[q.id]?'&#10003;':'')+'</div>'+
+      '<div><div class="qt">'+q.t+'</div><div class="qd">'+q.d+'</div></div></div>').join('');
+}
+
+/* ================= MISSIONS ================= */
+const MISSIONS=[
+{ name:'M-00 // GROUND CREW',
+  steps:[
+    {t:'Before git exists, there is just a folder. Start by finding out where you are — <b>pwd</b> means "print working directory".',
+     c:'pwd', m:'You are in your home folder, written as ~'},
+    {t:'<b>ls</b> lists what is inside the current folder.',
+     c:'ls', m:'Three folders here. Look at the FILES tab — the highlighted line is where you are standing.'},
+    {t:'Move into Desktop with <b>cd</b> — "change directory".',
+     c:'cd Desktop', m:'The prompt on the console changes to show your new location.'},
+    {t:'Desktop is empty. Make a folder for your project using <b>mkdir</b>.',
+     c:'mkdir starfarer', m:'This is just a normal folder. Nothing git-related has happened yet.'},
+    {t:'Confirm it exists.', c:'ls', m:''},
+    {t:'Step into it. Git only affects the folder you are standing in, so this matters.',
+     c:'cd starfarer', m:'A very common beginner mistake is running git init in the wrong folder.'},
+    {t:'Double-check your location before doing anything permanent.',
+     c:'pwd', m:'~/Desktop/starfarer — correct.'},
+    {t:'Now turn this ordinary folder into a repository with <b>git init</b>. It adds a hidden .git folder that records every version from here on.',
+     c:'git init', m:'The folder icon in the FILES tab turns green — it is now a repo.'}
+  ]},
+{ name:'M-01 // FIRST CARGO',
+  steps:[
+    {t:'A repo with no files is not much use. <b>touch</b> creates an empty file.',
+     c:'touch manifest.txt', m:'On a real machine you could also just make the file in a text editor.'},
+    {t:'Check it landed.', c:'ls', m:''},
+    {t:'Put something in it. <b>write</b> is this lab standing in for opening the file and typing.',
+     c:'write manifest.txt route: Port Olisar', m:'Real workflow: open the file in an editor, type, save.'},
+    {t:'<b>cat</b> prints a file so you can see its contents without opening an editor.',
+     c:'cat manifest.txt', m:''},
+    {t:'<b>git status</b> is your instrument panel. Run it constantly — it is free and prevents mistakes.',
+     c:'git status', m:'Notice: git can see the file but is not tracking it yet.'},
+    {t:'Files must be <b>staged</b> before they can be saved. Staging means "include this in the next snapshot".',
+     c:'git add .', m:'The dot means "everything that changed in this folder".'},
+    {t:'Now save the snapshot. A <b>commit</b> is a permanent point you can always come back to.',
+     c:'git commit -m "first route logged"', m:'First waypoint appears on the flight path graph.'}
+  ]},
+{ name:'M-02 // MORE WAYPOINTS',
+  steps:[
+    {t:'Add a second file so you can see git tracking more than one thing.',
+     c:'touch crew.txt', m:''},
+    {t:'Give it content.', c:'write crew.txt pilot: you', m:''},
+    {t:'Also change the first file.', c:'write manifest.txt route: Port Olisar, Everus Harbor', m:'Two files changed at once.'},
+    {t:'Check what git noticed.', c:'git status', m:'One modified file, one brand new file.'},
+    {t:'Stage both at once.', c:'git add .', m:'This is why the dot is handy.'},
+    {t:'Commit them together.', c:'git commit -m "crew and second stop"', m:'One commit can contain many file changes.'},
+    {t:'<b>git log</b> shows the history you have built.', c:'git log', m:'Real git shows long hash IDs; the lab shortens them.'}
+  ]},
+{ name:'M-03 // THE IGNORE LIST',
+  steps:[
+    {t:'Some files should never go into git — passwords, huge build folders, temporary junk your editor makes. A file called <b>.gitignore</b> is the list of what git should pretend it cannot see.',
+     c:'touch .gitignore', m:'The leading dot means it is a hidden file. Git still reads it.'},
+    {t:'Make a junk file first, so you can watch it disappear from view.',
+     c:'write secrets.txt password: hunter2', m:'Never commit real credentials. This is the whole reason .gitignore exists.'},
+    {t:'Check status — right now git can see it and wants to track it.',
+     c:'git status', m:'secrets.txt is listed as untracked. That is the danger.'},
+    {t:'Add it to the ignore list.', c:'write .gitignore secrets.txt',
+     m:'Real .gitignore holds one pattern per line. You can also use wildcards like *.log'},
+    {t:'Check status again — git now looks straight past it.',
+     c:'git status', m:'It still exists on disk. Git just refuses to track it.'},
+    {t:'Commit the ignore list itself. This one you DO want in the repo, so teammates get the same rules.',
+     c:'git add .', m:''},
+    {t:'Commit it.', c:'git commit -m "added ignore list"',
+     m:'Note secrets.txt did not go in. That is the point.'}
+  ]},
+{ name:'M-04 // SPLIT THE PATH',
+  steps:[
+    {t:'You want to try something risky without wrecking the working version. A <b>branch</b> is a parallel copy that starts where you are.',
+     c:'git checkout -b scenic-route', m:'-b means "create it and switch to it in one move".'},
+    {t:'Change a file on this branch.',
+     c:'write manifest.txt route: Port Olisar, Grim HEX, Everus Harbor', m:'You are editing on the gold lane now, not the blue one.'},
+    {t:'Stage it.', c:'git add .', m:''},
+    {t:'Commit it. A second lane appears on the graph.',
+     c:'git commit -m "scenic detour"', m:'Main is untouched and still safe.'},
+    {t:'Switch back to main to prove it.', c:'git checkout main', m:''},
+    {t:'Look at the file — your detour is gone. It still exists, just on the other branch.',
+     c:'cat manifest.txt', m:'Switching branches rewrites the files in your folder. That is the whole trick.'}
+  ]},
+{ name:'M-05 // REJOIN',
+  steps:[
+    {t:'The detour worked. <b>Merge</b> brings another branch\'s work into the one you are standing on.',
+     c:'git merge scenic-route', m:'Direction matters: you merge INTO your current branch.'},
+    {t:'Confirm main has it now.', c:'cat manifest.txt', m:'The lanes joined on the graph — that is a merge.'}
+  ]},
+{ name:'M-06 // COLLISION',
+  steps:[
+    {t:'Conflicts happen when two branches change the same line. Let us cause one deliberately so it stops being frightening.',
+     c:'git checkout -b cargo-run', m:'Planned mistakes teach faster than clean runs.'},
+    {t:'Change the manifest here.', c:'write manifest.txt route: Lorville direct', m:''},
+    {t:'Stage.', c:'git add .', m:''},
+    {t:'Commit on cargo-run.', c:'git commit -m "direct cargo route"', m:''},
+    {t:'Go back to main and change the SAME file differently.', c:'git checkout main', m:''},
+    {t:'Edit it.', c:'write manifest.txt route: Area18 via Yela', m:'Both branches now disagree about one file.'},
+    {t:'Stage.', c:'git add .', m:''},
+    {t:'Commit.', c:'git commit -m "alternate main route"', m:''},
+    {t:'Now merge. This WILL fail — that is the point.', c:'git merge cargo-run', m:'Read the error slowly. Git names the exact file that needs a decision.'},
+    {t:'Git will not guess for you, so it stops and writes BOTH versions into the file with <b>&lt;&lt;&lt;</b> markers around them. Open the FILES tab and look at it.<br><br>Real resolving means editing that file by hand: delete the markers, leave the text you want. Do that now.',
+     c:'write manifest.txt route: Lorville direct',
+     m:'You just typed the version you wanted, which wipes the markers. That is genuinely all "resolving a conflict" means.'},
+    {t:'Choosing is only the decision. You still stage the fixed file.', c:'git add .', m:''},
+    {t:'And commit to complete the merge.', c:'git commit -m "resolved route conflict"',
+     m:'A conflict is not damage. It is git refusing to guess. Shortcut for later: "resolve ours" / "resolve theirs" does the same thing in one step.'}
+  ]},
+{ name:'M-07 // UNDO',
+  steps:[
+    {t:'Everyone breaks something eventually. Git has an undo for every stage of the process — this mission covers all four. Start by making a bad edit.',
+     c:'write crew.txt DELETED EVERYTHING OOPS', m:'Not committed yet, just edited.'},
+    {t:'<b>git restore</b> throws away uncommitted edits to a file and puts back the last committed version.',
+     c:'git restore crew.txt', m:'Undo level 1: edited but not staged. Cheapest to fix.'},
+    {t:'Check it came back.', c:'cat crew.txt', m:'Your bad edit is gone. Note: restore is permanent — those edits were never saved anywhere.'},
+    {t:'Now a level up. Edit and stage something you did not mean to stage.',
+     c:'write crew.txt oops again', m:''},
+    {t:'Stage it.', c:'git add .', m:'Now it is queued for the next commit.'},
+    {t:'<b>git reset</b> with no arguments unstages everything. Your edits stay, they are just not queued anymore.',
+     c:'git reset', m:'Undo level 2: staged but not committed.'},
+    {t:'Clean up properly this time.', c:'git restore crew.txt', m:''},
+    {t:'Now the scary one. Make a commit you regret.',
+     c:'write crew.txt bad commit content', m:''},
+    {t:'Stage it.', c:'git add .', m:''},
+    {t:'Commit it.', c:'git commit -m "regrettable"', m:'Now it is in history. Two ways out.'},
+    {t:'<b>git reset --soft HEAD~1</b> removes the last commit but keeps your file changes. Use this when you committed too early or wrote a bad message.',
+     c:'git reset --soft HEAD~1', m:'HEAD~1 means "one commit before where I am". The commit vanished from the graph.'},
+    {t:'Your changes survived — put them back the way you want.',
+     c:'git restore crew.txt', m:'There is also --hard, which deletes the commit AND your changes. It is the one truly dangerous git command. Nothing survives it.'},
+    {t:'One more. Reset only works on commits nobody else has seen. If a bad commit is already pushed, you use <b>revert</b> instead. Make one to practise on.',
+     c:'write crew.txt something to undo later', m:''},
+    {t:'Stage.', c:'git add .', m:''},
+    {t:'Commit.', c:'git commit -m "to be reverted"', m:'Look at the commit id in the graph — you need it next.'},
+    {t:'<b>git revert</b> does not delete anything. It adds a NEW commit that undoes an old one, so history stays honest.',
+     c:'git log', m:'Find the id of the "to be reverted" commit. It will be the top one.'},
+    {t:'Revert it. (Use the id shown at the top of the log — usually the highest c-number.)',
+     c:'git revert LAST', m:'Replace LAST with the real id, e.g. git revert c9. reset rewrites history; revert adds to it. Safe on shared branches.'}
+  ]},
+{ name:'M-08 // LINK THE STATION',
+  steps:[
+    {t:'Everything so far exists only on this machine. A <b>remote</b> is a copy on a server — GitHub in the real world.',
+     c:'git remote add origin https://github.com/you/starfarer.git', m:'"origin" is just the conventional nickname for your main remote.'},
+    {t:'Confirm the link.', c:'git remote -v', m:''},
+    {t:'<b>Push</b> uploads your commits. -u sets the default target so later pushes are just "git push".',
+     c:'git push -u origin main', m:'Check the STATION tab — main is now in sync.'}
+  ]},
+{ name:'M-09 // INBOUND',
+  steps:[
+    {t:'A crewmate pushed a change while you were flying. The STATION tab is flashing. Check status first.',
+     c:'git status', m:'Always look before you pull.'},
+    {t:'<b>git pull</b> downloads their commits and merges them into your branch.',
+     c:'git pull', m:'pull = fetch (download) + merge, in one command.'}
+  ]},
+{ name:'M-10 // FILE A FLIGHT PLAN',
+  steps:[
+    {t:'On real teams nobody pushes straight to main. You branch, push the branch, and ask for review.',
+     c:'git checkout -b hull-upgrade', m:''},
+    {t:'Make your change.', c:'write crew.txt pilot: you, engineer: hired', m:''},
+    {t:'Stage.', c:'git add .', m:''},
+    {t:'Commit.', c:'git commit -m "engineer hired"', m:''},
+    {t:'Push the branch so others can see it.', c:'git push -u origin hull-upgrade', m:''},
+    {t:'A <b>pull request</b> formally asks to merge your branch into main, with a place for review first.',
+     c:'pr open hull-upgrade', m:'On GitHub this is a button on the website, not a git command.'},
+    {t:'Review passed. Merge it — the server merges into main for you.', c:'pr merge 1',
+     m:'branch → commit → push → PR → merge. This is the everyday professional loop.'},
+    {t:'Finally bring the merged main back down to your machine.', c:'git pull',
+     m:'You have now flown the whole loop, from empty folder to merged pull request.'}
+  ]},
+{ name:'M-11 // CLONE SOMEONE ELSE\'S',
+  steps:[
+    {t:'So far you built a project from scratch. Far more often you will <b>join</b> one that already exists. Go somewhere sensible first.',
+     c:'cd ..', m:'You want the new project as a sibling folder, not nested inside the old one.'},
+    {t:'<b>git clone</b> downloads an entire project from GitHub — every file AND the full history — and drops it in a new folder.',
+     c:'git clone https://github.com/crew/handbook.git',
+     m:'Heads up: this replaces the lab repo with the downloaded one, the way opening a different project would.'},
+    {t:'Look where you ended up. Clone puts you in the new folder automatically.',
+     c:'pwd', m:'It made the folder, named after the repo, and moved you into it.'},
+    {t:'See what came down with it.', c:'ls', m:'Files you never wrote — they came from the server.'},
+    {t:'Now the important bit: you did not just get the files, you got the whole history.',
+     c:'git log', m:'Three commits made by someone else, now sitting on your machine. That is what makes clone different from just downloading a zip.'},
+    {t:'And it is already linked to the server, so no remote setup needed.',
+     c:'git remote -v', m:'Clone sets up "origin" for you. You can push and pull immediately.'},
+    {t:'Prove it is a normal working repo — make a change.',
+     c:'write roster.txt captain: nova, pilot: you', m:''},
+    {t:'Stage it.', c:'git add .', m:''},
+    {t:'Commit it.', c:'git commit -m "added myself to roster"', m:''},
+    {t:'And send it up. Same workflow as always, on a project you did not start.',
+     c:'git push', m:'Course complete. Clone, commit, push — this is what joining an existing project looks like every single time.'}
+  ]}
+];
+
+function renderMission(){
+  const mn=document.getElementById('m-name'),mt=document.getElementById('m-text'),
+        mc=document.getElementById('m-cmd'),mp=document.getElementById('m-prog'),
+        mm=document.getElementById('m-meta'),cnt=document.getElementById('m-count');
+  if(!guided){ document.getElementById('mission').style.display='none'; return; }
+  document.getElementById('mission').style.display='';
+  if(missionIdx>=MISSIONS.length){
+    mn.textContent='ALL MISSIONS COMPLETE';
+    mt.innerHTML='Full loop flown: folder → repo → files → commits → branches → merge → conflict → remote → push → pull → pull request. Switch to <b>FREE FLIGHT</b> and try breaking things.';
+    document.getElementById('m-do').style.display='none';
+    mp.innerHTML='';mm.textContent='';cnt.textContent=MISSIONS.length+'/'+MISSIONS.length;return;
+  }
+  document.getElementById('m-do').style.display='flex';
+  const M=MISSIONS[missionIdx],st=M.steps[stepIdx];
+  mn.textContent=M.name; mt.innerHTML=st.t; mc.textContent=st.c; mm.textContent=st.m||'';
+  cnt.textContent=(missionIdx+1)+'/'+MISSIONS.length;
+  mp.innerHTML=M.steps.map((_,i)=>'<i class="'+(i<stepIdx?'done':i===stepIdx?'now':'')+'"></i>').join('');
+}
+function checkMission(cmd){
+  if(!guided||missionIdx>=MISSIONS.length) return;
+  const want=MISSIONS[missionIdx].steps[stepIdx].c;
+  const ok = want.includes('LAST')
+    ? new RegExp('^'+want.replace('LAST','c\\d+').replace(/\s+/g,'\\s+')+'$','i').test(cmd.trim())
+    : norm(cmd)===norm(want);
+  if(ok){
+    stepIdx++;
+    if(stepIdx>=MISSIONS[missionIdx].steps.length){
+      missionIdx++; stepIdx=0;
+      if(missionIdx<MISSIONS.length) w('&#9733; MISSION COMPLETE — next briefing loaded','ok');
+      else w('&#9733; ALL MISSIONS COMPLETE','ok');
+      if(MISSIONS[missionIdx] && MISSIONS[missionIdx].name.indexOf('INBOUND')>-1 && S.remote)
+        S.incoming={label:'crew: nav beacon update'};
+    }
+    renderMission();
+  }
+}
+function norm(s){ return s.trim().replace(/\s+/g,' ').replace(/["']/g,'"').toLowerCase(); }
+
+/* ================= COMMITS ================= */
+function addCommit(label,type,extra){
+  const br=S.branches[S.head], parents=[];
+  if(br.tip) parents.push(br.tip);
+  (extra||[]).forEach(p=>parents.push(p));
+  S.col++;
+  const c={id:'c'+S.commits.length,col:S.col,lane:br.lane,parents,label,type:type||'commit'};
+  S.commits.push(c); br.tip=c.id;
+  S.commitFiles[c.id]=Object.assign({},repoFiles());
+  return c;
+}
+
+/* ================= ENGINE ================= */
+function run(raw){
+  const c=raw.trim(); if(!c) return;
+  history.push(c); histPos=history.length;
+  wcmd(c);
+  if(c==='clear'){ logEl.innerHTML=''; return; }
+
+  /* ---- FILESYSTEM ---- */
+  if(c==='pwd'){ w(pathStr(S.cwd),'dim'); return after(c); }
+
+  if(c==='ls'){
+    const n=cwdNode(); const kids=n.children||{};
+    const names=Object.keys(kids).sort();
+    if(!names.length) w('(empty)','dim');
+    else names.forEach(k=>w(kids[k].type==='dir'
+      ? '<span style="color:var(--cyan)">'+esc(k)+'/</span>'
+      : esc(k),'dim'));
+    return after(c);
+  }
+
+  let m=c.match(/^cd\s+(.+)$/);
+  if(m){
+    const t=m[1].trim();
+    if(t==='..'){
+      if(!S.cwd.length){ w('already at home','warn'); return; }
+      S.cwd.pop(); w(pathStr(S.cwd),'dim'); return after(c);
+    }
+    if(t==='~'||t==='/'){ S.cwd=[]; w(pathStr(S.cwd),'dim'); return after(c); }
+    const n=cwdNode();
+    if(!n.children[t]){ w('cd: no such folder: '+esc(t),'err'); return; }
+    if(n.children[t].type!=='dir'){ w('cd: not a folder: '+esc(t),'err'); return; }
+    S.cwd.push(t); w(pathStr(S.cwd),'dim'); return after(c);
+  }
+  if(c==='cd'){ S.cwd=[]; w(pathStr(S.cwd),'dim'); return after(c); }
+
+  m=c.match(/^mkdir\s+([\w\-\.]+)$/);
+  if(m){
+    const n=cwdNode();
+    if(n.children[m[1]]){ w('mkdir: '+esc(m[1])+' already exists','err'); return; }
+    n.children[m[1]]={type:'dir',children:{}};
+    if(S.repoPath && inRepo()) S.flags.nestedDir=true;
+    w('created folder '+esc(m[1]),'ok'); return after(c);
+  }
+
+  m=c.match(/^touch\s+([\w\-\.]+)$/);
+  if(m){
+    const n=cwdNode();
+    if(n.children[m[1]]){ w(esc(m[1])+' already exists','warn'); return after(c); }
+    n.children[m[1]]={type:'file',content:''};
+    w('created file '+esc(m[1]),'ok'); return after(c);
+  }
+
+  m=c.match(/^write\s+([\w\-\.]+)\s+(.+)$/);
+  if(m){
+    const n=cwdNode();
+    if(!n.children[m[1]]) n.children[m[1]]={type:'file',content:''};
+    if(n.children[m[1]].type!=='file'){ w(esc(m[1])+' is a folder','err'); return; }
+    n.children[m[1]].content=m[2];
+    S.staged=false;
+    if(S.conflict && m[1]===S.conflict.file){
+      S.conflict=null; S.flags.conflictResolved=true;
+      w('conflict markers removed by hand — that is exactly how real git works','ok');
+      w('now run: git add . then git commit','dim');
+      return after(c);
+    }
+    w('wrote to '+esc(m[1]),'dim'); return after(c);
+  }
+
+  m=c.match(/^cat\s+([\w\-\.]+)$/);
+  if(m){
+    const n=cwdNode();
+    if(!n.children[m[1]]){ w('cat: no such file: '+esc(m[1]),'err'); return; }
+    const f=n.children[m[1]];
+    if(f.type!=='file'){ w('cat: '+esc(m[1])+' is a folder','err'); return; }
+    if(m[1]==='notes.txt' && S.cwd.join('/')==='Documents') S.flags.readNotes=true;
+    w(f.content?esc(f.content):'(empty file)','dim'); return after(c);
+  }
+
+  m=c.match(/^rm\s+([\w\-\.]+)$/);
+  if(m){
+    const n=cwdNode();
+    if(!n.children[m[1]]){ w('rm: no such file','err'); return; }
+    delete n.children[m[1]]; S.staged=false; S.flags.rmUsed=true;
+    w('deleted '+esc(m[1]),'warn'); return after(c);
+  }
+
+  /* ---- GIT INIT ---- */
+  if(c==='git init'){
+    if(!S.cwd.length){ w('You are in your home folder. Make a project folder and cd into it first.','err'); return; }
+    if(S.repoPath){ w('Reinitialized existing repository','warn'); return; }
+    S.repoPath=S.cwd.slice(); S.inited=true;
+    S.branches={main:{tip:null,lane:0}}; S.head='main'; S.snapshots={};
+    w('Initialized empty Git repository in '+pathStr(S.cwd)+'/.git/','ok');
+    return after(c);
+  }
+
+  /* everything below needs a repo (except clone) */
+  if(/^git |^resolve |^pr /.test(c) && !/^git clone/.test(c)){
+    if(!S.inited){ w('fatal: not a git repository — run <b>git init</b> inside a project folder','err'); return; }
+    if(!inRepo()){ w('fatal: not a git repository (you are at '+pathStr(S.cwd)+', repo is at '+pathStr(S.repoPath)+')','err'); return; }
+  }
+
+  /* ---- STATUS ---- */
+  if(c==='git status'){
+    w('On branch <b>'+S.head+'</b>','dim');
+    if(S.conflict){
+      w('You have unmerged paths.','err');
+      w('  both modified:   '+esc(S.conflict.file),'err');
+      w('  fix conflicts, then run: <b>git add .</b>','dim');
+    } else {
+      const now=repoFiles(), snap=S.snapshots[S.head]||{};
+      const changed=Object.keys(now).filter(k=>snap[k]!==now[k]&&!isIgnored(k));
+      const deleted=Object.keys(snap).filter(k=>!(k in now));
+      const ignoredNow=Object.keys(now).filter(k=>isIgnored(k));
+      if(!changed.length&&!deleted.length){ w('nothing to commit, working tree clean','dim'); }
+      else if(S.staged){
+        w('Changes to be committed:','ok');
+        changed.forEach(k=>w('  '+(k in snap?'modified:   ':'new file:   ')+esc(k),'ok'));
+        deleted.forEach(k=>w('  deleted:    '+esc(k),'ok'));
+      } else {
+        const untracked=changed.filter(k=>!(k in snap));
+        const modified=changed.filter(k=>k in snap);
+        if(modified.length||deleted.length){
+          w('Changes not staged for commit:','warn');
+          modified.forEach(k=>w('  modified:   '+esc(k),'warn'));
+          deleted.forEach(k=>w('  deleted:    '+esc(k),'warn'));
+        }
+        if(untracked.length){
+          w('Untracked files:','warn');
+          untracked.forEach(k=>w('  '+esc(k),'warn'));
+        }
+        w('  use "git add ." to stage','dim');
+      }
+      if(ignoredNow.length) w('('+ignoredNow.length+' file'+(ignoredNow.length>1?'s':'')+' ignored by .gitignore: '+ignoredNow.map(esc).join(', ')+')','dim');
+    }
+    if(S.remote&&S.incoming) w('Your branch is behind origin/'+S.head+' — run <b>git pull</b>','warn');
+    return after(c);
+  }
+
+  /* ---- ADD ---- */
+  if(/^git add( |$)/.test(c)){
+    if(S.conflict){ S.conflict=null; S.staged=true; w('conflict marked resolved and staged','ok'); return after(c); }
+    const now=repoFiles(), snap=S.snapshots[S.head]||{};
+    if(sameMap(now,snap)){ w('nothing to add, working tree clean','dim'); return; }
+    S.staged=true;
+    const list=Object.keys(now).filter(k=>snap[k]!==now[k]&&!isIgnored(k));
+    if(!list.length){ w('nothing to add — everything changed is listed in .gitignore','warn'); S.staged=false; return; }
+    list.forEach(k=>w('staged: '+esc(k),'ok'));
+    return after(c);
+  }
+
+  /* ---- COMMIT ---- */
+  m=c.match(/^git commit\s+-m\s+["'](.+)["']$/i);
+  if(m){
+    if(S.pendingMerge){
+      addCommit(m[1].slice(0,14),'merge',[S.pendingMerge]);
+      S.snapshots[S.head]=repoFiles(); S.pendingMerge=null; S.staged=false;
+      w('merge commit created','ok'); return after(c);
+    }
+    if(!S.staged){ w('nothing to commit — did you run <b>git add .</b>?','err'); return; }
+    addCommit(m[1].slice(0,14),'commit');
+    S.snapshots[S.head]=repoFiles(); S.staged=false;
+    w('['+S.head+'] '+esc(m[1]),'ok');
+    return after(c);
+  }
+  if(/^git commit/.test(c)){ w('use: git commit -m "your message"','err'); return; }
+
+  /* ---- BRANCH ---- */
+  if(c==='git branch'){
+    Object.keys(S.branches).forEach(b=>w((b===S.head?'* ':'&nbsp;&nbsp;')+esc(b),b===S.head?'ok':'dim'));
+    return after(c);
+  }
+  m=c.match(/^git (?:checkout -b|switch -c)\s+([\w\-\/]+)$/i);
+  if(m){
+    const n=m[1];
+    if(S.branches[n]){ w("fatal: branch '"+esc(n)+"' already exists",'err'); return; }
+    S.branches[n]={tip:S.branches[S.head].tip,lane:Object.keys(S.branches).length};
+    S.snapshots[n]=Object.assign({},S.snapshots[S.head]||{});
+    S.head=n; S.staged=false;
+    w("Switched to a new branch '"+esc(n)+"'",'ok'); return after(c);
+  }
+  m=c.match(/^git (?:checkout|switch)\s+([\w\-\/]+)$/i);
+  if(m){
+    const n=m[1];
+    if(!S.branches[n]){ w("error: pathspec '"+esc(n)+"' did not match any branch",'err'); return; }
+    if(S.conflict){ w('cannot switch branches mid-conflict — resolve it first','err'); return; }
+    S.head=n; S.staged=false;
+    setRepoFiles(S.snapshots[n]||{});
+    w("Switched to branch '"+esc(n)+"'",'ok'); return after(c);
+  }
+
+  /* ---- MERGE ---- */
+  m=c.match(/^git merge\s+([\w\-\/]+)$/i);
+  if(m){
+    const n=m[1];
+    if(!S.branches[n]){ w('merge: '+esc(n)+' - not something we can merge','err'); return; }
+    if(n===S.head){ w('Already up to date.','dim'); return; }
+    const ours=S.snapshots[S.head]||{}, theirs=S.snapshots[n]||{};
+    if(sameMap(ours,theirs)){ w('Already up to date.','dim'); return after(c); }
+
+    const conflictFile=Object.keys(theirs).find(k=>k in ours && ours[k]!==theirs[k] && bothMoved(S.head,n));
+    if(conflictFile){
+      S.conflict={file:conflictFile,ours:ours[conflictFile],theirs:theirs[conflictFile],branch:n};
+      S.pendingMerge=S.branches[n].tip;
+      w('Auto-merging '+esc(conflictFile),'dim');
+      w('CONFLICT (content): Merge conflict in '+esc(conflictFile),'err');
+      w('Automatic merge failed; fix conflicts and then commit the result.','err');
+      return after(c);
+    }
+    const merged=Object.assign({},ours,theirs);
+    setRepoFiles(merged);
+    addCommit('merge','merge',[S.branches[n].tip]);
+    S.snapshots[S.head]=merged;
+    w('Merge made by the "recursive" strategy.','ok');
+    return after(c);
+  }
+
+  /* ---- RESOLVE ---- */
+  m=c.match(/^resolve\s+(ours|theirs|both)$/i);
+  if(m){
+    if(!S.conflict){ w('no conflict to resolve','warn'); return; }
+    const k=m[1].toLowerCase(), f=S.conflict.file;
+    const val = k==='ours'?S.conflict.ours : k==='theirs'?S.conflict.theirs : S.conflict.ours+' + '+S.conflict.theirs;
+    const rn=repoNode(); rn.children[f]={type:'file',content:val};
+    w('resolution chosen: '+k,'ok');
+    w('now run <b>git add .</b> then <b>git commit -m "..."</b>','dim');
+    S.conflict=null; S.staged=false; S.flags.conflictResolved=true;
+    return after(c);
+  }
+
+  /* ---- REMOTE ---- */
+  m=c.match(/^git remote add\s+(\w+)\s+(\S+)$/i);
+  if(m){
+    if(S.remote){ w('error: remote origin already exists','err'); return; }
+    S.remote={name:m[1],url:m[2]};
+    w('remote "'+esc(m[1])+'" linked','ok'); return after(c);
+  }
+  if(c==='git remote -v'){
+    if(!S.remote){ w('(no remotes)','dim'); return; }
+    w(esc(S.remote.name)+'  '+esc(S.remote.url)+' (fetch)','dim');
+    w(esc(S.remote.name)+'  '+esc(S.remote.url)+' (push)','dim');
+    return after(c);
+  }
+
+  /* ---- PUSH ---- */
+  m=c.match(/^git push(?:\s+-u)?(?:\s+origin\s+([\w\-\/]+))?$/i);
+  if(m){
+    if(!S.remote){ w('fatal: no remote linked — run <b>git remote add origin &lt;url&gt;</b>','err'); return; }
+    const b=m[1]||S.head;
+    if(!S.branches[b]){ w('error: src refspec '+esc(b)+' does not match any','err'); return; }
+    if(!S.branches[b].tip){ w('everything up-to-date (no commits yet)','warn'); return; }
+    S.pushedBranches[b]=S.branches[b].tip;
+    w('Enumerating objects... done.','dim');
+    w('To '+esc(S.remote.url),'dim');
+    w('   branch '+esc(b)+' -> origin/'+esc(b),'ok');
+    return after(c);
+  }
+
+  /* ---- PULL ---- */
+  if(/^git pull/.test(c)){
+    if(!S.remote){ w('fatal: no remote linked','err'); return; }
+    if(!S.incoming){ w('Already up to date.','dim'); return after(c); }
+    addCommit('crew sync','commit');
+    S.snapshots[S.head]=repoFiles();
+    S.incoming=null; S.pushedBranches[S.head]=S.branches[S.head].tip;
+    w('Updating... fast-forward','dim');
+    w('crew commit merged in','ok');
+    return after(c);
+  }
+
+  /* ---- UNDO: restore a file ---- */
+  m=c.match(/^git (?:restore|checkout --)\s+([\w\-\.]+)$/i);
+  if(m){
+    const f=m[1], snap=S.snapshots[S.head]||{};
+    if(!(f in snap)){ w("error: pathspec '"+esc(f)+"' did not match any tracked file",'err'); return; }
+    const rn=repoNode(); rn.children[f]={type:'file',content:snap[f]};
+    S.staged=false;
+    S.flags.restored=true;
+    w('restored '+esc(f)+' to its last committed state','ok');
+    w('your uncommitted edits to that file are gone for good','warn');
+    return after(c);
+  }
+
+  /* ---- UNDO: unstage ---- */
+  if(c==='git reset'||c==='git restore --staged .'){
+    if(!S.staged){ w('nothing staged','dim'); return; }
+    S.staged=false;
+    w('unstaged everything — your edits are still there, just not queued for commit','ok');
+    return after(c);
+  }
+
+  /* ---- UNDO: reset back a commit ---- */
+  m=c.match(/^git reset\s+(--soft|--hard|--mixed)\s+HEAD~1$/i);
+  if(m){
+    const mode=m[1].toLowerCase();
+    const tipId=S.branches[S.head].tip;
+    if(!tipId){ w('fatal: no commits to undo','err'); return; }
+    const tip=S.commits.find(x=>x.id===tipId);
+    const parentId=tip.parents[0]||null;
+    S.branches[S.head].tip=parentId;
+    S.commits=S.commits.filter(x=>x.id!==tipId);
+    S.flags.resetUsed=true;
+    const parentFiles=parentId?(S.commitFiles[parentId]||{}):{};
+    S.snapshots[S.head]=Object.assign({},parentFiles);
+    if(mode==='--hard'){
+      setRepoFiles(parentFiles);
+      w('commit removed AND your file changes thrown away','warn');
+      w('--hard is the one genuinely dangerous undo. Nothing survives it.','err');
+    } else {
+      w('commit removed — your file changes are still sitting in the folder','ok');
+      w(mode==='--soft'?'--soft also keeps them staged':'--mixed leaves them unstaged','dim');
+      if(mode==='--soft') S.staged=true;
+    }
+    return after(c);
+  }
+  if(/^git reset\s+/.test(c)){ w('this lab supports: git reset, or git reset --soft|--mixed|--hard HEAD~1','err'); return; }
+
+  /* ---- UNDO: revert ---- */
+  m=c.match(/^git revert\s+(c\d+)$/i);
+  if(m){
+    const target=S.commits.find(x=>x.id===m[1]);
+    if(!target){ w('fatal: bad revision '+esc(m[1]),'err'); return; }
+    const before=target.parents[0]?(S.commitFiles[target.parents[0]]||{}):{};
+    const at=S.commitFiles[target.id]||{};
+    const touched=Object.keys(at).filter(k=>before[k]!==at[k]);
+    if(!touched.length){ w('nothing to revert in that commit','warn'); return; }
+    const rn=repoNode();
+    touched.forEach(k=>{
+      if(k in before) rn.children[k]={type:'file',content:before[k]};
+      else delete rn.children[k];
+    });
+    addCommit('revert '+target.id,'commit');
+    S.snapshots[S.head]=repoFiles(); S.staged=false;
+    w('Revert "'+esc(target.label)+'"','ok');
+    w('a NEW commit was added that undoes the old one — history is preserved','dim');
+    return after(c);
+  }
+
+  /* ---- CLONE ---- */
+  m=c.match(/^git clone\s+(\S+)$/i);
+  if(m){
+    const url=m[1];
+    const name=(url.split('/').pop()||'project').replace(/\.git$/,'');
+    const parent=cwdNode();
+    if(parent.children[name]){ w("fatal: destination path '"+esc(name)+"' already exists",'err'); return; }
+    parent.children[name]={type:'dir',children:{
+      'README.md':{type:'file',content:'crew handbook - shared project'},
+      'roster.txt':{type:'file',content:'captain: nova'}
+    }};
+    S.cwd.push(name);
+    S.repoPath=S.cwd.slice(); S.inited=true;
+    S.commits=[]; S.col=0; S.commitFiles={};
+    S.branches={main:{tip:null,lane:0}}; S.head='main';
+    S.snapshots={}; S.staged=false; S.conflict=null; S.pendingMerge=null;
+    S.prs=[]; S.prSeq=0; S.incoming=null;
+    ['project set up','handbook added','roster added'].forEach(l=>addCommit(l,'commit'));
+    S.snapshots.main=repoFiles();
+    S.remote={name:'origin',url:url};
+    S.pushedBranches={main:S.branches.main.tip};
+    S.flags.cloned=true;
+    w('Cloning into \''+esc(name)+'\'...','dim');
+    w('receiving objects... done.','dim');
+    w('you now have the full project AND its entire history','ok');
+    w('note: cloning replaced the lab repo with this downloaded one','warn');
+    return after(c);
+  }
+
+  /* ---- LOG ---- */
+  if(/^git log/.test(c)){
+    const lane=S.branches[S.head].lane;
+    const list=S.commits.filter(x=>x.lane<=lane);
+    if(!list.length){ w('fatal: your current branch does not have any commits yet','err'); return; }
+    list.slice().reverse().forEach(x=>w('<span style="color:var(--amber)">'+x.id+
+      '</span> '+esc(x.label)+(x.type==='merge'?' <span class="dim">(merge)</span>':''),'dim'));
+    return after(c);
+  }
+
+  /* ---- PR ---- */
+  m=c.match(/^pr open\s+([\w\-\/]+)$/i);
+  if(m){
+    const b=m[1];
+    if(!S.branches[b]){ w('no such branch: '+esc(b),'err'); return; }
+    if(!S.pushedBranches[b]){ w('push the branch first: <b>git push -u origin '+esc(b)+'</b>','err'); return; }
+    S.prSeq++;
+    S.prs.push({id:S.prSeq,branch:b,title:'Merge '+b+' into main',state:'open'});
+    w('Pull request #'+S.prSeq+' opened: '+esc(b)+' → main','ok');
+    w('check the FLIGHT PLANS tab','dim');
+    return after(c);
+  }
+  m=c.match(/^pr merge\s+(\d+)$/i);
+  if(m){
+    const pr=S.prs.find(p=>p.id===+m[1]);
+    if(!pr){ w('no pull request #'+esc(m[1]),'err'); return; }
+    if(pr.state!=='open'){ w('pull request already merged','warn'); return; }
+    pr.state='merged';
+    const prev=S.head; S.head='main';
+    addCommit('PR #'+pr.id,'merge',[S.branches[pr.branch].tip]);
+    S.snapshots['main']=Object.assign({},S.snapshots['main']||{},S.snapshots[pr.branch]||{});
+    S.pushedBranches['main']=S.branches['main'].tip;
+    S.head=prev;
+    S.incoming={label:'merged PR #'+pr.id};
+    w('Pull request #'+pr.id+' merged into main on the station','ok');
+    w('your local main is behind — run <b>git pull</b>','warn');
+    return after(c);
+  }
+
+  w('unknown command — see the COMMAND REF tab','err');
+}
+
+function bothMoved(a,b){
+  const la=S.branches[a].lane, lb=S.branches[b].lane;
+  return S.commits.some(x=>x.lane===la) && S.commits.some(x=>x.lane===lb);
+}
+function after(c){ drawGraph(); renderPanes(); checkQuests(); renderQuests(); renderDesktop(); checkMission(c); }
+
+/* ================= WIRING ================= */
+/* ---- TAB COMPLETION ---- */
+const ALL_COMMANDS=[
+  'pwd','ls','cd','cd ..','mkdir','touch','write','cat','rm','clear',
+  'git init','git status','git add .','git commit -m "','git log','git branch',
+  'git checkout','git checkout -b','git switch','git switch -c','git merge',
+  'git remote add origin','git remote -v','git push','git push -u origin','git pull',
+  'resolve ours','resolve theirs','resolve both','pr open','pr merge'
+];
+
+function completionsFor(text){
+  const trimmedStart=text.replace(/^\s+/,'');
+  const parts=trimmedStart.split(/\s+/);
+  const endsSpace=/\s$/.test(text);
+  const node=cwdNode();
+  const entries=node&&node.children?Object.keys(node.children):[];
+  const branches=S.branches?Object.keys(S.branches):[];
+
+  // completing a file/folder/branch argument
+  if(parts.length>1||endsSpace){
+    const frag=endsSpace?'':parts[parts.length-1];
+    const head=parts.slice(0,endsSpace?parts.length:parts.length-1).join(' ');
+    let pool=[];
+    if(/^cd$/.test(head)) pool=entries.filter(k=>node.children[k].type==='dir').concat(['..']);
+    else if(/^(cat|rm|write|touch)$/.test(head)) pool=entries.filter(k=>node.children[k].type==='file');
+    else if(/^git (checkout|switch|merge)( -b| -c)?$/.test(head)) pool=branches;
+    else if(/^git push( -u)?( origin)?$/.test(head)) pool=branches;
+    else if(/^pr open$/.test(head)) pool=branches;
+    else pool=entries;
+    const hits=pool.filter(x=>x.startsWith(frag));
+    return {hits,head,frag,isArg:true};
+  }
+
+  // completing the command itself
+  const hits=ALL_COMMANDS.filter(x=>x.startsWith(trimmedStart));
+  return {hits,head:'',frag:trimmedStart,isArg:false};
+}
+
+function commonPrefix(arr){
+  if(!arr.length) return '';
+  let p=arr[0];
+  arr.forEach(s=>{ while(!s.startsWith(p)) p=p.slice(0,-1); });
+  return p;
+}
+
+function doComplete(){
+  const {hits,head,frag,isArg}=completionsFor(cmdEl.value);
+  if(!hits.length) return;
+  if(hits.length===1){
+    cmdEl.value=(isArg?head+' ':'')+hits[0]+(hits[0].endsWith('"')?'':' ');
+    return;
+  }
+  const pre=commonPrefix(hits);
+  if(pre.length>frag.length){ cmdEl.value=(isArg?head+' ':'')+pre; return; }
+  w('<span class="dim">'+hits.map(esc).join('&nbsp;&nbsp;&nbsp;')+'</span>');
+}
+
+cmdEl.addEventListener('keydown',e=>{
+  /* Tab — autocomplete instead of jumping focus */
+  if(e.key==='Tab'){ e.preventDefault(); doComplete(); return; }
+
+  if(e.key==='Enter'){ run(cmdEl.value); cmdEl.value=''; return; }
+
+  /* history */
+  if(e.key==='ArrowUp'){ e.preventDefault(); if(histPos>0){histPos--;cmdEl.value=history[histPos];} return; }
+  if(e.key==='ArrowDown'){ e.preventDefault();
+    if(histPos<history.length-1){histPos++;cmdEl.value=history[histPos];}
+    else{histPos=history.length;cmdEl.value='';} return; }
+
+  /* control shortcuts */
+  if(e.ctrlKey||e.metaKey){
+    const k=e.key.toLowerCase();
+    if(k==='l'){ e.preventDefault(); logEl.innerHTML=''; return; }
+    if(k==='u'){ e.preventDefault(); cmdEl.value=cmdEl.value.slice(cmdEl.selectionStart); cmdEl.setSelectionRange(0,0); return; }
+    if(k==='k'){ e.preventDefault(); cmdEl.value=cmdEl.value.slice(0,cmdEl.selectionStart); return; }
+    if(k==='w'){ e.preventDefault();
+      const pos=cmdEl.selectionStart;
+      const before=cmdEl.value.slice(0,pos).replace(/\s*\S+\s*$/,'');
+      cmdEl.value=before+cmdEl.value.slice(pos);
+      cmdEl.setSelectionRange(before.length,before.length); return; }
+    if(k==='a'&&e.ctrlKey){ e.preventDefault(); cmdEl.setSelectionRange(0,0); return; }
+    if(k==='e'&&e.ctrlKey){ e.preventDefault(); const n=cmdEl.value.length; cmdEl.setSelectionRange(n,n); return; }
+    if(k==='c'&&e.ctrlKey&&!cmdEl.selectionStart!==cmdEl.selectionEnd){
+      e.preventDefault(); wcmd(cmdEl.value+'^C'); cmdEl.value=''; histPos=history.length; return; }
+  }
+});
+
+/* keep focus in the terminal when clicking anywhere in its panel */
+document.getElementById('term').addEventListener('click',e=>{
+  if(window.getSelection().toString()==='') cmdEl.focus();
+});
+document.getElementById('m-fill').onclick=()=>{
+  if(missionIdx<MISSIONS.length){ cmdEl.value=MISSIONS[missionIdx].steps[stepIdx].c; cmdEl.focus(); }
+};
+document.getElementById('t-guided').onclick=()=>{
+  guided=true;
+  document.getElementById('t-guided').classList.add('on');
+  document.getElementById('t-free').classList.remove('on');
+  renderMission();
+};
+document.getElementById('t-free').onclick=()=>{
+  guided=false;
+  document.getElementById('t-free').classList.add('on');
+  document.getElementById('t-guided').classList.remove('on');
+  renderMission();
+};
+document.querySelectorAll('#tabs button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#tabs button').forEach(x=>x.classList.remove('on'));
+    document.querySelectorAll('.tabpane').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    document.getElementById('pane-'+b.dataset.tab).classList.add('on');
+  };
+});
+document.querySelectorAll('.szbtns button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.szbtns button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on');
+    const g=document.getElementById('graph');
+    g.classList.remove('sz-s','sz-l');
+    if(b.dataset.sz==='s') g.classList.add('sz-s');
+    if(b.dataset.sz==='l') g.classList.add('sz-l');
+    drawGraph();
+  };
+});
+
+/* ================= GITHUB DESKTOP VIEW ================= */
+let gdTab='changes', gdSel=null, gdCommitSel=null;
+
+function gdChangedFiles(){
+  if(!S.repoPath) return [];
+  const now=repoFiles(), snap=S.snapshots[S.head]||{};
+  const out=[];
+  Object.keys(now).forEach(k=>{ if(snap[k]!==now[k]) out.push({name:k,state:(k in snap)?'mod':'new',now:now[k],was:snap[k]||''}); });
+  Object.keys(snap).forEach(k=>{ if(!(k in now)) out.push({name:k,state:'del',now:'',was:snap[k]}); });
+  return out;
+}
+
+function gdlog(cmd,note){
+  const l=document.getElementById('gd-log');
+  l.innerHTML+='<div><span class="cmd">$ '+esc(cmd)+'</span></div>';
+  if(note) l.innerHTML+='<div class="hint">'+esc(note)+'</div>';
+  l.scrollTop=l.scrollHeight;
+}
+
+function renderDesktop(){
+  if(!document.body.classList.contains('gd-on')) return;
+
+  // toolbar
+  document.getElementById('gd-repo-name').textContent =
+    S.repoPath ? S.repoPath[S.repoPath.length-1] : 'no repository';
+  document.getElementById('gd-branch-name').textContent = S.inited ? S.head : '—';
+
+  const st=document.getElementById('gd-sync-title'), ss=document.getElementById('gd-sync-sub');
+  if(!S.remote){ st.textContent='Publish repository'; ss.textContent='publish to GitHub'; }
+  else if(S.incoming){ st.textContent='Pull origin'; ss.textContent='1 commit to download'; }
+  else if(S.branches[S.head] && S.pushedBranches[S.head]!==S.branches[S.head].tip){
+    st.textContent='Push origin'; ss.textContent='local commits waiting'; }
+  else { st.textContent='Fetch origin'; ss.textContent='last checked just now'; }
+
+  const changes=gdChangedFiles();
+  document.getElementById('gd-chg-count').textContent=changes.length;
+  document.getElementById('gd-commit-btn').textContent='Commit to '+(S.inited?S.head:'main');
+  document.getElementById('gd-commit-btn').disabled=!changes.length;
+
+  const list=document.getElementById('gd-list');
+  const main=document.getElementById('gd-main');
+
+  if(gdTab==='changes'){
+    if(!S.inited){
+      list.innerHTML='';
+      main.innerHTML='<div class="gd-empty"><div class="big">No repository yet</div>'+
+        'Switch back to LAB VIEW and run <b>git init</b> inside a folder first.<br>'+
+        'GitHub Desktop would normally do this for you with File &rsaquo; New repository.</div>';
+      return;
+    }
+    if(!changes.length){
+      list.innerHTML='';
+      main.innerHTML='<div class="gd-empty"><div class="big">No local changes</div>'+
+        'Edit or add a file and it will appear in this list, ready to commit.</div>';
+      return;
+    }
+    list.innerHTML=changes.map((f,i)=>
+      '<div class="gd-file'+(gdSel===f.name?' sel':'')+'" data-f="'+esc(f.name)+'">'+
+      '<span class="cb">&#10003;</span><span class="nm">'+esc(f.name)+'</span>'+
+      '<span class="tag '+(f.state==='new'?'new':'mod')+'">'+
+      (f.state==='new'?'+':f.state==='del'?'&minus;':'&#9679;')+'</span></div>').join('');
+    list.querySelectorAll('.gd-file').forEach(el=>el.onclick=()=>{ gdSel=el.dataset.f; renderDesktop(); });
+
+    const sel=changes.find(f=>f.name===gdSel)||changes[0];
+    gdSel=sel.name;
+    let diff='<div class="gd-diffhead">'+esc(sel.name)+'</div><div class="gd-diff">';
+    if(sel.was) diff+='<div class="ln del">- '+esc(sel.was)+'</div>';
+    if(sel.now) diff+='<div class="ln add">+ '+esc(sel.now)+'</div>';
+    if(!sel.was&&!sel.now) diff+='<div class="ln ctx">(empty file)</div>';
+    diff+='</div>';
+    main.innerHTML=diff;
+
+  } else {
+    const commits=S.commits.slice().reverse();
+    if(!commits.length){
+      list.innerHTML='';
+      main.innerHTML='<div class="gd-empty"><div class="big">No commits yet</div>Make your first commit and it will show up here.</div>';
+      return;
+    }
+    list.innerHTML=commits.map(c=>
+      '<div class="gd-commit-row" data-c="'+c.id+'"><div class="t">'+esc(c.label)+'</div>'+
+      '<div class="m">'+c.id+(c.type==='merge'?' · merge commit':'')+'</div></div>').join('');
+    list.querySelectorAll('.gd-commit-row').forEach(el=>el.onclick=()=>{ gdCommitSel=el.dataset.c; renderDesktop(); });
+    const c=S.commits.find(x=>x.id===gdCommitSel)||commits[0];
+    gdCommitSel=c.id;
+    main.innerHTML='<div class="gd-diffhead">'+esc(c.label)+'</div>'+
+      '<div class="gd-empty" style="text-align:left;padding:20px 24px;">'+
+      '<div class="big">'+esc(c.label)+'</div>'+
+      'commit '+c.id+'<br>on branch lane '+c.lane+
+      (c.type==='merge'?'<br>this commit joins two branches together':'')+'</div>';
+  }
+}
+
+function gdDrop(anchor,html,handlers){
+  const d=document.getElementById('gd-drop');
+  const r=anchor.getBoundingClientRect();
+  d.innerHTML=html;
+  d.style.left=r.left+'px';
+  d.style.top=(r.bottom+2)+'px';
+  d.style.display='block';
+  handlers(d);
+  setTimeout(()=>{
+    document.addEventListener('click',function close(){ d.style.display='none'; document.removeEventListener('click',close); });
+  },0);
+}
+
+document.getElementById('gd-branch').onclick=e=>{
+  e.stopPropagation();
+  if(!S.inited) return;
+  const items=Object.keys(S.branches).map(b=>
+    '<div class="di'+(b===S.head?' cur':'')+'" data-b="'+esc(b)+'">'+
+    (b===S.head?'&#10003; ':'&nbsp;&nbsp;&nbsp;')+esc(b)+'</div>').join('');
+  gdDrop(document.getElementById('gd-branch'),
+    '<div class="dh">Switch branch</div>'+items+'<div class="di act" data-new="1">+ New branch…</div>',
+    d=>{
+      d.querySelectorAll('[data-b]').forEach(el=>el.onclick=()=>{
+        const b=el.dataset.b;
+        if(b===S.head) return;
+        gdlog('git checkout '+b,'switching branches rewrites the files in your folder');
+        run('git checkout '+b); renderDesktop();
+      });
+      d.querySelector('[data-new]').onclick=()=>{
+        const n=prompt('New branch name:');
+        if(!n) return;
+        gdlog('git checkout -b '+n,'creates the branch and switches to it');
+        run('git checkout -b '+n.trim()); renderDesktop();
+      };
+    });
+};
+
+document.getElementById('gd-repo').onclick=e=>{
+  e.stopPropagation();
+  gdDrop(document.getElementById('gd-repo'),
+    '<div class="dh">Repositories</div>'+
+    (S.repoPath?'<div class="di cur">&#10003; '+esc(S.repoPath[S.repoPath.length-1])+'</div>'
+               :'<div class="di">no repositories yet</div>'),
+    ()=>{});
+};
+
+document.getElementById('gd-sync').onclick=()=>{
+  if(!S.inited) return;
+  if(!S.remote){
+    const url='https://github.com/you/'+(S.repoPath[S.repoPath.length-1])+'.git';
+    gdlog('git remote add origin '+url,'links your local folder to a server copy');
+    run('git remote add origin '+url);
+    gdlog('git push -u origin '+S.head,'uploads your commits for the first time');
+    run('git push -u origin '+S.head);
+  } else if(S.incoming){
+    gdlog('git pull','downloads and merges what others pushed');
+    run('git pull');
+  } else if(S.pushedBranches[S.head]!==S.branches[S.head].tip){
+    gdlog('git push','uploads the commits you have made since last push');
+    run('git push -u origin '+S.head);
+  } else {
+    gdlog('git fetch','checks the server for new commits without merging them');
+  }
+  renderDesktop();
+};
+
+document.getElementById('gd-commit-btn').onclick=()=>{
+  const sum=document.getElementById('gd-summary').value.trim();
+  if(!sum){ document.getElementById('gd-summary').focus(); return; }
+  gdlog('git add .','GitHub Desktop stages the ticked files for you');
+  run('git add .');
+  gdlog('git commit -m "'+sum+'"','the Summary box is the -m message');
+  run('git commit -m "'+sum+'"');
+  document.getElementById('gd-summary').value='';
+  document.getElementById('gd-desc').value='';
+  renderDesktop();
+};
+
+document.querySelectorAll('#gd-tabs button').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('#gd-tabs button').forEach(x=>x.classList.remove('on'));
+    b.classList.add('on'); gdTab=b.dataset.gdtab; renderDesktop();
+  };
+});
+
+document.getElementById('gd-term-hide').onclick=function(){
+  const t=document.getElementById('gd-term');
+  t.classList.toggle('hidden');
+};
+
+/* ================= DESKTOP FEATURE TUTORIALS ================= */
+const TOURS=[
+{ key:'repos', name:'Repositories', blurb:'Why the screen went empty when you made a new one',
+  steps:[
+  { el:'#gd-repo', title:'Current repository',
+    body:'<p>This dropdown picks which project you are looking at. Everything else on screen — changes, history, branches — belongs to whichever repository is named here.</p>'+
+         '<p>Click it and you get the list of every repository Desktop knows about.</p>' },
+  { el:'#gd-repo', title:'Why your screen went blank',
+    body:'<div class="warn">You connected your account, saw your repositories, then created a new local one — and suddenly everything looked empty.</div>'+
+         '<p>Nothing was lost. Creating a repository <b>switches you into it</b>, and a brand-new repo genuinely has zero commits, zero history and zero changes. The panels are empty because there is nothing in it yet.</p>'+
+         '<p>Your other repositories are still there, one click away in this dropdown.</p>' },
+  { el:'#gd-repo', title:'The list is not everything',
+    body:'<p>This dropdown only shows repositories you have <b>added to Desktop</b> — created here, cloned here, or dragged in.</p>'+
+         '<p>A repository that exists on github.com but was never cloned to this machine will not appear until you clone it. The list is "what is on this computer", not "everything I own".</p>' },
+  { el:'#gd-body', title:'Local vs on GitHub',
+    body:'<p>A repository you create in Desktop is <b>local only</b> — a folder on a drive with a hidden <code>.git</code> folder inside. GitHub does not know it exists. That is why a new repo offers <b>Publish repository</b> rather than Push.</p>'+
+         '<p>Your BeeStation counts as local. Desktop only cares about the folder path; it does not care that the drive is on the network.</p>'+
+         '<div class="warn">Worth knowing: git on a network drive can be slow, and can corrupt a repo if the connection drops mid-write. Many people keep repos on the internal drive and let GitHub be the backup.</div>' }
+]},
+
+{ key:'branches', name:'Branches', blurb:'Parallel versions, and switching between them',
+  steps:[
+  { el:'#gd-branch', title:'Current branch',
+    body:'<p>A branch is a parallel version of the project. This shows which one you are standing on right now.</p>'+
+         '<p>Runs: <code>git checkout &lt;name&gt;</code></p>' },
+  { el:'#gd-branch', title:'Switching rewrites your folder',
+    body:'<p>When you switch branches, Desktop <b>physically changes the files in your folder</b>. Open the folder in Finder or Explorer after switching and the contents will genuinely be different.</p>'+
+         '<p>That is normal and it is the whole point. Nothing is deleted — the other version is safely stored in git and comes back when you switch again.</p>' },
+  { el:'#gd-branch', title:'Making a new one',
+    body:'<p>Click the dropdown and choose <b>New branch</b>. It starts as an exact copy of wherever you are standing.</p>'+
+         '<p>Standard habit: never work directly on <code>main</code>. Branch, do the work, then merge it back.</p>'+
+         '<p>Runs: <code>git checkout -b &lt;name&gt;</code></p>' }
+]},
+
+{ key:'changes', name:'Changes & staging', blurb:'The tick boxes, and what they really mean',
+  steps:[
+  { el:'#gd-tabs', title:'The Changes tab',
+    body:'<p>This lists files you have edited but not yet recorded into git. The number badge is how many.</p>'+
+         '<p>If it says <b>0</b>, you have nothing to commit — that is the most common reason the green Commit button looks dead.</p>' },
+  { el:'#gd-list', title:'The tick boxes',
+    body:'<p>Every changed file appears with a tick box. <b>Ticked means it goes into the next commit.</b> Untick one to leave it out.</p>'+
+         '<p>Green <b>+</b> is a brand-new file. Yellow <b>&#9679;</b> is an existing file that was modified.</p>' },
+  { el:'#gd-list', title:'This is "staging"',
+    body:'<p>Those tick boxes are the entire concept of <b>staging</b> — in the terminal that is <code>git add</code>.</p>'+
+         '<p>Why it exists: you might have edited six files but only want three of them in this commit. Staging is how you choose. Desktop just made it visual instead of typed.</p>' }
+]},
+
+{ key:'diff', name:'Reading the diff', blurb:'Seeing exactly what you changed',
+  steps:[
+  { el:'#gd-main', title:'The diff pane',
+    body:'<p>Click any file on the left and this pane shows what actually changed inside it.</p>'+
+         '<p><span style="color:#ffa198">Red</span> lines were removed. <span style="color:#7ee787">Green</span> lines were added. A modified line shows as both — the old version removed, the new one added.</p>' },
+  { el:'#gd-main', title:'Read it before you commit',
+    body:'<p>This is the single best habit to build. Ten seconds reading the diff catches the file you edited by accident, the debug line you forgot to delete, the password you nearly committed.</p>'+
+         '<p>Once something is committed and pushed, undoing it is possible but fiddly. Reading first is much cheaper.</p>' }
+]},
+
+{ key:'commit', name:'Committing', blurb:'Saving a snapshot, and what -m really is',
+  steps:[
+  { el:'#gd-commitbox', title:'Summary and Description',
+    body:'<p><b>Summary</b> is required and short. <b>Description</b> is optional detail for anything that needs explaining.</p>'+
+         '<p>That Summary box is exactly the same thing as <code>-m "..."</code> in the terminal. Same field, friendlier packaging.</p>' },
+  { el:'#gd-commit-btn', title:'Commit to <branch>',
+    body:'<p>The button names the branch you are committing to — a small safety net so you notice if you are on the wrong one.</p>'+
+         '<p>Runs: <code>git add .</code> then <code>git commit -m "your summary"</code></p>' },
+  { el:'#gd-commit-btn', title:'Committed is not uploaded',
+    body:'<p>After committing, your snapshot is saved <b>on this machine only</b>. GitHub still knows nothing about it.</p>'+
+         '<p>This trips up nearly everyone. Commit = save locally. Push = send to GitHub. Two separate steps, on purpose — it means you can commit while offline.</p>' }
+]},
+
+{ key:'sync', name:'Push, pull & publish', blurb:'The one button that changes its name',
+  steps:[
+  { el:'#gd-sync', title:'One button, four jobs',
+    body:'<p>This button relabels itself depending on what needs doing:</p>'+
+         '<p><b>Publish repository</b> — never been on GitHub. Sends it up for the first time.<br>'+
+         '<b>Push origin</b> — you have local commits GitHub does not have.<br>'+
+         '<b>Pull origin</b> — someone else pushed; you need to download.<br>'+
+         '<b>Fetch origin</b> — everything matches; just checking for news.</p>' },
+  { el:'#gd-sync', title:'Push and pull',
+    body:'<p><b>Push</b> uploads your commits. <b>Pull</b> downloads other people\'s and merges them into your copy.</p>'+
+         '<p>Habit worth forming: pull before you start working, push when you finish. It keeps the gap between your copy and everyone else\'s small, which keeps merge conflicts small.</p>'+
+         '<p>Runs: <code>git push</code> / <code>git pull</code></p>' },
+  { el:'#gd-sync', title:'"origin"',
+    body:'<p>You will see the word <b>origin</b> constantly. It is just a nickname for the server copy of your repo — the default name git gives it.</p>'+
+         '<p>"Push origin" means "send my commits to the copy on GitHub". Nothing more mysterious than that.</p>' }
+]},
+
+{ key:'history', name:'History', blurb:'Looking back at what you already saved',
+  steps:[
+  { el:'#gd-tabs', title:'The History tab',
+    body:'<p>Switch to History and the sidebar becomes a list of every commit already recorded, newest at the top.</p>' },
+  { el:'#gd-list', title:'Your record',
+    body:'<p>Click any commit to see what it changed. This is the payoff for committing regularly — you can walk back through the project one saved step at a time.</p>'+
+         '<p>It is also why short, honest commit messages matter. "fixed stuff" tells future-you nothing.</p>' }
+]},
+
+{ key:'strip', name:'The command strip', blurb:'Watching what the buttons actually run',
+  steps:[
+  { el:'#gd-term', title:'Not part of real GitHub Desktop',
+    body:'<p>This black strip does not exist in the real app. It is here so you learn what the buttons do underneath.</p>' },
+  { el:'#gd-term', title:'Why it is worth watching',
+    body:'<p>Every click prints the actual git command. After a few sessions the terminal stops being intimidating, because you have already been running these commands by hand without realising it.</p>'+
+         '<p>That is the whole point of this lab: the buttons get you moving, the commands stick.</p>' }
+]}
+];
+
+let curTour=null, tourIdx=0, toursDone={};
+const tourEl=document.getElementById('tour'),
+      tourHole=document.getElementById('tour-hole'),
+      tourCard=document.getElementById('tour-card');
+
+function showMenu(){
+  curTour=null;
+  tourEl.classList.add('on');
+  tourHole.style.display='none';
+  document.getElementById('tour-title').textContent='Tutorials';
+  document.getElementById('tour-body').innerHTML=
+    '<p style="margin-bottom:11px;">Short walkthroughs, one feature each. Take them in any order.</p>'+
+    '<div id="tour-menu">'+TOURS.map(t=>
+      '<button class="tmenu'+(toursDone[t.key]?' done':'')+'" data-k="'+t.key+'">'+
+      '<span class="tick">'+(toursDone[t.key]?'&#10003;':'')+'</span>'+
+      '<span><span class="tn">'+t.name+'</span><span class="tb">'+t.blurb+'</span></span>'+
+      '<span class="len">'+t.steps.length+'</span></button>').join('')+'</div>';
+  document.getElementById('tour-foot').style.display='none';
+  tourCard.classList.add('menu');
+  tourCard.style.left=Math.max(12,(window.innerWidth-420)/2)+'px';
+  tourCard.style.top='70px';
+  document.querySelectorAll('.tmenu').forEach(b=>b.onclick=()=>startTour(b.dataset.k));
+}
+
+function startTour(key){
+  curTour=TOURS.find(t=>t.key===key);
+  tourCard.classList.remove('menu');
+  document.getElementById('tour-foot').style.display='flex';
+  showStep(0);
+}
+
+function showStep(i){
+  tourIdx=i;
+  const s=curTour.steps[i];
+  document.getElementById('tour-title').textContent=s.title;
+  document.getElementById('tour-body').innerHTML=s.body;
+  document.getElementById('tour-step').textContent=curTour.name+' · '+(i+1)+'/'+curTour.steps.length;
+  document.getElementById('tour-prev').style.visibility=i===0?'hidden':'visible';
+  document.getElementById('tour-next').textContent=i===curTour.steps.length-1?'Finish':'Next';
+
+  const target=s.el?document.querySelector(s.el):null;
+  if(target){
+    const r=target.getBoundingClientRect();
+    tourHole.style.display='block';
+    tourHole.style.left=(r.left-4)+'px';
+    tourHole.style.top=(r.top-4)+'px';
+    tourHole.style.width=(r.width+8)+'px';
+    tourHole.style.height=(r.height+8)+'px';
+    const cw=340, ch=tourCard.offsetHeight||300;
+    let left=r.right+16, top=r.top;
+    if(left+cw>window.innerWidth-12) left=Math.max(12,r.left-cw-16);
+    if(left<12) left=Math.max(12,(window.innerWidth-cw)/2);
+    if(top+ch>window.innerHeight-12) top=Math.max(12,window.innerHeight-ch-12);
+    tourCard.style.left=left+'px'; tourCard.style.top=top+'px';
+  } else {
+    tourHole.style.display='none';
+    tourCard.style.left=Math.max(12,(window.innerWidth-340)/2)+'px';
+    tourCard.style.top='80px';
+  }
+}
+
+function openTutorials(){
+  if(!document.body.classList.contains('gd-on')){
+    document.body.classList.add('gd-on');
+    document.getElementById('b-view').innerHTML='&#9635; LAB VIEW';
+    renderDesktop();
+  }
+  setTimeout(showMenu,30);
+}
+function endTour(){ tourEl.classList.remove('on'); tourCard.classList.remove('menu'); }
+
+document.getElementById('gd-help').onclick=openTutorials;
+document.getElementById('tour-next').onclick=()=>{
+  if(!curTour) return;
+  if(tourIdx>=curTour.steps.length-1){ toursDone[curTour.key]=true; showMenu(); }
+  else showStep(tourIdx+1);
+};
+document.getElementById('tour-prev').onclick=()=>{ if(curTour) showStep(Math.max(0,tourIdx-1)); };
+document.getElementById('tour-skip').onclick=()=>{ if(curTour) showMenu(); else endTour(); };
+document.getElementById('tour-dim').onclick=endTour;
+window.addEventListener('resize',()=>{
+  if(!tourEl.classList.contains('on')) return;
+  if(curTour) showStep(tourIdx); else showMenu();
+});
+
+document.getElementById('b-view').onclick=function(){
+  const on=document.body.classList.toggle('gd-on');
+  this.innerHTML = on ? '&#9635; LAB VIEW' : '&#9636; DESKTOP VIEW';
+  if(on) renderDesktop();
+};
+
+document.getElementById('b-theme').onclick=function(){
+  const day=document.body.classList.toggle('day');
+  this.innerHTML = day ? '&#9790; HANGAR' : '&#9789; DAYLIGHT';
+  drawGraph();
+};
+
+document.getElementById('b-reset').onclick=()=>boot();
+
+function boot(){
+  S=fresh(); missionIdx=0; stepIdx=0; history=[]; histPos=-1;
+  logEl.innerHTML='';
+  w('GIT-LAB NAV CONSOLE v2.0','dim');
+  w('you are starting in an ordinary home folder — no repository exists yet','dim');
+  w('Tab autocompletes · &uarr;/&darr; recalls history · Ctrl+L clears · COMMAND REF tab lists everything','dim');
+  w('&nbsp;','dim');
+  gdSel=null; gdCommitSel=null;
+  document.getElementById('gd-log').innerHTML='<div class="hint">click things above and watch the real commands appear here</div>';
+  drawGraph(); renderPanes(); renderQuests(); renderDesktop(); renderMission();
+  cmdEl.focus();
+}
+boot();
+</script>
+</body>
+</html>
