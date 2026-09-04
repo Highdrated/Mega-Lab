@@ -27,7 +27,7 @@ const LABS_CONFIG = [
     id: "junle",
     name: "Junle",
     tag: "networking",
-    path: "labs/junle/index.html",
+    path: "labs/junie.html",
     ring: "ring-mid",
     angle: 150,
     glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
@@ -36,7 +36,7 @@ const LABS_CONFIG = [
     id: "pyle",
     name: "Pyle",
     tag: "Programming",
-    path: "labs/junle/pyle.html",
+    path: "labs/pyle.html",
     ring: "ring-outer",
     angle: 100,
     glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
