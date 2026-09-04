@@ -1,0 +1,1830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PYLE // VERDANT OPS</title>
+<style>
+  :root {
+    --bg: #06090f;
+    --text: #cdd6e4;
+    --dim: #5c6b84;
+    --ghost: #38445c;
+    --line: #16223a;
+    --edge: #1e3050;
+    --amber: #e8a33d;
+    --green: #6fd0f0;
+    --cyan: #6fd0f0;
+    --blue: #4f8fd0;
+    --red: #e0685e;
+    --panel: rgba(9, 14, 24, 0.86);
+    --consoleBg: rgba(6, 10, 18, 0.9);
+    --edge2: #24506a;
+    --track: #0e1626;
+    --strc: #a9cbe8;
+    --tdim: #3c4a64;
+    --taskc: #ecd8ac;
+    --gnlc: #1c2840;
+    --scan: rgba(0, 0, 0, 0.14);
+    --ft1: #131d2a; --ft2: #111927; --fstroke: #1c2836; --fdock: #14283a; --fdry: #3a2c14; --ffield: #070d16;
+  }
+  body[data-theme="paper"] {
+    --bg: #efe8da;
+    --text: #3c4148;
+    --dim: #8a8474;
+    --ghost: #c6bca6;
+    --line: #ddd2bc;
+    --edge: #c9bda2;
+    --amber: #a86a1a;
+    --green: #2a6a9a;
+    --cyan: #2a6a9a;
+    --blue: #4a7ab0;
+    --red: #b0402f;
+    --panel: rgba(246, 240, 228, 0.92);
+    --consoleBg: rgba(251, 247, 238, 0.95);
+    --edge2: #a8c2d4;
+    --track: #e0d6c0;
+    --strc: #2a6a4a;
+    --tdim: #b0a890;
+    --taskc: #7a5a20;
+    --gnlc: #d8cdb4;
+    --scan: rgba(90, 70, 40, 0.05);
+    --ft1: #ddd2b8; --ft2: #d5c9ac; --fstroke: #c2b494; --fdock: #b4c6d6; --fdry: #cc9c4c; --ffield: #ece4d2;
+  }
+  body[data-theme="paper"] { background: linear-gradient(180deg, #e6ddc9 0%, #efe8da 40%, #ece2ce 100%); }
+  body[data-theme="paper"] #stars { display: none; }
+  body[data-theme="paper"] .planetglow { background: radial-gradient(ellipse at 50% 100%, rgba(200,150,80,0.14) 0%, transparent 70%); }
+  body[data-theme="ember"] {
+    --bg: #131010;
+    --text: #cfc4b4;
+    --dim: #776c5c;
+    --ghost: #4a4136;
+    --line: #2a231c;
+    --edge: #3a3024;
+    --amber: #e0a050;
+    --green: #d0a468;
+    --cyan: #d0a468;
+    --blue: #9a8ea0;
+    --red: #d0685a;
+    --panel: rgba(22, 18, 15, 0.88);
+    --consoleBg: rgba(16, 13, 11, 0.92);
+    --edge2: #5a4830;
+    --track: #241d16;
+    --strc: #c8b088;
+    --tdim: #5a5044;
+    --taskc: #e0ca9c;
+    --gnlc: #322a20;
+    --scan: rgba(0, 0, 0, 0.16);
+    --ft1: #1e1813; --ft2: #1a1510; --fstroke: #2e261c; --fdock: #2a2e36; --fdry: #4a3418; --ffield: #14100c;
+  }
+  body[data-theme="ember"] { background: radial-gradient(ellipse at 50% 115%, #2e1c10 0%, #1c1410 40%, #100d0b 75%, #0a0808 100%); }
+  body[data-theme="ember"] .planetglow { background: radial-gradient(ellipse at 50% 100%, rgba(224,160,80,0.10) 0%, transparent 70%); }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 120%, #241610 0%, #12101a 34%, #080b14 62%, #04060b 100%);
+    color: var(--text);
+    font-family: "Consolas", "JetBrains Mono", "Menlo", monospace;
+    min-height: 100vh;
+    overflow: hidden;
+  }
+  #stars { position: fixed; inset: 0; z-index: 0; }
+  .planetglow {
+    position: fixed; left: 50%; bottom: -42vh;
+    width: 160vw; height: 60vh;
+    transform: translateX(-50%);
+    border-radius: 50% 50% 0 0;
+    background: radial-gradient(ellipse at 50% 100%, rgba(232,163,61,0.16) 0%, rgba(200,110,50,0.07) 45%, transparent 75%);
+    pointer-events: none; z-index: 0;
+  }
+  /* ---------- frame ---------- */
+  .deck {
+    position: relative; z-index: 1;
+    height: 100vh;
+    display: grid;
+    grid-template-rows: 40px minmax(0, 1fr);
+    grid-template-columns: 252px minmax(0, 1fr) 252px;
+    grid-template-areas: "top top top" "nav console tele";
+    gap: 12px;
+    padding: 12px 14px 14px;
+    max-width: 1560px;
+    margin: 0 auto;
+  }
+  .topbar {
+    grid-area: top;
+    display: flex; align-items: center; gap: 18px;
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    padding: 0 18px;
+    font-size: 10.5px; letter-spacing: 2px; color: var(--dim);
+    white-space: nowrap; overflow: hidden;
+  }
+  .topbar .sig { color: var(--cyan); letter-spacing: 4px; }
+  .topbar .sub { color: var(--tdim); }
+  .topbar .mode { color: var(--amber); }
+  .topbar .right { margin-left: auto; display: flex; gap: 16px; }
+  .qbtn {
+    font: inherit; font-size: 9.5px; letter-spacing: 2px;
+    background: transparent; color: var(--cyan);
+    border: 1px solid var(--edge2); padding: 2px 10px; cursor: pointer;
+  }
+  .qbtn:hover { background: var(--track); color: var(--text); }
+  .topbar .clock { color: var(--text); }
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--edge);
+    clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    min-height: 0;
+  }
+  .panel.nav { grid-area: nav; }
+  .panel.tele { grid-area: tele; }
+  .ptitle {
+    font-size: 9px; letter-spacing: 3px; color: var(--dim);
+    padding: 9px 12px 8px;
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; gap: 8px;
+    flex-shrink: 0;
+  }
+  .ptitle .tick { width: 8px; height: 1px; background: var(--cyan); box-shadow: 4px -3px 0 -0px var(--cyan); }
+  .ptitle .stat { margin-left: auto; color: var(--cyan); letter-spacing: 1px; }
+  /* ---------- nav (left) ---------- */
+  .navbody { flex: 1; overflow-y: auto; padding: 8px 10px; scrollbar-width: thin; scrollbar-color: var(--line) transparent; min-height: 0; }
+  .navbody::-webkit-scrollbar { width: 4px; }
+  .navbody::-webkit-scrollbar-thumb { background: var(--line); }
+  .navrow {
+    width: 100%; text-align: left;
+    background: transparent; border: 1px solid transparent;
+    color: var(--text); font: inherit; cursor: pointer;
+    padding: 6px 8px; margin-bottom: 3px;
+    display: block;
+  }
+  .navrow:hover { border-color: var(--edge); background: rgba(111,208,240,0.04); }
+  .navrow .nr-top { display: flex; justify-content: space-between; font-size: 11px; letter-spacing: 1px; }
+  .navrow .nr-name { color: var(--text); }
+  .navrow .nr-count { color: var(--dim); font-size: 10px; }
+  .navrow.done .nr-name { color: var(--cyan); }
+  .navbar { height: 3px; background: var(--track); margin-top: 5px; overflow: hidden; }
+  .navbar i { display: block; height: 100%; background: var(--cyan); width: 0%; transition: width 0.4s ease; }
+  .navrow.mode-row .navbar i { background: var(--amber); }
+  .nav-sep { font-size: 9px; letter-spacing: 3px; color: var(--tdim); margin: 10px 2px 5px; border-top: 1px solid var(--line); padding-top: 8px; }
+  /* codex */
+  .form-entry { padding: 3px 0 3px 9px; border-left: 1px solid var(--edge); margin-bottom: 2px; cursor: pointer; font-size: 11px; }
+  .form-entry:hover { border-left-color: var(--cyan); }
+  .form-entry .syn { color: var(--strc); white-space: pre-wrap; word-break: break-all; }
+  .form-entry .lbl { color: var(--dim); font-size: 9.5px; letter-spacing: 1px; }
+  .form-group { color: var(--amber); font-size: 9px; letter-spacing: 2px; margin: 8px 0 3px; }
+  .scroll-empty { color: var(--ghost); font-size: 11px; padding: 4px 2px; line-height: 1.5; }
+  /* ---------- telemetry (right) ---------- */
+  .telebody { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .teletop { padding: 12px; border-bottom: 1px solid var(--line); flex-shrink: 0; }
+  .chi-label { font-size: 9px; letter-spacing: 2px; color: var(--dim); display: flex; justify-content: space-between; margin-bottom: 4px; }
+  .chi-label b { color: var(--cyan); font-weight: normal; }
+  .chi-bar { height: 5px; background: var(--track); border: 1px solid var(--line); overflow: hidden; }
+  .chi-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--edge2), var(--cyan)); transition: width 0.4s ease; }
+  .flow-stats { font-size: 11px; color: var(--dim); line-height: 1.85; margin-top: 10px; }
+  .flow-stats b { color: var(--text); font-weight: normal; float: right; }
+  .theme-row { display: flex; align-items: center; gap: 5px; margin-top: 12px; }
+  .theme-row .tr-lbl { font-size: 9px; letter-spacing: 2px; color: var(--tdim); margin-right: 2px; }
+  .theme-row button {
+    font: inherit; font-size: 10px; letter-spacing: 1px;
+    background: transparent; color: var(--dim);
+    border: 1px solid var(--line); padding: 2px 7px; cursor: pointer;
+  }
+  .theme-row button:hover { border-color: var(--edge2); color: var(--text); }
+  .theme-row button.on { color: var(--cyan); border-color: var(--edge2); background: var(--track); }
+  .logwrap { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .syslog {
+    flex: 1; overflow-y: auto;
+    padding: 8px 12px;
+    font-size: 10.5px; line-height: 1.6;
+    color: var(--dim);
+    scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+  }
+  .syslog::-webkit-scrollbar { width: 4px; }
+  .syslog::-webkit-scrollbar-thumb { background: var(--line); }
+  .syslog .t { color: var(--tdim); }
+  .syslog .ok { color: var(--cyan); }
+  .syslog .warn { color: var(--amber); }
+  .syslog .err { color: var(--red); }
+  /* ---------- console (center) ---------- */
+  .console {
+    grid-area: console;
+    position: relative;
+    background: var(--consoleBg);
+    border: 1px solid var(--edge);
+    display: flex; flex-direction: column;
+    padding: 12px 16px 10px;
+    min-height: 0;
+  }
+  .console::before, .console::after,
+  .corner-b::before, .corner-b::after {
+    content: ""; position: absolute; width: 14px; height: 14px;
+    border-color: var(--cyan); border-style: solid; opacity: 0.7;
+  }
+  .console::before { top: -1px; left: -1px; border-width: 1px 0 0 1px; }
+  .console::after { top: -1px; right: -1px; border-width: 1px 1px 0 0; }
+  .corner-b::before { bottom: -1px; left: -1px; border-width: 0 0 1px 1px; }
+  .corner-b::after { bottom: -1px; right: -1px; border-width: 0 1px 1px 0; }
+  .scan {
+    position: absolute; inset: 0; pointer-events: none; z-index: 5;
+    background: repeating-linear-gradient(0deg, var(--scan) 0 1px, transparent 1px 3px);
+  }
+  .statusbar {
+    display: flex; gap: 14px; align-items: baseline;
+    font-size: 10.5px; letter-spacing: 1px;
+    color: var(--dim);
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 6px; margin-bottom: 8px;
+    flex-wrap: wrap;
+  }
+  .statusbar .name { color: var(--cyan); letter-spacing: 3px; }
+  .statusbar .mode { color: var(--amber); }
+  .statusbar .right { margin-left: auto; }
+  .main {
+    flex: 1; overflow-y: auto;
+    font-size: 13.5px; line-height: 1.55;
+    scrollbar-width: thin; scrollbar-color: var(--line) transparent;
+    padding-right: 4px;
+    min-height: 0;
+  }
+  .main::-webkit-scrollbar { width: 5px; }
+  .main::-webkit-scrollbar-thumb { background: var(--line); }
+  .row { white-space: pre-wrap; word-break: break-word; }
+  .c-dim { color: var(--dim); }
+  .c-amber { color: var(--amber); }
+  .c-green { color: var(--cyan); }
+  .c-blue { color: var(--blue); }
+  .c-red { color: var(--red); }
+  .task { border-left: 2px solid var(--amber); padding: 4px 10px; margin: 8px 0 4px; color: var(--taskc); }
+  .chipline { margin: 2px 0 6px; }
+  .chip {
+    display: inline-block; font-size: 10px; letter-spacing: 2px;
+    color: var(--cyan); border: 1px solid var(--edge2); border-radius: 0;
+    padding: 1px 8px; background: transparent;
+  }
+  .inputline { display: flex; align-items: baseline; gap: 8px; border-top: 1px solid var(--line); padding-top: 8px; margin-top: 6px; }
+  .prompt { color: var(--cyan); flex-shrink: 0; }
+  #cmd { flex: 1; background: transparent; border: none; outline: none; color: var(--text); font: inherit; font-size: 13.5px; caret-color: var(--cyan); }
+  /* ghost + field panes */
+  .ghostpane { display: none; flex: 1; overflow-y: auto; padding-right: 4px; min-height: 0; }
+  .ghostpane.on { display: block; }
+  .ghosthead { font-size: 11px; color: var(--dim); letter-spacing: 1px; margin-bottom: 8px; }
+  .ghosthead b { color: var(--amber); font-weight: normal; }
+  .gcode { font-size: 14.5px; line-height: 1.75; white-space: pre; }
+  .gc { color: var(--ghost); }
+  .gc.done { color: var(--cyan); }
+  .gc.done.str { color: var(--strc); }
+  .gc.done.com { color: var(--dim); font-style: italic; }
+  .gc.cur { background: rgba(232,163,61,0.35); color: #f4e2b8; }
+  .gc.wrong { background: rgba(224,104,94,0.45); color: #ffd0c8; }
+  .gnl { color: var(--gnlc); }
+  .gnl.cur { background: rgba(232,163,61,0.35); }
+  .gstats { margin-top: 10px; font-size: 12px; color: var(--dim); display: flex; gap: 18px; flex-wrap: wrap; }
+  .gstats b { color: var(--text); font-weight: normal; }
+  .fieldpane { display: none; }
+  .fieldpane.on { display: block; }
+  .fieldwrap { display: flex; justify-content: center; margin: 4px 0 8px; }
+  .fieldwrap svg { width: 100%; max-width: 560px; height: auto; display: block; border: 1px solid var(--edge); background: var(--ffield); }
+  .fhud { font-size: 11px; color: var(--dim); display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; margin-bottom: 4px; }
+  .fhud b { color: var(--amber); font-weight: normal; }
+  .drone-g { transition: transform 0.35s ease; }
+  @media (prefers-reduced-motion: reduce) { .drone-g { transition: none; } }
+  /* ---------- responsive ---------- */
+  @media (max-width: 1100px) {
+    .deck {
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: 36px auto minmax(0, 1fr) auto;
+      grid-template-areas: "top" "nav" "console" "tele";
+      padding: 8px; gap: 8px;
+    }
+    .panel.nav { max-height: 78px; }
+    .panel.nav .ptitle, .panel.nav .nav-sep, .panel.nav #scrollList { display: none; }
+    .navbody { display: flex; flex-direction: row; gap: 6px; overflow-x: auto; overflow-y: hidden; padding: 8px; }
+    .navbody::-webkit-scrollbar { height: 4px; }
+    #navList { display: flex; flex-direction: row; gap: 6px; }
+    .navrow { min-width: 128px; flex-shrink: 0; margin-bottom: 0; border-color: var(--line); }
+    .topbar .sub, .topbar .hide-sm { display: none; }
+    .panel.tele { flex-direction: row; align-items: center; max-height: 64px; }
+    .panel.tele .ptitle, .panel.tele .logwrap { display: none; }
+    .teletop { border-bottom: none; padding: 8px 12px; width: 100%; }
+    .flow-stats { display: flex; gap: 12px; line-height: 1.3; margin-top: 6px; flex-wrap: wrap; }
+    .flow-stats b { float: none; margin-left: 4px; }
+    .flow-stats span.hide-sm { display: none; }
+    .main, #cmd { font-size: 12.5px; }
+    .gcode { font-size: 12.5px; }
+  }
+</style>
+</head>
+<body>
+<canvas id="stars" aria-hidden="true"></canvas>
+<div class="planetglow" aria-hidden="true"></div>
+
+<div class="deck">
+  <div class="topbar">
+    <span class="sig">PYLE</span>
+    <span class="sub">// AGRI-PLATFORM «VERDANT» · CRUSADER LOW CLOUD DECK</span>
+    <span class="mode" id="modeLbl">BOOT</span>
+    <span id="taskLbl"></span>
+    <button class="qbtn" id="qbtn">QUESTS</button>
+    <span class="right">
+      <span class="hide-sm" id="userLbl">no operator</span>
+      <span class="hide-sm" id="scoreLbl"></span>
+      <span class="clock" id="clock">--:--:--</span>
+    </span>
+  </div>
+
+  <aside class="panel nav">
+    <div class="ptitle"><span class="tick"></span>TRAINING NAV<span class="stat" id="navStat"></span></div>
+    <div class="navbody">
+      <div id="navList"></div>
+      <div class="nav-sep">CODEX · LEARNED FORMS</div>
+      <div id="scrollList">
+        <div class="scroll-empty">Codex empty. Forms you master in the drills are archived here — tap one to recall its lesson.</div>
+      </div>
+    </div>
+  </aside>
+
+  <main class="console corner-b">
+    <div class="scan"></div>
+    <div class="statusbar">
+      <span class="name">CONSOLE</span>
+      <span class="mode" id="cliLbl">offline</span>
+      <span class="right c-dim" id="hintLbl"></span>
+    </div>
+    <div class="main" id="out"></div>
+    <div class="ghostpane" id="gpane" tabindex="0">
+      <div class="ghosthead" id="ghead"></div>
+      <div class="gcode" id="gcode"></div>
+      <div class="gstats" id="gstats"></div>
+    </div>
+    <div class="fieldpane" id="fpane">
+      <div class="fhud" id="fhud"></div>
+      <div class="fieldwrap" id="fwrap"></div>
+    </div>
+    <div class="inputline" id="inline">
+      <span class="prompt" id="prompt">·</span>
+      <input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="console input">
+    </div>
+  </main>
+
+  <aside class="panel tele">
+    <div class="ptitle"><span class="tick"></span>TELEMETRY</div>
+    <div class="telebody">
+      <div class="teletop">
+        <div class="chi-label"><span>FLOW · STREAK</span><b id="chiNum">0</b></div>
+        <div class="chi-bar"><div class="chi-fill" id="chiFill"></div></div>
+        <div class="flow-stats" id="flowStats"></div>
+        <div class="theme-row" id="themeRow">
+          <span class="tr-lbl">DISPLAY</span>
+          <button data-t="verdant" class="on">verdant</button>
+          <button data-t="paper">paper</button>
+          <button data-t="ember">ember</button>
+        </div>
+      </div>
+      <div class="logwrap">
+        <div class="ptitle" style="border-top:none"><span class="tick"></span>SYSTEM LOG</div>
+        <div class="syslog" id="syslog"></div>
+      </div>
+    </div>
+  </aside>
+</div>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const out = $("out"), cmd = $("cmd");
+let mode = "home";
+const score = { drills: 0, ghostBest: 0, bugs: 0, missions: 0, forges: 0 };
+
+/* ---------------- output helpers ---------------- */
+function line(txt, cls) {
+  const d = document.createElement("div");
+  d.className = "row" + (cls ? " " + cls : "");
+  d.textContent = txt;
+  out.appendChild(d); scrollDown();
+}
+function html(h) {
+  const d = document.createElement("div");
+  d.className = "row"; d.innerHTML = h;
+  out.appendChild(d); scrollDown();
+}
+function blank() { line("\u00a0"); }
+function scrollDown() { out.scrollTop = out.scrollHeight; }
+function chip(t) { html('<div class="chipline"><span class="chip">' + esc(t) + "</span></div>"); }
+function taskBox(t) { html('<div class="task">' + esc(t) + "</div>"); }
+function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+/* ---------------- cli modes: boot → login → shell → python ---------------- */
+let cliMode = "boot", user = null;
+function setPrompt() {
+  const p = $("prompt");
+  if (mode === "ghost") { p.textContent = "⌨"; return; }
+  if (cliMode === "boot") p.textContent = "·";
+  else if (cliMode === "login") p.textContent = "verdant login:";
+  else if (cliMode === "password") p.textContent = "password:";
+  else if (cliMode === "shell") p.textContent = "kaatje@verdant:~$";
+  else p.textContent = ">>>";
+}
+function setStatus() {
+  $("modeLbl").textContent = cliMode === "python" ? "PYTHON · " + mode.toUpperCase() : cliMode.toUpperCase();
+  $("cliLbl").textContent = cliMode === "python" ? "python 3.12 · " + mode : cliMode;
+  $("userLbl").textContent = user ? "op: " + user : "no operator";
+  $("scoreLbl").textContent = "d" + score.drills + " · b" + score.bugs + " · m" + score.missions;
+  setPrompt(); updateFlow(); renderNav();
+}
+
+/* ---------------- system log ---------------- */
+const syslogArr = [];
+function logEvent(msg, cls) {
+  const ts = new Date().toTimeString().slice(0, 8);
+  syslogArr.push({ ts, msg, cls });
+  if (syslogArr.length > 60) syslogArr.shift();
+  const el = $("syslog");
+  if (!el) return;
+  el.innerHTML = syslogArr.map(e =>
+    '<div><span class="t">' + e.ts + '</span> <span class="' + (e.cls || "") + '">' + esc(e.msg) + "</span></div>").join("");
+  el.scrollTop = el.scrollHeight;
+}
+
+/* ---------------- training nav (left panel) ---------------- */
+function renderNav() {
+  const el = $("navList");
+  if (!el) return;
+  let h = "";
+  MODULES.forEach(m => {
+    const done = m.drills.filter(d => d.doneFlag).length;
+    const pct = Math.round(100 * done / m.drills.length);
+    h += '<button class="navrow' + (done === m.drills.length ? " done" : "") + '" data-m="' + m.id + '">' +
+      '<span class="nr-top"><span class="nr-name">' + esc(m.name) + '</span><span class="nr-count">' + done + "/" + m.drills.length + "</span></span>" +
+      '<span class="navbar"><i style="width:' + pct + '%"></i></span></button>';
+  });
+  const rows = [
+    ["ghost", "GHOST TYPING", score.ghostBest ? score.ghostBest + "% best" : "untried", score.ghostBest],
+    ["bugs", "BUG HUNT", score.bugs + "/" + BUGS.length, Math.min(100, Math.round(100 * score.bugs / BUGS.length))],
+    ["field", "FIELD OPS", score.missions + " missions", Math.min(100, score.missions * 33)],
+    ["forge", "FORGE - BLANK FILE", score.forges + "/" + FORGES.length, Math.round(100 * score.forges / FORGES.length)],
+    ["start review", "REVIEW QUEUE", missed.length + " waiting", missed.length ? 100 : 0]
+  ];
+  rows.forEach(r => {
+    h += '<button class="navrow mode-row" data-c="' + r[0] + '"><span class="nr-top"><span class="nr-name">' + r[1] +
+      '</span><span class="nr-count">' + r[2] + "</span></span>" +
+      '<span class="navbar"><i style="width:' + (r[3] || 0) + '%"></i></span></button>';
+  });
+  el.innerHTML = h;
+  el.querySelectorAll(".navrow").forEach(b => b.addEventListener("click", () => {
+    if (cliMode !== "python") {
+      if (cliMode === "shell") line("Training runs inside the interpreter — type python3 first.", "c-amber");
+      cmd.focus(); return;
+    }
+    const c = b.dataset.m ? "start " + b.dataset.m : b.dataset.c;
+    html('<span class="c-dim">' + esc($("prompt").textContent) + " </span>" + esc(c));
+    handle(c);
+    cmd.focus();
+  }));
+  const ns = $("navStat");
+  if (ns) ns.textContent = MODULES.reduce((a, m) => a + m.drills.filter(d => d.doneFlag).length, 0) + " forms";
+}
+
+
+/* ---------------- forge: blank-file composition ---------------- */
+const FORGES = [
+  { id: 1, name: "preflight.py", ghost: 1,
+    run: ["junie online", "Cleared for takeoff"],
+    specs: {
+      2: 'Store the text "junie" in a variable called drone.',
+      3: "Store the number 87 in battery.",
+      4: "Store 3.5 in wind.",
+      6: "Print, with an f-string: the drone name, then the word online. (junie online)",
+      7: "An if: hold when battery is under 20 OR wind is above 9.0.",
+      8: "Inside it (4 spaces): print Hold at dock",
+      9: "The catch-all branch.",
+      10: "Inside it (4 spaces): print Cleared for takeoff"
+    } },
+  { id: 2, name: "field_report.py", ghost: 2,
+    run: ["Scanned 5 rows", "Pests found: 2"],
+    specs: {
+      2: 'A list called rows holding: "ok", "pest", "ok", "dry", "pest".',
+      3: "A counter, pests, starting at 0.",
+      5: "A for loop walking rows, each item called row.",
+      6: 'Inside it (4 spaces): an if — does row equal "pest"?',
+      7: "Inside THAT (8 spaces): add 1 to pests, shorthand.",
+      9: "Print with an f-string: Scanned {how many rows} rows — use len().",
+      10: "Print with an f-string: Pests found: {the counter}."
+    } },
+  { id: 3, name: "drone_ops.py", ghost: 3,
+    run: ["Status: go", "Spraying B2", "Spraying C5", "Spraying D1", "3 tiles treated", "Mission complete"],
+    specs: {
+      2: "Define a function check taking battery and wind.",
+      3: "Inside (4 spaces): an if — battery under 20 OR wind above 9.0.",
+      4: 'Inside THAT (8 spaces): return the text "hold".',
+      5: 'Back at one indent (4 spaces): return the text "go".',
+      7: "Define a function spray taking tiles.",
+      8: "Inside (4 spaces): a for loop walking tiles, each called tile.",
+      9: "Inside THAT (8 spaces): print with an f-string: Spraying {the tile}.",
+      10: "Back at one indent (4 spaces): return how many tiles there were.",
+      12: "Call check with 87 and 3.5, store the result in status.",
+      13: "Print with an f-string: Status: {the result}.",
+      15: 'An if: does status equal "go"?',
+      16: 'Inside (4 spaces): call spray with the list ["B2", "C5", "D1"], store in done.',
+      17: "Inside (4 spaces): print with an f-string: {done} tiles treated.",
+      19: "Print: Mission complete"
+    } },
+  { id: 4, name: "safe_ops.py", ghost: 4,
+    run: ["skipped: bad", "total: 49"],
+    specs: {
+      2: "Define a function to_int taking text.",
+      3: "Inside (4 spaces): open a try block.",
+      4: "Inside THAT (8 spaces): return text converted to an int.",
+      5: "Back at one indent (4 spaces): catch a ValueError.",
+      6: "Inside it (8 spaces): return None.",
+      8: 'A list readings holding: "12", "7", "bad", "30".',
+      9: "A counter total starting at 0.",
+      11: "A for loop walking readings, each item called r.",
+      12: "Inside (4 spaces): call to_int on r, store in value.",
+      13: "Inside (4 spaces): an if — is value None? (use is)",
+      14: "Inside THAT (8 spaces): print with an f-string: skipped: {the reading}.",
+      15: "Inside the loop (4 spaces): the catch-all branch.",
+      16: "Inside it (8 spaces): add value onto total, shorthand.",
+      18: "Print with an f-string: total: {the counter}."
+    } }
+];
+let forge = null;
+function forgeMenu() {
+  blank();
+  line("-- FORGE - BLANK FILE ------------------", "c-green");
+  line("No ghost letters this time. A spec describes each line - you write it", "c-dim");
+  line("from memory. hint shows the shape, skip reveals. This is the composition", "c-dim");
+  line("muscle: the step between typing Python and writing it.", "c-dim");
+  blank();
+  FORGES.forEach(f => line("  forge " + f.id + "   " + f.name + (score.forges >= f.id ? "   [forged]" : ""), "c-amber"));
+  line("Best done after its ghost run: ghost first, forge second.", "c-dim");
+}
+function startForge(n) {
+  const f = FORGES.find(x => x.id === n);
+  if (!f) { forgeMenu(); return; }
+  const g = GHOSTS.find(x => x.id === f.ghost);
+  forge = { f, lines: g.code.split("\n"), li: 0 };
+  mode = "forge"; setStatus();
+  blank();
+  line("-- FORGE - " + f.name + " -------------", "c-green");
+  line("Comments and blank lines are given. You write the code.", "c-dim");
+  logEvent("forge started: " + f.name, "ok");
+  nextForgeLine();
+}
+function nextForgeLine() {
+  const F = forge;
+  while (F.li < F.lines.length) {
+    const ln = F.lines[F.li];
+    if (ln.trim() === "" || ln.trim().startsWith("#")) {
+      line(ln === "" ? "\u00a0" : ln, "c-dim");
+      F.li++;
+      continue;
+    }
+    break;
+  }
+  if (F.li >= F.lines.length) { finishForge(); return; }
+  $("taskLbl").textContent = "line " + (F.li + 1) + "/" + F.lines.length;
+  taskBox("Line " + (F.li + 1) + ": " + (F.f.specs[F.li + 1] || "Write this line."));
+}
+function checkForge(input) {
+  const F = forge, expected = F.lines[F.li];
+  const t = input.trim().toLowerCase();
+  if (t === "hint") { line("shape: " + skeleton(expected), "c-amber"); return; }
+  if (t === "skip") {
+    line(expected, "c-amber");
+    line("  (revealed - it counts as read, not written. Keep going.)", "c-dim");
+    F.li++; nextForgeLine(); return;
+  }
+  const wantInd = indentOf(expected), gotInd = indentOf(input);
+  if (wantInd !== gotInd) {
+    line("IndentationError: this line lives at " + wantInd + " spaces (you used " + gotInd + ")", "c-red");
+    chiBreak(); return;
+  }
+  if (norm(input) === norm(expected)) {
+    line(expected, "c-green");
+    chiUp();
+    F.li++; nextForgeLine();
+  } else {
+    chiBreak();
+    line("Not what the spec asks. hint for the shape, skip to reveal.", "c-red");
+  }
+}
+function finishForge() {
+  const F = forge;
+  blank();
+  line("=== " + F.f.name + " - running ===", "c-amber");
+  F.f.run.forEach(o => line(o));
+  line("=== exit 0 ===", "c-amber");
+  if (score.forges < F.f.id) score.forges = F.f.id;
+  logEvent("forged from blank file: " + F.f.name, "ok");
+  blank();
+  line("You wrote that. Not traced - written.", "c-green");
+  if (F.f.id < FORGES.length) line("Next: forge " + (F.f.id + 1), "c-amber");
+  else line("All three forged. You are ready for real Python: install it, rewrite one of these from nothing, then change it - a 4th crop, a new rule, your own function.", "c-amber");
+  mode = "home"; forge = null; setStatus();
+}
+function skeleton(s) {
+  return s.replace(/[A-Za-z0-9]/g, "\u00b7");
+}
+
+/* ---------------- boot / login / shell ---------------- */
+function bootSeq() {
+  cliMode = "boot"; setStatus();
+  const bl = [
+    "VERDANT platform console v3.1.7",
+    "link: crusader relay .......... ok",
+    "atmo dampers .................. ok",
+    "hydro racks 1-8 ............... ok",
+    "drone bay [junie] ............. standby",
+    ""
+  ];
+  let i = 0;
+  (function step() {
+    if (i < bl.length) { line(bl[i] || "\u00a0", "c-dim"); i++; setTimeout(step, 220); }
+    else toLogin();
+  })();
+}
+function toLogin() {
+  cliMode = "login"; user = null; cmd.type = "text"; setStatus();
+  line("Operator authentication required.", "c-amber");
+  cmd.focus();
+}
+function doLogin(name) {
+  const n = name.toLowerCase();
+  if (n === "kaatje") { cliMode = "password"; cmd.type = "password"; setStatus(); return; }
+  if (n === "root") { line("root login refused on remote consoles.", "c-red"); return; }
+  if (n === "junie") { line("junie is a drone. Drones do not log in. (Yet.)", "c-dim"); return; }
+  line("no such operator: " + name, "c-red");
+}
+function doPassword() {
+  cmd.type = "text"; cliMode = "shell"; user = "kaatje"; setStatus();
+  logEvent("auth: operator kaatje accepted", "ok");
+  line("last login: yesterday, this same chair", "c-dim");
+  line(greeting(), "c-dim");
+  blank();
+  line("Type python3 to enter the training interpreter. help for shell commands.", "c-amber");
+}
+function toPython() {
+  cliMode = "python"; setStatus();
+  logEvent("python 3.12 interpreter started", "ok");
+  line("Python 3.12.4 (verdant build) on platform-os", "c-dim");
+  showHome();
+}
+function toShell() {
+  showPane("term"); mode = "home"; field = null; bug = null; cliMode = "shell"; setStatus();
+  logEvent("interpreter closed", "warn");
+  line("Interpreter closed. Progress kept for this session.", "c-dim");
+}
+function setTheme(th) {
+  if (th === "verdant") delete document.body.dataset.theme;
+  else document.body.dataset.theme = th;
+  const row = $("themeRow");
+  if (row) row.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === th));
+  logEvent("display theme: " + th, "ok");
+}
+function logout() {
+  logEvent("session closed: kaatje", "warn");
+  out.innerHTML = ""; user = null;
+  toLogin();
+}
+function shellCmd(raw, t) {
+  if (t === "python3" || t === "python") { toPython(); return; }
+  if (t === "clear") { out.innerHTML = ""; return; }
+  if (t === "ls") { line("training/   codex/   junie.cfg   field.map", "c-dim"); return; }
+  if (t === "whoami") { line("kaatje — drone op, cloud deck 7", "c-dim"); return; }
+  if (t === "date") { line(new Date().toString(), "c-dim"); return; }
+  if (t === "help") {
+    line("shell: python3 · ls · whoami · date · clear · exit", "c-dim");
+    line("All training lives inside python3.", "c-amber"); return;
+  }
+  if (t === "exit" || t === "logout") { logout(); return; }
+  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress)\b/.test(t) || /^(ghost|forge) [123]$/.test(t)) {
+    line("(training runs in python — entering python3 for you)", "c-dim");
+    cliMode = "python"; setStatus();
+    logEvent("python 3.12 interpreter started", "ok");
+    handle(raw);
+    return;
+  }
+  line("bash: " + t.split(" ")[0] + ": command not found — try python3", "c-red");
+}
+
+/* ---------------- chi (streak) ---------------- */
+let chi = 0, bestChi = 0;
+function chiUp() {
+  chi++; if (chi > bestChi) bestChi = chi;
+  if (chi === 10) { line("Ten unbroken. You are flowing.", "c-green"); logEvent("flow state: 10 streak", "ok"); }
+  updateFlow();
+}
+function chiBreak() {
+  if (chi >= 4) { line("Streak broken at " + chi + ". Breathe. Begin again.", "c-dim"); logEvent("streak broken at " + chi, "warn"); }
+  chi = 0; updateFlow();
+}
+function updateFlow() {
+  const f = $("chiFill"), n = $("chiNum");
+  if (f) { f.style.width = Math.min(chi, 10) * 10 + "%"; n.textContent = chi; }
+  const s = $("flowStats");
+  if (s) s.innerHTML =
+    "<span>drills <b>" + score.drills + "</b></span>" +
+    "<span>bugs <b>" + score.bugs + "</b></span>" +
+    "<span class='hide-sm'>ghost best <b>" + score.ghostBest + "%</b></span>" +
+    "<span class='hide-sm'>missions <b>" + score.missions + "</b></span>" +
+    "<span class='hide-sm'>best chi <b>" + bestChi + "</b></span>" +
+    "<span class='hide-sm'>to review <b>" + missed.length + "</b></span>";
+}
+
+/* ---------------- scroll of forms ---------------- */
+const learned = [];   // { group, chip, syn, note }
+const missed = [];    // drills answered wrong or skipped → 'start review'
+function learn(d) {
+  if (learned.some(e => e.chip === d.chip && e.syn === d.answers[0])) return;
+  learned.push({ group: d.group || "FORMS", chip: d.chip, syn: d.answers[0], note: d.note || "" });
+  renderScroll();
+}
+function missDrill(d) { if (!missed.includes(d)) { missed.push(d); updateFlow(); } }
+function renderScroll() {
+  const el = $("scrollList");
+  if (!el) return;
+  if (!learned.length) return;
+  const groups = {};
+  learned.forEach(e => { (groups[e.group] = groups[e.group] || []).push(e); });
+  let h = "";
+  for (const g in groups) {
+    h += '<div class="form-group">' + esc(g) + "</div>";
+    groups[g].forEach(e => {
+      h += '<div class="form-entry" data-i="' + learned.indexOf(e) + '">' +
+           '<div class="syn">' + esc(e.syn) + "</div>" +
+           '<div class="lbl">' + esc(e.chip) + "</div></div>";
+    });
+  }
+  el.innerHTML = h;
+  el.querySelectorAll(".form-entry").forEach(fe => fe.addEventListener("click", () => {
+    const e = learned[+fe.dataset.i];
+    blank();
+    line(e.syn, "c-green");
+    if (e.note) line("  ↳ " + e.note, "c-dim");
+    cmd.focus();
+  }));
+}
+
+/* ---------------- answer normalizer ----------------
+   Case-sensitive (that's real Python) but forgiving on
+   spacing and quote style. */
+function norm(s) {
+  s = s.trim().replace(/'/g, '"').replace(/\s+/g, " ");
+  s = s.replace(/\s*([=+\-*/%<>!,:()\[\]{}.])\s*/g, "$1");
+  return s;
+}
+function indentOf(s) { const m = s.match(/^[ \t]*/); return m[0].replace(/\t/g, "    ").length; }
+
+/* ---------------- drill modules ---------------- */
+const MODULES = [
+  {
+    id: "zero", name: "LESSON 0 · START HERE",
+    intro: "Never written code before? This is the runway. Read, type, watch it run.",
+    outro: "That was programming: instructions in, results out. Next: start basics — same ideas, more forms.",
+    drills: [
+      { teach: ["Python is a language for giving a computer instructions.",
+                "The most important instruction is print() — it makes the computer say something.",
+                "Type the line below EXACTLY, then press enter:"],
+        task: 'print("hello, verdant")',
+        answers: ['print("hello, verdant")'], out: ["hello, verdant"],
+        chip: "FIRST WORDS", note: "That line ran. You gave an instruction; the machine obeyed. That is all programming is." },
+      { teach: ["Python is also a calculator. No quotes needed for numbers."],
+        task: "Try: print(3 + 4)",
+        answers: ["print(3 + 4)"], out: ["7"],
+        chip: "CALCULATOR", note: "Python computed 3 + 4 first, then printed the result." },
+      { teach: ["Quotes change everything. With quotes, Python treats it as TEXT and repeats it literally."],
+        task: 'Now try: print("3 + 4")',
+        answers: ['print("3 + 4")'], out: ["3 + 4"],
+        chip: "TEXT VS MATH", note: "See the difference? Quotes = text, repeated as-is. No quotes = math, computed." },
+      { teach: ["A variable is a labeled box. You put a value in, the label remembers it.",
+                "The = sign means: store the right side under the name on the left."],
+        task: "Store 100 under the name battery: battery = 100",
+        answers: ["battery = 100"],
+        chip: "FIRST VARIABLE", note: "No output — and that's correct. Silence after = means Python stored it." },
+      { teach: ["The box remembers. Ask Python what's inside:"],
+        task: "print(battery)",
+        answers: ["print(battery)"], out: ["100"],
+        chip: "RECALL", note: "No quotes around battery — you wanted the VALUE inside the box, not the word." },
+      { teach: ["Variables can change — that's why they're called variables.",
+                "The right side computes first, then the result is stored back."],
+        task: "Junie used some power. Subtract 10: battery = battery - 10",
+        answers: ["battery = battery - 10", "battery -= 10"],
+        chip: "UPDATE", note: "Python read battery (100), subtracted 10, stored 90 back in the same box." },
+      { teach: ["Check the box again:"],
+        task: "print(battery)",
+        answers: ["print(battery)"], out: ["90"],
+        chip: "IT REMEMBERED", note: "90 — the variable kept the new value. Programs are built on this." },
+      { teach: ["f-strings mix text and variables in one line.",
+                'Put an f before the quotes, and wrap variable names in {curly braces}:'],
+        task: 'print(f"Junie at {battery}%")',
+        answers: ['print(f"Junie at {battery}%")'], out: ["Junie at 90%"],
+        chip: "F-STRING", note: "Python swapped {battery} for its value, 90, inside the text." },
+      { teach: ["One more form: the comment. A line starting with # is a note for humans.",
+                "Python skips it completely."],
+        task: "Write a comment: # my first program",
+        answers: ["# my first program", "#my first program"],
+        chip: "COMMENT", note: "Zero effect on the machine, priceless for the human reading your code next month." },
+      { teach: ["Last one. You now know: print, math, text, variables, f-strings, comments.",
+                "That is a real toolkit. Say it like you mean it:"],
+        task: 'print("I write Python now")',
+        answers: ['print("I write Python now")'], out: ["I write Python now"],
+        chip: "OPERATOR", note: "Confirmed. Head to start basics — same ideas, drilled until they're reflex." }
+    ]
+  },
+  {
+    id: "basics", name: "BASICS",
+    intro: "The very first syntax. Talking to the interpreter.",
+    drills: [
+      { task: 'Print the text: drone online', answers: ['print("drone online")'], out: ["drone online"], chip: "PRINT", note: "print() writes to the screen. Text goes in quotes." },
+      { task: "Write a comment that says: preflight check", answers: ["# preflight check", "#preflight check"], chip: "COMMENT", note: "# means Python ignores the rest of the line. Notes for humans." },
+      { task: 'Make a variable drone_name holding the text "junie".', answers: ['drone_name = "junie"'], chip: "VARIABLE", note: "name = value. No 'let', no 'var'. Just =." },
+      { task: "Make a variable battery holding the number 87.", answers: ["battery = 87"], chip: "NUMBER", note: "Numbers take no quotes. 87 is an int." },
+      { task: "Print the variable drone_name.", answers: ["print(drone_name)"], out: ["junie"], chip: "PRINT VAR", note: "No quotes — quotes would print the literal word drone_name." },
+      { task: 'Ask the pilot their name with input, prompt "Name: ", store it in pilot.', answers: ['pilot = input("Name: ")', 'pilot = input("Name:")', 'pilot = input("name: ")'], out: ["Name: kaatje"], chip: "INPUT", note: "input() pauses, shows the prompt, returns whatever gets typed — always as text." },
+      { task: "Print the type of battery.", answers: ["print(type(battery))"], out: ["<class 'int'>"], chip: "TYPE", note: "type() tells you what a thing is: int, str, float, list…" },
+      { task: 'Print with an f-string: Battery at 87% — using the variable battery.', answers: ['print(f"Battery at {battery}%")'], out: ["Battery at 87%"], chip: "F-STRING", note: 'f"..." lets you drop variables into text with {curly braces}.' },
+      { task: 'Convert the text "42" to a number and store it in crates.', answers: ['crates = int("42")'], chip: "INT()", note: "input() gives text. int() turns text into a number you can do math on." },
+      { task: "Make a variable wind holding 3.5.", answers: ["wind = 3.5"], chip: "FLOAT", note: "Decimals are floats. Python figures the type out itself." }
+    ]
+  },
+  {
+    id: "numstr", name: "NUMBERS + STRINGS",
+    intro: "Math and text. The two things every program chews on.",
+    drills: [
+      { task: "Add 5 to crates and store the result in total.", answers: ["total = crates + 5"], chip: "MATH", note: "+ - * / work as expected." },
+      { task: "Print 2 to the power of 8.", answers: ["print(2 ** 8)"], out: ["256"], chip: "POWER", note: "** is exponent. 2**8 = 256." },
+      { task: "Print the remainder of 10 divided by 3.", answers: ["print(10 % 3)"], out: ["1"], chip: "MODULO", note: "% gives the remainder. 10 % 3 = 1. Great for 'every 3rd row'." },
+      { task: "Print 17 divided by 5, whole part only.", answers: ["print(17 // 5)"], out: ["3"], chip: "FLOOR DIV", note: "// throws away the decimal. 17//5 = 3." },
+      { task: "Print drone_name in ALL CAPS.", answers: ["print(drone_name.upper())"], out: ["JUNIE"], chip: ".UPPER()", note: "Strings carry their own tools: .upper() .lower() .strip()…" },
+      { task: "Print the length of drone_name.", answers: ["print(len(drone_name))"], out: ["5"], chip: "LEN", note: "len() counts characters in text, items in a list." },
+      { task: 'In the string field, replace "weed" with "crop". Store back in field.', answers: ['field = field.replace("weed", "crop")'], chip: "REPLACE", note: ".replace(old, new) returns a NEW string — you must store it." },
+      { task: "Print the first three characters of code (index 0 up to 3).", answers: ["print(code[0:3])", "print(code[:3])"], chip: "SLICE", note: "[start:stop] — stop is not included. Counting starts at 0." },
+      { task: 'Split the string line on commas, store the pieces in parts.', answers: ['parts = line.split(",")'], chip: "SPLIT", note: '.split(",") chops text into a list. CSV rows, log lines…' },
+      { task: "Print wind rounded to 1 decimal.", answers: ["print(round(wind, 1))"], out: ["3.5"], chip: "ROUND", note: "round(value, decimals)." }
+    ]
+  },
+  {
+    id: "logic", name: "LOGIC",
+    intro: "if / elif / else. The drone starts making decisions.",
+    drills: [
+      { task: "Start an if: run when battery is below 20.", answers: ["if battery < 20:"], chip: "IF", note: "The colon : is mandatory. It announces an indented block below." },
+      { task: 'The line inside that if — indented 4 spaces — print: Return to dock', answers: ['    print("Return to dock")'], indent: 4, chip: "INDENT", note: "Indentation IS the syntax in Python. 4 spaces = inside the if." },
+      { task: "Add an elif: battery below 50.", answers: ["elif battery < 50:"], chip: "ELIF", note: "elif = else-if. Checked only when the if above was False." },
+      { task: "Add the catch-all branch.", answers: ["else:"], chip: "ELSE", note: "else takes no condition. It's the 'everything else' bucket." },
+      { task: 'Start an if: run when mode equals "auto".', answers: ['if mode == "auto":'], chip: "==", note: "== compares. A single = assigns. Mixing them up is the classic bug." },
+      { task: "Start an if: wind under 5 AND battery over 30.", answers: ["if wind < 5 and battery > 30:"], chip: "AND", note: "and, or, not — written as plain words." },
+      { task: "Start an if: run when raining is NOT true.", answers: ["if not raining:"], chip: "NOT", note: "not flips a boolean. Reads like English." },
+      { task: 'Start an if: run when "pest" appears in report.', answers: ['if "pest" in report:'], chip: "IN", note: '"x" in thing checks membership — inside strings and lists.' },
+      { task: "Make a boolean raining set to False.", answers: ["raining = False"], chip: "BOOLEAN", note: "True and False — capital first letter. That part IS case-sensitive." }
+    ]
+  },
+  {
+    id: "loops", name: "LOOPS",
+    intro: "Doing things many times without typing them many times.",
+    drills: [
+      { task: "Start a for loop: i counts 0 to 4.", answers: ["for i in range(5):"], chip: "FOR RANGE", note: "range(5) → 0,1,2,3,4. Five numbers, starts at 0, stops before 5." },
+      { task: "Inside it (4 spaces): print i.", answers: ["    print(i)"], indent: 4, chip: "LOOP BODY", note: "Everything indented under the for runs each pass." },
+      { task: "Start a for loop over the list field, each item called row.", answers: ["for row in field:"], chip: "FOR EACH", note: "Loops walk a list directly — no index juggling needed." },
+      { task: "Start a while loop: keep going while battery is above 0.", answers: ["while battery > 0:"], chip: "WHILE", note: "while repeats until its condition turns False. Make sure it CAN." },
+      { task: "Inside it: lower battery by 1 (shorthand).", answers: ["    battery -= 1", "    battery = battery - 1"], indent: 4, chip: "-=", note: "battery -= 1 is short for battery = battery - 1." },
+      { task: "The statement that exits a loop immediately.", answers: ["break"], chip: "BREAK", note: "break jumps out of the nearest loop, done or not." },
+      { task: "The statement that skips to the next pass.", answers: ["continue"], chip: "CONTINUE", note: "continue skips the rest of this pass, loop keeps going." },
+      { task: "Start a for loop: r counts 1 through 8.", answers: ["for r in range(1, 9):"], chip: "RANGE(A,B)", note: "range(1, 9) → 1..8. The stop value is never included." },
+      { task: "Loop over rows with both index and value: i, row.", answers: ["for i, row in enumerate(rows):"], chip: "ENUMERATE", note: "enumerate() hands you (index, item) pairs. Very Pythonic." }
+    ]
+  },
+  {
+    id: "lists", name: "LISTS + DICTS",
+    intro: "Collections. One name, many values.",
+    drills: [
+      { task: 'Make a list crops holding "maize", "wheat", "beet".', answers: ['crops = ["maize", "wheat", "beet"]'], chip: "LIST", note: "Square brackets, commas between items." },
+      { task: 'Add "hops" to the end of crops.', answers: ['crops.append("hops")'], chip: "APPEND", note: ".append() bolts one item onto the end." },
+      { task: "Print the first item of crops.", answers: ["print(crops[0])"], out: ["maize"], chip: "INDEX 0", note: "Counting starts at 0. Always." },
+      { task: "Print the LAST item of crops.", answers: ["print(crops[-1])"], out: ["beet"], chip: "INDEX -1", note: "Negative indexes count from the back. -1 = last." },
+      { task: "Print how many items crops holds.", answers: ["print(len(crops))"], out: ["3"], chip: "LEN", note: "Same len() as strings." },
+      { task: 'Make a dict drone with "id" 7 and "battery" 87.', answers: ['drone = {"id": 7, "battery": 87}'], chip: "DICT", note: "Curly braces, key: value pairs. Labels instead of positions." },
+      { task: "Print the battery value from that dict.", answers: ['print(drone["battery"])'], out: ["87"], chip: "DICT GET", note: "Look things up by key, not position." },
+      { task: 'Set a new key "mode" to "auto" in drone.', answers: ['drone["mode"] = "auto"'], chip: "DICT SET", note: "Assign to a key that doesn't exist — it appears." },
+      { task: "Sort crops alphabetically, in place.", answers: ["crops.sort()"], chip: "SORT", note: ".sort() rearranges the list itself and returns nothing." },
+      { task: 'Remove "beet" from crops.', answers: ['crops.remove("beet")'], chip: "REMOVE", note: ".remove(x) deletes the first matching item." }
+    ]
+  },
+  {
+    id: "funcs", name: "FUNCTIONS",
+    intro: "Name a block of code once, use it forever. This is where programs get big.",
+    drills: [
+      { task: "Define a function scan, no parameters.", answers: ["def scan():"], chip: "DEF", note: "def name(): — colon, then an indented body below." },
+      { task: 'Its body (4 spaces): return the text "clear".', answers: ['    return "clear"'], indent: 4, chip: "RETURN", note: "return hands a value back to whoever called the function." },
+      { task: "Call scan and store its result in report.", answers: ["report = scan()"], chip: "CALL", note: "Parentheses run it. Without () you're just naming it." },
+      { task: "Define spray taking one parameter, tile.", answers: ["def spray(tile):"], chip: "PARAM", note: "Parameters are the function's own local variables." },
+      { task: "Define move taking direction, and steps defaulting to 1.", answers: ['def move(direction, steps=1):'], chip: "DEFAULT", note: "steps=1 makes the argument optional." },
+      { task: 'Call move going "north" for 3 steps.', answers: ['move("north", 3)'], chip: "ARGS", note: "Arguments land in order: direction, then steps." },
+      { task: "Inside a function (4 spaces): return battery minus steps times 2.", answers: ["    return battery - steps * 2"], indent: 4, chip: "RETURN EXPR", note: "return can hold any expression — it's computed first." },
+      { task: "The guard line that runs main code only when the file is run directly.", answers: ['if __name__ == "__main__":'], chip: "MAIN GUARD", note: "Double underscores both sides. The classic Python entry point." }
+    ]
+  },
+  {
+    id: "errors", name: "ERRORS + TRY/EXCEPT",
+    intro: "You can read tracebacks. Now learn to catch them before they crash the drone.",
+    drills: [
+      { task: "Open a block for code that might fail.", answers: ["try:"], chip: "TRY", note: "try: means — attempt this, and if it blows up, don't crash: jump to except." },
+      { task: 'Inside it (4 spaces): convert text to an int, store in number.', answers: ["    number = int(text)"], indent: 4, chip: "RISKY LINE", note: 'int("hello") raises ValueError. Inside try, that raise gets caught instead of crashing.' },
+      { task: "Catch specifically a ValueError.", answers: ["except ValueError:"], chip: "EXCEPT", note: "Catch the error you expect, by name. Capital V, capital E — it's case-sensitive." },
+      { task: 'Inside it (4 spaces): print not a number', answers: ['    print("not a number")'], indent: 4, chip: "RECOVERY", note: "This runs ONLY when the try block failed with that error. The program lives on." },
+      { task: "Catch any remaining error type (the broad net).", answers: ["except Exception:"], chip: "CATCH-ALL", note: "except Exception: catches nearly everything. Last resort — specific catches first." },
+      { task: "The block that runs no matter what — error or not.", answers: ["finally:"], chip: "FINALLY", note: "finally: always runs. Close files, land drones — cleanup lives here." },
+      { task: 'Raise your own error: a ValueError with the message bad reading', answers: ['raise ValueError("bad reading")'], chip: "RAISE", note: "raise throws an error on purpose — how your code says 'I refuse this input.'" }
+    ]
+  }
+];
+
+/* ---------------- ghost programs ---------------- */
+const GHOSTS = [
+  {
+    id: 1, name: "preflight.py",
+    blurb: "Variables, f-strings, if/else — your first full file.",
+    code:
+`# preflight.py — drone check
+drone = "junie"
+battery = 87
+wind = 3.5
+
+print(f"{drone} online")
+if battery < 20 or wind > 9.0:
+    print("Hold at dock")
+else:
+    print("Cleared for takeoff")`
+  },
+  {
+    id: 2, name: "field_report.py",
+    blurb: "A list, a loop, a counter. Real work.",
+    code:
+`# field_report.py
+rows = ["ok", "pest", "ok", "dry", "pest"]
+pests = 0
+
+for row in rows:
+    if row == "pest":
+        pests += 1
+
+print(f"Scanned {len(rows)} rows")
+print(f"Pests found: {pests}")`
+  },
+  {
+    id: 3, name: "drone_ops.py",
+    blurb: "Full program: functions, parameters, returns, main flow. First syntax to finish.",
+    code:
+`# drone_ops.py — full mission
+def check(battery, wind):
+    if battery < 20 or wind > 9.0:
+        return "hold"
+    return "go"
+
+def spray(tiles):
+    for tile in tiles:
+        print(f"Spraying {tile}")
+    return len(tiles)
+
+status = check(87, 3.5)
+print(f"Status: {status}")
+
+if status == "go":
+    done = spray(["B2", "C5", "D1"])
+    print(f"{done} tiles treated")
+
+print("Mission complete")`
+  },
+  {
+    id: 4, name: "safe_ops.py",
+    blurb: "try/except inside a function — code that survives bad data.",
+    code:
+`# safe_ops.py — error handling
+def to_int(text):
+    try:
+        return int(text)
+    except ValueError:
+        return None
+
+readings = ["12", "7", "bad", "30"]
+total = 0
+
+for r in readings:
+    value = to_int(r)
+    if value is None:
+        print(f"skipped: {r}")
+    else:
+        total += value
+
+print(f"total: {total}")`
+  }
+];
+
+/* ---------------- bug hunt ---------------- */
+const BUGS = [
+  { code: ['print("hello)'], bad: 0, err: 'SyntaxError: unterminated string literal (line 1)',
+    fix: 'print("hello")', hint: "Count the quotes. Every opener needs a closer." },
+  { code: ["battery = 15", "if battery < 20", '    print("low")'], bad: 1, err: "SyntaxError: expected ':' (line 2)",
+    fix: "if battery < 20:", hint: "if, for, while, def — they all end their line the same way." },
+  { code: ['Print("lift off")'], bad: 0, err: "NameError: name 'Print' is not defined. Did you mean: 'print'?",
+    fix: 'print("lift off")', hint: "Python IS case-sensitive on names. print, not Print." },
+  { code: ['mode = "auto"', 'if mode = "auto":', '    print("autopilot")'], bad: 1, err: "SyntaxError: invalid syntax. Maybe you meant '==' instead of '='? (line 2)",
+    fix: 'if mode == "auto":', hint: "One = assigns. Two == compares. The if wants a comparison." },
+  { code: ["if wind > 9:", 'print("grounded")'], bad: 1, err: "IndentationError: expected an indented block after 'if' statement (line 1)",
+    fix: '    print("grounded")', hint: "The body of an if must step in — 4 spaces." },
+  { code: ["for i in range(3)", "    print(i)"], bad: 0, err: "SyntaxError: expected ':' (line 1)",
+    fix: "for i in range(3):", hint: "Same colon rule as if." },
+  { code: ['crops = ["maize", "wheat"', "print(crops)"], bad: 0, err: "SyntaxError: '[' was never closed (line 1)",
+    fix: 'crops = ["maize", "wheat"]', hint: "Open bracket, close bracket." },
+  { code: ["battery = 87", "print(batery)"], bad: 1, err: "NameError: name 'batery' is not defined. Did you mean: 'battery'?",
+    fix: "print(battery)", hint: "Read the variable name on line 1 very slowly." },
+  { code: ["def scan()", '    return "clear"'], bad: 0, err: "SyntaxError: expected ':' (line 1)",
+    fix: "def scan():", hint: "def joins the colon club too." },
+  { code: ['print("Row " + 3)'], bad: 0, err: 'TypeError: can only concatenate str (not "int") to str (line 1)',
+    fix: ['print("Row " + str(3))', 'print(f"Row {3}")', 'print("Row", 3)'], hint: "Text + number won't glue. Wrap the number in str(), or use an f-string." },
+  { code: ["try:", '    n = int("12")', "except ValueError", "    n = 0"], bad: 2, err: "SyntaxError: expected ':' (line 3)",
+    fix: "except ValueError:", hint: "except opens a block — same colon rule as try, if, def." },
+  { code: ["try:", '    n = int(text)', "except valueerror:", '    print("bad")'], bad: 2, err: "NameError: name 'valueerror' is not defined. Did you mean: 'ValueError'? (line 3)",
+    fix: "except ValueError:", hint: "Error names are case-sensitive: ValueError, TypeError, IndexError." }
+];
+
+/* ---------------- state ---------------- */
+let curModule = null, drillIdx = 0, drillQueue = [], allRun = false, allQueue = [];
+let ghost = null;   // { g, lines, cls, li, ci, errors, typed, t0, doneFlag }
+let bug = null;     // { idx, order, pos }
+let field = null;   // field game state
+
+/* ============================================================
+   HOME / ROUTER
+   ============================================================ */
+function greeting() {
+  const h = new Date().getHours();
+  if (h < 6) return "Working late again, Kaatje?";
+  if (h < 12) return "Good morning, Kaatje.";
+  if (h < 18) return "Good afternoon, Kaatje.";
+  return "Good evening, Kaatje.";
+}
+function showHome() {
+  mode = "home"; setStatus(); showPane("term");
+  $("taskLbl").textContent = "";
+  line("PYLE — Python training console", "c-green");
+  line(greeting(), "c-dim");
+  blank();
+  line("The farmer was replaced. The drone that replaced him runs on Python,");
+  line("and the drone answers to you. Learn the language, keep the fields alive.");
+  blank();
+  line("  start zero       never coded before? begin here ◄", "c-amber");
+  line("  start basics     first syntax: print, variables, input", "c-dim");
+  line("  start numstr     numbers + strings", "c-dim");
+  line("  start logic      if / elif / else", "c-dim");
+  line("  start loops      for + while", "c-dim");
+  line("  start lists      lists + dicts", "c-dim");
+  line("  start funcs      functions", "c-dim");
+  line("  start errors     try / except — surviving bad data", "c-dim");
+  line("  start all        every drill, shuffled", "c-dim");
+  blank();
+  line("  start review     re-drill only the forms you stumbled on", "c-dim");
+  blank();
+  line("  ghost            retype full programs over ghost letters", "c-amber");
+  line("  bugs             bug hunt — read the traceback, fix the line", "c-amber");
+  line("  field            fly the drone with real Python calls", "c-amber");
+  line("  forge            write the ghost programs from a blank file", "c-amber");
+  blank();
+  line("Left screen: training nav + your codex of learned forms.", "c-dim");
+  line("Right screen: flow streak, stats, and the live system log.", "c-dim");
+  blank();
+  line("  help · scroll · score · clear · menu", "c-dim");
+}
+function showPane(which) {
+  $("gpane").classList.toggle("on", which === "ghost");
+  $("fpane").classList.toggle("on", which === "field");
+  out.style.display = which === "ghost" ? "none" : "";
+  cmd.placeholder = which === "ghost" ? "type here — it lands on the ghost text" : "";
+  if (which === "ghost") $("prompt").textContent = "⌨"; else setPrompt();
+  cmd.focus();
+}
+
+/* ============================================================
+   DRILLS
+   ============================================================ */
+function startModule(id) {
+  if (id === "review") {
+    if (!missed.length) { line("Nothing to review — no stumbles recorded yet. The scroll approves.", "c-green"); return; }
+    curModule = { id: "review", name: "REVIEW", intro: "Only the forms that tripped you. " + missed.length + " to reclaim — answer right and they leave the list." };
+    drillQueue = missed.slice(); shuffle(drillQueue);
+    drillIdx = 0; mode = "drills"; setStatus();
+    blank();
+    line("── REVIEW " + "─".repeat(32), "c-green");
+    line(curModule.intro, "c-dim");
+    nextDrill(); return;
+  }
+  if (id === "all") {
+    allRun = true;
+    allQueue = [];
+    MODULES.forEach(m => m.drills.forEach(d => allQueue.push(d)));
+    shuffle(allQueue);
+    curModule = { name: "ALL DRILLS", intro: "Everything, shuffled. " + allQueue.length + " drills." };
+    drillQueue = allQueue;
+  } else {
+    const m = MODULES.find(x => x.id === id);
+    if (!m) { line("No module '" + id + "'. Try: modules", "c-red"); return; }
+    allRun = false; curModule = m; drillQueue = m.drills.slice();
+  }
+  drillIdx = 0; mode = "drills"; setStatus();
+  blank();
+  line("── " + curModule.name + " " + "─".repeat(Math.max(2, 40 - curModule.name.length)), "c-green");
+  line(curModule.intro, "c-dim");
+  nextDrill();
+}
+function nextDrill() {
+  if (drillIdx >= drillQueue.length) {
+    blank();
+    line(curModule.name + " complete. Well done, Kaatje.", "c-green");
+    logEvent(curModule.name + " complete", "ok");
+    if (curModule.outro) line(curModule.outro, "c-amber");
+    line("Type menu for the console, or start another module.", "c-dim");
+    mode = "home"; setStatus(); return;
+  }
+  const d = drillQueue[drillIdx];
+  $("taskLbl").textContent = (drillIdx + 1) + "/" + drillQueue.length;
+  if (d.teach && !allRun && curModule.id !== "review") { blank(); d.teach.forEach(s => line(s, "c-dim")); }
+  taskBox(d.task);
+}
+function checkDrill(input) {
+  const d = drillQueue[drillIdx];
+  if (input.trim().toLowerCase() === "hint") {
+    line("shape: " + skeleton(d.answers[0]), "c-amber");
+    line("  (letters hidden, structure shown - punctuation is half the syntax)", "c-dim");
+    return;
+  }
+  if (input.trim() === "skip") {
+    line("Answer: " + (Array.isArray(d.answers) ? d.answers[0] : d.answers), "c-amber");
+    if (d.note) line("  ↳ " + d.note, "c-dim");
+    missDrill(d); chiBreak();
+    drillIdx++; nextDrill(); return;
+  }
+  let ok = false;
+  if (d.indent) {
+    const ind = indentOf(input);
+    if (ind !== d.indent) {
+      line(ind === 0
+        ? "IndentationError: expected an indented block (this line lives INSIDE the block — 4 spaces)"
+        : "IndentationError: unexpected indent (use exactly 4 spaces)", "c-red");
+      return;
+    }
+  }
+  const ni = norm(input);
+  ok = d.answers.some(a => norm(a) === ni);
+  if (ok) {
+    score.drills++; d.doneFlag = true; chiUp(); learn(d);
+    logEvent("form acquired: " + d.chip, "ok");
+    if (d.out) d.out.forEach(o => line(o));
+    const mi = missed.indexOf(d);
+    if (mi > -1 && curModule.id === "review") missed.splice(mi, 1);
+    setStatus();
+    chip(d.chip);
+    if (d.note) line("  ↳ " + d.note, "c-dim");
+    drillIdx++; nextDrill();
+  } else {
+    chiBreak(); missDrill(d);
+    diagnose(input, d);
+  }
+}
+/* friendly python-flavoured nudges */
+function diagnose(input, d) {
+  const a = d.answers[0], t = input.trim();
+  if (/^(if|elif|else|for|while|def)\b/.test(t) && /:$/.test(a.trim()) && !/:$/.test(t))
+    line("SyntaxError: expected ':'  — blocks open with a colon.", "c-red");
+  else if (/==/.test(a) && /(^|[^=!<>])=([^=]|$)/.test(t) && !/==/.test(t))
+    line("Almost — a single = assigns. To compare, use ==.", "c-red");
+  else if (/^print\(/i.test(a) && /^print /i.test(t))
+    line("SyntaxError: Missing parentheses in call to 'print'. Did you mean print(...)?", "c-red");
+  else if (/^Print/.test(t))
+    line("NameError: name 'Print' is not defined. Did you mean: 'print'? (case matters)", "c-red");
+  else if ((a.match(/"/g) || []).length > ((t.match(/["']/g) || []).length))
+    line("Check your quotes — text needs an opener AND a closer.", "c-red");
+  else
+    line("Not quite. Try again, or type skip to see the answer.", "c-red");
+}
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } }
+
+/* ============================================================
+   GHOST MODE — type over ghost letters
+   ============================================================ */
+function ghostMenu() {
+  blank();
+  line("── GHOST MODE ──────────────────────────", "c-green");
+  line("A full program appears in ghost letters. Retype every character", "c-dim");
+  line("over it — indentation included. Wrong keys flash red and block.", "c-dim");
+  line("Case is checked in code (that's real Python), relaxed in comments", "c-dim");
+  line("and inside strings. Tab types 4 spaces. Esc quits.", "c-dim");
+  blank();
+  GHOSTS.forEach(g => line("  ghost " + g.id + "   " + g.name + " — " + g.blurb, "c-amber"));
+}
+function classifyLine(s) {
+  const cls = []; let inStr = null, com = false;
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (com) { cls.push("com"); continue; }
+    if (inStr) { cls.push("str"); if (c === inStr) inStr = null; continue; }
+    if (c === "#") { com = true; cls.push("com"); continue; }
+    if (c === '"' || c === "'") { inStr = c; cls.push("str"); continue; }
+    cls.push("code");
+  }
+  return cls;
+}
+function startGhost(n) {
+  const g = GHOSTS.find(x => x.id === n);
+  if (!g) { ghostMenu(); return; }
+  mode = "ghost"; setStatus(); showPane("ghost");
+  const lines = g.code.split("\n");
+  ghost = { g, lines, cls: lines.map(classifyLine), li: 0, ci: 0, errors: 0, typed: 0, t0: null, done: false };
+  $("ghead").innerHTML = "GHOST · <b>" + esc(g.name) + "</b> — start typing. Esc quits.";
+  renderGhost();
+  $("gpane").focus();
+}
+function renderGhost() {
+  const G = ghost, el = $("gcode");
+  let h = "";
+  for (let l = 0; l < G.lines.length; l++) {
+    const s = G.lines[l], cl = G.cls[l];
+    for (let c = 0; c < s.length; c++) {
+      let k = "gc";
+      const typedPast = l < G.li || (l === G.li && c < G.ci);
+      if (typedPast) k += " done " + (cl[c] === "com" ? "com" : cl[c] === "str" ? "str" : "");
+      if (l === G.li && c === G.ci && !G.done) k += " cur";
+      h += '<span class="' + k + '" data-p="' + l + "_" + c + '">' + esc(s[c]) + "</span>";
+    }
+    // newline marker
+    let nk = "gnl";
+    if (l === G.li && G.ci === s.length && !G.done) nk += " cur";
+    h += '<span class="' + nk + '">⏎</span>\n';
+  }
+  el.innerHTML = h;
+  renderGhostStats();
+}
+function renderGhostStats() {
+  const G = ghost;
+  const total = G.lines.reduce((a, s) => a + s.length + 1, 0);
+  const done = G.lines.slice(0, G.li).reduce((a, s) => a + s.length + 1, 0) + G.ci;
+  const acc = G.typed ? Math.round(100 * (G.typed - G.errors) / G.typed) : 100;
+  let time = "0s";
+  if (G.t0) { const t = Math.round((Date.now() - G.t0) / 1000); time = t + "s"; }
+  $("gstats").innerHTML =
+    "progress <b>" + done + "/" + total + "</b>" +
+    "  errors <b>" + G.errors + "</b>" +
+    "  accuracy <b>" + acc + "%</b>" +
+    "  time <b>" + time + "</b>";
+}
+function ghostKey(e) {
+  if (!ghost || mode !== "ghost") return;
+  const G = ghost;
+  if (e.key === "Escape") { endGhost(false); return; }
+  if (G.done) return;
+  let key = e.key;
+  if (key === "Tab") { e.preventDefault(); ghostChars("    "); return; }
+  if (key === "Backspace") {
+    e.preventDefault();
+    if (G.ci > 0) G.ci--;
+    else if (G.li > 0) { G.li--; G.ci = G.lines[G.li].length; }
+    renderGhost(); return;
+  }
+  if (key === "Enter") {
+    e.preventDefault();
+    handleGhostChar("\n"); return;
+  }
+  if (key.length !== 1) return;
+  e.preventDefault();
+  ghostChars(key);
+}
+function ghostChars(str) { for (const c of str) handleGhostChar(c); }
+function handleGhostChar(c) {
+  const G = ghost;
+  if (!G.t0) G.t0 = Date.now();
+  const lineS = G.lines[G.li];
+  const atEol = G.ci === lineS.length;
+  let expected = atEol ? "\n" : lineS[G.ci];
+  const cls = atEol ? "code" : G.cls[G.li][G.ci];
+  let okc;
+  if (cls === "com" || cls === "str") okc = c.toLowerCase() === expected.toLowerCase();
+  else okc = c === expected;
+  G.typed++;
+  if (okc) {
+    if (atEol) { G.li++; G.ci = 0; if (G.li >= G.lines.length) { finishGhost(); return; } }
+    else G.ci++;
+    renderGhost();
+  } else {
+    G.errors++;
+    flashWrong();
+    renderGhostStats();
+  }
+}
+function flashWrong() {
+  const G = ghost;
+  const sel = G.ci < G.lines[G.li].length
+    ? document.querySelector('[data-p="' + G.li + "_" + G.ci + '"]')
+    : document.querySelectorAll(".gnl")[G.li];
+  if (!sel) return;
+  sel.classList.add("wrong");
+  setTimeout(() => sel.classList.remove("wrong"), 220);
+}
+function finishGhost() {
+  const G = ghost; G.done = true;
+  const acc = G.typed ? Math.round(100 * (G.typed - G.errors) / G.typed) : 100;
+  if (acc > score.ghostBest) score.ghostBest = acc;
+  renderGhost();
+  setTimeout(() => endGhost(true), 400);
+}
+function endGhost(finished) {
+  const G = ghost;
+  showPane("term"); mode = "home"; setStatus();
+  if (finished) {
+    const acc = G.typed ? Math.round(100 * (G.typed - G.errors) / G.typed) : 100;
+    const t = Math.round((Date.now() - G.t0) / 1000);
+    blank();
+    line(G.g.name + " — typed start to finish.", "c-green");
+    line("accuracy " + acc + "%  ·  errors " + G.errors + "  ·  " + t + "s", "c-dim");
+    logEvent("ghost " + G.g.name + " — " + acc + "%", "ok");
+    if (G.g.id < GHOSTS.length) line("Next up: ghost " + (G.g.id + 1), "c-amber");
+    else line("That was a full program with functions — the whole arc. ghost 1 again to beat your accuracy.", "c-amber");
+  } else {
+    blank(); line("Ghost session ended.", "c-dim");
+  }
+  ghost = null;
+}
+$("gpane").addEventListener("click", () => cmd.focus());
+
+/* ============================================================
+   BUG HUNT
+   ============================================================ */
+function startBugs() {
+  mode = "bugs"; setStatus();
+  bug = { order: BUGS.map((_, i) => i), pos: 0 };
+  shuffle(bug.order);
+  blank();
+  line("── BUG HUNT ────────────────────────────", "c-green");
+  line("Junie tried to run some code and crashed. Read the traceback,", "c-dim");
+  line("find the broken line, retype it FIXED. skip shows the fix, menu quits.", "c-dim");
+  nextBug();
+}
+function nextBug() {
+  if (bug.pos >= bug.order.length) {
+    blank(); line("Bug hunt clear — " + bug.order.length + " crashes fixed. Junie flies again.", "c-green");
+    mode = "home"; setStatus(); return;
+  }
+  const b = BUGS[bug.order[bug.pos]];
+  $("taskLbl").textContent = (bug.pos + 1) + "/" + bug.order.length;
+  blank();
+  b.code.forEach((c, i) => line("  " + (i + 1) + "  " + c, "c-blue"));
+  line("Traceback (most recent call last):", "c-red");
+  line("  " + b.err, "c-red");
+  taskBox("Retype the broken line, corrected:");
+}
+function checkBug(input) {
+  const b = BUGS[bug.order[bug.pos]];
+  const t = input.trim();
+  if (t === "skip") {
+    const fx = Array.isArray(b.fix) ? b.fix[0] : b.fix;
+    line("Fix: " + fx, "c-amber");
+    line("  ↳ " + b.hint, "c-dim");
+    bug.pos++; nextBug(); return;
+  }
+  const fixes = Array.isArray(b.fix) ? b.fix : [b.fix];
+  let ok;
+  if (/^\s{4}/.test(fixes[0]) ) {
+    ok = indentOf(input) === indentOf(fixes[0]) && fixes.some(f => norm(f) === norm(input));
+  } else {
+    ok = fixes.some(f => norm(f) === norm(input));
+  }
+  if (ok) {
+    score.bugs++; chiUp(); setStatus();
+    logEvent("bug fixed: " + b.err.split(":")[0], "ok");
+    chip("BUG FIXED");
+    line("  ↳ " + b.hint, "c-dim");
+    bug.pos++; nextBug();
+  } else if (b.code.some(c => norm(c) === norm(input) && indentOf(c) === indentOf(input))) {
+    line("That's the same broken line. What is the traceback pointing at?", "c-red");
+  } else {
+    line("Still crashes. Read the error message once more — it names the problem.", "c-red");
+  }
+}
+
+/* ============================================================
+   FIELD OPS — drone game
+   ============================================================ */
+const FW = 12, FH = 8;
+function newField() {
+  const tiles = [];
+  for (let r = 0; r < FH; r++) { tiles.push(new Array(FW).fill(".")); }
+  tiles[0][0] = "H";
+  const spots = [];
+  while (spots.length < 7) {
+    const r = Math.floor(Math.random() * FH), c = Math.floor(Math.random() * FW);
+    if ((r === 0 && c === 0) || spots.some(s => s[0] === r && s[1] === c)) continue;
+    spots.push([r, c]);
+  }
+  spots.slice(0, 3).forEach(s => tiles[s[0]][s[1]] = "P");
+  spots.slice(3, 6).forEach(s => tiles[s[0]][s[1]] = "D");
+  tiles[spots[6][0]][spots[6][1]] = "S";
+  return {
+    tiles, r: 0, c: 0, battery: 100, mission: 0,
+    scanned: false, log: []
+  };
+}
+const MISSIONS = [
+  { name: "MISSION 1 — SCAN",
+    brief: 'A strange reading (the ? tile). Fly Junie there and drone.scan() it.\nMoves: drone.move("north"), drone.move("east", 3) …',
+    check: f => f.scanned },
+  { name: "MISSION 2 — PEST CONTROL",
+    brief: '3 pest tiles (¤). Fly to each one and drone.spray() it.\nTip: for i in range(4): drone.move("east")  — loops beat typing.',
+    check: f => !f.tiles.flat().includes("P") },
+  { name: "MISSION 3 — IRRIGATION + HOME",
+    brief: '3 dry tiles (≈). drone.water() each, then drone.home() to dock and recharge.\nChain commands with ; — e.g. drone.move("south", 2); drone.water()',
+    check: f => !f.tiles.flat().includes("D") && f.r === 0 && f.c === 0 }
+];
+function startField() {
+  mode = "field"; setStatus(); showPane("field");
+  field = newField();
+  setPrompt();
+  blank();
+  line("── FIELD OPS ───────────────────────────", "c-green");
+  line("The farmer was replaced. You weren't. Junie takes real Python calls:", "c-dim");
+  line('  drone.move("north")        one step  (north/south/east/west)', "c-dim");
+  line('  drone.move("east", 3)      three steps', "c-dim");
+  line("  drone.scan()  drone.spray()  drone.water()  drone.home()  drone.pos()", "c-dim");
+  line('  for i in range(4): drone.move("west")     single-line loops work', "c-dim");
+  line("  chain with ;   ·   map redraws   ·   mission re-reads the brief   ·   menu quits", "c-dim");
+  missionBrief();
+  drawField();
+}
+function missionBrief() {
+  const m = MISSIONS[field.mission];
+  blank();
+  line(m.name, "c-amber");
+  m.brief.split("\n").forEach(s => line(s, "c-dim"));
+}
+function drawField() {
+  const f = field, cs = 40;
+  let s = '<svg viewBox="0 0 ' + (FW * cs) + " " + (FH * cs) + '" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="field map">';
+  for (let r = 0; r < FH; r++) for (let c = 0; c < FW; c++) {
+    const t = f.tiles[r][c];
+    let fill = (r + c) % 2 ? "var(--ft1)" : "var(--ft2)";
+    if (t === "H") fill = "var(--fdock)";
+    if (t === "D") fill = "var(--fdry)";
+    s += '<rect x="' + (c * cs) + '" y="' + (r * cs) + '" width="' + cs + '" height="' + cs + '" fill="' + fill + '" stroke="var(--fstroke)" stroke-width="1"/>';
+    const cx = c * cs + cs / 2, cy = r * cs + cs / 2 + 5;
+    if (t === "P") s += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" font-size="18" fill="var(--red)">¤</text>';
+    if (t === "D") s += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" font-size="18" fill="var(--amber)">≈</text>';
+    if (t === "S") s += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" font-size="18" fill="var(--blue)">?</text>';
+    if (t === "H") s += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" font-size="13" fill="var(--blue)">⌂</text>';
+  }
+  s += '<g class="drone-g" style="transform: translate(' + (f.c * cs) + "px, " + (f.r * cs) + 'px)">' +
+       '<circle cx="' + (cs / 2) + '" cy="' + (cs / 2) + '" r="12" fill="none" stroke="var(--green)" stroke-width="2"/>' +
+       '<text x="' + (cs / 2) + '" y="' + (cs / 2 + 5) + '" text-anchor="middle" font-size="14" fill="var(--green)">✈</text></g>';
+  s += "</svg>";
+  $("fwrap").innerHTML = s;
+  $("fhud").innerHTML = "junie · row <b>" + f.r + "</b> col <b>" + f.c + "</b> · battery <b>" + f.battery + "%</b> · " + esc(MISSIONS[f.mission].name.toLowerCase());
+}
+function fieldTile() { return field.tiles[field.r][field.c]; }
+function spend(n) {
+  field.battery -= n;
+  if (field.battery <= 0) {
+    field.battery = 0; drawField();
+    line("Battery dead — Junie autolands and a tractor drags her to the dock. Recharged.", "c-red");
+    logEvent("junie battery depleted — recovered to dock", "err");
+    field.r = 0; field.c = 0; field.battery = 100; drawField();
+    return false;
+  }
+  return true;
+}
+function runFieldLine(inputLine) {
+  const stmts = inputLine.split(";").map(s => s.trim()).filter(Boolean);
+  if (!stmts.length) return;
+  for (const st of stmts) {
+    const loop = st.match(/^for\s+\w+\s+in\s+range\(\s*(\d+)\s*\)\s*:\s*(.+)$/);
+    if (loop) {
+      const n = parseInt(loop[1], 10);
+      if (n > 60) { line("ValueError: range too large for one breath (max 60)", "c-red"); return; }
+      for (let i = 0; i < n; i++) { if (!execDrone(loop[2].trim())) return; }
+    } else {
+      if (!execDrone(st)) return;
+    }
+  }
+  drawField();
+  const m = MISSIONS[field.mission];
+  if (m.check(field)) {
+    score.missions++; setStatus();
+    blank(); line(m.name + " COMPLETE.", "c-green");
+    logEvent(m.name.toLowerCase() + " complete", "ok");
+    if (field.mission < MISSIONS.length - 1) {
+      field.mission++; field.scanned = false;
+      missionBrief(); drawField();
+    } else {
+      line("All missions flown. The field is green, the dock hums, Junie sleeps.", "c-green");
+      line("field starts a fresh field · menu returns to console.", "c-dim");
+    }
+  }
+}
+function execDrone(st) {
+  const m = st.match(/^drone\.(move|scan|spray|water|home|pos|status)\(\s*(.*?)\s*\)$/);
+  if (!m) {
+    if (/^drone\.\w+$/.test(st)) line("Hint: functions need parentheses — drone.scan()", "c-red");
+    else if (/^drone\./.test(st)) line("AttributeError: 'Drone' object has no attribute '" + st.slice(6).split("(")[0] + "'", "c-red");
+    else line('SyntaxError: Junie only understands drone.<command>(...) and single-line for-loops', "c-red");
+    return false;
+  }
+  const fn = m[1];
+  const args = parseArgs(m[2]);
+  const f = field;
+  if (fn === "move") {
+    const dir = (typeof args[0] === "string") ? args[0].toLowerCase() : null;
+    const steps = args.length > 1 ? args[1] : 1;
+    if (!dir || !["north", "south", "east", "west"].includes(dir)) {
+      line('TypeError: move() wants "north", "south", "east" or "west" — in quotes', "c-red"); return false;
+    }
+    if (typeof steps !== "number" || steps < 1) { line("TypeError: steps must be a positive int", "c-red"); return false; }
+    for (let i = 0; i < steps; i++) {
+      let nr = f.r, nc = f.c;
+      if (dir === "north") nr--; if (dir === "south") nr++;
+      if (dir === "west") nc--; if (dir === "east") nc++;
+      if (nr < 0 || nr >= FH || nc < 0 || nc >= FW) {
+        drawField(); line("Junie refuses — edge of the field.", "c-red"); return true;
+      }
+      f.r = nr; f.c = nc;
+      if (!spend(1)) return true;
+      if (f.tiles[f.r][f.c] === "H") { f.battery = 100; }
+    }
+    if (f.tiles[f.r][f.c] === "H") line("Docked. Battery 100%.", "c-blue");
+    return true;
+  }
+  if (fn === "scan") {
+    if (!spend(1)) return true;
+    const t = fieldTile();
+    const msg = { ".": "healthy crop", "P": "PEST INFESTATION", "D": "dry soil", "H": "the dock", "S": "anomaly — a lost garden gnome. Logged." }[t];
+    line("scan → " + msg, t === "P" ? "c-red" : t === "D" ? "c-amber" : "c-blue");
+    if (t === "S") { f.tiles[f.r][f.c] = "."; f.scanned = true; }
+    return true;
+  }
+  if (fn === "spray") {
+    if (!spend(4)) return true;
+    if (fieldTile() === "P") { f.tiles[f.r][f.c] = "."; line("Pest neutralised.", "c-green"); }
+    else line("Sprayed a perfectly innocent tile. The crops forgive you.", "c-dim");
+    return true;
+  }
+  if (fn === "water") {
+    if (!spend(4)) return true;
+    if (fieldTile() === "D") { f.tiles[f.r][f.c] = "."; line("Soil watered.", "c-green"); }
+    else line("Watered an already-happy tile.", "c-dim");
+    return true;
+  }
+  if (fn === "home") {
+    const dist = f.r + f.c;
+    if (!spend(Math.max(1, Math.ceil(dist / 2)))) return true;
+    f.r = 0; f.c = 0; f.battery = 100;
+    line("Straight-line flight to dock. Battery 100%.", "c-blue");
+    return true;
+  }
+  if (fn === "pos" || fn === "status") {
+    line("(row " + f.r + ", col " + f.c + ")  battery " + f.battery + "%", "c-blue");
+    return true;
+  }
+  return false;
+}
+function parseArgs(s) {
+  if (!s.trim()) return [];
+  const parts = s.match(/"[^"]*"|'[^']*'|[^,\s][^,]*/g) || [];
+  return parts.map(p => {
+    p = p.trim();
+    if (/^["'].*["']$/.test(p)) return p.slice(1, -1);
+    const n = Number(p);
+    return isNaN(n) ? p : n;
+  });
+}
+
+/* ============================================================
+   INPUT ROUTER
+   ============================================================ */
+function questLog() {
+    line("── QUEST LOG ───────────────────────────", "c-green");
+
+    const bar = (x, n) => "\u25b0".repeat(Math.round(8 * x / n)) + "\u25b1".repeat(8 - Math.round(8 * x / n));
+    MODULES.forEach(m => {
+      const done = m.drills.filter(d => d.doneFlag).length;
+      line("  " + bar(done, m.drills.length) + "  " + done + "/" + m.drills.length + "  start " + m.id + "  " + m.name, done === m.drills.length ? "c-green" : "c-dim");
+    });
+    line("  " + bar(score.ghostBest, 100) + "  " + (score.ghostBest || 0) + "%   ghost     GHOST TYPING", "c-dim");
+    line("  " + bar(score.bugs, BUGS.length) + "  " + score.bugs + "/" + BUGS.length + "  bugs      BUG HUNT", "c-dim");
+    line("  " + bar(Math.min(score.missions, 3), 3) + "  " + score.missions + "/3   field     FIELD OPS", "c-dim");
+    line("  " + bar(score.forges, FORGES.length) + "  " + score.forges + "/" + FORGES.length + "   forge     BLANK FILE", "c-dim");
+    if (missed.length) line("  " + missed.length + " stumbled forms waiting — start review", "c-amber");
+    }
+function handle(raw) {
+  const t = raw.trim().toLowerCase();
+  if (cliMode === "boot") return;
+  if (cliMode === "login") { if (t) doLogin(raw.trim()); return; }
+  if (cliMode === "password") { doPassword(); return; }
+  if (cliMode === "shell") { shellCmd(raw, t); return; }
+  if (t === "exit()" || t === "quit()") { toShell(); return; }
+  if (t === "exit" || t === "quit") { line("Use exit() or Ctrl-D (i.e. EOF) to exit", "c-dim"); return; }
+  // meta first
+  if (t === "clear") { out.innerHTML = ""; return; }
+  if (t === "help") { showHelp(); return; }
+  if (t === "score") {
+    line("drills " + score.drills + " · best ghost accuracy " + score.ghostBest + "% · bugs fixed " + score.bugs + " · missions " + score.missions, "c-amber");
+    return;
+  }
+  if (t === "menu" || t === "home") {
+    mode = "home"; field = null; bug = null; showPane("term");
+    $("taskLbl").textContent = "";
+    out.innerHTML = ""; showHome(); return;
+  }
+  if (t === "modules") { MODULES.forEach(m => line("  start " + m.id + "   " + m.name + " — " + m.intro, "c-dim")); return; }
+  if (t === "quests" || t === "nav" || t === "progress") { questLog(); return; }
+  if (t === "scroll") {
+    if (!learned.length) { line("The scroll is blank — master some drills first.", "c-dim"); return; }
+    line("── SCROLL OF FORMS ─────────────────────", "c-green");
+    let g = "";
+    learned.forEach(e => {
+      if (e.group !== g) { g = e.group; line(g, "c-amber"); }
+      line("  " + e.syn, "c-green");
+      if (e.note) line("    ↳ " + e.note, "c-dim");
+    });
+    return;
+  }
+  if (t.startsWith("start ")) { startModule(t.slice(6).trim()); return; }
+  if (t === "ghost") { ghostMenu(); return; }
+  if (/^ghost [1-4]$/.test(t)) { startGhost(parseInt(t.slice(6), 10)); return; }
+  if (t === "forge") { forgeMenu(); return; }
+  if (/^forge [1-4]$/.test(t)) { startForge(parseInt(t.slice(6), 10)); return; }
+  if (t === "theme") { line("themes: verdant (night ops) - paper (day watch) - ember (long haul)", "c-dim"); line("usage: theme paper", "c-dim"); return; }
+  if (/^theme (verdant|paper|ember)$/.test(t)) {
+    setTheme(t.slice(6));
+    line("Theme set: " + t.slice(6), "c-green");
+    return;
+  }
+  if (t === "bugs") { startBugs(); return; }
+  if (t === "field") { startField(); return; }
+
+  if (mode === "forge") { checkForge(raw); return; }
+  if (mode === "drills") { checkDrill(raw); return; }
+  if (mode === "bugs") { checkBug(raw); return; }
+  if (mode === "field") {
+    if (t === "map") { drawField(); return; }
+    if (t === "mission") { missionBrief(); return; }
+    runFieldLine(raw); return;
+  }
+  line("Unknown command. help lists everything.", "c-dim");
+}
+function showHelp() {
+  line("── HELP ────────────────────────────────", "c-green");
+  line("  modules            list drill modules", "c-dim");
+  line("  start <id>         run a module   (start basics · start all · start review)", "c-dim");
+  line("  skip               inside drills/bugs: reveal the answer", "c-dim");
+  line("  ghost / ghost 1-4  retype programs over ghost letters", "c-dim");
+  line("  bugs               fix crashing code from its traceback", "c-dim");
+  line("  field              fly Junie with drone.move() etc.", "c-dim");
+  line("  forge / forge 1-4  write full programs from specs, no ghost", "c-dim");
+  line("  hint               inside drills/forge: reveal the line shape", "c-dim");
+  line("  theme <name>       verdant - paper - ember", "c-dim");
+  line("  scroll             print your learned forms (handy on mobile)", "c-dim");
+  line("  quests             quest log: every module + mode with progress", "c-dim");
+  line("  score · clear · menu", "c-dim");
+  line("  keys: ↑↓ history · Tab complete (or indent) · ^C cancel · ^D exit · ^L clear", "c-dim");
+}
+
+/* ---------------- real terminal shortcuts ---------------- */
+const hist = []; let histPos = -1, histDraft = "";
+function echoPrompt(extra) {
+  html('<span class="c-dim">' + esc($("prompt").textContent) + " </span>" + (extra || ""));
+}
+function tabComplete() {
+  const v = cmd.value;
+  // in drills/forge an empty-ish line + Tab = 4-space indent (python habit)
+  if (cliMode === "python" && (mode === "drills" || mode === "forge") && /^ *$/.test(v)) {
+    cmd.value = v + "    "; return;
+  }
+  const parts = v.split(" ");
+  const token = parts[parts.length - 1] || "";
+  const first = (parts[0] || "").toLowerCase();
+  let cands = [];
+  if (cliMode === "shell" && parts.length === 1)
+    cands = ["python3", "ls", "whoami", "date", "clear", "help", "exit"];
+  else if (cliMode === "python") {
+    if (parts.length === 1) {
+      cands = ["help", "modules", "start", "ghost", "bugs", "field", "forge", "scroll", "score", "clear", "menu", "theme", "hint", "skip", "exit()"];
+      if (mode === "field") cands = cands.concat(['drone.move("', "drone.scan()", "drone.spray()", "drone.water()", "drone.home()", "drone.pos()", "mission", "map"]);
+    } else if (first === "start") cands = ["zero", "basics", "numstr", "logic", "loops", "lists", "funcs", "errors", "all", "review"];
+    else if (first === "theme") cands = ["verdant", "paper", "ember"];
+    else if (first === "ghost" || first === "forge") cands = ["1", "2", "3", "4"];
+  } else return;
+  const m = cands.filter(c => c.toLowerCase().startsWith(token.toLowerCase()));
+  if (!m.length) return;
+  if (m.length === 1) { parts[parts.length - 1] = m[0]; cmd.value = parts.join(" "); return; }
+  let p = m[0];
+  for (const c of m) { while (p && !c.toLowerCase().startsWith(p.toLowerCase())) p = p.slice(0, -1); }
+  if (p.length > token.length) { parts[parts.length - 1] = p; cmd.value = parts.join(" "); }
+  line(m.join("   "), "c-dim");
+}
+cmd.addEventListener("keydown", e => {
+  if (mode === "ghost") {
+    if (e.ctrlKey && e.key.toLowerCase() === "c") { e.preventDefault(); endGhost(false); cmd.value = ""; return; }
+    if (e.key === "Escape" || e.key === "Backspace" || e.key === "Enter" || e.key === "Tab") {
+      e.preventDefault(); ghostKey(e); cmd.value = "";
+    }
+    return; // printable chars fall through to the input event below
+  }
+  if (e.ctrlKey && !e.altKey && !e.metaKey) {
+    const k = e.key.toLowerCase();
+    if (k === "l") { e.preventDefault(); out.innerHTML = ""; return; }
+    if (k === "c") {
+      e.preventDefault();
+      echoPrompt(esc(cmd.value) + '<span class="c-dim">^C</span>');
+      if (cliMode === "python") line("KeyboardInterrupt", "c-red");
+      cmd.value = ""; histPos = -1; return;
+    }
+    if (k === "d" && cmd.value === "") {
+      e.preventDefault();
+      if (cliMode === "python") { echoPrompt(); toShell(); }
+      else if (cliMode === "shell") { line("logout", "c-dim"); logout(); }
+      return;
+    }
+    if (k === "u") { e.preventDefault(); cmd.value = ""; return; }
+    if (k === "w") { e.preventDefault(); cmd.value = cmd.value.replace(/\S+\s*$/, ""); return; }
+    if (k === "a") { e.preventDefault(); cmd.setSelectionRange(0, 0); return; }
+    if (k === "e") { e.preventDefault(); const L = cmd.value.length; cmd.setSelectionRange(L, L); return; }
+    return;
+  }
+  if (e.key === "ArrowUp") {
+    if (!hist.length) return;
+    e.preventDefault();
+    if (histPos === -1) { histDraft = cmd.value; histPos = hist.length - 1; }
+    else if (histPos > 0) histPos--;
+    cmd.value = hist[histPos]; return;
+  }
+  if (e.key === "ArrowDown") {
+    if (histPos === -1) return;
+    e.preventDefault();
+    histPos++;
+    if (histPos >= hist.length) { histPos = -1; cmd.value = histDraft; }
+    else cmd.value = hist[histPos];
+    return;
+  }
+  if (e.key === "Tab") { e.preventDefault(); tabComplete(); return; }
+  if (e.key === "Enter") {
+    const v = cmd.value;
+    if (v.trim() !== "" || cliMode === "password") {
+      const shown = cliMode === "password" ? "········" : esc(v);
+      echoPrompt(shown);
+      if (cliMode !== "password" && cliMode !== "login" && v.trim()) {
+        if (hist[hist.length - 1] !== v) hist.push(v);
+        if (hist.length > 100) hist.shift();
+      }
+      histPos = -1; histDraft = "";
+      handle(v);
+    }
+    cmd.value = "";
+  }
+});
+cmd.addEventListener("input", () => {
+  if (mode !== "ghost") return;
+  const v = cmd.value;
+  cmd.value = "";
+  if (v) ghostChars(v);
+});
+document.querySelector(".console").addEventListener("click", e => {
+  if (mode !== "ghost" && !window.getSelection().toString()) cmd.focus();
+});
+
+(function stars() {
+  const c = $("stars");
+  if (!c || !c.getContext) return;
+  function paint() {
+    c.width = innerWidth; c.height = innerHeight;
+    const x = c.getContext("2d");
+    x.clearRect(0, 0, c.width, c.height);
+    for (let i = 0; i < 150; i++) {
+      const s = Math.random();
+      x.fillStyle = "rgba(" + (s > 0.8 ? "200,220,255" : "140,165,200") + "," + (0.15 + Math.random() * 0.55) + ")";
+      x.fillRect(Math.random() * c.width, Math.random() * c.height, s > 0.93 ? 2 : 1, s > 0.93 ? 2 : 1);
+    }
+  }
+  paint(); addEventListener("resize", paint);
+})();
+setInterval(() => {
+  const el = $("clock");
+  if (el) el.textContent = new Date().toUTCString().slice(17, 25) + " UTC";
+}, 1000);
+MODULES.forEach(m => m.drills.forEach(d => d.group = m.name));
+const qb = $("qbtn");
+if (qb) qb.addEventListener("click", () => { questLog(); cmd.focus(); });
+const themeRowEl = $("themeRow");
+if (themeRowEl) themeRowEl.querySelectorAll("button").forEach(b =>
+  b.addEventListener("click", () => { setTheme(b.dataset.t); cmd.focus(); }));
+
+setStatus();
+bootSeq();
+cmd.focus();
+</script>
+</body>
+</html>
