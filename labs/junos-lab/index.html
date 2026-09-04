@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>JunOS Lab</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="theme-color" content="#0f1512">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="toolbar">
+  <div class="tb-menu-wrap">
+    <button id="add-btn" title="Place devices and buildings">Add ▾</button>
+    <div class="tb-menu" id="add-menu"></div>
+  </div>
+  <div id="connect-wrap">
+    <button id="link-mode" title="Connect two ports: click this, then click two ports">Connect: LAN / Data</button><button id="cable-kind-btn" title="Choose the cable / connection type">▾</button>
+    <div id="cable-menu"></div>
+  </div>
+  <button id="del-mode">Delete</button>
+  <button id="undo-btn" title="Undo the last canvas change (Ctrl+Z)">Undo</button>
+  <div class="tb-sep"></div>
+  <div class="tb-menu-wrap">
+    <button id="view-btn" title="Visual layers: VLAN colors, IP labels, lens, impact heatmap">View ▾</button>
+    <div class="tb-menu" id="view-menu"></div>
+  </div>
+  <div class="tb-menu-wrap">
+    <button id="plan-btn" title="Pre-build tools: validate, matrix, build packet">Plan ▾</button>
+    <div class="tb-menu" id="plan-menu"></div>
+  </div>
+  <div class="tb-menu-wrap">
+    <button id="lab-btn" title="Save, load, or clear the lab">Lab ▾</button>
+    <div class="tb-menu" id="lab-menu"></div>
+  </div>
+  <div class="tb-sep"></div>
+  <button id="toggle-scenario">Scenarios</button>
+  <button id="ref-btn" title="Searchable command and concept reference">Reference</button>
+  <select id="theme-select" class="tb-select" title="Theme">
+    <option value="space">Orbital</option>
+    <option value="terminal">Terminal</option>
+  </select>
+  <span id="statusbar"></span>
+  <span id="hint">Click a device for its CLI. Drag to move. Wheel = zoom, drag background = pan.</span>
+  <div id="legacy-actions" style="display:none">
+    <button id="add-switch"></button>
+    <button id="add-router"></button>
+    <button id="add-host"></button>
+    <button id="add-server"></button>
+    <button id="add-isp"></button>
+    <button id="add-ap"></button>
+    <button id="add-crac"></button>
+    <button id="add-ups"></button>
+    <button id="add-rack"></button>
+    <button id="add-tray"></button>
+    <button id="add-desk"></button>
+    <button id="add-zone"></button>
+    <button id="vlan-btn"></button>
+    <button id="label-btn"></button>
+    <button id="lens-btn"></button>
+    <button id="validate-btn"></button>
+    <button id="impact-btn"></button>
+    <button id="matrix-btn"></button>
+    <button id="packet-btn"></button>
+    <button id="save"></button>
+    <button id="load"></button>
+    <button id="export-configs"></button>
+    <button id="clear"></button>
+  </div>
+</div>
+
+<div id="canvas-wrap">
+  <svg id="svg"></svg>
+  <div id="status-row"></div>
+  <div id="vlan-legend"></div>
+</div>
+
+<div id="tablet">
+  <div id="tablet-head">
+    <span class="tablet-cam"></span>
+    <button id="tablet-tab-learn" class="tablet-tab">Learn</button>
+    <button id="tablet-tab-scen" class="tablet-tab active">Scenarios</button>
+    <button id="tablet-tab-ref" class="tablet-tab">Reference</button>
+    <button id="tablet-tab-juno" class="tablet-tab">JUNO</button>
+    <button id="tablet-tab-notes" class="tablet-tab">Notes</button>
+    <span class="tablet-drag-hint">drag me</span>
+    <button id="tablet-close">✕</button>
+  </div>
+  <div id="tablet-body">
+    <div id="tab-notes" style="display:none"><div id="notes-list"></div></div>
+    <div id="tab-learn" style="display:none">
+      <div id="tut-list"></div>
+      <div id="tut-active" style="display:none"></div>
+    </div>
+    <div id="tab-scen">
+      <div id="scen-pager">
+        <button id="scen-prev" title="Previous page">◂</button>
+        <select id="scenario-select"></select>
+        <button id="scen-next" title="Next page">▸</button>
+      </div>
+      <div class="scen-toprow">
+        <button id="exam-btn" title="Hides hints and setup, times you until all objectives pass">Exam mode</button>
+      </div>
+      <div id="exam-timer"></div>
+      <h3 id="scen-title"></h3>
+      <p id="scen-desc"></p>
+      <div id="scen-objectives"></div>
+      <div id="hintbox">
+        <button id="load-setup-btn">Load starting setup for this scenario</button>
+        <button id="hint-btn">Give me a hint</button>
+        <div id="hint-list"></div>
+      </div>
+      <div id="ticketbox">
+        <button id="contract-btn" title="A generated build brief: departments, VLANs, requirements">Generate contract</button>
+        <button id="ticket-btn">Generate practice ticket</button>
+        <button id="solution-btn" style="display:none">Reveal the fault(s)</button>
+      </div>
+      <div id="scen-pageno"></div>
+    </div>
+    <div id="tab-ref" style="display:none"></div>
+    <div id="tab-juno" style="display:none">
+      <div id="juno-toprow">
+        <button id="juno-scan-btn">Full scan</button>
+        <button id="juno-voice">voice off</button>
+        <span class="juno-sld"><label>vol</label><input id="juno-vol" type="range" min="0.2" max="1" step="0.1" title="Voice volume"></span>
+        <span class="juno-sld"><label>pace</label><input id="juno-rate" type="range" min="0.8" max="1.3" step="0.05" title="Speaking pace"></span>
+      </div>
+      <div id="juno-log"></div>
+      <div id="juno-chips"></div>
+      <input id="juno-input" autocomplete="off" spellcheck="false"
+             placeholder="Ask JUNO — try: why can't hq-pc reach 10.0.20.5">
+    </div>
+  </div>
+  <div class="tablet-homebar"></div>
+</div>
+
+<div id="cli">
+  <div id="cli-head">
+    <div id="cli-tabs"></div>
+    <span id="cli-countdown"></span>
+    <select id="term-profile" class="tb-select" title="Terminal color profile — real macOS and Windows schemes (see Reference: Real terminals)">
+      <option value="match">App theme</option>
+      <optgroup label="macOS Terminal">
+        <option value="mac-basic">Basic (white)</option>
+        <option value="mac-pro">Pro (black)</option>
+        <option value="mac-homebrew">Homebrew</option>
+        <option value="solarized-dark">Solarized Dark (iTerm2)</option>
+      </optgroup>
+      <optgroup label="Windows">
+        <option value="win-cmd">Command Prompt</option>
+        <option value="win-ps">PowerShell</option>
+        <option value="win-campbell">Windows Terminal (Campbell)</option>
+      </optgroup>
+    </select>
+    <button id="bell-btn" title="Terminal bell: a short beep on errors, like the ASCII BEL of real terminals">bell on</button>
+    <button id="assist-btn" title="Inline suggestions from your history and the command grammar — ArrowRight accepts">assist on</button>
+    <button id="popout-btn" title="Pop the terminal out into a floating window (drag by its header, resize from the corner)">pop out</button>
+    <button id="closecli">✕</button>
+  </div>
+  <div id="cli-log"></div>
+  <div id="cli-inputrow">
+    <span id="cli-prompt">&gt;</span>
+    <div id="cli-inwrap"><span id="cli-ghost"></span><input id="cli-input" autocomplete="off" spellcheck="false" autocapitalize="off" autocorrect="off"></div>
+  </div>
+</div>
+
+<div id="modal-root"></div>
+<div id="popover"></div>
+
+<!-- classic scripts, load order matters: each layer builds on the previous -->
+<script src="js/core.js"></script>
+<script src="js/grammar.js"></script>
+<script src="js/cli.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/planner.js"></script>
+<script src="js/juno.js"></script>
+<script src="js/scenarios.js"></script>
+<script src="js/tutorials.js"></script>
+<script>
+/* installable app: only over http(s) — double-clicking index.html stays untouched */
+if("serviceWorker" in navigator && /^https?:$/.test(location.protocol))
+  navigator.serviceWorker.register("sw.js").catch(() => {});
+</script>
+</body>
+</html>
