@@ -22,7 +22,7 @@ const LABS_CONFIG = [
     ring: "ring-mid",
     angle: -30,
     glyph: '<rect x="1" y="4" width="14" height="8" rx="1.5"/><path d="M4 8h2M7 8h2M10 8h2"/>'
-  }
+  },
   {
     id: "junle",
     name: "Junle",
