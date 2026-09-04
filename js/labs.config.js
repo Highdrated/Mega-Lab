@@ -23,10 +23,13 @@ const LABS_CONFIG = [
     angle: -30,
     glyph: '<rect x="1" y="4" width="14" height="8" rx="1.5"/><path d="M4 8h2M7 8h2M10 8h2"/>'
   }
-  // Next room goes here, e.g.:
-  // {
-  //   id: "python-lab", name: "Python lab", tag: "programming",
-  //   path: "labs/python-lab/index.html", ring: "ring-outer", angle: 150,
-  //   glyph: '<path d="M6 4l-4 4 4 4M10 4l4 4-4 4"/>'
-  // }
+  {
+    id: "junle",
+    name: "Junle",
+    tag: "networking",
+    path: "labs/junle/index.html",
+    ring: "ring-outer",
+    angle: 150,
+    glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+  }
 ];
