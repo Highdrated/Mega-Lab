@@ -107,8 +107,12 @@
     grid-template-areas: "top top top" "nav console tele";
     gap: 12px;
     padding: 12px 14px 14px;
-    max-width: 1560px;
-    margin: 0 auto;
+    width: 100%;
+  }
+  @media (min-width: 1700px) {
+    .deck { grid-template-columns: 300px minmax(0, 1fr) 300px; gap: 16px; padding: 16px 20px 18px; }
+    .main, #cmd { font-size: 15px; }
+    .gcode { font-size: 15.5px; }
   }
   .topbar {
     grid-area: top;
@@ -245,7 +249,7 @@
   .statusbar .right { margin-left: auto; }
   .main {
     flex: 1; overflow-y: auto;
-    font-size: 13.5px; line-height: 1.55;
+    font-size: 14px; line-height: 1.62;
     scrollbar-width: thin; scrollbar-color: var(--line) transparent;
     padding-right: 4px;
     min-height: 0;
@@ -253,12 +257,13 @@
   .main::-webkit-scrollbar { width: 5px; }
   .main::-webkit-scrollbar-thumb { background: var(--line); }
   .row { white-space: pre-wrap; word-break: break-word; }
+  .row.echo { margin-top: 12px; padding-top: 8px; border-top: 1px solid var(--line); }
   .c-dim { color: var(--dim); }
   .c-amber { color: var(--amber); }
   .c-green { color: var(--cyan); }
   .c-blue { color: var(--blue); }
   .c-red { color: var(--red); }
-  .task { border-left: 2px solid var(--amber); padding: 4px 10px; margin: 8px 0 4px; color: var(--taskc); }
+  .task { border-left: 2px solid var(--amber); padding: 5px 10px; margin: 12px 0 6px; color: var(--taskc); }
   .chipline { margin: 2px 0 6px; }
   .chip {
     display: inline-block; font-size: 10px; letter-spacing: 2px;
@@ -399,16 +404,19 @@ let mode = "home";
 const score = { drills: 0, ghostBest: 0, bugs: 0, missions: 0, forges: 0 };
 
 /* ---------------- output helpers ---------------- */
+function trimOut() {
+  while (out.children.length > 350) out.removeChild(out.firstChild);
+}
 function line(txt, cls) {
   const d = document.createElement("div");
   d.className = "row" + (cls ? " " + cls : "");
   d.textContent = txt;
-  out.appendChild(d); scrollDown();
+  out.appendChild(d); trimOut(); scrollDown();
 }
-function html(h) {
+function html(h, cls) {
   const d = document.createElement("div");
-  d.className = "row"; d.innerHTML = h;
-  out.appendChild(d); scrollDown();
+  d.className = "row" + (cls ? " " + cls : ""); d.innerHTML = h;
+  out.appendChild(d); trimOut(); scrollDown();
 }
 function blank() { line("\u00a0"); }
 function scrollDown() { out.scrollTop = out.scrollHeight; }
@@ -478,7 +486,7 @@ function renderNav() {
       cmd.focus(); return;
     }
     const c = b.dataset.m ? "start " + b.dataset.m : b.dataset.c;
-    html('<span class="c-dim">' + esc($("prompt").textContent) + " </span>" + esc(c));
+    echoPrompt(esc(c));
     handle(c);
     cmd.focus();
   }));
@@ -561,6 +569,7 @@ function forgeMenu() {
   line("Best done after its ghost run: ghost first, forge second.", "c-dim");
 }
 function startForge(n) {
+  out.innerHTML = "";
   const f = FORGES.find(x => x.id === n);
   if (!f) { forgeMenu(); return; }
   const g = GHOSTS.find(x => x.id === f.ghost);
@@ -1109,6 +1118,7 @@ function showPane(which) {
    DRILLS
    ============================================================ */
 function startModule(id) {
+  out.innerHTML = "";
   if (id === "review") {
     if (!missed.length) { line("Nothing to review — no stumbles recorded yet. The scroll approves.", "c-green"); return; }
     curModule = { id: "review", name: "REVIEW", intro: "Only the forms that tripped you. " + missed.length + " to reclaim — answer right and they leave the list." };
@@ -1307,7 +1317,8 @@ function handleGhostChar(c) {
   let expected = atEol ? "\n" : lineS[G.ci];
   const cls = atEol ? "code" : G.cls[G.li][G.ci];
   let okc;
-  if (cls === "com" || cls === "str") okc = c.toLowerCase() === expected.toLowerCase();
+  if (expected === "—" || expected === "–") okc = (c === "-" || c === expected);
+  else if (cls === "com" || cls === "str") okc = c.toLowerCase() === expected.toLowerCase();
   else okc = c === expected;
   G.typed++;
   if (okc) {
@@ -1359,6 +1370,7 @@ $("gpane").addEventListener("click", () => cmd.focus());
    BUG HUNT
    ============================================================ */
 function startBugs() {
+  out.innerHTML = "";
   mode = "bugs"; setStatus();
   bug = { order: BUGS.map((_, i) => i), pos: 0 };
   shuffle(bug.order);
@@ -1444,6 +1456,7 @@ const MISSIONS = [
     check: f => !f.tiles.flat().includes("D") && f.r === 0 && f.c === 0 }
 ];
 function startField() {
+  out.innerHTML = "";
   mode = "field"; setStatus(); showPane("field");
   field = newField();
   setPrompt();
@@ -1696,7 +1709,7 @@ function showHelp() {
 /* ---------------- real terminal shortcuts ---------------- */
 const hist = []; let histPos = -1, histDraft = "";
 function echoPrompt(extra) {
-  html('<span class="c-dim">' + esc($("prompt").textContent) + " </span>" + (extra || ""));
+  html('<span class="c-dim">' + esc($("prompt").textContent) + " </span>" + (extra || ""), "echo");
 }
 function tabComplete() {
   const v = cmd.value;
