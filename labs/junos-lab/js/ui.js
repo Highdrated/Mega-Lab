@@ -135,131 +135,11 @@ function portXY(dev, portId){
   return [dev.x + x, dev.y + y];
 }
 function devCenter(dev){ return [dev.x + devWidth(dev) / 2, dev.y + devHeight(dev) / 2]; }
-/* ---------- cable pathways: trays route the cables, like real rooms ----------
-   A tray is a zone (kind "tray") with a level. Cables near a tray at both ends
-   are auto-routed along its spine; the length gains the up-and-down drops
-   people forget to estimate. No tray in reach = the old direct line. */
-const TRAY_LEVELS = {
-  ceiling:    { label: "ceiling basket",  dropM: 2.7, cap: 40 },
-  wall:       { label: "wall trunking",   dropM: 0.6, cap: 20 },
-  underfloor: { label: "underfloor duct", dropM: 0.3, cap: 50 },
-};
-const TRAY_PICKUP = 240;
-function allTrays(){ return Object.values(zones).filter(z => z.kind === "tray"); }
-function traySpine(z){
-  return z.w >= z.h
-    ? [[z.x + 8, z.y + z.h / 2], [z.x + z.w - 8, z.y + z.h / 2]]
-    : [[z.x + z.w / 2, z.y + 8], [z.x + z.w / 2, z.y + z.h - 8]];
-}
-function nearestOnSeg(p, a, b){
-  const dx = b[0] - a[0], dy = b[1] - a[1];
-  const L2 = dx * dx + dy * dy || 1;
-  const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L2));
-  return [a[0] + t * dx, a[1] + t * dy];
-}
-function ptDist(p, q){ return Math.hypot(p[0] - q[0], p[1] - q[1]); }
-function traysTouch(t1, t2){
-  const s1 = traySpine(t1), s2 = traySpine(t2);
-  const near = (p, s) => ptDist(p, nearestOnSeg(p, s[0], s[1])) < 34;
-  return near(s1[0], s2) || near(s1[1], s2) || near(s2[0], s1) || near(s2[1], s1);
-}
-function trayComponents(){
-  const ts = allTrays(), seen = new Set(), comps = [];
-  for(const t0 of ts){
-    if(seen.has(t0.id)) continue;
-    const comp = [], stack = [t0];
-    seen.add(t0.id);
-    while(stack.length){
-      const cur = stack.pop();
-      comp.push(cur);
-      for(const o of ts) if(!seen.has(o.id) && traysTouch(cur, o)){ seen.add(o.id); stack.push(o); }
-    }
-    comps.push(comp);
-  }
-  return comps;
-}
-function trayPath(comp, fromTray, fromPt, toTray, toPt){
-  if(fromTray === toTray) return { pts: [fromPt, toPt], chain: [fromTray] };
-  const prev = { [fromTray.id]: null };
-  const q = [fromTray];
-  while(q.length){
-    const cur = q.shift();
-    if(cur === toTray) break;
-    for(const o of comp) if(!(o.id in prev) && traysTouch(cur, o)){ prev[o.id] = cur; q.push(o); }
-  }
-  if(!(toTray.id in prev)) return null;
-  const chain = [];
-  for(let cur = toTray; cur; cur = prev[cur.id]) chain.unshift(cur);
-  const pts = [fromPt];
-  for(let i = 0; i < chain.length - 1; i++){
-    const sA = traySpine(chain[i]), sB = traySpine(chain[i + 1]);
-    const c0 = nearestOnSeg(sB[0], sA[0], sA[1]), c1 = nearestOnSeg(sB[1], sA[0], sA[1]);
-    const jA = ptDist(c0, sB[0]) < ptDist(c1, sB[1]) ? c0 : c1;
-    pts.push(jA, nearestOnSeg(jA, sB[0], sB[1]));
-  }
-  pts.push(toPt);
-  return { pts, chain };
-}
-function linkRoute(l){
-  const devA = devices[l.a.dev], devB = devices[l.b.dev];
-  if(!devA || !devB) return null;
-  const A = portXY(devA, l.a.port), B = portXY(devB, l.b.port);
-  const direct = { pts: [A, B], m: Math.round(ptDist(A, B) * M_PER_PX), trayIds: [], level: null };
-  const kind = l.kind || "lan";
-  if(kind === "wifi" || kind === "console") return direct;
-  if(typeof rackOf === "function"){
-    const rA = rackOf(l.a.dev), rB = rackOf(l.b.dev);
-    if(rA && rA === rB) return direct;   // in-rack DACs never leave the rack
-  }
-  let best = null;
-  for(const comp of trayComponents()){
-    let eA = null, eB = null;
-    for(const t2 of comp){
-      const s = traySpine(t2);
-      const pA = nearestOnSeg(A, s[0], s[1]), pB = nearestOnSeg(B, s[0], s[1]);
-      if(ptDist(A, pA) < (eA ? ptDist(A, eA.pt) : TRAY_PICKUP)) eA = { tray: t2, pt: pA };
-      if(ptDist(B, pB) < (eB ? ptDist(B, eB.pt) : TRAY_PICKUP)) eB = { tray: t2, pt: pB };
-    }
-    if(!eA || !eB) continue;
-    const mid = trayPath(comp, eA.tray, eA.pt, eB.tray, eB.pt);
-    if(!mid) continue;
-    const pts = [A, ...mid.pts, B];
-    let px = 0;
-    for(let i = 0; i < pts.length - 1; i++) px += ptDist(pts[i], pts[i + 1]);
-    const lvlA = TRAY_LEVELS[eA.tray.level || "ceiling"] || TRAY_LEVELS.ceiling;
-    const lvlB = TRAY_LEVELS[eB.tray.level || "ceiling"] || TRAY_LEVELS.ceiling;
-    const m = Math.round(px * M_PER_PX + lvlA.dropM + lvlB.dropM);
-    if(!best || m < best.m)
-      best = { pts, m, trayIds: mid.chain.map(t2 => t2.id), level: eA.tray.level || "ceiling" };
-  }
-  return best || direct;
-}
-function trayFillCounts(){
-  const fill = {};
-  if(!allTrays().length) return fill;
-  for(const l of Object.values(links)){
-    const r = linkRoute(l);
-    if(r) for(const tid of r.trayIds) fill[tid] = (fill[tid] || 0) + 1;
-  }
-  return fill;
-}
-function polyMid(pts){
-  let total = 0;
-  for(let i = 0; i < pts.length - 1; i++) total += ptDist(pts[i], pts[i + 1]);
-  let want = total / 2;
-  for(let i = 0; i < pts.length - 1; i++){
-    const seg = ptDist(pts[i], pts[i + 1]);
-    if(want <= seg){
-      const t = seg ? want / seg : 0;
-      return [pts[i][0] + (pts[i + 1][0] - pts[i][0]) * t, pts[i][1] + (pts[i + 1][1] - pts[i][1]) * t];
-    }
-    want -= seg;
-  }
-  return pts[0];
-}
 function linkLenM(l){
-  const r = linkRoute(l);
-  return r ? r.m : 0;
+  const a = devices[l.a.dev], b = devices[l.b.dev];
+  if(!a || !b) return 0;
+  const [x1, y1] = portXY(a, l.a.port), [x2, y2] = portXY(b, l.b.port);
+  return Math.round(Math.hypot(x2 - x1, y2 - y1) * M_PER_PX);
 }
 
 function el(tag, attrs, parent){
@@ -279,8 +159,7 @@ function portTitle(dev, portId){
   if(portId === "con") return "CON — serial console port — no network traffic (Console cables go here)";
   if(dev.type === "host" || dev.type === "server")
     return `eth0 — ${dev.cfg.ip ? dev.cfg.ip + "/" + dev.cfg.bits : "no IP"}` +
-      (dev.type === "server" ? "  (server)" : "") +
-      '\n(this jack IS "eth0" — Linux\'s name for the machine\'s first wired card; "dev eth0" in commands means this)';
+      (dev.type === "server" ? "  (server)" : "");
   if(dev.type === "isp") return `wan0 — ${dev.cfg.ip}/${dev.cfg.bits} (public)`;
   const d = D(dev);
   if(dev.type === "router"){
@@ -297,54 +176,17 @@ function portTitle(dev, portId){
   return t;
 }
 
-/* ---------- traffic: a rolling one-minute ledger of real packet journeys ---------- */
-var TRAFFIC = { events: [], cum: {} };   // cum["lid|toDevId"] = lifetime packets toward that device
-var probeOn = false, probePos = null;
-const PROBE_R = 150;
-function trafficBump(lid, toDevId){
-  TRAFFIC.events.push([Date.now(), lid]);
-  if(TRAFFIC.events.length > 3000) TRAFFIC.events.splice(0, 800);
-  const k = lid + "|" + (toDevId || "?");
-  TRAFFIC.cum[k] = (TRAFFIC.cum[k] || 0) + 1;
-}
-/* lifetime in/out counters for one device's port, real-counter style */
-function trafficPortCounters(devId, lid){
-  const l = links[lid];
-  if(!l) return { input: 0, output: 0 };
-  const farDev = l.a.dev === devId ? l.b.dev : l.a.dev;
-  return {
-    input: TRAFFIC.cum[lid + "|" + devId] || 0,
-    output: TRAFFIC.cum[lid + "|" + farDev] || 0,
-  };
-}
-function trafficStats(windowMs){
-  const cut = Date.now() - (windowMs || 60000);
-  const per = {}; let total = 0;
-  for(const [ts, lid] of TRAFFIC.events){
-    if(ts < cut) continue;
-    total++; per[lid] = (per[lid] || 0) + 1;
-  }
-  return { total, per };
-}
-function trafficCount(segs){
-  try{ for(const s of (segs || [])) if(s && s.link) trafficBump(s.link, s.dev); }catch(e){}
-}
-var RENDER_TRAFFIC = { total: 0, per: {} };
-var RENDER_TRAYFILL = {};
 function render(){
   if(!svg) return;
   svg.innerHTML = "";
   worldG = el("g", { id: "world", transform: `translate(${view.x},${view.y}) scale(${view.scale})` }, svg);
   const zoneLayer = el("g", {}, worldG);
-  const zRank = z => ({ building: 0, tray: 1, rack: 2, desk: 2 })[z.kind || "building"] || 0;
   Object.values(zones)
-    .sort((a, b) => (zRank(a) - zRank(b)) || (b.w * b.h) - (a.w * a.h))
+    .sort((a, b) => ((a.kind === "rack" ? 1 : 0) - (b.kind === "rack" ? 1 : 0)) || (b.w * b.h) - (a.w * a.h))
     .forEach(z => renderZone(z, zoneLayer));
   const linkLayer = el("g", {}, worldG);
   const devLayer = el("g", {}, worldG);
   animLayer = el("g", {}, worldG);
-  RENDER_TRAFFIC = trafficStats(60000);
-  RENDER_TRAYFILL = (typeof trayFillCounts === "function" && allTrays().length) ? trayFillCounts() : {};
   Object.entries(links).forEach(([lid, l]) => renderLink(lid, l, linkLayer));
   Object.values(devices).forEach(dev => renderDevice(dev, devLayer));
   updateScaleBar();
@@ -404,51 +246,8 @@ function renderStatusRow(){
   if(!row) return;
   const st = collectStatuses();
   row.innerHTML = "";
+  if(!st.length){ row.style.display = "none"; return; }
   row.style.display = "flex";
-  const tchip = document.createElement("span");
-  tchip.className = "traffic-chip"; tchip.id = "traffic-chip";
-  tchip.textContent = "traffic " + trafficStats(60000).total + " pkt/min";
-  tchip.title = "Real packet journeys crossing the lab in the last minute (pings, DHCP, lookups)";
-  const pb = document.createElement("button");
-  pb.className = "st-chip probe-btn" + (probeOn ? " active" : "");
-  pb.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
-    '<circle cx="6.5" cy="6.5" r="4.6" fill="none" stroke="currentColor" stroke-width="1.6"/>' +
-    '<path d="M10.2 10.2 L14 14" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>' +
-    '<path d="M3.6 6.5 h1.2 l0.9 -2 l1.4 3.8 l0.9 -1.8 h1.3" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" stroke-linecap="round"/>' +
-    '</svg>';
-  pb.setAttribute("aria-label", "traffic probe");
-  const tb = document.createElement("button");
-  tb.className = "st-chip probe-btn" + (timelineOn ? " active" : "");
-  tb.innerHTML = '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true">' +
-    '<path d="M1.5 8 h3 l1.5 -4 l2.5 8 l1.5 -4 h4.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round"/>' +
-    '</svg>';
-  tb.setAttribute("aria-label", "event timeline");
-  tb.title = timelineOn
-    ? "Timeline is ON — every log event across the lab on one strip of time. Click to hide"
-    : "Event timeline: every device's log events on one strip at the bottom — commits, flaps, failovers, in order";
-  tb.onclick = () => {
-    timelineOn = !timelineOn;
-    try{ localStorage.setItem("junoslab-timeline", timelineOn ? "on" : "off"); }catch(e){}
-    renderStatusRow(); renderTimeline();
-  };
-  pb.title = probeOn
-    ? "Probe is ON — hovering lights up an area and shows its per-cable traffic. Click to switch off"
-    : "Traffic probe: grey the whole lab, then hover anywhere to light up that area and read its per-cable traffic";
-  pb.onclick = () => {
-    probeOn = !probeOn;
-    if(!probeOn) probePos = null;
-    if(svg) svg.classList.toggle("probe", probeOn);
-    renderStatusRow(); render();
-  };
-  if(typeof LAST_JOURNEY !== "undefined" && LAST_JOURNEY && (LAST_JOURNEY.fwd || []).length){
-    const ib = document.createElement("button");
-    ib.className = "st-chip";
-    ib.textContent = "inspect last ping";
-    ib.title = "Step through the last ping hop by hop: MACs, IPs, NAT rewrites — like a capture";
-    ib.onclick = openInspector;
-    row.append(tchip, pb, ib);
-  } else row.append(tchip, pb);
-  row.appendChild(tb);
   const shown = st.slice(0, 5);
   for(const x of shown){
     const chip = document.createElement("button");
@@ -487,11 +286,8 @@ function updateLens(){
   const sx = lastPtr.x, sy = lastPtr.y;
   lensClipCircle.setAttribute("cx", sx); lensClipCircle.setAttribute("cy", sy);
   lensRing.setAttribute("cx", sx); lensRing.setAttribute("cy", sy);
-  // #world already carries the pan/zoom transform — the clone inherits it,
-  // so the lens only magnifies about the pointer (applying the view again
-  // was the bug that made it miss what you pointed at)
   lensUse.setAttribute("transform",
-    `translate(${sx},${sy}) scale(${LENS_K}) translate(${-sx},${-sy})`);
+    `translate(${sx},${sy}) scale(${LENS_K}) translate(${-sx},${-sy}) translate(${view.x},${view.y}) scale(${view.scale})`);
 }
 
 /* ---------- zones: buildings and rooms on the canvas ---------- */
@@ -539,62 +335,6 @@ function packRack(z){
   const need = (y - RACK_GAP + RACK_PAD) - z.y;
   if(gear.length && z.h < need) z.h = need;
   return gear;
-}
-function renderTrayZone(z, parent){
-  const horiz = z.w >= z.h;
-  const lvl = TRAY_LEVELS[z.level || "ceiling"] || TRAY_LEVELS.ceiling;
-  const g = el("g", { class: "zone zone-tray tray-" + (z.level || "ceiling"), transform: `translate(${z.x},${z.y})` }, parent);
-  const strip = el("rect", { width: z.w, height: z.h, rx: 6, class: "tray-strip" }, g);
-  const s = traySpine(z);
-  const fill = (typeof RENDER_TRAYFILL !== "undefined" && RENDER_TRAYFILL[z.id]) || 0;
-  el("line", { x1: s[0][0] - z.x, y1: s[0][1] - z.y, x2: s[1][0] - z.x, y2: s[1][1] - z.y,
-    class: "tray-bundle", "stroke-width": Math.min(9, 2 + fill * 0.5) }, g);
-  const lab = el("text", { x: horiz ? 10 : z.w / 2 + 8, y: horiz ? -5 : 14, class: "tray-lab" }, g);
-  lab.textContent = `${z.name} · ${lvl.label} · ${fill ? fill + " cable" + (fill === 1 ? "" : "s") : "empty"}` +
-    (fill > lvl.cap ? "  OVERFILLED" : "");
-  if(fill > lvl.cap) lab.classList.add("tray-over");
-  const lt = el("title", {}, strip);
-  lt.textContent = `${z.name} — ${lvl.label}. Cables near both ends route along it automatically ` +
-    `(each end pays ~${lvl.dropM} m of drop). Capacity ~${lvl.cap} cables. Click the label to change level; drag to move; corner to resize.`;
-  lab.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if(zoneDrag && zoneDrag.moved) return;
-    const order = ["ceiling", "wall", "underfloor"];
-    z.level = order[(order.indexOf(z.level || "ceiling") + 1) % order.length];
-    floatLabel(z.x + z.w / 2, z.y, z.name + " → " + TRAY_LEVELS[z.level].label);
-    touchState();
-  });
-  strip.addEventListener("pointerdown", (e) => {
-    if(mode === "delete") return;
-    const pt = toWorld(e);
-    zoneDrag = { id: z.id, offX: pt.x - z.x, offY: pt.y - z.y, members: [], memberZones: [], moved: false };
-    e.stopPropagation();
-  });
-  strip.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if(mode === "delete"){ pushUndo(); delete zones[z.id]; touchState(); }
-  });
-  const handle = el("rect", { class: "zone-handle", x: z.w - 12, y: z.h - 12, width: 11, height: 11 }, g);
-  handle.addEventListener("pointerdown", (e) => { zoneResize = { id: z.id }; e.stopPropagation(); });
-}
-function deskOf(devId){
-  return innermostZone(Object.values(zones).filter(z =>
-    z.kind === "desk" && zoneContains(z, devId)));
-}
-function packDesk(z){
-  const seats = Object.values(devices)
-    .filter(d => d.type === "host" && zoneContains(z, d))
-    .sort((a, b) => a.x - b.x);
-  let x = z.x + 12;
-  for(const d of seats){
-    const w = devWidth(d);
-    d.x = x;
-    d.y = z.y + 30;
-    x += w + 10;
-  }
-  if(seats.length && z.w < (x + 2) - z.x) z.w = (x + 2) - z.x;
-  if(seats.length && z.h < 30 + 58 + 16) z.h = 30 + 58 + 16;
-  return seats;
 }
 function clickIntoRack(devId){
   const dev = devices[devId];
@@ -666,9 +406,7 @@ function containedZoneIds(z){
     .map(z2 => z2.id);
 }
 function renderZone(z, parent){
-  if(z.kind === "tray"){ renderTrayZone(z, parent); return; }
-  const isRack = z.kind === "rack" || z.kind === "desk";
-  const isDesk = z.kind === "desk";
+  const isRack = z.kind === "rack";
   const color = VLAN_PALETTE[(z.hue || 0) % VLAN_PALETTE.length];
   const g = el("g", { class: "zone" + (isRack ? " zone-rack" : "") +
     (isRack && z.id === rackHover ? " zone-hot" : "") +
@@ -679,13 +417,11 @@ function renderZone(z, parent){
   if(!isRack) inner.style.fill = color;
   const head = el("rect", { class: "zone-head", x: 4, y: 4, width: z.w - 8, height: 24, rx: isRack ? 2 : 7 }, g);
   if(!isRack) head.style.fill = color;
-  if(isRack && !isDesk){
+  if(isRack){
     // mounting rails with screw holes — reads as steel, not a room
     el("line", { x1: 11, y1: 32, x2: 11, y2: z.h - 8, class: "zone-rail" }, g);
     el("line", { x1: z.w - 11, y1: 32, x2: z.w - 11, y2: z.h - 8, class: "zone-rail" }, g);
   }
-  if(isDesk)
-    el("line", { x1: 8, y1: z.h - 10, x2: z.w - 8, y2: z.h - 10, class: "zone-rail" }, g);
   const name = el("text", { x: 14, y: 21, class: "zone-name" }, g);
   name.textContent = z.name;
   const count = zoneMembers(z).length;
@@ -712,7 +448,6 @@ function renderZone(z, parent){
     });
   }
   const rackBtn = el("text", { x: z.w - 14, y: 21, "text-anchor": "end", class: "zone-act" }, g);
-  if(isDesk) rackBtn.style.display = "none";
   rackBtn.textContent = "rack";
   rackBtn.addEventListener("click", (e) => {
     e.stopPropagation();
@@ -740,10 +475,9 @@ function renderZone(z, parent){
       return;
     }
     if(zoneDrag && zoneDrag.moved) return;
-    const n = await modalInput(isDesk ? "Rename desk" : isRack ? "Rename rack" : "Rename building",
-      isDesk ? "Desks hold PCs (they snap into a row) and act as the cabling OUTLET: their runs are labeled by desk name in the schedule."
-        : isRack ? "Racks are furniture inside a building — they move with it, and hold your rack-mount gear."
-        : "Buildings group devices and racks; dragging the header moves everything inside.", z.name, "text");
+    const n = await modalInput(isRack ? "Rename rack" : "Rename building",
+      isRack ? "Racks are furniture inside a building — they move with it, and hold your rack-mount gear."
+             : "Buildings group devices and racks; dragging the header moves everything inside.", z.name, "text");
     if(n !== null && n.trim()){ z.name = n.trim(); touchState(); }
   });
   handle.addEventListener("pointerdown", (e) => {
@@ -805,34 +539,16 @@ function linkStatusLabel(lid){
 function renderLink(lid, l, parent){
   const devA = devices[l.a.dev], devB = devices[l.b.dev];
   if(!devA || !devB) return;
-  const kind = l.kind || "lan";
   const [ax, ay] = portXY(devA, l.a.port);
   const [bx, by] = portXY(devB, l.b.port);
-  // vlan view keeps straight lines: it is about logic, not the physical run
-  const route = vlanView ? null : linkRoute(l);
-  const pts = route ? route.pts : [[ax, ay], [bx, by]];
-  const ptsAttr = pts.map(p => p[0].toFixed(1) + "," + p[1].toFixed(1)).join(" ");
-  const hit = el("polyline", { points: ptsAttr, class: "linkhit" }, parent);
-  const line = el("polyline", { points: ptsAttr, class: linkClass(lid, l) }, parent);
-  const [mx, my] = polyMid(pts);
+  const hit = el("line", { x1: ax, y1: ay, x2: bx, y2: by, class: "linkhit" }, parent);
+  const line = el("line", { x1: ax, y1: ay, x2: bx, y2: by, class: linkClass(lid, l) }, parent);
   const t = el("title", {}, line);
-  t.textContent = `${devA.name}:${l.a.port} ↔ ${devB.name}:${l.b.port}  [${kind}]  ${linkStatusLabel(lid)}` +
-    (route && route.trayIds.length
-      ? `\n~${route.m} m via ${route.trayIds.map(id2 => (zones[id2] || {}).name).join(" + ")} (${TRAY_LEVELS[route.level].label}, drops included)`
-      : "");
-  if(probeOn && probePos){
-    if(Math.hypot(probePos.x - mx, probePos.y - my) < PROBE_R){
-      line.classList.add("pr-hot");
-      hit.classList.add("pr-hot");
-      const n = RENDER_TRAFFIC.per[lid] || 0;
-      const tc = el("text", { x: mx, y: my - 7, "text-anchor": "middle", class: "trafcount" }, parent);
-      tc.textContent = n ? n + " pkt/min" : "quiet";
-    }
-  }
+  t.textContent = `${devA.name}:${l.a.port} ↔ ${devB.name}:${l.b.port}  [${l.kind || "lan"}]  ${linkStatusLabel(lid)}`;
   if(vlanView) applyVlanPaint(lid, l, line, parent, ax, ay, bx, by);
   const zA = zoneOf(l.a.dev), zB = zoneOf(l.b.dev);
   if(zA !== zB && (zA || zB) && kind !== "console"){
-    const casing = el("polyline", { points: ptsAttr, class: "conduit" }, parent);
+    const casing = el("line", { x1: ax, y1: ay, x2: bx, y2: by, class: "conduit" }, parent);
     parent.insertBefore ? parent.insertBefore(casing, hit) : null;
   }
   const onClick = (e) => {
@@ -843,12 +559,13 @@ function renderLink(lid, l, parent){
   hit.addEventListener("click", onClick);
   line.addEventListener("click", onClick);
   if(l.speed && l.speed !== 1 && kind !== "console" && kind !== "wifi"){
-    const sl = el("text", { x: mx, y: my + 11, "text-anchor": "middle", class: "speedlbl" }, parent);
+    const sl = el("text", { x: (ax + bx) / 2, y: (ay + by) / 2 + 11, "text-anchor": "middle", class: "speedlbl" }, parent);
     sl.textContent = speedLabel(l.speed);
   }
+  // ae badge at the midpoint
   const pcA = devA.type === "switch" && devA.d ? devA.d.portCfg[l.a.port] : null;
   if(pcA && pcA.ae){
-    const badge = el("text", { x: mx, y: my - 4, class: "aebadge", "text-anchor": "middle" }, parent);
+    const badge = el("text", { x: (ax + bx) / 2, y: (ay + by) / 2 - 4, class: "aebadge", "text-anchor": "middle" }, parent);
     badge.textContent = pcA.ae;
   }
 }
@@ -868,8 +585,8 @@ const GLYPHS = {
 function renderDevice(dev, parent){
   const w = devWidth(dev), h = devHeight(dev);
   const g = el("g", {
-    class: "device" + (probeOn && probePos && Math.hypot(probePos.x - devCenter(dev)[0], probePos.y - devCenter(dev)[1]) < PROBE_R ? " pr-hot" : "") +
-      (activeDevice === dev.id ? " selected" : "") +
+    "data-dev": dev.id,
+    class: "device" + (activeDevice === dev.id ? " selected" : "") +
       (dev.type === "router" ? " router" : "") + (dev.type === "isp" ? " isp" : "") +
       (dev.type === "ap" ? " ap" : "") + (dev.type === "crac" ? " crac" : "") +
       (dev.type === "server" ? " server" : "") +
@@ -942,9 +659,6 @@ function renderDevice(dev, parent){
   }
   dev.ports.forEach((p, i) => {
     const [px, py] = portRelPos(dev, i);
-    if(typeof TUT_SPOTLIGHT !== "undefined" && TUT_SPOTLIGHT &&
-       dev.name === TUT_SPOTLIGHT.dev && p.id === TUT_SPOTLIGHT.port)
-      el("circle", { cx: px, cy: py, r: 10, class: "spotring" }, g);
     let cls = "port";
     const pcActive = physPortActive(dev, p.id);
     if(pcActive && isLinked(dev.id, p.id)) cls += " up";
@@ -1026,8 +740,7 @@ function renderDevice(dev, parent){
     if(mode !== "normal") return;
     const pt = toWorld(e);
     dragging = { id: dev.id, offX: pt.x - dev.x, offY: pt.y - dev.y, moved: false,
-      fromRack: (rackOf(dev.id) || {}).id || null,
-      fromDesk: (typeof deskOf === "function" && (deskOf(dev.id) || {}).id) || null };
+      fromRack: (rackOf(dev.id) || {}).id || null };
     e.stopPropagation();
   });
   g.addEventListener("click", (e) => {
@@ -1111,10 +824,6 @@ svg.addEventListener("pointermove", (e) => {
     lastPtr = { x: e.clientX - r.left, y: e.clientY - r.top };
     if(lensOn) updateLens();
   }
-  if(probeOn && !dragging && !panning && !zoneDrag && !zoneResize && activePointers.size < 2){
-    probePos = toWorld(e);
-    render();
-  }
   if(activePointers.has(e.pointerId)) activePointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
   if(activePointers.size === 2){ doPinch(); return; }
   if(zoneResize){
@@ -1165,17 +874,6 @@ svg.addEventListener("pointermove", (e) => {
 function endDrag(){
   if(dragging && dragging.moved){
     const dev = devices[dragging.id];
-    if(dev && dev.type === "host"){
-      const dsk = deskOf(dev.id);
-      if(dsk){
-        const seats = packDesk(dsk);
-        render();
-        floatLabel(dev.x + devWidth(dev) / 2, dev.y, dsk.name + " — seat " + (seats.indexOf(dev) + 1));
-        if(typeof clickSound === "function") clickSound();
-      }
-      const fromD = dragging.fromDesk;
-      if(fromD && zones[fromD] && (!dsk || dsk.id !== fromD)){ packDesk(zones[fromD]); render(); }
-    }
     if(rackMountable(dev)){
       const landed = clickIntoRack(dev.id);
       const from = dragging.fromRack;
@@ -1250,6 +948,7 @@ function deleteLink(lid){
   const l = links[lid];
   if(l){
     pushUndo();
+    if(typeof SFX !== "undefined") SFX.unplug();
     devLog(devices[l.a.dev], `SNMP_TRAP_LINK_DOWN: ${l.a.port} — cable unplugged`);
     devLog(devices[l.b.dev], `SNMP_TRAP_LINK_DOWN: ${l.b.port} — cable unplugged`);
   }
@@ -1260,6 +959,7 @@ function deleteLink(lid){
 }
 function deleteDevice(devId){
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.trash();
   const wasRacked = rackOf(devId);
   Object.entries(links).forEach(([id, l]) => {
     if(l.a.dev === devId || l.b.dev === devId) delete links[id];
@@ -1271,60 +971,6 @@ function deleteDevice(devId){
   touchState();
 }
 
-/* ---------- the timeline: every log event on one strip of time ---------- */
-var timelineOn = false;
-try{ timelineOn = localStorage.getItem("junoslab-timeline") === "on"; }catch(e){}
-function timelineColor(devId){
-  let h = 0;
-  for(let i = 0; i < devId.length; i++) h = (h * 31 + devId.charCodeAt(i)) >>> 0;
-  return VLAN_PALETTE[h % VLAN_PALETTE.length];
-}
-function renderTimeline(){
-  try{
-    const wrap = document.getElementById("canvas-wrap");
-    if(!wrap) return;
-    let tl = document.getElementById("timeline");
-    if(!timelineOn){ if(tl) tl.remove(); return; }
-    if(!tl){
-      tl = document.createElement("div");
-      tl.id = "timeline";
-      wrap.appendChild(tl);
-    }
-    tl.innerHTML = "";
-    const now = Date.now();
-    const evs = (typeof EVENTS !== "undefined" ? EVENTS : []).filter(ev => now - ev.ts < 15 * 60000);
-    const lbl = document.createElement("span"); lbl.className = "tl-lbl";
-    if(!evs.length){
-      lbl.textContent = "timeline: no events in the last 15 minutes — commits, flaps, boots and trips land here";
-      tl.appendChild(lbl);
-      return;
-    }
-    const t0 = Math.min(evs[0].ts, now - 60000);
-    const span = Math.max(now - t0, 60000);
-    lbl.textContent = "last " + Math.max(1, Math.round(span / 60000)) + " min";
-    tl.appendChild(lbl);
-    const track = document.createElement("div"); track.className = "tl-track";
-    for(const ev of evs){
-      const d = devices[ev.devId];
-      const dot = document.createElement("span");
-      dot.className = "tl-dot";
-      dot.style.left = (((ev.ts - t0) / span) * 100).toFixed(2) + "%";
-      dot.style.background = timelineColor(ev.devId);
-      dot.title = new Date(ev.ts).toTimeString().slice(0, 8) + "  " +
-        (d ? d.name : ev.devId) + " — " + ev.text;
-      if(d) dot.onclick = (e2) => { e2.stopPropagation(); openCli(ev.devId); };
-      track.appendChild(dot);
-    }
-    const nowMark = document.createElement("span"); nowMark.className = "tl-now";
-    nowMark.title = "now";
-    track.appendChild(nowMark);
-    tl.appendChild(track);
-  }catch(e){}
-}
-try{
-  if(typeof requestAnimationFrame === "function" && typeof setInterval === "function")
-    setInterval(renderTimeline, 5000);
-}catch(e){}
 var scaleBarLabel = null;
 function updateScaleBar(){
   try{
@@ -1340,96 +986,6 @@ function updateScaleBar(){
     }
     scaleBarLabel.textContent = "~" + Math.round(100 * M_PER_PX / view.scale) + " m";
   }catch(e){ /* headless shim has no real DOM — the scale bar is pure chrome */ }
-}
-
-/* ---------- packet inspector: the last ping, hop by hop ---------- */
-var inspState = null, inspHl = null;
-function inspHops(){
-  const j = (typeof LAST_JOURNEY !== "undefined") ? LAST_JOURNEY : null;
-  if(!j) return [];
-  const out = (j.fwd || []).map(s => ({ s, dir: "request" }));
-  if(j.rev) out.push(...j.rev.map(s => ({ s, dir: "reply" })));
-  return out.filter(h => h.s && h.s.link);
-}
-function clearInspHl(){ if(inspHl){ try{ inspHl.remove(); }catch(e){} inspHl = null; } }
-function closeInspector(){
-  inspState = null; clearInspHl();
-  const el2 = document.getElementById("inspector");
-  if(el2) el2.remove();
-}
-function openInspector(){
-  if(!inspHops().length) return;
-  inspState = { i: 0 };
-  renderInspector();
-}
-function renderInspector(){
-  try{
-    if(!inspState) return;
-    const hops = inspHops();
-    if(!hops.length) return closeInspector();
-    inspState.i = Math.max(0, Math.min(inspState.i, hops.length - 1));
-    let card = document.getElementById("inspector");
-    if(!card){ card = document.createElement("div"); card.id = "inspector"; document.body.appendChild(card); }
-    card.innerHTML = "";
-    const { s, dir } = hops[inspState.i];
-    const prev = inspState.i > 0 ? hops[inspState.i - 1] : null;
-    const l = links[s.link];
-    const toDev = devices[s.dev];
-    const fromDev = l ? devices[l.a.dev === s.dev ? l.b.dev : l.a.dev] : null;
-    const toPort = l ? (l.a.dev === s.dev ? l.a.port : l.b.port) : null;
-
-    const head = document.createElement("div"); head.className = "insp-head";
-    const ht = document.createElement("span");
-    ht.textContent = "Packet: hop " + (inspState.i + 1) + " of " + hops.length + " — " + dir;
-    const x = document.createElement("button"); x.className = "insp-x"; x.textContent = "✕";
-    x.onclick = closeInspector;
-    head.append(ht, x);
-    card.appendChild(head);
-
-    const route = document.createElement("div"); route.className = "insp-route";
-    route.textContent = (fromDev ? fromDev.name : "?") + "  ▸  " + (toDev ? toDev.name : "?") +
-      (l && l.kind && l.kind !== "lan" ? "   [" + l.kind + "]" : "");
-    card.appendChild(route);
-
-    const grid = document.createElement("div"); grid.className = "insp-grid";
-    const field = (k, v, hot) => {
-      const kk = document.createElement("div"); kk.className = "insp-k"; kk.textContent = k;
-      const vv = document.createElement("div"); vv.className = "insp-v" + (hot ? " hot" : ""); vv.textContent = v;
-      grid.append(kk, vv);
-    };
-    const macChanged = prev && prev.s.srcMac !== s.srcMac;
-    const natChanged = prev && prev.dir === dir && prev.s.srcIp !== s.srcIp;
-    field("src MAC", s.srcMac || "?", macChanged);
-    field("dst MAC", toDev && toPort ? macOf(s.dev, toPort) : "?", macChanged);
-    field("src IP", s.srcIp || "?", natChanged);
-    field("dst IP", s.dstIp || "?", false);
-    card.appendChild(grid);
-
-    const notes = document.createElement("div"); notes.className = "insp-notes";
-    const note = t2 => { const n = document.createElement("div"); n.textContent = "• " + t2; notes.appendChild(n); };
-    if(inspState.i === 0) note("The journey begins — these are the fields a real capture (tcpdump, Wireshark) would show.");
-    if(prev && prev.dir === "request" && dir === "reply") note("The REPLY begins: source and destination swap, and the whole journey must work mirrored.");
-    if(natChanged) note("NAT happened here: the source IP was rewritten (" + prev.s.srcIp + " → " + s.srcIp + "). The far side will answer to the NEW address.");
-    if(macChanged && !natChanged && prev && prev.dir === dir) note("A routed hop: the MAC addresses changed — MACs are per-street and rewritten by every router — while the IPs ride through unchanged.");
-    if(!prev) card.appendChild(notes); else card.appendChild(notes);
-
-    const row = document.createElement("div"); row.className = "insp-btns";
-    const bk = document.createElement("button"); bk.textContent = "◂ prev";
-    bk.disabled = inspState.i === 0;
-    bk.onclick = () => { inspState.i--; renderInspector(); };
-    const fw = document.createElement("button"); fw.textContent = "next ▸";
-    fw.disabled = inspState.i >= hops.length - 1;
-    fw.onclick = () => { inspState.i++; renderInspector(); };
-    row.append(bk, fw);
-    card.appendChild(row);
-
-    clearInspHl();
-    if(l && animLayer && devices[l.a.dev] && devices[l.b.dev]){
-      const [x1, y1] = portXY(devices[l.a.dev], l.a.port);
-      const [x2, y2] = portXY(devices[l.b.dev], l.b.port);
-      inspHl = el("line", { x1, y1, x2, y2, class: "insp-hl" }, animLayer);
-    }
-  }catch(e){}
 }
 
 /* ---------- link popover ---------- */
@@ -1648,6 +1204,7 @@ async function pickAndPlace(kind){
   if(cond === null) return;
   const p = spawnPos(isSwitch ? -40 : 0);
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   const id = isSwitch ? makeSwitch(p.x, p.y, ports, model) : makeRouter(p.x, p.y, ports, model);
   if(cond === "new"){
     const d = devices[id];
@@ -1676,6 +1233,7 @@ document.getElementById("add-ap").onclick = async () => {
   const ssid = await modalInput("SSID", "The network name hosts see in wifi scan.", "office-wifi", "text");
   if(ssid === null || !ssid.trim()) return;
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   const p = spawnPos(30);
   makeAp(p.x, p.y, ssid.trim(), m.model, m.radius);
   rebuildAllDerived(); touchState();
@@ -1703,6 +1261,7 @@ document.getElementById("add-crac").onclick = async () => {
     "Every powered device pours heat into its building; cooling takes it back out. Place the unit INSIDE the room it should cool — the building header shows the live temperature.", CRAC_MODELS);
   if(m === null) return;
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   const p = spawnPos(60);
   makeCrac(p.x, p.y, m.model, m.cool);
   rebuildAllDerived(); touchState();
@@ -1712,37 +1271,12 @@ const UPS_MODELS = [
   { value: { model: "1U Rack UPS 1000W", capW: 1000 }, label: "1U rack UPS — 1000 W", desc: "Carries a switch, a server and change through an outage" },
   { value: { model: "2U Rack UPS 2700W", capW: 2700 }, label: "2U rack UPS — 2700 W", desc: "A whole small rack: servers, switches, cooling" },
 ];
-document.getElementById("add-tray").onclick = async () => {
-  const lvl = await modalChoice("New cable tray",
-    "A shared pathway: every cable whose two ends sit near it routes ALONG it automatically — bundled, measured honestly (the up-and-down drops are charged per end), and checked for overfill.", [
-    { value: "ceiling", label: "Ceiling basket", desc: "Above the suspended ceiling; ~2.7 m drop per end; holds ~40 cables" },
-    { value: "wall", label: "Wall trunking", desc: "Surface duct at desk height; ~0.6 m per end; ~20 cables" },
-    { value: "underfloor", label: "Underfloor duct", desc: "Raised-floor route; ~0.3 m per end; ~50 cables" },
-  ]);
-  if(lvl === null) return;
-  pushUndo();
-  const p = spawnPos(0);
-  const id = "z_" + uid("tray");
-  zones[id] = { id, name: "Tray " + String.fromCharCode(65 + allTrays().length),
-    x: p.x - 130, y: p.y - 12, w: 260, h: 24, hue: 0, kind: "tray", level: lvl };
-  touchState();
-};
-document.getElementById("add-desk").onclick = async () => {
-  const n = await modalInput("New desk",
-    "Furniture for PCs: drop them on it and they snap into a row. The desk is also the cabling OUTLET — its runs are labeled by desk name in the schedule, like a real patch list.",
-    "Desk " + (Object.values(zones).filter(z => z.kind === "desk").length + 1), "text");
-  if(n === null || !n.trim()) return;
-  pushUndo();
-  const p = spawnPos(20);
-  const id = "z_" + uid("desk");
-  zones[id] = { id, name: n.trim(), x: p.x - 110, y: p.y - 50, w: 220, h: 104, hue: 5, kind: "desk" };
-  touchState();
-};
 document.getElementById("add-ups").onclick = async () => {
   const m = await modalChoice("New UPS",
     'A battery between the grid and your gear. Size it against the building\'s infrastructure load (open the UPS status), then drill an outage with the building\'s "grid" button — hosts have laptop batteries, your racks do not.', UPS_MODELS);
   if(m === null) return;
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   const p = spawnPos(50);
   const id = makeUps(p.x, p.y, m.model, m.capW);
   rebuildAllDerived(); touchState();
@@ -1751,12 +1285,14 @@ document.getElementById("add-ups").onclick = async () => {
 document.getElementById("add-host").onclick = () => {
   const p = spawnPos(60);
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   makeHost(p.x, p.y);
   touchState();
 };
 document.getElementById("add-server").onclick = () => {
   const p = spawnPos(40);
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   const id = makeServer(p.x, p.y);
   rebuildAllDerived();
   touchState();
@@ -1767,6 +1303,7 @@ document.getElementById("add-isp").onclick = async () => {
   if(v === null) return;
   const p = spawnPos(-80);
   pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
   makeIsp(p.x, p.y, validIp(v) ? v : "203.0.113.1");
   touchState();
 };
@@ -2249,6 +1786,15 @@ function updateCountdown(){
 }
 setInterval(() => { updateCountdown(); if(typeof updateExamTimer === "function") updateExamTimer(); }, 1000);
 
+function runCliCommand(dev, raw, masked){
+  const out = deviceExec(dev, raw);
+  dev.cli.log.push(...out);
+  if(out.some(l => l.cls === "err") && typeof termBell === "function") termBell();
+  if(raw.trim() && !masked && !dev.cli.stage){ dev.cli.history.push(raw); dev.cli.hIdx = dev.cli.history.length; }
+  refreshCliView();
+  touchState();
+  return out;
+}
 cliInput.addEventListener("keydown", (e) => {
   const dev = devices[activeDevice];
   if(!dev) return;
@@ -2259,12 +1805,8 @@ cliInput.addEventListener("keydown", (e) => {
     dev.cli.log.push({ cls: "cmd", text: promptStr(dev) + (masked ? "" : raw) });
     if(dev.cli.mode === "cfg" && raw.trim() && dev.cli.editKeys.length && !dev.cli.stage)
       dev.cli.log.push({ cls: "sys", text: cfgBanner(dev) });
-    const out = deviceExec(dev, raw);
-    dev.cli.log.push(...out);
-    if(out.some(l => l.cls === "err") && typeof termBell === "function") termBell();
-    if(raw.trim() && !masked && !dev.cli.stage){ dev.cli.history.push(raw); dev.cli.hIdx = dev.cli.history.length; }
-    refreshCliView();
-    touchState();
+    if(typeof predictIntercept === "function" && predictIntercept(dev, raw, masked)) return;
+    runCliCommand(dev, raw, masked);
     return;
   }
   if(e.key === "?"){
@@ -2333,8 +1875,6 @@ function segPoints(segs){
   return pts;
 }
 function animatePing(fwdSegs, ok, revSegs, meta){
-  trafficCount(fwdSegs);
-  if(ok) trafficCount(revSegs && revSegs.length ? revSegs : fwdSegs);
   if(typeof requestAnimationFrame !== "function" || !animLayer) return;
   meta = meta || {};
   const fwd = segPoints(fwdSegs || []);
@@ -2354,6 +1894,7 @@ function animatePing(fwdSegs, ok, revSegs, meta){
     return;
   }
   runDot(fwd, ok ? cssVar("--green", "#3ecf6e") : cssVar("--red", "#d1554a"), () => {
+    if(ok && typeof SFX !== "undefined") SFX.blip();
     if(!ok){
       const last = fwd[fwd.length - 1];
       flashFail(last);
@@ -2373,7 +1914,6 @@ function floatLabel(x, y, text, color){
   setTimeout(() => t.remove(), 2600);
 }
 function animateDhcp(pathSegs){
-  trafficCount(pathSegs); trafficCount(pathSegs);   // DORA is four passes over the same path
   if(typeof requestAnimationFrame !== "function" || !animLayer) return;
   const fwd = segPoints(pathSegs || []);
   if(fwd.length < 2) return;
@@ -2387,6 +1927,7 @@ function animateDhcp(pathSegs){
     const color = i % 2 === 0 ? green : blue;
     const end = pts[pts.length - 1];
     runDot(pts, color, () => {
+      if(typeof SFX !== "undefined") SFX.tick();
       floatLabel(end[0], end[1], label, color);
       i++;
       setTimeout(next, 160);
@@ -2426,6 +1967,7 @@ function runDot(pts, color, onDone){
 function flashFail(pt){
   if(!animLayer) return;
   if(!pt) return;
+  if(typeof SFX !== "undefined") SFX.womp();
   const x = el("text", { x: pt[0], y: pt[1] + 5, class: "pktfail", "text-anchor": "middle" }, animLayer);
   x.textContent = "✕";
   setTimeout(() => x.remove(), 1100);
@@ -2696,12 +2238,10 @@ const REF_CONCEPTS = [
   ["DHCP — the DORA dance", "Nobody types addresses onto three hundred laptops. A machine that wakes up addressless shouts into its subnet and a DHCP server answers, in a four-step exchange called DORA — Discover, Offer, Request, Acknowledge. The lab plays it out for real: dhclient eth0 on a host, a pool committed on the switch (see the how-to), and the animation shows all four packets. The ACK carries more than the address: gateway and DNS server ride along, which is why a wrong pool quietly breaks THREE things at once. show dhcp server binding lists every lease this box has handed out."],
   ["BGP — buying the internet", "Inside your network you own every route. At the edge, the internet is somebody else's network — your ISP's — and the two of you exchange routes by TREATY, not by trust. That treaty is BGP. Your network gets a name (set routing-options autonomous-system 65010), you declare who you talk to (set protocols bgp group EXT type external, peer-as 65001, neighbor <isp-ip>), and if everything matches — the AS numbers, the shared subnet, an actual working path — the session goes Established and the provider hands you a default route: 0.0.0.0/0, learned, not typed. Watch it appear in show route as [BGP/170]. When the numbers do NOT match, show bgp summary tells you exactly why it sits in Active, sulking. Every 'my internet is down' at a real company edge starts with reading that one screen."],
   ["DNS — the first step of every connection", "Every by-name connection starts with a question you never see: what NUMBER is this name? Your machine asks its configured nameserver (nameserver <ip> in this lab, /etc/resolv.conf in real life), the server checks its records, and only then does the real connection begin. This means the site can be UP while names are dead, and vice versa — two different failures that look identical from the couch. nslookup asks the question by itself, which is how you prove which half is broken. Run scenario 23 and break it both ways on purpose; the flowchart on this card is the whole debugging path."],
-  ["VRRP — two doors, one address", "A gateway is a single point of failure with a job title. VRRP fixes that: two switches carry the SAME virtual gateway address — set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1 on both, plus a priority (higher wins). Hosts point at the virtual address and never learn there are two boxes behind it. The master answers; when it dies, the backup takes over and nobody's default route changes — show vrrp tells you who is wearing the crown right now. One honesty note: real JunOS nests these statements one level deeper, under the address itself; the lab flattens that by one step, everything else is faithful. Scenario 27 makes you kill the master mid-ping to prove the handover."],
   ["The system log", "Every switch and router keeps a diary: show log messages. Commits, cables plugged and unplugged, storms, DHCP leases, ports shutting themselves off — all with timestamps. On a trouble ticket, read the diary first. The most recent commit is usually the crime scene."],
   ["CLI tricks", "Four habits worth building. One: type ? anywhere, and the box lists everything that can come next. Two: Tab finishes the word you started. Three: you may abbreviate — sh int terse means show interfaces terse. Four: arrow-up replays earlier commands. With assist on, gray ghost text offers the rest of your line (ArrowRight accepts it), and after a complete word it previews the possible next words."],
   ["Real terminals: macOS vs Windows", "Every operating system ships a terminal application that hosts a shell. On macOS it is Terminal.app (settings under Cmd-comma): its default profile Basic is black text on white, and the famous alternatives are Pro (white on black, slightly transparent) and Homebrew (green on black); many people instead install iTerm2 and the Solarized Dark color scheme. On Windows, the elderly Command Prompt is gray-on-black, PowerShell chose a deep blue background on purpose so you would always know which shell you were in, and the modern Windows Terminal uses a dark scheme called Campbell. Fonts differ by tradition too: Menlo and Monaco on the Mac, Consolas and Cascadia on Windows. This lab's terminal header has a profile picker with all of these palettes — and a bell toggle, because real terminals really do beep at errors (the beep is ASCII character 7, called BEL, older than the screen you are reading this on)."],
   ["Wi-Fi in this lab", "An access point is a bridge with a radio. Its eth0 cables into an access port, and every associated laptop behaves exactly as if it were plugged into that same port — same VLAN, same DHCP, same gateway. The dashed circle is coverage: wifi join only works inside it. Deliberately skipped here: channels, interference, roaming, and security handshakes. The lesson that matters: wireless is just the same L2, minus the cable."],
-  ["Cable management — trays, drops, honest metres", "Cables do not fly between machines; they walk — up the wall, along a tray above the ceiling or a duct under the floor, and back down. Draw a tray (Add > Cable tray) and every cable whose two ends sit near it routes ALONG it automatically, bundled into one tidy run with a count. The measured length gains the drops people forget: ~2.7 m per end for a ceiling basket, ~0.3 m underfloor — which is exactly how a crow-flies 18 m becomes a 27 m pull, and why first-time estimators always order short. Click a tray's label to change its level; the Validate check objects when a pathway is overfilled (a basket takes roughly 40 Cat6 before crush and heat set in), and the BOM prices the tray by the metre. Desks join the same story: PCs snap onto them in a row, and the cabling schedule names each run by its desk — outlet: Desk 7 — the way a real patch list reads. In-rack DACs stay in the rack, as they should."],
   ["Heat & cooling", "Every watt a device draws becomes heat in its room — a big router is a 450 W space heater that happens to route. This lab models it simply: rooms sit at 21 degrees and rise one degree for every 25 W of uncooled heat; cooling units subtract their capacity; gear protects itself with a thermal shutdown at 52 degrees (read show log messages afterwards — chassisd wrote it down). Watch the temperature on each building's header, check a box with show chassis environment, and size cooling with headroom: the day the AC fails is the day you learn why real rooms have two."],
   ["Console & management ports", "Two special ports sit at the right edge of every switch and router faceplate. CON is the console: a serial socket, the way in when a box has no network settings at all — which is why brand-new boxes are always set up through it. me0 is the management port: a network port reserved for administrators, with its own address (set interfaces me0 unit 0 family inet address ...). Neither one ever carries the users' traffic. Think of them as the staff entrance, never the shop floor."],
 ];
@@ -2714,149 +2254,30 @@ const REF_HOST_CMDS = [
   ["wifi scan / wifi join <ssid> / wifi leave", "wireless: list networks, associate, drop"],
   ["hostname <name>", "rename this host"],
 ];
-function ipAnatomyEl(){
-  const wrap = document.createElement("div"); wrap.className = "ipa";
-  const row = document.createElement("div"); row.className = "ipa-row";
-  [["10", "net"], [".", "dot"], ["0", "net"], [".", "dot"], ["10", "net"], [".", "dot"], ["23", "host"], ["/24", "mask"]].forEach(([txt, cls]) => {
-    const b = document.createElement("span"); b.className = "ipa-" + cls; b.textContent = txt;
-    row.appendChild(b);
-  });
-  wrap.appendChild(row);
-  const lab = document.createElement("div"); lab.className = "ipa-labels";
-  const l1 = document.createElement("span"); l1.className = "ipa-lab net";
-  l1.textContent = "the STREET — every neighbor shares these";
-  const l2 = document.createElement("span"); l2.className = "ipa-lab host";
-  l2.textContent = "the HOUSE";
-  lab.append(l1, l2);
-  wrap.appendChild(lab);
-  const cap = document.createElement("div"); cap.className = "ipa-cap";
-  cap.textContent = "/24 answers one question: how many of the four numbers name the street? " +
-    "/24 = the first three (the everyday case). /16 = the first two. /8 = just the first. " +
-    "Same street = talk directly. Different street = hand the packet to the gateway.";
-  wrap.appendChild(cap);
-  return wrap;
-}
-const NEWHOST_FLOW = [
-  { b: "PHYSICAL first: cable the PC's eth0 into a free access port on the switch (Connect ▾, LAN / Data — listen for the click)" },
-  { b: "open its shell, give it a house on the right street:  ip addr add 10.0.10.23/24 dev eth0" },
-  { q: "will it only ever talk to its own street?", side: "done — same-street neighbors already answer: ping one", sideOk: true, sideLabel: "yes", downLabel: "no, the world" },
-  { b: "tell it where the street's door is:  ip route add default via 10.0.10.1" },
-  { q: "will it use NAMES like web.lab, not just numbers?", side: "done — everything by IP now works", sideOk: true, sideLabel: "no", downLabel: "yes" },
-  { e: "nameserver 10.0.10.80 — then prove it in order: ping 10.0.10.1 (my own door), ping a neighbor, curl web.lab. Or skip ALL the typing with one command: dhclient eth0, if a DHCP pool exists.", ok: true },
-];
 const REF_PRIMER = {
-  title: "IP addresses, from zero",
-  intro: "An address like 10.0.10.23 is just a street plus a house number, written as four numbers (each 0-255). The picture below is the whole idea — genuinely all of it. No binary needed to start; the /number is explained under the picture, and beneath that is the exact ritual for plugging in a brand-new machine, physical steps included.",
+  title: "IP addressing from zero (how to count)",
+  intro: "An IPv4 address is four numbers, each 0 to 255, like 10.0.10.5. The /number after an address is the mask, and it answers one question: how much of the address names the STREET, and how much names the HOUSE? With /24, the first three numbers are the street (10.0.10.x) and the last number is the house. Two machines are in the same subnet when their street parts match exactly. That single test decides everything that happens next: same street means they talk to each other directly; different streets mean the packet must be handed to a gateway, who knows the way.",
   table: [
-    "what you want to do            where     type this",
-    "give this PC an address        PC $      ip addr add 10.0.10.23/24 dev eth0",
-    "see my address                 PC $      ip a           (or: ip addr, ifconfig)",
-    "set my gateway (the door)      PC $      ip route add default via 10.0.10.1",
-    "see my routes                  PC $      ip r",
-    "set who answers name lookups   PC $      nameserver 10.0.10.80",
-    "read that back                 PC $      cat /etc/resolv.conf",
-    "get ALL of the above at once   PC $      dhclient eth0   (needs a DHCP pool)",
-    "test my own street and door    PC $      ping 10.0.10.1  (your own gateway FIRST)",
-    "who have I actually talked to  PC $      arp -a",
+    "mask   addresses  usable  example block        typical use",
+    "/30            4       2  10.9.12.0-.3         router-to-router link (2 ends, perfect fit)",
+    "/29            8       6  10.0.0.0-.7          tiny segment",
+    "/26           64      62  10.0.0.0-.63         small office VLAN",
+    "/24          256     254  10.0.10.0-.255       the standard VLAN subnet",
+    "/16       65,536  65,534  10.0.0.0-10.0.255.*  a whole site (rarely one subnet!)",
+    "",
+    "usable = addresses minus 2. The FIRST address (10.0.10.0) is the name",
+    "of the street itself, and the LAST (10.0.10.255 in a /24) is broadcast —",
+    "shouting to the whole street. Neither can be given to a machine.",
   ].join("\n"),
   sections: [
-    ["Reading 10.0.10.23/24 aloud", "Street 10.0.10, house 23, and the /24 says the street is the first three numbers. The only special citizens: .1 is usually the gateway (the door itself), .0 is the street sign and .255 the megaphone — neither is a house you can assign. And /30 is the charming runt of the family: a street with exactly two usable houses, which is why router-to-router cables use it — two ends, two houses, a perfect fit."],
-    ["Choosing a number for a new machine", "Three rules. Same street as its neighbors — 10.0.10.x if the room is 10.0.10.0/24. Never .1 — that is almost always the door. Stay out of the DHCP range (this lab hands out .100-.199), or one day the pool leases YOUR number to a laptop and both machines break in maddening, intermittent ways. Infrastructure low (.1-.99, by hand), people high (.100+, by DHCP) is the convention real offices use."],
-    ["Checking yourself — the maintenance four", "ip a — what am I? ip r — where is my door? cat /etc/resolv.conf — who do I ask for names? arp -a — who have I actually talked to? A machine that 'cannot connect' is diagnosed by those four questions in about thirty seconds, and they work letter-for-letter on real Linux."],
-    ["When it does not work, test in THIS order", "One: ping your OWN gateway — proves your address, cable and door. Two: ping the far machine — proves routing between streets. Three: nslookup the name — proves DNS. The first test that fails names the guilty layer. People who start at step three stay lost the longest, because a name failure LOOKS identical to a network failure until you separate them."],
-    ["DHCP or by hand?", "Laptops and phones: DHCP, always — that is what the pool is for. Gateways, servers, printers: by hand, below the pool. The rule is about who needs to be FINDABLE: nobody minds a laptop changing house, but a server that moves breaks everyone's bookmarks — and a gateway that moves breaks the entire street."],
-    ["Why commands say eth0 (and switches say ge-0/0/0)", "eth0 is Linux's honest name for the machine's first wired network card — ETHernet, number ZERO. The single jack drawn on every PC and server IS eth0: one thing, two views, and 'dev eth0' in a command just means 'on that jack'. A second card would be eth1; a Wi-Fi radio is wlan0. Switch ports follow Juniper's scheme instead: ge-0/0/0 reads gigabit ethernet, slot 0 / card 0 / port 0 — which is why a 24-port switch counts ge-0/0/0 to ge-0/0/23. One honesty note: modern Linux sometimes renames eth0 to things like enp3s0 (predictable interface naming); the idea is identical, and eth0 remains the classic you will meet in every tutorial ever written. Hover any port in this lab and its tooltip tells you which name it answers to."],
-    ["The /number cheat sheet (when you meet other masks)", "/24 = 254 usable houses, the standard office VLAN. /26 = 62, a small VLAN. /29 = 6, a tiny segment. /30 = 2, a point-to-point link. /16 = 65534, a whole campus. You will use /24 and /30 for ninety percent of everything; recognize the rest and look up the arithmetic when you actually need it."],
+    ["Counting a /24, concretely", "10.0.10.0/24 runs from 10.0.10.0 to 10.0.10.255 — 256 addresses in total. The two ends are reserved: .0 names the street, .255 is the shout-to-everyone address. Machines get .1 through .254. The habit used everywhere in this lab, and in most real networks: the gateway takes .1, machines with fixed addresses take low numbers, and DHCP hands out a high block like .100 to .199."],
+    ["Why /30 for router links", "A cable between two routers needs exactly two addresses — one per end. /30 gives four addresses: street name, two usable, broadcast. Nothing wasted. So 10.9.12.0/30 puts .1 on one router and .2 on the other, and you will see this pattern on every WAN and site-to-site link in the lab."],
+    ["Planning: one VLAN, one subnet", "Give every VLAN its own /24, and make the third number match the VLAN number: VLAN 10 gets 10.0.10.0/24, VLAN 20 gets 10.0.20.0/24. Nothing enforces this — it is purely a habit — but it makes every address you ever see self-explaining, and every scenario in this lab follows it."],
+    ["Assigning: the computer", "ip addr add 10.0.10.5/24 dev eth0 — and the /24 matters just as much as the address, because the mask is how the computer decides direct-versus-gateway. Then ip route add default via 10.0.10.1 to name the gateway. Get the mask wrong and you create the classic ticket: the computer can reach its neighbors and absolutely nothing else."],
+    ["Assigning: the gateway", "The .1 lives on whichever device does the routing for that street: an irb door on the switch (set interfaces irb unit 10 family inet address 10.0.10.1/24) or a router port (set interfaces ge-0/0/1 unit 0 family inet address 10.0.10.1/24). The gateway must be on the SAME street with the SAME mask as its computers. A gateway on a different street is unreachable by definition — the computers cannot even ask for it."],
+    ["The three classic mistakes", "One: mask mismatch — two machines whose masks disagree also disagree about who is next door, so one can call the other but the answer gets mis-routed. Two: the same street used on two different VLANs — the router can no longer tell which room an address lives in. Three: a gateway outside the computers' street — the computer cannot ask for it, so everything off-street fails with Network is unreachable. When pings fail, check exactly these, in this order: mask, street, gateway."],
   ],
 };
-const REF_COOLING = {
-  title: "Cooling & CRACs, from zero",
-  intro: "Electronics turn nearly every watt they eat into HEAT, and heat never leaves a room by politeness — it has to be pumped out. A network that is perfect on paper still dies at 52 degrees. This page is the whole physical story: what the units are, how to size them, and how to notice trouble before the log writes TEMPERATURE CRITICAL.",
-  table: [
-    "unit                     capacity   price      what it is, honestly",
-    "Portable AC              3.5 kW     € 499      a beefy room AC on wheels — one hot closet's worth",
-    "In-row CRAC              10 kW      € 3,900    Computer Room Air Conditioner: refrigerant, like",
-    "                                               your home AC but built to run forever, parked in",
-    "                                               the rack row blowing cold straight at the gear",
-    "CRAH                     30 kW      € 9,500    Computer Room Air Handler: no refrigerant of its",
-    "                                               own — chilled WATER from a plant does the work.",
-    "                                               Datacenter scale; overkill for an office closet",
-  ].join("\n"),
-  sections: [
-    ["The arithmetic (this is the entire skill)", "Add up the heat: a small switch ~30-45 W, a big one ~90-100 W, a router 250-450 W, a SERVER 300 W, a PC ~120 W. Your cooling capacity must beat that sum — with roughly 30 percent headroom, because summer exists and so do future servers. One rack with two servers and a switch is already ~700 W: a desk fan will not save it, the 3.5 kW portable will."],
-    ["What the lab simulates, exactly", "Every powered device pours its watts into its building; every running cooling unit pumps watts out. The building header shows the live temperature — green under 30, amber to 38, red beyond. At 52 degrees a device performs an emergency thermal shutdown and writes it to its log. Power a device off and its heat stops; that is also why a dark room cools down."],
-    ["Placement is not decoration", "A cooling unit only cools the building it stands INSIDE — drop it outside the walls and the lab dryly notes it is cooling the car park. In real rooms position matters even more (hot aisles, cold aisles, blocked vents); the lab compresses all of that into one honest rule: the capacity must live in the same room as the heat."],
-    ["Monitoring, from glance to autopsy", "Four layers, cheapest first. The building header: always on screen, live degrees. The status row: warns when a room runs hot or a unit is switched off. Per box: show chassis environment — the room average can look fine while one cooked switch is dying. After the mystery outage: show log messages — the TEMPERATURE CRITICAL line is the confession, timestamped."],
-    ["The unit itself", "Click a cooling unit and type status: model, capacity, its room, and the live heat-versus-cooling ledger. It has a real power button — switch it off during an outage drill and understand why the UPS sizing includes it: a CRAC draws serious power (the lab bills it at ~30 percent of its cooling capacity), and a rack that survives a grid outage but loses its cooling only dies more slowly."],
-    ["When the DRC nags you about heat", "Validate flags rooms where heat beats cooling BEFORE the thermal shutdown teaches you the hard way — an amber warning at 30 degrees, an error at 38. Treat the warning as a purchase order, not an insult: the fix is a bigger unit or less gear in that room, and the BOM prices both choices."],
-  ],
-};
-const REF_CMDINDEX = [
-  { cat: "IP addresses & interfaces", rows: [
-    ["ip addr add 10.0.10.5/24 dev eth0", "PC $", "Give this machine an address by hand (ip a shows it back)"],
-    ["dhclient eth0", "PC $", "Ask DHCP for an address instead — the DORA exchange"],
-    ["set interfaces ge-0/0/1 unit 0 family inet address 10.0.20.1/24", "JunOS #", "Put an address on a router port"],
-    ["set interfaces irb unit 10 family inet address 10.0.10.1/24", "JunOS #", "Give a VLAN its gateway address (pair with l3-interface)"],
-    ["show interfaces terse", "JunOS >", "Every port, its state, its addresses — the first look at any box"],
-    ["ip addr  /  ip a  /  ifconfig", "PC $", "What is my address? (all three spellings work, like real life)"],
-  ]},
-  { cat: "Routing", rows: [
-    ["ip route add default via 10.0.10.1", "PC $", "Tell a PC where its door is — without this, far destinations fail instantly"],
-    ["set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1", "JunOS #", "The everything-else route on a JunOS box"],
-    ["set protocols ospf area 0 interface irb.10", "JunOS #", "Let routers exchange routes instead of typing them"],
-    ["set routing-options autonomous-system 65010", "JunOS #", "Your network's name in the BGP world (then a bgp group: type external, peer-as, neighbor)"],
-    ["show route", "JunOS >", "What the box will actually DO with a packet — [Static/5], [OSPF/10], [BGP/170]"],
-    ["set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1", "JunOS #", "Two switches share one gateway address; the backup takes over when the master dies (add priority to pick the master)"],
-    ["show vrrp", "JunOS >", "Who is master of the virtual gateway right now — read it before AND after you fail a box"],
-    ["show bgp summary  /  show ospf neighbor", "JunOS >", "Are the routing sessions up, and if not, why"],
-  ]},
-  { cat: "Switching — VLANs & trunks", rows: [
-    ["set vlans staff vlan-id 10", "JunOS #", "Build the room before showing people into it"],
-    ["set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff", "JunOS #", "Put a port in the room"],
-    ["set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode trunk", "JunOS #", "Make a port carry MANY rooms, tagged (then list vlan members [ ... ])"],
-    ["set vlans staff l3-interface irb.10", "JunOS #", "Bolt the gateway doorway into this room's wall"],
-    ["show vlans  /  show ethernet-switching table", "JunOS >", "Which ports are in which room; which MACs were learned where"],
-    ["show spanning-tree interface", "JunOS >", "Loop protection: which port is deliberately asleep (BLK)"],
-  ]},
-  { cat: "Reachability & diagnosis", rows: [
-    ["ping 10.0.20.5  (or ping web.lab)", "PC $", "The basic question — remember it proves BOTH directions"],
-    ["traceroute 8.8.8.8", "PC $", "WHERE the path dies, hop by hop"],
-    ["arp -a", "PC $", "Who this machine has actually talked to on its own street"],
-    ["show lldp neighbors", "JunOS >", "Ground truth of what is cabled to which port — believe it over any diagram"],
-    ["nslookup web.lab  /  dig +short web.lab", "PC $", "Test the name lookup ALONE — separates DNS problems from web problems"],
-    ["curl web.lab", "PC $", "The full chain: resolve, connect, serve — 200 OK closes the ticket"],
-    ["show log messages", "JunOS >", "The box's own diary: commits, flaps, storms, shutdowns. Read it first on any ticket"],
-  ]},
-  { cat: "Server & services", rows: [
-    ["service start dns|http|syslog", "server $", "Make the box LISTEN — systemctl start named / nginx / rsyslog also works"],
-    ["dns add web.lab 10.0.10.80  /  dns list", "server $", "Write the phone book other machines will ask"],
-    ["nameserver 10.0.10.80", "PC $", "Point a client at its DNS server (cat /etc/resolv.conf reads it back)"],
-    ["log  /  journalctl", "server $", "This server's events — plus every switch streaming to it via syslog"],
-    ["set system syslog host 10.0.10.90 any any", "JunOS #", "Stream this switch's diary to the syslog server"],
-    ["ssh 10.0.10.1", "PC $", "Open a switch's CLI across the network — needs set system services ssh committed there"],
-  ]},
-  { cat: "Wi-Fi", rows: [
-    ["wifi scan  /  nmcli dev wifi list", "PC $", "What networks exist here, and how strong (a dark AP does not appear)"],
-    ["wifi join office-wifi  /  nmcli dev wifi connect office-wifi", "PC $", "Associate — radio only, still no address"],
-    ["dhclient eth0", "PC $", "THEN get the address; the order never changes"],
-    ["show poe interface", "JunOS >", "Is the switch actually powering the AP, and how much budget is left"],
-  ]},
-  { cat: "The config workflow (JunOS's superpower)", rows: [
-    ["configure", "JunOS >", "Enter config mode — set/delete edit a private DRAFT, not the network"],
-    ["show | compare", "JunOS #", "The diff between draft and reality — the only place mistakes are free"],
-    ["commit", "JunOS #", "Make the draft real. Until this, NOTHING has happened"],
-    ["commit confirmed 5", "JunOS #", "Commit with a 5-minute fuse: if the change cuts you off, the box rolls back alone"],
-    ["rollback 1  (then commit)", "JunOS #", "Undo the last commit; rollback 0 discards the current draft"],
-    ["load set terminal", "JunOS #", "Paste a block of set commands (from these guides, or a colleague)"],
-  ]},
-  { cat: "Power, heat & the physical world", rows: [
-    ["show chassis environment", "JunOS >", "This box's own temperature — the room average can lie about one cooked switch"],
-    ["status", "UPS", "Click the UPS on the canvas, type status: battery vs the building's real load — read it BEFORE the outage drill"],
-    ["status", "cooling", "Click the cooling unit, type status: heat in, cooling out, room degrees now"],
-    ["show poe interface", "JunOS >", "Watts granted per port and the chassis budget"],
-    ["(the power buttons)", "", "Servers, switches and cooling have real ones — a dark box is unreachable, which is NOT the same as refusing"],
-  ]},
-];
 /* Every how-to step gets a counterfactual: what you would NOT have without it.
    Keyed by the step's exact action text; a test keeps the keys honest. */
 const REF_WITHOUT = {
@@ -3253,16 +2674,6 @@ const REF_EXAMPLES = [
   },
 ];
 
-/* prose helper: writes text into el, turning ALL-CAPS emphasis words into <b> */
-function refProse(el, text){
-  const parts = String(text).split(/([A-Z][A-Z'-]{2,}(?:\s[A-Z][A-Z'-]{2,})*)/g);
-  parts.forEach((p, i) => {
-    if(!p) return;
-    if(i % 2){ const b = document.createElement("b"); b.textContent = p; el.appendChild(b); }
-    else el.appendChild(document.createTextNode(p));
-  });
-  return el;
-}
 function buildReferenceInto(box){
     box.innerHTML = "";
     const filter = document.createElement("input");
@@ -3270,30 +2681,10 @@ function buildReferenceInto(box){
     filter.placeholder = "filter — try: vlan, trunk, commit, filter, lacp, nat, dhcp, ospf";
     box.appendChild(filter);
     const body = document.createElement("div"); box.appendChild(body);
-    // the book layer: sections become PAGES with a chapter bar and a pager.
-    // A search query temporarily flattens the book so results span every page.
-    const REF_PAGES = [];
-    let refPageIdx = 0;
-    try{ refPageIdx = parseInt(localStorage.getItem("junoslab-refpage") || "0", 10) || 0; }catch(e){}
-    const chapterBar = document.createElement("div"); chapterBar.className = "ref-chapters";
-    body.appendChild(chapterBar);
-    const mkPage = (title) => {
-      const pg = document.createElement("div"); pg.className = "ref-page";
-      pg._title = title;
-      REF_PAGES.push(pg);
-      body.appendChild(pg);
-      return pg;
-    };
-    const pageFund = mkPage("Fundamentals");
-    const pageCmd = mkPage("Command index");
-    const pageHow = mkPage("How-to guides");
-    const pageCon = mkPage("Concepts");
-    const pageEx = mkPage("Worked examples");
-    const pageFull = mkPage("Every command");
 
     // the addressing primer — one fold, opened like a book page
     const prHead = document.createElement("div"); prHead.className = "ref-h"; prHead.textContent = "Fundamentals";
-    pageFund.appendChild(prHead);
+    body.appendChild(prHead);
     const prFold = document.createElement("div"); prFold.className = "ref-fold";
     {
       const head = document.createElement("div"); head.className = "ref-fold-head";
@@ -3304,125 +2695,28 @@ function buildReferenceInto(box){
       const inner = document.createElement("div"); inner.className = "ref-fold-inner";
       const content = document.createElement("div"); content.className = "ref-fold-content";
       inner.appendChild(content);
-      const ov = refProse(Object.assign(document.createElement("div"), { className: "ref-ex-overview" }), REF_PRIMER.intro);
+      const ov = document.createElement("div"); ov.className = "ref-ex-overview"; ov.textContent = REF_PRIMER.intro;
       content.appendChild(ov);
-      content.appendChild(ipAnatomyEl());
-      const fh = document.createElement("div"); fh.className = "ref-ex-h";
-      fh.textContent = "Plugging in a brand-new machine — the whole ritual";
-      content.appendChild(fh);
-      const fl = refDiagramEl(NEWHOST_FLOW);
-      if(fl) content.appendChild(fl);
-      const th = document.createElement("div"); th.className = "ref-ex-h";
-      th.textContent = "Assign, check, maintain — the commands";
-      content.appendChild(th);
       const pre = document.createElement("pre"); pre.className = "ref-quick"; pre.textContent = REF_PRIMER.table;
       content.appendChild(pre);
       for(const [term, bodyTxt] of REF_PRIMER.sections){
         const row = document.createElement("div"); row.className = "ref-cmdrow";
         const c = document.createElement("div"); c.className = "ref-t"; c.textContent = term;
-        const hl = refProse(Object.assign(document.createElement("div"), { className: "ref-help" }), bodyTxt);
+        const hl = document.createElement("div"); hl.className = "ref-help"; hl.textContent = bodyTxt;
         row.append(c, hl);
         content.appendChild(row);
       }
       head.onclick = () => prFold.classList.toggle("open");
       prFold.append(head, inner);
-      prFold._q = (REF_PRIMER.title + " " + REF_PRIMER.intro + " subnet mask count address ip assign check maintenance new host connect " +
+      prFold._q = (REF_PRIMER.title + " " + REF_PRIMER.intro + " subnet mask count address ip " +
         REF_PRIMER.sections.map(x => x.join(" ")).join(" ")).toLowerCase();
-      pageFund.appendChild(prFold);
-    }
-
-    // cooling, same first-principles treatment
-    const coolFold = document.createElement("div"); coolFold.className = "ref-fold";
-    {
-      const head = document.createElement("div"); head.className = "ref-fold-head";
-      const chev = document.createElement("span"); chev.className = "ref-chev"; chev.textContent = "▸";
-      const label = document.createElement("span"); label.textContent = REF_COOLING.title;
-      const count = document.createElement("span"); count.className = "ref-count"; count.textContent = "primer";
-      head.append(chev, label, count);
-      const inner = document.createElement("div"); inner.className = "ref-fold-inner";
-      const content = document.createElement("div"); content.className = "ref-fold-content";
-      inner.appendChild(content);
-      content.appendChild(refProse(Object.assign(document.createElement("div"), { className: "ref-ex-overview" }), REF_COOLING.intro));
-      const fl = refDiagramEl(REF_DIAGRAMS["Heat & cooling"]);
-      if(fl) content.appendChild(fl);
-      const th = document.createElement("div"); th.className = "ref-ex-h";
-      th.textContent = "The units on the Add menu — and what the names mean";
-      content.appendChild(th);
-      const pre = document.createElement("pre"); pre.className = "ref-quick"; pre.textContent = REF_COOLING.table;
-      content.appendChild(pre);
-      for(const [term, bodyTxt] of REF_COOLING.sections){
-        const row = document.createElement("div"); row.className = "ref-cmdrow";
-        const c = document.createElement("div"); c.className = "ref-t"; c.textContent = term;
-        const hl = refProse(Object.assign(document.createElement("div"), { className: "ref-help" }), bodyTxt);
-        row.append(c, hl);
-        content.appendChild(row);
-      }
-      head.onclick = () => coolFold.classList.toggle("open");
-      coolFold.append(head, inner);
-      coolFold._q = (REF_COOLING.title + " crac crah hvac cooling heat temperature thermal aircon watts " +
-        REF_COOLING.sections.map(x => x.join(" ")).join(" ")).toLowerCase();
-      pageFund.appendChild(coolFold);
-    }
-
-    // the command index: what to type, where, for what
-    const ciHead = document.createElement("div"); ciHead.className = "ref-h";
-    ciHead.textContent = "Command index — by what you are trying to do";
-    pageCmd.appendChild(ciHead);
-    const ciFolds = [];
-    const WHERE_HELP = { "PC $": "type this in a PC's shell", "server $": "type this in a server's shell",
-      "JunOS >": "JunOS operational mode (the prompt ends in >)",
-      "JunOS #": "JunOS configure mode (type configure first; the prompt ends in #)",
-      "UPS": "click the UPS device on the canvas", "cooling": "click the cooling unit on the canvas" };
-    const ciCap = document.createElement("div"); ciCap.className = "ref-legend-cap";
-    ciCap.textContent = "The decoder ring: $ > # are PROMPTS — printed by the machine while it waits for you, never typed. Each row's chip says which window to stand in.";
-    pageCmd.appendChild(ciCap);
-    const legend = document.createElement("div"); legend.className = "ref-legend";
-    for(const [sym, txt] of [
-      ["$", "a Linux shell — PCs and servers"],
-      [">", "JunOS operational mode — looking around (show, ping)"],
-      ["#", "JunOS configure mode — changing things (type configure to enter, commit to make it real)"],
-    ]){
-      const s = document.createElement("div"); s.className = "ref-legend-sym"; s.textContent = sym;
-      const tx = document.createElement("div"); tx.className = "ref-legend-txt";
-      refProse(tx, txt);
-      legend.append(s, tx);
-    }
-    pageCmd.appendChild(legend);
-    for(const sec of REF_CMDINDEX){
-      const fold = document.createElement("div"); fold.className = "ref-fold";
-      const head = document.createElement("div"); head.className = "ref-fold-head";
-      const chev = document.createElement("span"); chev.className = "ref-chev"; chev.textContent = "▸";
-      const label = document.createElement("span"); label.textContent = sec.cat;
-      const count = document.createElement("span"); count.className = "ref-count"; count.textContent = String(sec.rows.length);
-      head.append(chev, label, count);
-      const inner = document.createElement("div"); inner.className = "ref-fold-inner";
-      const content = document.createElement("div"); content.className = "ref-fold-content";
-      inner.appendChild(content);
-      for(const [cmdT, where, what] of sec.rows){
-        const row = document.createElement("div"); row.className = "ref-cmdrow";
-        const c = document.createElement("div"); c.className = "ref-cmd";
-        if(where){
-          const wc = document.createElement("span"); wc.className = "ref-where";
-          wc.textContent = where;
-          wc.title = WHERE_HELP[where] || "";
-          c.appendChild(wc);
-        }
-        c.appendChild(document.createTextNode(cmdT));
-        const hl = refProse(Object.assign(document.createElement("div"), { className: "ref-help" }), what);
-        row.append(c, hl);
-        content.appendChild(row);
-      }
-      head.onclick = () => fold.classList.toggle("open");
-      fold.append(head, inner);
-      fold._q = (sec.cat + " " + sec.rows.map(r => r.join(" ")).join(" ")).toLowerCase();
-      pageCmd.appendChild(fold);
-      ciFolds.push({ fold });
+      body.appendChild(prFold);
     }
 
     // how-to guides: numbered first-time walkthroughs
     const hgHead = document.createElement("div"); hgHead.className = "ref-h";
     hgHead.textContent = "How-to guides — your first time, step by step";
-    pageHow.appendChild(hgHead);
+    body.appendChild(hgHead);
     const hgFolds = [];
     for(const gd of REF_HOWTO){
       const fold = document.createElement("div"); fold.className = "ref-fold";
@@ -3475,7 +2769,7 @@ function buildReferenceInto(box){
         const c2 = document.createElement("div"); c2.className = "ref-cmd";
         c2.textContent = (i + 1) + ".  " + cmd;
         const grid2 = document.createElement("div"); grid2.className = "ref-whygrid";
-        const hl = refProse(Object.assign(document.createElement("div"), { className: "ref-help" }), why);
+        const hl = document.createElement("div"); hl.className = "ref-help"; hl.textContent = why;
         grid2.appendChild(hl);
         const wo = REF_WITHOUT[cmd];
         if(wo){
@@ -3495,7 +2789,7 @@ function buildReferenceInto(box){
       content.appendChild(dd);
       head.onclick = () => fold.classList.toggle("open");
       fold.append(head, inner);
-      pageHow.appendChild(fold);
+      body.appendChild(fold);
       fold._q = (gd.title + " " + gd.intro + " " + gd.steps.map(x =>
         x.join(" ") + " " + (REF_WITHOUT[x[0]] || "")).join(" ")).toLowerCase();
       hgFolds.push({ fold });
@@ -3504,13 +2798,13 @@ function buildReferenceInto(box){
     // concepts: a grid of cards that lift like pop-up pages
     const conceptCards = [];
     const cHead = document.createElement("div"); cHead.className = "ref-h"; cHead.textContent = "Concepts";
-    pageCon.appendChild(cHead);
-    const grid = document.createElement("div"); grid.className = "ref-grid"; pageCon.appendChild(grid);
+    body.appendChild(cHead);
+    const grid = document.createElement("div"); grid.className = "ref-grid"; body.appendChild(grid);
     REF_CONCEPTS.forEach(([t, b], i) => {
       const card = document.createElement("div"); card.className = "ref-card";
       card.style.borderTopColor = VLAN_PALETTE[i % VLAN_PALETTE.length];
       const tt = document.createElement("div"); tt.className = "ref-card-title"; tt.textContent = t;
-      const bb = refProse(Object.assign(document.createElement("div"), { className: "ref-card-body" }), b);
+      const bb = document.createElement("div"); bb.className = "ref-card-body"; bb.textContent = b;
       card.append(tt, bb);
       const spec = REF_DIAGRAMS[t];
       let dgText = "";
@@ -3547,12 +2841,12 @@ function buildReferenceInto(box){
       });
       head.onclick = () => fold.classList.toggle("open");
       fold.append(head, inner);
-      pageFull.appendChild(fold);
+      body.appendChild(fold);
       folds.push({ fold, els });
     }
     // worked examples — full configs with explained steps
     const exHead = document.createElement("div"); exHead.className = "ref-h"; exHead.textContent = "Worked examples (complete configs)";
-    pageEx.appendChild(exHead);
+    body.appendChild(exHead);
     const exFolds = [];
     for(const ex of REF_EXAMPLES){
       const fold = document.createElement("div"); fold.className = "ref-fold";
@@ -3586,7 +2880,7 @@ function buildReferenceInto(box){
       for(const [snip, why] of ex.steps){
         const row = document.createElement("div"); row.className = "ref-cmdrow";
         const c = document.createElement("div"); c.className = "ref-cmd"; c.textContent = snip;
-        const hl = refProse(Object.assign(document.createElement("div"), { className: "ref-help" }), why);
+        const hl = document.createElement("div"); hl.className = "ref-help"; hl.textContent = why;
         row.append(c, hl);
         content.appendChild(row);
       }
@@ -3595,61 +2889,27 @@ function buildReferenceInto(box){
       for(const [cmd, what] of ex.verify){
         const row = document.createElement("div"); row.className = "ref-cmdrow";
         const c = document.createElement("div"); c.className = "ref-cmd"; c.textContent = cmd;
-        const hl = refProse(Object.assign(document.createElement("div"), { className: "ref-help" }), what);
+        const hl = document.createElement("div"); hl.className = "ref-help"; hl.textContent = what;
         row.append(c, hl);
         content.appendChild(row);
       }
       head.onclick = () => fold.classList.toggle("open");
       fold.append(head, inner);
-      pageEx.appendChild(fold);
+      body.appendChild(fold);
       fold._q = (ex.title + " " + ex.overview + " " + ex.quick.join(" ") + " " +
         ex.steps.map(x => x.join(" ")).join(" ")).toLowerCase();
       exFolds.push({ fold });
     }
-    const chHead = document.createElement("div"); chHead.className = "ref-h"; chHead.textContent = "Every command (generated from the grammar — it cannot drift)";
-    pageFull.appendChild(chHead);
+    const chHead = document.createElement("div"); chHead.className = "ref-h"; chHead.textContent = "Command index";
+    body.appendChild(chHead);
     chapter("Switch — configuration statements", SWITCH_CFG_SPECS.map(([sp, o]) => ["set " + refClean(sp), o.help || ""]));
     chapter("Switch — operational commands", OP_SPECS.switch.map(([sp, o]) => [refClean(sp), o.help || ""]));
     chapter("Router — configuration statements", ROUTER_CFG_SPECS.map(([sp, o]) => ["set " + refClean(sp), o.help || ""]));
     chapter("Router — operational commands", OP_SPECS.router.map(([sp, o]) => [refClean(sp), o.help || ""]));
     chapter("Host shell", REF_HOST_CMDS);
 
-    // book navigation: chapter chips on top, prev/next at the bottom
-    const chapBtns = [];
-    REF_PAGES.forEach((pg, k) => {
-      const b = document.createElement("button");
-      b.className = "ref-chap-btn";
-      b.textContent = pg._title;
-      b.onclick = () => setRefPage(k);
-      chapterBar.appendChild(b);
-      chapBtns.push(b);
-    });
-    const pager = document.createElement("div"); pager.className = "ref-pager";
-    const pgPrev = document.createElement("button"); pgPrev.textContent = "◂ previous";
-    const pgLbl = document.createElement("span"); pgLbl.className = "ref-pager-lbl";
-    const pgNext = document.createElement("button"); pgNext.textContent = "next ▸";
-    pgPrev.onclick = () => setRefPage(refPageIdx - 1);
-    pgNext.onclick = () => setRefPage(refPageIdx + 1);
-    pager.append(pgPrev, pgLbl, pgNext);
-    body.appendChild(pager);
-    function applyRefPages(q){
-      REF_PAGES.forEach((pg, k) => { pg.style.display = q || k === refPageIdx ? "" : "none"; });
-      chapBtns.forEach((b, k) => b.classList.toggle("active", !q && k === refPageIdx));
-      chapterBar.style.display = "";
-      pager.style.display = q ? "none" : "flex";
-      pgPrev.disabled = refPageIdx === 0;
-      pgNext.disabled = refPageIdx >= REF_PAGES.length - 1;
-      pgLbl.textContent = "page " + (refPageIdx + 1) + " of " + REF_PAGES.length + "  —  " + REF_PAGES[refPageIdx]._title;
-    }
-    function setRefPage(k){
-      refPageIdx = Math.max(0, Math.min(k, REF_PAGES.length - 1));
-      try{ localStorage.setItem("junoslab-refpage", String(refPageIdx)); }catch(e){}
-      applyRefPages(filter.value.trim().toLowerCase());
-      try{ box.scrollTop = 0; }catch(e){}
-    }
     filter.oninput = () => {
       const q = filter.value.trim().toLowerCase();
-      applyRefPages(q);
       let anyConcept = false;
       for(const card of conceptCards){
         const show = !q || card._q.includes(q);
@@ -3660,21 +2920,10 @@ function buildReferenceInto(box){
       grid.style.display = anyConcept ? "" : "none";
       {
         const showPr = !q || prFold._q.includes(q);
-        const showCool = !q || coolFold._q.includes(q);
         prFold.style.display = showPr ? "" : "none";
-        coolFold.style.display = showCool ? "" : "none";
-        prHead.style.display = showPr || showCool ? "" : "none";
+        prHead.style.display = showPr ? "" : "none";
         prFold.classList.toggle("open", !!q && showPr);
-        coolFold.classList.toggle("open", !!q && showCool);
       }
-      let anyCi = false;
-      for(const f of ciFolds){
-        const show = !q || f.fold._q.includes(q);
-        f.fold.style.display = show ? "" : "none";
-        if(show) anyCi = true;
-        f.fold.classList.toggle("open", !!q && show);
-      }
-      ciHead.style.display = anyCi ? "" : "none";
       let anyHg = false;
       for(const f of hgFolds){
         const show = !q || f.fold._q.includes(q);
@@ -3705,149 +2954,28 @@ function buildReferenceInto(box){
       }
       chHead.style.display = anyCh ? "" : "none";
     };
-    applyRefPages("");   // open the book to the remembered page
 }
 
 /* ---------- the tablet: floating window for scenarios + reference ---------- */
-/* ============================================================
-   NOTES — highlight anything in the tablet, save it, pin it to the screen
-   like a sticky. The reading-app habit, for a lab.
-   ============================================================ */
-var NOTES = [];
-try{ NOTES = JSON.parse(localStorage.getItem("junoslab-notes") || "[]"); }catch(e){}
-function notesSave(){ try{ localStorage.setItem("junoslab-notes", JSON.stringify(NOTES)); }catch(e){} }
-function noteAdd(text, src){
-  const n = { id: "n" + Date.now() + "_" + Math.floor(Math.random() * 1e4),
-    text: String(text).trim().slice(0, 600), src: src || "", pinned: false, x: 96, y: 96 };
-  if(!n.text) return null;
-  NOTES.push(n); notesSave();
-  renderNotesTab(); renderPinnedNotes();
-  return n;
-}
-function noteDelete(id){
-  NOTES = NOTES.filter(n => n.id !== id);
-  notesSave(); renderNotesTab(); renderPinnedNotes();
-}
-function notePin(id, on){
-  const n = NOTES.find(x => x.id === id);
-  if(!n) return;
-  n.pinned = on !== false;
-  notesSave(); renderNotesTab(); renderPinnedNotes();
-}
-function renderNotesTab(){
-  try{
-    const el = document.getElementById("notes-list");
-    if(!el) return;
-    el.innerHTML = "";
-    const intro = document.createElement("p"); intro.className = "tut-intro";
-    intro.textContent = NOTES.length
-      ? "Your highlights. 'Pin to screen' puts one on the canvas as a sticky you can drag around while you work."
-      : "Select any text in the Reference or Learn tabs and a small 'save to notes' button appears above it. Saved highlights collect here — and can be pinned to the screen as stickies, like leaving yourself a note on the monitor.";
-    el.appendChild(intro);
-    for(const n of NOTES.slice().reverse()){
-      const card = document.createElement("div"); card.className = "note-card";
-      const tx = document.createElement("div"); tx.className = "note-text"; tx.textContent = n.text;
-      const meta = document.createElement("div"); meta.className = "note-meta";
-      meta.textContent = n.src ? "from " + n.src : "";
-      const row = document.createElement("div"); row.className = "note-btns";
-      const pin = document.createElement("button");
-      pin.textContent = n.pinned ? "unpin from screen" : "pin to screen";
-      pin.onclick = () => notePin(n.id, !n.pinned);
-      const del = document.createElement("button"); del.className = "pv-danger";
-      del.textContent = "delete";
-      del.onclick = () => noteDelete(n.id);
-      row.append(pin, del);
-      card.append(tx, meta, row);
-      el.appendChild(card);
-    }
-  }catch(e){}
-}
-function renderPinnedNotes(){
-  try{
-    const wrap = document.getElementById("canvas-wrap");
-    if(!wrap) return;
-    for(const old of wrap.querySelectorAll(".sticky")) old.remove();
-    for(const n of NOTES){
-      if(!n.pinned) continue;
-      const s = document.createElement("div"); s.className = "sticky";
-      s.style.left = (n.x || 96) + "px"; s.style.top = (n.y || 96) + "px";
-      const x = document.createElement("button"); x.className = "sticky-x"; x.textContent = "✕";
-      x.title = "Unpin (the note stays in the Notes tab)";
-      x.onclick = () => notePin(n.id, false);
-      const tx = document.createElement("div"); tx.className = "sticky-text"; tx.textContent = n.text;
-      s.append(x, tx);
-      let drag = null;
-      s.addEventListener("pointerdown", (e) => {
-        if(e.target === x) return;
-        drag = { dx: e.clientX - (n.x || 0), dy: e.clientY - (n.y || 0) };
-        try{ s.setPointerCapture(e.pointerId); }catch(err){}
-        e.stopPropagation();
-      });
-      s.addEventListener("pointermove", (e) => {
-        if(!drag) return;
-        n.x = Math.max(0, e.clientX - drag.dx);
-        n.y = Math.max(0, e.clientY - drag.dy);
-        s.style.left = n.x + "px"; s.style.top = n.y + "px";
-      });
-      s.addEventListener("pointerup", () => { if(drag){ drag = null; notesSave(); } });
-      wrap.appendChild(s);
-    }
-  }catch(e){}
-}
-/* the save-selection chip */
-var noteChip = null;
-function noteChipEl(){
-  if(noteChip) return noteChip;
-  noteChip = document.createElement("button");
-  noteChip.id = "note-chip";
-  noteChip.textContent = "save to notes";
-  noteChip.style.display = "none";
-  noteChip.onclick = () => {
-    if(noteChip._text){
-      const srcName = { learn: "Learn", scen: "Scenarios", ref: "Reference", juno: "JUNO", notes: "Notes" }[tabletTab] || "the tablet";
-      noteAdd(noteChip._text, srcName);
-      noteChip.textContent = "saved ✓";
-      setTimeout(() => { noteChip.style.display = "none"; noteChip.textContent = "save to notes"; }, 700);
-    }
-  };
-  document.body.appendChild(noteChip);
-  return noteChip;
-}
-function noteCheckSelection(){
-  try{
-    if(typeof window === "undefined" || !window.getSelection) return;
-    const sel = window.getSelection();
-    const chip = noteChipEl();
-    const txt = sel && !sel.isCollapsed ? String(sel.toString()).trim() : "";
-    if(!txt){ if(chip.textContent === "save to notes") chip.style.display = "none"; return; }
-    const anchor = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
-    if(!anchor || !tabletEl.contains(anchor)){ chip.style.display = "none"; return; }
-    const r = sel.getRangeAt(0).getBoundingClientRect();
-    chip._text = txt;
-    chip.style.left = Math.max(4, Math.min(r.left + r.width / 2 - 46, (window.innerWidth || 1200) - 110)) + "px";
-    chip.style.top = Math.max(4, r.top - 32) + "px";
-    chip.style.display = "block";
-  }catch(e){}
-}
-try{
-  if(typeof document.addEventListener === "function")
-    document.addEventListener("pointerup", () => setTimeout(noteCheckSelection, 10));
-}catch(e){}
-
 const tabletEl = document.getElementById("tablet");
 let tabletTab = "scen";
 let refBuilt = false;
 function setTabletTab(tab){
   tabletTab = tab;
-  for(const t of ["learn", "scen", "ref", "juno", "notes"]){
-    const pane = document.getElementById("tab-" + t);
-    if(pane) pane.style.display = tab === t ? "" : "none";
-    const btn = document.getElementById("tablet-tab-" + t);
-    if(btn) btn.classList.toggle("active", tab === t);
-  }
+  const ts = document.getElementById("tab-scen"), tr = document.getElementById("tab-ref"),
+        tj = document.getElementById("tab-juno"), tp = document.getElementById("tab-proto");
+  if(ts) ts.style.display = tab === "scen" ? "" : "none";
+  if(tr) tr.style.display = tab === "ref" ? "" : "none";
+  if(tj) tj.style.display = tab === "juno" ? "" : "none";
+  if(tp) tp.style.display = tab === "proto" ? "" : "none";
+  const bs = document.getElementById("tablet-tab-scen"), br = document.getElementById("tablet-tab-ref"),
+        bj = document.getElementById("tablet-tab-juno"), bp = document.getElementById("tablet-tab-proto");
+  if(bs) bs.classList.toggle("active", tab === "scen");
+  if(br) br.classList.toggle("active", tab === "ref");
+  if(bj) bj.classList.toggle("active", tab === "juno");
+  if(bp) bp.classList.toggle("active", tab === "proto");
+  if(tab === "proto" && typeof renderProtoTab === "function") renderProtoTab();
   if(tab === "juno" && typeof junoInitTab === "function") junoInitTab();
-  if(tab === "learn" && typeof tutRender === "function") tutRender();
-  if(tab === "notes") renderNotesTab();
   if(tab === "ref" && !refBuilt){
     buildReferenceInto(document.getElementById("tab-ref"));
     refBuilt = true;
@@ -3874,12 +3002,10 @@ function saveTabletState(){
     }));
   }catch(e){}
 }
-{ const b = document.getElementById("tablet-tab-learn"); if(b) b.onclick = () => setTabletTab("learn"); }
-{ const b = document.getElementById("tablet-tab-notes"); if(b) b.onclick = () => setTabletTab("notes"); }
-try{ renderPinnedNotes(); }catch(e){}
 document.getElementById("tablet-tab-scen").onclick = () => setTabletTab("scen");
 document.getElementById("tablet-tab-ref").onclick = () => setTabletTab("ref");
 document.getElementById("tablet-tab-juno").onclick = () => setTabletTab("juno");
+document.getElementById("tablet-tab-proto").onclick = () => setTabletTab("proto");
 document.getElementById("tablet-close").onclick = closeTablet;
 document.getElementById("ref-btn").onclick = () => toggleTablet("ref");
 (function(){
@@ -3934,66 +3060,19 @@ document.getElementById("term-profile").onchange = (e) => applyTermProfile(e.tar
   applyTermProfile(p);
 })();
 
-let bellOn = true;
-try{ bellOn = localStorage.getItem("junoslab-bell") !== "off"; }catch(e){}
-let audioCtx = null;
 function termBell(){
-  if(!bellOn) return;
-  try{
-    const AC = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
-    if(!AC) return;
-    audioCtx = audioCtx || new AC();
-    const o = audioCtx.createOscillator(), gn = audioCtx.createGain();
-    o.type = "sine";
-    o.frequency.value = 880;
-    gn.gain.setValueAtTime(0.06, audioCtx.currentTime);
-    gn.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.12);
-    o.connect(gn); gn.connect(audioCtx.destination);
-    o.start(); o.stop(audioCtx.currentTime + 0.13);
-  }catch(e){}
+  if(typeof SFX !== "undefined") SFX.bell();
 }
-/* a small mechanical click — gear seating in rack rails, an RJ45 latch.
-   Shares the terminal bell's AudioContext and its on/off toggle. */
 function clickSound(){
-  if(!bellOn) return;
-  try{
-    const AC = (typeof window !== "undefined") && (window.AudioContext || window.webkitAudioContext);
-    if(!AC) return;
-    audioCtx = audioCtx || new AC();
-    const t0 = audioCtx.currentTime;
-    // a short noise burst through a bandpass = the latch itself
-    const n = Math.round(audioCtx.sampleRate * 0.05);
-    const buf = audioCtx.createBuffer(1, n, audioCtx.sampleRate);
-    const ch = buf.getChannelData(0);
-    for(let i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / n);
-    const src = audioCtx.createBufferSource();
-    src.buffer = buf;
-    const bp = audioCtx.createBiquadFilter();
-    bp.type = "bandpass"; bp.frequency.value = 2600; bp.Q.value = 1.2;
-    const gn = audioCtx.createGain();
-    gn.gain.setValueAtTime(0.14, t0);
-    gn.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.07);
-    src.connect(bp); bp.connect(gn); gn.connect(audioCtx.destination);
-    src.start(t0);
-    // and a tiny low thud underneath — steel meeting steel
-    const o = audioCtx.createOscillator(), g2 = audioCtx.createGain();
-    o.type = "triangle";
-    o.frequency.setValueAtTime(190, t0);
-    o.frequency.exponentialRampToValueAtTime(120, t0 + 0.06);
-    g2.gain.setValueAtTime(0.08, t0);
-    g2.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.08);
-    o.connect(g2); g2.connect(audioCtx.destination);
-    o.start(t0); o.stop(t0 + 0.09);
-  }catch(e){}
+  if(typeof SFX !== "undefined") SFX.plug();
 }
 function setBell(on){
-  bellOn = on;
-  try{ localStorage.setItem("junoslab-bell", on ? "on" : "off"); }catch(e){}
+  if(typeof SFX !== "undefined") SFX.setEnabled(on);
   const b = document.getElementById("bell-btn");
-  if(b){ b.textContent = "bell " + (on ? "on" : "off"); b.classList.toggle("active", on); }
+  if(b){ b.textContent = "sound " + (on ? "on" : "off"); b.classList.toggle("active", on); }
 }
-document.getElementById("bell-btn").onclick = () => setBell(!bellOn);
-setBell(bellOn);
+document.getElementById("bell-btn").onclick = () => setBell(!(typeof SFX !== "undefined" && SFX.isEnabled()));
+setBell(typeof SFX !== "undefined" ? SFX.isEnabled() : true);
 
 let cliFloating = false;
 const cliHead = document.getElementById("cli-head");
@@ -4124,8 +3203,6 @@ wireToolbarMenu("add-btn", "add-menu", [
   { header: "Layout" },
   { target: "add-zone", label: "Building", desc: "A room with walls, air, and a temperature — devices and racks live inside" },
   { target: "add-rack", label: "Rack", desc: "A steel frame; dropped gear clicks into the rails, in-rack cabling prices as DACs" },
-  { target: "add-tray", label: "Cable tray", desc: "Ceiling basket, wall trunking or underfloor duct — cables auto-route along it, bundled and measured" },
-  { target: "add-desk", label: "Desk", desc: "PCs snap into a row; the desk names its cable runs like a real outlet" },
 ]);
 wireToolbarMenu("view-btn", "view-menu", [
   { target: "vlan-btn", label: "VLAN colors", desc: "Color links and ports by VLAN, with a legend", checked: () => typeof vlanView !== "undefined" && vlanView },
@@ -4141,81 +3218,7 @@ wireToolbarMenu("plan-btn", "plan-menu", [
   { action: () => typeof exportDiagramSvg === "function" && exportDiagramSvg(), label: "Export diagram (SVG)", desc: "The canvas as a standalone vector file" },
   { action: () => typeof exportDiagramPng === "function" && exportDiagramPng(), label: "Export diagram (PNG)", desc: "A bitmap snapshot for pasting into documents" },
 ]);
-/* ---------- named lab slots: several labs side by side, in the browser ---------- */
-function slotAll(){
-  try{ return JSON.parse(localStorage.getItem("junoslab-slots") || "{}") || {}; }catch(e){ return {}; }
-}
-function slotWrite(all){ try{ localStorage.setItem("junoslab-slots", JSON.stringify(all)); }catch(e){} }
-function slotSave(name){
-  const n = String(name || "").trim().slice(0, 40);
-  if(!n) return false;
-  const all = slotAll();
-  all[n] = { data: serializeLab(), ts: Date.now(),
-    devices: Object.keys(devices).length };
-  slotWrite(all);
-  return true;
-}
-function slotLoad(name){
-  const all = slotAll();
-  if(!all[name]) return false;
-  loadLab(all[name].data);
-  return true;
-}
-function slotDelete(name){
-  const all = slotAll();
-  if(!(name in all)) return false;
-  delete all[name];
-  slotWrite(all);
-  return true;
-}
-function showSlotsModal(){
-  showModal((box, done) => {
-    const h = document.createElement("h3"); h.textContent = "Lab slots"; box.appendChild(h);
-    const p = document.createElement("p"); p.className = "ref-help";
-    p.textContent = "Several labs, side by side, kept in this browser — design A, design B, the practice mess. Loading replaces the canvas (undo can bring it back).";
-    box.appendChild(p);
-    const list = document.createElement("div");
-    const rebuild = () => {
-      list.innerHTML = "";
-      const all = slotAll();
-      const names = Object.keys(all).sort();
-      if(!names.length){
-        const em = document.createElement("p"); em.className = "ref-help";
-        em.textContent = "(no slots yet)";
-        list.appendChild(em);
-      }
-      for(const n of names){
-        const row = document.createElement("div"); row.className = "slot-row";
-        const lbl = document.createElement("span"); lbl.className = "slot-name";
-        lbl.textContent = n;
-        const meta = document.createElement("span"); meta.className = "slot-meta";
-        meta.textContent = all[n].devices + " devices · " + new Date(all[n].ts).toLocaleDateString();
-        const ld = document.createElement("button"); ld.textContent = "load";
-        ld.onclick = () => { pushUndo(); slotLoad(n); done(null); };
-        const ow = document.createElement("button"); ow.textContent = "overwrite";
-        ow.onclick = () => { slotSave(n); rebuild(); };
-        const del = document.createElement("button"); del.className = "pv-danger"; del.textContent = "delete";
-        del.onclick = () => { slotDelete(n); rebuild(); };
-        row.append(lbl, meta, ld, ow, del);
-        list.appendChild(row);
-      }
-    };
-    rebuild();
-    box.appendChild(list);
-    const saveRow = document.createElement("div"); saveRow.className = "slot-saverow";
-    const inp = document.createElement("input");
-    inp.placeholder = "name this lab (e.g. HQ design B)";
-    const sv = document.createElement("button"); sv.textContent = "save current lab as new slot";
-    sv.onclick = () => { if(slotSave(inp.value)){ inp.value = ""; rebuild(); } };
-    saveRow.append(inp, sv);
-    box.appendChild(saveRow);
-    const cl = document.createElement("button"); cl.textContent = "close";
-    cl.onclick = () => done(null);
-    box.appendChild(cl);
-  });
-}
 wireToolbarMenu("lab-btn", "lab-menu", [
-  { action: () => showSlotsModal(), label: "Lab slots", desc: "Several labs side by side in this browser — save, load, compare designs" },
   { target: "save", label: "Save lab to file", desc: "Download the whole lab as JSON" },
   { target: "load", label: "Load lab from file", desc: "Restore a saved lab (v1 saves migrate automatically)" },
   { action: () => typeof takeSnapshot === "function" && takeSnapshot(), label: "Snapshot this design", desc: "Keep up to 10 named versions in the browser" },
@@ -4234,8 +3237,6 @@ updateGroupBtns();
 
 /* central "something changed" hook */
 function touchState(){
-  if(typeof tutTick === "function") tutTick();
-  if(typeof renderTimeline === "function") renderTimeline();
   scheduleAutosave();
   if(typeof evalChecks === "function") evalChecks();
   if(typeof onStateTouched === "function") onStateTouched();

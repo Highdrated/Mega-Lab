@@ -106,10 +106,6 @@ function deriveDev(dev){
         fIn: cfgGet(uc, ["family", "inet", "filter", "input"]) || null,
         fOut: cfgGet(uc, ["family", "inet", "filter", "output"]) || null,
       };
-      const vg = Object.entries(cfgGet(uc, ["family", "inet", "vrrp-group"]) || {})[0];
-      if(vg && vg[1] && vg[1]["virtual-address"])
-        d.irbs[u].vrrp = { group: vg[0], vip: vg[1]["virtual-address"],
-          prio: parseInt(String(vg[1].priority || "100"), 10) || 100 };
       if(owner) d.irbByVlan[d.vlans[owner[0]].id] = u;
     }
   }
@@ -166,12 +162,7 @@ function deriveDev(dev){
       .map(r => ({ low: r && r.low, high: r && r.high }))
       .filter(r => validIp(r.low || "") && validIp(r.high || ""));
     const router = cfgGet(inet, ["dhcp-attributes", "router"]);
-    const reservations = Object.entries(inet.host || {})
-      .map(([hn, hc]) => ({ name: hn, mac: String((hc && hc["hardware-address"]) || "").toLowerCase(),
-        ip: hc && hc["ip-address"] }))
-      .filter(h2 => h2.mac && validIp(h2.ip || ""));
-    if(net) d.pools.push({ name: pname, net, ranges, reservations,
-      router: validIp(router || "") ? router : null });
+    if(net) d.pools.push({ name: pname, net, ranges, router: validIp(router || "") ? router : null });
   }
 
   // per-port MAC limits (port security)
@@ -200,44 +191,7 @@ function D(dev){ if(!dev.d) rebuildAllDerived(); return dev.d; }
    NETWORK-WIDE COMPUTATION: effective edges, LACP, RSTP, storms
    ============================================================ */
 let NET = null;
-var LAST_JOURNEY = null;   // the most recent ping, hop by hop, for the inspector
 
-/* ---------- VRRP: one virtual gateway address, owned by whichever
-   switch is alive and highest-priority right now ---------- */
-var VRRP = { byVip: {} };
-function computeVrrp(){
-  const fresh = { byVip: {} };
-  for(const dev of Object.values(devices)){
-    if(dev.type !== "switch" || !dev.d) continue;
-    for(const [u, irb] of Object.entries(dev.d.irbs || {})){
-      if(!irb.vrrp || !irb.vrrp.vip) continue;
-      const iface = ifacesOf(dev).find(i => i.name === "irb." + u);
-      const up = !!(iface && iface.up) && dev.powered !== false && !dev.failed;
-      (fresh.byVip[irb.vrrp.vip] = fresh.byVip[irb.vrrp.vip] || { master: null, all: [] })
-        .all.push({ devId: dev.id, unit: u, prio: irb.vrrp.prio, up, group: irb.vrrp.group });
-    }
-  }
-  for(const entry of Object.values(fresh.byVip)){
-    const alive = entry.all.filter(x => x.up)
-      .sort((a, b) => b.prio - a.prio || String(a.devId).localeCompare(String(b.devId)));
-    entry.master = alive.length ? alive[0].devId : null;
-  }
-  VRRP = fresh;
-}
-function showVrrpCmd(dev){
-  const rows = [];
-  for(const [u, irb] of Object.entries((dev.d && dev.d.irbs) || {})){
-    if(!irb.vrrp) continue;
-    const entry = VRRP.byVip[irb.vrrp.vip];
-    const me = entry && entry.all.find(x => x.devId === dev.id && x.unit === u);
-    const state = !me || !me.up ? "init" : entry.master === dev.id ? "master" : "backup";
-    rows.push("irb." + u + "      " + String(irb.vrrp.group).padEnd(7) + state.padEnd(9) +
-      String(irb.vrrp.prio).padEnd(10) + irb.vrrp.vip +
-      (state === "backup" && entry.master ? "   (master: " + (devices[entry.master] || {}).name + ")" : ""));
-  }
-  if(!rows.length) return "VRRP is not configured on this box\n(set interfaces irb unit <u> family inet vrrp-group <g> virtual-address <ip>)";
-  return "Interface   Group  State    Priority  Virtual-IP\n" + rows.join("\n");
-}
 function physPortActive(dev, portId){
   if(dev.failed) return false;                 // what-if failure simulation
   if(dev.type === "host" || dev.type === "isp") return true;
@@ -490,7 +444,6 @@ function rebuildAllDerived(){
     if(!changed) break;
     computeNet();
   }
-  computeVrrp();
   computeOspf();
   computeBgp();
   if(computeThermal()){ computeNet(); computeOspf(); computeBgp(); }   // thermal shutdowns change the graph
@@ -792,10 +745,6 @@ function ifacesOf(dev){
       const carried = effSwitchPorts(dev).some(p => p.vlanIds.includes(irb.vlanId));
       out.push({ name: "irb." + unit, unit, ip: irb.ip, bits: irb.bits, fIn: irb.fIn, fOut: irb.fOut,
         seed: { type: "vlan", dev: dev.id, vlanId: irb.vlanId }, up: carried, mac: macOf(dev.id, "irb." + unit) });
-      if(irb.vrrp && irb.vrrp.vip && VRRP.byVip[irb.vrrp.vip] && VRRP.byVip[irb.vrrp.vip].master === dev.id)
-        out.push({ name: "irb." + unit, unit, ip: irb.vrrp.vip, bits: irb.bits, fIn: irb.fIn, fOut: irb.fOut,
-          seed: { type: "vlan", dev: dev.id, vlanId: irb.vlanId }, up: carried,
-          mac: macOf(dev.id, "vrrp-" + irb.vrrp.group) });
     }
   }
   return out;
@@ -813,37 +762,6 @@ function findDeviceByIp(ip){
 }
 /* LLDP: the lab knows every cable, so neighbors are simply the live links.
    PCs stay silent (no lldpd), and console leads carry no frames. */
-/* show interfaces <port> — counters fed by the real traffic ledger */
-function showIfaceDetailCmd(dev, keys){
-  const port = keys[2];
-  if(!dev.ports.some(p => p.id === port))
-    return { text: "error: interface " + port + " not found on this chassis", err: true };
-  const le = Object.entries(links).find(([, l]) =>
-    (l.a.dev === dev.id && l.a.port === port) || (l.b.dev === dev.id && l.b.port === port));
-  const up = le && physPortActive(dev, port) &&
-    physPortActive(devices[(le[1].a.dev === dev.id ? le[1].b : le[1].a).dev],
-                   (le[1].a.dev === dev.id ? le[1].b : le[1].a).port) && !le[1].failed;
-  const ctr = (le && typeof trafficPortCounters === "function")
-    ? trafficPortCounters(dev.id, le[0]) : { input: 0, output: 0 };
-  const rate = (le && typeof trafficStats === "function")
-    ? (trafficStats(60000).per[le[0]] || 0) : 0;
-  const speed = le && le[1].speed ? le[1].speed : 1;
-  return "Physical interface: " + port + ", Enabled, Physical link is " + (up ? "Up" : "Down") + "\n" +
-    "  Link-level type: Ethernet, Speed: " + (speed >= 1 ? speed + "Gbps" : Math.round(speed * 1000) + "Mbps") +
-    ", MAC address: " + macOf(dev.id, port) + "\n" +
-    (le ? "  Connected to: " + (devices[(le[1].a.dev === dev.id ? le[1].b : le[1].a).dev] || {}).name +
-      ":" + (le[1].a.dev === dev.id ? le[1].b : le[1].a).port + "\n" : "  (no cable)\n") +
-    "  Traffic statistics (since this session began):\n" +
-    "    Input  packets: " + ctr.input + "\n" +
-    "    Output packets: " + ctr.output + "\n" +
-    "    Last minute:    " + rate + " packets crossed this link\n" +
-    "  (counters count REAL journeys — pings, DHCP, lookups you actually ran)";
-}
-function monitorIfaceCmd(dev, keys){
-  const out = showIfaceDetailCmd(dev, ["show", "interfaces", keys[2]]);
-  if(out && out.err) return out;
-  return String(out) + "\n\n(real JunOS live-updates this screen; the lab gives you a snapshot — run it again to refresh)";
-}
 function showLldpCmd(dev){
   const rows = [];
   for(const l of Object.values(links)){
@@ -902,13 +820,6 @@ function evalFilter(dev, fname, pkt){
     return t.then;
   }
   return "discard";                 // JunOS: implicit discard at the end of every filter
-}
-/* does this irb endpoint answer for a VRRP virtual address right now? */
-function vrrpAnswers(e2, ip){
-  if(!e2 || e2.kind !== "irb") return false;
-  const irb = D(e2.dev).irbs[e2.ep.irbUnit];
-  return !!(irb && irb.vrrp && irb.vrrp.vip === ip &&
-    VRRP.byVip[ip] && VRRP.byVip[ip].master === e2.dev.id);
 }
 function endpointL3(ep){
   const dev = devices[ep.dev];
@@ -996,7 +907,7 @@ function pingWalk(startDev, pkt0, opts){
     const l3eps = reach.endpoints.map(endpointL3).filter(Boolean);
     const found = r.type === "peer"
       ? l3eps.find(e => e.ip !== r.iface.ip && sameSubnet(e.ip, r.iface.ip, r.iface.bits))
-      : l3eps.find(e2 => e2.ip === targetIp || vrrpAnswers(e2, targetIp));
+      : l3eps.find(e => e.ip === targetIp);
     if(!found){
       const what = r.type === "connected" ? pkt.dst : r.type === "peer" ? "the provider-side peer" : `next-hop ${r.nh}`;
       return fail(
@@ -1010,9 +921,9 @@ function pingWalk(startDev, pkt0, opts){
         `filtered (${found.fIn})`,
         { filtered: { dev: found.dev, filter: found.fIn, iface: found.iface, act } });
     }
-    segs.push(...found.ep.path.map(s => ({ ...s, srcMac: r.iface.mac, srcIp: pkt.src, dstIp: pkt.dst })));
+    segs.push(...found.ep.path.map(s => ({ ...s, srcMac: r.iface.mac, srcIp: pkt.src })));
     if(opts.learn) learnPath(node, r.iface, found, pkt);
-    if(found.ip === pkt.dst || vrrpAnswers(found, pkt.dst)){
+    if(found.ip === pkt.dst){
       // a reply aimed at a NAT address isn't home yet — untranslate and keep routing
       const ent = opts.natTable && opts.natTable.find(en => en.devId === found.dev.id && en.natIp === pkt.dst);
       if(!ent) return { ok: true, hops, segs, deliveredDev: found.dev };
@@ -1088,7 +999,6 @@ function pingRun(dev, target, opts){
   const natTable = [], natEvents = [];
   const walkOpts = { ...opts, natTable, natEvents };
   const fwd = pingWalk(dev, pkt, walkOpts);
-  LAST_JOURNEY = { when: Date.now(), target, ok: false, fwd: fwd.segs || [], rev: null, natEvents };
   const head = `PING ${target} (${target}): 56 data bytes`;
   const anim = (segs, ok, revSegs, meta) => {
     if(opts.animate && typeof animatePing === "function") animatePing(segs, ok, revSegs, meta);
@@ -1103,8 +1013,6 @@ function pingRun(dev, target, opts){
   const backTo = natTable.length ? natTable[natTable.length - 1].natIp : srcIp;
   const rpkt = { src: target, dst: backTo, proto: opts.proto || "icmp" };
   const rev = pingWalk(fwd.deliveredDev, rpkt, walkOpts);
-  LAST_JOURNEY.rev = rev.segs || null;
-  LAST_JOURNEY.ok = !!rev.ok;
   if(!rev.ok){
     anim(fwd.segs, false, null, { short: "reply lost: " + (rev.short || "no return path"), srcDev: dev, natEvents });
     return { ok: false, lines: [
@@ -1142,8 +1050,7 @@ function runDhclient(host){
     return lines("err", head + "\n....DHCPNAK from " + srvIface.ip + "  (pool " + pool.name + " has no range — set ... range r1 low/high)");
   server.leases = server.leases || {};
   const mac = macOf(host.id, "eth0");
-  const resv = (pool.reservations || []).find(rv => rv.mac === mac.toLowerCase());
-  let ip = resv ? resv.ip : server.leases[mac];
+  let ip = server.leases[mac];
   if(!ip){
     const used = new Set(Object.values(server.leases));
     outer: for(const rg of pool.ranges){
@@ -1342,19 +1249,6 @@ function showChassisEnvCmd(dev){
     pad("Fans", 7) + pad("Fan tray", 18) + pad("OK", 10) + (t >= 35 ? "full speed" : "spinning normally"),
   ].join("\n");
 }
-function showCommitCmd(dev){
-  const log = dev.commitLog || [];
-  if(!log.length) return "no commits recorded this session\n(the history starts when you commit; add a note with: commit comment \"why\")";
-  return log.map((c2, i2) =>
-    String(i2).padEnd(4) + new Date(c2.ts).toISOString().replace("T", " ").slice(0, 19) + " UTC by " +
-    c2.user + " via cli" + (c2.confirmed ? " commit confirmed" : "") +
-    (c2.comment ? "\n    " + c2.comment : "")).join("\n");
-}
-function rescueSaveCmd(dev){
-  dev.rescue = deepClone(dev.config);
-  devLog(dev, "rescue configuration saved");
-  return "rescue configuration saved\n(a known-good config to fall back to: rollback rescue, then commit)";
-}
 function showVersionCmd(dev){
   const model = dev.model || (dev.type === "switch" ? "ex4300-48t" : "mx204");
   return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: 23.4R1.10 (JunOS Lab edition)`;
@@ -1387,14 +1281,11 @@ const OP_SPECS = {
     ["show configuration", { help: "The committed (active) configuration", fn: showConfigCmd }],
     ["show configuration | display set", { help: "The active config as set commands (paste-able)", fn: showConfigSetCmd }],
     ["show interfaces terse", { help: "Interface summary", fn: showTerse }],
-    ["show interfaces <interface:physport>", { help: "One port in detail: link state, MAC, real traffic counters", fn: showIfaceDetailCmd }],
-    ["monitor interface <interface:physport>", { help: "Traffic counters for one port (snapshot)", fn: monitorIfaceCmd }],
     ["show vlans", { help: "VLANs and member ports", fn: showVlansCmd }],
     ["show ethernet-switching table", { help: "Learned MAC addresses", fn: showMacTable }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
     ["show spanning-tree interface", { help: "RSTP port roles and states", fn: showStpCmd }],
-    ["show vrrp", { help: "Virtual gateway groups: who is master right now", fn: showVrrpCmd }],
     ["show lacp interfaces", { help: "LACP bundle status", fn: showLacpCmd }],
     ["show ospf neighbor", { help: "OSPF adjacencies", fn: showOspfNbrCmd }],
     ["show chassis environment", { help: "Temperatures and fans", fn: showChassisEnvCmd }],
@@ -1402,8 +1293,6 @@ const OP_SPECS = {
     ["show lldp neighbors", { help: "Who is cabled to which port — the cable-tracing tool", fn: showLldpCmd }],
     ["show poe interface", { help: "PoE power per port and the chassis budget", fn: showPoeCmd }],
     ["show log messages", { help: "Recent system events (commits, link flaps, storms)", fn: showLogCmd }],
-    ["show system commit", { help: "Commit history: when, by whom, and the comment that says WHY", fn: showCommitCmd }],
-    ["request system configuration rescue save", { help: "Keep the current config as the known-good fallback (rollback rescue)", fn: rescueSaveCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
     ["ping <target:ip>", { help: "Ping from this device (sources from an irb)", fn: (dev, keys) => { const r = doDevicePing(dev, keys[1]); return joinLines(r); } }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
@@ -1423,8 +1312,6 @@ const OP_SPECS = {
     ["show configuration", { help: "The committed (active) configuration", fn: showConfigCmd }],
     ["show configuration | display set", { help: "The active config as set commands (paste-able)", fn: showConfigSetCmd }],
     ["show interfaces terse", { help: "Interface summary", fn: showTerse }],
-    ["show interfaces <interface:physport>", { help: "One port in detail: link state, MAC, real traffic counters", fn: showIfaceDetailCmd }],
-    ["monitor interface <interface:physport>", { help: "Traffic counters for one port (snapshot)", fn: monitorIfaceCmd }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
     ["show ospf neighbor", { help: "OSPF adjacencies", fn: showOspfNbrCmd }],
@@ -1434,8 +1321,6 @@ const OP_SPECS = {
     ["show dhcp server binding", { help: "Leases handed out by this device", fn: showDhcpBindingCmd }],
     ["show lldp neighbors", { help: "Who is cabled to which port — the cable-tracing tool", fn: showLldpCmd }],
     ["show log messages", { help: "Recent system events (commits, link flaps)", fn: showLogCmd }],
-    ["show system commit", { help: "Commit history: when, by whom, and the comment that says WHY", fn: showCommitCmd }],
-    ["request system configuration rescue save", { help: "Keep the current config as the known-good fallback (rollback rescue)", fn: rescueSaveCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
     ["ping <target:ip>", { help: "Ping from this device", fn: (dev, keys) => joinLines(doDevicePing(dev, keys[1])) }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],

@@ -106,22 +106,6 @@ function computeBom(){
     else if(sameRack) add("c:dac", "FS.com 10G DAC twinax (in-rack link)", PRICE_MISC.cableDac);
     else add("c:cat6", "FS.com Cat6 patch cable", PRICE_MISC.cableCat6);
   }
-  const TRAY_M_PRICE = { ceiling: 9, wall: 4, underfloor: 12 };
-  const TRAY_M_LABEL = {
-    ceiling: "Cable basket tray (ceiling), per metre",
-    wall: "Wall trunking, per metre",
-    underfloor: "Underfloor cable duct, per metre",
-  };
-  for(const tz of Object.values(zones)){
-    if(tz.kind !== "tray") continue;
-    const m = Math.max(1, Math.round(Math.max(tz.w, tz.h) * M_PER_PX));
-    const lvl = tz.level || "ceiling";
-    const key = "t:" + lvl;
-    if(!rows.has(key))
-      rows.set(key, { label: TRAY_M_LABEL[lvl], unit: TRAY_M_PRICE[lvl], qty: 0, monthly: 0,
-        est: true, cat: "Cables & optics (FS.com)" });
-    rows.get(key).qty += m;
-  }
   let subtotal = 0, monthly = 0;
   const list = [...rows.values()];
   for(const r of list){ subtotal += r.unit * r.qty; monthly += r.monthly * r.qty; }
@@ -161,13 +145,7 @@ function cablingSchedule(){
     const zA = zoneOf(a.id), zB = zoneOf(b.id);
     const cross = zA !== zB ? `   crosses: ${zA ? zA.name : "outside"} -> ${zB ? zB.name : "outside"}` : "";
     const len = (l.kind || "lan") === "wifi" ? "" : `  ~${pad(String(linkLenM(l)) + " m", 7)}`;
-    const r = (typeof linkRoute === "function") ? linkRoute(l) : null;
-    const via = r && r.trayIds.length
-      ? `   via ${r.trayIds.map(id2 => (zones[id2] || {}).name).join("+")} (${TRAY_LEVELS[r.level].label})` : "";
-    const dsk = (typeof deskOf === "function")
-      ? [a, b].map(d => d.type === "host" && deskOf(d.id)).find(Boolean) : null;
-    const outlet = dsk ? `   outlet: ${dsk.name}` : "";
-    out.push(`${pad(a.name + " " + l.a.port, 26)} <-> ${pad(b.name + " " + l.b.port, 26)} [${l.kind || "lan"}]${len}${via}${outlet}${cross}`);
+    out.push(`${pad(a.name + " " + l.a.port, 26)} <-> ${pad(b.name + " " + l.b.port, 26)} [${l.kind || "lan"}]${len}${cross}`);
   }
   return out;
 }
@@ -350,14 +328,6 @@ function runDrc(){
     if(n > 0) push(n >= 2 ? "error" : "warn",
       `Single point of failure: losing cable ${linkDesc(lid)} breaks ${n} host-to-host path(s).`, [], [lid]);
   drcCableLengths(push);
-  if(typeof trayFillCounts === "function")
-    for(const [tid, n] of Object.entries(trayFillCounts())){
-      const tz = zones[tid];
-      if(!tz) continue;
-      const lvl = TRAY_LEVELS[tz.level || "ceiling"];
-      if(n > lvl.cap)
-        push("warn", `"${tz.name}" (${lvl.label}) is overfilled: ${n} cables in a ~${lvl.cap}-cable pathway — crushed cables and heat follow. Add a second run or a fatter tray.`, []);
-    }
   for(const z of Object.values(zones)){
     if((z.kind || "building") !== "building") continue;
     const infra = buildingInfra(z);

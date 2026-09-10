@@ -16,9 +16,9 @@ try{ junoVoiceOn = localStorage.getItem("junoslab-junovoice") === "on"; }catch(e
    Browsers ship wildly different voices and default to the worst one.
    Rank what is installed, prefer the premium/natural voices, and let the
    user pick — the picker persists. */
-var junoVoiceRate = 1.0, junoVoiceVol = 1.0;
+var junoVoiceName = null, junoVoiceRate = 1.0;
+try{ junoVoiceName = localStorage.getItem("junoslab-junovoice-name") || null; }catch(e){}
 try{ junoVoiceRate = parseFloat(localStorage.getItem("junoslab-junovoice-rate")) || 1.0; }catch(e){}
-try{ junoVoiceVol = parseFloat(localStorage.getItem("junoslab-junovoice-vol")) || 1.0; }catch(e){}
 const JUNO_PREFERRED = ["ava", "samantha", "aria", "jenny", "sonia", "libby", "karen",
   "serena", "moira", "google uk english female", "google us english", "zira"];
 function junoVoiceScore(v){
@@ -37,15 +37,14 @@ function junoVoices(){
     return (speechSynthesis.getVoices() || []).slice().sort((a, b) => junoVoiceScore(b) - junoVoiceScore(a));
   }catch(e){ return []; }
 }
-/* one voice: Google UK English Female. Browsers without Google voices
-   (Safari, Firefox, iPad) fall back to their best English voice instead of
-   going silent — there is nothing to choose, so there is no picker. */
 function junoPickVoice(){
   const vs = junoVoices();
   if(!vs.length) return null;
-  return vs.find(v => v.name === "Google UK English Female") ||
-         vs.find(v => /google uk english female/i.test(String(v.name))) ||
-         vs[0];
+  if(junoVoiceName){
+    const hit = vs.find(v => v.name === junoVoiceName);
+    if(hit) return hit;
+  }
+  return vs[0];
 }
 function junoSay(text){
   if(!junoVoiceOn) return;
@@ -63,7 +62,6 @@ function junoSay(text){
       if(voice){ u.voice = voice; u.lang = voice.lang; }
       u.rate = junoVoiceRate;
       u.pitch = 1.0;
-      u.volume = junoVoiceVol;
       speechSynthesis.speak(u);
     }
   }catch(e){}
@@ -241,80 +239,6 @@ function junoApplyFix(){
 }
 
 /* ---------- the brain ---------- */
-function junoWifi(){
-  const aps = Object.values(devices).filter(d => d.type === "ap");
-  if(!aps.length) return "No access points on the canvas.";
-  const out = [];
-  for(const ap of aps){
-    if(typeof POE !== "undefined" && POE.denied[ap.id])
-      out.push(`${ap.name} (${ap.cfg.ssid}): DARK — ${POE.denied[ap.id]}. Fix: a PoE switch (EX2300-24P, USW-Pro-24-PoE), or fit an FS.com injector via the AP's port popover.`);
-    else {
-      const le = Object.entries(links).find(([, l]) =>
-        (l.a.dev === ap.id && l.a.port === "eth0") || (l.b.dev === ap.id && l.b.port === "eth0"));
-      out.push(`${ap.name} (${ap.cfg.ssid}): powered and beaconing` +
-        (le ? "" : " — but UNCABLED, so it bridges nothing") +
-        ` (draws ${typeof apPoeDraw === "function" ? apPoeDraw(ap) : "?"} W).`);
-    }
-  }
-  for(const sw of Object.values(devices)){
-    if(sw.type !== "switch" || typeof POE === "undefined" || !POE.budget[sw.id]) continue;
-    out.push(`${sw.name} PoE budget: ${POE.used[sw.id] || 0} W used of ${POE.budget[sw.id]} W.`);
-  }
-  return out.join("\n");
-}
-function junoVrrp(){
-  if(typeof VRRP === "undefined" || !Object.keys(VRRP.byVip).length)
-    return "No VRRP anywhere — every gateway is a single point of failure with a job title. Scenario 27 shows the fix.";
-  const out = [];
-  for(const [vip, e] of Object.entries(VRRP.byVip)){
-    const master = e.master ? (devices[e.master] || {}).name : null;
-    out.push(`Virtual gateway ${vip}: ` + (master
-      ? `master is ${master}` + (e.all.filter(x => x.up).length > 1 ? `, backup standing by` : ` — and it has NO living backup right now`)
-      : "NO living master — every candidate is down. That street has no door."));
-  }
-  return out.join("\n");
-}
-function junoBgp(){
-  const rows = [];
-  for(const d of Object.values(devices))
-    for(const p of ((d.d && d.d.bgpPeers) || []))
-      rows.push(`${d.name} -> ${p.addr}: ${p.state}` + (p.state === "Established"
-        ? " — the provider's default route [BGP/170] is installed."
-        : ` — ${p.reason}`));
-  if(!rows.length) return "No BGP configured. The edge either has a typed static default, or no internet at all — show route on the router tells you which.";
-  return rows.join("\n");
-}
-function junoPower(){
-  const out = [];
-  for(const z of Object.values(zones)){
-    if((z.kind || "building") !== "building") continue;
-    const infra = (typeof buildingInfra === "function") ? buildingInfra(z) : [];
-    if(!infra.length) continue;
-    const cap = (typeof upsCapOf === "function") ? upsCapOf(z) : 0;
-    const load = infra.filter(d => d.powered !== false)
-      .reduce((a, d) => a + (typeof drawOf === "function" ? drawOf(d) : 0), 0);
-    if(z.gridDown) out.push(`${z.name}: GRID OUTAGE in progress — ` +
-      ((z.outagePrev || []).length ? `${z.outagePrev.length} device(s) dark.` : `riding on UPS (${z.outageLoad || 0} W of ${cap} W).`));
-    else if(cap === 0) out.push(`${z.name}: ${load} W of infrastructure, NO UPS — an outage takes it all down.`);
-    else if(load > cap) out.push(`${z.name}: UPS undersized — ${load} W of load on ${cap} W of battery. An outage drops everything anyway.`);
-    else out.push(`${z.name}: ${load} W on a ${cap} W UPS — an outage would be survived.`);
-  }
-  for(const d of Object.values(devices))
-    if((d.type === "server" || d.type === "switch" || d.type === "router") && d.powered === false)
-      out.push(`${d.name} is powered OFF — unreachable, which is silence, not refusal.`);
-  return out.length ? out.join("\n") : "No buildings with infrastructure — power risk is not measurable yet.";
-}
-function junoBusiest(){
-  if(typeof trafficStats !== "function") return "No traffic ledger available.";
-  const t = trafficStats(60000);
-  const top = Object.entries(t.per).sort((a, b) => b[1] - a[1]).slice(0, 3);
-  if(!top.length) return "Zero packets in the last minute — this lab only counts REAL journeys, so quiet means nothing has moved. Run a ping and ask again.";
-  return `${t.total} packet journeys in the last minute. Busiest cables:\n` + top.map(([lid, n]) => {
-    const l = links[lid];
-    const a = l && devices[l.a.dev], b2 = l && devices[l.b.dev];
-    return `- ${a ? a.name : "?"} <-> ${b2 ? b2.name : "?"}: ${n} pkt/min`;
-  }).join("\n");
-}
 function junoAnswer(raw){
   const q = String(raw || "").trim();
   const ql = q.toLowerCase();
@@ -328,9 +252,6 @@ function junoAnswer(raw){
       "- \"how hot is it\" — every room's temperature and heat budget",
       '- "weak points" — I fail every cable and report what breaks',
       '- "what happened" — recent events across all logs',
-      '- "why is the wifi dark" — PoE budgets and dead access points',
-      '- "who is the vrrp master" / "is bgp up" / "would we survive an outage"',
-      '- "busiest cables" — the traffic ledger, ranked',
       '- "fix it" — I propose a repair; "do it" applies it',
     ].join("\n") };
   if(/^(yes|do it|go ahead|proceed|please do|apply)/.test(ql))
@@ -345,11 +266,6 @@ function junoAnswer(raw){
     if(d) return { reply: junoDeviceReport(d), scanDev: d.id };
     return { reply: `No device called "${m[1]}" on the canvas.` };
   }
-  if(/(wifi|wi-fi|access point|\bap\b|dark|beacon|poe)/.test(ql)) return { reply: junoWifi() };
-  if(/(vrrp|virtual gateway|master|failover)/.test(ql)) return { reply: junoVrrp() };
-  if(/(bgp|provider|internet down|peering|autonomous)/.test(ql)) return { reply: junoBgp() };
-  if(/(ups|battery|outage|grid|power)/.test(ql)) return { reply: junoPower() };
-  if(/(traffic|busiest|bandwidth|pkt|packets per)/.test(ql)) return { reply: junoBusiest() };
   if(/(scan|analy[sz]e|status|health|check)/.test(ql)) return { reply: junoFullScan(), scan: true };
   if(/(temp|heat|hot|cool|hvac|degrees)/.test(ql)) return { reply: junoThermal() };
   if(/(weak|impact|single point|spof|redundan|what breaks)/.test(ql)) return { reply: junoImpact() };
@@ -456,22 +372,42 @@ function junoInitTab(){
   };
   if(vb) vb.onclick = () => setV(!junoVoiceOn);
   setV(junoVoiceOn);
+  const pick = document.getElementById("juno-voice-pick");
+  const fillVoices = () => {
+    if(!pick) return;
+    const vs = junoVoices();
+    if(!vs.length) return;
+    pick.innerHTML = "";
+    const chosen = junoPickVoice();
+    for(const v of vs){
+      if(!/^en/.test(String(v.lang || "")) && v !== chosen) continue;   // keep the list sane
+      const o = document.createElement("option");
+      o.value = v.name;
+      o.textContent = v.name + (junoVoiceScore(v) >= 200 ? "  *" : "");
+      if(chosen && v.name === chosen.name) o.selected = true;
+      pick.appendChild(o);
+    }
+  };
+  if(pick){
+    fillVoices();
+    try{
+      if(typeof speechSynthesis !== "undefined" && speechSynthesis.addEventListener)
+        speechSynthesis.addEventListener("voiceschanged", fillVoices);
+    }catch(e){}
+    pick.onchange = () => {
+      junoVoiceName = pick.value;
+      try{ localStorage.setItem("junoslab-junovoice-name", junoVoiceName); }catch(e){}
+      if(!junoVoiceOn) setV(true);
+      junoSay("This is how I sound now.");
+    };
+  }
   const rate = document.getElementById("juno-rate");
   if(rate){
     rate.value = junoVoiceRate;
-    rate.oninput = () => {
+    rate.onchange = () => {
       junoVoiceRate = parseFloat(rate.value) || 1.0;
       try{ localStorage.setItem("junoslab-junovoice-rate", String(junoVoiceRate)); }catch(e){}
+      junoSay("Reading at this pace.");
     };
-    rate.onchange = () => { if(junoVoiceOn) junoSay("Reading at this pace."); };
-  }
-  const vol = document.getElementById("juno-vol");
-  if(vol){
-    vol.value = junoVoiceVol;
-    vol.oninput = () => {
-      junoVoiceVol = parseFloat(vol.value) || 1.0;
-      try{ localStorage.setItem("junoslab-junovoice-vol", String(junoVoiceVol)); }catch(e){}
-    };
-    vol.onchange = () => { if(junoVoiceOn) junoSay("This loud."); };
   }
 })();

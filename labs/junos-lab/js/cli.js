@@ -164,7 +164,7 @@ function cfgExec(dev, cmd){
       "  commit                make the candidate active\n" +
       "  commit confirmed <m>  commit with automatic rollback unless confirmed\n" +
       "  commit check          validate without committing\n" +
-      "  rollback [n|rescue]   reset candidate (0 = committed, 1 = previous commit, rescue = the saved rescue config)\n" +
+      "  rollback [n]          reset candidate (0 = committed, 1 = previous commit...)\n" +
       "  run <command>         run an operational command from here\n" +
       "  exit                  leave this level / leave configuration mode");
   }
@@ -181,6 +181,8 @@ function cfgExec(dev, cmd){
     return lines("err", `unknown command: "${word}" — type ? for configuration mode commands`);
   }
   const rest = tokens.slice(1);
+  const legacy = legacySyntaxHint(cmd);
+  if(legacy && (cmdName === "set" || cmdName === "delete")) return legacy;
   switch(cmdName){
     case "set": return cfgSetCmd(dev, rest, cmd);
     case "delete": return cfgDeleteCmd(dev, rest);
@@ -444,15 +446,8 @@ function validateCandidate(dev){
 
 function commitCmd(dev, rest){
   const sub = rest[0] || "";
-  if(sub && !"check".startsWith(sub) && !"confirmed".startsWith(sub) && !"and-quit".startsWith(sub) && !"comment".startsWith(sub))
-    return lines("err", `unknown commit option "${sub}" — try commit, commit check, commit confirmed <minutes>, commit comment "why", commit and-quit`);
-  let comment = null;
-  const ci = rest.findIndex(x => "comment".startsWith(x) && x.length >= 3);
-  if(ci !== -1){
-    comment = rest.slice(ci + 1).join(" ").replace(/^"/, "").replace(/"$/, "").trim() || null;
-    if(!comment) return lines("err", 'usage: commit comment "what changed and why"');
-    rest = rest.slice(0, ci);
-  }
+  if(sub && !"check".startsWith(sub) && !"confirmed".startsWith(sub) && !"and-quit".startsWith(sub))
+    return lines("err", `unknown commit option "${sub}" — try commit, commit check, commit confirmed <minutes>, commit and-quit`);
   const errs = validateCandidate(dev);
   if(dev.brandNew && !cfgGet(dev.candidate, ["system", "root-authentication"]))
     errs.push("Missing mandatory statement: [edit system] root-authentication — a factory-fresh box refuses to commit until root has a password (set system root-authentication plain-text-password)");
@@ -488,12 +483,10 @@ function commitCmd(dev, rest){
     dev.brandNew = false;
     devLog(dev, "day-zero commit — factory-default state cleared");
   }
-  dev.commitLog = dev.commitLog || [];
-  dev.commitLog.unshift({ ts: Date.now(), user: dev.user || "kaatje", comment, confirmed: !!confirmedMin });
-  if(dev.commitLog.length > 20) dev.commitLog.length = 20;
-  devLog(dev, `UI_COMMIT_COMPLETED: commit by ${dev.user || "kaatje"}` + (comment ? ` — "${comment}"` : "") + (confirmedMin ? ` (confirmed, ${confirmedMin}m timer)` : ""));
+  devLog(dev, `UI_COMMIT_COMPLETED: commit by ${dev.user || "kaatje"}` + (confirmedMin ? ` (confirmed, ${confirmedMin}m timer)` : ""));
   rebuildAllDerived();
   touchState();
+  if(typeof SFX !== "undefined") SFX.commit();
   const out = [];
   if(confirmedMin)
     out.push({ cls:"out", text:
@@ -521,13 +514,8 @@ function autoRollback(dev){
 }
 
 function rollbackCmd(dev, rest){
-  if(rest[0] === "rescue"){
-    if(!dev.rescue) return lines("err", "error: no rescue configuration is set (save one first: request system configuration rescue save)");
-    dev.candidate = deepClone(dev.rescue);
-    return lines("out", "load complete");
-  }
   const n = rest.length ? parseInt(rest[0], 10) : 0;
-  if(isNaN(n) || n < 0) return lines("err", "usage: rollback <n> (0 = committed config, 1 = one commit ago ...) — or rollback rescue");
+  if(isNaN(n) || n < 0) return lines("err", "usage: rollback <n> (0 = committed config, 1 = one commit ago ...)");
   if(n === 0) dev.candidate = deepClone(dev.config);
   else {
     const h = dev.cfgHistory[n - 1];
@@ -575,33 +563,7 @@ function sshForward(dev, cmd){
 function hostExec(dev, cmd){
   const fwd = sshForward(dev, cmd);
   if(fwd) return fwd;
-  cmd = cmd.replace(/^sudo\s+/, "");   // of course you typed sudo — you are on Linux
   const parts = cmd.split(/\s+/);
-  // real-terminal spellings map onto the same machinery
-  if(parts[0] === "ip" && (parts[1] === "a" || parts[1] === "ad" || parts[1] === "add")) parts[1] = "addr";
-  if(parts[0] === "ip" && (parts[1] === "r" || parts[1] === "ro" || parts[1] === "rou")) parts[1] = "route";
-  if(cmd === "cat /etc/resolv.conf")
-    return lines("out", dev.cfg.ns ? "nameserver " + dev.cfg.ns
-      : "# /etc/resolv.conf is empty — set one with: nameserver <dns-ip>");
-  if(parts[0] === "nmcli"){
-    if(parts[1] === "dev" && parts[2] === "wifi" && (parts[3] === "list" || !parts[3]))
-      return hostExec(dev, "wifi scan");
-    if(parts[1] === "dev" && parts[2] === "wifi" && parts[3] === "connect" && parts[4])
-      return hostExec(dev, "wifi join " + parts[4]);
-    if(parts[1] === "dev" && parts[2] === "disconnect")
-      return hostExec(dev, "wifi leave");
-    return lines("err", "nmcli: try  nmcli dev wifi list  |  nmcli dev wifi connect <ssid>  |  nmcli dev disconnect");
-  }
-  if(parts[0] === "dig"){
-    const name = parts.filter(p => !p.startsWith("+") && p !== "dig")[0];
-    if(!name) return lines("err", "usage: dig <name>   (dig +short <name> for just the address)");
-    const r = resolveName(dev, name);
-    if(!r.ok) return lines("err", ";; " + r.text);
-    if(parts.includes("+short")) return lines("out", r.ip);
-    return lines("out",
-      ";; ANSWER SECTION:\n" + name + ".\t\t300\tIN\tA\t" + r.ip +
-      "\n\n;; SERVER: " + dev.cfg.ns + "#53  (" + r.via + ")");
-  }
   if(cmd === "?" || cmd === "help")
     return lines("out",
       "ip addr add <ip>/<bits> dev eth0     assign an address\n" +
@@ -611,11 +573,8 @@ function hostExec(dev, cmd){
       "ip route add default via <gw-ip>     set the default gateway\n" +
       "ip route [del default]               show / clear routes\n" +
       "arp -a                               show the ARP cache\n" +
-      "nameserver <dns-ip>                  point this machine at a DNS server (writes /etc/resolv.conf)\n" +
-      "cat /etc/resolv.conf                 read it back, exactly like on real Linux\n" +
-      "nslookup / dig [+short] <name>       resolve a name (both real tools work)\n" +
-      "curl <name-or-ip>                    fetch a web page\n" +
-      "nmcli dev wifi list | connect <ssid> the real Linux Wi-Fi tool (wifi scan/join also work)\n" +
+      "nameserver <dns-ip>                  point this machine at a DNS server\n" +
+      "nslookup <name> / curl <name>        resolve a name / fetch a web page\n" +
       "ping <ip-or-name>                    test reachability\n" +
       "ssh [user@]<ip-or-name>              open a CLI session on a switch, router or server\n" +
       "traceroute <ip>                      show the L3 path\n" +
@@ -765,9 +724,29 @@ function pwHash(pw){
   for(let i = 0; i < pw.length; i++) h = ((h * 33) ^ pw.charCodeAt(i)) >>> 0;
   return "$6$lab$" + h.toString(16).padStart(8, "0") + "..";
 }
+function legacySyntaxHint(cmd){
+  if(/\bport-mode\b/.test(cmd))
+    return lines("err",
+      "'port-mode' is legacy (pre-ELS) syntax — it worked on old EX code (Junos 12.x and earlier).\n" +
+      "This lab models ELS (Enhanced Layer 2 Software), the CLI on every current EX like the EX4300:\n" +
+      "  legacy:  set interfaces ge-0/0/1 unit 0 family ethernet-switching port-mode access\n" +
+      "  ELS:     set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode access");
+  if(/\bl3-interface\s+vlan\./.test(cmd))
+    return lines("err",
+      "'l3-interface vlan.N' is legacy (pre-ELS) syntax — RVIs were called vlan.N on old EX code.\n" +
+      "On ELS (this lab, and every current EX) the routed VLAN interface is irb:\n" +
+      "  legacy:  set vlans staff l3-interface vlan.10   (with interfaces vlan unit 10 ...)\n" +
+      "  ELS:     set vlans staff l3-interface irb.10    (with interfaces irb unit 10 ...)");
+  if(/\binterfaces\s+vlan\s+unit\b/.test(cmd))
+    return lines("err",
+      "'interfaces vlan unit N' is legacy (pre-ELS) syntax. On ELS the L3-in-a-VLAN interface is irb:\n" +
+      "  ELS: set interfaces irb unit 10 family inet address 10.0.10.1/24");
+  return null;
+}
 function powerOn(dev){
   if(dev.powered !== false) return;
   dev.powered = true;
+  if(typeof SFX !== "undefined") SFX.powerUp();
   devLog(dev, dev.type === "server" ? "kernel: power button pressed — system boot" : "chassisd: chassis power on");
   if(dev.brandNew){
     dev.cli.stage = "boot";
@@ -826,34 +805,15 @@ const SERVER_HELP =
   "service status                       what is running\n" +
   "dns add <name> <ip>                  publish a record (e.g. dns add web.lab 10.0.10.80)\n" +
   "dns del <name> / dns list            manage records\n" +
-  "log  (or journalctl / dmesg)         recent system messages (boots, shutdowns)\n" +
-  "systemctl start|stop|status <unit>   the real Linux spelling — nginx=http, named=dns, rsyslog=syslog\n" +
-  "...plus everything a host can do: ip addr (ip a), ip route (ip r), ping, curl, dig, ssh, hostname\n" +
-  "(sudo in front of anything is quietly accepted — you are on Linux, after all)";
+  "log                                  recent system messages (boots, shutdowns)\n" +
+  "...plus everything a host can do: ip addr, ip route, ping, curl, nslookup, hostname";
 function serverExec(dev, cmd){
   if(dev.powered === false)
     return lines("err", "(no power — the fans are silent. Press the power button on the faceplate.)");
   const fwd = sshForward(dev, cmd);
   if(fwd) return fwd;
-  cmd = cmd.replace(/^sudo\s+/, "");
   const parts = cmd.split(/\s+/);
   if(cmd === "?" || cmd === "help") return lines("out", SERVER_HELP);
-  if(parts[0] === "systemctl"){
-    const UNITS = { nginx: "http", httpd: "http", apache2: "http", named: "dns", bind9: "dns",
-      rsyslog: "syslog", syslogd: "syslog", dns: "dns", http: "http", syslog: "syslog" };
-    const svc = UNITS[String(parts[2] || "").replace(/\.service$/, "")];
-    if(parts[1] === "status" && !parts[2]) return serverExec(dev, "service status");
-    if(!svc) return lines("err", "systemctl: units here are nginx (http), named (dns), rsyslog (syslog) — or use the plain names");
-    if(parts[1] === "start" || parts[1] === "restart") return serverExec(dev, "service start " + svc);
-    if(parts[1] === "stop") return serverExec(dev, "service stop " + svc);
-    if(parts[1] === "status"){
-      const on = dev.cfg.services && dev.cfg.services[svc];
-      return lines("out", (on ? "● " : "○ ") + parts[2] + ".service\n   Active: " +
-        (on ? "active (running)" : "inactive (dead)"));
-    }
-    return lines("err", "usage: systemctl start|stop|restart|status <unit>");
-  }
-  if(parts[0] === "journalctl" || parts[0] === "dmesg") return serverExec(dev, "log");
   if(parts[0] === "log")
     return lines("out", (dev.syslog && dev.syslog.length) ? dev.syslog.join("\n") : "(log is empty)");
   if(parts[0] === "wifi") return lines("err", "servers live on cables — no radio in this chassis");

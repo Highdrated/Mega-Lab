@@ -9,13 +9,14 @@ No build step, no dependencies — open `index.html` in a browser.
 |---|---|
 | `index.html` | Markup + script includes (classic scripts, load order matters) |
 | `css/style.css` | All styling |
+| `js/sound.js` | Synthesized sound effects (Web Audio, no files): ticks, plugs, drops, commit chime, objective dings, fanfare, sound on/off toggle |
+| `js/protocols.js` | The Protocols tab: field guides (problem / how / live prereqs / config / numbers / verify / breaks / ELS notes / 30-second answer / quiz), per-protocol canvas animations, prereq-hover device glow, jump-to-scenario |
 | `js/core.js` | Global state, IP math, device factories, the config-tree engine (set/delete/render/diff) |
 | `js/grammar.js` | Placeholder types, the command trie (parsing, `?` completions, abbreviation, backtracking), switch/router config grammars |
 | `js/cli.js` | Command execution: operational + configuration modes, commit / commit confirmed / rollback, host & ISP shells |
 | `js/engine.js` | The network itself: derived config state, LACP bundle folding, RSTP/storm computation, VLAN-aware L2 reachability, routing, firewall filters, two-way ping/traceroute, MAC/ARP learning, operational `show` commands |
 | `js/ui.js` | SVG rendering, pan/zoom, cabling, modals, save/load (+v1 migration), autosave, tabbed CLI with `?`/Tab/history, packet animation |
-| `js/tutorials.js` | The Learn tab: hand-held interactive lessons — each step explains itself and watches the live lab to detect completion |
-| `js/scenarios.js` | The 27 scenarios, the fault-injection ticket generator, exam mode, progress persistence, boot |
+| `js/scenarios.js` | The 26 scenarios, the fault-injection ticket generator, exam mode, progress persistence, boot |
 | `js/planner.js` | Pre-build tooling: buildings/zones, bill of materials (Belgian prices), design rule check, failure-impact heatmap, reachability matrix, rack elevations, build packet |
 | `tests/` | Headless test suite: `node tests/run.js` (DOM shim + end-to-end assertions through the real CLI and engine) |
 | `juniper-lab.html` | Redirect stub (the app's old single-file home) |
@@ -55,7 +56,7 @@ No build step, no dependencies — open `index.html` in a browser.
   (`dns add`), an HTTP listener, and clients with `nameserver`/`nslookup`/`curl`,
   so traffic can be followed from name lookup to 200 OK (or told apart from
   connection-refused).
-- Live-checked **scenarios** (27), a fault-injection **ticket generator** (8
+- Live-checked **scenarios** (26), a fault-injection **ticket generator** (8
   fault types), and a **contract mode** that generates office-build briefs at
   three tiers.
 - Visual-learner layer: VLAN color view with legend, IP label view, capability
@@ -75,12 +76,6 @@ No build step, no dependencies — open `index.html` in a browser.
   **PoE**: real per-model switch budgets (`show poe interface`), allocation in
   port order, and dark APs that genuinely stop beaconing (fix: P-model switch
   or an FS.com injector).
-- **Cable management**: drawable **trays** (ceiling basket / wall trunking /
-  underfloor duct) auto-route nearby cables along their spine — bundled with a
-  count, measured with the real up-and-down drops per end, chained around
-  corners, checked for overfill by the DRC, and priced per metre on the BOM.
-  **Desks** seat PCs in a snapped row and label their runs as outlets in the
-  cabling schedule. In-rack DACs stay in the rack.
 - **Physical realism**: the canvas is a floor plan (1 px = 0.25 m, scale bar
   bottom-left) — copper runs over 100 m fail the DRC; racks snap gear into
   their rails at full width; servers, switches and CRACs heat their buildings;
@@ -88,16 +83,4 @@ No build step, no dependencies — open `index.html` in a browser.
   (the building header's `grid` button) if you sized it right. Link **speeds** with
   per-switch oversubscription checks, design **snapshots** with plan-A/plan-B
   diffing, and one-click **diagram export** (SVG/PNG).
-- **VRRP**: two switches share one virtual gateway; mastership is elected by
-  priority, failover is live (scenario 27 has you kill the master mid-ping).
-- **Learning layer**: a Learn tab with 13 hand-held tutorials (each step
-  auto-detects completion against the live lab) ending in a graded project;
-  a **drill mode** with flashcards generated from the command grammar; a notes
-  system (highlight anything, pin stickies to the canvas); a traffic ledger
-  with a hover **probe** mode, real `show interfaces` **counters** and
-  `monitor interface`; an **event timeline** strip of every log line across
-  the lab; a **packet inspector** that steps through the last ping hop by hop
-  (MACs, IPs, NAT rewrites); named **lab slots**; and JUNO answers for PoE,
-  VRRP, BGP, power and traffic. Plus `commit comment` + `show system commit`,
-  `rollback rescue`, and DHCP static reservations.
 - Two themes (Orbital, Terminal); no emoji anywhere, by decree.

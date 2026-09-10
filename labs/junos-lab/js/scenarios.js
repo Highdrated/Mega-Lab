@@ -938,61 +938,6 @@ const SCENARIOS = [
       "While the outage runs: laptop-1 still works (laptop battery), wifi still works (switch on UPS), files-1 still answers. Click OUTAGE to restore the grid. This drill — load, battery, verify — is exactly what a real ops team does yearly.",
     ],
   },
-  {
-    id: "no-single-door",
-    title: "27. No Single Door (VRRP)",
-    desc: "Every network so far had one gateway — one box whose death strands the whole street. Real designs give the street TWO doors wearing one shared address. Configure VRRP on both switches, then murder the master mid-ping and watch nobody notice.",
-    setup(){
-      const a = makeSwitch(200, 120, 8), b = makeSwitch(460, 120, 8);
-      cfgDo(a, [
-        "set system host-name door-a",
-        "set vlans staff vlan-id 10",
-        "set interfaces irb unit 10 family inet address 10.0.10.2/24",
-        "set vlans staff l3-interface irb.10",
-        "set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode trunk",
-        "set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff",
-        "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
-      ]);
-      cfgDo(b, [
-        "set system host-name door-b",
-        "set vlans staff vlan-id 10",
-        "set interfaces irb unit 10 family inet address 10.0.10.3/24",
-        "set vlans staff l3-interface irb.10",
-        "set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode trunk",
-        "set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff",
-        "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
-      ]);
-      const h = makeHost(330, 320);
-      devices[h].name = "worker-pc";
-      hostSet(h, "10.0.10.21", 24, "10.0.10.1");
-      cable(a, "ge-0/0/0", b, "ge-0/0/0");
-      cable(h, "eth0", b, "ge-0/0/1");
-    },
-    checks: [
-      { desc: "Both doors wear the shared address: vrrp-group 1 with virtual-address 10.0.10.1 committed on door-a AND door-b",
-        test: () => ["door-a", "door-b"].every(n => { const d = byName(n);
-          return !!(d && d.d && d.d.irbs && d.d.irbs["10"] && d.d.irbs["10"].vrrp &&
-            d.d.irbs["10"].vrrp.vip === "10.0.10.1"); }) },
-      { desc: "door-a is the preferred master: give it a higher priority than door-b (show vrrp on both)",
-        test: () => { const a2 = byName("door-a"), b2 = byName("door-b");
-          return !!(a2 && b2 && a2.d.irbs["10"] && b2.d.irbs["10"] &&
-            a2.d.irbs["10"].vrrp && b2.d.irbs["10"].vrrp &&
-            a2.d.irbs["10"].vrrp.prio > b2.d.irbs["10"].vrrp.prio); } },
-      { desc: "worker-pc reaches its gateway at the VIRTUAL address 10.0.10.1",
-        test: () => { const h2 = byName("worker-pc");
-          try{ return !!(h2 && pingRun(h2, "10.0.10.1", {}).ok); }catch(e){ return false; } } },
-      { desc: "THE DRILL, live right now: door-a is powered OFF and the ping to 10.0.10.1 still works (door-b took the crown)",
-        test: () => { const a2 = byName("door-a"), h2 = byName("worker-pc");
-          if(!a2 || a2.powered !== false || !h2) return false;
-          try{ return pingRun(h2, "10.0.10.1", {}).ok; }catch(e){ return false; } } },
-    ],
-    hints: [
-      "On BOTH switches (configure, then commit): set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1 — the virtual address is a THIRD address the two boxes share; their own .2 and .3 stay.",
-      "Pick the boss: on door-a add set interfaces irb unit 10 family inet vrrp-group 1 priority 200 (default is 100, higher wins). show vrrp on each box: door-a says master, door-b says backup.",
-      "From worker-pc: ping 10.0.10.1 — it answers, though NO interface owns that address permanently. That is the trick: the master answers for it.",
-      "Now the drill: press door-a's power button. Run the ping again — door-b answered before you finished reading show vrrp. Power door-a back on afterwards; the crown returns to the higher priority.",
-    ],
-  },
 ];
 // setups cable things up after their commits — make every setup leave the
 // derived network state (NET) consistent, no matter who calls it
@@ -1323,13 +1268,16 @@ function renderScenarioMeta(){
   }
   renderObjectives();
 }
+let sfxObjState = { id: null, done: 0 };
 function renderObjectives(){
   const objDiv = document.getElementById("scen-objectives");
   objDiv.innerHTML = "";
   let all = currentScenario.checks.length > 0;
+  let doneCount = 0;
   currentScenario.checks.forEach(c => {
     let done = false;
     try{ done = !!c.test(); }catch(e){ done = false; }
+    if(done) doneCount++;
     if(!done) all = false;
     const el2 = document.createElement("div");
     el2.className = "obj" + (done ? " done" : "");
@@ -1338,6 +1286,12 @@ function renderObjectives(){
     el2.append(dot, span);
     objDiv.appendChild(el2);
   });
+  if(sfxObjState.id !== currentScenario.id){
+    sfxObjState = { id: currentScenario.id, done: doneCount };
+  } else {
+    if(doneCount > sfxObjState.done && !all && typeof SFX !== "undefined") SFX.ding();
+    sfxObjState.done = doneCount;
+  }
   return all;
 }
 function evalChecks(){
@@ -1353,6 +1307,7 @@ function evalChecks(){
       }
       try{ localStorage.setItem(LS_PROGRESS, JSON.stringify(PROGRESS)); }catch(e){}
       renderScenSelect();
+      if(typeof SFX !== "undefined") SFX.fanfare();
       document.getElementById("scen-objectives").classList.add("done-flash");
       setTimeout(() => document.getElementById("scen-objectives").classList.remove("done-flash"), 1100);
     }
@@ -1400,11 +1355,32 @@ document.getElementById("scen-next").onclick = () => {
   const i = SCENARIOS.indexOf(currentScenario);
   gotoScenario((i < 0 ? -1 : i) + 1);
 };
+function maskHintParts(text){
+  const re = /((?:set|delete|show|run|dhclient|traceroute|ip)\s+[^.!?]*)/g;
+  const parts = [];
+  let last = 0, m;
+  while((m = re.exec(text))){
+    if(m.index > last) parts.push({ t: text.slice(last, m.index), cmd: false });
+    parts.push({ t: m[1], cmd: true });
+    last = m.index + m[1].length;
+  }
+  if(last < text.length) parts.push({ t: text.slice(last), cmd: false });
+  return parts;
+}
 document.getElementById("hint-btn").onclick = () => {
   if(hintIndex >= currentScenario.hints.length) return;
   const div = document.createElement("div");
   div.className = "hint-line";
-  div.textContent = `Hint ${hintIndex + 1}: ${currentScenario.hints[hintIndex]}`;
+  const parts = maskHintParts(`Hint ${hintIndex + 1}: ${currentScenario.hints[hintIndex]}`);
+  parts.forEach(p => {
+    if(!p.cmd){ div.appendChild(document.createTextNode(p.t)); return; }
+    const sp = document.createElement("span");
+    sp.className = "hint-cmd";
+    sp.textContent = p.t;
+    sp.title = "Try it from the idea first — click to reveal the command";
+    sp.onclick = () => sp.classList.add("revealed");
+    div.appendChild(sp);
+  });
   document.getElementById("hint-list").appendChild(div);
   hintIndex++;
   if(hintIndex >= currentScenario.hints.length){
@@ -1467,3 +1443,60 @@ function boot(){
   }
 }
 boot();
+
+let predictOn = false;
+try{ predictOn = localStorage.getItem("junoslab-predict") === "on"; }catch(e){}
+function setPredict(on){
+  predictOn = on;
+  try{ localStorage.setItem("junoslab-predict", on ? "on" : "off"); }catch(e){}
+  const b = document.getElementById("predict-btn");
+  if(b){ b.textContent = "Predict mode: " + (on ? "on" : "off"); b.classList.toggle("active", on); }
+}
+function passingCount(){
+  if(!currentScenario || !currentScenario.checks) return 0;
+  return currentScenario.checks.filter(c => { try{ return !!c.test(); }catch(e){ return false; } }).length;
+}
+function predictIntercept(dev, raw, masked){
+  if(!predictOn || examState.active) return false;
+  if(!dev || dev.cli.mode !== "cfg" || dev.cli.stage) return false;
+  const t = raw.trim();
+  if(!/^com(m(it?)?)?(\s+confirmed(\s+\d+)?)?$/.test(t) && !/^commit(\s+and-quit)?$/.test(t)) return false;
+  if(!currentScenario || !currentScenario.checks || !currentScenario.checks.length) return false;
+  const before = passingCount();
+  if(before >= currentScenario.checks.length) return false;
+  modalChoice("Predict before you commit",
+    "This is where the learning happens: what do you expect this commit to change for \u201c" + currentScenario.title + "\u201d?", [
+    { value: "more", label: "Progress \u2014 more objectives will pass", desc: "The config I staged moves the scenario forward" },
+    { value: "same", label: "No visible change yet", desc: "Necessary groundwork, but no objective flips on its own" },
+    { value: "less", label: "Something will break", desc: "I am knowingly committing something disruptive" },
+  ]).then(pred => {
+    runCliCommand(dev, raw, masked);
+    if(pred === null) return;
+    setTimeout(() => {
+      const after = passingCount();
+      const actual = after > before ? "more" : after < before ? "less" : "same";
+      const right = pred === actual;
+      const what = actual === "more" ? `objectives went ${before} \u2192 ${after} \u2014 progress`
+        : actual === "less" ? `objectives went ${before} \u2192 ${after} \u2014 something regressed`
+        : `objectives stayed at ${before}`;
+      if(typeof SFX !== "undefined") (right ? SFX.ding : SFX.womp)();
+      const div = document.createElement("div");
+      div.className = "hint-line " + (right ? "predict-right" : "predict-wrong");
+      div.textContent = (right ? "\u2713 Called it: " : "\u2715 Prediction missed: ") + what +
+        (right ? "" : ". A missed prediction is a gap in the mental model \u2014 worth a look at show | compare before the next one.");
+      document.getElementById("hint-list").prepend(div);
+    }, 60);
+  });
+  return true;
+}
+(function(){
+  const row = typeof document.querySelector === "function" ? document.querySelector(".scen-toprow") : null;
+  if(row){
+    const b = document.createElement("button");
+    b.id = "predict-btn";
+    b.title = "Before each commit in a scenario, guess the effect \u2014 then see if you were right";
+    b.onclick = () => setPredict(!predictOn);
+    row.appendChild(b);
+  }
+  setPredict(predictOn);
+})();

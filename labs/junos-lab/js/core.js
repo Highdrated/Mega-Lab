@@ -68,13 +68,8 @@ function devLog(dev, text){
   dev.syslog = dev.syslog || [];
   dev.syslog.push(new Date().toTimeString().slice(0, 8) + "  " + text);
   if(dev.syslog.length > 80) dev.syslog.shift();
-  EVENTS.push({ ts: Date.now(), devId: dev.id, text });
-  if(EVENTS.length > 400) EVENTS.splice(0, 100);
   syslogForward(dev, text);
 }
-/* the lab-wide event ledger: every device's log lines, with real timestamps,
-   feeding the timeline strip */
-var EVENTS = [];
 /* "set system syslog host <ip> any any" streams a copy of every log line to a
    server running the syslog service. It is UDP in spirit: if the server is
    unreachable, off, or not listening, the line is simply lost — like real life. */

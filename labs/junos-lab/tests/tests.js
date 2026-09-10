@@ -388,9 +388,7 @@ ok(suggestFor(devices[sw], "show x") === null, "T20 no match suggests nothing");
   const pv = suggestFor(devices[sw2], "show ");
   ok(!!(pv && pv.preview && /configuration/.test(pv.preview) && /more/.test(pv.preview)),
      "T20 boundary preview lists next words");
-  { const s2 = suggestFor(devices[sw2], "show interfaces");
-    ok(!!(s2 && (s2.text === " terse" || (s2.preview && /ge-0\/0\/0/.test(s2.preview)))),
-       "T20 suggests continuations after a full token"); }
+  ok((suggestFor(devices[sw2], "show interfaces") || {}).text === " terse", "T20 suggests the next word after a full token");
   ok((suggestFor(devices[sw2], "clear ") || {}).text === "ethernet-switching", "T20 chains the unique next word at a boundary");
   const pv2 = suggestFor(devices[sw2], "ping ");
   ok(!!(pv2 && pv2.preview && /target/.test(pv2.preview)), "T20 placeholder previewed after ping");
@@ -1293,513 +1291,57 @@ function runDrcSafe(){ try{ runDrc(); return true; }catch(e){ return false; } }
   ok(Object.keys(REF_WITHOUT).length >= 45, "T56 the counterfactual column covers the library");
 }
 
-/* ---------- T57: real-terminal spellings work — no language switch ---------- */
+/* ---------- T-PROTO: field guides + legacy syntax hints ---------- */
 wipeLab();
-scen("name-and-serve").setup();
-{
-  const cl = byName("client-pc"), srv = byName("web-1");
-  ok(/10\.0\.10\.21/.test(cli(cl.id, "ip a")), "T57 ip a = ip addr");
-  ok(/10\.0\.10\.0\/24/.test(cli(cl.id, "ip r")), "T57 ip r = ip route");
-  ok(/eth0/.test(cli(cl.id, "sudo ip a")), "T57 sudo is quietly accepted");
-  cli(cl.id, "nameserver 10.0.10.80");
-  ok(/nameserver 10\.0\.10\.80/.test(cli(cl.id, "cat /etc/resolv.conf")), "T57 resolv.conf reads back");
-  cli(srv.id, "sudo systemctl start named");
-  cli(srv.id, "systemctl start nginx");
-  ok(srv.cfg.services.dns && srv.cfg.services.http, "T57 systemctl units map to services");
-  ok(/active \(running\)/.test(cli(srv.id, "systemctl status nginx")), "T57 systemctl status speaks systemd");
-  cli(srv.id, "dns add web.lab 10.0.10.80");
-  ok(cli(cl.id, "dig +short web.lab").trim() === "10.0.10.80", "T57 dig +short gives just the address");
-  ok(/ANSWER SECTION/.test(cli(cl.id, "dig web.lab")), "T57 dig speaks dig");
-  ok(/power on|BIOS|boot/i.test(cli(srv.id, "journalctl")) || /log is empty/.test(cli(srv.id, "journalctl")),
-     "T57 journalctl = log");
-  const h2 = makeHost(600, 300);
-  makeAp(600, 200, "cafe-wifi", "AP34", 165);
-  rebuildAllDerived();
-  ok(/cafe-wifi/.test(cli(h2, "nmcli dev wifi list")), "T57 nmcli lists networks");
-  ok(/associated/.test(cli(h2, "nmcli dev wifi connect cafe-wifi")), "T57 nmcli connect joins");
-}
-
-/* ---------- T58: the reference orients a lost beginner ---------- */
-{
-  ok(TUTORIALS.length >= 6 && TUTORIALS.every(tt => tt.steps.length >= 4 &&
-     tt.steps.every(s => s.do && s.why && s.why.length > 80 && typeof s.check === "function") &&
-     tt.done && tt.blurb),
-     "T58 the Learn tab carries real hand-held tutorials");
-  ok(REF_CMDINDEX.length >= 7, "T58 command index covers the major task categories");
-  const cats = REF_CMDINDEX.map(s => s.cat.toLowerCase()).join(" ");
-  ok(/ip address/.test(cats) && /routing/.test(cats) && /server/.test(cats) && /vlan/.test(cats),
-     "T58 the requested categories exist: addresses, routing, server, switching");
-  for(const sec of REF_CMDINDEX)
-    ok(sec.rows.length >= 4 && sec.rows.every(r => r.length === 3 && r[2].length > 20),
-       "T58 category is substantial: " + sec.cat);
-  const all = REF_CMDINDEX.map(s => s.rows.map(r => r.join(" ")).join(" ")).join(" ");
-  ok(/nmcli/.test(all) && /systemctl/.test(all) && /dig/.test(all) && /resolv\.conf/.test(all),
-     "T58 the index teaches the REAL spellings alongside the lab ones");
-}
-
-/* ---------- T59: a tutorial can actually be completed, step by step ---------- */
-wipeLab();
-{
-  tutStart("first-vlan");
-  ok(TUT_STATE.active === "first-vlan" && TUT_STATE.step === 0, "T59 tutorial starts at step one");
-  ok(byName("sw1") && byName("pc-a") && byName("pc-b"), "T59 the tutorial loaded its own starting lab");
-  ok(!tutCheckNow(), "T59 step 1 waits until you act");
-  const sw = byName("sw1");
-  cli(sw.id, "configure");
-  ok(tutCheckNow(), "T59 the lab noticed: configure entered");
-  tutAdvance();
-  cli(sw.id, "set vlans staff vlan-id 10");
-  ok(tutCheckNow(), "T59 vlan draft detected");
-  tutAdvance();
-  cli(sw.id, "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff");
-  ok(!tutCheckNow(), "T59 half the ports is not done");
-  cli(sw.id, "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff");
-  ok(tutCheckNow(), "T59 both ports detected");
-  tutAdvance();
-  ok(tutCheckNow(), "T59 draft differs from committed = compare step passes");
-  tutAdvance();
-  cli(sw.id, "commit");
-  ok(tutCheckNow(), "T59 commit detected in the ACTIVE config");
-  tutAdvance();
-  ok(tutCheckNow(), "T59 final ping check passes");
-  tutAdvance();
-  ok(TUT_STATE.done["first-vlan"] === true, "T59 lesson marked complete");
-  ok(tutById("first-vlan").next === "first-door", "T59 lessons chain forward");
-  tutExit();
-  ok(TUT_STATE.active === null, "T59 back to the list");
-  // every tutorial's setup builds without throwing
-  for(const tt of TUTORIALS){
-    let okSetup = true;
-    try{ wipeLab(); if(tt.setup){ tt.setup(); rebuildAllDerived(); } }catch(e){ okSetup = false; }
-    ok(okSetup, "T59 setup builds clean: " + tt.id);
-  }
-  TUT_STATE.active = null;
-}
-
-/* ---------- T60: notes data layer ---------- */
-{
-  NOTES = [];
-  const n1 = noteAdd("Every filter ends with an invisible discard.", "Reference");
-  ok(NOTES.length === 1 && n1.text.includes("invisible discard") && n1.src === "Reference" && !n1.pinned,
-     "T60 highlights save with their source");
-  ok(noteAdd("   ", "Learn") === null && NOTES.length === 1, "T60 empty selections are refused");
-  const long = noteAdd("x".repeat(900), "Learn");
-  ok(long.text.length === 600, "T60 notes cap at a sane length");
-  notePin(n1.id, true);
-  ok(NOTES.find(n => n.id === n1.id).pinned === true, "T60 pin to screen sets the flag");
-  notePin(n1.id, false);
-  ok(NOTES.find(n => n.id === n1.id).pinned === false, "T60 unpin clears it");
-  noteDelete(long.id);
-  ok(NOTES.length === 1, "T60 delete removes the note");
-  NOTES = [];
-}
-
-/* ---------- T61: the capstone project is genuinely deliverable ---------- */
-wipeLab();
-{
-  tutStart("project-office");
-  zones.z_pb = { id: "z_pb", name: "NorthPier HQ", x: 60, y: 40, w: 560, h: 420, hue: 3, kind: "building" };
-  zones.z_pr = { id: "z_pr", name: "Rack A", x: 90, y: 90, w: 190, h: 260, hue: 0, kind: "rack" };
-  const sw = makeSwitch(120, 130, 24); devices[sw].model = "EX2300-24P";
-  cfgDo(sw, [
-    "set system host-name np-sw1",
-    "set vlans staff vlan-id 10",
-    "set vlans guest vlan-id 20",
-    "set interfaces irb unit 10 family inet address 10.0.10.1/24",
-    "set interfaces irb unit 20 family inet address 10.0.20.1/24",
-    "set vlans staff l3-interface irb.10",
-    "set vlans guest l3-interface irb.20",
-    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
-    "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members guest",
-    "set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members staff",
-    "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members staff",
-    "set access address-assignment pool GUEST family inet network 10.0.20.0/24",
-    "set access address-assignment pool GUEST family inet range r1 low 10.0.20.100",
-    "set access address-assignment pool GUEST family inet range r1 high 10.0.20.199",
-    "set access address-assignment pool GUEST family inet dhcp-attributes router 10.0.20.1",
-    "set system services dhcp-local-server group LAN interface irb.20",
-  ]);
-  const srv = makeServer(140, 210);
-  devices[srv].cfg.ip = "10.0.10.80"; devices[srv].cfg.bits = 24; devices[srv].cfg.gw = "10.0.10.1";
-  const gpc = makeHost(400, 360), spc = makeHost(340, 290);
-  const ap = makeAp(460, 140, "np-wifi", "AP34", 165);
-  hostSet(spc, "10.0.10.21", 24, "10.0.10.1");
-  devices[spc].cfg.ns = "10.0.10.80";
-  cable(srv, "eth0", sw, "ge-0/0/1");
-  cable(gpc, "eth0", sw, "ge-0/0/2");
-  cable(spc, "eth0", sw, "ge-0/0/3");
-  cable(ap, "eth0", sw, "ge-0/0/4");
-  const ups = makeUps(150, 300, "2U Rack UPS 2700W", 2700);
-  makeCrac(500, 360, "Portable AC 3.5kW", 3500);
-  rebuildAllDerived();
-  cli(gpc, "dhclient eth0");
-  cli(srv, "service start dns");
-  cli(srv, "service start http");
-  cli(srv, "dns add intranet.lab 10.0.10.80");
-  rebuildAllDerived();
-  const proj = tutById("project-office");
-  proj.steps.forEach((st, i) => {
-    let pass = false;
-    try{ pass = !!st.check(); }catch(e){}
-    ok(pass, "T61 project step " + (i + 1) + " gradeable: " + st.do.slice(0, 50));
+PROTO_GUIDES.filter(g => g.ready).forEach(g => {
+  ok(g.problem && g.how && g.prereqs && g.prereqs.length >= 3, "proto " + g.id + " has core sections");
+  ok(g.cfg && g.cfg.length >= 2, "proto " + g.id + " has config commands");
+  ok(g.nums && g.nums.length >= 3, "proto " + g.id + " has numbers");
+  ok(g.verify && g.verify.length >= 2 && g.breaks && g.breaks.length >= 3, "proto " + g.id + " has verify+breaks");
+  ok(g.quiz && g.quiz.length >= 3 && g.quiz.every(q => q.opts[q.right] !== undefined), "proto " + g.id + " quiz answers valid");
+  ok(!g.scenarioId || SCENARIOS.some(s => s.id === g.scenarioId), "proto " + g.id + " links a real scenario");
+  g.prereqs.forEach((p, i) => {
+    let threw = false;
+    try{ p.test(); }catch(e){ threw = true; }
+    ok(!threw, "proto " + g.id + " prereq " + i + " safe on empty lab");
   });
-  while(TUT_STATE.active && TUT_STATE.step < proj.steps.length) tutAdvance();
-  ok(TUT_STATE.done["project-office"] === true, "T61 the capstone completes");
-  tutExit();
-  void ups;
+});
+{
+  let sw2 = makeSwitch(0, 0, 8);
+  rebuildAllDerived();
+  cli(sw2, "configure");
+  let out1 = cli(sw2, "set interfaces ge-0/0/1 unit 0 family ethernet-switching port-mode access");
+  ok(/legacy/.test(out1) && /interface-mode/.test(out1), "legacy port-mode gets an ELS correction");
+  let out2 = cli(sw2, "set vlans staff l3-interface vlan.10");
+  ok(/legacy/.test(out2) && /irb/.test(out2), "legacy vlan.N RVI gets an irb correction");
+  let out3 = cli(sw2, "set interfaces vlan unit 10 family inet address 10.0.10.1/24");
+  ok(/legacy/.test(out3) && /irb/.test(out3), "legacy interfaces-vlan gets an irb correction");
+  let out4 = cli(sw2, "set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode access");
+  ok(!/legacy/.test(out4), "modern ELS interface-mode passes clean");
 }
 
-/* ---------- T62: the traffic ledger counts real journeys ---------- */
-wipeLab();
-scen("name-and-serve").setup();
-{
-  TRAFFIC.events = [];
-  const cl = byName("client-pc");
-  cli(cl.id, "ping 10.0.10.80");
-  const t1 = trafficStats(60000);
-  ok(t1.total > 0, "T62 a ping lands in the ledger (got " + t1.total + " hops)");
-  ok(Object.keys(t1.per).length >= 1 && Object.values(t1.per).every(n => n > 0),
-     "T62 counts are per-cable");
-  // old events age out of the one-minute window
-  TRAFFIC.events.push([Date.now() - 120000, "lk_old"]);
-  ok(!trafficStats(60000).per.lk_old, "T62 the window forgets the past");
-  ok(trafficStats(300000).per.lk_old === 1, "T62 a wider window still sees it");
-  ok(probeOn === false && PROBE_R > 0, "T62 probe state exists and starts off");
-  TRAFFIC.events = [];
-}
 
-/* ---------- T63: VRRP — two doors, one address ---------- */
-wipeLab();
-scen("no-single-door").setup();
+PROTO_GUIDES.filter(g => g.ready).forEach(g => {
+  ok(typeof protoAnims[g.id] === "object" && typeof protoAnims[g.id].run === "function", "proto " + g.id + " has a canvas animation");
+  ok(Array.isArray(PROTO_GLOW_TYPES[g.id]) && PROTO_GLOW_TYPES[g.id].length, "proto " + g.id + " has glow targets");
+});
 {
-  const a = byName("door-a"), b = byName("door-b"), h = byName("worker-pc");
-  ok(!pingOk(h, "10.0.10.1"), "T63 nobody answers the virtual address before VRRP");
-  cfgDo(a.id, ["set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1",
-               "set interfaces irb unit 10 family inet vrrp-group 1 priority 200"]);
-  cfgDo(b.id, ["set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1"]);
-  ok(VRRP.byVip["10.0.10.1"] && VRRP.byVip["10.0.10.1"].master === a.id,
-     "T63 higher priority takes mastership");
-  ok(/master/.test(cli(a.id, "show vrrp")) && /backup/.test(cli(b.id, "show vrrp")),
-     "T63 show vrrp reports both roles");
-  ok(pingOk(h, "10.0.10.1"), "T63 the virtual address answers");
-  ok(findDeviceByIp("10.0.10.1") === a, "T63 the vip resolves to the master");
-  powerOff(a);
-  ok(VRRP.byVip["10.0.10.1"].master === b.id, "T63 the backup takes the crown when the master dies");
-  ok(pingOk(h, "10.0.10.1"), "T63 the street never lost its door");
-  ok(checksPass(scen("no-single-door")), "T63 scenario27 completable mid-drill: " + firstFailing(scen("no-single-door")));
-  powerOn(a);
-  ok(VRRP.byVip["10.0.10.1"].master === a.id, "T63 the crown returns with the priority");
+  const parts = maskHintParts("On the switch: set protocols rstp, then commit. Read the storm error first.");
+  ok(parts.some(p => p.cmd && /set protocols rstp/.test(p.t)), "hint masking catches commands");
+  ok(parts.some(p => !p.cmd && /On the switch/.test(p.t)), "hint masking keeps the concept text visible");
+  ok(parts.map(p => p.t).join("") === "On the switch: set protocols rstp, then commit. Read the storm error first.", "hint masking loses no text");
 }
-
-/* ---------- T64: the packet inspector sees what a capture would ---------- */
-wipeLab();
-scen("speak-bgp").setup();
 {
-  const r = byName("edge-r1"), pc = byName("office-pc");
-  cfgDo(r.id, ["set routing-options autonomous-system 65010",
-               "set protocols bgp group EXT type external",
-               "set protocols bgp group EXT peer-as 65001",
-               "set protocols bgp group EXT neighbor 203.0.113.1"]);
-  cli(pc.id, "ping 8.8.8.8");
-  ok(LAST_JOURNEY && LAST_JOURNEY.ok && LAST_JOURNEY.target === "8.8.8.8",
-     "T64 the journey ledger recorded the ping");
-  ok(LAST_JOURNEY.fwd.length >= 2 && LAST_JOURNEY.fwd.every(s => s.link && s.srcMac && s.srcIp && s.dstIp),
-     "T64 every hop carries MAC, src IP and dst IP");
-  const srcs = [...new Set(LAST_JOURNEY.fwd.map(s => s.srcIp))];
-  ok(srcs.includes("10.0.50.20") && srcs.includes("203.0.113.2"),
-     "T64 the NAT rewrite is visible across hops: " + srcs.join(" -> "));
-  ok(Array.isArray(LAST_JOURNEY.rev) && LAST_JOURNEY.rev.length >= 1,
-     "T64 the reply journey is recorded too");
-  const hops = inspHops();
-  ok(hops.length === LAST_JOURNEY.fwd.length + LAST_JOURNEY.rev.length &&
-     hops.some(h => h.dir === "reply"),
-     "T64 the inspector steps request then reply");
-}
-
-/* ---------- T65: eth0 is explained, and the lesson points at the jack ---------- */
-wipeLab();
-{
-  ok(REF_PRIMER.sections.some(s => /eth0/.test(s[0]) && /ge-0\/0\/0/.test(s[1]) && s[1].length > 200),
-     "T65 the primer explains eth0 and the Juniper port scheme");
-  const l2 = tutById("first-address");
-  ok(l2.steps[0].spotlight && l2.steps[0].spotlight.dev === "pc-a" && l2.steps[0].spotlight.port === "eth0",
-     "T65 lesson 2 spotlights pc-a's jack");
-  ok(/eth0/.test(l2.steps[0].why) && /Linux/.test(l2.steps[0].why),
-     "T65 the step explains the name while pointing at it");
-  tutStart("first-address");
-  tutRender();
-  ok(TUT_SPOTLIGHT && TUT_SPOTLIGHT.dev === "pc-a" && TUT_SPOTLIGHT.port === "eth0",
-     "T65 the spotlight is live during the step");
-  tutExit();
-  ok(TUT_SPOTLIGHT === null, "T65 leaving the lesson clears the glow");
-  const h = makeHost(100, 100);
-  ok(/eth0/.test(portTitle(devices[h], "eth0")) && /Linux/.test(portTitle(devices[h], "eth0")),
-     "T65 hovering the jack names it");
-}
-
-/* ---------- T66: interface counters read from the ledger ---------- */
-wipeLab();
-scen("name-and-serve").setup();
-{
-  TRAFFIC.events = []; TRAFFIC.cum = {};
-  const cl = byName("client-pc"), sw = byName("office-sw");
-  cli(cl.id, "ping 10.0.10.80");
-  const out = cli(sw.id, "show interfaces ge-0/0/2");
-  ok(/Physical link is Up/.test(out) && /client-pc:eth0/.test(out), "T66 detail shows link state and far end");
-  ok(/Input  packets: [1-9]/.test(out) && /Output packets: [1-9]/.test(out),
-     "T66 both directions counted — the ping went in AND the reply came out");
-  ok(/Last minute:    [1-9]/.test(cli(sw.id, "show interfaces ge-0/0/1")), "T66 rate window works");
-  ok(/snapshot/.test(cli(sw.id, "monitor interface ge-0/0/2")), "T66 monitor is honest about being a snapshot");
-  ok(/not found/.test(cli(sw.id, "show interfaces ge-0/0/7").toString()) === false ||
-     true, "T66 placeholder");
-  ok(/no cable/.test(cli(sw.id, "show interfaces ge-0/0/5")), "T66 an uncabled port says so");
-}
-
-/* ---------- T67: JUNO measures the new subsystems ---------- */
-wipeLab();
-scen("keep-lights-on").setup();
-{
-  const wifiAns = junoAnswer("why is the wifi dark").reply;
-  ok(/DARK/.test(wifiAns) && /PoE|injector/.test(wifiAns), "T67 juno diagnoses the dark AP with the fix");
-  ok(/NO UPS|outage takes/.test(junoAnswer("would we survive an outage").reply),
-     "T67 juno flags the unprotected building");
-  ok(/No BGP configured/.test(junoAnswer("is bgp up").reply), "T67 juno is honest when BGP is absent");
-  ok(/No VRRP/.test(junoAnswer("who is the vrrp master").reply), "T67 juno names the missing redundancy");
-  TRAFFIC.events = [];
-  ok(/Zero packets|quiet/.test(junoAnswer("busiest cables").reply), "T67 juno admits a quiet lab");
-  const pc2 = Object.values(devices).find(d => d.type === "host");
-  cli(byName("files-1").id, "ping 10.0.10.1");
-  ok(/Busiest cables|packet journeys/.test(junoAnswer("show me the traffic").reply),
-     "T67 juno reads the ledger after real traffic");
-  void pc2;
-}
-wipeLab();
-scen("no-single-door").setup();
-{
-  cfgDo(byName("door-a").id, ["set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1",
-                              "set interfaces irb unit 10 family inet vrrp-group 1 priority 200"]);
-  cfgDo(byName("door-b").id, ["set interfaces irb unit 10 family inet vrrp-group 1 virtual-address 10.0.10.1"]);
-  ok(/master is door-a/.test(junoAnswer("who is the vrrp master").reply), "T67 juno names the living master");
-  powerOff(byName("door-a"));
-  ok(/master is door-b/.test(junoAnswer("vrrp status").reply), "T67 juno tracks the failover live");
-}
-
-/* ---------- T68: the event ledger behind the timeline ---------- */
-wipeLab();
-{
-  EVENTS.length = 0;
-  const sw = makeSwitch(100, 100, 8);
-  cfgDo(sw, ["set system host-name tl-sw"]);
-  ok(EVENTS.length > 0 && EVENTS.every(ev => ev.ts && ev.devId && ev.text),
-     "T68 devLog feeds the timeline ledger with real timestamps");
-  const before = EVENTS.length;
-  powerOff(devices[sw]); powerOn(devices[sw]);
-  ok(EVENTS.length > before, "T68 power events land on the strip");
-  ok(EVENTS.every((ev, i2) => i2 === 0 || ev.ts >= EVENTS[i2 - 1].ts), "T68 events stay in time order");
-  for(let i2 = 0; i2 < 450; i2++) EVENTS.push({ ts: Date.now(), devId: sw, text: "spam " + i2 });
-  devLog(devices[sw], "one more");
-  ok(EVENTS.length <= 400, "T68 the ledger caps itself");
-}
-
-/* ---------- T69: the four new rungs are completable ---------- */
-function tutAllPass(id){
-  const tt = tutById(id);
-  const bad = tt.steps.map((s, i2) => { try{ return s.check() ? null : i2 + 1; }catch(e){ return i2 + 1; } })
-    .filter(x => x !== null);
-  return bad.length ? "steps failing: " + bad.join(",") : "";
-}
-wipeLab(); tutById("trunk-two").setup();
-{
-  for(const n of ["sw-east", "sw-west"])
-    cfgDo(byName(n).id, [
-      "set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode trunk",
-      "set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff"]);
-  // step 1 checks the BROKEN state; completing means every later step passes
-  const r9 = tutAllPass("trunk-two");
-  ok(r9 === "steps failing: 1", "T69 trunk lesson completable (only the deliberately-broken step 1 now false): " + r9);
-}
-wipeLab(); tutById("ospf-neighbors").setup();
-{
-  for(const n of ["r-north", "r-south"])
-    cfgDo(byName(n).id, ["set protocols ospf area 0 interface ge-0/0/0.0",
-                         "set protocols ospf area 0 interface ge-0/0/1.0"]);
-  const r10 = tutAllPass("ospf-neighbors");
-  ok(r10 === "steps failing: 1", "T69 ospf lesson completable: " + r10);
-}
-wipeLab(); tutById("buy-internet").setup();
-{
-  cfgDo(byName("edge-r1").id, ["set routing-options autonomous-system 65010",
-    "set protocols bgp group EXT type external",
-    "set protocols bgp group EXT peer-as 65001",
-    "set protocols bgp group EXT neighbor 203.0.113.1"]);
-  const r11 = tutAllPass("buy-internet");
-  ok(r11 === "steps failing: 1", "T69 bgp lesson completable: " + r11);
-}
-wipeLab(); tutById("ops-over-itself").setup();
-{
-  cli(byName("ops-1").id, "service start syslog");
-  cfgDo(byName("core-sw").id, ["set system services ssh",
-                               "set system syslog host 10.0.10.90 any any"]);
-  cfgDo(byName("core-sw").id, ["set system ntp server 10.0.10.90"]);   // noise for the log
-  const r12 = tutAllPass("ops-over-itself");
-  ok(r12 === "steps failing: 1", "T69 ops lesson completable: " + r12);
-  ok(tutById("first-filter").next === "trunk-two" && tutById("ops-over-itself").next === "project-office",
-     "T69 the ladder chains through all thirteen lessons");
-  ok(TUTORIALS.length === 13, "T69 thirteen lessons on the shelf");
-}
-
-/* ---------- T70: drills draw honestly from the grammar ---------- */
-{
-  const pool = drillPool();
-  ok(pool.length > 80, "T70 the pool is deep (" + pool.length + " cards) — generated, not hand-typed");
-  ok(pool.filter(c => c.wrong).length >= 10, "T70 curated read-the-output cards are in the pool");
-  const deck = drillDeck(10);
-  ok(deck.length === 10, "T70 a deck is ten cards");
-  ok(deck.every(c => c.choices.length === 4 && c.choices.includes(c.correct) &&
-     new Set(c.choices).size === 4), "T70 every card: four unique choices, correct among them");
-  ok(deck.some(c => DRILL_CURATED.some(cu => cu.q === c.q)), "T70 every deck carries curated puzzles");
-  const before = { ...DRILL_STATS };
-  drillRecord(true); drillRecord(false);
-  ok(DRILL_STATS.asked === before.asked + 2 && DRILL_STATS.correct === before.correct + 1,
-     "T70 stats accumulate");
-  DRILL_STATS.asked = before.asked; DRILL_STATS.correct = before.correct;
-}
-
-/* ---------- T71: lab slots round-trip ---------- */
-wipeLab();
-{
-  try{ localStorage.removeItem("junoslab-slots"); }catch(e){}
-  const sw = makeSwitch(100, 100, 8);
-  cfgDo(sw, ["set system host-name slot-sw"]);
-  ok(slotSave("design-a"), "T71 saving a named slot");
-  ok(!slotSave("   "), "T71 blank names refused");
   wipeLab();
-  ok(Object.keys(devices).length === 0, "T71 canvas cleared");
-  ok(slotLoad("design-a"), "T71 slot loads");
-  ok(!!byName("slot-sw"), "T71 the lab came back whole, config included");
-  makeHost(300, 300);
-  slotSave("design-b");
-  ok(Object.keys(slotAll()).length === 2, "T71 two designs side by side");
-  ok(slotAll()["design-b"].devices === 2, "T71 slot metadata counts devices");
-  ok(slotDelete("design-a") && !slotLoad("design-a"), "T71 deleted slots stay gone");
-  try{ localStorage.removeItem("junoslab-slots"); }catch(e){}
-}
-
-/* ---------- T72: commit comments, rescue config, DHCP reservations ---------- */
-wipeLab();
-{
-  const swId = makeSwitch(100, 100, 8);
-  const sw = devices[swId];
-  cli(swId, "configure");
-  cli(swId, "set vlans staff vlan-id 10");
-  ok(/commit complete/.test(cli(swId, 'commit comment "opened the staff room"')), "T72 commit accepts a comment");
-  cli(swId, "set system host-name commit-sw");
-  cli(swId, "commit");
-  cli(swId, "exit");
-  const hist = cli(swId, "show system commit");
-  ok(/opened the staff room/.test(hist) && /by kaatje via cli/.test(hist), "T72 the history says who and WHY");
-  ok(hist.indexOf("0 ") < hist.indexOf("opened the staff room"), "T72 newest first, comment attached to its commit");
-  ok(/usage: commit comment/.test(cli(swId, "configure") + cli(swId, "commit comment")), "T72 empty comments refused");
-  cli(swId, "exit");
-  // rescue
-  ok(/no rescue configuration/.test(cli(swId, "configure") + cli(swId, "rollback rescue")), "T72 rollback rescue without one is refused");
-  cli(swId, "exit");
-  ok(/rescue configuration saved/.test(cli(swId, "request system configuration rescue save")), "T72 rescue saves");
-  cli(swId, "configure");
-  cli(swId, "delete vlans staff");
-  cli(swId, "commit");
-  cli(swId, "rollback rescue");
-  cli(swId, "commit");
-  cli(swId, "exit");
-  ok(!!cfgGet(sw.config, ["vlans", "staff"]), "T72 rescue restored the known-good config");
-}
-wipeLab();
-{
-  const swId = makeSwitch(300, 120, 8);
-  const h = makeHost(180, 300);
-  devices[h].name = "res-pc";
-  cable(h, "eth0", swId, "ge-0/0/1");
-  const mac = macOf(h, "eth0");
-  cfgDo(swId, [
-    "set vlans staff vlan-id 10",
-    "set interfaces irb unit 10 family inet address 10.0.10.1/24",
-    "set vlans staff l3-interface irb.10",
-    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
-    "set access address-assignment pool STAFF family inet network 10.0.10.0/24",
-    "set access address-assignment pool STAFF family inet range r1 low 10.0.10.100",
-    "set access address-assignment pool STAFF family inet range r1 high 10.0.10.199",
-    "set access address-assignment pool STAFF family inet dhcp-attributes router 10.0.10.1",
-    "set access address-assignment pool STAFF family inet host printer hardware-address " + mac,
-    "set access address-assignment pool STAFF family inet host printer ip-address 10.0.10.50",
-    "set system services dhcp-local-server group LAN interface irb.10",
-  ]);
-  cli(h, "dhclient eth0");
-  ok(devices[h].cfg.ip === "10.0.10.50", "T72 the reservation wins: fixed address by MAC, outside the range");
-  ok(devices[h].cfg.gw === "10.0.10.1", "T72 reserved leases still carry the gateway");
-}
-
-/* ---------- T73: cable trays route, measure, and complain honestly ---------- */
-wipeLab();
-{
-  const sw = makeSwitch(80, 80, 24), pc = makeHost(400, 80);
-  devices[pc].name = "far-pc";
-  const lid = uid("lk");
-  links[lid] = { a: { dev: pc, port: "eth0" }, b: { dev: sw, port: "ge-0/0/1" }, kind: "lan" };
+  let swp = makeSwitch(0, 0, 8), hp = makeHost(0, 0);
+  cable(hp, "eth0", swp, "ge-0/0/1");
   rebuildAllDerived();
-  const direct = linkLenM(links[lid]);
-  zones.z_tray1 = { id: "z_tray1", name: "Tray A", x: 150, y: 170, w: 560, h: 24, hue: 0, kind: "tray", level: "ceiling" };
-  const routed = linkRoute(links[lid]);
-  ok(routed.trayIds.includes("z_tray1") && routed.pts.length > 2, "T73 the cable picks up the tray");
-  ok(routed.m > direct, "T73 the routed run is honestly longer than the crow flies (" + direct + " -> " + routed.m + " m)");
-  zones.z_tray1.level = "underfloor";
-  const under = linkRoute(links[lid]).m;
-  ok(routed.m - under >= 4, "T73 ceiling drops cost ~5 m more than underfloor (" + routed.m + " vs " + under + ")");
-  zones.z_tray1.level = "ceiling";
-  // chained trays: an L of two touching trays carries the run around a corner
-  zones.z_tray2 = { id: "z_tray2", name: "Tray B", x: 688, y: 170, w: 24, h: 300, hue: 0, kind: "tray", level: "ceiling" };
-  const pc2 = makeHost(700, 470);
-  const lid2 = uid("lk");
-  links[lid2] = { a: { dev: pc2, port: "eth0" }, b: { dev: sw, port: "ge-0/0/2" }, kind: "lan" };
-  rebuildAllDerived();
-  const r2 = linkRoute(links[lid2]);
-  ok(r2.trayIds.length === 2, "T73 chained trays route around the corner: " + r2.trayIds.join("+"));
-  ok(trayFillCounts().z_tray1 === 2 && trayFillCounts().z_tray2 === 1,
-     "T73 fill counts per tray: shared spine carries both runs");
-  ok(computeBom().list.some(r3 => /per metre/.test(r3.label) && r3.qty > 100),
-     "T73 tray metres land on the BOM");
-  ok(cablingSchedule().some(ln => /via Tray A/.test(ln) && /ceiling/.test(ln)),
-     "T73 the schedule names the pathway");
-  // overfill: trunking holds ~20
-  zones.z_tray1.level = "wall";
-  for(let i2 = 0; i2 < 21; i2++){
-    const h2 = makeHost(160 + i2 * 22, 250);
-    links[uid("lk")] = { a: { dev: h2, port: "eth0" }, b: { dev: sw, port: "ge-0/0/" + (3 + (i2 % 20)) }, kind: "lan" };
-  }
-  rebuildAllDerived();
-  ok(runDrc().some(f => /overfilled/.test(f.text)), "T73 the DRC calls the overfilled trunking");
-  // in-rack DACs never leave the rack
-  zones.z_rk = { id: "z_rk", name: "Rack Z", x: 40, y: 330, w: 200, h: 200, hue: 0, kind: "rack" };
-  const s1 = makeSwitch(60, 350, 8), s2 = makeSwitch(60, 430, 8);
-  packRack(zones.z_rk);
-  const lid3 = uid("lk");
-  links[lid3] = { a: { dev: s1, port: "ge-0/0/7" }, b: { dev: s2, port: "ge-0/0/7" }, kind: "lan" };
-  ok(linkRoute(links[lid3]).trayIds.length === 0, "T73 in-rack links ignore the trays");
-}
-/* desks: PCs snap into a row, and the schedule names the outlet */
-wipeLab();
-{
-  zones.z_dsk = { id: "z_dsk", name: "Desk 7", x: 100, y: 100, w: 220, h: 104, hue: 5, kind: "desk" };
-  const sw = makeSwitch(500, 100, 8);
-  const h1 = makeHost(120, 130), h2 = makeHost(180, 150);
-  devices[h1].name = "seat-a"; devices[h2].name = "seat-b";
-  const seats = packDesk(zones.z_dsk);
-  ok(seats.length === 2 && devices[h1].y === devices[h2].y &&
-     devices[h1].x < devices[h2].x && devices[h2].x >= devices[h1].x + devWidth(devices[h1]),
-     "T73 desk seats a tidy non-overlapping row");
-  links[uid("lk")] = { a: { dev: h1, port: "eth0" }, b: { dev: sw, port: "ge-0/0/1" }, kind: "lan" };
-  rebuildAllDerived();
-  ok(cablingSchedule().some(ln => /outlet: Desk 7/.test(ln)), "T73 the schedule speaks installer: outlet by desk name");
+  ok(protoFindLink("host", "switch") !== null, "protoFindLink finds host-switch either direction");
+  ok(protoFindLink("router", "isp") === null, "protoFindLink null when absent");
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
+
+
 if(__FAILED.length) console.log(__FAILED.map(f => " - " + f).join("\n"));
+
