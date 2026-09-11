@@ -430,7 +430,7 @@ function html(h, cls) {
 }
 function blank() { line("\u00a0"); }
 function scrollDown() { out.scrollTop = out.scrollHeight; }
-function chip(t) { html('<div class="chipline"><span class="chip">' + esc(t) + "</span></div>"); }
+function chip(t) { html('<div class="chipline"><span class="chip">' + esc(t) + "</span></div>"); sndTick(); }
 function taskBox(t) { html('<div class="task">' + esc(t) + "</div>"); }
 function esc(s) { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 /* ---------------- cli modes: boot → login → shell → python ---------------- */
@@ -438,6 +438,9 @@ let cliMode = "boot", user = null;
 function setPrompt() {
   const p = $("prompt");
   if (mode === "ghost") { p.textContent = "⌨"; return; }
+  if (fcap) { p.textContent = "..."; return; }
+  if (mode === "sandbox" && sbBuf.length) { p.textContent = "..."; return; }
+  if (mode === "exam") { p.textContent = "exam>"; return; }
   if (cliMode === "boot") p.textContent = "·";
   else if (cliMode === "login") p.textContent = "verdant login:";
   else if (cliMode === "password") p.textContent = "password:";
@@ -450,6 +453,7 @@ function setStatus() {
   $("userLbl").textContent = user ? "op: " + user : "no operator";
   $("scoreLbl").textContent = "d" + score.drills + " · b" + score.bugs + " · m" + score.missions;
   setPrompt(); updateFlow(); renderNav();
+  saveState();
 }
 
 /* ---------------- system log ---------------- */
@@ -480,9 +484,10 @@ function renderNav() {
   const rows = [
     ["ghost", "GHOST TYPING", score.ghostBest ? score.ghostBest + "% best" : "untried", score.ghostBest],
     ["bugs", "BUG HUNT", score.bugs + "/" + BUGS.length, Math.min(100, Math.round(100 * score.bugs / BUGS.length))],
-    ["field", "FIELD OPS", score.missions + " missions", Math.min(100, score.missions * 33)],
+    ["field", "FIELD OPS", score.missions + "/" + MISSIONS.length, Math.min(100, Math.round(100 * score.missions / MISSIONS.length))],
     ["forge", "FORGE - BLANK FILE", score.forges + "/" + FORGES.length, Math.round(100 * score.forges / FORGES.length)],
-    ["start review", "REVIEW QUEUE", missed.length + " waiting", missed.length ? 100 : 0]
+    ["kata", "DAILY KATA", kataDoneToday() ? "done · " + kata.streak + "d" : kataInfo().type + " " + kataInfo().n + " today", kataDoneToday() ? 100 : 0],
+    ["start review", "REVIEW QUEUE", dueMissed().length + " due / " + missed.length, dueMissed().length ? 100 : 0]
   ];
   rows.forEach(r => {
     h += '<button class="navrow mode-row" data-c="' + r[0] + '"><span class="nr-top"><span class="nr-name">' + r[1] +
@@ -565,9 +570,21 @@ const FORGES = [
       15: "Inside the loop (4 spaces): the catch-all branch.",
       16: "Inside it (8 spaces): add value onto total, shorthand.",
       18: "Print with an f-string: total: {the counter}."
+    } },
+  { id: 5, name: "dice_run.py", ghost: 5,
+    run: ["turn 0: rolled 4", "turn 1: rolled 2", "turn 2: rolled 6", "total steps: 12", "(one possible run — it's random!)"],
+    specs: {
+      2: "Bring in the random module.",
+      4: "A counter steps starting at 0.",
+      5: "A for loop: turn counts 0 to 2.",
+      6: "Inside (4 spaces): a random number 1 to 6, stored in roll.",
+      7: "Inside (4 spaces): print with an f-string: turn {turn}: rolled {roll}.",
+      8: "Inside (4 spaces): add roll onto steps, shorthand.",
+      10: "Print with an f-string: total steps: {the counter}."
     } }
 ];
 let forge = null;
+let fcap = null;
 function forgeMenu() {
   blank();
   line("-- FORGE - BLANK FILE ------------------", "c-green");
@@ -579,7 +596,7 @@ function forgeMenu() {
   line("Best done after its ghost run: ghost first, forge second.", "c-dim");
 }
 function startForge(n) {
-  out.innerHTML = "";
+  out.innerHTML = ""; showPane("term"); fcap = null;
   const f = FORGES.find(x => x.id === n);
   if (!f) { forgeMenu(); return; }
   const g = GHOSTS.find(x => x.id === f.ghost);
@@ -626,6 +643,7 @@ function checkForge(input) {
     F.li++; nextForgeLine();
   } else {
     chiBreak();
+    showDiff(input, expected);
     line("Not what the spec asks. hint for the shape, skip to reveal.", "c-red");
   }
 }
@@ -636,7 +654,9 @@ function finishForge() {
   F.f.run.forEach(o => line(o));
   line("=== exit 0 ===", "c-amber");
   if (score.forges < F.f.id) score.forges = F.f.id;
+  sndChime();
   logEvent("forged from blank file: " + F.f.name, "ok");
+  checkKata("forge", F.f.id);
   blank();
   line("You wrote that. Not traced - written.", "c-green");
   if (F.f.id < FORGES.length) line("Next: forge " + (F.f.id + 1), "c-amber");
@@ -647,10 +667,263 @@ function skeleton(s) {
   return s.replace(/[A-Za-z0-9]/g, "\u00b7");
 }
 
+
+
+/* ---------------- glossary ---------------- */
+const GLOSS = {
+  variable: "A labeled box that stores a value. battery = 87 puts 87 in a box named battery; use the name to get it back.",
+  string: 'Text, wrapped in quotes: "junie". Strings carry tools like .upper() and .split().',
+  int: "A whole number: 87. No quotes, no decimal point.",
+  float: "A number with a decimal point: 3.5. Python picks int or float automatically.",
+  boolean: "True or False — capital first letter. What every if-condition boils down to.",
+  list: 'Many values in one box, in order: ["maize", "wheat"]. Index from 0, grow with .append().',
+  dict: 'Values stored by label instead of position: {"id": 7}. Look up with drone["id"].',
+  loop: "A way to repeat code. for walks through items; while repeats until a condition turns False.",
+  for: "A loop over a sequence: for row in field: runs the indented block once per item.",
+  while: "A loop that repeats as long as its condition is True. Make sure it can turn False!",
+  function: "A named block of code you can run whenever: def scan(): defines it, scan() runs it.",
+  parameter: "A function's own input variable: in def spray(tile):, tile receives what the caller sends.",
+  argument: 'The actual value you send when calling: in spray("B2"), the argument is "B2".',
+  return: "How a function hands a result back. return battery - 2 sends that value to the caller.",
+  if: "A decision: run the indented block only when the condition is True. elif and else extend it.",
+  indentation: "The 4 spaces that mark what's inside a block. In Python, indentation IS the structure.",
+  comment: "A line starting with # — ignored by Python, priceless for humans.",
+  "f-string": 'Text with variables baked in: f"Battery {battery}%" swaps {battery} for its value.',
+  fstring: 'Text with variables baked in: f"Battery {battery}%" swaps {battery} for its value.',
+  error: "Python refusing to continue, with a traceback telling you why and where. Read bottom-up.",
+  exception: "The formal name for a runtime error. try/except lets your code catch and survive them.",
+  module: "A toolbox of ready-made code. import random plugs it in; random.randint() uses a tool from it.",
+  import: "The statement that loads a module: import math, then math.sqrt(16).",
+  syntax: "The grammar of the language — where the colons, quotes and indents must go."
+};
+/* ---------------- persistence + daily kata ---------------- */
+const SAVE_KEY = "pyle-save-v1";
+let kata = { last: "", streak: 0 };
+function dayStr(off) {
+  const d = new Date(Date.now() + (off || 0) * 864e5);
+  return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+}
+function kataInfo() {
+  const seq = [["ghost", 1], ["forge", 1], ["ghost", 2], ["forge", 2], ["ghost", 3], ["forge", 3], ["ghost", 4], ["forge", 4], ["ghost", 5], ["forge", 5]];
+  const idx = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5) % seq.length;
+  const k = seq[idx];
+  const name = (k[0] === "ghost" ? GHOSTS : FORGES).find(x => x.id === k[1]).name;
+  return { type: k[0], n: k[1], name };
+}
+function kataDoneToday() { return kata.last === dayStr(); }
+function checkKata(type, n) {
+  const ki = kataInfo();
+  if (ki.type !== type || ki.n !== n || kataDoneToday()) return;
+  kata.streak = (kata.last === dayStr(-1)) ? kata.streak + 1 : 1;
+  kata.last = dayStr();
+  blank();
+  line("DAILY KATA COMPLETE — streak " + kata.streak + " day" + (kata.streak === 1 ? "" : "s"), "c-green");
+  sndChime();
+  logEvent("daily kata complete — streak " + kata.streak, "ok");
+  saveState(); updateFlow();
+}
+function saveState() {
+  try {
+    const d = {
+      done: MODULES.map(m => m.drills.map(x => !!x.doneFlag)),
+      learned: learned.map(e => [e.group, e.chip, e.syn, e.note]),
+      missed: missed.map(e => [e.mi, e.di, e.stage, e.due]),
+      score: score, bestChi: bestChi,
+      theme: document.body.dataset.theme || "verdant",
+      snd: sndOn,
+      kata: kata
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(d));
+  } catch (e) {}
+}
+function loadState() {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    if (d.done) MODULES.forEach((m, mi) => m.drills.forEach((x, di) => { if (d.done[mi] && d.done[mi][di]) x.doneFlag = true; }));
+    if (d.learned) d.learned.forEach(e => learned.push({ group: e[0], chip: e[1], syn: e[2], note: e[3] }));
+    if (d.missed) d.missed.forEach(p => {
+      if (!(MODULES[p[0]] && MODULES[p[0]].drills[p[1]])) return;
+      if (missed.some(e => e.mi === p[0] && e.di === p[1])) return;
+      missed.push({ mi: p[0], di: p[1], stage: p[2] || 0, due: p[3] || dayStr() });
+    });
+    if (d.score) Object.assign(score, d.score);
+    if (d.bestChi) bestChi = d.bestChi;
+    if (d.kata) Object.assign(kata, d.kata);
+    if (d.snd) sndOn = true;
+    if (d.theme && d.theme !== "verdant") setTheme(d.theme);
+    renderScroll();
+    return true;
+  } catch (e) { return false; }
+}
+
+/* ---------------- sound ---------------- */
+let sndOn = false, actx = null;
+function beep(f, dur, delay, type) {
+  if (!sndOn) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const t0 = actx.currentTime + (delay || 0) / 1000;
+    const o = actx.createOscillator(), g = actx.createGain();
+    o.frequency.value = f; o.type = type || "sine";
+    g.gain.setValueAtTime(0.05, t0);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(g); g.connect(actx.destination);
+    o.start(t0); o.stop(t0 + dur);
+  } catch (e) {}
+}
+function sndTick() { beep(880, 0.05); }
+function sndErr() { beep(150, 0.11, 0, "square"); }
+function sndChime() { beep(660, 0.1); beep(880, 0.1, 110); beep(1320, 0.16, 220); }
+
+/* ---------------- pyodide sandbox + exam ---------------- */
+let py = null, pyLoading = false, sbBuf = [], exBuf = [], exCapture = false, exStdout = "";
+async function ensurePyodide() {
+  if (py) return py;
+  if (!window.loadPyodide) {
+    await new Promise((res, rej) => {
+      const s = document.createElement("script");
+      s.src = "https://cdn.jsdelivr.net/pyodide/v0.26.4/full/pyodide.js";
+      s.onload = res; s.onerror = rej;
+      document.head.appendChild(s);
+    });
+  }
+  py = await loadPyodide();
+  py.setStdout({ batched: s => { if (exCapture) exStdout += s + "\n"; else line(s); } });
+  py.setStderr({ batched: s => line(s, "c-red") });
+  return py;
+}
+function pyErr(e) {
+  const msg = String(e.message || e);
+  const tail = msg.split("\n").filter(x => x.trim()).slice(-3).join("\n");
+  line(tail || "error", "c-red");
+}
+function startSandbox() {
+  out.innerHTML = ""; showPane("term"); fcap = null; mode = "sandbox"; sbBuf = []; setStatus();
+  line("-- SANDBOX - REAL PYTHON ---------------", "c-green");
+  if (py) { line("Interpreter warm. Type any Python. exit() leaves.", "c-dim"); return; }
+  if (!navigator.onLine) { line("Sandbox needs internet once, to fetch the Python runtime.", "c-red"); mode = "home"; setStatus(); return; }
+  line("Fetching the real Python runtime (~6 MB, cached after the first time)...", "c-dim");
+  pyLoading = true;
+  ensurePyodide().then(() => {
+    pyLoading = false;
+    line("Python " + py.runPython("import sys; sys.version.split()[0]") + " ready. This is not simulated.", "c-green");
+    line("Anything goes: variables, loops, defs, imports. Multi-line: end a line with : and keep typing; blank line runs it. exit() leaves.", "c-dim");
+    logEvent("pyodide runtime loaded", "ok");
+  }).catch(() => { pyLoading = false; line("Couldn't fetch the runtime - check the connection and try sandbox again.", "c-red"); mode = "home"; setStatus(); });
+}
+async function sbRun(code) {
+  try {
+    const r = await py.runPythonAsync(code);
+    if (r !== undefined && r !== null) {
+      let s = ""; try { s = r.toString(); } catch (e) {}
+      if (s !== "" && s !== "undefined") line(s);
+      if (r && r.destroy) try { r.destroy(); } catch (e) {}
+    }
+  } catch (e) { pyErr(e); }
+}
+function sbInput(raw) {
+  if (pyLoading) { line("(runtime still loading...)", "c-dim"); return; }
+  if (!py) { line("Runtime missing - leave with menu and try sandbox again.", "c-red"); return; }
+  if (sbBuf.length) {
+    if (raw.trim() === "") { const code = sbBuf.join("\n"); sbBuf = []; setPrompt(); sbRun(code); return; }
+    sbBuf.push(raw); return;
+  }
+  if (/:\s*$/.test(raw)) { sbBuf.push(raw); setPrompt(); return; }
+  sbRun(raw);
+}
+const EXAM = {
+  brief: [
+    "Write a complete program, from nothing. Requirements:",
+    '  1. data:  readings = ["12", "7", "bad", "30"]',
+    "  2. a function that converts one reading to int, returning None on ValueError",
+    "  3. loop the readings; bad ones print exactly:  skipped: bad",
+    "  4. finally print exactly:  total: 49",
+    "Type lines to add them. Commands: list - del <n> - run - exit()"
+  ],
+  needs: ["skipped: bad", "total: 49"]
+};
+function startExam() {
+  out.innerHTML = ""; showPane("term"); fcap = null; mode = "exam"; exBuf = []; setStatus();
+  line("-- FINAL EXAM - NO SPECS ---------------", "c-amber");
+  if (!py && !navigator.onLine) { line("The exam runs on real Python - internet needed once for the runtime.", "c-red"); mode = "home"; setStatus(); return; }
+  EXAM.brief.forEach(s => line(s, "c-dim"));
+  if (!py) { line("(fetching Python runtime...)", "c-dim"); ensurePyodide().then(() => line("Runtime ready. Begin.", "c-green")).catch(() => { line("Runtime fetch failed - try again online.", "c-red"); mode = "home"; setStatus(); }); }
+}
+function exInput(raw) {
+  const t = raw.trim().toLowerCase();
+  if (t === "list") {
+    if (!exBuf.length) { line("(buffer empty)", "c-dim"); return; }
+    exBuf.forEach((l, i) => line(String(i + 1).padStart(2) + "  " + l, "c-blue"));
+    return;
+  }
+  if (/^del \d+$/.test(t)) {
+    const n = parseInt(t.slice(4), 10);
+    if (n >= 1 && n <= exBuf.length) { line("removed: " + exBuf.splice(n - 1, 1)[0], "c-dim"); }
+    return;
+  }
+  if (t === "run") {
+    if (!py) { line("Runtime still loading...", "c-dim"); return; }
+    const code = exBuf.join("\n");
+    if (!/def \w+\(/.test(code) || !/except/.test(code)) {
+      line("Requirements check: the program must define a function AND use try/except.", "c-red");
+      return;
+    }
+    exCapture = true; exStdout = "";
+    py.runPythonAsync(code).then(() => {
+      exCapture = false;
+      const got = exStdout.split("\n").map(s => s.trim()).filter(Boolean);
+      line("-- output --", "c-dim");
+      got.forEach(g => line(g));
+      const i1 = got.indexOf(EXAM.needs[0]), i2 = got.indexOf(EXAM.needs[1]);
+      if (i1 > -1 && i2 > i1) {
+        score.exam = true;
+        learned.push({ group: "CERTIFICATE", chip: "FINAL EXAM PASSED", syn: "verified by real Python - " + dayStr(), note: "Wrote a working program from requirements alone. This is programming." });
+        renderScroll(); sndChime();
+        line("PASS - verified by the actual Python interpreter.", "c-green");
+        line("A certificate has been inked into your codex. You are no longer a beginner.", "c-amber");
+        logEvent("FINAL EXAM PASSED", "ok");
+        mode = "home"; setStatus();
+      } else {
+        line("Not yet - expected  " + EXAM.needs[0] + "  and later  " + EXAM.needs[1] + "  in the output. list to inspect, keep editing.", "c-red");
+      }
+    }).catch(e => { exCapture = false; pyErr(e); line("It crashed - real traceback above. Fix and run again.", "c-amber"); });
+    return;
+  }
+  exBuf.push(raw);
+  line(String(exBuf.length).padStart(2) + "  " + raw, "c-blue");
+}
+
+/* ---------------- codex cheat sheet ---------------- */
+function cheatsheet() {
+  if (!learned.length) { line("Codex empty - master some drills first.", "c-dim"); return; }
+  let body = "";
+  const groups = {};
+  learned.forEach(e => { (groups[e.group] = groups[e.group] || []).push(e); });
+  for (const g in groups) {
+    body += "<h2>" + esc(g) + "</h2>";
+    groups[g].forEach(e => { body += "<pre>" + esc(e.syn) + "</pre><p>" + esc(e.note || "") + "</p>"; });
+  }
+  const w = window.open("", "_blank");
+  if (!w) { line("Popup blocked - allow popups for this page to open the printable sheet.", "c-red"); return; }
+  w.document.write("<html><head><title>Pyle codex cheat sheet</title><style>body{font-family:Consolas,monospace;color:#222;max-width:680px;margin:30px auto;padding:0 16px}h1{font-size:18px;letter-spacing:2px}h2{font-size:12px;letter-spacing:2px;color:#a06a1a;margin:18px 0 4px}pre{background:#f4f0e6;padding:5px 9px;margin:3px 0;font-size:13px}p{font-size:11px;color:#666;margin:0 0 8px}</style></head><body><h1>PYLE CODEX - " + esc(dayStr()) + "</h1>" + body + "<p>Print with Ctrl+P.</p></body></html>");
+  w.document.close();
+  line("Cheat sheet opened in a new tab - Ctrl+P to print it.", "c-green");
+}
 /* ---------------- boot / login / shell ---------------- */
 function bootSeq() {
   cliMode = "boot"; setStatus();
   const bl = [
+    "\u00a0",
+    " \u2588\u2588\u2588\u2588\u2588\u2588   \u2588\u2588   \u2588\u2588  \u2588\u2588       \u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+    " \u2588\u2588   \u2588\u2588   \u2588\u2588 \u2588\u2588   \u2588\u2588       \u2588\u2588",
+    " \u2588\u2588\u2588\u2588\u2588\u2588     \u2588\u2588\u2588    \u2588\u2588       \u2588\u2588\u2588\u2588\u2588",
+    " \u2588\u2588          \u2588\u2588    \u2588\u2588       \u2588\u2588",
+    " \u2588\u2588          \u2588\u2588    \u2588\u2588\u2588\u2588\u2588\u2588  \u2588\u2588\u2588\u2588\u2588\u2588\u2588",
+    "\u00a0",
+    " python training console \u00b7 agri-platform verdant",
+    "\u00a0",
     "VERDANT platform console v3.1.7",
     "link: crusader relay .......... ok",
     "atmo dampers .................. ok",
@@ -682,6 +955,8 @@ function doPassword() {
   line("last login: yesterday, this same chair", "c-dim");
   line(greeting(), "c-dim");
   blank();
+  const ki = kataInfo();
+  line("Today's kata: " + ki.type + " " + ki.n + " — " + ki.name + (kataDoneToday() ? " (done \u2713)" : "") + " · streak " + kata.streak, "c-dim");
   line("Type python3 to enter the training interpreter. help for shell commands.", "c-amber");
 }
 function toPython() {
@@ -701,6 +976,7 @@ function setTheme(th) {
   const row = $("themeRow");
   if (row) row.querySelectorAll("button").forEach(b => b.classList.toggle("on", b.dataset.t === th));
   logEvent("display theme: " + th, "ok");
+  saveState();
 }
 function logout() {
   logEvent("session closed: kaatje", "warn");
@@ -718,7 +994,7 @@ function shellCmd(raw, t) {
     line("All training lives inside python3.", "c-amber"); return;
   }
   if (t === "exit" || t === "logout") { logout(); return; }
-  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress)\b/.test(t) || /^(ghost|forge) [123]$/.test(t)) {
+  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress|kata|wipe|sandbox|exam|save|load|sound|cheatsheet|gloss|what)\b/.test(t) || /^(ghost|forge) [1-5]$/.test(t)) {
     line("(training runs in python — entering python3 for you)", "c-dim");
     cliMode = "python"; setStatus();
     logEvent("python 3.12 interpreter started", "ok");
@@ -737,7 +1013,7 @@ function chiUp() {
 }
 function chiBreak() {
   if (chi >= 4) { line("Streak broken at " + chi + ". Breathe. Begin again.", "c-dim"); logEvent("streak broken at " + chi, "warn"); }
-  chi = 0; updateFlow();
+  chi = 0; sndErr(); updateFlow();
 }
 function updateFlow() {
   const f = $("chiFill"), n = $("chiNum");
@@ -749,7 +1025,8 @@ function updateFlow() {
     "<span class='hide-sm'>ghost best <b>" + score.ghostBest + "%</b></span>" +
     "<span class='hide-sm'>missions <b>" + score.missions + "</b></span>" +
     "<span class='hide-sm'>best chi <b>" + bestChi + "</b></span>" +
-    "<span class='hide-sm'>to review <b>" + missed.length + "</b></span>";
+    "<span>kata <b>" + kata.streak + "d</b></span>" +
+    "<span class='hide-sm'>review due <b>" + dueMissed().length + "/" + missed.length + "</b></span>";
 }
 
 /* ---------------- scroll of forms ---------------- */
@@ -760,7 +1037,22 @@ function learn(d) {
   learned.push({ group: d.group || "FORMS", chip: d.chip, syn: d.answers[0], note: d.note || "" });
   renderScroll();
 }
-function missDrill(d) { if (!missed.includes(d)) { missed.push(d); updateFlow(); } }
+function drillPos(d) {
+  for (let mi = 0; mi < MODULES.length; mi++) {
+    const di = MODULES[mi].drills.indexOf(d);
+    if (di > -1) return [mi, di];
+  }
+  return null;
+}
+function missDrill(d) {
+  const p = drillPos(d);
+  if (!p) return;
+  let e = missed.find(x => x.mi === p[0] && x.di === p[1]);
+  if (!e) missed.push({ mi: p[0], di: p[1], stage: 0, due: dayStr() });
+  else { e.stage = 0; e.due = dayStr(); }
+  updateFlow();
+}
+function dueMissed() { return missed.filter(e => e.due <= dayStr()); }
 function renderScroll() {
   const el = $("scrollList");
   if (!el) return;
@@ -861,10 +1153,13 @@ const MODULES = [
       { task: 'Make a variable drone_name holding the text "junie".', answers: ['drone_name = "junie"'], chip: "VARIABLE", note: "name = value. No 'let', no 'var'. Just =." },
       { task: "Make a variable battery holding the number 87.", answers: ["battery = 87"], chip: "NUMBER", note: "Numbers take no quotes. 87 is an int." },
       { task: "Print the variable drone_name.", answers: ["print(drone_name)"], out: ["junie"], chip: "PRINT VAR", note: "No quotes — quotes would print the literal word drone_name." },
-      { task: 'Ask the pilot their name with input, prompt "Name: ", store it in pilot.', answers: ['pilot = input("Name: ")', 'pilot = input("Name:")', 'pilot = input("name: ")'], out: ["Name: kaatje"], chip: "INPUT", note: "input() pauses, shows the prompt, returns whatever gets typed — always as text." },
-      { task: "Print the type of battery.", answers: ["print(type(battery))"], out: ["<class 'int'>"], chip: "TYPE", note: "type() tells you what a thing is: int, str, float, list…" },
+      { teach: ["input() asks the person at the keyboard a question and hands back whatever they type — always as text."],
+        task: 'Ask the pilot their name with input, prompt "Name: ", store it in pilot.', answers: ['pilot = input("Name: ")', 'pilot = input("Name:")', 'pilot = input("name: ")'], out: ["Name: kaatje"], chip: "INPUT", note: "input() pauses, shows the prompt, returns whatever gets typed — always as text." },
+      { teach: ["Not sure what kind of value you are holding? type() tells you: int, str, float, list…"],
+        task: "Print the type of battery.", answers: ["print(type(battery))"], out: ["<class 'int'>"], chip: "TYPE", note: "type() tells you what a thing is: int, str, float, list…" },
       { task: 'Print with an f-string: Battery at 87% — using the variable battery.', answers: ['print(f"Battery at {battery}%")'], out: ["Battery at 87%"], chip: "F-STRING", note: 'f"..." lets you drop variables into text with {curly braces}.' },
-      { task: 'Convert the text "42" to a number and store it in crates.', answers: ['crates = int("42")'], chip: "INT()", note: "input() gives text. int() turns text into a number you can do math on." },
+      { teach: ["input() always gives TEXT — even \"42\" is text. int() converts text into a number you can do math with."],
+        task: 'Convert the text "42" to a number and store it in crates.', answers: ['crates = int("42")'], chip: "INT()", note: "input() gives text. int() turns text into a number you can do math on." },
       { task: "Make a variable wind holding 3.5.", answers: ["wind = 3.5"], chip: "FLOAT", note: "Decimals are floats. Python figures the type out itself." }
     ]
   },
@@ -872,58 +1167,79 @@ const MODULES = [
     id: "numstr", name: "NUMBERS + STRINGS",
     intro: "Math and text. The two things every program chews on.",
     drills: [
-      { task: "Add 5 to crates and store the result in total.", answers: ["total = crates + 5"], chip: "MATH", note: "+ - * / work as expected." },
-      { task: "Print 2 to the power of 8.", answers: ["print(2 ** 8)"], out: ["256"], chip: "POWER", note: "** is exponent. 2**8 = 256." },
-      { task: "Print the remainder of 10 divided by 3.", answers: ["print(10 % 3)"], out: ["1"], chip: "MODULO", note: "% gives the remainder. 10 % 3 = 1. Great for 'every 3rd row'." },
-      { task: "Print 17 divided by 5, whole part only.", answers: ["print(17 // 5)"], out: ["3"], chip: "FLOOR DIV", note: "// throws away the decimal. 17//5 = 3." },
-      { task: "Print drone_name in ALL CAPS.", answers: ["print(drone_name.upper())"], out: ["JUNIE"], chip: ".UPPER()", note: "Strings carry their own tools: .upper() .lower() .strip()…" },
-      { task: "Print the length of drone_name.", answers: ["print(len(drone_name))"], out: ["5"], chip: "LEN", note: "len() counts characters in text, items in a list." },
-      { task: 'In the string field, replace "weed" with "crop". Store back in field.', answers: ['field = field.replace("weed", "crop")'], chip: "REPLACE", note: ".replace(old, new) returns a NEW string — you must store it." },
-      { task: "Print the first three characters of code (index 0 up to 3).", answers: ["print(code[0:3])", "print(code[:3])"], chip: "SLICE", note: "[start:stop] — stop is not included. Counting starts at 0." },
-      { task: 'Split the string line on commas, store the pieces in parts.', answers: ['parts = line.split(",")'], chip: "SPLIT", note: '.split(",") chops text into a list. CSV rows, log lines…' },
-      { task: "Print wind rounded to 1 decimal.", answers: ["print(round(wind, 1))"], out: ["3.5"], chip: "ROUND", note: "round(value, decimals)." }
+      { teach: ["Math on variables works like math on numbers — Python fetches the stored value first."],
+        task: "Add 5 to crates and store the result in total.", answers: ["total = crates + 5"], chip: "MATH", note: "+ - * / work as expected." },
+      { teach: ["New operator: ** means to-the-power-of. 2 ** 8 is 2 multiplied by itself 8 times."],
+        task: "Print 2 to the power of 8.", answers: ["print(2 ** 8)"], out: ["256"], chip: "POWER", note: "** is exponent. 2**8 = 256." },
+      { teach: ["New operator: % gives the REMAINDER after division. 10 % 3 leaves 1."],
+        task: "Print the remainder of 10 divided by 3.", answers: ["print(10 % 3)"], out: ["1"], chip: "MODULO", note: "% gives the remainder. 10 % 3 = 1. Great for 'every 3rd row'." },
+      { teach: ["New operator: // divides and throws the decimals away. 17 // 5 is 3."],
+        task: "Print 17 divided by 5, whole part only.", answers: ["print(17 // 5)"], out: ["3"], chip: "FLOOR DIV", note: "// throws away the decimal. 17//5 = 3." },
+      { teach: ["Strings carry built-in tools reached with a dot: name.upper(), name.lower(). These are called methods."],
+        task: "Print drone_name in ALL CAPS.", answers: ["print(drone_name.upper())"], out: ["JUNIE"], chip: ".UPPER()", note: "Strings carry their own tools: .upper() .lower() .strip()…" },
+      { teach: ["len() counts things — characters in text, items in a list."],
+        task: "Print the length of drone_name.", answers: ["print(len(drone_name))"], out: ["5"], chip: "LEN", note: "len() counts characters in text, items in a list." },
+      { teach: [".replace(old, new) swaps text — but it returns a NEW string, so store the result back into the variable."],
+        task: 'In the string field, replace "weed" with "crop". Store back in field.', answers: ['field = field.replace("weed", "crop")'], chip: "REPLACE", note: ".replace(old, new) returns a NEW string — you must store it." },
+      { teach: ["Square brackets slice text: code[0:3] takes characters 0, 1 and 2. The stop number is never included."],
+        task: "Print the first three characters of code (index 0 up to 3).", answers: ["print(code[0:3])", "print(code[:3])"], chip: "SLICE", note: "[start:stop] — stop is not included. Counting starts at 0." },
+      { teach: ['.split(",") chops one string into a LIST of pieces, cutting at every comma.'],
+        task: 'Split the string line on commas, store the pieces in parts.', answers: ['parts = line.split(",")'], chip: "SPLIT", note: '.split(",") chops text into a list. CSV rows, log lines…' },
+      { teach: ["round(value, n) trims a number to n decimal places."],
+        task: "Print wind rounded to 1 decimal.", answers: ["print(round(wind, 1))"], out: ["3.5"], chip: "ROUND", note: "round(value, decimals)." }
     ]
   },
   {
     id: "logic", name: "LOGIC",
     intro: "if / elif / else. The drone starts making decisions.",
     drills: [
-      { task: "Start an if: run when battery is below 20.", answers: ["if battery < 20:"], chip: "IF", note: "The colon : is mandatory. It announces an indented block below." },
+      { teach: ["An if runs its block only when the condition is True.", "The if line MUST end with a colon — and the block under it gets indented 4 spaces."],
+        task: "Start an if: run when battery is below 20.", answers: ["if battery < 20:"], chip: "IF", note: "The colon : is mandatory. It announces an indented block below." },
       { task: 'The line inside that if — indented 4 spaces — print: Return to dock', answers: ['    print("Return to dock")'], indent: 4, chip: "INDENT", note: "Indentation IS the syntax in Python. 4 spaces = inside the if." },
       { task: "Add an elif: battery below 50.", answers: ["elif battery < 50:"], chip: "ELIF", note: "elif = else-if. Checked only when the if above was False." },
       { task: "Add the catch-all branch.", answers: ["else:"], chip: "ELSE", note: "else takes no condition. It's the 'everything else' bucket." },
-      { task: 'Start an if: run when mode equals "auto".', answers: ['if mode == "auto":'], chip: "==", note: "== compares. A single = assigns. Mixing them up is the classic bug." },
-      { task: "Start an if: wind under 5 AND battery over 30.", answers: ["if wind < 5 and battery > 30:"], chip: "AND", note: "and, or, not — written as plain words." },
+      { teach: ["Comparing needs a DOUBLE equals: == asks are-these-the-same. A single = would store instead."],
+        task: 'Start an if: run when mode equals "auto".', answers: ['if mode == "auto":'], chip: "==", note: "== compares. A single = assigns. Mixing them up is the classic bug." },
+      { teach: ["Conditions combine with plain words: and needs both sides True, or needs just one."],
+        task: "Start an if: wind under 5 AND battery over 30.", answers: ["if wind < 5 and battery > 30:"], chip: "AND", note: "and, or, not — written as plain words." },
       { task: "Start an if: run when raining is NOT true.", answers: ["if not raining:"], chip: "NOT", note: "not flips a boolean. Reads like English." },
-      { task: 'Start an if: run when "pest" appears in report.', answers: ['if "pest" in report:'], chip: "IN", note: '"x" in thing checks membership — inside strings and lists.' },
-      { task: "Make a boolean raining set to False.", answers: ["raining = False"], chip: "BOOLEAN", note: "True and False — capital first letter. That part IS case-sensitive." }
+      { teach: ["The word in asks whether something appears inside — works on strings and lists alike."],
+        task: 'Start an if: run when "pest" appears in report.', answers: ['if "pest" in report:'], chip: "IN", note: '"x" in thing checks membership — inside strings and lists.' },
+      { teach: ["True and False are Python\u0027s yes and no. Capital first letter, no quotes."],
+        task: "Make a boolean raining set to False.", answers: ["raining = False"], chip: "BOOLEAN", note: "True and False — capital first letter. That part IS case-sensitive." }
     ]
   },
   {
     id: "loops", name: "LOOPS",
     intro: "Doing things many times without typing them many times.",
     drills: [
-      { task: "Start a for loop: i counts 0 to 4.", answers: ["for i in range(5):"], chip: "FOR RANGE", note: "range(5) → 0,1,2,3,4. Five numbers, starts at 0, stops before 5." },
+      { teach: ["for i in range(5): repeats its block 5 times while i counts 0,1,2,3,4.", "Same shape as if: colon, then an indented block."],
+        task: "Start a for loop: i counts 0 to 4.", answers: ["for i in range(5):"], chip: "FOR RANGE", note: "range(5) → 0,1,2,3,4. Five numbers, starts at 0, stops before 5." },
       { task: "Inside it (4 spaces): print i.", answers: ["    print(i)"], indent: 4, chip: "LOOP BODY", note: "Everything indented under the for runs each pass." },
       { task: "Start a for loop over the list field, each item called row.", answers: ["for row in field:"], chip: "FOR EACH", note: "Loops walk a list directly — no index juggling needed." },
-      { task: "Start a while loop: keep going while battery is above 0.", answers: ["while battery > 0:"], chip: "WHILE", note: "while repeats until its condition turns False. Make sure it CAN." },
+      { teach: ["while repeats as long as its condition stays True — so something inside must eventually change it, or it loops forever."],
+        task: "Start a while loop: keep going while battery is above 0.", answers: ["while battery > 0:"], chip: "WHILE", note: "while repeats until its condition turns False. Make sure it CAN." },
       { task: "Inside it: lower battery by 1 (shorthand).", answers: ["    battery -= 1", "    battery = battery - 1"], indent: 4, chip: "-=", note: "battery -= 1 is short for battery = battery - 1." },
       { task: "The statement that exits a loop immediately.", answers: ["break"], chip: "BREAK", note: "break jumps out of the nearest loop, done or not." },
       { task: "The statement that skips to the next pass.", answers: ["continue"], chip: "CONTINUE", note: "continue skips the rest of this pass, loop keeps going." },
       { task: "Start a for loop: r counts 1 through 8.", answers: ["for r in range(1, 9):"], chip: "RANGE(A,B)", note: "range(1, 9) → 1..8. The stop value is never included." },
-      { task: "Loop over rows with both index and value: i, row.", answers: ["for i, row in enumerate(rows):"], chip: "ENUMERATE", note: "enumerate() hands you (index, item) pairs. Very Pythonic." }
+      { teach: ["enumerate() hands out pairs: the position AND the item. Two names before in catch them both."],
+        task: "Loop over rows with both index and value: i, row.", answers: ["for i, row in enumerate(rows):"], chip: "ENUMERATE", note: "enumerate() hands you (index, item) pairs. Very Pythonic." }
     ]
   },
   {
     id: "lists", name: "LISTS + DICTS",
     intro: "Collections. One name, many values.",
     drills: [
-      { task: 'Make a list crops holding "maize", "wheat", "beet".', answers: ['crops = ["maize", "wheat", "beet"]'], chip: "LIST", note: "Square brackets, commas between items." },
+      { teach: ["A list holds many values in one variable, in order: square brackets, commas between."],
+        task: 'Make a list crops holding "maize", "wheat", "beet".', answers: ['crops = ["maize", "wheat", "beet"]'], chip: "LIST", note: "Square brackets, commas between items." },
       { task: 'Add "hops" to the end of crops.', answers: ['crops.append("hops")'], chip: "APPEND", note: ".append() bolts one item onto the end." },
-      { task: "Print the first item of crops.", answers: ["print(crops[0])"], out: ["maize"], chip: "INDEX 0", note: "Counting starts at 0. Always." },
+      { teach: ["Grab one item by its position in brackets. Python counts from 0, so [0] is the FIRST item."],
+        task: "Print the first item of crops.", answers: ["print(crops[0])"], out: ["maize"], chip: "INDEX 0", note: "Counting starts at 0. Always." },
       { task: "Print the LAST item of crops.", answers: ["print(crops[-1])"], out: ["beet"], chip: "INDEX -1", note: "Negative indexes count from the back. -1 = last." },
       { task: "Print how many items crops holds.", answers: ["print(len(crops))"], out: ["3"], chip: "LEN", note: "Same len() as strings." },
-      { task: 'Make a dict drone with "id" 7 and "battery" 87.', answers: ['drone = {"id": 7, "battery": 87}'], chip: "DICT", note: "Curly braces, key: value pairs. Labels instead of positions." },
+      { teach: ["A dict stores values by LABEL instead of position: curly braces, key: value pairs."],
+        task: 'Make a dict drone with "id" 7 and "battery" 87.', answers: ['drone = {"id": 7, "battery": 87}'], chip: "DICT", note: "Curly braces, key: value pairs. Labels instead of positions." },
       { task: "Print the battery value from that dict.", answers: ['print(drone["battery"])'], out: ["87"], chip: "DICT GET", note: "Look things up by key, not position." },
       { task: 'Set a new key "mode" to "auto" in drone.', answers: ['drone["mode"] = "auto"'], chip: "DICT SET", note: "Assign to a key that doesn't exist — it appears." },
       { task: "Sort crops alphabetically, in place.", answers: ["crops.sort()"], chip: "SORT", note: ".sort() rearranges the list itself and returns nothing." },
@@ -934,14 +1250,17 @@ const MODULES = [
     id: "funcs", name: "FUNCTIONS",
     intro: "Name a block of code once, use it forever. This is where programs get big.",
     drills: [
-      { task: "Define a function scan, no parameters.", answers: ["def scan():"], chip: "DEF", note: "def name(): — colon, then an indented body below." },
+      { teach: ["def names a block of code so you can run it whenever, as often as you like.", "Shape: def name(): — colon, then an indented body below."],
+        task: "Define a function scan, no parameters.", answers: ["def scan():"], chip: "DEF", note: "def name(): — colon, then an indented body below." },
       { task: 'Its body (4 spaces): return the text "clear".', answers: ['    return "clear"'], indent: 4, chip: "RETURN", note: "return hands a value back to whoever called the function." },
       { task: "Call scan and store its result in report.", answers: ["report = scan()"], chip: "CALL", note: "Parentheses run it. Without () you're just naming it." },
       { task: "Define spray taking one parameter, tile.", answers: ["def spray(tile):"], chip: "PARAM", note: "Parameters are the function's own local variables." },
-      { task: "Define move taking direction, and steps defaulting to 1.", answers: ['def move(direction, steps=1):'], chip: "DEFAULT", note: "steps=1 makes the argument optional." },
+      { teach: ["A parameter can carry a fallback: steps=1 means callers may leave it out."],
+        task: "Define move taking direction, and steps defaulting to 1.", answers: ['def move(direction, steps=1):'], chip: "DEFAULT", note: "steps=1 makes the argument optional." },
       { task: 'Call move going "north" for 3 steps.', answers: ['move("north", 3)'], chip: "ARGS", note: "Arguments land in order: direction, then steps." },
       { task: "Inside a function (4 spaces): return battery minus steps times 2.", answers: ["    return battery - steps * 2"], indent: 4, chip: "RETURN EXPR", note: "return can hold any expression — it's computed first." },
-      { task: "The guard line that runs main code only when the file is run directly.", answers: ['if __name__ == "__main__":'], chip: "MAIN GUARD", note: "Double underscores both sides. The classic Python entry point." }
+      { teach: ["A Python ritual you will see everywhere — it marks: run the code below only when this file is executed directly."],
+        task: "The guard line that runs main code only when the file is run directly.", answers: ['if __name__ == "__main__":'], chip: "MAIN GUARD", note: "Double underscores both sides. The classic Python entry point." }
     ]
   },
   {
@@ -952,9 +1271,42 @@ const MODULES = [
       { task: 'Inside it (4 spaces): convert text to an int, store in number.', answers: ["    number = int(text)"], indent: 4, chip: "RISKY LINE", note: 'int("hello") raises ValueError. Inside try, that raise gets caught instead of crashing.' },
       { task: "Catch specifically a ValueError.", answers: ["except ValueError:"], chip: "EXCEPT", note: "Catch the error you expect, by name. Capital V, capital E — it's case-sensitive." },
       { task: 'Inside it (4 spaces): print not a number', answers: ['    print("not a number")'], indent: 4, chip: "RECOVERY", note: "This runs ONLY when the try block failed with that error. The program lives on." },
-      { task: "Catch any remaining error type (the broad net).", answers: ["except Exception:"], chip: "CATCH-ALL", note: "except Exception: catches nearly everything. Last resort — specific catches first." },
-      { task: "The block that runs no matter what — error or not.", answers: ["finally:"], chip: "FINALLY", note: "finally: always runs. Close files, land drones — cleanup lives here." },
-      { task: 'Raise your own error: a ValueError with the message bad reading', answers: ['raise ValueError("bad reading")'], chip: "RAISE", note: "raise throws an error on purpose — how your code says 'I refuse this input.'" }
+      { teach: ["except Exception: catches nearly ANY error — a safety net for surprises. Specific catches always go first."],
+        task: "Catch any remaining error type (the broad net).", answers: ["except Exception:"], chip: "CATCH-ALL", note: "except Exception: catches nearly everything. Last resort — specific catches first." },
+      { teach: ["finally: runs whether the try succeeded or exploded — for cleanup that must always happen."],
+        task: "The block that runs no matter what — error or not.", answers: ["finally:"], chip: "FINALLY", note: "finally: always runs. Close files, land drones — cleanup lives here." },
+      { teach: ["Your code can throw errors on purpose: raise creates one when input is unacceptable."],
+        task: 'Raise your own error: a ValueError with the message bad reading', answers: ['raise ValueError("bad reading")'], chip: "RAISE", note: "raise throws an error on purpose — how your code says 'I refuse this input.'" }
+    ]
+  },
+  {
+    id: "imports", name: "IMPORTS",
+    intro: "Python ships with batteries. import plugs them in.",
+    drills: [
+      { teach: ["Python ships with toolboxes called modules. import <name> plugs one into your program."],
+        task: "Bring in the random module.", answers: ["import random"], chip: "IMPORT", note: "import loads a module — a toolbox of ready-made functions." },
+      { task: "Roll a die: random number 1 to 6, stored in roll.", answers: ["roll = random.randint(1, 6)"], chip: "RANDINT", note: "module.function() — the dot reaches into the toolbox. randint includes BOTH ends." },
+      { task: "Pick a random item from crops, store in pick.", answers: ["pick = random.choice(crops)"], chip: "CHOICE", note: "random.choice grabs one item from any list. Great for loot tables." },
+      { task: "Bring in the math module.", answers: ["import math"], chip: "IMPORT 2", note: "Same form, different toolbox." },
+      { task: "Print the square root of 16.", answers: ["print(math.sqrt(16))"], out: ["4.0"], chip: "SQRT", note: "Note the .0 — math.sqrt always returns a float." },
+      { task: "Print pi from the math module.", answers: ["print(math.pi)"], out: ["3.141592653589793"], chip: "MATH.PI", note: "Modules hold constants too, not just functions." },
+      { teach: ["from module import thing pulls ONE tool out, so you call it bare — no module. prefix needed."],
+        task: "Import ONLY randint from random.", answers: ["from random import randint"], chip: "FROM IMPORT", note: "from x import y — then you call randint() bare, no random. prefix." }
+    ]
+  },
+  {
+    id: "files", name: "FILES",
+    intro: "Programs that remember: reading and writing files.",
+    drills: [
+      { teach: ["open(\"name\") connects your program to a file on disk and hands back a file object to read from."],
+        task: 'Open log.txt for reading, store the file object in f.', answers: ['f = open("log.txt")'], chip: "OPEN", note: 'open() with just a name reads. The file must exist or FileNotFoundError.' },
+      { teach: ["with open(...) as f: opens AND guarantees closing, even when errors hit. The professional habit."],
+        task: 'The safer way: open log.txt in a with-block, as f.', answers: ['with open("log.txt") as f:'], chip: "WITH", note: "with closes the file automatically when the block ends — even on errors. Always prefer it." },
+      { task: "Inside it (4 spaces): read the whole file into data.", answers: ["    data = f.read()"], indent: 4, chip: "READ", note: ".read() returns the entire file as one string." },
+      { task: "Loop over the open file f, one line at a time.", answers: ["for line in f:"], chip: "LINE LOOP", note: "Files are loopable — each pass hands you one line, memory-friendly for big files." },
+      { task: 'Open log.txt for WRITING, store in f.', answers: ['f = open("log.txt", "w")'], chip: "WRITE MODE", note: '"w" wipes and writes fresh. "a" appends instead. Choose carefully.' },
+      { task: 'Inside a with-block (4 spaces): write the text mission ok', answers: ['    f.write("mission ok")'], indent: 4, chip: "WRITE", note: ".write() puts text in — add your own \\n, it won't." },
+      { task: "Manually close the file f (the with-block does this for you).", answers: ["f.close()"], chip: "CLOSE", note: "Open files hold resources. with handles this; f.close() is the manual way." }
     ]
   }
 ];
@@ -1037,6 +1389,21 @@ for r in readings:
         total += value
 
 print(f"total: {total}")`
+  },
+  {
+    id: 5, name: "dice_run.py",
+    blurb: "import random — a program that surprises even its author.",
+    code:
+`# dice_run.py — random patrol
+import random
+
+steps = 0
+for turn in range(3):
+    roll = random.randint(1, 6)
+    print(f"turn {turn}: rolled {roll}")
+    steps += roll
+
+print(f"total steps: {steps}")`
   }
 ];
 
@@ -1065,7 +1432,15 @@ const BUGS = [
   { code: ["try:", '    n = int("12")', "except ValueError", "    n = 0"], bad: 2, err: "SyntaxError: expected ':' (line 3)",
     fix: "except ValueError:", hint: "except opens a block — same colon rule as try, if, def." },
   { code: ["try:", '    n = int(text)', "except valueerror:", '    print("bad")'], bad: 2, err: "NameError: name 'valueerror' is not defined. Did you mean: 'ValueError'? (line 3)",
-    fix: "except ValueError:", hint: "Error names are case-sensitive: ValueError, TypeError, IndexError." }
+    fix: "except ValueError:", hint: "Error names are case-sensitive: ValueError, TypeError, IndexError." },
+  { code: ["for i in range(1, 5):", "    print(i)"], bad: 0, err: "WRONG OUTPUT: prints 1 2 3 4 — the mission needed five rows, starting at 0.",
+    fix: ["for i in range(5):", "for i in range(0, 5):"], hint: "No crash, wrong count. range(1,5) is four numbers; range(5) is five, from 0." },
+  { code: ["score = 100", "if score > 100:", '    print("you win")'], bad: 1, err: 'WRONG OUTPUT: score is exactly 100 but "you win" never prints.',
+    fix: "if score >= 100:", hint: "> excludes the boundary. >= includes it. Off-by-one lives at the edges." },
+  { code: ["values = [12, 7, 30]", "total = 0", "for v in values:", "    total = total + 1", "print(total)"], bad: 3, err: "WRONG OUTPUT: prints 3 — but the sum of the values is 49.",
+    fix: ["    total = total + v", "    total += v"], hint: "It counted the items instead of adding them. What should be added each pass?" },
+  { code: ['crops = ["maize", "wheat", "beet"]', "print(crops[1])"], bad: 1, err: "WRONG OUTPUT: prints wheat — the report needed the FIRST crop.",
+    fix: "print(crops[0])", hint: "Runs fine, grabs the wrong shelf. Counting starts at 0." }
 ];
 
 /* ---------------- state ---------------- */
@@ -1101,6 +1476,8 @@ function showHome() {
   line("  start lists      lists + dicts", "c-dim");
   line("  start funcs      functions", "c-dim");
   line("  start errors     try / except — surviving bad data", "c-dim");
+  line("  start imports    modules: random, math", "c-dim");
+  line("  start files      reading and writing files", "c-dim");
   line("  start all        every drill, shuffled", "c-dim");
   blank();
   line("  start review     re-drill only the forms you stumbled on", "c-dim");
@@ -1109,6 +1486,8 @@ function showHome() {
   line("  bugs             bug hunt — read the traceback, fix the line", "c-amber");
   line("  field            fly the drone with real Python calls", "c-amber");
   line("  forge            write the ghost programs from a blank file", "c-amber");
+  line("  sandbox          REAL Python - type anything, it actually runs", "c-amber");
+  line("  exam             the final: write a program from requirements alone", "c-amber");
   blank();
   line("Left screen: training nav + your codex of learned forms.", "c-dim");
   line("Right screen: flow streak, stats, and the live system log.", "c-dim");
@@ -1128,11 +1507,18 @@ function showPane(which) {
    DRILLS
    ============================================================ */
 function startModule(id) {
-  out.innerHTML = "";
+  out.innerHTML = ""; showPane("term"); fcap = null;
   if (id === "review") {
-    if (!missed.length) { line("Nothing to review — no stumbles recorded yet. The scroll approves.", "c-green"); return; }
-    curModule = { id: "review", name: "REVIEW", intro: "Only the forms that tripped you. " + missed.length + " to reclaim — answer right and they leave the list." };
-    drillQueue = missed.slice(); shuffle(drillQueue);
+    if (!missed.length) { line("Nothing scheduled — no stumbles recorded yet. The codex approves.", "c-green"); return; }
+    const due = dueMissed();
+    if (!due.length) {
+      const next = missed.map(e => e.due).sort()[0];
+      line("All " + missed.length + " scheduled forms are resting (spaced repetition).", "c-green");
+      line("Next batch due " + next + ". Come back then — the gap is the point.", "c-dim");
+      return;
+    }
+    curModule = { id: "review", name: "REVIEW", intro: due.length + " forms due today. Answer right and each moves further out: 1 day, 3 days, 7 days — then it's yours for good." };
+    drillQueue = due.map(e => MODULES[e.mi].drills[e.di]); shuffle(drillQueue);
     drillIdx = 0; mode = "drills"; setStatus();
     blank();
     line("── REVIEW " + "─".repeat(32), "c-green");
@@ -1161,6 +1547,7 @@ function nextDrill() {
   if (drillIdx >= drillQueue.length) {
     blank();
     line(curModule.name + " complete. Well done, Kaatje.", "c-green");
+    sndChime();
     logEvent(curModule.name + " complete", "ok");
     if (curModule.outro) line(curModule.outro, "c-amber");
     line("Type menu for the console, or start another module.", "c-dim");
@@ -1181,7 +1568,7 @@ function checkDrill(input) {
   if (input.trim() === "skip") {
     line("Answer: " + (Array.isArray(d.answers) ? d.answers[0] : d.answers), "c-amber");
     if (d.note) line("  ↳ " + d.note, "c-dim");
-    missDrill(d); chiBreak();
+    missDrill(d);
     drillIdx++; nextDrill(); return;
   }
   let ok = false;
@@ -1200,8 +1587,16 @@ function checkDrill(input) {
     score.drills++; d.doneFlag = true; chiUp(); learn(d);
     logEvent("form acquired: " + d.chip, "ok");
     if (d.out) d.out.forEach(o => line(o));
-    const mi = missed.indexOf(d);
-    if (mi > -1 && curModule.id === "review") missed.splice(mi, 1);
+    if (curModule.id === "review") {
+      const p = drillPos(d);
+      const e = p && missed.find(x => x.mi === p[0] && x.di === p[1]);
+      if (e) {
+        e.stage++;
+        const gaps = [1, 3, 7];
+        if (e.stage > 3) { missed.splice(missed.indexOf(e), 1); line("  \u25c9 mastered — off the schedule for good.", "c-green"); }
+        else { e.due = dayStr(gaps[e.stage - 1]); line("  \u25cb resurfaces in " + gaps[e.stage - 1] + " day" + (gaps[e.stage - 1] === 1 ? "" : "s") + ".", "c-dim"); }
+      }
+    }
     setStatus();
     chip(d.chip);
     if (d.note) line("  ↳ " + d.note, "c-dim");
@@ -1224,8 +1619,20 @@ function diagnose(input, d) {
     line("NameError: name 'Print' is not defined. Did you mean: 'print'? (case matters)", "c-red");
   else if ((a.match(/"/g) || []).length > ((t.match(/["']/g) || []).length))
     line("Check your quotes — text needs an opener AND a closer.", "c-red");
-  else
-    line("Not quite. Try again, or type skip to see the answer.", "c-red");
+  else {
+    showDiff(input, a);
+    line("Not quite. hint shows the shape, skip reveals.", "c-red");
+  }
+}
+function showDiff(input, answer) {
+  const ni = norm(input), na = norm(answer);
+  let i = 0;
+  const n = Math.min(ni.length, na.length);
+  while (i < n && ni[i] === na[i]) i++;
+  if (i === ni.length && i === na.length) return false;
+  line("your line: " + ni, "c-dim");
+  line("           " + " ".repeat(i) + "^ first difference is here", "c-red");
+  return true;
 }
 function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } }
 
@@ -1240,7 +1647,10 @@ function ghostMenu() {
   line("Case is checked in code (that's real Python), relaxed in comments", "c-dim");
   line("and inside strings. Tab types 4 spaces. Esc quits.", "c-dim");
   blank();
-  GHOSTS.forEach(g => line("  ghost " + g.id + "   " + g.name + " — " + g.blurb, "c-amber"));
+  GHOSTS.forEach(g => {
+    const a = (score.ghostAcc || {})[g.id];
+    line("  ghost " + g.id + "   " + g.name + " — " + g.blurb + (a ? "   [" + beltFor(a, a >= 98 ? 0 : 1) + " " + a + "%]" : ""), "c-amber");
+  });
 }
 function classifyLine(s) {
   const cls = []; let inStr = null, com = false;
@@ -1350,10 +1760,19 @@ function flashWrong() {
   sel.classList.add("wrong");
   setTimeout(() => sel.classList.remove("wrong"), 220);
 }
+function beltFor(acc, errors) {
+  if (acc >= 98 && errors === 0) return "FLAWLESS GOLD";
+  if (acc >= 96) return "gold";
+  if (acc >= 90) return "silver";
+  if (acc >= 78) return "bronze";
+  return "white";
+}
 function finishGhost() {
   const G = ghost; G.done = true;
   const acc = G.typed ? Math.round(100 * (G.typed - G.errors) / G.typed) : 100;
   if (acc > score.ghostBest) score.ghostBest = acc;
+  score.ghostAcc = score.ghostAcc || {};
+  if (acc > (score.ghostAcc[G.g.id] || 0)) score.ghostAcc[G.g.id] = acc;
   renderGhost();
   setTimeout(() => endGhost(true), 400);
 }
@@ -1365,8 +1784,10 @@ function endGhost(finished) {
     const t = Math.round((Date.now() - G.t0) / 1000);
     blank();
     line(G.g.name + " — typed start to finish.", "c-green");
-    line("accuracy " + acc + "%  ·  errors " + G.errors + "  ·  " + t + "s", "c-dim");
+    line("accuracy " + acc + "%  ·  errors " + G.errors + "  ·  " + t + "s  ·  belt: " + beltFor(acc, G.errors), acc >= 96 ? "c-amber" : "c-dim");
+    sndChime();
     logEvent("ghost " + G.g.name + " — " + acc + "%", "ok");
+    checkKata("ghost", G.g.id);
     if (G.g.id < GHOSTS.length) line("Next up: ghost " + (G.g.id + 1), "c-amber");
     else line("That was a full program with functions — the whole arc. ghost 1 again to beat your accuracy.", "c-amber");
   } else {
@@ -1380,7 +1801,7 @@ $("gpane").addEventListener("click", () => cmd.focus());
    BUG HUNT
    ============================================================ */
 function startBugs() {
-  out.innerHTML = "";
+  out.innerHTML = ""; showPane("term"); fcap = null;
   mode = "bugs"; setStatus();
   bug = { order: BUGS.map((_, i) => i), pos: 0 };
   shuffle(bug.order);
@@ -1463,8 +1884,28 @@ const MISSIONS = [
     check: f => !f.tiles.flat().includes("P") },
   { name: "MISSION 3 — IRRIGATION + HOME",
     brief: '3 dry tiles (≈). drone.water() each, then drone.home() to dock and recharge.\nChain commands with ; — e.g. drone.move("south", 2); drone.water()',
-    check: f => !f.tiles.flat().includes("D") && f.r === 0 && f.c === 0 }
+    check: f => !f.tiles.flat().includes("D") && f.r === 0 && f.c === 0 },
+  { name: "MISSION 4 — WRITE A FUNCTION",
+    brief: 'Two fresh pests. This time, define your OWN function:\n  def patrol():\n      drone.move("east")\n      drone.scan()\n(4-space body, blank line to finish. Then run it: patrol() )\nClear both pests, and use a function you defined at least once.',
+    setup: f => spawnTiles(f, "P", 2),
+    check: f => f.usedFn && !f.tiles.flat().includes("P") },
+  { name: "MISSION 5 — REUSE IT",
+    brief: "Two dry tiles. The point of functions is calling them AGAIN.\nWater both — with at least two calls to your defined function(s).\n(Redefine patrol() any time; the new body replaces the old.)",
+    setup: f => spawnTiles(f, "D", 2),
+    check: f => (f.fnCalls || 0) >= 2 && !f.tiles.flat().includes("D") },
+  { name: "MISSION 6 — GRAND TOUR",
+    brief: "Touch all four corners of the field, then drone.home().\nA good function makes this short. Loops inside the body work too.",
+    check: f => f.cornersHit && Object.keys(f.cornersHit).length === 4 && f.r === 0 && f.c === 0 && f.usedFn }
 ];
+function spawnTiles(f, type, n) {
+  let placed = 0, guard = 0;
+  while (placed < n && guard < 400) {
+    guard++;
+    const r = Math.floor(Math.random() * FH), c = Math.floor(Math.random() * FW);
+    if (f.tiles[r][c] !== "." || (r === f.r && c === f.c)) continue;
+    f.tiles[r][c] = type; placed++;
+  }
+}
 function startField() {
   out.innerHTML = "";
   mode = "field"; setStatus(); showPane("field");
@@ -1531,6 +1972,14 @@ function runFieldLine(inputLine) {
       if (n > 60) { line("ValueError: range too large for one breath (max 60)", "c-red"); return; }
       for (let i = 0; i < n; i++) { if (!execDrone(loop[2].trim())) return; }
     } else {
+      const um = st.match(/^(\w+)\(\)$/);
+      if (um && field.fns && field.fns[um[1]]) {
+        if ((runFieldLine._depth = (runFieldLine._depth || 0) + 1) > 4) { line("RecursionError: functions calling functions calling… Junie is dizzy.", "c-red"); runFieldLine._depth = 0; return; }
+        field.usedFn = true; field.fnCalls = (field.fnCalls || 0) + 1;
+        for (const bodyLine of field.fns[um[1]]) runFieldLine(bodyLine);
+        runFieldLine._depth--;
+        continue;
+      }
       if (!execDrone(st)) return;
     }
   }
@@ -1539,12 +1988,14 @@ function runFieldLine(inputLine) {
   if (m.check(field)) {
     score.missions++; setStatus();
     blank(); line(m.name + " COMPLETE.", "c-green");
+    sndChime();
     logEvent(m.name.toLowerCase() + " complete", "ok");
     if (field.mission < MISSIONS.length - 1) {
       field.mission++; field.scanned = false;
+      if (MISSIONS[field.mission].setup) MISSIONS[field.mission].setup(field);
       missionBrief(); drawField();
     } else {
-      line("All missions flown. The field is green, the dock hums, Junie sleeps.", "c-green");
+      line("All six missions flown — the last three on functions YOU wrote. The dock hums, Junie sleeps.", "c-green");
       line("field starts a fresh field · menu returns to console.", "c-dim");
     }
   }
@@ -1554,7 +2005,7 @@ function execDrone(st) {
   if (!m) {
     if (/^drone\.\w+$/.test(st)) line("Hint: functions need parentheses — drone.scan()", "c-red");
     else if (/^drone\./.test(st)) line("AttributeError: 'Drone' object has no attribute '" + st.slice(6).split("(")[0] + "'", "c-red");
-    else line('SyntaxError: Junie only understands drone.<command>(...) and single-line for-loops', "c-red");
+    else line('SyntaxError: Junie understands drone.<command>(...), for-loops, def name(): blocks, and your own defined functions', "c-red");
     return false;
   }
   const fn = m[1];
@@ -1575,6 +2026,8 @@ function execDrone(st) {
         drawField(); line("Junie refuses — edge of the field.", "c-red"); return true;
       }
       f.r = nr; f.c = nc;
+      f.cornersHit = f.cornersHit || {};
+      if ((f.r === 0 || f.r === FH - 1) && (f.c === 0 || f.c === FW - 1)) f.cornersHit[f.r + "_" + f.c] = true;
       if (!spend(1)) return true;
       if (f.tiles[f.r][f.c] === "H") { f.battery = 100; }
     }
@@ -1638,9 +2091,11 @@ function questLog() {
     });
     line("  " + bar(score.ghostBest, 100) + "  " + (score.ghostBest || 0) + "%   ghost     GHOST TYPING", "c-dim");
     line("  " + bar(score.bugs, BUGS.length) + "  " + score.bugs + "/" + BUGS.length + "  bugs      BUG HUNT", "c-dim");
-    line("  " + bar(Math.min(score.missions, 3), 3) + "  " + score.missions + "/3   field     FIELD OPS", "c-dim");
+    line("  " + bar(Math.min(score.missions, MISSIONS.length), MISSIONS.length) + "  " + score.missions + "/" + MISSIONS.length + "   field     FIELD OPS", "c-dim");
     line("  " + bar(score.forges, FORGES.length) + "  " + score.forges + "/" + FORGES.length + "   forge     BLANK FILE", "c-dim");
-    if (missed.length) line("  " + missed.length + " stumbled forms waiting — start review", "c-amber");
+    const ki = kataInfo();
+    line("  " + (kataDoneToday() ? "\u25c9 done" : "\u25cb open") + "        kata      TODAY: " + ki.type + " " + ki.n + " (streak " + kata.streak + ")", kataDoneToday() ? "c-green" : "c-amber");
+    if (missed.length) line("  review: " + dueMissed().length + " due today, " + missed.length + " scheduled — start review", dueMissed().length ? "c-amber" : "c-dim");
     }
 function handle(raw) {
   const t = raw.trim().toLowerCase();
@@ -1648,7 +2103,10 @@ function handle(raw) {
   if (cliMode === "login") { if (t) doLogin(raw.trim()); return; }
   if (cliMode === "password") { doPassword(); return; }
   if (cliMode === "shell") { shellCmd(raw, t); return; }
-  if (t === "exit()" || t === "quit()") { toShell(); return; }
+  if (t === "exit()" || t === "quit()") {
+    if (mode === "sandbox" || mode === "exam") { mode = "home"; sbBuf = []; setStatus(); line("Back at the training menu.", "c-dim"); return; }
+    toShell(); return;
+  }
   if (t === "exit" || t === "quit") { line("Use exit() or Ctrl-D (i.e. EOF) to exit", "c-dim"); return; }
   // meta first
   if (t === "clear") { out.innerHTML = ""; return; }
@@ -1658,12 +2116,71 @@ function handle(raw) {
     return;
   }
   if (t === "menu" || t === "home") {
-    mode = "home"; field = null; bug = null; showPane("term");
+    mode = "home"; field = null; bug = null; fcap = null; sbBuf = []; showPane("term");
     $("taskLbl").textContent = "";
     out.innerHTML = ""; showHome(); return;
   }
   if (t === "modules") { MODULES.forEach(m => line("  start " + m.id + "   " + m.name + " — " + m.intro, "c-dim")); return; }
   if (t === "quests" || t === "nav" || t === "progress") { questLog(); return; }
+  if (t === "kata") {
+    const ki = kataInfo();
+    line("── DAILY KATA ──────────────────────────", "c-green");
+    line("Today: " + ki.type + " " + ki.n + " — " + ki.name, "c-amber");
+    line(kataDoneToday() ? "Status: complete. Come back tomorrow." : "Status: waiting. Run " + ki.type + " " + ki.n + " start to finish.", kataDoneToday() ? "c-green" : "c-dim");
+    line("Streak: " + kata.streak + " day" + (kata.streak === 1 ? "" : "s"), "c-dim");
+    line("One program a day, every day. Ritual beats bingeing.", "c-dim");
+    return;
+  }
+  if (t === "sandbox") { startSandbox(); return; }
+  if (t === "exam") { startExam(); return; }
+  if (t === "cheatsheet") { cheatsheet(); return; }
+  if (t === "sound" || t === "sound on" || t === "sound off") {
+    sndOn = t === "sound" ? !sndOn : t === "sound on";
+    line("Sound " + (sndOn ? "on - ticks and chimes." : "off."), "c-dim");
+    if (sndOn) sndTick();
+    saveState(); return;
+  }
+  if (t === "save") {
+    try {
+      saveState();
+      const rawS = localStorage.getItem(SAVE_KEY) || "{}";
+      line("Transfer code - copy the whole line:", "c-amber");
+      line("PYLE1." + btoa(unescape(encodeURIComponent(rawS))), "c-dim");
+      line("On another device: load PYLE1....  (progress moves with you)", "c-dim");
+    } catch (e) { line("Saving unavailable in this browser.", "c-red"); }
+    return;
+  }
+  if (t.startsWith("load ")) {
+    const code = raw.trim().slice(5).trim();
+    if (!code.startsWith("PYLE1.")) { line("Transfer codes start with PYLE1.", "c-red"); return; }
+    try {
+      const json = decodeURIComponent(escape(atob(code.slice(6))));
+      JSON.parse(json);
+      localStorage.setItem(SAVE_KEY, json);
+      line("Progress imported - reloading...", "c-green");
+      setTimeout(() => location.reload(), 700);
+    } catch (e) { line("That code didn't decode. Copy the whole line, dots and all.", "c-red"); }
+    return;
+  }
+  if (t === "gloss" || t === "glossary") {
+    line("Ask me: what is a <term>. Known terms:", "c-dim");
+    line("  " + Object.keys(GLOSS).filter(k => k !== "fstring").join(" - "), "c-dim");
+    return;
+  }
+  if (t.startsWith("what is ") || t.startsWith("what's ")) {
+    let key = t.replace(/^what.s /, "").replace(/^what is /, "").replace(/^(a|an|the) /, "").replace(/[?.!]+$/, "").trim();
+    let hit = GLOSS[key] || GLOSS[key.replace(/s$/, "")] || GLOSS[key.replace(/-/g, "")];
+    if (hit) { line(key.toUpperCase(), "c-amber"); line(hit, "c-dim"); }
+    else { line("Not in the glossary yet. gloss lists what I can define.", "c-dim"); }
+    return;
+  }
+  if (t === "wipe") { line("This erases ALL saved progress. Type wipe confirm if you mean it.", "c-red"); return; }
+  if (t === "wipe confirm") {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+    line("Progress wiped. Reloading fresh…", "c-amber");
+    setTimeout(() => location.reload(), 800);
+    return;
+  }
   if (t === "scroll") {
     if (!learned.length) { line("The scroll is blank — master some drills first.", "c-dim"); return; }
     line("── SCROLL OF FORMS ─────────────────────", "c-green");
@@ -1677,9 +2194,9 @@ function handle(raw) {
   }
   if (t.startsWith("start ")) { startModule(t.slice(6).trim()); return; }
   if (t === "ghost") { ghostMenu(); return; }
-  if (/^ghost [1-4]$/.test(t)) { startGhost(parseInt(t.slice(6), 10)); return; }
+  if (/^ghost [1-5]$/.test(t)) { startGhost(parseInt(t.slice(6), 10)); return; }
   if (t === "forge") { forgeMenu(); return; }
-  if (/^forge [1-4]$/.test(t)) { startForge(parseInt(t.slice(6), 10)); return; }
+  if (/^forge [1-5]$/.test(t)) { startForge(parseInt(t.slice(6), 10)); return; }
   if (t === "theme") { line("themes: verdant (night ops) - paper (day watch) - ember (long haul)", "c-dim"); line("usage: theme paper", "c-dim"); return; }
   if (/^theme (verdant|paper|ember)$/.test(t)) {
     setTheme(t.slice(6));
@@ -1689,10 +2206,30 @@ function handle(raw) {
   if (t === "bugs") { startBugs(); return; }
   if (t === "field") { startField(); return; }
 
+  if (mode === "sandbox") { sbInput(raw); return; }
+  if (mode === "exam") { exInput(raw); return; }
   if (mode === "forge") { checkForge(raw); return; }
   if (mode === "drills") { checkDrill(raw); return; }
   if (mode === "bugs") { checkBug(raw); return; }
   if (mode === "field") {
+    if (fcap) {
+      if (raw.trim() === "") {
+        field.fns = field.fns || {};
+        field.fns[fcap.name] = fcap.lines.slice();
+        line("function " + fcap.name + "() stored — " + fcap.lines.length + " line" + (fcap.lines.length === 1 ? "" : "s") + ". Run it: " + fcap.name + "()", "c-green");
+        logEvent("field: def " + fcap.name + "() stored", "ok");
+        fcap = null; setPrompt(); return;
+      }
+      if (indentOf(raw) < 4) { line("IndentationError: the body lives at 4 spaces. Blank line to finish the def.", "c-red"); return; }
+      fcap.lines.push(raw.trim());
+      return;
+    }
+    const dm = raw.trim().match(/^def (\w+)\(\)\s*:$/);
+    if (dm) {
+      fcap = { name: dm[1], lines: [] };
+      line("Defining " + dm[1] + "() — enter drone commands indented 4 spaces. A blank line ends the def.", "c-amber");
+      setPrompt(); return;
+    }
     if (t === "map") { drawField(); return; }
     if (t === "mission") { missionBrief(); return; }
     runFieldLine(raw); return;
@@ -1704,14 +2241,22 @@ function showHelp() {
   line("  modules            list drill modules", "c-dim");
   line("  start <id>         run a module   (start basics · start all · start review)", "c-dim");
   line("  skip               inside drills/bugs: reveal the answer", "c-dim");
-  line("  ghost / ghost 1-4  retype programs over ghost letters", "c-dim");
+  line("  ghost / ghost 1-5  retype programs over ghost letters", "c-dim");
   line("  bugs               fix crashing code from its traceback", "c-dim");
   line("  field              fly Junie with drone.move() etc.", "c-dim");
-  line("  forge / forge 1-4  write full programs from specs, no ghost", "c-dim");
+  line("  forge / forge 1-5  write full programs from specs, no ghost", "c-dim");
   line("  hint               inside drills/forge: reveal the line shape", "c-dim");
   line("  theme <name>       verdant - paper - ember", "c-dim");
   line("  scroll             print your learned forms (handy on mobile)", "c-dim");
   line("  quests             quest log: every module + mode with progress", "c-dim");
+  line("  kata               today\u0027s daily program + your streak", "c-dim");
+  line("  sandbox            real Python interpreter (needs internet once)", "c-dim");
+  line("  exam               final exam, graded by real Python", "c-dim");
+  line("  what is <term>     plain-language glossary - gloss lists terms", "c-dim");
+  line("  cheatsheet         your codex as a printable page", "c-dim");
+  line("  save / load <code> move progress between devices", "c-dim");
+  line("  sound              toggle key ticks and chimes", "c-dim");
+  line("  wipe               erase all saved progress (asks to confirm)", "c-dim");
   line("  score · clear · menu", "c-dim");
   line("  keys: ↑↓ history · Tab complete (or indent) · ^C cancel · ^D exit · ^L clear", "c-dim");
 }
@@ -1735,11 +2280,11 @@ function tabComplete() {
     cands = ["python3", "ls", "whoami", "date", "clear", "help", "exit"];
   else if (cliMode === "python") {
     if (parts.length === 1) {
-      cands = ["help", "modules", "start", "ghost", "bugs", "field", "forge", "scroll", "score", "clear", "menu", "theme", "hint", "skip", "exit()"];
+      cands = ["help", "modules", "start", "ghost", "bugs", "field", "forge", "sandbox", "exam", "kata", "quests", "scroll", "cheatsheet", "score", "save", "sound", "clear", "menu", "theme", "hint", "skip", "what is", "exit()"];
       if (mode === "field") cands = cands.concat(['drone.move("', "drone.scan()", "drone.spray()", "drone.water()", "drone.home()", "drone.pos()", "mission", "map"]);
-    } else if (first === "start") cands = ["zero", "basics", "numstr", "logic", "loops", "lists", "funcs", "errors", "all", "review"];
+    } else if (first === "start") cands = ["zero", "basics", "numstr", "logic", "loops", "lists", "funcs", "errors", "imports", "files", "all", "review"];
     else if (first === "theme") cands = ["verdant", "paper", "ember"];
-    else if (first === "ghost" || first === "forge") cands = ["1", "2", "3", "4"];
+    else if (first === "ghost" || first === "forge") cands = ["1", "2", "3", "4", "5"];
   } else return;
   const m = cands.filter(c => c.toLowerCase().startsWith(token.toLowerCase()));
   if (!m.length) return;
@@ -1838,6 +2383,24 @@ setInterval(() => {
   const el = $("clock");
   if (el) el.textContent = new Date().toUTCString().slice(17, 25) + " UTC";
 }, 1000);
+const AMBIENT = [
+  "wind shear 2.1 m/s — nominal",
+  "hydro rack 3: nutrient cycle ok",
+  "junie: standby · battery 100%",
+  "cloud deck visibility 12 km",
+  "relay ping 43 ms",
+  "condensers at 87% efficiency",
+  "perimeter scan clear",
+  "rack 7 humidity 61%",
+  "atmo dampers: micro-adjust",
+  "solar wing 2 tracking sun",
+  "crusader relay handshake ok",
+  "junie ran a self-test: pass"
+];
+setInterval(() => {
+  if (Math.random() < 0.7) logEvent(AMBIENT[Math.floor(Math.random() * AMBIENT.length)]);
+}, 24000);
+logEvent("console online", "ok");
 MODULES.forEach(m => m.drills.forEach(d => d.group = m.name));
 const qb = $("qbtn");
 if (qb) qb.addEventListener("click", () => { questLog(); cmd.focus(); });
@@ -1845,8 +2408,10 @@ const themeRowEl = $("themeRow");
 if (themeRowEl) themeRowEl.querySelectorAll("button").forEach(b =>
   b.addEventListener("click", () => { setTheme(b.dataset.t); cmd.focus(); }));
 
+const restored = loadState();
 setStatus();
 bootSeq();
+if (restored) logEvent("progress restored from local save", "ok");
 cmd.focus();
 </script>
 </body>
