@@ -52,7 +52,7 @@ const LABS_CONFIG = [
   },
     {
     id: "spelle",
-    name: "Spelle",
+    name: "Java",
     tag: "Programming",
     path: "labs/spelle.html",
     ring: "ring-outer",
