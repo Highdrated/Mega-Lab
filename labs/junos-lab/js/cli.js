@@ -471,7 +471,10 @@ function commitCmd(dev, rest){
   }
   const prev = deepClone(dev.config);
   dev.cfgHistory.unshift(prev);
-  if(dev.cfgHistory.length > 8) dev.cfgHistory.length = 8;
+  if(dev.cfgHistory.length > 49) dev.cfgHistory.length = 49;
+  dev.commitLog = dev.commitLog || [];
+  dev.commitLog.unshift({ when: Date.now() });
+  if(dev.commitLog.length > 49) dev.commitLog.length = 49;
   dev.config = deepClone(dev.candidate);
   dev.name = hostnameOf(dev);
   if(confirmedMin){
@@ -488,6 +491,14 @@ function commitCmd(dev, rest){
   touchState();
   if(typeof SFX !== "undefined") SFX.commit();
   const out = [];
+  if(typeof strictOn === "function" && strictOn() && dev.type === "switch"){
+    const aes = Object.keys((typeof D === "function" && D(dev).aes) || {});
+    const cap = chassisAeCount(dev);
+    const orphans = aes.filter(a => parseInt(a.replace("ae", ""), 10) >= cap);
+    if(orphans.length)
+      out.push({ cls:"warn", text: "warning: " + orphans.join(", ") + " will not be created — set chassis aggregated-devices ethernet device-count " +
+        (Math.max.apply(null, orphans.map(a => parseInt(a.replace("ae", ""), 10))) + 1) + " first (strict mode)" });
+  }
   if(confirmedMin)
     out.push({ cls:"out", text:
       `commit confirmed will be automatically rolled back in ${confirmedMin} minute${confirmedMin>1?"s":""} unless confirmed\ncommit complete` });

@@ -186,6 +186,7 @@ function peekHelp(node){
          presence -> path itself is the statement
    ============================================================ */
 const SWITCH_CFG_SPECS = [
+  ["chassis aggregated-devices ethernet device-count <count:num>", { kind:"value", help:"How many ae bundles this chassis may create — real EX switches need this before any ae exists" }],
   ["system host-name <hostname:word>", { kind:"value", help:"Set the system hostname" }],
   ["interfaces <interface:ifname> disable", { kind:"presence", help:"Administratively disable this interface" }],
   ["interfaces <interface:ifname> description <text:word>", { kind:"value", help:"Interface description" }],

@@ -9,6 +9,7 @@ No build step, no dependencies — open `index.html` in a browser.
 |---|---|
 | `index.html` | Markup + script includes (classic scripts, load order matters) |
 | `css/style.css` | All styling |
+| `tests/soak.js` | Long-run fuzz test: `node tests/soak.js 30000` hammers random commands, cabling and deletions to hunt freezes and slow paths |
 | `js/sound.js` | Synthesized sound effects (Web Audio, no files): ticks, plugs, drops, commit chime, objective dings, fanfare, sound on/off toggle |
 | `js/protocols.js` | The Protocols tab: field guides (problem / how / live prereqs / config / numbers / verify / breaks / ELS notes / 30-second answer / quiz), per-protocol canvas animations, prereq-hover device glow, jump-to-scenario |
 | `js/core.js` | Global state, IP math, device factories, the config-tree engine (set/delete/render/diff) |

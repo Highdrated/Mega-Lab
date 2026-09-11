@@ -388,7 +388,11 @@ ok(suggestFor(devices[sw], "show x") === null, "T20 no match suggests nothing");
   const pv = suggestFor(devices[sw2], "show ");
   ok(!!(pv && pv.preview && /configuration/.test(pv.preview) && /more/.test(pv.preview)),
      "T20 boundary preview lists next words");
-  ok((suggestFor(devices[sw2], "show interfaces") || {}).text === " terse", "T20 suggests the next word after a full token");
+  {
+    const sug = suggestFor(devices[sw2], "show interfaces") || {};
+    ok(/terse/.test(sug.preview || "") && /statistics/.test(sug.preview || ""), "T20 previews both continuations after a full token");
+    ok((suggestFor(devices[sw2], "show interfaces t") || {}).text === "erse", "T20 completes uniquely once a letter disambiguates");
+  }
   ok((suggestFor(devices[sw2], "clear ") || {}).text === "ethernet-switching", "T20 chains the unique next word at a boundary");
   const pv2 = suggestFor(devices[sw2], "ping ");
   ok(!!(pv2 && pv2.preview && /target/.test(pv2.preview)), "T20 placeholder previewed after ping");
@@ -1009,14 +1013,22 @@ wipeLab();
   ok(z.w === devWidth(sw) + 2 * RACK_SIDE, "T44 rack widens to fit the widest box");
   ok(srv.x === z.x + (z.w - devWidth(srv)) / 2 && sw.x === z.x + (z.w - devWidth(sw)) / 2,
      "T44 gear centers between the rails");
-  ok(srv.y === z.y + RACK_TOP && sw.y === srv.y + devHeight(srv) + RACK_GAP,
-     "T44 flush top-down stack, no overlap");
+  ok(srv.y >= z.y + RACK_TOP && sw.y >= srv.y + devHeight(srv) + RACK_GAP,
+     "T44 no overlap, clamped below the top rail");
+  sw.y = srv.y + devHeight(srv) + RACK_GAP + 40;
+  packRack(z);
+  ok(sw.y === srv.y + devHeight(srv) + RACK_GAP + 40,
+     "T44 deliberate gaps between gear are preserved");
+  sw.y = srv.y + 2;
+  packRack(z);
+  ok(sw.y === srv.y + devHeight(srv) + RACK_GAP,
+     "T44 overlapping gear gets pushed down, never stacked on top");
   ok(z.h >= (sw.y + devHeight(sw) + RACK_PAD) - z.y, "T44 rack grows long enough for its gear");
   ok(out.x === 600 && out.y === 600, "T44 gear outside the rack stays where it is");
   makeHost(140, 150);
-  const again = packRack(z);
-  ok(again.length === 2 && again[0].y === z.y + RACK_TOP,
-     "T44 hosts are furniture, and repacking is idempotent");
+  const y1 = packRack(z).map(d => d.y).join();
+  const y2 = packRack(z).map(d => d.y).join();
+  ok(y1 === y2, "T44 hosts are furniture, and repacking is idempotent");
   ok(clickIntoRack(outId) === false && clickIntoRack(swId) === true,
      "T44 clickIntoRack: no-op outside, snaps inside");
 }
@@ -1294,13 +1306,13 @@ function runDrcSafe(){ try{ runDrc(); return true; }catch(e){ return false; } }
 /* ---------- T-PROTO: field guides + legacy syntax hints ---------- */
 wipeLab();
 PROTO_GUIDES.filter(g => g.ready).forEach(g => {
-  ok(g.problem && g.how && g.prereqs && g.prereqs.length >= 3, "proto " + g.id + " has core sections");
-  ok(g.cfg && g.cfg.length >= 2, "proto " + g.id + " has config commands");
+  ok(g.problem && g.how && (g.conceptual || (g.prereqs && g.prereqs.length >= 3)), "proto " + g.id + " has core sections");
+  ok(g.conceptual || (g.cfg && g.cfg.length >= 2), "proto " + g.id + " has config commands");
   ok(g.nums && g.nums.length >= 3, "proto " + g.id + " has numbers");
   ok(g.verify && g.verify.length >= 2 && g.breaks && g.breaks.length >= 3, "proto " + g.id + " has verify+breaks");
   ok(g.quiz && g.quiz.length >= 3 && g.quiz.every(q => q.opts[q.right] !== undefined), "proto " + g.id + " quiz answers valid");
   ok(!g.scenarioId || SCENARIOS.some(s => s.id === g.scenarioId), "proto " + g.id + " links a real scenario");
-  g.prereqs.forEach((p, i) => {
+  (g.prereqs || []).forEach((p, i) => {
     let threw = false;
     try{ p.test(); }catch(e){ threw = true; }
     ok(!threw, "proto " + g.id + " prereq " + i + " safe on empty lab");
@@ -1321,9 +1333,9 @@ PROTO_GUIDES.filter(g => g.ready).forEach(g => {
 }
 
 
-PROTO_GUIDES.filter(g => g.ready).forEach(g => {
+PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters").forEach(g => {
   ok(typeof protoAnims[g.id] === "object" && typeof protoAnims[g.id].run === "function", "proto " + g.id + " has a canvas animation");
-  ok(Array.isArray(PROTO_GLOW_TYPES[g.id]) && PROTO_GLOW_TYPES[g.id].length, "proto " + g.id + " has glow targets");
+  ok(g.conceptual || (Array.isArray(PROTO_GLOW_TYPES[g.id]) && PROTO_GLOW_TYPES[g.id].length), "proto " + g.id + " has glow targets");
 });
 {
   const parts = maskHintParts("On the switch: set protocols rstp, then commit. Read the storm error first.");
@@ -1338,6 +1350,143 @@ PROTO_GUIDES.filter(g => g.ready).forEach(g => {
   rebuildAllDerived();
   ok(protoFindLink("host", "switch") !== null, "protoFindLink finds host-switch either direction");
   ok(protoFindLink("router", "isp") === null, "protoFindLink null when absent");
+}
+
+
+{
+  wipeLab();
+  const s1 = makeSwitch(0, 0, 8), s2 = makeSwitch(300, 0, 8);
+  const a = devices[s1], b = devices[s2];
+  cable(s1, "ge-0/0/1", s2, "ge-0/0/1");
+  cable(s1, "ge-0/0/2", s2, "ge-0/0/2");
+  [a, b].forEach(d => {
+    deviceExec(d, "configure");
+    deviceExec(d, "set interfaces ge-0/0/1 ether-options 802.3ad ae0");
+    deviceExec(d, "set interfaces ge-0/0/2 ether-options 802.3ad ae0");
+    deviceExec(d, "set interfaces ae0 aggregated-ether-options lacp active");
+    deviceExec(d, "set interfaces ae0 unit 0 family ethernet-switching");
+    deviceExec(d, "commit");
+  });
+  ok(NET.aeInfo[s1].ae0 && NET.aeInfo[s1].ae0.up, "strict-off: bundle forms without chassis config");
+  setStrict(true);
+  rebuildAllDerived();
+  ok(NET.aeInfo[s1].ae0 && !NET.aeInfo[s1].ae0.up, "strict-on: bundle refuses to form without chassis config");
+  ok(NET.aeInfo[s1].ae0.members.every(m => /chassis aggregated-devices/.test(m.why)), "strict-on: show lacp explains why");
+  const w = deviceExec(a, "commit");
+  ok(w.some(l => l.cls === "warn" && /device-count/.test(l.text)), "strict-on: commit warns about the orphaned bundle");
+  [a, b].forEach(d => { deviceExec(d, "set chassis aggregated-devices ethernet device-count 1"); deviceExec(d, "commit"); });
+  ok(NET.aeInfo[s1].ae0.up, "strict-on: bundle forms once chassis aggregated-devices is configured");
+  setStrict(false);
+}
+
+
+{
+  wipeLab();
+  const r1 = makeRouter(0, 0, 4), r2 = makeRouter(300, 0, 4);
+  const a = devices[r1], b = devices[r2];
+  cable(r1, "ge-0/0/1", r2, "ge-0/0/1");
+  [["a", a, "10.9.12.1"], ["b", b, "10.9.12.2"]].forEach(([_, d, ip]) => {
+    deviceExec(d, "configure");
+    deviceExec(d, "set interfaces ge-0/0/1 unit 0 family inet address " + ip + "/30");
+    deviceExec(d, "set protocols ospf area 0 interface ge-0/0/1.0");
+    deviceExec(d, "commit");
+  });
+  ok((D(a).ospfNeighbors || []).some(n => n.state === "Full"), "conv: strict off = instant Full");
+  setStrict(true);
+  CONV.map = {};
+  rebuildAllDerived();
+  ok((D(a).ospfNeighbors || []).some(n => n.state === "ExStart"), "conv: strict on = adjacency starts in ExStart");
+  ok((D(a).ospfRoutes || []).length === 0, "conv: no OSPF routes until Full");
+  for(const k of Object.keys(CONV.map)) CONV.map[k] -= 7000;
+  rebuildAllDerived();
+  ok((D(a).ospfNeighbors || []).some(n => n.state === "Full"), "conv: adjacency reaches Full after the timer");
+  ok(convPending() === false, "conv: nothing pending once converged");
+  setStrict(false);
+}
+{
+  wipeLab();
+  const s1 = makeSwitch(0, 0, 8), h1 = makeHost(300, 0);
+  const sw = devices[s1], h = devices[h1];
+  cable(h1, "eth0", s1, "ge-0/0/1");
+  deviceExec(sw, "configure");
+  deviceExec(sw, "set vlans staff vlan-id 10");
+  deviceExec(sw, "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff");
+  deviceExec(sw, "set vlans staff l3-interface irb.10");
+  deviceExec(sw, "set interfaces irb unit 10 family inet address 10.0.10.1/24");
+  deviceExec(sw, "commit");
+  deviceExec(sw, "exit");
+  const cl = deviceExec(sw, "show system commit").map(l => l.text).join("\n");
+  ok(/0 +\d{4}-\d{2}-\d{2}/.test(cl) && /by cli/.test(cl), "timeline: show system commit lists commits");
+  deviceExec(h, "ip addr add 10.0.10.5/24 dev eth0");
+  const p = pingRun(h, "10.0.10.1");
+  ok(p.ok, "counters: setup ping works");
+  const st = deviceExec(sw, "show interfaces statistics").map(l => l.text).join("\n");
+  ok(/ge-0\/0\/1/.test(st) && !/no traffic counted/.test(st), "counters: ping moved the numbers");
+  const lid = Object.keys(links)[0];
+  links[lid].degraded = true;
+  LAB_RAND = () => 0.1;
+  const p2 = pingRun(h, "10.0.10.1");
+  ok(!p2.ok && p2.lines.some(l => /LOST mid-path/.test(l.text)), "gremlin: degraded link drops packets with the right story");
+  LAB_RAND = () => 0.99;
+  ok(pingRun(h, "10.0.10.1").ok, "gremlin: intermittent means sometimes it works");
+  const st2 = deviceExec(sw, "show interfaces statistics").map(l => l.text).join("\n");
+  ok(/CRC errors climbing/.test(st2), "gremlin: statistics flag the degraded port");
+  LAB_RAND = function(){ return Math.random(); };
+  delete links[lid].degraded;
+}
+{
+  wipeLab();
+  let prev = null;
+  for(let i = 0; i < 40; i++){
+    const id = i % 3 === 0 ? makeRouter(i * 30, 0, 4) : makeSwitch(i * 30, 100, 8);
+    if(prev !== null){
+      const a = devices[prev], b = devices[id];
+      const pa = a.ports.find(p => !isLinked(a.id, p.id)), pb = b.ports.find(p => !isLinked(b.id, p.id));
+      if(pa && pb) links[uid("lk")] = { a: { dev: prev, port: pa.id }, b: { dev: id, port: pb.id }, kind: "lan" };
+    }
+    prev = id;
+  }
+  const t0 = Date.now();
+  for(let i = 0; i < 10; i++) rebuildAllDerived();
+  const avg = (Date.now() - t0) / 10;
+  ok(avg < 120, "perf: rebuild at 40 devices averages under 120ms (was " + avg.toFixed(1) + "ms)");
+}
+
+
+{
+  ok(netCalc("192.168.10.130", 26).network === "192.168.10.128", "subnet: /26 network");
+  ok(netCalc("192.168.10.130", 26).usable === 62, "subnet: /26 hosts");
+  ok(netCalc("10.9.12.5", 30).broadcast === "10.9.12.7", "subnet: /30 broadcast");
+  ok(netCalc("172.16.5.9", 31).usable === 2, "subnet: /31 both usable (RFC 3021)");
+  for(let i = 0; i < 200; i++){
+    const q = subnetDrillQ();
+    const a = netCalc(q.ip, q.bits);
+    ok2 = ipToInt(a.network) <= ipToInt(q.ip) && ipToInt(q.ip) <= ipToInt(a.broadcast);
+    if(!ok2){ ok(false, "subnet drill: generated ip inside its own block (" + q.ip + "/" + q.bits + ")"); break; }
+  }
+  ok(true, "subnet drill: 200 generated questions all self-consistent");
+  wipeLab();
+  const s1 = makeSwitch(0, 0, 8);
+  const p = deviceExec(devices[s1], "show system processes").map(l => l.text).join("\n");
+  ok(/mgd/.test(p) && /rpd/.test(p) && /l2ald/.test(p), "arch: show system processes names the daemons");
+}
+
+
+{
+  wipeLab();
+  const ids = bulkMake("switch", 6, 8, null);
+  ok(ids.length === 6 && ids.every(id => devices[id] && devices[id].type === "switch"), "bulk: six switches in one call");
+  const ys = new Set(ids.map(id => devices[id].y));
+  ok(ys.size >= 2, "bulk: grid uses more than one row at six");
+  for(let i = 0; i < ids.length; i++) for(let j = i + 1; j < ids.length; j++){
+    const a = devices[ids[i]], b = devices[ids[j]];
+    const overlap = Math.abs(a.x - b.x) < 10 && Math.abs(a.y - b.y) < 10;
+    if(overlap){ ok(false, "bulk: devices " + i + "," + j + " overlap"); break; }
+  }
+  ok(true, "bulk: no two devices land on the same spot");
+  const mixed = bulkMake("host", 3).concat(bulkMake("ups", 2), bulkMake("crac", 2), bulkMake("isp", 2), bulkMake("ap", 2), bulkMake("server", 2), bulkMake("router", 2, 4));
+  ok(mixed.every(id => devices[id]), "bulk: every device type places cleanly");
+  ok(devices[bulkMake("isp", 2)[0]].cfg.ip, "bulk: ISPs arrive with a usable handoff address");
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");

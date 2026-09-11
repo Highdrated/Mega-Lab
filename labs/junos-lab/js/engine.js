@@ -244,6 +244,10 @@ function computeNet(){
     if(aIsAe && bIsAe){
       const aeA = D(devA).aes[ea.port], aeB = D(devB).aes[eb.port];
       if(!aeA.lacp || !aeB.lacp || aeA.disabled || aeB.disabled){ NET.linkStatus[lid] = "lacp-fail"; continue; }
+      if(typeof strictOn === "function" && strictOn()){
+        const numA = parseInt(ea.port.replace("ae", ""), 10), numB = parseInt(eb.port.replace("ae", ""), 10);
+        if(numA >= chassisAeCount(devA) || numB >= chassisAeCount(devB)){ NET.linkStatus[lid] = "lacp-fail"; continue; }
+      }
     }
     const key = [ea.dev + ":" + ea.port, eb.dev + ":" + eb.port].sort().join("|");
     if(!edges[key]) edges[key] = { a: ea, b: eb, linkIds: [] };
@@ -267,6 +271,9 @@ function computeNet(){
         }
         return { port: m, state, why };
       });
+      if(typeof strictOn === "function" && strictOn() && parseInt(ae.replace("ae", ""), 10) >= chassisAeCount(dev)){
+        members.forEach(m => { m.state = "Detached"; m.why = "chassis aggregated-devices not configured"; });
+      }
       info[ae] = { members, up: members.some(m => m.state === "Collecting distributing"), lacp: aeCfg.lacp };
     }
     NET.aeInfo[dev.id] = info;
@@ -394,6 +401,21 @@ function showPoeCmd(dev){
   return "Interface     Admin     Oper          Power    Device\n" +
     (rows.length ? rows.join("\n") : "(no powered devices on any port)") +
     "\n\nPoE budget: " + used.toFixed(1) + "W used of " + budget.toFixed(1) + "W";
+}
+var CONV = { map: {}, seen: new Set() };
+var CONV_NOW = function(){ return Date.now(); };
+function convAge(key){
+  CONV.seen.add(key);
+  if(!CONV.map[key]) CONV.map[key] = CONV_NOW();
+  return CONV_NOW() - CONV.map[key];
+}
+function convPrune(){
+  for(const k of Object.keys(CONV.map)) if(!CONV.seen.has(k)) delete CONV.map[k];
+  CONV.seen = new Set();
+}
+function convPending(){
+  const now = CONV_NOW();
+  return Object.values(CONV.map).some(t => now - t < 6000);
 }
 function rebuildAllDerived(){
   for(const dev of Object.values(devices))
@@ -539,6 +561,11 @@ function computeBgp(){
           peer.reason = "peer AS mismatch: you said " + (g.peerAs || "nothing") + ", the provider answers as AS" + ispAs;
           continue;
         }
+        if(typeof strictOn === "function" && strictOn()){
+          const age = convAge("bgp:" + dev.id + "|" + nip);
+          if(age < 2500){ peer.state = "Connect"; peer.reason = "TCP session opening (strict timing)"; continue; }
+          if(age < 5000){ peer.state = "OpenConfirm"; peer.reason = "OPEN exchanged, waiting on keepalives (strict timing)"; continue; }
+        }
         peer.state = "Established";
         if(!dev.d.bgpRoutes.some(r => r.net === "0.0.0.0"))
           dev.d.bgpRoutes.push({ net: "0.0.0.0", bits: 0, nh: nip, fromAs: ispAs });
@@ -582,12 +609,20 @@ function computeOspf(){
     const hit = reachOf(a).endpoints.map(endpointL3).filter(Boolean)
       .some(e => e.dev === b.dev && e.ip === b.iface.ip);
     if(!hit) continue;
-    if(!nbrs.has(a.dev.id)) nbrs.set(a.dev.id, []);
-    if(!nbrs.has(b.dev.id)) nbrs.set(b.dev.id, []);
-    nbrs.get(a.dev.id).push({ to: b.dev.id, ifName: a.iface.name, nhIp: b.iface.ip });
-    nbrs.get(b.dev.id).push({ to: a.dev.id, ifName: b.iface.name, nhIp: a.iface.ip });
-    a.dev.d.ospfNeighbors.push({ addr: b.iface.ip, iface: a.iface.name, name: hostnameOf(b.dev) });
-    b.dev.d.ospfNeighbors.push({ addr: a.iface.ip, iface: b.iface.name, name: hostnameOf(a.dev) });
+    let full = true;
+    if(typeof strictOn === "function" && strictOn()){
+      const k = "ospf:" + [a.dev.id + a.iface.name, b.dev.id + b.iface.name].sort().join("|");
+      full = convAge(k) >= 6000;
+    }
+    if(full){
+      if(!nbrs.has(a.dev.id)) nbrs.set(a.dev.id, []);
+      if(!nbrs.has(b.dev.id)) nbrs.set(b.dev.id, []);
+      nbrs.get(a.dev.id).push({ to: b.dev.id, ifName: a.iface.name, nhIp: b.iface.ip });
+      nbrs.get(b.dev.id).push({ to: a.dev.id, ifName: b.iface.name, nhIp: a.iface.ip });
+    }
+    const st = full ? "Full" : "ExStart";
+    a.dev.d.ospfNeighbors.push({ addr: b.iface.ip, iface: a.iface.name, name: hostnameOf(b.dev), state: st });
+    b.dev.d.ospfNeighbors.push({ addr: a.iface.ip, iface: b.iface.name, name: hostnameOf(a.dev), state: st });
   }
   // every OSPF node advertises the networks of all its OSPF interfaces (incl. passive)
   const advert = new Map();
@@ -982,6 +1017,53 @@ function learnPath(fromNode, viaIface, found, pkt){
 }
 
 /* full round-trip ping with formatted output */
+
+function showCommitHistCmd(dev){
+  const log = dev.commitLog || [];
+  if(!log.length) return "(no commits yet on this device)";
+  return log.map((c, i) =>
+    pad(String(i), 4) + new Date(c.when).toISOString().replace("T", " ").slice(0, 19) + " UTC  by cli" +
+    (i === 0 ? "   (current — rollback " + (i + 1) + " returns to the one below)" : "")).join("\n") +
+    "\n\n" + log.length + " commits kept (max 49) — rollback <n> loads any of them into the candidate";
+}
+function showIfStatsCmd(dev){
+  const c = dev.ctr || {};
+  const ports = dev.ports.map(p => p.id).filter(id => c[id]);
+  if(!ports.length) return "(no traffic counted yet — pings and DHCP will move these numbers)";
+  const rows = [["Interface", "In pkts", "Out pkts", "Errors", ""]];
+  for(const id of ports){
+    const degraded = Object.values(links).some(l =>
+      ((l.a.dev === dev.id && l.a.port === id) || (l.b.dev === dev.id && l.b.port === id)) && l.degraded);
+    rows.push([id, String(c[id].rx || 0), String(c[id].tx || 0), String(c[id].err || 0), degraded ? "\u26a0 CRC errors climbing" : ""]);
+  }
+  return rows.map(r => pad(r[0], 12) + pad(r[1], 10) + pad(r[2], 10) + pad(r[3], 9) + r[4]).join("\n");
+}
+function bumpCtr(dev, port, kind, n){
+  if(!dev) return;
+  dev.ctr = dev.ctr || {};
+  dev.ctr[port] = dev.ctr[port] || { rx: 0, tx: 0, err: 0 };
+  dev.ctr[port][kind] += n;
+}
+var LAB_RAND = function(){ return Math.random(); };
+function countSegs(segs, n){
+  for(const s of (segs || [])){
+    const l = links[s.link];
+    if(!l) continue;
+    bumpCtr(devices[l.a.dev], l.a.port, "tx", n);
+    bumpCtr(devices[l.b.dev], l.b.port, "rx", n);
+  }
+}
+function degradedLoss(segs){
+  for(const s of (segs || [])){
+    const l = links[s.link];
+    if(l && l.degraded && LAB_RAND() < 0.45){
+      bumpCtr(devices[l.a.dev], l.a.port, "err", 1);
+      bumpCtr(devices[l.b.dev], l.b.port, "err", 1);
+      return l;
+    }
+  }
+  return null;
+}
 function pingRun(dev, target, opts){
   opts = opts || {};
   if(!validIp(target)) return { ok: false, lines: lines("err", "ping: bad address " + target) };
@@ -1000,6 +1082,16 @@ function pingRun(dev, target, opts){
   const walkOpts = { ...opts, natTable, natEvents };
   const fwd = pingWalk(dev, pkt, walkOpts);
   const head = `PING ${target} (${target}): 56 data bytes`;
+  if(fwd.ok){
+    const gremlin = degradedLoss(fwd.segs);
+    if(gremlin){
+      countSegs(fwd.segs, 2);
+      return { ok: false, lines: [
+        { cls: "out", text: head },
+        { cls: "err", text: "Request timeout — packets are being LOST mid-path, not blocked.\n(intermittent loss smells like a bad cable or dying optic: run show interfaces statistics and look for climbing errors)" +
+          "\n\n--- " + target + " ping statistics ---\n2 packets transmitted, 0 packets received, 100.0% packet loss" }] };
+    }
+  }
   const anim = (segs, ok, revSegs, meta) => {
     if(opts.animate && typeof animatePing === "function") animatePing(segs, ok, revSegs, meta);
   };
@@ -1009,6 +1101,7 @@ function pingRun(dev, target, opts){
       { cls: "out", text: head },
       { cls: "err", text: fwd.text + "\n\n--- " + target + " ping statistics ---\n2 packets transmitted, 0 packets received, 100.0% packet loss" }] };
   }
+  countSegs(fwd.segs, 2);
   // reply must be able to route back (to the NAT address, if we were translated)
   const backTo = natTable.length ? natTable[natTable.length - 1].natIp : srcIp;
   const rpkt = { src: target, dst: backTo, proto: opts.proto || "icmp" };
@@ -1219,7 +1312,7 @@ function showOspfNbrCmd(dev){
   const n = D(dev).ospfNeighbors || [];
   if(!n.length) return "No OSPF neighbors yet — interfaces are enabled, but nobody reached Full.\n(Neighbors need: same subnet, a working L2 path, and non-passive on both ends.)";
   const rows = [["Address", "Interface", "State", "Neighbor"]];
-  for(const x of n) rows.push([x.addr, x.iface, "Full", x.name]);
+  for(const x of n) rows.push([x.addr, x.iface, x.state || "Full", x.name]);
   return rows.map(r => pad(r[0], 17) + pad(r[1], 14) + pad(r[2], 7) + r[3]).join("\n");
 }
 function showNatCmd(dev){
@@ -1248,6 +1341,20 @@ function showChassisEnvCmd(dev){
     pad("Temp", 7) + pad("Routing Engine", 18) + pad(st, 10) + (t + 6).toFixed(1) + " degrees C",
     pad("Fans", 7) + pad("Fan tray", 18) + pad("OK", 10) + (t >= 35 ? "full speed" : "spinning normally"),
   ].join("\n");
+}
+function showProcessesCmd(dev){
+  const base = [
+    ["mgd", "management daemon — owns the CLI and the candidate config; every set you type talks to mgd"],
+    ["rpd", "routing protocol daemon — OSPF, BGP, static routes; builds the routing table on the RE"],
+    ["dcd", "device control daemon — interface configuration and state"],
+    ["chassisd", "chassis daemon — fans, power, temperature, hardware inventory"],
+    ["eventd", "event daemon — collects syslog and system events"],
+  ];
+  if(dev.type === "switch") base.splice(2, 0, ["l2ald", "layer 2 address learning daemon — MAC tables, VLANs, ethernet switching"]);
+  if(cfgGet(dev.config, ["system", "services", "ssh"])) base.push(["sshd", "ssh daemon — remote CLI sessions"]);
+  return "PID   Process     What it does\n" + base.map((p, i) =>
+    pad(String(1000 + i * 17), 6) + pad(p[0], 12) + p[1]).join("\n") +
+    "\n\nAll daemons run on the Routing Engine (control plane); the PFE forwards transit traffic in hardware.";
 }
 function showVersionCmd(dev){
   const model = dev.model || (dev.type === "switch" ? "ex4300-48t" : "mx204");
@@ -1284,6 +1391,8 @@ const OP_SPECS = {
     ["show vlans", { help: "VLANs and member ports", fn: showVlansCmd }],
     ["show ethernet-switching table", { help: "Learned MAC addresses", fn: showMacTable }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
+    ["show system commit", { help: "Commit history — who committed when, rollback numbers", fn: showCommitHistCmd }],
+    ["show interfaces statistics", { help: "Per-port packet counters and errors", fn: showIfStatsCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
     ["show spanning-tree interface", { help: "RSTP port roles and states", fn: showStpCmd }],
     ["show lacp interfaces", { help: "LACP bundle status", fn: showLacpCmd }],
@@ -1294,6 +1403,7 @@ const OP_SPECS = {
     ["show poe interface", { help: "PoE power per port and the chassis budget", fn: showPoeCmd }],
     ["show log messages", { help: "Recent system events (commits, link flaps, storms)", fn: showLogCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
+    ["show system processes", { help: "The Junos daemons and what each one owns", fn: showProcessesCmd }],
     ["ping <target:ip>", { help: "Ping from this device (sources from an irb)", fn: (dev, keys) => { const r = doDevicePing(dev, keys[1]); return joinLines(r); } }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
     ["clear ethernet-switching table", { help: "Flush learned MACs", fn: dev => { dev.macTable = []; return "ethernet-switching table flushed"; } }],
@@ -1313,6 +1423,8 @@ const OP_SPECS = {
     ["show configuration | display set", { help: "The active config as set commands (paste-able)", fn: showConfigSetCmd }],
     ["show interfaces terse", { help: "Interface summary", fn: showTerse }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
+    ["show system commit", { help: "Commit history — who committed when, rollback numbers", fn: showCommitHistCmd }],
+    ["show interfaces statistics", { help: "Per-port packet counters and errors", fn: showIfStatsCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
     ["show ospf neighbor", { help: "OSPF adjacencies", fn: showOspfNbrCmd }],
     ["show bgp summary", { help: "BGP neighbors and session state", fn: showBgpCmd }],
@@ -1322,6 +1434,7 @@ const OP_SPECS = {
     ["show lldp neighbors", { help: "Who is cabled to which port — the cable-tracing tool", fn: showLldpCmd }],
     ["show log messages", { help: "Recent system events (commits, link flaps)", fn: showLogCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
+    ["show system processes", { help: "The Junos daemons and what each one owns", fn: showProcessesCmd }],
     ["ping <target:ip>", { help: "Ping from this device", fn: (dev, keys) => joinLines(doDevicePing(dev, keys[1])) }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
     ["exit", { help: "(sessions close from the tab bar)", fn: () => "(this is the operational prompt — close the session from the tab bar or ✕)" }],

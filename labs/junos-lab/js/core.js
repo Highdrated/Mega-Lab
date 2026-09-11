@@ -287,3 +287,24 @@ function diffTrees(applied, cand){
   walk(applied, cand, []);
   return out.join("\n");
 }
+
+var STRICT = false;
+try{ STRICT = localStorage.getItem("junoslab-strict") === "on"; }catch(e){}
+function strictOn(){ return STRICT; }
+function setStrict(on){
+  STRICT = !!on;
+  try{ localStorage.setItem("junoslab-strict", STRICT ? "on" : "off"); }catch(e){}
+  if(typeof rebuildAllDerived === "function") rebuildAllDerived();
+  if(typeof render === "function") render();
+  if(typeof refreshCliView === "function") refreshCliView();
+}
+function chassisAeCount(dev){
+  try{
+    const v = dev.config && dev.config.chassis && dev.config.chassis["aggregated-devices"]
+      && dev.config.chassis["aggregated-devices"].ethernet
+      && dev.config.chassis["aggregated-devices"].ethernet["device-count"];
+    return v ? parseInt(v, 10) : 0;
+  }catch(e){ return 0; }
+}
+
+var APP_VERSION = "2.2.1";

@@ -325,14 +325,14 @@ function packRack(z){
     .sort((a, b) => a.y - b.y);
   for(const d of gear)
     if(z.w < devNaturalWidth(d) + RACK_SIDE * 2) z.w = devNaturalWidth(d) + RACK_SIDE * 2;
-  let y = z.y + RACK_TOP;
+  let cursor = z.y + RACK_TOP;
   for(const d of gear){
-    d.rackW = z.w - RACK_SIDE * 2;   // every box the same width — nothing floats
+    d.rackW = z.w - RACK_SIDE * 2;
     d.x = z.x + RACK_SIDE;
-    d.y = y;
-    y += devHeight(d) + RACK_GAP;
+    d.y = Math.max(cursor, d.y);
+    cursor = d.y + devHeight(d) + RACK_GAP;
   }
-  const need = (y - RACK_GAP + RACK_PAD) - z.y;
+  const need = (cursor - RACK_GAP + RACK_PAD) - z.y;
   if(gear.length && z.h < need) z.h = need;
   return gear;
 }
@@ -491,7 +491,7 @@ function renderStatusbar(){
   const nStorm = NET ? NET.stormLinks.size : 0;
   const nBlk = NET ? NET.blocked.size : 0;
   const nErr = Object.values(devices).reduce((a, d) => a + Object.keys(d.errDisabled || {}).length, 0);
-  let s = `NODES ${Object.keys(devices).length}  LINKS ${Object.keys(links).length}`;
+  let s = `v${typeof APP_VERSION !== "undefined" ? APP_VERSION : "?"}  ·  NODES ${Object.keys(devices).length}  LINKS ${Object.keys(links).length}`;
   if(nBlk) s += `  STP-BLK ${nBlk}`;
   if(nErr) s += `  ERR-DIS ${nErr}`;
   const nFail = Object.values(devices).filter(d => d.failed).length +
@@ -971,6 +971,24 @@ function deleteDevice(devId){
   touchState();
 }
 
+
+var uiErrCount = 0;
+function reportUiError(err, where){
+  uiErrCount++;
+  try{ console.error("[junoslab]", where || "", err); }catch(e){}
+  if(uiErrCount > 3) return;
+  try{
+    var t = document.createElement("div");
+    t.className = "err-toast";
+    t.textContent = "\u26a0 internal error in " + (where || "the app") + " \u2014 " + (err && err.message ? err.message : err) + " (still running; press F12 for details)";
+    document.body.appendChild(t);
+    setTimeout(function(){ t.remove(); }, 9000);
+  }catch(e){}
+}
+if(typeof window !== "undefined" && window.addEventListener){
+  window.addEventListener("error", function(e){ reportUiError(e.error || e.message, "window"); });
+  window.addEventListener("unhandledrejection", function(e){ reportUiError(e.reason, "async"); });
+}
 var scaleBarLabel = null;
 function updateScaleBar(){
   try{
@@ -1182,6 +1200,74 @@ const ROUTER_MODELS = [
   { header: "Other" },
   { value: "custom", label: "Custom port count", desc: "Not a real SKU — excluded from pricing (1-16 ports)" },
 ];
+function bulkMake(kind, n, ports, model){
+  const ids = [];
+  const c = worldCenter();
+  const cols = Math.ceil(Math.sqrt(n));
+  const mk = {
+    switch: (x, y) => makeSwitch(x, y, ports || 8, model),
+    router: (x, y) => makeRouter(x, y, ports || 4, model),
+    host: (x, y) => makeHost(x, y),
+    server: (x, y) => makeServer(x, y),
+    ap: (x, y) => makeAp(x, y),
+    isp: (x, y) => makeIsp(x, y, "203.0.113.1"),
+    crac: (x, y) => makeCrac(x, y),
+    ups: (x, y) => makeUps(x, y),
+  }[kind];
+  if(!mk) return ids;
+  const probe = mk(0, 0);
+  const w = devNaturalWidth(devices[probe]) + 40;
+  const h = devHeight(devices[probe]) + 46;
+  const x0 = c.x - (cols * w) / 2, y0 = c.y - (Math.ceil(n / cols) * h) / 2;
+  devices[probe].x = x0; devices[probe].y = y0;
+  ids.push(probe);
+  for(let i = 1; i < n; i++){
+    const id = mk(x0 + (i % cols) * w, y0 + Math.floor(i / cols) * h);
+    ids.push(id);
+  }
+  return ids;
+}
+async function bulkAddFlow(){
+  const kind = await modalChoice("Add multiple at once", "Pick a type, then how many — they land in a tidy grid at the center of your view.", [
+    { value: "switch", label: "Switches", desc: "Same model for the whole batch" },
+    { value: "router", label: "Routers", desc: "Same model for the whole batch" },
+    { value: "host", label: "Hosts", desc: "Endpoint PCs with Linux shells" },
+    { value: "server", label: "Servers", desc: "Rack-mount boxes with services" },
+    { value: "ap", label: "Access points", desc: "office-wifi defaults; rename after" },
+    { value: "isp", label: "ISPs", desc: "Multiple uplinks / multihoming drills" },
+    { value: "ups", label: "UPS units", desc: "One per building, usually" },
+    { value: "crac", label: "Cooling units", desc: "One per building, usually" },
+  ]);
+  if(kind === null) return;
+  let ports = null, model = null;
+  if(kind === "switch" || kind === "router"){
+    const v = await modalChoice("Which model for the batch?", null, kind === "switch" ? SWITCH_MODELS : ROUTER_MODELS);
+    if(v === null) return;
+    if(v === "custom"){
+      const cp = await modalInput("Custom " + kind, "How many ports each?", kind === "switch" ? "8" : "4", "number");
+      if(cp === null) return;
+      const pn = parseInt(cp, 10);
+      ports = isNaN(pn) || pn < 1 ? (kind === "switch" ? 8 : 4) : Math.min(pn, kind === "switch" ? 96 : 16);
+    } else {
+      model = v.model; ports = v.ports;
+    }
+  }
+  const cnt = await modalInput("How many?", "2 to 24 — they arrive named and numbered, ready to cable.", "3", "number");
+  if(cnt === null) return;
+  let n = parseInt(cnt, 10);
+  if(isNaN(n) || n < 2) n = 2;
+  if(n > 24) n = 24;
+  pushUndo();
+  if(typeof SFX !== "undefined") SFX.drop();
+  const ids = bulkMake(kind, n, ports, model);
+  rebuildAllDerived();
+  touchState();
+  render();
+  if(ids.length){
+    const d = devices[ids[0]];
+    floatLabel(d.x + devWidth(d) / 2, d.y - 8, n + " \u00d7 " + kind + " placed");
+  }
+}
 async function pickAndPlace(kind){
   const isSwitch = kind === "switch";
   const v = await modalChoice(isSwitch ? "New switch" : "New router",
@@ -1492,7 +1578,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ---------- themes ---------- */
-const THEMES = ["space", "terminal"];
+const THEMES = ["space", "terminal", "blueprint"];
 function cssVar(name, fallback){
   try{
     if(typeof getComputedStyle === "function"){
@@ -1784,7 +1870,13 @@ function updateCountdown(){
     cliCountdown.textContent = `commit confirmed — auto-rollback in ${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} (type commit to keep it)`;
   } else cliCountdown.textContent = "";
 }
-setInterval(() => { updateCountdown(); if(typeof updateExamTimer === "function") updateExamTimer(); }, 1000);
+setInterval(() => {
+  updateCountdown();
+  if(typeof updateExamTimer === "function") updateExamTimer();
+  if(typeof strictOn === "function" && strictOn() && typeof convPending === "function" && convPending()){
+    try{ rebuildAllDerived(); render(); refreshCliView(); }catch(e){ reportUiError(e, "convergence tick"); }
+  }
+}, 1000);
 
 function runCliCommand(dev, raw, masked){
   const out = deviceExec(dev, raw);
@@ -1792,12 +1884,22 @@ function runCliCommand(dev, raw, masked){
   if(out.some(l => l.cls === "err") && typeof termBell === "function") termBell();
   if(raw.trim() && !masked && !dev.cli.stage){ dev.cli.history.push(raw); dev.cli.hIdx = dev.cli.history.length; }
   refreshCliView();
+  if(typeof updateGhost === "function") updateGhost();
   touchState();
   return out;
 }
 cliInput.addEventListener("keydown", (e) => {
-  const dev = devices[activeDevice];
-  if(!dev) return;
+  let dev = devices[activeDevice];
+  if(!dev){
+    openTabs = openTabs.filter(id => devices[id]);
+    activeDevice = openTabs[openTabs.length - 1] || null;
+    dev = devices[activeDevice];
+    if(!dev){
+      if(e.key === "Enter") reportUiError(new Error("this terminal's device no longer exists \u2014 click a device to reopen"), "terminal");
+      return;
+    }
+    refreshCliView();
+  }
   if(e.key === "Enter"){
     const raw = cliInput.value;
     cliInput.value = "";
@@ -1825,7 +1927,12 @@ cliInput.addEventListener("keydown", (e) => {
     const res = completionsFor(dev, cur);
     if(res.err || !res.items){ if(typeof termBell === "function") termBell(); return; }
     const real = res.items.filter(i => !i.label.startsWith("<"));
-    if(!real.length){ if(typeof termBell === "function") termBell(); return; }
+    if(!real.length){
+      if(typeof termBell === "function") termBell();
+      if(cur.trim() && dev.cli.mode === "cfg" && !/^(set|delete|show|run|edit|top|up|exit|commit|rollback|activate|deactivate|annotate|rename|load|save|quit)/.test(cur.trim()))
+        { dev.cli.log.push({ cls: "sys", text: "nothing completes from \"" + cur.trim() + "\" here — config statements start with set / delete / show / edit" }); renderCliLog(); }
+      return;
+    }
     const endsSpace = /\s$/.test(cur) || cur.trim() === "";
     const partial = endsSpace ? "" : cur.trim().split(/\s+/).pop();
     let common = real[0].label;
@@ -1833,7 +1940,11 @@ cliInput.addEventListener("keydown", (e) => {
     if(common.length > partial.length){
       const base = endsSpace ? cur : cur.slice(0, cur.length - partial.length);
       cliInput.value = base + common + (real.length === 1 ? " " : "");
+    } else if(real.length > 1){
+      dev.cli.log.push({ cls: "out", text: real.map(i => i.label).join("   ") });
+      renderCliLog();
     }
+    updateGhost();
     return;
   }
   if(e.key === "ArrowRight" || e.key === "End"){
@@ -1853,6 +1964,7 @@ cliInput.addEventListener("keydown", (e) => {
   if(e.key === "ArrowDown"){
     e.preventDefault();
     if(dev.cli.hIdx < dev.cli.history.length){ dev.cli.hIdx++; cliInput.value = dev.cli.history[dev.cli.hIdx] || ""; }
+    updateGhost();
     return;
   }
 });
@@ -3188,6 +3300,7 @@ function wireToolbarMenu(btnId, menuId, items){
   TB_MENUS.push(menu);
 }
 wireToolbarMenu("add-btn", "add-menu", [
+  { action: () => bulkAddFlow(), label: "Multiple at once\u2026", desc: "Any device type \u00d7 2\u201324, placed in a grid — no click marathons" },
   { header: "Networking — Juniper / Ubiquiti" },
   { target: "add-switch", label: "Switch", desc: "EX-series or UniFi — real SKUs with real port counts" },
   { target: "add-router", label: "Router / gateway", desc: "MX, SRX, or UniFi gateways" },
@@ -3204,7 +3317,39 @@ wireToolbarMenu("add-btn", "add-menu", [
   { target: "add-zone", label: "Building", desc: "A room with walls, air, and a temperature — devices and racks live inside" },
   { target: "add-rack", label: "Rack", desc: "A steel frame; dropped gear clicks into the rails, in-rack cabling prices as DACs" },
 ]);
+function showInspector(){
+  const tally = {};
+  Object.values(NET.linkStatus).forEach(v => tally[v] = (tally[v] || 0) + 1);
+  const parts = [
+    "devices: " + Object.keys(devices).length + "   links: " + Object.keys(links).length + "   zones: " + Object.keys(zones).length,
+    "link status: " + JSON.stringify(tally),
+    "stp blocked: " + NET.blocked.size + "   storm links: " + NET.stormLinks.size,
+    "ae bundles: " + JSON.stringify(NET.aeInfo),
+    "stp roots: " + JSON.stringify(NET.stpRoot),
+    "strict mode: " + (typeof strictOn === "function" && strictOn()) +
+      "   converging: " + (typeof convPending === "function" && convPending()),
+    "degraded links: " + Object.entries(links).filter(([, l]) => l.degraded).length,
+    "version: " + (typeof APP_VERSION !== "undefined" ? APP_VERSION : "?"),
+  ];
+  modalConfirm("State inspector — the engine's derived truth", parts.join("\n\n"), "Close");
+}
+function injectGremlin(){
+  const up = Object.entries(links).filter(([lid, l]) => !l.degraded && NET.linkStatus[lid] === "up");
+  if(!up.length){ modalConfirm("No victims", "No healthy cables to degrade — cable something up first.", "OK"); return; }
+  const [lid, l] = up[Math.floor(Math.random() * up.length)];
+  l.degraded = true;
+  [l.a, l.b].forEach(e => { const d = devices[e.dev]; if(d && typeof devLog === "function") devLog(d, "if: " + e.port + " CRC/framing errors detected"); });
+  touchState();
+  modalConfirm("Gremlin released \ud83d\udc7e", "Somewhere on this canvas, one cable just went bad — intermittent loss, not a clean break.\n\nHunt it like a real ticket: ping through paths, then show interfaces statistics on the suspects and look for climbing error counters.", "Hunt it");
+}
+function clearGremlins(){
+  let n = 0;
+  Object.values(links).forEach(l => { if(l.degraded){ delete l.degraded; n++; } });
+  touchState();
+  modalConfirm("All clear", n + " cable(s) recovered.", "OK");
+}
 wireToolbarMenu("view-btn", "view-menu", [
+  { action: () => showInspector(), label: "State inspector", desc: "The engine's derived state — link status, bundles, STP roots, convergence" },
   { target: "vlan-btn", label: "VLAN colors", desc: "Color links and ports by VLAN, with a legend", checked: () => typeof vlanView !== "undefined" && vlanView },
   { target: "label-btn", label: "IP labels", desc: "Addresses and gateways drawn on the canvas", checked: () => typeof ipLabels !== "undefined" && ipLabels },
   { target: "lens-btn", label: "Lens", desc: "A magnifying glass follows your pointer", checked: () => typeof lensOn !== "undefined" && lensOn },
@@ -3219,6 +3364,8 @@ wireToolbarMenu("plan-btn", "plan-menu", [
   { action: () => typeof exportDiagramPng === "function" && exportDiagramPng(), label: "Export diagram (PNG)", desc: "A bitmap snapshot for pasting into documents" },
 ]);
 wireToolbarMenu("lab-btn", "lab-menu", [
+  { action: () => injectGremlin(), label: "Inject a gremlin", desc: "A random live cable starts silently dropping packets — find it with show interfaces statistics" },
+  { action: () => clearGremlins(), label: "Clear gremlins", desc: "All degraded cables recover" },
   { target: "save", label: "Save lab to file", desc: "Download the whole lab as JSON" },
   { target: "load", label: "Load lab from file", desc: "Restore a saved lab (v1 saves migrate automatically)" },
   { action: () => typeof takeSnapshot === "function" && takeSnapshot(), label: "Snapshot this design", desc: "Keep up to 10 named versions in the browser" },

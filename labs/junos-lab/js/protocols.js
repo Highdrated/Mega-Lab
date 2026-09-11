@@ -1,3 +1,29 @@
+function ipToInt(ip){
+  return ip.split(".").reduce(function(a, o){ return (a << 8) + parseInt(o, 10); }, 0) >>> 0;
+}
+function intToIp(n){
+  return [(n >>> 24) & 255, (n >>> 16) & 255, (n >>> 8) & 255, n & 255].join(".");
+}
+function netCalc(ip, bits){
+  var mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0;
+  var net = (ipToInt(ip) & mask) >>> 0;
+  var bcast = (net | (~mask >>> 0)) >>> 0;
+  var usable = bits >= 31 ? (bits === 31 ? 2 : 1) : Math.max(0, bcast - net - 1);
+  return {
+    network: intToIp(net),
+    broadcast: intToIp(bcast),
+    first: bits >= 31 ? intToIp(net) : intToIp(net + 1),
+    last: bits >= 31 ? intToIp(bcast) : intToIp(bcast - 1),
+    usable: usable,
+    mask: intToIp(mask)
+  };
+}
+function subnetDrillQ(){
+  var bits = 22 + Math.floor(Math.random() * 8);
+  var ip = [10 + Math.floor(Math.random() * 180), Math.floor(Math.random() * 256), Math.floor(Math.random() * 256), 1 + Math.floor(Math.random() * 254)].join(".");
+  return { ip: ip, bits: bits, ans: netCalc(ip, bits) };
+}
+
 var PROTO_GUIDES = [
   {
     id: "lacp",
@@ -76,7 +102,7 @@ var PROTO_GUIDES = [
       ["ae0–ae4091", "Bundle naming range on Junos (this lab: ae0–ae99)"]
     ],
     els: [
-      ["set chassis aggregated-devices ethernet device-count 2", "Real Junos needs this before any ae exists — the lab auto-creates bundles, real EX switches don't"],
+      ["set chassis aggregated-devices ethernet device-count 2", "Real Junos needs this before any ae exists — turn on strict mode below and this lab will demand it too"],
       ["(legacy and ELS mostly agree here)", "LACP config barely changed across the ELS split — the traps are in VLAN and irb syntax, not here"]
     ],
     verify: [
@@ -542,6 +568,221 @@ var PROTO_GUIDES = [
         why: "A static route is unconditional trust. The BGP route exists only while the peer is alive and talking — failure detection is built into the protocol, which is exactly what you want from an interconnect." },
     ],
   },
+  {
+    id: "junos-arch",
+    title: "Junos Architecture — RE, PFE & daemons",
+    tag: "JNCIA \u00b7 fundamentals",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: "Why does a switch keep forwarding at full speed while you're hammering the CLI, and why does a commit not drop a single packet? Because Junos splits the box in two. The ROUTING ENGINE (RE) is the brain: a computer running the daemons, the CLI, the routing protocols, the config. The PACKET FORWARDING ENGINE (PFE) is the muscle: dedicated hardware that moves transit traffic using a forwarding table the RE compiled for it. The exam loves this split — and so does real troubleshooting, because 'control plane problem' and 'forwarding plane problem' are different tickets.",
+      svg: "arch-problem"
+    },
+    how: {
+      text: "The RE runs one daemon per job — type show system processes on any lab device to meet them. mgd owns the CLI and the candidate config (every set you type is a conversation with mgd). rpd runs the routing protocols and builds the ROUTING table; from it the RE derives the smaller FORWARDING table and pushes it down to the PFE. dcd manages interfaces; chassisd watches fans, power and temperature; on switches l2ald learns MACs. Transit traffic never visits the RE — the PFE forwards it in hardware. Only EXCEPTION traffic climbs up: packets addressed TO the box (your ping, your ssh, a routing protocol hello). That's why a busy CLI never slows customer traffic, and why the commit model (candidate \u2192 validate \u2192 activate) can swap configs without a hiccup."
+    },
+    nums: [
+      ["mgd", "management daemon — CLI, candidate config, commit"],
+      ["rpd", "routing protocol daemon — OSPF, BGP, statics; the routing table"],
+      ["dcd / chassisd", "interfaces / hardware (fans, power, temperature)"],
+      ["l2ald", "MAC learning and ethernet switching (EX switches)"],
+      ["2 tables", "routing table (RE, everything known) \u2192 forwarding table (PFE, best paths only)"],
+      ["1 candidate", "config model: edit a candidate, commit makes it active — rollback 0 discards"]
+    ],
+    verify: [
+      ["show system processes", "Meet the daemons — the exam names them and so do error messages"],
+      ["show version", "Model + Junos version; the same Junos runs across EX, MX, SRX — one OS, the exam's favorite fact"],
+      ["show chassis environment", "chassisd's world: temperatures and fans"],
+      ["show system commit", "The commit model in action — history of activated candidates"]
+    ],
+    breaks: [
+      "Blaming the forwarding plane for a control-plane symptom — 'I can't ssh to the switch' while customer traffic flows fine is an RE/exception-path issue, not a PFE one.",
+      "Expecting transit traffic in the RE's logs — the PFE forwards it in hardware; the RE never saw it.",
+      "Forgetting the candidate model — typing set and walking away changes NOTHING until commit.",
+      "Thinking the routing and forwarding tables are the same thing — the exam will test the direction: RE builds routing \u2192 derives forwarding \u2192 pushes to PFE."
+    ],
+    answer: "Junos separates the control plane from the forwarding plane. The Routing Engine is a computer running modular daemons — mgd for the CLI and config, rpd for routing protocols, chassisd for hardware — and it builds the routing table. From that it derives a forwarding table and installs it into the Packet Forwarding Engine, dedicated hardware that moves transit traffic without involving the RE. Only traffic addressed to the box itself goes up to the RE. Configuration follows the candidate model: edits go into a candidate that becomes active only at commit, which is also what makes rollback trivial.",
+    quiz: [
+      { q: "A customer's traffic flows perfectly, but you can't ssh into the switch. Which plane is in trouble?",
+        opts: ["Forwarding plane — the PFE is dropping packets", "Control plane — ssh is exception traffic destined for the RE", "Both"],
+        right: 1,
+        why: "Transit traffic is PFE business and it's fine. Your ssh is addressed TO the box, so it must reach the RE — that path (or the RE itself, or a filter on it) is what's broken." },
+      { q: "You type ten set commands and close the laptop. What changed on the network?",
+        opts: ["Everything you typed", "Nothing — the candidate was never committed", "Only the interface commands"],
+        right: 1,
+        why: "Junos edits a candidate configuration. Until commit, the active config — and the network — is untouched. This is the exam's favorite trap and real life's favorite safety net." },
+      { q: "Which daemon did you talk to every time you typed a command in this lab?",
+        opts: ["rpd", "mgd", "chassisd"],
+        right: 1,
+        why: "mgd owns the CLI and the candidate config. rpd only cares about routing protocols; chassisd about fans and power." },
+    ],
+  },
+  {
+    id: "filters",
+    title: "Firewall Filters & Routing Policy",
+    tag: "JNCIA \u00b7 traffic control",
+    ready: true,
+    scenarioId: null,
+    problem: {
+      text: "Two different jobs that the exam loves to make you tell apart. A FIREWALL FILTER decides the fate of PACKETS crossing an interface — block the guest VLAN from reaching management, allow only icmp, drop a noisy host. ROUTING POLICY decides the fate of ROUTES entering or leaving a protocol — what you accept from a BGP peer, what you advertise to them. Same term/match/action grammar, completely different victims: filters eat packets, policies eat routes.",
+      svg: "filters-problem"
+    },
+    how: {
+      text: "Both are built from TERMS evaluated top-down, first match wins. A term has from (match conditions) and then (an action). For filters the actions are accept, reject (drop + tell the sender), or discard (drop silently — the sender just times out); anything not matched by any term hits the implicit discard-all at the end, the classic foot-gun. This lab simulates filters fully: build one below and watch a ping die two different ways. Routing policy uses the same shape under policy-options, applied as import/export on a protocol — the lab doesn't simulate policy yet, so this guide teaches the concepts and defaults the exam asks about."
+    },
+    prereqs: [
+      { desc: "A filter defined with at least one term (set firewall family inet filter ...)",
+        test: function(){ return typeof devsBy === "function" && devsBy("switch").concat(devsBy("router")).some(function(d){
+          var f = cfgGet(d.config, ["firewall", "family", "inet", "filter"]) || {};
+          return Object.keys(f).length >= 1; }); } },
+      { desc: "The filter applied to an interface (family inet filter input ...)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var ifs = cfgGet(d.config, ["interfaces"]) || {};
+          return JSON.stringify(ifs).indexOf("\"filter\"") !== -1; }); } },
+      { desc: "The proof: a ping that used to work now dies at the filter",
+        test: function(){ return typeof NET !== "undefined" && devsBy("host").some(function(h){
+          if(!h.cfg || !h.cfg.ip || !h.cfg.gw) return false;
+          var r = null;
+          try{ r = pingRun(h, h.cfg.gw); }catch(e){ return false; }
+          return r && !r.ok && r.lines.some(function(l){ return /firewall filter/.test(l.text); }); }); } },
+    ],
+    cfg: [
+      ["set firewall family inet filter GUEST-BLOCK term t1 from source-address 10.0.20.0/24", "Match packets from the guest subnet..."],
+      ["set firewall family inet filter GUEST-BLOCK term t1 then discard", "...and drop them silently (reject would send 'administratively prohibited' back)"],
+      ["set firewall family inet filter GUEST-BLOCK term allow-rest then accept", "CRITICAL: without this, the implicit discard-all at the end eats EVERYTHING else too"],
+      ["set interfaces irb unit 20 family inet filter input GUEST-BLOCK", "Apply it inbound on the guest gateway — filters do nothing until applied"]
+    ],
+    nums: [
+      ["top-down, first match", "Term evaluation order for filters AND policies — order is everything"],
+      ["implicit discard", "What awaits unmatched packets at the end of every filter — forget allow-rest and lock yourself out"],
+      ["reject vs discard", "reject answers 'prohibited'; discard says nothing — the sender just times out"],
+      ["import / export", "Policy direction: what routes come INTO your table / what you advertise OUT"],
+      ["BGP default export", "Advertise BGP-learned (and locally originated BGP) routes — NOT your statics, NOT your OSPF, unless policy says so"],
+      ["OSPF default", "Internal routes flood via LSAs regardless; export policy is for injecting OUTSIDE routes (statics) into OSPF"]
+    ],
+    verify: [
+      ["show configuration | display set", "Read the filter back as set commands — order of terms is order of evaluation"],
+      ["ping through it, both actions", "discard = timeout; reject = 'Communication administratively prohibited'. The lab's ping tells you WHICH filter on WHICH box ate it"],
+      ["show route (policy side)", "On real gear: is the route even in the table? Import policy runs before the table, export after best-path"]
+    ],
+    breaks: [
+      "No accept-the-rest term — the implicit discard swallows all traffic including your own ssh. The classic self-lockout.",
+      "Filter defined but never applied to an interface — a filter in config doing nothing is invisible until you check the interface stanza.",
+      "Terms in the wrong order — an accept-all term FIRST means your careful block term below it never runs.",
+      "Confusing the two tools — 'block that subnet' is a filter job; 'stop advertising that route to the peer' is policy. Packets vs routes.",
+      "Expecting BGP to advertise your static default by itself — the default export policy doesn't; that needs an export policy on real gear."
+    ],
+    answer: "A firewall filter is packet-level access control: terms evaluated top-down with match conditions and an action — accept, reject, or discard — applied to an interface, with an implicit discard for anything unmatched, which is why every filter needs a final accept term for the rest. Routing policy uses the same term structure but operates on routes, as import or export on a protocol: import decides what enters the routing table, export what gets advertised. The distinction the exam wants is exactly that — filters act on packets crossing an interface, policy acts on routes crossing a protocol boundary.",
+    quiz: [
+      { q: "Your filter blocks the guest subnet — and suddenly NOBODY can reach the gateway, including staff. Why?",
+        opts: ["The guest subnet was too big", "No accept term for other traffic — the implicit discard-all ate everything unmatched", "The filter needs a commit"],
+        right: 1,
+        why: "Every filter ends with an invisible discard-everything. Your one term matched guests; staff matched nothing, fell through, and got discarded. Always finish with a then accept term for the rest." },
+      { q: "Ping dies with 'Communication administratively prohibited'. Which filter action did it hit?",
+        opts: ["discard", "reject", "accept"],
+        right: 1,
+        why: "reject drops the packet AND answers with an ICMP prohibited message — polite but chatty. discard says nothing at all; the sender just times out. Exam loves this pair." },
+      { q: "You want to stop advertising a route to your BGP peer. Which tool?",
+        opts: ["A firewall filter on the peering interface", "An export routing policy on the BGP session", "Delete the interface"],
+        right: 1,
+        why: "Routes are policy's territory. A filter would clumsily block packets; an export policy surgically removes the route from what you tell the peer, while traffic keeps flowing." },
+    ],
+  },
+  {
+    id: "subnetting",
+    title: "IP Subnetting — the drill",
+    tag: "JNCIA \u00b7 fundamentals",
+    ready: true,
+    conceptual: true,
+    drill: "subnet",
+    problem: {
+      text: "Every exam form has subnetting questions, and every real ticket starts with 'is this address even in that subnet?'. You've been USING the answers all along — every /24, /30 and /31 in this lab — now make the math automatic. The goal: given any address/prefix, produce network, broadcast, usable range and host count in under 30 seconds, in your head.",
+      svg: "subnet-problem"
+    },
+    how: {
+      text: "The prefix says how many leading bits are the street name; the rest are house numbers. The fast method is the magic number: take the interesting octet (where the mask isn't 0 or 255) and compute 256 minus its mask value — subnets step by that size. A /26 means mask .192 in the last octet, magic number 64: networks at .0, .64, .128, .192. Your address falls in one of those blocks; block start = network, block end minus... no — block start plus size minus one = broadcast, and everything between is usable (minus the two ends). Hosts = 2^(32-prefix) minus 2. Then the two exam specials: /31 has NO network/broadcast waste — both addresses usable on point-to-point (RFC 3021) — and /32 is one host, a loopback."
+    },
+    nums: [
+      ["/24 = 254 hosts", "The everyday LAN — 256 minus network and broadcast"],
+      ["/26 = 62 \u00b7 /27 = 30 \u00b7 /28 = 14", "The magic-number trio the exam recycles endlessly (sizes 64, 32, 16)"],
+      ["/30 = 2 hosts", "Classic point-to-point — 4 addresses, 2 usable"],
+      ["/31 = 2 hosts, 0 waste", "Modern point-to-point, RFC 3021 — no network or broadcast address at all"],
+      ["magic number", "256 \u2212 interesting mask octet = subnet step size"],
+      ["2^(32\u2212prefix) \u2212 2", "Usable hosts (except /31 and /32)"]
+    ],
+    verify: [
+      ["the drill below", "Generate questions until the streak stops feeling like effort — that's the exam threshold"],
+      ["your own lab", "Every address you've typed here lives in a subnet — check a /30 handoff or an irb /24 against your mental math"]
+    ],
+    breaks: [
+      "Off-by-one on the broadcast — the block ENDS at next-network-minus-one, not at next-network.",
+      "Forgetting to subtract 2 for network and broadcast when counting hosts — except on /31.",
+      "Doing binary longhand under time pressure — the magic number method is the speed tool; save binary for checking.",
+      "Reading the wrong octet — a /22's interesting octet is the THIRD, not the fourth. Prefix 17\u201324 lives in octet three."
+    ],
+    answer: "Given an address and prefix I find the interesting octet, compute the magic number as 256 minus the mask value there, and snap the address down to the nearest multiple — that's the network. Add the block size minus one for the broadcast, everything between is usable, and the count is two to the power of the host bits minus two. The exceptions worth naming: /31 point-to-point links use both addresses with no broadcast at all, and /32 is a single host route.",
+    quiz: [
+      { q: "192.168.10.130/26 — which subnet is this address in?",
+        opts: ["192.168.10.0/26", "192.168.10.128/26", "192.168.10.192/26"],
+        right: 1,
+        why: "Magic number: 256\u2212192 = 64, so blocks start at .0, .64, .128, .192. 130 falls in the .128 block: network .128, broadcast .191, usable .129\u2013.190." },
+      { q: "A colleague wants 40 hosts per subnet with minimum waste. Which prefix?",
+        opts: ["/27 (30 hosts)", "/26 (62 hosts)", "/25 (126 hosts)"],
+        right: 1,
+        why: "/27 gives 30 — too small. /26 gives 62 — the smallest block that fits 40. Right-sizing subnets is a standing exam pattern." },
+      { q: "Why do modern point-to-point links use /31 instead of /30?",
+        opts: ["It's faster", "Zero waste — both addresses usable, no network/broadcast (RFC 3021)", "Old routers can't do /30"],
+        right: 1,
+        why: "A /30 burns half its addresses on network and broadcast. RFC 3021 declared point-to-point links don't need either, so /31 fits two routers in two addresses. You've seen it in the DIA guide's numbers." },
+    ],
+  },
+  {
+    id: "osi",
+    title: "OSI & TCP/IP — where everything lives",
+    tag: "JNCIA \u00b7 fundamentals",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: "The exam's opening act, and secretly the index of this whole lab: every feature you've used lives on a layer. Naming the layer is how engineers compress a whole diagnosis into one sentence — 'that's an L2 problem' instantly rules out routing, NAT and DNS. The model is a filing cabinet for your knowledge; the exam checks the drawers.",
+      svg: "osi-problem"
+    },
+    how: {
+      text: "Seven layers, but the working set is 1\u20134. Layer 1, physical: cables, optics, the gremlin's CRC errors. Layer 2, data link: frames and MAC addresses — switching, VLANs, LACP, RSTP, broadcast domains; a switch port per collision domain, a VLAN per broadcast domain. Layer 3, network: packets and IP — routing, OSPF, BGP, subnetting, ping's ICMP. Layer 4, transport: TCP's connections (BGP rides TCP 179) and UDP's fire-and-forget (DHCP on 67/68). Layers 5\u20137 blur into 'the application' — ssh, DNS. Each layer wraps the one above: data \u2192 segment \u2192 packet \u2192 frame \u2192 bits, and the PDU names are exam currency. TCP/IP's four layers say the same thing with fewer drawers."
+    },
+    nums: [
+      ["L1 bits", "Cables and optics — a dying cable's CRC errors live here"],
+      ["L2 frames \u00b7 MAC", "Switching, VLANs, LACP, RSTP — one broadcast domain per VLAN"],
+      ["L3 packets \u00b7 IP", "Routing, OSPF, BGP path logic, ICMP ping"],
+      ["L4 segments \u00b7 ports", "TCP (connections, BGP:179) vs UDP (fire-and-forget, DHCP:67/68)"],
+      ["PDU chain", "data \u2192 segment \u2192 packet \u2192 frame \u2192 bits — each layer wraps the last"],
+      ["switch vs router", "Switch = L2 device (frames/MACs); router = L3 (packets/IPs) — the exam's favorite one-liner"]
+    ],
+    verify: [
+      ["your own tickets", "Practice the sentence: 'ping fails but ARP resolves' \u2192 which layer? 'link light off' \u2192 which layer?"],
+      ["this lab's tabs", "Sort the protocol guides by layer from memory — LACP, VLAN, RSTP are L2; DIA, OSPF, BGP, DHCP are L3/L4 stories"]
+    ],
+    breaks: [
+      "Calling everything 'the network is down' — layerless diagnosis is why tickets bounce between teams.",
+      "Mixing up MAC (L2, local, flat) and IP (L3, routed, hierarchical) — frames are delivered by MAC inside a subnet, packets by IP between them.",
+      "Forgetting a VLAN is a broadcast domain — 'why doesn't DHCP cross VLANs' is an L2-boundary question you've already answered in the DHCP guide.",
+      "Placing BGP at layer 3 — the protocol MANAGES L3 routes but SPEAKS over TCP at layer 4. Exam trap."
+    ],
+    answer: "OSI is the shared map: physical bits on layer 1, frames and MAC addresses on layer 2 where switches, VLANs and spanning tree live, IP packets and routing on layer 3, and TCP or UDP transport on layer 4 — with each layer encapsulating the one above as data, segment, packet, frame, bits. Its practical value is diagnostic: a link light is L1, ARP and VLANs are L2, a routing problem is L3, a refused connection is L4 upward — naming the layer is naming the team and the tool that fixes it.",
+    quiz: [
+      { q: "Hosts in the same VLAN can't ping each other, but both have link lights and correct IPs. Highest layer proven working?",
+        opts: ["Layer 3 — IP is configured", "Layer 1 — the cables carry bits; everything above is suspect", "Layer 4"],
+        right: 1,
+        why: "A link light proves physical only. Configured IPs prove nothing about delivery. Next suspect up the stack is L2 — same VLAN really? MAC learning? A filter? Climb one layer at a time." },
+      { q: "BGP operates at which layer?",
+        opts: ["Layer 3 — it's a routing protocol", "It manages L3 routes but runs over TCP at layer 4", "Layer 2"],
+        right: 1,
+        why: "The classic trap. BGP's PAYLOAD is layer-3 routing information, but the protocol itself is a TCP application on port 179 — which is exactly why 'no TCP reachability, no BGP session' was the rule in the BGP guide." },
+      { q: "One broadcast domain equals...",
+        opts: ["One switch", "One VLAN", "One cable"],
+        right: 1,
+        why: "A switch can host many broadcast domains (one per VLAN), and one VLAN can span many switches over trunks. The VLAN is the wall a broadcast cannot cross — routers (or irb interfaces) are the doors." },
+    ],
+  },
   { id: "vrrp", title: "VRRP — Gateway Redundancy", tag: "L3 · redundancy", ready: false,
     teaser: "Two routers pretending to be one gateway IP, so the default gateway can die without anyone updating a single host. Needs engine support first — on the roadmap." },
   { id: "lldp", title: "LLDP — Neighbor Discovery", tag: "L2 · operations", ready: false,
@@ -624,6 +865,46 @@ function protoSvg(kind){
     '<text x="275" y="40" fill="var(--green)">eBGP session (TCP 179) \u2014 Established</text>' +
     '<text x="275" y="90" fill="var(--blue)">\u2190 0.0.0.0/0 arrives as [BGP/170]</text>' +
     '<text x="275" y="120" fill="var(--dim)">provider dies \u2192 session drops \u2192 route vanishes. No blackhole.</text>' + close;
+  if(kind === "arch-problem") return open +
+    box(60, 25, 200, "ROUTING ENGINE (brain)") +
+    '<text x="160" y="75" fill="var(--dim)">mgd \u00b7 rpd \u00b7 dcd \u00b7 chassisd</text>' +
+    box(60, 95, 200, "PFE (muscle)") +
+    '<line x1="160" y1="55" x2="160" y2="95" stroke="var(--amber)" stroke-width="2"/>' +
+    '<text x="230" y="80" fill="var(--amber)">forwarding table \u2193</text>' +
+    '<line x1="20" y1="110" x2="60" y2="110" stroke="var(--green)" stroke-width="2"/>' +
+    '<line x1="260" y1="110" x2="300" y2="110" stroke="var(--green)" stroke-width="2"/>' +
+    '<text x="160" y="145" fill="var(--green)">transit traffic crosses the PFE only</text>' +
+    '<line x1="380" y1="120" x2="380" y2="45" stroke="var(--blue)" stroke-width="2" stroke-dasharray="5 3"/>' +
+    '<text x="452" y="80" fill="var(--blue)">your ssh / ping to the box</text>' +
+    '<text x="452" y="98" fill="var(--blue)">= exception traffic \u2192 RE</text>' + close;
+  if(kind === "filters-problem") return open +
+    box(30, 55, 110, "FILTER") +
+    '<text x="85" y="40" fill="var(--dim)">eats PACKETS</text>' +
+    '<text x="85" y="110" fill="var(--red)">guest \u2192 mgmt \u2715</text>' +
+    box(420, 55, 110, "POLICY") +
+    '<text x="475" y="40" fill="var(--dim)">eats ROUTES</text>' +
+    '<text x="475" y="110" fill="var(--red)">don\u2019t advertise 10/8 \u2715</text>' +
+    '<text x="280" y="60" fill="var(--text)">same term / from / then grammar</text>' +
+    '<text x="280" y="80" fill="var(--amber)">different victims</text>' + close;
+  if(kind === "subnet-problem") return open +
+    '<text x="280" y="30" fill="var(--text)" font-size="13">192.168.10.130 /26</text>' +
+    '<rect x="60" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<rect x="170" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--green)" stroke-width="2"/>' +
+    '<rect x="280" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<rect x="390" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<text x="115" y="67">.0</text><text x="225" y="67" fill="var(--green)">.64</text>' +
+    '<text x="335" y="67">.128</text><text x="445" y="67">.192</text>' +
+    '<text x="335" y="67" fill="var(--green)"></text>' +
+    '<text x="280" y="100" fill="var(--amber)">magic number: 256 \u2212 192 = 64 \u2192 blocks of 64</text>' +
+    '<text x="280" y="125" fill="var(--green)">.130 \u2192 block .128: net .128 \u00b7 bcast .191 \u00b7 62 hosts</text>' + close;
+  if(kind === "osi-problem") return open +
+    '<g text-anchor="start" font-size="10.5">' +
+    '<text x="40" y="30" fill="var(--dim)">L4 segments</text><text x="150" y="30" fill="var(--text)">TCP/UDP \u2014 BGP:179, DHCP:67/68</text>' +
+    '<text x="40" y="55" fill="var(--dim)">L3 packets</text><text x="150" y="55" fill="var(--text)">IP \u00b7 routing \u00b7 OSPF \u00b7 ping</text>' +
+    '<text x="40" y="80" fill="var(--dim)">L2 frames</text><text x="150" y="80" fill="var(--text)">MAC \u00b7 VLANs \u00b7 LACP \u00b7 RSTP</text>' +
+    '<text x="40" y="105" fill="var(--dim)">L1 bits</text><text x="150" y="105" fill="var(--text)">cables \u00b7 optics \u00b7 CRC errors</text>' +
+    '<text x="40" y="135" fill="var(--amber)">diagnosis = climbing this ladder one layer at a time</text>' +
+    '</g>' + close;
   return "";
 }
 
@@ -741,6 +1022,7 @@ var PROTO_GLOW_TYPES = {
   lacp: ["switch"], vlan: ["switch"], rstp: ["switch"],
   dia: ["router", "isp"], dhcp: ["switch", "host"],
   ospf: ["router"], bgp: ["router", "isp"],
+  filters: ["switch", "router"],
 };
 function protoGlow(guideId, on){
   if(typeof document.querySelectorAll !== "function") return;
@@ -775,8 +1057,28 @@ function renderProtoTab(){
 
 function renderProtoList(box){
   protoEl("h3", "pg-list-title", box, "Field guides");
-  protoEl("p", "pg-list-sub", box, "One protocol per page, always the same shape: the problem, how it works, what must be true first, how to prove it, what breaks it — and the answer you'd give out loud.");
-  PROTO_GUIDES.forEach(function(g){
+  protoEl("p", "pg-list-sub", box, "One topic per page, always the same shape: the problem, how it works, what must be true first, how to prove it, what breaks it — and the answer you'd give out loud.");
+  var exam = protoEl("div", "pg-exam-map", box);
+  protoEl("b", null, exam, "\ud83c\udf93 JNCIA-Junos coverage map");
+  [
+    ["Junos OS fundamentals", "junos-arch guide + show system processes on any device"],
+    ["CLI & configuration basics", "the whole lab — plus commit/rollback in scenarios 4\u20135 and show system commit"],
+    ["Operational monitoring", "show commands everywhere; counters + gremlin hunts (Lab menu)"],
+    ["Routing fundamentals", "OSPF + BGP guides, static routes in the DIA guide, route preference in the numbers"],
+    ["Routing policy & firewall filters", "filters guide — with a live build-and-block exercise"],
+    ["Networking fundamentals", "OSI guide + the subnetting drill"],
+  ].forEach(function(r){
+    var row = protoEl("div", "pg-exam-row", exam);
+    protoEl("span", "pg-exam-dom", row, r[0]);
+    protoEl("span", null, row, r[1]);
+  });
+  var groups = [
+    ["Exam fundamentals", PROTO_GUIDES.filter(function(g){ return /JNCIA/.test(g.tag); })],
+    ["Protocols", PROTO_GUIDES.filter(function(g){ return !/JNCIA/.test(g.tag); })],
+  ];
+  groups.forEach(function(gr){
+    protoEl("div", "pg-group-h", box, gr[0]);
+    gr[1].forEach(function(g){
     var card = protoEl("div", "pg-card" + (g.ready ? "" : " pg-card-soon"), box);
     var top = protoEl("div", "pg-card-top", card);
     protoEl("b", null, top, g.title);
@@ -787,6 +1089,7 @@ function renderProtoList(box){
     } else {
       protoEl("div", "pg-soon", card, "coming soon");
     }
+    });
   });
 }
 
@@ -821,10 +1124,12 @@ function renderProtoGuide(box, g){
     };
   }
 
+  var rows = [];
+  if(g.prereqs && g.prereqs.length){
   var s3 = sec("Prerequisites \u2014 live from YOUR lab");
   protoEl("p", "pg-sub", s3, "These check your actual canvas and configs, and update as you work:");
   var list = protoEl("div", "pg-prereqs", s3);
-  var rows = g.prereqs.map(function(p){
+  rows = g.prereqs.map(function(p){
     var row = protoEl("div", "obj pg-linked", list);
     protoEl("div", "dot", row);
     protoEl("span", null, row, p.desc);
@@ -847,7 +1152,57 @@ function renderProtoGuide(box, g){
     if(!tp || tp.style.display === "none"){ protoStopTimer(); return; }
     refresh(false);
   }, 1200);
+  }
 
+  if(g.drill === "subnet"){
+    var sd = sec("The drill \u2014 make it automatic");
+    var q = null, streak = 0;
+    try{ streak = parseInt(localStorage.getItem("junoslab-subnet-streak") || "0", 10); }catch(e){}
+    var head = protoEl("div", "pg-drill-q", sd, "");
+    var form = protoEl("div", "pg-drill-form", sd);
+    var mk = function(label){
+      var w = protoEl("label", "pg-drill-field", form);
+      protoEl("span", null, w, label);
+      var inp = document.createElement("input");
+      inp.type = "text"; inp.autocomplete = "off"; inp.spellcheck = false;
+      w.appendChild(inp);
+      return inp;
+    };
+    var fNet = mk("network"), fBc = mk("broadcast"), fN = mk("usable hosts");
+    var fb = protoEl("div", "pg-drill-fb", sd, "");
+    var sk = protoEl("div", "pg-drill-streak", sd, "streak: " + streak);
+    var newQ = function(){
+      q = subnetDrillQ();
+      head.textContent = q.ip + "/" + q.bits + "  \u2014  network, broadcast, usable hosts?";
+      [fNet, fBc, fN].forEach(function(i){ i.value = ""; i.className = ""; });
+      fb.textContent = "";
+      fNet.focus && fNet.focus();
+    };
+    var checkBtn = protoEl("button", "pg-anim-btn", sd, "Check");
+    var nextBtn = protoEl("button", "pg-anim-btn", sd, "New question");
+    checkBtn.onclick = function(){
+      if(!q) return;
+      var okNet = fNet.value.trim() === q.ans.network;
+      var okBc = fBc.value.trim() === q.ans.broadcast;
+      var okN = parseInt(fN.value.trim(), 10) === q.ans.usable;
+      fNet.className = okNet ? "pg-q-right" : "pg-q-wrong";
+      fBc.className = okBc ? "pg-q-right" : "pg-q-wrong";
+      fN.className = okN ? "pg-q-right" : "pg-q-wrong";
+      if(okNet && okBc && okN){
+        streak++;
+        fb.textContent = "\u2713 all three — that's the exam speed building";
+        if(typeof SFX !== "undefined") SFX.ding();
+      } else {
+        streak = 0;
+        fb.textContent = "answer: network " + q.ans.network + " \u00b7 broadcast " + q.ans.broadcast + " \u00b7 " + q.ans.usable + " hosts (mask " + q.ans.mask + ")";
+        if(typeof SFX !== "undefined") SFX.womp();
+      }
+      try{ localStorage.setItem("junoslab-subnet-streak", String(streak)); }catch(e){}
+      sk.textContent = "streak: " + streak;
+    };
+    nextBtn.onclick = newQ;
+    newQ();
+  }
   if(g.cfg){
     var s4 = sec("Configure it \u2014 the exact commands");
     g.cfg.forEach(function(c){
@@ -885,6 +1240,18 @@ function renderProtoGuide(box, g){
       protoEl("code", null, row, r[0]);
       protoEl("div", null, row, r[1]);
     });
+    if(g.id === "lacp" && typeof strictOn === "function"){
+      var wrap = protoEl("label", "pg-strict", s8);
+      var cb = document.createElement("input");
+      cb.type = "checkbox";
+      cb.checked = strictOn();
+      cb.onchange = function(){
+        setStrict(cb.checked);
+        if(typeof SFX !== "undefined") SFX.tick();
+      };
+      wrap.appendChild(cb);
+      protoEl("span", null, wrap, " Strict real-Junos mode — ae bundles refuse to form until chassis aggregated-devices is configured, exactly like a real EX. Commit warns you when a bundle is orphaned. Applies lab-wide, survives refresh.");
+    }
   }
 
   var s9 = sec("The 30-second answer \ud83c\udfa4");
