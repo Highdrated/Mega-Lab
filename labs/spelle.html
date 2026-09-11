@@ -389,7 +389,7 @@ function simulate(levelRows, code) {
   }
   function tick() {
     ops++;
-    if (ops > 300) throw new Error("the spell fizzles — over 300 steps. Is a loop running forever?");
+    if (ops > 600) throw new Error("the spell fizzles — over 600 steps. Is a loop running forever?");
   }
   function requireDir(d) {
     if (!DIRS[d]) throw new Error('unknown direction "' + d + '" — use "up", "down", "left" or "right"');
@@ -438,12 +438,18 @@ function simulate(levelRows, code) {
     say(text) {
       tick();
       actions.push({ type: "say", text: String(text) });
+    },
+    here() {
+      tick();
+      const t = tileAt(hx, hy);
+      const names = { ".": "floor", "K": "key", "C": "chest", "E": "stairs" };
+      return names[t] || "floor";
     }
   };
 
   try {
-    const fn = new Function("move", "look", "grab", "say", '"use strict";\n' + code);
-    fn(api.move, api.look, api.grab, api.say);
+    const fn = new Function("move", "look", "grab", "say", "here", '"use strict";\n' + code);
+    fn(api.move, api.look, api.grab, api.say, api.here);
   } catch (e) {
     error = e.message;
   }
@@ -643,7 +649,7 @@ move("dir", 3);   ← "dir" in quotes: the TEXT dir. Nonsense!</div>
   move("right");
 }
 "while what's ahead is NOT a wall, keep walking"</div>
-<div class="teach"><code>!==</code> means "is not equal to" (its twin <code>===</code> means "is equal to"). ⚠ A while whose condition never turns false loops forever — the spell fizzles at 300 steps if you manage it.</div>
+<div class="teach"><code>!==</code> means "is not equal to" (its twin <code>===</code> means "is equal to"). ⚠ A while whose condition never turns false loops forever — the spell fizzles at 600 steps if you manage it.</div>
 <p><em>Quest:</em> walk right until the wall, then take one step down to the stairs. You don't know the corridor's length — that's the point.</p>`,
       starter: "",
       level: ["##########", "#@.......#", "########E#", "##########"],
@@ -774,6 +780,290 @@ if (blocked("right")) { ... }</div>
   ]
 },
 {
+  id: "arrays",
+  name: "ARRAYS",
+  drills: [
+    {
+      brief: `<h2>A LIST OF THINGS</h2>
+<div class="teach">An <b>array</b> is an ordered list in one jar. Square brackets, commas between items:</div>
+<div class="ex">let path = ["right", "right", "down"];
+              0        1        2
+path[0]   ← the first item ("right")</div>
+<div class="teach">Counting starts at <b>0</b> — the oldest gotcha in programming. <code>path[1]</code> is the SECOND item.</div>
+<p><em>Quest:</em> store the route in an array, then walk it by index: <code>move(path[0]);</code> <code>move(path[1]);</code> <code>move(path[2]);</code></p>`,
+      starter: "",
+      level: ["######", "#@...#", "###..#", "###E.#", "######"],
+      reqs: [
+        R("declares an array of directions", /let\s+path\s*=\s*\[\s*["']right["']\s*,\s*["']right["']\s*,\s*["']down["']/),
+        R("moves by index (path[0] ... path[2])", /move\(\s*path\[0\]\s*\)[\s\S]*move\(\s*path\[2\]\s*\)/),
+        G("the hero walks the route", res => res.actions.filter(a => a.type === "move").length >= 3)
+      ],
+      hint: 'let path = ["right", "right", "down"];\nmove(path[0]);\nmove(path[1]);\nmove(path[2]);\nmove("down");   // one more to the stairs'
+    },
+    {
+      brief: `<h2>LOOPING AN ARRAY</h2>
+<div class="teach">Indexing by hand defeats the point. The classic pairing: a for loop whose counter IS the index, running to <code>path.length</code> (the array knows its own size):</div>
+<div class="ex">for (let i = 0; i < path.length; i++) {
+  move(path[i]);
+}</div>
+<div class="teach">Change the array, the loop adapts. Data and logic, separated — a mighty idea wearing a small robe.</div>
+<p><em>Quest:</em> the route is <code>right, right, down, down, right</code>. Put it in an array, walk it with the loop.</p>`,
+      starter: "",
+      level: ["#######", "#@....#", "#.....#", "#...E.#", "#######"],
+      reqs: [
+        R("loops to path.length", /i\s*<\s*path\.length/),
+        R("moves with path[i]", /move\(\s*path\[\s*i\s*\]\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let path = ["right", "right", "down", "down", "right"];\nfor (let i = 0; i < path.length; i++) {\n  move(path[i]);\n}'
+    },
+    {
+      brief: `<h2>PUSH — GROWING A LIST</h2>
+<div class="teach">Arrays aren't carved in stone. <code>path.push("down")</code> appends an item to the end. Programs often BUILD their plan first, then execute it:</div>
+<div class="ex">let path = [];        ← empty list
+path.push("right");   ← plan grows
+path.push("down");</div>
+<p><em>Quest:</em> start with an EMPTY array, push the route <code>right, right, down, down</code> one item at a time, then walk it with your loop.</p>`,
+      starter: "",
+      level: ["######", "#@...#", "#....#", "#..E.#", "######"],
+      reqs: [
+        R("starts from an empty array", /let\s+path\s*=\s*\[\s*\]/),
+        G("pushes at least 4 items", (res, code) => (code.match(/path\.push\(/g) || []).length >= 4),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let path = [];\npath.push("right");\npath.push("right");\npath.push("down");\npath.push("down");\nfor (let i = 0; i < path.length; i++) {\n  move(path[i]);\n}'
+    }
+  ]
+},
+{
+  id: "objects",
+  name: "OBJECTS",
+  drills: [
+    {
+      brief: `<h2>BUNDLED FACTS</h2>
+<div class="teach">An <b>object</b> groups named values — facts about one thing, in one jar. Curly braces, <code>name: value</code> pairs:</div>
+<div class="ex">let hero = { name: "kaatje", hp: 10 };
+
+hero.name   ← "kaatje"   (the dot reaches inside)
+hero.hp     ← 10</div>
+<div class="teach">Arrays answer "which position?"; objects answer "which name?". Together they model everything — every JSON your automations shuffle at DCU is exactly this.</div>
+<p><em>Quest:</em> create that hero object, make them <code>say(hero.name)</code>, then step right to the stairs.</p>`,
+      starter: "",
+      level: ["#####", "#@E.#", "#####"],
+      reqs: [
+        R("object with name and hp", /let\s+hero\s*=\s*\{[^}]*name\s*:\s*["']kaatje["'][^}]*hp\s*:\s*10[^}]*\}/),
+        G('the hero says their name', res => res.actions.some(a => a.type === "say" && a.text === "kaatje")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let hero = { name: "kaatje", hp: 10 };\nsay(hero.name);\nmove("right");'
+    },
+    {
+      brief: `<h2>CHANGING PROPERTIES</h2>
+<div class="teach">Dot-access works for writing too. A trap bites for 3 damage:</div>
+<div class="ex">hero.hp = hero.hp - 3;
+          └─ read old (10), subtract, store new (7)</div>
+<p><em>Quest:</em> create the hero (hp 10), subtract 3 exactly as shown, <code>say(hero.hp)</code> to prove it (should announce 7), then limp right to the stairs.</p>`,
+      starter: "",
+      level: ["#####", "#@E.#", "#####"],
+      reqs: [
+        R("subtracts from hero.hp", /hero\.hp\s*=\s*hero\.hp\s*-\s*3/),
+        G("announces 7", res => res.actions.some(a => a.type === "say" && a.text === "7")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let hero = { name: "kaatje", hp: 10 };\nhero.hp = hero.hp - 3;\nsay(hero.hp);\nmove("right");'
+    },
+    {
+      brief: `<h2>OBJECTS AS PLANS</h2>
+<div class="teach">Object values feed straight into function calls — a whole instruction as one bundle:</div>
+<div class="ex">let plan = { dir: "right", steps: 4 };
+move(plan.dir, plan.steps);</div>
+<p><em>Quest:</em> cross the four-step corridor using exactly that plan object.</p>`,
+      starter: "",
+      level: ["########", "#@...E.#", "########"],
+      reqs: [
+        R("plan object with dir and steps", /let\s+plan\s*=\s*\{[^}]*dir\s*:\s*["']right["'][^}]*steps\s*:\s*4[^}]*\}/),
+        R("move reads from the plan", /move\(\s*plan\.dir\s*,\s*plan\.steps\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let plan = { dir: "right", steps: 4 };\nmove(plan.dir, plan.steps);'
+    }
+  ]
+},
+{
+  id: "modern",
+  name: "MODERN SPELLCRAFT",
+  drills: [
+    {
+      brief: `<h2>CONST</h2>
+<div class="teach"><code>let</code> has a stricter sibling: <code>const</code> — a jar that can never be re-filled. Try to reassign it and JS throws an error ON PURPOSE, catching your mistake early. Modern rule of thumb: <b>const by default, let only when the value must change.</b></div>
+<p><em>Quest:</em> declare <code>const steps = 3;</code> and cross the corridor with it.</p>`,
+      starter: "",
+      level: ["#######", "#@..E.#", "#######"],
+      reqs: [
+        R("uses const", /const\s+steps\s*=\s*3/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'const steps = 3;\nmove("right", steps);'
+    },
+    {
+      brief: `<h2>ARROW FUNCTIONS</h2>
+<div class="teach">Modern JS writes small functions with an arrow — same power, less ink:</div>
+<div class="ex">function dash(dir) { move(dir, 3); }   ← the old way
+
+const dash = (dir) => move(dir, 3);    ← the arrow way
+             └param┘    └─ body ─┘</div>
+<p><em>Quest:</em> forge <code>dash</code> as an arrow function, then dash right and dash down.</p>`,
+      starter: "",
+      level: ["######", "#@...#", "#....#", "#....#", "#...E#", "######"],
+      reqs: [
+        R("const dash = (dir) => ...", /const\s+dash\s*=\s*\(?\s*dir\s*\)?\s*=>/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'const dash = (dir) => move(dir, 3);\ndash("right");\ndash("down");'
+    },
+    {
+      brief: `<h2>FOREACH — FUNCTIONS AS ARGUMENTS</h2>
+<div class="teach">The deepest modern idea: functions are values — you can hand one TO another function. <code>forEach</code> takes a function and calls it once per array item:</div>
+<div class="ex">["right", "down"].forEach(dir => move(dir));
+                          └── a function, passed as ──┘
+                              an argument (a "callback")</div>
+<div class="teach">This replaces the whole for-loop-with-index dance. Callbacks power everything in real JS: button clicks, timers, web requests.</div>
+<p><em>Quest:</em> walk the route <code>right, right, down, down</code> using forEach and an arrow callback. No for loop allowed.</p>`,
+      starter: "",
+      level: ["######", "#@...#", "#....#", "#..E.#", "######"],
+      reqs: [
+        R("uses .forEach with an arrow callback", /\.forEach\(\s*\(?\s*dir\s*\)?\s*=>/),
+        G("no for loop this time", (res, code) => !/for\s*\(/.test(code)),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: '["right", "right", "down", "down"].forEach(dir => move(dir));'
+    }
+  ]
+},
+{
+  id: "nested",
+  name: "NESTED LOOPS",
+  drills: [
+    {
+      brief: `<h2>A LOOP IN A LOOP</h2>
+<div class="teach">Put a loop inside a loop and you sweep a GRID: the outer loop walks rows, the inner loop walks each row's columns. Every spreadsheet, every image, every dungeon map is processed this way.</div>
+<div class="ex">for (let row = 0; row < 3; row++) {
+  for (let col = 0; col < 4; col++) {
+    move("right"); grab();
+  }
+  move("down");
+  move("left", 4);        ← carriage return!
+}</div>
+<p><em>Quest:</em> three treasures hide in the 3×4 hall. Sweep every tile with the nested loop above, grabbing as you go. The stairs wait at the sweep's end.</p>`,
+      starter: "",
+      level: ["#######", "#@..C.#", "#.C...#", "#...CE#", "#######"],
+      reqs: [
+        R("a loop inside a loop", /for\s*\([^)]*\)\s*\{[\s\S]*for\s*\([^)]*\)\s*\{/),
+        G("all three treasures grabbed", res => res.held.filter(h => h === "treasure").length >= 3),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'for (let row = 0; row < 3; row++) {\n  for (let col = 0; col < 4; col++) {\n    move("right");\n    grab();\n  }\n  move("down");\n  move("left", 4);\n}'
+    },
+    {
+      brief: `<h2>BUILDING WITH LOOPS</h2>
+<div class="teach">Loops don't just move — they BUILD. Strings have their own spells: <code>"⭐".repeat(3)</code> returns <code>"⭐⭐⭐"</code>. Feed the loop counter into repeat and each pass grows:</div>
+<p><em>Quest:</em> make the hero proclaim a growing banner — say <code>"⭐".repeat(i)</code> for i from 1 to 3 (three says: ⭐, ⭐⭐, ⭐⭐⭐) — then take one step right to the stairs.</p>`,
+      starter: "",
+      level: ["#####", "#@E.#", "#####"],
+      reqs: [
+        R("uses .repeat(i)", /\.repeat\(\s*i\s*\)/),
+        G("says ⭐, ⭐⭐, ⭐⭐⭐", res => ["⭐","⭐⭐","⭐⭐⭐"].every(t => res.actions.some(a => a.type === "say" && a.text === t))),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'for (let i = 1; i <= 3; i++) {\n  say("⭐".repeat(i));\n}\nmove("right");'
+    }
+  ]
+},
+{
+  id: "runes",
+  name: "DICE & RUNES",
+  drills: [
+    {
+      brief: `<h2>MATH.RANDOM — ROLLING DICE</h2>
+<div class="teach">JS ships a toolbox object called <code>Math</code>. <code>Math.random()</code> returns a random decimal between 0 and 1 — turning it into a die roll is a sacred incantation worth memorizing:</div>
+<div class="ex">Math.floor(Math.random() * 20) + 1
+           └ 0 ... 19.999 ┘
+└ chop decimals: 0..19 ┘
+                            └ shift: 1..20 ┘</div>
+<div class="teach">Gluing text and values together uses <code>+</code> on strings: <code>"rolled " + roll</code>.</div>
+<p><em>Quest:</em> roll a d20 into a const, announce <code>"rolled " + roll</code>, then step right.</p>`,
+      starter: "",
+      level: ["#####", "#@E.#", "#####"],
+      reqs: [
+        R("the d20 incantation", /Math\.floor\(\s*Math\.random\(\)\s*\*\s*20\s*\)\s*\+\s*1/),
+        G('announces "rolled <n>"', res => res.actions.some(a => a.type === "say" && /^rolled \d+$/.test(a.text))),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'const roll = Math.floor(Math.random() * 20) + 1;\nsay("rolled " + roll);\nmove("right");'
+    },
+    {
+      brief: `<h2>TEMPLATE LITERALS</h2>
+<div class="teach">Gluing with <code>+</code> gets ugly fast. Modern JS interpolates with <b>backtick</b> strings — values slot straight into <code>\${ }</code> holes:</div>
+<div class="ex">say("hp: " + hero.hp);      ← old glue
+
+say(\`hp: \${hero.hp}\`);      ← template literal
+    ↑ backticks, not quotes</div>
+<p><em>Quest:</em> create a hero with <code>hp: 10</code>, announce their health with a template literal (exactly <code>hp: 10</code>), then step right.</p>`,
+      starter: "",
+      level: ["#####", "#@E.#", "#####"],
+      reqs: [
+        R("uses a template literal with \${ }", /\`[^\`]*\$\{[^}]+\}[^\`]*\`/),
+        G('announces "hp: 10"', res => res.actions.some(a => a.type === "say" && a.text === "hp: 10")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'const hero = { hp: 10 };\nsay(\`hp: \${hero.hp}\`);\nmove("right");'
+    }
+  ]
+},
+{
+  id: "algorithms",
+  name: "ALGORITHMS",
+  drills: [
+    {
+      brief: `<h2>THE SENTINEL LOOP</h2>
+<div class="teach">A new spell: <code>here()</code> returns what the hero stands ON — <code>"floor"</code>, <code>"key"</code>, <code>"stairs"</code>. Combine it with while and the hero walks UNTIL ARRIVAL, not a fixed count:</div>
+<div class="ex">while (here() !== "stairs") {
+  if (look("right") !== "wall") move("right");
+  else move("down");
+}</div>
+<div class="teach">Read it: "until I stand on stairs — go right if I can, else go down." No route knowledge needed. This is a <b>greedy algorithm</b>: always take the locally best step.</div>
+<p><em>Quest:</em> cast exactly that spell on this staircase dungeon. Watch the hero navigate itself.</p>`,
+      starter: "",
+      level: ["########", "#@.#####", "##.#####", "##..####", "###.####", "###..###", "####.###", "####E###", "########"],
+      reqs: [
+        R("a sentinel while on here()", /while\s*\(\s*here\(\)\s*!==?\s*["']stairs["']\s*\)/),
+        R("chooses with look inside", /if\s*\(\s*look\(/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'while (here() !== "stairs") {\n  if (look("right") !== "wall") move("right");\n  else move("down");\n}'
+    },
+    {
+      brief: `<h2>THE WALL FOLLOWER</h2>
+<div class="teach">The legendary maze algorithm: <b>keep your right hand on the wall</b> and any simply-connected maze must eventually yield its exit. To know where "my right" is, the hero needs a FACING — an index into a compass array, turned with modular arithmetic (<code>%</code>, remainder):</div>
+<div class="ex">const dirs = ["up", "right", "down", "left"];
+let f = 1;                       ← facing right
+
+(f + 1) % 4   ← the dir to my right (wraps 3→0)
+(f + 3) % 4   ← the dir to my left</div>
+<div class="teach">The algorithm, each pass: if my right is open — turn right and step. Else if ahead is open — step. Else — turn left and rethink.</div>
+<p><em>Quest:</em> implement the wall follower and set it loose. If it's correct, the hero solves the maze with no route in the spell at all. THIS is programming.</p>`,
+      starter: "const dirs = [\"up\", \"right\", \"down\", \"left\"];\nlet f = 1;\n\nwhile (here() !== \"stairs\") {\n\n}",
+      level: ["##########", "#@.......#", "########.#", "#........#", "#.########", "#......E.#", "##########"],
+      reqs: [
+        R("turns with modular arithmetic (% 4)", /%\s*4/),
+        R("a sentinel while on here()", /while\s*\(\s*here\(\)\s*!==?\s*["']stairs["']\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'const dirs = ["up", "right", "down", "left"];\nlet f = 1;\nwhile (here() !== "stairs") {\n  if (look(dirs[(f + 1) % 4]) !== "wall") {\n    f = (f + 1) % 4;\n    move(dirs[f]);\n  } else if (look(dirs[f]) !== "wall") {\n    move(dirs[f]);\n  } else {\n    f = (f + 3) % 4;\n  }\n}'
+    }
+  ]
+},
+{
   id: "delve",
   name: "⚔ THE DELVE",
   drills: [
@@ -815,6 +1105,18 @@ if (blocked("right")) { ... }</div>
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
       hint: 'the shape is a serpent: full-width corridors, alternating.\nwhile (look("right") !== "wall") { move("right"); }\nmove("down"); — then the same leftward. loops of loops...'
+    },
+    {
+      brief: `<h2>DELVE IV · THE LABYRINTH</h2>
+<div class="teach">The master's test. A true branching maze in full darkness. You COULD scout it corridor by corridor... or you could unleash the wall follower from ALGORITHMS and watch it conquer a maze you've never seen. Both count. One is wisdom.</div>
+<p><em>Quest:</em> reach the stairs.</p>`,
+      starter: "",
+      fog: true,
+      level: ["#############", "#@..........#", "###########.#", "#...#.......#", "#.#.#.#######", "#.#...#.....#", "#.#####.###.#", "#.....#.#...#", "#####.#.#.###", "#E....#.....#", "#############"],
+      reqs: [
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: "the wall follower needs no map. copy your spell from ALGORITHMS II\nand let it walk. (watch the fog peel back as it works.)"
     }
   ]
 }
