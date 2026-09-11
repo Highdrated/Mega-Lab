@@ -1,0 +1,2237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>STYLE · Scriptorium</title>
+<style>
+  :root {
+    --parchment: #efe5cd;
+    --sheet: #f8f1de;
+    --ink: #372c1e;
+    --soft: #8a7a5f;
+    --hair: #d5c5a0;
+    --wax: #8f2f22;
+    --gold: #96731f;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 20%, #f4ebd6 0%, var(--parchment) 55%, #e2d3ac 100%);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  code, pre, #editor, .ex { font-family: "Consolas", "Menlo", monospace; }
+
+  /* ============ HEADER ============ */
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--hair);
+    flex-shrink: 0;
+  }
+  #chapsel {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--sheet);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    padding: 7px 14px;
+    max-width: 320px;
+    cursor: pointer;
+    outline: none;
+  }
+  #chapsel:hover { border-color: var(--soft); }
+  .hbtn {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .hbtn:hover { border-color: var(--soft); }
+  .hbtn.active { border-color: var(--wax); color: var(--wax); }
+  .wordmark {
+    font-size: 20px;
+    letter-spacing: 6px;
+    color: var(--ink);
+  }
+  .wordmark i { font-style: normal; color: var(--wax); }
+  .wordmark::after { display: none; }
+  .titleblock {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--soft);
+    line-height: 1.5;
+  }
+  .titleblock b { color: var(--ink); font-weight: normal; }
+  .titleblock br { display: none; }
+  header .spacer { flex: 1; }
+  .deskstat {
+    font-size: 12px;
+    font-style: italic;
+    color: var(--soft);
+    text-align: right;
+    line-height: 1.5;
+  }
+  .deskstat b { color: var(--ink); font-weight: normal; }
+
+  /* ============ DESK ============ */
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(270px, 340px) 1fr 1fr;
+    min-height: 0;
+  }
+  .pane {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    border-right: 1px solid var(--hair);
+  }
+  .pane:last-child { border-right: none; }
+  .pane:nth-child(2) { border-right: none; }
+  .pane-head {
+    padding: 12px 24px 10px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--soft);
+    flex-shrink: 0;
+    text-transform: lowercase;
+  }
+  .pane-head .dot { display: none; }
+  .draft-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 12px;
+  }
+  .draft-head .key { font-size: 11px; color: var(--hair); font-style: italic; }
+  .draft-head .tools { display: flex; gap: 6px; }
+  .draft-head .tools button {
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-style: normal;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .draft-head .tools button:hover { border-color: var(--soft); }
+  .draft-head .tools button.primary {
+    border-color: var(--wax);
+    background: var(--wax);
+    color: var(--sheet);
+  }
+  .draft-head .tools button.primary:hover { background: #74251a; }
+  .draft-head .tools button.gold { border-color: var(--gold); color: var(--gold); }
+
+  /* ---- BRIEF ---- */
+  #brief {
+    flex: 1;
+    overflow-y: auto;
+    padding: 6px 28px 28px;
+    font-size: 14px;
+    line-height: 1.75;
+  }
+  #brief h2 {
+    font-size: 15px;
+    letter-spacing: 1px;
+    color: var(--ink);
+    font-weight: normal;
+    margin-bottom: 12px;
+  }
+  #brief h2::before {
+    content: "❧ ";
+    color: var(--wax);
+  }
+  #brief p { margin-bottom: 14px; color: var(--ink); }
+  #brief .teach {
+    color: #6b5c42;
+    margin-bottom: 16px;
+  }
+  #brief code {
+    background: rgba(55, 44, 30, 0.07);
+    color: var(--ink);
+    padding: 1px 5px;
+    font-size: 12px;
+  }
+  #brief .ex {
+    background: var(--sheet);
+    border: 1px solid var(--hair);
+    padding: 12px 14px;
+    margin: 12px 0 16px;
+    white-space: pre;
+    overflow-x: auto;
+    font-size: 12px;
+    color: var(--ink);
+  }
+  #reqs { list-style: none; margin-top: 10px; border-top: 1px solid var(--hair); padding-top: 12px; }
+  #reqs li {
+    padding: 4px 0 4px 22px;
+    position: relative;
+    color: var(--soft);
+    font-size: 13px;
+  }
+  #reqs li::before {
+    content: "";
+    position: absolute;
+    left: 2px; top: 11px;
+    width: 7px; height: 7px;
+    border: 1px solid var(--soft);
+    border-radius: 50%;
+  }
+  #reqs li.pass { color: var(--gold); }
+  #reqs li.pass::before { background: var(--gold); border-color: var(--gold); }
+  #reqs li.fail { color: var(--wax); }
+  #reqs li.fail::before { border-color: var(--wax); }
+  #reqs li.fail::after {
+    content: "";
+    position: absolute;
+    left: -2px; top: 14px;
+    width: 15px; height: 1px;
+    background: var(--wax);
+    transform: rotate(-45deg);
+  }
+
+  .hintbox {
+    margin-top: 16px;
+    border-left: 2px solid var(--wax);
+    padding: 4px 0 4px 14px;
+    font-size: 12px;
+    font-family: "Consolas", "Menlo", monospace;
+    color: var(--ink);
+    white-space: pre-wrap;
+    display: none;
+  }
+  .hintbox.show { display: block; }
+
+  .targetbox {
+    border: 1px solid var(--hair);
+    background: #fff;
+    margin: 4px 0 14px;
+    box-shadow: 0 4px 14px rgba(55, 44, 30, 0.1);
+  }
+  .targetbox iframe {
+    width: 100%;
+    height: 150px;
+    border: none;
+    display: block;
+  }
+  .targetlabel {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--soft);
+    margin-bottom: 4px;
+  }
+  .tourneybar {
+    display: flex;
+    gap: 14px;
+    font-size: 12px;
+    color: var(--soft);
+    font-style: italic;
+    margin-bottom: 12px;
+  }
+  .tourneybar b { color: var(--wax); font-weight: normal; font-style: normal; }
+  .results {
+    text-align: center;
+    padding: 20px 0;
+  }
+  .results .rank {
+    font-size: 26px;
+    letter-spacing: 4px;
+    color: var(--wax);
+    margin: 14px 0 6px;
+  }
+  .results .medals { font-size: 20px; letter-spacing: 4px; margin: 10px 0; }
+
+  /* ---- DRAFT (left page) ---- */
+  #editor {
+    flex: 1;
+    width: auto;
+    margin: 0 12px 16px 24px;
+    background: var(--sheet);
+    color: var(--ink);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 30px rgba(55, 44, 30, 0.12);
+    outline: none;
+    resize: none;
+    padding: 20px 22px;
+    font-size: 13px;
+    line-height: 1.7;
+    tab-size: 2;
+    caret-color: var(--wax);
+  }
+  #editor::selection { background: rgba(143, 47, 34, 0.18); }
+  #editor::placeholder { color: #bcab88; }
+
+  /* ---- PREVIEW (right page) ---- */
+  #preview-wrap {
+    flex: 1;
+    background: transparent;
+    position: relative;
+    min-height: 0;
+    padding: 0 24px 16px 12px;
+  }
+  #preview {
+    width: 100%;
+    height: 100%;
+    border: 1px solid var(--hair);
+    background: #fff;
+    box-shadow: 0 8px 30px rgba(55, 44, 30, 0.12);
+  }
+  .stamp {
+    position: absolute;
+    top: 24px; right: 44px;
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #b04a37 0%, var(--wax) 45%, #6e2015 100%);
+    color: #f3e2c8;
+    font-size: 11px;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-12deg);
+    box-shadow: 0 4px 14px rgba(55, 44, 30, 0.35), inset 0 0 0 3px rgba(243, 226, 200, 0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+  }
+  .stamp.show { opacity: 1; transform: rotate(-12deg) scale(1); }
+
+  /* ============ CHRONICLE ============ */
+  footer {
+    flex-shrink: 0;
+    border-top: 1px solid var(--hair);
+    padding: 8px 36px;
+    font-size: 12px;
+    font-style: italic;
+    height: 54px;
+    overflow-y: auto;
+  }
+  footer .log-line { color: var(--soft); line-height: 1.7; }
+  footer .log-line b { color: var(--gold); font-weight: normal; }
+  footer .log-line i { color: var(--wax); font-style: normal; }
+  footer .log-line em { color: var(--ink); font-style: normal; }
+
+  /* ============ COVER SCROLL ============ */
+  #cover {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, #f2e8d2 0%, #e0d0a8 90%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .sheet {
+    border: 1px solid var(--ink);
+    outline: 1px solid var(--hair);
+    outline-offset: 5px;
+    padding: 52px 66px;
+    text-align: center;
+    position: relative;
+    background: var(--sheet);
+    max-width: 560px;
+    box-shadow: 0 24px 70px rgba(55, 44, 30, 0.25);
+  }
+  .sheet::before, .sheet::after {
+    content: "❦";
+    position: static;
+    display: block;
+    border: none;
+    width: auto; height: auto;
+    color: var(--wax);
+    font-size: 16px;
+  }
+  .sheet::before { margin-bottom: 18px; }
+  .sheet::after { margin-top: 22px; }
+  .sheet h1 {
+    font-size: 38px;
+    letter-spacing: 14px;
+    font-weight: normal;
+    margin-bottom: 8px;
+    padding-left: 14px;
+  }
+  .sheet h1 i { font-style: normal; color: var(--wax); }
+  .sheet .sub {
+    font-size: 12px;
+    font-style: italic;
+    letter-spacing: 1px;
+    color: var(--soft);
+    margin-bottom: 28px;
+  }
+  .sheet .meta {
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 10px;
+    color: var(--soft);
+    line-height: 1.9;
+    margin-bottom: 32px;
+    text-align: left;
+    display: inline-block;
+  }
+  .sheet .meta b { color: var(--ink); font-weight: normal; }
+  .sheet button {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 12px 32px;
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    color: var(--sheet);
+    cursor: pointer;
+  }
+  .sheet button:hover { background: var(--wax); border-color: var(--wax); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--hair); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--soft); }
+
+  @media (max-width: 940px) {
+    main { grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); }
+    .pane:first-child {
+      grid-column: 1 / -1;
+      border-right: none;
+      border-bottom: 1px solid var(--hair);
+    }
+    #brief { max-height: 26vh; }
+  }
+  @media (max-width: 560px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr 1fr; overflow-y: auto; }
+    .pane { border-right: none; border-bottom: 1px solid var(--hair); }
+    #editor { margin: 0 24px 16px; }
+    #preview-wrap { padding: 0 24px 24px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cover">
+  <div class="sheet">
+    <h1>STY<i>LE</i></h1>
+    <div class="sub">the scriptorium · a front-end lab of HTML &amp; CSS</div>
+    <div class="meta">
+      <b>COMMISSION</b> .. MEGA LAB / VOLUME III<br>
+      <b>SCRIBE</b> ...... KAATJE<br>
+      <b>REVIEWER</b> .... JUNIE, AERIAL FAMILIAR<br>
+      <b>METHOD</b> ...... DRAFT LEFT · REVIEW RIGHT · SEAL WHEN TRUE
+    </div>
+    <button onclick="openDesk()">UNROLL THE SCROLL</button>
+  </div>
+</div>
+
+<header>
+  <div class="wordmark">STY<i>LE</i></div>
+  <select id="chapsel" title="chapters"></select>
+  <button class="hbtn" id="reviewbtn" onclick="startReview()">review (<span id="misscount">0</span>)</button>
+  <button class="hbtn" id="tourneybtn" onclick="startTourney()">⚔ tourney</button>
+  <div class="spacer"></div>
+  <div class="deskstat">
+    <b id="sheetname">LESSON 0</b> · sealed <b id="stat-pass">0</b> · <b id="stat-total">0%</b>
+  </div>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-head"><span class="dot"></span>brief</div>
+    <div id="brief"></div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head draft-head">
+      <span>draft <span class="key">· ctrl+enter seals — again for next</span></span>
+      <span class="tools">
+        <button id="nextbtn" onclick="nextDrill()" style="display:none;" class="gold">next →</button>
+        <button onclick="resetDrill()">reset</button>
+        <button onclick="showHint()">hint</button>
+        <button class="primary" onclick="checkDraft()">seal</button>
+      </span>
+    </div>
+    <textarea id="editor" spellcheck="false" placeholder="take up the quill..."></textarea>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head"><span class="dot"></span>preview · live</div>
+    <div id="preview-wrap">
+      <iframe id="preview" sandbox="allow-same-origin" title="live preview"></iframe>
+      <div class="stamp" id="stamp">SEALED</div>
+    </div>
+  </section>
+</main>
+
+<footer id="log"></footer>
+
+<script>
+/* ================================================================
+   STYLE · Scriptorium — front-end drafting lab, volume III
+   Each drill: { brief, starter, reqs: [{label, test}], hint }
+================================================================ */
+
+const R = (label, re) => ({ label, test: c => re.test(c) });
+const Rf = (label, fn) => ({ label, test: fn });
+
+const MODULES = [
+/* ---------------- LESSON 0 ---------------- */
+{
+  id: "lesson0",
+  name: "LESSON 0 · START HERE",
+  drills: [
+    {
+      brief: `<h2>WHAT IS HTML?</h2>
+<div class="teach">A web page is a document. HTML describes its <b>structure</b>: "this is a heading, this is a paragraph, this is a link."<br><br>
+You do it with <b>tags</b> — a name in angle brackets. Most come in pairs, an opening tag and a closing tag with a slash:</div>
+<div class="ex">&lt;h1&gt;Hello&lt;/h1&gt;
+└──┘     └───┘
+open     close</div>
+<p>The browser reads the tags and renders the page — that's the white page on your right. Everything you write in DRAFT renders there live.</p>
+<p><em>Task:</em> write a big heading. Use the <code>&lt;h1&gt;</code> tag with the text <code>hello, world</code> inside it. Watch the preview as you type.</p>`,
+      starter: "",
+      reqs: [
+        R("uses an <h1> opening tag", /<h1>/i),
+        R("closes it with </h1>", /<\/h1>/i),
+        R("says hello, world", /<h1>\s*hello,\s*world\s*<\/h1>/i)
+      ],
+      hint: "<h1>hello, world</h1>"
+    },
+    {
+      brief: `<h2>PARAGRAPHS</h2>
+<div class="teach">Headings are for titles. For normal text, use the paragraph tag: <code>&lt;p&gt;</code>. Each paragraph gets its own pair of tags, and the browser spaces them apart automatically.</div>
+<p><em>Task:</em> keep your heading, and add a paragraph under it that says <code>my first page</code>.</p>`,
+      starter: "<h1>hello, world</h1>\n",
+      reqs: [
+        R("still has the <h1>", /<h1>[\s\S]*<\/h1>/i),
+        R("has a <p> ... </p> pair", /<p>[\s\S]*<\/p>/i),
+        R("paragraph says my first page", /<p>\s*my\s+first\s+page\s*<\/p>/i)
+      ],
+      hint: "<h1>hello, world</h1>\n<p>my first page</p>"
+    },
+    {
+      brief: `<h2>WHAT IS CSS?</h2>
+<div class="teach">HTML says what things <b>are</b>. CSS says how they <b>look</b>. A CSS rule picks an element and sets properties on it:</div>
+<div class="ex">h1 { color: crimson; }
+└┘ └─────────────────┘
+who        what</div>
+<div class="teach">Learn the official names now — every tutorial and error message uses them:<br><br>
+· the whole line is a <b>rule</b><br>
+· <code>h1</code> is the <b>selector</b> (who it applies to)<br>
+· <code>color: crimson;</code> is a <b>declaration</b><br>
+· <code>color</code> is the <b>property</b>, <code>crimson</code> the <b>value</b><br><br>
+⚠ Every declaration ends with a <b>semicolon</b>. Forget one and CSS won't complain — it silently swallows the NEXT declaration too. "My second style isn't working" is a missing <code>;</code> nine times out of ten.<br><br>
+For now we write CSS inside a <code>&lt;style&gt;</code> tag, right in the same file.</div>
+<p><em>Task:</em> the style block is started for you. Add a rule inside it that makes <code>h1</code> elements <code>crimson</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>hello, world</h1>\n<p>my first page</p>",
+      reqs: [
+        R("has a <style> block", /<style>[\s\S]*<\/style>/i),
+        R("targets h1 with a rule", /h1\s*\{[\s\S]*?\}/i),
+        R("sets color to crimson", /h1\s*\{[^}]*color\s*:\s*crimson\s*;?[^}]*\}/i)
+      ],
+      hint: "h1 { color: crimson; }   ← goes between the style tags"
+    }
+  ]
+},
+{
+  id: "skeleton",
+  name: "PAGE SKELETON",
+  drills: [
+    {
+      brief: `<h2>THE FULL DOCUMENT</h2>
+<div class="teach">In this lab you write fragments — but a real .html file has a fixed skeleton the browser expects:</div>
+<div class="ex">&lt;!DOCTYPE html&gt;   ← "this is modern HTML"
+&lt;html&gt;
+  &lt;head&gt;          ← ABOUT the page (invisible)
+    &lt;title&gt;...&lt;/title&gt;
+  &lt;/head&gt;
+  &lt;body&gt;          ← the VISIBLE page
+    ...
+  &lt;/body&gt;
+&lt;/html&gt;</div>
+<div class="teach">The <code>&lt;title&gt;</code> is what shows on the browser tab — not on the page itself.</div>
+<p><em>Task:</em> write the full skeleton: doctype, html, a head with the title <code>my keep</code>, and a body with an h1 saying <code>welcome</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("starts with <!DOCTYPE html>", /<!DOCTYPE\s+html>/i),
+        R("<html> wraps everything", /<html[\s>][\s\S]*<\/html>/i),
+        R("head contains title: my keep", /<head>[\s\S]*<title>\s*my\s+keep\s*<\/title>[\s\S]*<\/head>/i),
+        R("body contains h1: welcome", /<body>[\s\S]*<h1>\s*welcome\s*<\/h1>[\s\S]*<\/body>/i)
+      ],
+      hint: "<!DOCTYPE html>\n<html>\n  <head>\n    <title>my keep</title>\n  </head>\n  <body>\n    <h1>welcome</h1>\n  </body>\n</html>"
+    },
+    {
+      brief: `<h2>WHAT LIVES IN THE HEAD</h2>
+<div class="teach">Computers store text as <b>numbers</b> — a <b>character set</b> is the codebook mapping numbers to letters. Old codebooks only knew English; type é, ñ, 中 or ❧ and you'd get garbage like <code>Ã©</code>.<br><br>
+<b>UTF-8</b> is the universal codebook: every letter of every language, plus symbols and emoji. <code>&lt;meta charset="UTF-8"&gt;</code> tells the browser "read my text with THIS codebook." Skip it and accented names break — ask any Belgian form ever.<br><br>
+Two more head habits:<br>
+<code>&lt;html lang="en"&gt;</code> — declares the page's language, for screen readers and translators.<br>
+<code>&lt;style&gt;</code> — your CSS's proper home is the head, not scattered through the body.</div>
+<p><em>Task:</em> upgrade your skeleton: give the html tag <code>lang="en"</code>, add <code>&lt;meta charset="UTF-8"&gt;</code> in the head, and a <code>&lt;style&gt;</code> block giving <code>body</code> a background of <code>beige</code>.</p>`,
+      starter: "<!DOCTYPE html>\n<html>\n  <head>\n    <title>my keep</title>\n  </head>\n  <body>\n    <h1>welcome</h1>\n  </body>\n</html>",
+      reqs: [
+        R('html has lang="en"', /<html\s+lang\s*=\s*["']en["']\s*>/i),
+        R('meta charset="UTF-8" in the head', /<head>[\s\S]*<meta\s+charset\s*=\s*["']UTF-8["']\s*\/?>[\s\S]*<\/head>/i),
+        R("<style> lives inside <head>", /<head>[\s\S]*<style>[\s\S]*<\/style>[\s\S]*<\/head>/i),
+        R("body background: beige", /body\s*\{[^}]*background(?:-color)?\s*:\s*beige\s*;?[^}]*\}/i)
+      ],
+      hint: '<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <title>my keep</title>\n  <style>\n    body { background: beige; }\n  </style>\n</head>'
+    },
+    {
+      brief: `<h2>THE VIEWPORT</h2>
+<div class="teach">One more head resident, and it earns its keep on phones. Mobile browsers, by default, pretend to be ~980px wide and shrink the whole page — tiny unreadable text. This line tells them to stop pretending:</div>
+<div class="ex">&lt;meta name="viewport"
+      content="width=device-width, initial-scale=1"&gt;
+
+width=device-width  →  "be as wide as the actual screen"
+initial-scale=1     →  "start at 100% zoom"</div>
+<div class="teach">Without it, the media queries you'll meet in the RESPONSIVE chapter never fire on phones — the browser lies about its width. With it, they work. Every real page carries this line.</div>
+<p><em>Task:</em> add the viewport meta to your head, exactly as shown.</p>`,
+      starter: "<!DOCTYPE html>\n<html lang=\"en\">\n  <head>\n    <meta charset=\"UTF-8\">\n    <title>my keep</title>\n  </head>\n  <body>\n    <h1>welcome</h1>\n  </body>\n</html>",
+      reqs: [
+        R('meta name="viewport" in the head', /<head>[\s\S]*<meta\s+name\s*=\s*["']viewport["'][^>]*>[\s\S]*<\/head>/i),
+        R("content: width=device-width, initial-scale=1", /content\s*=\s*["']width=device-width,\s*initial-scale=1(?:\.0)?["']/i)
+      ],
+      hint: '<meta name="viewport" content="width=device-width, initial-scale=1">'
+    }
+  ]
+},
+/* ---------------- STRUCTURE ---------------- */
+{
+  id: "structure",
+  name: "STRUCTURE",
+  drills: [
+    {
+      brief: `<h2>HEADING LEVELS</h2>
+<div class="teach">Headings run from <code>&lt;h1&gt;</code> (biggest, one per page) down to <code>&lt;h6&gt;</code>. They form an outline, like chapters and sub-chapters in a chronicle.</div>
+<p><em>Task:</em> write an <code>&lt;h1&gt;</code> that says <code>royal decree</code> and an <code>&lt;h2&gt;</code> under it that says <code>article one</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("h1 says royal decree", /<h1>\s*royal\s+decree\s*<\/h1>/i),
+        R("h2 says article one", /<h2>\s*article\s+one\s*<\/h2>/i),
+        Rf("h1 comes before h2", c => {
+          const a = c.search(/<h1>/i), b = c.search(/<h2>/i);
+          return a > -1 && b > -1 && a < b;
+        })
+      ],
+      hint: "<h1>royal decree</h1>\n<h2>article one</h2>"
+    },
+    {
+      brief: `<h2>LISTS</h2>
+<div class="teach">A bulleted list is an unordered list: <code>&lt;ul&gt;</code>. Each bullet inside it is a list item: <code>&lt;li&gt;</code>.</div>
+<div class="ex">&lt;ul&gt;
+  &lt;li&gt;first thing&lt;/li&gt;
+  &lt;li&gt;second thing&lt;/li&gt;
+&lt;/ul&gt;</div>
+<p><em>Task:</em> write a <code>&lt;ul&gt;</code> with three <code>&lt;li&gt;</code> items for the provisions run: <code>bread</code>, <code>mead</code>, <code>arrows</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("has a <ul> ... </ul>", /<ul>[\s\S]*<\/ul>/i),
+        Rf("has three <li> items", c => (c.match(/<li>/gi) || []).length >= 3),
+        R("items: bread, mead, arrows", /<li>\s*bread\s*<\/li>[\s\S]*<li>\s*mead\s*<\/li>[\s\S]*<li>\s*arrows\s*<\/li>/i)
+      ],
+      hint: "<ul>\n  <li>bread</li>\n  <li>mead</li>\n  <li>arrows</li>\n</ul>"
+    },
+    {
+      brief: `<h2>NUMBERED LISTS</h2>
+<div class="teach">When order matters — steps, rankings — use an <b>ordered</b> list: <code>&lt;ol&gt;</code>. Same <code>&lt;li&gt;</code> items inside, but the browser numbers them for you.</div>
+<p><em>Task:</em> the baker's method, as an <code>&lt;ol&gt;</code> with three steps: <code>mix</code>, <code>bake</code>, <code>eat</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("has an <ol> ... </ol>", /<ol>[\s\S]*<\/ol>/i),
+        Rf("has three <li> items", c => (c.match(/<li>/gi) || []).length >= 3),
+        R("steps in order: mix, bake, eat", /<li>\s*mix\s*<\/li>[\s\S]*<li>\s*bake\s*<\/li>[\s\S]*<li>\s*eat\s*<\/li>/i)
+      ],
+      hint: "<ol>\n  <li>mix</li>\n  <li>bake</li>\n  <li>eat</li>\n</ol>"
+    },
+    {
+      brief: `<h2>LINKS</h2>
+<div class="teach">Links use the anchor tag <code>&lt;a&gt;</code>. The destination goes in an <b>attribute</b> called <code>href</code> — short for <b>h</b>ypertext <b>ref</b>erence, "the text that refers elsewhere." Attributes live inside the opening tag:</div>
+<div class="ex">&lt;a href="https://example.com"&gt;visit&lt;/a&gt;
+   └─────── attribute ───────┘</div>
+<p><em>Task:</em> write a link to <code>https://example.com</code> whose visible text is <code>the guild ledger</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("uses an <a> tag", /<a\s/i),
+        R('href="https://example.com"', /href\s*=\s*["']https:\/\/example\.com\/?["']/i),
+        R("link text is the guild ledger", /<a[^>]*>\s*the\s+guild\s+ledger\s*<\/a>/i)
+      ],
+      hint: '<a href="https://example.com">the guild ledger</a>'
+    },
+    {
+      brief: `<h2>IMAGES</h2>
+<div class="teach"><code>&lt;img&gt;</code> is a rare tag with <b>no closing tag</b>. It needs two attributes: <code>src</code> (<b>s</b>ou<b>rc</b>e — where the image file lives) and <code>alt</code> (<b>alt</b>ernative text — what to say instead, for screen readers and broken links).</div>
+<p><em>Task:</em> write an image with <code>src="drone.png"</code> and <code>alt="junie in flight"</code>. (The preview shows the alt text — there is no real drone.png on this desk. Yet.)</p>`,
+      starter: "",
+      reqs: [
+        R("uses an <img> tag", /<img\s/i),
+        R('src="drone.png"', /src\s*=\s*["']drone\.png["']/i),
+        R('alt="junie in flight"', /alt\s*=\s*["']junie\s+in\s+flight["']/i)
+      ],
+      hint: '<img src="drone.png" alt="junie in flight">'
+    },
+    {
+      brief: `<h2>COMMENTS</h2>
+<div class="teach">Sometimes you want to leave a note in the code that the browser <b>ignores</b> — a margin scribble for future scribes. HTML comments open with <code>&lt;!--</code> and close with <code>--&gt;</code>:</div>
+<div class="ex">&lt;!-- this never renders --&gt;</div>
+<p><em>Task:</em> write a paragraph that says <code>the map is drawn</code>, then a comment containing <code>secret passage</code>. Check the preview: the paragraph shows, the comment stays invisible.</p>`,
+      starter: "",
+      reqs: [
+        R("p says the map is drawn", /<p>\s*the\s+map\s+is\s+drawn\s*<\/p>/i),
+        R("comment with secret passage", /<!--[\s\S]*secret\s+passage[\s\S]*-->/i)
+      ],
+      hint: "<p>the map is drawn</p>\n<!-- secret passage -->"
+    }
+  ]
+},
+/* ---------------- TEXT & TYPE ---------------- */
+{
+  id: "text",
+  name: "TEXT & TYPE",
+  drills: [
+    {
+      brief: `<h2>STRONG & EMPHASIS</h2>
+<div class="teach">Inside a paragraph, wrap words to change their weight: <code>&lt;strong&gt;</code> renders bold (important!), <code>&lt;em&gt;</code> renders italic (emphasis). These live <b>inline</b> — inside the flow of text, not on their own line.</div>
+<p><em>Task:</em> write a paragraph: <code>beware the marsh at night</code> — with <code>beware</code> wrapped in <code>&lt;strong&gt;</code> and <code>at night</code> wrapped in <code>&lt;em&gt;</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("a paragraph exists", /<p>[\s\S]*<\/p>/i),
+        R("<strong>beware</strong>", /<strong>\s*beware\s*<\/strong>/i),
+        R("<em>at night</em>", /<em>\s*at\s+night\s*<\/em>/i)
+      ],
+      hint: "<p><strong>beware</strong> the marsh <em>at night</em></p>"
+    },
+    {
+      brief: `<h2>SPAN</h2>
+<div class="teach"><code>&lt;span&gt;</code> is the inline cousin of <code>&lt;div&gt;</code>: a wrapper with no meaning and no visual change — until you give it a class and style it. Perfect for coloring one word in a sentence.</div>
+<p><em>Task:</em> in the drafted paragraph, wrap the word <code>dragon</code> in a span with class <code>rune</code>, then write a rule making <code>.rune</code> the color <code>firebrick</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>the dragon sleeps beneath the mountain</p>",
+      reqs: [
+        R('span class="rune" around dragon', /<span\s+class\s*=\s*["']rune["']\s*>\s*dragon\s*<\/span>/i),
+        R(".rune color firebrick", /\.rune\s*\{[^}]*color\s*:\s*firebrick\s*;?[^}]*\}/i)
+      ],
+      hint: '<span class="rune">dragon</span>\n.rune { color: firebrick; }'
+    },
+    {
+      brief: `<h2>TEXT-ALIGN</h2>
+<div class="teach">Text sits left by default. <code>text-align</code> moves it: <code>left</code>, <code>center</code>, <code>right</code>. Set it on the element that <b>contains</b> the text.</div>
+<p><em>Task:</em> center the heading with <code>text-align: center;</code> on <code>h1</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>the tourney begins</h1>\n<p>knights from seven kingdoms have arrived.</p>",
+      reqs: [
+        R("h1 text-align: center", /h1\s*\{[^}]*text-align\s*:\s*center\s*;?[^}]*\}/i)
+      ],
+      hint: "h1 { text-align: center; }"
+    },
+    {
+      brief: `<h2>LINE-HEIGHT</h2>
+<div class="teach">Cramped lines are hard to read. <code>line-height</code> sets the space between lines of text. A bare number like <code>1.8</code> means "1.8 × the font size" — the safest way to write it.</div>
+<p><em>Task:</em> give <code>p</code> a <code>line-height</code> of <code>1.8</code>. Watch the paragraph breathe.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>it is a truth universally acknowledged that a scribe in possession of a good quill must be in want of parchment. and ink. and quiet. and perhaps a small cat to guard the desk.</p>",
+      reqs: [
+        R("p line-height: 1.8", /p\s*\{[^}]*line-height\s*:\s*1\.8\s*;?[^}]*\}/i)
+      ],
+      hint: "p { line-height: 1.8; }"
+    },
+    {
+      brief: `<h2>TEXT-DECORATION</h2>
+<div class="teach">Links come underlined by default. <code>text-decoration: none;</code> removes the line — commonly paired with a custom color so links still stand out.</div>
+<p><em>Task:</em> style <code>a</code> with <code>text-decoration: none;</code> and <code>color: darkred;</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>consult <a href=\"#\">the archives</a> for the full account.</p>",
+      reqs: [
+        R("a text-decoration: none", /(?:^|[^.#\w])a\s*\{[^}]*text-decoration\s*:\s*none\s*;?[^}]*\}/i),
+        R("a color: darkred", /(?:^|[^.#\w])a\s*\{[^}]*color\s*:\s*darkred\s*;?[^}]*\}/i)
+      ],
+      hint: "a { text-decoration: none; color: darkred; }"
+    }
+  ]
+},
+/* ---------------- NESTING ---------------- */
+{
+  id: "nesting",
+  name: "NESTING",
+  drills: [
+    {
+      brief: `<h2>PARENT & CHILD</h2>
+<div class="teach">Tags go <b>inside</b> other tags. The outer tag is the parent, the inner is the child. The rule: whatever opens last, closes first — chests inside chests.</div>
+<div class="ex">&lt;div&gt;          ← parent opens
+  &lt;p&gt;hi&lt;/p&gt;    ← child opens AND closes
+&lt;/div&gt;         ← parent closes</div>
+<p><em>Task:</em> write a <code>&lt;div&gt;</code> containing a <code>&lt;p&gt;</code> that says <code>nested cargo</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("has a <div> ... </div>", /<div>[\s\S]*<\/div>/i),
+        R("a <p> lives inside the div", /<div>[\s\S]*<p>[\s\S]*<\/p>[\s\S]*<\/div>/i),
+        R("paragraph says nested cargo", /<p>\s*nested\s+cargo\s*<\/p>/i)
+      ],
+      hint: "<div>\n  <p>nested cargo</p>\n</div>"
+    },
+    {
+      brief: `<h2>SEMANTIC REGIONS</h2>
+<div class="teach"><code>&lt;div&gt;</code> is a plain box with no meaning. Real pages use <b>semantic</b> tags that say what the region is: <code>&lt;header&gt;</code>, <code>&lt;main&gt;</code>, <code>&lt;footer&gt;</code>. Same behavior as div — but readable, by humans and machines.</div>
+<p><em>Task:</em> write a page skeleton: a <code>&lt;header&gt;</code> with an <code>&lt;h1&gt;</code> saying <code>castle keep</code>, a <code>&lt;main&gt;</code> with a <code>&lt;p&gt;</code> saying <code>the gates hold</code>, and a <code>&lt;footer&gt;</code> saying <code>end of watch</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("header contains h1 castle keep", /<header>[\s\S]*<h1>\s*castle\s+keep\s*<\/h1>[\s\S]*<\/header>/i),
+        R("main contains p the gates hold", /<main>[\s\S]*<p>\s*the\s+gates\s+hold\s*<\/p>[\s\S]*<\/main>/i),
+        R("footer says end of watch", /<footer>[\s\S]*end\s+of\s+watch[\s\S]*<\/footer>/i)
+      ],
+      hint: "<header>\n  <h1>castle keep</h1>\n</header>\n<main>\n  <p>the gates hold</p>\n</main>\n<footer>end of watch</footer>"
+    },
+    {
+      brief: `<h2>NESTED LISTS</h2>
+<div class="teach">A list item can contain a whole new list. That's how menus and family trees work — a <code>&lt;ul&gt;</code> inside an <code>&lt;li&gt;</code>.</div>
+<div class="ex">&lt;ul&gt;
+  &lt;li&gt;tools
+    &lt;ul&gt;
+      &lt;li&gt;wrench&lt;/li&gt;
+    &lt;/ul&gt;
+  &lt;/li&gt;
+&lt;/ul&gt;</div>
+<p><em>Task:</em> write a list with one item <code>armory</code> that contains its own sub-list with items <code>sword</code> and <code>shield</code>.</p>`,
+      starter: "",
+      reqs: [
+        R("outer <ul> exists", /<ul>[\s\S]*<\/ul>/i),
+        R("li 'armory' contains a nested <ul>", /<li>\s*armory[\s\S]*<ul>[\s\S]*<\/ul>[\s\S]*<\/li>/i),
+        R("sub-list has sword and shield", /<li>\s*sword\s*<\/li>[\s\S]*<li>\s*shield\s*<\/li>/i)
+      ],
+      hint: "<ul>\n  <li>armory\n    <ul>\n      <li>sword</li>\n      <li>shield</li>\n    </ul>\n  </li>\n</ul>"
+    }
+  ]
+},
+/* ---------------- CSS BASICS ---------------- */
+{
+  id: "cssbasics",
+  name: "CSS BASICS",
+  drills: [
+    {
+      brief: `<h2>ELEMENT SELECTORS</h2>
+<div class="teach">A selector chooses which elements a rule applies to. The simplest kind is the tag name itself: <code>p { ... }</code> styles <b>every</b> paragraph.</div>
+<p><em>Task:</em> the page is drafted for you. Add CSS that makes all <code>p</code> elements <code>steelblue</code> and gives <code>body</code> a <code>background</code> of <code>ivory</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>weather report</h1>\n<p>clear skies over the terraces.</p>\n<p>wind from the east.</p>",
+      reqs: [
+        R("p color is steelblue", /p\s*\{[^}]*color\s*:\s*steelblue\s*;?[^}]*\}/i),
+        R("body background is ivory", /body\s*\{[^}]*background(?:-color)?\s*:\s*ivory\s*;?[^}]*\}/i)
+      ],
+      hint: "p { color: steelblue; }\nbody { background: ivory; }"
+    },
+    {
+      brief: `<h2>CLASSES</h2>
+<div class="teach">Element selectors hit everything. To style <b>some</b> elements, give them a <code>class</code> attribute in the HTML, and select it in CSS with a dot:</div>
+<div class="ex">&lt;p class="alert"&gt;low fuel&lt;/p&gt;
+
+.alert { color: red; }</div>
+<p><em>Task:</em> give the second paragraph the class <code>alert</code>, then write a rule making <code>.alert</code> the color <code>tomato</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>systems normal.</p>\n<p>low fuel warning.</p>",
+      reqs: [
+        R('a p has class="alert"', /<p\s+class\s*=\s*["']alert["']\s*>/i),
+        R(".alert rule sets color tomato", /\.alert\s*\{[^}]*color\s*:\s*tomato\s*;?[^}]*\}/i)
+      ],
+      hint: '<p class="alert">low fuel warning.</p>\n.alert { color: tomato; }'
+    },
+    {
+      brief: `<h2>IDs</h2>
+<div class="teach">An <code>id</code> is like a class, but for exactly <b>one</b> element on the page — a unique name. Select it with a hash: <code>#banner { ... }</code>. Rule of thumb: classes for groups, ids for one-offs.</div>
+<p><em>Task:</em> give the h1 the id <code>callsign</code>, then write a rule making <code>#callsign</code> <code>darkorange</code> with a <code>font-size</code> of <code>40px</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>JUNIE-01</h1>\n<p>agricultural survey unit.</p>",
+      reqs: [
+        R('h1 has id="callsign"', /<h1\s+id\s*=\s*["']callsign["']\s*>/i),
+        R("#callsign color darkorange", /#callsign\s*\{[^}]*color\s*:\s*darkorange\s*;?[^}]*\}/i),
+        R("#callsign font-size 40px", /#callsign\s*\{[^}]*font-size\s*:\s*40px\s*;?[^}]*\}/i)
+      ],
+      hint: '<h1 id="callsign">JUNIE-01</h1>\n#callsign { color: darkorange; font-size: 40px; }'
+    },
+    {
+      brief: `<h2>FONTS</h2>
+<div class="teach">Two properties carry most typography: <code>font-family</code> (which typeface — always end with a generic fallback like <code>serif</code>, <code>sans-serif</code> or <code>monospace</code>) and <code>font-size</code>.</div>
+<p><em>Task:</em> make <code>body</code> use <code>font-family: Georgia, serif;</code> and give <code>p</code> a <code>font-size</code> of <code>18px</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>the chronicle</h1>\n<p>everything reads better in a serif. allegedly.</p>",
+      reqs: [
+        R("body font-family Georgia, serif", /body\s*\{[^}]*font-family\s*:\s*Georgia\s*,\s*serif\s*;?[^}]*\}/i),
+        R("p font-size 18px", /p\s*\{[^}]*font-size\s*:\s*18px\s*;?[^}]*\}/i)
+      ],
+      hint: "body { font-family: Georgia, serif; }\np { font-size: 18px; }"
+    },
+    {
+      brief: `<h2>CSS COMMENTS</h2>
+<div class="teach">You met HTML's margin scribbles (<code>&lt;!-- --&gt;</code>). CSS has its own, and the syntax is different: <code>/* like this */</code>. Same purpose — notes the browser ignores — and the same trick for temporarily switching a rule off without deleting it ("commenting out").</div>
+<div class="ex">/* the royal palette */
+h1 { color: sienna; }
+/* p { color: red; }  ← switched off */</div>
+<p><em>Task:</em> above the h1 rule, add a CSS comment containing <code>ink budget</code>. Check the preview: nothing changes — that's the point.</p>`,
+      starter: "<style>\nh1 { color: sienna; }\n</style>\n\n<h1>the ledger</h1>",
+      reqs: [
+        R("a /* */ comment with ink budget", /\/\*[\s\S]*ink\s+budget[\s\S]*\*\//i),
+        R("the h1 rule still works", /h1\s*\{[^}]*color\s*:\s*sienna\s*;?[^}]*\}/i)
+      ],
+      hint: "/* ink budget */\nh1 { color: sienna; }"
+    }
+  ]
+},
+/* ---------------- SELECTORS II ---------------- */
+{
+  id: "selectors2",
+  name: "SELECTORS II",
+  drills: [
+    {
+      brief: `<h2>GROUPING</h2>
+<div class="teach">One rule for several selectors? Separate them with commas — the style hits all of them:</div>
+<div class="ex">h1, h2 { color: navy; }</div>
+<p><em>Task:</em> with one rule, make both <code>h1</code> and <code>h2</code> the color <code>sienna</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>book of hours</h1>\n<h2>morning prayers</h2>\n<p>the bell rings at dawn.</p>",
+      reqs: [
+        R("one grouped rule: h1, h2", /h1\s*,\s*h2\s*\{[^}]*\}/i),
+        R("grouped rule sets color sienna", /h1\s*,\s*h2\s*\{[^}]*color\s*:\s*sienna\s*;?[^}]*\}/i)
+      ],
+      hint: "h1, h2 { color: sienna; }"
+    },
+    {
+      brief: `<h2>DESCENDANT SELECTORS</h2>
+<div class="teach">A space between selectors means "inside": <code>nav a</code> selects links <b>inside</b> a nav — and leaves every other link alone. That's how you style a menu without touching the rest of the page.</div>
+<p><em>Task:</em> the page has links in the nav and one in the paragraph. Write a rule so only <code>nav a</code> gets <code>color: maroon;</code>. Check the preview: the paragraph link must keep its default blue.</p>`,
+      starter: "<style>\n\n</style>\n\n<nav>\n  <a href=\"#\">hall</a>\n  <a href=\"#\">stables</a>\n</nav>\n<p>read <a href=\"#\">the notice</a> by the gate.</p>",
+      reqs: [
+        R("rule targets nav a", /nav\s+a\s*\{[^}]*\}/i),
+        R("nav a color maroon", /nav\s+a\s*\{[^}]*color\s*:\s*maroon\s*;?[^}]*\}/i)
+      ],
+      hint: "nav a { color: maroon; }"
+    },
+    {
+      brief: `<h2>HOVER</h2>
+<div class="teach">A <b>pseudo-class</b> styles an element in a certain state. <code>:hover</code> applies while the mouse is over it:</div>
+<div class="ex">a:hover { color: gold; }</div>
+<p><em>Task:</em> make links turn <code>goldenrod</code> on hover. Then actually hover them in the preview — your first interactive style.</p>`,
+      starter: "<style>\n\n</style>\n\n<nav>\n  <a href=\"#\">hall</a>\n  <a href=\"#\">stables</a>\n  <a href=\"#\">armory</a>\n</nav>",
+      reqs: [
+        R("uses a:hover", /a\s*:\s*hover\s*\{[^}]*\}/i),
+        R("hover color goldenrod", /a\s*:\s*hover\s*\{[^}]*color\s*:\s*goldenrod\s*;?[^}]*\}/i)
+      ],
+      hint: "a:hover { color: goldenrod; }"
+    },
+    {
+      brief: `<h2>TAG + CLASS</h2>
+<div class="teach">Glue a tag and class together with no space — <code>p.note</code> means "paragraphs that have class note" — stricter than <code>.note</code> alone.</div>
+<p><em>Task:</em> write a rule so <code>p.note</code> is <code>font-style: italic;</code> and <code>color: gray;</code>. The div with the same class must stay unstyled (that's the point).</p>`,
+      starter: "<style>\n\n</style>\n\n<p class=\"note\">scribbled in the margin.</p>\n<div class=\"note\">this div also claims to be a note.</div>",
+      reqs: [
+        R("rule targets p.note", /p\.note\s*\{[^}]*\}/i),
+        R("font-style italic", /p\.note\s*\{[^}]*font-style\s*:\s*italic\s*;?[^}]*\}/i),
+        R("color gray", /p\.note\s*\{[^}]*color\s*:\s*gray\s*;?[^}]*\}/i)
+      ],
+      hint: "p.note { font-style: italic; color: gray; }"
+    }
+  ]
+},
+{
+  id: "cascade",
+  name: "THE CASCADE",
+  drills: [
+    {
+      brief: `<h2>INHERITANCE</h2>
+<div class="teach">The C in CSS is <b>Cascading</b>: styles flow downward. Text properties (color, font) set on a parent are <b>inherited</b> by every child — so one rule on <code>body</code> can style the whole page. (Box properties like border and padding do NOT inherit — imagine every element sprouting a border.)</div>
+<p><em>Task:</em> make BOTH the heading and the paragraph <code>seagreen</code> — but you may only write ONE rule, on <code>body</code>. No h1 rule, no p rule. Let inheritance do the work.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>the family tree</h1>\n<p>what the parent has, the children receive.</p>",
+      reqs: [
+        R("body color: seagreen", /body\s*\{[^}]*color\s*:\s*seagreen\s*;?[^}]*\}/i),
+        Rf("no color rule on h1", c => !/h1\s*\{[^}]*color/i.test(c)),
+        Rf("no color rule on p", c => !/(?<![\w.#-])p\s*\{[^}]*color/i.test(c))
+      ],
+      hint: "body { color: seagreen; }   ← that's the whole answer"
+    },
+    {
+      brief: `<h2>SPECIFICITY</h2>
+<div class="teach">When two rules disagree, the more <b>specific</b> selector wins. A class beats a plain tag — regardless of where each rule sits in the file:</div>
+<div class="ex">p       { color: gray; }      weight: 1
+.vital  { color: crimson; }   weight: 10  ← wins
+#unique { ... }               weight: 100</div>
+<p><em>Task:</em> all paragraphs are gray. Give the second one the class <code>vital</code> and write a <code>.vital</code> rule with <code>color: crimson;</code>. Keep the gray p rule — watch the class outrank it.</p>`,
+      starter: "<style>\np { color: gray; }\n</style>\n\n<p>routine notice.</p>\n<p>the king rides at dawn.</p>",
+      reqs: [
+        R("the p { color: gray; } rule survives", /(?<![\w.#-])p\s*\{[^}]*color\s*:\s*gray\s*;?[^}]*\}/i),
+        R('second p has class="vital"', /<p\s+class\s*=\s*["']vital["']\s*>/i),
+        R(".vital color: crimson", /\.vital\s*\{[^}]*color\s*:\s*crimson\s*;?[^}]*\}/i)
+      ],
+      hint: '<p class="vital">the king rides at dawn.</p>\n.vital { color: crimson; }'
+    },
+    {
+      brief: `<h2>LAST RULE WINS</h2>
+<div class="teach">And when two rules are <b>equally</b> specific? The one written <b>later</b> in the file wins. This is why the order of your CSS matters — and why a stray rule at the bottom can mysteriously override everything above it.</div>
+<p><em>Task:</em> the h1 is gray. Don't touch that rule — add a SECOND <code>h1</code> rule below it with <code>color: teal;</code>. Same specificity, later position: teal wins.</p>`,
+      starter: "<style>\nh1 { color: gray; }\n</style>\n\n<h1>the tiebreaker</h1>",
+      reqs: [
+        R("a rule sets h1 to teal", /h1\s*\{[^}]*color\s*:\s*teal\s*;?[^}]*\}/i),
+        Rf("gray rule first, teal rule after it", c => {
+          const rules = [...c.matchAll(/h1\s*\{[^}]*\}/gi)];
+          if (rules.length < 2) return false;
+          return /color\s*:\s*gray/i.test(rules[0][0]) &&
+                 rules.slice(1).some(r => /color\s*:\s*teal/i.test(r[0]));
+        })
+      ],
+      hint: "h1 { color: gray; }\nh1 { color: teal; }   ← added below, so it wins"
+    }
+  ]
+},
+/* ---------------- COLORS ---------------- */
+{
+  id: "colors",
+  name: "COLORS",
+  drills: [
+    {
+      brief: `<h2>HEX CODES</h2>
+<div class="teach">Named colors run out fast. A <b>hex code</b> mixes red, green and blue in pairs: <code>#RRGGBB</code>.<br><br>
+"Hex" is <b>hexadecimal</b> — counting in base 16. After 9, the digits keep going as letters: <code>0 1 2 3 4 5 6 7 8 9 a b c d e f</code>. So each two-character pair runs from <code>00</code> (0, none) to <code>ff</code> (255, full) — the same 0–255 you'll meet in rgb(), just written compactly. <code>#8b0000</code> = red 8b (139), green 00, blue 00: dark red.</div>
+<div class="ex">#8b0000   dark red   (8b red, 00 green, 00 blue)
+#ffffff   white      (everything full)
+#000000   black      (everything off)</div>
+<p><em>Task:</em> make the h1 exactly <code>#8b0000</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>the crimson banner</h1>",
+      reqs: [
+        R("h1 color is #8b0000", /h1\s*\{[^}]*color\s*:\s*#8b0000\s*;?[^}]*\}/i)
+      ],
+      hint: "h1 { color: #8b0000; }"
+    },
+    {
+      brief: `<h2>RGB</h2>
+<div class="teach">The same mix can be written in decimal: <code>rgb(red, green, blue)</code>, each channel 0–255. Same colors, different notation — pick whichever reads better to you.</div>
+<p><em>Task:</em> make <code>p</code> the color <code>rgb(70, 40, 20)</code> — a scribe's walnut ink.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>this entry written in walnut ink, by candlelight.</p>",
+      reqs: [
+        R("p color rgb(70, 40, 20)", /p\s*\{[^}]*color\s*:\s*rgb\(\s*70\s*,\s*40\s*,\s*20\s*\)\s*;?[^}]*\}/i)
+      ],
+      hint: "p { color: rgb(70, 40, 20); }"
+    },
+    {
+      brief: `<h2>GRADIENTS</h2>
+<div class="teach">A background doesn't have to be one color. <code>linear-gradient(top-color, bottom-color)</code> fades from one to the other:</div>
+<div class="ex">body { background: linear-gradient(gold, white); }</div>
+<p><em>Task:</em> give <code>body</code> a background of <code>linear-gradient(wheat, white)</code> — parchment fading to daylight.</p>`,
+      starter: "<style>\n\n</style>\n\n<h1>dawn over the valley</h1>\n<p>the mist lifts from the fields.</p>",
+      reqs: [
+        R("body has a linear-gradient", /body\s*\{[^}]*background[^:}]*:\s*linear-gradient\([^)]*\)\s*;?[^}]*\}/i),
+        R("gradient runs wheat → white", /linear-gradient\(\s*wheat\s*,\s*white\s*\)/i)
+      ],
+      hint: "body { background: linear-gradient(wheat, white); }"
+    },
+    {
+      brief: `<h2>BANNER COLORS</h2>
+<div class="teach">Foreground and background are chosen <b>together</b> — contrast is what makes text readable. Dark on light, or light on dark.</div>
+<p><em>Task:</em> style <code>.banner</code> with <code>background: darkred;</code> and <code>color: ivory;</code> — pale letters on a dark standard.</p>`,
+      starter: "<style>\n\n</style>\n\n<div class=\"banner\">house kaatje</div>\n<p>the banner flies over the keep.</p>",
+      reqs: [
+        R(".banner background darkred", /\.banner\s*\{[^}]*background(?:-color)?\s*:\s*darkred\s*;?[^}]*\}/i),
+        R(".banner color ivory", /\.banner\s*\{[^}]*color\s*:\s*ivory\s*;?[^}]*\}/i)
+      ],
+      hint: ".banner { background: darkred; color: ivory; }"
+    }
+  ]
+},
+{
+  id: "units",
+  name: "UNITS",
+  drills: [
+    {
+      brief: `<h2>PERCENT</h2>
+<div class="teach">First, what have we been using? A <b>pixel</b> (<code>px</code>) is one dot of the screen — the smallest unit, absolute and fixed: <code>80px</code> is 80 dots whether the window is huge or tiny.<br><br>
+<code>%</code> is the opposite — relative to the <b>parent</b>: <code>width: 50%</code> means "half of whatever contains me." Resize the window and it follows.</div>
+<p><em>Task:</em> give <code>.bar</code> a <code>width</code> of <code>50%</code>. Then drag your browser window narrower and wider — the bar keeps its ratio.</p>`,
+      starter: "<style>\n.bar {\n  background: seagreen;\n  color: white;\n  padding: 10px;\n}\n</style>\n\n<div class=\"bar\">half of my parent</div>",
+      reqs: [
+        R(".bar width: 50%", /\.bar\s*\{[^}]*width\s*:\s*50%\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .bar:  width: 50%;"
+    },
+    {
+      brief: `<h2>EM</h2>
+<div class="teach"><code>em</code> sizes relative to the <b>inherited font size</b>: <code>font-size: 1.5em</code> means "1.5 × whatever I would have been." Change the base, and everything in em scales with it. (Its cousin <code>rem</code> works the same but always measures against the page root — steadier for big layouts.)</div>
+<p><em>Task:</em> give <code>.lead</code> a <code>font-size</code> of <code>1.5em</code> — a larger opening line that scales with the page.</p>`,
+      starter: "<style>\n\n</style>\n\n<p class=\"lead\">hear ye, hear ye.</p>\n<p>regular proclamations continue below.</p>",
+      reqs: [
+        R(".lead font-size: 1.5em", /\.lead\s*\{[^}]*font-size\s*:\s*1\.5em\s*;?[^}]*\}/i)
+      ],
+      hint: ".lead { font-size: 1.5em; }"
+    },
+    {
+      brief: `<h2>VIEWPORT UNITS</h2>
+<div class="teach"><code>vh</code> and <code>vw</code> measure the browser window itself: <code>1vh</code> = 1% of the window's height. <code>height: 100vh</code> = exactly one full screen — how every hero banner on the modern web is made.</div>
+<p><em>Task:</em> give <code>.hero</code> a <code>height</code> of <code>50vh</code> — half the window, whatever size the window is.</p>`,
+      starter: "<style>\n.hero {\n  background: linear-gradient(wheat, white);\n  display: flex;\n  align-items: center;\n  justify-content: center;\n}\n</style>\n\n<div class=\"hero\">\n  <h1>the summer fair</h1>\n</div>\n<p>scroll on for the full program.</p>",
+      reqs: [
+        R(".hero height: 50vh", /\.hero\s*\{[^}]*height\s*:\s*50vh\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .hero:  height: 50vh;"
+    }
+  ]
+},
+/* ---------------- BOX MODEL ---------------- */
+{
+  id: "boxmodel",
+  name: "BOX MODEL",
+  drills: [
+    {
+      brief: `<h2>EVERYTHING IS A BOX</h2>
+<div class="teach">Every element is a rectangle with four layers, inside out:</div>
+<div class="ex">┌─ margin ────────────┐  space OUTSIDE
+│ ┌─ border ────────┐ │  the visible edge
+│ │ ┌─ padding ───┐ │ │  space INSIDE
+│ │ │   content   │ │ │  your text
+│ │ └─────────────┘ │ │
+│ └─────────────────┘ │
+└─────────────────────┘</div>
+<p><em>Task:</em> the <code>.crate</code> div is drafted. Give it a <code>border</code> of <code>2px solid saddlebrown</code> and a <code>background</code> of <code>wheat</code>. Watch a box appear.</p>`,
+      starter: "<style>\n.crate {\n\n}\n</style>\n\n<div class=\"crate\">supply crate</div>",
+      reqs: [
+        R("border: 2px solid saddlebrown", /\.crate\s*\{[^}]*border\s*:\s*2px\s+solid\s+saddlebrown\s*;?[^}]*\}/i),
+        R("background: wheat", /\.crate\s*\{[^}]*background(?:-color)?\s*:\s*wheat\s*;?[^}]*\}/i)
+      ],
+      hint: ".crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n}"
+    },
+    {
+      brief: `<h2>PADDING</h2>
+<div class="teach">Padding pushes the content away from the border — breathing room <b>inside</b> the box. The text in your crate is hugging the edge. Cramped cargo.</div>
+<p><em>Task:</em> add <code>padding: 20px;</code> to <code>.crate</code>. Watch the text step back from the border.</p>`,
+      starter: "<style>\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n}\n</style>\n\n<div class=\"crate\">supply crate</div>",
+      reqs: [
+        R("padding: 20px on .crate", /\.crate\s*\{[^}]*padding\s*:\s*20px\s*;?[^}]*\}/i),
+        R("border still present", /\.crate\s*\{[^}]*border\s*:[^}]*\}/i)
+      ],
+      hint: "add inside .crate:  padding: 20px;"
+    },
+    {
+      brief: `<h2>MARGIN</h2>
+<div class="teach">Margin is space <b>outside</b> the border — it pushes other elements away. Two crates with no margin sit stacked flush; margin separates them.</div>
+<p><em>Task:</em> two crates are drafted, touching. Give <code>.crate</code> a <code>margin</code> of <code>16px</code> so they separate from each other and the page edge.</p>`,
+      starter: "<style>\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n}\n</style>\n\n<div class=\"crate\">crate one</div>\n<div class=\"crate\">crate two</div>",
+      reqs: [
+        R("margin: 16px on .crate", /\.crate\s*\{[^}]*margin\s*:\s*16px\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .crate:  margin: 16px;"
+    },
+    {
+      brief: `<h2>WIDTH & ROUNDING</h2>
+<div class="teach">Boxes stretch full-width by default. <code>width</code> constrains them; <code>border-radius</code> rounds the corners.</div>
+<p><em>Task:</em> give <code>.crate</code> a <code>width</code> of <code>200px</code> and a <code>border-radius</code> of <code>8px</code>.</p>`,
+      starter: "<style>\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n  margin: 16px;\n}\n</style>\n\n<div class=\"crate\">crate one</div>\n<div class=\"crate\">crate two</div>",
+      reqs: [
+        R("width: 200px", /\.crate\s*\{[^}]*width\s*:\s*200px\s*;?[^}]*\}/i),
+        R("border-radius: 8px", /\.crate\s*\{[^}]*border-radius\s*:\s*8px\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .crate:\n  width: 200px;\n  border-radius: 8px;"
+    },
+    {
+      brief: `<h2>SHADOWS</h2>
+<div class="teach"><code>box-shadow</code> lifts a box off the page: <code>box-shadow: right down blur color;</code></div>
+<div class="ex">box-shadow: 4px 4px 8px gray;
+            │   │   │   └ color
+            │   │   └ blur softness
+            │   └ down offset
+            └ right offset</div>
+<p><em>Task:</em> add <code>box-shadow: 4px 4px 8px gray;</code> to <code>.crate</code>. Suddenly: depth.</p>`,
+      starter: "<style>\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n  margin: 16px;\n  width: 200px;\n  border-radius: 8px;\n}\n</style>\n\n<div class=\"crate\">crate one</div>\n<div class=\"crate\">crate two</div>",
+      reqs: [
+        R("box-shadow: 4px 4px 8px gray", /\.crate\s*\{[^}]*box-shadow\s*:\s*4px\s+4px\s+8px\s+gray\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .crate:  box-shadow: 4px 4px 8px gray;"
+    }
+  ]
+},
+{
+  id: "shapes",
+  name: "SHAPES",
+  drills: [
+    {
+      brief: `<h2>THE CIRCLE</h2>
+<div class="teach">CSS has no circle tag — you forge one from a square: equal <code>width</code> and <code>height</code>, then <code>border-radius: 50%;</code> rounds every corner all the way to the middle.</div>
+<div class="ex">square + border-radius: 50%  =  circle
+(if width ≠ height you get an ellipse — also useful)</div>
+<p><em>Task:</em> mint a coin: give <code>.coin</code> a <code>width</code> and <code>height</code> of <code>80px</code> and <code>border-radius: 50%;</code>.</p>`,
+      starter: "<style>\n.coin {\n  background: goldenrod;\n}\n</style>\n\n<div class=\"coin\"></div>",
+      reqs: [
+        R("width and height both 80px", /\.coin\s*\{(?=[^}]*width\s*:\s*80px)(?=[^}]*height\s*:\s*80px)[^}]*\}/i),
+        R("border-radius: 50%", /\.coin\s*\{[^}]*border-radius\s*:\s*50%\s*;?[^}]*\}/i)
+      ],
+      hint: ".coin {\n  width: 80px;\n  height: 80px;\n  border-radius: 50%;\n}"
+    },
+    {
+      brief: `<h2>THE PILL</h2>
+<div class="teach">Give a box a border-radius <b>bigger than half its height</b> and the short ends become perfect half-circles — the pill shape of every modern button and tag. The lazy legendary value: <code>border-radius: 999px;</code>.</div>
+<p><em>Task:</em> shape <code>.tag</code> into a pill: <code>padding: 8px 20px;</code>, <code>border-radius: 999px;</code>, and a <code>background</code> of <code>seagreen</code>.</p>`,
+      starter: "<style>\n.tag {\n  display: inline-block;\n  color: white;\n}\n</style>\n\n<span class=\"tag\">potion of style</span>",
+      reqs: [
+        R("padding: 8px 20px", /\.tag\s*\{[^}]*padding\s*:\s*8px\s+20px\s*;?[^}]*\}/i),
+        R("border-radius: 999px", /\.tag\s*\{[^}]*border-radius\s*:\s*999px\s*;?[^}]*\}/i),
+        R("background: seagreen", /\.tag\s*\{[^}]*background(?:-color)?\s*:\s*seagreen\s*;?[^}]*\}/i)
+      ],
+      hint: ".tag {\n  padding: 8px 20px;\n  border-radius: 999px;\n  background: seagreen;\n}"
+    },
+    {
+      brief: `<h2>THE TRIANGLE</h2>
+<div class="teach">The oldest trick in the scroll: a box with <b>zero size</b> but thick borders. Where borders meet, they slice diagonally — make three of them invisible and the fourth is a triangle:</div>
+<div class="ex">width: 0;  height: 0;
+border-left:   30px solid transparent;
+border-right:  30px solid transparent;
+border-bottom: 60px solid firebrick;   ← points UP</div>
+<p><em>Task:</em> raise a pennant: apply exactly those five lines to <code>.flag</code>.</p>`,
+      starter: "<style>\n.flag {\n\n}\n</style>\n\n<div class=\"flag\"></div>",
+      reqs: [
+        R("width: 0 and height: 0", /\.flag\s*\{(?=[^}]*width\s*:\s*0)(?=[^}]*height\s*:\s*0)[^}]*\}/i),
+        R("left and right borders transparent (30px)", /\.flag\s*\{(?=[^}]*border-left\s*:\s*30px\s+solid\s+transparent)(?=[^}]*border-right\s*:\s*30px\s+solid\s+transparent)[^}]*\}/i),
+        R("border-bottom: 60px solid firebrick", /\.flag\s*\{[^}]*border-bottom\s*:\s*60px\s+solid\s+firebrick\s*;?[^}]*\}/i)
+      ],
+      hint: ".flag {\n  width: 0;\n  height: 0;\n  border-left: 30px solid transparent;\n  border-right: 30px solid transparent;\n  border-bottom: 60px solid firebrick;\n}"
+    },
+    {
+      brief: `<h2>THE DIAMOND</h2>
+<div class="teach">Some shapes are just other shapes, rotated. A square turned 45° is a diamond — <code>transform: rotate(45deg);</code> and done. (You met transform in MOTION; here it sculpts.)</div>
+<p><em>Task:</em> cut a gem: <code>.gem</code> with <code>width</code> and <code>height</code> of <code>60px</code>, <code>background: teal;</code>, and <code>transform: rotate(45deg);</code>.</p>`,
+      starter: "<style>\n.gem {\n  margin: 30px;\n}\n</style>\n\n<div class=\"gem\"></div>",
+      reqs: [
+        R("width and height 60px", /\.gem\s*\{(?=[^}]*width\s*:\s*60px)(?=[^}]*height\s*:\s*60px)[^}]*\}/i),
+        R("background: teal", /\.gem\s*\{[^}]*background(?:-color)?\s*:\s*teal\s*;?[^}]*\}/i),
+        R("transform: rotate(45deg)", /\.gem\s*\{[^}]*transform\s*:\s*rotate\(\s*45deg\s*\)\s*;?[^}]*\}/i)
+      ],
+      hint: ".gem {\n  width: 60px;\n  height: 60px;\n  background: teal;\n  transform: rotate(45deg);\n}"
+    },
+    {
+      brief: `<h2>CORNER BY CORNER</h2>
+<div class="teach"><code>border-radius</code> secretly takes FOUR values — one per corner, clockwise from top-left:</div>
+<div class="ex">border-radius: 50% 50% 0 0;
+               ↑TL  ↑TR ↑BR ↑BL   =  a dome</div>
+<p><em>Task:</em> raise a dome: <code>.dome</code> with <code>width: 100px;</code>, <code>height: 50px;</code>, <code>background: sienna;</code> and <code>border-radius: 50% 50% 0 0;</code>. (Mix corners and you can forge leaves, petals, eggs...)</p>`,
+      starter: "<style>\n.dome {\n\n}\n</style>\n\n<div class=\"dome\"></div>",
+      reqs: [
+        R("width 100px, height 50px", /\.dome\s*\{(?=[^}]*width\s*:\s*100px)(?=[^}]*height\s*:\s*50px)[^}]*\}/i),
+        R("background: sienna", /\.dome\s*\{[^}]*background(?:-color)?\s*:\s*sienna\s*;?[^}]*\}/i),
+        R("border-radius: 50% 50% 0 0", /\.dome\s*\{[^}]*border-radius\s*:\s*50%\s+50%\s+0\s+0\s*;?[^}]*\}/i)
+      ],
+      hint: ".dome {\n  width: 100px;\n  height: 50px;\n  background: sienna;\n  border-radius: 50% 50% 0 0;\n}"
+    }
+  ]
+},
+{
+  id: "display",
+  name: "DISPLAY & FLOW",
+  drills: [
+    {
+      brief: `<h2>BLOCK VS INLINE</h2>
+<div class="teach">Every element is born one of two ways:<br><br>
+<b>block</b> — takes the full width, starts a new line (div, p, h1, ul)<br>
+<b>inline</b> — flows inside text, only as wide as its content (span, a, strong)<br><br>
+The <code>display</code> property can override nature.</div>
+<p><em>Task:</em> the three gold tags sit in a row because spans are inline. Set <code>.tag</code> to <code>display: block;</code> and watch each claim its own line — you just turned inline elements into block elements.</p>`,
+      starter: "<style>\n.tag {\n  background: gold;\n  padding: 4px;\n}\n</style>\n\n<span class=\"tag\">honey</span>\n<span class=\"tag\">wax</span>\n<span class=\"tag\">mead</span>",
+      reqs: [
+        R(".tag display: block", /\.tag\s*\{[^}]*display\s*:\s*block\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .tag:  display: block;"
+    },
+    {
+      brief: `<h2>INLINE-BLOCK</h2>
+<div class="teach">Inline elements ignore <code>width</code>, <code>height</code>, and vertical padding — they're text, not boxes. <code>display: inline-block;</code> is the hybrid: flows in a line like text, but accepts box sizing. It's how a humble link becomes a button.</div>
+<p><em>Task:</em> style <code>.button</code> with <code>display: inline-block;</code>, <code>padding: 10px 20px;</code>, <code>background: darkslategray;</code> and <code>color: white;</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>ready to proceed?</p>\n<a href=\"#\" class=\"button\">enter the keep</a>",
+      reqs: [
+        R(".button display: inline-block", /\.button\s*\{[^}]*display\s*:\s*inline-block\s*;?[^}]*\}/i),
+        R("padding: 10px 20px", /\.button\s*\{[^}]*padding\s*:\s*10px\s+20px\s*;?[^}]*\}/i),
+        R("background darkslategray, color white", /\.button\s*\{(?=[^}]*background(?:-color)?\s*:\s*darkslategray)(?=[^}]*color\s*:\s*white)[^}]*\}/i)
+      ],
+      hint: ".button {\n  display: inline-block;\n  padding: 10px 20px;\n  background: darkslategray;\n  color: white;\n}"
+    },
+    {
+      brief: `<h2>DISPLAY: NONE</h2>
+<div class="teach"><code>display: none;</code> removes an element entirely — no space left behind, as if it never existed. (Menus that open and close? JavaScript toggling display between none and block.)</div>
+<p><em>Task:</em> hide the spoiler: set <code>.spoiler</code> to <code>display: none;</code>. The paragraphs above and below close ranks.</p>`,
+      starter: "<style>\n\n</style>\n\n<p>the tale begins.</p>\n<p class=\"spoiler\">the butler did it.</p>\n<p>the tale continues.</p>",
+      reqs: [
+        R(".spoiler display: none", /\.spoiler\s*\{[^}]*display\s*:\s*none\s*;?[^}]*\}/i)
+      ],
+      hint: ".spoiler { display: none; }"
+    },
+    {
+      brief: `<h2>CENTERING A PAGE</h2>
+<div class="teach">The most-used layout pattern on the web: cap the content's width, and split the leftover space evenly left and right:</div>
+<div class="ex">.page {
+  max-width: 300px;   ← never wider than this
+  margin: 0 auto;     ← 0 top/bottom, auto = equal sides
+}</div>
+<p><em>Task:</em> apply exactly that to <code>.page</code>. Resize the window: the column stays centered, and on narrow windows it gracefully shrinks (that's why <code>max-width</code> beats <code>width</code>).</p>`,
+      starter: "<style>\n.page {\n  background: cornsilk;\n  padding: 16px;\n}\n</style>\n\n<div class=\"page\">\n  <h1>the centered column</h1>\n  <p>every article site you have ever read does this.</p>\n</div>",
+      reqs: [
+        R(".page max-width: 300px", /\.page\s*\{[^}]*max-width\s*:\s*300px\s*;?[^}]*\}/i),
+        R(".page margin: 0 auto", /\.page\s*\{[^}]*margin\s*:\s*0\s+auto\s*;?[^}]*\}/i)
+      ],
+      hint: ".page {\n  max-width: 300px;\n  margin: 0 auto;\n}"
+    }
+  ]
+},
+/* ---------------- FLEXBOX ---------------- */
+{
+  id: "layout",
+  name: "FLEXBOX",
+  drills: [
+    {
+      brief: `<h2>DISPLAY: FLEX</h2>
+<div class="teach">By default, divs stack vertically. Set <code>display: flex;</code> on a <b>parent</b> and its children line up in a row instead. The parent directs; the children obey.</div>
+<p><em>Task:</em> three crates are stacked. Add <code>display: flex;</code> to <code>.row</code> and watch them snap into a row.</p>`,
+      starter: "<style>\n.row {\n\n}\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n}\n</style>\n\n<div class=\"row\">\n  <div class=\"crate\">a</div>\n  <div class=\"crate\">b</div>\n  <div class=\"crate\">c</div>\n</div>",
+      reqs: [
+        R("display: flex on .row", /\.row\s*\{[^}]*display\s*:\s*flex\s*;?[^}]*\}/i)
+      ],
+      hint: ".row { display: flex; }"
+    },
+    {
+      brief: `<h2>GAP</h2>
+<div class="teach">Flex children touch by default. <code>gap</code> puts even spacing between them — set on the parent, no margins needed.</div>
+<p><em>Task:</em> add <code>gap: 12px;</code> to <code>.row</code>.</p>`,
+      starter: "<style>\n.row {\n  display: flex;\n}\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n}\n</style>\n\n<div class=\"row\">\n  <div class=\"crate\">a</div>\n  <div class=\"crate\">b</div>\n  <div class=\"crate\">c</div>\n</div>",
+      reqs: [
+        R("gap: 12px on .row", /\.row\s*\{[^}]*gap\s*:\s*12px\s*;?[^}]*\}/i),
+        R("display: flex still set", /\.row\s*\{[^}]*display\s*:\s*flex\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .row:  gap: 12px;"
+    },
+    {
+      brief: `<h2>JUSTIFY & ALIGN</h2>
+<div class="teach">Two properties position flex children inside the parent:<br><br>
+<code>justify-content</code> — along the row (left / center / right / spread)<br>
+<code>align-items</code> — across the row (top / center / bottom)</div>
+<p><em>Task:</em> the <code>.row</code> now has a fixed height. Center the crates both ways: <code>justify-content: center;</code> and <code>align-items: center;</code>.</p>`,
+      starter: "<style>\n.row {\n  display: flex;\n  gap: 12px;\n  height: 220px;\n  border: 1px dashed gray;\n}\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n}\n</style>\n\n<div class=\"row\">\n  <div class=\"crate\">a</div>\n  <div class=\"crate\">b</div>\n  <div class=\"crate\">c</div>\n</div>",
+      reqs: [
+        R("justify-content: center", /\.row\s*\{[^}]*justify-content\s*:\s*center\s*;?[^}]*\}/i),
+        R("align-items: center", /\.row\s*\{[^}]*align-items\s*:\s*center\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .row:\n  justify-content: center;\n  align-items: center;"
+    },
+    {
+      brief: `<h2>DIRECTION</h2>
+<div class="teach">Flex defaults to a row, but <code>flex-direction: column;</code> stacks children vertically — with all the same centering and gap powers. Most page layouts are just rows and columns of flex boxes, nested.</div>
+<p><em>Task:</em> add <code>flex-direction: column;</code> to <code>.row</code>. Note how justify-content now works vertically — the axes swap.</p>`,
+      starter: "<style>\n.row {\n  display: flex;\n  gap: 12px;\n  height: 260px;\n  border: 1px dashed gray;\n  justify-content: center;\n  align-items: center;\n}\n.crate {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n}\n</style>\n\n<div class=\"row\">\n  <div class=\"crate\">a</div>\n  <div class=\"crate\">b</div>\n  <div class=\"crate\">c</div>\n</div>",
+      reqs: [
+        R("flex-direction: column", /\.row\s*\{[^}]*flex-direction\s*:\s*column\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .row:  flex-direction: column;"
+    }
+  ]
+},
+{
+  id: "grid",
+  name: "GRID",
+  drills: [
+    {
+      brief: `<h2>DISPLAY: GRID</h2>
+<div class="teach">Flexbox lays out a <b>line</b>. CSS Grid lays out a <b>grid</b> — rows AND columns at once. Declare the columns on the parent and children fill the cells automatically:</div>
+<div class="ex">.gallery {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+}
+        ↑ three columns, 1 fraction each = equal thirds</div>
+<p><em>Task:</em> six tiles are stacked. Give <code>.gallery</code> <code>display: grid;</code> and <code>grid-template-columns: 1fr 1fr 1fr;</code> — a 3×2 grid appears.</p>`,
+      starter: "<style>\n.gallery {\n\n}\n.tile {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 24px;\n  text-align: center;\n}\n</style>\n\n<div class=\"gallery\">\n  <div class=\"tile\">1</div>\n  <div class=\"tile\">2</div>\n  <div class=\"tile\">3</div>\n  <div class=\"tile\">4</div>\n  <div class=\"tile\">5</div>\n  <div class=\"tile\">6</div>\n</div>",
+      reqs: [
+        R("display: grid on .gallery", /\.gallery\s*\{[^}]*display\s*:\s*grid\s*;?[^}]*\}/i),
+        R("grid-template-columns: 1fr 1fr 1fr", /\.gallery\s*\{[^}]*grid-template-columns\s*:\s*1fr\s+1fr\s+1fr\s*;?[^}]*\}/i)
+      ],
+      hint: ".gallery {\n  display: grid;\n  grid-template-columns: 1fr 1fr 1fr;\n}"
+    },
+    {
+      brief: `<h2>FRACTIONS & GAP</h2>
+<div class="teach"><code>fr</code> units are ratios: <code>1fr 2fr</code> means the second column gets twice the space of the first. And <code>gap</code> works exactly as it did in flexbox.</div>
+<p><em>Task:</em> reshape the gallery: <code>grid-template-columns: 1fr 2fr;</code> and <code>gap: 10px;</code> — a sidebar-and-content shape.</p>`,
+      starter: "<style>\n.gallery {\n  display: grid;\n  grid-template-columns: 1fr 1fr 1fr;\n}\n.tile {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 24px;\n  text-align: center;\n}\n</style>\n\n<div class=\"gallery\">\n  <div class=\"tile\">1</div>\n  <div class=\"tile\">2</div>\n  <div class=\"tile\">3</div>\n  <div class=\"tile\">4</div>\n</div>",
+      reqs: [
+        R("grid-template-columns: 1fr 2fr", /\.gallery\s*\{[^}]*grid-template-columns\s*:\s*1fr\s+2fr\s*;?[^}]*\}/i),
+        R("gap: 10px", /\.gallery\s*\{[^}]*gap\s*:\s*10px\s*;?[^}]*\}/i)
+      ],
+      hint: "grid-template-columns: 1fr 2fr;\ngap: 10px;"
+    },
+    {
+      brief: `<h2>SPANNING CELLS</h2>
+<div class="teach">A child can claim more than one cell: <code>grid-column: span 2;</code> stretches it across two columns — headers, feature tiles, banners.</div>
+<p><em>Task:</em> make <code>.feature</code> span both columns with <code>grid-column: span 2;</code>.</p>`,
+      starter: "<style>\n.gallery {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 10px;\n}\n.tile {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 24px;\n  text-align: center;\n}\n</style>\n\n<div class=\"gallery\">\n  <div class=\"tile feature\">grand hall</div>\n  <div class=\"tile\">kitchen</div>\n  <div class=\"tile\">cellar</div>\n</div>",
+      reqs: [
+        R(".feature grid-column: span 2", /\.feature\s*\{[^}]*grid-column\s*:\s*span\s+2\s*;?[^}]*\}/i)
+      ],
+      hint: ".feature { grid-column: span 2; }"
+    }
+  ]
+},
+{
+  id: "columns",
+  name: "COLUMNS",
+  drills: [
+    {
+      brief: `<h2>NEWSPAPER COLUMNS</h2>
+<div class="teach">For flowing TEXT in columns (not layout boxes), CSS has a dedicated tool: <code>column-count</code> splits a block of text and pours it across columns automatically, top to bottom then across.</div>
+<p><em>Task:</em> set the manuscript in two columns: give <code>.scroll</code> a <code>column-count</code> of <code>2</code> and a <code>column-gap</code> of <code>24px</code>.</p>`,
+      starter: "<style>\n.scroll {\n\n}\n</style>\n\n<div class=\"scroll\">\n  <p>in the third year of the long peace, the guild of scribes took census of every quill in the realm. the count lasted a full winter, for the quills would not stay still.</p>\n  <p>it was decided, at length, that the counting itself was the point, and the number was declared to be plenty.</p>\n</div>",
+      reqs: [
+        R("column-count: 2", /\.scroll\s*\{[^}]*column-count\s*:\s*2\s*;?[^}]*\}/i),
+        R("column-gap: 24px", /\.scroll\s*\{[^}]*column-gap\s*:\s*24px\s*;?[^}]*\}/i)
+      ],
+      hint: ".scroll {\n  column-count: 2;\n  column-gap: 24px;\n}"
+    },
+    {
+      brief: `<h2>THE COLUMN RULE</h2>
+<div class="teach">A vertical line between text columns is drawn with <code>column-rule</code> — same syntax as border: <code>width style color</code>.</div>
+<p><em>Task:</em> add <code>column-rule: 1px solid sienna;</code> to <code>.scroll</code> — an illuminated manuscript divider.</p>`,
+      starter: "<style>\n.scroll {\n  column-count: 2;\n  column-gap: 24px;\n}\n</style>\n\n<div class=\"scroll\">\n  <p>in the third year of the long peace, the guild of scribes took census of every quill in the realm. the count lasted a full winter, for the quills would not stay still.</p>\n  <p>it was decided, at length, that the counting itself was the point, and the number was declared to be plenty.</p>\n</div>",
+      reqs: [
+        R("column-rule: 1px solid sienna", /\.scroll\s*\{[^}]*column-rule\s*:\s*1px\s+solid\s+sienna\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside .scroll:  column-rule: 1px solid sienna;"
+    },
+    {
+      brief: `<h2>SIDEBAR + CONTENT</h2>
+<div class="teach">For layout columns (boxes, not flowing text), flex has one more spell: <code>flex: 1;</code> on a child means "take all remaining space." Fixed sidebar + stretchy content = the shape of most apps — including this very lab.</div>
+<div class="ex">.layout  { display: flex; }
+.side    { width: 120px; }   ← fixed
+.content { flex: 1; }        ← everything else</div>
+<p><em>Task:</em> build exactly that: <code>.layout</code> display flex, <code>.side</code> width 120px, <code>.content</code> flex: 1.</p>`,
+      starter: "<style>\n.layout {\n\n}\n.side {\n  background: wheat;\n  padding: 12px;\n}\n.content {\n  background: cornsilk;\n  padding: 12px;\n}\n</style>\n\n<div class=\"layout\">\n  <div class=\"side\">menu</div>\n  <div class=\"content\">the great hall of content</div>\n</div>",
+      reqs: [
+        R(".layout display: flex", /\.layout\s*\{[^}]*display\s*:\s*flex\s*;?[^}]*\}/i),
+        R(".side width: 120px", /\.side\s*\{[^}]*width\s*:\s*120px\s*;?[^}]*\}/i),
+        R(".content flex: 1", /\.content\s*\{[^}]*flex\s*:\s*1\s*;?[^}]*\}/i)
+      ],
+      hint: ".layout { display: flex; }\n.side { width: 120px; }\n.content { flex: 1; }"
+    }
+  ]
+},
+{
+  id: "position",
+  name: "POSITION",
+  drills: [
+    {
+      brief: `<h2>RELATIVE</h2>
+<div class="teach">Normally elements sit where the flow puts them. <code>position: relative;</code> lets you nudge one from its natural spot with <code>top</code>, <code>left</code>, <code>right</code>, <code>bottom</code> — without disturbing its neighbors (they still act as if it never moved).</div>
+<p><em>Task:</em> nudge <code>.seal</code>: <code>position: relative;</code>, <code>top: 10px;</code>, <code>left: 20px;</code>.</p>`,
+      starter: "<style>\n.seal {\n  background: firebrick;\n  color: white;\n  padding: 8px;\n  width: 80px;\n  text-align: center;\n}\n</style>\n\n<div class=\"seal\">seal</div>\n<p>the paragraph below pretends nothing moved.</p>",
+      reqs: [
+        R("position: relative", /\.seal\s*\{[^}]*position\s*:\s*relative\s*;?[^}]*\}/i),
+        R("top: 10px and left: 20px", /\.seal\s*\{(?=[^}]*top\s*:\s*10px)(?=[^}]*left\s*:\s*20px)[^}]*\}/i)
+      ],
+      hint: ".seal {\n  position: relative;\n  top: 10px;\n  left: 20px;\n}"
+    },
+    {
+      brief: `<h2>ABSOLUTE</h2>
+<div class="teach"><code>position: absolute;</code> pulls an element out of the flow entirely and pins it to its nearest <b>positioned ancestor</b>. The classic pairing:</div>
+<div class="ex">.poster { position: relative; }  ← the anchor
+.seal   { position: absolute;    ← pinned to it
+          top: 8px; right: 8px; }</div>
+<div class="teach">This is every corner badge, close button, and notification dot on the web.</div>
+<p><em>Task:</em> pin the seal to the poster's top-right corner using exactly that pattern.</p>`,
+      starter: "<style>\n.poster {\n  border: 4px double maroon;\n  padding: 30px;\n  width: 240px;\n  background: wheat;\n}\n.seal {\n  background: firebrick;\n  color: white;\n  padding: 6px;\n}\n</style>\n\n<div class=\"poster\">\n  <div class=\"seal\">royal</div>\n  <h1>decree</h1>\n  <p>by order of the crown.</p>\n</div>",
+      reqs: [
+        R(".poster position: relative", /\.poster\s*\{[^}]*position\s*:\s*relative\s*;?[^}]*\}/i),
+        R(".seal position: absolute", /\.seal\s*\{[^}]*position\s*:\s*absolute\s*;?[^}]*\}/i),
+        R(".seal top: 8px, right: 8px", /\.seal\s*\{(?=[^}]*top\s*:\s*8px)(?=[^}]*right\s*:\s*8px)[^}]*\}/i)
+      ],
+      hint: ".poster { position: relative; ... }\n.seal { position: absolute; top: 8px; right: 8px; ... }"
+    },
+    {
+      brief: `<h2>FIXED</h2>
+<div class="teach"><code>position: fixed;</code> pins an element to the <b>window</b> itself — it stays put while the page scrolls under it. Sticky headers, chat bubbles, cookie banners: all fixed.</div>
+<p><em>Task:</em> pin <code>.banner</code> with <code>position: fixed;</code>, <code>top: 0;</code>, <code>left: 0;</code> and <code>width: 100%;</code>. Then scroll the preview — the banner holds its post.</p>`,
+      starter: "<style>\n.banner {\n  background: darkslategray;\n  color: white;\n  padding: 10px;\n}\n</style>\n\n<div class=\"banner\">⚔ the watch never sleeps</div>\n<p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p><p>scroll me.</p>",
+      reqs: [
+        R("position: fixed", /\.banner\s*\{[^}]*position\s*:\s*fixed\s*;?[^}]*\}/i),
+        R("top: 0 and left: 0", /\.banner\s*\{(?=[^}]*top\s*:\s*0)(?=[^}]*left\s*:\s*0)[^}]*\}/i),
+        R("width: 100%", /\.banner\s*\{[^}]*width\s*:\s*100%\s*;?[^}]*\}/i)
+      ],
+      hint: ".banner {\n  position: fixed;\n  top: 0;\n  left: 0;\n  width: 100%;\n}"
+    }
+  ]
+},
+{
+  id: "motion",
+  name: "MOTION & POLISH",
+  drills: [
+    {
+      brief: `<h2>HOVER STATES</h2>
+<div class="teach">Interactive elements should <b>answer</b> the mouse. Two properties do most of it: a <code>:hover</code> style change, and <code>cursor: pointer;</code> so the arrow becomes a hand.</div>
+<p><em>Task:</em> give <code>button</code> the rule <code>cursor: pointer;</code>, and add a <code>button:hover</code> rule with <code>background: goldenrod;</code>. Hover it in the preview.</p>`,
+      starter: "<style>\nbutton {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 10px 20px;\n}\n</style>\n\n<button>knock on the gate</button>",
+      reqs: [
+        R("button cursor: pointer", /button\s*\{[^}]*cursor\s*:\s*pointer\s*;?[^}]*\}/i),
+        R("button:hover background goldenrod", /button\s*:\s*hover\s*\{[^}]*background(?:-color)?\s*:\s*goldenrod\s*;?[^}]*\}/i)
+      ],
+      hint: "button { cursor: pointer; ... }\nbutton:hover { background: goldenrod; }"
+    },
+    {
+      brief: `<h2>TRANSITIONS</h2>
+<div class="teach">The hover snaps instantly — harsh. <code>transition</code> animates the change: <code>transition: background 0.4s;</code> means "when background changes, glide there over 0.4 seconds." It goes on the element's <b>normal</b> rule, not the hover rule.</div>
+<p><em>Task:</em> add <code>transition: background 0.4s;</code> to the <code>button</code> rule. Hover again — feel the difference.</p>`,
+      starter: "<style>\nbutton {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 10px 20px;\n  cursor: pointer;\n}\nbutton:hover {\n  background: goldenrod;\n}\n</style>\n\n<button>knock on the gate</button>",
+      reqs: [
+        R("transition: background 0.4s on button", /button\s*\{[^}]*transition\s*:\s*background\s+0?\.4s\s*;?[^}]*\}/i)
+      ],
+      hint: "add inside the button rule:  transition: background 0.4s;"
+    },
+    {
+      brief: `<h2>TRANSFORM</h2>
+<div class="teach"><code>transform</code> moves, rotates and scales elements without disturbing the layout around them. Paired with a transition, it makes things feel alive: <code>transform: scale(1.05)</code>, <code>rotate(-3deg)</code>, <code>translateY(-4px)</code>...</div>
+<p><em>Task:</em> make the card lift on hover: add <code>transition: transform 0.3s;</code> to <code>.card</code>, and a <code>.card:hover</code> rule with <code>transform: scale(1.05);</code>.</p>`,
+      starter: "<style>\n.card {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 20px;\n  width: 180px;\n  text-align: center;\n}\n</style>\n\n<div class=\"card\">\n  <h2>the relic</h2>\n  <p>handle with care</p>\n</div>",
+      reqs: [
+        R(".card transition: transform 0.3s", /\.card\s*\{[^}]*transition\s*:\s*transform\s+0?\.3s\s*;?[^}]*\}/i),
+        R(".card:hover transform: scale(1.05)", /\.card\s*:\s*hover\s*\{[^}]*transform\s*:\s*scale\(\s*1\.05\s*\)\s*;?[^}]*\}/i)
+      ],
+      hint: ".card { ... transition: transform 0.3s; }\n.card:hover { transform: scale(1.05); }"
+    }
+  ]
+},
+{
+  id: "responsive",
+  name: "RESPONSIVE",
+  drills: [
+    {
+      brief: `<h2>MEDIA QUERIES</h2>
+<div class="teach">Pages get viewed on phones, tablets, and vast monitors. A <b>media query</b> applies rules only when a condition holds:</div>
+<div class="ex">@media (max-width: 600px) {
+  body { background: cornsilk; }
+}
+↑ "IF the window is 600px or narrower, apply these"</div>
+<div class="teach">(Remember the viewport meta from PAGE SKELETON? THIS is why it exists — without it, phones lie about their width and these queries never fire.)</div>
+<p><em>Task:</em> write exactly that query. The preview pane counts as the window here — drag your browser narrower and wider and watch the background flip at the threshold.</p>`,
+      starter: "<style>\nbody { background: white; }\n</style>\n\n<h1>the shapeshifter</h1>\n<p>resize the window. watch me change.</p>",
+      reqs: [
+        R("@media (max-width: 600px) block", /@media\s*\(\s*max-width\s*:\s*600px\s*\)\s*\{[\s\S]*\}/i),
+        R("inside it, body background cornsilk", /@media\s*\(\s*max-width\s*:\s*600px\s*\)\s*\{[\s\S]*body\s*\{[^}]*background(?:-color)?\s*:\s*cornsilk\s*;?[^}]*\}[\s\S]*\}/i)
+      ],
+      hint: "@media (max-width: 600px) {\n  body { background: cornsilk; }\n}"
+    },
+    {
+      brief: `<h2>RESPONSIVE LAYOUT</h2>
+<div class="teach">The real use: reshaping layout. A row of columns on wide screens becomes a stack on phones — one media query flipping <code>flex-direction</code>.</div>
+<p><em>Task:</em> the <code>.row</code> is a flex row. Add a media query: at <code>max-width: 500px</code>, give <code>.row</code> the rule <code>flex-direction: column;</code>. Resize to watch the columns stack. (This exact pattern fixed OUR lab's layout earlier — now it's yours.)</p>`,
+      starter: "<style>\n.row {\n  display: flex;\n  gap: 12px;\n}\n.crate {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 20px;\n  flex: 1;\n}\n</style>\n\n<div class=\"row\">\n  <div class=\"crate\">hall</div>\n  <div class=\"crate\">stables</div>\n  <div class=\"crate\">armory</div>\n</div>",
+      reqs: [
+        R("@media (max-width: 500px) block", /@media\s*\(\s*max-width\s*:\s*500px\s*\)\s*\{[\s\S]*\}/i),
+        R("inside it, .row flex-direction: column", /@media\s*\(\s*max-width\s*:\s*500px\s*\)\s*\{[\s\S]*\.row\s*\{[^}]*flex-direction\s*:\s*column\s*;?[^}]*\}[\s\S]*\}/i)
+      ],
+      hint: "@media (max-width: 500px) {\n  .row { flex-direction: column; }\n}"
+    }
+  ]
+},
+/* ---------------- TABLES ---------------- */
+{
+  id: "tables",
+  name: "TABLES",
+  drills: [
+    {
+      brief: `<h2>ROWS & CELLS</h2>
+<div class="teach">A table is rows of cells: <code>&lt;table&gt;</code> holds <code>&lt;tr&gt;</code> (table row), each row holds <code>&lt;td&gt;</code> (table data):</div>
+<div class="ex">&lt;table&gt;
+  &lt;tr&gt; &lt;td&gt;ale&lt;/td&gt; &lt;td&gt;2&lt;/td&gt; &lt;/tr&gt;
+&lt;/table&gt;</div>
+<p><em>Task:</em> the tavern ledger. A table with two rows: <code>ale | 2</code> and <code>bread | 1</code> — each row has two <code>&lt;td&gt;</code> cells.</p>`,
+      starter: "",
+      reqs: [
+        R("a <table> exists", /<table>[\s\S]*<\/table>/i),
+        Rf("two <tr> rows", c => (c.match(/<tr>/gi) || []).length >= 2),
+        R("row: ale | 2", /<tr>\s*<td>\s*ale\s*<\/td>\s*<td>\s*2\s*<\/td>\s*<\/tr>/i),
+        R("row: bread | 1", /<tr>\s*<td>\s*bread\s*<\/td>\s*<td>\s*1\s*<\/td>\s*<\/tr>/i)
+      ],
+      hint: "<table>\n  <tr> <td>ale</td> <td>2</td> </tr>\n  <tr> <td>bread</td> <td>1</td> </tr>\n</table>"
+    },
+    {
+      brief: `<h2>HEADER CELLS</h2>
+<div class="teach">The first row usually labels the columns. Use <code>&lt;th&gt;</code> (table header) instead of <code>&lt;td&gt;</code> — it renders bold and centered, and tells machines "this is a column name."</div>
+<p><em>Task:</em> add a header row on top with <code>&lt;th&gt;item&lt;/th&gt;</code> and <code>&lt;th&gt;price&lt;/th&gt;</code>.</p>`,
+      starter: "<table>\n  <tr> <td>ale</td> <td>2</td> </tr>\n  <tr> <td>bread</td> <td>1</td> </tr>\n</table>",
+      reqs: [
+        R("a header row with <th> cells", /<tr>\s*<th>[\s\S]*<\/th>\s*<th>[\s\S]*<\/th>\s*<\/tr>/i),
+        R("headers are item and price", /<th>\s*item\s*<\/th>\s*<th>\s*price\s*<\/th>/i),
+        Rf("data rows still present", c => (c.match(/<td>/gi) || []).length >= 4)
+      ],
+      hint: "<tr> <th>item</th> <th>price</th> </tr>   ← first row inside the table"
+    },
+    {
+      brief: `<h2>TABLE BORDERS</h2>
+<div class="teach">Raw tables are invisible grids. Two moves make them readable: give <code>th, td</code> a border, and set <code>border-collapse: collapse;</code> on the table so neighboring borders merge into single lines instead of doubling up.</div>
+<p><em>Task:</em> style <code>th, td</code> with <code>border: 1px solid sienna;</code> and <code>padding: 6px;</code>, and give <code>table</code> the rule <code>border-collapse: collapse;</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n<table>\n  <tr> <th>item</th> <th>price</th> </tr>\n  <tr> <td>ale</td> <td>2</td> </tr>\n  <tr> <td>bread</td> <td>1</td> </tr>\n</table>",
+      reqs: [
+        R("th, td border 1px solid sienna", /th\s*,\s*td\s*\{[^}]*border\s*:\s*1px\s+solid\s+sienna\s*;?[^}]*\}/i),
+        R("th, td padding 6px", /th\s*,\s*td\s*\{[^}]*padding\s*:\s*6px\s*;?[^}]*\}/i),
+        R("table border-collapse: collapse", /table\s*\{[^}]*border-collapse\s*:\s*collapse\s*;?[^}]*\}/i)
+      ],
+      hint: "th, td { border: 1px solid sienna; padding: 6px; }\ntable { border-collapse: collapse; }"
+    }
+  ]
+},
+/* ---------------- FORMS ---------------- */
+{
+  id: "forms",
+  name: "FORMS",
+  drills: [
+    {
+      brief: `<h2>INPUTS</h2>
+<div class="teach">Forms collect what visitors type. <code>&lt;input&gt;</code> is a self-closing tag (like img). <code>type="text"</code> makes a one-line text box, and <code>placeholder</code> shows ghost text until they type:</div>
+<div class="ex">&lt;input type="text" placeholder="..."&gt;</div>
+<p><em>Task:</em> write a text input with the placeholder <code>your name</code>. Type in it in the preview!</p>`,
+      starter: "",
+      reqs: [
+        R("an <input> exists", /<input\s/i),
+        R('type="text"', /<input[^>]*type\s*=\s*["']text["'][^>]*>/i),
+        R('placeholder="your name"', /<input[^>]*placeholder\s*=\s*["']your\s+name["'][^>]*>/i)
+      ],
+      hint: '<input type="text" placeholder="your name">'
+    },
+    {
+      brief: `<h2>LABELS</h2>
+<div class="teach">Every input deserves a <code>&lt;label&gt;</code> — visible text saying what the field is for. Put the label right before its input.</div>
+<p><em>Task:</em> add a label saying <code>scroll title</code> followed by a text input.</p>`,
+      starter: "",
+      reqs: [
+        R("label says scroll title", /<label[^>]*>\s*scroll\s+title\s*<\/label>/i),
+        R("followed by a text input", /<\/label>[\s\S]*<input[^>]*type\s*=\s*["']text["'][^>]*>/i)
+      ],
+      hint: '<label>scroll title</label>\n<input type="text">'
+    },
+    {
+      brief: `<h2>BUTTONS</h2>
+<div class="teach"><code>&lt;button&gt;</code> makes a clickable button; its text goes between the tags. (What it <b>does</b> when clicked is JavaScript's job — a lab for another day.)</div>
+<p><em>Task:</em> write a button that says <code>send raven</code>, and style <code>button</code> with <code>background: darkslategray;</code> and <code>color: white;</code>.</p>`,
+      starter: "<style>\n\n</style>\n\n",
+      reqs: [
+        R("button says send raven", /<button[^>]*>\s*send\s+raven\s*<\/button>/i),
+        R("button background darkslategray", /button\s*\{[^}]*background(?:-color)?\s*:\s*darkslategray\s*;?[^}]*\}/i),
+        R("button color white", /button\s*\{[^}]*color\s*:\s*white\s*;?[^}]*\}/i)
+      ],
+      hint: "<button>send raven</button>\nbutton { background: darkslategray; color: white; }"
+    },
+    {
+      brief: `<h2>DROPDOWNS</h2>
+<div class="teach">A dropdown is a <code>&lt;select&gt;</code> containing <code>&lt;option&gt;</code> tags — one per choice:</div>
+<div class="ex">&lt;select&gt;
+  &lt;option&gt;first choice&lt;/option&gt;
+  &lt;option&gt;second choice&lt;/option&gt;
+&lt;/select&gt;</div>
+<p><em>Task:</em> a weapon picker: a select with two options, <code>sword</code> and <code>shield</code>. Try it in the preview.</p>`,
+      starter: "",
+      reqs: [
+        R("a <select> exists", /<select[^>]*>[\s\S]*<\/select>/i),
+        R("option sword", /<option[^>]*>\s*sword\s*<\/option>/i),
+        R("option shield", /<option[^>]*>\s*shield\s*<\/option>/i)
+      ],
+      hint: "<select>\n  <option>sword</option>\n  <option>shield</option>\n</select>"
+    }
+  ]
+},
+/* ---------------- FORGE ---------------- */
+{
+  id: "forge",
+  name: "FORGE",
+  drills: [
+    {
+      brief: `<h2>FORGE · PROFILE CARD</h2>
+<div class="teach">No starter code. No ghost letters. Just a spec — like a real commission. Draft from a blank sheet; the checklist reviews as you submit.</div>
+<p><em>Spec:</em> a profile card for the operator.</p>
+<ul style="list-style:none; font-size:12px; color:var(--soft); line-height:2;">
+<li>· a div with class <code>card</code></li>
+<li>· inside it: an h2 saying <code>kaatje</code> and a p saying <code>drone operator</code></li>
+<li>· .card styled with a border, padding, and a width of 220px</li>
+</ul>`,
+      starter: "",
+      reqs: [
+        R('div with class="card"', /<div\s+class\s*=\s*["']card["']\s*>/i),
+        R("h2 kaatje inside the card", /<div[^>]*class\s*=\s*["']card["'][^>]*>[\s\S]*<h2>\s*kaatje\s*<\/h2>[\s\S]*<\/div>/i),
+        R("p drone operator inside the card", /<div[^>]*class\s*=\s*["']card["'][^>]*>[\s\S]*<p>\s*drone\s+operator\s*<\/p>[\s\S]*<\/div>/i),
+        R(".card has a border", /\.card\s*\{[^}]*border\s*:[^}]*\}/i),
+        R(".card has padding", /\.card\s*\{[^}]*padding\s*:[^}]*\}/i),
+        R(".card width is 220px", /\.card\s*\{[^}]*width\s*:\s*220px\s*;?[^}]*\}/i)
+      ],
+      hint: "<style>\n.card { border: 2px solid ___; padding: ___; width: 220px; }\n</style>\n<div class=\"card\">\n  <h2>...</h2>\n  <p>...</p>\n</div>"
+    },
+    {
+      brief: `<h2>FORGE · NAV BAR</h2>
+<p><em>Spec:</em> a horizontal navigation bar.</p>
+<ul style="list-style:none; font-size:12px; color:var(--soft); line-height:2;">
+<li>· a nav element containing three a links: <code>home</code>, <code>fields</code>, <code>hangar</code></li>
+<li>· each link's href can be just <code>#</code></li>
+<li>· nav styled with display: flex and a gap of 20px</li>
+<li>· nav has a background of any color you like</li>
+</ul>`,
+      starter: "",
+      reqs: [
+        R("a <nav> element exists", /<nav[\s>]/i),
+        Rf("three links: home, fields, hangar", c =>
+          /<a[^>]*>\s*home\s*<\/a>/i.test(c) &&
+          /<a[^>]*>\s*fields\s*<\/a>/i.test(c) &&
+          /<a[^>]*>\s*hangar\s*<\/a>/i.test(c)),
+        R("nav is display: flex", /nav\s*\{[^}]*display\s*:\s*flex\s*;?[^}]*\}/i),
+        R("nav gap: 20px", /nav\s*\{[^}]*gap\s*:\s*20px\s*;?[^}]*\}/i),
+        R("nav has a background", /nav\s*\{[^}]*background(?:-color)?\s*:[^}]*\}/i)
+      ],
+      hint: "<style>\nnav { display: flex; gap: 20px; background: ___; }\n</style>\n<nav>\n  <a href=\"#\">home</a>\n  ...\n</nav>"
+    },
+    {
+      brief: `<h2>FORGE · TAVERN MENU</h2>
+<p><em>Spec:</em> the menu board of The Drowsy Dragon.</p>
+<ul style="list-style:none; font-size:12px; color:var(--soft); line-height:2;">
+<li>· an h1 saying <code>the drowsy dragon</code></li>
+<li>· a table with a header row: <code>dish</code> and <code>coin</code> (th cells)</li>
+<li>· at least two data rows of your own invention (td cells)</li>
+<li>· th, td styled with a border and some padding</li>
+<li>· table has border-collapse: collapse</li>
+</ul>`,
+      starter: "",
+      reqs: [
+        R("h1 the drowsy dragon", /<h1>\s*the\s+drowsy\s+dragon\s*<\/h1>/i),
+        R("header row: dish | coin", /<th>\s*dish\s*<\/th>\s*<th>\s*coin\s*<\/th>/i),
+        Rf("at least two data rows (4+ td)", c => (c.match(/<td>/gi) || []).length >= 4),
+        R("th, td have a border", /th\s*,\s*td\s*\{[^}]*border\s*:[^}]*\}/i),
+        R("th, td have padding", /th\s*,\s*td\s*\{[^}]*padding\s*:[^}]*\}/i),
+        R("table border-collapse collapse", /table\s*\{[^}]*border-collapse\s*:\s*collapse\s*;?[^}]*\}/i)
+      ],
+      hint: "<style>\ntable { border-collapse: collapse; }\nth, td { border: 1px solid ___; padding: ___; }\n</style>\n<h1>the drowsy dragon</h1>\n<table>\n  <tr> <th>dish</th> <th>coin</th> </tr>\n  <tr> <td>...</td> <td>...</td> </tr>\n  ...\n</table>"
+    },
+    {
+      brief: `<h2>FORGE · WANTED POSTER</h2>
+<p><em>Spec:</em> a wanted poster, nailed to the gate.</p>
+<ul style="list-style:none; font-size:12px; color:var(--soft); line-height:2;">
+<li>· a div with class <code>poster</code>, width 300px</li>
+<li>· .poster has a border using the <code>double</code> style (e.g. <code>6px double maroon</code>), padding, and text-align: center</li>
+<li>· .poster background: any parchment-ish color</li>
+<li>· inside: an h1 saying <code>wanted</code> and a p mentioning a <code>reward</code></li>
+</ul>`,
+      starter: "",
+      reqs: [
+        R('div class="poster"', /<div\s+class\s*=\s*["']poster["']\s*>/i),
+        R(".poster width 300px", /\.poster\s*\{[^}]*width\s*:\s*300px\s*;?[^}]*\}/i),
+        R(".poster has a double border", /\.poster\s*\{[^}]*border\s*:\s*\d+px\s+double\s+[^;}]+;?[^}]*\}/i),
+        R(".poster has padding", /\.poster\s*\{[^}]*padding\s*:[^}]*\}/i),
+        R(".poster text-align center", /\.poster\s*\{[^}]*text-align\s*:\s*center\s*;?[^}]*\}/i),
+        R(".poster has a background", /\.poster\s*\{[^}]*background(?:-color)?\s*:[^}]*\}/i),
+        R("h1 wanted inside", /<h1>\s*wanted\s*<\/h1>/i),
+        R("a p mentions a reward", /<p>[^<]*reward[^<]*<\/p>/i)
+      ],
+      hint: "<style>\n.poster {\n  width: 300px; border: 6px double maroon; padding: ___;\n  text-align: center; background: ___;\n}\n</style>\n<div class=\"poster\">\n  <h1>wanted</h1>\n  <p>... reward ...</p>\n</div>"
+    },
+    {
+      brief: `<h2>FORGE · JUNIE'S BADGE</h2>
+<div class="teach">Final commission. Everything at once: structure, classes, box model, flexbox.</div>
+<p><em>Spec:</em> a field badge for Junie.</p>
+<ul style="list-style:none; font-size:12px; color:var(--soft); line-height:2;">
+<li>· a div with class <code>badge</code>, width 260px, padding, border, and border-radius</li>
+<li>· inside: an h1 saying <code>JUNIE-01</code> and a p saying <code>verdant platform</code></li>
+<li>· .badge uses display: flex with flex-direction: column and align-items: center</li>
+<li>· .badge background: any color (make it yours)</li>
+</ul>`,
+      starter: "",
+      reqs: [
+        R('div class="badge"', /<div\s+class\s*=\s*["']badge["']\s*>/i),
+        R("h1 JUNIE-01 inside", /<h1>\s*junie-01\s*<\/h1>/i),
+        R("p verdant platform inside", /<p>\s*verdant\s+platform\s*<\/p>/i),
+        R(".badge width 260px", /\.badge\s*\{[^}]*width\s*:\s*260px\s*;?[^}]*\}/i),
+        R(".badge has padding, border, radius", /\.badge\s*\{(?=[^}]*padding\s*:)(?=[^}]*border\s*:)(?=[^}]*border-radius\s*:)[^}]*\}/i),
+        R(".badge flex column, centered", /\.badge\s*\{(?=[^}]*display\s*:\s*flex)(?=[^}]*flex-direction\s*:\s*column)(?=[^}]*align-items\s*:\s*center)[^}]*\}/i),
+        R(".badge has a background", /\.badge\s*\{[^}]*background(?:-color)?\s*:[^}]*\}/i)
+      ],
+      hint: "<style>\n.badge {\n  width: 260px; padding: ___; border: ___; border-radius: ___;\n  display: flex; flex-direction: column; align-items: center;\n  background: ___;\n}\n</style>\n<div class=\"badge\">\n  <h1>JUNIE-01</h1>\n  <p>verdant platform</p>\n</div>"
+      },
+    {
+      brief: `<h2>FORGE · THE VILLAGE HOMEPAGE</h2>
+<div class="teach">The final commission uses the whole chronicle: skeleton, nav, grid, responsiveness. Take your time. This is a real page.</div>
+<p><em>Spec:</em> a homepage for the village.</p>
+<ul style="list-style:none; font-size:12px; color:var(--soft); line-height:2;">
+<li>· a full skeleton: doctype, html, head with a title, body</li>
+<li>· in the body: a nav (display: flex, with a gap) holding three links</li>
+<li>· a main containing an h1 and a p of your choosing</li>
+<li>· a div with class <code>tiles</code>: display grid, grid-template-columns 1fr 1fr 1fr, with a gap, holding three divs of class <code>tile</code></li>
+<li>· .tile styled with a background and padding</li>
+<li>· a footer</li>
+<li>· a media query at max-width 500px making .tiles grid-template-columns: 1fr</li>
+</ul>`,
+      starter: "",
+      reqs: [
+        R("full skeleton (doctype, html, head+title, body)", /<!DOCTYPE\s+html>[\s\S]*<html[\s>][\s\S]*<head>[\s\S]*<title>[\s\S]*<\/title>[\s\S]*<\/head>[\s\S]*<body>[\s\S]*<\/body>[\s\S]*<\/html>/i),
+        Rf("nav with three links", c => /<nav[\s>]/i.test(c) && ((c.match(/<a\s/gi) || []).length >= 3)),
+        R("nav is flex with a gap", /nav\s*\{(?=[^}]*display\s*:\s*flex)(?=[^}]*gap\s*:)[^}]*\}/i),
+        R("main holds an h1 and a p", /<main>[\s\S]*<h1>[\s\S]*<\/h1>[\s\S]*<p>[\s\S]*<\/p>[\s\S]*<\/main>/i),
+        R(".tiles: grid, 3 columns, gap", /\.tiles\s*\{(?=[^}]*display\s*:\s*grid)(?=[^}]*grid-template-columns\s*:\s*1fr\s+1fr\s+1fr)(?=[^}]*gap\s*:)[^}]*\}/i),
+        Rf("three .tile divs", c => (c.match(/class\s*=\s*["']tile["']/gi) || []).length >= 3),
+        R(".tile has background and padding", /\.tile\s*\{(?=[^}]*background(?:-color)?\s*:)(?=[^}]*padding\s*:)[^}]*\}/i),
+        R("a footer exists", /<footer[\s>][\s\S]*<\/footer>/i),
+        R("media query: .tiles → 1fr at 500px", /@media\s*\(\s*max-width\s*:\s*500px\s*\)\s*\{[\s\S]*\.tiles\s*\{[^}]*grid-template-columns\s*:\s*1fr\s*;?[^}]*\}[\s\S]*\}/i)
+      ],
+      hint: "<!DOCTYPE html>\n<html>\n<head>\n  <title>...</title>\n  <style>\n    nav { display: flex; gap: 16px; }\n    .tiles { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }\n    .tile { background: ___; padding: ___; }\n    @media (max-width: 500px) {\n      .tiles { grid-template-columns: 1fr; }\n    }\n  </style>\n</head>\n<body>\n  <nav> 3 links </nav>\n  <main> h1 + p </main>\n  <div class=\"tiles\"> 3 tile divs </div>\n  <footer>...</footer>\n</body>\n</html>"
+      }
+  ]
+}
+];
+
+/* ================= THE TOURNEY ================= */
+/* Match-the-target rounds drawn from skills already taught. */
+const CHALLENGES = [
+  {
+    t: "forge a coin",
+    target: "<style>.x{width:80px;height:80px;background:goldenrod;border-radius:50%;}</style><div class=\"x\"></div>",
+    starter: "<style>\n.coin {\n  background: goldenrod;\n}\n</style>\n\n<div class=\"coin\"></div>",
+    reqs: [
+      R("width & height 80px", /\.coin\s*\{(?=[^}]*width\s*:\s*80px)(?=[^}]*height\s*:\s*80px)[^}]*\}/i),
+      R("border-radius: 50%", /\.coin\s*\{[^}]*border-radius\s*:\s*50%\s*;?[^}]*\}/i)
+    ],
+    hint: "square it (80 × 80), then border-radius: 50%;"
+  },
+  {
+    t: "raise a pennant",
+    target: "<style>.x{width:0;height:0;border-left:30px solid transparent;border-right:30px solid transparent;border-bottom:60px solid firebrick;}</style><div class=\"x\"></div>",
+    starter: "<style>\n.flag {\n\n}\n</style>\n\n<div class=\"flag\"></div>",
+    reqs: [
+      R("width & height 0", /\.flag\s*\{(?=[^}]*width\s*:\s*0)(?=[^}]*height\s*:\s*0)[^}]*\}/i),
+      R("side borders 30px transparent", /\.flag\s*\{(?=[^}]*border-left\s*:\s*30px\s+solid\s+transparent)(?=[^}]*border-right\s*:\s*30px\s+solid\s+transparent)[^}]*\}/i),
+      R("border-bottom 60px solid firebrick", /\.flag\s*\{[^}]*border-bottom\s*:\s*60px\s+solid\s+firebrick\s*;?[^}]*\}/i)
+    ],
+    hint: "the border triangle trick: zero size, transparent sides, solid bottom"
+  },
+  {
+    t: "cut a gem",
+    target: "<style>.x{width:60px;height:60px;background:teal;transform:rotate(45deg);margin:24px;}</style><div class=\"x\"></div>",
+    starter: "<style>\n.gem {\n  margin: 24px;\n}\n</style>\n\n<div class=\"gem\"></div>",
+    reqs: [
+      R("60 × 60, teal", /\.gem\s*\{(?=[^}]*width\s*:\s*60px)(?=[^}]*height\s*:\s*60px)(?=[^}]*background(?:-color)?\s*:\s*teal)[^}]*\}/i),
+      R("rotated 45deg", /\.gem\s*\{[^}]*transform\s*:\s*rotate\(\s*45deg\s*\)\s*;?[^}]*\}/i)
+    ],
+    hint: "a teal square, transform: rotate(45deg);"
+  },
+  {
+    t: "brew a potion tag",
+    target: "<style>.x{display:inline-block;color:white;padding:8px 20px;border-radius:999px;background:seagreen;font-family:Georgia,serif;}</style><span class=\"x\">potion of style</span>",
+    starter: "<style>\n.tag {\n  display: inline-block;\n  color: white;\n}\n</style>\n\n<span class=\"tag\">potion of style</span>",
+    reqs: [
+      R("padding 8px 20px", /\.tag\s*\{[^}]*padding\s*:\s*8px\s+20px\s*;?[^}]*\}/i),
+      R("pill radius 999px", /\.tag\s*\{[^}]*border-radius\s*:\s*999px\s*;?[^}]*\}/i),
+      R("seagreen background", /\.tag\s*\{[^}]*background(?:-color)?\s*:\s*seagreen\s*;?[^}]*\}/i)
+    ],
+    hint: "pill = big radius (999px) + padding + background"
+  },
+  {
+    t: "raise a dome",
+    target: "<style>.x{width:100px;height:50px;background:sienna;border-radius:50% 50% 0 0;}</style><div class=\"x\"></div>",
+    starter: "<style>\n.dome {\n\n}\n</style>\n\n<div class=\"dome\"></div>",
+    reqs: [
+      R("100 × 50, sienna", /\.dome\s*\{(?=[^}]*width\s*:\s*100px)(?=[^}]*height\s*:\s*50px)(?=[^}]*background(?:-color)?\s*:\s*sienna)[^}]*\}/i),
+      R("radius 50% 50% 0 0", /\.dome\s*\{[^}]*border-radius\s*:\s*50%\s+50%\s+0\s+0\s*;?[^}]*\}/i)
+    ],
+    hint: "round only the top corners: border-radius: 50% 50% 0 0;"
+  },
+  {
+    t: "three equal columns",
+    target: "<style>.r{display:flex;gap:10px;}.c{background:wheat;border:2px solid saddlebrown;padding:16px;flex:1;text-align:center;}</style><div class=\"r\"><div class=\"c\">a</div><div class=\"c\">b</div><div class=\"c\">c</div></div>",
+    starter: "<style>\n.row {\n\n}\n.crate {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 16px;\n  text-align: center;\n}\n</style>\n\n<div class=\"row\">\n  <div class=\"crate\">a</div>\n  <div class=\"crate\">b</div>\n  <div class=\"crate\">c</div>\n</div>",
+    reqs: [
+      R(".row display: flex with gap: 10px", /\.row\s*\{(?=[^}]*display\s*:\s*flex)(?=[^}]*gap\s*:\s*10px)[^}]*\}/i),
+      R(".crate flex: 1 (equal shares)", /\.crate\s*\{[^}]*flex\s*:\s*1\s*;?[^}]*\}/i)
+    ],
+    hint: "flex the row (gap: 10px), give every crate flex: 1;"
+  },
+  {
+    t: "a 2×2 tile grid",
+    target: "<style>.g{display:grid;grid-template-columns:1fr 1fr;gap:10px;}.t{background:wheat;border:2px solid saddlebrown;padding:16px;text-align:center;}</style><div class=\"g\"><div class=\"t\">1</div><div class=\"t\">2</div><div class=\"t\">3</div><div class=\"t\">4</div></div>",
+    starter: "<style>\n.gallery {\n\n}\n.tile {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 16px;\n  text-align: center;\n}\n</style>\n\n<div class=\"gallery\">\n  <div class=\"tile\">1</div>\n  <div class=\"tile\">2</div>\n  <div class=\"tile\">3</div>\n  <div class=\"tile\">4</div>\n</div>",
+    reqs: [
+      R("display: grid, two 1fr columns", /\.gallery\s*\{(?=[^}]*display\s*:\s*grid)(?=[^}]*grid-template-columns\s*:\s*1fr\s+1fr)[^}]*\}/i),
+      R("gap: 10px", /\.gallery\s*\{[^}]*gap\s*:\s*10px\s*;?[^}]*\}/i)
+    ],
+    hint: "display: grid; grid-template-columns: 1fr 1fr; gap: 10px;"
+  },
+  {
+    t: "center the relic",
+    target: "<style>.a{display:flex;justify-content:center;align-items:center;height:150px;border:1px dashed gray;}.r{background:wheat;border:2px solid saddlebrown;padding:14px;}</style><div class=\"a\"><div class=\"r\">relic</div></div>",
+    starter: "<style>\n.altar {\n  height: 150px;\n  border: 1px dashed gray;\n}\n.relic {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 14px;\n}\n</style>\n\n<div class=\"altar\">\n  <div class=\"relic\">relic</div>\n</div>",
+    reqs: [
+      R(".altar is a flex container", /\.altar\s*\{[^}]*display\s*:\s*flex\s*;?[^}]*\}/i),
+      R("centered both ways", /\.altar\s*\{(?=[^}]*justify-content\s*:\s*center)(?=[^}]*align-items\s*:\s*center)[^}]*\}/i)
+    ],
+    hint: "on the altar: display: flex; justify-content: center; align-items: center;"
+  },
+  {
+    t: "the sidebar layout",
+    target: "<style>.l{display:flex;}.s{width:100px;background:wheat;padding:10px;}.c{flex:1;background:cornsilk;padding:10px;}</style><div class=\"l\"><div class=\"s\">menu</div><div class=\"c\">content</div></div>",
+    starter: "<style>\n.layout {\n\n}\n.side {\n  background: wheat;\n  padding: 10px;\n}\n.content {\n  background: cornsilk;\n  padding: 10px;\n}\n</style>\n\n<div class=\"layout\">\n  <div class=\"side\">menu</div>\n  <div class=\"content\">content</div>\n</div>",
+    reqs: [
+      R(".layout display: flex", /\.layout\s*\{[^}]*display\s*:\s*flex\s*;?[^}]*\}/i),
+      R(".side width: 100px", /\.side\s*\{[^}]*width\s*:\s*100px\s*;?[^}]*\}/i),
+      R(".content flex: 1", /\.content\s*\{[^}]*flex\s*:\s*1\s*;?[^}]*\}/i)
+    ],
+    hint: "flex parent; fixed .side (100px); .content takes the rest with flex: 1;"
+  },
+  {
+    t: "pin the corner seal",
+    target: "<style>.p{position:relative;border:4px double maroon;padding:26px;width:200px;background:wheat;}.s{position:absolute;top:8px;right:8px;background:firebrick;color:white;padding:5px;font-family:Georgia,serif;font-size:12px;}</style><div class=\"p\"><div class=\"s\">royal</div><b>decree</b></div>",
+    starter: "<style>\n.poster {\n  border: 4px double maroon;\n  padding: 26px;\n  width: 200px;\n  background: wheat;\n}\n.seal {\n  background: firebrick;\n  color: white;\n  padding: 5px;\n}\n</style>\n\n<div class=\"poster\">\n  <div class=\"seal\">royal</div>\n  <b>decree</b>\n</div>",
+    reqs: [
+      R(".poster position: relative", /\.poster\s*\{[^}]*position\s*:\s*relative\s*;?[^}]*\}/i),
+      R(".seal absolute, top 8px right 8px", /\.seal\s*\{(?=[^}]*position\s*:\s*absolute)(?=[^}]*top\s*:\s*8px)(?=[^}]*right\s*:\s*8px)[^}]*\}/i)
+    ],
+    hint: "anchor the poster (relative), pin the seal (absolute, top/right 8px)"
+  },
+  {
+    t: "the two-column manuscript",
+    target: "<style>.s{column-count:2;column-gap:20px;column-rule:1px solid sienna;font-family:Georgia,serif;font-size:12px;}</style><div class=\"s\"><p>in the third year of the long peace the guild took census of every quill in the realm. the count lasted a full winter.</p></div>",
+    starter: "<style>\n.scroll {\n\n}\n</style>\n\n<div class=\"scroll\">\n  <p>in the third year of the long peace the guild took census of every quill in the realm. the count lasted a full winter, for the quills would not stay still.</p>\n</div>",
+    reqs: [
+      R("column-count: 2, column-gap: 20px", /\.scroll\s*\{(?=[^}]*column-count\s*:\s*2)(?=[^}]*column-gap\s*:\s*20px)[^}]*\}/i),
+      R("column-rule: 1px solid sienna", /\.scroll\s*\{[^}]*column-rule\s*:\s*1px\s+solid\s+sienna\s*;?[^}]*\}/i)
+    ],
+    hint: "column-count: 2; column-gap: 20px; column-rule: 1px solid sienna;"
+  },
+  {
+    t: "the house banner",
+    target: "<style>.b{background:darkred;color:ivory;padding:12px;text-align:center;font-family:Georgia,serif;}</style><div class=\"b\">house kaatje</div>",
+    starter: "<style>\n.banner {\n\n}\n</style>\n\n<div class=\"banner\">house kaatje</div>",
+    reqs: [
+      R("darkred background, ivory text", /\.banner\s*\{(?=[^}]*background(?:-color)?\s*:\s*darkred)(?=[^}]*color\s*:\s*ivory)[^}]*\}/i),
+      R("padding: 12px, centered text", /\.banner\s*\{(?=[^}]*padding\s*:\s*12px)(?=[^}]*text-align\s*:\s*center)[^}]*\}/i)
+    ],
+    hint: "background: darkred; color: ivory; padding: 12px; text-align: center;"
+  }
+];
+
+const RANKS = [
+  [10, "CHAMPION OF THE REALM", "every banner sealed, first strike, no aid"],
+  [8, "PALADIN", "the heralds sing of you"],
+  [6, "KNIGHT", "a worthy showing at the lists"],
+  [3, "SQUIRE", "the armor fits; keep training"],
+  [0, "PAGE", "every champion started here"]
+];
+
+/* ================= STATE ================= */
+const state = {
+  mod: 0,
+  drill: 0,
+  passed: {},
+  missed: {},
+  reviewQueue: null,
+  reviewPos: 0,
+  tourney: null
+};
+
+function key(m, d) { return MODULES[m].id + ":" + d; }
+
+function save() {
+  try { localStorage.setItem("style-lab", JSON.stringify({ passed: state.passed, missed: state.missed })); } catch (e) {}
+}
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem("style-lab"));
+    if (s) { state.passed = s.passed || {}; state.missed = s.missed || {}; }
+  } catch (e) {}
+}
+
+/* ================= DOM ================= */
+const $ = id => document.getElementById(id);
+const editor = $("editor");
+const preview = $("preview");
+
+function log(msg) {
+  const el = document.createElement("div");
+  el.className = "log-line";
+  el.innerHTML = msg;
+  $("log").prepend(el);
+  while ($("log").children.length > 30) $("log").lastChild.remove();
+}
+
+/* ================= RENDER ================= */
+function buildNav() {
+  const sel = $("chapsel");
+  sel.innerHTML = "";
+  MODULES.forEach((m, i) => {
+    const done = m.drills.filter((_, d) => state.passed[key(i, d)]).length;
+    const o = document.createElement("option");
+    o.value = i;
+    o.textContent = `${m.name}  —  ${done}/${m.drills.length}${done === m.drills.length ? " ✓" : ""}`;
+    if (i === state.mod && !state.reviewQueue && !state.tourney) o.selected = true;
+    sel.appendChild(o);
+  });
+  const missCount = Object.keys(state.missed).filter(k => state.missed[k]).length;
+  $("misscount").textContent = missCount;
+  $("reviewbtn").className = "hbtn" + (state.reviewQueue ? " active" : "");
+  $("tourneybtn").className = "hbtn" + (state.tourney ? " active" : "");
+}
+
+function firstOpen(mi) {
+  const m = MODULES[mi];
+  for (let d = 0; d < m.drills.length; d++) if (!state.passed[key(mi, d)]) return d;
+  return 0;
+}
+
+function currentDrill() {
+  if (state.tourney) {
+    const ch = state.tourney.rounds[state.tourney.pos];
+    return { m: -1, d: state.tourney.pos, drill: ch, tourney: true };
+  }
+  if (state.reviewQueue) {
+    const [m, d] = state.reviewQueue[state.reviewPos];
+    return { m, d, drill: MODULES[m].drills[d] };
+  }
+  return { m: state.mod, d: state.drill, drill: MODULES[state.mod].drills[state.drill] };
+}
+
+function renderDrill() {
+  const cur = currentDrill();
+  const { m, d, drill } = cur;
+
+  if (cur.tourney) {
+    const t = state.tourney;
+    $("sheetname").textContent = `TOURNEY · ROUND ${t.pos + 1}/${t.rounds.length}`;
+    $("brief").innerHTML =
+      `<div class="tourneybar">round <b>${t.pos + 1}/${t.rounds.length}</b> · streak <b>${t.streak}</b> · flawless <b>${t.flawless}</b></div>` +
+      `<h2>${escapeHtml(drill.t.toUpperCase())}</h2>` +
+      `<div class="targetlabel">match this target:</div>` +
+      `<div class="targetbox"><iframe id="target" sandbox="allow-same-origin"></iframe></div>` +
+      `<ul id="reqs">${drill.reqs.map(r => `<li>${escapeHtml(r.label)}</li>`).join("")}</ul>` +
+      `<div class="hintbox" id="hintbox"></div>`;
+    $("target").srcdoc = `<!DOCTYPE html><html><head><style>body{font-family:Georgia,serif;padding:12px;margin:0;}</style></head><body>` + drill.target + `</body></html>`;
+    editor.value = drill.starter;
+    $("nextbtn").style.display = "none";
+    $("stamp").classList.remove("show");
+    updatePreview();
+    updateStats();
+    buildNav();
+    editor.focus();
+    return;
+  }
+
+  const mod = MODULES[m];
+  $("sheetname").textContent = state.reviewQueue
+    ? `REVIEW ${state.reviewPos + 1}/${state.reviewQueue.length}`
+    : `${mod.name} · ${d + 1}/${mod.drills.length}`;
+
+  $("brief").innerHTML =
+    drill.brief +
+    `<ul id="reqs">${drill.reqs.map(r => `<li>${escapeHtml(r.label)}</li>`).join("")}</ul>` +
+    `<div class="hintbox" id="hintbox"></div>`;
+
+  editor.value = drill.starter;
+  $("nextbtn").style.display = "none";
+  $("stamp").classList.remove("show");
+  updatePreview();
+  updateStats();
+  buildNav();
+  editor.focus();
+}
+
+function updatePreview() {
+  preview.srcdoc =
+    `<!DOCTYPE html><html><head><style>body{font-family:Georgia,serif;padding:14px;margin:0;}</style></head><body>` +
+    editor.value + `</body></html>`;
+}
+
+function updateStats() {
+  const total = MODULES.reduce((n, m) => n + m.drills.length, 0);
+  const done = Object.keys(state.passed).filter(k => state.passed[k]).length;
+  const missed = Object.keys(state.missed).filter(k => state.missed[k]).length;
+  $("stat-pass").textContent = done;
+  $("stat-total").textContent = Math.round(done / total * 100) + "%";
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+/* ================= ACTIONS ================= */
+function checkDraft() {
+  const { m, d, drill } = currentDrill();
+  const code = editor.value;
+  const items = document.querySelectorAll("#reqs li");
+  let allPass = true;
+
+  drill.reqs.forEach((r, i) => {
+    const ok = r.test(code);
+    items[i].className = ok ? "pass" : "fail";
+    if (!ok) allPass = false;
+  });
+
+  if (currentDrill().tourney) {
+    const t = state.tourney;
+    if (allPass) {
+      if (!t.sealedRound) {
+        t.sealed++;
+        t.streak++;
+        t.best = Math.max(t.best, t.streak);
+        if (!t.hinted && !t.missed) t.flawless++;
+        t.sealedRound = true;
+      }
+      $("stamp").classList.add("show");
+      $("nextbtn").style.display = "";
+      log(`<b>SEALED</b> — round ${t.pos + 1}${(!t.hinted && !t.missed) ? " · flawless 🏅" : ""} · streak ${t.streak}`);
+    } else {
+      if (!t.sealedRound) { t.missed = true; t.streak = 0; }
+      $("stamp").classList.remove("show");
+      const misses = drill.reqs.filter(r => !r.test(code)).length;
+      log(`<i>REDLINED</i> — ${misses} open. The crowd holds its breath.`);
+    }
+    updateStats();
+    return;
+  }
+
+  const k = key(m, d);
+  if (allPass) {
+    const first = !state.passed[k];
+    state.passed[k] = true;
+    if (state.reviewQueue) delete state.missed[k];
+    save();
+    $("stamp").classList.add("show");
+    $("nextbtn").style.display = "";
+    log(`<b>SEALED</b> — ${MODULES[m].name}, page ${d + 1}${first ? "" : " (re-sealed)"}`);
+  } else {
+    if (!state.passed[k]) state.missed[k] = true;
+    save();
+    $("stamp").classList.remove("show");
+    const misses = drill.reqs.filter(r => !r.test(code)).length;
+    log(`<i>REDLINED</i> — ${misses} requirement${misses > 1 ? "s" : ""} open. Amend and resubmit.`);
+  }
+  updateStats();
+  buildNav();
+}
+
+function nextDrill() {
+  if (state.tourney) {
+    const t = state.tourney;
+    t.pos++;
+    t.hinted = false; t.missed = false; t.sealedRound = false;
+    if (t.pos >= t.rounds.length) { endTourney(); return; }
+    renderDrill();
+    return;
+  }
+  if (state.reviewQueue) {
+    state.reviewPos++;
+    if (state.reviewPos >= state.reviewQueue.length) {
+      state.reviewQueue = null;
+      log(`<em>REVIEW COMPLETE</em> — back to the current chapter.`);
+      renderDrill();
+      return;
+    }
+    renderDrill();
+    return;
+  }
+  const mod = MODULES[state.mod];
+  if (state.drill < mod.drills.length - 1) {
+    state.drill++;
+  } else if (state.mod < MODULES.length - 1) {
+    state.mod++;
+    state.drill = 0;
+    log(`<em>NEW CHAPTER</em> — ${MODULES[state.mod].name}`);
+  } else {
+    log(`<em>THE CHRONICLE IS COMPLETE.</em> Every page sealed. Junie circles the tower in approval.`);
+    return;
+  }
+  renderDrill();
+}
+
+function showHint() {
+  if (state.tourney) state.tourney.hinted = true;
+  const { drill } = currentDrill();
+  const hb = $("hintbox");
+  hb.textContent = drill.hint;
+  hb.classList.add("show");
+  log(`<em>HINT</em> pinned to the brief.`);
+}
+
+function resetDrill() {
+  const { drill } = currentDrill();
+  editor.value = drill.starter;
+  updatePreview();
+  document.querySelectorAll("#reqs li").forEach(li => li.className = "");
+  $("stamp").classList.remove("show");
+  $("nextbtn").style.display = "none";
+}
+
+function startTourney() {
+  const pool = [...CHALLENGES].sort(() => Math.random() - 0.5).slice(0, 10);
+  state.reviewQueue = null;
+  state.tourney = { rounds: pool, pos: 0, sealed: 0, flawless: 0, streak: 0, best: 0, hinted: false, missed: false, sealedRound: false };
+  log(`<em>⚔ THE TOURNEY BEGINS</em> — ten rounds. Match each target. First strike with no hint = flawless.`);
+  renderDrill();
+}
+
+function endTourney() {
+  const t = state.tourney;
+  const rank = RANKS.find(r => t.flawless >= r[0]);
+  let best = 0;
+  try { best = parseInt(localStorage.getItem("style-tourney-best") || "0"); } catch (e) {}
+  const newBest = t.flawless > best;
+  if (newBest) { try { localStorage.setItem("style-tourney-best", String(t.flawless)); } catch (e) {} }
+  $("sheetname").textContent = "TOURNEY · RESULTS";
+  $("brief").innerHTML =
+    `<div class="results">
+      <div class="targetlabel">the herald announces</div>
+      <div class="rank">${rank[1]}</div>
+      <div style="font-size:12px; color:var(--soft); font-style:italic;">${rank[2]}</div>
+      <div class="medals">${"🏅".repeat(t.flawless) || "—"}</div>
+      <div style="font-size:13px; line-height:2;">
+        sealed: ${t.sealed}/10 · flawless: ${t.flawless} · best streak: ${t.best}
+        ${newBest ? "<br><b style='color:var(--gold)'>new personal best!</b>" : (best ? "<br>personal best: " + best + " flawless" : "")}
+      </div>
+    </div>`;
+  editor.value = "";
+  updatePreview();
+  log(`<em>THE TOURNEY ENDS</em> — ${rank[1].toLowerCase()}, ${t.flawless} flawless. Again?`);
+  state.tourney = null;
+  buildNav();
+}
+
+function startReview() {
+  state.tourney = null;
+  const q = [];
+  MODULES.forEach((m, mi) => m.drills.forEach((_, di) => {
+    if (state.missed[key(mi, di)]) q.push([mi, di]);
+  }));
+  if (!q.length) { log(`<em>REVIEW</em> — nothing redlined. A clean chronicle.`); return; }
+  state.reviewQueue = q;
+  state.reviewPos = 0;
+  log(`<em>REVIEW</em> — replaying ${q.length} redlined page${q.length > 1 ? "s" : ""}.`);
+  renderDrill();
+}
+
+function openDesk() {
+  $("cover").style.display = "none";
+  log(`<em>THE SCRIPTORIUM OPENS</em> — scribe kaatje at the desk. Draft left, review right, seal when true.`);
+  editor.focus();
+}
+
+/* ================= WIRING ================= */
+editor.addEventListener("input", updatePreview);
+editor.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    if ($("nextbtn").style.display !== "none") nextDrill();
+    else checkDraft();
+  }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const s = editor.selectionStart;
+    editor.value = editor.value.slice(0, s) + "  " + editor.value.slice(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = s + 2;
+    updatePreview();
+  }
+});
+
+$("chapsel").addEventListener("change", e => {
+  state.reviewQueue = null;
+  state.tourney = null;
+  state.mod = parseInt(e.target.value);
+  state.drill = firstOpen(state.mod);
+  renderDrill();
+});
+
+load();
+renderDrill();
+</script>
+</body>
+</html>
