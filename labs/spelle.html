@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SPELLE · Grimoire</title>
+<style>
+  :root {
+    --parchment: #efe5cd;
+    --sheet: #f8f1de;
+    --ink: #372c1e;
+    --soft: #8a7a5f;
+    --hair: #d5c5a0;
+    --wax: #8f2f22;
+    --gold: #96731f;
+    --stone: #4a3b2a;
+    --stone-dark: #2e2416;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { height: 100%; }
+  body {
+    background: radial-gradient(ellipse at 50% 20%, #f4ebd6 0%, var(--parchment) 55%, #e2d3ac 100%);
+    color: var(--ink);
+    font-family: Georgia, "Times New Roman", serif;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  code, pre, #editor, .ex { font-family: "Consolas", "Menlo", monospace; }
+
+  header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 12px 24px;
+    border-bottom: 1px solid var(--hair);
+    flex-shrink: 0;
+  }
+  .wordmark { font-size: 20px; letter-spacing: 6px; color: var(--ink); }
+  .wordmark i { font-style: normal; color: var(--wax); }
+  #chapsel {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    color: var(--ink);
+    background: var(--sheet);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    padding: 7px 14px;
+    max-width: 320px;
+    cursor: pointer;
+    outline: none;
+  }
+  #chapsel:hover { border-color: var(--soft); }
+  header .spacer { flex: 1; }
+  .deskstat { font-size: 12px; font-style: italic; color: var(--soft); }
+  .deskstat b { color: var(--ink); font-weight: normal; }
+
+  main {
+    flex: 1;
+    display: grid;
+    grid-template-columns: minmax(270px, 340px) 1fr 1fr;
+    min-height: 0;
+  }
+  .pane { display: flex; flex-direction: column; min-height: 0; border-right: 1px solid var(--hair); }
+  .pane:last-child, .pane:nth-child(2) { border-right: none; }
+  .pane:first-child { border-right: 1px solid var(--hair); }
+  .pane-head {
+    padding: 12px 24px 10px;
+    font-size: 13px;
+    font-style: italic;
+    color: var(--soft);
+    flex-shrink: 0;
+    text-transform: lowercase;
+  }
+  .spell-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 12px;
+  }
+  .spell-head .key { font-size: 11px; color: var(--hair); font-style: italic; }
+  .spell-head .tools { display: flex; gap: 6px; }
+  .spell-head .tools button {
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-style: normal;
+    padding: 5px 12px;
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .spell-head .tools button:hover { border-color: var(--soft); }
+  .spell-head .tools button.primary { border-color: var(--wax); background: var(--wax); color: var(--sheet); }
+  .spell-head .tools button.primary:hover { background: #74251a; }
+  .spell-head .tools button.gold { border-color: var(--gold); color: var(--gold); }
+
+  #brief { flex: 1; overflow-y: auto; padding: 6px 24px 24px; font-size: 14px; line-height: 1.75; }
+  #brief h2 { font-size: 15px; letter-spacing: 1px; font-weight: normal; margin-bottom: 12px; }
+  #brief h2::before { content: "✦ "; color: var(--wax); }
+  #brief p { margin-bottom: 14px; }
+  #brief .teach { color: #6b5c42; margin-bottom: 16px; }
+  #brief code { background: rgba(55,44,30,0.07); padding: 1px 5px; font-size: 12px; }
+  #brief .ex {
+    background: var(--sheet);
+    border: 1px solid var(--hair);
+    padding: 12px 14px;
+    margin: 12px 0 16px;
+    white-space: pre;
+    overflow-x: auto;
+    font-size: 12px;
+  }
+  #reqs { list-style: none; margin-top: 10px; border-top: 1px solid var(--hair); padding-top: 12px; }
+  #reqs li { padding: 4px 0 4px 22px; position: relative; color: var(--soft); font-size: 13px; }
+  #reqs li::before {
+    content: "";
+    position: absolute;
+    left: 2px; top: 11px;
+    width: 7px; height: 7px;
+    border: 1px solid var(--soft);
+    border-radius: 50%;
+  }
+  #reqs li.pass { color: var(--gold); }
+  #reqs li.pass::before { background: var(--gold); border-color: var(--gold); }
+  #reqs li.fail { color: var(--wax); }
+  #reqs li.fail::before { border-color: var(--wax); }
+
+  .hintbox {
+    margin-top: 16px;
+    border-left: 2px solid var(--wax);
+    padding: 4px 0 4px 14px;
+    font-size: 12px;
+    font-family: "Consolas", "Menlo", monospace;
+    white-space: pre-wrap;
+    display: none;
+  }
+  .hintbox.show { display: block; }
+
+  #editor {
+    flex: 1;
+    width: auto;
+    margin: 0 12px 16px 24px;
+    background: var(--sheet);
+    color: var(--ink);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 30px rgba(55,44,30,0.12);
+    outline: none;
+    resize: none;
+    padding: 20px 22px;
+    font-size: 13px;
+    line-height: 1.7;
+    tab-size: 2;
+    caret-color: var(--wax);
+  }
+  #editor::placeholder { color: #bcab88; }
+
+  /* ---- the dungeon ---- */
+  #dungeon-wrap {
+    flex: 1;
+    position: relative;
+    min-height: 0;
+    padding: 0 24px 16px 12px;
+    display: flex;
+  }
+  #dungeon-sheet {
+    flex: 1;
+    background: var(--stone-dark);
+    border: 1px solid var(--hair);
+    box-shadow: 0 8px 30px rgba(55,44,30,0.2);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: auto;
+  }
+  #grid { display: grid; gap: 2px; }
+  .cell {
+    width: 34px; height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 19px;
+    border-radius: 3px;
+    position: relative;
+    transition: background 0.2s;
+  }
+  .cell.floor { background: #d9c9a3; box-shadow: inset 0 0 4px rgba(74,59,42,0.35); }
+  .cell.wall  { background: var(--stone); box-shadow: inset 0 -3px 0 var(--stone-dark); }
+  .cell.fog   { background: #241c10; box-shadow: none; }
+  .cell.fog::after { content: ""; }
+  .cell .item { position: absolute; }
+  .cell .hero { position: absolute; z-index: 2; transition: transform 0.12s; }
+  .cell .hero.bump { animation: bump 0.25s; }
+  @keyframes bump {
+    0% { transform: translateX(0); }
+    40% { transform: translateX(5px); }
+    100% { transform: translateX(0); }
+  }
+  .stamp {
+    position: absolute;
+    top: 20px; right: 40px;
+    width: 84px; height: 84px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 38% 32%, #b04a37 0%, var(--wax) 45%, #6e2015 100%);
+    color: #f3e2c8;
+    font-size: 11px;
+    letter-spacing: 2px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transform: rotate(-12deg);
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4), inset 0 0 0 3px rgba(243,226,200,0.35);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 5;
+  }
+  .stamp.show { opacity: 1; }
+  #satchel {
+    position: absolute;
+    left: 24px; bottom: 26px;
+    font-size: 16px;
+    letter-spacing: 4px;
+    background: rgba(248,241,222,0.85);
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    padding: 4px 12px;
+    min-height: 30px;
+  }
+
+  footer {
+    flex-shrink: 0;
+    border-top: 1px solid var(--hair);
+    padding: 8px 24px;
+    font-size: 12px;
+    font-style: italic;
+    height: 54px;
+    overflow-y: auto;
+  }
+  footer .log-line { color: var(--soft); line-height: 1.7; }
+  footer .log-line b { color: var(--gold); font-weight: normal; }
+  footer .log-line i { color: var(--wax); font-style: normal; }
+  footer .log-line em { color: var(--ink); font-style: normal; }
+
+  #cover {
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at 50% 30%, #f2e8d2 0%, #e0d0a8 90%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+  }
+  .sheet {
+    border: 1px solid var(--ink);
+    outline: 1px solid var(--hair);
+    outline-offset: 5px;
+    padding: 52px 66px;
+    text-align: center;
+    background: var(--sheet);
+    max-width: 560px;
+    box-shadow: 0 24px 70px rgba(55,44,30,0.25);
+  }
+  .sheet::before, .sheet::after { content: "❦"; display: block; color: var(--wax); font-size: 16px; }
+  .sheet::before { margin-bottom: 18px; }
+  .sheet::after { margin-top: 22px; }
+  .sheet h1 { font-size: 38px; letter-spacing: 12px; font-weight: normal; margin-bottom: 8px; padding-left: 12px; }
+  .sheet h1 i { font-style: normal; color: var(--wax); }
+  .sheet .sub { font-size: 12px; font-style: italic; letter-spacing: 1px; color: var(--soft); margin-bottom: 28px; }
+  .sheet .meta {
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 10px;
+    color: var(--soft);
+    line-height: 1.9;
+    margin-bottom: 32px;
+    text-align: left;
+    display: inline-block;
+  }
+  .sheet .meta b { color: var(--ink); font-weight: normal; }
+  .sheet button {
+    font-family: Georgia, serif;
+    font-size: 13px;
+    letter-spacing: 2px;
+    padding: 12px 32px;
+    background: var(--ink);
+    border: 1px solid var(--ink);
+    border-radius: 999px;
+    color: var(--sheet);
+    cursor: pointer;
+  }
+  .sheet button:hover { background: var(--wax); border-color: var(--wax); }
+
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: var(--hair); }
+
+  @media (max-width: 940px) {
+    main { grid-template-columns: 1fr 1fr; grid-template-rows: auto minmax(0, 1fr); }
+    .pane:first-child { grid-column: 1 / -1; border-right: none; border-bottom: 1px solid var(--hair); }
+    #brief { max-height: 26vh; }
+  }
+  @media (max-width: 560px) {
+    main { grid-template-columns: 1fr; grid-template-rows: auto 1fr 1fr; overflow-y: auto; }
+    .pane { border-right: none; border-bottom: 1px solid var(--hair); }
+    #editor { margin: 0 24px 16px; }
+    #dungeon-wrap { padding: 0 24px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="cover">
+  <div class="sheet">
+    <h1>SPEL<i>LE</i></h1>
+    <div class="sub">the grimoire · a JavaScript lab of moving things</div>
+    <div class="meta">
+      <b>COMMISSION</b> .. MEGA LAB / VOLUME IV<br>
+      <b>APPRENTICE</b> .. KAATJE<br>
+      <b>FAMILIAR</b> .... JUNIE (SCOUTING AHEAD)<br>
+      <b>METHOD</b> ...... WRITE A SPELL · CAST IT · WATCH THE HERO OBEY
+    </div>
+    <button onclick="openGrimoire()">OPEN THE GRIMOIRE</button>
+  </div>
+</div>
+
+<header>
+  <div class="wordmark">SPEL<i>LE</i></div>
+  <select id="chapsel" title="chapters"></select>
+  <div class="spacer"></div>
+  <div class="deskstat">
+    <b id="sheetname">LESSON 0</b> · sealed <b id="stat-pass">0</b> · <b id="stat-total">0%</b>
+  </div>
+</header>
+
+<main>
+  <section class="pane">
+    <div class="pane-head">brief</div>
+    <div id="brief"></div>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head spell-head">
+      <span>spellbook <span class="key">· ctrl+enter casts — again for next</span></span>
+      <span class="tools">
+        <button id="nextbtn" onclick="nextDrill()" style="display:none;" class="gold">next →</button>
+        <button onclick="resetDrill()">reset</button>
+        <button onclick="showHint()">hint</button>
+        <button class="primary" onclick="castSpell()">cast</button>
+      </span>
+    </div>
+    <textarea id="editor" spellcheck="false" placeholder="inscribe your spell..."></textarea>
+  </section>
+
+  <section class="pane">
+    <div class="pane-head">the dungeon · live</div>
+    <div id="dungeon-wrap">
+      <div id="dungeon-sheet"><div id="grid"></div></div>
+      <div id="satchel"></div>
+      <div class="stamp" id="stamp">SEALED</div>
+    </div>
+  </section>
+</main>
+
+<footer id="log"></footer>
+
+<script>
+/* ================================================================
+   SPELLE — learn JavaScript by commanding a hero through dungeons
+   Levels: # wall · . floor · @ hero · K key · C chest · E stairs
+   D door (opens if the hero holds the key)
+================================================================ */
+
+const R = (label, re) => ({ label, test: (code, res) => re.test(code) });
+const G = (label, fn) => ({ label, test: (code, res) => fn(res, code) });
+
+/* ---------------- SIMULATION (pure, testable) ---------------- */
+function simulate(levelRows, code) {
+  const grid = levelRows.map(r => r.split(""));
+  let hx = 0, hy = 0;
+  grid.forEach((row, y) => row.forEach((c, x) => { if (c === "@") { hx = x; hy = y; grid[y][x] = "."; } }));
+
+  const held = [];
+  const actions = [{ type: "start", x: hx, y: hy }];
+  let ops = 0, reachedExit = false, error = null;
+  const DIRS = { up: [0, -1], down: [0, 1], left: [-1, 0], right: [1, 0] };
+
+  function tileAt(x, y) {
+    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) return "#";
+    return grid[y][x];
+  }
+  function tick() {
+    ops++;
+    if (ops > 300) throw new Error("the spell fizzles — over 300 steps. Is a loop running forever?");
+  }
+  function requireDir(d) {
+    if (!DIRS[d]) throw new Error('unknown direction "' + d + '" — use "up", "down", "left" or "right"');
+  }
+
+  const api = {
+    move(dir, n) {
+      requireDir(dir);
+      if (n === undefined) n = 1;
+      if (typeof n !== "number" || n < 1) throw new Error("move's second argument must be a number of steps (1 or more)");
+      for (let i = 0; i < n; i++) {
+        tick();
+        const [dx, dy] = DIRS[dir];
+        const nx = hx + dx, ny = hy + dy;
+        const t = tileAt(nx, ny);
+        if (t === "#") { actions.push({ type: "bump", dir }); continue; }
+        if (t === "D") {
+          if (held.includes("key")) {
+            grid[ny][nx] = ".";
+            actions.push({ type: "unlock", x: nx, y: ny });
+          } else {
+            actions.push({ type: "bump", dir, locked: true });
+            continue;
+          }
+        }
+        hx = nx; hy = ny;
+        actions.push({ type: "move", dir, x: hx, y: hy });
+        if (tileAt(hx, hy) === "E") reachedExit = true;
+      }
+    },
+    look(dir) {
+      requireDir(dir);
+      tick();
+      const [dx, dy] = DIRS[dir];
+      const t = tileAt(hx + dx, hy + dy);
+      const names = { "#": "wall", ".": "floor", "K": "key", "C": "chest", "D": "door", "E": "stairs" };
+      return names[t] || "floor";
+    },
+    grab() {
+      tick();
+      const t = tileAt(hx, hy);
+      if (t === "K") { held.push("key"); grid[hy][hx] = "."; actions.push({ type: "grab", item: "key", x: hx, y: hy }); }
+      else if (t === "C") { held.push("treasure"); grid[hy][hx] = "."; actions.push({ type: "grab", item: "treasure", x: hx, y: hy }); }
+      else { actions.push({ type: "grabfail" }); }
+    },
+    say(text) {
+      tick();
+      actions.push({ type: "say", text: String(text) });
+    }
+  };
+
+  try {
+    const fn = new Function("move", "look", "grab", "say", '"use strict";\n' + code);
+    fn(api.move, api.look, api.grab, api.say);
+  } catch (e) {
+    error = e.message;
+  }
+
+  return { actions, held, reachedExit, error, endX: hx, endY: hy, ops };
+}
+
+/* ---------------- CURRICULUM ---------------- */
+const MODULES = [
+{
+  id: "lesson0",
+  name: "LESSON 0 · START HERE",
+  drills: [
+    {
+      brief: `<h2>WHAT IS JAVASCRIPT?</h2>
+<div class="teach">HTML is structure. CSS is looks. <b>JavaScript makes things HAPPEN</b> — it's the language of action, and the browser speaks it natively.<br><br>
+A JS program is a list of <b>statements</b>, run top to bottom. The most common statement is a <b>function call</b> — invoking a named ability:</div>
+<div class="ex">move("right");
+└──┘ └─────┘
+name  argument (extra info the function needs)</div>
+<div class="teach">Your hero 🧙 understands the spell <code>move</code>. The argument — text in quotes, called a <b>string</b> — tells it which way: <code>"up"</code>, <code>"down"</code>, <code>"left"</code>, <code>"right"</code>. Each statement ends with <code>;</code> — same habit as CSS.</div>
+<p><em>Quest:</em> the stairs lie two steps right. Cast <code>move("right");</code> twice — one statement per line — and press CAST.</p>`,
+      starter: "",
+      level: ["#######", "#@.E..#", "#######"],
+      reqs: [
+        R('calls move("right")', /move\(\s*["']right["']\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'move("right");\nmove("right");'
+    },
+    {
+      brief: `<h2>A SECOND ARGUMENT</h2>
+<div class="teach">Functions can take more than one argument, separated by commas. <code>move</code> accepts a second one — a <b>number</b> of steps (no quotes; numbers aren't text):</div>
+<div class="ex">move("right", 5);   ← five steps in one spell</div>
+<p><em>Quest:</em> a five-step corridor. Cross it with ONE statement using the second argument.</p>`,
+      starter: "",
+      level: ["#########", "#@....E.#", "#########"],
+      reqs: [
+        R("uses move with a number argument", /move\(\s*["']right["']\s*,\s*5\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'move("right", 5);'
+    },
+    {
+      brief: `<h2>SAY — YOUR FIRST OUTPUT</h2>
+<div class="teach">Programs talk back. The spell <code>say("...")</code> makes the hero speak into the chronicle below — SPELLE's version of JavaScript's famous <code>console.log()</code>, the tool you'll use forever to see what your code is thinking.</div>
+<p><em>Quest:</em> make the hero <code>say("into the depths")</code>, then take the stairs one step down.</p>`,
+      starter: "",
+      level: ["#####", "#@..#", "#E..#", "#####"],
+      reqs: [
+        G('the hero says "into the depths"', res => res.actions.some(a => a.type === "say" && a.text === "into the depths")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'say("into the depths");\nmove("down");'
+    }
+  ]
+},
+{
+  id: "motion",
+  name: "SPELLS OF MOTION",
+  drills: [
+    {
+      brief: `<h2>CHAINING SPELLS</h2>
+<div class="teach">Statements run in order, top to bottom — the whole program is a recipe. Plan the route BEFORE casting: that's programming in one sentence.</div>
+<p><em>Quest:</em> the stairs lie right 3, then down 3. Two statements.</p>`,
+      starter: "",
+      level: ["#######", "#@...##", "####.##", "####.##", "####E##", "#######"],
+      reqs: [
+        G("the hero reaches the stairs", res => res.reachedExit),
+        G("no bumping into walls", res => !res.actions.some(a => a.type === "bump"))
+      ],
+      hint: 'move("right", 3);\nmove("down", 3);\n// walls block you — read the map!'
+    },
+    {
+      brief: `<h2>GRAB</h2>
+<div class="teach">Some spells take NO arguments — the parentheses stay, empty: <code>grab();</code> picks up whatever the hero stands on. The door 🚪 ahead is locked; it opens only if the satchel holds the key 🗝.</div>
+<p><em>Quest:</em> walk onto the key, <code>grab();</code> it, then continue through the door to the stairs.</p>`,
+      starter: "",
+      level: ["#########", "#@.K.DE.#", "#########"],
+      reqs: [
+        G("the key is in the satchel", res => res.held.includes("key")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'move("right", 2);\ngrab();\nmove("right", 3);'
+    },
+    {
+      brief: `<h2>LOOK — SPELLS THAT ANSWER</h2>
+<div class="teach">Some functions <b>return</b> a value — they hand something back. <code>look("right")</code> returns a string naming what lies one tile that way: <code>"wall"</code>, <code>"floor"</code>, <code>"key"</code>, <code>"door"</code>, <code>"stairs"</code>.<br><br>
+A returned value can be passed straight into another spell:</div>
+<div class="ex">say(look("right"));   ← look answers, say speaks it</div>
+<p><em>Quest:</em> make the hero say what lies to the right (spoiler: it's a wall), then find the stairs below.</p>`,
+      starter: "",
+      level: ["#####", "#@###", "#.###", "#E###", "#####"],
+      reqs: [
+        G('the hero reports "wall"', res => res.actions.some(a => a.type === "say" && a.text === "wall")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'say(look("right"));\nmove("down", 2);'
+    }
+  ]
+},
+{
+  id: "variables",
+  name: "VARIABLES",
+  drills: [
+    {
+      brief: `<h2>LET — NAMING A VALUE</h2>
+<div class="teach">A <b>variable</b> is a labeled jar for a value. <code>let</code> creates one:</div>
+<div class="ex">let steps = 4;      ← create jar "steps", put 4 in it
+move("right", steps);  ← use the jar's contents</div>
+<div class="teach">Why bother? Change the jar once and every spell using it changes too — one source of truth.</div>
+<p><em>Quest:</em> declare <code>let steps = 4;</code> and use the variable (not the number) inside your move.</p>`,
+      starter: "",
+      level: ["########", "#@...E.#", "########"],
+      reqs: [
+        R("declares let steps = 4", /let\s+steps\s*=\s*4/),
+        R("move uses the variable", /move\(\s*["']right["']\s*,\s*steps\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let steps = 4;\nmove("right", steps);'
+    },
+    {
+      brief: `<h2>ONE JAR, MANY SPELLS</h2>
+<div class="teach">The same variable can feed several statements. This staircase is perfectly regular — 2 right, 2 down, repeated — so one <code>steps</code> jar drives everything.</div>
+<p><em>Quest:</em> declare <code>let steps = 2;</code> and use it in ALL four moves: right, down, right, down.</p>`,
+      starter: "",
+      level: ["#######", "#@....#", "#.....#", "#.....#", "#.....#", "#....E#", "#######"],
+      reqs: [
+        R("declares let steps = 2", /let\s+steps\s*=\s*2/),
+        G("every move uses the variable", (res, code) => {
+          const moves = code.match(/move\([^)]*\)/g) || [];
+          return moves.length >= 4 && moves.every(m => /,\s*steps\s*\)/.test(m));
+        }),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let steps = 2;\nmove("right", steps);\nmove("down", steps);\nmove("right", steps);\nmove("down", steps);'
+    },
+    {
+      brief: `<h2>STRINGS IN JARS</h2>
+<div class="teach">Jars hold any value — numbers, strings, even directions. Note the difference:</div>
+<div class="ex">let dir = "down";
+move(dir, 3);     ← dir, no quotes: use the jar
+move("dir", 3);   ← "dir" in quotes: the TEXT dir. Nonsense!</div>
+<p><em>Quest:</em> declare <code>let dir = "down";</code> and descend 3 steps using the variable.</p>`,
+      starter: "",
+      level: ["#####", "#@..#", "#...#", "#...#", "#E..#", "#####"],
+      reqs: [
+        R('declares let dir = "down"', /let\s+dir\s*=\s*["']down["']/),
+        R("move uses the variable dir", /move\(\s*dir\s*,\s*3\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'let dir = "down";\nmove(dir, 3);'
+    }
+  ]
+},
+{
+  id: "loops",
+  name: "LOOPS",
+  drills: [
+    {
+      brief: `<h2>THE FOR LOOP</h2>
+<div class="teach">Repeating yourself is beneath a mage. A <b>for loop</b> runs a block of code N times:</div>
+<div class="ex">for (let i = 0; i < 8; i++) {
+  move("right");
+}
+     └─ start ─┘└─ keep going while ─┘└─ count up ─┘</div>
+<div class="teach">Read it aloud: "let i start at 0; while i is under 8, run the block, then add 1 to i." The block between <code>{ }</code> runs 8 times.</div>
+<p><em>Quest:</em> cross the great corridor — 8 steps right — with a for loop containing a single-step <code>move("right");</code>.</p>`,
+      starter: "",
+      level: ["############", "#@.......E.#", "############"],
+      reqs: [
+        R("uses a for loop", /for\s*\(\s*let\s+i\s*=\s*0\s*;\s*i\s*<\s*8\s*;\s*i\+\+\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'for (let i = 0; i < 8; i++) {\n  move("right");\n}'
+    },
+    {
+      brief: `<h2>LOOPING A PATTERN</h2>
+<div class="teach">The loop body can hold ANY statements. A repeating route — right, down, right, down... — is one pattern looped:</div>
+<p><em>Quest:</em> descend the grand staircase: loop 3 times, each pass moving right once and down once.</p>`,
+      starter: "",
+      level: ["######", "#@...#", "#....#", "#....#", "####E#", "######"],
+      reqs: [
+        R("uses a for loop", /for\s*\(/),
+        G("both moves live inside the loop", (res, code) => {
+          const body = code.match(/for\s*\([^)]*\)\s*\{([\s\S]*?)\}/);
+          return body && /move\(\s*["']right["']/.test(body[1]) && /move\(\s*["']down["']/.test(body[1]);
+        }),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'for (let i = 0; i < 3; i++) {\n  move("right");\n  move("down");\n}'
+    },
+    {
+      brief: `<h2>THE WHILE LOOP</h2>
+<div class="teach">What if you don't KNOW how many times? <code>while</code> repeats as long as a condition stays true — checked fresh before every pass:</div>
+<div class="ex">while (look("right") !== "wall") {
+  move("right");
+}
+"while what's ahead is NOT a wall, keep walking"</div>
+<div class="teach"><code>!==</code> means "is not equal to" (its twin <code>===</code> means "is equal to"). ⚠ A while whose condition never turns false loops forever — the spell fizzles at 300 steps if you manage it.</div>
+<p><em>Quest:</em> walk right until the wall, then take one step down to the stairs. You don't know the corridor's length — that's the point.</p>`,
+      starter: "",
+      level: ["##########", "#@.......#", "########E#", "##########"],
+      reqs: [
+        R("uses a while loop with look", /while\s*\(\s*look\(\s*["']right["']\s*\)\s*!==?\s*["']wall["']\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'while (look("right") !== "wall") {\n  move("right");\n}\nmove("down");'
+    }
+  ]
+},
+{
+  id: "conditions",
+  name: "CONDITIONS",
+  drills: [
+    {
+      brief: `<h2>IF</h2>
+<div class="teach">Programs decide. <code>if</code> runs a block only when its condition is true:</div>
+<div class="ex">if (look("right") === "wall") {
+  move("down", 2);
+}</div>
+<p><em>Quest:</em> the passage right is blocked. Ask with look, and IF it's a wall, go down 2 and right 2 to the stairs.</p>`,
+      starter: "",
+      level: ["######", "#@#..#", "#.#..#", "#..E.#", "######"],
+      reqs: [
+        R("uses if with look", /if\s*\(\s*look\(\s*["']right["']\s*\)\s*===?\s*["']wall["']\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'if (look("right") === "wall") {\n  move("down", 2);\n  move("right", 2);\n}'
+    },
+    {
+      brief: `<h2>ELSE</h2>
+<div class="teach"><code>else</code> is the other fork: one road IF true, the other otherwise. The prize: ONE spell that solves DIFFERENT dungeons.</div>
+<div class="ex">if (look("right") === "wall") {
+  move("down", 2);
+  move("right", 2);
+} else {
+  move("right", 2);
+  move("down", 2);
+}</div>
+<p><em>Quest:</em> this room is the mirror of the last — the right passage is OPEN. Cast exactly the spell above: the else branch fires this time. Same code, both rooms. That's the power.</p>`,
+      starter: "",
+      level: ["######", "#@...#", "###..#", "###E.#", "######"],
+      reqs: [
+        R("has an if branch", /if\s*\(\s*look\(/),
+        R("has an else branch", /else\s*\{/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'if (look("right") === "wall") {\n  move("down", 2);\n  move("right", 2);\n} else {\n  move("right", 2);\n  move("down", 2);\n}'
+    },
+    {
+      brief: `<h2>LOOP + IF = A BRAIN</h2>
+<div class="teach">Combine repetition with decision and the hero starts to <b>navigate</b>: every pass, check ahead and choose. This is the seed of every game AI ever written.</div>
+<p><em>Quest:</em> the zigzag descent. Loop 6 times; each pass, IF the right is a wall, step down — ELSE step right.</p>`,
+      starter: "",
+      level: ["######", "#@.#.#", "##.###", "##..##", "###.##", "###.E#", "######"],
+      reqs: [
+        R("a for loop", /for\s*\(/),
+        R("an if/else inside", /if\s*\(\s*look\([\s\S]*else/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'for (let i = 0; i < 6; i++) {\n  if (look("right") === "wall") {\n    move("down");\n  } else {\n    move("right");\n  }\n}\nmove("right");'
+    }
+  ]
+},
+{
+  id: "functions",
+  name: "WRITING SPELLS",
+  drills: [
+    {
+      brief: `<h2>FUNCTION — FORGE YOUR OWN</h2>
+<div class="teach">You've been CALLING spells. Now write one. <code>function</code> bundles statements under a name; calling the name runs the bundle:</div>
+<div class="ex">function stride() {     ← define (nothing happens yet)
+  move("right");
+  move("right");
+}
+
+stride();               ← now it happens
+stride();</div>
+<p><em>Quest:</em> define <code>stride</code> exactly like that, then call it twice to cross 4 tiles.</p>`,
+      starter: "",
+      level: ["########", "#@...E.#", "########"],
+      reqs: [
+        R("defines function stride", /function\s+stride\s*\(\s*\)\s*\{/),
+        G("calls it at least twice", (res, code) => (code.match(/stride\s*\(\s*\)\s*;/g) || []).length >= 2),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'function stride() {\n  move("right");\n  move("right");\n}\nstride();\nstride();'
+    },
+    {
+      brief: `<h2>PARAMETERS</h2>
+<div class="teach">Your spells can take arguments too. A <b>parameter</b> is the jar-name in the definition; the argument fills it at each call:</div>
+<div class="ex">function dash(dir) {    ← dir is the parameter
+  move(dir, 3);
+}
+dash("right");          ← "right" pours into dir
+dash("down");</div>
+<p><em>Quest:</em> define <code>dash</code>, then dash right and dash down to the stairs.</p>`,
+      starter: "",
+      level: ["######", "#@...#", "#....#", "#....#", "#...E#", "######"],
+      reqs: [
+        R("defines function dash(dir)", /function\s+dash\s*\(\s*dir\s*\)\s*\{/),
+        R("the body uses move(dir, 3)", /move\(\s*dir\s*,\s*3\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'function dash(dir) {\n  move(dir, 3);\n}\ndash("right");\ndash("down");'
+    },
+    {
+      brief: `<h2>RETURN</h2>
+<div class="teach">Your spells can ANSWER, like look does. <code>return</code> hands a value back and ends the function:</div>
+<div class="ex">function blocked(dir) {
+  return look(dir) === "wall";   ← returns true or false
+}
+
+if (blocked("right")) { ... }</div>
+<div class="teach">true/false values are <b>booleans</b> — the currency of every if and while.</div>
+<p><em>Quest:</em> define <code>blocked</code>, then use <code>if (blocked("right"))</code> to choose: down 2 + right 2 if blocked, else straight right.</p>`,
+      starter: "",
+      level: ["######", "#@#..#", "#.#..#", "#..E.#", "######"],
+      reqs: [
+        R("defines function blocked(dir)", /function\s+blocked\s*\(\s*dir\s*\)\s*\{/),
+        R("returns a look comparison", /return\s+look\(\s*dir\s*\)\s*===?\s*["']wall["']/),
+        R("if uses blocked(...)", /if\s*\(\s*blocked\(\s*["']right["']\s*\)\s*\)/),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'function blocked(dir) {\n  return look(dir) === "wall";\n}\nif (blocked("right")) {\n  move("down", 2);\n  move("right", 2);\n}'
+    }
+  ]
+},
+{
+  id: "delve",
+  name: "⚔ THE DELVE",
+  drills: [
+    {
+      brief: `<h2>DELVE I · THE ANTECHAMBER</h2>
+<div class="teach">No lesson. No starter. The dungeon is dark — only tiles near your hero's path are revealed. Cast, watch, learn the map, recast. Every spell you know is legal.</div>
+<p><em>Quest:</em> find the key 🗝, open the door 🚪, reach the stairs.</p>`,
+      starter: "",
+      fog: true,
+      level: ["#########", "#@..#...#", "#.#.#.#.#", "#.#K..#.#", "#.#####.#", "#....D.E#", "#########"],
+      reqs: [
+        G("the key is in the satchel", res => res.held.includes("key")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: "scout first: cast small spells (move a few steps) to light the map.\nthe key is roughly down-right of you; the door guards the east passage."
+    },
+    {
+      brief: `<h2>DELVE II · THE TREASURY</h2>
+<div class="teach">The chest 💰 is optional plunder — but what apprentice leaves treasure?</div>
+<p><em>Quest:</em> grab the treasure AND reach the stairs.</p>`,
+      starter: "",
+      fog: true,
+      level: ["##########", "#@...#...#", "####.#.#.#", "#C.#.#.#.#", "#..#.#.#.#", "#........#", "########E#", "##########"],
+      reqs: [
+        G("treasure in the satchel", res => res.held.includes("treasure")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: "the chest hides west, below the wall block. the long south corridor connects everything."
+    },
+    {
+      brief: `<h2>DELVE III · THE LONG DARK</h2>
+<div class="teach">The final descent. Corridors of unknown length — this one truly WANTS while-loops and look. A champion's spell is short.</div>
+<p><em>Quest:</em> key, door, stairs. Bonus honor if your spell is under 12 lines.</p>`,
+      starter: "",
+      fog: true,
+      level: ["############", "#@.........#", "##########.#", "#K.........#", "#.##########", "#........D.#", "##########.#", "#........E.#", "############"],
+      reqs: [
+        G("the key is in the satchel", res => res.held.includes("key")),
+        G("the hero reaches the stairs", res => res.reachedExit)
+      ],
+      hint: 'the shape is a serpent: full-width corridors, alternating.\nwhile (look("right") !== "wall") { move("right"); }\nmove("down"); — then the same leftward. loops of loops...'
+    }
+  ]
+}
+];
+
+/* ================= STATE ================= */
+const state = { mod: 0, drill: 0, passed: {}, missed: {} };
+function key(m, d) { return MODULES[m].id + ":" + d; }
+function save() { try { localStorage.setItem("spelle-lab", JSON.stringify({ passed: state.passed })); } catch (e) {} }
+function load() { try { const s = JSON.parse(localStorage.getItem("spelle-lab")); if (s) state.passed = s.passed || {}; } catch (e) {} }
+
+/* ================= DOM ================= */
+const $ = id => document.getElementById(id);
+const editor = $("editor");
+let animTimer = null;
+
+function log(msg) {
+  const el = document.createElement("div");
+  el.className = "log-line";
+  el.innerHTML = msg;
+  $("log").prepend(el);
+  while ($("log").children.length > 30) $("log").lastChild.remove();
+}
+
+function currentDrill() {
+  return { m: state.mod, d: state.drill, drill: MODULES[state.mod].drills[state.drill] };
+}
+
+const EMOJI = { K: "🗝", C: "💰", D: "🚪", E: "🌀" };
+
+/* render level; visited = Set("x,y") for fog; heroPos = {x,y} */
+function renderDungeon(levelRows, heroPos, removed, opened, visited) {
+  const grid = $("grid");
+  const rows = levelRows.map(r => r.split(""));
+  grid.style.gridTemplateColumns = `repeat(${rows[0].length}, 34px)`;
+  grid.innerHTML = "";
+  rows.forEach((row, y) => row.forEach((c, x) => {
+    const cell = document.createElement("div");
+    const k = x + "," + y;
+    const isFog = visited && !visited.has(k);
+    if (c === "#") cell.className = "cell wall" + (isFog ? " fog" : "");
+    else cell.className = "cell floor" + (isFog ? " fog" : "");
+    if (!isFog) {
+      let t = c === "@" ? "." : c;
+      if (removed && removed.has(k)) t = ".";
+      if (opened && opened.has(k)) t = ".";
+      if (EMOJI[t]) cell.innerHTML = `<span class="item">${EMOJI[t]}</span>`;
+    }
+    if (heroPos && heroPos.x === x && heroPos.y === y) {
+      cell.innerHTML += `<span class="hero" id="hero">🧙</span>`;
+    }
+    grid.appendChild(cell);
+  }));
+}
+
+function heroStart(levelRows) {
+  let pos = { x: 0, y: 0 };
+  levelRows.forEach((r, y) => { const x = r.indexOf("@"); if (x > -1) pos = { x, y }; });
+  return pos;
+}
+
+function neighbors(x, y) {
+  return [[x,y],[x+1,y],[x-1,y],[x,y+1],[x,y-1],[x+1,y+1],[x-1,y-1],[x+1,y-1],[x-1,y+1]].map(p => p[0] + "," + p[1]);
+}
+
+function renderDrill() {
+  clearInterval(animTimer);
+  const { m, d, drill } = currentDrill();
+  const mod = MODULES[m];
+  $("sheetname").textContent = `${mod.name} · ${d + 1}/${mod.drills.length}`;
+  $("brief").innerHTML =
+    drill.brief +
+    `<ul id="reqs">${drill.reqs.map(r => `<li>${escapeHtml(r.label)}</li>`).join("")}</ul>` +
+    `<div class="hintbox" id="hintbox"></div>`;
+  editor.value = drill.starter;
+  $("nextbtn").style.display = "none";
+  $("stamp").classList.remove("show");
+  $("satchel").textContent = "";
+  const start = heroStart(drill.level);
+  const visited = drill.fog ? new Set(neighbors(start.x, start.y)) : null;
+  renderDungeon(drill.level, start, new Set(), new Set(), visited);
+  updateStats();
+  buildNav();
+  editor.focus();
+}
+
+function updateStats() {
+  const total = MODULES.reduce((n, m) => n + m.drills.length, 0);
+  const done = Object.keys(state.passed).filter(k => state.passed[k]).length;
+  $("stat-pass").textContent = done;
+  $("stat-total").textContent = Math.round(done / total * 100) + "%";
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+function buildNav() {
+  const sel = $("chapsel");
+  sel.innerHTML = "";
+  MODULES.forEach((m, i) => {
+    const done = m.drills.filter((_, d) => state.passed[key(i, d)]).length;
+    const o = document.createElement("option");
+    o.value = i;
+    o.textContent = `${m.name}  —  ${done}/${m.drills.length}${done === m.drills.length ? " ✓" : ""}`;
+    if (i === state.mod) o.selected = true;
+    sel.appendChild(o);
+  });
+}
+
+/* ================= CASTING ================= */
+function castSpell() {
+  clearInterval(animTimer);
+  const { m, d, drill } = currentDrill();
+  const code = editor.value;
+  const res = simulate(drill.level, code);
+
+  if (res.error) {
+    log(`<i>THE SPELL MISFIRES</i> — ${escapeHtml(res.error)}`);
+  }
+
+  /* animate the actions */
+  const start = heroStart(drill.level);
+  let pos = { ...start };
+  const removed = new Set(), opened = new Set();
+  const visited = drill.fog ? new Set(neighbors(start.x, start.y)) : null;
+  renderDungeon(drill.level, pos, removed, opened, visited);
+  const satchelIcons = [];
+  let i = 1;
+
+  animTimer = setInterval(() => {
+    if (i >= res.actions.length) {
+      clearInterval(animTimer);
+      finishCast(code, res);
+      return;
+    }
+    const a = res.actions[i++];
+    if (a.type === "move") {
+      pos = { x: a.x, y: a.y };
+      if (visited) neighbors(a.x, a.y).forEach(k => visited.add(k));
+    }
+    if (a.type === "unlock") { opened.add(a.x + "," + a.y); log(`<em>CLUNK</em> — the door yields to the key.`); }
+    if (a.type === "grab") {
+      removed.add(a.x + "," + a.y);
+      satchelIcons.push(a.item === "key" ? "🗝" : "💰");
+      $("satchel").textContent = satchelIcons.join(" ");
+      log(`<em>GRABBED</em> — ${a.item} into the satchel.`);
+    }
+    if (a.type === "grabfail") log(`<i>grab()</i> — nothing here but dust.`);
+    if (a.type === "say") log(`🧙 <em>"${escapeHtml(a.text)}"</em>`);
+    renderDungeon(drill.level, pos, removed, opened, visited);
+    if (a.type === "bump") {
+      const h = $("hero");
+      if (h) { h.classList.add("bump"); }
+      if (a.locked) log(`<i>LOCKED</i> — the door needs a key.`);
+    }
+  }, 160);
+}
+
+function finishCast(code, res) {
+  const { m, d, drill } = currentDrill();
+  const items = document.querySelectorAll("#reqs li");
+  let allPass = true;
+  drill.reqs.forEach((r, i) => {
+    const ok = !res.error && r.test(code, res);
+    items[i].className = ok ? "pass" : "fail";
+    if (!ok) allPass = false;
+  });
+  const k = key(m, d);
+  if (allPass) {
+    state.passed[k] = true;
+    save();
+    $("stamp").classList.add("show");
+    $("nextbtn").style.display = "";
+    log(`<b>SEALED</b> — ${MODULES[m].name}, quest ${d + 1}. The hero bows.`);
+  } else if (!res.error) {
+    log(`<i>NOT YET</i> — the checklist shows what remains. Recast at will.`);
+  }
+  updateStats();
+  buildNav();
+}
+
+function nextDrill() {
+  const mod = MODULES[state.mod];
+  if (state.drill < mod.drills.length - 1) state.drill++;
+  else if (state.mod < MODULES.length - 1) {
+    state.mod++;
+    state.drill = 0;
+    log(`<em>NEW CHAPTER</em> — ${MODULES[state.mod].name}`);
+  } else {
+    log(`<em>THE GRIMOIRE IS COMPLETE.</em> The dungeon bows to its new master.`);
+    return;
+  }
+  renderDrill();
+}
+
+function showHint() {
+  const { drill } = currentDrill();
+  const hb = $("hintbox");
+  hb.textContent = drill.hint;
+  hb.classList.add("show");
+  log(`<em>HINT</em> pinned to the brief.`);
+}
+
+function resetDrill() {
+  renderDrill();
+}
+
+function openGrimoire() {
+  $("cover").style.display = "none";
+  log(`<em>THE GRIMOIRE OPENS</em> — apprentice kaatje takes the quill. Write a spell, cast it, watch the hero obey.`);
+  editor.focus();
+}
+
+/* ================= WIRING ================= */
+$("chapsel").addEventListener("change", e => {
+  state.mod = parseInt(e.target.value);
+  state.drill = 0;
+  renderDrill();
+});
+editor.addEventListener("keydown", e => {
+  if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+    e.preventDefault();
+    if ($("nextbtn").style.display !== "none") nextDrill();
+    else castSpell();
+  }
+  if (e.key === "Tab") {
+    e.preventDefault();
+    const s = editor.selectionStart;
+    editor.value = editor.value.slice(0, s) + "  " + editor.value.slice(editor.selectionEnd);
+    editor.selectionStart = editor.selectionEnd = s + 2;
+  }
+});
+
+load();
+renderDrill();
+</script>
+</body>
+</html>
