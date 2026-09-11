@@ -575,12 +575,17 @@ var PROTO_GUIDES = [
     ready: true,
     conceptual: true,
     problem: {
-      text: "Why does a switch keep forwarding at full speed while you're hammering the CLI, and why does a commit not drop a single packet? Because Junos splits the box in two. The ROUTING ENGINE (RE) is the brain: a computer running the daemons, the CLI, the routing protocols, the config. The PACKET FORWARDING ENGINE (PFE) is the muscle: dedicated hardware that moves transit traffic using a forwarding table the RE compiled for it. The exam loves this split — and so does real troubleshooting, because 'control plane problem' and 'forwarding plane problem' are different tickets.",
+      text: ["Why does a switch keep forwarding at full speed while you're hammering the CLI? Because a Junos box is really TWO machines in one chassis.", "The ROUTING ENGINE (RE) is the brain — a small computer running the CLI, the config, and the routing protocols. The PACKET FORWARDING ENGINE (PFE) is the muscle — dedicated hardware that moves customer traffic without asking the brain.", "The exam loves this split, and so does troubleshooting: 'control plane problem' and 'forwarding plane problem' are different tickets with different fixes."],
       svg: "arch-problem"
     },
     how: {
-      text: "The RE runs one daemon per job — type show system processes on any lab device to meet them. mgd owns the CLI and the candidate config (every set you type is a conversation with mgd). rpd runs the routing protocols and builds the ROUTING table; from it the RE derives the smaller FORWARDING table and pushes it down to the PFE. dcd manages interfaces; chassisd watches fans, power and temperature; on switches l2ald learns MACs. Transit traffic never visits the RE — the PFE forwards it in hardware. Only EXCEPTION traffic climbs up: packets addressed TO the box (your ping, your ssh, a routing protocol hello). That's why a busy CLI never slows customer traffic, and why the commit model (candidate \u2192 validate \u2192 activate) can swap configs without a hiccup."
+      text: ["The brain is not one program — it's a team of daemons, one per job. mgd owns the CLI: every set you type is a conversation with mgd. rpd runs the routing protocols. dcd handles interfaces, chassisd watches fans and temperature, and on switches l2ald learns MAC addresses. (Press the buttons below to meet them on a real device.)", "The two of them share work like this: rpd builds the ROUTING table on the RE, the RE boils it down to a smaller FORWARDING table, and pushes that down into the PFE's hardware. From then on, customer traffic crosses the PFE only.", "Only one kind of packet ever climbs up to the brain: EXCEPTION traffic — packets addressed TO the box itself. Your ssh. Your ping to the switch. An OSPF hello. Everything else stays downstairs.", "That's the whole trick: a busy CLI can't slow customer traffic (different machine), and a commit swaps configs without dropping a packet (the PFE keeps forwarding on the old table until the new one lands)."]
     },
+    try: [
+      ["show system processes", "Meet the daemon team on a real device — these names ARE exam answers"],
+      ["show version", "Model and Junos version — one OS across EX, MX and SRX, the exam's favorite fact"],
+      ["show system commit", "The candidate model's paper trail — every commit, timestamped"]
+    ],
     nums: [
       ["mgd", "management daemon — CLI, candidate config, commit"],
       ["rpd", "routing protocol daemon — OSPF, BGP, statics; the routing table"],
@@ -622,13 +627,13 @@ var PROTO_GUIDES = [
     title: "Firewall Filters & Routing Policy",
     tag: "JNCIA \u00b7 traffic control",
     ready: true,
-    scenarioId: null,
+    scenarioId: "filtered-segment",
     problem: {
-      text: "Two different jobs that the exam loves to make you tell apart. A FIREWALL FILTER decides the fate of PACKETS crossing an interface — block the guest VLAN from reaching management, allow only icmp, drop a noisy host. ROUTING POLICY decides the fate of ROUTES entering or leaving a protocol — what you accept from a BGP peer, what you advertise to them. Same term/match/action grammar, completely different victims: filters eat packets, policies eat routes.",
+      text: ["First, defuse the name: on an EX switch, 'firewall' does NOT mean a firewall appliance. It isn't stateful, it doesn't track connections like an SRX would. It's a per-packet checklist — what other vendors call an ACL. Junos just reuses the word in config, and yes, that confuses everyone.", "A FIREWALL FILTER is a bouncer's checklist stapled to ONE interface, in ONE direction. Every packet crossing it walks the list: block the guest VLAN from reaching management, allow only icmp, drop a noisy host.", "ROUTING POLICY is the same checklist idea aimed at a different victim: ROUTES entering or leaving a protocol — what you accept from a BGP peer, what you advertise back. Filters eat packets; policies eat routes. That one sentence is worth an exam point."],
       svg: "filters-problem"
     },
     how: {
-      text: "Both are built from TERMS evaluated top-down, first match wins. A term has from (match conditions) and then (an action). For filters the actions are accept, reject (drop + tell the sender), or discard (drop silently — the sender just times out); anything not matched by any term hits the implicit discard-all at the end, the classic foot-gun. This lab simulates filters fully: build one below and watch a ping die two different ways. Routing policy uses the same shape under policy-options, applied as import/export on a protocol — the lab doesn't simulate policy yet, so this guide teaches the concepts and defaults the exam asks about."
+      text: ["A filter is a stack of TERMS, read top-down. Each term has a from (the match) and a then (the verdict). First term that matches wins — the packet never sees the terms below it. A term with no from at all matches everything.", "Three verdicts: accept (pass), reject (drop it AND send back 'administratively prohibited'), discard (drop it silently — the sender just waits and times out). Same death, different politeness. The lab's ping tells you which one ate your packet, and on which box.", "Now the foot-gun the exam and real life both adore: every filter ends with an INVISIBLE final rule — discard everything. If your terms only describe what to block, everything else falls off the end and dies too, including your own ssh. So every filter needs a final bare 'then accept' term for the rest of the world. Build it below and lock a ping out on purpose — the prerequisites walk you through it live.", "Routing policy reuses the exact same term/from/then shape, but under policy-options, applied to a protocol as import (what may enter my routing table) or export (what I advertise out). The lab doesn't simulate policy yet, so learn the two defaults the exam asks: BGP exports BGP-learned routes only — never your statics unless a policy says so — and OSPF floods its internal routes regardless; its export policy is for injecting outside routes in."]
     },
     prereqs: [
       { desc: "A filter defined with at least one term (set firewall family inet filter ...)",
@@ -645,6 +650,9 @@ var PROTO_GUIDES = [
           var r = null;
           try{ r = pingRun(h, h.cfg.gw); }catch(e){ return false; }
           return r && !r.ok && r.lines.some(function(l){ return /firewall filter/.test(l.text); }); }); } },
+    ],
+    try: [
+      ["show configuration | display set", "Read a device's filter back as set commands — term order = evaluation order"]
     ],
     cfg: [
       ["set firewall family inet filter GUEST-BLOCK term t1 from source-address 10.0.20.0/24", "Match packets from the guest subnet..."],
@@ -696,11 +704,11 @@ var PROTO_GUIDES = [
     conceptual: true,
     drill: "subnet",
     problem: {
-      text: "Every exam form has subnetting questions, and every real ticket starts with 'is this address even in that subnet?'. You've been USING the answers all along — every /24, /30 and /31 in this lab — now make the math automatic. The goal: given any address/prefix, produce network, broadcast, usable range and host count in under 30 seconds, in your head.",
+      text: ["Every exam form has subnetting questions, and every real ticket starts with 'is this address even in that subnet?'.", "You've been USING the answers all along — every /24 LAN, /30 handoff and /31 point-to-point in this lab. Now make the math automatic: any address/prefix \u2192 network, broadcast, usable count, in under 30 seconds, in your head."],
       svg: "subnet-problem"
     },
     how: {
-      text: "The prefix says how many leading bits are the street name; the rest are house numbers. The fast method is the magic number: take the interesting octet (where the mask isn't 0 or 255) and compute 256 minus its mask value — subnets step by that size. A /26 means mask .192 in the last octet, magic number 64: networks at .0, .64, .128, .192. Your address falls in one of those blocks; block start = network, block end minus... no — block start plus size minus one = broadcast, and everything between is usable (minus the two ends). Hosts = 2^(32-prefix) minus 2. Then the two exam specials: /31 has NO network/broadcast waste — both addresses usable on point-to-point (RFC 3021) — and /32 is one host, a loopback."
+      text: ["The prefix splits an address into street name (network bits) and house numbers (host bits). Everything follows from where that split falls.", "The fast method is the MAGIC NUMBER. Find the interesting octet — the one where the mask isn't 0 or 255 — and compute 256 minus its mask value. Subnets step by that size. A /26 means mask .192, magic number 256\u2212192 = 64: networks sit at .0, .64, .128, .192.", "Snap your address DOWN to the nearest step: that's the network. Add the step size minus one: that's the broadcast. Everything strictly between them is usable, and the count is 2^(host bits) \u2212 2.", "Worked once, slowly: 192.168.10.130/26 \u2192 magic 64 \u2192 130 snaps down to 128 \u2192 network .128, broadcast .128+63 = .191, usable .129\u2013.190, count 62. That's the whole method — the drill below makes it reflex.", "Two exam specials to memorize as exceptions: /31 point-to-point keeps BOTH addresses usable — no network, no broadcast (RFC 3021) — and /32 is a single host."]
     },
     nums: [
       ["/24 = 254 hosts", "The everyday LAN — 256 minus network and broadcast"],
@@ -743,11 +751,11 @@ var PROTO_GUIDES = [
     ready: true,
     conceptual: true,
     problem: {
-      text: "The exam's opening act, and secretly the index of this whole lab: every feature you've used lives on a layer. Naming the layer is how engineers compress a whole diagnosis into one sentence — 'that's an L2 problem' instantly rules out routing, NAT and DNS. The model is a filing cabinet for your knowledge; the exam checks the drawers.",
+      text: ["The exam's opening act — and secretly the index of this whole lab, because every feature you've used lives on a layer.", "Naming the layer compresses a whole diagnosis into one sentence: 'that's an L2 problem' instantly rules out routing, NAT and DNS. The model is a filing cabinet; the exam checks the drawers."],
       svg: "osi-problem"
     },
     how: {
-      text: "Seven layers, but the working set is 1\u20134. Layer 1, physical: cables, optics, the gremlin's CRC errors. Layer 2, data link: frames and MAC addresses — switching, VLANs, LACP, RSTP, broadcast domains; a switch port per collision domain, a VLAN per broadcast domain. Layer 3, network: packets and IP — routing, OSPF, BGP, subnetting, ping's ICMP. Layer 4, transport: TCP's connections (BGP rides TCP 179) and UDP's fire-and-forget (DHCP on 67/68). Layers 5\u20137 blur into 'the application' — ssh, DNS. Each layer wraps the one above: data \u2192 segment \u2192 packet \u2192 frame \u2192 bits, and the PDU names are exam currency. TCP/IP's four layers say the same thing with fewer drawers."
+      text: ["Seven layers on paper; the working set is 1\u20134, and you've already touched all of them in this lab.", "Layer 1, physical — bits on a wire. Cables, optics, and the gremlin's climbing CRC errors. Layer 2, data link — FRAMES delivered by MAC address. Switching, VLANs, LACP, RSTP. One VLAN = one broadcast domain; that wall is why DHCP can't cross VLANs.", "Layer 3, network — PACKETS delivered by IP. Routing, OSPF, subnetting, ping's ICMP. Layer 4, transport — ports and delivery style: TCP builds connections (BGP rides TCP 179), UDP fires and forgets (DHCP on 67/68). Layers 5\u20137 blur into 'the application': ssh, DNS.", "Each layer gift-wraps the one above on the way down: data \u2192 segment \u2192 packet \u2192 frame \u2192 bits. Those PDU names are exam currency. And the diagnostic habit that makes this practical: climb ONE layer at a time — link light (L1), then ARP/VLAN (L2), then routing (L3), then the service (L4+)."]
     },
     nums: [
       ["L1 bits", "Cables and optics — a dying cable's CRC errors live here"],
@@ -889,12 +897,12 @@ function protoSvg(kind){
   if(kind === "subnet-problem") return open +
     '<text x="280" y="30" fill="var(--text)" font-size="13">192.168.10.130 /26</text>' +
     '<rect x="60" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
-    '<rect x="170" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--green)" stroke-width="2"/>' +
-    '<rect x="280" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<rect x="170" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<rect x="280" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--green)" stroke-width="2"/>' +
     '<rect x="390" y="50" width="110" height="26" rx="4" fill="none" stroke="var(--line)"/>' +
-    '<text x="115" y="67">.0</text><text x="225" y="67" fill="var(--green)">.64</text>' +
-    '<text x="335" y="67">.128</text><text x="445" y="67">.192</text>' +
-    '<text x="335" y="67" fill="var(--green)"></text>' +
+    '<text x="115" y="67">.0</text><text x="225" y="67">.64</text>' +
+    '<text x="335" y="67" fill="var(--green)">.128 \u2190 .130 lives here</text>' +
+    '<text x="445" y="67">.192</text>' +
     '<text x="280" y="100" fill="var(--amber)">magic number: 256 \u2212 192 = 64 \u2192 blocks of 64</text>' +
     '<text x="280" y="125" fill="var(--green)">.130 \u2192 block .128: net .128 \u00b7 bcast .191 \u00b7 62 hosts</text>' + close;
   if(kind === "osi-problem") return open +
@@ -1072,6 +1080,16 @@ function renderProtoList(box){
     protoEl("span", "pg-exam-dom", row, r[0]);
     protoEl("span", null, row, r[1]);
   });
+  if(typeof courseDomainStats === "function"){
+    var st = courseDomainStats();
+    var rd = protoEl("div", "pg-exam-ready", exam);
+    Object.keys(st).forEach(function(dom){
+      var d = st[dom];
+      var chip = protoEl("span", "pg-ready-chip" + (d.done >= d.total ? " pg-ready-done" : ""), rd,
+        dom.split(" ")[0] + " " + d.done + "/" + d.total);
+      chip.title = dom;
+    });
+  }
   var groups = [
     ["Exam fundamentals", PROTO_GUIDES.filter(function(g){ return /JNCIA/.test(g.tag); })],
     ["Protocols", PROTO_GUIDES.filter(function(g){ return !/JNCIA/.test(g.tag); })],
@@ -1105,15 +1123,18 @@ function renderProtoGuide(box, g){
     return d;
   };
 
+  var paras = function(box2, t){
+    (Array.isArray(t) ? t : [t]).forEach(function(x){ protoEl("p", null, box2, x); });
+  };
   var s1 = sec("The problem it solves");
-  protoEl("p", null, s1, g.problem.text);
+  paras(s1, g.problem.text);
   if(g.problem.svg){
     var holder = protoEl("div", null, s1);
     holder.innerHTML = protoSvg(g.problem.svg);
   }
 
   var s2 = sec("How it works");
-  protoEl("p", null, s2, g.how.text);
+  paras(s2, g.how.text);
   var anim = protoAnims[g.id];
   if(anim){
     var ab = protoEl("button", "pg-anim-btn", s2, "\u25b6 Animate this on my canvas");
@@ -1211,6 +1232,28 @@ function renderProtoGuide(box, g){
       protoEl("div", null, row, c[1]);
     });
   }
+  if(g.try && g.try.length){
+    var st = sec("Try it right now");
+    protoEl("p", "pg-sub", st, "Each button runs the command on a device on your canvas and opens its terminal \u2014 read the real output next to this guide:");
+    g.try.forEach(function(tr){
+      var row = protoEl("div", "pg-try", st);
+      var b = protoEl("button", "pg-try-btn", row, "\u25b8 " + tr[0]);
+      protoEl("div", "pg-try-note", row, tr[1]);
+      b.onclick = function(){
+        var types = PROTO_GLOW_TYPES[g.id] || ["switch", "router"];
+        var dev = devices[activeDevice];
+        if(!dev || types.indexOf(dev.type) === -1)
+          dev = Object.values(devices).find(function(d){ return types.indexOf(d.type) !== -1; });
+        if(!dev){
+          modalConfirm("No device yet", "Place a " + types[0] + " first (Add menu), then try again.", "OK");
+          return;
+        }
+        openCli(dev.id);
+        runCliCommand(dev, tr[0], false);
+        if(typeof SFX !== "undefined") SFX.tick();
+      };
+    });
+  }
 
   if(g.nums){
     var s5 = sec("The numbers to know");
@@ -1267,6 +1310,10 @@ function renderProtoGuide(box, g){
       b.onclick = function(){
         var correct = oi === q.right;
         b.classList.add(correct ? "pg-q-right" : "pg-q-wrong");
+        if(correct && typeof markQuizDone === "function"){
+          markQuizDone(g.id, qi);
+          if(typeof renderCourseBar === "function") renderCourseBar();
+        }
         if(typeof SFX !== "undefined") (correct ? SFX.ding : SFX.womp)();
         if(!why){
           why = protoEl("div", "pg-q-why", qbox, (correct ? "\u2713 " : "Not quite \u2014 ") + q.why);

@@ -4,7 +4,7 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.join(__dirname, "..");
-const order = ["core.js", "sound.js", "grammar.js", "cli.js", "engine.js", "ui.js", "planner.js", "juno.js", "scenarios.js", "protocols.js"];
+const order = ["core.js", "sound.js", "grammar.js", "cli.js", "engine.js", "ui.js", "planner.js", "juno.js", "scenarios.js", "protocols.js", "course.js"];
 const ctx = vm.createContext({ console });
 vm.runInContext(fs.readFileSync(path.join(__dirname, "shim.js"), "utf8"), ctx, { filename: "shim.js" });
 for(const f of order)

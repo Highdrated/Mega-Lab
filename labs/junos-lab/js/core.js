@@ -307,4 +307,4 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "2.2.1";
+var APP_VERSION = "2.4.0";

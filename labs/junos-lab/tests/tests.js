@@ -1489,6 +1489,45 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters").forEach
   ok(devices[bulkMake("isp", 2)[0]].cfg.ip, "bulk: ISPs arrive with a usable handoff address");
 }
 
+
+{
+  PROTO_GUIDES.filter(g => g.ready && g.conceptual).forEach(g => {
+    const t = g.how.text;
+    ok(Array.isArray(t) && t.length >= 2 && t.every(p => p.length < 600), "guide " + g.id + " how-it-works is chunked, no walls of text");
+  });
+  const arch = PROTO_GUIDES.find(g => g.id === "junos-arch");
+  ok(arch.try && arch.try.length >= 3, "arch guide has runnable try-it commands");
+  wipeLab();
+  const s1 = makeSwitch(0, 0, 8);
+  arch.try.forEach(tr => {
+    const out = deviceExec(devices[s1], tr[0]).map(l => l.text).join("");
+    ok(!/unknown command|syntax error/.test(out), "try chip runs clean: " + tr[0]);
+  });
+}
+
+
+{
+  COURSE.forEach(u => {
+    if(u.s) ok(SCENARIOS.some(sc => sc.id === u.s), "course: scenario unit exists: " + u.s);
+    if(u.g) ok(PROTO_GUIDES.some(g => g.id === u.g && g.ready), "course: guide unit exists and is ready: " + u.g);
+  });
+  const allDomainIds = Object.values(COURSE_DOMAINS).flat();
+  COURSE.forEach(u => ok(allDomainIds.includes(u.s || u.g), "course: unit mapped to an exam domain: " + (u.s || u.g)));
+  {
+    const nx = courseNext();
+    const consistent = nx === null || (!unitDone(nx.unit) && COURSE.slice(0, nx.idx).every(unitDone));
+    ok(consistent, "course: next unit is the first undone one, everything before it done");
+  }
+  const stats = courseDomainStats();
+  ok(Object.keys(stats).length === 6 && Object.values(stats).every(d => d.total > 0), "course: six domains, all populated");
+  const g0 = PROTO_GUIDES.find(g => g.id === "osi");
+  g0.quiz.forEach((q, qi) => markQuizDone("osi", qi));
+  ok(unitDone({ g: "osi" }) && courseNext().unit.g === "subnetting", "course: mastering a guide's quiz advances the path");
+  try{ localStorage.removeItem("junoslab-quizdone:osi"); }catch(e){}
+  ok(PROTO_GUIDES.find(g => g.id === "filters").scenarioId === "filtered-segment", "filters guide links its live scenario");
+  ok(THEMES.includes("nightops") && THEMES.includes("paper") && !THEMES.includes("blueprint"), "themes: nightops + paper in, blueprint gone");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

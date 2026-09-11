@@ -1578,7 +1578,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ---------- themes ---------- */
-const THEMES = ["space", "terminal", "blueprint"];
+const THEMES = ["space", "terminal", "nightops", "paper"];
 function cssVar(name, fallback){
   try{
     if(typeof getComputedStyle === "function"){
@@ -3095,6 +3095,27 @@ function setTabletTab(tab){
   if(tab === "scen" && typeof renderScenarioMeta === "function") renderScenarioMeta();
   saveTabletState();
 }
+(function(){
+  const t = document.getElementById("tablet"), grip = document.getElementById("tablet-grip"), mx = document.getElementById("tablet-max");
+  if(mx) mx.onclick = () => { t.classList.toggle("tablet-max"); };
+  if(!grip) return;
+  let sz = null;
+  grip.addEventListener("pointerdown", (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const r = t.getBoundingClientRect();
+    t.style.left = r.left + "px"; t.style.top = r.top + "px"; t.style.right = "auto";
+    sz = { x: e.clientX, y: e.clientY, w: r.width, h: r.height };
+    grip.setPointerCapture(e.pointerId);
+  });
+  grip.addEventListener("pointermove", (e) => {
+    if(!sz) return;
+    t.style.width = Math.max(300, sz.w + e.clientX - sz.x) + "px";
+    t.style.height = Math.max(280, sz.h + e.clientY - sz.y) + "px";
+  });
+  const end = () => { sz = null; };
+  grip.addEventListener("pointerup", end);
+  grip.addEventListener("pointercancel", end);
+})();
 function openTablet(tab){
   if(tab) setTabletTab(tab);
   tabletEl.classList.add("open");

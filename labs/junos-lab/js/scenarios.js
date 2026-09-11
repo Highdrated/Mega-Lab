@@ -1308,6 +1308,7 @@ function evalChecks(){
       try{ localStorage.setItem(LS_PROGRESS, JSON.stringify(PROGRESS)); }catch(e){}
       renderScenSelect();
       if(typeof SFX !== "undefined") SFX.fanfare();
+      if(typeof courseOnComplete === "function") setTimeout(function(){ courseOnComplete(currentScenario.id); }, 400);
       document.getElementById("scen-objectives").classList.add("done-flash");
       setTimeout(() => document.getElementById("scen-objectives").classList.remove("done-flash"), 1100);
     }
