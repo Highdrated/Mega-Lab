@@ -47,7 +47,7 @@ const LABS_CONFIG = [
     tag: "General",
     path: "labs/git-lab.html",
     ring: "ring-inner",
-    angle: 180,
+    angle: 200,
     glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
   },
     {
