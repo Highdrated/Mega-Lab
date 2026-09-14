@@ -51,6 +51,64 @@
     outline: none;
   }
   #chapsel:hover { border-color: var(--soft); }
+  .hbtn {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    padding: 7px 14px;
+    background: transparent;
+    border: 1px solid var(--hair);
+    border-radius: 999px;
+    color: var(--ink);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .hbtn:hover { border-color: var(--soft); }
+  #mapforge {
+    position: fixed;
+    inset: 0;
+    background: rgba(46, 36, 22, 0.55);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    z-index: 60;
+  }
+  #mapforge.open { display: flex; }
+  .forge-sheet {
+    background: var(--sheet);
+    border: 1px solid var(--ink);
+    outline: 1px solid var(--hair);
+    outline-offset: 5px;
+    padding: 26px 30px;
+    width: 460px;
+    box-shadow: 0 24px 70px rgba(0,0,0,0.4);
+  }
+  .forge-sheet h2 { font-size: 15px; font-weight: normal; letter-spacing: 1px; margin-bottom: 10px; }
+  .forge-sheet .legend { font-size: 11px; color: var(--soft); font-family: "Consolas", monospace; margin-bottom: 10px; line-height: 1.7; }
+  .forge-sheet textarea {
+    width: 100%;
+    height: 180px;
+    font-family: "Consolas", "Menlo", monospace;
+    font-size: 13px;
+    line-height: 1.5;
+    background: #fff;
+    border: 1px solid var(--hair);
+    padding: 10px;
+    resize: vertical;
+    outline: none;
+  }
+  .forge-sheet .row { display: flex; gap: 8px; margin-top: 12px; align-items: center; }
+  .forge-sheet button {
+    font-family: Georgia, serif;
+    font-size: 12px;
+    padding: 7px 16px;
+    border-radius: 999px;
+    border: 1px solid var(--hair);
+    background: transparent;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .forge-sheet button.primary { border-color: var(--wax); background: var(--wax); color: var(--sheet); }
+  .forge-sheet label { font-size: 12px; font-style: italic; color: var(--soft); margin-left: auto; }
   header .spacer { flex: 1; }
   .deskstat { font-size: 12px; font-style: italic; color: var(--soft); }
   .deskstat b { color: var(--ink); font-weight: normal; }
@@ -316,7 +374,8 @@
       <b>COMMISSION</b> .. MEGA LAB / VOLUME IV<br>
       <b>APPRENTICE</b> .. KAATJE<br>
       <b>FAMILIAR</b> .... JUNIE (SCOUTING AHEAD)<br>
-      <b>METHOD</b> ...... WRITE A SPELL · CAST IT · WATCH THE HERO OBEY
+      <b>METHOD</b> ...... WRITE A SPELL · CAST IT · WATCH THE HERO OBEY<br>
+      <b>SISTER</b> ...... STYLE, VOL. III (HTML + CSS)
     </div>
     <button onclick="openGrimoire()">OPEN THE GRIMOIRE</button>
   </div>
@@ -325,6 +384,8 @@
 <header>
   <div class="wordmark">SPEL<i>LE</i></div>
   <select id="chapsel" title="chapters"></select>
+  <button class="hbtn" onclick="openMapForge()">🗺 map</button>
+  <button class="hbtn" onclick="saveCode()" title="export / import progress">🪶</button>
   <div class="spacer"></div>
   <div class="deskstat">
     <b id="sheetname">LESSON 0</b> · sealed <b id="stat-pass">0</b> · <b id="stat-total">0%</b>
@@ -342,8 +403,10 @@
       <span>spellbook <span class="key">· ctrl+enter casts — again for next</span></span>
       <span class="tools">
         <button id="nextbtn" onclick="nextDrill()" style="display:none;" class="gold">next →</button>
+        <button id="speedbtn" onclick="cycleSpeed()" title="animation speed">1×</button>
         <button onclick="resetDrill()">reset</button>
         <button onclick="showHint()">hint</button>
+        <button onclick="stepCast()" title="run one action at a time">step</button>
         <button class="primary" onclick="castSpell()">cast</button>
       </span>
     </div>
@@ -359,6 +422,25 @@
     </div>
   </section>
 </main>
+
+<div id="mapforge">
+  <div class="forge-sheet">
+    <h2>✦ THE MAP FORGE</h2>
+    <div class="legend"># wall · . floor · @ hero · E stairs · K key · D door · C chest<br>one row per line — edges are walled automatically</div>
+    <textarea id="mapinput" spellcheck="false">#########
+#@..#...#
+#.#.#.#.#
+#.#...#.#
+#.#####.#
+#......E#
+#########</textarea>
+    <div class="row">
+      <button class="primary" onclick="loadMap()">enter this dungeon</button>
+      <button onclick="closeMapForge()">close</button>
+      <label><input type="checkbox" id="mapfog" checked> fog of war</label>
+    </div>
+  </div>
+</div>
 
 <footer id="log"></footer>
 
@@ -452,6 +534,8 @@ function simulate(levelRows, code) {
     fn(api.move, api.look, api.grab, api.say, api.here);
   } catch (e) {
     error = e.message;
+    const frames = [...(e.stack || "").matchAll(/<anonymous>:(\d+):\d+/g)].map(m => parseInt(m[1])).filter(n => n > 1);
+    if (frames.length) error += " — spell line " + (Math.min(...frames) - 1);
   }
 
   return { actions, held, reachedExit, error, endX: hx, endY: hy, ops };
@@ -1123,7 +1207,14 @@ let f = 1;                       ← facing right
 ];
 
 /* ================= STATE ================= */
-const state = { mod: 0, drill: 0, passed: {}, missed: {} };
+const state = { mod: 0, drill: 0, passed: {}, missed: {}, speed: 160, custom: null };
+const SPEEDS = [[160, "1×"], [55, "3×"], [22, "8×"]];
+let speedIdx = 0;
+function cycleSpeed() {
+  speedIdx = (speedIdx + 1) % SPEEDS.length;
+  state.speed = SPEEDS[speedIdx][0];
+  document.getElementById("speedbtn").textContent = SPEEDS[speedIdx][1];
+}
 function key(m, d) { return MODULES[m].id + ":" + d; }
 function save() { try { localStorage.setItem("spelle-lab", JSON.stringify({ passed: state.passed })); } catch (e) {} }
 function load() { try { const s = JSON.parse(localStorage.getItem("spelle-lab")); if (s) state.passed = s.passed || {}; } catch (e) {} }
@@ -1142,6 +1233,7 @@ function log(msg) {
 }
 
 function currentDrill() {
+  if (state.custom) return { m: -1, d: 0, drill: state.custom, custom: true };
   return { m: state.mod, d: state.drill, drill: MODULES[state.mod].drills[state.drill] };
 }
 
@@ -1184,7 +1276,29 @@ function neighbors(x, y) {
 
 function renderDrill() {
   clearInterval(animTimer);
-  const { m, d, drill } = currentDrill();
+  stepCtx = null;
+  const cur = currentDrill();
+  const { m, d, drill } = cur;
+  if (cur.custom) {
+    $("sheetname").textContent = "MAP FORGE";
+    $("brief").innerHTML =
+      `<h2>YOUR OWN DUNGEON</h2>
+<div class="teach">Forged at your own desk. Solve it with any spell — or hand it to the wall follower and see if your architecture defeats the algorithm.</div>
+<p><em>Quest:</em> reach the stairs.</p>` +
+      `<ul id="reqs">${drill.reqs.map(r => `<li>${escapeHtml(r.label)}</li>`).join("")}</ul>` +
+      `<div class="hintbox" id="hintbox"></div>`;
+    editor.value = "";
+    $("nextbtn").style.display = "none";
+    $("stamp").classList.remove("show");
+    $("satchel").textContent = "";
+    const start0 = heroStart(drill.level);
+    const visited0 = drill.fog ? new Set(neighbors(start0.x, start0.y)) : null;
+    renderDungeon(drill.level, start0, new Set(), new Set(), visited0);
+    updateStats();
+    buildNav();
+    editor.focus();
+    return;
+  }
   const mod = MODULES[m];
   $("sheetname").textContent = `${mod.name} · ${d + 1}/${mod.drills.length}`;
   $("brief").innerHTML =
@@ -1228,56 +1342,105 @@ function buildNav() {
 }
 
 /* ================= CASTING ================= */
+let stepCtx = null;
+
+function newRunCtx(drill, code) {
+  const res = simulate(drill.level, code);
+  const start = heroStart(drill.level);
+  return {
+    drill, code, res,
+    pos: { ...start },
+    removed: new Set(),
+    opened: new Set(),
+    visited: drill.fog ? new Set(neighbors(start.x, start.y)) : null,
+    satchel: [],
+    i: 1
+  };
+}
+
+function applyAction(ctx) {
+  const a = ctx.res.actions[ctx.i++];
+  if (a.type === "move") {
+    ctx.pos = { x: a.x, y: a.y };
+    if (ctx.visited) neighbors(a.x, a.y).forEach(k => ctx.visited.add(k));
+  }
+  if (a.type === "unlock") { ctx.opened.add(a.x + "," + a.y); log(`<em>CLUNK</em> — the door yields to the key.`); }
+  if (a.type === "grab") {
+    ctx.removed.add(a.x + "," + a.y);
+    ctx.satchel.push(a.item === "key" ? "🗝" : "💰");
+    $("satchel").textContent = ctx.satchel.join(" ");
+    log(`<em>GRABBED</em> — ${a.item} into the satchel.`);
+  }
+  if (a.type === "grabfail") log(`<i>grab()</i> — nothing here but dust.`);
+  if (a.type === "say") log(`🧙 <em>"${escapeHtml(a.text)}"</em>`);
+  renderDungeon(ctx.drill.level, ctx.pos, ctx.removed, ctx.opened, ctx.visited);
+  if (a.type === "bump") {
+    const h = $("hero");
+    if (h) h.classList.add("bump");
+    if (a.locked) log(`<i>LOCKED</i> — the door needs a key.`);
+  }
+  return a;
+}
+
 function castSpell() {
   clearInterval(animTimer);
-  const { m, d, drill } = currentDrill();
+  stepCtx = null;
+  const { drill } = currentDrill();
   const code = editor.value;
-  const res = simulate(drill.level, code);
-
-  if (res.error) {
-    log(`<i>THE SPELL MISFIRES</i> — ${escapeHtml(res.error)}`);
-  }
-
-  /* animate the actions */
-  const start = heroStart(drill.level);
-  let pos = { ...start };
-  const removed = new Set(), opened = new Set();
-  const visited = drill.fog ? new Set(neighbors(start.x, start.y)) : null;
-  renderDungeon(drill.level, pos, removed, opened, visited);
-  const satchelIcons = [];
-  let i = 1;
-
+  const ctx = newRunCtx(drill, code);
+  if (ctx.res.error) log(`<i>THE SPELL MISFIRES</i> — ${escapeHtml(ctx.res.error)}`);
+  $("satchel").textContent = "";
+  renderDungeon(drill.level, ctx.pos, ctx.removed, ctx.opened, ctx.visited);
   animTimer = setInterval(() => {
-    if (i >= res.actions.length) {
+    if (ctx.i >= ctx.res.actions.length) {
       clearInterval(animTimer);
-      finishCast(code, res);
+      finishCast(code, ctx.res);
       return;
     }
-    const a = res.actions[i++];
-    if (a.type === "move") {
-      pos = { x: a.x, y: a.y };
-      if (visited) neighbors(a.x, a.y).forEach(k => visited.add(k));
-    }
-    if (a.type === "unlock") { opened.add(a.x + "," + a.y); log(`<em>CLUNK</em> — the door yields to the key.`); }
-    if (a.type === "grab") {
-      removed.add(a.x + "," + a.y);
-      satchelIcons.push(a.item === "key" ? "🗝" : "💰");
-      $("satchel").textContent = satchelIcons.join(" ");
-      log(`<em>GRABBED</em> — ${a.item} into the satchel.`);
-    }
-    if (a.type === "grabfail") log(`<i>grab()</i> — nothing here but dust.`);
-    if (a.type === "say") log(`🧙 <em>"${escapeHtml(a.text)}"</em>`);
-    renderDungeon(drill.level, pos, removed, opened, visited);
-    if (a.type === "bump") {
-      const h = $("hero");
-      if (h) { h.classList.add("bump"); }
-      if (a.locked) log(`<i>LOCKED</i> — the door needs a key.`);
-    }
-  }, 160);
+    applyAction(ctx);
+  }, state.speed);
+}
+
+function stepCast() {
+  clearInterval(animTimer);
+  const { drill } = currentDrill();
+  const code = editor.value;
+  if (!stepCtx || stepCtx.code !== code || stepCtx.drill !== drill) {
+    stepCtx = newRunCtx(drill, code);
+    if (stepCtx.res.error) log(`<i>THE SPELL MISFIRES</i> — ${escapeHtml(stepCtx.res.error)}`);
+    $("satchel").textContent = "";
+    renderDungeon(drill.level, stepCtx.pos, stepCtx.removed, stepCtx.opened, stepCtx.visited);
+    log(`<em>STEP MODE</em> — the spell is cast but frozen. Each press = one action, in order.`);
+    return;
+  }
+  if (stepCtx.i >= stepCtx.res.actions.length) {
+    finishCast(code, stepCtx.res);
+    stepCtx = null;
+    return;
+  }
+  const a = applyAction(stepCtx);
+  log(`<em>STEP ${stepCtx.i - 1}/${stepCtx.res.actions.length - 1}</em> — ${a.type}${a.dir ? " " + a.dir : ""}${a.text ? ' "' + escapeHtml(a.text) + '"' : ""}`);
 }
 
 function finishCast(code, res) {
-  const { m, d, drill } = currentDrill();
+  const cur = currentDrill();
+  if (cur.custom) {
+    const items = document.querySelectorAll("#reqs li");
+    let allPass = true;
+    cur.drill.reqs.forEach((r, i) => {
+      const ok = !res.error && r.test(code, res);
+      if (items[i]) items[i].className = ok ? "pass" : "fail";
+      if (!ok) allPass = false;
+    });
+    if (allPass) {
+      $("stamp").classList.add("show");
+      log(`<b>CONQUERED</b> — your own dungeon falls. Forge another?`);
+    } else if (!res.error) {
+      log(`<i>NOT YET</i> — the stairs still wait.`);
+    }
+    return;
+  }
+  const { m, d, drill } = cur;
   const items = document.querySelectorAll("#reqs li");
   let allPass = true;
   drill.reqs.forEach((r, i) => {
@@ -1331,8 +1494,51 @@ function openGrimoire() {
   editor.focus();
 }
 
+function openMapForge() { $("mapforge").classList.add("open"); }
+function closeMapForge() { $("mapforge").classList.remove("open"); }
+function loadMap() {
+  let rows = $("mapinput").value.split("\n").map(r => r.trimEnd()).filter(r => r.length);
+  if (!rows.length) { log(`<i>THE FORGE</i> — an empty map is just darkness.`); return; }
+  const w = Math.max(...rows.map(r => r.length));
+  rows = rows.map(r => ("#" + r.padEnd(w, "#") + "#"));
+  const cap = "#".repeat(w + 2);
+  rows = [cap, ...rows, cap];
+  const flat = rows.join("");
+  if ((flat.match(/@/g) || []).length !== 1) { log(`<i>THE FORGE</i> — the map needs exactly one hero (@).`); return; }
+  if (!flat.includes("E")) { log(`<i>THE FORGE</i> — no stairs (E), no quest.`); return; }
+  state.custom = {
+    level: rows,
+    fog: $("mapfog").checked,
+    starter: "",
+    reqs: [G("the hero reaches the stairs", res => res.reachedExit)],
+    hint: "your map, your rules. the wall follower from ALGORITHMS never hurts."
+  };
+  try { localStorage.setItem("spelle-custom-map", $("mapinput").value); } catch (e) {}
+  closeMapForge();
+  log(`<em>THE FORGE COOLS</em> — a new dungeon stands. ${$("mapfog").checked ? "In darkness." : "Fully lit."}`);
+  renderDrill();
+}
+try { const m = localStorage.getItem("spelle-custom-map"); if (m) $("mapinput").value = m; } catch (e) {}
+
+function saveCode() {
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify({ passed: state.passed }))));
+  const answer = prompt("Your progress code — copy it somewhere safe.\nOr paste a saved code here and press OK to restore:", code);
+  if (answer && answer !== code) {
+    try {
+      const data = JSON.parse(decodeURIComponent(escape(atob(answer.trim()))));
+      state.passed = data.passed || {};
+      save();
+      renderDrill();
+      log(`<em>RESTORED</em> — the grimoire remembers.`);
+    } catch (e) {
+      log(`<i>THAT CODE</i> is not a grimoire. Nothing changed.`);
+    }
+  }
+}
+
 /* ================= WIRING ================= */
 $("chapsel").addEventListener("change", e => {
+  state.custom = null;
   state.mod = parseInt(e.target.value);
   state.drill = 0;
   renderDrill();

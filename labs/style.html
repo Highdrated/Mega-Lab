@@ -429,7 +429,8 @@
       <b>COMMISSION</b> .. MEGA LAB / VOLUME III<br>
       <b>SCRIBE</b> ...... KAATJE<br>
       <b>REVIEWER</b> .... JUNIE, AERIAL FAMILIAR<br>
-      <b>METHOD</b> ...... DRAFT LEFT · REVIEW RIGHT · SEAL WHEN TRUE
+      <b>METHOD</b> ...... DRAFT LEFT · REVIEW RIGHT · SEAL WHEN TRUE<br>
+      <b>SISTER</b> ...... SPELLE, VOL. IV (JAVASCRIPT)
     </div>
     <button onclick="openDesk()">UNROLL THE SCROLL</button>
   </div>
@@ -440,6 +441,9 @@
   <select id="chapsel" title="chapters"></select>
   <button class="hbtn" id="reviewbtn" onclick="startReview()">review (<span id="misscount">0</span>)</button>
   <button class="hbtn" id="tourneybtn" onclick="startTourney()">⚔ tourney</button>
+  <button class="hbtn" id="practicebtn" onclick="startPractice()">drills</button>
+  <button class="hbtn" id="sandboxbtn" onclick="startSandbox()">sandbox</button>
+  <button class="hbtn" onclick="saveCode()" title="export / import progress">🪶</button>
   <div class="spacer"></div>
   <div class="deskstat">
     <b id="sheetname">LESSON 0</b> · sealed <b id="stat-pass">0</b> · <b id="stat-total">0%</b>
@@ -1891,6 +1895,46 @@ const CHALLENGES = [
     hint: "column-count: 2; column-gap: 20px; column-rule: 1px solid sienna;"
   },
   {
+    t: "the watchful banner",
+    target: "<style>.b{position:fixed;top:0;left:0;width:100%;background:darkslategray;color:white;padding:10px;font-family:Georgia,serif;}</style><div class=\"b\">⚔ the watch never sleeps</div><p style=\"margin-top:50px\">the page below.</p>",
+    starter: "<style>\n.banner {\n  background: darkslategray;\n  color: white;\n  padding: 10px;\n}\n</style>\n\n<div class=\"banner\">⚔ the watch never sleeps</div>\n<p>the page below.</p>",
+    reqs: [
+      R("position: fixed, pinned top-left", /\.banner\s*\{(?=[^}]*position\s*:\s*fixed)(?=[^}]*top\s*:\s*0)(?=[^}]*left\s*:\s*0)[^}]*\}/i),
+      R("width: 100%", /\.banner\s*\{[^}]*width\s*:\s*100%\s*;?[^}]*\}/i)
+    ],
+    hint: "position: fixed; top: 0; left: 0; width: 100%;"
+  },
+  {
+    t: "the gliding button",
+    target: "<style>button{background:wheat;border:2px solid saddlebrown;padding:10px 20px;cursor:pointer;transition:background 0.4s;}button:hover{background:goldenrod;}</style><button>knock</button><p style=\"font-size:11px;color:gray\">(hover it)</p>",
+    starter: "<style>\nbutton {\n  background: wheat;\n  border: 2px solid saddlebrown;\n  padding: 10px 20px;\n}\n</style>\n\n<button>knock</button>",
+    reqs: [
+      R("cursor: pointer", /button\s*\{[^}]*cursor\s*:\s*pointer\s*;?[^}]*\}/i),
+      R("hover turns goldenrod", /button\s*:\s*hover\s*\{[^}]*background(?:-color)?\s*:\s*goldenrod\s*;?[^}]*\}/i),
+      R("transition: background 0.4s", /button\s*\{[^}]*transition\s*:\s*background\s+0?\.4s\s*;?[^}]*\}/i)
+    ],
+    hint: "cursor + transition on button; goldenrod on button:hover"
+  },
+  {
+    t: "a link becomes a button",
+    target: "<style>.b{display:inline-block;padding:10px 20px;background:darkslategray;color:white;font-family:Georgia,serif;text-decoration:none;}</style><a href=\"#\" class=\"b\">enter the keep</a>",
+    starter: "<style>\n\n</style>\n\n<a href=\"#\" class=\"button\">enter the keep</a>",
+    reqs: [
+      R("display: inline-block", /\.button\s*\{[^}]*display\s*:\s*inline-block\s*;?[^}]*\}/i),
+      R("padding 10px 20px, dark bg, white text", /\.button\s*\{(?=[^}]*padding\s*:\s*10px\s+20px)(?=[^}]*background(?:-color)?\s*:\s*darkslategray)(?=[^}]*color\s*:\s*white)[^}]*\}/i)
+    ],
+    hint: "inline-block + padding + background + color — the DISPLAY & FLOW recipe"
+  },
+  {
+    t: "the grand hall spans",
+    target: "<style>.g{display:grid;grid-template-columns:1fr 1fr;gap:10px;}.t{background:wheat;border:2px solid saddlebrown;padding:14px;text-align:center;}.f{grid-column:span 2;}</style><div class=\"g\"><div class=\"t f\">grand hall</div><div class=\"t\">kitchen</div><div class=\"t\">cellar</div></div>",
+    starter: "<style>\n.gallery {\n  display: grid;\n  grid-template-columns: 1fr 1fr;\n  gap: 10px;\n}\n.tile {\n  border: 2px solid saddlebrown;\n  background: wheat;\n  padding: 14px;\n  text-align: center;\n}\n</style>\n\n<div class=\"gallery\">\n  <div class=\"tile feature\">grand hall</div>\n  <div class=\"tile\">kitchen</div>\n  <div class=\"tile\">cellar</div>\n</div>",
+    reqs: [
+      R(".feature spans both columns", /\.feature\s*\{[^}]*grid-column\s*:\s*span\s+2\s*;?[^}]*\}/i)
+    ],
+    hint: ".feature { grid-column: span 2; }"
+  },
+  {
     t: "the house banner",
     target: "<style>.b{background:darkred;color:ivory;padding:12px;text-align:center;font-family:Georgia,serif;}</style><div class=\"b\">house kaatje</div>",
     starter: "<style>\n.banner {\n\n}\n</style>\n\n<div class=\"banner\">house kaatje</div>",
@@ -1918,7 +1962,11 @@ const state = {
   missed: {},
   reviewQueue: null,
   reviewPos: 0,
-  tourney: null
+  practice: false,
+  sandbox: false,
+  tourney: null,
+  timed: false,
+  roundTimer: null
 };
 
 function key(m, d) { return MODULES[m].id + ":" + d; }
@@ -1990,13 +2038,15 @@ function renderDrill() {
     const t = state.tourney;
     $("sheetname").textContent = `TOURNEY · ROUND ${t.pos + 1}/${t.rounds.length}`;
     $("brief").innerHTML =
-      `<div class="tourneybar">round <b>${t.pos + 1}/${t.rounds.length}</b> · streak <b>${t.streak}</b> · flawless <b>${t.flawless}</b></div>` +
+      `<div class="tourneybar">round <b>${t.pos + 1}/${t.rounds.length}</b> · streak <b>${t.streak}</b> · flawless <b>${t.flawless}</b>` +
+      ` · <a href="#" onclick="toggleTimed(); return false;" style="color:var(--soft)">${state.timed ? "⏳ <b id='clock'>60</b>s" : "⏳ timed: off"}</a></div>` +
       `<h2>${escapeHtml(drill.t.toUpperCase())}</h2>` +
       `<div class="targetlabel">match this target:</div>` +
       `<div class="targetbox"><iframe id="target" sandbox="allow-same-origin"></iframe></div>` +
       `<ul id="reqs">${drill.reqs.map(r => `<li>${escapeHtml(r.label)}</li>`).join("")}</ul>` +
       `<div class="hintbox" id="hintbox"></div>`;
     $("target").srcdoc = `<!DOCTYPE html><html><head><style>body{font-family:Georgia,serif;padding:12px;margin:0;}</style></head><body>` + drill.target + `</body></html>`;
+    startRoundClock();
     editor.value = drill.starter;
     $("nextbtn").style.display = "none";
     $("stamp").classList.remove("show");
@@ -2009,7 +2059,7 @@ function renderDrill() {
 
   const mod = MODULES[m];
   $("sheetname").textContent = state.reviewQueue
-    ? `REVIEW ${state.reviewPos + 1}/${state.reviewQueue.length}`
+    ? `${state.practice ? "DRILL" : "REVIEW"} ${state.reviewPos + 1}/${state.reviewQueue.length}`
     : `${mod.name} · ${d + 1}/${mod.drills.length}`;
 
   $("brief").innerHTML =
@@ -2044,8 +2094,23 @@ function escapeHtml(s) {
   return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function diagnose(code) {
+  const open = (code.match(/\{/g) || []).length, close = (code.match(/\}/g) || []).length;
+  if (open !== close) return `curly braces don't match — ${open} opening { vs ${close} closing }.`;
+  if (/<style>/i.test(code) && !/<\/style>/i.test(code)) return "the <style> tag is never closed — everything after it counts as CSS.";
+  if ((code.match(/"/g) || []).length % 2 === 1) return 'an odd number of " quotes — one attribute is missing its closing quote.';
+  if (/:\s*[^;{}\n]+\n\s*[a-z-]+\s*:/i.test(code)) return "a declaration may be missing its semicolon — CSS silently swallows the next line.";
+  for (const t of ["h1","p","div","ul","li","a","span","nav","table","header","main","footer"]) {
+    const o = (code.match(new RegExp("<" + t + "[\\s>]", "gi")) || []).length;
+    const c = (code.match(new RegExp("</" + t + ">", "gi")) || []).length;
+    if (o > c) return `<${t}> opens ${o} time${o > 1 ? "s" : ""} but closes only ${c} — a closing tag is missing.`;
+  }
+  return null;
+}
+
 /* ================= ACTIONS ================= */
 function checkDraft() {
+  if (state.sandbox) { log(`<em>SANDBOX</em> — nothing to seal here. Just create.`); return; }
   const { m, d, drill } = currentDrill();
   const code = editor.value;
   const items = document.querySelectorAll("#reqs li");
@@ -2084,17 +2149,19 @@ function checkDraft() {
   if (allPass) {
     const first = !state.passed[k];
     state.passed[k] = true;
-    if (state.reviewQueue) delete state.missed[k];
+    if (state.reviewQueue && !state.practice) delete state.missed[k];
     save();
     $("stamp").classList.add("show");
     $("nextbtn").style.display = "";
     log(`<b>SEALED</b> — ${MODULES[m].name}, page ${d + 1}${first ? "" : " (re-sealed)"}`);
   } else {
-    if (!state.passed[k]) state.missed[k] = true;
+    if (!state.passed[k] && !state.practice) state.missed[k] = true;
     save();
     $("stamp").classList.remove("show");
     const misses = drill.reqs.filter(r => !r.test(code)).length;
     log(`<i>REDLINED</i> — ${misses} requirement${misses > 1 ? "s" : ""} open. Amend and resubmit.`);
+    const tip = diagnose(code);
+    if (tip) log(`<em>SCRIBE'S EYE</em> — ${tip}`);
   }
   updateStats();
   buildNav();
@@ -2112,8 +2179,10 @@ function nextDrill() {
   if (state.reviewQueue) {
     state.reviewPos++;
     if (state.reviewPos >= state.reviewQueue.length) {
+      const wasPractice = state.practice;
       state.reviewQueue = null;
-      log(`<em>REVIEW COMPLETE</em> — back to the current chapter.`);
+      state.practice = false;
+      log(wasPractice ? `<em>DRILLS DONE</em> — the quill stays sharp.` : `<em>REVIEW COMPLETE</em> — back to the current chapter.`);
       renderDrill();
       return;
     }
@@ -2135,6 +2204,7 @@ function nextDrill() {
 }
 
 function showHint() {
+  if (state.sandbox) { log(`<em>SANDBOX TIP</em> — stuck? Revisit a chapter, or start from the template with reset.`); return; }
   if (state.tourney) state.tourney.hinted = true;
   const { drill } = currentDrill();
   const hb = $("hintbox");
@@ -2144,6 +2214,7 @@ function showHint() {
 }
 
 function resetDrill() {
+  if (state.sandbox) { editor.value = SANDBOX_TEMPLATE; updatePreview(); try { localStorage.setItem("style-sandbox", editor.value); } catch (e) {} return; }
   const { drill } = currentDrill();
   editor.value = drill.starter;
   updatePreview();
@@ -2152,15 +2223,42 @@ function resetDrill() {
   $("nextbtn").style.display = "none";
 }
 
+function toggleTimed() {
+  state.timed = !state.timed;
+  clearInterval(state.roundTimer);
+  if (state.tourney) { startRoundClock(); renderDrill(); }
+  log(state.timed ? `<em>⏳ TIMED</em> — 60 seconds a round. The crowd leans in.` : `<em>⏳ UNTIMED</em> — take your time, scribe.`);
+}
+
+function startRoundClock() {
+  clearInterval(state.roundTimer);
+  if (!state.timed || !state.tourney) return;
+  let left = 60;
+  state.roundTimer = setInterval(() => {
+    left--;
+    const c = document.getElementById("clock");
+    if (c) c.textContent = left;
+    if (left <= 0) {
+      clearInterval(state.roundTimer);
+      const t = state.tourney;
+      if (t && !t.sealedRound) { t.missed = true; t.streak = 0; }
+      log(`<i>TIME!</i> — the herald calls the round. Onward.`);
+      nextDrill();
+    }
+  }, 1000);
+}
+
 function startTourney() {
+  clearInterval(state.roundTimer);
   const pool = [...CHALLENGES].sort(() => Math.random() - 0.5).slice(0, 10);
-  state.reviewQueue = null;
+  state.reviewQueue = null; state.sandbox = false; state.practice = false;
   state.tourney = { rounds: pool, pos: 0, sealed: 0, flawless: 0, streak: 0, best: 0, hinted: false, missed: false, sealedRound: false };
   log(`<em>⚔ THE TOURNEY BEGINS</em> — ten rounds. Match each target. First strike with no hint = flawless.`);
   renderDrill();
 }
 
 function endTourney() {
+  clearInterval(state.roundTimer);
   const t = state.tourney;
   const rank = RANKS.find(r => t.flawless >= r[0]);
   let best = 0;
@@ -2186,8 +2284,46 @@ function endTourney() {
   buildNav();
 }
 
+const SANDBOX_TEMPLATE = "<style>\n  body { font-family: Georgia, serif; }\n\n</style>\n\n<h1>the open page</h1>\n<p>draft anything. nothing is checked here.</p>";
+
+function startSandbox() {
+  clearInterval(state.roundTimer);
+  state.reviewQueue = null; state.tourney = null; state.practice = false;
+  state.sandbox = true;
+  $("sheetname").textContent = "SANDBOX";
+  $("brief").innerHTML = `<h2>THE OPEN PAGE</h2>
+<div class="teach">No quest. No checklist. A blank sheet and the live preview — the most honest teacher in the lab. Rebuild something from a chapter, break it on purpose, see what happens.</div>
+<p>Ideas: a page about your cats · a Junle-style panel · the DCU dashboard header · a shape you haven't forged yet.</p>
+<div class="teach">Your sandbox draft is saved automatically and survives reloads.</div>`;
+  let saved = null;
+  try { saved = localStorage.getItem("style-sandbox"); } catch (e) {}
+  editor.value = saved || SANDBOX_TEMPLATE;
+  $("nextbtn").style.display = "none";
+  $("stamp").classList.remove("show");
+  updatePreview();
+  buildNav();
+  log(`<em>SANDBOX</em> — the open page. Create freely.`);
+  editor.focus();
+}
+
+function startPractice() {
+  clearInterval(state.roundTimer);
+  state.tourney = null; state.sandbox = false;
+  const sealed = [];
+  MODULES.forEach((m, mi) => m.drills.forEach((_, di) => {
+    if (state.passed[key(mi, di)]) sealed.push([mi, di]);
+  }));
+  if (sealed.length < 3) { log(`<em>DRILLS</em> — seal a few chapters first; practice draws from what you've mastered.`); return; }
+  state.reviewQueue = sealed.sort(() => Math.random() - 0.5).slice(0, 5);
+  state.reviewPos = 0;
+  state.practice = true;
+  log(`<em>MORNING DRILLS</em> — ${state.reviewQueue.length} sealed pages, revisited. Mastery fades without use.`);
+  renderDrill();
+}
+
 function startReview() {
-  state.tourney = null;
+  clearInterval(state.roundTimer);
+  state.tourney = null; state.sandbox = false; state.practice = false;
   const q = [];
   MODULES.forEach((m, mi) => m.drills.forEach((_, di) => {
     if (state.missed[key(mi, di)]) q.push([mi, di]);
@@ -2205,8 +2341,31 @@ function openDesk() {
   editor.focus();
 }
 
+function saveCode() {
+  let best = "0";
+  try { best = localStorage.getItem("style-tourney-best") || "0"; } catch (e) {}
+  const code = btoa(unescape(encodeURIComponent(JSON.stringify({ passed: state.passed, missed: state.missed, best }))));
+  const answer = prompt("Your progress code — copy it somewhere safe.\nOr paste a saved code here and press OK to restore:", code);
+  if (answer && answer !== code) {
+    try {
+      const data = JSON.parse(decodeURIComponent(escape(atob(answer.trim()))));
+      state.passed = data.passed || {};
+      state.missed = data.missed || {};
+      if (data.best) { try { localStorage.setItem("style-tourney-best", String(data.best)); } catch (e) {} }
+      save();
+      renderDrill();
+      log(`<em>RESTORED</em> — the chronicle remembers.`);
+    } catch (e) {
+      log(`<i>THAT CODE</i> is not a chronicle. Nothing changed.`);
+    }
+  }
+}
+
 /* ================= WIRING ================= */
-editor.addEventListener("input", updatePreview);
+editor.addEventListener("input", () => {
+  updatePreview();
+  if (state.sandbox) { try { localStorage.setItem("style-sandbox", editor.value); } catch (e) {} }
+});
 editor.addEventListener("keydown", e => {
   if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
     e.preventDefault();
@@ -2223,8 +2382,11 @@ editor.addEventListener("keydown", e => {
 });
 
 $("chapsel").addEventListener("change", e => {
+  clearInterval(state.roundTimer);
   state.reviewQueue = null;
   state.tourney = null;
+  state.sandbox = false;
+  state.practice = false;
   state.mod = parseInt(e.target.value);
   state.drill = firstOpen(state.mod);
   renderDrill();
