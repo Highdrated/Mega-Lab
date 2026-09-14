@@ -307,6 +307,90 @@
   .fhud b { color: var(--amber); font-weight: normal; }
   .drone-g { transition: transform 0.35s ease; }
   @media (prefers-reduced-motion: reduce) { .drone-g { transition: none; } }
+  /* ---------- academy (fullscreen reading) ---------- */
+  .academy {
+    position: fixed; inset: 0; z-index: 60;
+    background: var(--bg);
+    display: none;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+  .academy.on { display: block; }
+  .ac-top {
+    position: sticky; top: 0; z-index: 5;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--edge);
+    padding: 12px 18px;
+    font-size: 11px; letter-spacing: 2px; color: var(--dim);
+  }
+  .ac-top .ac-name { color: var(--cyan); letter-spacing: 3px; }
+  .ac-top .ac-ch { color: var(--amber); flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .ac-btn {
+    font: inherit; font-size: 13px;
+    background: transparent; color: var(--text);
+    border: 1px solid var(--edge); padding: 8px 16px; cursor: pointer;
+    min-height: 40px; min-width: 44px;
+  }
+  .ac-btn:hover { border-color: var(--edge2); }
+  .ac-page {
+    max-width: 720px; margin: 0 auto;
+    padding: 30px 22px 90px;
+    font-size: var(--acfs, 17px);
+    line-height: 1.85;
+    color: var(--text);
+  }
+  .ac-page h1 { font-size: 1.5em; letter-spacing: 1px; color: var(--cyan); margin: 10px 0 6px; font-weight: normal; }
+  .ac-page h2 { font-size: 1.12em; color: var(--amber); margin: 34px 0 8px; font-weight: normal; letter-spacing: 0.5px; }
+  .ac-page p { margin: 0 0 14px; }
+  .ac-page .ac-sub { color: var(--dim); font-size: 0.85em; margin-bottom: 26px; }
+  .ac-page code, .ac-code {
+    font-family: inherit;
+    background: var(--track);
+    border: 1px solid var(--line);
+    padding: 1px 7px;
+    color: var(--strc);
+  }
+  .ac-code {
+    display: block; white-space: pre-wrap;
+    padding: 12px 16px; margin: 12px 0;
+    line-height: 1.7;
+  }
+  .ac-out { display: block; white-space: pre-wrap; padding: 10px 16px; margin: -8px 0 14px; border: 1px dashed var(--edge); color: var(--text); font-size: 0.95em; }
+  .ac-reveal {
+    display: block; width: 100%;
+    font: inherit; text-align: center;
+    background: transparent; color: var(--amber);
+    border: 1px dashed var(--edge2);
+    padding: 12px; margin: -6px 0 14px;
+    cursor: pointer; min-height: 46px;
+  }
+  .ac-reveal:hover { background: var(--track); }
+  .ac-check { border: 1px solid var(--edge); padding: 16px 18px; margin: 16px 0; }
+  .ac-check .ac-q { color: var(--amber); margin-bottom: 12px; }
+  .ac-opt {
+    display: block; width: 100%; text-align: left;
+    font: inherit; background: transparent; color: var(--text);
+    border: 1px solid var(--line); padding: 12px 14px; margin: 6px 0;
+    cursor: pointer; min-height: 46px;
+  }
+  .ac-opt:hover { border-color: var(--edge2); }
+  .ac-opt.right { border-color: var(--green); color: var(--green); }
+  .ac-opt.wrong { border-color: var(--red); color: var(--red); }
+  .ac-why { color: var(--dim); font-size: 0.9em; margin-top: 10px; display: none; }
+  .ac-why.on { display: block; }
+  .ac-end { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 40px; border-top: 1px solid var(--line); padding-top: 24px; }
+  .ac-card {
+    display: block; width: 100%; text-align: left;
+    font: inherit; background: transparent; color: var(--text);
+    border: 1px solid var(--edge); padding: 18px; margin: 10px 0;
+    cursor: pointer; min-height: 56px;
+  }
+  .ac-card:hover { border-color: var(--edge2); background: var(--track); }
+  .ac-card .t1 { color: var(--cyan); }
+  .ac-card .t2 { color: var(--dim); font-size: 0.85em; margin-top: 4px; }
+  .ac-card.read .t1 { color: var(--green); }
+  @media (max-width: 700px) { .ac-page { padding: 22px 16px 80px; } }
   /* ---------- responsive ---------- */
   @media (max-width: 1100px) {
     .deck {
@@ -406,6 +490,17 @@
     </div>
   </aside>
 </div>
+<div class="academy" id="academy">
+  <div class="ac-top">
+    <span class="ac-name">PYLE ACADEMY</span>
+    <span class="ac-ch" id="acCh"></span>
+    <button class="ac-btn" id="acSmaller" aria-label="smaller text">A-</button>
+    <button class="ac-btn" id="acBigger" aria-label="bigger text">A+</button>
+    <button class="ac-btn" id="acHome">chapters</button>
+    <button class="ac-btn" id="acClose" aria-label="close">close</button>
+  </div>
+  <div class="ac-page" id="acPage"></div>
+</div>
 <script>
 "use strict";
 const $ = id => document.getElementById(id);
@@ -486,6 +581,7 @@ function renderNav() {
     ["bugs", "BUG HUNT", score.bugs + "/" + BUGS.length, Math.min(100, Math.round(100 * score.bugs / BUGS.length))],
     ["field", "FIELD OPS", score.missions + "/" + MISSIONS.length, Math.min(100, Math.round(100 * score.missions / MISSIONS.length))],
     ["forge", "FORGE - BLANK FILE", score.forges + "/" + FORGES.length, Math.round(100 * score.forges / FORGES.length)],
+    ["academy", "ACADEMY", Object.keys(score.acadRead || {}).length + "/" + ACADEMY.length + " read", Math.round(100 * Object.keys(score.acadRead || {}).length / ACADEMY.length)],
     ["kata", "DAILY KATA", kataDoneToday() ? "done · " + kata.streak + "d" : kataInfo().type + " " + kataInfo().n + " today", kataDoneToday() ? 100 : 0],
     ["start review", "REVIEW QUEUE", dueMissed().length + " due / " + missed.length, dueMissed().length ? 100 : 0]
   ];
@@ -645,6 +741,8 @@ function checkForge(input) {
     chiBreak();
     showDiff(input, expected);
     line("Not what the spec asks. hint for the shape, skip to reveal.", "c-red");
+    const fch = FORGE_CHAPTER[F.f.id];
+    if (fch && ACADEMY.some(x => x.id === fch)) line("Background reading: academy " + fch, "c-dim");
   }
 }
 function finishForge() {
@@ -790,7 +888,7 @@ async function ensurePyodide() {
     });
   }
   py = await loadPyodide();
-  py.setStdout({ batched: s => { if (exCapture) exStdout += s + "\n"; else line(s); } });
+  py.setStdout({ batched: s => { if (exCapture) exStdout += s + "\n"; else if (acCapture) acOut += s + "\n"; else line(s); } });
   py.setStderr({ batched: s => line(s, "c-red") });
   return py;
 }
@@ -911,6 +1009,331 @@ function cheatsheet() {
   w.document.close();
   line("Cheat sheet opened in a new tab - Ctrl+P to print it.", "c-green");
 }
+
+/* ---------------- academy: the textbook layer ---------------- */
+const ACADEMY = [
+  {
+    id: "programs", title: "Programs, variables and the interpreter",
+    sub: "What is actually happening when Python runs your file.",
+    drill: "start basics",
+    sections: [
+      { h: "A program is a list of instructions" },
+      { p: "A Python program is a text file read from the top line to the bottom line by a program called the interpreter. Nothing mystical: the interpreter looks at line 1, does what it says, moves to line 2, and so on until the file ends or something crashes. Every rule you will ever learn about Python is really a rule about what the interpreter does when it reaches a line." },
+      { p: "That top-to-bottom order matters more than beginners expect. You cannot use a variable on line 3 that only gets created on line 8 — at line 3 the interpreter has never heard of it yet. When something is 'not defined', ask: had the interpreter already reached the line that defines it?" },
+      { h: "print() — making the machine speak" },
+      { p: "print() writes to the screen. It is how a program reports back to you, and while you learn, it is also your flashlight: unsure what a variable holds halfway through a program? print it and look." },
+      { code: 'print("systems online")', predict: "systems online", why: "The interpreter reached the line, saw a print instruction, and wrote the text between the quotes. That round-trip — you write an instruction, the machine obeys — is all programming is." },
+      { h: "Variables — labeled boxes" },
+      { p: "A variable is a name attached to a value. The = sign is not the maths 'equals' — it is an instruction: compute whatever is on the RIGHT side, then store the result under the name on the LEFT side. Read battery = 87 as 'battery gets 87', never 'battery equals 87'." },
+      { p: "Because = stores rather than states, a line like x = x + 2 is perfectly sensible: compute x + 2 using the current value, then store the result back into x. The old value is gone. Variables vary — that is the whole point of the name." },
+      { code: "x = 5\nx = x + 2\nprint(x)", predict: "7", why: "Line 1 stores 5. Line 2 reads the current x (5), adds 2, stores 7 back into x. Line 3 prints whatever x holds NOW — 7. The 5 no longer exists anywhere." },
+      { h: "Naming rules" },
+      { p: "Names use letters, digits and underscores, cannot start with a digit, and are case-sensitive: battery and Battery are two different boxes. The Python convention is snake_case: lowercase words joined by underscores, like drone_name or max_wind_speed. Pick names that say what the box holds — b saves four keystrokes today and costs you an hour of confusion next month." },
+      { check: { q: "After  a = 3  then  a = a * 4 , what does print(a) show?", opts: ["3", "12", "a * 4"], correct: 1, why: "= computes the right side first (3 × 4 = 12), then stores it back into a, replacing the 3." } }
+    ]
+  },
+  {
+    id: "numbers", title: "Numbers: int, float, and the decimal point",
+    sub: "The chapter every online test assumes you already read.",
+    drill: "start numstr",
+    sections: [
+      { h: "Two kinds of numbers" },
+      { p: "Python has two everyday number types. An int (integer) is a whole number: 87, 0, -3. A float (floating-point number) is a number carrying a decimal point: 3.5, 87.0, -0.25. The decimal point IS the difference — write 87 and you have an int; write 87.0 and you have a float, even though mathematically they are the same amount." },
+      { p: "Why two types at all? Ints are exact and unlimited in size — perfect for counting things: rows, retries, pests. Floats trade a little exactness for the ability to hold fractions — measurements, percentages, sensor readings. Choosing between them is really answering: am I counting, or measuring?" },
+      { code: "print(type(87))\nprint(type(87.0))", predict: "<class 'int'>\n<class 'float'>", why: "type() is your microscope — it names the type of any value. Same amount, different types, purely because of the decimal point." },
+      { h: "Division always gives a float" },
+      { p: "Here is the rule that surprises everyone once: the / operator ALWAYS produces a float, even when the division is perfectly clean. Python does this for consistency — / cannot know in advance whether the result will be whole, so it commits to float every time." },
+      { code: "print(10 / 2)", predict: "5.0", why: "Not 5 — 5.0. Ten divided by two with / is a float, always. If you need a whole-number answer, that is a different operator…" },
+      { h: "The whole-number toolkit: //, %, **" },
+      { p: "// is floor division: divide and drop everything after the decimal point. 17 // 5 is 3. Its partner % (modulo) gives what was LEFT OVER: 17 % 5 is 2, because 5 fits three times with 2 remaining. Together they answer 'how many fit, and what remains?' — crates per pallet plus leftovers, minutes into hours plus spare minutes, every-third-row patterns (row % 3 == 0)." },
+      { p: "** is power: 2 ** 8 is 2 multiplied by itself 8 times — 256. You will meet it in areas (side ** 2), growth curves, and file sizes." },
+      { check: { q: "What does  print(7 // 2)  show?", opts: ["3.5", "3", "3.0"], correct: 1, why: "// divides (3.5) then drops the decimal part, and it keeps the int type when both sides are ints: 3." } },
+      { h: "The famous float weirdness" },
+      { p: "Type this into any Python on Earth and enjoy the result:" },
+      { code: "print(0.1 + 0.2)", predict: "0.30000000000000004", why: "Not a bug — a limitation of how ALL computers store decimals. Floats are held in binary, and 0.1 in binary is an infinite repeating fraction (like 1/3 in decimal: 0.3333…). It gets cut off, and the tiny cut shows up in arithmetic." },
+      { p: "The practical consequences: never compare floats with == (0.1 + 0.2 == 0.3 is False!), and use round(value, digits) when presenting results to humans: round(0.1 + 0.2, 2) gives 0.3. For money, real programs count whole cents as ints — exactly to dodge this." },
+      { h: "Converting between types" },
+      { p: "int() and float() convert. Two behaviours to burn in: int() on a decimal TRUNCATES — chops toward zero, no rounding: int(3.9) is 3, not 4. Want rounding? That is round(3.9) → 4. And int() on text works only when the text is a clean whole number: int(\"42\") is 42, but int(\"4.2\") crashes — go float(\"4.2\") first." },
+      { code: "print(int(3.9))\nprint(round(3.9))", predict: "3\n4", why: "int() chops, round() rounds. Mixing these two up is a classic source of off-by-one bugs in real code." },
+      { p: "Last rule of the chapter: mix an int with a float in any arithmetic and the result is a float. 3 + 0.5 is 3.5; 2 * 1.0 is 2.0. Float is contagious — one decimal point anywhere and it spreads to the answer." },
+      { check: { q: "battery = 87  then  battery = battery / 1 .  What type is battery now?", opts: ["int", "float", "error"], correct: 1, why: "/ always returns a float — even dividing by 1. battery is now 87.0. Use // or avoid the division to keep an int." } }
+    ]
+  },
+  {
+    id: "strings", title: "Strings: text, quotes and f-strings",
+    sub: "Why \"3\" + \"4\" is 34 and other tales of text.",
+    drill: "start numstr",
+    sections: [
+      { h: "Text lives in quotes" },
+      { p: "A string is text: characters in order, wrapped in quotes. Single or double quotes are identical in Python — \"junie\" and 'junie' are the same string; pick one style and stay consistent. The quotes are not part of the text, they are the container that tells Python 'treat this as characters, not code'." },
+      { p: "That distinction is everything. 42 is a number you can do math with; \"42\" is two characters that merely look like a number. input() always hands you strings — which is why converting with int() before doing math is a reflex worth building early." },
+      { code: 'print("3" + "4")\nprint(3 + 4)', predict: "34\n7", why: "+ on strings GLUES them (concatenation). + on numbers adds. Same symbol, different job depending on the types — and mixing them, \"3\" + 4, crashes with a TypeError." },
+      { h: "Strings carry their own tools" },
+      { p: "Every string comes with built-in methods, reached with a dot: name.upper() shouts it, name.lower() calms it, name.strip() trims spaces off both ends (gold for cleaning user input), name.split(\",\") chops it into a list. And len(name) counts its characters." },
+      { p: "One deep truth hides here: strings are immutable — they can never be changed in place. Every method returns a NEW string and leaves the original untouched. That is why field.replace(\"weed\", \"crop\") alone does nothing visible: the fixed string was returned and thrown away. Store it: field = field.replace(\"weed\", \"crop\")." },
+      { check: { q: "After  name = \"junie\"  then  name.upper() , what does print(name) show?", opts: ["JUNIE", "junie", "error"], correct: 1, why: "upper() returned \"JUNIE\" — but nothing stored it. The original is untouched. name = name.upper() would keep it." } },
+      { h: "f-strings — text with values baked in" },
+      { p: "The modern way to mix text and variables: put an f before the opening quote, and write variable names inside {curly braces}. Python swaps each {name} for its value. Anything goes inside the braces — variables, math, even function calls." },
+      { code: 'battery = 87\nprint(f"Battery at {battery}%")\nprint(f"Half: {battery / 2}")', predict: "Battery at 87%\nHalf: 43.5", why: "The braces are little windows into Python — {battery / 2} computed the division right inside the string. (And note the .5 — division floats, as chapter 2 promised.)" },
+      { p: "You will also meet older styles in the wild — \"Battery \" + str(battery) and \"Battery %s\" % battery — read them when you see them, write f-strings yourself. They are the cleanest, and they are what Pyle drills." },
+      { check: { q: "What does  print(f\"{2 + 3}\")  show?", opts: ["{2 + 3}", "5", "23"], correct: 1, why: "Braces inside an f-string evaluate their contents as Python: 2 + 3 computes to 5, which lands in the text." } }
+    ]
+  }
+,
+  {
+    id: "logic", title: "Logic: if, elif, else and the truth",
+    sub: "How a program decides — and why the colon and the indent are sacred.",
+    drill: "start logic",
+    sections: [
+      { h: "Every decision boils down to True or False" },
+      { p: "Underneath every if lives a boolean: a value that is either True or False, capital first letter, no quotes. Comparisons manufacture booleans: battery < 20 is a question, and Python answers it with True or False before the if even looks at it. You can print(battery < 20) and see the answer raw." },
+      { p: "The comparison operators: < and > you know; <= and >= include the boundary; == asks are-these-equal; != asks are-these-different. The most punished mistake in beginner Python: = stores, == compares. Write if mode = \"auto\": and Python refuses to run, helpfully suggesting the fix." },
+      { h: "The block: colon + indent" },
+      { p: "An if line MUST end with a colon, and everything belonging to it steps in 4 spaces below. The indentation is not styling — it IS the grammar. Python knows the if is over when the indentation steps back out. This one idea powers if, loops, functions, everything: colon opens a block, indent is the block, dedent closes it." },
+      { code: "battery = 15\nif battery < 20:\n    print(\"low power\")\n    print(\"return to dock\")\nprint(\"telemetry sent\")", predict: "low power\nreturn to dock\ntelemetry sent", why: "The two indented lines belong to the if — they run only because 15 < 20 is True. The unindented last line is OUTSIDE the block: it runs no matter what. Move the indent and you move the meaning." },
+      { h: "elif and else — one ladder, one winner" },
+      { p: "Chain decisions with elif (else-if) and close with else. Python walks the ladder top to bottom and runs the FIRST branch whose condition is True — then skips the rest entirely, even if later conditions would also be True. else takes no condition; it is the everything-else bucket at the bottom." },
+      { code: "score = 85\nif score >= 90:\n    print(\"gold\")\nelif score >= 80:\n    print(\"silver\")\nelif score >= 70:\n    print(\"bronze\")\nelse:\n    print(\"keep training\")", predict: "silver", why: "85 fails the first test, passes the second — silver prints and the ladder EXITS. The bronze test never even runs. Order matters: put the strictest condition first." },
+      { h: "Combining and flipping" },
+      { p: "Conditions combine with plain English words: and needs both sides True, or needs at least one, not flips the answer. Parentheses group when it gets busy: if (wind > 9 or rain) and battery < 30:. And the word in asks about membership — \"pest\" in report, item in crops — one word replacing a whole loop." },
+      { check: { q: "if x = 5:  \u2014 what happens?", opts: ["Runs when x is 5", "SyntaxError before running", "Always runs"], correct: 1, why: "= assigns, it never compares. Python rejects the line outright and suggests ==. This exact error is in the bug hunt \u2014 you may have already fixed it." } },
+      { check: { q: "score = 100  with  if score > 100: print(\"win\")  \u2014 does win print?", opts: ["Yes", "No"], correct: 1, why: "> excludes the boundary; 100 > 100 is False. Boundary bugs live exactly here \u2014 >= includes it." } }
+    ]
+  },
+  {
+    id: "loops", title: "Loops: for, while and the accumulator",
+    sub: "Doing things a thousand times without typing them a thousand times.",
+    drill: "start loops",
+    sections: [
+      { h: "for — a loop over things" },
+      { p: "for row in rows: hands you each item of a list, one per pass, under the name you chose. The loop body (colon + indent, as always) runs once per item. No counting, no indexes \u2014 Python walks the list for you. This is the loop you will write 9 times out of 10." },
+      { h: "range() — a loop over numbers" },
+      { p: "When you need plain repetition, range() manufactures the numbers: range(5) is 0, 1, 2, 3, 4 \u2014 five numbers, starting at ZERO, stopping BEFORE 5. Both facts trip beginners weekly. range(1, 6) starts at 1 and stops before 6. The stop value is never included, same as slicing \u2014 one rule, everywhere." },
+      { code: "for i in range(3):\n    print(f\"pass {i}\")", predict: "pass 0\npass 1\npass 2", why: "Three passes, counting from 0. If you wanted 1, 2, 3 \u2014 that is range(1, 4). Off-by-one errors are born and die on this line." },
+      { h: "The accumulator — the most useful pattern in programming" },
+      { p: "Create a variable BEFORE the loop, update it INSIDE the loop, use it AFTER: that is the accumulator, and it is how programs count, sum, collect and build. total = 0 then total += value each pass. pests = 0 then pests += 1 when a condition hits. Recognize this shape and half of all beginner programs become readable at a glance." },
+      { code: "values = [12, 7, 30]\ntotal = 0\nfor v in values:\n    total += v\nprint(total)", predict: "49", why: "total starts empty, grows by each value, survives the loop. Note += v, not += 1 \u2014 adding the ITEM sums; adding 1 merely counts. (That exact bug is in the bug hunt.)" },
+      { h: "while — repeat until told otherwise" },
+      { p: "while condition: repeats as long as the condition stays True \u2014 which means something in the body must eventually make it False, or the loop runs forever (Ctrl+C is the escape hatch, in Pyle and in life). Use while when you cannot know the pass count in advance: while battery > 0, while not docked." },
+      { p: "Two loop control words: break exits the loop immediately, done or not; continue abandons this pass and jumps to the next one. Both read exactly like they sound." },
+      { check: { q: "How many times does  for i in range(2, 5):  loop?", opts: ["2", "3", "4"], correct: 1, why: "2, 3, 4 \u2014 the stop (5) is excluded. Count: stop minus start = 3 passes." } },
+      { check: { q: "Which loop for \u0027keep scanning until a pest is found\u0027?", opts: ["for, with range()", "while, with a condition"], correct: 1, why: "Unknown number of passes = while. for is for known collections or counts; while runs until reality changes." } }
+    ]
+  },
+  {
+    id: "collections", title: "Collections: lists and dicts",
+    sub: "One name, many values — and when to reach for which.",
+    drill: "start lists",
+    sections: [
+      { h: "Lists — ordered, numbered from zero" },
+      { p: "A list is many values in one variable, in order, in square brackets: crops = [\"maize\", \"wheat\", \"beet\"]. Positions count from 0 \u2014 crops[0] is maize, crops[2] is beet \u2014 and negative positions count from the back: crops[-1] is the last item, whatever the length. len(crops) tells you how many." },
+      { p: "Unlike strings, lists are mutable \u2014 changeable in place. crops.append(\"hops\") really grows the list; crops.sort() really reorders it; crops.remove(\"beet\") really deletes. No storing-the-result dance needed. That difference \u2014 strings frozen, lists alive \u2014 explains half the confusing behaviour you will ever meet." },
+      { code: "crops = [\"maize\", \"wheat\", \"beet\"]\ncrops.append(\"hops\")\nprint(len(crops))\nprint(crops[-1])", predict: "4\nhops", why: "append changed the actual list \u2014 length 4 now \u2014 and [-1] grabs the newest last item. Slicing works too: crops[0:2] is the first two, stop excluded, same rule as range()." },
+      { h: "Dicts — labeled, not numbered" },
+      { p: "A dict stores values by LABEL instead of position: curly braces, key: value pairs. drone = {\"id\": 7, \"battery\": 87}. Read with drone[\"battery\"]; write with drone[\"mode\"] = \"auto\" \u2014 assigning to a missing key simply creates it. Ask for a key that does not exist and Python raises KeyError, naming the missing label." },
+      { code: "drone = {\"id\": 7, \"battery\": 87}\ndrone[\"battery\"] -= 5\ndrone[\"mode\"] = \"auto\"\nprint(drone[\"battery\"])\nprint(len(drone))", predict: "82\n3", why: "Keys behave like tiny variables inside the dict \u2014 read, update, create. len counts the pairs." },
+      { h: "Choosing between them" },
+      { p: "The test: do the items have natural POSITIONS, or natural NAMES? Readings over time, rows of a field, a queue of tasks \u2014 positions, list. A drone\u0027s properties, a user\u0027s profile, settings \u2014 names, dict. Real programs nest them constantly: a LIST of drones, where each drone is a DICT. Read that sentence again \u2014 it describes most JSON, most APIs, and most of your future n8n payloads." },
+      { check: { q: "crops = [\"maize\", \"wheat\", \"beet\"]  \u2014 what is crops[3]?", opts: ["\"beet\"", "IndexError", "\"maize\""], correct: 1, why: "Three items means positions 0, 1, 2. There is no 3 \u2014 IndexError. The last item is [2], or [-1] from the back." } },
+      { check: { q: "Best home for a customer\u0027s name, email and city?", opts: ["A list", "A dict", "Three separate strings"], correct: 1, why: "Those are NAMED properties \u2014 customer[\"email\"] reads like meaning. A list would force you to remember that position 1 is the email." } }
+    ]
+  },
+  {
+    id: "functions", title: "Functions: def, return and scope",
+    sub: "Name a block once, run it forever — and the print-vs-return trap.",
+    drill: "start funcs",
+    sections: [
+      { h: "Why functions exist" },
+      { p: "A function is a block of code with a name. Define it once with def name(): and an indented body; run it whenever with name(). The parentheses ARE the run button \u2014 without them you are just mentioning the function, not calling it. Functions kill copy-paste: fix a bug in one place, every caller is fixed." },
+      { h: "Parameters in, return out" },
+      { p: "Parameters are the function\u0027s own input variables: def spray(tile): means every call must hand over one value, which lives inside as tile. Defaults make them optional: def move(direction, steps=1). And return sends a result BACK to whoever called \u2014 the call itself becomes the value: report = scan() stores whatever scan returned." },
+      { h: "The trap: print is not return" },
+      { p: "The single most common beginner confusion. print() shows a value to the HUMAN and hands back nothing. return hands a value to the CODE and shows nothing. A function that prints its answer instead of returning it looks fine on screen \u2014 until you try to USE the answer and find you are holding None." },
+      { code: "def double_a(x):\n    print(x * 2)\n\ndef double_b(x):\n    return x * 2\n\nresult_a = double_a(5)\nresult_b = double_b(5)\nprint(result_a)\nprint(result_b)", predict: "10\nNone\n10", why: "double_a printed 10 during its call \u2014 but returned nothing, so result_a is None. double_b stayed silent and RETURNED 10, which stored. Rule: return by default; print only at the edges of your program." },
+      { h: "Scope — variables inside stay inside" },
+      { p: "Variables created inside a function (including its parameters) exist only during that call, then vanish. This is scope, and it is a feature: functions cannot accidentally trample each other\u0027s variables. When a function needs a value, pass it in as a parameter; when the outside needs a result, return it. In, work, out \u2014 clean borders." },
+      { code: "def check(battery):\n    verdict = \"go\" if battery > 20 else \"hold\"\n    return verdict\n\nprint(check(87))\nprint(check(12))", predict: "go\nhold", why: "verdict is born and dies inside each call. Also spot the one-line if \u2014 value_if_true if condition else value_if_false \u2014 a compact form you will meet in real code." },
+      { p: "Last piece: if __name__ == \"__main__\": marks where the program STARTS when run directly. Definitions above, the main flow under the guard \u2014 that skeleton is exactly what the upcoming Blueprint chapter drills." },
+      { check: { q: "def f(x): print(x + 1)  then  y = f(4) . What is y?", opts: ["5", "None", "4"], correct: 1, why: "It printed 5, but returned nothing \u2014 so y caught None. Printing is not returning." } },
+      { check: { q: "What do the () in  scan()  do?", opts: ["Decoration", "Actually run the function", "Mark it as defined"], correct: 1, why: "Parentheses execute. Bare scan is just a reference to the function \u2014 useful someday, but not a call." } }
+    ]
+  },
+  {
+    id: "errors", title: "Errors: tracebacks, try/except and raising",
+    sub: "Crashes are messages, not punishments. Learn to read them, then to catch them.",
+    drill: "start errors",
+    sections: [
+      { h: "Read the traceback bottom-up" },
+      { p: "When Python crashes it prints a traceback \u2014 and the gold is at the BOTTOM: the last line names the error type and describes it; the line above points at the file and line number where it happened. Read bottom-up, jump to that line, and you have solved most crashes before finishing your coffee." },
+      { h: "The cast of common errors" },
+      { p: "SyntaxError: the grammar is broken \u2014 missing colon, unclosed quote \u2014 caught before anything runs. NameError: you used a name Python has never seen (typo, or defined later). TypeError: right idea, wrong type \u2014 \"3\" + 4. ValueError: right type, impossible value \u2014 int(\"hello\"). IndexError: position past the end of a list. KeyError: a dict label that is not there. IndentationError: the block structure is off. Six names cover 95% of your first year of crashes." },
+      { code: "int(\"hello\")", predict: "ValueError: invalid literal for int() with base 10: 'hello'", why: "The text is a valid string (right type for int() to attempt), but its VALUE cannot become a number \u2014 hence ValueError, not TypeError. The message even shows the offending value." },
+      { h: "try/except — planning for failure" },
+      { p: "Some failures are not bugs \u2014 they are Tuesdays: a bad reading, a malformed line, a user typing \"twelve\". try: marks the code that might fail; except ValueError: catches that specific failure and runs recovery instead of crashing. Catch the error you EXPECT, by name \u2014 a bare except swallows everything including your genuine bugs, and you will hunt them blind." },
+      { code: "def to_int(text):\n    try:\n        return int(text)\n    except ValueError:\n        return None\n\nprint(to_int(\"42\"))\nprint(to_int(\"junk\"))", predict: "42\nNone", why: "The happy path returns the number; the failure path returns None instead of exploding. Callers check  if value is None:  \u2014 exactly the pattern ghost 4 and the final exam are built on." },
+      { p: "Two more tools: finally: runs whether the try succeeded or failed \u2014 cleanup that must always happen. And raise ValueError(\"bad reading\") throws an error ON PURPOSE: your own code refusing bad input loudly, instead of limping on with garbage. Failing loud and early beats failing quiet and late \u2014 that is half of professional programming in one sentence." },
+      { check: { q: "crops[10] on a 3-item list raises\u2026", opts: ["ValueError", "IndexError", "KeyError"], correct: 1, why: "Positions past the end of a LIST are IndexError. KeyError is its dict cousin \u2014 missing label instead of missing position." } },
+      { check: { q: "Why catch  except ValueError:  instead of bare  except: ?", opts: ["It runs faster", "Bare except hides real bugs too", "Bare except is invalid"], correct: 1, why: "A bare except swallows EVERYTHING \u2014 including the typos and logic errors you desperately want to see. Name what you expect; let the rest crash loudly." } }
+    ]
+  }
+];
+let acOpen = false, acChapter = null, acCapture = false, acOut = "", acScrollT = null;
+const CHAPTER_OF = { zero: "programs", basics: "programs", numstr: "numbers", logic: "logic", loops: "loops", lists: "collections", funcs: "functions", errors: "errors" };
+const FORGE_CHAPTER = { 1: "logic", 2: "loops", 3: "functions", 4: "errors", 5: "functions" };
+function acFs(delta) {
+  score.acadFs = Math.min(22, Math.max(14, (score.acadFs || 17) + delta));
+  document.documentElement.style.setProperty("--acfs", score.acadFs + "px");
+  saveState();
+}
+function drillStat(drillCmd) {
+  const id = (drillCmd || "").replace("start ", "").trim();
+  const m = MODULES.find(x => x.id === id);
+  if (!m) return "";
+  const done = m.drills.filter(d => d.doneFlag).length;
+  return "drill " + done + "/" + m.drills.length;
+}
+function chapterChecks(c, ci) {
+  let total = 0, right = 0;
+  c.sections.forEach((s, i) => {
+    if (s.check) { total++; if ((score.acadChecks || {})[c.id + "_" + i] === true) right++; }
+  });
+  return total ? "checks " + right + "/" + total : "";
+}
+function openAcademy(chapterId) {
+  acOpen = true;
+  $("academy").classList.add("on");
+  document.documentElement.style.setProperty("--acfs", (score.acadFs || 17) + "px");
+  if (chapterId) renderChapter(chapterId); else renderChapterList();
+}
+function closeAcademy() {
+  stashPos();
+  acOpen = false; acChapter = null;
+  $("academy").classList.remove("on");
+  saveState();
+  cmd.focus();
+}
+function stashPos() {
+  if (acChapter) score.acadPos = { ch: acChapter, y: $("academy").scrollTop };
+}
+function renderChapterList() {
+  stashPos();
+  acChapter = null;
+  $("acCh").textContent = "chapters";
+  score.acadRead = score.acadRead || {};
+  let hh = "<h1>The Academy</h1><p class='ac-sub'>The reading half of Pyle. Suggested path: read a chapter, drill it in the console, come back for the next. Understanding first, muscle second.</p>";
+  const pos = score.acadPos;
+  if (pos && ACADEMY.some(c => c.id === pos.ch)) {
+    const pc = ACADEMY.find(c => c.id === pos.ch);
+    hh += '<button class="ac-card" data-cont="1"><div class="t1">\u21bb Continue reading: ' + esc(pc.title) + '</div><div class="t2">Picks up where you left off.</div></button>';
+  }
+  let nextMarked = false;
+  ACADEMY.forEach(c => {
+    const read = !!score.acadRead[c.id];
+    let tag = "";
+    if (!read && !nextMarked) { tag = " \u2014 next up"; nextMarked = true; }
+    const stats = [drillStat(c.drill), chapterChecks(c)].filter(Boolean).join(" \u00b7 ");
+    hh += '<button class="ac-card' + (read ? " read" : "") + '" data-ch="' + c.id + '">' +
+      '<div class="t1">' + (read ? "\u25c9 " : "\u25cb ") + esc(c.title) + esc(tag) + "</div>" +
+      '<div class="t2">' + esc(c.sub) + (stats ? " \u00b7 " + stats : "") + "</div></button>";
+  });
+  hh += "<p class='ac-sub' style='margin-top:26px'>Coming with semester 2: script anatomy, classes, toolboxes, servers.</p>";
+  $("acPage").innerHTML = hh;
+  $("acPage").querySelectorAll(".ac-card").forEach(b => b.addEventListener("click", () => {
+    if (b.dataset.cont) { const p = score.acadPos; renderChapter(p.ch, p.y); }
+    else renderChapter(b.dataset.ch);
+  }));
+  $("academy").scrollTop = 0;
+}
+function renderChapter(id, restoreY) {
+  const c = ACADEMY.find(x => x.id === id);
+  if (!c) { renderChapterList(); return; }
+  acChapter = id;
+  $("acCh").textContent = c.title;
+  score.acadChecks = score.acadChecks || {};
+  let hh = "<h1>" + esc(c.title) + "</h1><p class='ac-sub'>" + esc(c.sub) + "</p>";
+  c.sections.forEach((s, i) => {
+    if (s.h) hh += "<h2>" + esc(s.h) + "</h2>";
+    if (s.p) hh += "<p>" + esc(s.p) + "</p>";
+    if (s.code) {
+      hh += '<span class="ac-code" data-code="' + i + '" contenteditable="true" spellcheck="false">' + esc(s.code) + "</span>";
+      hh += '<button class="ac-reveal" data-i="' + i + '">tap to run it \u2192 (editable \u2014 change it first if you like)</button>';
+      hh += '<span class="ac-out" data-out="' + i + '" style="display:none"></span>';
+      hh += '<p class="ac-why" data-why="' + i + '">' + esc(s.why) + "</p>";
+    }
+    if (s.check) {
+      const key = c.id + "_" + i;
+      const prev = score.acadChecks[key];
+      hh += '<div class="ac-check" data-c="' + i + '"><div class="ac-q">Check yourself: ' + esc(s.check.q) + "</div>";
+      s.check.opts.forEach((o, oi) => {
+        let cls = "ac-opt";
+        if (prev === true && oi === s.check.correct) cls += " right";
+        hh += '<button class="' + cls + '" data-oi="' + oi + '">' + esc(o) + "</button>";
+      });
+      hh += '<p class="ac-why' + (prev === true ? " on" : "") + '">' + esc(s.check.why) + "</p></div>";
+    }
+  });
+  hh += '<div class="ac-end"><button class="ac-btn" id="acDrill">drill this chapter \u2192</button><button class="ac-btn" id="acBack">all chapters</button></div>';
+  $("acPage").innerHTML = hh;
+  $("acPage").querySelectorAll(".ac-reveal").forEach(b => b.addEventListener("click", () => runAcademyCode(c, +b.dataset.i, b)));
+  $("acPage").querySelectorAll(".ac-check").forEach(box => {
+    const i = +box.dataset.c;
+    const chk = c.sections[i].check;
+    box.querySelectorAll(".ac-opt").forEach(b => b.addEventListener("click", () => {
+      box.querySelectorAll(".ac-opt").forEach(x => x.classList.remove("right", "wrong"));
+      const ok = +b.dataset.oi === chk.correct;
+      b.classList.add(ok ? "right" : "wrong");
+      if (ok) box.querySelector(".ac-why").classList.add("on");
+      score.acadChecks[c.id + "_" + i] = ok;
+      saveState();
+    }));
+  });
+  $("acPage").querySelector("#acBack").addEventListener("click", renderChapterList);
+  $("acPage").querySelector("#acDrill").addEventListener("click", () => {
+    closeAcademy();
+    if (cliMode === "shell") { cliMode = "python"; setStatus(); logEvent("python 3.12 interpreter started", "ok"); }
+    if (cliMode === "python") { echoPrompt(esc(c.drill)); handle(c.drill); }
+  });
+  score.acadRead = score.acadRead || {};
+  if (!score.acadRead[c.id]) { score.acadRead[c.id] = true; logEvent("academy: " + c.title, "ok"); }
+  saveState(); setStatus();
+  $("academy").scrollTop = restoreY || 0;
+}
+function acShowOut(i, text, isErr) {
+  const o = $("acPage").querySelector('[data-out="' + i + '"]');
+  const w = $("acPage").querySelector('[data-why="' + i + '"]');
+  if (o) { o.style.display = "block"; o.textContent = text; o.style.color = isErr ? "var(--red)" : ""; }
+  if (w) w.classList.add("on");
+}
+function runAcademyCode(c, i, btn) {
+  const codeEl = $("acPage").querySelector('[data-code="' + i + '"]');
+  const code = codeEl ? codeEl.textContent : c.sections[i].code;
+  const canned = c.sections[i].predict;
+  const edited = codeEl && codeEl.textContent.trim() !== c.sections[i].code.trim();
+  if (py) {
+    acCapture = true; acOut = "";
+    py.runPythonAsync(code).then(() => {
+      acCapture = false;
+      acShowOut(i, acOut.trimEnd() || "(no output)");
+      btn.textContent = "run again \u2192";
+    }).catch(e => {
+      acCapture = false;
+      const msg = String(e.message || e).split("\n").filter(x => x.trim()).slice(-2).join("\n");
+      acShowOut(i, msg, true);
+      btn.textContent = "run again \u2192";
+    });
+    return;
+  }
+  if (navigator.onLine && !pyLoading) {
+    btn.textContent = "fetching real Python (~6 MB, once)\u2026";
+    pyLoading = true;
+    ensurePyodide().then(() => { pyLoading = false; runAcademyCode(c, i, btn); })
+      .catch(() => { pyLoading = false; acShowOut(i, canned + "\n(recorded run \u2014 runtime fetch failed)"); btn.textContent = "run again \u2192"; });
+    return;
+  }
+  acShowOut(i, edited ? "(recorded runs can\u0027t follow edits \u2014 go online once for real Python)" : canned + "\n(recorded run \u2014 offline)");
+  btn.textContent = "run again \u2192";
+}
+
 /* ---------------- boot / login / shell ---------------- */
 function bootSeq() {
   cliMode = "boot"; setStatus();
@@ -994,7 +1417,7 @@ function shellCmd(raw, t) {
     line("All training lives inside python3.", "c-amber"); return;
   }
   if (t === "exit" || t === "logout") { logout(); return; }
-  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress|kata|wipe|sandbox|exam|save|load|sound|cheatsheet|gloss|what)\b/.test(t) || /^(ghost|forge) [1-5]$/.test(t)) {
+  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress|kata|wipe|sandbox|exam|save|load|sound|cheatsheet|gloss|what|academy|read)\b/.test(t) || /^(ghost|forge) [1-5]$/.test(t)) {
     line("(training runs in python — entering python3 for you)", "c-dim");
     cliMode = "python"; setStatus();
     logEvent("python 3.12 interpreter started", "ok");
@@ -1468,6 +1891,7 @@ function showHome() {
   line("The farmer was replaced. The drone that replaced him runs on Python,");
   line("and the drone answers to you. Learn the language, keep the fields alive.");
   blank();
+  line("  academy          READ first: the textbook behind the drills", "c-amber");
   line("  start zero       never coded before? begin here ◄", "c-amber");
   line("  start basics     first syntax: print, variables, input", "c-dim");
   line("  start numstr     numbers + strings", "c-dim");
@@ -1622,6 +2046,8 @@ function diagnose(input, d) {
   else {
     showDiff(input, a);
     line("Not quite. hint shows the shape, skip reveals.", "c-red");
+    const ch = curModule && CHAPTER_OF[curModule.id];
+    if (ch && ACADEMY.some(x => x.id === ch)) line("Lost? The reading is one command away: academy " + ch, "c-dim");
   }
 }
 function showDiff(input, answer) {
@@ -2131,6 +2557,10 @@ function handle(raw) {
     line("One program a day, every day. Ritual beats bingeing.", "c-dim");
     return;
   }
+  if (t === "academy" || t === "read" || /^academy \w+$/.test(t)) {
+    const chId = t.startsWith("academy ") ? t.slice(8).trim() : null;
+    openAcademy(chId); return;
+  }
   if (t === "sandbox") { startSandbox(); return; }
   if (t === "exam") { startExam(); return; }
   if (t === "cheatsheet") { cheatsheet(); return; }
@@ -2250,6 +2680,7 @@ function showHelp() {
   line("  scroll             print your learned forms (handy on mobile)", "c-dim");
   line("  quests             quest log: every module + mode with progress", "c-dim");
   line("  kata               today\u0027s daily program + your streak", "c-dim");
+  line("  academy            fullscreen reading: the why behind the forms", "c-dim");
   line("  sandbox            real Python interpreter (needs internet once)", "c-dim");
   line("  exam               final exam, graded by real Python", "c-dim");
   line("  what is <term>     plain-language glossary - gloss lists terms", "c-dim");
@@ -2280,7 +2711,7 @@ function tabComplete() {
     cands = ["python3", "ls", "whoami", "date", "clear", "help", "exit"];
   else if (cliMode === "python") {
     if (parts.length === 1) {
-      cands = ["help", "modules", "start", "ghost", "bugs", "field", "forge", "sandbox", "exam", "kata", "quests", "scroll", "cheatsheet", "score", "save", "sound", "clear", "menu", "theme", "hint", "skip", "what is", "exit()"];
+      cands = ["help", "academy", "modules", "start", "ghost", "bugs", "field", "forge", "sandbox", "exam", "kata", "quests", "scroll", "cheatsheet", "score", "save", "sound", "clear", "menu", "theme", "hint", "skip", "what is", "exit()"];
       if (mode === "field") cands = cands.concat(['drone.move("', "drone.scan()", "drone.spray()", "drone.water()", "drone.home()", "drone.pos()", "mission", "map"]);
     } else if (first === "start") cands = ["zero", "basics", "numstr", "logic", "loops", "lists", "funcs", "errors", "imports", "files", "all", "review"];
     else if (first === "theme") cands = ["verdant", "paper", "ember"];
@@ -2402,6 +2833,16 @@ setInterval(() => {
 }, 24000);
 logEvent("console online", "ok");
 MODULES.forEach(m => m.drills.forEach(d => d.group = m.name));
+$("acClose").addEventListener("click", closeAcademy);
+$("academy").addEventListener("scroll", () => {
+  if (!acChapter) return;
+  if (acScrollT) return;
+  acScrollT = setTimeout(() => { acScrollT = null; stashPos(); }, 600);
+});
+$("acHome").addEventListener("click", renderChapterList);
+$("acBigger").addEventListener("click", () => acFs(1));
+$("acSmaller").addEventListener("click", () => acFs(-1));
+document.addEventListener("keydown", e => { if (e.key === "Escape" && acOpen) closeAcademy(); });
 const qb = $("qbtn");
 if (qb) qb.addEventListener("click", () => { questLog(); cmd.focus(); });
 const themeRowEl = $("themeRow");
