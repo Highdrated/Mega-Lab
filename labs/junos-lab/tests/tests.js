@@ -1649,6 +1649,152 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters" && g.id 
   });
 }
 
+
+{
+  const box = document.createElement("div");
+  let threw = null;
+  try{ renderProtoList(box); }catch(e){ threw = e; }
+  ok(!threw, "protocols tab list renders without throwing (all guides, array or string problem.text)");
+  ok(box.children.length > 0, "protocols tab list actually produced content");
+  PROTO_GUIDES.forEach(g => {
+    if(!g.ready){ ok(typeof g.teaser === "string" && g.teaser.length > 0, "unready guide " + g.id + " has a teaser"); return; }
+    ok(typeof g.problem.text === "string" || Array.isArray(g.problem.text), "guide " + g.id + " problem.text is string or array");
+    {
+      const box2 = document.createElement("div");
+      let threw2 = null;
+      try{ renderProtoGuide(box2, g); }catch(e){ threw2 = e; }
+      ok(!threw2, "guide " + g.id + " opens without throwing" + (threw2 ? " (" + threw2.message + ")" : ""));
+    }
+  });
+}
+
+
+{
+  ok(TICKET_FAULTS.length >= 11, "content: ticket fault pool expanded to " + TICKET_FAULTS.length);
+  TICKET_FAULTS.forEach(f => ok(["routine", "urgent", "critical"].includes(f.severity), "fault " + f.id + " has a valid severity"));
+  const ids2 = new Set(TICKET_FAULTS.map(f => f.id));
+  ok(ids2.size === TICKET_FAULTS.length, "content: no duplicate fault ids");
+  ok(ticketMaxSeverity([{ severity: "routine" }, { severity: "critical" }]) === "critical", "severity: max-of-set picks the worst one");
+  ok(ticketXpValue([{ severity: "urgent" }, { severity: "routine" }]) === 60, "severity: xp sums correctly (40+20)");
+}
+{
+  RANKS.forEach((r, i) => { if(i > 0) ok(r.xp > RANKS[i - 1].xp, "rank thresholds strictly increasing at " + i); });
+  ok(rankFor(0).title === RANKS[0].title, "rank: 0 xp is the starting rank");
+  ok(rankFor(999999).title === RANKS[RANKS.length - 1].title, "rank: huge xp caps at the top rank");
+  ok(rankFor(299).title === "NOC Technician" || rankFor(299).title === "Network Technician", "rank: boundary just under a threshold stays in the lower rank");
+  ok(rankFor(300).title === "Associate Network Engineer", "rank: exact threshold promotes");
+  try{ localStorage.removeItem("junoslab-xp"); }catch(e){}
+  ok(xpTotal() === 0, "xp: fresh install starts at zero");
+  const a1 = awardXp(50, "test");
+  ok(a1 === 50 && xpTotal() === 50, "xp: award accumulates and persists");
+  const a2 = awardXp(20, "test2");
+  ok(a2 === 70, "xp: second award adds on top");
+  try{ localStorage.removeItem("junoslab-xp"); }catch(e){}
+}
+{
+  wipeLab();
+  try{ localStorage.removeItem("junoslab-xp"); }catch(e){}
+  try{ localStorage.removeItem(LS_PROGRESS); }catch(e){}
+  PROGRESS = {};
+  wipeLab();
+  generateTicket();
+  const before = xpTotal();
+  currentTicket.faults.forEach(f => f.fix(currentTicket.ids));
+  rebuildAllDerived();
+  evalChecks();
+  const afterFirst = xpTotal();
+  ok(afterFirst > before, "xp: solving a ticket awards xp (" + before + " -> " + afterFirst + ")");
+  evalChecks();
+  ok(xpTotal() === afterFirst, "xp: re-evaluating the SAME solved ticket does not double-award");
+  wipeLab();
+  generateTicket();
+  currentTicket.faults.forEach(f => f.fix(currentTicket.ids));
+  rebuildAllDerived();
+  evalChecks();
+  const afterSecond = xpTotal();
+  ok(afterSecond > afterFirst, "xp: a NEW ticket (same scenario id \u2018ticket\u2019) awards xp again \u2014 not blocked by the once-only progress flag");
+  try{ localStorage.removeItem("junoslab-xp"); }catch(e){}
+}
+
+
+{
+  ok(SEVERITY_XP.critical > SEVERITY_XP.urgent && SEVERITY_XP.urgent > SEVERITY_XP.routine, "xp: severity tiers are ordered");
+  ok(CONTRACT_XP[3] > CONTRACT_XP[1] * 2, "xp: hard contracts far outweigh easy ones");
+  ok(SEVERITY_XP.routine > 4 * 4, "xp: hands-on ticket work outweighs a guide's worth of quiz answers (Tier 2 bias)");
+  wipeLab();
+  generateSeniorTicket();
+  ok(currentTicket && currentTicket.senior === true, "senior: incident flagged as senior");
+  ok(currentTicket.faults.length === 3, "senior: three independent faults applied");
+  ok(new Set(currentTicket.faults.map(f => f.id)).size === 3, "senior: faults are distinct");
+  const before = xpTotal();
+  currentTicket.faults.forEach(f => f.fix(currentTicket.ids));
+  rebuildAllDerived();
+  evalChecks();
+  const gained = xpTotal() - before;
+  ok(gained > 0, "senior: solving awards xp");
+  ok(gained >= Math.round(ticketXpValue(currentTicket.faults) * 1.5), "senior: difficulty multiplier applied (got " + gained + ")");
+  try{ localStorage.removeItem("junoslab-xp"); }catch(e){}
+}
+{
+  wipeLab();
+  const sw = makeSwitch(200, 200, 8);
+  const r1 = makeRouter(0, 0, 4), r2 = makeRouter(400, 0, 4);
+  const h = makeHost(200, 400);
+  cable(r1, "ge-0/0/0", sw, "ge-0/0/1");
+  cable(r2, "ge-0/0/0", sw, "ge-0/0/2");
+  cable(h, "eth0", sw, "ge-0/0/3");
+  const vr = (id, ip, prio) => {
+    const d = devices[id];
+    deviceExec(d, "configure");
+    deviceExec(d, "set interfaces ge-0/0/0 unit 0 family inet address " + ip + "/24");
+    deviceExec(d, "set interfaces ge-0/0/0 unit 0 family inet address " + ip + "/24 vrrp-group 10 virtual-address 10.0.10.1");
+    deviceExec(d, "set interfaces ge-0/0/0 unit 0 family inet address " + ip + "/24 vrrp-group 10 priority " + prio);
+    deviceExec(d, "commit"); deviceExec(d, "exit");
+  };
+  vr(r1, "10.0.10.2", 200); vr(r2, "10.0.10.3", 100);
+  hostSet(h, "10.0.10.50", 24, "10.0.10.1");
+  rebuildAllDerived();
+  const grp = Object.values(NET.vrrp)[0];
+  ok(grp && grp.master === r1, "vrrp: higher priority wins the election");
+  ok(grp.members.filter(m => m.state === "master").length === 1, "vrrp: exactly one master");
+  ok(grp.members.some(m => m.state === "backup"), "vrrp: the loser is backup, not master");
+  ok(pingOk(devices[h], "10.0.10.1"), "vrrp: host reaches the VIRTUAL address");
+  const vout = deviceExec(devices[r1], "show vrrp").map(l => l.text).join("\n");
+  ok(/master/.test(vout) && /10\.0\.10\.1/.test(vout), "vrrp: show vrrp reports state and vip");
+  deviceExec(devices[r1], "configure");
+  deviceExec(devices[r1], "set interfaces ge-0/0/0 disable");
+  deviceExec(devices[r1], "commit");
+  rebuildAllDerived();
+  ok(Object.values(NET.vrrp)[0].master === r2, "vrrp: FAILOVER — backup promotes when master's link dies");
+  ok(pingOk(devices[h], "10.0.10.1"), "vrrp: gateway survives the failure (host never changed config)");
+}
+{
+  wipeLab();
+  const r = makeRouter(0, 0, 4);
+  const a = makeRouter(200, 0, 4), b = makeRouter(400, 0, 4);
+  cable(r, "ge-0/0/0", a, "ge-0/0/0");
+  cable(r, "ge-0/0/1", b, "ge-0/0/0");
+  const d = devices[r];
+  deviceExec(d, "configure");
+  deviceExec(d, "set interfaces ge-0/0/0 unit 0 family inet address 10.0.1.1/24");
+  deviceExec(d, "set interfaces ge-0/0/1 unit 0 family inet address 10.0.2.1/24");
+  deviceExec(d, "set routing-options static route 10.50.0.0/24 next-hop 10.0.1.2");
+  deviceExec(d, "set routing-options static route 10.50.0.0/24 next-hop 10.0.2.2");
+  deviceExec(d, "commit");
+  rebuildAllDerived();
+  const res = routeLookup(d, "10.50.0.5");
+  ok(res && res.ecmp && res.ecmp.length === 2, "ecmp: two equal-cost next-hops installed");
+  const f1 = routeLookup(d, "10.50.0.5").nh;
+  const f2 = routeLookup(d, "10.50.0.5").nh;
+  ok(f1 === f2, "ecmp: the SAME flow always hashes to the same path (packet order preserved)");
+  const paths = new Set();
+  for(let i = 1; i < 40; i++){
+    const rr = routeLookup(d, "10.50.0." + i);
+    if(rr && rr.nh) paths.add(rr.nh);
+  }
+  ok(paths.size === 2, "ecmp: different flows spread across BOTH paths (load sharing works)");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

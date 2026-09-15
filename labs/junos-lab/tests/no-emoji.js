@@ -19,7 +19,7 @@ function decodeUnicode(text){
   return t;
 }
 
-const emojiPat = /[\u{1F300}-\u{1FAFF}]/gu;
+const emojiPat = /[\u{1F300}-\u{1FAFF}\u{2300}-\u{23FF}\u{2B00}-\u{2BFF}\u{FE0F}\u{1F1E6}-\u{1F1FF}]/gu;
 let bad = 0;
 for(const f of files){
   const p = path.join(root, f);

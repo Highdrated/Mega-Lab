@@ -80,6 +80,10 @@ function renderCourseBar(){
   var host = document.getElementById("course-bar");
   if(!host) return;
   host.innerHTML = "";
+  var rankHost = document.createElement("div");
+  rankHost.id = "rank-badge";
+  host.appendChild(rankHost);
+  if(typeof renderRankBadge === "function") renderRankBadge();
   var next = courseNext();
   var done = courseDoneCount();
   var strip = document.createElement("div");

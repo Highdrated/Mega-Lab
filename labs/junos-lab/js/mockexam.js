@@ -188,12 +188,17 @@ function finishMockExam(timeUp, abandoned){
   var total = MOCK.i;
   var pct = total ? Math.round((MOCK.correct / total) * 100) : 0;
   var pass = pct >= 65;
+  if(typeof awardXp === "function" && total >= 5){
+    var lengthMult = total >= 65 ? 1.5 : total >= 40 ? 1.2 : 1;
+    var xp = Math.round((pct / 3) * lengthMult) + (pass ? 25 : 0);
+    awardXp(xp, "mock exam (" + total + "q, " + pct + "%)");
+  }
   h.innerHTML = "";
   var card = document.createElement("div");
   card.className = "mock-card";
   var head = document.createElement("div");
   head.className = "mock-result " + (pass ? "mock-pass" : "mock-fail");
-  head.textContent = (timeUp ? "\u23f0 Time! " : "") + pct + "% \u2014 " + MOCK.correct + " / " + total + (pass ? "  \u00b7  PASS territory" : "  \u00b7  below the ~65% pass line");
+  head.textContent = (timeUp ? "Time! " : "") + pct + "% \u2014 " + MOCK.correct + " / " + total + (pass ? "  \u00b7  PASS territory" : "  \u00b7  below the ~65% pass line");
   card.appendChild(head);
   Object.keys(MOCK.perDom).forEach(function(d){
     var s = MOCK.perDom[d];
@@ -214,6 +219,14 @@ function finishMockExam(timeUp, abandoned){
       d.textContent = "\u2715 " + m.q.q + "  \u2192  " + m.q.why;
       card.appendChild(d);
     });
+  }
+  if(typeof rankProgress === "function"){
+    var rk = document.createElement("div");
+    rk.className = "rank-next";
+    rk.style.textAlign = "center";
+    rk.style.margin = "10px 0 2px";
+    rk.textContent = "Rank: " + rankProgress().rank.title + " (" + rankProgress().xp + " XP)";
+    card.appendChild(rk);
   }
   var close = document.createElement("button");
   close.className = "mock-close";

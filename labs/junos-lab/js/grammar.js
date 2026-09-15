@@ -205,7 +205,7 @@ const SWITCH_CFG_SPECS = [
   ["interfaces <interface:ifname> unit <unit:unit> family inet filter output <filter:filterref>", { kind:"value", help:"Apply a firewall filter to outbound traffic" }],
   ["vlans <vlan-name:word> vlan-id <id:vlanid>", { kind:"value", help:"Create a VLAN with this 802.1Q id" }],
   ["vlans <vlan-name:vlanref> l3-interface <irb:irbref>", { kind:"value", help:"Attach an irb unit as this VLAN's L3 gateway" }],
-  ["routing-options static route <destination:prefix> next-hop <next-hop:ip>", { kind:"value", help:"Static route (0.0.0.0/0 = default)" }],
+  ["routing-options static route <destination:prefix> next-hop <next-hop:ip>", { kind:"list", help:"Static route (0.0.0.0/0 = default; repeat next-hop for ECMP load sharing)" }],
   ["protocols rstp", { kind:"presence", help:"Enable Rapid Spanning Tree on this switch" }],
   ["protocols rstp interface all", { kind:"enumvalue", help:"Run RSTP on all interfaces" }],
   ["firewall family inet filter <filter:word> term <term:word> from source-address <address:prefix>", { kind:"list", help:"Match on source address" }],
@@ -241,6 +241,9 @@ const SWITCH_CFG_SPECS = [
   ["switch-options interface <interface:physport> packet-action shutdown", { kind:"enumvalue", help:"Error-disable the port when the MAC limit is exceeded" }],
 ];
 const ROUTER_CFG_SPECS = [
+  ["interfaces <interface:physport> unit <unit:unit> family inet address <address:prefix> vrrp-group <group:num> virtual-address <vip:ip>", { kind:"value", help:"The shared gateway address both routers answer to" }],
+  ["interfaces <interface:physport> unit <unit:unit> family inet address <address:prefix> vrrp-group <group:num> priority <prio:num>", { kind:"value", help:"Higher priority wins the election and becomes master (default 100)" }],
+  ["interfaces <interface:physport> unit <unit:unit> family inet address <address:prefix> vrrp-group <group:num> preempt", { kind:"presence", help:"Take mastership back when a higher-priority router returns" }],
   ["system host-name <hostname:word>", { kind:"value", help:"Set the system hostname" }],
   ["interfaces <interface:ifname> mtu <mtu:num>", { kind:"value", help:"Interface MTU in bytes (default 1514) — mismatches stall OSPF adjacencies" }],
   ["interfaces <interface:physport> disable", { kind:"presence", help:"Administratively disable this interface" }],
@@ -248,7 +251,7 @@ const ROUTER_CFG_SPECS = [
   ["interfaces <interface:physport> unit <unit:unit> family inet address <address:prefix>", { kind:"list", help:"IPv4 address on this interface" }],
   ["interfaces <interface:physport> unit <unit:unit> family inet filter input <filter:filterref>", { kind:"value", help:"Apply a firewall filter to inbound traffic" }],
   ["interfaces <interface:physport> unit <unit:unit> family inet filter output <filter:filterref>", { kind:"value", help:"Apply a firewall filter to outbound traffic" }],
-  ["routing-options static route <destination:prefix> next-hop <next-hop:ip>", { kind:"value", help:"Static route (0.0.0.0/0 = default)" }],
+  ["routing-options static route <destination:prefix> next-hop <next-hop:ip>", { kind:"list", help:"Static route (0.0.0.0/0 = default; repeat next-hop for ECMP load sharing)" }],
   ["firewall family inet filter <filter:word> term <term:word> from source-address <address:prefix>", { kind:"list", help:"Match on source address" }],
   ["firewall family inet filter <filter:word> term <term:word> from destination-address <address:prefix>", { kind:"list", help:"Match on destination address" }],
   ["firewall family inet filter <filter:word> term <term:word> from protocol <proto:word>", { kind:"list", help:"Match on protocol (e.g. icmp)" }],

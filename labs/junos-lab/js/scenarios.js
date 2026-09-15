@@ -1005,14 +1005,31 @@ function buildTicketBase(){
   rebuildAllDerived();
   return { core, acc1, acc2, edge, isp };
 }
+const SEVERITY_ORDER = ["routine", "urgent", "critical"];
+const SEVERITY_XP = { routine: 20, urgent: 40, critical: 70 };
+function ticketMaxSeverity(faults){
+  return faults.reduce((best, f) =>
+    SEVERITY_ORDER.indexOf(f.severity) > SEVERITY_ORDER.indexOf(best) ? f.severity : best, "routine");
+}
+function ticketSeverityLabel(faults){
+  return ticketMaxSeverity(faults).toUpperCase();
+}
+function ticketXpValue(faults){
+  return faults.reduce((sum, f) => sum + (SEVERITY_XP[f.severity] || 15), 0);
+}
+const CONTRACT_XP = { 1: 45, 2: 80, 3: 130 };
+var xpChallengeToken = null;
+var xpChallengeAwarded = false;
 const TICKET_FAULTS = [
   { id: "trunk-down",
+    severity: "critical",
     ticket: "Rack A is dark — staff-pc1 AND guest-pc1 both report total loss of connectivity. Rack B is fine.",
     apply: ids => cfgDo(ids.acc1, ["set interfaces ge-0/0/0 disable"]),
     fix: ids => cfgDo(ids.acc1, ["delete interfaces ge-0/0/0 disable"]),
     hint: "Both VLANs in one rack at once smells like the uplink, not a VLAN. show interfaces terse on acc-1.",
     reveal: "acc-1's uplink ge-0/0/0 was admin-disabled — delete interfaces ge-0/0/0 disable, commit." },
   { id: "wrong-vlan",
+    severity: "routine",
     ticket: "staff-pc1 can't reach anything — not even its own gateway 10.0.10.1. The guest next to it is fine.",
     apply: ids => cfgDo(ids.acc1, [
       "delete interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff",
@@ -1023,30 +1040,35 @@ const TICKET_FAULTS = [
     hint: "One machine, gateway unreachable, neighbors fine → look at ITS port. show vlans on acc-1: which VLAN is ge-0/0/2 in?",
     reveal: "staff-pc1's port (acc-1 ge-0/0/2) was moved into vlan guest — its 10.0.10.x address lives in the staff subnet." },
   { id: "trunk-missing-vlan",
+    severity: "urgent",
     ticket: "Every guest in rack A is down. Staff in rack A are fine. Rack B unaffected.",
     apply: ids => cfgDo(ids.core, ["delete interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members guest"]),
     fix: ids => cfgDo(ids.core, ["set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members guest"]),
     hint: "One VLAN, one rack → the trunk between them stopped carrying that VLAN. Compare show vlans on core-1 vs acc-1: is guest on BOTH ends of the rack-A trunk?",
     reveal: "core-1's trunk to acc-1 (ge-0/0/0) stopped carrying vlan guest. Re-add it to the members list and commit." },
   { id: "wrong-gw",
+    severity: "routine",
     ticket: "staff-pc2 reaches machines in its own subnet, but nothing beyond — no other VLANs, no internet.",
     apply: () => { const h = byName("staff-pc2"); if(h) h.cfg.gw = "10.0.10.254"; },
     fix: () => { const h = byName("staff-pc2"); if(h) h.cfg.gw = "10.0.10.1"; },
     hint: "Local works, remote doesn't → first hop. On staff-pc2: ip route. Does that gateway actually exist?",
     reveal: "staff-pc2's default gateway was 10.0.10.254 — nothing owns that address. The real gateway is 10.0.10.1." },
   { id: "no-default",
+    severity: "critical",
     ticket: "Site-wide: everything internal pings fine, but the internet is dead for everyone.",
     apply: ids => cfgDo(ids.core, ["delete routing-options static route 0.0.0.0/0"]),
     fix: ids => cfgDo(ids.core, ["set routing-options static route 0.0.0.0/0 next-hop 10.0.99.1"]),
     hint: "Internal fine + internet dead for ALL VLANs → the shared default route. show route on core-1: where's 0.0.0.0/0?",
     reveal: "core-1 lost its default route toward edge-r (0.0.0.0/0 next-hop 10.0.99.1)." },
   { id: "no-return",
+    severity: "urgent",
     ticket: "Guests can ping their gateway and even core addresses, but the internet times out — for guests only.",
     apply: ids => cfgDo(ids.edge, ["delete routing-options static route 10.0.20.0/24"]),
     fix: ids => cfgDo(ids.edge, ["set routing-options static route 10.0.20.0/24 next-hop 10.0.99.2"]),
     hint: "traceroute 8.8.8.8 from guest-pc1 — it LEAVES. So the loss is on the way back. show route on edge-r: can it send anything to 10.0.20.0/24?",
     reveal: "edge-r lost its return route to 10.0.20.0/24 — guest packets got out, the replies had nowhere to go." },
   { id: "filter-block",
+    severity: "critical",
     ticket: "Every guest is down hard — gateway unreachable. Staff untouched. It started right after a 'security change'.",
     apply: ids => cfgDo(ids.core, [
       "set firewall family inet filter GUEST-IN term q from source-address 10.0.20.0/24",
@@ -1058,6 +1080,7 @@ const TICKET_FAULTS = [
     hint: "'After a security change' — show configuration on core-1 and look at the firewall stanza, then at what irb.20 has applied.",
     reveal: "A filter GUEST-IN on core-1 irb.20 discards all guest traffic (and its implicit end-discard eats whatever's left). Remove it or rewrite it with an accept term." },
   { id: "nat-missing",
+    severity: "critical",
     ticket: "Internet is dead for the whole site. Internal traffic is fine — and traceroute from any PC LEAVES the building and dies somewhere out there.",
     apply: ids => cfgDo(ids.edge, ["delete security nat source rule-set OFFICE"]),
     fix: ids => cfgDo(ids.edge, [
@@ -1067,13 +1090,40 @@ const TICKET_FAULTS = [
       "set security nat source rule-set OFFICE rule R1 then source-nat interface"]),
     hint: "Forward path fine, dies beyond the edge, ALL VLANs at once — the internet can't route your private addresses back. What translates them? show security nat source on edge-r.",
     reveal: "edge-r lost its source NAT rule-set — private 10.x sources were leaving untranslated, so no reply could ever return." },
+
+  { id: "irb-unbound",
+    severity: "urgent",
+    ticket: "Staff can talk to each other fine, but nobody in staff can reach guest, core services, or the internet. Everything else is normal.",
+    apply: ids => cfgDo(ids.core, ["delete vlans staff l3-interface irb.10"]),
+    fix: ids => cfgDo(ids.core, ["set vlans staff l3-interface irb.10"]),
+    hint: "Intra-VLAN fine, everything ROUTED broken, only staff affected \u2192 that VLAN's gateway binding. show vlans on core-1: does vlan staff still point at an l3-interface?",
+    reveal: "core-1's vlan staff lost its l3-interface binding to irb.10 \u2014 the VLAN kept switching, but stopped routing. Re-bind it and commit." },
+  { id: "acc2-trunk-missing-staff",
+    severity: "critical",
+    ticket: "Rack B is dark \u2014 every machine there, no exceptions. Rack A is untouched.",
+    apply: ids => cfgDo(ids.core, ["delete interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff"]),
+    fix: ids => cfgDo(ids.core, ["set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff"]),
+    hint: "Whole rack dark, other rack fine \u2192 the trunk feeding that rack. show vlans on core-1 for the acc-2 uplink (ge-0/0/1) \u2014 is staff still a member?",
+    reveal: "core-1's trunk to acc-2 (ge-0/0/1) had 'staff' pulled from its VLAN members \u2014 acc-2's only VLAN vanished from the wire." },
+  { id: "nat-scope-too-narrow",
+    severity: "urgent",
+    ticket: "Guests can't reach the internet \u2014 traceroute LEAVES the building and dies out there. Staff are completely fine.",
+    apply: ids => cfgDo(ids.edge, [
+      "delete security nat source rule-set OFFICE rule R1 match source-address 10.0.0.0/8",
+      "set security nat source rule-set OFFICE rule R1 match source-address 10.0.10.0/24"]),
+    fix: ids => cfgDo(ids.edge, [
+      "delete security nat source rule-set OFFICE rule R1 match source-address 10.0.10.0/24",
+      "set security nat source rule-set OFFICE rule R1 match source-address 10.0.0.0/8"]),
+    hint: "Forward path leaves fine, only ONE vlan affected, reply never comes back \u2192 NAT is translating some sources but not this one. show security nat source on edge-r \u2014 what does rule R1 actually match?",
+    reveal: "edge-r's NAT rule R1 was narrowed to match only 10.0.10.0/24 (staff) \u2014 guest's 10.0.20.0/24 sources were leaving untranslated and dying at the internet's doorstep." },
 ];
 let currentTicket = null;
 
 function ticketScenario(faults){
   return {
     id: "ticket",
-    title: "Trouble Ticket",
+    title: "Trouble Ticket — " + ticketSeverityLabel(faults),
+    severity: ticketMaxSeverity(faults),
     desc: faults.map(f => "“" + f.ticket + "”").join("\n\n") +
       "\n\nEverything below should be green when the network is healthy again.",
     isTicket: true,
@@ -1107,6 +1157,8 @@ async function generateTicket(){
   rebuildAllDerived();
   currentTicket = { ids, faults };
   currentScenario = ticketScenario(faults);
+  xpChallengeToken = "ticket:" + uid("t");
+  xpChallengeAwarded = false;
   hintIndex = 0;
   document.getElementById("hint-list").innerHTML = "";
   resetHintBtn();
@@ -1207,6 +1259,38 @@ function contractScenario(spec){
     ],
   };
 }
+
+async function generateSeniorTicket(){
+  if(Object.keys(devices).length &&
+     !(await modalConfirm("Senior incident?",
+       "Multi-fault incident: THREE independent faults at once, no hints about how many. You must rule out layers systematically rather than find one obvious break.\n\nThis replaces the canvas with the standard two-rack site.",
+       "Page me in")))
+    return;
+  if(typeof pushUndo === "function") pushUndo();
+  const ids = buildTicketBase();
+  const pool = TICKET_FAULTS.slice();
+  const faults = [];
+  for(let i = 0; i < 3 && pool.length; i++)
+    faults.push(pool.splice(Math.floor(Math.random() * pool.length), 1)[0]);
+  faults.forEach(f => f.apply(ids));
+  rebuildAllDerived();
+  currentTicket = { ids, faults, senior: true };
+  currentScenario = ticketScenario(faults);
+  currentScenario.title = "Senior Incident \u2014 multi-fault";
+  currentScenario.desc = "Multiple independent faults are live at once. Symptoms will overlap and mislead \u2014 fixing one may not visibly change anything until another is also fixed.\n\n" +
+    currentScenario.desc +
+    "\n\nWork it like a real major incident: establish what DOES work, divide by layer, and re-test after every single change.";
+  xpChallengeToken = "senior:" + uid("s");
+  xpChallengeAwarded = false;
+  hintIndex = 0;
+  document.getElementById("hint-list").innerHTML = "";
+  resetHintBtn();
+  document.getElementById("solution-btn").style.display = "block";
+  document.getElementById("scenario-select").selectedIndex = -1;
+  if(typeof openTablet === "function") openTablet("scen");
+  renderScenarioMeta();
+  touchState();
+}
 async function generateContract(){
   const tier = await modalChoice("New contract", "Pick the job size — the brief is generated, the canvas is yours.", [
     { value: 1, label: "Small office", desc: "One switch, two departments, strict isolation" },
@@ -1222,6 +1306,8 @@ async function generateContract(){
   rebuildAllDerived();
   currentScenario = contractScenario(generateContractSpec(tier));
   currentTicket = null;
+  xpChallengeToken = "contract:" + uid("c");
+  xpChallengeAwarded = false;
   hintIndex = 0;
   document.getElementById("hint-list").innerHTML = "";
   resetHintBtn();
@@ -1297,6 +1383,14 @@ function renderObjectives(){
 function evalChecks(){
   if(!document.getElementById("tab-scen")) return;
   const all = renderObjectives();
+  if(all && (currentScenario.isTicket || currentScenario.isContract) && !xpChallengeAwarded){
+    xpChallengeAwarded = true;
+    if(typeof awardXp === "function"){
+      if(currentScenario.isTicket)
+        awardXp(Math.round(ticketXpValue(currentTicket.faults) * (currentTicket.senior ? 1.5 : 1)), currentScenario.title);
+      else awardXp(CONTRACT_XP[currentScenario.id.replace("contract-tier", "")] || 30, currentScenario.title);
+    }
+  }
   if(all && Object.keys(devices).length){
     const id = currentScenario.id;
     const first = !(PROGRESS[id] && PROGRESS[id].done);
@@ -1309,6 +1403,8 @@ function evalChecks(){
       renderScenSelect();
       if(typeof SFX !== "undefined") SFX.fanfare();
       if(typeof courseOnComplete === "function") setTimeout(function(){ courseOnComplete(currentScenario.id); }, 400);
+      if(typeof awardXp === "function" && !(currentScenario.isTicket || currentScenario.isContract))
+        awardXp(20, currentScenario.title);
       document.getElementById("scen-objectives").classList.add("done-flash");
       setTimeout(() => document.getElementById("scen-objectives").classList.remove("done-flash"), 1100);
     }
@@ -1420,6 +1516,7 @@ function updateExamTimer(){
     `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} — no hints, no setup. All objectives green = pass.`;
 }
 document.getElementById("ticket-btn").onclick = () => { if(typeof SFX !== "undefined") SFX.ticket(); generateTicket(); };
+document.getElementById("senior-btn").onclick = () => { if(typeof SFX !== "undefined") SFX.alert(); generateSeniorTicket(); };
 document.getElementById("solution-btn").onclick = () => {
   if(!currentTicket) return;
   modalConfirm("The fault(s)", currentTicket.faults.map(f => "• " + f.reveal).join("\n"), "Got it");

@@ -15,7 +15,7 @@ function deriveDev(dev){
   const d = {
     hostname: hostnameOf(dev),
     portCfg: {}, aes: {}, irbs: {}, irbByVlan: {}, l3ports: {},
-    routes: [], vlans: {}, rstp: false, filters: {}, stormProfiles: {},
+    routes: [], vlans: {}, rstp: false, filters: {}, stormProfiles: {}, vrrp: [],
   };
   // vlans (implicit factory "default" = 1)
   const vcfg = cfgGet(c, ["vlans"]) || {};
@@ -114,7 +114,23 @@ function deriveDev(dev){
     for(const p of dev.ports){
       const ic = ifs[p.id] || {};
       d.portCfg[p.id] = { disabled: !!ic.disable, desc: ic.description || null, ae: null, mtu: ic.mtu ? parseInt(ic.mtu, 10) : 1514 };
-      const addr = (cfgGet(ic, ["unit", "0", "family", "inet", "address"]) || []).map(parsePrefix).filter(Boolean)[0];
+      const addrObj = cfgGet(ic, ["unit", "0", "family", "inet", "address"]) || [];
+      if(addrObj && !Array.isArray(addrObj)){
+        for(const pfx in addrObj){
+          const vg = addrObj[pfx] && addrObj[pfx]["vrrp-group"];
+          if(!vg) continue;
+          for(const gid in vg){
+            const g = vg[gid] || {};
+            if(!g["virtual-address"]) continue;
+            d.vrrp.push({
+              port: p.id, group: parseInt(gid, 10), vip: g["virtual-address"],
+              priority: g.priority ? parseInt(g.priority, 10) : 100,
+              preempt: !!g.preempt, realIp: parsePrefix(pfx) ? parsePrefix(pfx).ip : null,
+            });
+          }
+        }
+      }
+      const addr = (Array.isArray(addrObj) ? addrObj : Object.keys(addrObj)).map(parsePrefix).filter(Boolean)[0];
       if(addr) d.l3ports[p.id] = {
         ip: addr.ip, bits: addr.bits, mtu: ic.mtu ? parseInt(ic.mtu, 10) : 1514,
         fIn: cfgGet(ic, ["unit", "0", "family", "inet", "filter", "input"]) || null,
@@ -129,8 +145,11 @@ function deriveDev(dev){
   const routes = cfgGet(c, ["routing-options", "static", "route"]) || {};
   for(const [pfx, r] of Object.entries(routes)){
     const p = parsePrefix(pfx);
-    const nh = r && r["next-hop"];
-    if(p && validIp(nh || "")) d.routes.push({ net: p.ip, bits: p.bits, nh });
+    if(!p) continue;
+    // next-hop may be a single value or several (ECMP)
+    const nhs = r && r["next-hop"];
+    for(const nh of (Array.isArray(nhs) ? nhs : [nhs]))
+      if(validIp(nh || "")) d.routes.push({ net: p.ip, bits: p.bits, nh });
   }
 
   // BGP (eBGP to the provider): local AS + external groups
@@ -424,6 +443,7 @@ function rebuildAllDerived(){
     if(dev.type === "switch" || dev.type === "router") dev.d = deriveDev(dev);
   computePoe();
   computeNet();
+  computeVrrp();
 
   // storm-control reaction: shutdown-profiles error-disable their port, then everything recomputes
   for(let round = 0; round < 3; round++){
@@ -799,6 +819,7 @@ function findDeviceByIp(ip){
     if((d.type === "host" || d.type === "server" || d.type === "isp") && d.cfg && d.cfg.ip === ip) return d;
     if(d.type === "switch" || d.type === "router"){
       if(ifacesOf(d).some(i => i.ip === ip)) return d;
+      if(isVrrpVip(d, ip)) return d;
       if(d.d && d.d.me0 && d.d.me0.ip === ip) return d;
     }
   }
@@ -828,6 +849,74 @@ function routesOf(dev){
     return dev.cfg.gw ? [{ net: "0.0.0.0", bits: 0, nh: dev.cfg.gw }] : [];
   return [];
 }
+function showVrrpCmd(dev){
+  const mine = [];
+  for(const k in (NET.vrrp || {})){
+    const g = NET.vrrp[k];
+    const m = g.members.find(x => x.dev === dev.id);
+    if(m) mine.push({ g, m });
+  }
+  if(!mine.length) return "(no VRRP groups configured on this device)";
+  const rows = [["Interface", "Group", "State", "Priority", "Virtual-address"]];
+  for(const { g, m } of mine)
+    rows.push([m.port, String(g.group), m.state, String(m.priority), g.vip]);
+  return rows.map(r => pad(r[0], 14) + pad(r[1], 8) + pad(r[2], 10) + pad(r[3], 10) + r[4]).join("\n") +
+    "\n\n(master answers for the virtual address; backup takes over within seconds if the master's link fails)";
+}
+function computeVrrp(){
+  NET.vrrp = {};
+  const groups = new Map();
+  for(const dev of Object.values(devices)){
+    if(dev.type !== "router" && dev.type !== "switch") continue;
+    for(const g of ((dev.d && dev.d.vrrp) || [])){
+      const key = g.vip + "|" + g.group;
+      if(!groups.has(key)) groups.set(key, []);
+      const pc = (dev.d.portCfg || {})[g.port];
+      const linked = isLinked(dev.id, g.port);
+      const usable = linked && !(pc && pc.disabled) && dev.powered !== false;
+      groups.get(key).push({ dev, g, usable });
+    }
+  }
+  for(const [key, members] of groups){
+    const live = members.filter(m => m.usable);
+    // Highest priority wins; ties break on highest real address, like real VRRP.
+    live.sort((a, b) => b.g.priority - a.g.priority ||
+      (ipToInt32(b.g.realIp || "0.0.0.0") - ipToInt32(a.g.realIp || "0.0.0.0")));
+    const master = live[0] || null;
+    NET.vrrp[key] = {
+      vip: members[0].g.vip, group: members[0].g.group,
+      master: master ? master.dev.id : null,
+      members: members.map(m => ({
+        dev: m.dev.id, port: m.g.port, priority: m.g.priority, preempt: m.g.preempt,
+        state: !m.usable ? "init" : (master && m.dev.id === master.dev.id ? "master" : "backup"),
+      })),
+    };
+  }
+}
+function ipToInt32(ip){
+  return ip.split(".").reduce((a, o) => (a << 8) + (parseInt(o, 10) || 0), 0) >>> 0;
+}
+function vrrpMasterFor(vip){
+  for(const k in (NET.vrrp || {})){
+    const g = NET.vrrp[k];
+    if(g.vip === vip && g.master) return devices[g.master] || null;
+  }
+  return null;
+}
+function isVrrpVip(dev, ip){
+  for(const k in (NET.vrrp || {})){
+    const g = NET.vrrp[k];
+    if(g.vip === ip && g.master === dev.id) return true;
+  }
+  return false;
+}
+function ecmpHash(dev, dstIp, n){
+  // Real Junos hashes the flow (src/dst) so a given flow stays on one path.
+  let h = 0;
+  const key = (dev.id || "") + "|" + dstIp;
+  for(let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return h % n;
+}
 function routeLookup(dev, dstIp){
   const up = ifacesOf(dev).filter(i => i.up);
   const conn = up.find(i => sameSubnet(dstIp, i.ip, i.bits));
@@ -843,6 +932,16 @@ function routeLookup(dev, dstIp){
   if(cands.length){
     cands.sort((a, b) => b.bits - a.bits || a.pref - b.pref);
     const best = cands[0];
+    // ECMP: equal prefix length AND equal preference = equal-cost paths sharing the load
+    const equals = cands.filter(c => c.bits === best.bits && c.pref === best.pref && c.nh !== best.nh);
+    if(equals.length){
+      const set = [best, ...equals];
+      const idx = ecmpHash(dev, dstIp, set.length);
+      const chosen = set[idx];
+      const viaE = up.find(i => sameSubnet(chosen.nh, i.ip, i.bits));
+      return { type: "static", nh: chosen.nh, iface: viaE || null, route: chosen, proto: chosen.proto,
+               ecmp: set.map(c => c.nh) };
+    }
     const via = up.find(i => sameSubnet(best.nh, i.ip, i.bits));
     return { type: "static", nh: best.nh, iface: via || null, route: best, proto: best.proto };
   }
@@ -897,9 +996,11 @@ function pingWalk(startDev, pkt0, opts){
       const ent = opts.natTable.find(en => en.devId === node.id && en.natIp === pkt.dst);
       if(ent) pkt = { ...pkt, dst: ent.orig };
     }
-    // does this node own the destination?
+    // does this node own the destination? (a VRRP master also answers for the virtual address)
     const own = ifacesOf(node).find(i => i.ip === pkt.dst);
     if(own) return { ok: true, hops, segs, deliveredDev: node };
+    if((node.type === "router" || node.type === "switch") && isVrrpVip(node, pkt.dst))
+      return { ok: true, hops, segs, deliveredDev: node };
     if(node.type === "isp" && isPublicIp(pkt.dst) &&
        !ifacesOf(node).some(i => i.up && sameSubnet(pkt.dst, i.ip, i.bits))){
       // beyond the provider = "the internet" — but its own /30 routes normally
@@ -951,7 +1052,9 @@ function pingWalk(startDev, pkt0, opts){
     const l3eps = reach.endpoints.map(endpointL3).filter(Boolean);
     const found = r.type === "peer"
       ? l3eps.find(e => e.ip !== r.iface.ip && sameSubnet(e.ip, r.iface.ip, r.iface.bits))
-      : l3eps.find(e => e.ip === targetIp);
+      : (l3eps.find(e => e.ip === targetIp) ||
+         // VRRP: the elected master answers ARP for the virtual address
+         l3eps.find(e => e.dev && isVrrpVip(e.dev, targetIp)));
     if(!found){
       const what = r.type === "connected" ? pkt.dst : r.type === "peer" ? "the provider-side peer" : `next-hop ${r.nh}`;
       return fail(
@@ -1510,6 +1613,7 @@ const OP_SPECS = {
     ["show ethernet-switching table", { help: "Learned MAC addresses", fn: showMacTable }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
     ["show system commit", { help: "Commit history — who committed when, rollback numbers", fn: showCommitHistCmd }],
+    ["show vrrp", { help: "VRRP groups — who is master for each virtual address", fn: showVrrpCmd }],
     ["show interfaces statistics", { help: "Per-port packet counters and errors", fn: showIfStatsCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
     ["show spanning-tree interface", { help: "RSTP port roles and states", fn: showStpCmd }],
@@ -1546,6 +1650,7 @@ const OP_SPECS = {
     ["show interfaces terse", { help: "Interface summary", fn: showTerse }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
     ["show system commit", { help: "Commit history — who committed when, rollback numbers", fn: showCommitHistCmd }],
+    ["show vrrp", { help: "VRRP groups — who is master for each virtual address", fn: showVrrpCmd }],
     ["show interfaces statistics", { help: "Per-port packet counters and errors", fn: showIfStatsCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
     ["show ospf neighbor", { help: "OSPF adjacencies", fn: showOspfNbrCmd }],

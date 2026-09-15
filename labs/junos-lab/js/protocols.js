@@ -907,10 +907,268 @@ var PROTO_GUIDES = [
         why: "Root logs into the underlying shell (%). Typing cli starts the Junos CLI (>). Everyone hits this once on real hardware; the exam makes sure you hit it on paper first." },
     ],
   },
-  { id: "vrrp", title: "VRRP — Gateway Redundancy", tag: "L3 · redundancy", ready: false,
-    teaser: "Two routers pretending to be one gateway IP, so the default gateway can die without anyone updating a single host. Needs engine support first — on the roadmap." },
-  { id: "lldp", title: "LLDP — Neighbor Discovery", tag: "L2 · operations", ready: false,
-    teaser: "The protocol that answers 'what is plugged into this port?' without walking to the rack. Needs engine support first — on the roadmap." },
+  {
+    id: "vrrp",
+    title: "VRRP — Gateway Redundancy",
+    tag: "L3 · redundancy",
+    ready: true,
+    problem: {
+      text: ["Every host on a subnet points at ONE default gateway address. Hard-code it in DHCP, put it on three hundred machines, and you have created a single point of failure with three hundred victims.",
+             "Replace that router and everyone is offline until you touch every client. Unacceptable in a datacenter.",
+             "VRRP solves it by lying, elegantly: two routers share ONE virtual address. Hosts point at the virtual address forever and never learn which physical router is actually answering."],
+      svg: "vrrp-problem"
+    },
+    how: {
+      text: ["Both routers join a VRRP group and advertise the same virtual IP. They compare PRIORITY (default 100, higher wins; identical priorities break the tie on the higher real address) and elect one MASTER. Only the master answers ARP for the virtual address and forwards traffic sent to it.",
+             "The backup sits silent, listening for the master's advertisements. When those stop — dead link, dead router, dead RE — the backup promotes itself within seconds and starts answering for the same virtual address. Hosts notice nothing: same gateway IP, same ARP entry, new hardware behind it.",
+             "PREEMPT decides what happens when the old master returns: with preempt the higher-priority router takes mastership back, without it the current master keeps the job to avoid a second disruption. Both are defensible — know which one you configured."]
+    },
+    prereqs: [
+      { desc: "Two routers cabled to the same switch (the shared segment)",
+        test: function(){ return typeof devsBy === "function" && devsBy("router").filter(function(r){
+          return Object.values(links).some(function(l){
+            return (l.a.dev === r.id && devices[l.b.dev] && devices[l.b.dev].type === "switch") ||
+                   (l.b.dev === r.id && devices[l.a.dev] && devices[l.a.dev].type === "switch"); }); }).length >= 2; } },
+      { desc: "Both routers have a VRRP group with the SAME virtual address",
+        test: function(){ if(typeof NET === "undefined" || !NET.vrrp) return false;
+          return Object.keys(NET.vrrp).some(function(k){ return NET.vrrp[k].members.length >= 2; }); } },
+      { desc: "One router is elected master, the other is backup",
+        test: function(){ if(typeof NET === "undefined" || !NET.vrrp) return false;
+          return Object.keys(NET.vrrp).some(function(k){
+            var g = NET.vrrp[k];
+            return g.master && g.members.some(function(m){ return m.state === "backup"; }); }); } },
+      { desc: "A host uses the VIRTUAL address as its gateway and can ping it",
+        test: function(){ if(typeof NET === "undefined" || !NET.vrrp) return false;
+          var vips = Object.keys(NET.vrrp).map(function(k){ return NET.vrrp[k].vip; });
+          return devsBy("host").some(function(h){
+            if(!h.cfg || !h.cfg.gw || vips.indexOf(h.cfg.gw) === -1) return false;
+            try{ return pingOk(h, h.cfg.gw); }catch(e){ return false; } }); } },
+    ],
+    try: [
+      ["show vrrp", "Who is master right now, and at what priority"]
+    ],
+    cfg: [
+      ["set interfaces ge-0/0/0 unit 0 family inet address 10.0.10.2/24", "The router's OWN address — each router keeps a unique real one"],
+      ["set interfaces ge-0/0/0 unit 0 family inet address 10.0.10.2/24 vrrp-group 10 virtual-address 10.0.10.1", "The shared gateway address hosts will point at"],
+      ["set interfaces ge-0/0/0 unit 0 family inet address 10.0.10.2/24 vrrp-group 10 priority 200", "Higher priority wins the election — this router becomes master"],
+      ["commit", "Then repeat on the second router with ITS own address, the SAME virtual-address, and a lower priority"]
+    ],
+    nums: [
+      ["100", "Default priority — higher wins the election"],
+      ["255", "Reserved for the router that literally owns the virtual address as its real one"],
+      ["1 s", "Default advertisement interval"],
+      ["3 missed adverts", "Roughly when a backup declares the master dead and promotes itself"],
+      ["preempt / no preempt", "Whether a returning higher-priority router takes mastership back"]
+    ],
+    els: [
+      ["(VRRP syntax is the same on legacy and ELS code)", "It lives under the interface address, not the switching stanza that ELS renamed"]
+    ],
+    real: [
+      "On real gear you would pair VRRP with a tracked interface: if the router's UPLINK dies, drop its priority so it hands mastership over instead of becoming a black hole.",
+      "Bench test worth doing: ping the VIP continuously, then pull the master's cable. Count how many pings you lose — that number is your real-world failover window."
+    ],
+    verify: [
+      ["show vrrp", "State column: exactly one master per group. Two masters means the routers cannot hear each other — a VLAN or trunk problem, not a VRRP problem"],
+      ["ping the virtual address from a host", "The real test — hosts must reach the VIP, not just the routers' own addresses"],
+      ["disable the master's interface, ping again", "The proof: mastership moves and traffic survives. If the ping dies, the backup never took over"]
+    ],
+    breaks: [
+      "The two routers are not actually on the same L2 segment — different VLANs, or a trunk not carrying the VLAN. Both then think they are alone and BOTH become master.",
+      "Hosts pointed at a router's REAL address instead of the virtual one — redundancy exists and protects nobody.",
+      "Mismatched virtual addresses between the two routers — two separate groups of one, both master, no redundancy.",
+      "No interface tracking on real gear: the master keeps mastership after losing its own uplink, and cheerfully blackholes everything.",
+      "Forgetting preempt is off and wondering why the powerful router stayed backup after a reboot."
+    ],
+    answer: "VRRP lets two routers share one virtual gateway address so hosts never have to care which physical router is alive. They elect a master by priority — higher wins, default 100 — and only the master answers ARP for the virtual address; the backup listens for advertisements and promotes itself within seconds when they stop. Hosts keep the same gateway IP throughout, which is why it protects a whole subnet without touching a single client. To verify I check show vrrp for exactly one master, ping the virtual address from a host, then fail the master's link and prove the ping survives.",
+    quiz: [
+      { q: "Both routers in a VRRP group report themselves as master. Most likely cause?",
+        opts: ["Priorities are identical", "They cannot hear each other — no shared L2 path (VLAN or trunk problem)", "Preempt is disabled"],
+        right: 1,
+        why: "VRRP elects a master by exchanging advertisements over a shared segment. If those never arrive, each router concludes it is alone and takes the role. Identical priorities would still elect one winner on the address tiebreak. This is an L2 problem wearing an L3 costume." },
+      { q: "Hosts are configured with the gateway 10.0.10.2, which is router A's real address. VRRP is running with virtual address 10.0.10.1. Router A dies. What happens?",
+        opts: ["VRRP fails over, hosts stay online", "Hosts go offline — they were never pointed at the virtual address", "Router B adopts 10.0.10.2"],
+        right: 1,
+        why: "The whole mechanism depends on hosts using the VIRTUAL address. Pointed at a real address, they follow that specific router into the grave. Redundancy configured but not used is the most expensive kind of nothing." },
+      { q: "Why does a VRRP master typically also track its uplink interface?",
+        opts: ["To speed up failover", "So losing its own path upstream lowers its priority and hands mastership over instead of blackholing traffic", "It is required by the protocol"],
+        right: 1,
+        why: "Without tracking, a router whose uplink died still wins the election on the LAN side and keeps attracting traffic it can no longer forward. Tracking ties mastership to actually being useful." },
+    ],
+  },
+  {
+    id: "ecmp",
+    title: "ECMP — Load Balancing Across Paths",
+    tag: "L3 · load sharing",
+    ready: true,
+    problem: {
+      text: ["You bought two links to the same destination. Without help, routing picks ONE best path and the second sits idle — paid for, racked, powered, doing nothing until the first one dies.",
+             "ECMP (Equal-Cost Multi-Path) uses both at once. When two routes to the same prefix have equal cost, the router installs BOTH and shares traffic across them.",
+             "This is load balancing at layer 3, and together with LACP at layer 2 it is how datacenter fabrics use every link they own instead of half of them."],
+      svg: "ecmp-problem"
+    },
+    how: {
+      text: ["Two routes qualify as equal-cost when they have the same prefix length AND the same protocol preference. Same destination, same specificity, same trust level — no reason to prefer one, so use both.",
+             "Traffic is split per FLOW, not per packet. The router hashes fields from the packet (source and destination, typically) and that hash picks the path. Every packet of the same conversation therefore takes the same link, which keeps them in order — out-of-order packets wreck TCP performance, so this matters.",
+             "The consequence surprises people: one big file transfer does NOT get double bandwidth, because it is one flow on one link. ECMP scales across MANY conversations, not within one. That is the honest answer to the interview question."]
+    },
+    prereqs: [
+      { desc: "A router with two equal-cost routes to the same destination",
+        test: function(){ return typeof devsBy === "function" && devsBy("router").some(function(r){
+          var seen = {};
+          return (D(r).routes || []).some(function(rt){
+            var key = rt.net + "/" + rt.bits;
+            if(seen[key] && seen[key] !== rt.nh) return true;
+            seen[key] = rt.nh; return false; }); }); } },
+      { desc: "Both next-hops are reachable (each has an interface in its subnet)",
+        test: function(){ if(typeof NET === "undefined") return false;
+          return devsBy("router").some(function(r){
+            var byPrefix = {};
+            (D(r).routes || []).forEach(function(rt){
+              var key = rt.net + "/" + rt.bits;
+              (byPrefix[key] = byPrefix[key] || []).push(rt.nh); });
+            return Object.keys(byPrefix).some(function(k){
+              var nhs = byPrefix[k];
+              if(nhs.length < 2) return false;
+              var ifs = ifacesOf(r).filter(function(i){ return i.up; });
+              return nhs.every(function(nh){ return ifs.some(function(i){ return sameSubnet(nh, i.ip, i.bits); }); }); }); }); } },
+      { desc: "Traffic actually resolves over the multi-path route (a ping succeeds through it)",
+        test: function(){ return devsBy("router").some(function(r){
+          var byPrefix = {};
+          (D(r).routes || []).forEach(function(rt){
+            var key = rt.net + "/" + rt.bits;
+            (byPrefix[key] = byPrefix[key] || []).push(rt.nh); });
+          return Object.keys(byPrefix).some(function(k){
+            if(byPrefix[k].length < 2) return false;
+            var net = k.split("/")[0];
+            var probe = net.replace(/\.0$/, ".1");
+            try{ var res = routeLookup(r, probe); return !!(res && res.ecmp && res.ecmp.length >= 2); }catch(e){ return false; } }); }); } },
+    ],
+    try: [
+      ["show route", "Look for a prefix with more than one next-hop listed — that is ECMP installed"]
+    ],
+    cfg: [
+      ["set routing-options static route 10.50.0.0/24 next-hop 10.0.1.2", "First path to the destination"],
+      ["set routing-options static route 10.50.0.0/24 next-hop 10.0.2.2", "Second path, same prefix, same preference — now they are equal-cost"],
+      ["commit", "Both next-hops install; traffic hashes across them per flow"]
+    ],
+    nums: [
+      ["equal prefix + equal preference", "The two conditions that make paths equal-cost"],
+      ["per-flow", "How traffic is split — not per-packet, to keep packets in order"],
+      ["1 flow = 1 link", "Why a single transfer never exceeds one link's bandwidth"],
+      ["L2 vs L3", "LACP load-balances a bundle of cables; ECMP load-balances routed paths"]
+    ],
+    els: [
+      ["(ECMP is routing, untouched by the ELS split)", "Real Junos also needs a load-balance export policy to use all next-hops in forwarding — the lab installs them directly"]
+    ],
+    real: [
+      "On real Junos, installing multiple next-hops in the ROUTING table is not enough — you also apply a per-packet load-balance policy to the FORWARDING table, or the PFE still uses only one. This lab skips that step; the exam does not.",
+      "Datacenter fabrics (spine-leaf) are built almost entirely on ECMP — every leaf reaches every spine at equal cost, which is exactly how the fabric scales."
+    ],
+    verify: [
+      ["show route <destination>", "Multiple next-hops under one prefix means ECMP is installed"],
+      ["ping from several different sources", "Different flows hash to different paths — that is the load sharing working"],
+      ["disable one path, ping again", "Traffic should continue on the survivor — ECMP is redundancy as well as capacity"]
+    ],
+    breaks: [
+      "Routes are not actually equal — different prefix lengths mean longest-match wins and only one path is ever used.",
+      "Different protocols for the same prefix (a static plus an OSPF route) — preference decides, no load sharing.",
+      "Expecting one download to saturate both links — per-flow hashing puts one conversation on one path, always.",
+      "On real gear: forgetting the forwarding-table load-balance policy, so the routing table shows two next-hops while the PFE quietly uses one."
+    ],
+    answer: "ECMP installs multiple next-hops for the same prefix when the routes are equal cost — same prefix length and same preference — so both links carry traffic instead of one sitting idle. The split is per flow, hashed on source and destination, so packets of a conversation stay in order and a single transfer never exceeds one link's bandwidth; the gain is across many flows. It is the layer-3 counterpart to LACP at layer 2, and it is what lets spine-leaf datacenter fabrics use every path they have. On real Junos the routing table holds both next-hops but a forwarding-table load-balance policy is needed for the hardware to actually use them.",
+    quiz: [
+      { q: "You enable ECMP across two 1 Gbps links and copy one large file. What throughput do you expect?",
+        opts: ["2 Gbps — both links combine", "About 1 Gbps — one flow hashes onto one link", "500 Mbps"],
+        right: 1,
+        why: "Per-flow hashing keeps a conversation on a single path to preserve packet order. ECMP multiplies capacity across many flows, never within one. This exact question separates people who have read about ECMP from people who have run it." },
+      { q: "Two routes to 10.50.0.0/24: one static (preference 5), one OSPF (preference 10). Does ECMP engage?",
+        opts: ["Yes — same prefix", "No — unequal preference means the static simply wins", "Only if you enable it"],
+        right: 1,
+        why: "Equal-cost requires BOTH equal prefix length and equal preference. Different preferences mean a clear winner, so the router installs one path and ignores the other." },
+      { q: "How do ECMP and LACP relate?",
+        opts: ["They are the same thing at different names", "LACP load-balances physical cables at layer 2; ECMP load-balances routed paths at layer 3", "ECMP replaces LACP"],
+        right: 1,
+        why: "Both share load and both survive a failure, but at different layers: LACP bundles cables between two devices into one logical link, ECMP spreads routed traffic across independent paths that may cross entirely different devices." },
+    ],
+  },
+  {
+    id: "lldp",
+    title: "LLDP — Neighbor Discovery",
+    tag: "L2 · operations",
+    ready: true,
+    problem: {
+      text: ["It is 2 AM, you are remote, and you need to know what is plugged into ge-0/0/17. The alternatives are walking to the rack, trusting a cable label written in 2019, or trusting a spreadsheet.",
+             "LLDP asks the neighbour directly. Every participating device announces itself on every port — name, port, capabilities — and every device remembers what it heard.",
+             "It is the single most useful operational command for anyone who inherits someone else's cabling."],
+      svg: "lldp-problem"
+    },
+    how: {
+      text: ["LLDP (Link Layer Discovery Protocol, IEEE 802.1AB) is vendor-neutral, unlike Cisco's CDP. Each device periodically sends a frame out every enabled port containing its system name, the port it is sending from, and what it can do.",
+             "These frames never cross a switch — they are link-local by design, so a neighbour entry always means a DIRECT cable. That is exactly what makes it trustworthy for cable tracing: if it shows up as a neighbour, it is physically plugged in.",
+             "Endpoints usually stay silent (a PC runs no LLDP daemon), so an empty entry does not always mean a dead cable — it may just be a device that does not speak. LLDP-MED extends it for phones and APs to negotiate power and VLAN automatically."]
+    },
+    prereqs: [
+      { desc: "Two switches or routers cabled together",
+        test: function(){ return Object.values(links).some(function(l){
+          var a = devices[l.a.dev], b = devices[l.b.dev];
+          return a && b && (a.type === "switch" || a.type === "router") && (b.type === "switch" || b.type === "router"); }); } },
+      { desc: "A neighbour is visible (run show lldp neighbors)",
+        test: function(){ return Object.values(links).some(function(l){
+          var a = devices[l.a.dev], b = devices[l.b.dev];
+          return a && b && (a.type === "switch" || a.type === "router") && (b.type === "switch" || b.type === "router") &&
+                 l.kind !== "console" && NET.linkStatus && NET.linkStatus[Object.keys(links).find(function(k){ return links[k] === l; })] === "up"; }); } },
+      { desc: "At least two network devices are powered and configured with host-names (so neighbours identify themselves)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).filter(function(d){
+          return d.powered !== false && cfgGet(d.config, ["system", "host-name"]); }).length >= 2; } },
+    ],
+    try: [
+      ["show lldp neighbors", "The cable-tracing command — who is on the other end of each port"]
+    ],
+    cfg: [
+      ["set system host-name core-1", "Give the device a name — this is what neighbours will SEE in their LLDP table"],
+      ["set protocols lldp interface all", "Run LLDP on every interface (this lab has it on by default; real switches often need it stated)"],
+      ["commit", "Then from the neighbour: show lldp neighbors — your new host-name should appear"]
+    ],
+    nums: [
+      ["30 s", "Default advertisement interval"],
+      ["120 s", "Default hold time before a stale neighbour is dropped"],
+      ["802.1AB", "The IEEE standard — vendor-neutral, unlike CDP"],
+      ["link-local", "LLDP frames never cross a switch, so a neighbour is always directly cabled"]
+    ],
+    els: [
+      ["(LLDP predates the ELS split and is unchanged)", "Runs under protocols lldp on both old and current code"]
+    ],
+    real: [
+      "This is the command to run FIRST when you inherit an undocumented rack — it builds your topology map faster than any spreadsheet.",
+      "On your bench EX4300, compare show lldp neighbors against the physical cables: the moment they disagree, you have found either a mislabelled cable or a patch-panel surprise."
+    ],
+    verify: [
+      ["show lldp neighbors", "System name and port of whatever is directly cabled to each interface"],
+      ["compare against the cable labels", "Where LLDP and the labels disagree, LLDP is right"],
+      ["unplug a cable and check again", "The entry should disappear after the hold time — proof it reflects reality, not memory"]
+    ],
+    breaks: [
+      "Expecting neighbours for PCs and servers — most endpoints do not run LLDP, so silence is normal there.",
+      "Trusting an entry that has gone stale — they persist for the hold time after a cable is pulled.",
+      "Assuming a neighbour means a working data path — LLDP can be fine while the VLAN configuration makes the link useless for traffic.",
+      "Looking for CDP output on a Juniper box — wrong vendor's protocol."
+    ],
+    answer: "LLDP is the vendor-neutral neighbour discovery protocol: every device advertises its name, port and capabilities out each interface, and each device stores what it hears. Because the frames are link-local and never cross a switch, a neighbour entry always means a direct physical cable, which makes show lldp neighbors the fastest way to map an undocumented rack or confirm what is really plugged into a port. Endpoints often stay silent since they run no LLDP daemon, and entries persist for a hold time after a cable is pulled, so it maps cabling rather than guaranteeing a working data path.",
+    quiz: [
+      { q: "show lldp neighbors is empty for the port your PC is plugged into. What does that prove?",
+        opts: ["The cable is dead", "Very little — most PCs do not run LLDP at all", "The port is disabled"],
+        right: 1,
+        why: "LLDP requires both ends to participate. Network gear speaks it; ordinary endpoints usually do not. Absence of a neighbour is not evidence of a problem on a host port." },
+      { q: "Why can an LLDP neighbour entry be trusted to mean a DIRECT cable?",
+        opts: ["It includes a cable serial number", "LLDP frames are link-local — switches do not forward them", "It is verified by the routing protocol"],
+        right: 1,
+        why: "The frames are deliberately never forwarded beyond the link. So if you see a neighbour, there is a cable between you and it, with nothing in between." },
+      { q: "You see an LLDP neighbour on a port, but no traffic passes. Contradiction?",
+        opts: ["Yes, LLDP proves the link works", "No — LLDP proves physical adjacency, not correct VLAN or L3 configuration", "Yes, restart the port"],
+        right: 1,
+        why: "LLDP operates below the configuration that carries user traffic. A perfectly cabled link with the wrong VLAN membership shows a healthy neighbour and moves no data. It maps cabling, not correctness." },
+    ],
+  },
 ];
 
 var protoView = { page: "list", guide: null };
@@ -1149,12 +1407,40 @@ var protoAnims = {
     ], "Established \u2713");
     return true;
   } },
+  vrrp: { need: "Cable two routers to the same switch first.", run: function(){
+    var lk = protoFindLink("router", "switch");
+    if(!lk) return false;
+    protoVolley([
+      { p: [lk.pa, lk.pb], label: "VRRP advert: I am master, priority 200" },
+      { p: [lk.pb, lk.pa], label: "backup listens, stays silent" },
+    ], "one virtual address, two routers");
+    return true;
+  } },
+  ecmp: { need: "Cable a router to another router first.", run: function(){
+    var lk = protoFindLink("router", "router");
+    if(!lk) return false;
+    protoVolley([
+      { p: [lk.pa, lk.pb], label: "flow A hashes to path 1" },
+      { p: [lk.pa, lk.pb], label: "flow B hashes to path 2" },
+    ], "both links carrying, per flow");
+    return true;
+  } },
+  lldp: { need: "Cable two switches or routers together first.", run: function(){
+    var lk = protoFindLink("switch", "switch") || protoFindLink("router", "switch");
+    if(!lk) return false;
+    protoVolley([
+      { p: [lk.pa, lk.pb], label: "LLDP: I am sw-1, port ge-0/0/1" },
+      { p: [lk.pb, lk.pa], label: "LLDP: I am sw-2, port ge-0/0/1" },
+    ], "neighbours discovered");
+    return true;
+  } },
 };
 var PROTO_GLOW_TYPES = {
   lacp: ["switch"], vlan: ["switch"], rstp: ["switch"],
   dia: ["router", "isp"], dhcp: ["switch", "host"],
   ospf: ["router"], bgp: ["router", "isp"],
   filters: ["switch", "router"], maintenance: ["switch", "router"],
+  vrrp: ["router"], ecmp: ["router"], lldp: ["switch", "router"],
 };
 function protoGlow(guideId, on){
   if(typeof document.querySelectorAll !== "function") return;
@@ -1225,7 +1511,11 @@ function renderProtoList(box){
     var top = protoEl("div", "pg-card-top", card);
     protoEl("b", null, top, g.title);
     protoEl("span", "pg-tag", top, g.tag);
-    protoEl("div", "pg-card-body", card, g.ready ? g.problem.text.split(". ")[0] + "." : g.teaser);
+    var firstSentence = function(t){
+      var s2 = Array.isArray(t) ? (t[0] || "") : t;
+      return s2.split(". ")[0] + ".";
+    };
+    protoEl("div", "pg-card-body", card, g.ready ? firstSentence(g.problem.text) : g.teaser);
     if(g.ready){
       card.onclick = function(){ protoView = { page: "guide", guide: g }; renderProtoTab(); };
     } else {
@@ -1455,7 +1745,12 @@ function renderProtoGuide(box, g){
         var correct = oi === q.right;
         b.classList.add(correct ? "pg-q-right" : "pg-q-wrong");
         if(correct && typeof markQuizDone === "function"){
+          var wasNew = !quizDoneSet(g.id).has(String(qi));
           markQuizDone(g.id, qi);
+          if(wasNew && typeof awardXp === "function"){
+            awardXp(4, g.title + " quiz");
+            if(g.quiz && quizDoneSet(g.id).size >= g.quiz.length) awardXp(20, g.title + " mastered");
+          }
           if(typeof renderCourseBar === "function") renderCourseBar();
         }
         if(typeof SFX !== "undefined") (correct ? SFX.ding : SFX.womp)();
