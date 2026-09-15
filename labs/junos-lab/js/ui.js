@@ -989,6 +989,29 @@ if(typeof window !== "undefined" && window.addEventListener){
   window.addEventListener("error", function(e){ reportUiError(e.error || e.message, "window"); });
   window.addEventListener("unhandledrejection", function(e){ reportUiError(e.reason, "async"); });
 }
+
+var REAL_MODE = false;
+try{ REAL_MODE = localStorage.getItem("junoslab-real") === "on"; }catch(e){}
+function realOn(){ return REAL_MODE; }
+function setRealMode(on){
+  REAL_MODE = !!on;
+  try{ localStorage.setItem("junoslab-real", REAL_MODE ? "on" : "off"); }catch(e){}
+  setStrict(REAL_MODE ? true : (function(){ try{ return localStorage.getItem("junoslab-strict") !== "off"; }catch(e){ return true; } })());
+  if(REAL_MODE && typeof setAssist === "function") setAssist(false);
+  if(REAL_MODE && typeof setPredict === "function" && typeof predictOn !== "undefined" && predictOn) setPredict(false);
+  document.body.classList.toggle("real-mode", REAL_MODE);
+  const b = document.getElementById("real-btn");
+  if(b){ b.textContent = "real junos: " + (REAL_MODE ? "ON" : "off"); b.classList.toggle("real-active", REAL_MODE); }
+  const jt = document.getElementById("tablet-tab-juno");
+  if(jt) jt.style.display = REAL_MODE ? "none" : "";
+  if(REAL_MODE && typeof setTabletTab === "function"){
+    const jp = document.getElementById("tab-juno");
+    if(jp && jp.style.display !== "none") setTabletTab("scen");
+  }
+  if(typeof renderCourseBar === "function") renderCourseBar();
+  render();
+}
+document.getElementById("real-btn").onclick = () => setRealMode(!REAL_MODE);
 var scaleBarLabel = null;
 function updateScaleBar(){
   try{
@@ -1349,6 +1372,7 @@ document.getElementById("add-crac").onclick = async () => {
   pushUndo();
   if(typeof SFX !== "undefined") SFX.drop();
   const p = spawnPos(60);
+  if(typeof SFX !== "undefined") SFX.fan();
   makeCrac(p.x, p.y, m.model, m.cool);
   rebuildAllDerived(); touchState();
 };
@@ -1578,7 +1602,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 /* ---------- themes ---------- */
-const THEMES = ["space", "terminal", "nightops", "paper"];
+const THEMES = ["space", "terminal", "nightops", "paper", "darkacademia"];
 function cssVar(name, fallback){
   try{
     if(typeof getComputedStyle === "function"){
@@ -1799,7 +1823,14 @@ function bannerFor(dev){
   if(dev.type === "isp") return `--- upstream provider link: ${dev.name} (read-only) ---`;
   return `--- ${dev.name} — linux shell (type ? for commands) ---`;
 }
+const openCliOrig_marker = true;
 function openCli(devId){
+  const gdev = devices[devId];
+  if(gdev && consoleGateBlocks(gdev)){
+    modalConfirm("No console connection",
+      "REAL JUNOS mode: this box is factory-fresh (Amnesiac). Like your bench EX4300, it has no management access yet \u2014 nothing to ssh to, no IP, nothing.\n\nRun a CONSOLE cable from a host to this device (Connect menu \u2192 console), do the initial configuration through it, and only then manage it over the network.", "Understood");
+    return;
+  }
   const dev = devices[devId];
   if(!dev) return;
   if(!openTabs.includes(devId)) openTabs.push(devId);
@@ -1876,8 +1907,53 @@ setInterval(() => {
   if(typeof strictOn === "function" && strictOn() && typeof convPending === "function" && convPending()){
     try{ rebuildAllDerived(); render(); refreshCliView(); }catch(e){ reportUiError(e, "convergence tick"); }
   }
+  try{ dhcpLeaseTick(); }catch(e){}
 }, 1000);
+function dhcpLeaseTick(){
+  for(const id in devices){
+    const d = devices[id];
+    if(!d.leaseMeta) continue;
+    for(const mac in d.leaseMeta){
+      const m = d.leaseMeta[mac];
+      const age = (Date.now() - m.at) / 1000;
+      if(!m.renewed && age > 300){
+        m.renewed = true;
+        m.at = Date.now();
+        devLog(d, "JDHCPD: DHCPREQUEST (renewal) from " + mac + " \u2014 lease extended 600s");
+      }
+    }
+  }
+}
 
+function realCommitIntercept(dev, raw, masked){
+  if(typeof realOn !== "function" || !realOn()) return false;
+  if(!dev || dev.cli.mode !== "cfg" || dev.cli.stage) return false;
+  if(!/^commit(\s|$)/.test(raw.trim())) return false;
+  const out = deviceExec(dev, raw);
+  const failed = out.some(l => l.cls === "err");
+  if(raw.trim() && !masked){ dev.cli.history.push(raw); dev.cli.hIdx = dev.cli.history.length; }
+  dev.cli.log.push({ cls: "out", text: "configuration check succeeds" });
+  dev.cli.busy = true;
+  refreshCliView();
+  const wait = failed ? 700 : 1400 + Math.random() * 2200;
+  setTimeout(() => {
+    dev.cli.busy = false;
+    dev.cli.log.push(...out);
+    if(failed && typeof termBell === "function") termBell();
+    refreshCliView();
+    if(typeof updateGhost === "function") updateGhost();
+    touchState();
+  }, wait);
+  return true;
+}
+function consoleGateBlocks(dev){
+  if(typeof realOn !== "function" || !realOn()) return false;
+  if(dev.type !== "switch" && dev.type !== "router") return false;
+  if(!dev.brandNew) return false;
+  const hasConsole = Object.values(links).some(l =>
+    ((l.a.dev === dev.id || l.b.dev === dev.id) && l.kind === "console"));
+  return !hasConsole;
+}
 function runCliCommand(dev, raw, masked){
   const out = deviceExec(dev, raw);
   dev.cli.log.push(...out);
@@ -1908,6 +1984,7 @@ cliInput.addEventListener("keydown", (e) => {
     if(dev.cli.mode === "cfg" && raw.trim() && dev.cli.editKeys.length && !dev.cli.stage)
       dev.cli.log.push({ cls: "sys", text: cfgBanner(dev) });
     if(typeof predictIntercept === "function" && predictIntercept(dev, raw, masked)) return;
+    if(realCommitIntercept(dev, raw, masked)) return;
     runCliCommand(dev, raw, masked);
     return;
   }
@@ -2194,6 +2271,10 @@ function setAssist(on){
 document.getElementById("assist-btn").onclick = () => setAssist(!assistOn);
 setAssist(assistOn);
 cliInput.addEventListener("input", updateGhost);
+cliInput.addEventListener("keydown", (e) => {
+  if(e.key.length === 1 || e.key === "Backspace" || e.key === "Enter")
+    if(typeof SFX !== "undefined") SFX.clack();
+});
 
 /* ============================================================
    REFERENCE — searchable in-app library (commands come straight
@@ -3205,7 +3286,15 @@ function setBell(on){
   if(b){ b.textContent = "sound " + (on ? "on" : "off"); b.classList.toggle("active", on); }
 }
 document.getElementById("bell-btn").onclick = () => setBell(!(typeof SFX !== "undefined" && SFX.isEnabled()));
+document.getElementById("ambient-btn").onclick = () => {
+  if(typeof SFX === "undefined") return;
+  if(SFX.ambientIsOn()) SFX.ambientOff(); else { if(!SFX.isEnabled()) setBell(true); SFX.ambientOn(); }
+  const b = document.getElementById("ambient-btn");
+  b.textContent = "ambient " + (SFX.ambientIsOn() ? "on" : "off");
+  b.classList.toggle("active", SFX.ambientIsOn());
+};
 setBell(typeof SFX !== "undefined" ? SFX.isEnabled() : true);
+setRealMode(REAL_MODE);
 
 let cliFloating = false;
 const cliHead = document.getElementById("cli-head");
@@ -3359,9 +3448,10 @@ function injectGremlin(){
   if(!up.length){ modalConfirm("No victims", "No healthy cables to degrade — cable something up first.", "OK"); return; }
   const [lid, l] = up[Math.floor(Math.random() * up.length)];
   l.degraded = true;
+  if(typeof SFX !== "undefined") SFX.alert();
   [l.a, l.b].forEach(e => { const d = devices[e.dev]; if(d && typeof devLog === "function") devLog(d, "if: " + e.port + " CRC/framing errors detected"); });
   touchState();
-  modalConfirm("Gremlin released \ud83d\udc7e", "Somewhere on this canvas, one cable just went bad — intermittent loss, not a clean break.\n\nHunt it like a real ticket: ping through paths, then show interfaces statistics on the suspects and look for climbing error counters.", "Hunt it");
+  modalConfirm("Gremlin released", "Somewhere on this canvas, one cable just went bad — intermittent loss, not a clean break.\n\nHunt it like a real ticket: ping through paths, then show interfaces statistics on the suspects and look for climbing error counters.", "Hunt it");
 }
 function clearGremlins(){
   let n = 0;

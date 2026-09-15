@@ -288,8 +288,8 @@ function diffTrees(applied, cand){
   return out.join("\n");
 }
 
-var STRICT = false;
-try{ STRICT = localStorage.getItem("junoslab-strict") === "on"; }catch(e){}
+var STRICT = true;
+try{ STRICT = localStorage.getItem("junoslab-strict") !== "off"; }catch(e){}
 function strictOn(){ return STRICT; }
 function setStrict(on){
   STRICT = !!on;
@@ -307,4 +307,10 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "2.4.0";
+var APP_VERSION = "3.3.1";
+
+function svgMark(kind){
+  if(kind === "check") return '<svg class="mk mk-check" viewBox="0 0 14 14"><path d="M2.5 7.5 L5.8 10.8 L11.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  if(kind === "cross") return '<svg class="mk mk-cross" viewBox="0 0 14 14"><path d="M3 3 L11 11 M11 3 L3 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
+  return "";
+}

@@ -1230,7 +1230,7 @@ async function generateContract(){
   renderScenarioMeta();
   touchState();
 }
-document.getElementById("contract-btn").onclick = generateContract;
+document.getElementById("contract-btn").onclick = () => { if(typeof SFX !== "undefined") SFX.ticket(); generateContract(); };
 
 /* ============================================================
    SCENARIO PANEL / PROGRESS / EXAM MODE
@@ -1419,7 +1419,7 @@ function updateExamTimer(){
   document.getElementById("exam-timer").textContent =
     `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} — no hints, no setup. All objectives green = pass.`;
 }
-document.getElementById("ticket-btn").onclick = generateTicket;
+document.getElementById("ticket-btn").onclick = () => { if(typeof SFX !== "undefined") SFX.ticket(); generateTicket(); };
 document.getElementById("solution-btn").onclick = () => {
   if(!currentTicket) return;
   modalConfirm("The fault(s)", currentTicket.faults.map(f => "• " + f.reveal).join("\n"), "Got it");
@@ -1483,7 +1483,7 @@ function predictIntercept(dev, raw, masked){
       if(typeof SFX !== "undefined") (right ? SFX.ding : SFX.womp)();
       const div = document.createElement("div");
       div.className = "hint-line " + (right ? "predict-right" : "predict-wrong");
-      div.textContent = (right ? "\u2713 Called it: " : "\u2715 Prediction missed: ") + what +
+      div.innerHTML = (right ? svgMark("check") + " Called it: " : svgMark("cross") + " Prediction missed: ") + what +
         (right ? "" : ". A missed prediction is a gap in the mental model \u2014 worth a look at show | compare before the next one.");
       document.getElementById("hint-list").prepend(div);
     }, 60);

@@ -189,6 +189,8 @@ const SWITCH_CFG_SPECS = [
   ["chassis aggregated-devices ethernet device-count <count:num>", { kind:"value", help:"How many ae bundles this chassis may create — real EX switches need this before any ae exists" }],
   ["system host-name <hostname:word>", { kind:"value", help:"Set the system hostname" }],
   ["interfaces <interface:ifname> disable", { kind:"presence", help:"Administratively disable this interface" }],
+  ["interfaces <interface:ifname> mtu <mtu:num>", { kind:"value", help:"Interface MTU in bytes (default 1514) — mismatches stall OSPF adjacencies" }],
+
   ["interfaces <interface:ifname> description <text:word>", { kind:"value", help:"Interface description" }],
   ["interfaces <interface:physport> ether-options 802.3ad <bundle:aeref>", { kind:"value", help:"Make this port a member of an aggregated (LACP) bundle" }],
   ["interfaces <interface:ifname> aggregated-ether-options lacp active", { kind:"enumvalue", help:"Run LACP in active mode on this bundle" }],
@@ -240,6 +242,7 @@ const SWITCH_CFG_SPECS = [
 ];
 const ROUTER_CFG_SPECS = [
   ["system host-name <hostname:word>", { kind:"value", help:"Set the system hostname" }],
+  ["interfaces <interface:ifname> mtu <mtu:num>", { kind:"value", help:"Interface MTU in bytes (default 1514) — mismatches stall OSPF adjacencies" }],
   ["interfaces <interface:physport> disable", { kind:"presence", help:"Administratively disable this interface" }],
   ["interfaces <interface:physport> description <text:word>", { kind:"value", help:"Interface description" }],
   ["interfaces <interface:physport> unit <unit:unit> family inet address <address:prefix>", { kind:"list", help:"IPv4 address on this interface" }],

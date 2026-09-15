@@ -105,6 +105,10 @@ var PROTO_GUIDES = [
       ["set chassis aggregated-devices ethernet device-count 2", "Real Junos needs this before any ae exists — turn on strict mode below and this lab will demand it too"],
       ["(legacy and ELS mostly agree here)", "LACP config barely changed across the ELS split — the traps are in VLAN and irb syntax, not here"]
     ],
+    real: [
+      "On your EX4300 the chassis aggregated-devices line is NOT optional — no device-count, no ae0, full stop.",
+      "Bench idea: bundle two ports between your EX4300 and anything LACP-capable, then pull one cable mid-ping and watch nothing happen.",
+    ],
     verify: [
       ["show lacp interfaces", "The truth. Healthy = every member says 'Collecting distributing'. 'Detached' next to a member means that cable or that far-end config is the problem."],
       ["show interfaces terse | match ae", "The bundle itself should be up/up, like any other interface."],
@@ -178,6 +182,10 @@ var PROTO_GUIDES = [
       ["legacy: ...ethernet-switching port-mode access|trunk", "ELS: interface-mode access|trunk — same idea, renamed. The lab CLI corrects you if you type the old one"],
       ["legacy: native-vlan-id under the port", "ELS: set interfaces ge-0/0/7 native-vlan-id 99 at the physical interface level"]
     ],
+    real: [
+      "On the real bench: show vlans after every change — the EX4300's default VLAN catches forgotten ports exactly like the lab's does.",
+      "Real trunk tip: native-vlan-id mismatches between real switches cause the weirdest one-way problems; the lab keeps this simple, reality doesn't.",
+    ],
     verify: [
       ["show vlans", "Which VLANs exist and which interfaces really ended up in each — read this before trusting your memory"],
       ["show ethernet-switching interface", "Per-port mode (access/trunk) and VLAN membership"],
@@ -248,6 +256,10 @@ var PROTO_GUIDES = [
     els: [
       ["Old EX code shipped with RSTP enabled by default", "On ELS platforms don't assume — configure it explicitly and check show spanning-tree bridge"],
       ["legacy: set protocols stp (original, slow STP)", "Current practice: rstp (or mstp/vstp for per-VLAN trees) — plain stp is a museum piece"]
+    ],
+    real: [
+      "Your EX4300 runs RSTP out of the box — check show spanning-tree bridge BEFORE trusting a factory config.",
+      "Bench idea: loop two cables between your switch and a dumb desktop switch and watch the port LEDs during the storm (briefly!). Unforgettable.",
     ],
     verify: [
       ["show spanning-tree bridge", "Who is root? If you didn't choose the root, the network chose for you — usually badly"],
@@ -397,6 +409,10 @@ var PROTO_GUIDES = [
       ["legacy: set system services dhcp pool ...", "The old built-in server. Current Junos uses dhcp-local-server + access address-assignment, as this lab teaches"],
       ["legacy: bound to vlan.N", "ELS: bound to irb.N — same rename as everywhere else in the ELS split"]
     ],
+    real: [
+      "The EX4300 uses the exact dhcp-local-server + address-assignment syntax this lab teaches — configs transfer 1:1.",
+      "Real-world catch: a second (rogue) DHCP server on the VLAN wins races the lab doesn't simulate — DCU's office wifi has met this one.",
+    ],
     verify: [
       ["show dhcp server binding", "Every lease this box has handed out — the client's MAC should appear here seconds after dhclient"],
       ["dhclient eth0 (on the host)", "'no DHCPOFFERS' means the server isn't reachable in this VLAN — wrong irb binding, or wrong port VLAN"],
@@ -463,6 +479,10 @@ var PROTO_GUIDES = [
     ],
     els: [
       ["(routing survived the ELS split untouched)", "OSPF syntax is identical on legacy and current code — the ELS changes live in the switching layer, not here"]
+    ],
+    real: [
+      "Real adjacencies take the same seconds strict mode simulates — watch show ospf neighbor climb ExStart \u2192 Full on the bench.",
+      "Real gear adds MTU mismatch as a stuck-in-ExStart cause the lab doesn't model — remember it for the exam and for carrier handoffs.",
     ],
     verify: [
       ["show ospf neighbor", "The state column is the diagnosis: Full = synced; stuck in Init/ExStart = one-way hearing or MTU mismatch; absent = no hellos arriving"],
@@ -540,6 +560,10 @@ var PROTO_GUIDES = [
     els: [
       ["(BGP predates and ignores the ELS split)", "Identical syntax on legacy and current code — the ELS renames hit ethernet-switching, not routing protocols"]
     ],
+    real: [
+      "The DCG interconnect speaks exactly this: eBGP over a /30. The show bgp summary reading habit transfers directly.",
+      "On real sessions, hold-timer expiry during flaps (your Gi0/0/23!) shows as last-error in show bgp neighbor — a diagnostic layer the lab simplifies.",
+    ],
     verify: [
       ["show bgp summary", "THE command. Established = healthy; anything else, read the state/reason — Active/Connect means it can't even reach the peer, Idle means config rejected"],
       ["show route receive-protocol bgp 203.0.113.1", "What the provider is actually advertising to you"],
@@ -593,6 +617,10 @@ var PROTO_GUIDES = [
       ["l2ald", "MAC learning and ethernet switching (EX switches)"],
       ["2 tables", "routing table (RE, everything known) \u2192 forwarding table (PFE, best paths only)"],
       ["1 candidate", "config model: edit a candidate, commit makes it active — rollback 0 discards"]
+    ],
+    real: [
+      "On the EX4300, show chassis routing-engine shows the actual RE's CPU and memory — the 'brain is a computer' claim, verifiable.",
+      "Commit on the real box takes a few seconds (validation is real work); the lab's instant commit is the one friendliness strict mode keeps.",
     ],
     verify: [
       ["show system processes", "Meet the daemons — the exam names them and so do error messages"],
@@ -667,6 +695,10 @@ var PROTO_GUIDES = [
       ["import / export", "Policy direction: what routes come INTO your table / what you advertise OUT"],
       ["BGP default export", "Advertise BGP-learned (and locally originated BGP) routes — NOT your statics, NOT your OSPF, unless policy says so"],
       ["OSPF default", "Internal routes flood via LSAs regardless; export policy is for injecting OUTSIDE routes (statics) into OSPF"]
+    ],
+    real: [
+      "Golden rule on real gear: NEVER apply a new filter to the interface your own ssh rides on without commit confirmed. The implicit discard has eaten many engineers.",
+      "Real filters also count hits per term (show firewall) — the fastest way to prove which term is matching.",
     ],
     verify: [
       ["show configuration | display set", "Read the filter back as set commands — order of terms is order of evaluation"],
@@ -791,6 +823,90 @@ var PROTO_GUIDES = [
         why: "A switch can host many broadcast domains (one per VLAN), and one VLAN can span many switches over trunks. The VLAN is the wall a broadcast cannot cross — routers (or irb interfaces) are the doors." },
     ],
   },
+  {
+    id: "maintenance",
+    title: "System Maintenance — users, rescue & the file system",
+    tag: "JNCIA \u00b7 maintenance",
+    ready: true,
+    problem: {
+      text: ["The unglamorous exam domain that saves real careers: who can log in, what happens when a config change goes wrong at a remote site, and why upgrades fail on full disks.", "Junos has an answer for each — login classes for access, the rescue config as your known-good parachute, and a file system you can actually inspect and clean. None of it is hard; all of it is asked."],
+      svg: "maint-problem"
+    },
+    how: {
+      text: ["ACCESS: every account gets a login CLASS bundling its permissions. Four built-ins to memorize: super-user (everything), operator (reset things, no config), read-only (look, don't touch), unauthorized (nothing). Root is special — set its password with root-authentication, and note root logs into the SHELL first, then starts cli.", "THE PARACHUTE: request system configuration rescue save snapshots your current active config as the rescue config. Weeks later, when a bad change strands a remote box, rollback rescue loads that snapshot into the candidate — commit, and you're back to known-good. Pair it with commit confirmed (scenario 11) for remote changes: belt AND suspenders.", "THE FILE SYSTEM: configs live in /config — the active one plus rollbacks as juniper.conf.N.gz, and rescue.conf.gz if you made one. /var/tmp collects install bundles and junk. Before ANY software upgrade: request system storage cleanup — a full /var is the classic upgrade killer, and the exam knows it."]
+    },
+    prereqs: [
+      { desc: "An admin account committed with a login class (system login user ...)",
+        test: function(){ return typeof devsBy === "function" && devsBy("switch").concat(devsBy("router")).some(function(d){
+          var u = cfgGet(d.config, ["system", "login", "user"]) || {};
+          return Object.keys(u).some(function(name){ return u[name] && u[name].class; }); }); } },
+      { desc: "Root password set (system root-authentication)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !!cfgGet(d.config, ["system", "root-authentication"]); }); } },
+      { desc: "A rescue configuration saved (request system configuration rescue save)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){ return !!d.rescueConfig; }); } },
+      { desc: "Prove the parachute: make a bad change, commit, rollback rescue, commit — back to known-good",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return d.rescueConfig && JSON.stringify(d.config) === JSON.stringify(d.rescueConfig) && (d.cfgHistory || []).length >= 2; }); } },
+    ],
+    try: [
+      ["file list", "Walk the file system — active config, rollbacks, rescue, /var/tmp junk"],
+      ["request system configuration rescue save", "Save the parachute (do this on a device you've configured)"],
+      ["request system storage cleanup", "The pre-upgrade ritual — watch what it removes"]
+    ],
+    cfg: [
+      ["set system login user kaatje class super-user", "An admin account — class decides ALL its permissions"],
+      ["set system login user kaatje authentication plain-text-password Nets4Days!", "Junos stores it hashed, never plaintext"],
+      ["set system root-authentication plain-text-password RootPw9!", "Root's password — commit refuses on a factory box until this is set"],
+      ["commit", "Then save the parachute: run request system configuration rescue save"]
+    ],
+    nums: [
+      ["super-user / operator / read-only / unauthorized", "The four built-in login classes, in descending power — memorize the order"],
+      ["rollback 0\u201349", "0 = discard candidate edits, 1\u201349 = previous commits, rescue = your saved snapshot"],
+      ["/config", "Where juniper.conf.gz and the rollback files live"],
+      ["/var/tmp", "Where old bundles pile up — storage cleanup's hunting ground"],
+      ["shell \u2192 cli", "Root lands in the shell (%) and must type cli — a classic exam question"]
+    ],
+    els: [
+      ["(identical on legacy and current code)", "System maintenance predates the ELS split entirely"]
+    ],
+    real: [
+      "Your EX4300 refuses its very first commit until root-authentication is set — factory behavior the lab's fresh boxes mirror.",
+      "Do the rescue-save on the real bench switch too: one bad VLAN commit at OOST1 and rollback rescue is a two-command fix instead of a site visit.",
+      "Real upgrades: storage cleanup FIRST, then request system software add — and never over a wobbly power feed."
+    ],
+    verify: [
+      ["show system commit + file list", "History and files — see your commits become juniper.conf.N.gz"],
+      ["rollback rescue, then show | compare", "Preview exactly what restoring the parachute would change BEFORE committing it"],
+      ["log in as the new user (ssh)", "Classes are only real when tested — read-only should fail at configure"]
+    ],
+    breaks: [
+      "No rescue config saved — rollback rescue has nothing to load. The parachute must be packed BEFORE the jump.",
+      "Wrong class handed out — an operator can bounce interfaces but a careless super-user can delete the config. Least privilege.",
+      "Upgrading onto a full /var — the install dies halfway. Cleanup first, always.",
+      "Confusing rollback 1 (previous commit) with rollback rescue (your chosen known-good) — history moves, the rescue doesn't.",
+      "Setting root-authentication but forgetting commit confirmed on remote changes — rescue saves the config, confirmed saves the SESSION."
+    ],
+    answer: "Junos maintenance is three habits. Access control through login classes — super-user, operator, read-only, unauthorized — so every account has exactly the power it needs, with root set through root-authentication. A rescue configuration saved with request system configuration rescue save, so any box can return to known-good with rollback rescue plus a commit. And file-system hygiene: configs and rollbacks live in /config, junk accumulates in /var/tmp, and request system storage cleanup runs before every upgrade because a full /var is the standard upgrade failure.",
+    quiz: [
+      { q: "A remote site's switch got a bad config change three weeks of commits ago. Fastest safe recovery?",
+        opts: ["rollback 1 and hope", "rollback rescue, review show | compare, commit", "Factory reset"],
+        right: 1,
+        why: "rollback 1 only steps back ONE commit — the damage is 20 commits deep. The rescue config is the snapshot YOU chose as known-good; load it, preview the diff, commit. That's exactly what it exists for." },
+      { q: "An account that may restart daemons and clear sessions but never change configuration gets class...",
+        opts: ["super-user", "operator", "read-only"],
+        right: 1,
+        why: "operator = operational actions without configuration rights. read-only can't act at all; super-user can do everything. The four built-ins in descending power: super-user, operator, read-only, unauthorized." },
+      { q: "A Junos software upgrade fails midway with a storage error. What was skipped?",
+        opts: ["A reboot", "request system storage cleanup before starting", "Setting the root password"],
+        right: 1,
+        why: "The install bundle needs room in /var, and old bundles plus unrotated logs eat it. Cleanup before upgrade is the ritual — the exam and every field engineer agree on this one." },
+      { q: "You log in as root on a fresh EX and see a % prompt instead of >. What now?",
+        opts: ["The switch is broken", "Type cli — root lands in the shell first", "Reboot"],
+        right: 1,
+        why: "Root logs into the underlying shell (%). Typing cli starts the Junos CLI (>). Everyone hits this once on real hardware; the exam makes sure you hit it on paper first." },
+    ],
+  },
   { id: "vrrp", title: "VRRP — Gateway Redundancy", tag: "L3 · redundancy", ready: false,
     teaser: "Two routers pretending to be one gateway IP, so the default gateway can die without anyone updating a single host. Needs engine support first — on the roadmap." },
   { id: "lldp", title: "LLDP — Neighbor Discovery", tag: "L2 · operations", ready: false,
@@ -819,7 +935,7 @@ function protoSvg(kind){
     '<line x1="90" y1="56" x2="180" y2="56" stroke="var(--red)" stroke-width="2"/>' +
     '<line x1="90" y1="70" x2="180" y2="70" stroke="var(--red)" stroke-width="2"/>' +
     '<text x="135" y="35" fill="var(--red)">two bare cables</text>' +
-    '<text x="135" y="105" fill="var(--red)">= loop = storm \u26a1</text>' +
+    '<text x="135" y="105" fill="var(--red)">= loop = broadcast storm</text>' +
     box(310, 45, 70, "SW1") + box(470, 45, 70, "SW2") +
     '<line x1="380" y1="56" x2="470" y2="56" stroke="var(--green)" stroke-width="2"/>' +
     '<line x1="380" y1="70" x2="470" y2="70" stroke="var(--green)" stroke-width="2"/>' +
@@ -913,6 +1029,14 @@ function protoSvg(kind){
     '<text x="40" y="105" fill="var(--dim)">L1 bits</text><text x="150" y="105" fill="var(--text)">cables \u00b7 optics \u00b7 CRC errors</text>' +
     '<text x="40" y="135" fill="var(--amber)">diagnosis = climbing this ladder one layer at a time</text>' +
     '</g>' + close;
+  if(kind === "maint-problem") return open +
+    box(40, 30, 150, "login classes") +
+    '<text x="115" y="80" fill="var(--dim)">who may do what</text>' +
+    box(205, 30, 150, "rescue config") +
+    '<text x="280" y="80" fill="var(--green)">the parachute</text>' +
+    box(370, 30, 150, "file system") +
+    '<text x="445" y="80" fill="var(--dim)">/config \u00b7 /var/tmp</text>' +
+    '<text x="280" y="120" fill="var(--amber)">boring on paper \u00b7 priceless at 3 AM at a remote site</text>' + close;
   return "";
 }
 
@@ -1030,7 +1154,7 @@ var PROTO_GLOW_TYPES = {
   lacp: ["switch"], vlan: ["switch"], rstp: ["switch"],
   dia: ["router", "isp"], dhcp: ["switch", "host"],
   ospf: ["router"], bgp: ["router", "isp"],
-  filters: ["switch", "router"],
+  filters: ["switch", "router"], maintenance: ["switch", "router"],
 };
 function protoGlow(guideId, on){
   if(typeof document.querySelectorAll !== "function") return;
@@ -1067,7 +1191,7 @@ function renderProtoList(box){
   protoEl("h3", "pg-list-title", box, "Field guides");
   protoEl("p", "pg-list-sub", box, "One topic per page, always the same shape: the problem, how it works, what must be true first, how to prove it, what breaks it — and the answer you'd give out loud.");
   var exam = protoEl("div", "pg-exam-map", box);
-  protoEl("b", null, exam, "\ud83c\udf93 JNCIA-Junos coverage map");
+  protoEl("b", null, exam, "JNCIA-Junos coverage map");
   [
     ["Junos OS fundamentals", "junos-arch guide + show system processes on any device"],
     ["CLI & configuration basics", "the whole lab — plus commit/rollback in scenarios 4\u20135 and show system commit"],
@@ -1116,24 +1240,40 @@ function renderProtoGuide(box, g){
   back.onclick = function(){ protoStopTimer(); protoView = { page: "list", guide: null }; renderProtoTab(); };
   protoEl("h3", "pg-title", box, g.title);
   var n = 0;
-  var sec = function(title){
+  var TIER_GLYPH = {
+    lead: '<svg viewBox="0 0 14 14"><path d="M2 3.5 Q7 1.5 12 3.5 L12 11 Q7 9.5 2 11 Z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M7 2.2 L7 10.2" stroke="currentColor" stroke-width="1"/></svg>',
+    action: '<svg viewBox="0 0 14 14"><path d="M3 2 L11 7 L3 12 Z" fill="currentColor"/></svg>',
+    reference: '<svg viewBox="0 0 14 14"><rect x="2.5" y="2.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/><path d="M2.5 6 L11.5 6 M6 2.5 L6 11.5" stroke="currentColor" stroke-width=".8"/></svg>',
+    answer: '<svg viewBox="0 0 14 14"><path d="M3 4 Q3 2 5 2 L5 5 Q5 6.3 3.7 6.3 L3 6.3" fill="none" stroke="currentColor" stroke-width="1"/><path d="M8 4 Q8 2 10 2 L10 5 Q10 6.3 8.7 6.3 L8 6.3" fill="none" stroke="currentColor" stroke-width="1"/></svg>',
+    quiz: '<svg viewBox="0 0 14 14"><circle cx="7" cy="7" r="5" fill="none" stroke="currentColor" stroke-width="1"/><circle cx="7" cy="7" r="1.3" fill="currentColor"/></svg>',
+  };
+  var sec = function(title, tier){
     n++;
-    var d = protoEl("div", "pg-sec", box);
-    protoEl("div", "pg-sec-h", d, n + " \u00b7 " + title);
+    tier = tier || "reference";
+    var d = protoEl("div", "pg-sec pg-tier-" + tier, box);
+    var h = protoEl("div", "pg-sec-h", d);
+    var ic = document.createElement("span");
+    ic.className = "pg-sec-icon";
+    ic.innerHTML = TIER_GLYPH[tier] || TIER_GLYPH.reference;
+    h.appendChild(ic);
+    var lbl = document.createElement("span");
+    lbl.className = "pg-sec-label";
+    lbl.textContent = n + " \u00b7 " + title;
+    h.appendChild(lbl);
     return d;
   };
 
   var paras = function(box2, t){
     (Array.isArray(t) ? t : [t]).forEach(function(x){ protoEl("p", null, box2, x); });
   };
-  var s1 = sec("The problem it solves");
+  var s1 = sec("The problem it solves", "lead");
   paras(s1, g.problem.text);
   if(g.problem.svg){
     var holder = protoEl("div", null, s1);
     holder.innerHTML = protoSvg(g.problem.svg);
   }
 
-  var s2 = sec("How it works");
+  var s2 = sec("How it works", "lead");
   paras(s2, g.how.text);
   var anim = protoAnims[g.id];
   if(anim){
@@ -1147,7 +1287,7 @@ function renderProtoGuide(box, g){
 
   var rows = [];
   if(g.prereqs && g.prereqs.length){
-  var s3 = sec("Prerequisites \u2014 live from YOUR lab");
+  var s3 = sec("Prerequisites \u2014 live from YOUR lab", "action");
   protoEl("p", "pg-sub", s3, "These check your actual canvas and configs, and update as you work:");
   var list = protoEl("div", "pg-prereqs", s3);
   rows = g.prereqs.map(function(p){
@@ -1176,7 +1316,7 @@ function renderProtoGuide(box, g){
   }
 
   if(g.drill === "subnet"){
-    var sd = sec("The drill \u2014 make it automatic");
+    var sd = sec("The drill \u2014 make it automatic", "action");
     var q = null, streak = 0;
     try{ streak = parseInt(localStorage.getItem("junoslab-subnet-streak") || "0", 10); }catch(e){}
     var head = protoEl("div", "pg-drill-q", sd, "");
@@ -1225,7 +1365,7 @@ function renderProtoGuide(box, g){
     newQ();
   }
   if(g.cfg){
-    var s4 = sec("Configure it \u2014 the exact commands");
+    var s4 = sec("Configure it \u2014 the exact commands", "action");
     g.cfg.forEach(function(c){
       var row = protoEl("div", "pg-verify", s4);
       protoEl("code", null, row, c[0]);
@@ -1233,7 +1373,7 @@ function renderProtoGuide(box, g){
     });
   }
   if(g.try && g.try.length){
-    var st = sec("Try it right now");
+    var st = sec("Try it right now", "action");
     protoEl("p", "pg-sub", st, "Each button runs the command on a device on your canvas and opens its terminal \u2014 read the real output next to this guide:");
     g.try.forEach(function(tr){
       var row = protoEl("div", "pg-try", st);
@@ -1256,7 +1396,7 @@ function renderProtoGuide(box, g){
   }
 
   if(g.nums){
-    var s5 = sec("The numbers to know");
+    var s5 = sec("The numbers to know", "reference");
     var tbl = protoEl("div", "pg-nums", s5);
     g.nums.forEach(function(r){
       var row = protoEl("div", "pg-num-row", tbl);
@@ -1265,18 +1405,18 @@ function renderProtoGuide(box, g){
     });
   }
 
-  var s6 = sec("Verify it");
+  var s6 = sec("Verify it", "reference");
   g.verify.forEach(function(v){
     var row = protoEl("div", "pg-verify", s6);
     protoEl("code", null, row, v[0]);
     protoEl("div", null, row, v[1]);
   });
 
-  var s7 = sec("What breaks it");
+  var s7 = sec("What breaks it", "reference");
   g.breaks.forEach(function(b){ protoEl("div", "pg-break", s7, "\u2715 " + b); });
 
   if(g.els){
-    var s8 = sec("Legacy vs current CLI (the ELS split)");
+    var s8 = sec("Legacy vs current CLI (the ELS split)", "reference");
     protoEl("p", "pg-sub", s8, "Junos renamed parts of the switching CLI around 12.3/13.x (\u201cEnhanced Layer 2 Software\u201d). This lab teaches current ELS syntax \u2014 the EX4300 dialect. On an older box you may meet:");
     g.els.forEach(function(r){
       var row = protoEl("div", "pg-verify", s8);
@@ -1297,10 +1437,14 @@ function renderProtoGuide(box, g){
     }
   }
 
-  var s9 = sec("The 30-second answer \ud83c\udfa4");
+  if(g.real && g.real.length){
+    var sr = sec("On your real EX4300", "reference");
+    g.real.forEach(function(r){ protoEl("div", "pg-real", sr, r); });
+  }
+  var s9 = sec("The 30-second answer", "answer");
   protoEl("p", "pg-answer", s9, "\u201c" + g.answer + "\u201d");
 
-  var s10 = sec("Check yourself");
+  var s10 = sec("Check yourself", "quiz");
   g.quiz.forEach(function(q, qi){
     var qbox = protoEl("div", "pg-q", s10);
     protoEl("div", "pg-q-text", qbox, (qi + 1) + ". " + q.q);
@@ -1316,7 +1460,8 @@ function renderProtoGuide(box, g){
         }
         if(typeof SFX !== "undefined") (correct ? SFX.ding : SFX.womp)();
         if(!why){
-          why = protoEl("div", "pg-q-why", qbox, (correct ? "\u2713 " : "Not quite \u2014 ") + q.why);
+          why = protoEl("div", "pg-q-why", qbox, "");
+          why.innerHTML = (correct ? svgMark("check") + " " : "Not quite \u2014 ") + q.why;
         }
         if(correct){
           qbox.querySelectorAll(".pg-q-opt").forEach(function(x){ x.disabled = true; });

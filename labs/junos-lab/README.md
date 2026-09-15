@@ -11,6 +11,9 @@ No build step, no dependencies — open `index.html` in a browser.
 | `css/style.css` | All styling |
 | `tests/soak.js` | Long-run fuzz test: `node tests/soak.js 30000` hammers random commands, cabling and deletions to hunt freezes and slow paths |
 | `js/sound.js` | Synthesized sound effects (Web Audio, no files): ticks, plugs, drops, commit chime, objective dings, fanfare, sound on/off toggle |
+| `js/course.js` | JNCIA learning path, quiz-mastery tracking, next-up cards, the 15-minute session ritual |
+| `js/mockexam.js` | Timed mock exam engine — weighted toward past mistakes, per-domain scoring |
+| `tests/no-emoji.js` | Standalone CI guard: fails the build if pictographic emoji creep into any learning material |
 | `js/protocols.js` | The Protocols tab: field guides (problem / how / live prereqs / config / numbers / verify / breaks / ELS notes / 30-second answer / quiz), per-protocol canvas animations, prereq-hover device glow, jump-to-scenario |
 | `js/core.js` | Global state, IP math, device factories, the config-tree engine (set/delete/render/diff) |
 | `js/grammar.js` | Placeholder types, the command trie (parsing, `?` completions, abbreviation, backtracking), switch/router config grammars |

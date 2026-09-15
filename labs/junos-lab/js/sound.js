@@ -49,6 +49,81 @@ var SFX = (function(){
     src.start(t0);
   }
 
+  var lastClack = 0;
+  function clack(){
+    var c = armed(); if(!c) return;
+    var now = performance.now();
+    if(now - lastClack < 42) return;
+    lastClack = now;
+    var t0 = c.currentTime;
+    noise(c, t0, 2400 + Math.random() * 1400, 2.2, 0.03, 0.018);
+    tone(c, t0, "triangle", 620 + Math.random() * 240, 400, 0.012, 0.02);
+  }
+  function alertChirp(){
+    var c = armed(); if(!c) return;
+    var t0 = c.currentTime;
+    tone(c, t0, "sine", 1560, 1560, 0.06, 0.07);
+    tone(c, t0 + 0.11, "sine", 1560, 1560, 0.06, 0.07);
+    tone(c, t0 + 0.30, "sine", 1180, 1180, 0.045, 0.1);
+  }
+  function ticket(){
+    var c = armed(); if(!c) return;
+    var t0 = c.currentTime;
+    noise(c, t0, 1200, 1.0, 0.09, 0.05);
+    noise(c, t0 + 0.10, 1200, 1.0, 0.07, 0.05);
+    tone(c, t0 + 0.2, "sine", 988, 988, 0.04, 0.12);
+  }
+  function fan(){
+    var c = armed(); if(!c) return;
+    var t0 = c.currentTime;
+    var n = Math.round(c.sampleRate * 1.4);
+    var buf = c.createBuffer(1, n, c.sampleRate);
+    var ch = buf.getChannelData(0);
+    for(var i = 0; i < n; i++) ch[i] = (Math.random() * 2 - 1);
+    var src = c.createBufferSource();
+    src.buffer = buf;
+    var lp = c.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.setValueAtTime(220, t0);
+    lp.frequency.exponentialRampToValueAtTime(900, t0 + 0.9);
+    lp.frequency.exponentialRampToValueAtTime(500, t0 + 1.4);
+    var g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t0);
+    g.gain.exponentialRampToValueAtTime(0.05, t0 + 0.5);
+    g.gain.exponentialRampToValueAtTime(0.0001, t0 + 1.4);
+    src.connect(lp); lp.connect(g); g.connect(c.destination);
+    src.start(t0);
+  }
+  var ambient = null;
+  function ambientOn(){
+    var c = armed(); if(!c || ambient) return;
+    var n = Math.round(c.sampleRate * 2);
+    var buf = c.createBuffer(1, n, c.sampleRate);
+    var ch = buf.getChannelData(0);
+    var last = 0;
+    for(var i = 0; i < n; i++){
+      var w = Math.random() * 2 - 1;
+      last = (last + 0.02 * w) / 1.02;
+      ch[i] = last * 3.5;
+    }
+    var src = c.createBufferSource();
+    src.buffer = buf; src.loop = true;
+    var lp = c.createBiquadFilter();
+    lp.type = "lowpass"; lp.frequency.value = 340; lp.Q.value = 0.6;
+    var hum = c.createOscillator();
+    hum.type = "sine"; hum.frequency.value = 119;
+    var hg = c.createGain(); hg.gain.value = 0.006;
+    var g = c.createGain(); g.gain.value = 0.028;
+    src.connect(lp); lp.connect(g); g.connect(c.destination);
+    hum.connect(hg); hg.connect(c.destination);
+    src.start(); hum.start();
+    ambient = { src: src, hum: hum };
+  }
+  function ambientOff(){
+    if(!ambient) return;
+    try{ ambient.src.stop(); ambient.hum.stop(); }catch(e){}
+    ambient = null;
+  }
+  function ambientIsOn(){ return !!ambient; }
   var lastTick = 0;
   function tick(){
     var c = armed(); if(!c) return;
@@ -121,6 +196,7 @@ var SFX = (function(){
   }
   function setEnabled(on){
     enabled = !!on;
+    if(!enabled) ambientOff();
     try{ localStorage.setItem("junoslab-sound", enabled ? "on" : "off"); }catch(e){}
   }
   function isEnabled(){ return enabled; }
@@ -137,5 +213,7 @@ var SFX = (function(){
 
   return { tick: tick, plug: plug, unplug: unplug, drop: drop, trash: trash,
            commit: commit, ding: ding, fanfare: fanfare, blip: blip, womp: womp,
-           bell: bell, powerUp: powerUp, setEnabled: setEnabled, isEnabled: isEnabled };
+           bell: bell, powerUp: powerUp, setEnabled: setEnabled, isEnabled: isEnabled,
+           clack: clack, alert: alertChirp, ticket: ticket, fan: fan,
+           ambientOn: ambientOn, ambientOff: ambientOff, ambientIsOn: ambientIsOn };
 })();

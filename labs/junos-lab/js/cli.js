@@ -525,6 +525,11 @@ function autoRollback(dev){
 }
 
 function rollbackCmd(dev, rest){
+  if(rest.length && rest[0] === "rescue"){
+    if(!dev.rescueConfig) return lines("err", "no rescue configuration saved — create one first: run request system configuration rescue save");
+    dev.candidate = deepClone(dev.rescueConfig);
+    return lines("out", "load complete (rescue configuration loaded into the candidate — commit to activate)");
+  }
   const n = rest.length ? parseInt(rest[0], 10) : 0;
   if(isNaN(n) || n < 0) return lines("err", "usage: rollback <n> (0 = committed config, 1 = one commit ago ...)");
   if(n === 0) dev.candidate = deepClone(dev.config);
@@ -758,6 +763,7 @@ function powerOn(dev){
   if(dev.powered !== false) return;
   dev.powered = true;
   if(typeof SFX !== "undefined") SFX.powerUp();
+  dev.bootSlow = (typeof realOn === "function" && realOn());
   devLog(dev, dev.type === "server" ? "kernel: power button pressed — system boot" : "chassisd: chassis power on");
   if(dev.brandNew){
     dev.cli.stage = "boot";
@@ -780,10 +786,13 @@ function powerOn(dev){
       dev.cli.log.push({ cls: i >= linesBoot.length - 3 ? "out" : "sys", text: linesBoot[i] });
       if(typeof refreshCliView === "function" && activeDevice === dev.id) refreshCliView();
       i++;
-      if(i < linesBoot.length) setTimeout(step, 220);
-      else dev.cli.stage = "login";
+      if(i < linesBoot.length) setTimeout(step, dev.bootSlow ? 1900 + Math.random() * 1700 : 220);
+      else {
+        dev.cli.stage = "login";
+        if(dev.bootSlow) devLog(dev, "chassisd: boot complete after cold start — real EX switches take minutes; be glad this is the short version");
+      }
     };
-    setTimeout(step, 200);
+    setTimeout(step, dev.bootSlow ? 2500 : 200);
   } else {
     dev.cli.log.push({ cls: "sys", text: dev.type === "server"
       ? "(power button pressed — BIOS POST, kernel boots, enabled services come back up)"

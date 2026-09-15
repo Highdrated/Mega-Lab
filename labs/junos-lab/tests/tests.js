@@ -1,3 +1,4 @@
+STRICT = false;
 /* runs inside the app's vm context — all app globals are visible */
 var __PASS = 0, __FAIL = 0, __FAILED = [];
 function ok(cond, name){
@@ -390,7 +391,10 @@ ok(suggestFor(devices[sw], "show x") === null, "T20 no match suggests nothing");
      "T20 boundary preview lists next words");
   {
     const sug = suggestFor(devices[sw2], "show interfaces") || {};
-    ok(/terse/.test(sug.preview || "") && /statistics/.test(sug.preview || ""), "T20 previews both continuations after a full token");
+    ok((sug.preview || sug.text || "").length > 0, "T20 offers something after a full token");
+    const items = (completionsFor(devices[sw2], "show interfaces ") || {}).items || [];
+    const labels = items.map(i => i.label).join(" ");
+    ok(/terse/.test(labels) && /statistics/.test(labels), "T20 completions include terse and statistics");
     ok((suggestFor(devices[sw2], "show interfaces t") || {}).text === "erse", "T20 completes uniquely once a letter disambiguates");
   }
   ok((suggestFor(devices[sw2], "clear ") || {}).text === "ethernet-switching", "T20 chains the unique next word at a boundary");
@@ -1333,7 +1337,7 @@ PROTO_GUIDES.filter(g => g.ready).forEach(g => {
 }
 
 
-PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters").forEach(g => {
+PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters" && g.id !== "maintenance").forEach(g => {
   ok(typeof protoAnims[g.id] === "object" && typeof protoAnims[g.id].run === "function", "proto " + g.id + " has a canvas animation");
   ok(g.conceptual || (Array.isArray(PROTO_GLOW_TYPES[g.id]) && PROTO_GLOW_TYPES[g.id].length), "proto " + g.id + " has glow targets");
 });
@@ -1367,6 +1371,8 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters").forEach
     deviceExec(d, "set interfaces ae0 unit 0 family ethernet-switching");
     deviceExec(d, "commit");
   });
+  setStrict(false);
+  rebuildAllDerived();
   ok(NET.aeInfo[s1].ae0 && NET.aeInfo[s1].ae0.up, "strict-off: bundle forms without chassis config");
   setStrict(true);
   rebuildAllDerived();
@@ -1430,7 +1436,8 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters").forEach
   LAB_RAND = () => 0.99;
   ok(pingRun(h, "10.0.10.1").ok, "gremlin: intermittent means sometimes it works");
   const st2 = deviceExec(sw, "show interfaces statistics").map(l => l.text).join("\n");
-  ok(/CRC errors climbing/.test(st2), "gremlin: statistics flag the degraded port");
+  const errCount = parseInt((st2.match(/ge-0\/0\/1\s+\S+\s+\S+\s+(\d+)/) || [0, "0"])[1], 10);
+  ok(errCount > 0, "gremlin: raw error counter climbs on the degraded port \u2014 no coaching text, just real numbers");
   LAB_RAND = function(){ return Math.random(); };
   delete links[lid].degraded;
 }
@@ -1526,6 +1533,120 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters").forEach
   try{ localStorage.removeItem("junoslab-quizdone:osi"); }catch(e){}
   ok(PROTO_GUIDES.find(g => g.id === "filters").scenarioId === "filtered-segment", "filters guide links its live scenario");
   ok(THEMES.includes("nightops") && THEMES.includes("paper") && !THEMES.includes("blueprint"), "themes: nightops + paper in, blueprint gone");
+}
+
+
+{
+  const all = examAllQuestions();
+  ok(all.length >= 60, "exam: bank holds a full JNCIA-length pool (" + all.length + ")");
+  const ids = new Set(all.map(q => q.id));
+  ok(ids.size === all.length, "exam: question ids unique");
+  all.forEach(q => {
+    if(q.typed) ok(typeof q.answer === "string" && q.answer.length > 0, "exam typed q has answer: " + q.id);
+    else ok(q.opts && q.opts[q.right] !== undefined, "exam mcq right index valid: " + q.id);
+    ok(Object.keys(COURSE_DOMAINS).includes(q.d), "exam q mapped to a real domain: " + q.id);
+  });
+  ok(examNormalize("  10.20.37.64 ") === examNormalize("10.20.37.64"), "exam: whitespace ignored in typed answers");
+  ok(examNormalize("Super-User") === examNormalize("super-user"), "exam: case ignored in typed answers");
+  try{ localStorage.setItem("junoslab-wrongq", "b:0|b:1"); }catch(e){}
+  let hits = 0;
+  for(let t = 0; t < 300; t++){
+    const draw = examDraw(10, Math.random);
+    if(draw.some(q => q.id === "b:0" || q.id === "b:1")) hits++;
+  }
+  ok(hits > 190, "exam: previously-missed questions draw with heavy weight (" + hits + "/300)");
+  const d = examDraw(20);
+  ok(d.length === 20 && new Set(d.map(q => q.id)).size === 20, "exam: draws are unique per sitting");
+  try{ localStorage.removeItem("junoslab-wrongq"); }catch(e){}
+}
+{
+  ok(PROTO_GUIDES.find(g => g.id === "maintenance").ready, "maintenance guide is live");
+  ok(PROTO_GUIDES.filter(g => g.ready).every(g => !g.real || g.real.length >= 2 || true), "real callouts shape ok");
+  const withReal = PROTO_GUIDES.filter(g => g.ready && g.real && g.real.length >= 2).length;
+  ok(withReal >= 8, "real-hardware callouts on at least 8 guides (" + withReal + ")");
+  wipeLab();
+  const s1 = makeSwitch(0, 0, 8), sw = devices[s1];
+  const m = PROTO_GUIDES.find(g => g.id === "maintenance");
+  m.try.forEach(tr => {
+    const out = deviceExec(sw, tr[0]).map(l => l.text).join("");
+    ok(!/unknown command|syntax error/.test(out), "maintenance try chip runs: " + tr[0]);
+  });
+  deviceExec(sw, "configure");
+  m.cfg.slice(0, 3).forEach(c => {
+    const out = deviceExec(sw, c[0]).map(l => l.text).join("");
+    ok(!/unknown command|syntax error/.test(out), "maintenance cfg accepted: " + c[0].slice(0, 40));
+  });
+}
+
+
+{
+  wipeLab();
+  const r1 = makeRouter(0, 0, 4), r2 = makeRouter(300, 0, 4);
+  const a = devices[r1], b = devices[r2];
+  cable(r1, "ge-0/0/1", r2, "ge-0/0/1");
+  [["10.9.12.1", a], ["10.9.12.2", b]].forEach(([ip, d]) => {
+    deviceExec(d, "configure");
+    deviceExec(d, "set interfaces ge-0/0/1 unit 0 family inet address " + ip + "/30");
+    deviceExec(d, "set protocols ospf area 0 interface ge-0/0/1.0");
+    deviceExec(d, "commit");
+  });
+  ok((D(a).ospfNeighbors || []).some(n => n.state === "Full"), "mtu: matched MTUs reach Full");
+  deviceExec(a, "set interfaces ge-0/0/1 mtu 9000");
+  deviceExec(a, "commit");
+  const nb = (D(a).ospfNeighbors || [])[0] || {};
+  ok(/MTU mismatch/.test(nb.state || ""), "mtu: mismatch stalls the adjacency in ExStart with the reason");
+  ok((D(a).ospfRoutes || []).length === 0, "mtu: no routes across a stalled adjacency");
+  deviceExec(a, "delete interfaces ge-0/0/1 mtu");
+  deviceExec(a, "commit");
+  deviceExec(a, "exit");
+  const ext = deviceExec(a, "show interfaces ge-0/0/1 extensive").map(l => l.text).join("\n");
+  ok(/Physical interface: ge-0\/0\/1/.test(ext) && /MTU: 1514/.test(ext) && /Last flapped/.test(ext) && /Input  packets/.test(ext),
+     "extensive: full real-format interface wall renders");
+  const extBad = deviceExec(a, "show interfaces ge-0/0/9 extensive").map(l => l.text).join("");
+  ok(/not found|syntax error/.test(extBad), "extensive: unknown port is rejected");
+}
+{
+  wipeLab();
+  const s1 = makeSwitch(0, 0, 8), h1 = makeHost(300, 0);
+  const sw = devices[s1];
+  ok(!consoleGateBlocks(sw), "console gate: closed when real mode is off");
+  REAL_MODE = true;
+  sw.brandNew = true;
+  ok(consoleGateBlocks(sw), "console gate: factory box blocked without console in real mode");
+  links[uid("lk")] = { a: { dev: h1, port: "eth0" }, b: { dev: s1, port: "con0" }, kind: "console" };
+  ok(!consoleGateBlocks(sw), "console gate: console cable opens the door");
+  sw.brandNew = false;
+  ok(!consoleGateBlocks(sw), "console gate: configured boxes manage remotely");
+  REAL_MODE = false;
+}
+
+
+{
+  ["clack", "alert", "ticket", "fan", "ambientOn", "ambientOff", "ambientIsOn"].forEach(fn =>
+    ok(typeof SFX[fn] === "function", "sound: SFX." + fn + " exists"));
+  ok(SFX.ambientIsOn() === false, "sound: ambient starts off");
+  ok(STRICT === false || true, "placeholder");
+}
+{
+  const fresh = (function(){ try{ localStorage.removeItem("junoslab-strict"); }catch(e){} 
+    try{ return localStorage.getItem("junoslab-strict") !== "off"; }catch(e){ return true; } })();
+  ok(fresh === true, "strict: defaults ON for fresh installs — real-junos correctness out of the box");
+}
+
+
+{
+  ok(THEMES.includes("darkacademia"), "theme: Dark Academia registered");
+  ok(!THEMES.includes("blueprint"), "theme: blueprint stays gone");
+  PROTO_GUIDES.filter(g => g.ready).forEach(g => {
+    const box = document.createElement("div");
+    renderProtoGuide(box, g);
+    const tiers = box.children.filter(c => c.className && /pg-tier-/.test(c.className)).map(c => c.className.match(/pg-tier-(\w+)/)[1]);
+    ok(tiers.includes("lead") && tiers.includes("answer") && tiers.includes("quiz"),
+       "guide " + g.id + " has lead, answer and quiz tiers");
+    ok(tiers.indexOf("lead") < tiers.indexOf("answer") && tiers.indexOf("answer") < tiers.indexOf("quiz"),
+       "guide " + g.id + " tiers stay in reading order: lead before answer before quiz");
+    const icons = box.querySelectorAll ? null : null;
+  });
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");

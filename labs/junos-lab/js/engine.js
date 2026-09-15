@@ -76,7 +76,7 @@ function deriveDev(dev){
       const ownEs = cfgGet(ic, ["unit", "0", "family", "ethernet-switching"]) !== undefined;
       const es = esInfo(ownEs || !rangeByPort[p.id] ? ic : rangeByPort[p.id]);
       d.portCfg[p.id] = {
-        disabled: !!ic.disable, desc: ic.description || null,
+        disabled: !!ic.disable, desc: ic.description || null, mtu: ic.mtu ? parseInt(ic.mtu, 10) : 1514,
         ae: (cfgGet(ic, ["ether-options", "802.3ad"])) || null,
         mode: es.mode, vlanNames: es.vlanNames, vlanIds: es.vlanIds, storm: es.storm,
         esEnabled: true,   // an unconfigured switch port is factory-default access on vlan "default"
@@ -113,10 +113,10 @@ function deriveDev(dev){
   if(dev.type === "router"){
     for(const p of dev.ports){
       const ic = ifs[p.id] || {};
-      d.portCfg[p.id] = { disabled: !!ic.disable, desc: ic.description || null, ae: null };
+      d.portCfg[p.id] = { disabled: !!ic.disable, desc: ic.description || null, ae: null, mtu: ic.mtu ? parseInt(ic.mtu, 10) : 1514 };
       const addr = (cfgGet(ic, ["unit", "0", "family", "inet", "address"]) || []).map(parsePrefix).filter(Boolean)[0];
       if(addr) d.l3ports[p.id] = {
-        ip: addr.ip, bits: addr.bits,
+        ip: addr.ip, bits: addr.bits, mtu: ic.mtu ? parseInt(ic.mtu, 10) : 1514,
         fIn: cfgGet(ic, ["unit", "0", "family", "inet", "filter", "input"]) || null,
         fOut: cfgGet(ic, ["unit", "0", "family", "inet", "filter", "output"]) || null,
       };
@@ -418,6 +418,8 @@ function convPending(){
   return Object.values(CONV.map).some(t => now - t < 6000);
 }
 function rebuildAllDerived(){
+  const __post = () => { try{ trackFlaps(); }catch(e){} };
+  setTimeout ? null : null;
   for(const dev of Object.values(devices))
     if(dev.type === "switch" || dev.type === "router") dev.d = deriveDev(dev);
   computePoe();
@@ -610,6 +612,13 @@ function computeOspf(){
       .some(e => e.dev === b.dev && e.ip === b.iface.ip);
     if(!hit) continue;
     let full = true;
+    let mtuA = (a.iface && a.iface.mtu) || 1514, mtuB = (b.iface && b.iface.mtu) || 1514;
+    if(mtuA !== mtuB){
+      const stA = "ExStart (MTU mismatch: " + mtuA + " vs " + mtuB + ")";
+      a.dev.d.ospfNeighbors.push({ addr: b.iface.ip, iface: a.iface.name, name: hostnameOf(b.dev), state: stA });
+      b.dev.d.ospfNeighbors.push({ addr: a.iface.ip, iface: b.iface.name, name: hostnameOf(a.dev), state: stA });
+      continue;
+    }
     if(typeof strictOn === "function" && strictOn()){
       const k = "ospf:" + [a.dev.id + a.iface.name, b.dev.id + b.iface.name].sort().join("|");
       full = convAge(k) >= 6000;
@@ -770,7 +779,7 @@ function ifacesOf(dev){
   } else if(dev.type === "router"){
     for(const [port, l3] of Object.entries(D(dev).l3ports)){
       const pc = D(dev).portCfg[port];
-      out.push({ name: port + ".0", port, ip: l3.ip, bits: l3.bits, fIn: l3.fIn, fOut: l3.fOut,
+      out.push({ name: port + ".0", port, ip: l3.ip, bits: l3.bits, fIn: l3.fIn, fOut: l3.fOut, mtu: l3.mtu || 1514,
         seed: { type: "port", dev: dev.id, port }, up: isLinked(dev.id, port) && !(pc && pc.disabled),
         mac: macOf(dev.id, port) });
     }
@@ -1034,7 +1043,7 @@ function showIfStatsCmd(dev){
   for(const id of ports){
     const degraded = Object.values(links).some(l =>
       ((l.a.dev === dev.id && l.a.port === id) || (l.b.dev === dev.id && l.b.port === id)) && l.degraded);
-    rows.push([id, String(c[id].rx || 0), String(c[id].tx || 0), String(c[id].err || 0), degraded ? "\u26a0 CRC errors climbing" : ""]);
+    rows.push([id, String(c[id].rx || 0), String(c[id].tx || 0), String(c[id].err || 0), ""]);
   }
   return rows.map(r => pad(r[0], 12) + pad(r[1], 10) + pad(r[2], 10) + pad(r[3], 9) + r[4]).join("\n");
 }
@@ -1157,7 +1166,9 @@ function runDhclient(host){
   }
   host.cfg.ip = ip; host.cfg.bits = pool.net.bits;
   host.cfg.gw = pool.router || null; host.cfg.viaDhcp = true;
-  devLog(server, `JDHCPD: DHCPACK — leased ${ip} to ${mac} (pool ${pool.name})`);
+  server.leaseMeta = server.leaseMeta || {};
+  server.leaseMeta[mac] = { at: Date.now(), renewed: false };
+  devLog(server, `JDHCPD: DHCPACK — leased ${ip} to ${mac} (pool ${pool.name}, lease 600s)`);
   if(typeof animateDhcp === "function") animateDhcp(srvEp.path);
   touchState();
   return lines("out",
@@ -1240,12 +1251,19 @@ function showVlansCmd(dev){
   }
   return rows.map(r => pad(r[0], 14) + pad(r[1], 6) + pad(r[2], 8) + r[3]).join("\n");
 }
+var MAC_SEEN = {};
 function showMacTable(dev){
   if(!dev.macTable.length)
     return "(empty — switches learn MAC addresses from traffic; send a ping and look again)";
-  const rows = [["Vlan", "MAC address", "Type", "Interface"]];
-  for(const m of dev.macTable) rows.push([m.vlan, m.mac, "D", m.iface]);
-  return rows.map(r => pad(r[0], 12) + pad(r[1], 20) + pad(r[2], 6) + r[3]).join("\n");
+  const rows = [["Vlan", "MAC address", "Type", "Age", "Interface"]];
+  for(const m of dev.macTable){
+    const k = dev.id + "|" + m.mac;
+    if(!MAC_SEEN[k]) MAC_SEEN[k] = Date.now();
+    const age = Math.floor((Date.now() - MAC_SEEN[k]) / 1000);
+    rows.push([m.vlan, m.mac, "D", age + "s", m.iface]);
+  }
+  return rows.map(r => pad(r[0], 12) + pad(r[1], 20) + pad(r[2], 6) + pad(r[3], 8) + r[4]).join("\n") +
+    "\n(dynamic entries age out after ~300s of silence on real gear)";
 }
 function showRouteCmd(dev){
   const out = [];
@@ -1356,6 +1374,106 @@ function showProcessesCmd(dev){
     pad(String(1000 + i * 17), 6) + pad(p[0], 12) + p[1]).join("\n") +
     "\n\nAll daemons run on the Routing Engine (control plane); the PFE forwards transit traffic in hardware.";
 }
+function fileListCmd(dev){
+  const rescue = dev.rescueConfig ? "  rescue.conf.gz          " + new Date(dev.rescueWhen || Date.now()).toISOString().slice(0, 10) : null;
+  const rows = [
+    "/config:",
+    "  juniper.conf.gz         (active configuration)",
+    "  juniper.conf.1.gz       (rollback 1)",
+    "  juniper.conf.2.gz       (rollback 2)",
+    rescue,
+    "",
+    "/var/tmp:",
+    "  install-" + (dev.model || "ex") + ".tgz       (old install bundle — storage cleanup would remove this)",
+    "  cores/                  (empty, thankfully)",
+  ].filter(x => x !== null);
+  return rows.join("\n");
+}
+function storageCleanupCmd(dev){
+  dev.cleaned = true;
+  return "Currently rotating log files and removing old software bundles...\n" +
+    "  /var/tmp/install-" + (dev.model || "ex") + ".tgz   removed\n" +
+    "  /var/log/* rotated\n" +
+    "Freed: enough. Run this BEFORE a software upgrade — a full /var is the classic upgrade killer.";
+}
+function rescueSaveCmd(dev){
+  dev.rescueConfig = JSON.parse(JSON.stringify(dev.config));
+  dev.rescueWhen = Date.now();
+  return "Saving active configuration to rescue.conf.gz — this is your known-good snapshot.\n" +
+    "Restore it any time from configuration mode with: rollback rescue (then commit).";
+}
+var FLAP = {};
+function trackFlaps(){
+  for(const lid in NET.linkStatus){
+    const st = NET.linkStatus[lid];
+    const prev = FLAP[lid];
+    if(prev && prev.st !== st){
+      FLAP[lid] = { st, at: Date.now() };
+      const l = links[lid];
+      if(l) [l.a, l.b].forEach(e => {
+        const d = devices[e.dev];
+        if(d && (d.type === "switch" || d.type === "router"))
+          devLog(d, "mib2d: SNMP_TRAP_LINK_" + (st === "up" ? "UP" : "DOWN") + ": ifIndex " + e.port + " \u2014 " + prev.st + " \u2192 " + st);
+      });
+    } else if(!prev){
+      FLAP[lid] = { st, at: Date.now() };
+    }
+  }
+  for(const lid of Object.keys(FLAP)) if(!links[lid]) delete FLAP[lid];
+}
+function lastFlapOf(dev, port){
+  for(const lid in links){
+    const l = links[lid];
+    if((l.a.dev === dev.id && l.a.port === port) || (l.b.dev === dev.id && l.b.port === port))
+      return FLAP[lid] ? FLAP[lid].at : null;
+  }
+  return null;
+}
+function agoStr(t){
+  if(!t) return "Never";
+  const s = Math.max(0, Math.floor((Date.now() - t) / 1000));
+  if(s < 60) return s + "s ago";
+  if(s < 3600) return Math.floor(s / 60) + "m " + (s % 60) + "s ago";
+  return Math.floor(s / 3600) + "h " + Math.floor((s % 3600) / 60) + "m ago";
+}
+function showIfExtensive(dev, keys){
+  const port = keys[2];
+  const p = dev.ports.find(x => x.id === port);
+  if(!p) return "error: interface " + port + " not found on this device";
+  const pc = (D(dev).portCfg || {})[port] || {};
+  const lid = Object.keys(links).find(k => (links[k].a.dev === dev.id && links[k].a.port === port) || (links[k].b.dev === dev.id && links[k].b.port === port));
+  const st = lid ? (NET.linkStatus[lid] || "down") : "down";
+  const linkUp = st === "up" || st === "oob";
+  const ctr = (dev.ctr || {})[port] || { rx: 0, tx: 0, err: 0 };
+  const ifc = cfgGet(dev.config, ["interfaces", port]) || {};
+  const mtu = ifc.mtu ? parseInt(ifc.mtu, 10) : 1514;
+  const out = [];
+  out.push("Physical interface: " + port + ", " + (pc.disabled ? "Administratively down" : "Enabled") + ", Physical link is " + (linkUp ? "Up" : "Down"));
+  out.push("  Link-level type: Ethernet, MTU: " + mtu + ", Speed: 1000mbps, Duplex: Full-duplex");
+  out.push("  Device flags   : Present Running" + (pc.disabled ? " Down" : ""));
+  out.push("  Last flapped   : " + agoStr(lastFlapOf(dev, port)));
+  out.push("  Statistics last cleared: Never");
+  out.push("  Traffic statistics:");
+  out.push("   Input  packets: " + (ctr.rx || 0));
+  out.push("   Output packets: " + (ctr.tx || 0));
+  out.push("   Input  errors : " + (ctr.err || 0) + (ctr.err > 0 ? "   \u2190 climbing errors on a live link smell like a bad cable" : ""));
+  const unit = (ifc.unit && ifc.unit["0"]) || null;
+  if(unit){
+    out.push("");
+    out.push("  Logical interface " + port + ".0");
+    const fam = unit.family || {};
+    if(fam["ethernet-switching"]){
+      const es = fam["ethernet-switching"];
+      out.push("    Protocol ethernet-switching, Mode: " + (es["interface-mode"] || "access") +
+        (es.vlan && es.vlan.members ? ", VLANs: " + [].concat(es.vlan.members).join(" ") : ""));
+    }
+    if(fam.inet){
+      const addr = fam.inet.address ? Object.keys(fam.inet.address).join(", ") : "(none)";
+      out.push("    Protocol inet, Addresses: " + addr);
+    }
+  }
+  return out.join("\n");
+}
 function showVersionCmd(dev){
   const model = dev.model || (dev.type === "switch" ? "ex4300-48t" : "mx204");
   return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: 23.4R1.10 (JunOS Lab edition)`;
@@ -1404,6 +1522,10 @@ const OP_SPECS = {
     ["show log messages", { help: "Recent system events (commits, link flaps, storms)", fn: showLogCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
     ["show system processes", { help: "The Junos daemons and what each one owns", fn: showProcessesCmd }],
+    ["show interfaces <interface:physport> extensive", { help: "The full real-Junos interface wall: flags, MTU, last flapped, counters", fn: showIfExtensive }],
+    ["file list", { help: "The Junos file system — configs, rollbacks, rescue, /var/tmp", fn: fileListCmd }],
+    ["request system storage cleanup", { help: "Free space: rotate logs, remove old bundles — run before upgrades", fn: storageCleanupCmd }],
+    ["request system configuration rescue save", { help: "Snapshot the active config as the rescue config", fn: rescueSaveCmd }],
     ["ping <target:ip>", { help: "Ping from this device (sources from an irb)", fn: (dev, keys) => { const r = doDevicePing(dev, keys[1]); return joinLines(r); } }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
     ["clear ethernet-switching table", { help: "Flush learned MACs", fn: dev => { dev.macTable = []; return "ethernet-switching table flushed"; } }],
@@ -1435,6 +1557,10 @@ const OP_SPECS = {
     ["show log messages", { help: "Recent system events (commits, link flaps)", fn: showLogCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
     ["show system processes", { help: "The Junos daemons and what each one owns", fn: showProcessesCmd }],
+    ["show interfaces <interface:physport> extensive", { help: "The full real-Junos interface wall: flags, MTU, last flapped, counters", fn: showIfExtensive }],
+    ["file list", { help: "The Junos file system — configs, rollbacks, rescue, /var/tmp", fn: fileListCmd }],
+    ["request system storage cleanup", { help: "Free space: rotate logs, remove old bundles — run before upgrades", fn: storageCleanupCmd }],
+    ["request system configuration rescue save", { help: "Snapshot the active config as the rescue config", fn: rescueSaveCmd }],
     ["ping <target:ip>", { help: "Ping from this device", fn: (dev, keys) => joinLines(doDevicePing(dev, keys[1])) }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
     ["exit", { help: "(sessions close from the tab bar)", fn: () => "(this is the operational prompt — close the session from the tab bar or ✕)" }],
