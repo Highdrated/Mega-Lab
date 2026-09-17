@@ -144,6 +144,29 @@
     border: 1px solid var(--edge2); padding: 2px 10px; cursor: pointer;
   }
   .qbtn:hover { background: var(--track); color: var(--text); }
+
+  .catbtn {
+    font: inherit; font-size: 9.5px; letter-spacing: 2px;
+    background: transparent; color: var(--text);
+    border: 1px solid var(--edge); padding: 2px 10px; cursor: pointer;
+  }
+  .catbtn:hover { border-color: var(--edge2); background: var(--track); }
+  .catmenu {
+    display: none; position: fixed; top: 0; left: 0;
+    background: var(--panel); border: 1px solid var(--edge2);
+    min-width: 250px; max-height: 70vh; overflow-y: auto;
+    z-index: 200; padding: 4px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.55);
+  }
+  .catmenu.on { display: block; }
+  .catmenu .cg-h { font-size: 8.5px; letter-spacing: 2px; color: var(--tdim); padding: 6px 8px 3px; }
+  .catmenu button {
+    display: block; width: 100%; text-align: left;
+    font: inherit; font-size: 11px; background: transparent; color: var(--text);
+    border: none; padding: 6px 8px; cursor: pointer;
+  }
+  .catmenu button:hover { background: var(--track); color: var(--cyan); }
+  .catmenu button .cd { color: var(--dim); font-size: 9.5px; display: block; }
   .topbar .clock { color: var(--text); }
   .panel {
     background: var(--panel);
@@ -535,6 +558,7 @@
     <span class="sub">// AGRI-PLATFORM «VERDANT» · CRUSADER LOW CLOUD DECK</span>
     <span class="mode" id="modeLbl">BOOT</span>
     <span id="taskLbl"></span>
+    <button class="catbtn" id="catBtn">CATEGORIES ▾</button>
     <button class="qbtn" id="qbtn">QUESTS</button>
     <span class="right">
       <span class="hide-sm" id="userLbl">no operator</span>
@@ -543,6 +567,7 @@
     </span>
   </div>
 
+  <div class="catmenu" id="catMenu" role="menu"></div>
   <aside class="panel nav">
     <div class="ptitle"><span class="tick"></span>TRAINING NAV<span class="stat" id="navStat"></span></div>
     <div class="navbody">
@@ -907,7 +932,10 @@ function finishForge() {
   blank();
   line("You wrote that. Not traced - written.", "c-green");
   if (F.f.id < FORGES.length) line("Next: forge " + (F.f.id + 1), "c-amber");
-  else line("All three forged. You are ready for real Python: install it, rewrite one of these from nothing, then change it - a 4th crop, a new rule, your own function.", "c-amber");
+  else {
+    line("All forged. You are ready for real Python on your own machine.", "c-amber");
+    line("The how-to is written up: academy launch - install, PATH, your first .py file.", "c-amber");
+  }
   mode = "home"; forge = null; setStatus();
 }
 function skeleton(s) {
@@ -1130,6 +1158,7 @@ function exInput(raw) {
         renderScroll(); sndChime();
         line("PASS - verified by the actual Python interpreter.", "c-green");
         line("A certificate has been inked into your codex. You are no longer a beginner.", "c-amber");
+        line("Next step is off this page: academy launch \u2014 getting Python onto your own machine.", "c-amber");
         logEvent("FINAL EXAM PASSED", "ok");
         mode = "home"; setStatus();
       } else {
@@ -1308,6 +1337,31 @@ const ACADEMY = [
     ]
   },
   {
+    id: "files", title: "Files and JSON: making a program remember",
+    sub: "Everything your program knows dies at exit \u2014 unless you write it down.",
+    drill: "start files",
+    sections: [
+      { h: "Memory is temporary. Files are not." },
+      { p: "Every variable you have ever made lives in RAM and vanishes the moment the program ends. That is fine for a calculation and useless for anything that must survive: yesterday's readings, a config, a list of devices. Writing to a file is how a program stops being a goldfish." },
+      { h: "open() and the with-block" },
+      { p: "open(path) connects your program to a file and hands back a file object. The catch: an open file holds a system resource, and if your code crashes before closing it, that resource leaks. On a long-running service, enough leaks and the process dies." },
+      { p: "So the professional form is the with-block: with open(path) as f: \u2014 it opens the file, gives it to you as f, and guarantees the close when the block ends, crash or no crash. Write it this way every time and you never think about closing again." },
+      { code: 'with open("note.txt", "w") as f:\n    f.write("mission ok\\n")\n\nwith open("note.txt") as f:\n    print(f.read())', predict: "mission ok", why: 'Two blocks: one wrote, one read it back. Note the \\n \u2014 write() adds nothing you do not ask for, so lines need their own newline.' },
+      { h: "The modes: r, w, a" },
+      { p: 'open(path) alone means read. open(path, "w") means write \u2014 and it WIPES the file first, silently, completely. open(path, "a") appends to the end instead. The difference between "w" and "a" has destroyed more homework than any other character in Python.' },
+      { p: "Reading has shapes too: f.read() gives the whole file as one string, f.readlines() gives a list of lines, and looping the file directly \u2014 for line in f: \u2014 hands you one line at a time without loading the lot into memory. Use the loop for anything big." },
+      { check: { q: 'A log file has 500 lines. You open it with "w" and write one line. How many lines does it have now?', opts: ["501", "1", "500"], correct: 1, why: '"w" truncates the file to nothing before writing. You wanted "a" for append. This is the most expensive typo in file handling.' } },
+      { h: "JSON: structure that survives the trip" },
+      { p: "A text file holds text. But you usually want to save STRUCTURE \u2014 a list, a dict, nested data. JSON is the agreed format for that, and Python speaks it natively through the json module." },
+      { p: "Four functions, and the naming is the only confusing part: json.dump(data, file) writes to a file, json.dumps(data) returns a string. json.load(file) reads from a file, json.loads(string) parses a string. The s means string. That is the whole rule." },
+      { code: 'import json\n\nspells = ["lumos", "mend"]\nprint(json.dumps(spells))\n\ndevice = {"id": 7, "up": True, "temp": None}\nprint(json.dumps(device))', predict: '["lumos", "mend"]\n{"id": 7, "up": true, "temp": null}', why: "Look at the second line closely: Python's True became true, and None became null. JSON has its own spelling, and Python converts both ways automatically." },
+      { h: "The round trip" },
+      { p: "Save with dump, load with load, and what comes back is ordinary Python data \u2014 a real list, a real dict, ready to index and loop. That round trip is the backbone of config files, caches, saved state, and every API you will ever call." },
+      { p: "One honest warning: json.load on a malformed file raises JSONDecodeError, and a missing file raises FileNotFoundError. Both are ordinary Tuesdays for a service reading data it did not write. That is precisely what try/except is for \u2014 and why the errors chapter comes before this one." },
+      { check: { q: "Which one turns a Python dict into a STRING?", opts: ["json.dump", "json.dumps", "json.load"], correct: 1, why: "The s is for string. dump writes to a file; dumps returns text you can print, log, or send over HTTP." } }
+    ]
+  },
+  {
     id: "errors", title: "Errors: tracebacks, try/except and raising",
     sub: "Crashes are messages, not punishments. Learn to read them, then to catch them.",
     drill: "start errors",
@@ -1323,6 +1377,38 @@ const ACADEMY = [
       { p: "Two more tools: finally: runs whether the try succeeded or failed \u2014 cleanup that must always happen. And raise ValueError(\"bad reading\") throws an error ON PURPOSE: your own code refusing bad input loudly, instead of limping on with garbage. Failing loud and early beats failing quiet and late \u2014 that is half of professional programming in one sentence." },
       { check: { q: "crops[10] on a 3-item list raises\u2026", opts: ["ValueError", "IndexError", "KeyError"], correct: 1, why: "Positions past the end of a LIST are IndexError. KeyError is its dict cousin \u2014 missing label instead of missing position." } },
       { check: { q: "Why catch  except ValueError:  instead of bare  except: ?", opts: ["It runs faster", "Bare except hides real bugs too", "Bare except is invalid"], correct: 1, why: "A bare except swallows EVERYTHING \u2014 including the typos and logic errors you desperately want to see. Name what you expect; let the rest crash loudly." } }
+    ]
+  },
+  {
+    id: "launch", title: "Python on your own machine",
+    sub: "The bridge out of Pyle: install it, write a file, run it. No simulation.",
+    drill: "start blueprint",
+    sections: [
+      { h: "You already know more than the setup requires" },
+      { p: "Everything Pyle runs is real Python \u2014 but it runs inside this page. At some point you want a file on your own disk that you can edit, run, schedule, and put in git. That step is smaller than it looks, and this chapter is the whole of it." },
+      { h: "1. Do you already have it?" },
+      { p: "Open a terminal first. On Windows that is PowerShell or Windows Terminal; on macOS it is Terminal (Cmd+Space, type terminal); on Linux you already know. Then ask:" },
+      { code: 'print("if you can run this here, your Python works")', predict: "if you can run this here, your Python works", why: "In a real terminal the equivalent check is: python3 --version  \u2014 if it prints something like Python 3.12.4, you are done. If it says 'command not found', install it." },
+      { p: "Windows users: try python --version too, and py --version. Windows commonly installs it as python or py rather than python3. macOS ships an old Python 2-era stub that can confuse you \u2014 always use python3 there." },
+      { h: "2. Installing it" },
+      { p: "Windows: download from python.org and TICK THE BOX that says 'Add Python to PATH' on the first screen of the installer. If you miss it, the terminal will not find python afterwards and you will think the install failed. It did not \u2014 rerun the installer and choose Modify." },
+      { p: "macOS: the clean route is Homebrew \u2014 brew install python. Linux: it is almost certainly already there; if not, sudo apt install python3 python3-venv on Debian and Ubuntu." },
+      { h: "3. What PATH actually is" },
+      { p: "When you type python3, the shell does not search your whole disk. It looks through a list of folders called PATH, in order, and runs the first match. 'Command not found' almost never means the program is missing \u2014 it means the folder holding it is not on that list." },
+      { p: "That is also why a virtual environment works the way it does: activating one simply puts its own bin folder at the FRONT of PATH, so its python gets found first. Nothing is copied, nothing is magic. In Pyle's box you can see this with: which python3 \u2014 before and after activating." },
+      { h: "4. Your first real file" },
+      { p: "A Python file is a plain text file ending in .py. Any editor works, but VS Code is the sensible default \u2014 free, and its Python extension gives you syntax colours and error underlines. Save this as hello.py somewhere you can find, like a folder called code in your home directory." },
+      { code: 'name = "Kaatje"\nprint(f"hello {name}, running from a real file")', predict: "hello Kaatje, running from a real file", why: "Exactly the same code you have been writing here. The only new thing is where it lives." },
+      { h: "5. Running it \u2014 and the one thing that trips everyone" },
+      { p: "In the terminal you must first move to the folder holding the file. That is cd, the same command Pyle's box taught you: cd code. Check you are in the right place with ls (dir on Windows) \u2014 you should see hello.py listed. Then run it: python3 hello.py" },
+      { p: "If you get 'can't open file': you are in the wrong folder, not writing bad Python. pwd tells you where you are. This single confusion accounts for most of the pain of a first week, and it is pure navigation, nothing to do with the language." },
+      { check: { q: "python3 hello.py says: can't open file 'hello.py'. What is wrong?", opts: ["The code has a syntax error", "The terminal is in a different folder", "Python is not installed"], correct: 1, why: "Python never even read the file, so your code is irrelevant so far. cd to the folder that holds it \u2014 ls or dir will confirm when you are there." } },
+      { h: "6. A venv, for real this time" },
+      { p: "The moment you want a package that did not ship with Python \u2014 requests, flask, pandas \u2014 make a venv first. Identical commands to the ones drilled in the servers module: python3 -m venv .venv, then source .venv/bin/activate on macOS and Linux, or .venv\\Scripts\\activate on Windows." },
+      { p: "Then pip install requests, and pip freeze > requirements.txt so the environment can be rebuilt. Never sudo pip install. That rule has not changed and never will." },
+      { h: "Where to go from here" },
+      { p: "Rewrite one of the forge programs from memory in a real file. Then change it: another crop, a new rule, your own function. The moment you modify something that works and it still works, you are no longer learning Python \u2014 you are using it." },
+      { check: { q: "You need the requests package for a new script. First step?", opts: ["sudo pip install requests", "Create and activate a venv, then pip install", "Download it from the website"], correct: 1, why: "One venv per project, always. sudo pip installs into the system Python and is the habit venvs exist to prevent." } }
     ]
   }
 ];
@@ -2251,6 +2337,7 @@ function boxCmd(raw) {
       line("pip: try install | list | freeze", "c-dim"); return true;
     }
     case "clear": out.innerHTML = ""; return true;
+    case "tour": tourText(); return true;
     case "exit": case "logout": logout(); return true;
     case "reset-box": FS = fsDefault(); cwd = "/home/kaatje"; venvActive = null; screens = []; services = {}; fsSave(); line("Box reset to a fresh install.", "c-amber"); setPrompt(); return true;
     case "help": boxHelp(); return true;
@@ -2322,7 +2409,17 @@ const QUESTS = [
     check: w => w.warded >= 1 && w.cursedSurvived },
   { name: "VI \u00b7 CLOSE THE BOOK",
     brief: ["OBJECTIVE: read the moonstone, then return to the cauldron."],
-    check: w => w.moonRead && w.tiles[w.r][w.c] === "C" }
+    check: w => w.moonRead && w.tiles[w.r][w.c] === "C" },
+  { name: "VII \u00b7 THE COTTAGE",
+    brief: ["OBJECTIVE: write the grimoire to grimoire.json so it survives the night.",
+            "Nothing you have done so far outlives this session. Files change that.",
+            "You need: import json, then a with-block, then json.dump(grimoire, f)."],
+    check: w => w.savedFile },
+  { name: "VIII \u00b7 THE RETURN",
+    brief: ["OBJECTIVE: empty the grimoire, then load it back from the file.",
+            "grimoire.clear() wipes it. json.load(f) brings it home.",
+            "Afterwards: leave with menu, type exit() to reach the shell, and cat grimoire.json."],
+    check: w => w.reloaded }
 ];
 function apiRef() {
   blank();
@@ -2337,7 +2434,11 @@ function apiRef() {
    ['grimoire.append("x")', "list \u2014 also .remove(), .pop()"],
    ['print(bag)', "dict of what you carry"],
    ['for i in range(n):', "repeat"],
-   ['def name():', "write a spell, then call name()"]
+   ['def name():', "write a spell, then call name()"],
+   ['import json', "before any file work"],
+   ['with open("grimoire.json", "w") as f:', 'then: json.dump(grimoire, f)'],
+   ['with open("grimoire.json") as f:', "then: grimoire = json.load(f)"],
+   ['grimoire.clear()', "empty the book"]
   ].forEach(r => html('<span class="c-dim">&gt;&gt;&gt; </span>' + hl(r[0]) + '  <span class="py-com">' + esc("# " + r[1]) + "</span>"));
   say("a line ending in : opens a block \u00b7 blank line runs it");
 }
@@ -2440,6 +2541,57 @@ function witchLine(raw) {
 }
 function witchExec(st) {
   const w = witch;
+  // --- imports ---
+  if (/^import json$/.test(st)) { w.hasJson = true; line("(json imported)", "c-dim"); return true; }
+  if (/^import \w+$/.test(st)) { line("(module imported \u2014 only json does anything in the glade)", "c-dim"); return true; }
+  // --- with open(...) as f: ---
+  let fm = st.match(/^with open\(\s*["']([^"']+)["']\s*(?:,\s*["']([rwa])["']\s*)?\)\s*as\s+(\w+)\s*:$/);
+  if (fm) {
+    w.openFile = { path: fm[1], mode: fm[2] || "r", handle: fm[3] };
+    line("(" + fm[1] + " open for " + (w.openFile.mode === "r" ? "reading" : w.openFile.mode === "a" ? "appending" : "writing") + ")", "c-dim");
+    return true;
+  }
+  // --- json.dump(grimoire, f) ---
+  fm = st.match(/^json\.dump\(\s*(\w+)\s*,\s*(\w+)\s*\)$/);
+  if (fm) {
+    if (!w.hasJson) { line("NameError: name 'json' is not defined \u2014 import it first", "c-red"); return false; }
+    if (!w.openFile) { line("NameError: name '" + fm[2] + "' is not defined \u2014 open a file first", "c-red"); return false; }
+    if (w.openFile.mode === "r") { line("io.UnsupportedOperation: not writable \u2014 open it with \"w\"", "c-red"); return false; }
+    const data = fm[1] === "grimoire" ? w.grimoire : fm[1] === "bag" ? w.bag : null;
+    if (data === null) { line("NameError: name '" + fm[1] + "' is not defined", "c-red"); return false; }
+    fsEnsure();
+    const full = norm2(w.openFile.path);
+    FS[full] = JSON.stringify(data) + "\n";
+    fsSave();
+    w.savedFile = true;
+    line("wrote " + w.openFile.path + " \u2014 " + JSON.stringify(data).length + " bytes to the cottage floor", "c-green");
+    say("that file is real: leave the glade, exit() to the shell, and cat " + w.openFile.path);
+    w.openFile = null;
+    return true;
+  }
+  // --- x = json.load(f) ---
+  fm = st.match(/^(\w+)\s*=\s*json\.load\(\s*(\w+)\s*\)$/);
+  if (fm) {
+    if (!w.hasJson) { line("NameError: name 'json' is not defined \u2014 import it first", "c-red"); return false; }
+    if (!w.openFile) { line("NameError: name '" + fm[2] + "' is not defined \u2014 open a file first", "c-red"); return false; }
+    if (w.openFile.mode !== "r") { line("io.UnsupportedOperation: not readable \u2014 open it without \"w\"", "c-red"); return false; }
+    fsEnsure();
+    const full = norm2(w.openFile.path);
+    if (!exists(full)) { line("FileNotFoundError: [Errno 2] No such file or directory: '" + w.openFile.path + "'", "c-red"); w.openFile = null; return false; }
+    let parsed;
+    try { parsed = JSON.parse(FS[full]); }
+    catch (e) { line("json.decoder.JSONDecodeError: that file is not valid JSON", "c-red"); w.openFile = null; return false; }
+    if (fm[1] === "grimoire") {
+      if (!Array.isArray(parsed)) { line("TypeError: the grimoire must be a list", "c-red"); w.openFile = null; return false; }
+      w.grimoire = parsed; w.reloaded = true;
+      line("the grimoire returns \u2014 " + parsed.length + " spell(s) back in the book", "c-green");
+    } else if (fm[1] === "bag") { w.bag = parsed; line("bag restored", "c-green"); }
+    else line(JSON.stringify(parsed));
+    w.openFile = null;
+    return true;
+  }
+  if (/^grimoire\.clear\(\)$/.test(st)) { w.grimoire = []; line("the pages go blank.", "c-dim"); return true; }
+  if (/^print\(open\(/.test(st)) { line("(read files with a with-block \u2014 see api)", "c-dim"); return true; }
   // grimoire list operations
   let m = st.match(/^grimoire\.append\(\s*["']([^"']+)["']\s*\)$/);
   if (m) { w.grimoire.push(m[1]); line('added "' + m[1] + '" to the grimoire \u2014 ' + w.grimoire.length + " spell(s)", "c-green"); return true; }
@@ -2644,6 +2796,16 @@ const TEACH = [
     real: "Wrapping a network call, a file read, a type conversion. On a server the difference between a warded call and an unwarded one is a service that logs an error versus a service that dies at 3am." },
   { m: /^witch\.divine\(\)$/, py: "import random \u2014 module functions, non-deterministic results",
     real: "Randomness has real uses: jittered retry delays so a hundred clients do not reconnect at once, sampling rows from a large log, generating test data. Also why tests must not depend on it." },
+  { m: /^import json$/, py: "import \u2014 loading a standard-library module",
+    real: "json is how machines exchange data: every API response, every n8n item, every config file. import json appears in more real scripts than almost any other line." },
+  { m: /^with open\(/, py: "with \u2014 open a file and guarantee it closes",
+    real: "The professional way to touch a file. Even if the code inside crashes, with closes the handle. On a long-running server, leaked file handles eventually take the service down." },
+  { m: /^json\.dump\(/, py: "serialising Python data into a file",
+    real: "Saving state so it survives a restart: cached results, a config, a report. Your program stops being a goldfish." },
+  { m: /^\w+\s*=\s*json\.load\(/, py: "parsing a file back into Python data",
+    real: "The other half: reading config at startup, loading yesterday's results, ingesting a payload someone POSTed to you." },
+  { m: /^grimoire\.clear\(\)$/, py: "list.clear() \u2014 emptying in place",
+    real: "Resetting a buffer between batches. Note it empties the SAME list, unlike grimoire = [] which makes a new one \u2014 a subtle difference that matters when something else holds a reference." },
   { m: /^def \w+\(\)\s*:$/, py: "def \u2014 naming a block of steps so it can be reused",
     real: "The moment a sequence gets a name it becomes a tool: <b>def backup_config(device)</b>, <b>def parse_reading(line)</b>. Fix a bug inside a function and every caller is fixed at once." },
   { m: /^\w+\(\)$/, py: "calling a function you defined \u2014 the parentheses run it",
@@ -2709,6 +2871,90 @@ function replHint(code, label) {
   html('<div class="repl-hint">' + (label ? '<span class="py-com">' + esc("# " + label) + "</span><br>" : "") +
     '<span class="rp">&gt;&gt;&gt; </span>' + hl(code) + "</div>");
 }
+
+/* ---------------- category dropdown ---------------- */
+const CATEGORIES = [
+  { h: "LEARN", items: [
+    ["academy", "Academy", "read the why, chapter by chapter"],
+    ["workbook", "Workbook", "solve real exercises, graded by running"],
+    ["modules", "Drills (list)", "see every drill module and progress"]
+  ]},
+  { h: "PRACTICE", items: [
+    ["ghost", "Ghost typing", "retype full programs, letter by letter"],
+    ["bugs", "Bug hunt", "fix crashing code from its traceback"],
+    ["forge", "Forge", "write full programs from a blank file"],
+    ["start review", "Review queue", "spaced repetition of stumbled forms"]
+  ]},
+  { h: "PLAY", items: [
+    ["field", "Field ops", "fly the drone with real Python calls"],
+    ["grimoire", "The Grimoire", "witch game \u2014 spells and cauldrons"]
+  ]},
+  { h: "FREE PYTHON", items: [
+    ["sandbox", "Sandbox", "real interpreter, no rules"],
+    ["exam", "Final exam", "no specs, graded by real Python"],
+    ["exit()", "The Box (shell)", "simulated server, real filesystem"]
+  ]},
+  { h: "TOOLS", items: [
+    ["quests", "Quest log", "full progress across everything"],
+    ["scroll", "Codex", "print your learned forms"],
+    ["theme", "Theme", "verdant / paper / ember"]
+  ]}
+];
+function buildCatMenu() {
+  const m = $("catMenu");
+  if (!m) return;
+  let hh = "";
+  CATEGORIES.forEach(c => {
+    hh += '<div class="cg-h">' + esc(c.h) + "</div>";
+    c.items.forEach(it => {
+      hh += '<button data-c="' + esc(it[0]) + '">' + esc(it[1]) + '<span class="cd">' + esc(it[2]) + "</span></button>";
+    });
+  });
+  m.innerHTML = hh;
+  m.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
+    m.classList.remove("on");
+    const c = b.dataset.c;
+    if (cliMode === "shell" && c !== "exit()") { line("(entering python3 for you)", "c-dim"); cliMode = "python"; setStatus(); logEvent("python 3.12 interpreter started", "ok"); }
+    echoPrompt(esc(c));
+    handle(c);
+    cmd.focus();
+  }));
+}
+
+/* ---------------- guided tour for newcomers ---------------- */
+function tourText() {
+  blank();
+  line("\u2500\u2500 THE TOUR \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500", "c-green");
+  line("Pyle has five kinds of thing. You do not need all of them today.", "c-dim");
+  blank();
+  line("1. ACADEMY \u2014 the textbook.", "c-amber");
+  line("   Plain-language chapters on what Python actually is. Read first, drill after.", "c-dim");
+  line("   Try:  academy", "c-dim");
+  blank();
+  line("2. DRILLS \u2014 the muscle.", "c-amber");
+  line("   Short typed exercises, each one explained before it is asked.", "c-dim");
+  line("   Never coded before? Try:  start zero", "c-dim");
+  blank();
+  line("3. WORKBOOK \u2014 real problems.", "c-amber");
+  line("   A task in words, your own code, graded by actually running it. Any working answer passes.", "c-dim");
+  line("   Try:  workbook", "c-dim");
+  blank();
+  line("4. GAMES \u2014 the same skills, sideways.", "c-amber");
+  line("   grimoire is a witch in a glade; field is a drone over crops. Both take real Python.", "c-dim");
+  blank();
+  line("5. THE BOX \u2014 this shell.", "c-amber");
+  line("   A fake Linux server with a real filesystem. Write a script here, run it on real Python,", "c-dim");
+  line("   break whatever you like. reset-box puts it all back.", "c-dim");
+  blank();
+  line("A suggested first hour, in order:", "c-green");
+  line("   academy  \u2192  start zero  \u2192  workbook  \u2192  grimoire", "c-amber");
+  blank();
+  line("When you are ready to leave Pyle and write Python on your own computer:", "c-green");
+  line("   academy launch   \u2014 install it, find your files, run a real .py", "c-amber");
+  blank();
+  line("kata gives you one small thing to do each day. quests shows everything at once.", "c-dim");
+  line("Lost at any point: type  help  in the shell, or  help  inside Python.", "c-dim");
+}
 /* ---------------- boot / login / shell ---------------- */
 function bootSeq() {
   cliMode = "boot"; setStatus();
@@ -2738,6 +2984,15 @@ function bootSeq() {
 function toLogin() {
   cliMode = "login"; user = null; cmd.classList.remove("masked"); setStatus();
   line("Operator authentication required.", "c-amber");
+  if (!score.everLoggedIn) {
+    blank();
+    line("New to all this? Read these four lines first \u2014 they are the whole idea:", "c-dim");
+    line("  1. This black screen is a TERMINAL. You type a command, press enter, it answers.", "c-dim");
+    line("  2. Nothing here can break. Everything is simulated except the Python, which is real.", "c-dim");
+    line("  3. Right now it wants a username. Type:  kaatje", "c-amber");
+    line("  4. Then any password you like \u2014 the typing will be hidden, that is normal.", "c-dim");
+    blank();
+  }
   cmd.focus();
 }
 function doLogin(name) {
@@ -2755,8 +3010,25 @@ function doPassword() {
   blank();
   const ki = kataInfo();
   line("Today's kata: " + ki.type + " " + ki.n + " — " + ki.name + (kataDoneToday() ? " (done \u2713)" : "") + " · streak " + kata.streak, "c-dim");
-  line("You are on a simulated server — real commands, real Python, nothing to break.", "c-dim");
-  line("help lists what the box understands. python3 enters the training interpreter.", "c-amber");
+  if (!score.everLoggedIn) {
+    score.everLoggedIn = true; saveState();
+    blank();
+    line("You are in. This is a SHELL \u2014 you are talking to the machine, not to Python yet.", "c-green");
+    line("Two different things live here, and telling them apart is the first real lesson:", "c-dim");
+    blank();
+    line("  kaatje@verdant-ops:~$   \u2190 the shell. Commands like ls, cd, cat live here.", "c-dim");
+    line("  >>>                     \u2190 Python. Type python3 to get there. exit() comes back.", "c-dim");
+    blank();
+    line("Three commands to try right now, in order:", "c-amber");
+    line("  ls          list what is in this folder", "c-dim");
+    line("  cat notes.txt   show what is inside a file", "c-dim");
+    line("  python3     enter Python, where the training lives", "c-dim");
+    blank();
+    line("Then type:  tour   \u2014 a two-minute guided walk through everything Pyle has.", "c-amber");
+  } else {
+    line("You are on a simulated server \u2014 real commands, real Python, nothing to break.", "c-dim");
+    line("help lists what the box understands. python3 enters the training interpreter.", "c-amber");
+  }
 }
 function toPython() {
   cliMode = "python"; setStatus();
@@ -2799,7 +3071,7 @@ function shellCmd(raw, t) {
   }
   if (boxCmd(raw)) return;
 
-  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress|kata|wipe|sandbox|exam|save|load|sound|cheatsheet|gloss|what|academy|read|workbook|grimoire|witch)\b/.test(t) || /^(ghost|forge) [1-5]$/.test(t)) {
+  if (/^(start|ghost|bugs|field|forge|modules|scroll|menu|score|help|quests|nav|progress|kata|wipe|sandbox|exam|save|load|sound|cheatsheet|gloss|what|academy|read|workbook|grimoire|witch|tour)\b/.test(t) || /^(ghost|forge) [1-5]$/.test(t)) {
     line("(training runs in python — entering python3 for you)", "c-dim");
     cliMode = "python"; setStatus();
     logEvent("python 3.12 interpreter started", "ok");
@@ -2911,13 +3183,13 @@ const VARIANTS = {
     { task: 'Make a variable rack_id holding the text "R7".', answers: ['rack_id = "R7"'] }
   ],
   "NUMBER": [
-    { task: "Make a variable battery holding the number 87.", answers: ["battery = 87"] },
+    { teach: ["Numbers take no quotes. Text needs quotes, numbers do not \u2014 that distinction runs through the whole language."], task: "Make a variable battery holding the number 87.", answers: ["battery = 87"] },
     { task: "Make a variable crates holding the number 144.", answers: ["crates = 144"] },
     { task: "Make a variable rows holding the number 12.", answers: ["rows = 12"] },
     { task: "Make a variable port holding the number 8000.", answers: ["port = 8000"] }
   ],
   "FLOAT": [
-    { task: "Make a variable wind holding 3.5.", answers: ["wind = 3.5"] },
+    { teach: ["A number with a decimal point is a float, not an int. Python decides which type from how you write the number."], task: "Make a variable wind holding 3.5.", answers: ["wind = 3.5"] },
     { task: "Make a variable temp holding 21.4.", answers: ["temp = 21.4"] },
     { task: "Make a variable humidity holding 0.61.", answers: ["humidity = 0.61"] },
     { task: "Make a variable load holding 0.75.", answers: ["load = 0.75"] },
@@ -3462,17 +3734,18 @@ const MODULES = [
   {
     id: "basics", name: "BASICS",
     intro: "The very first syntax. Talking to the interpreter.",
+    outro: "You can talk to Python now: print, variables, input, types. Next: numstr adds math and text handling on top of what you just learned.",
     drills: [
-      { task: 'Print the text: drone online', answers: ['print("drone online")'], out: ["drone online"], chip: "PRINT", note: "print() writes to the screen. Text goes in quotes." },
-      { task: "Write a comment that says: preflight check", answers: ["# preflight check", "#preflight check"], chip: "COMMENT", note: "# means Python ignores the rest of the line. Notes for humans." },
-      { task: 'Make a variable drone_name holding the text "junie".', answers: ['drone_name = "junie"'], chip: "VARIABLE", note: "name = value. No 'let', no 'var'. Just =." },
+      { teach: ["Every language needs a first word. In Python it is print() \u2014 it writes text to the screen."], task: 'Print the text: drone online', answers: ['print("drone online")'], out: ["drone online"], chip: "PRINT", note: "print() writes to the screen. Text goes in quotes." },
+      { teach: ["A line starting with # is a comment — Python ignores it completely. It is a note left for the next human, including future you."], task: "Write a comment that says: preflight check", answers: ["# preflight check", "#preflight check"], chip: "COMMENT", note: "# means Python ignores the rest of the line. Notes for humans." },
+      { teach: ["A variable is a labeled box. name = value stores value under that label — no 'let', no 'var', just =."], task: 'Make a variable drone_name holding the text "junie".', answers: ['drone_name = "junie"'], chip: "VARIABLE", note: "name = value. No 'let', no 'var'. Just =." },
       { task: "Make a variable battery holding the number 87.", answers: ["battery = 87"], chip: "NUMBER", note: "Numbers take no quotes. 87 is an int." },
-      { task: "Print the variable drone_name.", answers: ["print(drone_name)"], out: ["junie"], chip: "PRINT VAR", note: "No quotes — quotes would print the literal word drone_name." },
+      { teach: ["Print the CONTENTS of the box by using its name with no quotes. Quotes would print the literal word drone_name instead."], task: "Print the variable drone_name.", answers: ["print(drone_name)"], out: ["junie"], chip: "PRINT VAR", note: "No quotes — quotes would print the literal word drone_name." },
       { teach: ["input() asks the person at the keyboard a question and hands back whatever they type — always as text."],
         task: 'Ask the pilot their name with input, prompt "Name: ", store it in pilot.', answers: ['pilot = input("Name: ")', 'pilot = input("Name:")', 'pilot = input("name: ")'], out: ["Name: kaatje"], chip: "INPUT", note: "input() pauses, shows the prompt, returns whatever gets typed — always as text." },
       { teach: ["Not sure what kind of value you are holding? type() tells you: int, str, float, list…"],
         task: "Print the type of battery.", answers: ["print(type(battery))"], out: ["<class 'int'>"], chip: "TYPE", note: "type() tells you what a thing is: int, str, float, list…" },
-      { task: 'Print with an f-string: Battery at 87% — using the variable battery.', answers: ['print(f"Battery at {battery}%")'], out: ["Battery at 87%"], chip: "F-STRING", note: 'f"..." lets you drop variables into text with {curly braces}.' },
+      { teach: ['An f-string mixes text and variables: put an f before the quotes, wrap a variable name in {braces}, and Python swaps it for the value.'], task: 'Print with an f-string: Battery at 87% — using the variable battery.', answers: ['print(f"Battery at {battery}%")'], out: ["Battery at 87%"], chip: "F-STRING", note: 'f"..." lets you drop variables into text with {curly braces}.' },
       { teach: ["input() always gives TEXT — even \"42\" is text. int() converts text into a number you can do math with."],
         task: 'Convert the text "42" to a number and store it in crates.', answers: ['crates = int("42")'], chip: "INT()", note: "input() gives text. int() turns text into a number you can do math on." },
       { task: "Make a variable wind holding 3.5.", answers: ["wind = 3.5"], chip: "FLOAT", note: "Decimals are floats. Python figures the type out itself." }
@@ -3481,6 +3754,7 @@ const MODULES = [
   {
     id: "numstr", name: "NUMBERS + STRINGS",
     intro: "Math and text. The two things every program chews on.",
+    outro: "Numbers and text are second nature now. Next: logic — teaching Python to make decisions with if.",
     drills: [
       { teach: ["Math on variables works like math on numbers — Python fetches the stored value first."],
         task: "Add 5 to crates and store the result in total.", answers: ["total = crates + 5"], chip: "MATH", note: "+ - * / work as expected." },
@@ -3507,17 +3781,18 @@ const MODULES = [
   {
     id: "logic", name: "LOGIC",
     intro: "if / elif / else. The drone starts making decisions.",
+    outro: "Your programs can decide now. Next: loops — so they can decide the same thing many times without you repeating yourself.",
     drills: [
       { teach: ["An if runs its block only when the condition is True.", "The if line MUST end with a colon — and the block under it gets indented 4 spaces."],
         task: "Start an if: run when battery is below 20.", answers: ["if battery < 20:"], chip: "IF", note: "The colon : is mandatory. It announces an indented block below." },
-      { task: 'The line inside that if — print: Return to dock', answers: ['    print("Return to dock")'], indent: 4, chip: "INDENT", note: "Indentation IS the syntax in Python. 4 spaces = inside the if." },
-      { task: "Add an elif: battery below 50.", answers: ["elif battery < 50:"], chip: "ELIF", note: "elif = else-if. Checked only when the if above was False." },
-      { task: "Add the catch-all branch.", answers: ["else:"], chip: "ELSE", note: "else takes no condition. It's the 'everything else' bucket." },
+      { teach: ["Indentation is not decoration in Python \u2014 it IS the grammar. Four spaces means 'this line belongs to the if above'."], task: 'The line inside that if — print: Return to dock', answers: ['    print("Return to dock")'], indent: 4, chip: "INDENT", note: "Indentation IS the syntax in Python. 4 spaces = inside the if." },
+      { teach: ["elif means 'else, if'. It is only tested when the if above it was False \u2014 Python walks down the ladder and runs the FIRST branch that is True."], task: "Add an elif: battery below 50.", answers: ["elif battery < 50:"], chip: "ELIF", note: "elif = else-if. Checked only when the if above was False." },
+      { teach: ["else takes no condition \u2014 it is what runs when every branch above failed. It is always last."], task: "Add the catch-all branch.", answers: ["else:"], chip: "ELSE", note: "else takes no condition. It's the 'everything else' bucket." },
       { teach: ["Comparing needs a DOUBLE equals: == asks are-these-the-same. A single = would store instead."],
         task: 'Start an if: run when mode equals "auto".', answers: ['if mode == "auto":'], chip: "==", note: "== compares. A single = assigns. Mixing them up is the classic bug." },
       { teach: ["Conditions combine with plain words: and needs both sides True, or needs just one."],
         task: "Start an if: wind under 5 AND battery over 30.", answers: ["if wind < 5 and battery > 30:"], chip: "AND", note: "and, or, not — written as plain words." },
-      { task: "Start an if: run when raining is NOT true.", answers: ["if not raining:"], chip: "NOT", note: "not flips a boolean. Reads like English." },
+      { teach: ["not flips True to False and back. if not raining: reads like English \u2014 and is preferred over comparing to False."], task: "Start an if: run when raining is NOT true.", answers: ["if not raining:"], chip: "NOT", note: "not flips a boolean. Reads like English." },
       { teach: ["The word in asks whether something appears inside — works on strings and lists alike."],
         task: 'Start an if: run when "pest" appears in report.', answers: ['if "pest" in report:'], chip: "IN", note: '"x" in thing checks membership — inside strings and lists.' },
       { teach: ["True and False are Python\u0027s yes and no. Capital first letter, no quotes."],
@@ -3527,17 +3802,18 @@ const MODULES = [
   {
     id: "loops", name: "LOOPS",
     intro: "Doing things many times without typing them many times.",
+    outro: "Repetition is yours. Next: lists — the collections loops were built to walk through.",
     drills: [
       { teach: ["for i in range(5): repeats its block 5 times while i counts 0,1,2,3,4.", "Same shape as if: colon, then an indented block."],
         task: "Start a for loop: i counts 0 to 4.", answers: ["for i in range(5):"], chip: "FOR RANGE", note: "range(5) → 0,1,2,3,4. Five numbers, starts at 0, stops before 5." },
-      { task: "Inside it: print i.", answers: ["    print(i)"], indent: 4, chip: "LOOP BODY", note: "Everything indented under the for runs each pass." },
-      { task: "Start a for loop over the list field, each item called row.", answers: ["for row in field:"], chip: "FOR EACH", note: "Loops walk a list directly — no index juggling needed." },
+      { teach: ["Everything indented under the for line runs once per pass of the loop \u2014 the indent IS the body."], task: "Inside it: print i.", answers: ["    print(i)"], indent: 4, chip: "LOOP BODY", note: "Everything indented under the for runs each pass." },
+      { teach: ["for can walk a LIST directly — no counting needed. Each pass, the loop variable holds the next item."], task: "Start a for loop over the list field, each item called row.", answers: ["for row in field:"], chip: "FOR EACH", note: "Loops walk a list directly — no index juggling needed." },
       { teach: ["while repeats as long as its condition stays True — so something inside must eventually change it, or it loops forever."],
         task: "Start a while loop: keep going while battery is above 0.", answers: ["while battery > 0:"], chip: "WHILE", note: "while repeats until its condition turns False. Make sure it CAN." },
-      { task: "Inside it: lower battery by 1 (shorthand).", answers: ["    battery -= 1", "    battery = battery - 1"], indent: 4, chip: "-=", note: "battery -= 1 is short for battery = battery - 1." },
-      { task: "The statement that exits a loop immediately.", answers: ["break"], chip: "BREAK", note: "break jumps out of the nearest loop, done or not." },
-      { task: "The statement that skips to the next pass.", answers: ["continue"], chip: "CONTINUE", note: "continue skips the rest of this pass, loop keeps going." },
-      { task: "Start a for loop: r counts 1 through 8.", answers: ["for r in range(1, 9):"], chip: "RANGE(A,B)", note: "range(1, 9) → 1..8. The stop value is never included." },
+      { teach: ["battery -= 1 is shorthand for battery = battery - 1. Both do the same thing; the short form is what you\u2019ll see in real code."], task: "Inside it: lower battery by 1 (shorthand).", answers: ["    battery -= 1", "    battery = battery - 1"], indent: 4, chip: "-=", note: "battery -= 1 is short for battery = battery - 1." },
+      { teach: ["Sometimes a loop should stop early \u2014 found what you needed, no point continuing."], task: "The statement that exits a loop immediately.", answers: ["break"], chip: "BREAK", note: "break jumps out of the nearest loop, done or not." },
+      { teach: ["Different from break: continue does not stop the loop, it just skips the REST of this one pass and moves to the next."], task: "The statement that skips to the next pass.", answers: ["continue"], chip: "CONTINUE", note: "continue skips the rest of this pass, loop keeps going." },
+      { teach: ["range(1, 9) starts at 1 and stops BEFORE 9 — giving 1 through 8. The stop number is never included."], task: "Start a for loop: r counts 1 through 8.", answers: ["for r in range(1, 9):"], chip: "RANGE(A,B)", note: "range(1, 9) → 1..8. The stop value is never included." },
       { teach: ["enumerate() hands out pairs: the position AND the item. Two names before in catch them both."],
         task: "Loop over rows with both index and value: i, row.", answers: ["for i, row in enumerate(rows):"], chip: "ENUMERATE", note: "enumerate() hands you (index, item) pairs. Very Pythonic." }
     ]
@@ -3545,35 +3821,37 @@ const MODULES = [
   {
     id: "lists", name: "LISTS + DICTS",
     intro: "Collections. One name, many values.",
+    outro: "You can hold many values and look them up two ways — by position, by name. Next: funcs — naming a sequence of steps so you can reuse it.",
     drills: [
       { teach: ["A list holds many values in one variable, in order: square brackets, commas between."],
         task: 'Make a list crops holding "maize", "wheat", "beet".', answers: ['crops = ["maize", "wheat", "beet"]'], chip: "LIST", note: "Square brackets, commas between items." },
-      { task: 'Add "hops" to the end of crops.', answers: ['crops.append("hops")'], chip: "APPEND", note: ".append() bolts one item onto the end." },
+      { teach: [".append(x) grows a list by one, tacked on the end. It changes the list in place — no need to store the result."], task: 'Add "hops" to the end of crops.', answers: ['crops.append("hops")'], chip: "APPEND", note: ".append() bolts one item onto the end." },
       { teach: ["Grab one item by its position in brackets. Python counts from 0, so [0] is the FIRST item."],
         task: "Print the first item of crops.", answers: ["print(crops[0])"], out: ["maize"], chip: "INDEX 0", note: "Counting starts at 0. Always." },
-      { task: "Print the LAST item of crops.", answers: ["print(crops[-1])"], out: ["beet"], chip: "INDEX -1", note: "Negative indexes count from the back. -1 = last." },
-      { task: "Print how many items crops holds.", answers: ["print(len(crops))"], out: ["3"], chip: "LEN", note: "Same len() as strings." },
+      { teach: ["Negative indexes count from the back: [-1] is always the last item, whatever the list\u2019s length."], task: "Print the LAST item of crops.", answers: ["print(crops[-1])"], out: ["beet"], chip: "INDEX -1", note: "Negative indexes count from the back. -1 = last." },
+      { teach: ["len() works the same on lists as it does on strings \u2014 it counts what is inside."], task: "Print how many items crops holds.", answers: ["print(len(crops))"], out: ["3"], chip: "LEN", note: "Same len() as strings." },
       { teach: ["A dict stores values by LABEL instead of position: curly braces, key: value pairs."],
         task: 'Make a dict drone with "id" 7 and "battery" 87.', answers: ['drone = {"id": 7, "battery": 87}'], chip: "DICT", note: "Curly braces, key: value pairs. Labels instead of positions." },
-      { task: "Print the battery value from that dict.", answers: ['print(drone["battery"])'], out: ["87"], chip: "DICT GET", note: "Look things up by key, not position." },
-      { task: 'Set a new key "mode" to "auto" in drone.', answers: ['drone["mode"] = "auto"'], chip: "DICT SET", note: "Assign to a key that doesn't exist — it appears." },
-      { task: "Sort crops alphabetically, in place.", answers: ["crops.sort()"], chip: "SORT", note: ".sort() rearranges the list itself and returns nothing." },
-      { task: 'Remove "beet" from crops.', answers: ['crops.remove("beet")'], chip: "REMOVE", note: ".remove(x) deletes the first matching item." }
+      { teach: ["Dicts look up by LABEL, not position: drone[\"battery\"] reaches straight in by name."], task: "Print the battery value from that dict.", answers: ['print(drone["battery"])'], out: ["87"], chip: "DICT GET", note: "Look things up by key, not position." },
+      { teach: ["Assign to a key that does not exist yet and Python simply creates it — no separate 'add' step needed."], task: 'Set a new key "mode" to "auto" in drone.', answers: ['drone["mode"] = "auto"'], chip: "DICT SET", note: "Assign to a key that doesn't exist — it appears." },
+      { teach: [".sort() reorders the list itself and returns nothing \u2014 do not write crops = crops.sort(), it would store None."], task: "Sort crops alphabetically, in place.", answers: ["crops.sort()"], chip: "SORT", note: ".sort() rearranges the list itself and returns nothing." },
+      { teach: [".remove(value) deletes the first item that matches. Ask it to remove something not there and Python raises ValueError."], task: 'Remove "beet" from crops.', answers: ['crops.remove("beet")'], chip: "REMOVE", note: ".remove(x) deletes the first matching item." }
     ]
   },
   {
     id: "funcs", name: "FUNCTIONS",
     intro: "Name a block of code once, use it forever. This is where programs get big.",
+    outro: "You can name and reuse logic now — the biggest jump so far. Next: errors — what happens when the world does not cooperate, and how to survive it.",
     drills: [
       { teach: ["def names a block of code so you can run it whenever, as often as you like.", "Shape: def name(): — colon, then an indented body below."],
         task: "Define a function scan, no parameters.", answers: ["def scan():"], chip: "DEF", note: "def name(): — colon, then an indented body below." },
-      { task: 'Its body: return the text "clear".', answers: ['    return "clear"'], indent: 4, chip: "RETURN", note: "return hands a value back to whoever called the function." },
-      { task: "Call scan and store its result in report.", answers: ["report = scan()"], chip: "CALL", note: "Parentheses run it. Without () you're just naming it." },
-      { task: "Define spray taking one parameter, tile.", answers: ["def spray(tile):"], chip: "PARAM", note: "Parameters are the function's own local variables." },
+      { teach: ["return hands a value BACK to whoever called the function. It is not print \u2014 nothing appears on screen, the caller receives it instead."], task: 'Its body: return the text "clear".', answers: ['    return "clear"'], indent: 4, chip: "RETURN", note: "return hands a value back to whoever called the function." },
+      { teach: ["Parentheses RUN a function; without them you are only naming it. report = scan() calls it and catches what it returns."], task: "Call scan and store its result in report.", answers: ["report = scan()"], chip: "CALL", note: "Parentheses run it. Without () you're just naming it." },
+      { teach: ["A parameter is the function’s own input variable. Whatever the caller sends in becomes tile, just for that call."], task: "Define spray taking one parameter, tile.", answers: ["def spray(tile):"], chip: "PARAM", note: "Parameters are the function's own local variables." },
       { teach: ["A parameter can carry a fallback: steps=1 means callers may leave it out."],
         task: "Define move taking direction, and steps defaulting to 1.", answers: ['def move(direction, steps=1):'], chip: "DEFAULT", note: "steps=1 makes the argument optional." },
-      { task: 'Call move going "north" for 3 steps.', answers: ['move("north", 3)'], chip: "ARGS", note: "Arguments land in order: direction, then steps." },
-      { task: "Inside a function: return battery minus steps times 2.", answers: ["    return battery - steps * 2"], indent: 4, chip: "RETURN EXPR", note: "return can hold any expression — it's computed first." },
+      { teach: ["Arguments fill parameters in order: the first goes to direction, the second to steps."], task: 'Call move going "north" for 3 steps.', answers: ['move("north", 3)'], chip: "ARGS", note: "Arguments land in order: direction, then steps." },
+      { teach: ["return can hold a full expression \u2014 Python computes it first, then sends the result back."], task: "Inside a function: return battery minus steps times 2.", answers: ["    return battery - steps * 2"], indent: 4, chip: "RETURN EXPR", note: "return can hold any expression — it's computed first." },
       { teach: ["A Python ritual you will see everywhere — it marks: run the code below only when this file is executed directly."],
         task: "The guard line that runs main code only when the file is run directly.", answers: ['if __name__ == "__main__":'], chip: "MAIN GUARD", note: "Double underscores both sides. The classic Python entry point." }
     ]
@@ -3581,11 +3859,12 @@ const MODULES = [
   {
     id: "errors", name: "ERRORS + TRY/EXCEPT",
     intro: "You can read tracebacks. Now learn to catch them before they crash the drone.",
+    outro: "Your code can survive bad input now instead of crashing on it. Next: imports — borrowing tools other people already built.",
     drills: [
-      { task: "Open a block for code that might fail.", answers: ["try:"], chip: "TRY", note: "try: means — attempt this, and if it blows up, don't crash: jump to except." },
-      { task: 'Inside it: convert text to an int, store in number.', answers: ["    number = int(text)"], indent: 4, chip: "RISKY LINE", note: 'int("hello") raises ValueError. Inside try, that raise gets caught instead of crashing.' },
-      { task: "Catch specifically a ValueError.", answers: ["except ValueError:"], chip: "EXCEPT", note: "Catch the error you expect, by name. Capital V, capital E — it's case-sensitive." },
-      { task: 'Inside it: print not a number', answers: ['    print("not a number")'], indent: 4, chip: "RECOVERY", note: "This runs ONLY when the try block failed with that error. The program lives on." },
+      { teach: ["Some failures are not bugs \u2014 bad input, a missing file, a dead network. try: marks code that might fail so the program can survive it."], task: "Open a block for code that might fail.", answers: ["try:"], chip: "TRY", note: "try: means — attempt this, and if it blows up, don't crash: jump to except." },
+      { teach: ["This is the risky line. int() on text that is not a number raises ValueError \u2014 inside try, that raise gets caught instead of crashing."], task: 'Inside it: convert text to an int, store in number.', answers: ["    number = int(text)"], indent: 4, chip: "RISKY LINE", note: 'int("hello") raises ValueError. Inside try, that raise gets caught instead of crashing.' },
+      { teach: ["except names WHICH failure you expect. Catch the specific one \u2014 a bare except swallows your real bugs too, and you will hunt them blind."], task: "Catch specifically a ValueError.", answers: ["except ValueError:"], chip: "EXCEPT", note: "Catch the error you expect, by name. Capital V, capital E — it's case-sensitive." },
+      { teach: ["This is the recovery path \u2014 it runs ONLY when the try block failed. The program keeps going instead of dying."], task: 'Inside it: print not a number', answers: ['    print("not a number")'], indent: 4, chip: "RECOVERY", note: "This runs ONLY when the try block failed with that error. The program lives on." },
       { teach: ["except Exception: catches nearly ANY error — a safety net for surprises. Specific catches always go first."],
         task: "Catch any remaining error type (the broad net).", answers: ["except Exception:"], chip: "CATCH-ALL", note: "except Exception: catches nearly everything. Last resort — specific catches first." },
       { teach: ["finally: runs whether the try succeeded or exploded — for cleanup that must always happen."],
@@ -3597,14 +3876,15 @@ const MODULES = [
   {
     id: "imports", name: "IMPORTS",
     intro: "Python ships with batteries. import plugs them in.",
+    outro: "Python's toolbox is open to you. Next: files — making a program remember something after it ends.",
     drills: [
       { teach: ["Python ships with toolboxes called modules. import <name> plugs one into your program."],
         task: "Bring in the random module.", answers: ["import random"], chip: "IMPORT", note: "import loads a module — a toolbox of ready-made functions." },
-      { task: "Roll a die: random number 1 to 6, stored in roll.", answers: ["roll = random.randint(1, 6)"], chip: "RANDINT", note: "module.function() — the dot reaches into the toolbox. randint includes BOTH ends." },
-      { task: "Pick a random item from crops, store in pick.", answers: ["pick = random.choice(crops)"], chip: "CHOICE", note: "random.choice grabs one item from any list. Great for loot tables." },
-      { task: "Bring in the math module.", answers: ["import math"], chip: "IMPORT 2", note: "Same form, different toolbox." },
-      { task: "Print the square root of 16.", answers: ["print(math.sqrt(16))"], out: ["4.0"], chip: "SQRT", note: "Note the .0 — math.sqrt always returns a float." },
-      { task: "Print pi from the math module.", answers: ["print(math.pi)"], out: ["3.141592653589793"], chip: "MATH.PI", note: "Modules hold constants too, not just functions." },
+      { teach: ["module.function() \u2014 the dot reaches into the toolbox you imported. randint includes BOTH ends, unlike range()."], task: "Roll a die: random number 1 to 6, stored in roll.", answers: ["roll = random.randint(1, 6)"], chip: "RANDINT", note: "module.function() — the dot reaches into the toolbox. randint includes BOTH ends." },
+      { teach: ["random.choice() picks one item out of any list \u2014 loot tables, sample rows, a random server from a pool."], task: "Pick a random item from crops, store in pick.", answers: ["pick = random.choice(crops)"], chip: "CHOICE", note: "random.choice grabs one item from any list. Great for loot tables." },
+      { teach: ["Same form, a different toolbox. Each module is a separate collection of ready-made tools."], task: "Bring in the math module.", answers: ["import math"], chip: "IMPORT 2", note: "Same form, different toolbox." },
+      { teach: ["Watch the output carefully \u2014 math.sqrt always returns a float, so you get 4.0 and not 4."], task: "Print the square root of 16.", answers: ["print(math.sqrt(16))"], out: ["4.0"], chip: "SQRT", note: "Note the .0 — math.sqrt always returns a float." },
+      { teach: ["Modules hold constants too, not only functions \u2014 and math.pi has no parentheses because it is a value, not something to run."], task: "Print pi from the math module.", answers: ["print(math.pi)"], out: ["3.141592653589793"], chip: "MATH.PI", note: "Modules hold constants too, not just functions." },
       { teach: ["from module import thing pulls ONE tool out, so you call it bare — no module. prefix needed."],
         task: "Import ONLY randint from random.", answers: ["from random import randint"], chip: "FROM IMPORT", note: "from x import y — then you call randint() bare, no random. prefix." }
     ]
@@ -3612,20 +3892,22 @@ const MODULES = [
   {
     id: "files", name: "FILES",
     intro: "Programs that remember: reading and writing files.",
+    outro: "Your programs can read and write now — real persistence. Next: blueprint, so you know exactly how to start a brand new file from nothing.",
     drills: [
       { teach: ["open(\"name\") connects your program to a file on disk and hands back a file object to read from."],
         task: 'Open log.txt for reading, store the file object in f.', answers: ['f = open("log.txt")'], chip: "OPEN", note: 'open() with just a name reads. The file must exist or FileNotFoundError.' },
       { teach: ["with open(...) as f: opens AND guarantees closing, even when errors hit. The professional habit."],
         task: 'The safer way: open log.txt in a with-block, as f.', answers: ['with open("log.txt") as f:'], chip: "WITH", note: "with closes the file automatically when the block ends — even on errors. Always prefer it." },
-      { task: "Inside it: read the whole file into data.", answers: ["    data = f.read()"], indent: 4, chip: "READ", note: ".read() returns the entire file as one string." },
-      { task: "Loop over the open file f, one line at a time.", answers: ["for line in f:"], chip: "LINE LOOP", note: "Files are loopable — each pass hands you one line, memory-friendly for big files." },
-      { task: 'Open log.txt for WRITING, store in f.', answers: ['f = open("log.txt", "w")'], chip: "WRITE MODE", note: '"w" wipes and writes fresh. "a" appends instead. Choose carefully.' },
-      { task: 'Inside a with-block: write the text mission ok', answers: ['    f.write("mission ok")'], indent: 4, chip: "WRITE", note: ".write() puts text in — add your own \\n, it won't." },
-      { task: "Manually close the file f (the with-block does this for you).", answers: ["f.close()"], chip: "CLOSE", note: "Open files hold resources. with handles this; f.close() is the manual way." }
+      { teach: [".read() pulls the ENTIRE file into one string. Fine for a config, dangerous for a 2 GB log."], task: "Inside it: read the whole file into data.", answers: ["    data = f.read()"], indent: 4, chip: "READ", note: ".read() returns the entire file as one string." },
+      { teach: ["A file is loopable. This reads one line at a time instead of loading everything \u2014 the memory-safe way to handle big files."], task: "Loop over the open file f, one line at a time.", answers: ["for line in f:"], chip: "LINE LOOP", note: "Files are loopable — each pass hands you one line, memory-friendly for big files." },
+      { teach: ["The second argument is the mode. \"w\" WIPES the file before writing \u2014 silently and completely. \"a\" appends instead. Choose carefully."], task: 'Open log.txt for WRITING, store in f.', answers: ['f = open("log.txt", "w")'], chip: "WRITE MODE", note: '"w" wipes and writes fresh. "a" appends instead. Choose carefully.' },
+      { teach: [".write() puts text in exactly as given \u2014 it adds no newline, so lines need their own \\n."], task: 'Inside a with-block: write the text mission ok', answers: ['    f.write("mission ok")'], indent: 4, chip: "WRITE", note: ".write() puts text in — add your own \\n, it won't." },
+      { teach: ["Open files hold a system resource. A with-block closes automatically; this is the manual way, for when you opened without one."], task: "Manually close the file f (the with-block does this for you).", answers: ["f.close()"], chip: "CLOSE", note: "Open files hold resources. with handles this; f.close() is the manual way." }
     ]  },
   {
     id: "servers", name: "PYTHON ON SERVERS",
     intro: "venv, background processes, services. Where scripts stop being scripts and start being infrastructure.",
+    outro: "venv, screen, systemd, logging — the habits of code that runs unattended. Next: web, for talking to and serving over a network.",
     drills: [
       { teach: ["A venv (virtual environment) is a folder holding its OWN python and its own installed packages.",
                 "One venv per project — always. It keeps a tiny service and a multi-gigabyte ML stack from ever touching each other."],
@@ -3710,6 +3992,7 @@ const MODULES = [
   {
     id: "web", name: "PYTHON FOR THE WEB",
     intro: "Serving pages, building endpoints, calling APIs. The layer your n8n flows talk to.",
+    outro: "You can serve endpoints and call other people's APIs. From here: the workbook has real problems to solve, and academy has the deeper why behind everything drilled so far.",
     drills: [
       { teach: ["The fastest web server in existence: one command, serves the current folder over HTTP.",
                 "Perfect for testing a static page or letting another machine grab a file."],
@@ -4761,11 +5044,12 @@ function handle(raw) {
     return;
   }
   if (t === "menu" || t === "home") {
-    mode = "home"; field = null; bug = null; fcap = null; wcap = null; witch = null; sbBuf = []; showPane("term");
+    mode = "home"; field = null; bug = null; fcap = null; wcap = null; witch = null; ghost = null; forge = null; blk = null; wb = null; sbBuf = []; showPane("term");
     $("taskLbl").textContent = "";
     out.innerHTML = ""; showHome(); return;
   }
   if (t === "modules") { MODULES.forEach(m => line("  start " + m.id + "   " + m.name + " — " + m.intro, "c-dim")); return; }
+  if (t === "tour") { tourText(); return; }
   if (t === "quests" || t === "nav" || t === "progress") { questLog(); return; }
   if (t === "kata") {
     const ki = kataInfo();
@@ -4924,6 +5208,7 @@ function showHelp() {
   line("  hint               inside drills/forge: reveal the line shape", "c-dim");
   line("  theme <name>       verdant - paper - ember", "c-dim");
   line("  scroll             print your learned forms (handy on mobile)", "c-dim");
+  line("  tour               what Pyle contains and the order to use it", "c-dim");
   line("  quests             quest log: every module + mode with progress", "c-dim");
   line("  kata               today\u0027s daily program + your streak", "c-dim");
   line("  academy            fullscreen reading: the why behind the forms", "c-dim");
@@ -5163,6 +5448,22 @@ document.addEventListener("keydown", e => {
   if (e.key === "Escape" && acOpen) { closeAcademy(); return; }
   if (e.key === "Escape" && mode === "workbook") wbExit();
 });
+buildCatMenu();
+const catBtn = $("catBtn"), catMenu = $("catMenu");
+if (catBtn) catBtn.addEventListener("click", e => {
+  e.stopPropagation();
+  const open = !catMenu.classList.contains("on");
+  if (open) {
+    const r = catBtn.getBoundingClientRect();
+    catMenu.style.top = (r.bottom + 6) + "px";
+    catMenu.style.left = Math.max(8, Math.min(r.left, window.innerWidth - 260)) + "px";
+  }
+  catMenu.classList.toggle("on", open);
+});
+if (catMenu) catMenu.addEventListener("click", e => e.stopPropagation());
+window.addEventListener("resize", () => { if (catMenu) catMenu.classList.remove("on"); });
+document.addEventListener("keydown", e => { if (e.key === "Escape" && catMenu) catMenu.classList.remove("on"); });
+document.addEventListener("click", () => { if (catMenu) catMenu.classList.remove("on"); });
 const qb = $("qbtn");
 if (qb) qb.addEventListener("click", () => { questLog(); cmd.focus(); });
 const themeRowEl = $("themeRow");
