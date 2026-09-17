@@ -18,6 +18,33 @@ function netCalc(ip, bits){
     mask: intToIp(mask)
   };
 }
+function subnetSteps(ip, bits){
+  var octIdx = Math.floor(bits / 8);
+  var r = bits % 8;
+  var octets = ip.split(".").map(Number);
+  if(r === 0){
+    // Prefix lands exactly on an octet boundary — no partial-byte math needed.
+    var fixed = octets.slice(0, octIdx).join(".");
+    return {
+      aligned: true,
+      octIdx: octIdx,
+      text: "/" + bits + " lands exactly on an octet boundary: the first " + octIdx +
+        " octet" + (octIdx === 1 ? "" : "s") + " (" + (fixed || "\u2014") + ") are fully network, " +
+        "and everything after is fully host \u2014 the whole last octet, 0 to 255, is address space with no partial-byte math."
+    };
+  }
+  var step = Math.pow(2, 8 - r);
+  var maskByte = 256 - step;
+  var blockStart = Math.floor(octets[octIdx] / step) * step;
+  return {
+    aligned: false,
+    octIdx: octIdx, step: step, maskByte: maskByte, blockStart: blockStart,
+    text: "The mask boundary falls inside octet " + (octIdx + 1) + " (counting from 1), giving it the value ." + maskByte +
+      ". Magic number: 256 \u2212 " + maskByte + " = " + step + " \u2014 blocks in that octet step by " + step + ": " +
+      [0, step, step * 2, step * 3].filter(function(n){ return n < 256; }).map(function(n){ return "." + n; }).join(", ") + " \u2026\n" +
+      "." + octets[octIdx] + " falls in the block starting at ." + blockStart + ", so that block is the network."
+  };
+}
 function subnetDrillQ(){
   var bits = 22 + Math.floor(Math.random() * 8);
   var ip = [10 + Math.floor(Math.random() * 180), Math.floor(Math.random() * 256), Math.floor(Math.random() * 256), 1 + Math.floor(Math.random() * 254)].join(".");
@@ -1169,6 +1196,295 @@ var PROTO_GUIDES = [
         why: "LLDP operates below the configuration that carries user traffic. A perfectly cabled link with the wrong VLAN membership shows a healthy neighbour and moves no data. It maps cabling, not correctness." },
     ],
   },
+  {
+    id: "cabling",
+    title: "Cabling & Media — the physical layer",
+    tag: "Network+ · fundamentals",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: ["Half of all network faults are physical, and the physical layer is the one part you cannot fix from the CLI.",
+             "Network+ tests this hard because it is where the money and the mistakes live: the wrong cable over the wrong distance fails intermittently rather than cleanly, which is the worst failure mode there is.",
+             "Know the categories, the distances, and the connectors, and you can diagnose from the rack instead of guessing from the terminal."],
+      svg: "cabling-problem"
+    },
+    how: {
+      text: ["COPPER, twisted pair: Cat5e carries 1 Gbps, Cat6 does 1 Gbps at 100 m or 10 Gbps up to 55 m, Cat6a does 10 Gbps for the full 100 m. That 100 m limit is the number the exam loves — it is the total channel including patch cords.",
+             "Twisted pair comes as UTP (unshielded, normal) or STP/shielded for electrically noisy environments. Terminations follow T568A or T568B — pick one and stay consistent; matching both ends gives a straight-through cable, mixing them gives a crossover, though modern gear auto-negotiates with Auto-MDIX.",
+             "FIBER: single-mode (SMF, yellow jacket, a tiny 9-micron core, a laser source) goes tens of kilometres — the datacenter interconnect and carrier choice. Multi-mode (MMF, aqua or orange, 50/62.5-micron core, LED or VCSEL) is cheaper but limited to hundreds of metres. Connectors you must recognise: LC (small, duplex, the modern default), SC (square, push-pull), ST (round, bayonet), and MPO/MTP for high-density 40/100G breakouts.",
+             "TRANSCEIVERS: SFP (1G), SFP+ (10G), QSFP+ (40G), QSFP28 (100G). They are hot-swappable modules, and mismatching transceiver type to fiber type is a classic silent failure — the link either never comes up or comes up and drops."]
+    },
+    nums: [
+      ["100 m", "Maximum twisted-pair channel length — the single most-tested number"],
+      ["Cat5e / Cat6 / Cat6a", "1 Gbps / 10 Gbps at 55 m / 10 Gbps at 100 m"],
+      ["SMF vs MMF", "Single-mode: 9 micron core, laser, tens of km. Multi-mode: 50 or 62.5 micron, LED, hundreds of m"],
+      ["LC · SC · ST · MPO", "Fiber connectors: small duplex, square push-pull, round bayonet, high-density ribbon"],
+      ["SFP · SFP+ · QSFP28", "1G · 10G · 100G transceiver form factors"],
+      ["T568A / T568B", "Pin-out standards — same at both ends is straight-through, mixed is crossover"]
+    ],
+    real: [
+      "In your own datacenter work, the physical layer is where the intermittent faults hide: a marginal patch cord passes a link test and then drops under load. The lab's gremlin feature simulates exactly this — climbing error counters with the link still showing up.",
+      "Worth doing on the bench: read show interfaces extensive on a real EX4300 port and find the error counters. Those numbers are your physical-layer evidence."
+    ],
+    verify: [
+      ["show interfaces extensive", "Input errors and CRC counters climbing on an up link means a physical problem, not a config one"],
+      ["check the transceiver and the fiber type match", "An SMF transceiver on MMF fiber (or vice versa) is a silent, maddening failure"],
+      ["measure the run, including patch cords", "Over 100 m on copper is not a maybe — it is the cause"]
+    ],
+    breaks: [
+      "Exceeding 100 m on copper and blaming the switch — the symptom is intermittent loss, not a dead link.",
+      "Mixing single-mode and multi-mode on the same run, or mismatching the transceiver to the fiber.",
+      "Running unshielded copper alongside power cabling or through a machine room, then chasing ghosts in the config.",
+      "Assuming a link light means a healthy cable — a marginal cable links up and then throws CRC errors under real traffic.",
+      "Trusting the cable label over what the port actually reports."
+    ],
+    answer: "The physical layer is where roughly half of real faults originate and it cannot be fixed from the CLI. Copper twisted pair runs to 100 metres total channel, with Cat5e at 1 Gbps, Cat6 reaching 10 Gbps only to 55 metres, and Cat6a doing 10 Gbps for the full run. Fiber splits into single-mode for long distances with a laser and a 9-micron core, and multi-mode for shorter cheaper runs, terminated in LC, SC, ST or MPO connectors and driven by SFP, SFP+ or QSFP transceivers that must match the fiber type. The diagnostic habit is to read interface error counters: a link that is up while CRC errors climb is a physical problem wearing a configuration disguise.",
+    quiz: [
+      { q: "A 10 Gbps link over Cat6 runs 80 metres and behaves erratically. Most likely cause?",
+        opts: ["Faulty switch port", "Cat6 only supports 10 Gbps to 55 m — the run is too long for that speed", "Wrong VLAN"],
+        right: 1,
+        why: "Cat6 does 1 Gbps at the full 100 m but only 10 Gbps up to 55 m. At 80 m you need Cat6a. Erratic rather than dead is the signature of a marginal physical run." },
+      { q: "Which fiber type and connector pair would you expect on a long-haul carrier interconnect?",
+        opts: ["Multi-mode with ST", "Single-mode with LC", "Cat6a with RJ45"],
+        right: 1,
+        why: "Single-mode carries tens of kilometres, and LC is the modern compact duplex connector used on nearly all current transceivers. Multi-mode is for short in-building runs." },
+      { q: "A link shows up on both ends, but input errors climb steadily under load. What layer is the problem?",
+        opts: ["Layer 3 — routing", "Layer 1 — physical: a marginal cable, connector or transceiver", "Layer 2 — VLAN mismatch"],
+        right: 1,
+        why: "Link state proves the electrical or optical signal exists; error counters prove it is degraded. Configuration problems do not create CRC errors. Replace the cable or transceiver before touching the config." },
+    ],
+  },
+  {
+    id: "wireless",
+    title: "Wireless — 802.11 in practice",
+    tag: "Network+ · implementation",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: ["Wireless is a shared, half-duplex, interference-prone medium pretending to be a cable, and users judge the entire network by it.",
+             "Most bad Wi-Fi is not a coverage problem, it is a CHANNEL problem: too many access points shouting over each other on overlapping channels.",
+             "Network+ tests the standards, the bands, and the channel planning rules — all three show up in real deployments immediately."],
+      svg: "wireless-problem"
+    },
+    how: {
+      text: ["The standards, in order: 802.11n (Wi-Fi 4, both bands), 802.11ac (Wi-Fi 5, 5 GHz only), 802.11ax (Wi-Fi 6/6E, both bands plus 6 GHz), 802.11be (Wi-Fi 7). Each adds throughput and efficiency, but the band matters more than the letter in daily life.",
+             "2.4 GHz: better range and wall penetration, but only THREE non-overlapping channels — 1, 6 and 11 — and it shares space with microwaves, Bluetooth and everything else. 5 GHz: far more non-overlapping channels, more throughput, shorter range. 6 GHz (Wi-Fi 6E) adds even more clean spectrum.",
+             "Channel planning is the discipline: neighbouring APs must not share a channel or overlap. On 2.4 GHz that means a strict 1-6-11 pattern. Widening channels (40, 80, 160 MHz) buys throughput but consumes the spectrum that separation needs — wide channels on 2.4 GHz are self-defeating.",
+             "Security has a clear ladder: WEP is broken, WPA2 with AES is the acceptable minimum, WPA3 is current. Enterprise deployments use 802.1X with a RADIUS server so each user authenticates individually rather than sharing one passphrase."]
+    },
+    nums: [
+      ["1, 6, 11", "The only non-overlapping 2.4 GHz channels — the channel-plan rule"],
+      ["2.4 / 5 / 6 GHz", "Range and penetration / throughput and channels / clean new spectrum (Wi-Fi 6E)"],
+      ["802.11n / ac / ax / be", "Wi-Fi 4 / 5 / 6 and 6E / 7"],
+      ["WPA2-AES minimum, WPA3 current", "WEP and TKIP are dead — the exam expects you to say so"],
+      ["802.1X + RADIUS", "Enterprise authentication: per-user credentials instead of a shared passphrase"],
+      ["-67 dBm", "A common minimum signal target for reliable voice or video coverage"]
+    ],
+    real: [
+      "This is directly your UniFi work: the 3D coverage map and AP placement exercise is exactly channel planning plus signal targets made visual.",
+      "In a datacenter, wireless is for staff and management convenience — never for production traffic. Know the distinction when asked."
+    ],
+    verify: [
+      ["survey before and after", "A site survey or heat map is the evidence; guessing AP placement is how you get complaints"],
+      ["check channel assignments on neighbouring APs", "Two adjacent APs on the same 2.4 GHz channel halve each other's capacity"],
+      ["check signal strength at the edge of coverage", "Weak signal and channel contention produce the same user complaint and need different fixes"]
+    ],
+    breaks: [
+      "Using 2.4 GHz channels other than 1, 6 and 11 — anything else overlaps and degrades neighbours.",
+      "Turning AP transmit power to maximum, which extends interference further than usable coverage and breaks roaming.",
+      "Wide channels on 2.4 GHz, consuming the little spectrum that separation depends on.",
+      "Blaming coverage when the real problem is co-channel contention — adding another AP makes it worse.",
+      "Leaving WPA2-TKIP or WEP in place on legacy SSIDs."
+    ],
+    answer: "Wireless is a shared half-duplex medium, so capacity depends on channel planning as much as coverage. The 2.4 GHz band gives better range but only three non-overlapping channels, 1, 6 and 11, while 5 GHz and the 6 GHz band added by Wi-Fi 6E give far more channels and throughput at shorter range. The standards run 802.11n, ac, ax and be as Wi-Fi 4 through 7. Security should be WPA2 with AES at minimum and WPA3 where available, with 802.1X and RADIUS for per-user enterprise authentication. The common diagnostic mistake is treating co-channel interference as a coverage problem and adding more access points, which makes it worse.",
+    quiz: [
+      { q: "Users complain about slow Wi-Fi in an open-plan office with six APs, all on 2.4 GHz channel 6. Best first action?",
+        opts: ["Add more access points", "Re-plan channels across 1, 6 and 11", "Increase transmit power"],
+        right: 1,
+        why: "Six APs on one channel means they all contend for the same airtime. More APs or more power worsens contention. Channel separation is the fix, and it costs nothing." },
+      { q: "Why does 2.4 GHz have only three usable channels?",
+        opts: ["Regulatory limits on power", "The channels overlap in frequency; only 1, 6 and 11 are far enough apart not to interfere", "Older hardware limitations"],
+        right: 1,
+        why: "The band's channels are spaced closer than their actual width, so adjacent numbers bleed into each other. Only 1, 6 and 11 are separated enough to coexist cleanly." },
+      { q: "An enterprise wants each employee to authenticate with their own credentials on Wi-Fi. What is required?",
+        opts: ["WPA3 personal with a strong passphrase", "802.1X with a RADIUS server", "A separate SSID per user"],
+        right: 1,
+        why: "Personal or pre-shared-key modes share one secret among everyone. 802.1X with RADIUS authenticates each user individually, which also lets you revoke one person without changing everyone's config." },
+    ],
+  },
+  {
+    id: "netsec",
+    title: "Network Security — concepts and defences",
+    tag: "Network+ · security",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: ["Network+ devotes a whole domain to security, and it is the part most likely to appear in your actual job description regardless of title.",
+             "The exam is not asking you to be a penetration tester. It wants the vocabulary, the common attacks, and the standard defences — the things a network engineer is expected to recognise and configure.",
+             "You already build one of these defences in this lab: firewall filters are access control at layer 3."],
+      svg: "netsec-problem"
+    },
+    how: {
+      text: ["The framing is the CIA triad: Confidentiality (only the right people can read it), Integrity (it was not altered), Availability (it is actually reachable). Every control maps to one or more of these, and exam questions often hinge on naming which one an attack violates.",
+             "AAA describes access control: Authentication (who are you), Authorization (what may you do), Accounting (what did you do). RADIUS and TACACS+ are the protocols that deliver it — TACACS+ separates the three and is Cisco-originated, RADIUS combines authentication and authorization and is the wireless and general standard.",
+             "Common attacks worth recognising: ARP spoofing and MAC flooding at layer 2, DHCP starvation and rogue DHCP servers, VLAN hopping, on-path (formerly man-in-the-middle) attacks, DoS and DDoS, and social engineering, which is still the most effective of the lot.",
+             "Standard defences at the switch: port security limiting MAC addresses per port, DHCP snooping to block rogue servers, dynamic ARP inspection, disabling unused ports, and 802.1X for port-based authentication. Above that sit firewalls, ACLs, network segmentation, and VPNs — IPsec for site-to-site tunnels, TLS-based VPNs for remote users."]
+    },
+    nums: [
+      ["CIA", "Confidentiality, Integrity, Availability — the framing for every control"],
+      ["AAA", "Authentication, Authorization, Accounting"],
+      ["RADIUS vs TACACS+", "Combines authn and authz, UDP, wireless standard / separates all three, TCP, device administration"],
+      ["802.1X", "Port-based network access control — authenticate before the port carries traffic"],
+      ["IPsec / TLS", "Site-to-site tunnels / remote-access and application encryption"],
+      ["defence in depth", "Layered controls, so one failure does not become a breach"]
+    ],
+    real: [
+      "Your access-control and M365 work is AAA in practice — the same vocabulary, applied to identity systems instead of switch ports.",
+      "The firewall-filters guide in this lab is the hands-on version of the ACL concepts here: terms, match conditions, and an implicit deny at the end."
+    ],
+    verify: [
+      ["check what is applied, not what is configured", "A filter, ACL or port-security policy that exists but is not applied to an interface protects nothing"],
+      ["test from the attacker's position", "Prove isolation by trying to reach what should be blocked, not by reading the config"],
+      ["audit unused ports", "Disabled unused ports and no default VLAN membership is basic hygiene the exam expects"]
+    ],
+    breaks: [
+      "Confusing authentication with authorization — proving who you are is not the same as being allowed to act.",
+      "Treating a firewall as the only control, so anything that gets inside moves freely — the flat-network failure.",
+      "Leaving default credentials or unused ports live in the default VLAN.",
+      "Assuming a VPN encrypts everything — split tunnelling means some traffic bypasses it entirely.",
+      "Forgetting that social engineering bypasses every technical control on this list."
+    ],
+    answer: "Network security is framed by the CIA triad — confidentiality, integrity and availability — and access is governed by AAA: authentication, authorization and accounting, delivered by RADIUS or TACACS+. The attacks a network engineer is expected to recognise include ARP spoofing and MAC flooding at layer 2, rogue DHCP servers, VLAN hopping, on-path interception and denial of service. The standard defences are layered: port security, DHCP snooping, dynamic ARP inspection and 802.1X on the access switch, then segmentation, firewall rules and ACLs, with IPsec or TLS VPNs protecting traffic in transit. The recurring practical mistake is a control that is configured but never applied, which protects nothing.",
+    quiz: [
+      { q: "An attacker floods a switch with fake MAC addresses until its table overflows and it begins flooding frames to all ports. Which attack, and which part of CIA does it primarily attack?",
+        opts: ["ARP spoofing — integrity", "MAC flooding — confidentiality, since traffic becomes visible to the attacker", "DDoS — availability"],
+        right: 1,
+        why: "Overflowing the MAC table forces the switch to flood, so the attacker sees traffic meant for others. That is a confidentiality breach. Port security limiting MACs per port is the standard defence." },
+      { q: "What is the difference between authentication and authorization?",
+        opts: ["They are the same thing", "Authentication proves identity; authorization decides what that identity may do", "Authorization happens first"],
+        right: 1,
+        why: "A valid login proves who you are. What you may then read, change or configure is a separate decision — which is exactly why login classes exist on Junos." },
+      { q: "Which control specifically prevents a rogue DHCP server from handing out bad gateways?",
+        opts: ["Port security", "DHCP snooping", "802.1X"],
+        right: 1,
+        why: "DHCP snooping marks ports as trusted or untrusted and drops server-type DHCP messages arriving on untrusted ports. Port security limits MAC addresses; 802.1X authenticates the device." },
+    ],
+  },
+  {
+    id: "cloudwan",
+    title: "Cloud, Virtualization & WAN",
+    tag: "Network+ · concepts",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: ["Network+ assumes modern networks reach beyond the building, and that a growing share of the infrastructure is someone else's hardware.",
+             "This domain is vocabulary-heavy and concept-light, which makes it free marks if you learn the definitions and easy marks lost if you skip it.",
+             "It also describes your daily reality: a datacenter sells connectivity and hosts virtualized workloads for other people."],
+      svg: "cloudwan-problem"
+    },
+    how: {
+      text: ["CLOUD SERVICE MODELS: IaaS gives you virtual machines and networking and you manage the OS upward. PaaS gives you a platform to deploy code onto, with the OS managed for you. SaaS gives you the finished application. The exam's shortcut: the more letters toward SaaS, the less you manage.",
+             "DEPLOYMENT MODELS: public (shared provider infrastructure), private (dedicated to one organisation), hybrid (both, connected), and community (shared by related organisations). Connectivity to cloud is either over the internet with a VPN, or via a dedicated private circuit for predictable performance.",
+             "VIRTUALIZATION: a hypervisor runs multiple virtual machines on one physical host. Type 1 runs directly on the hardware (datacenter standard), Type 2 runs on top of an existing OS (a laptop). Virtual switches connect VMs to each other and to the physical network. Containers go further, sharing the host kernel and packaging only the application.",
+             "WAN: connections between sites. MPLS provides carrier-managed, labelled paths with quality guarantees. SD-WAN uses software to steer traffic across cheaper links, often replacing MPLS. Point-to-point leased lines, broadband and cellular fill the rest. Dedicated Internet Access, which this lab covers hands-on, is the uncontended product a datacenter sells."]
+    },
+    nums: [
+      ["IaaS · PaaS · SaaS", "You manage OS upward / you deploy code / you just use the app"],
+      ["public · private · hybrid · community", "The four deployment models"],
+      ["Type 1 vs Type 2 hypervisor", "Bare metal (datacenter) vs hosted on an existing OS (desktop)"],
+      ["MPLS vs SD-WAN", "Carrier-managed labelled paths with SLAs vs software-steered traffic over cheaper links"],
+      ["DIA", "Dedicated Internet Access — uncontended bandwidth with an SLA"],
+      ["containers vs VMs", "Share the host kernel, package the app / full guest OS per instance"]
+    ],
+    real: [
+      "This is DCU's product line described in exam vocabulary: colocation, DIA, and interconnects are exactly what this domain calls WAN services and dedicated connectivity.",
+      "Your Docker and Portainer work is the container side of this guide — the same concepts the exam asks about abstractly."
+    ],
+    verify: [
+      ["name who manages what", "The fastest way to tell IaaS from PaaS from SaaS in an exam question is to ask where the boundary of your responsibility sits"],
+      ["ask contended or dedicated", "Broadband is shared; DIA and leased lines are not. This distinction drives both price and SLA"],
+      ["check the path, not just the destination", "Cloud reachability problems are usually the connection method — VPN, direct circuit, or plain internet"]
+    ],
+    breaks: [
+      "Mixing up PaaS and IaaS — if you patch the operating system, it is IaaS.",
+      "Assuming hybrid cloud means two providers; it means private plus public, connected.",
+      "Treating SD-WAN as a replacement for having any WAN circuit at all — it steers traffic across circuits, it does not create them.",
+      "Confusing a virtual switch with a physical one when troubleshooting VM connectivity; the fault is often inside the host.",
+      "Selling or buying broadband where the customer expects DIA performance, then being surprised by contention."
+    ],
+    answer: "Cloud is described by service model and deployment model: IaaS gives virtual infrastructure you manage from the operating system upward, PaaS gives a managed platform for your code, and SaaS gives a finished application, deployed publicly, privately, as a hybrid or shared by a community. Virtualization underneath uses a hypervisor, Type 1 on bare metal in datacenters and Type 2 hosted on an existing OS, with virtual switches connecting VMs and containers sharing the host kernel instead of running full guest operating systems. On the WAN side, MPLS offers carrier-managed paths with guarantees, SD-WAN steers traffic across cheaper links in software, and Dedicated Internet Access provides uncontended bandwidth with an SLA, as opposed to shared broadband.",
+    quiz: [
+      { q: "You rent virtual machines and are responsible for patching their operating systems. Which service model?",
+        opts: ["SaaS", "IaaS", "PaaS"],
+        right: 1,
+        why: "Responsibility for the OS is the dividing line. IaaS gives you infrastructure and leaves the OS to you. PaaS would manage the OS so you only deploy code; SaaS would give you the finished application." },
+      { q: "What distinguishes a Type 1 hypervisor from a Type 2?",
+        opts: ["Type 1 supports more VMs", "Type 1 runs directly on the hardware; Type 2 runs on top of an existing operating system", "Type 2 is faster"],
+        right: 1,
+        why: "Type 1 is bare metal and standard in datacenters because it removes the host OS layer. Type 2 runs as an application on a normal desktop OS, which is convenient but adds overhead." },
+      { q: "A customer buys business broadband and complains that throughput drops every evening. What did they actually need?",
+        opts: ["A faster router", "Dedicated Internet Access — uncontended bandwidth with an SLA", "A VPN"],
+        right: 1,
+        why: "Broadband is contended: you share capacity with other subscribers, and evenings are peak. DIA reserves bandwidth end to end and backs it with a service level agreement, which is why it costs more." },
+    ],
+  },
+  {
+    id: "troubleshooting",
+    title: "Troubleshooting Methodology",
+    tag: "Network+ · troubleshooting",
+    ready: true,
+    conceptual: true,
+    problem: {
+      text: ["Troubleshooting is the largest domain on Network+, and the exam tests a specific seven-step method, in order, by name.",
+             "It is also the skill that separates engineers who fix things from engineers who change things until the symptom moves.",
+             "You already practise the doing half in this lab's tickets. This guide gives it the structure the exam wants and real incidents reward."],
+      svg: "troubleshooting-problem"
+    },
+    how: {
+      text: ["The seven steps: 1) Identify the problem — gather information, question users, determine what changed. 2) Establish a theory of probable cause, questioning the obvious first. 3) Test the theory. If it is wrong, form a new one; if it is right, move on. 4) Establish a plan of action and identify potential effects.",
+             "5) Implement the solution, or escalate if it is beyond your authority or scope. 6) Verify full system functionality and, where possible, implement preventive measures. 7) Document findings, actions and outcomes.",
+             "Two steps get skipped in real life and punished on the exam: verifying FULL functionality (not just the reported symptom) and DOCUMENTING. Both are explicitly tested.",
+             "Alongside the method sits the divide-and-conquer habit: work the OSI layers deliberately. Confirm the physical link, then layer 2 adjacency, then layer 3 reachability, then the application. Each answer halves the remaining suspects, which is why 'what changed recently' is the single most valuable question you can ask."]
+    },
+    nums: [
+      ["7 steps", "Identify, theorise, test, plan, implement or escalate, verify, document"],
+      ["step 6", "Verify FULL functionality — not just the one symptom reported"],
+      ["step 7", "Document — explicitly tested, routinely skipped"],
+      ["'what changed?'", "The highest-yield question in any incident"],
+      ["divide and conquer", "Work the layers; each answer halves the suspect list"]
+    ],
+    real: [
+      "The senior incident mode in this lab is built for exactly this: three faults at once mean fixing one may change nothing visible, which punishes guessing and rewards systematic layer elimination.",
+      "In a real major incident the discipline that saves you is re-testing after every single change, one change at a time."
+    ],
+    verify: [
+      ["reproduce before you fix", "A fault you cannot reproduce is a fault you cannot prove you fixed"],
+      ["change one thing at a time", "Two simultaneous changes make the result uninterpretable"],
+      ["re-test everything, not just the complaint", "Step 6 exists because fixes create new faults"]
+    ],
+    breaks: [
+      "Jumping to a solution before identifying the problem — fixing the wrong thing convincingly.",
+      "Changing several things at once, so you never learn which one mattered.",
+      "Declaring victory when the reported symptom clears, without checking the rest of the system.",
+      "Never documenting, so the next person, possibly you, starts from zero.",
+      "Not asking what changed recently — the crime scene is usually the most recent commit."
+    ],
+    answer: "The method is seven ordered steps: identify the problem by gathering information and asking what changed, establish a theory of probable cause, test that theory, establish a plan of action with its likely effects, implement the fix or escalate, verify full system functionality and add preventive measures, and finally document everything. Underneath it runs a divide-and-conquer habit of working the OSI layers in order, since each confirmed layer halves the remaining suspects. The two steps most often skipped in practice and most reliably tested are verifying the whole system rather than the reported symptom, and documenting the outcome.",
+    quiz: [
+      { q: "You have a theory, you test it, and it turns out to be wrong. What does the methodology say to do next?",
+        opts: ["Implement a fix anyway and observe", "Establish a new theory, or escalate", "Restart the affected devices"],
+        right: 1,
+        why: "A disproven theory sends you back to step 2, not forward to step 5. Implementing a fix for a cause you have disproven is how one fault becomes two." },
+      { q: "A user's reported problem is resolved. According to the methodology, what comes before documenting?",
+        opts: ["Close the ticket", "Verify full system functionality and implement preventive measures", "Inform management"],
+        right: 1,
+        why: "Step 6 requires checking that the whole system works, not just the symptom that was reported, and adding prevention where possible. Documentation is step 7, after that verification." },
+      { q: "Which question most reliably shortens an incident?",
+        opts: ["Who reported it?", "What changed recently?", "How many users are affected?"],
+        right: 1,
+        why: "Networks that worked and then stopped usually did so because something changed. Recent changes are the highest-probability cause, which is why commit history and change logs are the first place to look." },
+    ],
+  },
 ];
 
 var protoView = { page: "list", guide: null };
@@ -1295,6 +1611,58 @@ function protoSvg(kind){
     box(370, 30, 150, "file system") +
     '<text x="445" y="80" fill="var(--dim)">/config \u00b7 /var/tmp</text>' +
     '<text x="280" y="120" fill="var(--amber)">boring on paper \u00b7 priceless at 3 AM at a remote site</text>' + close;
+  if(kind === "cabling-problem") return open +
+    '<text x="130" y="28" fill="var(--text)">COPPER (twisted pair)</text>' +
+    '<line x1="40" y1="52" x2="220" y2="52" stroke="var(--amber)" stroke-width="3"/>' +
+    '<text x="130" y="72">Cat5e 1G \u00b7 Cat6 10G@55m \u00b7 Cat6a 10G@100m</text>' +
+    '<text x="130" y="92" fill="var(--red)">hard limit: 100 m</text>' +
+    '<text x="420" y="28" fill="var(--text)">FIBER</text>' +
+    '<line x1="320" y1="52" x2="520" y2="52" stroke="var(--green)" stroke-width="3"/>' +
+    '<text x="420" y="72">single-mode: 9\u00b5m, laser, tens of km</text>' +
+    '<text x="420" y="92">multi-mode: 50\u00b5m, LED, hundreds of m</text>' +
+    '<text x="280" y="126" fill="var(--dim)">LC \u00b7 SC \u00b7 ST \u00b7 MPO connectors  |  SFP 1G \u00b7 SFP+ 10G \u00b7 QSFP28 100G</text>' + close;
+  if(kind === "wireless-problem") return open +
+    '<circle cx="120" cy="70" r="42" fill="none" stroke="var(--red)" stroke-dasharray="4 3"/>' +
+    '<circle cx="190" cy="70" r="42" fill="none" stroke="var(--red)" stroke-dasharray="4 3"/>' +
+    '<text x="155" y="26" fill="var(--red)">same channel = contention</text>' +
+    '<text x="155" y="132" fill="var(--red)">both APs on ch 6</text>' +
+    '<circle cx="370" cy="70" r="40" fill="none" stroke="var(--green)"/>' +
+    '<circle cx="465" cy="70" r="40" fill="none" stroke="var(--green)"/>' +
+    '<text x="370" y="74" fill="var(--green)">ch 1</text>' +
+    '<text x="465" y="74" fill="var(--green)">ch 6</text>' +
+    '<text x="418" y="26" fill="var(--green)">separated channels</text>' +
+    '<text x="418" y="132" fill="var(--green)">2.4 GHz: only 1, 6, 11</text>' + close;
+  if(kind === "netsec-problem") return open +
+    '<path d="M280 20 L330 42 L330 80 Q330 108 280 124 Q230 108 230 80 L230 42 Z" fill="none" stroke="var(--green)" stroke-width="1.5"/>' +
+    '<text x="280" y="62" fill="var(--green)">C I A</text>' +
+    '<text x="280" y="82" fill="var(--dim)">confidentiality</text>' +
+    '<text x="280" y="98" fill="var(--dim)">integrity \u00b7 availability</text>' +
+    '<text x="95" y="50" fill="var(--text)">AAA</text>' +
+    '<text x="95" y="70">authentication</text><text x="95" y="86">authorization</text><text x="95" y="102">accounting</text>' +
+    '<text x="470" y="50" fill="var(--text)">defences</text>' +
+    '<text x="470" y="70">port security \u00b7 802.1X</text><text x="470" y="86">DHCP snooping \u00b7 ACLs</text><text x="470" y="102">segmentation \u00b7 VPN</text>' + close;
+  if(kind === "cloudwan-problem") return open +
+    box(30, 40, 90, "IaaS") + box(140, 40, 90, "PaaS") + box(250, 40, 90, "SaaS") +
+    '<text x="185" y="88" fill="var(--dim)">you manage less \u2192</text>' +
+    '<line x1="30" y1="100" x2="340" y2="100" stroke="var(--amber)" stroke-width="1.5"/>' +
+    '<text x="470" y="40" fill="var(--text)">WAN</text>' +
+    '<text x="470" y="60">MPLS \u00b7 SD-WAN</text>' +
+    '<text x="470" y="78">leased line \u00b7 DIA</text>' +
+    '<text x="470" y="100" fill="var(--dim)">contended vs dedicated</text>' + close;
+  if(kind === "troubleshooting-problem") return open +
+    '<g font-size="10">' +
+    '<text x="70" y="30" fill="var(--text)">1 identify</text>' +
+    '<text x="70" y="50" fill="var(--text)">2 theorise</text>' +
+    '<text x="70" y="70" fill="var(--text)">3 test theory</text>' +
+    '<text x="70" y="90" fill="var(--text)">4 plan</text>' +
+    '<text x="70" y="110" fill="var(--text)">5 implement / escalate</text>' +
+    '<text x="70" y="130" fill="var(--amber)">6 verify FULL function</text>' +
+    '<path d="M180 66 L180 46" stroke="var(--red)" stroke-width="1"/>' +
+    '<text x="300" y="60" fill="var(--red)">theory wrong? back to step 2</text>' +
+    '<text x="330" y="110" fill="var(--amber)">7 document \u2014 always tested</text>' +
+    '<text x="330" y="30" fill="var(--dim)">divide and conquer:</text>' +
+    '<text x="330" y="44" fill="var(--dim)">L1 \u2192 L2 \u2192 L3 \u2192 app</text>' +
+    '</g>' + close;
   return "";
 }
 
@@ -1477,15 +1845,27 @@ function renderProtoList(box){
   protoEl("h3", "pg-list-title", box, "Field guides");
   protoEl("p", "pg-list-sub", box, "One topic per page, always the same shape: the problem, how it works, what must be true first, how to prove it, what breaks it — and the answer you'd give out loud.");
   var exam = protoEl("div", "pg-exam-map", box);
-  protoEl("b", null, exam, "JNCIA-Junos coverage map");
-  [
-    ["Junos OS fundamentals", "junos-arch guide + show system processes on any device"],
-    ["CLI & configuration basics", "the whole lab — plus commit/rollback in scenarios 4\u20135 and show system commit"],
-    ["Operational monitoring", "show commands everywhere; counters + gremlin hunts (Lab menu)"],
-    ["Routing fundamentals", "OSPF + BGP guides, static routes in the DIA guide, route preference in the numbers"],
-    ["Routing policy & firewall filters", "filters guide — with a live build-and-block exercise"],
-    ["Networking fundamentals", "OSI guide + the subnetting drill"],
-  ].forEach(function(r){
+  var EXAM_MAPS = {
+    jncia: [
+      ["Junos OS fundamentals", "junos-arch guide + show system processes on any device"],
+      ["CLI & configuration basics", "the whole lab — plus commit/rollback in scenarios 4\u20135 and show system commit"],
+      ["Operational monitoring", "show commands everywhere; counters + gremlin hunts (Lab menu)"],
+      ["Routing fundamentals", "OSPF + BGP guides, static routes in the DIA guide, route preference in the numbers"],
+      ["Routing policy & firewall filters", "filters guide — with a live build-and-block exercise"],
+      ["Networking fundamentals", "OSI guide + the subnetting drill"],
+    ],
+    netplus: [
+      ["Networking concepts", "OSI, subnetting drill, and the cloud/virtualization/WAN guide"],
+      ["Network implementation", "VLANs, RSTP, LACP, ECMP, VRRP and the wireless guide — all with live scenarios"],
+      ["Network operations", "cabling & media, LLDP neighbour discovery, DHCP, and the DIA delivery chain"],
+      ["Network security", "network security concepts + the hands-on firewall filters exercise"],
+      ["Network troubleshooting", "the 7-step methodology guide, plus tickets, gremlins and senior incidents"],
+    ],
+  };
+  var trackId = typeof activeTrackId === "function" ? activeTrackId() : "jncia";
+  var trackName = typeof activeTrack === "function" ? activeTrack().name : "JNCIA-Junos";
+  protoEl("b", null, exam, trackName + " coverage map");
+  (EXAM_MAPS[trackId] || EXAM_MAPS.jncia).forEach(function(r){
     var row = protoEl("div", "pg-exam-row", exam);
     protoEl("span", "pg-exam-dom", row, r[0]);
     protoEl("span", null, row, r[1]);
@@ -1500,10 +1880,16 @@ function renderProtoList(box){
       chip.title = dom;
     });
   }
+  // Guides on the active track's path come first, so the list matches what you
+  // are actually studying; everything else stays available below.
+  var onPath = {};
+  if(typeof COURSE !== "undefined")
+    COURSE.forEach(function(u){ if(u.g) onPath[u.g] = true; });
   var groups = [
-    ["Exam fundamentals", PROTO_GUIDES.filter(function(g){ return /JNCIA/.test(g.tag); })],
-    ["Protocols", PROTO_GUIDES.filter(function(g){ return !/JNCIA/.test(g.tag); })],
-  ];
+    ["On your " + trackName + " path", PROTO_GUIDES.filter(function(g){ return onPath[g.id]; })],
+    ["Exam fundamentals", PROTO_GUIDES.filter(function(g){ return !onPath[g.id] && /JNCIA|Network\+/.test(g.tag); })],
+    ["Other protocols", PROTO_GUIDES.filter(function(g){ return !onPath[g.id] && !/JNCIA|Network\+/.test(g.tag); })],
+  ].filter(function(gr){ return gr[1].length; });
   groups.forEach(function(gr){
     protoEl("div", "pg-group-h", box, gr[0]);
     gr[1].forEach(function(g){
@@ -1641,11 +2027,16 @@ function renderProtoGuide(box, g){
       fN.className = okN ? "pg-q-right" : "pg-q-wrong";
       if(okNet && okBc && okN){
         streak++;
-        fb.textContent = "\u2713 all three — that's the exam speed building";
+        fb.innerHTML = svgMark("check") + " all three \u2014 that's the exam speed building";
         if(typeof SFX !== "undefined") SFX.ding();
       } else {
         streak = 0;
-        fb.textContent = "answer: network " + q.ans.network + " \u00b7 broadcast " + q.ans.broadcast + " \u00b7 " + q.ans.usable + " hosts (mask " + q.ans.mask + ")";
+        var steps = subnetSteps(q.ip, q.bits);
+        fb.innerHTML = "";
+        var method = protoEl("div", "pg-drill-method", fb, steps.text);
+        var ans = protoEl("div", "pg-drill-ans", fb,
+          "\u2192 network " + q.ans.network + " \u00b7 broadcast " + q.ans.broadcast + " \u00b7 " +
+          q.ans.usable + " usable hosts (mask " + q.ans.mask + ")");
         if(typeof SFX !== "undefined") SFX.womp();
       }
       try{ localStorage.setItem("junoslab-subnet-streak", String(streak)); }catch(e){}

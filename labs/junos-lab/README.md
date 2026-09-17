@@ -12,6 +12,7 @@ No build step, no dependencies — open `index.html` in a browser.
 | `tests/soak.js` | Long-run fuzz test: `node tests/soak.js 30000` hammers random commands, cabling and deletions to hunt freezes and slow paths |
 | `js/sound.js` | Synthesized sound effects (Web Audio, no files): ticks, plugs, drops, commit chime, objective dings, fanfare, sound on/off toggle |
 | `js/rank.js` | Rank/XP progression — career ladder (Trainee NOC Technician → Datacenter Chief Architect), fed by tickets, contracts, quiz mastery, and mock exams |
+| `js/course.js` | Dual certification tracks (JNCIA-Junos and CompTIA Network+) with switchable paths, quiz-mastery tracking, next-up cards, 15-minute sessions |
 | `js/course.js` | JNCIA learning path, quiz-mastery tracking, next-up cards, the 15-minute session ritual |
 | `js/mockexam.js` | Timed mock exam engine — weighted toward past mistakes, per-domain scoring |
 | `tests/no-emoji.js` | Standalone CI guard: fails the build if pictographic emoji creep into any learning material |

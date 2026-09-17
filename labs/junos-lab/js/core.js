@@ -307,7 +307,7 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "3.5.0";
+var APP_VERSION = "3.7.0";
 
 function svgMark(kind){
   if(kind === "check") return '<svg class="mk mk-check" viewBox="0 0 14 14"><path d="M2.5 7.5 L5.8 10.8 L11.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';

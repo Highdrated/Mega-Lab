@@ -29,24 +29,76 @@ var EXAM_BANK = [
   { d: "Policy & filters", q: "Export policy on a protocol controls...", opts: ["Which routes enter your routing table", "Which routes you advertise to others", "Which packets leave an interface"], right: 1, why: "Export = advertising out; import = accepting in. Packets are firewall-filter business, not policy." },
   { d: "Policy & filters", q: "By default, BGP advertises to a peer...", opts: ["Everything in the routing table", "Only BGP-learned and BGP-originated routes", "Nothing"], right: 1, why: "Your statics and OSPF routes stay home unless an export policy sends them. The 'why isn't my static advertised' classic." },
   { d: "Policy & filters", q: "Filter terms are evaluated...", opts: ["All terms, most specific wins", "Top-down, first match wins", "Random order"], right: 1, why: "Order is everything: a broad accept term above a block term neuters the block." },
+  { t: "netplus", d: "Networking concepts", q: "What is the maximum length of a copper twisted-pair channel?", opts: ["55 metres", "100 metres", "185 metres"], right: 1, why: "100 m total channel including patch cords. Cat6 only reaches 10 Gbps within 55 m, but the length limit itself is 100 m." },
+  { t: "netplus", d: "Networking concepts", q: "Which fiber type uses a roughly 9-micron core and a laser source for long distances?", opts: ["Multi-mode", "Single-mode", "Both equally"], right: 1, why: "Single-mode has the tiny core and laser source, reaching tens of kilometres. Multi-mode has a wider core, an LED or VCSEL, and far shorter reach." },
+  { t: "netplus", d: "Networking concepts", q: "In IaaS, who is responsible for patching the guest operating system?", opts: ["The provider", "You, the customer", "Nobody — it is automatic"], right: 1, why: "IaaS delivers infrastructure; the OS and everything above it is yours. PaaS would manage the OS for you." },
+  { t: "netplus", d: "Networking concepts", q: "Which hypervisor type runs directly on bare metal?", opts: ["Type 1", "Type 2", "Both"], right: 0, why: "Type 1 runs directly on the hardware and is the datacenter standard. Type 2 runs as an application on an existing desktop OS." },
+  { t: "netplus", d: "Networking concepts", q: "A hybrid cloud combines which two?", opts: ["Two public providers", "Private and public cloud, connected", "Cloud and on-premises backup only"], right: 1, why: "Hybrid means private plus public, linked together. Two public providers would be multi-cloud." },
+  { t: "netplus", d: "Network implementation", q: "Which three 2.4 GHz channels do not overlap?", opts: ["1, 5, 9", "1, 6, 11", "2, 7, 12"], right: 1, why: "Only 1, 6 and 11 are spaced far enough apart to avoid overlapping. Any other combination degrades neighbouring APs." },
+  { t: "netplus", d: "Network implementation", q: "Which standard is known as Wi-Fi 6?", opts: ["802.11ac", "802.11ax", "802.11n"], right: 1, why: "802.11ax is Wi-Fi 6 (and 6E with the 6 GHz band). 802.11ac is Wi-Fi 5, 802.11n is Wi-Fi 4." },
+  { t: "netplus", d: "Network implementation", q: "An enterprise wants per-user wireless credentials rather than a shared passphrase. What is needed?", opts: ["WPA3-Personal", "802.1X with RADIUS", "A hidden SSID"], right: 1, why: "802.1X with a RADIUS server authenticates each user individually, which also allows revoking one user without changing everyone's configuration." },
+  { t: "netplus", d: "Network implementation", q: "What does a default gateway do for a host?", opts: ["Resolves names to addresses", "Forwards traffic destined outside the local subnet", "Assigns the host its IP address"], right: 1, why: "Anything not on the local subnet is handed to the default gateway. DNS resolves names; DHCP assigns addresses." },
+  { t: "netplus", d: "Network operations", q: "Which protocol reports what is directly cabled to a switch port, vendor-neutrally?", opts: ["CDP", "LLDP", "SNMP"], right: 1, why: "LLDP (802.1AB) is the vendor-neutral neighbour discovery protocol. CDP is Cisco's proprietary equivalent." },
+  { t: "netplus", d: "Network operations", q: "Which protocol is used to collect device metrics for monitoring systems?", opts: ["SNMP", "SMTP", "SFTP"], right: 0, why: "SNMP polls devices for counters and state and receives traps. SMTP is mail, SFTP is file transfer." },
+  { t: "netplus", d: "Network operations", q: "Why does a network rely on NTP?", opts: ["To speed up DNS", "To keep timestamps consistent so logs across devices can be correlated", "To assign IP addresses"], right: 1, why: "Without synchronised clocks, correlating an event across several devices' logs becomes guesswork, and certificate validation can fail." },
+  { t: "netplus", d: "Network operations", q: "What does a syslog server provide that local device logs do not?", opts: ["Faster logging", "Centralised, retained logs that survive a device failure or reboot", "Encrypted storage by default"], right: 1, why: "Centralisation means logs persist beyond the device and can be searched across the estate — essential when the device itself is the thing that failed." },
+  { t: "netplus", d: "Network security", q: "An attacker overflows a switch's MAC table so it floods frames to every port. Which attack is this?", opts: ["ARP spoofing", "MAC flooding", "VLAN hopping"], right: 1, why: "MAC flooding exhausts the table and forces the switch to flood, exposing traffic. Port security limiting MACs per port is the defence." },
+  { t: "netplus", d: "Network security", q: "Which control specifically blocks a rogue DHCP server on an access port?", opts: ["DHCP snooping", "802.1X", "Port mirroring"], right: 0, why: "DHCP snooping classifies ports as trusted or untrusted and drops server-side DHCP messages from untrusted ports." },
+  { t: "netplus", d: "Network security", q: "Which part of the CIA triad does a denial-of-service attack target?", opts: ["Confidentiality", "Integrity", "Availability"], right: 2, why: "DoS does not read or alter data; it makes the service unreachable, which is precisely availability." },
+  { t: "netplus", d: "Network security", q: "What is the difference between RADIUS and TACACS+?", opts: ["RADIUS is newer", "TACACS+ separates authentication, authorization and accounting and uses TCP; RADIUS combines authn and authz over UDP", "They are identical"], right: 1, why: "TACACS+ separates all three functions and is favoured for device administration; RADIUS combines authentication and authorization and dominates wireless and network access." },
+  { t: "netplus", d: "Network security", q: "Which VPN technology is typically used for site-to-site tunnels?", opts: ["IPsec", "TLS/SSL portal VPN", "SSH"], right: 0, why: "IPsec is the standard for permanent site-to-site tunnels. TLS-based VPNs are more common for individual remote users." },
+  { t: "netplus", d: "Network troubleshooting", q: "In the seven-step methodology, what immediately follows testing a theory that proves CORRECT?", opts: ["Document findings", "Establish a plan of action and identify potential effects", "Verify full system functionality"], right: 1, why: "A confirmed theory moves to step 4, planning the action and its likely effects, before implementation in step 5." },
+  { t: "netplus", d: "Network troubleshooting", q: "Your theory is disproven by testing. What does the methodology require?", opts: ["Implement a fix anyway", "Establish a new theory, or escalate", "Document and close"], right: 1, why: "A disproven theory returns you to step 2. Acting on a cause you have already ruled out creates new faults." },
+  { t: "netplus", d: "Network troubleshooting", q: "Which step is explicitly required after implementing a solution and before documenting?", opts: ["Verify full system functionality and implement preventive measures", "Close the ticket", "Notify the user"], right: 0, why: "Step 6 requires verifying the entire system rather than only the reported symptom, plus prevention where possible. Documentation is step 7." },
+  { t: "netplus", d: "Network troubleshooting", q: "A user reports no connectivity. Their link light is on and they have an APIPA address (169.254.x.x). What does that indicate?", opts: ["DNS failure", "The host could not reach a DHCP server", "A routing loop"], right: 1, why: "An APIPA address is self-assigned when no DHCP offer arrives. The physical link is fine, so look at the DHCP path, VLAN membership, or the server itself." },
+  { t: "netplus", d: "Network troubleshooting", q: "Which command-line tool shows the path a packet takes toward a destination?", opts: ["ping", "traceroute / tracert", "netstat"], right: 1, why: "Traceroute reveals each hop, so the last responding hop points at where the path breaks. Ping only tells you success or failure end to end." },
 ];
 
 function examAllQuestions(){
   var all = [];
+  var track = typeof activeTrackId === "function" ? activeTrackId() : "jncia";
+  var doms = typeof COURSE_DOMAINS !== "undefined" ? COURSE_DOMAINS : {};
   EXAM_BANK.forEach(function(b, i){
-    all.push({ id: "b:" + i, d: b.d, q: b.q, opts: b.opts, right: b.right, why: b.why, typed: !!b.typed, answer: b.answer });
+    // A question belongs to the active track if it is tagged for it, or if its
+    // domain exists in this track's domain map (shared fundamentals).
+    var tagged = b.t ? b.t === track : true;
+    var domainFits = Object.keys(doms).indexOf(b.d) !== -1;
+    if(!tagged && !domainFits) return;
+    if(b.t && b.t !== track && !domainFits) return;
+    all.push({ id: "b:" + i, d: domainFits ? b.d : remapDomain(b.d, doms), q: b.q, opts: b.opts, right: b.right, why: b.why, typed: !!b.typed, answer: b.answer });
   });
   var domOf = function(gid){
-    for(var dom in COURSE_DOMAINS) if(COURSE_DOMAINS[dom].indexOf(gid) !== -1) return dom;
-    return "Routing fundamentals";
+    for(var dom in doms) if(doms[dom].indexOf(gid) !== -1) return dom;
+    return null;
   };
   PROTO_GUIDES.forEach(function(g){
     if(!g.ready || !g.quiz) return;
+    // Only guides that are part of the ACTIVE track contribute questions, so a
+    // Network+ sitting never asks Junos-specific material and vice versa.
+    var dom = domOf(g.id);
+    if(!dom) return;
     g.quiz.forEach(function(q, qi){
-      all.push({ id: "g:" + g.id + ":" + qi, d: domOf(g.id), q: q.q, opts: q.opts, right: q.right, why: q.why });
+      all.push({ id: "g:" + g.id + ":" + qi, d: dom, q: q.q, opts: q.opts, right: q.right, why: q.why });
     });
   });
   return all;
+}
+function remapDomain(d, doms){
+  // Shared questions keep their meaning across tracks; fall back to the first
+  // domain so nothing is ever orphaned in a per-domain score breakdown.
+  var keys = Object.keys(doms);
+  if(keys.indexOf(d) !== -1) return d;
+  var lower = d.toLowerCase();
+  for(var i = 0; i < keys.length; i++){
+    var k = keys[i].toLowerCase();
+    if(lower.indexOf("fundamental") !== -1 && k.indexOf("concept") !== -1) return keys[i];
+    if(lower.indexOf("routing") !== -1 && k.indexOf("implementation") !== -1) return keys[i];
+    if(lower.indexOf("cli") !== -1 && k.indexOf("implementation") !== -1) return keys[i];
+    if(lower.indexOf("monitor") !== -1 && k.indexOf("operations") !== -1) return keys[i];
+    if(lower.indexOf("policy") !== -1 && k.indexOf("security") !== -1) return keys[i];
+    if(lower.indexOf("junos") !== -1 && k.indexOf("operations") !== -1) return keys[i];
+  }
+  return keys[0] || d;
 }
 function examWrongSet(){
   try{ return new Set((localStorage.getItem("junoslab-wrongq") || "").split("|").filter(Boolean)); }

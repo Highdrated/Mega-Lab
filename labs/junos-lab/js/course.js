@@ -1,25 +1,77 @@
-var COURSE = [
-  { g: "osi" }, { g: "subnetting" }, { s: "basic-connect" },
-  { g: "vlan" }, { s: "vlan-split" }, { s: "trunk-span" }, { s: "irb-intervlan" },
-  { g: "rstp" }, { s: "rstp-loop" },
-  { g: "lacp" }, { s: "lacp-bundle" },
-  { g: "junos-arch" }, { s: "commit-confirmed" },
-  { g: "dhcp" }, { s: "dhcp-serve" },
-  { g: "filters" }, { s: "filtered-segment" },
-  { g: "ospf" }, { s: "ospf-backbone" },
-  { g: "dia" }, { s: "isp-onboarding" }, { s: "nat-edge" },
-  { g: "bgp" }, { s: "speak-bgp" },
-  { s: "interconnect-recovery" },
-];
-
-var COURSE_DOMAINS = {
-  "Networking fundamentals": ["osi", "subnetting", "basic-connect"],
-  "Junos OS fundamentals": ["junos-arch", "commit-confirmed"],
-  "CLI & configuration": ["vlan", "vlan-split", "trunk-span", "irb-intervlan", "rstp", "rstp-loop", "lacp", "lacp-bundle"],
-  "Monitoring & maintenance": ["dhcp", "dhcp-serve", "interconnect-recovery"],
-  "Routing fundamentals": ["ospf", "ospf-backbone", "dia", "isp-onboarding", "nat-edge", "bgp", "speak-bgp"],
-  "Policy & filters": ["filters", "filtered-segment"],
+var TRACKS = {
+  jncia: {
+    name: "JNCIA-Junos",
+    label: "JNCIA path",
+    course: [
+      { g: "osi" }, { g: "subnetting" }, { s: "basic-connect" },
+      { g: "vlan" }, { s: "vlan-split" }, { s: "trunk-span" }, { s: "irb-intervlan" },
+      { g: "rstp" }, { s: "rstp-loop" },
+      { g: "lacp" }, { s: "lacp-bundle" },
+      { g: "junos-arch" }, { s: "commit-confirmed" },
+      { g: "dhcp" }, { s: "dhcp-serve" },
+      { g: "filters" }, { s: "filtered-segment" },
+      { g: "ospf" }, { s: "ospf-backbone" },
+      { g: "dia" }, { s: "isp-onboarding" }, { s: "nat-edge" },
+      { g: "bgp" }, { s: "speak-bgp" },
+      { s: "interconnect-recovery" },
+    ],
+    domains: {
+      "Networking fundamentals": ["osi", "subnetting", "basic-connect"],
+      "Junos OS fundamentals": ["junos-arch", "commit-confirmed"],
+      "CLI & configuration": ["vlan", "vlan-split", "trunk-span", "irb-intervlan", "rstp", "rstp-loop", "lacp", "lacp-bundle"],
+      "Monitoring & maintenance": ["dhcp", "dhcp-serve", "interconnect-recovery"],
+      "Routing fundamentals": ["ospf", "ospf-backbone", "dia", "isp-onboarding", "nat-edge", "bgp", "speak-bgp"],
+      "Policy & filters": ["filters", "filtered-segment"],
+    },
+  },
+  netplus: {
+    name: "CompTIA Network+",
+    label: "Network+ path",
+    course: [
+      { g: "osi" }, { g: "cabling" }, { g: "subnetting" }, { s: "basic-connect" },
+      { g: "vlan" }, { s: "vlan-split" }, { s: "irb-intervlan" },
+      { g: "rstp" }, { s: "rstp-loop" },
+      { g: "lacp" }, { s: "lacp-bundle" },
+      { g: "ecmp" },
+      { g: "wireless" },
+      { g: "dhcp" }, { s: "dhcp-serve" },
+      { g: "lldp" },
+      { g: "ospf" }, { s: "ospf-backbone" },
+      { g: "dia" }, { s: "isp-onboarding" }, { s: "nat-edge" },
+      { g: "bgp" },
+      { g: "vrrp" },
+      { g: "cloudwan" },
+      { g: "netsec" }, { g: "filters" }, { s: "filtered-segment" },
+      { g: "troubleshooting" }, { s: "interconnect-recovery" },
+    ],
+    domains: {
+      "Networking concepts": ["osi", "subnetting", "cloudwan", "basic-connect"],
+      "Network implementation": ["vlan", "vlan-split", "irb-intervlan", "rstp", "rstp-loop", "lacp", "lacp-bundle", "ecmp", "wireless", "ospf", "ospf-backbone", "bgp", "vrrp"],
+      "Network operations": ["cabling", "dhcp", "dhcp-serve", "lldp", "dia", "isp-onboarding", "nat-edge"],
+      "Network security": ["netsec", "filters", "filtered-segment"],
+      "Network troubleshooting": ["troubleshooting", "interconnect-recovery"],
+    },
+  },
 };
+
+function activeTrackId(){
+  try{
+    var t = localStorage.getItem("junoslab-track");
+    return TRACKS[t] ? t : "jncia";
+  }catch(e){ return "jncia"; }
+}
+function activeTrack(){ return TRACKS[activeTrackId()]; }
+function setTrack(id){
+  if(!TRACKS[id]) return;
+  try{ localStorage.setItem("junoslab-track", id); }catch(e){}
+  COURSE = TRACKS[id].course;
+  COURSE_DOMAINS = TRACKS[id].domains;
+  if(typeof renderCourseBar === "function") renderCourseBar();
+  if(typeof renderProtoTab === "function" && document.getElementById("tab-proto") &&
+     document.getElementById("tab-proto").style.display !== "none") renderProtoTab();
+}
+var COURSE = TRACKS[activeTrackId()].course;
+var COURSE_DOMAINS = TRACKS[activeTrackId()].domains;
 
 function quizDoneSet(gid){
   try{ return new Set((localStorage.getItem("junoslab-quizdone:" + gid) || "").split(",").filter(Boolean)); }
@@ -111,6 +163,17 @@ function renderCourseBar(){
     doneEl.textContent = "\\ud83c\\udf93 Path complete — Exam mode is your arena now";
     row.appendChild(doneEl);
   }
+  var tsw = document.createElement("button");
+  tsw.textContent = "Track: " + activeTrack().name;
+  tsw.title = "Switch between the JNCIA-Junos and CompTIA Network+ learning paths";
+  tsw.onclick = function(){
+    modalChoice("Choose your certification track",
+      "Both tracks use the same lab and share progress \u2014 guides and scenarios you have already completed stay completed.", [
+      { value: "jncia", label: TRACKS.jncia.name, desc: "Juniper-focused: Junos CLI, architecture, config and routing depth" },
+      { value: "netplus", label: TRACKS.netplus.name, desc: "Vendor-neutral: adds cabling, wireless, cloud/WAN, security and troubleshooting methodology" },
+    ]).then(function(v){ if(v) setTrack(v); });
+  };
+  row.appendChild(tsw);
   var qs = document.createElement("button");
   qs.textContent = "15-min session";
   qs.title = "Two subnet drills, one review question, then your next step";

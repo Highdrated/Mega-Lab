@@ -51,13 +51,17 @@ const SCENARIOS = [
     desc: "Get two hosts talking through a switch. No VLANs, no tricks — just prove the plumbing works.",
     checks: [
       { desc: "At least 1 switch and 2 hosts placed",
+        why: "Ping needs at least two endpoints and something to switch frames between them — this is the minimum topology any test can run on.",
         test: () => devsBy("switch").length >= 1 && devsBy("host").length >= 2 },
       { desc: "Both hosts cabled into the switch",
+        why: "An uncabled port carries nothing. Physical connectivity always comes before configuration — Junos can't route packets down a wire that isn't there.",
         test: () => devsBy("host").length >= 2 && devsBy("host").every(h => isLinked(h.id, "eth0")) },
       { desc: "Both hosts have an IP in the same /24",
+        why: "Two hosts can only ARP for each other directly if they believe they're on the same subnet — different subnets would need a router, not a switch.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           return hs.length >= 2 && new Set(hs.map(h => networkOf(h.cfg.ip, 24))).size === 1; } },
       { desc: "ping succeeds between the two hosts",
+        why: "This is the actual proof. Cabling and addressing can look correct and still not work — ping is the only check that confirms it.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           return hs.length >= 2 && pingOk(hs[0], hs[1].cfg.ip); } },
     ],
@@ -73,15 +77,19 @@ const SCENARIOS = [
     desc: "Two hosts, one switch, different VLANs. The goal is for the ping to FAIL — that's success here.",
     checks: [
       { desc: "Two VLANs exist on a switch (not counting default)",
+        why: "Without a second VLAN there's nothing to isolate — the whole point of this lab is two separate broadcast domains on one switch.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
       { desc: "The two hosts sit on access ports in different VLANs",
+        why: "Isolation happens at the PORT, not the host — a host doesn't know its VLAN, the switch enforces it based on which access port it's plugged into.",
         test: () => { const hs = devsBy("host");
           if(hs.length < 2) return false;
           const vs = hs.map(hostAccessVlan).filter(Boolean);
           return vs.length >= 2 && new Set(vs).size >= 2; } },
       { desc: "Both hosts have IPs configured",
+        why: "Addresses in the SAME subnet make the coming failure meaningful — if the ping failed just because of mismatched IPs, it wouldn't prove VLAN isolation at all.",
         test: () => devsBy("host").filter(h => h.cfg.ip).length >= 2 },
       { desc: "Ping between them correctly fails (proves the isolation)",
+        why: "A failing ping is the goal here — it's the only evidence that the VLAN boundary is real, not just configured and ignored.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           if(hs.length < 2) return false;
           if(new Set(hs.map(hostAccessVlan).filter(Boolean)).size < 2) return false;
@@ -99,6 +107,7 @@ const SCENARIOS = [
     desc: "Every deployment starts here: config mode, hostname, commit. Nothing is real until you commit.",
     checks: [
       { desc: "A switch has a committed host-name",
+        why: "Junos edits a candidate configuration — nothing you type is real until commit activates it. This is the single most important habit the CLI teaches.",
         test: () => devsBy("switch").some(sw => cfgGet(sw.config, ["system", "host-name"])) },
     ],
     hints: [
@@ -113,15 +122,19 @@ const SCENARIOS = [
     desc: "Classic datacenter shape: a distribution switch uplinked to an access switch, hosts off the access switch.",
     checks: [
       { desc: "2 switches cabled to each other (the uplink)",
+        why: "This cable is the uplink — the one link every host on the access switch depends on to reach anything beyond it.",
         test: () => Object.values(links).some(l =>
           devices[l.a.dev] && devices[l.b.dev] &&
           devices[l.a.dev].type === "switch" && devices[l.b.dev].type === "switch") },
       { desc: "At least 2 hosts hanging off the switches",
+        why: "You need traffic to actually cross the uplink to prove it works, not just exist.",
         test: () => devsBy("host").length >= 2 },
       { desc: "Hosts share one subnet and ping across the uplink",
+        why: "This is the real test: the uplink isn't just plugged in, it's actually carrying traffic between two separate switches.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           return hs.length >= 2 && pingOk(hs[0], hs[1].cfg.ip); } },
       { desc: "Both switches renamed to something real (committed host-name)",
+        why: "In a real rack, an unlabelled switch is a liability at 2 AM. Naming devices the moment you deploy them is basic hygiene, not decoration.",
         test: () => devsBy("switch").filter(sw => cfgGet(sw.config, ["system", "host-name"])).length >= 2 },
     ],
     hints: [
@@ -136,25 +149,32 @@ const SCENARIOS = [
     desc: "A router with a WAN link to an ISP and a LAN link into your switch. Get a brand-new client host to the internet — try pinging 8.8.8.8 once it all works.",
     checks: [
       { desc: "1 router, 1 ISP node, 1 switch, 1 host placed",
+        why: "This is the minimum chain a real internet handoff needs: something to deliver service, something to route it, something to distribute it, and something to use it.",
         test: () => devsBy("router").length >= 1 && devsBy("isp").length >= 1 &&
                     devsBy("switch").length >= 1 && devsBy("host").length >= 1 },
       { desc: "Router cabled to both the ISP and the switch",
+        why: "The router is the boundary between your network and theirs — it needs a leg on each side, or there's no path for traffic to cross.",
         test: () => { const rt = devsBy("router")[0];
           if(!rt) return false;
           const touches = t => Object.values(links).some(l =>
             [l.a, l.b].some(e => e.dev === rt.id) && [l.a, l.b].some(e => devices[e.dev] && devices[e.dev].type === t));
           return touches("isp") && touches("switch"); } },
       { desc: "Router has an address on both WAN and LAN interfaces",
+        why: "An interface with no address can't originate or terminate IP traffic — both sides of the router need an identity before anything can route.",
         test: () => devsBy("router").some(rt => Object.keys(D(rt).l3ports).length >= 2) },
       { desc: "Router has a default route (0.0.0.0/0) at the ISP",
+        why: "Without a default route, the router has no idea where to send traffic for destinations it doesn't specifically know — which is almost the entire internet.",
         test: () => devsBy("router").some(rt => D(rt).routes.some(r => r.net === "0.0.0.0" && r.bits === 0)) },
       { desc: "Client host (with a gateway set) pings the ISP",
+        why: "This proves the LAN side works end to end before adding NAT to the picture — isolate each layer before stacking the next one on top.",
         test: () => { const isp = devsBy("isp")[0];
           const h = devsBy("host").find(x => x.cfg.ip);
           return isp && h && pingOk(h, isp.cfg.ip); } },
       { desc: "Source NAT configured on the router (the internet won't answer 192.168.x)",
+        why: "The internet has no route back to a private address — NAT rewrites the source so replies have somewhere real to go.",
         test: () => devsBy("router").some(rt => (D(rt).natRules || []).length > 0) },
       { desc: "Client host reaches the internet (ping 8.8.8.8)",
+        why: "This is the actual deliverable — everything before it was necessary, but this is the only check that proves the service works as sold.",
         test: () => { const h = devsBy("host").find(x => x.cfg.ip);
           return h && pingOk(h, "8.8.8.8"); } },
     ],
@@ -182,11 +202,14 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "Both sites placed with the interconnect between them",
+        why: "Reproducing the exact topology behind a real ticket is the first step of any investigation — you can't diagnose what you haven't built.",
         test: () => byName("site-a-acc1") && byName("site-b-acc1") },
       { desc: "The interconnect port is admin-up on both ends",
+        why: "An interconnect has two owners and two ends — checking only your own side is how half of these tickets get closed and reopened an hour later.",
         test: () => { const a = byName("site-a-acc1"), b = byName("site-b-acc1");
           return a && b && !D(a).portCfg["ge-0/0/0"].disabled && !D(b).portCfg["ge-0/0/0"].disabled; } },
       { desc: "site-a-mgmt pings site-b-mgmt across the interconnect",
+        why: "A port showing 'up' proves the physical layer only. Traffic actually crossing the link is the only proof the ticket is truly resolved.",
         test: () => pingOk("site-a-mgmt", "10.10.10.2") },
     ],
     hints: [
@@ -202,16 +225,20 @@ const SCENARIOS = [
     desc: "Door controllers share switches with client gear but live walled off in their own VLAN. Ops needs to reach them; clients must not.",
     checks: [
       { desc: "Switch has a client VLAN and a separate security VLAN",
+        why: "Physical separation isn't enough when devices share a switch — a VLAN is what actually walls the security systems off from client traffic.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
       { desc: "Client host, access-panel host, and ops host placed (3 hosts)",
+        why: "You need one device to represent each role — the thing that must be blocked, the thing to protect, and the team that legitimately needs access.",
         test: () => devsBy("host").length >= 3 },
       { desc: "Ops host shares the access-panel's VLAN (non-default)",
+        why: "Ops needs to actually reach the panel to manage it — which means being inside its VLAN, not just on the same physical switch.",
         test: () => { const hs = devsBy("host");
           if(hs.length < 3) return false;
           const vs = hs.map(hostAccessVlan);
           return hs.some((h1, i) => hs.some((h2, j) =>
             i !== j && vs[i] && vs[i] === vs[j] && vs[i] !== "default")); } },
       { desc: "The client host CANNOT reach the access-panel",
+        why: "This is the actual security requirement. A wall that isn't tested is just a hope.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           if(hs.length < 3) return false;
           for(const h1 of hs) for(const h2 of hs){
@@ -233,21 +260,26 @@ const SCENARIOS = [
     desc: "Two customers on one switch, one shared gateway router. Here's the trap: a router with interfaces in both subnets will happily route customer A into customer B. VLANs alone don't save you — you need a firewall filter.",
     checks: [
       { desc: "Switch has two customer VLANs (not counting default)",
+        why: "Two tenants sharing hardware absolutely require separate broadcast domains — this is the baseline isolation before the trap even applies.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
       { desc: "Two customer hosts: different VLANs, different subnets, gateways set",
+        why: "Different subnets are what make the router relevant at all — without them, this would just be the VLAN-isolation lab again.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
           const vs = hs.map(hostAccessVlan).filter(Boolean);
           const nets = new Set(hs.map(h => networkOf(h.cfg.ip, 24)));
           return new Set(vs).size >= 2 && nets.size >= 2; } },
       { desc: "Router has a gateway address in each customer subnet",
+        why: "A router can only forward between subnets it has a presence in — one leg per tenant is what lets it cross the VLAN boundary at all.",
         test: () => devsBy("router").some(rt => Object.keys(D(rt).l3ports).length >= 2) },
       { desc: "Each customer can ping their own gateway",
+        why: "This confirms basic L3 reachability BEFORE the trap — if a tenant can't even reach their own gateway, the cross-tenant test downstream would be meaningless.",
         test: () => { const rt = devsBy("router")[0];
           const hs = devsBy("host").filter(h => h.cfg.ip);
           if(!rt || hs.length < 2) return false;
           return hs.every(h => Object.values(D(rt).l3ports).some(p => sameSubnet(p.ip, h.cfg.ip, p.bits) && pingOk(h, p.ip))); } },
       { desc: "Customer A cannot reach Customer B — despite the shared router (firewall filter!)",
+        why: "This is the whole lesson: routing alone will happily connect two tenants through a shared router. Only a filter, explicitly blocking it, actually enforces the isolation everyone assumes VLANs already provide.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
           const [h1, h2] = hs;
@@ -266,15 +298,19 @@ const SCENARIOS = [
     desc: "Real EX switches route between VLANs themselves — no external router. Give each VLAN an irb gateway and get staff talking to guests, deliberately.",
     checks: [
       { desc: "Two VLANs, each bound to an irb L3 interface",
+        why: "Without an irb, a VLAN is purely L2 — switching only. Binding it to an irb is what gives the switch itself a routable presence in that VLAN.",
         test: () => devsBy("switch").some(sw =>
           Object.values(D(sw).vlans).filter(v => v.l3).length >= 2) },
       { desc: "Both irb units have addresses (the two gateways)",
+        why: "An irb with no address can't be anyone's gateway — hosts need something real to send their inter-VLAN traffic to.",
         test: () => devsBy("switch").some(sw => Object.keys(D(sw).irbs).length >= 2) },
       { desc: "A host in each VLAN, with IP and matching gateway",
+        why: "The gateway a host is configured with must actually be its own VLAN's irb, or its inter-VLAN traffic has nowhere to go.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
           return new Set(hs.map(hostAccessVlan).filter(Boolean)).size >= 2; } },
       { desc: "Cross-VLAN ping succeeds (through the switch's own irb)",
+        why: "This proves the switch itself is doing the routing — no separate router device exists here, which is the point of irb on real EX hardware.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
           const [h1, h2] = hs;
@@ -306,8 +342,10 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "Both switches define the same two VLANs (staff/guest style)",
+        why: "A VLAN tag only means something if BOTH switches agree what VLAN 10 and 20 actually are — mismatched definitions silently break the trunk's purpose.",
         test: () => devsBy("switch").filter(sw => nonDefaultVlans(sw).length >= 2).length >= 2 },
       { desc: "The inter-switch link is a trunk on BOTH ends, carrying both VLANs",
+        why: "A trunk is a two-sided agreement. One end in trunk mode and the other in access mode is a classic real-world outage, not a working uplink.",
         test: () => Object.values(links).some(l => {
           const a = devices[l.a.dev], b = devices[l.b.dev];
           if(!a || !b || a.type !== "switch" || b.type !== "switch") return false;
@@ -315,8 +353,10 @@ const SCENARIOS = [
           return pa && pb && pa.mode === "trunk" && pb.mode === "trunk" &&
                  pa.vlanIds.length >= 2 && pb.vlanIds.length >= 2; }) },
       { desc: "Same-VLAN hosts ping across the trunk (staff-east → staff-west)",
+        why: "This is the actual deliverable of trunking: one VLAN, stretched cleanly across two physical switches over a single cable.",
         test: () => pingOk("staff-east", "10.0.10.12") && pingOk("guest-east", "10.0.20.22") },
       { desc: "Cross-VLAN still fails (the trunk carries VLANs, it doesn't merge them)",
+        why: "A trunk transports VLANs, it does not merge them — if cross-VLAN traffic started working here, something would be misconfigured, not improved.",
         test: () => byName("staff-east") && !pingOk("staff-east", "10.0.20.22") },
     ],
     hints: [
@@ -336,10 +376,13 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "A change was committed with commit confirmed",
+        why: "commit confirmed is the specific safety mechanism for changes to a device you can only reach through itself — an ordinary commit gives you no way back if it locks you out.",
         test: () => devsBy("switch").some(sw => sw.stats.usedCommitConfirmed) },
       { desc: "…and then actually confirmed (no rollback timer left running)",
+        why: "The safety net only protects you if you forget to confirm. If you meant the change to stick, confirming it is what makes it permanent instead of temporary.",
         test: () => devsBy("switch").some(sw => sw.stats.usedCommitConfirmed && !sw.commitPending) },
       { desc: "The change survived: switch has a committed host-name",
+        why: "This proves the whole mechanism worked end to end — the change went live, you confirmed it, and it's genuinely part of the active configuration now.",
         test: () => devsBy("switch").some(sw => sw.stats.usedCommitConfirmed && cfgGet(sw.config, ["system", "host-name"])) },
     ],
     hints: [
@@ -370,10 +413,13 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "guest-pc can no longer reach ops-srv (10.0.10.5)",
+        why: "This is the actual security requirement from the ticket — everything else in this scenario exists to get here without breaking anything else.",
         test: () => byName("guest-pc") && !pingOk("guest-pc", "10.0.10.5") },
       { desc: "guest-pc still reaches its own gateway (10.0.20.1) — you filtered, not broke",
+        why: "A filter that's too broad looks identical to success on the one thing you tested, and silently breaks everything else — this check catches that mistake.",
         test: () => pingOk("guest-pc", "10.0.20.1") },
       { desc: "A firewall filter with a discard/reject term is applied on the switch",
+        why: "Confirms the fix is a real, applied filter — not a coincidence of routing, and not a filter that exists in config but was never attached to an interface.",
         test: () => devsBy("switch").some(sw => {
           const applied = JSON.stringify(cfgGet(sw.config, ["interfaces"]) || {}).includes('"filter"');
           const hasDrop = Object.values(D(sw).filters).some(terms => terms.some(t => t.then !== "accept"));
@@ -402,13 +448,17 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "Both switches: ge-0/0/0 and ge-0/0/1 are members of ae0",
+        why: "LACP membership must be configured identically on BOTH ends — a member declared on only one switch has no partner and never joins the bundle.",
         test: () => devsBy("switch").filter(sw => D(sw).aes.ae0 && D(sw).aes.ae0.members.length >= 2).length >= 2 },
       { desc: "LACP is configured on both bundles, and both come up",
+        why: "Declaring ports as members isn't enough — the bundle itself needs the lacp active statement, or the two switches never negotiate and nothing forwards.",
         test: () => { const sws = devsBy("switch").filter(sw => D(sw).aes.ae0);
           return sws.length >= 2 && sws.every(sw => NET.aeInfo[sw.id] && NET.aeInfo[sw.id].ae0 && NET.aeInfo[sw.id].ae0.up); } },
       { desc: "No more storm — the loop became one logical link",
+        why: "This is the reason LACP exists here at all: two parallel cables were a loop; bundled correctly, they become ONE logical link with no loop at all.",
         test: () => NET.stormLinks.size === 0 && Object.keys(links).length > 0 },
       { desc: "pc-a pings pc-b across the bundle",
+        why: "Proves the bundle isn't just administratively up — it's actually forwarding real traffic between the two switches.",
         test: () => pingOk("pc-a", "10.0.0.2") },
     ],
     hints: [
@@ -436,12 +486,16 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "RSTP enabled on all three switches",
+        why: "RSTP only breaks a loop if EVERY switch in it participates — one switch left out keeps flooding regardless of what the other two do.",
         test: () => devsBy("switch").length >= 3 && devsBy("switch").every(sw => D(sw).rstp) },
       { desc: "The storm is gone",
+        why: "This is the direct consequence of RSTP doing its job — the loop that was flooding the segment is now broken.",
         test: () => Object.keys(links).length > 0 && NET.stormLinks.size === 0 },
       { desc: "Exactly the redundant path is blocked (a port shows BLK)",
+        why: "RSTP doesn't remove the redundant cable, it holds one port in reserve — this confirms the algorithm found and blocked exactly the one path that would complete the loop.",
         test: () => NET.blocked.size >= 1 },
       { desc: "pc-2 pings pc-3 — the ring works, minus the loop",
+        why: "This proves the topology is still fully connected — RSTP removed the LOOP, not the redundancy or the connectivity.",
         test: () => pingOk("pc-2", "10.0.0.3") },
     ],
     hints: [
@@ -467,14 +521,18 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "A storm-control profile with action-shutdown exists and is bound to a port",
+        why: "A profile that exists in config but isn't bound to an interface protects nothing — storm control has to actually be attached to the port carrying the risk.",
         test: () => devsBy("switch").some(sw =>
           Object.values(D(sw).stormProfiles).some(p => p.shutdown) &&
           Object.values(D(sw).portCfg).some(pc => pc.storm)) },
       { desc: "The backstop fired: a port is error-disabled",
+        why: "This confirms storm control actually triggered under real storm conditions, not just that it was configured and never tested.",
         test: () => devsBy("switch").some(sw => Object.keys(sw.errDisabled).length > 0) },
       { desc: "The storm is contained",
+        why: "The whole point of the backstop — the runaway traffic causing the storm has been physically stopped at the port level.",
         test: () => Object.keys(links).length > 0 && NET.stormLinks.size === 0 },
       { desc: "pc-a still pings pc-b (over the surviving cable)",
+        why: "Storm control shutting down ONE port shouldn't take down the whole network — this proves the fix was surgical, not a bigger outage than the problem.",
         test: () => pingOk("pc-a", "10.0.0.2") },
     ],
     hints: [
@@ -511,11 +569,14 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "The two-site topology is in place",
+        why: "Reproducing the exact topology behind a real ticket is the first step of any investigation — you can't diagnose what you haven't built.",
         test: () => byName("hq-rtr") && byName("branch-rtr") && byName("hq-pc") && byName("branch-pc") },
       { desc: "branch-rtr has a route back to HQ's subnet (10.0.0.0/24)",
+        why: "This is the actual missing piece: a router can forward a packet FORWARD perfectly and still have no route to send the reply BACK.",
         test: () => { const r = byName("branch-rtr");
           return r && D(r).routes.some(rt => sameSubnet("10.0.0.10", rt.net, rt.bits)); } },
       { desc: "hq-pc pings branch-pc — the round trip finally closes",
+        why: "Ping only succeeds if BOTH directions work — this is the proof that the asymmetry, the classic 'I can send but not receive' fault, is actually fixed.",
         test: () => pingOk("hq-pc", "10.0.1.10") },
     ],
     hints: [
@@ -544,10 +605,13 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "Baseline holds: client-pc pings the ISP edge (203.0.113.1)",
+        why: "Confirms routing and the physical path already work, so any failure past this point is specifically a NAT problem, not something more basic.",
         test: () => pingOk("client-pc", "203.0.113.1") },
       { desc: "A source NAT rule-set is committed on the router",
+        why: "This is the only fix that makes sense here — routing was already proven to work, so the missing piece has to be translation, not reachability.",
         test: () => devsBy("router").some(rt => (D(rt).natRules || []).length > 0) },
       { desc: "client-pc reaches the internet (8.8.8.8)",
+        why: "This is the actual deliverable of NAT — a private address, invisible to the internet, now reaching it because its source is being rewritten to something public.",
         test: () => pingOk("client-pc", "8.8.8.8") },
     ],
     hints: [
@@ -575,13 +639,17 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "An address pool is committed (network, a range, and a router option)",
+        why: "A DHCP server with no pool has nothing to hand out — the pool IS the promise the server can make to clients.",
         test: () => devsBy("switch").some(sw => (D(sw).pools || []).some(p => p.ranges.length && p.router)) },
       { desc: "The DHCP server is bound to irb.10 (the staff VLAN's gateway)",
+        why: "DHCP DISCOVER is a broadcast that never crosses a VLAN boundary — the server has to be listening INSIDE the VLAN it's serving, not just configured somewhere on the box.",
         test: () => devsBy("switch").some(sw => D(sw).dhcpIfs && D(sw).dhcpIfs.has("irb.10")) },
       { desc: "laptop got a lease: address in 10.0.10.0/24 plus a gateway, via DHCP",
+        why: "This proves the whole DORA exchange completed correctly — an address alone isn't enough if the gateway never arrived with it.",
         test: () => { const h = byName("laptop");
           return !!(h && h.cfg.viaDhcp && h.cfg.ip && sameSubnet(h.cfg.ip, "10.0.10.0", 24) && h.cfg.gw); } },
       { desc: "laptop pings its gateway (the lease actually works)",
+        why: "A lease can be technically valid and still be useless if the address, mask or gateway don't actually work together — this is the real-world test.",
         test: () => pingOk("laptop", "10.0.10.1") },
     ],
     hints: [
@@ -621,14 +689,18 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "OSPF enabled on all three routers (transit links, plus the LANs)",
+        why: "OSPF only builds a complete map if every router and every relevant interface participates — leave one out and part of the network stays invisible to it.",
         test: () => devsBy("router").length >= 3 &&
           devsBy("router").every(rt => Object.keys(D(rt).ospf || {}).length >= 2) },
       { desc: "Adjacencies are Full — every router has two neighbors",
+        why: "A neighbor relationship stuck below Full means the routers haven't actually synchronized their maps of the network yet — no usable routes come from it.",
         test: () => devsBy("router").every(rt => (D(rt).ospfNeighbors || []).length >= 2) },
       { desc: "hq-r learned the far LAN via OSPF (no statics anywhere)",
+        why: "This is the actual point of the lab — proving the route was LEARNED, not typed, which is what lets it survive a topology change automatically.",
         test: () => { const r = byName("hq-r");
           return !!(r && (D(r).ospfRoutes || []).some(x => x.net === "10.3.0.0")); } },
       { desc: "hq-pc pings far-pc across the learned routes",
+        why: "The final proof that the dynamically learned routes are not just present in the table, but genuinely usable for real traffic.",
         test: () => pingOk("hq-pc", "10.3.0.10") },
     ],
     hints: [
@@ -663,12 +735,15 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "MAC limit of 1 with packet-action shutdown committed on acc-1 ge-0/0/3",
+        why: "This is the actual defense — without both the limit AND the shutdown action configured, the switch has no way to notice or react to a second device appearing.",
         test: () => { const sw = byName("acc-1");
           const lim = sw && D(sw).macLimit && D(sw).macLimit["ge-0/0/3"];
           return !!(lim && lim.limit === 1 && lim.shutdown); } },
       { desc: "The trap fired: ge-0/0/3 is error-disabled",
+        why: "Configuring the defense isn't enough on its own — this proves it actually activated under a real violation, not just sitting there unused.",
         test: () => { const sw = byName("acc-1"); return !!(sw && sw.errDisabled["ge-0/0/3"]); } },
       { desc: "desk-pc is unaffected and still pings the gateway",
+        why: "Port security should punish the specific violating port, not the whole network — this confirms the blast radius was exactly one port.",
         test: () => pingOk("desk-pc", "10.0.10.1") },
     ],
     hints: [
@@ -703,11 +778,14 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "laptop is associated with office-wifi (no cable involved)",
+        why: "Association is the wireless equivalent of plugging in a cable — nothing else on this checklist can work until the radio link itself exists.",
         test: () => { const h = byName("laptop"); return !!(h && wifiLinkOf(h.id)); } },
       { desc: "laptop got address and gateway via DHCP, over the air",
+        why: "This proves the AP is truly acting as a transparent bridge — the exact same DHCP process that works over copper works identically over the radio link.",
         test: () => { const h = byName("laptop");
           return !!(h && h.cfg.viaDhcp && h.cfg.ip && sameSubnet(h.cfg.ip, "10.0.10.0", 24) && h.cfg.gw); } },
       { desc: "laptop pings its gateway across the wireless bridge",
+        why: "The final proof that wireless isn't a separate, special network — it's the same staff VLAN, same gateway, just without a patch cable.",
         test: () => pingOk("laptop", "10.0.10.1") },
     ],
     hints: [
@@ -736,12 +814,15 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "A cooling unit is running inside the server room",
+        why: "A CRAC placed outside the room it's meant to cool does nothing for the heat actually building up inside — placement matters as much as capacity.",
         test: () => Object.values(devices).some(d => d.type === "crac" && d.powered !== false && !d.failed &&
           (() => { const z = zoneOf(d.id); return !!(z && z.name === "Server room"); })()) },
       { desc: "Room temperature back under 28°C",
+        why: "This is the actual root cause finally addressed — the devices didn't fail from bad config, they thermally protected themselves from an overheating room.",
         test: () => { const z = Object.values(zones).find(z2 => z2.name === "Server room");
           return !!(z && THERMAL.zones[z.id] && THERMAL.zones[z.id].temp <= 28); } },
       { desc: "core-sw and big-rtr powered up and staying up",
+        why: "Powering the devices back on before the room is actually cool just trips the same thermal shutdown again — this confirms the fix held, not just that a button was pressed.",
         test: () => { const a = byName("core-sw"), b = byName("big-rtr");
           return !!(a && b && a.powered !== false && b.powered !== false); } },
     ],
@@ -777,14 +858,18 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "web-1 is serving: both dns and http running",
+        why: "A server that isn't running the service can be perfectly reachable on the network and still refuse every connection — the service has to actually be listening.",
         test: () => { const s2 = byName("web-1");
           return !!(s2 && s2.cfg.services && s2.cfg.services.dns && s2.cfg.services.http); } },
       { desc: "A DNS record exists: web.lab points at web-1's address",
+        why: "Without a record, 'web.lab' is just a string nobody knows how to translate — DNS is the lookup table that makes a name mean an address.",
         test: () => { const s2 = byName("web-1");
           return !!(s2 && s2.cfg.records && s2.cfg.records["web.lab"] === "10.0.10.80"); } },
       { desc: "client-pc knows who to ask: nameserver set to 10.0.10.80",
+        why: "A client with no nameserver configured has no one to ask — the name resolution step can't even begin.",
         test: () => { const h2 = byName("client-pc"); return !!(h2 && h2.cfg.ns === "10.0.10.80"); } },
       { desc: "curl web.lab works end to end: resolve, connect, 200 OK",
+        why: "This is the real end-to-end test — proving resolution, routing, AND the service itself all worked together, not just one piece in isolation.",
         test: () => { const h2 = byName("client-pc");
           return !!(h2 && curlCheck(h2, "web.lab").ok); } },
     ],
@@ -820,17 +905,21 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "office-sw accepts SSH: system services ssh is committed",
+        why: "Without this line committed, the switch simply refuses every SSH connection attempt — it's the on/off switch for remote management entirely.",
         test: () => { const sw2 = byName("office-sw");
           return !!(sw2 && cfgGet(sw2.config, ["system", "services", "ssh"])); } },
       { desc: "admin-pc can actually reach it on port 22",
+        why: "Enabling the service on the switch is only half of it — this proves the path between admin-pc and the switch on that specific port genuinely works.",
         test: () => { const sw2 = byName("office-sw"), h2 = byName("admin-pc");
           if(!sw2 || !h2 || !cfgGet(sw2.config, ["system", "services", "ssh"])) return false;
           try{ return pingRun(h2, "10.0.10.1", { proto: "tcp" }).ok; }catch(e){ return false; } } },
       { desc: "office-sw streams its log: syslog host 10.0.10.90, and ops-1 runs the syslog service",
+        why: "A switch's own local log disappears the moment it reboots or fails — centralizing it is what lets you investigate an incident AFTER the device that caused it is gone.",
         test: () => { const sw2 = byName("office-sw"), s2 = byName("ops-1");
           return !!(sw2 && s2 && cfgGet(sw2.config, ["system", "syslog", "host", "10.0.10.90"]) &&
             s2.cfg.services && s2.cfg.services.syslog); } },
       { desc: "ops-1 has received at least one line FROM office-sw (make some noise: commit something)",
+        why: "Configuring syslog forwarding proves nothing until a real message actually arrives — this is the only check that confirms the pipe is truly flowing.",
         test: () => { const s2 = byName("ops-1");
           return !!(s2 && (s2.syslog || []).some(ln => ln.includes("office-sw"))); } },
     ],
@@ -865,17 +954,21 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "edge-r1 has a name in the BGP world: routing-options autonomous-system",
+        why: "BGP identifies every network by its AS number — without one, your router has no identity to offer the provider during the session setup.",
         test: () => { const r2 = byName("edge-r1"); return !!(r2 && r2.d && r2.d.as); } },
       { desc: "The session is Established (show bgp summary — and read the reason column while it is not)",
+        why: "Nothing else in this scenario can work until the session itself is up — Established is the gate everything downstream depends on.",
         test: () => { const r2 = byName("edge-r1");
           return !!(r2 && r2.d && (r2.d.bgpPeers || []).some(p => p.state === "Established")); } },
       { desc: "A default route was LEARNED, not typed: show route says [BGP/170], and no static default exists",
+        why: "This is the entire point of running BGP here — a typed static route can't detect the provider going down; a LEARNED one disappears the instant the session does, protecting you from blackholing traffic.",
         test: () => { const r2 = byName("edge-r1");
           if(!r2) return false;
           if((r2.d.routes || []).some(rt => rt.net === "0.0.0.0")) return false;
           const lk = routeLookup(r2, "8.8.8.8");
           return !!(lk && lk.proto === "bgp"); } },
       { desc: "office-pc reaches 8.8.8.8 across the learned route (NAT is already set up for you)",
+        why: "The final proof that the whole chain — BGP session, learned route, and NAT — genuinely delivers working internet access, not just a route sitting unused in a table.",
         test: () => { const h2 = byName("office-pc");
           try{ return !!(h2 && pingRun(h2, "8.8.8.8", {}).ok); }catch(e){ return false; } } },
     ],
@@ -914,9 +1007,11 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "hq-wifi has power (it is drawn dark: NO POWER — a PoE-less switch feeds it nothing)",
+        why: "An AP with no power is not a network problem at all — it's a power delivery problem wearing a wireless costume, and no amount of Wi-Fi config fixes it.",
         test: () => { const ap2 = Object.values(devices).find(d => d.type === "ap" && d.cfg.ssid === "hq-wifi");
           return !!(ap2 && !POE.denied[ap2.id]); } },
       { desc: "HQ has a UPS, sized for the whole infrastructure load (open the UPS status to compare)",
+        why: "A UPS that's too small for the load it protects fails exactly when you need it — sizing it against the real load is the whole point of buying one.",
         test: () => { const z = Object.values(zones).find(z2 => z2.name === "HQ");
           if(!z) return false;
           const load = z.gridDown ? (z.outageLoad || 0)
@@ -924,9 +1019,11 @@ const SCENARIOS = [
           const cap = upsCapOf(z);
           return cap > 0 && load > 0 && load <= cap; } },
       { desc: "The drill is LIVE: grid power is out right now (the building's grid button)",
+        why: "A UPS that has never been tested under a real outage is a UPS you're only hoping works — the drill is what actually proves it.",
         test: () => { const z = Object.values(zones).find(z2 => z2.name === "HQ");
           return !!(z && z.gridDown); } },
       { desc: "And everything survived: switch and server still up on battery",
+        why: "This is the actual deliverable of the whole exercise — infrastructure staying online through a power event is the entire reason a UPS exists.",
         test: () => { const sw2 = byName("hq-sw"), s2 = byName("files-1");
           const z = Object.values(zones).find(z2 => z2.name === "HQ");
           return !!(z && z.gridDown && sw2 && s2 && sw2.powered !== false && s2.powered !== false); } },
@@ -1366,10 +1463,30 @@ function renderObjectives(){
     if(done) doneCount++;
     if(!done) all = false;
     const el2 = document.createElement("div");
-    el2.className = "obj" + (done ? " done" : "");
+    el2.className = "obj" + (done ? " done" : "") + (c.why ? " obj-has-why" : "");
     const dot = document.createElement("div"); dot.className = "dot";
     const span = document.createElement("span"); span.textContent = c.desc;
     el2.append(dot, span);
+    if(c.why){
+      const q = document.createElement("button");
+      q.className = "obj-why-btn";
+      q.type = "button";
+      q.textContent = "?";
+      q.title = "Why does this matter?";
+      const whyEl = document.createElement("div");
+      whyEl.className = "obj-why";
+      whyEl.textContent = c.why;
+      whyEl.style.display = "none";
+      q.onclick = (e) => {
+        e.stopPropagation();
+        const open = whyEl.style.display !== "none";
+        whyEl.style.display = open ? "none" : "block";
+        q.classList.toggle("obj-why-open", !open);
+        if(!open && typeof SFX !== "undefined") SFX.tick();
+      };
+      el2.appendChild(q);
+      el2.appendChild(whyEl);
+    }
     objDiv.appendChild(el2);
   });
   if(sfxObjState.id !== currentScenario.id){
@@ -1542,8 +1659,13 @@ function boot(){
 }
 boot();
 
-let predictOn = false;
-try{ predictOn = localStorage.getItem("junoslab-predict") === "on"; }catch(e){}
+let predictOn = true;
+try{
+  const raw = localStorage.getItem("junoslab-predict");
+  // Defaults ON for anyone who hasn't explicitly chosen — this is the strongest
+  // "why" mechanism in the lab, and it was easy to never discover while off.
+  predictOn = raw === null ? true : raw === "on";
+}catch(e){}
 function setPredict(on){
   predictOn = on;
   try{ localStorage.setItem("junoslab-predict", on ? "on" : "off"); }catch(e){}
@@ -1560,10 +1682,19 @@ function predictIntercept(dev, raw, masked){
   const t = raw.trim();
   if(!/^com(m(it?)?)?(\s+confirmed(\s+\d+)?)?$/.test(t) && !/^commit(\s+and-quit)?$/.test(t)) return false;
   if(!currentScenario || !currentScenario.checks || !currentScenario.checks.length) return false;
+  // Once you've finished a scenario before, the friction has done its job —
+  // don't re-ask on a repeat run.
+  if(currentScenario.id && PROGRESS[currentScenario.id] && PROGRESS[currentScenario.id].done) return false;
   const before = passingCount();
   if(before >= currentScenario.checks.length) return false;
+  let firstEver = false;
+  try{ firstEver = !localStorage.getItem("junoslab-predict-explained"); }catch(e){}
+  if(firstEver){ try{ localStorage.setItem("junoslab-predict-explained", "1"); }catch(e){} }
+  const intro = firstEver
+    ? "First time seeing this: before every commit in a scenario you haven't finished yet, the lab asks you to predict the effect. Guessing wrong is fine \u2014 it's the fastest way to find a gap in your mental model. (Toggle it off any time with the Predict mode button.)\n\n"
+    : "";
   modalChoice("Predict before you commit",
-    "This is where the learning happens: what do you expect this commit to change for \u201c" + currentScenario.title + "\u201d?", [
+    intro + "What do you expect this commit to change for \u201c" + currentScenario.title + "\u201d?", [
     { value: "more", label: "Progress \u2014 more objectives will pass", desc: "The config I staged moves the scenario forward" },
     { value: "same", label: "No visible change yet", desc: "Necessary groundwork, but no objective flips on its own" },
     { value: "less", label: "Something will break", desc: "I am knowingly committing something disruptive" },
