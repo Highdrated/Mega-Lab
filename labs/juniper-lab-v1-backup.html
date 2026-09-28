@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>JunOS Lab</title>
+<style>
+  :root{
+    --bg:#0f1512; --panel:#16201b; --line:#2a3a30;
+    --green:#3ecf6e; --amber:#c99a3c; --red:#d1554a; --text:#dfe8e2; --dim:#7f9187;
+  }
+  *{box-sizing:border-box;}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Consolas','Menlo',monospace;height:100vh;overflow:hidden;}
+  #toolbar{
+    display:flex;gap:8px;align-items:center;padding:8px 12px;background:var(--panel);
+    border-bottom:1px solid var(--line);
+  }
+  button{
+    background:#1f2b23;color:var(--text);border:1px solid var(--line);border-radius:4px;
+    padding:6px 10px;cursor:pointer;font-family:inherit;font-size:12px;
+  }
+  button:hover{border-color:var(--green);}
+  button.active{background:var(--green);color:#0f1512;font-weight:bold;}
+  #hint{margin-left:auto;color:var(--dim);font-size:12px;}
+  #canvas-wrap{position:relative;height:calc(100vh - 42px);}
+  svg{width:100%;height:100%;background:
+     radial-gradient(circle, #1b2620 1px, transparent 1px) 0 0/24px 24px, var(--bg);}
+  .device{cursor:grab;}
+  .device rect{fill:#182219;stroke:var(--line);stroke-width:1.5;rx:6;}
+  .device.selected rect{stroke:var(--amber);}
+  .device.router rect{fill:#141c26;stroke:#2a3a4a;}
+  .device.isp rect{fill:#241a26;stroke:#3a2a44;stroke-dasharray:4 2;}
+  .device text{fill:var(--text);font-size:11px;font-family:inherit;pointer-events:none;}
+  .device .label{fill:var(--dim);font-size:9px;}
+  .port{fill:#26362c;stroke:var(--dim);stroke-width:1;cursor:crosshair;}
+  .port.up{fill:var(--green);}
+  .port.armed{stroke:var(--amber);stroke-width:2;}
+  .link{stroke:var(--red);stroke-width:2;}
+  .link.up{stroke:var(--green);}
+  .link.mgmt{stroke-dasharray:6 3;}
+  .link.mgmt.up{stroke:#4a90d9;}
+  .link.console{stroke-dasharray:2 3;stroke:#7f9187;stroke-width:1.5;}
+  .link.remote{stroke-dasharray:10 4;}
+  .link.remote.up{stroke:var(--amber);}
+  #cli{
+    position:fixed;left:0;right:0;bottom:0;height:0;overflow:hidden;
+    background:#0b100d;border-top:1px solid var(--line);transition:height .18s ease;
+    display:flex;flex-direction:column;
+  }
+  #cli.open{height:42vh;}
+  #cli-head{display:flex;justify-content:space-between;align-items:center;
+    padding:6px 12px;background:var(--panel);border-bottom:1px solid var(--line);font-size:12px;color:var(--dim);}
+  #cli-log{flex:1;overflow-y:auto;padding:10px 14px;font-size:12.5px;white-space:pre-wrap;line-height:1.5;}
+  #cli-log .cmd{color:var(--amber);}
+  #cli-log .out{color:var(--text);}
+  #cli-log .err{color:var(--red);}
+  #cli-inputrow{display:flex;align-items:center;padding:8px 14px;border-top:1px solid var(--line);}
+  #cli-prompt{color:var(--green);margin-right:6px;white-space:pre;font-size:12.5px;}
+  #cli-input{flex:1;background:none;border:none;color:var(--text);font-family:inherit;font-size:12.5px;outline:none;}
+  #closecli{background:none;border:none;color:var(--dim);cursor:pointer;font-size:14px;}
+
+  #scenario-panel{
+    position:fixed;top:42px;right:-320px;width:300px;height:calc(100vh - 42px);
+    background:var(--panel);border-left:1px solid var(--line);transition:right .18s ease;
+    padding:16px;overflow-y:auto;font-size:12.5px;z-index:5;
+  }
+  #scenario-panel.open{right:0;}
+  #scenario-panel select{width:100%;background:#1f2b23;color:var(--text);border:1px solid var(--line);
+    border-radius:4px;padding:6px;margin-bottom:10px;font-family:inherit;font-size:12px;}
+  #scenario-panel h3{margin:0 0 6px;color:var(--amber);font-size:14px;}
+  #scenario-panel p{color:var(--dim);line-height:1.5;}
+  .obj{display:flex;align-items:flex-start;gap:6px;margin:8px 0;padding:6px;border-radius:4px;background:#1a2420;}
+  .obj.done{background:#173322;}
+  .obj .dot{width:9px;height:9px;border-radius:50%;background:var(--dim);margin-top:3px;flex:none;}
+  .obj.done .dot{background:var(--green);}
+  .obj span{line-height:1.4;}
+  #hintbox{margin-top:14px;border-top:1px solid var(--line);padding-top:10px;}
+  #hintbox button{width:100%;margin-bottom:6px;}
+  .hint-line{color:var(--amber);background:#221c10;border:1px solid #3a2f14;border-radius:4px;
+    padding:6px 8px;margin-bottom:6px;font-size:11.5px;line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="add-switch">+ Switch</button>
+  <button id="add-router">+ Router</button>
+  <button id="add-isp">+ ISP / Internet</button>
+  <button id="add-host">+ Host</button>
+  <button id="link-mode">Cable</button>
+  <button id="del-mode">Delete</button>
+  <button id="save">Save</button>
+  <button id="load">Load</button>
+  <button id="clear">Clear Lab</button>
+  <button id="toggle-scenario">Scenarios</button>
+  <span id="hint">Click a device to open its CLI. Drag to move.</span>
+</div>
+
+<div id="canvas-wrap">
+  <svg id="svg"></svg>
+</div>
+
+<div id="scenario-panel">
+  <select id="scenario-select"></select>
+  <h3 id="scen-title"></h3>
+  <p id="scen-desc"></p>
+  <div id="scen-objectives"></div>
+  <div id="hintbox">
+    <button id="load-setup-btn">📦 Load starting setup for this scenario</button>
+    <button id="hint-btn">💡 Give me a hint</button>
+    <div id="hint-list"></div>
+  </div>
+</div>
+
+<div id="cli">
+  <div id="cli-head">
+    <span id="cli-title">device</span>
+    <button id="closecli">✕</button>
+  </div>
+  <div id="cli-log"></div>
+  <div id="cli-inputrow">
+    <span id="cli-prompt">&gt;</span>
+    <input id="cli-input" autocomplete="off" spellcheck="false">
+  </div>
+</div>
+
+<script>
+/* ---------- state ---------- */
+let devices = {};      // id -> {id,type,x,y,name,ports:[{id,name,vlan,up,mode}], cfg:{...}}
+let links = {};         // id -> {a:{dev,port}, b:{dev,port}}
+let vlans = { default: 1 };
+let nextId = 1;
+let mode = "normal";    // normal | link | delete
+let armedPort = null;   // {dev,port} first click in link mode
+let activeDevice = null;
+let dragging = null;
+
+const svg = document.getElementById("svg");
+const NS = "http://www.w3.org/2000/svg";
+
+function uid(prefix){ return prefix + (nextId++); }
+
+/* ---------- device factories ---------- */
+function makeSwitch(x,y,portCount){
+  const id = uid("sw");
+  const n = portCount || 48;
+  devices[id] = {
+    id, type:"switch", x, y, name: id,
+    ports: Array.from({length:n},(_, i) => ({ id:`ge-0/0/${i}`, up:true, disabled:false, vlan:"default" })),
+    cfg: { hostname:id, vlans: {default:1} }
+  };
+  return id;
+}
+function makeHost(x,y){
+  const id = uid("h");
+  devices[id] = {
+    id, type:"host", x, y, name: id,
+    ports: [{ id:"eth0", up:true, disabled:false, vlan:"default" }],
+    cfg: { ip:null, mask:null }
+  };
+  return id;
+}
+function makeRouter(x,y,portCount){
+  const id = uid("rt");
+  const n = portCount || 4;
+  devices[id] = {
+    id, type:"router", x, y, name: id,
+    ports: Array.from({length:n},(_, i) => ({ id:`ge-0/0/${i}`, up:true, disabled:false, ip:null, mask:null })),
+    cfg: { hostname:id, routes: [] } // routes: [{destNet,destBits,nextHopIp}]
+  };
+  return id;
+}
+function makeIsp(x,y){
+  const id = uid("isp");
+  const pub = prompt("Public IP for this ISP link?","203.0.113.1") || "203.0.113.1";
+  devices[id] = {
+    id, type:"isp", x, y, name: "ISP",
+    ports: [{ id:"wan0", up:true, disabled:false }],
+    cfg: { ip: pub, mask: "30" }
+  };
+  return id;
+}
+
+/* ---------- rendering ---------- */
+function render(){
+  svg.innerHTML = "";
+  // links first (under devices)
+  Object.values(links).forEach(renderLink);
+  Object.values(devices).forEach(renderDevice);
+}
+
+function portLayout(dev){
+  const n = dev.ports.length;
+  if(n <= 1) return { rows:1, cols:1 };
+  const rows = n <= 8 ? 1 : 2;
+  const cols = Math.ceil(n/rows);
+  return { rows, cols };
+}
+function devWidth(dev){
+  if(dev.ports.length <= 1) return 70;
+  const { cols } = portLayout(dev);
+  return Math.max(110, cols*16 + 20);
+}
+function devHeaderH(){ return 34; }
+function devHeight(dev){
+  if(dev.ports.length <= 1) return 46;
+  const { rows } = portLayout(dev);
+  return devHeaderH() + rows*14 + 10;
+}
+function portRelPos(dev, i){
+  const { cols } = portLayout(dev);
+  const w = devWidth(dev);
+  const row = Math.floor(i/cols);
+  const col = i % cols;
+  const spacing = w/(cols+1);
+  return [ spacing*(col+1), devHeaderH() + row*14 + 10 ];
+}
+function portXY(dev, portIndex){
+  const [x,y] = portRelPos(dev, portIndex);
+  return [dev.x + x, dev.y + y];
+}
+
+function renderDevice(dev){
+  const w = devWidth(dev);
+  const h = devHeight(dev);
+  const g = document.createElementNS(NS,"g");
+  g.setAttribute("class","device"+(activeDevice===dev.id?" selected":"")+(dev.type==="router"?" router":"")+(dev.type==="isp"?" isp":""));
+  g.setAttribute("transform",`translate(${dev.x},${dev.y})`);
+  g.dataset.id = dev.id;
+
+  const rect = document.createElementNS(NS,"rect");
+  rect.setAttribute("width",w); rect.setAttribute("height",h);
+  g.appendChild(rect);
+
+  const icon = document.createElementNS(NS,"text");
+  icon.setAttribute("x", 8); icon.setAttribute("y", 18);
+  icon.setAttribute("class","label");
+  icon.textContent = dev.type === "switch" ? `JUNOS SWITCH — ${dev.ports.length}p`
+    : dev.type === "router" ? `JUNOS ROUTER — ${dev.ports.length}p`
+    : dev.type === "isp" ? "ISP / INTERNET"
+    : "HOST";
+  g.appendChild(icon);
+
+  const label = document.createElementNS(NS,"text");
+  label.setAttribute("x", 8); label.setAttribute("y", 30);
+  label.textContent = dev.name;
+  g.appendChild(label);
+
+  dev.ports.forEach((p, i) => {
+    const [px,py] = portRelPos(dev, i);
+    const c = document.createElementNS(NS,"circle");
+    c.setAttribute("cx",px); c.setAttribute("cy",py); c.setAttribute("r", dev.ports.length>16?3:5);
+    const isUp = p.up && !p.disabled && isLinked(dev.id,p.id);
+    c.setAttribute("class","port"+(isUp?" up":"")+(armedPort&&armedPort.dev===dev.id&&armedPort.port===p.id?" armed":""));
+    c.dataset.dev = dev.id; c.dataset.port = p.id;
+    c.addEventListener("click",(e)=>{ e.stopPropagation(); onPortClick(dev.id,p.id); });
+    g.appendChild(c);
+  });
+
+  g.addEventListener("mousedown",(e)=>{
+    if(mode==="normal"){
+      dragging = { id: dev.id, offX: e.offsetX - dev.x, offY: e.offsetY - dev.y };
+    }
+  });
+  g.addEventListener("click",(e)=>{
+    if(mode==="delete"){ deleteDevice(dev.id); return; }
+    if(mode==="normal"){ openCli(dev.id); }
+  });
+
+  svg.appendChild(g);
+}
+
+function isLinked(devId,portId){
+  return Object.values(links).some(l =>
+    (l.a.dev===devId && l.a.port===portId) || (l.b.dev===devId && l.b.port===portId));
+}
+
+function findLinkFor(devId,portId){
+  return Object.entries(links).find(([id,l]) =>
+    (l.a.dev===devId && l.a.port===portId) || (l.b.dev===devId && l.b.port===portId));
+}
+
+function renderLink(link){
+  const devA = devices[link.a.dev], devB = devices[link.b.dev];
+  if(!devA || !devB) return;
+  const iA = devA.ports.findIndex(p=>p.id===link.a.port);
+  const iB = devB.ports.findIndex(p=>p.id===link.b.port);
+  const [ax,ay] = portXY(devA, iA);
+  const [bx,by] = portXY(devB, iB);
+  const pA = devA.ports[iA], pB = devB.ports[iB];
+  const kind = link.kind || "lan";
+  const up = kind==="console" ? true :
+    pA.up && pB.up && !pA.disabled && !pB.disabled && (pA.vlan === pB.vlan || devA.type==="switch" || devB.type==="switch");
+  const line = document.createElementNS(NS,"line");
+  line.setAttribute("x1",ax); line.setAttribute("y1",ay);
+  line.setAttribute("x2",bx); line.setAttribute("y2",by);
+  line.setAttribute("class","link"+(kind!=="lan"?" "+kind:"")+(up?" up":""));
+  line.addEventListener("click",(e)=>{ e.stopPropagation(); showLinkInfo(link,kind); });
+  svg.appendChild(line);
+}
+
+function showLinkInfo(link, kind){
+  const labels = { lan:"LAN / Data", mgmt:"Management (out-of-band)", console:"Console (local only — no network path)", remote:"Remote / WAN link" };
+  alert(`Connection type: ${labels[kind] || "LAN / Data"}`);
+}
+
+/* ---------- interaction ---------- */
+svg.addEventListener("mousemove",(e)=>{
+  if(dragging){
+    const dev = devices[dragging.id];
+    dev.x = Math.max(0,e.offsetX - dragging.offX);
+    dev.y = Math.max(0,e.offsetY - dragging.offY);
+    render();
+  }
+});
+svg.addEventListener("mouseup",()=>{ dragging=null; });
+svg.addEventListener("mouseleave",()=>{ dragging=null; });
+
+function onPortClick(devId,portId){
+  if(mode !== "link") return;
+  if(!armedPort){
+    armedPort = { dev:devId, port:portId };
+    render();
+    return;
+  }
+  if(armedPort.dev===devId && armedPort.port===portId){ armedPort=null; render(); return; }
+  // don't link an already-linked port
+  if(isLinked(devId,portId) || isLinked(armedPort.dev,armedPort.port)){
+    armedPort = null; render();
+    return;
+  }
+  const choice = prompt(
+    "Connection type?\n1 = LAN / Data (normal, carries traffic)\n2 = Management (out-of-band admin network)\n3 = Console (local only — does NOT carry network traffic)\n4 = Remote / WAN link (long-haul, e.g. an interconnect)",
+    "1"
+  );
+  const kindMap = { "1":"lan", "2":"mgmt", "3":"console", "4":"remote" };
+  const kind = kindMap[(choice||"1").trim()] || "lan";
+  const id = uid("lk");
+  links[id] = { a: armedPort, b: { dev:devId, port:portId }, kind };
+  armedPort = null;
+  render();
+}
+
+function deleteDevice(devId){
+  Object.entries(links).forEach(([id,l])=>{
+    if(l.a.dev===devId || l.b.dev===devId) delete links[id];
+  });
+  delete devices[devId];
+  if(activeDevice===devId) closeCli();
+  render();
+}
+
+document.getElementById("add-switch").onclick = ()=>{
+  const n = parseInt(prompt("How many ports on this switch?","48"),10);
+  makeSwitch(80+Math.random()*80,80+Math.random()*80, isNaN(n)||n<1 ? 48 : n);
+  render();
+};
+document.getElementById("add-host").onclick = ()=>{ makeHost(80+Math.random()*80,220+Math.random()*80); render(); };
+document.getElementById("add-router").onclick = ()=>{
+  const n = parseInt(prompt("How many ports on this router?","4"),10);
+  makeRouter(80+Math.random()*80,150+Math.random()*80, isNaN(n)||n<1 ? 4 : n);
+  render();
+};
+document.getElementById("add-isp").onclick = ()=>{ makeIsp(400+Math.random()*80,60+Math.random()*40); render(); };
+
+function setMode(m){
+  mode = m; armedPort = null;
+  ["link-mode","del-mode"].forEach(id=>document.getElementById(id).classList.remove("active"));
+  if(m==="link") document.getElementById("link-mode").classList.add("active");
+  if(m==="delete") document.getElementById("del-mode").classList.add("active");
+  const hint = document.getElementById("hint");
+  hint.textContent = m==="link" ? "Click two ports to cable them. Click Cable again to stop."
+    : m==="delete" ? "Click a device to delete it. Click Delete again to stop."
+    : "Click a device to open its CLI. Drag to move.";
+  render();
+}
+document.getElementById("link-mode").onclick = ()=> setMode(mode==="link" ? "normal" : "link");
+document.getElementById("del-mode").onclick = ()=> setMode(mode==="delete" ? "normal" : "delete");
+
+document.getElementById("save").onclick = ()=>{
+  const blob = new Blob([JSON.stringify({devices,links,vlans,nextId},null,2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "junos-lab-save.json"; a.click();
+};
+document.getElementById("load").onclick = ()=>{
+  const inp = document.createElement("input"); inp.type="file"; inp.accept="application/json";
+  inp.onchange = ()=>{
+    const reader = new FileReader();
+    reader.onload = ()=>{
+      const data = JSON.parse(reader.result);
+      devices = data.devices||{}; links = data.links||{}; vlans = data.vlans||{default:1}; nextId = data.nextId||1;
+      render();
+    };
+    reader.readAsText(inp.files[0]);
+  };
+  inp.click();
+};
+document.getElementById("clear").onclick = ()=>{
+  if(confirm("Wipe the whole lab?")){ devices={}; links={}; vlans={default:1}; nextId=1; closeCli(); render(); }
+};
+
+/* ---------- CLI ---------- */
+const cli = document.getElementById("cli");
+const cliLog = document.getElementById("cli-log");
+const cliInput = document.getElementById("cli-input");
+const cliPrompt = document.getElementById("cli-prompt");
+const cliTitle = document.getElementById("cli-title");
+
+function openCli(devId){
+  activeDevice = devId;
+  const dev = devices[devId];
+  dev.cli = dev.cli || { configMode:false, buffer:[] };
+  cliTitle.textContent = dev.name + "  (" + dev.type + ")";
+  cliLog.innerHTML = "";
+  const banner = dev.type==="switch" || dev.type==="router"
+    ? `Amnesiac (ttyd0)\n\nlogin: kaatje\n--- JUNOS lab session ---`
+    : dev.type==="isp"
+    ? `--- upstream provider link: ${dev.name} (read-only) ---`
+    : `--- host shell: ${dev.name} ---`;
+  printLine("out", banner);
+  updatePrompt();
+  cli.classList.add("open");
+  cliInput.focus();
+  render();
+}
+function closeCli(){ cli.classList.remove("open"); activeDevice=null; render(); }
+document.getElementById("closecli").onclick = closeCli;
+
+function updatePrompt(){
+  const dev = devices[activeDevice];
+  if(!dev) return;
+  if(dev.type==="host"){ cliPrompt.textContent = `${dev.name}$`; return; }
+  if(dev.type==="isp"){ cliPrompt.textContent = `${dev.name}>`; return; }
+  cliPrompt.textContent = dev.cli.configMode ? `${dev.cfg.hostname}#` : `${dev.cfg.hostname}>`;
+}
+
+function printLine(cls,text){
+  const div = document.createElement("div");
+  div.className = cls;
+  div.textContent = text;
+  cliLog.appendChild(div);
+  cliLog.scrollTop = cliLog.scrollHeight;
+}
+
+function promptStr(dev){
+  if(dev.type==="host") return dev.name+"$ ";
+  if(dev.type==="isp") return dev.name+"> ";
+  return dev.cli.configMode ? dev.cfg.hostname+"# " : dev.cfg.hostname+"> ";
+}
+
+cliInput.addEventListener("keydown",(e)=>{
+  if(e.key!=="Enter") return;
+  const raw = cliInput.value;
+  cliInput.value = "";
+  const dev = devices[activeDevice];
+  printLine("cmd", promptStr(dev) + raw);
+  let out;
+  if(dev.type==="switch") out = runSwitchCmd(dev,raw.trim());
+  else if(dev.type==="router") out = runRouterCmd(dev,raw.trim());
+  else if(dev.type==="isp") out = runIspCmd(dev,raw.trim());
+  else out = runHostCmd(dev,raw.trim());
+  if(out) printLine(out.err ? "err":"out", out.text);
+  updatePrompt();
+  render();
+});
+
+/* very small Junos-flavored CLI: enough to drive port state + vlans */
+const SWITCH_HELP = [
+  "configure                                          — enter config mode",
+  "commit / exit                                      — save / leave config mode",
+  "set system host-name <name>                        — rename the switch",
+  "set vlans <name> vlan-id <id>                       — create a VLAN",
+  "set interfaces <port> vlan members <vlan-name>      — put a port in a VLAN",
+  "set interfaces <port> disable                       — admin-down a port",
+  "delete interfaces <port> disable                    — bring a port back up",
+  "show interfaces terminal / show vlans               — check current state",
+].join("\n");
+const HOST_HELP = [
+  "ip addr add <ip>/<mask> dev eth0   — assign an address",
+  "ip addr / ifconfig                 — show current address",
+  "ping <ip>                          — test reachability",
+].join("\n");
+
+function nudge(cmd, dev){
+  const parts = cmd.split(/\s+/);
+  if(parts[0]==="set" && parts[1]==="interfaces")
+    return `usage: set interfaces <port> vlan members <vlan-name>   OR   set interfaces <port> disable\n(ports on this device: ${dev.ports.map(p=>p.id).join(", ")})`;
+  if(parts[0]==="set" && parts[1]==="vlans")
+    return `usage: set vlans <name> vlan-id <id>`;
+  if(parts[0]==="set" && !dev.cli.configMode)
+    return `you're not in config mode yet — type "configure" first`;
+  return `unknown command: "${cmd}" — type ? or help for what's available here`;
+}
+
+function runSwitchCmd(dev, cmd){
+  if(!cmd) return null;
+  const parts = cmd.split(/\s+/);
+  if(cmd==="?" || cmd==="help"){ return {text: SWITCH_HELP}; }
+  if(cmd==="configure"){ dev.cli.configMode = true; return {text:"Entering configuration mode"}; }
+  if(cmd==="commit"){ return {text:"commit complete"}; }
+  if(cmd==="exit"){
+    if(dev.cli.configMode){ dev.cli.configMode=false; return {text:"Exiting configuration mode"}; }
+    return {text:""};
+  }
+  if(cmd==="show interfaces terminal"){
+    return {text: dev.ports.map(p=>`${p.id}  ${p.disabled?"admin-down":(isLinked(dev.id,p.id)?"up":"down")}  vlan:${p.vlan}`).join("\n")};
+  }
+  if(cmd==="show vlans"){
+    return {text: Object.entries(dev.cfg.vlans).map(([n,id])=>`${n}  vlan-id ${id}`).join("\n")};
+  }
+  if(dev.cli.configMode && parts[0]==="set" && parts[1]==="system" && parts[2]==="host-name" && parts[3]){
+    dev.cfg.hostname = parts[3]; dev.name = parts[3]; return {text:""};
+  }
+  if(dev.cli.configMode && parts[0]==="set" && parts[1]==="vlans" && parts[2] && parts[3]==="vlan-id" && parts[4]){
+    dev.cfg.vlans[parts[2]] = parseInt(parts[4]); return {text:""};
+  }
+  if(dev.cli.configMode && parts[0]==="set" && parts[1]==="interfaces" && parts[2]){
+    const port = dev.ports.find(p=>p.id===parts[2]);
+    if(!port) return {text:`error: interface ${parts[2]} not found. valid ports: ${dev.ports.map(p=>p.id).join(", ")}`, err:true};
+    if(parts[3]==="disable"){ port.disabled = true; return {text:""}; }
+    const vlanIdx = parts.indexOf("vlan");
+    if(vlanIdx>-1 && parts[vlanIdx+1]==="members" && parts[vlanIdx+2]){
+      if(!dev.cfg.vlans[parts[vlanIdx+2]]) return {text:`error: vlan "${parts[vlanIdx+2]}" doesn't exist yet — create it first with "set vlans ${parts[vlanIdx+2]} vlan-id <id>"`, err:true};
+      port.vlan = parts[vlanIdx+2]; return {text:""};
+    }
+    return {text: nudge(cmd,dev), err:true};
+  }
+  if(dev.cli.configMode && parts[0]==="delete" && parts[1]==="interfaces" && parts[2]){
+    const port = dev.ports.find(p=>p.id===parts[2]);
+    if(port && parts[3]==="disable"){ port.disabled = false; return {text:""}; }
+  }
+  return {text: nudge(cmd,dev), err:true};
+}
+
+function runHostCmd(dev, cmd){
+  if(!cmd) return null;
+  const parts = cmd.split(/\s+/);
+  if(cmd==="?" || cmd==="help"){ return {text: HOST_HELP}; }
+  if(parts[0]==="ip" && parts[1]==="addr" && (parts[2]==="add" || parts.length>=3)){
+    const target = parts.find(p=>p.includes("/"));
+    if(!target) return {text:`usage: ip addr add <ip>/<mask> dev eth0`, err:true};
+    const [ip,mask] = target.split("/");
+    dev.cfg.ip = ip; dev.cfg.mask = mask||"24";
+    return {text:`eth0: ${ip}/${dev.cfg.mask} assigned`};
+  }
+  if(parts[0]==="ping"){
+    if(!parts[1]) return {text:`usage: ping <ip>`, err:true};
+    const res = pingCheck(dev, parts[1]);
+    return {text: res.text, err: !res.ok};
+  }
+  if(cmd==="ifconfig" || cmd==="ip addr"){
+    return {text: dev.cfg.ip ? `eth0: ${dev.cfg.ip}/${dev.cfg.mask}` : "eth0: no IP assigned"};
+  }
+  return {text:`command not found: "${parts[0]}" — type ? or help`, err:true};
+}
+
+/* ---------- router CLI ---------- */
+const ROUTER_HELP = [
+  "configure                                                   — enter config mode",
+  "commit / exit                                               — save / leave config mode",
+  "set system host-name <name>                                 — rename the router",
+  "set interfaces <port> family inet address <ip>/<bits>        — assign an IP to a port",
+  "set interfaces <port> disable                                — admin-down a port",
+  "set routing-options static route <net>/<bits> next-hop <ip>  — add a route (0.0.0.0/0 = default)",
+  "show interfaces terminal / show route                        — check current state",
+].join("\n");
+
+function routerNudge(cmd, dev){
+  const parts = cmd.split(/\s+/);
+  if(parts[0]==="set" && parts[1]==="interfaces")
+    return `usage: set interfaces <port> family inet address <ip>/<bits>   OR   set interfaces <port> disable\n(ports on this device: ${dev.ports.map(p=>p.id).join(", ")})`;
+  if(parts[0]==="set" && parts[1]==="routing-options")
+    return `usage: set routing-options static route <network>/<bits> next-hop <ip>\ne.g. set routing-options static route 0.0.0.0/0 next-hop 203.0.113.2`;
+  if(parts[0]==="set" && !dev.cli.configMode)
+    return `you're not in config mode yet — type "configure" first`;
+  return `unknown command: "${cmd}" — type ? or help`;
+}
+
+function runRouterCmd(dev, cmd){
+  if(!cmd) return null;
+  const parts = cmd.split(/\s+/);
+  if(cmd==="?" || cmd==="help"){ return {text: ROUTER_HELP}; }
+  if(cmd==="configure"){ dev.cli.configMode = true; return {text:"Entering configuration mode"}; }
+  if(cmd==="commit"){ return {text:"commit complete"}; }
+  if(cmd==="exit"){
+    if(dev.cli.configMode){ dev.cli.configMode=false; return {text:"Exiting configuration mode"}; }
+    return {text:""};
+  }
+  if(cmd==="show interfaces terminal"){
+    return {text: dev.ports.map(p=>`${p.id}  ${p.disabled?"admin-down":(isLinked(dev.id,p.id)?"up":"down")}  ${p.ip?p.ip+"/"+p.mask:"no ip"}`).join("\n")};
+  }
+  if(cmd==="show route"){
+    const connected = dev.ports.filter(p=>p.ip).map(p=>`${networkOf(p.ip,p.mask)}/${p.mask}  connected (${p.id})`);
+    const statics = dev.cfg.routes.map(r=>`${r.destNet}/${r.destBits}  static via ${r.nextHopIp}`);
+    const all = [...connected, ...statics];
+    return {text: all.length ? all.join("\n") : "no routes yet"};
+  }
+  if(dev.cli.configMode && parts[0]==="set" && parts[1]==="system" && parts[2]==="host-name" && parts[3]){
+    dev.cfg.hostname = parts[3]; dev.name = parts[3]; return {text:""};
+  }
+  if(dev.cli.configMode && parts[0]==="set" && parts[1]==="interfaces" && parts[2]){
+    const port = dev.ports.find(p=>p.id===parts[2]);
+    if(!port) return {text:`error: interface ${parts[2]} not found. valid ports: ${dev.ports.map(p=>p.id).join(", ")}`, err:true};
+    if(parts[3]==="disable"){ port.disabled = true; return {text:""}; }
+    const addrIdx = parts.indexOf("address");
+    if(parts[3]==="family" && parts[4]==="inet" && addrIdx>-1 && parts[addrIdx+1]){
+      const [ip,bits] = parts[addrIdx+1].split("/");
+      if(!ip || !bits) return {text: routerNudge(cmd,dev), err:true};
+      port.ip = ip; port.mask = parseInt(bits);
+      return {text:""};
+    }
+    return {text: routerNudge(cmd,dev), err:true};
+  }
+  if(dev.cli.configMode && parts[0]==="delete" && parts[1]==="interfaces" && parts[2]){
+    const port = dev.ports.find(p=>p.id===parts[2]);
+    if(port && parts[3]==="disable"){ port.disabled = false; return {text:""}; }
+  }
+  if(dev.cli.configMode && parts[0]==="set" && parts[1]==="routing-options" && parts[2]==="static" && parts[3]==="route" && parts[4]){
+    const [net,bits] = parts[4].split("/");
+    const nhIdx = parts.indexOf("next-hop");
+    if(!net || !bits || nhIdx===-1 || !parts[nhIdx+1]) return {text: routerNudge(cmd,dev), err:true};
+    const nextHopIp = parts[nhIdx+1];
+    dev.cfg.routes = dev.cfg.routes.filter(r=>!(r.destNet===net && r.destBits===parseInt(bits)));
+    dev.cfg.routes.push({ destNet:net, destBits:parseInt(bits), nextHopIp });
+    return {text:""};
+  }
+  return {text: routerNudge(cmd,dev), err:true};
+}
+
+/* ---------- ISP CLI (read-only stub, represents "the internet") ---------- */
+const ISP_HELP = [
+  "show interfaces terminal   — this link's public IP",
+  "(this is the outside world — nothing to configure here)",
+].join("\n");
+function runIspCmd(dev, cmd){
+  if(!cmd) return null;
+  if(cmd==="?" || cmd==="help"){ return {text: ISP_HELP}; }
+  if(cmd==="show interfaces terminal"){
+    return {text: `wan0  up  ${dev.cfg.ip}/${dev.cfg.mask}  (upstream provider)`};
+  }
+  return {text:`this is a read-only ISP link — nothing to configure. Try "show interfaces terminal".`, err:true};
+}
+
+/* ---------- IP helpers ---------- */
+function ipToInt(ip){
+  const p = ip.split(".").map(Number);
+  return ((p[0]<<24) | (p[1]<<16) | (p[2]<<8) | p[3]) >>> 0;
+}
+function maskFor(bits){ return bits<=0 ? 0 : (~0 << (32-bits)) >>> 0; }
+function sameSubnet(ipA, ipB, bits){
+  const m = maskFor(bits);
+  return (ipToInt(ipA) & m) === (ipToInt(ipB) & m);
+}
+function networkOf(ip, bits){
+  const m = maskFor(bits);
+  const n = ipToInt(ip) & m;
+  return [(n>>>24)&255,(n>>>16)&255,(n>>>8)&255,n&255].join(".");
+}
+
+/* reachability: L2 flood within a vlan/broadcast domain, then hop through routers via static routes */
+function l2Domain(startDevId, startPortId){
+  const domain = [];
+  const visited = new Set();
+  const key = (d,p)=>d+":"+p;
+  const queue = [{dev:startDevId, port:startPortId}];
+  visited.add(key(startDevId,startPortId));
+  while(queue.length){
+    const cur = queue.shift();
+    domain.push(cur);
+    const curDev = devices[cur.dev];
+    const curPort = curDev.ports.find(p=>p.id===cur.port);
+    if(!curPort || curPort.disabled || !curPort.up) continue;
+    const entry = findLinkFor(cur.dev,cur.port);
+    if(!entry) continue;
+    const [,l] = entry;
+    if((l.kind||"lan")==="console") continue; // console links are out-of-band — never carry data traffic
+    const other = (l.a.dev===cur.dev && l.a.port===cur.port) ? l.b : l.a;
+    const otherDev = devices[other.dev];
+    const otherPort = otherDev.ports.find(p=>p.id===other.port);
+    if(!otherPort || otherPort.disabled || !otherPort.up) continue;
+    // vlan must match when both sides carry a vlan tag (switches/hosts); routers/isp have no vlan field, treat as wildcard
+    if(curPort.vlan!==undefined && otherPort.vlan!==undefined && curPort.vlan!==otherPort.vlan) continue;
+    if(!visited.has(key(other.dev,other.port))){
+      visited.add(key(other.dev,other.port));
+      queue.push(other);
+      // a switch forwards across all its other ports in the same vlan
+      if(otherDev.type==="switch"){
+        otherDev.ports.forEach(p=>{
+          if(p.id===other.port) return;
+          if(p.disabled || !p.up) return;
+          if(p.vlan!==otherPort.vlan) return;
+          if(!visited.has(key(otherDev.id,p.id))){
+            visited.add(key(otherDev.id,p.id));
+            queue.push({dev:otherDev.id, port:p.id});
+          }
+        });
+      }
+    }
+  }
+  return domain;
+}
+
+function bestRoute(router, targetIp){
+  let best = null;
+  router.cfg.routes.forEach(r=>{
+    if(sameSubnet(targetIp, r.destNet, r.destBits)){
+      if(!best || r.destBits > best.destBits) best = r;
+    }
+  });
+  return best;
+}
+
+function findExitPort(router, nextHopIp){
+  return router.ports.find(p => p.ip && !p.disabled && sameSubnet(nextHopIp, p.ip, p.mask));
+}
+
+function pingCheck(srcHost, targetIp){
+  if(!srcHost.cfg.ip) return {ok:false, text:`ping: no IP configured on this host`};
+
+  let curDev = srcHost.id, curPort = srcHost.ports[0].id;
+  let hops = 0;
+  const seenRouters = new Set();
+
+  while(hops < 8){
+    hops++;
+    const domain = l2Domain(curDev, curPort);
+
+    // is the target directly in this L2 domain? (host or ISP endpoint with matching IP)
+    const found = domain.find(node=>{
+      const d = devices[node.dev];
+      return (d.type==="host" || d.type==="isp") && d.cfg.ip===targetIp;
+    });
+    if(found) return {ok:true, text:`64 bytes from ${targetIp}: icmp_seq=${hops} ttl=64 time=0.4 ms`};
+
+    // any router interfaces sitting in this domain that could route us onward?
+    const routerNode = domain.find(node=> devices[node.dev].type==="router" && !seenRouters.has(node.dev+":"+node.port));
+    if(!routerNode) return {ok:false, text:`Request timeout for icmp_seq ${hops} (no L2 path / VLAN mismatch / link down)`};
+
+    seenRouters.add(routerNode.dev+":"+routerNode.port);
+    const router = devices[routerNode.dev];
+    const route = bestRoute(router, targetIp);
+    if(!route) return {ok:false, text:`Request timeout for icmp_seq ${hops} (${router.name} has no route to ${targetIp} — check "show route" / static routes)`};
+
+    const exitPort = findExitPort(router, route.nextHopIp);
+    if(!exitPort) return {ok:false, text:`Request timeout for icmp_seq ${hops} (${router.name}: next-hop ${route.nextHopIp} isn't reachable from any configured interface)`};
+    if(exitPort.disabled || !exitPort.up) return {ok:false, text:`Request timeout for icmp_seq ${hops} (${router.name}: exit interface ${exitPort.id} is down)`};
+
+    curDev = router.id; curPort = exitPort.id;
+  }
+  return {ok:false, text:`Request timeout (too many hops — possible routing loop)`};
+}
+
+/* ---------- scenarios & hints ---------- */
+const SCENARIOS = [
+  {
+    id: "basic-connect",
+    title: "1. Basic Connectivity",
+    desc: "Get two hosts talking through a switch. No VLANs, no tricks — just prove the plumbing works.",
+    setup(){ /* free-build, no forced layout */ },
+    checks: [
+      { desc:"At least 1 switch and 2 hosts placed",
+        test:()=> Object.values(devices).filter(d=>d.type==="switch").length>=1 &&
+                  Object.values(devices).filter(d=>d.type==="host").length>=2 },
+      { desc:"Both hosts cabled into the switch",
+        test:()=> Object.values(devices).filter(d=>d.type==="host").every(h=>Object.values(links).some(l=>l.a.dev===h.id||l.b.dev===h.id)) &&
+                  Object.values(devices).filter(d=>d.type==="host").length>=2 },
+      { desc:"Both hosts have an IP in the same /24",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<2) return false;
+          const nets = hosts.map(h=>h.cfg.ip.split(".").slice(0,3).join("."));
+          return new Set(nets).size===1; } },
+      { desc:"ping succeeds between the two hosts",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<2) return false;
+          return pingCheck(hosts[0], hosts[1].cfg.ip).ok; } },
+    ],
+    hints: [
+      "Add a switch and two hosts from the toolbar, then use Cable mode to wire host → switch, host → switch.",
+      "Both hosts need an IP: in each host's CLI, run something like ip addr add 10.0.0.1/24 dev eth0 (use a different last number on the second host).",
+      "If ping still fails, check each switch port isn't disabled, and that both host ports ended up in the same vlan (default is fine here).",
+    ]
+  },
+  {
+    id: "vlan-split",
+    title: "2. VLAN Isolation",
+    desc: "Put two hosts on the same switch but in different VLANs. The goal is for the ping to FAIL — that's success here.",
+    setup(){},
+    checks: [
+      { desc:"Two VLANs exist on a switch (not just default)",
+        test:()=> Object.values(devices).some(d=>d.type==="switch" && Object.keys(d.cfg.vlans).length>=2) },
+      { desc:"Two hosts, each on a different VLAN port",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host");
+          if(hosts.length<2) return false;
+          const vlansUsed = hosts.map(h=>h.ports[0].vlan);
+          return new Set(vlansUsed).size>=2; } },
+      { desc:"Both hosts have IPs configured",
+        test:()=> Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip).length>=2 },
+      { desc:"Ping between them correctly fails (proves isolation)",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<2) return false;
+          return !pingCheck(hosts[0], hosts[1].cfg.ip).ok; } },
+    ],
+    hints: [
+      "On the switch: set vlans staff vlan-id 10, then set vlans guest vlan-id 20 (inside configure mode).",
+      "Assign each host's switch port to a different vlan: set interfaces ge-0/0/0 vlan members staff, set interfaces ge-0/0/1 vlan members guest.",
+      "Give both hosts IPs in the same subnet anyway — the point is they're on the same wire but still can't reach each other. If ping succeeds, double check the two ports really ended up in different vlans with show vlans / show interfaces terminal.",
+    ]
+  },
+  {
+    id: "rename-switch",
+    title: "3. Day-Zero Basics",
+    desc: "Every real deployment starts here: get into config mode and rename the switch.",
+    setup(){},
+    checks: [
+      { desc:"A switch has been renamed from its default id",
+        test:()=> Object.values(devices).some(d=>d.type==="switch" && d.cfg.hostname !== d.id) },
+    ],
+    hints: [
+      "Click a switch to open its CLI.",
+      "Type configure, then set system host-name <whatever you want>.",
+      "Don't forget commit — nothing sticks until you commit.",
+    ]
+  },
+  {
+    id: "access-distribution",
+    title: "4. Access → Distribution Uplink",
+    desc: "Real datacenter shape: a distribution switch uplinked to an access switch, hosts hang off the access switch. Classic default layout.",
+    setup(){},
+    checks: [
+      { desc:"2 switches placed and cabled to each other (the uplink)",
+        test:()=>{ const sws=Object.values(devices).filter(d=>d.type==="switch");
+          if(sws.length<2) return false;
+          return Object.values(links).some(l=> devices[l.a.dev]?.type==="switch" && devices[l.b.dev]?.type==="switch"); } },
+      { desc:"At least 2 hosts hanging off the access switch",
+        test:()=> Object.values(devices).filter(d=>d.type==="host").length>=2 },
+      { desc:"All hosts share one subnet and can ping each other across the uplink",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<2) return false;
+          return pingCheck(hosts[0], hosts[1].cfg.ip).ok; } },
+      { desc:"Both switches have been renamed to something real (e.g. dist-1, acc-1)",
+        test:()=> Object.values(devices).filter(d=>d.type==="switch" && d.cfg.hostname!==d.id).length>=2 },
+    ],
+    hints: [
+      "Place two switches, cable a port on one directly to a port on the other — that's your uplink.",
+      "Hang two or more hosts off the second (access) switch, give them IPs in the same subnet.",
+      "Rename each switch to something you'd actually see on a rack label — helps this feel real, and it's a checked objective.",
+    ]
+  },
+  {
+    id: "isp-onboarding",
+    title: "5. Onboard a New Client via ISP",
+    desc: "The classic 'new customer' scenario: a router with a WAN link out to an ISP and a LAN link into your access switch. Get a brand-new client host reaching the internet.",
+    setup(){},
+    checks: [
+      { desc:"1 router, 1 ISP node, 1 switch, 1 host all placed",
+        test:()=> Object.values(devices).filter(d=>d.type==="router").length>=1 &&
+                  Object.values(devices).filter(d=>d.type==="isp").length>=1 &&
+                  Object.values(devices).filter(d=>d.type==="switch").length>=1 &&
+                  Object.values(devices).filter(d=>d.type==="host").length>=1 },
+      { desc:"Router's WAN port cabled to the ISP, LAN port cabled to the switch",
+        test:()=>{ const rt=Object.values(devices).find(d=>d.type==="router");
+          if(!rt) return false;
+          const toIsp = Object.values(links).some(l=>[l.a,l.b].some(e=>e.dev===rt.id) && [l.a,l.b].some(e=>devices[e.dev]?.type==="isp"));
+          const toSwitch = Object.values(links).some(l=>[l.a,l.b].some(e=>e.dev===rt.id) && [l.a,l.b].some(e=>devices[e.dev]?.type==="switch"));
+          return toIsp && toSwitch; } },
+      { desc:"Router has an IP on both its WAN and LAN interfaces",
+        test:()=>{ const rt=Object.values(devices).find(d=>d.type==="router");
+          if(!rt) return false;
+          return rt.ports.filter(p=>p.ip).length>=2; } },
+      { desc:"Router has a default route (0.0.0.0/0) pointing at the ISP",
+        test:()=>{ const rt=Object.values(devices).find(d=>d.type==="router");
+          if(!rt) return false;
+          return rt.cfg.routes.some(r=>r.destNet==="0.0.0.0"&&r.destBits===0); } },
+      { desc:"New client host can ping the ISP's public IP",
+        test:()=>{ const rt=Object.values(devices).find(d=>d.type==="router");
+          const isp=Object.values(devices).find(d=>d.type==="isp");
+          const host=Object.values(devices).find(d=>d.type==="host"&&d.cfg.ip);
+          if(!rt||!isp||!host) return false;
+          return pingCheck(host, isp.cfg.ip).ok; } },
+    ],
+    hints: [
+      "Layout: Host → Switch → Router(LAN port) ... Router(WAN port) → ISP. Cable all of it first.",
+      "On the router: set interfaces <wan-port> family inet address <your-ip>/30 to match the ISP's subnet, and a separate IP on the LAN-facing port for the client subnet.",
+      "The ISP node already has a fixed public IP (check its CLI with 'show interfaces terminal') — your router's WAN address just needs to be in the same /30 as it.",
+      "Add the default route on the router: set routing-options static route 0.0.0.0/0 next-hop <isp's IP>. Then give the host an IP in the router's LAN subnet and ping the ISP's address.",
+    ]
+  },
+  {
+    id: "interconnect-recovery",
+    title: "6. Site-to-Site Interconnect Recovery",
+    desc: "Two datacenter sites, linked by a single interconnect port. This is what a real 'link is flapping' ticket looks like on your end — the interconnect is down, and you need to bring it back AND prove it end-to-end, not just check the port light.",
+    setup(){
+      const swA = makeSwitch(60,60,8);
+      devices[swA].cfg.hostname = "site-a-acc1"; devices[swA].name = "site-a-acc1";
+      const swB = makeSwitch(420,60,8);
+      devices[swB].cfg.hostname = "site-b-acc1"; devices[swB].name = "site-b-acc1";
+      const hostA = makeHost(60,220); devices[hostA].name = "site-a-mgmt"; devices[hostA].cfg.ip="10.10.10.1"; devices[hostA].cfg.mask="24";
+      const hostB = makeHost(420,220); devices[hostB].name = "site-b-mgmt"; devices[hostB].cfg.ip="10.10.10.2"; devices[hostB].cfg.mask="24";
+      links[uid("lk")] = { a:{dev:hostA,port:"eth0"}, b:{dev:swA,port:devices[swA].ports[1].id} };
+      links[uid("lk")] = { a:{dev:hostB,port:"eth0"}, b:{dev:swB,port:devices[swB].ports[1].id} };
+      // the interconnect itself — starts down, like the ticket you'd get handed
+      links[uid("lk")] = { a:{dev:swA,port:devices[swA].ports[0].id}, b:{dev:swB,port:devices[swB].ports[0].id} };
+      devices[swA].ports[0].disabled = true;
+    },
+    checks: [
+      { desc:"Both sites placed with the interconnect between them",
+        test:()=> Object.values(devices).some(d=>d.name==="site-a-acc1") && Object.values(devices).some(d=>d.name==="site-b-acc1") },
+      { desc:"The interconnect port is admin-up on both ends",
+        test:()=>{ const swA=Object.values(devices).find(d=>d.name==="site-a-acc1");
+          const swB=Object.values(devices).find(d=>d.name==="site-b-acc1");
+          if(!swA||!swB) return false;
+          return !swA.ports[0].disabled && !swB.ports[0].disabled; } },
+      { desc:"site-a-mgmt can ping site-b-mgmt across the interconnect (proves it end-to-end)",
+        test:()=>{ const a=Object.values(devices).find(d=>d.name==="site-a-mgmt");
+          const b=Object.values(devices).find(d=>d.name==="site-b-mgmt");
+          if(!a||!b) return false;
+          return pingCheck(a, b.cfg.ip).ok; } },
+    ],
+    hints: [
+      "Click 'Load Setup' below to get the pre-built two-site topology — the interconnect starts down, same as a real ticket.",
+      "Open site-a-acc1's CLI, configure, and check show interfaces terminal — you'll see the interconnect port sitting admin-down.",
+      "delete interfaces <port> disable brings it back. Check both ends, not just the one you looked at first — real interconnects have two sides and either one could be the culprit.",
+      "Don't stop at 'the port shows up' — open site-a-mgmt's shell and actually ping site-b-mgmt's IP. Link light isn't proof of connectivity.",
+    ]
+  },
+  {
+    id: "access-control-segment",
+    title: "7. Physical Access Control Segment",
+    desc: "Datacenters run door controllers and access panels on the same switches as client gear, but logically walled off. This lab has no ACLs/firewalls — so the only real way to keep a segment isolated is to simply never route to it. Build that.",
+    setup(){},
+    checks: [
+      { desc:"Switch has a client VLAN and a separate security VLAN",
+        test:()=> Object.values(devices).some(d=>d.type==="switch" && Object.keys(d.cfg.vlans).length>=3) },
+      { desc:"A client host, an access-panel host, and an ops host are all placed",
+        test:()=> Object.values(devices).filter(d=>d.type==="host").length>=3 },
+      { desc:"The ops host shares the access-panel's VLAN (so it can reach it directly)",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<3) return false;
+          return hosts.some((h1,i)=>hosts.some((h2,j)=>i!==j && h1.ports[0].vlan===h2.ports[0].vlan && h1.ports[0].vlan!=="default"));
+        } },
+      { desc:"The client host CANNOT reach the access-panel (isolation actually holds)",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<3) return false;
+          // find a pair on different vlans and confirm ping fails between at least one such pair
+          for(const h1 of hosts) for(const h2 of hosts){
+            if(h1===h2) continue;
+            if(h1.ports[0].vlan!==h2.ports[0].vlan){
+              if(!pingCheck(h1,h2.cfg.ip).ok) return true;
+            }
+          }
+          return false;
+        } },
+    ],
+    hints: [
+      "Create two non-default VLANs on the switch, e.g. set vlans client vlan-id 10 and set vlans security vlan-id 99.",
+      "Put the client host's port in vlan client. Put both the access-panel host's port AND the ops host's port in vlan security — that's what gives ops reachability while the client segment stays blind to it.",
+      "Give all three hosts an IP (any subnet is fine — VLAN membership is what's actually gating reachability here, not the IP scheme). If the client host can still ping the panel, its switch port probably ended up in the wrong VLAN.",
+    ]
+  },
+  {
+    id: "multi-tenant-vlans",
+    title: "8. Multi-Tenant Customer VLANs",
+    desc: "Two different customers sharing one access switch — completely normal in colo. Each gets an isolated VLAN and their own path out through the router, with zero visibility into the other's traffic, even though they're on the same physical switch and router.",
+    setup(){},
+    checks: [
+      { desc:"Switch has two customer VLANs (not counting default)",
+        test:()=> Object.values(devices).some(d=>d.type==="switch" && Object.keys(d.cfg.vlans).length>=3) },
+      { desc:"Two customer hosts, each on a different VLAN, each with an IP in a different subnet",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<2) return false;
+          const vlans = new Set(hosts.map(h=>h.ports[0].vlan));
+          const nets = new Set(hosts.map(h=>h.cfg.ip.split(".").slice(0,3).join(".")));
+          return vlans.size>=2 && nets.size>=2; } },
+      { desc:"Router has a working gateway IP in each customer's subnet",
+        test:()=>{ const rt=Object.values(devices).find(d=>d.type==="router");
+          if(!rt) return false;
+          return rt.ports.filter(p=>p.ip).length>=2; } },
+      { desc:"Each customer can reach their own gateway (proves their path works)",
+        test:()=>{ const rt=Object.values(devices).find(d=>d.type==="router");
+          const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(!rt||hosts.length<2) return false;
+          return hosts.every(h=> rt.ports.some(p=>p.ip && pingCheck(h,p.ip).ok)); } },
+      { desc:"Customer A cannot reach Customer B — isolation holds even through the shared router",
+        test:()=>{ const hosts=Object.values(devices).filter(d=>d.type==="host"&&d.cfg.ip);
+          if(hosts.length<2) return false;
+          const [h1,h2] = hosts;
+          if(h1.cfg.ip.split(".").slice(0,3).join(".") === h2.cfg.ip.split(".").slice(0,3).join(".")) return false;
+          return !pingCheck(h1,h2.cfg.ip).ok; } },
+    ],
+    hints: [
+      "Give the switch two VLANs, e.g. cust-a and cust-b, one customer host on each.",
+      "Give the router two interfaces, one IP in cust-a's subnet, one in cust-b's subnet — that's each customer's default gateway.",
+      "Ping each customer host to its own router IP first to prove the gateway path works. Then try customer-a to customer-b directly — it should fail, because you never gave the router any reason to bridge the two together.",
+    ]
+  },
+];
+let currentScenario = SCENARIOS[0];
+let hintIndex = 0;
+
+function renderScenarioPanel(){
+  document.getElementById("scen-title").textContent = currentScenario.title;
+  document.getElementById("scen-desc").textContent = currentScenario.desc;
+  const objDiv = document.getElementById("scen-objectives");
+  objDiv.innerHTML = "";
+  currentScenario.checks.forEach(c=>{
+    let done = false;
+    try{ done = !!c.test(); }catch(e){ done = false; }
+    const el = document.createElement("div");
+    el.className = "obj"+(done?" done":"");
+    el.innerHTML = `<div class="dot"></div><span>${c.desc}</span>`;
+    objDiv.appendChild(el);
+  });
+}
+
+const scenSelect = document.getElementById("scenario-select");
+SCENARIOS.forEach((s,i)=>{
+  const opt = document.createElement("option");
+  opt.value = i; opt.textContent = s.title;
+  scenSelect.appendChild(opt);
+});
+scenSelect.onchange = ()=>{
+  currentScenario = SCENARIOS[scenSelect.value];
+  hintIndex = 0;
+  document.getElementById("hint-list").innerHTML = "";
+  renderScenarioPanel();
+};
+
+document.getElementById("toggle-scenario").onclick = ()=>{
+  document.getElementById("scenario-panel").classList.toggle("open");
+  renderScenarioPanel();
+};
+
+document.getElementById("hint-btn").onclick = ()=>{
+  const list = document.getElementById("hint-list");
+  if(hintIndex >= currentScenario.hints.length){
+    return;
+  }
+  const div = document.createElement("div");
+  div.className = "hint-line";
+  div.textContent = `Hint ${hintIndex+1}: ${currentScenario.hints[hintIndex]}`;
+  list.appendChild(div);
+  hintIndex++;
+  if(hintIndex >= currentScenario.hints.length){
+    document.getElementById("hint-btn").textContent = "No more hints — you've got everything";
+    document.getElementById("hint-btn").disabled = true;
+  }
+};
+
+document.getElementById("load-setup-btn").onclick = ()=>{
+  if(Object.keys(devices).length>0){
+    if(!confirm("This adds the scenario's starting devices on top of whatever's already on the canvas. Continue?")) return;
+  }
+  currentScenario.setup();
+  render();
+};
+
+const _origRender = render;
+render = function(){ _origRender(); renderScenarioPanel(); };
+
+render();
+</script>
+</body>
+</html>
