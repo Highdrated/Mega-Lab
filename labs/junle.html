@@ -324,6 +324,19 @@
     border: 1px solid var(--line); padding: 4px 12px; white-space: nowrap;
   }
   .stage-act:hover { border-color: var(--green); color: var(--amber); }
+  .weakbanner {
+    display: flex; align-items: center; flex-wrap: wrap; gap: 10px;
+    margin: 0 0 20px; padding: 12px 16px;
+    border: 1px solid var(--line); border-left: 2px solid var(--red);
+    background: rgba(0,0,0,0.15);
+    font-size: 12px; color: var(--dim); letter-spacing: 1px;
+  }
+  .weakbanner .wb-label { color: var(--red); font-size: 11px; letter-spacing: 3px; }
+  .weakbanner .wb-act {
+    margin-left: auto; color: var(--green); font-size: 11px; letter-spacing: 1px;
+    cursor: pointer; border: 1px solid var(--line); padding: 5px 12px; white-space: nowrap;
+  }
+  .weakbanner .wb-act:hover { border-color: var(--green); color: var(--amber); }
   .scen-head {
     font-size: 11px;
     letter-spacing: 3px;
@@ -2367,15 +2380,17 @@
         "  (one logical link, LACP keeps both sides honest)"
       ],
       steps: [
-        ["1. tell the chassis how many ae interfaces may exist", "set chassis aggregated-devices ethernet device-count 2"],
-        ["2. put each member port into the bundle", "set interfaces ge-0/0/44 ether-options 802.3ad ae0"],
-        ["", "set interfaces ge-0/0/45 ether-options 802.3ad ae0"],
-        ["3. turn on LACP, active mode (we send the negotiation)", "set interfaces ae0 aggregated-ether-options lacp active"],
-        ["4. the bundle itself carries the VLAN config, not the members", "set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk"],
-        ["", "set interfaces ae0 unit 0 family ethernet-switching vlan members all"]
+        ["1. tell the chassis how many ae interfaces may exist", "set chassis aggregated-devices ethernet device-count 2", "reserves the ae0..aeN bundle slots up front.", "ae0 doesn't exist yet, so every later 802.3ad line is rejected."],
+        ["2. put each member port into the bundle", "set interfaces ge-0/0/44 ether-options 802.3ad ae0", "this is the ONLY line the physical port carries; it hands the port to ae0.", "the port stays a lone port and never joins the LAG."],
+        ["", "set interfaces ge-0/0/45 ether-options 802.3ad ae0", "the second member is what makes it redundant.", "a one-member bundle has no redundancy, just a slower single link."],
+        ["3. turn on LACP, active mode", "set interfaces ae0 aggregated-ether-options lacp active", "active sends LACP packets so both sides agree the bundle is healthy.", "if both sides are passive the bundle never negotiates and stays down."],
+        ["4. the bundle carries VLAN config, not the members", "set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk", "ae0 is the logical port now; all switching config lives here.", "VLANs put on the members are ignored and tagging breaks."],
+        ["", "set interfaces ae0 unit 0 family ethernet-switching vlan members all", "lets VLANs ride the bundle; tighten to named VLANs in production.", "with no members the trunk carries nothing and hosts go dark."],
       ],
       verify: ["show lacp interfaces", "show interfaces ae0 extensive"],
-      gotcha: "Both members MUST have identical speed/duplex, and any old family ethernet-switching config on the member ports has to be deleted first \u2014 the member carries only the 802.3ad line."
+      gotcha: "Both members MUST have identical speed/duplex, and any old family ethernet-switching config on the member ports has to be deleted first \u2014 the member carries only the 802.3ad line.",
+      recap: "You bundled two ports into ae0, enabled LACP so both ends agree it is up, and moved all VLAN config onto the bundle. One link can now fail with no outage.",
+      next: "RSTP \u2014 once you trunk bundles between switches you need spanning-tree so a redundant path can't loop. read rstp."
     },
     {
       id: "vrrp",
@@ -2389,13 +2404,15 @@
         "  servers: gateway 10.20.0.254 \u2014 always"
       ],
       steps: [
-        ["1. each switch keeps its own real address on the irb", "set interfaces irb unit 20 family inet address 10.20.0.1/24 vrrp-group 20 virtual-address 10.20.0.254"],
-        ["2. decide who wins: higher priority = master", "set interfaces irb unit 20 family inet address 10.20.0.1/24 vrrp-group 20 priority 200"],
-        ["3. let the master take back over after it recovers", "set interfaces irb unit 20 family inet address 10.20.0.1/24 vrrp-group 20 preempt"],
-        ["4. same on the second switch with its own real IP + lower priority", "(mirror the config on SW-B with 10.20.0.2/24, priority 100)"]
+        ["1. each switch keeps its own real address + shares a virtual one", "set interfaces irb unit 20 family inet address 10.20.0.1/24 vrrp-group 20 virtual-address 10.20.0.254", "the .254 is the gateway servers point at; it floats to whoever is master.", "without a shared VIP each server would need to know which router is alive."],
+        ["2. decide who wins: higher priority = master", "set interfaces irb unit 20 family inet address 10.20.0.1/24 vrrp-group 20 priority 200", "priority makes mastership deterministic instead of random.", "equal priorities mean the election is decided by IP, not by you."],
+        ["3. let the master take back over after it recovers", "set interfaces irb unit 20 family inet address 10.20.0.1/24 vrrp-group 20 preempt", "preempt returns control to the primary once it is healthy again.", "without preempt the backup keeps the VIP even after the master returns."],
+        ["4. mirror on SW-B with its own IP + lower priority", "(SW-B: 10.20.0.2/24, same group 20, priority 100)", "both routers must share group 20 and the same VIP to fail over.", "a mismatched group or VIP means two independent routers, no failover."],
       ],
       verify: ["show vrrp", "show vrrp detail"],
-      gotcha: "The virtual address must be inside the subnet but must NOT be either switch's real address. Group number must match on both sides."
+      gotcha: "The virtual address must be inside the subnet but must NOT be either switch's real address. Group number must match on both sides.",
+      recap: "Two routers now share one gateway IP (10.20.0.254). The higher-priority one answers for it; if it dies, the backup takes over in seconds and servers never notice.",
+      next: "OSPF \u2014 VRRP gives hosts a resilient gateway, but the routers still need to learn each other's subnets dynamically. read ospf."
     },
     {
       id: "ospf",
@@ -2408,13 +2425,15 @@
         "  Full = routes flowing. stuck ExStart = MTU mismatch."
       ],
       steps: [
-        ["1. give the router a stable identity", "set routing-options router-id 10.0.0.5"],
-        ["2. put the routed interfaces into an area", "set protocols ospf area 0.0.0.0 interface irb.20"],
-        ["3. server VLANs advertise but never form neighbours", "set protocols ospf area 0.0.0.0 interface irb.20 passive"],
-        ["4. only real router-to-router links stay active", "set protocols ospf area 0.0.0.0 interface irb.0"]
+        ["1. give the router a stable identity", "set routing-options router-id 10.0.0.5", "the router-id names this router in every OSPF message.", "OSPF picks a random interface IP that can change on reboot and confuse neighbours."],
+        ["2. put the routed interfaces into an area", "set protocols ospf area 0.0.0.0 interface irb.20", "area 0 is the backbone; interfaces in it advertise their subnets.", "an interface not in an area is invisible to OSPF and its subnet isn't shared."],
+        ["3. server VLANs advertise but form no neighbours", "set protocols ospf area 0.0.0.0 interface irb.20 passive", "passive shares the subnet without letting anyone speak OSPF to you there.", "without passive, anyone on that VLAN could form an adjacency and inject routes."],
+        ["4. keep real router-to-router links active", "set protocols ospf area 0.0.0.0 interface irb.0", "active links are where adjacencies form and routes exchange.", "if the uplink is passive too, no neighbour forms and nothing is learned."],
       ],
       verify: ["show ospf neighbor", "show ospf route", "show route protocol ospf"],
-      gotcha: "Passive on server VLANs is not optional politeness \u2014 without it anyone on that VLAN could speak OSPF to you. And ExStart forever = check MTU both sides."
+      gotcha: "Passive on server VLANs is not optional politeness \u2014 without it anyone on that VLAN could speak OSPF to you. And ExStart forever = check MTU both sides.",
+      recap: "Each router now advertises its subnets into area 0, forms adjacencies only on real uplinks, and keeps server VLANs passive so they can't be spoofed.",
+      next: "BGP \u2014 OSPF handles inside your network; talking to a carrier or another AS needs BGP. read bgp."
     },
     {
       id: "bgp",
@@ -2427,13 +2446,15 @@
         "  Active = trying and failing to connect. check L3 first."
       ],
       steps: [
-        ["1. declare your own AS number", "set routing-options autonomous-system 65010"],
-        ["2. make a group for the peering type", "set protocols bgp group upstream type external"],
-        ["3. add the neighbour with its AS", "set protocols bgp group upstream neighbor 10.0.0.254 peer-as 65020"],
-        ["4. peer address must be reachable BEFORE bgp can talk", "(ping it \u2014 bgp rides on top of plain TCP/179)"]
+        ["1. declare your own AS number", "set routing-options autonomous-system 65010", "your AS is your identity to every peer.", "no local AS means BGP can't build the OPEN message and no session forms."],
+        ["2. make a group for the peering type", "set protocols bgp group upstream type external", "external marks this as eBGP (a different AS), which changes the rules.", "wrong type (internal) expects a matching AS and the session won't come up."],
+        ["3. add the neighbour with its AS", "set protocols bgp group upstream neighbor 10.0.0.254 peer-as 65020", "the peer-as must match what the other side actually is.", "a peer-as mismatch is refused in the OPEN and the session never establishes."],
+        ["4. the peer address must be reachable first", "(ping 10.0.0.254 before expecting BGP)", "BGP rides on plain TCP/179; no IP reachability, no session.", "if you can't ping the peer, BGP sits in Active/Connect forever."],
       ],
       verify: ["show bgp summary", "show route receive-protocol bgp 10.0.0.254", "show route advertising-protocol bgp 10.0.0.254"],
-      gotcha: "Established with 0 routes received is still broken \u2014 the session is up but policy is filtering everything. Session state and route flow are two different checks."
+      gotcha: "Established with 0 routes received is still broken \u2014 the session is up but policy is filtering everything. Session state and route flow are two different checks.",
+      recap: "You set your AS, defined an external peer with its correct AS, and confirmed L3 reachability. The session can now reach Established and exchange routes.",
+      next: "COMMIT MODEL \u2014 routing changes are risky on live gear; learn the candidate/commit/rollback safety net. read commit."
     },
     {
       id: "rstp",
@@ -2447,14 +2468,15 @@
         "   lower priority number wins the root election"
       ],
       steps: [
-        ["1. turn it on", "set protocols rstp"],
-        ["2. pin the root where YOU decide (core, not a desk switch)", "set protocols rstp bridge-priority 4096"],
-        ["3. server/desktop ports come up instantly", "set protocols rstp interface ge-0/0/10 edge"],
-        ["4. an edge port that hears a BPDU gets shut", "set protocols rstp bpdu-block-on-edge"],
-        ["5. uplinks may never become root ports via rogue gear", "set protocols rstp interface ge-0/0/47 no-root-port"]
+        ["1. turn it on", "set protocols rstp", "enables spanning-tree so redundant links can't form a loop.", "a single accidental cable between two ports can melt the whole L2 domain."],
+        ["2. pin the root where YOU decide", "set protocols rstp bridge-priority 4096", "lower number wins root; put it on the core, not a desk switch.", "leave the default 32768 and the oldest MAC in the building becomes root by accident."],
+        ["3. server/desktop ports come up instantly", "set protocols rstp interface ge-0/0/10 edge", "edge ports skip listening/learning so hosts get link immediately.", "without edge, every host port waits ~30s and users think the port is dead."],
+        ["4. an edge port that hears a BPDU gets shut", "set protocols rstp bpdu-block-on-edge", "protects the tree if someone plugs a switch into a host port.", "a rogue switch on an edge port could hijack the root election."],
       ],
       verify: ["show spanning-tree bridge", "show spanning-tree interface"],
-      gotcha: "Default priority is 32768 everywhere \u2014 leave it and the oldest MAC address in the building wins root. Always set it on purpose."
+      gotcha: "Default priority is 32768 everywhere \u2014 leave it and the oldest MAC address in the building wins root. Always set it on purpose.",
+      recap: "Spanning-tree is on, the root is pinned to your core on purpose, host ports come up instantly, and a rogue switch on an edge port gets blocked.",
+      next: "VIRTUAL CHASSIS \u2014 once single switches are solid, stack several into one managed unit. read vc."
     },
     {
       id: "vc",
@@ -2467,13 +2489,15 @@
         "  ring the vcp cables \u2014 a broken chain splits the brain"
       ],
       steps: [
-        ["1. convert uplink ports into VC ports (both sides!)", "request virtual-chassis vc-port set pic-slot 1 port 0"],
-        ["2. make mastership deterministic \u2014 highest wins", "set virtual-chassis member 0 mastership-priority 255"],
-        ["3. protect against split-brain on a broken ring", "set virtual-chassis no-split-detection"],
-        ["4. optional: preprovision serials so members get fixed IDs", "set virtual-chassis preprovisioned"]
+        ["1. convert uplink ports into VC ports (both sides!)", "request virtual-chassis vc-port set pic-slot 1 port 0", "VC ports are the backbone that stitches members into one switch.", "an un-converted port stays a normal uplink and the member never joins."],
+        ["2. make mastership deterministic", "set virtual-chassis member 0 mastership-priority 255", "highest priority always wins, so you pick the brain.", "equal priorities after a reboot can elect two masters = split brain."],
+        ["3. protect against a broken ring", "set virtual-chassis no-split-detection", "for a two-member stack, stops a lost link from splitting the brain.", "without it, one dead VC link can leave you with two masters fighting."],
+        ["4. optional: fix member IDs", "set virtual-chassis preprovisioned", "ties each serial to a fixed member id so slots don't shuffle.", "un-preprovisioned members can renumber themselves after a reboot."],
       ],
       verify: ["show virtual-chassis", "show virtual-chassis vc-port"],
-      gotcha: "Two members with equal priority after a power blip = two masters = split brain. Priority 255 on your chosen master is not optional. no-split-detection is for TWO-member stacks specifically."
+      gotcha: "Two members with equal priority after a power blip = two masters = split brain. Priority 255 on your chosen master is not optional. no-split-detection is for TWO-member stacks specifically.",
+      recap: "Multiple EX switches now act as one: uplinks became VC ports, member 0 is the deterministic master, and split-brain protection is on.",
+      next: "IRB / INTER-VLAN \u2014 one logical switch still needs to route between its VLANs. read irb."
     },
     {
       id: "irb",
@@ -2487,12 +2511,14 @@
         "  irb without l3-interface binding = link stays DOWN"
       ],
       steps: [
-        ["1. create the L3 interface with an address", "set interfaces irb unit 20 family inet address 10.20.0.1/24"],
-        ["2. bind it to its VLAN \u2014 the step everyone forgets", "set vlans servers l3-interface irb.20"],
-        ["3. a default route makes the rest of the world reachable", "set routing-options static route 0.0.0.0/0 next-hop 10.0.0.1"]
+        ["1. create the L3 interface with an address", "set interfaces irb unit 20 family inet address 10.20.0.1/24", "the irb is the switch's router-leg inside VLAN 20.", "no irb means VLAN 20 has no gateway and can't reach other subnets."],
+        ["2. bind it to its VLAN (the step everyone forgets)", "set vlans servers l3-interface irb.20", "this link is what actually activates the irb.", "an unbound irb shows admin-up / link-DOWN forever, even with an IP set."],
+        ["3. a default route reaches the rest of the world", "set routing-options static route 0.0.0.0/0 next-hop 10.0.0.1", "sends anything unknown toward the upstream gateway.", "without it, local VLANs talk to each other but nothing leaves the switch."],
       ],
       verify: ["show interfaces terse | match irb", "show route"],
-      gotcha: "An unbound irb shows admin UP link DOWN forever \u2014 that is the NO MANAGEMENT scenario in this very lab. The irb only comes up when its VLAN exists, is bound, and has at least one live port."
+      gotcha: "An unbound irb shows admin UP link DOWN forever \u2014 that is the NO MANAGEMENT scenario in this very lab. The irb only comes up when its VLAN exists, is bound, and has at least one live port.",
+      recap: "VLAN 20 now has a gateway (irb.20), it's correctly bound so the interface is actually up, and a default route lets it reach beyond the switch.",
+      next: "STORM CONTROL \u2014 routing between VLANs is live; now protect the switch from broadcast floods. read storm."
     },
     {
       id: "storm",
@@ -2505,12 +2531,14 @@
         "  EX4300 = ELS platform: profiles live under forwarding-options"
       ],
       steps: [
-        ["1. use the built-in default profile on everything", "set forwarding-options storm-control-profiles default all"],
-        ["2. or make your own with a bandwidth ceiling", "set forwarding-options storm-control-profiles strict all bandwidth-percentage 5"],
-        ["3. optionally shut the port instead of just dropping", "set forwarding-options storm-control-profiles strict action-shutdown"]
+        ["1. use the built-in default profile on everything", "set forwarding-options storm-control-profiles default all", "caps broadcast/multicast/unknown-unicast so a flood can't drown the CPU.", "an uncapped port lets a loop or berserk NIC take the whole switch down."],
+        ["2. or make your own with a ceiling", "set forwarding-options storm-control-profiles strict all bandwidth-percentage 5", "a tighter cap (5%) trips sooner on noisy segments.", "too high a ceiling and the storm still saturates the port before it trips."],
+        ["3. optionally shut the port instead of dropping", "set forwarding-options storm-control-profiles strict action-shutdown", "shutdown isolates the offender instead of just trimming its traffic.", "drop-only leaves the source connected to keep hammering the segment."],
       ],
       verify: ["show interfaces ge-0/0/10 extensive", "show log messages | last 20"],
-      gotcha: "Old guides show 'set interfaces X ... storm-control' \u2014 that is legacy non-ELS syntax and fails on the EX4300. Verify on the bench switch."
+      gotcha: "Old guides show 'set interfaces X ... storm-control' \u2014 that is legacy non-ELS syntax and fails on the EX4300. Verify on the bench switch.",
+      recap: "Every port now has a storm-control ceiling using the ELS forwarding-options syntax, so a broadcast storm can't take management with it.",
+      next: "COMMIT MODEL \u2014 you've built a lot; now master the safety net that makes changing it survivable. read commit."
     },
     {
       id: "commit",
@@ -2525,14 +2553,16 @@
         "        ^-- rollback 0 throws the candidate away"
       ],
       steps: [
-        ["1. review every change before it goes live", "show | compare"],
-        ["2. validate without applying", "commit check"],
-        ["3. remote change? always the safety net", "commit confirmed 5"],
-        ["4. still alive? make it stick", "commit"],
-        ["5. made it worse? previous config is one command away", "rollback 1"]
+        ["1. review every change before it goes live", "show | compare", "shows the diff of candidate vs active so nothing sneaks in.", "commit blind and a stray line ships straight to production."],
+        ["2. validate without applying", "commit check", "catches syntax and reference errors before they take effect.", "skipping it means the first sign of a bad config is an outage."],
+        ["3. remote change? always the safety net", "commit confirmed 5", "auto-rolls back in 5 min unless you confirm with a second commit.", "a bad remote change with plain commit can lock you out with no undo."],
+        ["4. still alive? make it stick", "commit", "the second commit confirms and keeps the change.", "forget it and commit-confirmed quietly reverts everything in 5 minutes."],
+        ["5. made it worse? previous config is one command away", "rollback 1", "loads the last committed config instantly.", "without rollback you'd rebuild the change by hand under pressure."],
       ],
       verify: ["show system commit", "show configuration | compare rollback 1"],
-      gotcha: "commit confirmed followed by silence ROLLS BACK \u2014 the second plain commit is the confirmation. Forgetting it undoes your change five minutes later and you will blame the switch."
+      gotcha: "commit confirmed followed by silence ROLLS BACK \u2014 the second plain commit is the confirmation. Forgetting it undoes your change five minutes later and you will blame the switch.",
+      recap: "You now review with compare, validate with check, protect remote changes with commit confirmed, and can undo instantly with rollback. This is what makes live changes safe.",
+      next: "You've completed the protocol guides. Head to the TRACK to see which topics still need drilling, or type 'review weak'."
     }
   ];
 
@@ -2861,6 +2891,63 @@
           out: ["0 (FPC 0)  Prsnt   255  Master*", "1 (FPC 1)  Prsnt   128  Linecard"] }
       ]
     },
+    {
+      id: "mtublackhole",
+      name: "MTU BLACK HOLE",
+      art: "routing",
+      brief: "Small pings across the DCO2-DCG link work fine, but file transfers and OSPF over it hang. Classic MTU mismatch.",
+      steps: [
+        { task: "Users report large transfers stall but ssh works. Confirm small packets pass first.", answers: ["ping 10.50.0.2 count 3"], fx: "m1", chip: "SMALL OK",
+          out: ["PING 10.50.0.2: 56 data bytes", "64 bytes from 10.50.0.2: icmp_seq=0 ttl=64 time=0.8 ms", "3 packets transmitted, 3 received, 0% loss"] },
+        { task: "Small pings pass. Now prove the black hole: send a large packet with do-not-fragment set.", answers: ["ping 10.50.0.2 size 8000 do-not-fragment count 3"], fx: "m2", chip: "LARGE FAILS",
+          out: ["PING 10.50.0.2: 8000 data bytes", "ping: sendto: Message too long", "3 packets transmitted, 0 received, 100% loss"] },
+        { task: "Large DF packets die. Check the MTU actually set on your interface.", answers: ["show interfaces ge-0/0/23 | match MTU", "show interfaces ge-0/0/23"], fx: "m3", chip: "MTU SEEN",
+          out: ["  Link-level type: Ethernet, MTU: 1514, Speed: 1000mbps", "  Protocol inet, MTU: 1500"] },
+        { task: "Your side is default 1500 but the carrier runs jumbo. Enter configuration mode.", answers: ["configure", "edit"], fx: "m4", chip: "CONFIG" },
+        { task: "Set the interface MTU to 9192 to match the jumbo-frame carrier link.", answers: ["set interfaces ge-0/0/23 mtu 9192"], fx: "m5", chip: "MTU SET" },
+        { task: "Commit and leave configuration mode.", answers: ["commit and-quit"], fx: "m6", chip: "COMMITTED", out: ["commit complete"] },
+        { task: "Prove it: the same large do-not-fragment ping must now pass.", answers: ["ping 10.50.0.2 size 8000 do-not-fragment count 3"], fx: "m7", chip: "FIXED",
+          out: ["PING 10.50.0.2: 8000 data bytes", "8008 bytes from 10.50.0.2: icmp_seq=0 ttl=64 time=1.2 ms", "3 packets transmitted, 3 received, 0% loss"] }
+      ]
+    },
+    {
+      id: "asymroute",
+      name: "ASYMMETRIC PATH",
+      art: "routing",
+      brief: "Traffic to the servers VLAN reaches them, but return traffic takes a different path and the stateful firewall drops it.",
+      steps: [
+        { task: "A customer says sessions to 10.20.0.0/24 open then freeze. Look at how you route to it.", answers: ["show route 10.20.0.0/24"], fx: "a1", chip: "FWD PATH",
+          out: ["10.20.0.0/24  *[OSPF/10] via ge-0/0/1.0 (CORE-A)", "              [OSPF/10] via ge-0/0/2.0 (CORE-B)"] },
+        { task: "Two equal-cost paths out. Check which path the return traffic actually takes back.", answers: ["show route 10.10.0.0/24"], fx: "a2", chip: "RETURN PATH",
+          out: ["10.10.0.0/24  *[OSPF/10] via ge-0/0/2.0 (CORE-B)"] },
+        { task: "Out via CORE-A, back via CORE-B: asymmetric, and the firewall on CORE-A never sees the return. Confirm the firewall is dropping.", answers: ["show firewall log", "show security flow session"], fx: "a3", chip: "DROPS SEEN",
+          out: ["Time     Filter   Action  Interface   Src           Dst", "10:32:01 pfe      D       ge-0/0/1.0  10.20.0.14    10.10.0.9"] },
+        { task: "You need one deterministic path. Enter configuration mode.", answers: ["configure", "edit"], fx: "a4", chip: "CONFIG" },
+        { task: "Raise the OSPF metric on the CORE-B link so the forward path prefers CORE-A both ways.", answers: ["set protocols ospf area 0.0.0.0 interface ge-0/0/2.0 metric 50"], fx: "a5", chip: "METRIC SET" },
+        { task: "Commit and leave configuration mode.", answers: ["commit and-quit"], fx: "a6", chip: "COMMITTED", out: ["commit complete"] },
+        { task: "Verify the return path now matches the forward path via CORE-A.", answers: ["show route 10.10.0.0/24"], fx: "a7", chip: "SYMMETRIC",
+          out: ["10.10.0.0/24  *[OSPF/10] via ge-0/0/1.0 (CORE-A)"] }
+      ]
+    },
+    {
+      id: "policydrop",
+      name: "SILENT POLICY DROP",
+      art: "bgp",
+      brief: "The eBGP session to the carrier is Established, but not a single route is being learned. Policy is eating them.",
+      steps: [
+        { task: "The upstream says they are advertising routes. Confirm your session state first.", answers: ["show bgp summary"], fx: "d1", chip: "SESSION UP",
+          out: ["Peer          AS      State        #Active/Received/Accepted", "10.0.0.254    65020   Established  0/482/0"] },
+        { task: "Established, 482 received, 0 accepted: policy is rejecting everything. See what the peer actually sends BEFORE policy.", answers: ["show route receive-protocol bgp 10.0.0.254"], fx: "d2", chip: "RAW ROUTES",
+          out: ["  Prefix            Nexthop       AS path", "  185.12.0.0/22     10.0.0.254    65020 I", "  185.12.4.0/22     10.0.0.254    65020 I"] },
+        { task: "The routes arrive fine. So the import policy is the culprit. Inspect the group's import policy name.", answers: ["show configuration protocols bgp group upstream", "show configuration protocols bgp"], fx: "d3", chip: "POLICY FOUND",
+          out: ["group upstream {", "    type external;", "    import REJECT-ALL;", "    neighbor 10.0.0.254 { peer-as 65020; }", "}"] },
+        { task: "import REJECT-ALL is the smoking gun. Enter configuration mode.", answers: ["configure", "edit"], fx: "d4", chip: "CONFIG" },
+        { task: "Remove the broken import policy from the group so accepted routes can flow.", answers: ["delete protocols bgp group upstream import REJECT-ALL"], fx: "d5", chip: "POLICY REMOVED" },
+        { task: "Commit and leave configuration mode.", answers: ["commit and-quit"], fx: "d6", chip: "COMMITTED", out: ["commit complete"] },
+        { task: "Verify routes are now accepted and active.", answers: ["show bgp summary"], fx: "d7", chip: "ROUTES FLOWING",
+          out: ["Peer          AS      State        #Active/Received/Accepted", "10.0.0.254    65020   Established  482/482/482"] }
+      ]
+    },
   ];
 
   const SCENE_ART = {
@@ -3092,6 +3179,7 @@
     try {
       localStorage.setItem("junle_blueprint", JSON.stringify({ committed: cfgCommitted, candidate: cfgCandidate, history: cfgHistory }));
     } catch (e) {}
+    if (typeof repaintTopoIfVisible === "function") repaintTopoIfVisible();
   }
 
   function cfgValidTop(line) {
@@ -3154,6 +3242,64 @@
       }
     });
     return errs;
+  }
+
+  function cfgWarn() {
+    const w = [];
+    const cfg = cfgCandidate;
+    const has = function(sub) { return cfg.some(function(l) { return l.indexOf(sub) >= 0; }); };
+
+    const trunks = cfg.filter(function(l) { return l.indexOf("interface-mode trunk") >= 0; });
+    trunks.forEach(function(l) {
+      const t = l.split(" ");
+      const ifc = t[2];
+      const hasNative = cfg.some(function(x) { return x.indexOf("interfaces " + ifc) >= 0 && x.indexOf("native-vlan-id") >= 0; });
+      if (!hasNative) w.push("review: " + ifc + " is a trunk with no native-vlan-id \u2014 untagged frames will be dropped");
+    });
+
+    const aeMembers = {};
+    cfg.forEach(function(l) {
+      const t = l.split(" ");
+      const adi = t.indexOf("802.3ad");
+      if (adi > 0 && t[adi + 1] && t[1] === "interfaces") {
+        const ae = t[adi + 1];
+        if (!aeMembers[ae]) aeMembers[ae] = [];
+        aeMembers[ae].push(t[2]);
+      }
+    });
+    Object.keys(aeMembers).forEach(function(ae) {
+      if (aeMembers[ae].length < 2) w.push("review: " + ae + " has only one member \u2014 a LAG needs 2+ links for redundancy");
+      const lacpOn = cfg.some(function(l) { return l.indexOf("interfaces " + ae) >= 0 && l.indexOf("lacp") >= 0; });
+      if (!lacpOn) w.push("review: " + ae + " has members but no LACP \u2014 add 'aggregated-ether-options lacp active'");
+    });
+
+    const vlanDefs = cfg.filter(function(l) { return l.split(" ")[1] === "vlans" && l.split(" ")[3] === "vlan-id"; });
+    vlanDefs.forEach(function(l) {
+      const t = l.split(" ");
+      const name = t[2];
+      const used = cfg.some(function(x) { return x.indexOf("members " + name) >= 0; }) ||
+                   cfg.some(function(x) { return x.indexOf("l3-interface") >= 0 && x.indexOf("vlans " + name) >= 0; });
+      if (!used) w.push("review: vlan " + name + " is defined but no interface uses it");
+    });
+
+    cfg.forEach(function(l) {
+      const t = l.split(" ");
+      if (t[1] === "interfaces" && t[2] === "irb" && t[3] === "unit" && t[4]) {
+        const unit = t[4];
+        const bound = cfg.some(function(x) { return x.indexOf("l3-interface irb." + unit) >= 0; });
+        if (!bound) w.push("review: irb." + unit + " has an address but no vlan binds it \u2014 it will stay link-down");
+      }
+    });
+
+    if (has("interfaces ge-") && has("interface-mode trunk") && !has("protocols rstp") && !has("protocols mstp")) {
+      w.push("review: trunks present but no spanning-tree \u2014 a loop here could melt the L2 domain");
+    }
+
+    if (has("protocols bgp") && !has("routing-options autonomous-system")) {
+      w.push("review: bgp configured but no local autonomous-system set");
+    }
+
+    return w;
   }
 
   function cfgCommit(force) {
@@ -3279,6 +3425,7 @@
     vc: "vc", storm: "storm", commit: "commit",
     ghost: "vc", splitvc: "vc", deadport: "basics", safechange: "commit",
     bgpdown: "bgp", ospfstuck: "ospf", rogueroot: "rstp", serverlag: "lacp",
+    mtublackhole: "ospf", asymroute: "ospf", policydrop: "bgp",
     blackhole: "ospf", flapping: "basics", nomgmt: "irb", fullstore: "basics",
     wrongvlan: "vlans", lockout: "commit"
   };
@@ -3355,7 +3502,52 @@
     "rollback 1": "Loads the PREVIOUS committed config. rollback 0 only throws away uncommitted candidate edits."
   };
   function whyFor(cmd) {
-    return WHY[cmd] || null;
+    if (WHY[cmd]) return WHY[cmd];
+    const SHOW = {
+      "show interfaces terse": "one-line status of every interface \\u2014 your fastest up/down/IP overview.",
+      "show version": "confirms the Junos release, which decides what syntax and features you have.",
+      "show chassis hardware": "serials and part numbers \\u2014 needed for RMA and to confirm what's installed.",
+      "show system alarms": "active red/yellow alarms; always check before and after any change.",
+      "show ethernet-switching table": "the MAC table \\u2014 proves which port a device actually lives on.",
+      "show system uptime": "how long it's been up; a recent reboot often explains a fresh problem.",
+      "show lldp neighbors": "who is directly connected to each port \\u2014 verifies your cabling.",
+      "show lldp neighbours": "who is directly connected to each port \\u2014 verifies your cabling.",
+      "show configuration | display set": "the running config as flat set commands \\u2014 easy to copy, diff, and paste.",
+      "show system users": "who else is logged in \\u2014 check before committing so you don't clash.",
+      "show system storage": "free disk; a full /var is a classic reason a commit fails.",
+      "show route": "the routing table \\u2014 shows how the switch reaches every destination.",
+      "show vlans": "which VLANs exist and which ports are in each \\u2014 verifies your L2 design.",
+      "show lacp interfaces": "confirms both LAG members negotiated and are collecting/distributing.",
+      "show spanning-tree bridge": "who won root and your bridge priority \\u2014 confirms the tree is where you want it.",
+      "show ospf neighbor": "adjacency state; Full means routes are exchanging, stuck states mean trouble.",
+      "show bgp summary": "peer state and route counts \\u2014 Established with 0 accepted means policy is dropping.",
+      "show virtual-chassis": "member roles (master/backup/linecard) \\u2014 confirms the stack formed cleanly.",
+      "show vrrp": "which router is master for the VIP and whether failover is armed."
+    };
+    if (SHOW[cmd]) return SHOW[cmd];
+    if (cmd.indexOf("storm-control") >= 0 && cmd.indexOf("forwarding-options") >= 0)
+      return "EX4300 is ELS: storm-control lives under forwarding-options, not under interfaces.";
+    if (cmd.indexOf("l3-interface irb.") >= 0)
+      return "This binds the VLAN to its irb. Without it the irb stays link-down even with an IP.";
+    if (cmd.indexOf("802.3ad") >= 0)
+      return "The member port carries only the 802.3ad line; VLAN config lives on the ae bundle.";
+    if (cmd.indexOf("interface-mode trunk") >= 0)
+      return "Trunk carries tagged VLANs. Add a native-vlan-id or untagged frames get dropped.";
+    if (cmd.indexOf("native-vlan-id") >= 0)
+      return "native-vlan-id handles untagged frames arriving on a trunk port.";
+    if (cmd.indexOf("bridge-priority") >= 0)
+      return "Lower number wins the root election. Never leave the default 32768 to chance.";
+    if (cmd.indexOf("mastership-priority") >= 0)
+      return "Highest priority wins VC mastership. Equal values risk split-brain after a reboot.";
+    if (cmd.indexOf("vlan-id") >= 0 && cmd.indexOf("set vlans") === 0)
+      return "vlan-id is single-value: setting it again overwrites rather than stacking.";
+    if (cmd.indexOf("members") >= 0)
+      return "members accumulate: each line adds a VLAN to the port, it doesn't replace.";
+    if (cmd.indexOf("commit confirmed") >= 0)
+      return "Auto-rolls back unless a second commit confirms it. Your remote-change safety net.";
+    if (cmd.indexOf("lacp") >= 0)
+      return "At least one side must be active or the LACP bundle never negotiates.";
+    return null;
   }
 
   const GUIDE_DRILL = {
@@ -3862,12 +4054,16 @@
       }
       if (typed === "commit check") {
         const errs = cfgCheck();
+        const warns = cfgWarn();
         if (errs.length) errs.forEach(function(e) { print(e, "warn"); });
-        else print("configuration check succeeds", "out");
+        warns.forEach(function(x) { print(x, "hint"); });
+        if (!errs.length) print("configuration check succeeds" + (warns.length ? " (" + warns.length + " design note" + (warns.length === 1 ? "" : "s") + ")" : ""), "out");
         return true;
       }
       if (typed === "commit" || typed === "commit and-quit" || typed.indexOf("commit confirmed") === 0) {
+        const warns = cfgWarn();
         if (!cfgCommit(false)) return true;
+        warns.forEach(function(x) { print(x, "hint"); });
         if (typed.indexOf("commit confirmed") === 0) print("commit confirmed will be automatically rolled back in " + (typed.split(" ")[2] || "10") + " minutes unless confirmed", "out");
         print("commit complete", "out");
         logEvent("mgd: commit complete (blueprint)", "ok");
@@ -3932,6 +4128,20 @@
 
   function buildTrack() {
     trackEl.innerHTML = "";
+    const weak = weakestTopics(3).filter(function(t) { return masteryPct(t) < 80; });
+    if (weak.length) {
+      const banner = document.createElement("div");
+      banner.className = "weakbanner";
+      const names = weak.map(function(t) { return (TOPIC_LABEL[t] || t.toUpperCase()) + " " + masteryPct(t) + "%"; });
+      banner.innerHTML = '<span class="wb-label">SHAKIEST</span> ' + names.join(" &#183; ") +
+        '<span class="wb-act" data-weak="1">DRILL THESE &#8594;</span>';
+      banner.querySelector(".wb-act").addEventListener("click", function() {
+        showView("terminal");
+        answerEl.value = "review weak";
+        handleInput();
+      });
+      trackEl.appendChild(banner);
+    }
     const nextIdx = nextStageIndex();
     TRACK.forEach(function(st, i) {
       const lv = masteryLevel(st.topic);
@@ -4567,6 +4777,8 @@
     }
     sfxOk();
     speak("accepted. proceeding.", "correct");
+    const dw = d.why || whyFor(d.answers[0]);
+    if (dw) print("why: " + dw, "sys");
     if (fails > 0 && !reviewRun) requeue(d, true);
     setTimeout(nextDrill, 600);
   }
@@ -4717,11 +4929,15 @@
       t.steps.forEach(function(s) {
         if (s[0]) print("  " + s[0], "sys");
         print("      " + s[1], "out");
+        if (s[2]) print("      why: " + s[2], "sys");
+        if (s[3]) print("      without it: " + s[3], "warn");
       });
       print("VERIFY", "sys");
       t.verify.forEach(function(v) { print("      " + v, "out"); });
       print("GOTCHA", "sys");
       print("  " + t.gotcha, "warn");
+      if (t.recap) { print("RECAP", "sys"); print("  " + t.recap, "out"); }
+      if (t.next) { print("NEXT", "sys"); print("  " + t.next, "sys"); }
       speak("now do it \u2014 don't just read it:", "sys");
       if (GUIDE_DRILL[t.id]) printAction("DRILL THIS \u2192", "start " + GUIDE_DRILL[t.id]);
       printAction("PLAN IT (blueprint) \u2192", "configure");
@@ -5107,7 +5323,10 @@
         cmd.textContent = s[1];
         const desc = document.createElement("div");
         desc.className = "learn-desc";
-        desc.textContent = s[0];
+        let dtx = s[0] || "";
+        if (s[2]) dtx += (dtx ? " " : "") + "Why: " + s[2];
+        if (s[3]) dtx += " Without it: " + s[3];
+        desc.textContent = dtx;
         row.appendChild(cmd);
         row.appendChild(desc);
         body.appendChild(row);
@@ -5116,6 +5335,18 @@
       ver.className = "learn-desc";
       ver.textContent = "verify: " + t.verify.join("  \u00b7  ") + "  \u2014  gotcha: " + t.gotcha;
       body.appendChild(ver);
+      if (t.recap) {
+        const rc = document.createElement("div");
+        rc.className = "learn-desc";
+        rc.innerHTML = '<b style="color:var(--text)">Recap:</b> ' + t.recap;
+        body.appendChild(rc);
+      }
+      if (t.next) {
+        const nx = document.createElement("div");
+        nx.className = "learn-desc";
+        nx.innerHTML = '<b style="color:var(--green)">Next:</b> ' + t.next;
+        body.appendChild(nx);
+      }
       header.addEventListener("click", function() {
         const open = body.classList.toggle("hidden") === false;
         chapter.classList.toggle("open", open);
@@ -5550,9 +5781,114 @@
     return h + '</svg>';
   }
 
+  function parseBlueprint(cfg) {
+    const model = { host: null, vlans: [], aes: {}, access: [], irbs: [], hasRstp: false, hasVc: false, hasStorm: false, hasOspf: false, hasBgp: false };
+    cfg.forEach(function (l) {
+      const t = l.split(" ");
+      if (t[1] === "system" && t[2] === "host-name" && t[3]) model.host = t[3];
+      if (t[1] === "vlans" && t[2]) {
+        let v = model.vlans.find(function (x) { return x.name === t[2]; });
+        if (!v) { v = { name: t[2], tag: null }; model.vlans.push(v); }
+        if (t[3] === "vlan-id" && t[4]) v.tag = t[4];
+      }
+      if (t[1] === "interfaces" && t[2] && t[2].indexOf("ae") === 0) {
+        const ae = t[2];
+        if (!model.aes[ae]) model.aes[ae] = { name: ae, members: [] };
+      }
+      const adi = t.indexOf("802.3ad");
+      if (adi > 0 && t[adi + 1]) {
+        const ae = t[adi + 1];
+        if (!model.aes[ae]) model.aes[ae] = { name: ae, members: [] };
+        if (t[1] === "interfaces" && t[2]) model.aes[ae].members.push(t[2]);
+      }
+      if (t[1] === "interfaces" && t[2] && t[2].indexOf("ge-") === 0) {
+        const mi = t.indexOf("members");
+        if (mi > 0 && model.access.indexOf(t[2]) < 0) model.access.push(t[2]);
+      }
+      if (t[1] === "interfaces" && t[2] === "irb" && t[3] === "unit" && t[4]) {
+        if (model.irbs.indexOf(t[4]) < 0) model.irbs.push(t[4]);
+      }
+      if (t[1] === "protocols" && t[2] === "rstp") model.hasRstp = true;
+      if (t[1] === "virtual-chassis") model.hasVc = true;
+      if (t[1] === "forwarding-options" && t[2] === "storm-control-profiles") model.hasStorm = true;
+      if (t[1] === "protocols" && t[2] === "ospf") model.hasOspf = true;
+      if (t[1] === "protocols" && t[2] === "bgp") model.hasBgp = true;
+    });
+    return model;
+  }
+
+  function blueprintEmpty(cfg) {
+    return !cfg || cfg.length === 0;
+  }
+
+  function topoBlueprint(cfg) {
+    if (blueprintEmpty(cfg)) {
+      return '<svg class="topomini" viewBox="0 0 150 300">' +
+        '<rect x="45" y="120" width="60" height="34" rx="4" class="nd-sw" style="stroke-dasharray:4 4;opacity:0.5"/>' +
+        '<text x="75" y="141" class="nlab" style="opacity:0.5">EX4300</text>' +
+        '<text x="75" y="180" class="nsub">NOTHING BUILT YET</text>' +
+        '<text x="75" y="196" class="nsub" style="opacity:0.7">set / commit to see it here</text>' +
+        '</svg><div class="pulse-cap">BLUEPRINT &#183; empty</div>';
+    }
+    const m = parseBlueprint(cfg);
+    const aes = Object.keys(m.aes).map(function (k) { return m.aes[k]; });
+    let h = '<svg class="topomini" viewBox="0 0 150 300">';
+    h += '<text x="75" y="14" class="nsub">BLUEPRINT</text>';
+
+    const swName = (m.host || "EX4300").toUpperCase().slice(0, 10);
+    const swW = 96, swX = 27, swY = 28, swH = 26;
+    h += '<rect x="' + swX + '" y="' + swY + '" width="' + swW + '" height="' + swH + '" rx="3" class="nd-core"/>';
+    h += '<text x="75" y="' + (swY + 16) + '" class="nlab">' + swName + '</text>';
+
+    let badges = [];
+    if (m.hasVc) badges.push("VC");
+    if (m.hasRstp) badges.push("RSTP");
+    if (m.hasOspf) badges.push("OSPF");
+    if (m.hasBgp) badges.push("BGP");
+    if (m.hasStorm) badges.push("STORM");
+    if (badges.length) {
+      h += '<text x="75" y="' + (swY + swH + 11) + '" class="nsub lit">' + badges.join(" \u00b7 ") + '</text>';
+    }
+
+    let y = swY + swH + (badges.length ? 22 : 14);
+
+    if (m.vlans.length) {
+      h += '<text x="12" y="' + y + '" class="nsub" style="text-anchor:start">VLANS</text>';
+      y += 6;
+      m.vlans.slice(0, 6).forEach(function (v, i) {
+        const vy = y + i * 16;
+        h += '<line x1="75" y1="' + (swY + swH) + '" x2="30" y2="' + (vy + 6) + '" class="lnk live"/>';
+        h += '<rect x="10" y="' + vy + '" width="66" height="13" rx="2" class="nd-srvbox"/>';
+        h += '<circle cx="16" cy="' + (vy + 6.5) + '" r="1.6" class="nd-ledc"/>';
+        h += '<text x="45" y="' + (vy + 9) + '" class="nlab" style="font-size:7px">' + v.name.slice(0, 7).toUpperCase() + (v.tag ? " " + v.tag : "") + '</text>';
+      });
+      y += Math.min(m.vlans.length, 6) * 16 + 6;
+    }
+
+    if (aes.length) {
+      aes.slice(0, 3).forEach(function (ae, i) {
+        const ay = y + i * 18;
+        h += '<rect x="82" y="' + ay + '" width="56" height="15" rx="2" class="nd-sw"/>';
+        h += '<line x1="110" y1="' + (swY + swH) + '" x2="110" y2="' + ay + '" class="lnk live"/>';
+        h += '<text x="110" y="' + (ay + 10) + '" class="nlab">' + ae.name.toUpperCase() + ' &#215;' + ae.members.length + '</text>';
+      });
+    }
+
+    let capBits = [];
+    capBits.push(m.vlans.length + " vlan" + (m.vlans.length === 1 ? "" : "s"));
+    if (aes.length) capBits.push(aes.length + " lag");
+    if (m.irbs.length) capBits.push(m.irbs.length + " irb");
+    if (m.access.length) capBits.push(m.access.length + " port" + (m.access.length === 1 ? "" : "s"));
+    h += '</svg><div class="pulse-cap focus-cap">' + (m.host || "ex4300") + ' &#183; ' + capBits.join(" &#183; ") + ' &#183; tap to read config</div>';
+    return h;
+  }
+
   function panelTopo() {
     const sc = SCENARIOS.find(function (x) { return "sc-" + x.id === currentModuleId; });
     if (sc && sc.topo) return sc.topo + '<div class="pulse-cap">' + sc.name + '</div>';
+    if (!currentModuleId) {
+      return topoBlueprint(cfgCommitted);
+    }
     const f = focusNode();
     const view = stats.topoView || "tiered";
     let body;
@@ -5758,6 +6094,13 @@
     return h;
   }
 
+  function repaintTopoIfVisible() {
+    ["l", "r"].forEach(function (s) {
+      const kind = s === "l" ? (stats.sideL || "syslog") : (stats.sideR || "clock");
+      if (kind === "topology") renderPanel(s);
+    });
+  }
+
   function renderPanel(side) {
     const kind = side === "l" ? (stats.sideL || "syslog") : (stats.sideR || "clock");
     const body = side === "l" ? sideL : sideR;
@@ -5789,6 +6132,18 @@
           el.classList.add(litFx[fx]);
         });
       });
+      const isBlueprint = !currentModuleId && !SCENARIOS.find(function (x) { return "sc-" + x.id === currentModuleId; });
+      if (isBlueprint && cfgCommitted.length) {
+        const svg = body.querySelector(".topomini");
+        if (svg) {
+          svg.style.cursor = "pointer";
+          svg.addEventListener("click", function () {
+            showView("terminal");
+            answerEl.value = "show configuration";
+            handleInput();
+          });
+        }
+      }
     }
     else if (kind === "cheatsheet") body.innerHTML = panelCheat();
     else if (kind === "pulse") {
