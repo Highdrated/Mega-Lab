@@ -571,6 +571,30 @@
     .main, #cmd { font-size: 12.5px; }
     .gcode { font-size: 12.5px; }
   }
+.pm { max-width: 860px; }
+.pm-kind { font-size: 11px; letter-spacing: 3px; color: var(--cyan); margin: 14px 0 4px; }
+.pm-bar { height: 3px; background: var(--track); margin: 4px 0 6px; }
+.pm-bar i { display: block; height: 3px; background: var(--cyan); }
+.pm-strip { display: inline-flex; gap: 3px; }
+.pm-strip i { font-style: normal; width: 18px; text-align: center; border: 1px solid var(--edge); color: var(--ghost); font-size: 10px; line-height: 16px; }
+.pm-strip i.on { color: var(--bg); background: var(--cyan); border-color: var(--cyan); }
+.pm-body { white-space: pre-wrap; line-height: 1.7; font-size: 14px; color: var(--text); border: 1px solid var(--edge); background: var(--track); padding: 16px 18px; margin: 10px 0; }
+.pm-code { white-space: pre; overflow-x: auto; background: var(--consoleBg); border: 1px solid var(--edge2); padding: 14px 18px; margin: 0 0 10px; font: inherit; font-size: 15px; line-height: 1.7; color: var(--text); }
+.pm-k { color: var(--amber); } .pm-s { color: var(--strc); } .pm-n { color: var(--cyan); }
+.pm-ed, .pm-line { width: 100%; box-sizing: border-box; background: var(--consoleBg); color: var(--text); border: 1px solid var(--edge2); font: inherit; font-size: 14.5px; line-height: 1.6; padding: 12px 14px; outline: none; caret-color: var(--cyan); }
+.pm-ed { min-height: 150px; resize: vertical; }
+.pm-ed.pm-small { min-height: 90px; }
+.pm-ed:focus, .pm-line:focus { border-color: var(--cyan); }
+.pm-choices { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin: 6px 0; }
+.pm-choice { text-align: left; }
+.pm-choice.pm-right { border-color: var(--green); color: var(--green); }
+.pm-choice.pm-wrong { border-color: var(--red); color: var(--red); opacity: .7; }
+.pm-cmp { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin: 10px 0; }
+.pm-cmp span { display: block; font-size: 10px; letter-spacing: 2px; color: var(--dim); margin-bottom: 4px; }
+.pm-cmp pre { margin: 0; white-space: pre-wrap; border: 1px solid var(--edge); padding: 10px 14px; min-height: 20px; font: inherit; font-size: 13.5px; }
+.pm-why { border-left: 2px solid var(--cyan); padding: 8px 12px; margin: 10px 0; line-height: 1.6; font-size: 14px; color: var(--text); }
+.pm-why span { display: block; font-size: 10px; letter-spacing: 2px; color: var(--cyan); margin-bottom: 4px; }
+@media (max-width: 700px) { .pm-choices, .pm-cmp { grid-template-columns: 1fr; } }
 #flight{--fb:#04060a;--fpan:#060b11;--fpan2:#03080d;--fline:#1a2633;--fline2:#1f3444;--ftrack:#1d2a36;--ftext:#e6ecf1;--fdim:#5b6673;--fmuted:#8b96a3;--facc:#4fd2e8;--facc2:#9ae8f5;--faccd:#1b6a7c;--fonacc:#031016;--fgate:#c9a6ff;--fgate2:#8b7aa8;--fglow:#0d2130;--fah1:#34414f;--fah2:#101820;--fstar:#e6f1ff}
 #flight{position:fixed;inset:0;z-index:5000;overflow:auto;background:var(--fb);color:var(--ftext);font-family:"Segoe UI",system-ui,-apple-system,sans-serif}
 #flight[hidden]{display:none}
@@ -6856,6 +6880,8 @@ function handle(raw) {
     });
     return;
   }
+  if (t === "mission" || t === "missions") { line("missions (PRIMM — predict, run, investigate, modify, make): " + Object.keys(MISSIONS_PRIMM).join(", "), "c-dim"); line("usage: mission loops", "c-dim"); return; }
+  if (t.startsWith("mission ")) { startMission(t.slice(8).trim()); return; }
   if (t.startsWith("start ")) { startModule(t.slice(6).trim()); return; }
   if (t === "ghost") { ghostMenu(); return; }
   if (/^ghost [1-6]$/.test(t)) { startGhost(parseInt(t.slice(6), 10)); return; }
@@ -7175,6 +7201,7 @@ $("acSmaller").addEventListener("click", () => acFs(-1));
 document.addEventListener("keydown", e => {
   if (e.key === "Escape" && acOpen) { closeAcademy(); return; }
   if (e.key === "Escape" && mode === "workbook") wbExit();
+  if (e.key === "Escape" && mode === "mission" && pm) pmExit();
   if (e.key === "Escape" && mode === "scenarios") scExit();
   if (e.key === "Escape" && mode === "review") revExit();
 });
@@ -7204,6 +7231,350 @@ const restored = loadState();
 fsLoad();
 gitLoad();
 setStatus();
+const MISSIONS_PRIMM = {
+  loops: {
+    title: "LOOPS",
+    steps: [
+      { t: "learn", title: "How this mission works",
+        body: "Every idea goes through five moves:\n\n  PREDICT      read code, guess what it prints\n  RUN          real Python shows the truth\n  INVESTIGATE  small questions about why\n  MODIFY       change working code to do something new\n  MAKE         write your own from a blank page\n\nGuessing wrong is the point — the surprise is what makes it stick. Nothing is shown before you try." },
+
+      { t: "predict", cycle: "Counting with range",
+        code: "for i in range(3):\n    print(i)",
+        out: ["0", "1", "2"],
+        why: "range(3) hands out 0, 1, 2 — three numbers, starting at 0 and stopping BEFORE 3. The indented line runs once for each number, and i holds the current one." },
+      { t: "investigate", q: "Same loop, but range(5). How many times does print run?", ans: ["5", "five"],
+        hints: ["Count the numbers range(5) hands out."],
+        why: "One pass per number: 0, 1, 2, 3, 4 → five passes." },
+      { t: "investigate", q: "What is the LAST number range(5) gives?", ans: ["4", "four"],
+        hints: ["It starts at 0. Does it ever reach the stop number?"],
+        why: "The stop number is never included. This is the #1 loop mistake in real code — worth remembering." },
+      { t: "modify", task: "Change this loop so it prints 1 up to and including 5.",
+        starter: "for i in range(3):\n    print(i)",
+        expect: ["1", "2", "3", "4", "5"],
+        hints: ["range can take a start AND a stop: range(start, stop).", "The stop is never included — to reach 5, stop at 6.", "for i in range(1, 6):"],
+        sol: "for i in range(1, 6):\n    print(i)" },
+      { t: "recall", drill: 0 },
+      { t: "recall", drill: 1 },
+      { t: "recall", drill: 7 },
+
+      { t: "predict", cycle: "Walking a list",
+        code: "ports = [\"ge-0/0/1\", \"ge-0/0/2\", \"ge-0/0/3\"]\nfor p in ports:\n    print(\"check\", p)",
+        out: ["check ge-0/0/1", "check ge-0/0/2", "check ge-0/0/3"],
+        why: "No counting needed: each pass, p IS the next item of the list. print with a comma puts a space between the parts." },
+      { t: "investigate", q: "The loop has finished. What is in p now?",
+        choices: ["\"ge-0/0/1\"", "\"ge-0/0/3\"", "nothing — p is gone", "the whole list"], ans: 1,
+        why: "The loop variable keeps the LAST item it held. It does not disappear when the loop ends — handy, and sometimes a surprise." },
+      { t: "modify", task: "Print each port name in UPPER case — just the name, one per line.",
+        given: "ports = [\"ge-0/0/1\", \"ge-0/0/2\", \"ge-0/0/3\"]",
+        starter: "for p in ports:\n    print(\"check\", p)",
+        expect: ["GE-0/0/1", "GE-0/0/2", "GE-0/0/3"],
+        g2: "ports = [\"xe-1/0/0\", \"xe-1/0/1\"]", e2: ["XE-1/0/0", "XE-1/0/1"],
+        hints: ["Strings have a method that shouts: .upper()", "Drop the word check — print only p, uppercased.", "print(p.upper())"],
+        sol: "for p in ports:\n    print(p.upper())" },
+      { t: "recall", drill: 2 },
+      { t: "predict",
+        code: "for i, p in enumerate([\"up\", \"down\"]):\n    print(i, p)",
+        out: ["0 up", "1 down"],
+        why: "enumerate() hands out pairs: the position AND the item. Two names before in catch them both. Positions start at 0, like range." },
+      { t: "recall", drill: 8 },
+
+      { t: "predict", cycle: "Repeat until",
+        code: "battery = 3\nwhile battery > 0:\n    print(battery)\n    battery -= 1\nprint(\"dock\")",
+        out: ["3", "2", "1", "dock"],
+        why: "while checks its condition before every pass. battery -= 1 lowers it each time; at 0 the condition is False, the loop ends and Python carries on to dock." },
+      { t: "investigate", q: "Delete the line battery -= 1. What happens now?",
+        choices: ["prints 3 once, then dock", "prints 3 forever — it never stops", "an error", "prints nothing"], ans: 1,
+        why: "Nothing changes battery any more, so battery > 0 stays True forever. Every while needs something inside that moves it toward False." },
+      { t: "modify", task: "Count down from 10 in steps of 2, then print dock.",
+        starter: "battery = 3\nwhile battery > 0:\n    print(battery)\n    battery -= 1\nprint(\"dock\")",
+        expect: ["10", "8", "6", "4", "2", "dock"],
+        hints: ["Change where battery starts.", "Lower it by 2 each pass instead of 1.", "battery -= 2"],
+        sol: "battery = 10\nwhile battery > 0:\n    print(battery)\n    battery -= 2\nprint(\"dock\")" },
+      { t: "recall", drill: 3 },
+      { t: "recall", drill: 4 },
+
+      { t: "predict", cycle: "Leaving early",
+        code: "for n in range(1, 6):\n    if n == 2:\n        continue\n    if n == 4:\n        break\n    print(n)",
+        out: ["1", "3"],
+        why: "continue skips the rest of THIS pass, so 2 is never printed. break leaves the loop completely, so 4 and 5 never come." },
+      { t: "recall", drill: 5 },
+      { t: "recall", drill: 6 },
+
+      { t: "make", cycle: "Mini-tool · port audit", tier: 2,
+        task: "status holds the state of every port. Print how many ports are down.",
+        given: "status = [\"up\", \"down\", \"up\", \"down\"]",
+        expect: ["2"],
+        g2: "status = [\"down\", \"down\", \"up\", \"down\", \"down\"]", e2: ["4"],
+        hints: ["Start a counter at 0 before the loop.", "Loop over status. When an item == \"down\", add 1 to the counter.", "Print the counter AFTER the loop — not indented, or it prints every pass."],
+        sol: "down = 0\nfor s in status:\n    if s == \"down\":\n        down += 1\nprint(down)" },
+      { t: "make", tier: 3,
+        task: "Part 2. ports and status line up by position. For every down port print, for example:  ge-0/0/2 is down",
+        given: "ports = [\"ge-0/0/1\", \"ge-0/0/2\", \"ge-0/0/3\", \"ge-0/0/4\"]\nstatus = [\"up\", \"down\", \"up\", \"down\"]",
+        expect: ["ge-0/0/2 is down", "ge-0/0/4 is down"],
+        g2: "ports = [\"xe-1/0/0\", \"xe-1/0/1\", \"xe-1/0/2\"]\nstatus = [\"down\", \"up\", \"up\"]", e2: ["xe-1/0/0 is down"],
+        hints: ["You need the position too: enumerate(status) gives i and the state.", "ports[i] is the name at the same position.", "print(ports[i], \"is down\")"],
+        sol: "for i, s in enumerate(status):\n    if s == \"down\":\n        print(ports[i], \"is down\")" },
+      { t: "done" }
+    ]
+  }
+};
+
+let pm = null;
+
+function pmSave() {
+  score.primm = score.primm || {};
+  score.primm[pm.id] = { i: pm.i, res: pm.res, saved: pm.saved || [] };
+  saveState();
+}
+
+function pmHL(code) {
+  let h = esc(code);
+  h = h.replace(/(&quot;[^&]*?&quot;|"[^"\n]*")/g, '<span class="pm-s">$1</span>');
+  h = h.replace(/\b(for|in|while|if|elif|else|break|continue|def|return|print|range|enumerate|and|or|not|True|False)\b(?![^<]*<\/span>)/g, '<span class="pm-k">$1</span>');
+  h = h.replace(/(^|[^\w#-])(\d+)(?![^<]*<\/span>)/g, '$1<span class="pm-n">$2</span>');
+  return h;
+}
+
+function pmNorm(s) { return String(s).trim().toLowerCase().replace(/^["']|["']$/g, "").replace(/\s+/g, " "); }
+function pmLines(s) { return String(s).split("\n").map(x => x.trim()).filter(x => x !== ""); }
+
+function startMission(id) {
+  const def = MISSIONS_PRIMM[id];
+  if (!def) { line("No mission for '" + id + "' yet. Missions so far: " + Object.keys(MISSIONS_PRIMM).join(", "), "c-red"); return; }
+  try { localStorage.setItem("pyle-fp-last", id); } catch (e) {}
+  const saved = (score.primm || {})[id];
+  pm = { id, def, i: saved ? Math.min(saved.i, def.steps.length - 1) : 0, res: saved ? saved.res || {} : {}, saved: saved ? saved.saved || [] : [], tries: 0, hints: 0, solved: false };
+  mode = "mission"; setStatus(); showPane("workbook");
+  if (!py && !pyLoading && navigator.onLine) {
+    pyLoading = true;
+    ensurePyodide().then(() => { pyLoading = false; }).catch(() => { pyLoading = false; });
+  }
+  logEvent("mission " + id + " · step " + (pm.i + 1), "ok");
+  pmShow();
+}
+
+function pmExit() {
+  pm = null; mode = "home"; showPane("term"); setStatus();
+  line("Mission paused — your place is saved. mission loops picks it up again.", "c-dim");
+  cmd.focus();
+}
+
+function pmStrip(step) {
+  const phases = [["predict", "P"], ["run", "R"], ["investigate", "I"], ["modify", "M"], ["make", "M"]];
+  const now = step.t === "predict" ? (pm.solved ? "run" : "predict") : step.t;
+  return '<span class="pm-strip">' + phases.map(p => '<i class="' + (p[0] === now ? "on" : "") + '" title="' + p[0] + '">' + p[1] + "</i>").join("") + "</span>";
+}
+
+function pmCycleName() {
+  let c = "";
+  for (let k = 0; k <= pm.i; k++) if (pm.def.steps[k].cycle) c = pm.def.steps[k].cycle;
+  return c;
+}
+
+function pmShow() {
+  const step = pm.def.steps[pm.i];
+  pm.tries = 0; pm.hints = 0; pm.solved = !!pm.res[pm.i];
+  const total = pm.def.steps.length - 1;
+  const label = { learn: "BRIEFING", predict: "PREDICT", investigate: "INVESTIGATE", modify: "MODIFY", make: "MAKE", recall: "RECALL", done: "DEBRIEF" }[step.t];
+  let h = '<div class="pm">';
+  h += '<div class="wb-head"><span>MISSION · ' + esc(pm.def.title) + "</span>" + (pmCycleName() ? "<span>" + esc(pmCycleName()) + "</span>" : "") +
+    "<b>step " + Math.min(pm.i + 1, total) + "/" + total + "</b>" + pmStrip(step) + "</div>";
+  h += '<div class="pm-bar"><i style="width:' + Math.round(100 * pm.i / total) + '%"></i></div>';
+  h += '<div class="pm-kind">' + label + "</div>";
+
+  if (step.t === "learn") {
+    h += '<div class="pm-body">' + esc(step.body) + "</div>";
+    h += '<div class="wb-btns"><button class="wb-btn primary" id="pmNext">start ▸</button><button class="wb-btn" id="pmClose">close</button></div>';
+  } else if (step.t === "predict") {
+    h += '<div class="wb-task">Read the code. What will it print? Type the output exactly, one line per line of output.</div>';
+    h += '<pre class="pm-code">' + pmHL(step.code) + "</pre>";
+    h += '<textarea class="pm-ed pm-small" id="pmIn" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="your prediction — one printed line per line"></textarea>';
+    h += '<div class="wb-btns"><button class="wb-btn primary" id="pmGo">lock in & run ▸ (ctrl+enter)</button><button class="wb-btn" id="pmBack">◂</button><button class="wb-btn" id="pmClose">close</button></div>';
+    h += '<div id="pmOut"></div>';
+  } else if (step.t === "investigate") {
+    h += '<div class="wb-task">' + esc(step.q) + "</div>";
+    if (step.choices) {
+      h += '<div class="pm-choices">' + step.choices.map((c, k) => '<button class="wb-btn pm-choice" data-k="' + k + '">' + esc(c) + "</button>").join("") + "</div>";
+    } else {
+      h += '<input class="pm-line" id="pmIn" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="your answer, then enter">';
+    }
+    h += '<div class="wb-btns">' + (step.choices ? "" : '<button class="wb-btn primary" id="pmGo">check ▸</button>') + '<button class="wb-btn" id="pmHint">hint</button><button class="wb-btn" id="pmBack">◂</button><button class="wb-btn" id="pmClose">close</button></div>';
+    h += '<div id="pmOut"></div>';
+  } else if (step.t === "recall") {
+    const d = MODULES.find(m => m.id === pm.id).drills[step.drill];
+    h += '<div class="wb-task">From memory — nothing to copy. ' + esc(d.task) + "</div>";
+    h += '<input class="pm-line" id="pmIn" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="type the line of Python, then enter">';
+    h += '<div class="wb-btns"><button class="wb-btn primary" id="pmGo">check ▸</button><button class="wb-btn" id="pmHint">hint</button><button class="wb-btn" id="pmBack">◂</button><button class="wb-btn" id="pmClose">close</button></div>';
+    h += '<div id="pmOut"></div>';
+  } else if (step.t === "modify" || step.t === "make") {
+    h += '<div class="wb-task">' + (step.tier ? "★".repeat(step.tier) + "☆".repeat(3 - step.tier) + "  " : "") + esc(step.task) + "</div>";
+    if (step.given) h += '<span class="wb-given"># given — already runs before your code:\n' + esc(step.given) + "</span>";
+    h += '<textarea class="pm-ed" id="pmIn" spellcheck="false" autocapitalize="off" autocomplete="off" placeholder="' + (step.t === "make" ? "# blank page — your code here" : "") + '"></textarea>';
+    h += '<div class="wb-btns"><button class="wb-btn primary" id="pmGo">run ▸ (ctrl+enter)</button><button class="wb-btn" id="pmHint">hint</button><button class="wb-btn" id="pmBack">◂</button><button class="wb-btn" id="pmClose">close</button></div>';
+    h += '<div id="pmOut"><span class="wb-out">output appears here</span></div>';
+  } else if (step.t === "done") {
+    const vals = Object.values(pm.res);
+    const cnt = k => vals.filter(v => v === k).length;
+    h += '<div class="pm-body">Mission complete.\n\n  first-try right   ' + cnt("ok") + "\n  needed hints      " + cnt("hint") + "\n  shown the answer  " + cnt("shown") +
+      "\n\nThe ones you missed are the ones that will stick — they are in your review queue.\n\nYour port-audit tool is below. It is real Python: it runs anywhere, on your own machine too.</div>";
+    const t1 = pm.def.steps.filter(s => s.t === "make");
+    h += '<pre class="pm-code">' + pmHL((pm.saved && pm.saved.length === 2 && pm.saved.join("\n\n")) || t1.map(s => s.sol).join("\n\n")) + "</pre>";
+    h += '<div class="wb-btns"><button class="wb-btn primary" id="pmCopy">copy code</button><button class="wb-btn" id="pmRestart">start over</button><button class="wb-btn" id="pmClose">close</button></div>';
+  }
+  h += "</div>";
+  const pane = $("wbpane");
+  pane.innerHTML = h;
+  const q = s => pane.querySelector(s);
+  if (q("#pmClose")) q("#pmClose").addEventListener("click", pmExit);
+  if (q("#pmNext")) q("#pmNext").addEventListener("click", pmNext);
+  if (q("#pmBack")) q("#pmBack").addEventListener("click", () => { if (pm.i > 0) { pm.i--; pmSave(); pmShow(); } });
+  if (q("#pmHint")) q("#pmHint").addEventListener("click", pmHint);
+  if (q("#pmGo")) q("#pmGo").addEventListener("click", pmGo);
+  if (q("#pmRestart")) q("#pmRestart").addEventListener("click", () => { pm.i = 0; pm.res = {}; pmSave(); pmShow(); });
+  if (q("#pmCopy")) q("#pmCopy").addEventListener("click", () => {
+    const txt = q(".pm-code").textContent;
+    try { navigator.clipboard.writeText(txt); q("#pmCopy").textContent = "copied ✓"; } catch (e) {}
+  });
+  pane.querySelectorAll(".pm-choice").forEach(b => b.addEventListener("click", () => pmChoice(+b.dataset.k, b)));
+  const inp = q("#pmIn");
+  if (inp) {
+    if (step.starter && step.t === "modify") inp.value = step.starter;
+    inp.addEventListener("keydown", ev => {
+      if (inp.tagName === "INPUT" && ev.key === "Enter") { ev.preventDefault(); pmGo(); }
+      if (inp.tagName === "TEXTAREA" && ev.key === "Enter" && (ev.ctrlKey || ev.metaKey)) { ev.preventDefault(); pmGo(); }
+      if (inp.tagName === "TEXTAREA" && ev.key === "Tab") { ev.preventDefault(); const s = inp.selectionStart; inp.value = inp.value.slice(0, s) + "    " + inp.value.slice(inp.selectionEnd); inp.selectionStart = inp.selectionEnd = s + 4; }
+    });
+    inp.focus();
+  } else if (q("#pmNext")) q("#pmNext").focus();
+}
+
+function pmOut(html) { const o = $("wbpane").querySelector("#pmOut"); if (o) o.innerHTML = html; }
+
+function pmMark(result) {
+  pm.res[pm.i] = pm.res[pm.i] || result;
+  pm.solved = true;
+  pmSave(); setStatus();
+}
+
+function pmNextBtn(label) {
+  const btns = $("wbpane").querySelector(".wb-btns");
+  if (!btns || $("wbpane").querySelector("#pmNext")) return;
+  const b = document.createElement("button");
+  b.className = "wb-btn primary"; b.id = "pmNext"; b.textContent = label || "next ▸";
+  b.addEventListener("click", pmNext);
+  btns.insertBefore(b, btns.firstChild);
+  const go = $("wbpane").querySelector("#pmGo");
+  if (go) go.classList.remove("primary");
+  b.focus();
+}
+
+function pmNext() {
+  if (pm.i < pm.def.steps.length - 1) pm.i++;
+  pmSave(); pmShow();
+}
+
+function pmWhy(text) { return '<div class="pm-why"><span>WHY</span>' + esc(text) + "</div>"; }
+
+async function pmGo() {
+  const step = pm.def.steps[pm.i];
+  const inp = $("wbpane").querySelector("#pmIn");
+  const val = inp ? inp.value : "";
+  if (step.t === "predict") {
+    if (!val.trim()) { pmOut('<span class="wb-out wb-fail">Guess first — even a wrong guess teaches you more than no guess.</span>'); return; }
+    let actual = step.out;
+    if (py) { const r = await wbCase("", step.code); if (r.ok) actual = r.out; }
+    const mine = pmLines(val), right = mine.length === actual.length && mine.every((x, k) => x === actual[k]);
+    pmMark(right ? "ok" : "miss");
+    pmOut('<div class="pm-cmp"><div><span>YOUR PREDICTION</span><pre>' + esc(mine.join("\n")) + '</pre></div><div><span>REAL PYTHON' + (py ? "" : " (cached)") + "</span><pre>" + esc(actual.join("\n")) + "</pre></div></div>" +
+      '<span class="' + (right ? "wb-pass" : "c-amber") + '">' + (right ? "✓ Spot on." : "✗ Not quite — compare line by line. What did Python do that you didn't expect?") + "</span>" + pmWhy(step.why));
+    inp.readOnly = true;
+    $("wbpane").querySelectorAll(".pm-strip i").forEach((el, k) => el.classList.toggle("on", k === 1));
+    pmNextBtn();
+    return;
+  }
+  if (step.t === "investigate") {
+    if (!val.trim()) return;
+    const ok = step.ans.some(a => pmNorm(a) === pmNorm(val));
+    pm.tries++;
+    if (ok) { pmMark(pm.hints ? "hint" : pm.tries > 1 ? "hint" : "ok"); pmOut('<span class="wb-pass">✓ Right.</span>' + pmWhy(step.why)); pmNextBtn(); return; }
+    if (pm.tries >= 2) { pmMark("shown"); pmOut('<span class="wb-fail">✗ The answer is ' + esc(step.ans[0]) + ".</span>" + pmWhy(step.why)); pmNextBtn(); return; }
+    pmOut('<span class="wb-fail">✗ Not that. One more try' + (step.hints ? " — or take a hint." : ".") + "</span>");
+    return;
+  }
+  if (step.t === "recall") {
+    const d = MODULES.find(m => m.id === pm.id).drills[step.drill];
+    if (!val.trim()) return;
+    const ok = d.answers.some(a => norm(a) === norm(val));
+    pm.tries++;
+    if (ok) {
+      d.doneFlag = true;
+      pmMark(pm.hints || pm.tries > 1 ? "hint" : "ok");
+      pmOut('<span class="wb-pass">✓ From memory. That is how it sticks.</span>' + pmWhy(d.note || ""));
+      renderNav(); pmNextBtn(); return;
+    }
+    if (pm.tries >= 3) {
+      pmMark("shown");
+      const di = MODULES.find(m => m.id === pm.id).drills.indexOf(d), mi = MODULES.findIndex(m => m.id === pm.id);
+      if (!missed.some(e => e.mi === mi && e.di === di)) missed.push({ mi, di, stage: 0, due: dayStr(1) });
+      pmOut('<span class="wb-fail">✗ It was:  ' + esc(d.answers[0].trim()) + "</span>" + pmWhy((d.note || "") + "  — added to your review queue for tomorrow."));
+      saveState(); pmNextBtn(); return;
+    }
+    pmOut('<span class="wb-fail">✗ Not quite. ' + (3 - pm.tries) + " tr" + (3 - pm.tries === 1 ? "y" : "ies") + " left — a hint costs nothing.</span>");
+    return;
+  }
+  if (step.t === "modify" || step.t === "make") {
+    if (!py) { pmOut('<span class="wb-out wb-fail">Real Python is still loading… one moment, then run again.</span>'); if (!pyLoading && navigator.onLine) { pyLoading = true; ensurePyodide().then(() => { pyLoading = false; }).catch(() => { pyLoading = false; }); } return; }
+    if (!val.trim()) { pmOut('<span class="wb-out wb-fail">Write some code first.</span>'); return; }
+    pm.tries++;
+    const r1 = await wbCase(step.given, val);
+    if (!r1.ok) { pmOut('<span class="wb-out wb-fail">' + esc(r1.err) + "\n— a real traceback. Read the last line: it names the problem.</span>"); return; }
+    if (!wbSame(r1.out, step.expect)) {
+      pmOut('<div class="pm-cmp"><div><span>YOUR OUTPUT</span><pre>' + esc(r1.out.join("\n") || "(nothing)") + '</pre></div><div><span>WANTED</span><pre>' + esc(step.expect.join("\n")) + "</pre></div></div>");
+      return;
+    }
+    if (step.e2) {
+      const r2 = await wbCase(step.g2, val);
+      if (!r2.ok || !wbSame(r2.out, step.e2)) { pmOut('<span class="wb-out">sample data: <span class="wb-pass">pass</span>\n<span class="wb-fail">different data: FAIL — your code fits the example, not the problem. No hardcoding!</span></span>'); return; }
+    }
+    pmMark(pm.hints ? "hint" : pm.tries > 1 ? "hint" : "ok");
+    if (step.t === "make") { pm.saved = (pm.saved || []).filter(x => x !== val.trim()); pm.saved.push(val.trim()); pm.saved = pm.saved.slice(-2); }
+    pmOut('<span class="wb-out">' + esc(r1.out.join("\n")) + '\n\n<span class="wb-pass">PASS — verified by real Python' + (step.e2 ? ", on hidden data too" : "") + '.</span></span><span class="wb-sol"># one clean way — compare with yours:\n' + esc(step.sol) + "</span>");
+    sndChime();
+    pmNextBtn();
+  }
+}
+
+function pmChoice(k, btn) {
+  const step = pm.def.steps[pm.i];
+  if (pm.solved && pm.res[pm.i] && $("wbpane").querySelector("#pmNext")) return;
+  pm.tries++;
+  if (k === step.ans) {
+    btn.classList.add("pm-right");
+    pmMark(pm.tries > 1 ? "hint" : "ok");
+    pmOut('<span class="wb-pass">✓ Right.</span>' + pmWhy(step.why));
+    pmNextBtn(); return;
+  }
+  btn.classList.add("pm-wrong"); btn.disabled = true;
+  if (pm.tries >= 2) {
+    pmMark("shown");
+    $("wbpane").querySelectorAll(".pm-choice")[step.ans].classList.add("pm-right");
+    pmOut('<span class="wb-fail">✗ Not that one.</span>' + pmWhy(step.why));
+    pmNextBtn(); return;
+  }
+  pmOut('<span class="wb-fail">✗ Not that one. Think about it once more.</span>');
+}
+
+function pmHint() {
+  const step = pm.def.steps[pm.i];
+  let hints = step.hints || [];
+  if (step.t === "recall") {
+    const d = MODULES.find(m => m.id === pm.id).drills[step.drill];
+    hints = (d.teach || []).concat(d.chip ? ["It is known as: " + d.chip] : []);
+  }
+  if (!hints.length) { pmOut('<span class="c-dim">No hint for this one — trust your reading.</span>'); return; }
+  pm.hints = Math.min(pm.hints + 1, hints.length);
+  pmOut('<span class="wb-out"><span class="c-amber">hint ' + pm.hints + "/" + hints.length + ":</span> " + esc(hints[pm.hints - 1]) + "</span>");
+}
 try { if (!localStorage.getItem("pyle-space-default")) { localStorage.setItem("pyle-space-default", "1"); setTheme("space"); } } catch (e) {}
 const FP_SECTORS = [
   { name: "FOUNDATIONS", ids: ["zero", "basics", "numstr", "logic", "loops", "lists", "funcs", "errors", "imports", "files"] },
@@ -7329,6 +7700,14 @@ function fpRender() {
     $("fpTask").textContent = (drill.teach && drill.teach[0] ? drill.teach[0] + "\n\n" : "") + "TASK · " + (drill.task || "");
     $("fpLeft").textContent = left + " DRILL" + (left === 1 ? "" : "S") + " TO THE NEXT WAYPOINT";
     $("fpEngage").disabled = false;
+    const mis = MISSIONS_PRIMM[cur.id];
+    if (mis) {
+      const sv = (score.primm || {})[cur.id], at = sv ? sv.i : 0, tot = mis.steps.length - 1;
+      $("fpTitle").innerHTML = esc(fpTitleCase(cur.name)) + ' <small>· mission ' + Math.min(at + 1, tot) + "/" + tot + "</small>";
+      $("fpEta").textContent = "ETA ~" + Math.max(3, Math.round((tot - at) * 1.2)) + " MIN";
+      $("fpTask").textContent = "NEW · PRIMM MISSION\n\nPredict  \u2192  Run  \u2192  Investigate  \u2192  Modify  \u2192  Make\n\nGuess first, let real Python answer, then build a port-audit tool from a blank page. No answers shown up front.";
+      $("fpLeft").textContent = (tot - at) + " STEP" + (tot - at === 1 ? "" : "S") + " TO GO";
+    }
   } else {
     $("fpTitle").textContent = "All sectors clear";
     $("fpIntro").textContent = "Every module is done. Keep the edge sharp with review, kata and the workbook.";
@@ -7383,7 +7762,9 @@ function flightOpen() {
 function flightInit() {
   $("fpEngage").addEventListener("click", () => {
     if (!(fpState && fpState.cur)) { fpClose("__console"); return; }
-    const m = fpState.cur, i = m.drills.findIndex(d => !d.doneFlag);
+    const m = fpState.cur;
+    if (MISSIONS_PRIMM[m.id]) { fpClose("mission " + m.id); return; }
+    const i = m.drills.findIndex(d => !d.doneFlag);
     fpSkipTo = i > 0 ? i : null;
     fpClose("start " + m.id);
   });
