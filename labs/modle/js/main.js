@@ -64,7 +64,7 @@ function dailyResult(score) {
     title: "daily complete",
     score: score + " / 5",
     sub: score === 5 ? "Perfect run. See you tomorrow." : "New challenge tomorrow — keep the day streak alive.",
-    share: daily.shareText()
+    share: null
   });
 }
 
@@ -86,7 +86,7 @@ route("/practice/daily", () => {
       title: "daily complete",
       score: P.daily.score + " / 5",
       sub: "You already finished today's challenge — new one tomorrow.",
-      share: daily.shareText()
+      share: null
     });
     return;
   }
@@ -226,10 +226,8 @@ before((from, to) => {
   if (from && from.startsWith("/drill") && !to.startsWith("/drill")) leaveDrill();
 });
 
-if ("serviceWorker" in navigator && location.protocol !== "file:") {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register("sw.js").catch(() => {});
-  });
+if ("serviceWorker" in navigator) {
+  navigator.serviceWorker.getRegistrations().then(regs => regs.forEach(r => { if (r.scope.indexOf("/labs/modle/") >= 0) r.unregister(); })).catch(() => {});
 }
 
 renderShelf();

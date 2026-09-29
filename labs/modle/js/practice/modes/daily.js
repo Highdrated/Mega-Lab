@@ -24,12 +24,6 @@ function buildSet(t) {
   return set;
 }
 
-export function shareText() {
-  if (!P.daily || !P.daily.marks) return "";
-  const squares = P.daily.marks.map(m => m ? "🟩" : "🟥").join("");
-  return "Modle " + P.daily.date + " — " + P.daily.score + "/5\n" + squares + "\nmodle.net";
-}
-
 export function start(onFinish) {
   const t = todayStr();
   const set = buildSet(t);

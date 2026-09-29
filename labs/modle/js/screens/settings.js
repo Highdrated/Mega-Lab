@@ -8,17 +8,11 @@ import * as trackPicker from "../lang/track.js";
 import * as themes from "../core/themes.js";
 import * as cat from "../progress/cat.js";
 
-const SUGGEST_ACCESS_KEY = "PASTE-YOUR-WEB3FORMS-KEY-HERE";
-
 export function applyMotion() {
   document.body.classList.toggle("no-motion", P.prefs.reduceMotion);
 }
 
-const suggestReady = () => SUGGEST_ACCESS_KEY.indexOf("PASTE-") !== 0;
-
 export function render() {
-  const fb = el("suggBlock");
-  if (fb) fb.classList.toggle("hidden", !suggestReady());
   const tbox = el("setTheme");
   if (tbox) {
     tbox.innerHTML = "";
@@ -118,27 +112,4 @@ export function wire() {
     trackPicker.render();
   };
 
-  el("suggOpen").onclick = () => { el("suggOverlay").classList.remove("hidden"); el("suggMsg").textContent = ""; el("suggText").focus(); };
-  el("suggClose").onclick = () => el("suggOverlay").classList.add("hidden");
-  el("suggOverlay").onclick = (e) => { if (e.target === el("suggOverlay")) el("suggOverlay").classList.add("hidden"); };
-  document.addEventListener("keydown", (e) => { if (e.key === "Escape") el("suggOverlay").classList.add("hidden"); });
-
-  el("suggSend").onclick = async () => {
-    const text = el("suggText").value.trim();
-    const msg = el("suggMsg"), btn = el("suggSend");
-    if (!text) { msg.className = "msg err"; msg.textContent = "write something first"; return; }
-    if (SUGGEST_ACCESS_KEY.indexOf("PASTE-") === 0) { msg.className = "msg err"; msg.textContent = "suggestion box not set up yet"; return; }
-    btn.disabled = true; msg.className = "msg"; msg.textContent = "sending...";
-    try {
-      const res = await fetch("https://api.web3forms.com/submit", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Accept": "application/json" },
-        body: JSON.stringify({ access_key: SUGGEST_ACCESS_KEY, subject: "Modle suggestion", from_name: "Modle suggestion box", message: text })
-      });
-      const data = await res.json();
-      if (data.success) { msg.className = "msg ok"; msg.textContent = "sent — thank you!"; el("suggText").value = ""; }
-      else { msg.className = "msg err"; msg.textContent = "sending failed, try again later"; }
-    } catch (e) { msg.className = "msg err"; msg.textContent = "sending failed, try again later"; }
-    btn.disabled = false;
-  };
 }
