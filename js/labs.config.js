@@ -76,5 +76,14 @@ const LABS_CONFIG = [
     ring: "ring-inner",
     angle: 20,
     glyph: '<path d="M3 3h4a2 2 0 0 1 1 1v9a2 2 0 0 0-1-1H3z"/><path d="M13 3H9a2 2 0 0 0-1 1v9a2 2 0 0 1 1-1h4z"/>'
+    },
+  {
+    id: "modle",
+    name: "Modle",
+    tag: "Math",
+    path: "labs/modle/index.html",
+    ring: "ring-inner",
+    angle: 110,
+    glyph: '<circle cx="4.5" cy="4.5" r="2"/><circle cx="11.5" cy="11.5" r="2"/><path d="M13 3L3 13"/>'
   }
 ];

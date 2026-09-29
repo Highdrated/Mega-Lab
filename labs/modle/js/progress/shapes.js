@@ -1,0 +1,20 @@
+export const SHAPES = {
+circle: '<circle cx="20" cy="20" r="8"/><circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2"/>',
+    square: '<rect x="9" y="9" width="22" height="22" rx="3"/>',
+    rings: '<circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="20" cy="20" r="10" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="20" cy="20" r="4"/>',
+    triangle: '<polygon points="20,6 34,32 6,32"/>',
+    diamond: '<polygon points="20,4 34,20 20,36 6,20"/>',
+    pentagon: '<polygon points="20,5 34.3,15.4 28.8,32.1 11.2,32.1 5.7,15.4"/>',
+    hexagon: '<polygon points="20,5 33,12.5 33,27.5 20,35 7,27.5 7,12.5"/>',
+    split: '<circle cx="20" cy="20" r="15" fill="none" stroke="currentColor" stroke-width="2"/><path d="M20 20 L20 5 A15 15 0 0 1 33 27.5 Z"/>',
+    sun: '<circle cx="20" cy="20" r="8"/><g stroke="currentColor" stroke-width="2.5">' + [0,45,90,135,180,225,270,315].map(a => { const r = a * Math.PI / 180; return '<line x1="' + (20 + 12 * Math.cos(r)).toFixed(1) + '" y1="' + (20 + 12 * Math.sin(r)).toFixed(1) + '" x2="' + (20 + 17 * Math.cos(r)).toFixed(1) + '" y2="' + (20 + 17 * Math.sin(r)).toFixed(1) + '"/>'; }).join("") + "</g>",
+    star: '<polygon points="20,4 24.7,14.6 36.2,15.8 27.6,23.5 30.1,34.8 20,29 9.9,34.8 12.4,23.5 3.8,15.8 15.3,14.6"/>',
+    plus: '<path d="M15 6 h10 v9 h9 v10 h-9 v9 h-10 v-9 h-9 v-10 h9 z"/>',
+    nested: '<rect x="6" y="6" width="28" height="28" rx="3" fill="none" stroke="currentColor" stroke-width="2.5"/><rect x="13" y="13" width="14" height="14" rx="2"/>',
+    octagon: '<polygon points="13.4,5 26.6,5 35,13.4 35,26.6 26.6,35 13.4,35 5,26.6 5,13.4"/>',
+    arrow: '<polygon points="20,4 34,20 26,20 26,36 14,36 14,20 6,20"/>',
+    crescent: '<path d="M26 5 A16 16 0 1 0 26 35 A12.5 12.5 0 1 1 26 5 Z"/>',
+    gem: '<polygon points="20,3 31,13 20,23 9,13"/><polygon points="20,20 29,28 20,37 11,28" fill="none" stroke="currentColor" stroke-width="2.5"/>',
+    chevrons: '<g fill="none" stroke="currentColor" stroke-width="3.5"><polyline points="8,14 20,6 32,14"/><polyline points="8,24 20,16 32,24"/><polyline points="8,34 20,26 32,34"/></g>',
+    target: '<circle cx="20" cy="20" r="16" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="10" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="20" cy="20" r="4.5"/><line x1="20" y1="1" x2="20" y2="8" stroke="currentColor" stroke-width="2"/><line x1="20" y1="32" x2="20" y2="39" stroke="currentColor" stroke-width="2"/><line x1="1" y1="20" x2="8" y2="20" stroke="currentColor" stroke-width="2"/><line x1="32" y1="20" x2="39" y2="20" stroke="currentColor" stroke-width="2"/>'
+};

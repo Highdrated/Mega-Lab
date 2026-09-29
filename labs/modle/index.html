@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modle — math that reads like code</title>
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230d1117'/%3E%3Ctext x='16' y='23' font-family='monospace' font-size='20' font-weight='bold' fill='%23e3b23c' text-anchor='middle'%3Em%3C/text%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/tokens.css">
+<link rel="stylesheet" href="css/base.css">
+<link rel="stylesheet" href="css/components.css">
+<link rel="stylesheet" href="css/screens.css">
+<link rel="stylesheet" href="css/sections.css">
+<link rel="stylesheet" href="css/drill.css">
+<link rel="stylesheet" href="css/themes.css">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#12161d">
+<meta name="description" content="Modle — read code, predict what it does, and drill the bits you keep forgetting.">
+</head>
+<body>
+
+  <header class="chrome">
+    <a class="logo" href="#/">modle</a>
+    <nav class="mainnav">
+      <a data-nav="learn" href="#/learn">Learn</a>
+      <a data-nav="practice" href="#/practice">Practice</a>
+      <a data-nav="drill" href="#/drill">Drill</a>
+      <a data-nav="build" href="#/build">Build</a>
+      <a data-nav="compete" href="#/compete">Compete</a>
+    </nav>
+    <a class="netswitch" href="network/index.html">Switch to Networking</a>
+    <div class="chrome-right">
+      <div class="trackpick" id="trackPick"></div>
+      <a class="icon" data-nav="stats" href="#/stats">stats</a>
+      <a class="icon" data-nav="settings" href="#/settings">settings</a>
+    </div>
+  </header>
+
+  <div class="rail">
+    <span class="rail-lvl" id="railLvl">lvl 1</span>
+    <span class="rail-rank" id="railRank">Novice</span>
+    <div class="rail-bar"><div class="rail-fill" id="railFill"></div></div>
+    <span class="rail-stat" id="railXp">0 xp</span>
+    <span class="rail-sep">&middot;</span>
+    <span class="rail-stat" title="badges unlocked">&#9670; <b id="railBadges">0/21</b></span>
+    <span class="rail-sep">&middot;</span>
+    <span class="rail-stat" title="day streak">&#9650; <b id="railStreak">&mdash;</b></span>
+    <a class="rail-due" id="railDue" href="#/drill" title="items due for review">&#9679; <b id="railDueN">0</b> due</a>
+  </div>
+
+  <div class="stage">
+
+    <section class="screen on" id="home">
+      <div class="brand"><h1 class="wordmark">modle<span class="cursor"></span></h1><div class="tag">math that reads like code</div><div class="ranktag" id="ranktag"></div></div>
+      <div class="term"><div class="dots"><span></span><span></span><span></span></div><div class="demoline" id="demo"></div></div>
+      <button class="primary" id="start">Start practicing</button>
+      <button class="secondary" id="startdaily">Daily challenge</button>
+      <button class="secondary" id="startsprint">Sprint &middot; 60 seconds</button>
+      <div class="hint">one shared set of 5 puzzles, new every day</div>
+
+      <div class="doors">
+        <a class="door" href="#/learn"><b>Learn</b><span>short concept pages, read before you drill</span></a>
+        <a class="door" href="#/practice"><b>Practice</b><span>ten puzzle types, three difficulties</span></a>
+        <a class="door" href="#/drill"><b>Drill</b><span>spaced review + bug hunt, picked for you</span></a>
+        <a class="door" href="#/build"><b>Build</b><span>write real Python, hidden tests grade it</span></a>
+        <a class="door" href="#/compete"><b>Compete</b><span>daily challenge, streaks, sprints</span></a>
+      </div>
+
+      <div class="cal"><div class="cal-head"><span class="lbl">last 4 weeks</span><span class="cnt" id="daystreak"></span></div><div class="cal-grid" id="calgrid"></div></div>
+      <div class="shelf"><div class="shelf-head"><span class="lbl">achievements</span><span class="cnt" id="shelfcnt"></span></div><div class="badges" id="badges"></div></div>
+    </section>
+
+    <section class="screen" id="learn">
+      <div class="settings-head"><h2>learn</h2><a href="#/"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; back</span></a></div>
+      <div id="learnBody"></div>
+    </section>
+
+    <section class="screen" id="practice">
+      <div class="topbar"><div class="level"><span class="badge-lvl" id="badge">lvl 1</span><div class="xpbar"><div class="xpfill" id="xpfill"></div></div></div><div class="score">streak <b id="streak">0</b> <span id="flame"></span> <span class="combo" id="combo"></span><br>solved <b id="solved">0</b></div></div>
+      <div id="freeui">
+        <div class="barlabel">difficulty</div><div class="bar" id="diffs"></div>
+        <div class="barlabel">category</div><div class="bar" id="cats"></div>
+      </div>
+      <div class="dailybar hidden" id="dailybar"><span id="dailyprog"></span><span id="dailydate"></span></div>
+      <div class="card" id="card">
+        <div class="xppop" id="xppop"></div>
+        <button class="helpbtn" id="helpbtn" title="What does this mean?">?</button>
+        <div class="prompt" id="prompt"></div>
+        <div class="hintbox hidden" id="hintbox"></div>
+        <div class="row"><input id="answer" type="text" inputmode="numeric" autocomplete="off" placeholder="your answer" /><button class="go" id="check">Run</button></div>
+        <div class="feedback" id="feedback"></div>
+        <div class="viz" id="viz"></div>
+        <button class="next hidden" id="next">Next puzzle &rarr;</button>
+      </div>
+      <div class="home-link"><a href="#/">&larr; home</a> &nbsp;&middot;&nbsp; <a href="#/stats">stats</a> &nbsp;&middot;&nbsp; <a href="#/settings">settings</a> <span id="reviewwrap" class="hidden">&nbsp;&middot;&nbsp; <a id="toreview" style="color:var(--wrong);cursor:pointer"></a></span></div>
+    </section>
+
+    <section class="screen" id="drill">
+      <div class="settings-head"><h2>drill</h2><a href="#/"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; back</span></a></div>
+      <div id="drillBody"></div>
+    </section>
+
+    <section class="screen" id="bughunt">
+      <div class="settings-head"><h2 id="bugHeading">bug hunt</h2><a href="#/drill"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; drill</span></a></div>
+      <div id="bugBody"></div>
+    </section>
+
+    <section class="screen" id="syntax">
+      <div class="settings-head"><h2>spot the syntax error</h2><a href="#/drill"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; drill</span></a></div>
+      <div id="synBody"></div>
+    </section>
+
+    <section class="screen" id="typing">
+      <div class="settings-head"><h2>type it exactly</h2><a href="#/drill"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; drill</span></a></div>
+      <div id="typeBody"></div>
+    </section>
+
+    <section class="screen" id="build">
+      <div class="settings-head"><h2>build</h2><a href="#/"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; back</span></a></div>
+      <div id="buildBody"></div>
+    </section>
+
+    <section class="screen" id="compete">
+      <div class="settings-head"><h2>compete</h2><a href="#/"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; back</span></a></div>
+      <div id="competeBody"></div>
+    </section>
+
+    <section class="screen" id="stats">
+      <div class="settings-head"><h2>stats</h2><a href="#/"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; back</span></a></div>
+      <div class="bigstats">
+        <div class="bigstat"><b id="stTotal">0</b><span>solved</span></div>
+        <div class="bigstat"><b id="stAcc">-</b><span>accuracy</span></div>
+        <div class="bigstat"><b id="stBest">0</b><span>best streak</span></div>
+      </div>
+      <div class="set-block"><h3>Per category</h3><p>Accuracy by category — spot your weak points.</p><div id="statrows"></div></div>
+    </section>
+
+    <section class="screen" id="settings">
+      <div class="settings-head"><h2>settings</h2><a href="#/"><span style="color:var(--muted);font-size:12px;cursor:pointer">&larr; back</span></a></div>
+      <div class="set-block"><h3>Default difficulty</h3><p>Where each session starts.</p><div class="set-bar" id="setDiff"></div></div>
+      <div class="set-block"><h3>Practice categories</h3><p>Tap to include or drop categories from your mix.</p><div class="set-bar" id="setCats"></div></div>
+      <div class="set-block"><h3>Visual explanations</h3><p>Draw a diagram under each answer — great for visual learners.</p><div class="switch" id="setVisual"><span class="track"><span class="knob"></span></span><span class="lab">off</span></div></div>
+      <div class="set-block"><h3>Theme</h3><p>Changes every colour on the site, diagrams included.</p><div class="set-bar" id="setTheme"></div></div>
+      <div class="set-block"><h3>Language track</h3><p>One picker for the whole site, up at the top. It changes what Learn and Build show you — it does not create separate pages per language.</p></div>
+      <div class="set-block"><h3>Cat</h3><p>A small companion in the corner. Tap it for your stats.</p><div class="switch" id="setCat"><span class="track"><span class="knob"></span></span><span class="lab">on</span></div><div class="set-bar" id="setHat" style="margin-top:12px"></div></div>
+      <div class="set-block"><h3>Reduce motion</h3><p>Turn off animations for a calmer screen.</p><div class="switch" id="setMotion"><span class="track"><span class="knob"></span></span><span class="lab">animations on</span></div></div>
+      <div class="set-block hidden" id="suggBlock"><h3>Feedback</h3><p>Have an idea for Modle? A puzzle type, a badge, anything.</p><button class="setbtn" id="suggOpen">Suggest a feature</button></div>
+      <div class="set-block"><h3>Progress</h3><p>Clear your saved XP, level, streaks and badges. This cannot be undone.</p><button class="danger" id="setReset">Reset all progress</button></div>
+      <button class="primary" id="setStart">Start practicing</button>
+    </section>
+
+    <section class="screen" id="result">
+      <div class="brand"><h1 class="wordmark" style="font-size:34px" id="resultTitle">daily complete</h1></div>
+      <div class="result-big" id="resultScore"></div>
+      <div class="result-sub" id="resultSub"></div>
+      <button class="secondary hidden" id="shareBtn">Share result</button>
+      <div class="hint hidden" id="shareMsg"></div>
+      <button class="primary" id="resultHome" style="margin-top:10px">Back to home</button>
+    </section>
+
+  </div>
+
+  <div class="overlay hidden" id="suggOverlay">
+    <div class="modal">
+      <button class="close" id="suggClose">&times;</button>
+      <h3>Suggest a feature</h3>
+      <p>Your idea goes straight to the maker of Modle.</p>
+      <textarea id="suggText" maxlength="600" placeholder="your idea..."></textarea>
+      <button class="send" id="suggSend">Send suggestion</button><span class="msg" id="suggMsg"></span>
+      <p style="margin:12px 0 0;font-size:11px;color:var(--muted);line-height:1.5">Suggestions are delivered via Web3Forms, a US-based service. Please don't include personal information.</p>
+    </div>
+  </div>
+
+  <div class="cat" id="cat">
+    <div class="cat-say" id="catSay"></div>
+    <button class="cat-hide" id="catHide" title="hide the cat">&times;</button>
+    <div class="cat-art" id="catArt"></div>
+  </div>
+
+  <div class="toast" id="toast"><svg class="ic" viewBox="0 0 40 40" id="toastic"></svg><div class="txt"><small>achievement unlocked</small><b id="toastnm"></b></div></div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
