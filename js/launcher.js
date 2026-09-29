@@ -1,10 +1,11 @@
+requestAnimationFrame(() => document.getElementById("scene").classList.add("booted"));
 const SVGNS = "http://www.w3.org/2000/svg";
 const RADII = { "ring-inner": 90, "ring-mid": 160, "ring-outer": 230 };
 const RING_NAMES = { "ring-inner": "inner orbit", "ring-mid": "mid orbit", "ring-outer": "outer orbit" };
 const CX = 450, CY = 310;
 const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-const $ = (id) => document.getElementById(id);
+const $ = (id) => document.getElementById(id) || document.createElement("div");
 const roomsEl = $("rooms");
 const markersEl = $("markers");
 
@@ -465,7 +466,6 @@ function tick() {
 tick();
 setInterval(tick, 1000);
 
-requestAnimationFrame(() => $("scene").classList.add("booted"));
 
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
