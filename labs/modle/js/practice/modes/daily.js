@@ -1,11 +1,11 @@
-import { setRng, useSystemRng, mulberry32, dateSeed } from "../../core/rng.js";
+import { setRng, useSystemRng, mulberry32, dateSeed, rand } from "../../core/rng.js";
+import { allCatKeys } from "../../core/catalog.js";
 import { todayStr } from "../../core/dates.js";
 import { P, save, markPlayedToday } from "../../core/profile.js";
-import { generators } from "../generators.js";
+import { gen } from "../generators.js";
 import { startSession } from "../engine.js";
 import { checkAchievements } from "../../progress/hud.js";
 
-const CATS = ["basics", "modulo", "ranges", "indexing", "webmath"];
 const DIFFS = ["easy", "easy", "medium", "medium", "hard"];
 
 export const doneToday = () => !!(P.daily && P.daily.date === todayStr());
@@ -14,7 +14,10 @@ function buildSet(t) {
   const set = [];
   setRng(mulberry32(dateSeed("modle-" + t)));
   try {
-    for (let i = 0; i < 5; i++) set.push({ pz: generators[CATS[i]](DIFFS[i]), cat: CATS[i] });
+    const pool = allCatKeys.slice();
+    const cats = [];
+    while (cats.length < 5) cats.push(pool.splice(rand(0, pool.length - 1), 1)[0]);
+    for (let i = 0; i < 5; i++) set.push({ pz: gen(cats[i], DIFFS[i]), cat: cats[i], diff: DIFFS[i] });
   } finally {
     useSystemRng();
   }

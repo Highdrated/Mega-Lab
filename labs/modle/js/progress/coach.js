@@ -4,7 +4,8 @@ import { catList } from "../core/catalog.js";
 const LESSON_FOR = {
   basics: "operators", powers: "powers", binary: "binary", strings: "slicing",
   webmath: "ceil", modulo: "modulo", ranges: "ranges", indexing: "indexing",
-  stats: "aggregates", coordinates: "variables"
+  stats: "aggregates", coordinates: "variables",
+  cycles: "cycles", rounding: "rounding", subnets: "subnets"
 };
 
 const NEXT_DIFF = { easy: "medium", medium: "hard" };

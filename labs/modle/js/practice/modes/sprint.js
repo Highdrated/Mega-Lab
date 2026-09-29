@@ -1,5 +1,5 @@
 import { P, save, markPlayedToday } from "../../core/profile.js";
-import { generators } from "../generators.js";
+import { gen } from "../generators.js";
 import { startSession, refreshChrome, stopSession } from "../engine.js";
 
 const SECONDS = 60;
@@ -36,7 +36,7 @@ export function start(onFinish) {
       if (over) return null;
       const cats = P.prefs.enabled;
       const cat = cats[Math.floor(Math.random() * cats.length)];
-      return { pz: generators[cat](P.prefs.difficulty), cat: cat };
+      return { pz: gen(cat, P.prefs.difficulty), cat: cat, diff: P.prefs.difficulty };
     },
     onResult: (correct) => { if (correct) score++; },
     finish: finish,

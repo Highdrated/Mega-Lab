@@ -9,6 +9,14 @@ export const TRACKS = [
   { key: "cpp", label: "C++", ready: false }
 ];
 
+function withNewCats(prefs) {
+  if (!prefs.enabled || !prefs.enabled.length) return allCatKeys.slice();
+  const known = prefs.knownCats || ["basics", "powers", "binary", "strings", "webmath", "modulo", "ranges", "indexing", "stats", "coordinates"];
+  const out = prefs.enabled.filter(k => allCatKeys.includes(k));
+  allCatKeys.forEach(k => { if (!known.includes(k) && !out.includes(k)) out.push(k); });
+  return out.length ? out : allCatKeys.slice();
+}
+
 function blank() {
   const d = store.read();
   const prefs = d.prefs || {};
@@ -35,11 +43,17 @@ function blank() {
     syntaxSolved: d.syntaxSolved || [],
     bestWpm: d.bestWpm || 0,
     typedRuns: d.typedRuns || 0,
+    mistakes: d.mistakes || [],
+    pocketsDone: d.pocketsDone || 0,
+    bestPocket: d.bestPocket || 0,
+    retriesWon: d.retriesWon || 0,
     prefs: {
       difficulty: prefs.difficulty || "easy",
-      enabled: prefs.enabled && prefs.enabled.length ? prefs.enabled : allCatKeys.slice(),
+      enabled: withNewCats(prefs),
+      knownCats: allCatKeys.slice(),
       reduceMotion: prefs.reduceMotion || false,
-      visual: prefs.visual || false,
+      visual: prefs.visualSet ? !!prefs.visual : true,
+      visualSet: !!prefs.visualSet,
       track: prefs.track || "python",
       theme: prefs.theme === "terminal" ? "wheat" : (prefs.theme || "wheat"),
       hat: prefs.hat || "none",

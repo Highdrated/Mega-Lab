@@ -26,6 +26,9 @@ export function render() {
       (done ? '<button class="secondary" id="cmpShare">Copy result</button><div class="hint hidden" id="cmpShareMsg"></div>' : "") +
     "</div>" +
 
+    '<div class="set-block"><h3>Pocket</h3><p>Ten puzzles, about five minutes, your weak spots first. Best: <b>' + (P.bestPocket || 0) + '/10</b> · played ' + (P.pocketsDone || 0) + "×</p>" +
+      '<button class="secondary" id="cmpPocket">Start a pocket round</button></div>' +
+
     '<div class="set-block"><h3>Sprint</h3><p>Sixty seconds, as many as you can. Personal best: <b>' + P.bestSprint + "</b></p>" +
       '<button class="secondary" id="cmpSprint">Start a sprint</button></div>' +
 
@@ -39,6 +42,7 @@ export function render() {
 
   el("cmpDaily").onclick = () => go("/practice/daily");
   el("cmpSprint").onclick = () => go("/practice/sprint");
+  el("cmpPocket").onclick = () => go("/practice/pocket");
   const sh = el("cmpShare");
   if (sh) sh.onclick = async () => {
     const text = shareText();

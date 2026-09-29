@@ -57,12 +57,14 @@ function named(expr, sym, val, pool) {
   return name + " = " + val + "\n>>> " + expr.split(String(val)).join(name);
 }
 
+let lastKind = null;
+
 export const generators = {
 
-  basics(diff) {
+  basics(diff, force) {
     const size = { easy: [1, 10], medium: [5, 25], hard: [10, 50] }[diff];
     const cap = { easy: 6, medium: 9, hard: 12 }[diff];
-    const kind = pick({
+    const kind = lastKind = force || pick({
       easy: ["op", "op", "op", "var", "floordiv", "unary"],
       medium: ["op", "op", "var", "var2", "floordiv", "precedence", "paren"],
       hard: ["op", "var2", "precedence", "paren", "floordiv", "chain", "mixed"]
@@ -129,8 +131,8 @@ export const generators = {
     return { code: a + " " + op + " " + b, answer: ans, explain: "<code>" + op + "</code> means <b>" + opName + "</b>. So this is " + a + " " + opName + " " + b + ", which comes to <b>" + ans + "</b>." + opNote, viz: viz };
   },
 
-  powers(diff) {
-    const kind = pick({
+  powers(diff, force) {
+    const kind = lastKind = force || pick({
       easy: ["basic", "basic", "square", "square", "zero", "one", "two", "three", "digits", "expadd", "sumsq"],
       medium: ["basic", "basic", "square", "cube", "two", "ten", "sqrt", "three", "digits", "expadd", "expsub", "compare", "sumsq", "diffsq"],
       hard: ["basic", "basic", "two", "ten", "sqrt", "cube", "nested", "neg", "mask", "expadd", "expsub", "compare", "sumsq", "diffsq", "three"]
@@ -239,9 +241,9 @@ export const generators = {
       viz: { t: "chain", base: base, exp: exp, result: Math.pow(base, exp) } };
   },
 
-  binary(diff) {
+  binary(diff, force) {
     const range = { easy: [1, 31], medium: [16, 127], hard: [64, 511] }[diff];
-    const kind = pick({
+    const kind = lastKind = force || pick({
       easy: ["read", "read", "write", "ones", "place"],
       medium: ["read", "write", "ones", "place", "add", "power"],
       hard: ["read", "write", "ones", "add", "power", "mask", "double"]
@@ -305,8 +307,8 @@ export const generators = {
       viz: { t: "bits", bin: pyBin(n) } };
   },
 
-  strings(diff) {
-    const kind = pick({
+  strings(diff, force) {
+    const kind = lastKind = force || pick({
       easy: ["len", "len", "char", "count", "upper", "in", "concat", "repeat", "first", "last"],
       medium: ["count", "slicelen", "index", "upper", "concat", "repeat", "replace", "split", "startswith", "negchar", "find"],
       hard: ["slicelen", "slice", "negslice", "replace", "split", "join", "strip", "find", "two", "stepslice"]
@@ -362,9 +364,9 @@ export const generators = {
       viz: { t: "boxes", chars: w.split(""), range: [a, b] } };
   },
 
-  webmath(diff) {
+  webmath(diff, force) {
     const big = { easy: 40, medium: 120, hard: 320 }[diff];
-    const kind = pick({
+    const kind = lastKind = force || pick({
       easy: ["pages", "rows", "discount", "percent", "total"],
       medium: ["pages", "rows", "discount", "percent", "total", "vat", "leftover"],
       hard: ["pages", "discount", "percent", "vat", "leftover", "grid", "ratio"]
@@ -383,9 +385,9 @@ export const generators = {
     return { code: "ceil(" + total + " / " + per + ")", answer: ans, explain: "Divide first, then think about the leftovers." + box(total + " ÷ " + per + " = " + (Math.round(total / per * 100) / 100) + " pages") + "You cannot have part of a page, and those leftover items still need somewhere to sit. So round <b>up</b> to <b>" + ans + "</b>.<br>That last page will only be partly full, and that is fine — this is exactly how pagination works on every website.", viz: { t: "cells", n: ans, unit: "page" } };
   },
 
-  modulo(diff) {
+  modulo(diff, force) {
     const range = { easy: [6, 20, 2, 6], medium: [11, 60, 3, 9], hard: [40, 150, 6, 12] }[diff];
-    const kind = pick({
+    const kind = lastKind = force || pick({
       easy: ["rem", "even", "smaller", "zero", "clock", "everyn", "lastdigit"],
       medium: ["rem", "even", "clock", "smaller", "zero", "everyn"],
       hard: ["rem", "clock", "negative", "everyn", "wrap", "lastdigit", "divmod"]
@@ -409,8 +411,8 @@ export const generators = {
       viz: { t: "modclock", b: b, rem: a % b } };
   },
 
-  ranges(diff) {
-    const kind = pick({
+  ranges(diff, force) {
+    const kind = lastKind = force || pick({
       easy: ["count", "count", "simple", "last", "first", "sum"],
       medium: ["count", "simple", "last", "sum", "contains", "listout"],
       hard: ["count", "last", "contains", "backwards", "listout", "sumstep", "empty"]
@@ -436,11 +438,11 @@ export const generators = {
       viz: { t: "numline", min: start, max: stop, ticks: values } };
   },
 
-  indexing(diff) {
+  indexing(diff, force) {
     const size = { easy: rand(3, 7), medium: rand(4, 9), hard: rand(5, 10) }[diff];
     const arr = []; for (let i = 0; i < size; i++) arr.push(rand(1, 20));
     const base = "arr = " + listLit(arr) + "\n>>> ";
-    const kind = pick({
+    const kind = lastKind = force || pick({
       easy: ["last", "get", "get", "first", "len"],
       medium: ["neg", "get", "len", "slicelen", "lastval", "sum2"],
       hard: ["neg", "slicelen", "negval", "sliceval", "step", "nested", "oob"]
@@ -465,8 +467,8 @@ export const generators = {
       viz: { t: "boxes", vals: arr, hi: [k] } };
   },
 
-  stats(diff) {
-    const kind = pick({
+  stats(diff, force) {
+    const kind = lastKind = force || pick({
       easy: ["sum", "sum", "max", "min", "len", "count"],
       medium: ["sum", "max", "min", "mean", "len", "spread", "sorted"],
       hard: ["mean", "spread", "sorted", "median", "sumslice", "maxminus", "rounded"]
@@ -495,8 +497,8 @@ export const generators = {
       viz: { t: "bars", vals: a3, mean: sum / a3.length } };
   },
 
-  coordinates(diff) {
-    const kind = pick({
+  coordinates(diff, force) {
+    const kind = lastKind = force || pick({
       easy: ["move", "move", "single", "distance"],
       medium: ["move", "single", "distance", "steps", "mirror"],
       hard: ["wrap", "wrap", "distance", "steps", "mirror", "diag"]
@@ -516,5 +518,240 @@ export const generators = {
       answer: (x + dx) + "," + ny, placeholder: "x, y", inputmode: "text",
       explain: "A position is two numbers: <b>x</b> is how far across, <b>y</b> is how far up. Move by changing them one at a time." + box("x:  " + x + " + " + dx + " = " + (x + dx) + "\ny:  " + y + " " + (down ? "− " + dy : "+ " + dy) + " = " + ny) + "New position: <b>(" + (x + dx) + ", " + ny + ")</b>.",
       viz: { t: "grid2d", w: x + dx + 1, h: Math.max(y, ny) + 1, from: [x, y], to: [x + dx, ny] } };
+  },
+  subnets(diff, force) {
+    const kind = lastKind = force || pick({
+      easy: ["hosts", "hosts", "size", "block", "octet"],
+      medium: ["hosts", "block", "network", "offset", "broadcast", "prefixfor", "and"],
+      hard: ["network", "broadcast", "prefixfor", "and", "count", "same", "nth"]
+    }[diff]);
+    const pre = rand(25, 30), hb = 32 - pre, size = Math.pow(2, hb), octet = 256 - size;
+    const maskBits = "1".repeat(8 - hb) + "0".repeat(hb);
+    const h = rand(1, 254), start = Math.floor(h / size) * size;
+    const b8 = (n) => pyBin(n).padStart(8, "0");
+
+    if (kind === "size") return { code: "# addresses in a /" + pre + "\n>>> 2 ** (32 - " + pre + ")", answer: size,
+      explain: "An IPv4 address is 32 bits. A <b>/" + pre + "</b> locks the first " + pre + " for the network, so " + hb + " bits are left to number the hosts." + box("32 − " + pre + " = " + hb + " host bits\n2 ** " + hb + " = " + size + " addresses") + "Every extra host bit doubles the room — that is why subnet sizes are always powers of 2.",
+      viz: { t: "bits", bin: maskBits } };
+    if (kind === "block") return { code: "# mask 255.255.255." + octet + "\n>>> 256 - " + octet, answer: size,
+      explain: "The <b>block size</b> is how far apart the subnets sit. Take the last mask number away from 256." + box("256 − " + octet + " = " + size + "\nsubnets start at 0, " + size + ", " + (size * 2) + ", " + (size * 3) + " …") + "Learn this one by heart — it is the key that opens every other subnet question.",
+      viz: { t: "blocks", size: size, host: -1 } };
+    if (kind === "octet") return { code: "# last mask number for a /" + pre + "\n>>> 256 - 2 ** (32 - " + pre + ")", answer: octet,
+      explain: "Work out the block size first, then take it off 256 — the same trick as before, just run backwards." + box("host bits:  32 − " + pre + " = " + hb + "\nblock:      2 ** " + hb + " = " + size + "\nmask:       256 − " + size + " = " + octet) + "In binary the mask is <code>" + maskBits + "</code> — the 1s are network, the 0s are room for hosts.",
+      viz: { t: "bits", bin: maskBits } };
+    if (kind === "network") return { code: "# host 10.0.0." + h + " /" + pre + "  (block " + size + ")\n>>> " + h + " // " + size + " * " + size, answer: start,
+      explain: "This is the question every subnet calculator answers: <i>which subnet is this host in?</i>" + box(h + " // " + size + " = " + Math.floor(h / size) + "     whole blocks before it\n" + Math.floor(h / size) + " * " + size + " = " + start + "     jump to the start of its block") + "So .<b>" + h + "</b> lives in the subnet that starts at <b>." + start + "</b>. Floor-divide, then multiply back — the leftover is thrown away on purpose.",
+      viz: { t: "blocks", size: size, host: h } };
+    if (kind === "offset") return { code: "# how far into its /" + pre + " block is ." + h + "?  (block " + size + ")\n>>> " + h + " % " + size, answer: h % size,
+      explain: "<code>%</code> keeps the leftover after removing every full block — which is exactly the host's position inside its own subnet." + box(h + " // " + size + " = " + Math.floor(h / size) + " full blocks = " + start + "\n" + h + " − " + start + " = " + (h % size) + "   ← same as " + h + " % " + size) + "So ." + h + " is host number <b>" + (h % size) + "</b> inside the ." + start + " subnet.",
+      viz: { t: "blocks", size: size, host: h } };
+    if (kind === "broadcast") return { code: "# broadcast address for 10.0.0." + h + " /" + pre + "\n>>> " + h + " // " + size + " * " + size + " + " + size + " - 1", answer: start + size - 1,
+      explain: "The broadcast is the <b>last</b> address in the block — one before the next subnet starts." + box("start:      " + h + " // " + size + " * " + size + " = " + start + "\nnext start: " + start + " + " + size + " = " + (start + size) + "\nbroadcast:  " + (start + size) + " − 1 = " + (start + size - 1)) + "Usable hosts sit between them: ." + (start + 1) + " to ." + (start + size - 2) + ".",
+      viz: { t: "blocks", size: size, host: h } };
+    if (kind === "prefixfor") {
+      const need = rand(2, 7), n = rand(Math.max(1, Math.pow(2, need - 1) - 1), Math.pow(2, need) - 2);
+      const lines = [];
+      for (let b = 1; b <= need; b++) lines.push("2 ** " + b + " − 2 = " + String(Math.pow(2, b) - 2).padEnd(4) + (Math.pow(2, b) - 2 >= n ? "enough ✓  → /" + (32 - b) : "too small"));
+      return { code: "# need " + n + " hosts on one subnet\n>>> smallest prefix?", answer: 32 - need, placeholder: "prefix, e.g. 26", inputmode: "numeric",
+        explain: "Keep adding host bits until the usable count reaches " + n + ". Usable is always <code>2 ** bits − 2</code>." + box(lines.join("\n")) + "Then flip it round: 32 − " + need + " host bits = <b>/" + (32 - need) + "</b>. The smallest subnet that fits wastes the fewest addresses.",
+        viz: { t: "bits", bin: "1".repeat(8 - need) + "0".repeat(need) } };
+    }
+    if (kind === "and") return { code: h + " & " + octet, answer: h & octet,
+      explain: "<code>&</code> compares two numbers bit by bit and keeps a 1 only where <b>both</b> have a 1. This is literally what a router does with a mask." + box(b8(h) + "   " + h + "\n" + b8(octet) + "   " + octet + "  mask\n" + "--------\n" + b8(h & octet) + "   " + (h & octet)) + "The mask's 1s keep the network part, its 0s wipe the host part. Same answer as <code>" + h + " // " + size + " * " + size + "</code>.",
+      viz: { t: "bits", bin: b8(h & octet) } };
+    if (kind === "count") {
+      const p1 = rand(24, 27), p2 = p1 + rand(1, 30 - p1 > 4 ? 4 : 30 - p1);
+      return { code: "# how many /" + p2 + " subnets fit in one /" + p1 + "\n>>> 2 ** (" + p2 + " - " + p1 + ")", answer: Math.pow(2, p2 - p1),
+        explain: "Each step longer in the prefix borrows one host bit and splits every subnet in half." + box("/" + p1 + " → /" + p2 + " is " + (p2 - p1) + " extra bit" + (p2 - p1 === 1 ? "" : "s") + "\n2 ** " + (p2 - p1) + " = " + Math.pow(2, p2 - p1) + " subnets") + "Halving " + (p2 - p1) + " time" + (p2 - p1 === 1 ? "" : "s") + " gives <b>" + Math.pow(2, p2 - p1) + "</b> pieces.",
+        viz: { t: "blocks", size: Math.pow(2, 32 - p2) >= 4 ? Math.pow(2, 32 - p2) : 4, host: -1 } };
+    }
+    if (kind === "same") {
+      const a = rand(0, 255), sameOne = random() < 0.5;
+      const aStart = Math.floor(a / size) * size;
+      let b = sameOne ? aStart + rand(0, size - 1) : (aStart + size < 256 ? aStart + size + rand(0, size - 1) : aStart - size + rand(0, size - 1));
+      if (b === a) b = aStart + ((a - aStart + 1) % size);
+      const yes = Math.floor(a / size) === Math.floor(b / size);
+      return { code: "# /" + pre + " (block " + size + "): are ." + a + " and ." + b + " neighbours?\n>>> " + a + " // " + size + " == " + b + " // " + size, answer: yes ? "True" : "False", placeholder: "True or False", inputmode: "text",
+        explain: "Two hosts share a subnet when they land in the same block number." + box(a + " // " + size + " = " + Math.floor(a / size) + "\n" + b + " // " + size + " = " + Math.floor(b / size) + "\nsame block?  " + (yes ? "yes → True" : "no → False")) + (yes ? "They can talk directly, no router needed." : "Different blocks, so traffic between them has to go through a router."),
+        viz: { t: "blocks", size: size, host: a, host2: b } };
+    }
+    if (kind === "nth") {
+      const k = rand(1, Math.min(6, 256 / size - 1));
+      return { code: "# first usable host in subnet number " + k + " of a /" + pre + "\n# (block " + size + ", counting subnets from 0)\n>>> " + k + " * " + size + " + 1", answer: k * size + 1,
+        explain: "Subnets are laid end to end, " + size + " addresses each. Subnet " + k + " starts after " + k + " full blocks." + box("start:       " + k + " × " + size + " = " + (k * size) + "   (the network address itself)\nfirst host:  " + (k * size) + " + 1 = " + (k * size + 1)) + "Same zero-counting as list indexes — subnet 0 is the first one.",
+        viz: { t: "blocks", size: size, host: k * size + 1 } };
+    }
+    return { code: "# usable hosts in a /" + pre + "\n>>> 2 ** (32 - " + pre + ") - 2", answer: size - 2,
+      explain: "Three steps: find the host bits, raise 2 to that power, then take 2 off." + box("32 − " + pre + " = " + hb + " host bits\n2 ** " + hb + " = " + size + " addresses\n" + size + " − 2 = " + (size - 2) + " usable") + "The 2 you lose are the first address (the network's own name) and the last (broadcast, shouting to everyone).",
+      viz: { t: "bits", bin: maskBits } };
+  },
+
+  cycles(diff, force) {
+    const kind = lastKind = force || pick({
+      easy: ["listwrap", "listwrap", "weekday", "zigzag", "nextidx"],
+      medium: ["listwrap", "weekday", "wrapleft", "hours", "minutes", "nextidx", "zigzag"],
+      hard: ["wrapleft", "minutes", "tens", "toindex", "together", "both", "hours"]
+    }[diff]);
+    const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+    const gcd = (a, b) => b ? gcd(b, a % b) : a;
+
+    if (kind === "weekday") {
+      const d = rand(0, 6), n = rand(3, diff === "easy" ? 14 : 40), r = (d + n) % 7;
+      return { code: "# 0 = Mon … 6 = Sun. Today is " + d + " (" + DAYS[d] + ")\n>>> (" + d + " + " + n + ") % 7", answer: r,
+        explain: "A week is a loop of 7. Add the days, then <code>% 7</code> throws away every full week." + box(d + " + " + n + " = " + (d + n) + "\n" + (d + n) + " % 7 = " + r + "   → " + DAYS[r]) + n + " days after " + DAYS[d] + " is a <b>" + DAYS[r] + "</b>. Calendars, shift rotas and backup schedules all run on this.",
+        viz: { t: "modclock", b: 7, rem: r } };
+    }
+    if (kind === "zigzag") {
+      const row = rand(0, 9), dir = row % 2 === 0 ? "right" : "left";
+      return Object.assign({ code: "row = " + row + "\n>>> 'right' if row % 2 == 0 else 'left'",
+        explain: "This is the snake pattern a drone uses to sweep a whole field: even rows go one way, odd rows come back." + box(row + " % 2 = " + (row % 2) + "   → " + (row % 2 === 0 ? "even → 'right'" : "odd → 'left'")) + "Row " + row + " goes <b>" + dir + "</b>. No zig-zag flag to remember — the row number already knows.",
+        viz: { t: "modclock", b: 2, rem: row % 2 } }, asText(dir));
+    }
+    if (kind === "nextidx") {
+      const n = rand(3, 6), i = random() < 0.5 ? n - 1 : rand(0, n - 2);
+      return { code: "players = " + n + "\n>>> i = " + i + "\n>>> (i + 1) % players", answer: (i + 1) % n,
+        explain: "Turns go 0, 1, 2 … and then back to 0. Adding 1 moves on; <code>% players</code> catches the wrap." + box("(" + i + " + 1) = " + (i + 1) + "\n" + (i + 1) + " % " + n + " = " + ((i + 1) % n)) + (i === n - 1 ? "The last player hands the turn back to player <b>0</b> — no <code>if</code> needed." : "Nothing to wrap yet, so it is just the next one: <b>" + ((i + 1) % n) + "</b>."),
+        viz: { t: "modclock", b: n, rem: (i + 1) % n } };
+    }
+    if (kind === "wrapleft") {
+      const w = pick([6, 8, 10, 12]), x = rand(0, 2), step = rand(x + 1, x + 4), r = ((x - step) % w + w) % w;
+      return { code: "# grid " + w + " wide, at column " + x + ", step " + step + " left\n>>> (" + x + " - " + step + ") % " + w, answer: r,
+        explain: "Stepping left past column 0 goes negative: " + x + " − " + step + " = " + (x - step) + ". Python's <code>%</code> always hands back something between 0 and " + (w - 1) + ", so it wraps round to the right edge." + box("(" + (x - step) + ") % " + w + "  →  " + (x - step) + " + " + w + " = " + r) + "You reappear at column <b>" + r + "</b>. Adding the width once is the mental shortcut.",
+        viz: { t: "modclock", b: w, rem: r } };
+    }
+    if (kind === "hours") {
+      const hh = rand(0, 23), add = rand(3, 40), r = (hh + add) % 24;
+      return { code: "# it is " + hh + ":00 — what hour is it " + add + " hours later?\n>>> (" + hh + " + " + add + ") % 24", answer: r,
+        explain: "A day wraps at 24. Add, then strip out every complete day." + box(hh + " + " + add + " = " + (hh + add) + "\n" + (hh + add) + " % 24 = " + r) + "It will be <b>" + r + ":00</b>" + (hh + add >= 24 ? ", " + Math.floor((hh + add) / 24) + " day" + (Math.floor((hh + add) / 24) === 1 ? "" : "s") + " later." : ", same day."),
+        viz: { t: "modclock", b: 24, rem: r } };
+    }
+    if (kind === "minutes") {
+      const m = rand(61, 400);
+      return { code: m + " // 60, " + m + " % 60", answer: Math.floor(m / 60) + "," + (m % 60), placeholder: "hours, minutes", inputmode: "text",
+        explain: "<code>//</code> and <code>%</code> are a team: one counts the full hours, the other keeps the minutes that did not fill an hour." + box(m + " // 60 = " + Math.floor(m / 60) + "   full hours\n" + m + " %  60 = " + (m % 60) + "   minutes left") + m + " minutes is <b>" + Math.floor(m / 60) + "h " + (m % 60) + "m</b>. Same pair turns seconds into a timer display.",
+        viz: { t: "modclock", b: 12, rem: Math.floor((m % 60) / 5) } };
+    }
+    if (kind === "tens") {
+      const n = rand(100, 999), r = Math.floor(n / 10) % 10;
+      return { code: n + " // 10 % 10", answer: r,
+        explain: "Two moves, left to right. <code>// 10</code> chops off the last digit, then <code>% 10</code> grabs the new last digit." + box(n + " // 10 = " + Math.floor(n / 10) + "\n" + Math.floor(n / 10) + " % 10 = " + r) + "So you get the <b>tens</b> digit, <b>" + r + "</b>. Swap in 100 to reach the hundreds.",
+        viz: { t: "modclock", b: 10, rem: r } };
+    }
+    if (kind === "toindex") {
+      const w = rand(3, 8), r = rand(1, 5), c = rand(0, w - 1);
+      return { code: "# grid " + w + " wide, stored as one flat list\n# row " + r + ", column " + c + " → list index?\n>>> " + r + " * " + w + " + " + c, answer: r * w + c,
+        explain: "Each row before this one is a full " + w + " cells, so skip those first, then step along the row." + box(r + " rows × " + w + " = " + (r * w) + "   cells to skip\n" + (r * w) + " + " + c + " = " + (r * w + c)) + "Index <b>" + (r * w + c) + "</b>. It is the reverse of <code>i // " + w + ", i % " + w + "</code>, which turns the index back into row and column.",
+        viz: { t: "grid2d", w: w, h: r + 1, from: [0, r], to: [c, 0] } };
+    }
+    if (kind === "together") {
+      const a = pick([2, 3, 4, 5, 6]); let b = pick([3, 4, 6, 8, 10]); if (b === a) b = a + 1;
+      const l = a * b / gcd(a, b);
+      const mult = (x) => Array.from({ length: Math.min(8, l / x + 1) }, (_, i) => x * (i + 1)).join(", ");
+      return { code: "# light A blinks every " + a + "s, light B every " + b + "s\n# both blink at t = 0 — when next together?\n>>> first t > 0 where t % " + a + " == 0 and t % " + b + " == 0", answer: l,
+        explain: "List when each one blinks and find the first number in both lists." + box("A: " + mult(a) + "\nB: " + mult(b)) + "They line up again at <b>" + l + "</b>. (Maths calls this the lowest common multiple — games use it for timers that should sync up.)",
+        viz: { t: "modclock", b: Math.min(l, 24), rem: 0 } };
+    }
+    if (kind === "both") {
+      const a = pick([3, 4]), b = pick([5, 6]), l = a * b / gcd(a, b);
+      const t = random() < 0.4 ? l * rand(1, 3) : rand(1, 60), yes = t % a === 0 && t % b === 0;
+      return { code: "# spawn every " + a + " ticks AND every " + b + " ticks\n>>> " + t + " % " + a + " == 0 and " + t + " % " + b + " == 0", answer: yes ? "True" : "False", placeholder: "True or False", inputmode: "text",
+        explain: "<code>and</code> only says True when <b>both</b> halves are True." + box(t + " % " + a + " = " + (t % a) + "   → " + (t % a === 0 ? "True" : "False") + "\n" + t + " % " + b + " = " + (t % b) + "   → " + (t % b === 0 ? "True" : "False") + "\nboth?     → " + (yes ? "True" : "False")) + "FizzBuzz is exactly this puzzle with 3 and 5.",
+        viz: { t: "modclock", b: a, rem: t % a } };
+    }
+    const sets = [["red", "green", "blue"], ["N", "E", "S", "W"], ["rock", "paper", "scissors"], ["mon", "tue", "wed", "thu", "fri"]];
+    const items = pick(sets), L = items.length, i = rand(L, L * 4), r = i % L;
+    return Object.assign({ code: "c = " + listLit(items.map(x => "'" + x + "'")) + "\n>>> c[" + i + " % len(c)]",
+      explain: "The list has " + L + " items, so <code>% len(c)</code> turns any number into a safe position from 0 to " + (L - 1) + " — no IndexError, ever." + box(i + " % " + L + " = " + r + "\nc[" + r + "] = '" + items[r] + "'") + "Answer <b>'" + items[r] + "'</b>. This is how you cycle colours, directions or animation frames forever.",
+      viz: { t: "modclock", b: L, rem: r } }, asText(items[r]));
+  },
+
+  rounding(diff, force) {
+    const kind = lastKind = force || pick({
+      easy: ["int", "round", "round", "roundnd", "ceil"],
+      medium: ["bankers", "negfloor", "negint", "ceiltrick", "roundneg", "roundnd", "int"],
+      hard: ["bankers", "negfloor", "divmodneg", "floatsum", "roundten", "ceiltrick", "percent"]
+    }[diff]);
+    const a = rand(1, 19), d = pick([1, 2, 3, 4, 6, 7, 8, 9]);
+    const x = a + "." + d;
+    const line = (v, to) => ({ t: "numline", min: Math.floor(Math.min(v, to)), max: Math.ceil(Math.max(v, to)) === Math.floor(Math.min(v, to)) ? Math.floor(Math.min(v, to)) + 1 : Math.ceil(Math.max(v, to)), base: v, to: to });
+
+    if (kind === "int") return { code: "int(" + x + ")", answer: a,
+      explain: "<code>int()</code> does not round — it simply <b>chops off</b> everything after the dot. Even ." + d + " gets thrown away." + box("int(" + x + ")  →  " + a + "   (." + d + " discarded)") + "If you wanted normal rounding you would use <code>round()</code> instead.",
+      viz: line(a + d / 10, a) };
+    if (kind === "round") { const r = d > 5 ? a + 1 : a; return { code: "round(" + x + ")", answer: r,
+      explain: "<code>round()</code> goes to the <b>nearest</b> whole number. ." + d + " is " + (d > 5 ? "past the halfway mark, so it goes up" : "below the halfway mark, so it goes down") + "." + box(a + " ←── " + x + " ──→ " + (a + 1) + "\nnearest: " + r) + "Answer <b>" + r + "</b>.",
+      viz: line(a + d / 10, r) }; }
+    if (kind === "ceil") return { code: "ceil(" + x + ")", answer: a + 1,
+      explain: "<code>ceil</code> is short for ceiling — it always goes <b>up</b> to the next whole number, however small the decimal." + box("ceil(" + x + ")  →  " + (a + 1)) + "You met it in web math: part of a page is still a page.",
+      viz: line(a + d / 10, a + 1) };
+    if (kind === "roundnd") {
+      const cents = rand(1, 9) * 100 + rand(0, 98), t = pick([0, 1, 2, 3, 4, 6, 7, 8, 9]), tail = rand(0, 9);
+      const shown = (cents / 100).toFixed(2) + t + tail, r = (cents + (t >= 6 ? 1 : 0)) / 100;
+      return { code: "round(" + shown + ", 2)", answer: r,
+        explain: "The <code>2</code> means \"keep two decimals\". Look only at the <b>third</b> decimal to decide." + box(shown + "\n    ^ third decimal is " + t + " → " + (t >= 6 ? "round up" : "leave it")) + "Answer <b>" + r + "</b>. This is how prices and percentages get tidied for display.",
+        viz: null };
+    }
+    if (kind === "bankers") {
+      const b = rand(0, 9), r = b % 2 === 0 ? b : b + 1;
+      return { code: "round(" + b + ".5)", answer: r,
+        explain: "The famous trap. Python does <b>not</b> always round .5 up — it goes to the nearest <b>even</b> number. This is called banker's rounding, and it stops lots of .5s all nudging totals upward." + box("round(0.5) = 0\nround(1.5) = 2\nround(2.5) = 2\nround(3.5) = 4") + b + " and " + (b + 1) + " are equally close; the even one is <b>" + r + "</b>.",
+        viz: line(b + 0.5, r) };
+    }
+    if (kind === "negfloor") {
+      const bb = pick([2, 3, 4]); let aa = rand(5, 19); if (aa % bb === 0) aa++;
+      const r = Math.floor(-aa / bb);
+      return { code: "-" + aa + " // " + bb, answer: r,
+        explain: "<code>//</code> always rounds <b>down the number line</b> — towards minus infinity, not towards zero." + box("-" + aa + " / " + bb + " = " + (Math.round(-aa / bb * 100) / 100) + "\nround DOWN →  " + r) + "Down from " + (Math.round(-aa / bb * 100) / 100) + " is <b>" + r + "</b>, not " + (r + 1) + ". For positive numbers you never notice; for negatives it bites.",
+        viz: line(-aa / bb, r) };
+    }
+    if (kind === "negint") return { code: "int(-" + x + ")", answer: -a,
+      explain: "<code>int()</code> chops the decimal off, which moves negatives <b>towards zero</b> — the opposite direction to <code>//</code>." + box("int(-" + x + ")   → -" + a + "   chop, towards 0\n-" + x + " // 1  → -" + (a + 1) + "   floor, away from 0") + "Answer <b>-" + a + "</b>.",
+      viz: line(-(a + d / 10), -a) };
+    if (kind === "roundneg") { const r = d > 5 ? -(a + 1) : -a; return { code: "round(-" + x + ")", answer: r,
+      explain: "<code>round()</code> just finds the nearest whole number, minus sign or not." + box("-" + (a + 1) + " ←── -" + x + " ──→ -" + a + "\nnearest: " + r) + "Answer <b>" + r + "</b>.",
+      viz: line(-(a + d / 10), r) }; }
+    if (kind === "ceiltrick") {
+      const bb = pick([3, 4, 5, 8]); let aa = rand(bb + 1, bb * 6); if (aa % bb === 0) aa++;
+      const r = Math.ceil(aa / bb);
+      return { code: "-(-" + aa + " // " + bb + ")", answer: r,
+        explain: "A trick for rounding <b>up</b> without importing anything. Flip the sign, floor-divide (which pushes it further down), then flip back." + box("-" + aa + " // " + bb + " = " + Math.floor(-aa / bb) + "\n-(" + Math.floor(-aa / bb) + ") = " + r) + "Same as <code>ceil(" + aa + " / " + bb + ")</code> = <b>" + r + "</b> — handy for \"how many pages\" in one line.",
+        viz: { t: "cells", n: r, unit: "page" } };
+    }
+    if (kind === "divmodneg") {
+      const bb = pick([2, 3, 4]); let aa = rand(5, 15); if (aa % bb === 0) aa++;
+      const qq = Math.floor(-aa / bb), rr = -aa - qq * bb;
+      return { code: "divmod(-" + aa + ", " + bb + ")", answer: qq + "," + rr, placeholder: "q, r", inputmode: "text",
+        explain: "<code>divmod</code> gives both halves at once: <code>(a // b, a % b)</code>. With a negative, the floor goes down, so the remainder comes out positive." + box("-" + aa + " // " + bb + " = " + qq + "\n-" + aa + " %  " + bb + " = " + rr + "\ncheck: " + qq + " × " + bb + " + " + rr + " = -" + aa) + "Answer <b>(" + qq + ", " + rr + ")</b>. The check line always holds — that is the rule Python keeps.",
+        viz: { t: "modclock", b: bb, rem: rr } };
+    }
+    if (kind === "floatsum") {
+      const pair = pick([[0.1, 0.2, 0.3], [0.1, 0.7, 0.8], [0.2, 0.4, 0.6], [0.5, 0.25, 0.75], [1.5, 2.5, 4.0], [0.3, 0.6, 0.9], [0.25, 0.125, 0.375]]);
+      const yes = pair[0] + pair[1] === pair[2];
+      return { code: pair[0] + " + " + pair[1] + " == " + pair[2], answer: yes ? "True" : "False", placeholder: "True or False", inputmode: "text",
+        explain: (yes
+          ? "Halves, quarters and eighths are stored <b>exactly</b> in binary, so the sum really does equal " + pair[2] + " → <b>True</b>."
+          : "Computers store decimals in binary, and tenths cannot be written exactly in binary — like 1/3 in decimal. So the sum is a hair off:" + box(pair[0] + " + " + pair[1] + " = " + (pair[0] + pair[1])) + "Not quite " + pair[2] + " → <b>False</b>.") +
+          "<br>Rule of thumb: never compare floats with <code>==</code>; use <code>math.isclose()</code> or round first.",
+        viz: null };
+    }
+    if (kind === "roundten") {
+      const k = pick([1, 2, 3]), p = Math.pow(10, k); let n = rand(1000, 9999); if (n % p === 5 * p / 10) n++;
+      const r = Math.round(n / p) * p;
+      return { code: "round(" + n + ", -" + k + ")", answer: r,
+        explain: "A <b>negative</b> number of places rounds to the left of the dot: -1 to tens, -2 to hundreds, -3 to thousands." + box("round to nearest " + p + "\n" + n + "  →  " + r) + "Answer <b>" + r + "</b>. Useful for \"about 1200 users\" style dashboards.",
+        viz: line(n / p, r / p) };
+    }
+    const bb = pick([3, 6, 7, 9, 11]), aa = rand(1, bb - 1), r = Math.round(aa / bb * 100);
+    return { code: "round(" + aa + " / " + bb + " * 100)", answer: r,
+      explain: "Work left to right: divide, turn it into a percentage, then tidy to a whole number." + box(aa + " / " + bb + " = " + (aa / bb).toFixed(4) + "\n× 100 = " + (aa / bb * 100).toFixed(2) + "\nround → " + r) + "<b>" + r + "%</b> — exactly how a progress bar label is made.",
+      viz: { t: "bars", two: [100, r], labels: ["all", r + "%"] } };
   }
+
 };
+
+export function gen(cat, diff, force) {
+  lastKind = null;
+  const pz = generators[cat](diff, force);
+  pz.kind = lastKind || "core";
+  return pz;
+}

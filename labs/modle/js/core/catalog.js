@@ -1,7 +1,8 @@
 export const catList = [
   ["basics", "basics", "+"], ["powers", "powers", "^"], ["binary", "binary", "0b"], ["strings", "strings", '""'],
   ["webmath", "web math", "%"], ["modulo", "modulo", "%"], ["ranges", "ranges", ".."], ["indexing", "indexing", "[]"],
-  ["stats", "stats", "Σ"], ["coordinates", "coords", "xy"]
+  ["stats", "stats", "Σ"], ["coordinates", "coords", "xy"],
+  ["cycles", "cycles", "↻"], ["rounding", "rounding", "≈"], ["subnets", "subnets", "/"]
 ];
 
 export const allCatKeys = catList.map(c => c[0]);

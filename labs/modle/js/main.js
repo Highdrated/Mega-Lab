@@ -17,6 +17,7 @@ import * as daily from "./practice/modes/daily.js";
 import * as sprint from "./practice/modes/sprint.js";
 import * as review from "./practice/modes/review.js";
 import * as drillMode from "./practice/modes/drill.js";
+import * as pocket from "./practice/modes/pocket.js";
 import * as drill from "./drill/drill.js";
 import * as bughunt from "./drill/bughunt.js";
 import * as cat from "./progress/cat.js";
@@ -27,6 +28,7 @@ function show(id) {
   document.querySelectorAll(".screen").forEach(s => s.classList.remove("on"));
   const target = el(id);
   if (target) target.classList.add("on");
+  document.body.dataset.screen = id;
 }
 
 function leavePractice() {
@@ -106,6 +108,19 @@ route("/practice/sprint", () => {
   updateHud(false);
 });
 
+route("/practice/pocket", () => {
+  show("practice");
+  pocket.start((right, total, time) => {
+    showResult({
+      title: "pocket done",
+      score: right + " / " + total,
+      sub: time + " — " + (right === total ? "flawless. Your weak spots are getting less weak." : "anything you missed is already queued to come back."),
+      share: null
+    });
+  });
+  updateHud(false);
+});
+
 route("/practice/review", () => {
   const queue = free.takeMistakes();
   if (!queue.length) { go("/practice"); return; }
@@ -118,7 +133,8 @@ route("/practice/:cat", (p) => {
   if (!allCatKeys.includes(p.cat)) { go("/practice"); return; }
   show("practice");
   if (!P.prefs.enabled.includes(p.cat)) { P.prefs.enabled.push(p.cat); save(); }
-  free.start({ cat: p.cat });
+  const q = p.query || {};
+  free.start({ cat: p.cat, kind: q.kind, diff: ["easy", "medium", "hard"].includes(q.diff) ? q.diff : undefined });
   updateHud(false);
 });
 
@@ -160,6 +176,7 @@ fallback(() => go("/"));
 el("start").onclick = () => go("/practice");
 el("startdaily").onclick = () => go("/practice/daily");
 el("startsprint").onclick = () => go("/practice/sprint");
+el("startpocket").onclick = () => go("/practice/pocket");
 el("toreview").onclick = () => go("/practice/review");
 el("resultHome").onclick = () => go("/");
 

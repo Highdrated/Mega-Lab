@@ -41,7 +41,10 @@ export const here = () => currentPath;
 export function before(fn) { beforeEach = fn; }
 
 function resolve() {
-  const parts = parse(location.hash);
+  const hq = (location.hash || "").split("?");
+  const parts = parse(hq[0]);
+  const query = {};
+  new URLSearchParams(hq[1] || "").forEach((v, k) => { query[k] = v; });
   const path = "/" + parts.join("/");
   const hit = match(parts);
   if (beforeEach) beforeEach(currentPath, path);
@@ -50,7 +53,7 @@ function resolve() {
     const seg = a.getAttribute("data-nav");
     a.classList.toggle("on", parts[0] === seg || (seg === "" && parts.length === 0));
   });
-  if (hit) hit.handler(hit.params);
+  if (hit) hit.handler(Object.assign({}, hit.params, { query: query }));
   else if (notFound) notFound(path);
   window.scrollTo(0, 0);
 }

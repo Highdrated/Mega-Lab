@@ -21,7 +21,12 @@ export const achievements = [
   { id: "perfect", name: "Perfect Daily", shape: "target", test: (s) => s.perfectDailies >= 1 },
   { id: "scholar", name: "Scholar", shape: "rings", test: (s) => s.read >= 4 },
   { id: "builder", name: "Builder", shape: "plus", test: (s) => s.built >= 1 },
-  { id: "engineer", name: "Engineer", shape: "nested", test: (s) => s.built >= 5 }
+  { id: "engineer", name: "Engineer", shape: "nested", test: (s) => s.built >= 5 },
+  { id: "subnet", name: "Subnet Sage", shape: "hexagon", test: (s) => (s.cats.subnets || 0) >= 25 },
+  { id: "looper", name: "Loop Keeper", shape: "rings", test: (s) => (s.cats.cycles || 0) >= 25 },
+  { id: "rounder", name: "Round Trip", shape: "circle", test: (s) => (s.cats.rounding || 0) >= 25 },
+  { id: "pocket", name: "Pocket Pro", shape: "square", test: (s) => s.pockets >= 5 },
+  { id: "secondwind", name: "Second Wind", shape: "arrow", test: (s) => s.retries >= 10 }
 ]
 ;
 
@@ -30,7 +35,8 @@ export function statsSnapshot(P, level, dayStreak) {
     solved: P.solved, maxStreak: P.maxStreak, level: level,
     catsTried: P.catsTried, cats: P.cats, dayStreak: dayStreak,
     dailiesDone: P.dailiesDone, perfectDailies: P.perfectDailies,
-    read: P.read.length, built: P.built.length
+    read: P.read.length, built: P.built.length,
+    pockets: P.pocketsDone || 0, retries: P.retriesWon || 0
   };
 }
 

@@ -120,6 +120,95 @@ n % 3 == 0    every third one?</code></pre>
 <p>It also <em>wraps</em> numbers around. On a 10-wide grid, <code>x % 10</code> keeps <code>x</code> between 0 and 9 forever — walk off the right edge and you reappear on the left. That's how Pac-Man works, and it's how clock faces work.</p>`
   },
   {
+    slug: "cycles",
+    title: "Loops with %",
+    blurb: "Modulo part two — clocks, turns, weekdays and zig-zags.",
+    minutes: 4,
+    drill: "cycles",
+    body: `
+<p>Once you know <code>%</code> gives the leftover, you can make <strong>anything loop</strong>. The recipe never changes:</p>
+<pre><code>position = (start + steps) % size</code></pre>
+<h4>Clocks and calendars</h4>
+<pre><code>(22 + 5) % 24     ->  3      22:00 plus 5 hours
+(4 + 10) % 7      ->  0      Friday + 10 days = Monday</code></pre>
+<h4>Taking turns</h4>
+<pre><code>players = 4
+i = 3
+i = (i + 1) % players   ->  0      back to the first player</code></pre>
+<p>No <code>if i == last</code> check needed — the <code>%</code> does the wrap for you.</p>
+<h4>Cycling through a list</h4>
+<pre><code>colors = ["red", "green", "blue"]
+colors[7 % len(colors)]  ->  "green"</code></pre>
+<p>7 % 3 is 1, so you get position 1. Any number in, a safe position out — never an IndexError.</p>
+<h4>Walking left off the edge</h4>
+<pre><code>(0 - 1) % 8   ->  7</code></pre>
+<p>Python's <code>%</code> never gives a negative answer when the size is positive. Step left of column 0 and you land on the far right.</p>
+<h4>// and % as a team</h4>
+<pre><code>125 // 60   ->  2     full hours
+125 %  60   ->  5     leftover minutes
+row * width + col     the reverse: row, col back into one index</code></pre>`
+  },
+  {
+    slug: "rounding",
+    title: "Rounding",
+    blurb: "int, //, round and ceil — they all disagree on negatives.",
+    minutes: 4,
+    drill: "rounding",
+    body: `
+<p>Python has several ways to turn a decimal into a whole number, and they <strong>do not agree</strong>. Picture a number line:</p>
+<pre><code>   -4    -3.7   -3            3    3.7    4
+    |-----*------|            |------*-----|</code></pre>
+<ul>
+<li><code>int()</code> — chops the decimal off. Moves <strong>towards zero</strong>: <code>int(3.7)</code> is 3, <code>int(-3.7)</code> is -3.</li>
+<li><code>//</code> — floor. Always moves <strong>down</strong>: <code>-7 // 2</code> is -4, not -3.</li>
+<li><code>ceil()</code> — always moves <strong>up</strong>: <code>ceil(3.1)</code> is 4.</li>
+<li><code>round()</code> — goes to the <strong>nearest</strong>.</li>
+</ul>
+<h4>The .5 surprise</h4>
+<pre><code>round(1.5)  ->  2
+round(2.5)  ->  2      not 3!
+round(3.5)  ->  4</code></pre>
+<p>Exact halves go to the nearest <strong>even</strong> number ("banker's rounding"), so rounding lots of .5 values does not drift your totals upward.</p>
+<h4>Decimal places</h4>
+<pre><code>round(3.14159, 2)   ->  3.14
+round(1234, -2)     ->  1200      negative = left of the dot</code></pre>
+<h4>The float trap</h4>
+<pre><code>0.1 + 0.2 == 0.3    ->  False</code></pre>
+<p>Computers store decimals in binary, and a tenth cannot be written exactly in binary (like 1/3 in decimal). Compare with <code>math.isclose()</code> or round first.</p>`
+  },
+  {
+    slug: "subnets",
+    title: "Subnet math",
+    blurb: "Hosts, block sizes and network addresses — it's all // and %.",
+    minutes: 5,
+    drill: "subnets",
+    body: `
+<p>Subnetting looks scary, but it is three things you already know: <strong>powers of 2</strong>, <strong>//</strong> and <strong>%</strong>.</p>
+<h4>1. Host bits</h4>
+<p>An IPv4 address is 32 bits. A <code>/27</code> keeps 27 for the network, leaving <strong>5</strong> for hosts.</p>
+<pre><code>2 ** (32 - 27)       ->  32 addresses
+2 ** (32 - 27) - 2   ->  30 usable</code></pre>
+<p>The two you lose: the first address names the network, the last is the broadcast.</p>
+<h4>2. Block size</h4>
+<pre><code>mask 255.255.255.224
+256 - 224   ->  32</code></pre>
+<p>Subnets sit end to end, one block each: <code>.0 .32 .64 .96 .128 …</code></p>
+<h4>3. Which subnet is a host in?</h4>
+<pre><code>host .77, block 32
+77 // 32 * 32          ->  64     network address
+77 %  32               ->  13     position inside the block
+64 + 32 - 1            ->  95     broadcast</code></pre>
+<p>Floor-divide to count whole blocks, multiply back to land on the start. That's the whole trick.</p>
+<h4>4. The router's way: &amp;</h4>
+<pre><code>01001101    77
+11100000    224  (mask)
+--------
+01000000    64</code></pre>
+<p><code>&amp;</code> keeps a 1 only where both rows have one. Mask 1s keep the network part, mask 0s wipe the host part. Same answer as <code>77 // 32 * 32</code>.</p>
+<h4>5. Picking a prefix</h4>
+<p>Need 50 hosts? Try host bits until <code>2 ** bits - 2</code> is big enough: 5 bits gives 30 (too small), 6 bits gives 62 ✓. So <code>32 - 6</code> = <strong>/26</strong>.</p>`
+  },
+  {
     slug: "indexing",
     title: "Indexing",
     blurb: "Counting from zero, and counting backwards.",

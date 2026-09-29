@@ -1,4 +1,4 @@
-const VERSION = "modle-v7";
+const VERSION = "modle-v8";
 const SHELL = [
   "./",
   "./index.html",

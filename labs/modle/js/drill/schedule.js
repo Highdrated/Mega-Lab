@@ -11,6 +11,7 @@ export const bugKey = (slug) => "bug:" + slug;
 
 export function parseSkill(key) {
   const bits = key.split(":");
+  if (bits[0] === "k") return { kind: "type", cat: bits[1], type: bits[2], diff: (P.srs[key] && P.srs[key].diff) || "medium" };
   return { kind: bits[0] === "bug" ? "bug" : "puzzle", cat: bits[0], diff: bits[1], slug: bits[1] };
 }
 
@@ -38,8 +39,9 @@ function slot(key) {
   return s;
 }
 
-export function grade(key, correct) {
+export function grade(key, correct, diff) {
   const s = slot(key);
+  if (diff) s.diff = diff;
   const today = todayStr();
 
   if (correct) {

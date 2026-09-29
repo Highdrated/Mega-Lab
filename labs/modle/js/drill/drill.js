@@ -4,11 +4,12 @@ import { go } from "../core/router.js";
 import { catList, diffList } from "../core/catalog.js";
 import { skillKey, summary, buildQueue, nextDueDate, retention, daysBetween } from "./schedule.js";
 import { todayStr } from "../core/dates.js";
+import { typeKeys, weakSpots, kindLabel, catName } from "../practice/kinds.js";
 
 export function allSkillKeys() {
   const keys = [];
   catList.forEach(c => diffList.forEach(d => keys.push(skillKey(c[0], d))));
-  return keys;
+  return keys.concat(typeKeys());
 }
 
 export const todayQueue = (size) => buildQueue(allSkillKeys(), size || 12, 4);
@@ -19,6 +20,14 @@ function bar(s) {
     : "";
   return '<div class="mix">' + seg(s.due, "due", "due now") + seg(s.fresh, "fresh", "not started") +
     seg(s.learning - s.due, "learning", "learning") + seg(s.strong, "strong", "solid") + "</div>";
+}
+
+function weakBlock() {
+  const w = weakSpots(6);
+  if (!w.length) return "";
+  return '<div class="set-block"><h3>Weak spots</h3><p>Puzzle types you have missed. Tap one to practise just that.</p><div class="weak">' +
+    w.map(x => '<a class="weak-row" data-cat="' + x.cat + '" data-kind="' + x.kind + '" data-diff="' + x.diff + '"><span>' + kindLabel(x.cat, x.kind) + '<small>' + catName(x.cat) + '</small></span><b>' + (x.lapses === 1 ? "missed once" : "missed " + x.lapses + "×") + "</b></a>").join("") +
+    "</div></div>";
 }
 
 export function render() {
@@ -70,8 +79,10 @@ export function render() {
 
     "</div>" +
 
+    weakBlock() +
+
     '<div class="set-block"><h3>How this works</h3>' +
-      "<p>Every category-and-difficulty pair is tracked on its own — thirty of them. Get one right and its next review is pushed further out: 1 day, then 3, then roughly two and a half times longer each time. Get it wrong and it resets to today.</p>" +
+      "<p>Every category-and-difficulty pair is tracked on its own. On top of that, every <b>type</b> of puzzle you get wrong anywhere — practice, daily, sprint, pocket — gets its own card, so the exact thing you missed comes back, not just the category. Get one right and its next review is pushed further out: 1 day, then 3, then roughly two and a half times longer each time. Get it wrong and it resets to today.</p>" +
       "<p>So a short session each day beats a long one each week, and the app quietly spends most of your time on the things you are worst at.</p></div>" +
 
     '<div class="set-block"><h3>Signal</h3>' +
@@ -84,6 +95,9 @@ export function render() {
       (drilledToday ? '<p class="done-note">Reviewed today ✓</p>' : "") +
     "</div>";
 
+  box.querySelectorAll(".weak-row").forEach(a => {
+    a.onclick = () => go("/practice/" + a.getAttribute("data-cat") + "?kind=" + a.getAttribute("data-kind") + "&diff=" + a.getAttribute("data-diff"));
+  });
   el("drillReview").onclick = () => { if (q.length) go("/drill/review"); };
   el("drillBugs").onclick = () => go("/drill/bugs");
   el("drillBugsTimed").onclick = () => go("/drill/bugs-timed");

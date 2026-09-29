@@ -108,5 +108,39 @@ len(nums)   ->  4     how many there are</code></pre>
 <p><b>Wrapping is where <code>%</code> comes in.</b> On a grid 10 wide, positions only go 0 to 9. Walk to 12 and you should reappear at 2.</p>
 <pre><code>12 % 10  ->  2      walked off the right, back on the left
 -1 % 10  ->  9      walked off the left, back on the right</code></pre>
-<p>One symbol handles both edges. It is how Pac-Man works, and how anything that loops around works.</p>`
+<p>One symbol handles both edges. It is how Pac-Man works, and how anything that loops around works.</p>`,
+
+  cycles: `
+<p><b>Anything that loops uses <code>%</code>.</b> Days of the week, turns in a game, colours in a pattern, hours on a clock.</p>
+<p><b>The pattern is always the same:</b> add as normal, then <code>% size</code> of the loop.</p>
+<pre><code>(day + 10) % 7          10 days later, 0-6
+(i + 1) % players       next player, back to 0 after the last
+colors[i % len(colors)] never runs off the end of the list</code></pre>
+<p><b>Going backwards still works.</b> <code>(0 - 1) % 8</code> is <b>7</b>, not -1 — Python always hands back a leftover between 0 and size − 1.</p>
+<p><b>// and % are a pair.</b> <code>125 // 60</code> is the full hours (2), <code>125 % 60</code> is the minutes left (5).</p>
+<p><b>Even or odd rows</b> — <code>row % 2</code> is 0 or 1, which is how a drone zig-zags across a field.</p>`,
+
+  rounding: `
+<p><b>Four tools, four behaviours.</b> Put the number on a number line and ask which way each one moves it.</p>
+<pre><code>          -3.7          3.7
+int()     -3  (to 0)     3  (to 0)     chop the decimals
+//  1     -4  (down)     3  (down)     floor, always down
+round()   -4  (nearest)  4  (nearest)
+ceil()    -3  (up)       4  (up)</code></pre>
+<p><b>The .5 trap:</b> <code>round(2.5)</code> is <b>2</b> and <code>round(3.5)</code> is <b>4</b>. Exact halves go to the nearest <b>even</b> number.</p>
+<p><b>Float trap:</b> <code>0.1 + 0.2 == 0.3</code> is <b>False</b> — tenths cannot be stored exactly in binary. Halves and quarters can.</p>
+<p><b>Round up without math:</b> <code>-(-a // b)</code> is the same as <code>ceil(a / b)</code>.</p>`,
+
+  subnets: `
+<p><b>An IPv4 address is 32 bits.</b> <code>/26</code> means the first 26 are the network and the other <b>6</b> number the hosts.</p>
+<pre><code>host bits   32 - 26       = 6
+addresses   2 ** 6        = 64
+usable      64 - 2        = 62     (lose network + broadcast)
+mask        256 - 64      = 192    → 255.255.255.192</code></pre>
+<p><b>Block size is the key.</b> Subnets sit side by side, one block each: 0, 64, 128, 192.</p>
+<p><b>Which subnet is .77 in?</b> Floor-divide by the block, multiply back:</p>
+<pre><code>77 // 64 * 64  = 64     network
+77 %  64       = 13     position inside it
+64 + 64 - 1    = 127    broadcast</code></pre>
+<p><b>Same thing with <code>&amp;</code>:</b> <code>77 &amp; 192</code> = 64. The mask's 1-bits keep the network, the 0-bits wipe the host.</p>`
 };

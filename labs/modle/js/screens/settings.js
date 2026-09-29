@@ -92,7 +92,7 @@ let resetArmed = false;
 
 export function wire() {
   el("setMotion").onclick = () => { P.prefs.reduceMotion = !P.prefs.reduceMotion; applyMotion(); save(); render(); };
-  el("setVisual").onclick = () => { P.prefs.visual = !P.prefs.visual; save(); render(); };
+  el("setVisual").onclick = () => { P.prefs.visual = !P.prefs.visual; P.prefs.visualSet = true; save(); render(); };
   el("setStart").onclick = () => go("/practice");
   const ct = el("setCat");
   if (ct) ct.onclick = () => { cat.toggle(); render(); };
