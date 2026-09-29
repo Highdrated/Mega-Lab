@@ -59,8 +59,6 @@ function examAllQuestions(){
   var track = typeof activeTrackId === "function" ? activeTrackId() : "jncia";
   var doms = typeof COURSE_DOMAINS !== "undefined" ? COURSE_DOMAINS : {};
   EXAM_BANK.forEach(function(b, i){
-    // A question belongs to the active track if it is tagged for it, or if its
-    // domain exists in this track's domain map (shared fundamentals).
     var tagged = b.t ? b.t === track : true;
     var domainFits = Object.keys(doms).indexOf(b.d) !== -1;
     if(!tagged && !domainFits) return;
@@ -73,8 +71,6 @@ function examAllQuestions(){
   };
   PROTO_GUIDES.forEach(function(g){
     if(!g.ready || !g.quiz) return;
-    // Only guides that are part of the ACTIVE track contribute questions, so a
-    // Network+ sitting never asks Junos-specific material and vice versa.
     var dom = domOf(g.id);
     if(!dom) return;
     g.quiz.forEach(function(q, qi){
@@ -84,8 +80,6 @@ function examAllQuestions(){
   return all;
 }
 function remapDomain(d, doms){
-  // Shared questions keep their meaning across tracks; fall back to the first
-  // domain so nothing is ever orphaned in a per-domain score breakdown.
   var keys = Object.keys(doms);
   if(keys.indexOf(d) !== -1) return d;
   var lower = d.toLowerCase();

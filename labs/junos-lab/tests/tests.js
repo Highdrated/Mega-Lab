@@ -519,7 +519,9 @@ ok(devsBy("host").length === 0 && devsBy("switch").length === 1, "T26 undo resto
 wipeLab();
 sw = makeSwitch(0, 0, 24, "EX3400-24T");
 rebuildAllDerived();
-ok(devices[sw].ports.length === 24 && devices[sw].model === "EX3400-24T", "T28 model + port count stored");
+ok(devices[sw].model === "EX3400-24T", "T28 model stored");
+ok(devices[sw].ports.filter(p => p.role === "access").length === 24, "T28 EX3400-24T has 24 access ports");
+ok(devices[sw].ports.filter(p => p.role === "uplink").length === 4, "T28 EX3400-24T also has its 4 uplinks, like the real SKU");
 ok(cli(sw, "show version").includes("ex3400-24t"), "T28 show version reports the model");
 {
   const snap = JSON.parse(JSON.stringify(serializeLab()));
@@ -1105,10 +1107,10 @@ scen("ops-production").setup();
   cfgDo(sw.id, ["set system syslog host 10.0.10.90 any any"]);
   cfgDo(sw.id, ["set system services ssh"]);           // noise AFTER the stream is up
   ok((srv.syslog || []).some(ln => ln.includes("office-sw")), "T49 switch lines arrive on the server");
-  const before = (srv.syslog || []).length;
   cli(srv.id, "service stop syslog");
+  const before = (srv.syslog || []).length;
   cfgDo(sw.id, ["set system ntp server 10.0.10.90"]);
-  ok((srv.syslog || []).length === before, "T49 stopped syslog service = lines silently lost (UDP)");
+  ok((srv.syslog || []).length === before, "T49 stopped syslog service = REMOTE lines silently lost (UDP); local systemd lines still journal");
   cli(srv.id, "service start syslog");
 
   // T50 ssh
@@ -1892,6 +1894,532 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters" && g.id 
     const st = subnetSteps(q.ip, q.bits);
     ok(typeof st.text === "string" && st.text.length > 20, "subnet drill explainer: never crashes or empties on a random question (" + q.ip + "/" + q.bits + ")");
   }
+}
+
+
+{
+  try{ unmodeledClear(); }catch(e){}
+  ok(unmodeledLog().length === 0, "telemetry: starts empty");
+  wipeLab();
+  const sw = makeSwitch(0, 0, 8);
+  deviceExec(devices[sw], "show bananas");
+  ok(unmodeledLog().some(e => /bananas/.test(e.cmd)), "telemetry: records an unknown operational command");
+  deviceExec(devices[sw], "configure");
+  deviceExec(devices[sw], "frobnicate the widget");
+  ok(unmodeledLog().some(e => /frobnicate/.test(e.cmd) && e.mode === "configuration"), "telemetry: records an unknown config command with its mode");
+  const before = unmodeledLog().find(e => /bananas/.test(e.cmd)).n;
+  deviceExec(devices[sw], "exit");
+  deviceExec(devices[sw], "show bananas");
+  const after = unmodeledLog().find(e => /bananas/.test(e.cmd)).n;
+  ok(after === before + 1, "telemetry: repeat attempts increment the counter instead of duplicating");
+  deviceExec(devices[sw], "show vlans");
+  ok(!unmodeledLog().some(e => /show vlans/.test(e.cmd)), "telemetry: a VALID command is never recorded as a gap");
+  unmodeledClear();
+  ok(unmodeledLog().length === 0, "telemetry: clear works");
+}
+{
+  wipeLab();
+  const a = makeSwitch(0, 0, 8);
+  const d = devices[a];
+  const hw = deviceExec(d, "show chassis hardware").map(l => l.text).join("\n");
+  ok(/Chassis/.test(hw) && /Routing Engine 0/.test(hw) && /Power Supply/.test(hw), "bench: show chassis hardware lists real inventory rows");
+  const al = deviceExec(d, "show chassis alarms").map(l => l.text).join("\n");
+  ok(/No alarms currently active/.test(al), "bench: a healthy switch reports no alarms");
+  deviceExec(d, "configure");
+  deviceExec(d, "set interfaces ge-0/0/4 disable");
+  deviceExec(d, "commit");
+  deviceExec(d, "exit");
+  const al2 = deviceExec(d, "show chassis alarms").map(l => l.text).join("\n");
+  ok(/ge-0\/0\/4/.test(al2) && /disabled/.test(al2), "bench: a disabled port raises a real alarm");
+  const b = makeSwitch(300, 0, 8);
+  cable(a, "ge-0/0/1", b, "ge-0/0/1");
+  rebuildAllDerived();
+  const op = deviceExec(d, "show interfaces diagnostics optics ge-0/0/1").map(l => l.text).join("\n");
+  ok(/Laser output power/.test(op) && /Receiver signal average power/.test(op), "bench: optics shows DOM readings for a cabled port");
+  const lid = Object.keys(links)[0];
+  links[lid].degraded = true;
+  rebuildAllDerived();
+  const op2 = deviceExec(d, "show interfaces diagnostics optics ge-0/0/1").map(l => l.text).join("\n");
+  ok(/marginal/.test(op2), "bench: a degraded link shows a low-power warning in optics \u2014 the gremlin is diagnosable");
+  const al3 = deviceExec(d, "show chassis alarms").map(l => l.text).join("\n");
+  ok(/receive errors/.test(al3), "bench: the degraded link also raises a chassis alarm");
+  delete links[lid].degraded;
+}
+{
+  wipeLab();
+  const a = makeSwitch(0, 0, 8), b = makeSwitch(300, 0, 8), c = makeSwitch(600, 0, 8);
+  cable(a, "ge-0/0/0", b, "ge-0/0/0");
+  cable(b, "ge-0/0/1", c, "ge-0/0/1");
+  const vcSet = (id, mid, role) => {
+    const d = devices[id];
+    deviceExec(d, "configure");
+    const out = deviceExec(d, "set virtual-chassis member " + mid + " role " + role).map(l => l.text).join("");
+    ok(!/error|unknown/i.test(out), "vc: config accepted for member " + mid);
+    deviceExec(d, "commit"); deviceExec(d, "exit");
+  };
+  vcSet(a, 0, "routing-engine");
+  vcSet(b, 1, "routing-engine");
+  vcSet(c, 2, "line-card");
+  rebuildAllDerived();
+  ok(NET.vc && Object.keys(NET.vc).length === 3, "vc: all three switches joined one virtual chassis");
+  const states = Object.keys(NET.vc).map(id => NET.vc[id].state);
+  ok(states.filter(x => x === "master").length === 1, "vc: exactly one master elected");
+  ok(states.filter(x => x === "backup").length === 1, "vc: a backup exists for failover");
+  ok(states.filter(x => x === "linecard").length === 1, "vc: the line-card member is not eligible to run the VC");
+  ok(NET.vc[c].role === "line-card", "vc: declared roles are respected");
+  const show = deviceExec(devices[a], "show virtual-chassis").map(l => l.text).join("\n");
+  ok(/Member/.test(show) && /master/.test(show) && /backup/.test(show), "vc: show virtual-chassis renders the member table");
+  ok(vcMasterOf(devices[c]) !== null, "vc: a line-card member can still identify its master");
+  const lone = makeSwitch(900, 0, 8);
+  deviceExec(devices[lone], "configure");
+  deviceExec(devices[lone], "set virtual-chassis member 0 role routing-engine");
+  deviceExec(devices[lone], "commit"); deviceExec(devices[lone], "exit");
+  rebuildAllDerived();
+  const loneOut = deviceExec(devices[lone], "show virtual-chassis").map(l => l.text).join("\n");
+  ok(/no other configured member/.test(loneOut), "vc: a configured-but-isolated switch explains why no VC formed");
+}
+{
+  wipeLab();
+  const id = makeSwitch(0, 0, 8);
+  const d = devices[id];
+  d.cli.stage = "boot";
+  const brk = deviceExec(d, "break").map(l => l.text).join("");
+  ok(/loader/.test(brk) && d.cli.stage === "loader", "recovery: break interrupts the boot into the loader");
+  const q = deviceExec(d, "?").map(l => l.text).join("");
+  ok(/boot -s/.test(q), "recovery: loader help documents single-user mode");
+  deviceExec(d, "boot -s");
+  ok(d.cli.stage === "single", "recovery: boot -s reaches single-user mode");
+  const rec = deviceExec(d, "recovery").map(l => l.text).join("");
+  ok(/root password recovery/.test(rec) && d.cli.mode === "cfg", "recovery: recovery drops into config mode to reset the password");
+  deviceExec(d, "set system root-authentication plain-text-password Recovered1!");
+  deviceExec(d, "commit");
+  ok(!!cfgGet(d.config, ["system", "root-authentication"]), "recovery: the new root password actually commits");
+  const id2 = makeSwitch(300, 0, 8);
+  const d2 = devices[id2];
+  d2.cli.stage = "boot";
+  deviceExec(d2, "break");
+  deviceExec(d2, "boot");
+  ok(d2.cli.stage === "login", "recovery: plain boot from the loader returns to a normal login");
+}
+{
+  wipeLab();
+  const id = makeSwitch(0, 0, 8);
+  const d = devices[id];
+  deviceExec(d, "configure");
+  deviceExec(d, "set system host-name export-test");
+  deviceExec(d, "set vlans staff vlan-id 10");
+  deviceExec(d, "commit");
+  const setForm = treeToDisplaySet(d.config, []).join("\n");
+  ok(/^set system host-name export-test$/m.test(setForm), "export: display-set form produces paste-able set commands");
+  ok(/set vlans staff vlan-id 10/.test(setForm), "export: nested config flattens correctly into set statements");
+  const confForm = treeToText(d.config);
+  ok(/\{/.test(confForm) && /\}/.test(confForm), "export: .conf form uses the hierarchical braces format");
+  ok(/host-name export-test;/.test(confForm), "export: .conf statements are semicolon-terminated like real Junos");
+}
+
+
+{
+  // Audit findings worth locking in permanently.
+  unmodeledClear();
+  wipeLab();
+  const id = makeSwitch(0, 0, 8);
+  const d = devices[id];
+  d.cli.stage = "newpass";
+  deviceExec(d, "SuperSecretPassword123");
+  ok(!unmodeledLog().some(e => /SuperSecret/.test(e.cmd)), "telemetry PRIVACY: password input is never recorded as an unmodeled command");
+  d.cli.stage = null;
+  unmodeledClear();
+  for(let i = 0; i < 260; i++) deviceExec(d, "bogus-audit-cmd-" + i);
+  ok(unmodeledLog().length === UNMODELED_MAX, "telemetry: log is capped at UNMODELED_MAX, it cannot grow without bound");
+  unmodeledClear();
+}
+{
+  // A VC whose VCP link goes down must SPLIT, not silently pretend to be whole.
+  wipeLab();
+  const a = makeSwitch(0, 0, 8), b = makeSwitch(300, 0, 8);
+  cable(a, "ge-0/0/0", b, "ge-0/0/0");
+  [[a, 0], [b, 1]].forEach(([x, m]) => {
+    const dd = devices[x];
+    deviceExec(dd, "configure");
+    deviceExec(dd, "set virtual-chassis member " + m + " role routing-engine");
+    deviceExec(dd, "commit"); deviceExec(dd, "exit");
+  });
+  rebuildAllDerived();
+  ok(Object.keys(NET.vc).length === 2, "vc: forms over an up VCP link");
+  const dd = devices[a];
+  deviceExec(dd, "configure");
+  deviceExec(dd, "set interfaces ge-0/0/0 disable");
+  deviceExec(dd, "commit"); deviceExec(dd, "exit");
+  rebuildAllDerived();
+  ok(Object.keys(NET.vc).length === 0, "vc: a downed VCP link splits the chassis \u2014 members stop reporting as one device");
+}
+{
+  // All-line-card VC: someone must still run it, or the stack is unmanageable.
+  wipeLab();
+  const a = makeSwitch(0, 0, 8), b = makeSwitch(300, 0, 8);
+  cable(a, "ge-0/0/0", b, "ge-0/0/0");
+  [[a, 0], [b, 1]].forEach(([x, m]) => {
+    const dd = devices[x];
+    deviceExec(dd, "configure");
+    deviceExec(dd, "set virtual-chassis member " + m + " role line-card");
+    deviceExec(dd, "commit"); deviceExec(dd, "exit");
+  });
+  rebuildAllDerived();
+  const states = Object.keys(NET.vc).map(i => NET.vc[i].state);
+  ok(states.filter(x => x === "master").length === 1, "vc: even an all-line-card VC elects one master rather than becoming headless");
+}
+
+
+{
+  ok(SERVICE_NAMES.length >= 7, "services: catalogue expanded (" + SERVICE_NAMES.length + ")");
+  SERVICE_NAMES.forEach(n => {
+    ok(SERVICE_CATALOG[n].port && SERVICE_CATALOG[n].note, "service " + n + " documents its port and purpose");
+  });
+  wipeLab();
+  const sid = makeServer(0, 0);
+  const srv = devices[sid];
+  const list = cli(sid, "service list");
+  ok(/nms/.test(list) && /snmp/.test(list) && /ntp/.test(list), "services: service list shows the new services");
+  cli(sid, "service start nms");
+  ok(srv.cfg.services.nms === true, "services: nms starts");
+  cli(sid, "service start snmp");
+  const st = cli(sid, "service status");
+  ok(/nms\s+\S+\s+running/.test(st) && /snmp\s+\S+\s+running/.test(st), "services: status reports running services with ports");
+  cli(sid, "service stop nms");
+  ok(srv.cfg.services.nms === false, "services: nms stops");
+  const bad = cli(sid, "service start banana");
+  ok(/usage/.test(bad), "services: an unknown service name is rejected with usage");
+}
+{
+  wipeLab();
+  ok(monitorSnapshot().nms === 0, "monitoring: no NMS means nothing is polling");
+  const sw = makeSwitch(0, 0, 8);
+  const sid = makeServer(300, 0);
+  const srv = devices[sid];
+  cable(sid, "eth0", sw, "ge-0/0/1");
+  srv.cfg.ip = "10.0.10.80"; srv.cfg.bits = 24;
+  cli(sid, "service start nms");
+  rebuildAllDerived();
+  const snap = monitorSnapshot();
+  ok(snap.nms === 1, "monitoring: an NMS server is detected");
+  ok(snap.rows.length >= 2, "monitoring: switches and servers appear as monitored targets");
+  ok(snap.rows.every(r => ["up", "warn", "alarm", "unreachable"].includes(r.state)), "monitoring: every row has a valid state");
+  const swRow = snap.rows.find(r => r.id === sw);
+  ok(swRow && swRow.state === "unreachable", "monitoring: a switch with no IP cannot be polled and reads unreachable");
+  devices[sw].powered = false;
+  rebuildAllDerived();
+  const off = monitorSnapshot().rows.find(r => r.id === sw);
+  ok(off && (off.state === "unreachable" || off.state === "down"), "monitoring: a powered-off device does not read as healthy");
+}
+{
+  ok(INCIDENTS.length >= 4, "incidents: several night-shift scenarios exist");
+  const ids2 = new Set(INCIDENTS.map(i => i.id));
+  ok(ids2.size === INCIDENTS.length, "incidents: ids are unique");
+  INCIDENTS.forEach(inc => {
+    ok(inc.page && inc.page.length > 40, "incident " + inc.id + " has a realistic pager message");
+    ok(!/because|the cause is/i.test(inc.page), "incident " + inc.id + " pager describes SYMPTOMS, not the cause");
+    ok(inc.debrief && inc.debrief.length > 80, "incident " + inc.id + " has a debrief that teaches the lesson");
+    ok(inc.checks.length >= 2, "incident " + inc.id + " has multiple restore checks");
+    inc.checks.forEach((c, i) => ok(c.why && c.why.length > 20, "incident " + inc.id + " check " + i + " explains why it matters"));
+  });
+  INCIDENTS.forEach(inc => {
+    wipeLab();
+    const ids = buildIncidentSite();
+    let threw = null;
+    try{ inc.setup(ids); }catch(e){ threw = e.message; }
+    ok(!threw, "incident " + inc.id + " sets up without throwing" + (threw ? " (" + threw + ")" : ""));
+    rebuildAllDerived();
+    const states = inc.checks.map(c => { try{ return !!c.test(ids); }catch(e){ return "threw"; } });
+    ok(!states.includes("threw"), "incident " + inc.id + " checks all evaluate without throwing");
+    ok(states[0] === false, "incident " + inc.id + " primary fault check is genuinely broken at page time");
+    ok(states.some(x => x === false), "incident " + inc.id + " is not already solved when it pages you");
+  });
+}
+{
+  wipeLab();
+  const ids = buildIncidentSite();
+  const inc = INCIDENTS.find(i => i.id === "loop-storm");
+  inc.setup(ids);
+  rebuildAllDerived();
+  ok(NET.stormLinks.size > 0, "incident loop-storm: a real broadcast storm forms");
+  [ids.core, ids.acc1].forEach(id => cfgDo(id, ["set protocols rstp"]));
+  rebuildAllDerived();
+  const after = inc.checks.map(c => { try{ return !!c.test(ids); }catch(e){ return false; } });
+  ok(after.every(Boolean), "incident loop-storm: enabling RSTP alone resolves it \u2014 no cable pulling needed");
+}
+{
+  wipeLab();
+  const ids = buildIncidentSite();
+  const inc = INCIDENTS.find(i => i.id === "service-crash");
+  inc.setup(ids);
+  rebuildAllDerived();
+  ok(ids.srv && devices[ids.srv], "incident service-crash: bootstraps its own app server (the base site has none)");
+  ok(devices[ids.srv].cfg.services.dns === true, "incident service-crash: DNS stays up so the fault is isolated to HTTP");
+  devices[ids.srv].cfg.services.http = true;
+  rebuildAllDerived();
+  const after = inc.checks.map(c => { try{ return !!c.test(ids); }catch(e){ return false; } });
+  ok(after.every(Boolean), "incident service-crash: restarting the service restores end-to-end curl");
+}
+
+
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 8);
+  ok(snmpEnabled(devices[sw]) === false, "snmp: a factory switch has no community configured");
+  cfgDo(sw, ["set snmp community dcu-ro authorization read-only"]);
+  rebuildAllDerived();
+  ok(snmpEnabled(devices[sw]) === true, "snmp: community config is accepted and detected");
+  ok(/no SNMP community/.test(snmpMissingReason(makeSwitch(300, 0, 8) && devices[Object.keys(devices).filter(k => devices[k].type === "switch")[1]])),
+     "snmp: an unconfigured switch reports the real reason it cannot be polled");
+}
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 8);
+  const sid = makeServer(300, 0);
+  const srv = devices[sid];
+  cable(sid, "eth0", sw, "ge-0/0/1");
+  srv.cfg.ip = "10.0.10.80"; srv.cfg.bits = 24;
+  deviceExec(srv, "service start nms");
+  cfgDo(sw, ["set vlans staff vlan-id 10",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+    "set vlans staff l3-interface irb.10",
+    "set interfaces irb unit 10 family inet address 10.0.10.1/24"]);
+  rebuildAllDerived();
+  const before = monitorSnapshot().rows.find(r => r.id === sw);
+  ok(before.state === "unreachable", "monitoring: a reachable but SNMP-less switch is NOT reported as healthy");
+  ok(/no SNMP community/.test(before.issues.join("")), "monitoring: it says exactly why it cannot poll");
+  cfgDo(sw, ["set snmp community dcu-ro authorization read-only"]);
+  rebuildAllDerived();
+  const after = monitorSnapshot().rows.find(r => r.id === sw);
+  ok(after.state === "up", "monitoring: the switch becomes pollable once SNMP is actually configured");
+}
+{
+  const hier = [
+    "## Last commit: 2026-09-19 22:14:03 UTC",
+    "version 23.4R1.10;",
+    "system {",
+    "    host-name core-1;",
+    "    services {",
+    "        ssh;",
+    "    }",
+    "}",
+    "interfaces {",
+    "    ge-0/0/1 {",
+    "        unit 0 {",
+    "            family ethernet-switching {",
+    "                interface-mode access;",
+    "                vlan {",
+    "                    members staff;",
+    "                }",
+    "            }",
+    "        }",
+    "    }",
+    "}",
+    "vlans {",
+    "    staff {",
+    "        vlan-id 10;",
+    "    }",
+    "}",
+  ].join("\n");
+  const lines = confToSetLines(hier);
+  ok(lines.includes("set system host-name core-1"), "import: flattens a simple stanza");
+  ok(lines.includes("set system services ssh"), "import: flattens a presence statement");
+  ok(lines.includes("set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff"),
+     "import: flattens deeply nested braces into one set statement");
+  ok(lines.includes("set vlans staff vlan-id 10"), "import: handles sibling stanzas after a close brace");
+  ok(!lines.some(l => /version|Last commit/.test(l)), "import: strips version headers and comments");
+  const flat = confToSetLines("set system host-name acc-1\nset vlans guest vlan-id 20\n");
+  ok(flat.length === 2 && flat[0] === "set system host-name acc-1", "import: accepts display-set format unchanged");
+  ok(confToSetLines("").length === 0, "import: empty text yields nothing rather than throwing");
+  ok(confToSetLines("total nonsense here").length === 0, "import: unparseable text yields nothing");
+}
+{
+  wipeLab();
+  const a = makeSwitch(0, 0, 48);
+  cfgDo(a, ["set system host-name rt-round", "set vlans staff vlan-id 10",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces irb unit 10 family inet address 10.0.10.1/24",
+    "set vlans staff l3-interface irb.10", "set protocols rstp",
+    "set snmp community dcu-ro authorization read-only"]);
+  rebuildAllDerived();
+  const hierOut = treeToText(devices[a].config);
+  const flatOut = treeToDisplaySet(devices[a].config, []).join("\n");
+  const b = makeSwitch(300, 0, 48);
+  const r1 = importConfigInto(devices[b], hierOut);
+  cfgExec(devices[b], "commit");
+  const c = makeSwitch(600, 0, 48);
+  const r2 = importConfigInto(devices[c], flatOut);
+  cfgExec(devices[c], "commit");
+  rebuildAllDerived();
+  ok(r1.failed.length === 0 && r2.failed.length === 0, "import: the lab's own export re-imports with zero gaps");
+  ok(JSON.stringify(devices[a].config) === JSON.stringify(devices[b].config),
+     "import: hierarchical export -> import round-trips to an identical config");
+  ok(JSON.stringify(devices[a].config) === JSON.stringify(devices[c].config),
+     "import: display-set export -> import round-trips to an identical config");
+}
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 48);
+  const res = importConfigInto(devices[sw],
+    "set system host-name ok-1\nset class-of-service interfaces ge-0/0/5 scheduler-map SM-1\n");
+  ok(res.applied === 1, "import: supported statements still apply when others fail");
+  ok(res.failed.length === 1 && /class-of-service/.test(res.failed[0].line),
+     "import: an unmodelled hierarchy is reported as a specific gap, not silently dropped");
+  ok(!!res.failed[0].why, "import: each gap carries the reason the CLI rejected it");
+}
+
+
+{
+  ok(Object.keys(DEVICE_PROFILES).length >= 8, "profiles: a real device catalogue exists");
+  Object.keys(DEVICE_PROFILES).forEach(m => {
+    const p = DEVICE_PROFILES[m];
+    ok(p.access > 0 && p.version, "profile " + m + " defines access ports and a Junos version");
+    ok(p.poeW === undefined, "profile " + m + " does not duplicate PoE budget (POE_BUDGET_W owns that)");
+  });
+  wipeLab();
+  const sw = makeSwitch(0, 0, 48, "EX4300-48T");
+  const d = devices[sw];
+  ok(d.ports.filter(p => p.role === "access").length === 48, "profiles: EX4300-48T has 48 access ports");
+  const ups = d.ports.filter(p => p.role === "uplink");
+  ok(ups.length === 4, "profiles: EX4300-48T has 4 uplinks");
+  ok(ups.every(p => /^xe-0\/1\/\d$/.test(p.id)), "profiles: uplinks use real xe-0/1/x naming, not ge-0/0/x");
+  const qfx = makeSwitch(300, 0, 48, "QFX5100-48S");
+  ok(devices[qfx].ports.filter(p => p.role === "uplink").every(p => /^et-/.test(p.id)), "profiles: QFX uplinks are et- (40G)");
+  const generic = makeSwitch(600, 0, 8);
+  ok(generic && devices[generic].ports.length === 8, "profiles: an unprofiled switch still works with a plain port count");
+  cfgDo(sw, ["set interfaces xe-0/1/0 unit 0 family ethernet-switching interface-mode trunk"]);
+  rebuildAllDerived();
+  ok(!!cfgGet(devices[sw].config, ["interfaces", "xe-0/1/0"]), "profiles: uplink ports are configurable like any other interface");
+  const ver = deviceExec(devices[sw], "show version").map(l => l.text).join("");
+  ok(/23\.4R1\.10/.test(ver), "profiles: show version reports the profile's Junos version");
+  const hw = deviceExec(devices[sw], "show chassis hardware").map(l => l.text).join("\n");
+  ok(/48x10\/100\/1000/.test(hw) && /4x 10G uplink/.test(hw),
+     "profiles: show chassis hardware separates access ports from uplinks accurately");
+}
+{
+  wipeLab();
+  const r = makeRouter(0, 0, 4, "MX204"), isp = makeIsp(400, 0, "203.0.113.1");
+  cable(r, "ge-0/0/0", isp, "ge-0/0/0");
+  cfgDo(r, ["set interfaces ge-0/0/0 unit 0 family inet address 203.0.113.2/30",
+    "set routing-options static route 10.50.0.0/24 next-hop 203.0.113.1",
+    "set routing-options autonomous-system 65010",
+    "set protocols bgp group ISP type external",
+    "set protocols bgp group ISP peer-as 65000",
+    "set protocols bgp group ISP neighbor 203.0.113.1"]);
+  rebuildAllDerived();
+  const before = advertisedRoutes(devices[r], "203.0.113.1");
+  ok(before.policy === null, "policy: no export policy configured yet");
+  ok(!before.routes.some(x => x.r.proto === "static"),
+     "policy: Junos default does NOT advertise your statics \u2014 the classic exam answer");
+  cfgDo(r, ["set policy-options policy-statement ADV-STATIC term t1 from protocol static",
+    "set policy-options policy-statement ADV-STATIC term t1 then accept",
+    "set protocols bgp group ISP export ADV-STATIC"]);
+  rebuildAllDerived();
+  const after = advertisedRoutes(devices[r], "203.0.113.1");
+  ok(after.policy === "ADV-STATIC", "policy: the export policy is picked up on the group");
+  ok(after.routes.some(x => x.r.net === "10.50.0.0" && x.r.proto === "static"),
+     "policy: the static is now advertised because a term accepted it");
+  const out = deviceExec(devices[r], "show route advertising-protocol bgp 203.0.113.1").map(l => l.text).join("\n");
+  ok(/10\.50\.0\.0\/24/.test(out) && /term t1 matched and accepts/.test(out),
+     "policy: show route advertising-protocol names the deciding term");
+  const v = policyVerdict(devices[r], "ADV-STATIC", { net: "10.99.0.0", bits: 24, proto: "ospf" });
+  ok(v.action === "reject" && /implicit/.test(v.why),
+     "policy: an unmatched route hits the implicit reject at the end of the policy");
+  const missing = policyVerdict(devices[r], "NO-SUCH-POLICY", { net: "1.1.1.0", bits: 24, proto: "static" });
+  ok(missing.action === "none" && /not defined/.test(missing.why),
+     "policy: referencing an undefined policy is reported, not silently treated as accept");
+}
+{
+  wipeLab();
+  const r = makeRouter(0, 0, 4, "MX204");
+  cfgDo(r, ["set policy-options policy-statement RF term t1 from route-filter 10.50.0.0/24 exact",
+    "set policy-options policy-statement RF term t1 then accept"]);
+  rebuildAllDerived();
+  const exact = policyVerdict(devices[r], "RF", { net: "10.50.0.0", bits: 24, proto: "static" });
+  ok(exact.action === "accept", "policy: route-filter exact matches the exact prefix");
+  const longer = policyVerdict(devices[r], "RF", { net: "10.50.0.0", bits: 25, proto: "static" });
+  ok(longer.action === "reject", "policy: route-filter exact does NOT match a more specific prefix");
+}
+
+
+{
+  wipeLab();
+  const a = makeSwitch(0, 0, 8), b = makeSwitch(300, 0, 8);
+  cable(a, "ge-0/0/1", b, "ge-0/0/1"); cable(a, "ge-0/0/2", b, "ge-0/0/2");
+  [a, b].forEach(id => cfgDo(id, [
+    "set chassis aggregated-devices ethernet device-count 1",
+    "set interfaces ge-0/0/1 ether-options 802.3ad ae0",
+    "set interfaces ge-0/0/2 ether-options 802.3ad ae0",
+    "set interfaces ae0 aggregated-ether-options lacp active",
+    "set interfaces ae0 unit 0 family ethernet-switching"]));
+  rebuildAllDerived();
+  ok(NET.aeInfo[a].ae0.up, "min-links: a 2-member bundle is up by default");
+  cfgDo(a, ["set interfaces ae0 aggregated-ether-options minimum-links 2"]);
+  rebuildAllDerived();
+  ok(NET.aeInfo[a].ae0.up, "min-links: still up while both members are up");
+  ok(NET.aeInfo[a].ae0.minLinks === 2, "min-links: the configured value is read");
+  cfgDo(a, ["set interfaces ge-0/0/2 disable"]);
+  rebuildAllDerived();
+  ok(!NET.aeInfo[a].ae0.up, "min-links: bundle goes DOWN when members drop below the minimum");
+  ok(/minimum-links 2 not met/.test(NET.aeInfo[a].ae0.minWhy || ""), "min-links: the reason names the shortfall");
+  cfgDo(a, ["delete interfaces ge-0/0/2 disable"]);
+  rebuildAllDerived();
+  ok(NET.aeInfo[a].ae0.up, "min-links: bundle recovers when the member returns");
+}
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 8), hT = makeHost(0, 200), hA = makeHost(300, 200);
+  cable(hT, "eth0", sw, "ge-0/0/7");
+  cable(hA, "eth0", sw, "ge-0/0/1");
+  cfgDo(sw, ["set vlans staff vlan-id 10",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode access",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces ge-0/0/7 unit 0 family ethernet-switching interface-mode trunk",
+    "set interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members staff"]);
+  hostSet(hT, "10.0.10.5", 24, null); hostSet(hA, "10.0.10.6", 24, null);
+  rebuildAllDerived();
+  ok(!pingOk(devices[hT], "10.0.10.6"), "native-vlan: untagged traffic into a trunk is dropped without a native VLAN");
+  cfgDo(sw, ["set interfaces ge-0/0/7 native-vlan-id 10"]);
+  rebuildAllDerived();
+  ok(pingOk(devices[hT], "10.0.10.6"), "native-vlan: setting it lands untagged frames in that VLAN, both directions");
+  cfgDo(sw, ["delete interfaces ge-0/0/7 native-vlan-id", "set interfaces ge-0/0/7 native-vlan-id 99"]);
+  rebuildAllDerived();
+  ok(!pingOk(devices[hT], "10.0.10.6"), "native-vlan: a native VLAN not carried on the trunk still drops the traffic");
+}
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 48, "EX4300-48P");
+  const ap1 = makeAp(200, 0), ap2 = makeAp(200, 100);
+  cable(ap1, "eth0", sw, "ge-0/0/1"); cable(ap2, "eth0", sw, "ge-0/0/2");
+  rebuildAllDerived();
+  ok(!POE.denied[ap1] && !POE.denied[ap2], "poe: both APs powered within budget");
+  cfgDo(sw, ["set poe interface ge-0/0/1 disable"]);
+  rebuildAllDerived();
+  ok(/administratively disabled/.test(POE.denied[ap1] || ""), "poe: per-port disable stops power on that port");
+  ok(!POE.denied[ap2], "poe: disabling one port does not affect the other");
+  cfgDo(sw, ["set poe interface ge-0/0/2 maximum-power 5"]);
+  rebuildAllDerived();
+  ok(/capped at 5 W/.test(POE.denied[ap2] || ""), "poe: a per-port power cap below the draw denies power with a clear reason");
+  const out = deviceExec(devices[sw], "show poe interface").map(l => l.text).join("\n");
+  ok(/Disabled/.test(out) && /Priority/.test(out), "poe: show poe interface reports admin state and priority");
+}
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 8);
+  const empty = deviceExec(devices[sw], "show analyzer").map(l => l.text).join("");
+  ok(/no analyzer configured/.test(empty), "analyzer: reports cleanly when nothing is configured");
+  cfgDo(sw, ["set forwarding-options analyzer CAP input ingress interface ge-0/0/1",
+    "set forwarding-options analyzer CAP output interface ge-0/0/5"]);
+  rebuildAllDerived();
+  const good = deviceExec(devices[sw], "show analyzer").map(l => l.text).join("\n");
+  ok(/Analyzer name: CAP/.test(good) && /ge-0\/0\/1/.test(good) && /ge-0\/0\/5/.test(good),
+     "analyzer: shows what is mirrored and where the copy goes");
+  ok(!/warning/.test(good), "analyzer: a sane config raises no warnings");
+  cfgDo(sw, ["delete forwarding-options analyzer CAP output interface",
+    "set forwarding-options analyzer CAP output interface ge-0/0/1"]);
+  rebuildAllDerived();
+  const loop = deviceExec(devices[sw], "show analyzer").map(l => l.text).join("\n");
+  ok(/loops the copy back/.test(loop), "analyzer: catches mirroring a port back into itself");
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");

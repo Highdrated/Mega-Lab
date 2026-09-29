@@ -47,7 +47,46 @@ function deviceExec(dev, raw){
     if(dev.powered === false)
       return lines("err", "(no power — the console is dark. Press the power button on the faceplate.)");
     const stage = dev.cli.stage;
-    if(stage === "boot") return lines("out", "(booting — give it a second...)");
+    if(stage === "boot"){
+      if(/^(break|ctrl\+c|\^c)$/i.test(cmd)){
+        dev.cli.stage = "loader";
+        dev.bootSlow = false;
+        return lines("out", "Type '?' for a list of commands, 'help' for more detailed help.\nloader>");
+      }
+      return lines("out", "(booting \u2014 give it a second...)\n(type break to interrupt the boot and reach the loader prompt)");
+    }
+    if(stage === "loader"){
+      if(cmd === "?" || cmd === "help")
+        return lines("out", "loader commands:\n  boot                    continue booting normally\n  boot -s                 boot into single-user mode (the password-recovery path)\n  reboot                  restart the box");
+      if(cmd === "boot"){
+        dev.cli.stage = "login";
+        return lines("out", "Booting...\n\nAmnesiac (ttyu0)\n\nlogin:");
+      }
+      if(/^boot\s+-s$/.test(cmd)){
+        dev.cli.stage = "single";
+        return lines("out",
+          "Booting [kernel] in single user mode...\n\n" +
+          "Enter full pathname of shell or 'recovery' for root password recovery\n" +
+          "or RETURN for /bin/sh:");
+      }
+      if(cmd === "reboot"){ dev.cli.stage = "login"; return lines("out", "Rebooting...\n\nAmnesiac (ttyu0)\n\nlogin:"); }
+      return lines("err", "Unknown command. Type ? for the list.\nloader>");
+    }
+    if(stage === "single"){
+      if(cmd === "recovery"){
+        dev.cli.stage = null;
+        dev.cli.mode = "cfg";
+        dev.user = "root";
+        dev.recoveryMode = true;
+        return lines("out",
+          "Performing filesystem check...\nroot file system: clean\n\n" +
+          "Entering Junos configuration mode for root password recovery.\n" +
+          "Set a new root password, then commit:\n" +
+          "  set system root-authentication plain-text-password\n" +
+          "  commit\n\n[edit]");
+      }
+      return lines("out", "(type recovery to reset the root password \u2014 that is what single-user mode is for here)");
+    }
     if(stage === "login"){
       if(cmd === "root"){
         dev.cli.stage = "shell";
@@ -107,6 +146,7 @@ function tokenCol(raw, at){
   return Math.max(0, raw.indexOf(toks[at], idx));
 }
 function opErr(res, dev, raw){
+  if(typeof unmodeledRecord === "function") unmodeledRecord(raw, "operational", dev && dev.type);
   const l = [];
   // the real-JunOS caret: a ^ directly under the word that broke
   if(raw != null && res.at != null){
@@ -178,6 +218,7 @@ function cfgExec(dev, cmd){
   const cmdName = CFG_COMMANDS.includes(word) ? word : (matches.length === 1 ? matches[0] : null);
   if(!cmdName){
     if(matches.length > 1) return lines("err", `ambiguous command: "${word}" could be: ${matches.join(", ")}`);
+    if(typeof unmodeledRecord === "function") unmodeledRecord(cmd, "configuration", dev && dev.type);
     return lines("err", `unknown command: "${word}" — type ? for configuration mode commands`);
   }
   const rest = tokens.slice(1);
@@ -819,10 +860,21 @@ function powerOff(dev){
 }
 
 /* ---------- server shell: a host that LISTENS ---------- */
+const SERVICE_CATALOG = {
+  dns:    { port: "53/udp",  note: "name resolution — publish records with: dns add <name> <ip>" },
+  http:   { port: "80/tcp",  note: "web service — listening on port 80" },
+  syslog: { port: "514/udp", note: "log collector — point gear here: set system syslog host <this ip> any any" },
+  ntp:    { port: "123/udp", note: "time source — without it, log timestamps across devices cannot be correlated" },
+  snmp:   { port: "161/udp", note: "exposes counters and state so a monitoring system can poll this box" },
+  radius: { port: "1812/udp", note: "AAA — per-user authentication for 802.1X and device login" },
+  nms:    { port: "443/tcp", note: "monitoring system — polls SNMP on everything it can reach (View > Monitoring screen)" },
+};
+const SERVICE_NAMES = Object.keys(SERVICE_CATALOG);
 const SERVER_HELP =
-  "service start dns|http|syslog       start listening (a server is a computer that listens)\n" +
-  "service stop dns|http|syslog         stop a service\n" +
-  "service status                       what is running\n" +
+  "service start <name>                 start listening (a server is a computer that listens)\n" +
+  "service stop <name>                  stop a service\n" +
+  "service status                       what is running, and on which port\n" +
+  "service list                         every service this box can run\n" +
   "dns add <name> <ip>                  publish a record (e.g. dns add web.lab 10.0.10.80)\n" +
   "dns del <name> / dns list            manage records\n" +
   "log                                  recent system messages (boots, shutdowns)\n" +
@@ -840,24 +892,26 @@ function serverExec(dev, cmd){
   dev.cfg.services = dev.cfg.services || {};
   dev.cfg.records = dev.cfg.records || {};
   if(parts[0] === "service"){
-    if(parts[1] === "start" && (parts[2] === "dns" || parts[2] === "http" || parts[2] === "syslog")){
+    if(parts[1] === "list")
+      return lines("out", SERVICE_NAMES.map(n =>
+        pad(n, 10) + pad(SERVICE_CATALOG[n].port, 11) + SERVICE_CATALOG[n].note).join("\n"));
+    if(parts[1] === "start" && SERVICE_NAMES.includes(parts[2])){
       dev.cfg.services[parts[2]] = true;
+      if(typeof devLog === "function") devLog(dev, "systemd: started " + parts[2] + " (" + SERVICE_CATALOG[parts[2]].port + ")");
       if(typeof touchState === "function") touchState();
-      return lines("out", `* ${parts[2]} started` + (
-        parts[2] === "dns" ? " — publish records with: dns add <name> <ip>" :
-        parts[2] === "http" ? " — listening on port 80" :
-        ' — listening on 514/udp. Point network gear here: set system syslog host <this ip> any any'));
+      return lines("out", `* ${parts[2]} started — ` + SERVICE_CATALOG[parts[2]].note);
     }
-    if(parts[1] === "stop" && (parts[2] === "dns" || parts[2] === "http" || parts[2] === "syslog")){
+    if(parts[1] === "stop" && SERVICE_NAMES.includes(parts[2])){
       dev.cfg.services[parts[2]] = false;
+      if(typeof devLog === "function") devLog(dev, "systemd: stopped " + parts[2]);
       if(typeof touchState === "function") touchState();
       return lines("out", `* ${parts[2]} stopped`);
     }
     if(parts[1] === "status" || !parts[1])
-      return lines("out", ["dns     " + (dev.cfg.services.dns ? "running" : "stopped"),
-                           "http    " + (dev.cfg.services.http ? "running" : "stopped"),
-                           "syslog  " + (dev.cfg.services.syslog ? "running" : "stopped")].join("\n"));
-    return lines("err", "usage: service start|stop dns|http|syslog  —  or service status");
+      return lines("out", SERVICE_NAMES.map(n =>
+        pad(n, 10) + pad(SERVICE_CATALOG[n].port, 11) +
+        (dev.cfg.services[n] ? "running" : "stopped")).join("\n"));
+    return lines("err", "usage: service start|stop <name>  |  service status  |  service list\nservices: " + SERVICE_NAMES.join(", "));
   }
   if(parts[0] === "dns"){
     if(parts[1] === "add" && parts[2] && validIp(parts[3] || "")){

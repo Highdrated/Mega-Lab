@@ -1630,6 +1630,70 @@ document.getElementById("theme-select").onchange = (e) => applyTheme(e.target.va
 /* ============================================================
    SAVE / LOAD / MIGRATE / AUTOSAVE / EXPORT
    ============================================================ */
+const LS_SNAPS = "junoslab-snapshots";
+function snapList(){
+  try{ return JSON.parse(localStorage.getItem(LS_SNAPS) || "[]") || []; }catch(e){ return []; }
+}
+function snapSave(list){
+  try{ localStorage.setItem(LS_SNAPS, JSON.stringify(list)); return true; }
+  catch(e){ return false; }
+}
+async function saveSnapshot(){
+  const name = await modalInput("Save this lab",
+    "Give it a name you will recognise later \u2014 like a bench you can come back to.", "", "text");
+  if(name === null) return;
+  const clean = String(name).trim().slice(0, 60);
+  if(!clean){ modalConfirm("Needs a name", "A snapshot without a name is impossible to find again.", "OK"); return; }
+  const list = snapList();
+  const existing = list.findIndex(s2 => s2.name.toLowerCase() === clean.toLowerCase());
+  if(existing !== -1 &&
+     !(await modalConfirm("Overwrite \u201c" + list[existing].name + "\u201d?",
+       "A snapshot with that name already exists. Overwriting replaces it permanently.", "Overwrite")))
+    return;
+  const entry = { name: clean, at: Date.now(), data: serializeLab() };
+  if(existing !== -1) list[existing] = entry; else list.push(entry);
+  if(!snapSave(list)){
+    modalConfirm("Could not save",
+      "Browser storage is full. Delete an old snapshot, or export this lab to a file instead (Lab > Save lab to file).", "OK");
+    return;
+  }
+  if(typeof SFX !== "undefined") SFX.commit();
+}
+async function loadSnapshot(){
+  const list = snapList();
+  if(!list.length){
+    modalConfirm("No saved labs yet",
+      "Build a topology, then use Lab > Save this lab to keep it. Saved labs live in this browser \u2014 use Save lab to file for anything you want to keep permanently or move between machines.", "OK");
+    return;
+  }
+  const sorted = list.slice().sort((a, b) => b.at - a.at);
+  const pick = await modalChoice("Load a saved lab",
+    "Loading replaces everything currently on the canvas.", sorted.map(s2 => ({
+      value: s2.name,
+      label: s2.name,
+      desc: (s2.data && s2.data.devices ? s2.data.devices.length : 0) + " devices \u00b7 saved " +
+        new Date(s2.at).toISOString().slice(0, 16).replace("T", " "),
+    })));
+  if(pick === null) return;
+  const entry = list.find(s2 => s2.name === pick);
+  if(!entry) return;
+  pushUndo();
+  loadLab(entry.data);
+  rebuildAllDerived();
+  render();
+  touchState();
+  if(typeof SFX !== "undefined") SFX.powerUp();
+}
+async function deleteSnapshot(){
+  const list = snapList();
+  if(!list.length){ modalConfirm("Nothing to delete", "You have no saved labs yet.", "OK"); return; }
+  const sorted = list.slice().sort((a, b) => b.at - a.at);
+  const pick = await modalChoice("Delete a saved lab", "This cannot be undone.",
+    sorted.map(s2 => ({ value: s2.name, label: s2.name,
+      desc: "saved " + new Date(s2.at).toISOString().slice(0, 16).replace("T", " ") })));
+  if(pick === null) return;
+  snapSave(list.filter(s2 => s2.name !== pick));
+}
 function serializeLab(){
   const devs = Object.values(devices).map(d => {
     const base = { id: d.id, type: d.type, x: Math.round(d.x), y: Math.round(d.y), name: d.name, portCount: d.ports.length, model: d.model || null };
@@ -1760,18 +1824,148 @@ document.getElementById("load").onclick = () => {
   };
   inp.click();
 };
-document.getElementById("export-configs").onclick = () => {
-  const parts = [];
-  for(const dev of Object.values(devices)){
-    if(dev.type === "switch" || dev.type === "router"){
-      parts.push(`## ===== ${hostnameOf(dev)} (${dev.type}) =====\n` + showConfigCmd(dev));
-    } else if(dev.type === "host"){
-      parts.push(`## ===== ${dev.name} (host) =====\n# ip: ${dev.cfg.ip || "-"}/${dev.cfg.bits || "-"}  gw: ${dev.cfg.gw || "-"}`);
+function confToSetLines(text){
+  const raw = String(text || "").replace(/\r/g, "");
+  if(/^\s*set\s+/m.test(raw) && !/\{\s*$/m.test(raw)){
+    return raw.split("\n")
+      .map(l => l.replace(/^\s*#.*$/, "").trim())
+      .filter(l => /^set\s+/.test(l))
+      .map(l => l.replace(/;\s*$/, ""));
+  }
+  const out = [];
+  const stack = [];
+  const lines = raw.split("\n");
+  let inBlockComment = false;
+  for(let line of lines){
+    if(inBlockComment){
+      if(line.indexOf("*/") !== -1) inBlockComment = false;
+      continue;
+    }
+    if(line.indexOf("/*") !== -1 && line.indexOf("*/") === -1){ inBlockComment = true; continue; }
+    line = line.replace(/\/\*[\s\S]*?\*\//g, "");
+    line = line.replace(/##.*$/, "").trim();
+    if(!line || line.startsWith("#")) continue;
+    if(line === "}" || line === "};"){ stack.pop(); continue; }
+    if(/^version\s/.test(line)) continue;
+    if(line.endsWith("{")){
+      const head = line.slice(0, -1).trim();
+      if(head) stack.push(head);
+      continue;
+    }
+    if(line.endsWith(";")){
+      const body = line.slice(0, -1).trim();
+      if(!body) continue;
+      out.push("set " + stack.concat(body).join(" "));
+      continue;
+    }
+    if(line.endsWith("}")){
+      const body = line.slice(0, -1).trim();
+      if(body) out.push("set " + stack.concat(body).join(" "));
+      stack.pop();
     }
   }
+  return out;
+}
+function importConfigInto(dev, text){
+  const setLines = confToSetLines(text);
+  const result = { total: setLines.length, applied: 0, failed: [] };
+  if(!setLines.length) return result;
+  const wasMode = dev.cli.mode;
+  dev.cli.mode = "cfg";
+  for(const line of setLines){
+    let out = [];
+    try{ out = cfgExec(dev, line); }catch(e){ out = [{ cls: "err", text: String(e && e.message || e) }]; }
+    if(out.some(l => l.cls === "err")){
+      result.failed.push({ line, why: (out.find(l => l.cls === "err") || {}).text || "rejected" });
+    } else result.applied++;
+  }
+  dev.cli.mode = wasMode;
+  return result;
+}
+async function importConfigFlow(){
+  const targets = Object.values(devices).filter(d => d.type === "switch" || d.type === "router");
+  const opts = [{ value: "__new_switch", label: "A new switch", desc: "Create a fresh EX-style switch and load the config into it" },
+                { value: "__new_router", label: "A new router", desc: "Create a fresh router and load the config into it" }]
+    .concat(targets.map(d => ({ value: d.id, label: hostnameOf(d), desc: "Load into this existing " + d.type + " (adds to its candidate)" })));
+  const target = await modalChoice("Import a configuration",
+    "Paste output from a real device \u2014 either hierarchical (show configuration) or flat (show configuration | display set). Where should it go?", opts);
+  if(target === null) return;
+  const text = await modalInput("Paste the configuration",
+    "Everything the lab cannot parse will be listed afterwards \u2014 that list is a genuine gap between this simulator and your real box.", "", "textarea");
+  if(text === null || !String(text).trim()) return;
+  let devId = target;
+  if(target === "__new_switch" || target === "__new_router"){
+    pushUndo();
+    const p = spawnPos(40);
+    devId = target === "__new_switch" ? makeSwitch(p.x, p.y, 48, "EX4300-48T") : makeRouter(p.x, p.y, 8, "MX204");
+    devices[devId].brandNew = false;
+  } else pushUndo();
+  const dev = devices[devId];
+  if(!dev) return;
+  const res = importConfigInto(dev, text);
+  try{ cfgExec(dev, "commit"); }catch(e){}
+  rebuildAllDerived();
+  render();
+  touchState();
+  const head = res.applied + " of " + res.total + " statements applied to " + hostnameOf(dev) + ".";
+  if(!res.total){
+    modalConfirm("Nothing to import",
+      "No set statements or hierarchical stanzas were found in that text. Paste the output of show configuration, or show configuration | display set.", "OK");
+    return;
+  }
+  if(!res.failed.length){
+    modalConfirm("Configuration imported", head + "\n\nEverything parsed cleanly \u2014 this config is fully supported by the lab.", "Good");
+    if(typeof SFX !== "undefined") SFX.commit();
+    return;
+  }
+  const shown = res.failed.slice(0, 25).map(f => "\u2022 " + f.line + "\n    " + f.why.replace(/\n/g, " ")).join("\n");
+  modalConfirm("Imported with gaps",
+    head + "\n\n" + res.failed.length + " statement(s) the lab does not model:\n\n" + shown +
+    (res.failed.length > 25 ? "\n\n\u2026and " + (res.failed.length - 25) + " more" : "") +
+    "\n\nThese are recorded under Lab > Unmodeled commands.", "Close");
+  res.failed.forEach(f => { if(typeof unmodeledRecord === "function") unmodeledRecord(f.line, "import", dev.type); });
+}
+function confHeader(dev){
+  const stamp = new Date().toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  return "## Last changed: " + stamp + "\n" +
+         "version 23.4R1.10;\n";
+}
+function exportConfigs(fmt){
+  const parts = [];
+  for(const dev of Object.values(devices)){
+    if(dev.type !== "switch" && dev.type !== "router") continue;
+    const name = hostnameOf(dev);
+    if(fmt === "set"){
+      const body = Object.keys(dev.config).length
+        ? treeToDisplaySet(dev.config, []).join("\n")
+        : "## (factory-default \u2014 empty configuration)";
+      parts.push("## ===== " + name + " (" + dev.type + ") =====\n" + body);
+    } else {
+      const body = Object.keys(dev.config).length
+        ? treeToText(dev.config)
+        : "## (factory-default \u2014 empty configuration)";
+      parts.push("## ===== " + name + " (" + dev.type + ") =====\n" + confHeader(dev) + body);
+    }
+  }
+  if(!parts.length){
+    modalConfirm("Nothing to export", "Place a switch or router and configure it first.", "OK");
+    return;
+  }
+  const ext = fmt === "set" ? "set.txt" : "conf";
   const blob = new Blob([parts.join("\n\n") + "\n"], { type: "text/plain" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob); a.download = "junos-lab-configs.txt"; a.click();
+  a.href = URL.createObjectURL(blob);
+  a.download = "junos-lab-configs." + ext;
+  a.click();
+}
+document.getElementById("export-configs").onclick = async () => {
+  const fmt = await modalChoice("Export configurations",
+    "Both formats are what a real box gives you \u2014 pick the one you would actually keep.", [
+    { value: "conf", label: "Junos .conf (hierarchical)", desc: "The braces format of juniper.conf \u2014 what show configuration prints and what lives in /config" },
+    { value: "set", label: "Set commands (display set)", desc: "Flat set statements \u2014 paste-able straight into another box, the documentation format" },
+  ]);
+  if(fmt === null) return;
+  exportConfigs(fmt);
 };
 document.getElementById("clear").onclick = async () => {
   if(!(await modalConfirm("Wipe the whole lab?", "Every device, cable and config goes. Scenario progress is kept.", "Wipe it"))) return;
@@ -3427,6 +3621,20 @@ wireToolbarMenu("add-btn", "add-menu", [
   { target: "add-zone", label: "Building", desc: "A room with walls, air, and a temperature — devices and racks live inside" },
   { target: "add-rack", label: "Rack", desc: "A steel frame; dropped gear clicks into the rails, in-rack cabling prices as DACs" },
 ]);
+function showUnmodeled(){
+  const log = typeof unmodeledLog === "function" ? unmodeledLog() : [];
+  if(!log.length){
+    modalConfirm("Nothing unmodeled yet",
+      "Every command you type that this lab does not recognise gets recorded here.\n\nThis is the lab's own to-do list: if something you would type on a real EX4300 shows up in this list, it is a gap worth closing.", "OK");
+    return;
+  }
+  const lines2 = log.slice(0, 40).map(e =>
+    pad(String(e.n) + "x", 6) + pad(e.mode === "configuration" ? "config" : "op", 9) + e.cmd);
+  modalConfirm("Commands this lab does not model (" + log.length + ")",
+    "Recorded from your own typing \u2014 most-tried first. Anything here that works on a real switch is a genuine gap in the simulation.\n\n" +
+    lines2.join("\n") +
+    (log.length > 40 ? "\n\n\u2026and " + (log.length - 40) + " more" : ""), "Close");
+}
 function showInspector(){
   const tally = {};
   Object.values(NET.linkStatus).forEach(v => tally[v] = (tally[v] || 0) + 1);
@@ -3460,6 +3668,7 @@ function clearGremlins(){
   modalConfirm("All clear", n + " cable(s) recovered.", "OK");
 }
 wireToolbarMenu("view-btn", "view-menu", [
+  { action: () => openMonitor(), label: "Monitoring screen", desc: "Live NMS view \u2014 what is up, warning, alarming or unreachable" },
   { action: () => showInspector(), label: "State inspector", desc: "The engine's derived state — link status, bundles, STP roots, convergence" },
   { target: "vlan-btn", label: "VLAN colors", desc: "Color links and ports by VLAN, with a legend", checked: () => typeof vlanView !== "undefined" && vlanView },
   { target: "label-btn", label: "IP labels", desc: "Addresses and gateways drawn on the canvas", checked: () => typeof ipLabels !== "undefined" && ipLabels },
@@ -3475,8 +3684,13 @@ wireToolbarMenu("plan-btn", "plan-menu", [
   { action: () => typeof exportDiagramPng === "function" && exportDiagramPng(), label: "Export diagram (PNG)", desc: "A bitmap snapshot for pasting into documents" },
 ]);
 wireToolbarMenu("lab-btn", "lab-menu", [
+  { action: () => showUnmodeled(), label: "Unmodeled commands", desc: "What you typed that this lab does not support \u2014 the gap list vs a real switch" },
   { action: () => injectGremlin(), label: "Inject a gremlin", desc: "A random live cable starts silently dropping packets — find it with show interfaces statistics" },
   { action: () => clearGremlins(), label: "Clear gremlins", desc: "All degraded cables recover" },
+  { action: () => importConfigFlow(), label: "Import a config\u2026", desc: "Paste a real device's configuration and rehearse changes against it" },
+  { action: () => saveSnapshot(), label: "Save this lab\u2026", desc: "Keep this topology under a name and come back to it later" },
+  { action: () => loadSnapshot(), label: "Load a saved lab\u2026", desc: "Switch between the benches you have built" },
+  { action: () => deleteSnapshot(), label: "Delete a saved lab\u2026", desc: "Clear one out of browser storage" },
   { target: "save", label: "Save lab to file", desc: "Download the whole lab as JSON" },
   { target: "load", label: "Load lab from file", desc: "Restore a saved lab (v1 saves migrate automatically)" },
   { action: () => typeof takeSnapshot === "function" && takeSnapshot(), label: "Snapshot this design", desc: "Keep up to 10 named versions in the browser" },

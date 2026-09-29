@@ -1,61 +1,121 @@
-// Workshop launcher.
-// Reads LABS_CONFIG (js/labs.config.js), draws the room list and the orbit,
-// launches labs into a full-screen iframe, and can export/import progress.
-// No frameworks, no build step.
-
 const SVGNS = "http://www.w3.org/2000/svg";
 const RADII = { "ring-inner": 90, "ring-mid": 160, "ring-outer": 230 };
+const RING_NAMES = { "ring-inner": "inner orbit", "ring-mid": "mid orbit", "ring-outer": "outer orbit" };
 const CX = 450, CY = 310;
+const REDUCED = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 const $ = (id) => document.getElementById(id);
 const roomsEl = $("rooms");
 const markersEl = $("markers");
 
-// ---------- safe localStorage helpers ----------
-// localStorage can throw (private mode, sandboxes), so every call is guarded.
 function lsGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
 function lsSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
+function lsJson(key) { try { return JSON.parse(lsGet(key)) || {}; } catch (e) { return {}; } }
 
-// ---------- build the room list + orbit markers ----------
-LABS_CONFIG.forEach((lab, i) => {
-  const btn = document.createElement("button");
-  btn.className = "room";
-  btn.dataset.id = lab.id;
-  btn.innerHTML = `
-    <span class="idx">${String(i + 1).padStart(2, "0")}</span>
-    <span>
-      <span class="name">${lab.name}<span class="last"></span></span><br>
-      <span class="tag">${lab.tag}</span>
-    </span>
-    <svg class="glyph" viewBox="0 0 16 16">${lab.glyph || ""}</svg>`;
-  roomsEl.appendChild(btn);
+function esc(s) { return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c])); }
 
-  // marker on the orbit
-  const a = (lab.angle || 0) * Math.PI / 180;
-  const r = RADII[lab.ring] || RADII["ring-mid"];
-  const x = CX + Math.cos(a) * r, y = CY + Math.sin(a) * r;
-  const g = document.createElementNS(SVGNS, "g");
-  g.setAttribute("class", "marker");
-  g.dataset.id = lab.id;
-  g.innerHTML = `
-    <path class="bracket" d="M${x-12} ${y-12}h-6v6M${x+12} ${y-12}h6v6M${x-12} ${y+12}h-6v-6M${x+12} ${y+12}h6v-6"/>
-    <circle cx="${x}" cy="${y}" r="9"/>
-    <circle class="dotm" cx="${x}" cy="${y}" r="2.5"/>`;
-  markersEl.appendChild(g);
+const labs = LABS_CONFIG.map((lab, i) => {
+  const ring = RADII[lab.ring] ? lab.ring : "ring-mid";
+  const angle = ((lab.angle || 0) % 360 + 360) % 360;
+  const a = angle * Math.PI / 180;
+  const r = RADII[ring];
+  return { ...lab, ring, index: i, angle, x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r, sector: (lab.tag || "general").trim() };
 });
 
-// "add a room" row — a hint, not a real room
+const sectors = [];
+for (const lab of labs) {
+  const key = lab.sector.toLowerCase();
+  let s = sectors.find((x) => x.key === key);
+  if (!s) { s = { key, name: lab.sector, labs: [] }; sectors.push(s); }
+  s.labs.push(lab);
+}
+
+function bearing(lab) { return String(Math.round((lab.angle + 90) % 360)).padStart(3, "0") + "°"; }
+
+let order = 0;
+for (const s of sectors) {
+  const head = document.createElement("div");
+  head.className = "sector";
+  head.dataset.sector = s.key;
+  head.style.setProperty("--i", order++);
+  head.innerHTML = `<span>sector <b>${esc(s.name)}</b></span><span>${s.labs.length}</span>`;
+  roomsEl.appendChild(head);
+  for (const lab of s.labs) {
+    const btn = document.createElement("button");
+    btn.className = "room";
+    btn.dataset.id = lab.id;
+    btn.dataset.sector = s.key;
+    btn.style.setProperty("--i", order++);
+    btn.innerHTML = `
+      <span class="idx">${String(lab.index + 1).padStart(2, "0")}</span>
+      <span>
+        <span class="name">${esc(lab.name)}<span class="last">last</span></span>
+        <span class="tag">${RING_NAMES[lab.ring]} · ${bearing(lab)}</span>
+      </span>
+      <svg class="glyph" viewBox="0 0 16 16">${lab.glyph || ""}</svg>`;
+    roomsEl.appendChild(btn);
+  }
+}
+
 const addBtn = document.createElement("button");
 addBtn.className = "room add";
 addBtn.dataset.id = "__add";
+addBtn.style.setProperty("--i", order++);
 addBtn.innerHTML = `
   <span class="idx">+</span>
-  <span><span class="name">Add a room</span><br><span class="tag">js/labs.config.js</span></span>
+  <span><span class="name">Add a room</span><span class="tag">js/labs.config.js</span></span>
   <svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>`;
 roomsEl.appendChild(addBtn);
-$("nodeCount").textContent = LABS_CONFIG.length;
 
-// ---------- ticks around the outer ring ----------
+const emptyEl = document.createElement("div");
+emptyEl.className = "empty";
+emptyEl.textContent = "no rooms on that heading";
+emptyEl.hidden = true;
+roomsEl.appendChild(emptyEl);
+
+labs.forEach((lab, i) => {
+  const { x, y } = lab;
+  const right = x >= CX - 4;
+  const lx = right ? x + 18 : x - 18;
+  const anchor = right ? "start" : "end";
+  const g = document.createElementNS(SVGNS, "g");
+  g.setAttribute("class", "marker");
+  g.setAttribute("tabindex", "0");
+  g.setAttribute("role", "button");
+  g.setAttribute("aria-label", `Open ${lab.name}`);
+  g.dataset.id = lab.id;
+  g.style.setProperty("--i", i);
+  g.innerHTML = `
+    <circle class="hit" cx="${x}" cy="${y}" r="22"/>
+    <circle class="halo" cx="${x}" cy="${y}" r="14"/>
+    <path class="bracket" d="M${x - 14} ${y - 20}h-6v6M${x + 14} ${y - 20}h6v6M${x - 14} ${y + 20}h-6v-6M${x + 14} ${y + 20}h6v-6"/>
+    <circle class="planet" cx="${x}" cy="${y}" r="8"/>
+    <circle class="dotm" cx="${x}" cy="${y}" r="2.5"/>
+    <line class="leader" x1="${right ? x + 10 : x - 10}" y1="${y}" x2="${right ? lx - 3 : lx + 3}" y2="${y}"/>
+    <text class="mlabel" x="${lx}" y="${y + 1}" text-anchor="${anchor}">${esc(lab.name)}</text>
+    <text class="mtag" x="${lx}" y="${y + 12}" text-anchor="${anchor}">${esc(lab.sector)}</text>`;
+  markersEl.appendChild(g);
+});
+
+$("nodeCount").textContent = labs.length;
+$("sectorCount").textContent = sectors.length;
+
+(function buildRingLabels() {
+  const g = $("ringLabels");
+  for (const ring of Object.keys(RADII)) {
+    const onRing = [...new Set(labs.filter((l) => l.ring === ring).map((l) => l.sector.toLowerCase()))];
+    if (!onRing.length) continue;
+    const t = document.createElementNS(SVGNS, "text");
+    t.setAttribute("class", "ring-label");
+    t.setAttribute("data-ring", ring);
+    t.setAttribute("x", CX);
+    t.setAttribute("y", CY - RADII[ring] - 6);
+    t.setAttribute("text-anchor", "middle");
+    t.textContent = onRing.join(" / ");
+    g.appendChild(t);
+  }
+})();
+
 (function buildTicks() {
   const g = $("ticks"), r = 240;
   for (let i = 0; i < 72; i++) {
@@ -68,78 +128,220 @@ $("nodeCount").textContent = LABS_CONFIG.length;
   }
 })();
 
-// ---------- theme ----------
-// "void" = dark, "orbital" = steel. Also writes the JunOS lab's own theme key
-// so a lab launched from Orbital opens in its Orbital ("space") theme.
+(function buildGrid() {
+  const g = $("grid");
+  const lines = [[CX - 300, CY, CX + 300, CY], [CX, CY - 290, CX, CY + 290]];
+  for (const d of [45, 135]) {
+    const a = d * Math.PI / 180;
+    lines.push([CX - Math.cos(a) * 260, CY - Math.sin(a) * 260, CX + Math.cos(a) * 260, CY + Math.sin(a) * 260]);
+  }
+  for (const [x1, y1, x2, y2] of lines) {
+    const l = document.createElementNS(SVGNS, "line");
+    l.setAttribute("x1", x1); l.setAttribute("y1", y1); l.setAttribute("x2", x2); l.setAttribute("y2", y2);
+    g.appendChild(l);
+  }
+})();
+
+const starfield = (() => {
+  const canvas = $("stars");
+  const ctx = canvas.getContext("2d");
+  let stars = [], w = 0, h = 0, dpr = 1, px = 0, py = 0, tx = 0, ty = 0, rgb = "230,240,255", raf = null;
+
+  function readColor() { rgb = getComputedStyle(document.body).getPropertyValue("--star").trim() || rgb; }
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    w = canvas.clientWidth; h = canvas.clientHeight;
+    canvas.width = w * dpr; canvas.height = h * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const count = Math.round(Math.min(420, (w * h) / 4200));
+    stars = Array.from({ length: count }, () => ({
+      x: Math.random() * w, y: Math.random() * h,
+      z: Math.random() ** 2,
+      tw: Math.random() * Math.PI * 2,
+      sp: 0.4 + Math.random() * 1.6,
+    }));
+    if (REDUCED) draw(0);
+  }
+
+  function draw(t) {
+    ctx.clearRect(0, 0, w, h);
+    px += (tx - px) * 0.04; py += (ty - py) * 0.04;
+    for (const s of stars) {
+      const depth = 0.2 + s.z * 0.8;
+      let x = s.x + px * depth * 14, y = s.y + py * depth * 10;
+      if (!REDUCED) { s.x -= 0.02 * depth; if (s.x < -20) s.x = w + 20; }
+      const tw = REDUCED ? 0.8 : 0.55 + 0.45 * Math.sin(t / 1000 * s.sp + s.tw);
+      const alpha = (0.18 + s.z * 0.7) * tw;
+      const size = 0.4 + s.z * 1.3;
+      ctx.fillStyle = `rgba(${rgb},${alpha.toFixed(3)})`;
+      ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
+    }
+  }
+
+  function loop(t) { draw(t); raf = requestAnimationFrame(loop); }
+
+  window.addEventListener("resize", resize);
+  window.addEventListener("pointermove", (e) => { tx = e.clientX / w - 0.5; ty = e.clientY / h - 0.5; });
+  document.addEventListener("visibilitychange", () => {
+    if (REDUCED) return;
+    if (document.hidden) { cancelAnimationFrame(raf); raf = null; } else if (!raf) raf = requestAnimationFrame(loop);
+  });
+
+  readColor(); resize();
+  if (!REDUCED) raf = requestAnimationFrame(loop);
+  return {
+    recolor() { readColor(); if (REDUCED) draw(0); },
+    pause() { cancelAnimationFrame(raf); raf = null; },
+    resume() { if (!REDUCED && !raf) raf = requestAnimationFrame(loop); },
+  };
+})();
+
 function setTheme(t) {
   document.body.className = t === "orbital" ? "theme-orbital" : "";
   for (const b of document.querySelectorAll("#themeToggle button")) b.classList.toggle("on", b.dataset.theme === t);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "orbital" ? "#b4bcc4" : "#0A0B0D");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "orbital" ? "#b4bcc4" : "#05070B");
   lsSet("workshop-theme", t);
   lsSet("junoslab-theme", t === "orbital" ? "space" : "terminal");
+  starfield.recolor();
 }
 for (const b of document.querySelectorAll("#themeToggle button")) b.addEventListener("click", () => setTheme(b.dataset.theme));
 setTheme(lsGet("workshop-theme") || "void");
 
-// ---------- hover: list row lights its marker + ring ----------
-function setLit(id, on) {
-  const lab = LABS_CONFIG.find((l) => l.id === id); if (!lab) return;
-  document.querySelector(`.marker[data-id="${id}"]`)?.classList.toggle("lit", on);
-  document.querySelector(`.ring.${lab.ring}`)?.classList.toggle("lit", on);
+function timeAgo(ts) {
+  if (!ts) return "never";
+  const m = Math.round((Date.now() - ts) / 60000);
+  if (m < 1) return "just now";
+  if (m < 60) return `${m}m ago`;
+  const h = Math.round(m / 60);
+  if (h < 24) return `${h}h ago`;
+  return `${Math.round(h / 24)}d ago`;
 }
 
-// ---------- launching a lab ----------
-// Sequence: lock screen (progress bar) -> iframe loads lab -> stage shows.
-// The iframe starts loading immediately behind the lock screen, so the
-// 1.2s init animation doubles as real load time.
+let litId = null;
+function setLit(id, on) {
+  const lab = labs.find((l) => l.id === id);
+  if (!lab) return;
+  if (on && litId && litId !== id) setLit(litId, false);
+  document.querySelector(`.marker[data-id="${id}"]`)?.classList.toggle("lit", on);
+  document.querySelector(`.room[data-id="${id}"]`)?.classList.toggle("lit", on);
+  document.querySelector(`.ring.${lab.ring}`)?.classList.toggle("lit", on);
+  document.querySelector(`.ring-label[data-ring="${lab.ring}"]`)?.classList.toggle("lit", on);
+  const course = $("course");
+  course.setAttribute("x2", lab.x); course.setAttribute("y2", lab.y);
+  course.classList.toggle("on", on);
+  $("readout").classList.toggle("on", on);
+  if (on) {
+    litId = id;
+    $("roName").textContent = lab.name;
+    $("roSector").textContent = lab.sector;
+    $("roOrbit").textContent = `${RING_NAMES[lab.ring]} · r${RADII[lab.ring]}`;
+    $("roBearing").textContent = bearing(lab);
+    $("roLast").textContent = timeAgo(lsJson("workshop-docked")[id]);
+  } else if (litId === id) {
+    litId = null;
+  }
+}
+
 const opened = $("opened"), stage = $("stage"), frame = $("labFrame");
-let launchTimer = null;
+let launchTimers = [];
 
 function launch(lab) {
-  $("openedTitle").textContent = lab.name;
-  $("openedTag").textContent = lab.tag;
-  $("openedState").textContent = "initialising";
-  opened.classList.add("show");
+  if (!lab) return;
+  for (const r of document.querySelectorAll(".room, .marker")) r.classList.toggle("was-last", r.dataset.id === lab.id);
+  lsSet("workshop-last", lab.id);
+  const docked = lsJson("workshop-docked"); docked[lab.id] = Date.now(); lsSet("workshop-docked", JSON.stringify(docked));
 
+  $("openedTitle").textContent = lab.name;
+  $("openedTag").textContent = lab.sector;
+  $("openedState").textContent = "approaching";
+  $("openedClamps").textContent = "aligning";
+  opened.classList.add("show");
   frame.src = lab.path;
-  clearTimeout(launchTimer);
-  launchTimer = setTimeout(() => {
-    $("openedState").textContent = "online";
-    stage.classList.add("show");
-    opened.classList.remove("show");
-  }, 1400);
+
+  launchTimers.forEach(clearTimeout);
+  launchTimers = [
+    setTimeout(() => { $("openedClamps").textContent = "engaged"; $("openedState").textContent = "pressurising"; }, 700),
+    setTimeout(() => {
+      $("openedState").textContent = "docked";
+      stage.classList.add("show");
+      opened.classList.remove("show");
+      starfield.pause();
+    }, 1400),
+  ];
 }
 
 function release() {
-  clearTimeout(launchTimer);
+  launchTimers.forEach(clearTimeout);
   stage.classList.remove("show");
   opened.classList.remove("show");
-  frame.src = "about:blank"; // unload the lab so it stops running in the background
+  frame.src = "about:blank";
+  starfield.resume();
 }
 
 const lastOpened = lsGet("workshop-last");
-if (lastOpened) document.querySelector(`.room[data-id="${lastOpened}"]`)?.classList.add("was-last");
+if (lastOpened) for (const el of document.querySelectorAll(`[data-id="${CSS.escape(lastOpened)}"]`)) el.classList.add("was-last");
 
 for (const row of document.querySelectorAll(".room")) {
   const id = row.dataset.id;
   row.addEventListener("mouseenter", () => setLit(id, true));
   row.addEventListener("mouseleave", () => setLit(id, false));
+  row.addEventListener("focus", () => setLit(id, true));
+  row.addEventListener("blur", () => setLit(id, false));
   row.addEventListener("click", () => {
     if (id === "__add") { toast("edit js/labs.config.js to add a room"); return; }
-    const lab = LABS_CONFIG.find((l) => l.id === id);
-    for (const r of document.querySelectorAll(".room")) r.classList.remove("was-last");
-    row.classList.add("was-last");
-    lsSet("workshop-last", id);
-    launch(lab);
+    launch(labs.find((l) => l.id === id));
   });
 }
+
+for (const m of document.querySelectorAll(".marker")) {
+  const id = m.dataset.id;
+  m.addEventListener("mouseenter", () => setLit(id, true));
+  m.addEventListener("mouseleave", () => setLit(id, false));
+  m.addEventListener("focus", () => setLit(id, true));
+  m.addEventListener("blur", () => setLit(id, false));
+  m.addEventListener("click", () => launch(labs.find((l) => l.id === id)));
+  m.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); launch(labs.find((l) => l.id === id)); } });
+}
+
 $("backBtn").addEventListener("click", release);
 $("releaseBtn").addEventListener("click", release);
 
-// ---------- export / import progress ----------
-// Every lab keeps its state in localStorage. Because the labs load in an
-// iframe on the same site, they share this launcher's localStorage — so
-// dumping ALL keys captures every lab's progress in one JSON file.
+const search = $("search");
+function applyFilter() {
+  const q = search.value.trim().toLowerCase();
+  let shown = 0;
+  for (const lab of labs) {
+    const hit = !q || lab.name.toLowerCase().includes(q) || lab.sector.toLowerCase().includes(q) || lab.id.includes(q);
+    const row = document.querySelector(`.room[data-id="${CSS.escape(lab.id)}"]`);
+    row.hidden = !hit;
+    document.querySelector(`.marker[data-id="${CSS.escape(lab.id)}"]`).style.opacity = hit ? "" : "0.18";
+    if (hit) shown++;
+  }
+  for (const head of document.querySelectorAll(".sector")) {
+    head.hidden = !document.querySelector(`.room[data-sector="${head.dataset.sector}"]:not([hidden])`);
+  }
+  addBtn.hidden = !!q;
+  emptyEl.hidden = shown > 0;
+}
+search.addEventListener("input", applyFilter);
+search.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") {
+    const first = document.querySelector(".room:not(.add):not([hidden])");
+    if (first) launch(labs.find((l) => l.id === first.dataset.id));
+  } else if (e.key === "Escape") {
+    search.value = ""; applyFilter(); search.blur();
+  }
+});
+
+document.addEventListener("keydown", (e) => {
+  if (stage.classList.contains("show") || opened.classList.contains("show")) {
+    if (e.key === "Escape") release();
+    return;
+  }
+  if (e.key === "/" && document.activeElement !== search) { e.preventDefault(); search.focus(); }
+});
+
 function exportProgress() {
   const data = {};
   try {
@@ -176,7 +378,6 @@ function importProgress(file) {
 $("exportBtn").addEventListener("click", exportProgress);
 $("importFile").addEventListener("change", (e) => { if (e.target.files[0]) importProgress(e.target.files[0]); e.target.value = ""; });
 
-// ---------- toast ----------
 let toastTimer = null;
 function toast(msg) {
   const t = $("toast");
@@ -186,10 +387,18 @@ function toast(msg) {
   toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
 }
 
-// ---------- boot + PWA ----------
+function tick() {
+  const now = new Date();
+  const start = new Date(now.getFullYear(), 0, 0);
+  const day = Math.floor((now - start) / 86400000);
+  $("stardate").textContent = `${now.getFullYear()}.${String(day).padStart(3, "0")}`;
+  $("clock").textContent = now.toTimeString().slice(0, 8);
+}
+tick();
+setInterval(tick, 1000);
+
 requestAnimationFrame(() => $("scene").classList.add("booted"));
 
-// service worker only works over http(s) — skipped when opened from disk
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }

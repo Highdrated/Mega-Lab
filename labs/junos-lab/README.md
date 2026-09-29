@@ -11,6 +11,7 @@ No build step, no dependencies — open `index.html` in a browser.
 | `css/style.css` | All styling |
 | `tests/soak.js` | Long-run fuzz test: `node tests/soak.js 30000` hammers random commands, cabling and deletions to hunt freezes and slow paths |
 | `js/sound.js` | Synthesized sound effects (Web Audio, no files): ticks, plugs, drops, commit chime, objective dings, fanfare, sound on/off toggle |
+| `js/ops.js` | Operations layer — SNMP-style monitoring screen and night-shift incident simulations (pager, diagnosis, debrief) |
 | `js/rank.js` | Rank/XP progression — career ladder (Trainee NOC Technician → Datacenter Chief Architect), fed by tickets, contracts, quiz mastery, and mock exams |
 | `js/course.js` | Dual certification tracks (JNCIA-Junos and CompTIA Network+) with switchable paths, quiz-mastery tracking, next-up cards, 15-minute sessions |
 | `js/course.js` | JNCIA learning path, quiz-mastery tracking, next-up cards, the 15-minute session ritual |
@@ -26,7 +27,6 @@ No build step, no dependencies — open `index.html` in a browser.
 | `js/planner.js` | Pre-build tooling: buildings/zones, bill of materials (Belgian prices), design rule check, failure-impact heatmap, reachability matrix, rack elevations, build packet |
 | `tests/` | Headless test suite: `node tests/run.js` (DOM shim + end-to-end assertions through the real CLI and engine) |
 | `juniper-lab.html` | Redirect stub (the app's old single-file home) |
-| `juniper-lab-v1-backup.html` | Frozen pre-rewrite version |
 
 ## Conventions
 

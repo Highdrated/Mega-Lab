@@ -106,12 +106,38 @@ function macOf(devId, portId){
    ============================================================ */
 function freshCli(){ return { mode:"op", editKeys:[], history:[], hIdx:-1, log:[] }; }
 
+var DEVICE_PROFILES = {
+  "EX2300-C-12T": { access: 12, uplinks: 2, uplinkKind: "ge", uplinkPic: 1, version: "21.4R3.15", els: true },
+  "EX2300-24P":   { access: 24, uplinks: 4, uplinkKind: "ge", uplinkPic: 1, version: "21.4R3.15", els: true },
+  "EX3400-24T":   { access: 24, uplinks: 4, uplinkKind: "xe", uplinkPic: 1, version: "21.4R3.15", els: true },
+  "EX4300-48T":   { access: 48, uplinks: 4, uplinkKind: "xe", uplinkPic: 1, version: "23.4R1.10", els: true },
+  "EX4300-48P":   { access: 48, uplinks: 4, uplinkKind: "xe", uplinkPic: 1, version: "23.4R1.10", els: true },
+  "EX4300-24T":   { access: 24, uplinks: 4, uplinkKind: "xe", uplinkPic: 1, version: "23.4R1.10", els: true },
+  "QFX5100-48S":  { access: 48, uplinks: 6, uplinkKind: "et", uplinkPic: 1, version: "21.4R3.15", els: true },
+  "MX204":        { access: 8, uplinks: 0, uplinkKind: "et", uplinkPic: 1, version: "23.4R1.10", els: true, router: true },
+  "SRX300":       { access: 8, uplinks: 0, uplinkKind: "ge", uplinkPic: 1, version: "21.4R3.15", els: true, router: true },
+};
+function profileFor(model){
+  return (model && DEVICE_PROFILES[model]) || null;
+}
+function buildPorts(model, fallbackCount){
+  const p = profileFor(model);
+  if(!p){
+    const n = fallbackCount || 12;
+    return Array.from({ length: n }, (_, i) => ({ id: `ge-0/0/${i}` }));
+  }
+  const ports = [];
+  for(let i = 0; i < p.access; i++) ports.push({ id: `ge-0/0/${i}`, role: "access" });
+  for(let i = 0; i < p.uplinks; i++)
+    ports.push({ id: `${p.uplinkKind}-0/${p.uplinkPic}/${i}`, role: "uplink", speed: p.uplinkKind === "ge" ? 1000 : (p.uplinkKind === "xe" ? 10000 : 40000) });
+  return ports;
+}
 function makeSwitch(x, y, portCount, model){
   const id = uid("sw");
   const n = portCount || 12;
   devices[id] = {
     id, type:"switch", x, y, name:id, model: model || null,
-    ports: Array.from({length:n}, (_, i) => ({ id:`ge-0/0/${i}` })),
+    ports: buildPorts(model, n),
     config: {}, candidate: {}, cfgHistory: [],
     errDisabled: {}, macTable: [], arp: {}, stats: {},
     commitPending: null, cli: freshCli(),
@@ -307,10 +333,33 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "3.7.0";
+var APP_VERSION = "3.12.0";
 
 function svgMark(kind){
   if(kind === "check") return '<svg class="mk mk-check" viewBox="0 0 14 14"><path d="M2.5 7.5 L5.8 10.8 L11.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
   if(kind === "cross") return '<svg class="mk mk-cross" viewBox="0 0 14 14"><path d="M3 3 L11 11 M11 3 L3 11" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>';
   return "";
+}
+
+var UNMODELED_MAX = 200;
+function unmodeledLog(){
+  try{ return JSON.parse(localStorage.getItem("junoslab-unmodeled") || "[]") || []; }
+  catch(e){ return []; }
+}
+function unmodeledRecord(cmd, mode, devType){
+  var t = String(cmd || "").trim();
+  if(!t || t === "?" || t.length < 3) return;
+  if(/^[?\s]+$/.test(t)) return;
+  try{
+    var log = unmodeledLog();
+    var hit = log.find(function(e){ return e.cmd === t && e.mode === mode; });
+    if(hit){ hit.n++; hit.last = Date.now(); }
+    else log.push({ cmd: t, mode: mode, dev: devType || "?", n: 1, last: Date.now() });
+    log.sort(function(a, b){ return b.n - a.n || b.last - a.last; });
+    if(log.length > UNMODELED_MAX) log.length = UNMODELED_MAX;
+    localStorage.setItem("junoslab-unmodeled", JSON.stringify(log));
+  }catch(e){}
+}
+function unmodeledClear(){
+  try{ localStorage.removeItem("junoslab-unmodeled"); }catch(e){}
 }

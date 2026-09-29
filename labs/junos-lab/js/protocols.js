@@ -120,6 +120,7 @@ var PROTO_GUIDES = [
       ["set interfaces ge-0/0/1 ether-options 802.3ad ae0", "Port ge-0/0/1 becomes a member of bundle ae0 — repeat for every member cable"],
       ["set interfaces ae0 aggregated-ether-options lacp active", "Run LACP on the bundle, in active mode (send LACPDUs, don't just answer)"],
       ["set interfaces ae0 unit 0 family ethernet-switching", "The bundle itself must be a switching interface, or it forwards nothing"],
+      ["set interfaces ae0 aggregated-ether-options minimum-links 2", "Optional: keep the bundle DOWN unless at least this many members are up — better than limping at half capacity"],
       ["commit", "Then do the SAME on the far-end switch — LACP is a two-sided agreement"]
     ],
     nums: [
@@ -197,7 +198,8 @@ var PROTO_GUIDES = [
       ["set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode access", "This port carries exactly one untagged VLAN"],
       ["set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff", "...and that VLAN is staff"],
       ["set interfaces ge-0/0/7 unit 0 family ethernet-switching interface-mode trunk", "The uplink to the next switch becomes a trunk"],
-      ["set interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members [ staff guest ]", "The trunk carries these VLANs, tagged — forget one here and that VLAN silently dies at this cable"]
+      ["set interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members [ staff guest ]", "The trunk carries these VLANs, tagged — forget one here and that VLAN silently dies at this cable"],
+      ["set interfaces ge-0/0/7 native-vlan-id 10", "Optional: which VLAN untagged frames belong to on this trunk. Without it, untagged traffic arriving on a trunk is simply dropped"]
     ],
     nums: [
       ["1–4094", "Usable VLAN ID range (12-bit field; 0 and 4095 are reserved)"],
@@ -207,7 +209,7 @@ var PROTO_GUIDES = [
     ],
     els: [
       ["legacy: ...ethernet-switching port-mode access|trunk", "ELS: interface-mode access|trunk — same idea, renamed. The lab CLI corrects you if you type the old one"],
-      ["legacy: native-vlan-id under the port", "ELS: set interfaces ge-0/0/7 native-vlan-id 99 at the physical interface level"]
+      ["legacy: native-vlan-id under the port", "ELS: set interfaces ge-0/0/7 native-vlan-id 99 at the physical interface level — configurable in this lab, and it really does carry untagged frames"]
     ],
     real: [
       "On the real bench: show vlans after every change — the EX4300's default VLAN catches forgotten ports exactly like the lab's does.",
@@ -932,6 +934,97 @@ var PROTO_GUIDES = [
         opts: ["The switch is broken", "Type cli — root lands in the shell first", "Reboot"],
         right: 1,
         why: "Root logs into the underlying shell (%). Typing cli starts the Junos CLI (>). Everyone hits this once on real hardware; the exam makes sure you hit it on paper first." },
+    ],
+  },
+  {
+    id: "vc",
+    title: "Virtual Chassis — many switches, one box",
+    tag: "L2 · Juniper",
+    ready: true,
+    problem: {
+      text: ["A wiring closet with four switches means four IP addresses, four configurations, four boxes to upgrade, and four chances to make them disagree with each other.",
+             "Virtual Chassis collapses them into ONE logical switch: one management address, one configuration, one commit. Ports are simply numbered by member — ge-0/0/1 on member 2 is ge-2/0/1.",
+             "It is a Juniper-specific feature and a datacenter staple, which is exactly why it turns up in interviews and on real EX deployments."],
+      svg: "vc-problem"
+    },
+    how: {
+      text: ["Members are cabled together over VCP links and each is given a member id and a role. Roles matter: routing-engine members are eligible to run the show, line-card members only forward.",
+             "The members elect a MASTER, which owns the configuration and the CLI you actually talk to, plus a BACKUP that mirrors it and takes over if the master dies. Everything else is a line card.",
+             "Preprovisioning is the production pattern: you list each member's serial number in advance, so member ids are locked to specific physical chassis. Without it, ids get assigned by election and a replacement switch can silently claim the wrong slot.",
+             "The payoff is that the whole stack behaves as one device — a LAG can span members, so an uplink survives losing an entire physical switch, not just a cable."]
+    },
+    prereqs: [
+      { desc: "At least two switches cabled together (the VCP links)",
+        test: function(){ return Object.values(links).some(function(l){
+          var a = devices[l.a.dev], b = devices[l.b.dev];
+          return a && b && a.type === "switch" && b.type === "switch"; }); } },
+      { desc: "virtual-chassis member config committed on two or more switches",
+        test: function(){ return typeof devsBy === "function" && devsBy("switch").filter(function(sw){
+          return D(sw).vc && D(sw).vc.members.length; }).length >= 2; } },
+      { desc: "The VC formed: show virtual-chassis lists the members",
+        test: function(){ return typeof NET !== "undefined" && NET.vc && Object.keys(NET.vc).length >= 2; } },
+      { desc: "Exactly one master, and a backup ready to take over",
+        test: function(){ if(typeof NET === "undefined" || !NET.vc) return false;
+          var byVc = {};
+          for(var id in NET.vc){
+            var v = NET.vc[id];
+            byVc[v.vcid] = byVc[v.vcid] || { m: 0, b: 0 };
+            if(v.state === "master") byVc[v.vcid].m++;
+            if(v.state === "backup") byVc[v.vcid].b++;
+          }
+          return Object.keys(byVc).some(function(k){ return byVc[k].m === 1 && byVc[k].b >= 1; }); } },
+    ],
+    try: [
+      ["show virtual-chassis", "Member ids, roles, and which switch is currently master"],
+      ["show chassis hardware", "The serial number you would use when preprovisioning a member"]
+    ],
+    cfg: [
+      ["set virtual-chassis member 0 role routing-engine", "Member 0 is eligible to be master or backup"],
+      ["set virtual-chassis member 1 role routing-engine", "A second eligible member — this is what gives you a backup"],
+      ["set virtual-chassis member 2 role line-card", "Line-card members forward traffic but never run the VC"],
+      ["set virtual-chassis preprovisioned", "Production pattern: lock member ids to specific chassis serial numbers"],
+      ["commit", "Then show virtual-chassis — one master, one backup, the rest line cards"]
+    ],
+    nums: [
+      ["master / backup / line-card", "The three member roles — only routing-engine members can be the first two"],
+      ["ge-2/0/1", "Port naming inside a VC: member 2, PIC 0, port 1"],
+      ["1 config, 1 commit", "The whole point — the VC is a single managed device"],
+      ["preprovisioned", "Member ids bound to serial numbers, so a swapped switch cannot steal a slot"]
+    ],
+    els: [
+      ["(Virtual Chassis is Juniper-specific and unaffected by the ELS split)", "The syntax lives under virtual-chassis, not the switching stanza ELS renamed"]
+    ],
+    real: [
+      "This is exactly the OOST1 pattern: a monitoring-room switch joining an existing Virtual Chassis is this feature in production.",
+      "On real hardware, always preprovision. An unprovisioned replacement switch joining a VC can take an unexpected member id and inherit the wrong port configuration — a genuinely nasty outage.",
+      "A LAG spanning two VC members survives losing a whole switch, which is why VC plus LACP is the standard closet design."
+    ],
+    verify: [
+      ["show virtual-chassis", "One master, one backup, the rest line cards — anything else means members cannot see each other"],
+      ["check port naming", "Ports should appear as ge-<member>/0/<port> — proof the members really merged into one device"],
+      ["reboot or disable the master", "The backup should take over as master. Untested failover is not failover"]
+    ],
+    breaks: [
+      "Members cabled but not configured — no VC forms, they stay independent switches with independent configs.",
+      "No second routing-engine member, so there is no backup: lose the master and the whole stack loses its brain.",
+      "Skipping preprovisioning, then replacing a failed switch — the new chassis can claim the wrong member id and the wrong port config.",
+      "Assuming a VC removes the need for redundancy elsewhere — it is one logical device, so one bad config commit hits every member at once.",
+      "Mixing incompatible models or Junos versions between members, which real hardware simply refuses."
+    ],
+    answer: "Virtual Chassis merges several physical EX switches into one logical switch with a single configuration, single management address and single commit, with ports renumbered by member as ge-member/0/port. Members are cabled over VCP links and assigned roles: routing-engine members are eligible to become master, which owns the configuration and CLI, or backup, which mirrors it and takes over on failure, while line-card members only forward. The production pattern is preprovisioning, binding member ids to specific chassis serial numbers so a replacement switch cannot claim the wrong slot. Its real payoff is that a LAG can span members, so an uplink survives losing an entire switch rather than just a cable.",
+    quiz: [
+      { q: "In a Virtual Chassis, what does the port name ge-2/0/1 refer to?",
+        opts: ["VLAN 2, port 1", "Member 2, PIC 0, port 1", "The second VCP link"],
+        right: 1,
+        why: "Inside a VC the first number becomes the member id. That renumbering is the clearest evidence the switches genuinely merged into one logical device." },
+      { q: "You build a VC where only one member has role routing-engine. What is the risk?",
+        opts: ["No risk, one master is all you need", "There is no backup — if the master fails, the VC loses the member that owns its configuration and CLI", "The VC will not form"],
+        right: 1,
+        why: "Backup eligibility requires a second routing-engine member. With only one, you have built a stack whose brain is a single point of failure." },
+      { q: "Why is preprovisioning the recommended production pattern?",
+        opts: ["It makes the VC faster", "It binds member ids to specific chassis serial numbers, so a replacement switch cannot silently take the wrong slot and inherit the wrong port config", "It is required for LAGs"],
+        right: 1,
+        why: "Without preprovisioning, member ids come from election. Swap a dead switch and the replacement may claim a different id, meaning every port on it now carries another member's configuration." },
     ],
   },
   {
@@ -1663,6 +1756,17 @@ function protoSvg(kind){
     '<text x="330" y="30" fill="var(--dim)">divide and conquer:</text>' +
     '<text x="330" y="44" fill="var(--dim)">L1 \u2192 L2 \u2192 L3 \u2192 app</text>' +
     '</g>' + close;
+  if(kind === "vc-problem") return open +
+    box(40, 30, 90, "sw-1") + box(40, 78, 90, "sw-2") +
+    '<text x="85" y="122" fill="var(--red)">2 configs, 2 IPs</text>' +
+    '<text x="250" y="70" fill="var(--dim)">virtual-chassis</text>' +
+    '<path d="M180 70 L320 70" stroke="var(--amber)" stroke-width="1.5"/>' +
+    '<path d="M310 65 L320 70 L310 75" fill="none" stroke="var(--amber)" stroke-width="1.5"/>' +
+    '<rect x="360" y="24" width="170" height="100" rx="6" fill="none" stroke="var(--green)" stroke-dasharray="5 3"/>' +
+    '<text x="445" y="46" fill="var(--green)">one logical switch</text>' +
+    '<text x="445" y="70">member 0 \u2014 master</text>' +
+    '<text x="445" y="88">member 1 \u2014 backup</text>' +
+    '<text x="445" y="112" fill="var(--dim)">ge-1/0/1 = member 1, port 1</text>' + close;
   return "";
 }
 
@@ -1793,6 +1897,16 @@ var protoAnims = {
     ], "both links carrying, per flow");
     return true;
   } },
+  vc: { need: "Cable two switches together first (the VCP links).", run: function(){
+    var lk = protoFindLink("switch", "switch");
+    if(!lk) return false;
+    protoVolley([
+      { p: [lk.pa, lk.pb], label: "VCP: member 0, routing-engine" },
+      { p: [lk.pb, lk.pa], label: "VCP: member 1, routing-engine" },
+      { p: [lk.pa, lk.pb], label: "election: lowest id wins" },
+    ], "one logical switch");
+    return true;
+  } },
   lldp: { need: "Cable two switches or routers together first.", run: function(){
     var lk = protoFindLink("switch", "switch") || protoFindLink("router", "switch");
     if(!lk) return false;
@@ -1809,6 +1923,7 @@ var PROTO_GLOW_TYPES = {
   ospf: ["router"], bgp: ["router", "isp"],
   filters: ["switch", "router"], maintenance: ["switch", "router"],
   vrrp: ["router"], ecmp: ["router"], lldp: ["switch", "router"],
+  vc: ["switch"],
 };
 function protoGlow(guideId, on){
   if(typeof document.querySelectorAll !== "function") return;
@@ -1880,8 +1995,6 @@ function renderProtoList(box){
       chip.title = dom;
     });
   }
-  // Guides on the active track's path come first, so the list matches what you
-  // are actually studying; everything else stays available below.
   var onPath = {};
   if(typeof COURSE !== "undefined")
     COURSE.forEach(function(u){ if(u.g) onPath[u.g] = true; });

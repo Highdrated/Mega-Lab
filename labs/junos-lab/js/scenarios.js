@@ -1520,6 +1520,8 @@ function evalChecks(){
       renderScenSelect();
       if(typeof SFX !== "undefined") SFX.fanfare();
       if(typeof courseOnComplete === "function") setTimeout(function(){ courseOnComplete(currentScenario.id); }, 400);
+      if(typeof incidentDebrief === "function" && typeof currentIncident !== "undefined" && currentIncident)
+        setTimeout(function(){ incidentDebrief(); }, 900);
       if(typeof awardXp === "function" && !(currentScenario.isTicket || currentScenario.isContract))
         awardXp(20, currentScenario.title);
       document.getElementById("scen-objectives").classList.add("done-flash");
@@ -1634,6 +1636,7 @@ function updateExamTimer(){
 }
 document.getElementById("ticket-btn").onclick = () => { if(typeof SFX !== "undefined") SFX.ticket(); generateTicket(); };
 document.getElementById("senior-btn").onclick = () => { if(typeof SFX !== "undefined") SFX.alert(); generateSeniorTicket(); };
+document.getElementById("night-btn").onclick = () => { if(typeof pickIncident === "function") pickIncident(); };
 document.getElementById("solution-btn").onclick = () => {
   if(!currentTicket) return;
   modalConfirm("The fault(s)", currentTicket.faults.map(f => "• " + f.reveal).join("\n"), "Got it");
@@ -1662,8 +1665,6 @@ boot();
 let predictOn = true;
 try{
   const raw = localStorage.getItem("junoslab-predict");
-  // Defaults ON for anyone who hasn't explicitly chosen — this is the strongest
-  // "why" mechanism in the lab, and it was easy to never discover while off.
   predictOn = raw === null ? true : raw === "on";
 }catch(e){}
 function setPredict(on){
@@ -1682,8 +1683,6 @@ function predictIntercept(dev, raw, masked){
   const t = raw.trim();
   if(!/^com(m(it?)?)?(\s+confirmed(\s+\d+)?)?$/.test(t) && !/^commit(\s+and-quit)?$/.test(t)) return false;
   if(!currentScenario || !currentScenario.checks || !currentScenario.checks.length) return false;
-  // Once you've finished a scenario before, the friction has done its job —
-  // don't re-ask on a repeat run.
   if(currentScenario.id && PROGRESS[currentScenario.id] && PROGRESS[currentScenario.id].done) return false;
   const before = passingCount();
   if(before >= currentScenario.checks.length) return false;

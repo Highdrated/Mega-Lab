@@ -1,7 +1,7 @@
 /* JunOS Lab service worker — after one visit over http(s), the whole lab
    works with no server running at all. Network-first so updates land when a
    server IS present; cache answers when it is not. */
-const CACHE = "junoslab-v10";
+const CACHE = "junoslab-v15";
 const FILES = [
   "./",
   "./index.html",
@@ -22,6 +22,7 @@ const FILES = [
   "./js/protocols.js",
   "./js/course.js",
   "./js/mockexam.js",
+  "./js/ops.js",
 ];
 self.addEventListener("install", (e) => {
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)).then(() => self.skipWaiting()));

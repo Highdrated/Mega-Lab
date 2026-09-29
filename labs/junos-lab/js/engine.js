@@ -15,8 +15,17 @@ function deriveDev(dev){
   const d = {
     hostname: hostnameOf(dev),
     portCfg: {}, aes: {}, irbs: {}, irbByVlan: {}, l3ports: {},
-    routes: [], vlans: {}, rstp: false, filters: {}, stormProfiles: {}, vrrp: [],
+    routes: [], vlans: {}, rstp: false, filters: {}, stormProfiles: {}, vrrp: [], vc: null,
   };
+  const vcCfg = cfgGet(c, ["virtual-chassis"]);
+  if(vcCfg){
+    const members = [];
+    const mcfg = vcCfg.member || {};
+    for(const mid in mcfg)
+      members.push({ id: parseInt(mid, 10), role: mcfg[mid].role || "line-card", serial: mcfg[mid]["serial-number"] || null });
+    members.sort((a, b) => a.id - b.id);
+    d.vc = { preprovisioned: !!vcCfg.preprovisioned, members };
+  }
   // vlans (implicit factory "default" = 1)
   const vcfg = cfgGet(c, ["vlans"]) || {};
   for(const [name, v] of Object.entries(vcfg)){
@@ -61,7 +70,9 @@ function deriveDev(dev){
     if(names.includes("all")) names = Object.keys(d.vlans);
     if(!names.length && mode === "access") names = ["default"];
     const vlanIds = names.includes("all") ? allVlanIds() : names.map(vlanIdOf).filter(n => !isNaN(n));
-    return { has, mode, vlanNames: names, vlanIds,
+    const nvRaw = ic && ic["native-vlan-id"];
+    const nativeVlan = nvRaw !== undefined ? parseInt([].concat(nvRaw)[0], 10) : null;
+    return { has, mode, vlanNames: names, vlanIds, nativeVlan,
              storm: typeof eso["storm-control"] === "string" ? eso["storm-control"] : null };
   };
 
@@ -79,6 +90,7 @@ function deriveDev(dev){
         disabled: !!ic.disable, desc: ic.description || null, mtu: ic.mtu ? parseInt(ic.mtu, 10) : 1514,
         ae: (cfgGet(ic, ["ether-options", "802.3ad"])) || null,
         mode: es.mode, vlanNames: es.vlanNames, vlanIds: es.vlanIds, storm: es.storm,
+        nativeVlan: es.nativeVlan,
         esEnabled: true,   // an unconfigured switch port is factory-default access on vlan "default"
       };
     }
@@ -146,7 +158,6 @@ function deriveDev(dev){
   for(const [pfx, r] of Object.entries(routes)){
     const p = parsePrefix(pfx);
     if(!p) continue;
-    // next-hop may be a single value or several (ECMP)
     const nhs = r && r["next-hop"];
     for(const nh of (Array.isArray(nhs) ? nhs : [nhs]))
       if(validIp(nh || "")) d.routes.push({ net: p.ip, bits: p.bits, nh });
@@ -293,7 +304,16 @@ function computeNet(){
       if(typeof strictOn === "function" && strictOn() && parseInt(ae.replace("ae", ""), 10) >= chassisAeCount(dev)){
         members.forEach(m => { m.state = "Detached"; m.why = "chassis aggregated-devices not configured"; });
       }
-      info[ae] = { members, up: members.some(m => m.state === "Collecting distributing"), lacp: aeCfg.lacp };
+      const activeCount = members.filter(m => m.state === "Collecting distributing").length;
+      const minCfg = cfgGet(dev.config, ["interfaces", ae, "aggregated-ether-options", "minimum-links"]);
+      const minLinks = minCfg ? parseInt([].concat(minCfg)[0], 10) : 1;
+      let up = activeCount >= Math.max(1, minLinks);
+      let minWhy = null;
+      if(activeCount > 0 && !up){
+        minWhy = "minimum-links " + minLinks + " not met (" + activeCount + " up)";
+        members.forEach(m => { if(m.state === "Collecting distributing"){ m.state = "Detached"; m.why = minWhy; } });
+      }
+      info[ae] = { members, up, lacp: aeCfg.lacp, minLinks, activeCount, minWhy };
     }
     NET.aeInfo[dev.id] = info;
   }
@@ -392,15 +412,58 @@ function computePoe(){
       for(const { ap } of list) POE.denied[ap.id] = (sw.model || "that platform") + " supplies no PoE";
       continue;
     }
-    list.sort((x, y) => String(x.port).localeCompare(String(y.port), undefined, { numeric: true }));
+    const poeCfg = cfgGet(sw.config, ["poe", "interface"]) || {};
+    const prioRank = { critical: 0, high: 1, low: 3 };
+    for(let i = list.length - 1; i >= 0; i--){
+      const pc = poeCfg[list[i].port];
+      if(pc && pc.disable){
+        POE.denied[list[i].ap.id] = "PoE is administratively disabled on " + list[i].port;
+        list.splice(i, 1);
+      }
+    }
+    list.sort((x, y) => {
+      const px = poeCfg[x.port] && poeCfg[x.port].priority;
+      const py = poeCfg[y.port] && poeCfg[y.port].priority;
+      const rx = prioRank[[].concat(px || "none")[0]] !== undefined ? prioRank[[].concat(px)[0]] : 2;
+      const ry = prioRank[[].concat(py || "none")[0]] !== undefined ? prioRank[[].concat(py)[0]] : 2;
+      return rx - ry || String(x.port).localeCompare(String(y.port), undefined, { numeric: true });
+    });
     let used = 0;
-    for(const { ap } of list){
+    for(const { ap, port } of list){
       const draw = apPoeDraw(ap);
+      const pcap = poeCfg[port] && poeCfg[port]["maximum-power"];
+      const cap = pcap ? parseInt([].concat(pcap)[0], 10) : null;
+      if(cap !== null && draw > cap){
+        POE.denied[ap.id] = "needs " + draw + " W but the port is capped at " + cap + " W";
+        continue;
+      }
       if(used + draw <= budget) used += draw;
       else POE.denied[ap.id] = "PoE budget exceeded on " + sw.name + " (" + budget + " W)";
     }
     POE.used[swId] = used;
   }
+}
+function showAnalyzerCmd(dev){
+  const an = cfgGet(dev.config, ["forwarding-options", "analyzer"]) || {};
+  const names = Object.keys(an);
+  if(!names.length) return "(no analyzer configured \u2014 set forwarding-options analyzer <name> input ingress interface <port>)";
+  const out = [];
+  for(const n of names){
+    const a = an[n] || {};
+    const ing = cfgGet(a, ["input", "ingress", "interface"]) || [];
+    const egr = cfgGet(a, ["input", "egress", "interface"]) || [];
+    const dst = cfgGet(a, ["output", "interface"]);
+    const dstPort = dst ? [].concat(dst)[0] : null;
+    out.push("Analyzer name: " + n);
+    out.push("  Mirrored interfaces (ingress): " + ([].concat(ing).join(", ") || "none"));
+    out.push("  Mirrored interfaces (egress):  " + ([].concat(egr).join(", ") || "none"));
+    out.push("  Output interface:              " + (dstPort || "none \u2014 mirrored traffic has nowhere to go"));
+    if(dstPort && !dev.ports.some(p => p.id === dstPort))
+      out.push("  warning: output interface is not a port on this device");
+    if(dstPort && ([].concat(ing).includes(dstPort) || [].concat(egr).includes(dstPort)))
+      out.push("  warning: the output port is also being mirrored \u2014 that loops the copy back on itself");
+  }
+  return out.join("\n");
 }
 function showPoeCmd(dev){
   const budget = poeBudgetOf(dev);
@@ -412,12 +475,17 @@ function showPoeCmd(dev){
     const other = devices[(l.a.dev === dev.id ? l.b : l.a).dev];
     if(!other || other.type !== "ap") continue;
     const denied = POE.denied[other.id];
-    rows.push(String(me.port).padEnd(14) + "Enabled   " +
-      (denied ? "OFF (denied)  0.0W     " : "ON        " + apPoeDraw(other).toFixed(1) + "W    ") + other.name +
-      (other.cfg && other.cfg.injector ? "  (external injector)" : ""));
+    const pc = (cfgGet(dev.config, ["poe", "interface", me.port]) || {});
+    const admin = pc.disable ? "Disabled" : "Enabled ";
+    const prio = pc.priority ? [].concat(pc.priority)[0] : "low";
+    rows.push(String(me.port).padEnd(14) + admin + "  " +
+      (denied ? "OFF (denied)  0.0W     " : "ON        " + apPoeDraw(other).toFixed(1) + "W    ") +
+      String(prio).padEnd(9) + other.name +
+      (other.cfg && other.cfg.injector ? "  (external injector)" : "") +
+      (denied ? "   [" + denied + "]" : ""));
   }
   const used = POE.used[dev.id] || 0;
-  return "Interface     Admin     Oper          Power    Device\n" +
+  return "Interface     Admin     Oper          Power    Priority Device\n" +
     (rows.length ? rows.join("\n") : "(no powered devices on any port)") +
     "\n\nPoE budget: " + used.toFixed(1) + "W used of " + budget.toFixed(1) + "W";
 }
@@ -444,6 +512,7 @@ function rebuildAllDerived(){
   computePoe();
   computeNet();
   computeVrrp();
+  computeVc();
 
   // storm-control reaction: shutdown-profiles error-disable their port, then everything recomputes
   for(let round = 0; round < 3; round++){
@@ -693,7 +762,7 @@ function effSwitchPorts(sw){
   for(const p of sw.ports){
     const pc = d.portCfg[p.id];
     if(!pc || pc.disabled || sw.errDisabled[p.id] || pc.ae) continue;
-    out.push({ port: p.id, mode: pc.mode, vlanIds: pc.vlanIds });
+    out.push({ port: p.id, mode: pc.mode, vlanIds: pc.vlanIds, nativeVlan: pc.nativeVlan });
   }
   for(const [ae, aeCfg] of Object.entries(d.aes)){
     if(aeCfg.disabled) continue;
@@ -727,7 +796,8 @@ function l2Reach(seed){
         if(pi.mode === "trunk" && pi.vlanIds.includes(vlanId)) enterSwVlan(toDev, vlanId, newPath);
       } else {
         if(pi.mode === "access") enterSwVlan(toDev, pi.vlanIds[0], newPath);
-        // untagged into a trunk: dropped (no native vlan in this lab)
+        else if(pi.mode === "trunk" && pi.nativeVlan !== null && !isNaN(pi.nativeVlan) &&
+                pi.vlanIds.includes(pi.nativeVlan)) enterSwVlan(toDev, pi.nativeVlan, newPath);
       }
     } else if(toDev.type === "ap"){
       // an access point is a dumb untagged bridge between its wired uplink
@@ -765,7 +835,7 @@ function l2Reach(seed){
       if(p.mode === "access" && p.vlanIds[0] === vlanId)
         q.push(() => traverseEdge(sw.id, p.port, false, vlanId, path));
       else if(p.mode === "trunk" && p.vlanIds.includes(vlanId))
-        q.push(() => traverseEdge(sw.id, p.port, true, vlanId, path));
+        q.push(() => traverseEdge(sw.id, p.port, p.nativeVlan !== vlanId, vlanId, path));
     }
   }
 
@@ -863,6 +933,81 @@ function showVrrpCmd(dev){
   return rows.map(r => pad(r[0], 14) + pad(r[1], 8) + pad(r[2], 10) + pad(r[3], 10) + r[4]).join("\n") +
     "\n\n(master answers for the virtual address; backup takes over within seconds if the master's link fails)";
 }
+function computeVc(){
+  NET.vc = {};
+  const configured = Object.values(devices).filter(dv =>
+    dv.type === "switch" && dv.d && dv.d.vc && dv.d.vc.members.length);
+  if(!configured.length) return;
+  const seen = new Set();
+  for(const start of configured){
+    if(seen.has(start.id)) continue;
+    const group = [];
+    const queue = [start];
+    seen.add(start.id);
+    while(queue.length){
+      const cur = queue.shift();
+      group.push(cur);
+      for(const lid in links){
+        const l = links[lid];
+        let other = null;
+        if(l.a.dev === cur.id) other = devices[l.b.dev];
+        else if(l.b.dev === cur.id) other = devices[l.a.dev];
+        if(!other || seen.has(other.id)) continue;
+        if(other.type !== "switch" || !other.d || !other.d.vc || !other.d.vc.members.length) continue;
+        if(NET.linkStatus[lid] !== "up") continue;
+        seen.add(other.id);
+        queue.push(other);
+      }
+    }
+    if(group.length < 2) continue;
+    const slots = [];
+    group.forEach((dv, idx) => {
+      const declared = dv.d.vc.members[Math.min(idx, dv.d.vc.members.length - 1)];
+      slots.push({ dev: dv, id: declared ? declared.id : idx, role: declared ? declared.role : "line-card" });
+    });
+    slots.sort((a, b) => a.id - b.id);
+    const reCapable = slots.filter(sl => sl.role === "routing-engine");
+    const master = (reCapable[0] || slots[0]).dev.id;
+    const backup = reCapable.length > 1 ? reCapable[1].dev.id : null;
+    const vcid = "vc:" + group.map(dv => dv.id).sort().join("+");
+    for(const sl of slots){
+      NET.vc[sl.dev.id] = {
+        vcid, memberId: sl.id, role: sl.role,
+        state: sl.dev.id === master ? "master" : (sl.dev.id === backup ? "backup" : "linecard"),
+        peers: group.filter(dv => dv.id !== sl.dev.id).map(dv => dv.id),
+        size: group.length,
+      };
+    }
+  }
+}
+function vcMasterOf(dev){
+  const info = NET.vc && NET.vc[dev.id];
+  if(!info) return null;
+  for(const id in NET.vc)
+    if(NET.vc[id].vcid === info.vcid && NET.vc[id].state === "master") return devices[id] || null;
+  return null;
+}
+function showVcCmd(dev){
+  const info = NET.vc && NET.vc[dev.id];
+  const d = D(dev);
+  if(!info){
+    if(d.vc && d.vc.members.length)
+      return "Virtual Chassis is configured on this member, but no other configured member is reachable.\n" +
+        "(a VC needs at least two configured switches with an up link between them)";
+    return "(virtual-chassis is not configured on this switch)";
+  }
+  const rows = [["Member", "Role", "State", "Switch"]];
+  const ids = Object.keys(NET.vc).filter(id => NET.vc[id].vcid === info.vcid)
+    .sort((a, b) => NET.vc[a].memberId - NET.vc[b].memberId);
+  for(const id of ids){
+    const v = NET.vc[id];
+    rows.push([String(v.memberId), v.role, v.state, hostnameOf(devices[id])]);
+  }
+  return "Virtual Chassis ID: " + info.vcid.replace("vc:", "") +
+    (d.vc && d.vc.preprovisioned ? "  (preprovisioned)" : "") + "\n" +
+    rows.map(r => pad(r[0], 9) + pad(r[1], 17) + pad(r[2], 11) + r[3]).join("\n") +
+    "\n\n" + info.size + " members act as ONE logical switch \u2014 configure the master, and the whole VC follows.";
+}
 function computeVrrp(){
   NET.vrrp = {};
   const groups = new Map();
@@ -911,7 +1056,6 @@ function isVrrpVip(dev, ip){
   return false;
 }
 function ecmpHash(dev, dstIp, n){
-  // Real Junos hashes the flow (src/dst) so a given flow stays on one path.
   let h = 0;
   const key = (dev.id || "") + "|" + dstIp;
   for(let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
@@ -932,7 +1076,6 @@ function routeLookup(dev, dstIp){
   if(cands.length){
     cands.sort((a, b) => b.bits - a.bits || a.pref - b.pref);
     const best = cands[0];
-    // ECMP: equal prefix length AND equal preference = equal-cost paths sharing the load
     const equals = cands.filter(c => c.bits === best.bits && c.pref === best.pref && c.nh !== best.nh);
     if(equals.length){
       const set = [best, ...equals];
@@ -996,7 +1139,6 @@ function pingWalk(startDev, pkt0, opts){
       const ent = opts.natTable.find(en => en.devId === node.id && en.natIp === pkt.dst);
       if(ent) pkt = { ...pkt, dst: ent.orig };
     }
-    // does this node own the destination? (a VRRP master also answers for the virtual address)
     const own = ifacesOf(node).find(i => i.ip === pkt.dst);
     if(own) return { ok: true, hops, segs, deliveredDev: node };
     if((node.type === "router" || node.type === "switch") && isVrrpVip(node, pkt.dst))
@@ -1053,7 +1195,6 @@ function pingWalk(startDev, pkt0, opts){
     const found = r.type === "peer"
       ? l3eps.find(e => e.ip !== r.iface.ip && sameSubnet(e.ip, r.iface.ip, r.iface.bits))
       : (l3eps.find(e => e.ip === targetIp) ||
-         // VRRP: the elected master answers ARP for the virtual address
          l3eps.find(e => e.dev && isVrrpVip(e.dev, targetIp)));
     if(!found){
       const what = r.type === "connected" ? pkt.dst : r.type === "peer" ? "the provider-side peer" : `next-hop ${r.nh}`;
@@ -1453,6 +1594,92 @@ function showLogCmd(dev){
   const logl = dev.syslog || [];
   return logl.length ? logl.slice(-50).join("\n") : "(log is empty)";
 }
+function serialOf(dev){
+  var h = 0, k = String(dev.id);
+  for(var i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) >>> 0;
+  return (dev.type === "router" ? "JN" : "PE") + String(h % 1000000).padStart(6, "0");
+}
+function showChassisHardwareCmd(dev){
+  const model = dev.model || (dev.type === "switch" ? "EX4300-24T" : "MX204");
+  const n = dev.ports.length;
+  const ups = dev.ports.filter(p => p.role === "uplink");
+  const acc = n - ups.length;
+  const rows = [
+    ["Item", "Version", "Part number", "Serial number", "Description"],
+    ["Chassis", "", "", serialOf(dev), model],
+    ["Routing Engine 0", "REV 08", "650-000001", serialOf(dev) + "R", "RE-" + model],
+    ["FPC 0", "REV 12", "650-000002", serialOf(dev) + "F", acc + "x10/100/1000 Base-T"],
+    ["  PIC 0", "", "BUILTIN", "BUILTIN", acc + "x GE"],
+    ["Power Supply 0", "REV 03", "740-000003", serialOf(dev) + "P", "AC " + (dev.type === "router" ? "650W" : "350W")],
+    ["Fan Tray 0", "", "", "", "Fan Tray"],
+  ];
+  if(ups.length){
+    const kind = ups[0].id.split("-")[0];
+    const rate = kind === "et" ? "40G" : (kind === "xe" ? "10G" : "1G");
+    rows.splice(5, 0, ["  PIC 1", "", "BUILTIN", "BUILTIN", ups.length + "x " + rate + " uplink"]);
+  }
+  return rows.map(r => pad(r[0], 20) + pad(r[1], 9) + pad(r[2], 14) + pad(r[3], 15) + r[4]).join("\n");
+}
+function showOpticsCmd(dev, keys){
+  const port = keys && keys[2];
+  const ports = port ? dev.ports.filter(p => p.id === port) : dev.ports;
+  if(port && !ports.length) return "error: interface " + port + " not found on this device";
+  const out = [];
+  let shown = 0;
+  for(const p of ports){
+    const lid = Object.keys(links).find(k =>
+      (links[k].a.dev === dev.id && links[k].a.port === p.id) ||
+      (links[k].b.dev === dev.id && links[k].b.port === p.id));
+    if(!lid){
+      if(port) out.push("Physical interface: " + p.id + "\n  (no transceiver / no link \u2014 optical diagnostics unavailable)");
+      continue;
+    }
+    const l = links[lid];
+    const up = NET.linkStatus && (NET.linkStatus[lid] === "up" || NET.linkStatus[lid] === "oob");
+    const degraded = !!l.degraded;
+    const rx = degraded ? -12.8 : -5.2;
+    const tx = degraded ? -4.1 : -2.3;
+    out.push([
+      "Physical interface: " + p.id,
+      "  Laser bias current           :  " + (degraded ? "38.2" : "22.6") + " mA",
+      "  Laser output power           :  " + tx.toFixed(2) + " dBm",
+      "  Module temperature           :  " + (degraded ? "58" : "34") + " degrees C",
+      "  Receiver signal average power:  " + (up ? rx.toFixed(2) + " dBm" : "-40.00 dBm (no signal)"),
+      "  Rx power low warning         :  " + (degraded ? "On  \u2014 signal is marginal" : "Off"),
+      "  Module temperature high alarm:  " + (degraded ? "On" : "Off"),
+    ].join("\n"));
+    shown++;
+    if(!port && shown >= 8) break;
+  }
+  if(!out.length) return "(no cabled interfaces \u2014 optical diagnostics need a link)";
+  return out.join("\n\n");
+}
+function showChassisAlarmsCmd(dev){
+  const alarms = [];
+  const t = (typeof THERMAL !== "undefined" && THERMAL.devices[dev.id]) || 21;
+  if(t >= 45) alarms.push(["Major", "Chassis temperature too high (" + t.toFixed(1) + " C)"]);
+  else if(t >= 35) alarms.push(["Minor", "Chassis temperature elevated (" + t.toFixed(1) + " C)"]);
+  for(const pid in (dev.errDisabled || {}))
+    alarms.push(["Major", pid + " error-disabled"]);
+  for(const lid in links){
+    const l = links[lid];
+    const mine = (l.a.dev === dev.id && l.a.port) || (l.b.dev === dev.id && l.b.port);
+    if(mine && l.degraded) alarms.push(["Minor", mine + " receive errors \u2014 check cable or optic"]);
+  }
+  const d = D(dev);
+  for(const p in (d.portCfg || {}))
+    if(d.portCfg[p].disabled) alarms.push(["Minor", p + " administratively disabled"]);
+  if(typeof strictOn === "function" && strictOn() && dev.type === "switch"){
+    const cap = chassisAeCount(dev);
+    for(const ae in (d.aes || {}))
+      if(parseInt(ae.replace("ae", ""), 10) >= cap)
+        alarms.push(["Minor", ae + " configured but chassis aggregated-devices not set"]);
+  }
+  if(!alarms.length) return "No alarms currently active";
+  return alarms.length + " alarm" + (alarms.length === 1 ? "" : "s") + " currently active\n" +
+    pad("Class", 8) + "Description\n" +
+    alarms.map(a => pad(a[0], 8) + a[1]).join("\n");
+}
 function showChassisEnvCmd(dev){
   const t = (typeof THERMAL !== "undefined" && THERMAL.devices[dev.id]) || 21;
   const st = t >= 45 ? "Too hot" : t >= 35 ? "Check" : "OK";
@@ -1577,9 +1804,82 @@ function showIfExtensive(dev, keys){
   }
   return out.join("\n");
 }
+function policyVerdict(dev, policyName, route){
+  const pol = cfgGet(dev.config, ["policy-options", "policy-statement", policyName]);
+  if(!pol) return { action: "none", term: null, why: "policy " + policyName + " is not defined" };
+  const terms = pol.term || {};
+  for(const tname of Object.keys(terms)){
+    const t = terms[tname] || {};
+    const from = t.from || {};
+    let matches = true;
+    if(from.protocol !== undefined){
+      const want = [].concat(from.protocol);
+      if(!want.includes(route.proto)) matches = false;
+    }
+    if(matches && from["route-filter"]){
+      const rf = from["route-filter"];
+      const keys = Object.keys(rf);
+      let hit = false;
+      for(const k of keys){
+        const p = parsePrefix(k);
+        if(!p) continue;
+        const mode = typeof rf[k] === "string" ? rf[k] : (rf[k] && rf[k].exact ? "exact" : "orlonger");
+        if(mode === "exact"){
+          if(p.ip === route.net && p.bits === route.bits) hit = true;
+        } else if(sameSubnet(route.net, p.ip, p.bits) && route.bits >= p.bits) hit = true;
+      }
+      if(!hit) matches = false;
+    }
+    if(!matches) continue;
+    const then = t.then;
+    const act = typeof then === "string" ? then : (then && then.accept ? "accept" : (then && then.reject ? "reject" : null));
+    if(act === "accept") return { action: "accept", term: tname, why: "term " + tname + " matched and accepts" };
+    if(act === "reject") return { action: "reject", term: tname, why: "term " + tname + " matched and rejects" };
+    return { action: "none", term: tname, why: "term " + tname + " matched but has no accept/reject" };
+  }
+  return { action: "reject", term: null, why: "no term matched \u2014 the implicit default at the end of a policy rejects" };
+}
+function advertisedRoutes(dev, neighbor){
+  const groups = cfgGet(dev.config, ["protocols", "bgp", "group"]) || {};
+  let policy = null, group = null;
+  for(const g in groups){
+    const nb = groups[g].neighbor;
+    const list = nb ? [].concat(nb) : [];
+    if(!neighbor || list.includes(neighbor)){ group = g; policy = groups[g].export; break; }
+  }
+  const d = D(dev);
+  const cands = [];
+  (d.routes || []).forEach(r => cands.push({ net: r.net, bits: r.bits, proto: "static" }));
+  (d.bgpRoutes || []).forEach(r => cands.push({ net: r.net, bits: r.bits, proto: "bgp" }));
+  (d.ospfRoutes || []).forEach(r => cands.push({ net: r.net, bits: r.bits, proto: "ospf" }));
+  const out = [];
+  for(const r of cands){
+    if(!policy){
+      if(r.proto === "bgp") out.push({ r, why: "default policy: BGP-learned routes are advertised" });
+      continue;
+    }
+    const v = policyVerdict(dev, [].concat(policy)[0], r);
+    if(v.action === "accept") out.push({ r, why: v.why });
+  }
+  return { group, policy: policy ? [].concat(policy)[0] : null, routes: out, cands };
+}
+function showAdvertisingCmd(dev, keys){
+  const neighbor = keys[keys.length - 1];
+  const res = advertisedRoutes(dev, neighbor);
+  if(!res.group) return "(no BGP group configured for " + neighbor + ")";
+  const head = "Advertising to " + neighbor + " (group " + res.group + ")" +
+    (res.policy ? ", export policy " + res.policy : ", no export policy \u2014 Junos defaults apply");
+  if(!res.routes.length)
+    return head + "\n\n(nothing is being advertised)\n" +
+      "Without an export policy, Junos advertises only BGP-learned routes \u2014 your statics and OSPF routes stay home.";
+  const rows = res.routes.map(x => pad(x.r.net + "/" + x.r.bits, 22) + pad(x.r.proto, 9) + x.why);
+  return head + "\n" + pad("Prefix", 22) + pad("Source", 9) + "Why\n" + rows.join("\n");
+}
 function showVersionCmd(dev){
   const model = dev.model || (dev.type === "switch" ? "ex4300-48t" : "mx204");
-  return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: 23.4R1.10 (JunOS Lab edition)`;
+  const prof = typeof profileFor === "function" ? profileFor(dev.model) : null;
+  const ver = (prof && prof.version) || "23.4R1.10";
+  return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: ${ver} (JunOS Lab edition)`;
 }
 function showConfigCmd(dev){
   return Object.keys(dev.config).length ? treeToText(dev.config) : "## Last commit: never\n## (factory-default — empty configuration)";
@@ -1613,6 +1913,7 @@ const OP_SPECS = {
     ["show ethernet-switching table", { help: "Learned MAC addresses", fn: showMacTable }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
     ["show system commit", { help: "Commit history — who committed when, rollback numbers", fn: showCommitHistCmd }],
+    ["show route advertising-protocol bgp <neighbor:ip>", { help: "What you are advertising to a peer, and which policy term decided it", fn: showAdvertisingCmd }],
     ["show vrrp", { help: "VRRP groups — who is master for each virtual address", fn: showVrrpCmd }],
     ["show interfaces statistics", { help: "Per-port packet counters and errors", fn: showIfStatsCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
@@ -1620,9 +1921,15 @@ const OP_SPECS = {
     ["show lacp interfaces", { help: "LACP bundle status", fn: showLacpCmd }],
     ["show ospf neighbor", { help: "OSPF adjacencies", fn: showOspfNbrCmd }],
     ["show chassis environment", { help: "Temperatures and fans", fn: showChassisEnvCmd }],
+    ["show chassis hardware", { help: "Inventory: model, serials, FPC/PIC, power supplies", fn: showChassisHardwareCmd }],
+    ["show virtual-chassis", { help: "VC members, roles and which one is master", fn: showVcCmd }],
+    ["show chassis alarms", { help: "Active chassis alarms \u2014 the first command on any incident", fn: showChassisAlarmsCmd }],
+    ["show interfaces diagnostics optics", { help: "Optical DOM readings \u2014 light levels, laser bias, temperature", fn: showOpticsCmd }],
+    ["show interfaces diagnostics optics <interface:physport>", { help: "Optical DOM readings for one port", fn: (dev, keys) => showOpticsCmd(dev, [null, null, keys[keys.length - 1]]) }],
     ["show dhcp server binding", { help: "Leases handed out by this device", fn: showDhcpBindingCmd }],
     ["show lldp neighbors", { help: "Who is cabled to which port — the cable-tracing tool", fn: showLldpCmd }],
     ["show poe interface", { help: "PoE power per port and the chassis budget", fn: showPoeCmd }],
+    ["show analyzer", { help: "Port mirroring \u2014 what is mirrored and where the copy goes", fn: showAnalyzerCmd }],
     ["show log messages", { help: "Recent system events (commits, link flaps, storms)", fn: showLogCmd }],
     ["show version", { help: "Software version", fn: showVersionCmd }],
     ["show system processes", { help: "The Junos daemons and what each one owns", fn: showProcessesCmd }],
@@ -1650,6 +1957,7 @@ const OP_SPECS = {
     ["show interfaces terse", { help: "Interface summary", fn: showTerse }],
     ["show route", { help: "Routing table", fn: showRouteCmd }],
     ["show system commit", { help: "Commit history — who committed when, rollback numbers", fn: showCommitHistCmd }],
+    ["show route advertising-protocol bgp <neighbor:ip>", { help: "What you are advertising to a peer, and which policy term decided it", fn: showAdvertisingCmd }],
     ["show vrrp", { help: "VRRP groups — who is master for each virtual address", fn: showVrrpCmd }],
     ["show interfaces statistics", { help: "Per-port packet counters and errors", fn: showIfStatsCmd }],
     ["show arp", { help: "ARP cache", fn: showArpCmd }],
@@ -1657,6 +1965,11 @@ const OP_SPECS = {
     ["show bgp summary", { help: "BGP neighbors and session state", fn: showBgpCmd }],
     ["show security nat source", { help: "Source NAT rules", fn: showNatCmd }],
     ["show chassis environment", { help: "Temperatures and fans", fn: showChassisEnvCmd }],
+    ["show chassis hardware", { help: "Inventory: model, serials, FPC/PIC, power supplies", fn: showChassisHardwareCmd }],
+    ["show virtual-chassis", { help: "VC members, roles and which one is master", fn: showVcCmd }],
+    ["show chassis alarms", { help: "Active chassis alarms \u2014 the first command on any incident", fn: showChassisAlarmsCmd }],
+    ["show interfaces diagnostics optics", { help: "Optical DOM readings \u2014 light levels, laser bias, temperature", fn: showOpticsCmd }],
+    ["show interfaces diagnostics optics <interface:physport>", { help: "Optical DOM readings for one port", fn: (dev, keys) => showOpticsCmd(dev, [null, null, keys[keys.length - 1]]) }],
     ["show dhcp server binding", { help: "Leases handed out by this device", fn: showDhcpBindingCmd }],
     ["show lldp neighbors", { help: "Who is cabled to which port — the cable-tracing tool", fn: showLldpCmd }],
     ["show log messages", { help: "Recent system events (commits, link flaps)", fn: showLogCmd }],
