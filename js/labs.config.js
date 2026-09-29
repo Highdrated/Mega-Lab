@@ -67,5 +67,14 @@ const LABS_CONFIG = [
     ring: "ring-outer",
     angle: 300,
     glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+  },
+    {
+    id: "codex",
+    name: "Codex",
+    tag: "Reference",
+    path: "labs/codex.html",
+    ring: "ring-inner",
+    angle: 20,
+    glyph: '<path d="M3 3h4a2 2 0 0 1 1 1v9a2 2 0 0 0-1-1H3z"/><path d="M13 3H9a2 2 0 0 0-1 1v9a2 2 0 0 1 1-1h4z"/>'
   }
 ];

@@ -49,7 +49,7 @@ for (const s of sectors) {
     btn.innerHTML = `
       <span class="idx">${String(lab.index + 1).padStart(2, "0")}</span>
       <span>
-        <span class="name">${esc(lab.name)}<span class="last">last</span></span>
+        <span class="name">${esc(lab.name)}<span class="last">last</span><span class="open-dot">open</span></span>
         <span class="tag">${RING_NAMES[lab.ring]} · ${bearing(lab)}</span>
       </span>
       <svg class="glyph" viewBox="0 0 16 16">${lab.glyph || ""}</svg>`;
@@ -243,8 +243,67 @@ function setLit(id, on) {
   }
 }
 
-const opened = $("opened"), stage = $("stage"), frame = $("labFrame");
-let launchTimers = [];
+const opened = $("opened"), stage = $("stage"), framesEl = $("frames"), tabsEl = $("tabs");
+const MAX_TABS = 6;
+const openTabs = [];
+let activeTab = null, launchTimers = [];
+
+function tabLab(id) { return labs.find((l) => l.id === id); }
+
+function syncOpenState() {
+  for (const row of document.querySelectorAll(".room")) row.classList.toggle("is-open", openTabs.some((t) => t.id === row.dataset.id));
+  $("openCount").textContent = openTabs.length;
+  $("backToTabs").hidden = !openTabs.length || stage.classList.contains("show");
+}
+
+function renderTabs() {
+  tabsEl.innerHTML = "";
+  for (const t of openTabs) {
+    const el = document.createElement("div");
+    el.className = "tab" + (t.id === activeTab ? " on" : "");
+    el.setAttribute("role", "tab");
+    el.setAttribute("aria-selected", t.id === activeTab ? "true" : "false");
+    const name = document.createElement("button");
+    name.className = "tab-name";
+    name.textContent = t.lab.name;
+    name.addEventListener("click", () => activate(t.id));
+    const x = document.createElement("button");
+    x.className = "tab-x";
+    x.setAttribute("aria-label", "Close " + t.lab.name);
+    x.textContent = "×";
+    x.addEventListener("click", (ev) => { ev.stopPropagation(); closeTab(t.id); });
+    el.append(name, x);
+    tabsEl.appendChild(el);
+  }
+  syncOpenState();
+}
+
+function activate(id) {
+  activeTab = id;
+  for (const t of openTabs) t.frame.classList.toggle("on", t.id === id);
+  stage.classList.add("show");
+  starfield.pause();
+  renderTabs();
+  lsSet("workshop-last", id);
+}
+
+function showMap() {
+  launchTimers.forEach(clearTimeout);
+  stage.classList.remove("show");
+  opened.classList.remove("show");
+  starfield.resume();
+  syncOpenState();
+}
+
+function closeTab(id) {
+  const i = openTabs.findIndex((t) => t.id === id);
+  if (i < 0) return;
+  openTabs[i].frame.remove();
+  openTabs.splice(i, 1);
+  if (!openTabs.length) { activeTab = null; showMap(); renderTabs(); return; }
+  if (activeTab === id) activate(openTabs[Math.min(i, openTabs.length - 1)].id);
+  else renderTabs();
+}
 
 function launch(lab) {
   if (!lab) return;
@@ -252,31 +311,40 @@ function launch(lab) {
   lsSet("workshop-last", lab.id);
   const docked = lsJson("workshop-docked"); docked[lab.id] = Date.now(); lsSet("workshop-docked", JSON.stringify(docked));
 
+  if (openTabs.some((t) => t.id === lab.id)) { activate(lab.id); return; }
+  if (openTabs.length >= MAX_TABS) { toast(`max ${MAX_TABS} labs open — close a tab first`); if (activeTab) activate(activeTab); return; }
+
+  const frame = document.createElement("iframe");
+  frame.title = lab.name;
+  frame.src = lab.path;
+  framesEl.appendChild(frame);
+  openTabs.push({ id: lab.id, lab, frame });
+
   $("openedTitle").textContent = lab.name;
   $("openedTag").textContent = lab.sector;
   $("openedState").textContent = "approaching";
   $("openedClamps").textContent = "aligning";
   opened.classList.add("show");
-  frame.src = lab.path;
 
   launchTimers.forEach(clearTimeout);
   launchTimers = [
     setTimeout(() => { $("openedClamps").textContent = "engaged"; $("openedState").textContent = "pressurising"; }, 700),
     setTimeout(() => {
       $("openedState").textContent = "docked";
-      stage.classList.add("show");
       opened.classList.remove("show");
-      starfield.pause();
+      activate(lab.id);
     }, 1400),
   ];
 }
 
-function release() {
+function abortDocking() {
   launchTimers.forEach(clearTimeout);
-  stage.classList.remove("show");
   opened.classList.remove("show");
-  frame.src = "about:blank";
-  starfield.resume();
+  const pending = openTabs[openTabs.length - 1];
+  if (pending && pending.id !== activeTab && !stage.classList.contains("show")) {
+    pending.frame.remove(); openTabs.pop();
+  }
+  renderTabs();
 }
 
 const lastOpened = lsGet("workshop-last");
@@ -304,8 +372,10 @@ for (const m of document.querySelectorAll(".marker")) {
   m.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); launch(labs.find((l) => l.id === id)); } });
 }
 
-$("backBtn").addEventListener("click", release);
-$("releaseBtn").addEventListener("click", release);
+$("backBtn").addEventListener("click", abortDocking);
+$("tabHome").addEventListener("click", showMap);
+$("tabAdd").addEventListener("click", showMap);
+$("backToTabs").addEventListener("click", () => { if (activeTab) activate(activeTab); });
 
 const search = $("search");
 function applyFilter() {
@@ -335,10 +405,8 @@ search.addEventListener("keydown", (e) => {
 });
 
 document.addEventListener("keydown", (e) => {
-  if (stage.classList.contains("show") || opened.classList.contains("show")) {
-    if (e.key === "Escape") release();
-    return;
-  }
+  if (opened.classList.contains("show")) { if (e.key === "Escape") abortDocking(); return; }
+  if (stage.classList.contains("show")) { if (e.key === "Escape") showMap(); return; }
   if (e.key === "/" && document.activeElement !== search) { e.preventDefault(); search.focus(); }
 });
 

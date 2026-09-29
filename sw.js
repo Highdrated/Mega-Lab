@@ -1,7 +1,7 @@
 /* Workshop service worker.
    Precaches the launcher; caches labs the first time they're opened.
    Network-first so updates from GitHub land when online; cache when offline. */
-const CACHE = "workshop-v3";
+const CACHE = "workshop-v4";
 const PRECACHE = [
   "./",
   "./index.html",

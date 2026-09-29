@@ -1,0 +1,1921 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7ebef">
+<title>Codex — Mega Lab Reference</title>
+<style>
+:root{
+  --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --rail: 268px;
+  --r: 3px;
+}
+html[data-theme="day"]{
+  --bg:#e7ebef; --panel:#f8f9fb; --sunk:#eef1f4; --ink:#151e27; --strong:#0a1118;
+  --muted:#5d6b79; --faint:#8a97a3; --line:#d4dae0; --hair:#e3e8ec;
+  --accent:#0d6a85; --accent-soft:#d8e8ed; --pin:#a96c2e;
+}
+html[data-theme="night"]{
+  --bg:#0e1419; --panel:#151c22; --sunk:#111920; --ink:#d9e2e8; --strong:#f1f6f9;
+  --muted:#8a9dab; --faint:#65788a; --line:#242f38; --hair:#1d262e;
+  --accent:#54c3dc; --accent-soft:#12303a; --pin:#d3924b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px);
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--accent-soft)}
+
+.top{
+  display:flex; align-items:center; gap:14px;
+  height:56px; padding:0 16px;
+  background:var(--panel); border-bottom:1px solid var(--line);
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+}
+.brand{display:flex;align-items:baseline;gap:9px;flex:none}
+.brand b{font-family:var(--serif);font-weight:600;font-size:20px;color:var(--strong)}
+.brand span{color:var(--faint);font-size:12px}
+.drawer-btn{display:none;padding:6px;border-radius:var(--r)}
+.search-wrap{flex:1;max-width:520px;position:relative;display:flex;align-items:center}
+.search-wrap > svg{position:absolute;left:10px;opacity:.5;pointer-events:none}
+#search{
+  width:100%; padding:8px 12px 8px 32px; font:inherit;
+  background:var(--sunk); color:var(--ink);
+  border:1px solid var(--line); border-radius:var(--r);
+}
+#search::placeholder{color:var(--faint)}
+.kbd{
+  position:absolute;right:8px;color:var(--faint);font-family:var(--mono);font-size:11px;
+  border:1px solid var(--line);border-radius:2px;padding:1px 5px;pointer-events:none
+}
+#search:focus + .kbd{display:none}
+.top-tools{display:flex;gap:4px;margin-left:auto;flex:none}
+.tbtn{padding:7px 10px;border-radius:var(--r);color:var(--muted);display:flex;align-items:center;gap:6px;font-size:13px}
+.tbtn:hover{background:var(--sunk);color:var(--ink)}
+
+.shell{display:flex;min-height:calc(100vh - 56px);align-items:flex-start}
+
+.rail{
+  width:var(--rail); flex:none; position:sticky; top:56px;
+  height:calc(100vh - 56px); overflow-y:auto; overscroll-behavior:contain;
+  background:var(--panel); border-right:1px solid var(--line); padding:14px 0 40px;
+}
+.rail-label{font-size:11px;letter-spacing:.06em;color:var(--faint);padding:0 16px 8px}
+.vol{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:9px 16px;text-align:left;border-left:2px solid transparent;color:var(--muted);
+}
+.vol:hover{background:var(--sunk);color:var(--ink)}
+.vol[aria-current="true"]{border-left-color:var(--vc,var(--accent));color:var(--strong);background:var(--sunk)}
+.sigil{
+  width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:2px;
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  color:var(--vc);border:1px solid var(--vc);opacity:.85;
+}
+.vol-meta{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.vol-meta b{font-weight:600;font-size:14px}
+.vol-meta small{color:var(--faint);font-size:11.5px}
+.rail-sep{height:1px;background:var(--hair);margin:12px 16px}
+.jump{display:block;width:100%;text-align:left;padding:5px 16px 5px 26px;color:var(--muted);font-size:13px}
+.jump:hover{color:var(--accent)}
+.jump.on{color:var(--strong);font-weight:600}
+
+.page{flex:1;min-width:0;padding:34px 40px 140px;max-width:1180px}
+.vol-head{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.vol-head h1{font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.1;color:var(--strong)}
+.vol-head p{color:var(--muted);margin-top:7px;max-width:62ch;font-size:14.5px}
+.vol-head .count{color:var(--faint);font-size:12.5px;font-family:var(--mono);margin-top:10px;display:block}
+
+.group{margin-bottom:34px;scroll-margin-top:78px}
+.group > h2{
+  font-size:13px;font-weight:600;color:var(--vc,var(--accent));letter-spacing:.03em;
+  padding-bottom:7px;margin-bottom:0;border-bottom:1px solid var(--hair);
+}
+.entry{border-bottom:1px solid var(--hair);background:var(--panel)}
+.entry.open{background:var(--sunk)}
+.head{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;
+  align-items:baseline;padding:11px 12px;cursor:pointer;
+}
+.head:hover .code{color:var(--accent)}
+.code{font-family:var(--mono);font-size:13.5px;color:var(--strong);word-break:break-word;grid-column:1}
+.gloss{color:var(--muted);font-size:13.5px;grid-column:1;max-width:74ch}
+.tools{grid-column:2;grid-row:1 / span 2;display:flex;gap:2px;align-self:center}
+.tools button{padding:6px;border-radius:var(--r);color:var(--faint);opacity:.5;display:grid;place-items:center}
+.entry:hover .tools button,.entry:focus-within .tools button{opacity:1}
+.tools button:hover{background:var(--bg);color:var(--ink)}
+.tools button.pinned{color:var(--pin);opacity:1}
+.note{display:none;padding:2px 12px 16px 12px}
+.entry.open .note{display:block}
+.note p{font-family:var(--serif);font-size:15.5px;line-height:1.62;color:var(--ink);max-width:66ch}
+.note pre{
+  font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);
+  background:var(--bg);border:1px solid var(--hair);border-left:2px solid var(--vc,var(--accent));
+  border-radius:var(--r);padding:10px 12px;margin-top:11px;overflow-x:auto;max-width:80ch;white-space:pre;
+}
+.hit-where{font-size:11.5px;color:var(--faint);font-family:var(--mono);padding:9px 12px 0;display:block}
+.empty{padding:56px 4px;max-width:52ch}
+.empty h2{font-family:var(--serif);font-size:22px;color:var(--strong);margin-bottom:8px}
+.empty p{color:var(--muted)}
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--strong);color:var(--panel);padding:8px 16px;border-radius:var(--r);
+  font-size:13px;z-index:80;opacity:0;pointer-events:none;transition:opacity .18s;
+}
+.toast.show{opacity:1}
+.scrim{display:none}
+
+.sec-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hair);padding-bottom:7px;margin-bottom:0}
+.sec-head h2{font-size:13px;font-weight:600;color:var(--vc,var(--accent));letter-spacing:.03em;border:none;padding:0;margin:0;flex:1}
+.sec-num{
+  font-family:var(--mono);font-size:11px;color:var(--faint);
+  border:1px solid var(--line);border-radius:2px;padding:1px 6px;flex:none;
+}
+.sec-num.done{color:var(--vc,var(--accent));border-color:var(--vc,var(--accent))}
+.readbtn{font-size:12px;color:var(--faint);padding:3px 8px;border:1px solid var(--line);border-radius:var(--r);flex:none}
+.readbtn:hover{color:var(--ink);border-color:var(--muted)}
+.readbtn.done{color:var(--vc,var(--accent));border-color:var(--vc,var(--accent))}
+.concept{padding:16px 12px 18px;background:var(--panel);border-bottom:1px solid var(--hair)}
+.concept p{font-family:var(--serif);font-size:16px;line-height:1.66;color:var(--ink);max-width:68ch}
+.concept pre{
+  font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--muted);
+  background:var(--bg);border:1px solid var(--hair);border-radius:var(--r);
+  padding:12px 14px;margin-top:14px;overflow-x:auto;max-width:80ch;white-space:pre;
+}
+.block{padding:14px 12px 16px;background:var(--panel);border-top:1px solid var(--hair)}
+.block h3{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.03em}
+.block ul{list-style:none;max-width:72ch}
+.block li{position:relative;padding-left:16px;margin-bottom:6px;font-size:14px;color:var(--ink)}
+.block li::before{content:"–";position:absolute;left:0;color:var(--vc,var(--accent))}
+.qa{max-width:70ch;margin-bottom:10px}
+.qa button{
+  text-align:left;font-size:14px;color:var(--ink);padding:8px 10px;width:100%;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--sunk);
+}
+.qa button:hover{border-color:var(--vc,var(--accent))}
+.qa p{
+  display:none;font-family:var(--serif);font-size:15px;line-height:1.6;
+  color:var(--muted);padding:9px 10px 2px;
+}
+.qa.open p{display:block}
+.sec-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px 12px 0}
+.sec-foot a,.sec-foot button{
+  font-size:13px;color:var(--muted);border:1px solid var(--line);
+  border-radius:var(--r);padding:6px 11px;text-decoration:none;display:inline-block;
+}
+.sec-foot a:hover,.sec-foot button:hover{color:var(--strong);border-color:var(--vc,var(--accent))}
+.sec-foot .next{color:var(--vc,var(--accent));border-color:var(--vc,var(--accent))}
+.bar{height:2px;background:var(--line);border-radius:2px;margin-top:4px;overflow:hidden;width:150px}
+.bar i{display:block;height:100%;background:var(--vc,var(--accent))}
+.resume{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--vc,var(--accent));
+  border-radius:var(--r);padding:12px 14px;margin-bottom:24px;
+}
+.resume span{font-size:14px;color:var(--muted);flex:1;min-width:220px}
+.resume b{color:var(--strong);font-weight:600}
+.resume button{font-size:13px;color:var(--vc,var(--accent));border:1px solid var(--vc,var(--accent));border-radius:var(--r);padding:6px 12px}
+.recipe{background:var(--panel);border-bottom:1px solid var(--hair);padding:16px 12px 18px;margin-bottom:0}
+.recipe h2{font-family:var(--serif);font-size:20px;color:var(--strong);font-weight:600;border:none;padding:0}
+.recipe > p{color:var(--muted);font-size:13.5px;margin:4px 0 14px;max-width:70ch}
+.step{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px 12px;margin-bottom:12px}
+.step .n{font-family:var(--mono);font-size:11px;color:var(--faint);padding-top:3px}
+.step code{
+  font-family:var(--mono);font-size:13px;color:var(--strong);white-space:pre-wrap;
+  background:var(--bg);border:1px solid var(--hair);border-left:2px solid var(--vc,var(--accent));
+  border-radius:var(--r);padding:7px 10px;display:block;
+}
+.step p{grid-column:2;font-size:13.5px;color:var(--muted);max-width:70ch}
+
+@media (max-width:900px){
+  .drawer-btn{display:grid;place-items:center}
+  .rail{
+    position:fixed;top:0;left:0;height:100%;z-index:60;
+    transform:translateX(-100%);transition:transform .22s ease;
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+  }
+  body.nav-open .rail{transform:none}
+  body.nav-open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50}
+  .page{padding:22px 16px 140px}
+  .vol-head h1{font-size:27px}
+  .brand span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  .top,.rail,.tools,.sec-foot,.readbtn,.resume{display:none}
+  .page{padding:0;max-width:none}
+  .note,.qa p{display:block!important}
+  .entry{break-inside:avoid}
+  body.print-one .group{display:none}
+  body.print-one .group.print-me{display:block}
+  body.print-one .vol-head{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="drawer-btn tbtn" id="drawerBtn" aria-label="Open volumes">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div class="brand"><b>Codex</b><span>Mega Lab reference</span></div>
+  <div class="search-wrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="search" type="search" placeholder="Search every volume" autocomplete="off" spellcheck="false">
+    <span class="kbd">/</span>
+  </div>
+  <div class="top-tools">
+    <button class="tbtn" id="pinBtn" title="Pinned entries">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
+      <span id="pinCount">0</span>
+    </button>
+    <button class="tbtn" id="themeBtn" title="Switch theme" aria-label="Switch theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main class="page" id="page"></main>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const DATA = [];
+DATA.push({
+id:"junos", sigil:"JN", name:"Junos", sub:"Switch CLI", color:"#b3673c",
+blurb:"EX-series command line, ELS dialect. Everything you type at a switch: modes, config, protocols, and the show commands that prove it worked.",
+groups:[
+{t:"Modes and navigation", e:[
+ {c:"cli", d:"Enter the Junos CLI from the shell prompt", n:"A % prompt means you are in the FreeBSD shell, not Junos. Type cli to get the > operational prompt. Typing exit from operational mode drops you back to the shell."},
+ {c:"configure", d:"Move from operational mode to configuration mode", n:"The prompt changes from > to #. Shared mode by default, so two people can edit at once and both see each other's uncommitted changes."},
+ {c:"configure exclusive", d:"Lock the candidate config so nobody else can edit", n:"Use it on a production switch during a change window. If someone else already holds the lock you are told who."},
+ {c:"edit interfaces ge-0/0/1", d:"Drop into a branch of the hierarchy", n:"Everything you type after this is relative to that branch, so you type fewer words and make fewer typos. up moves one level back, top returns to the root, exit leaves the branch."},
+ {c:"show | display set", d:"Show the config as flat set commands", n:"The default view is a curly-brace tree. This flattens it into the same set lines you would type, which is what you want when copying config between switches or into a change ticket.", x:"user@sw> show configuration interfaces ge-0/0/1 | display set"},
+ {c:"run show interfaces terse", d:"Run an operational command without leaving config mode", n:"run is the bridge from # back to >. Saves you committing or exiting just to check something."},
+ {c:"help reference ospf", d:"Open the built-in documentation for a statement", n:"help topic explains the concept, help reference explains the syntax. Useful when you are offline in a datacenter with no browser."}
+]},
+{t:"The commit workflow", e:[
+ {c:"show | compare", d:"Diff the candidate config against what is running", n:"The single most important habit in Junos. Lines with + are being added, lines with - removed. Read this before every commit, every time.", x:"[edit]\nuser@sw# show | compare\n[edit interfaces ge-0/0/1]\n+   description UPLINK-TO-CORE"},
+ {c:"commit check", d:"Validate the candidate without applying it", n:"Catches syntax and consistency errors (missing units, an ae bundle with no device-count) while the running config stays untouched."},
+ {c:"commit confirmed 5", d:"Commit, but roll back automatically in 5 minutes", n:"Your safety net for remote changes. If the change locks you out, the switch restores the previous config on its own. If it works, type commit again within the window to make it permanent."},
+ {c:"commit and-quit", d:"Apply the change and return to operational mode", n:"Common end-of-change shortcut. Add comment 'text' to label the commit in the log."},
+ {c:"rollback 1", d:"Load the previous committed config as the candidate", n:"rollback only loads it, it does not apply it. You still have to commit. The switch keeps 50 previous commits, rollback 0 is the current running config, so rollback 0 discards your uncommitted edits."},
+ {c:"show system commit", d:"List recent commits with user, time and comment", n:"Your audit trail. Pair it with commit comment so the list reads as a change log instead of a row of timestamps."},
+ {c:"request system configuration rescue save", d:"Save the current config as the rescue copy", n:"Do this once a switch is known-good. rollback rescue then brings that copy back no matter how deep the mess."},
+ {c:"load set terminal", d:"Paste a block of set commands into the candidate", n:"Paste your lines, then press Ctrl+D to finish. load merge and load override read from a file instead. Always follow with show | compare."}
+]},
+{t:"Interfaces", e:[
+ {c:"set interfaces ge-0/0/1 description UPLINK-CORE", d:"Label a port", n:"Free text, no spaces unless you quote it. Descriptions appear in show interfaces descriptions and save you tracing cables later."},
+ {c:"set interfaces ge-0/0/1 unit 0 family ethernet-switching", d:"Make the port a switch port", n:"Unit 0 is the logical interface. family ethernet-switching means layer 2. family inet with an address would make it a routed port instead."},
+ {c:"set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode access", d:"Set an access port (ELS syntax)", n:"ELS is the dialect on EX4300 and newer. The old non-ELS word was port-mode, which will be rejected here. One untagged VLAN for one device.", x:"set interfaces ge-0/0/1 unit 0 family ethernet-switching interface-mode access\nset interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members SERVERS"},
+ {c:"set interfaces ge-0/0/2 unit 0 family ethernet-switching interface-mode trunk", d:"Set a trunk port carrying tagged VLANs", n:"Trunks go switch to switch, or to a hypervisor. Add vlan members per VLAN, or vlan members all. Untagged traffic on a trunk needs native-vlan-id."},
+ {c:"set interfaces ge-0/0/1 mtu 9216", d:"Raise the MTU for jumbo frames", n:"On EX the MTU is set on the physical interface and includes the Ethernet header. Every device in the path must agree or you get silent drops on large packets."},
+ {c:"set interfaces ge-0/0/9 disable", d:"Administratively shut a port", n:"Junos has no shutdown keyword. delete interfaces ge-0/0/9 disable brings it back up."},
+ {c:"set interfaces em0 unit 0 family inet address 10.0.0.9/24", d:"Address the out-of-band management port", n:"em0 (or me0/vme on a Virtual Chassis) lives in its own routing instance on many boxes, so it needs its own static route through the management gateway."}
+]},
+{t:"VLANs and switching", e:[
+ {c:"set vlans SERVERS vlan-id 10", d:"Create a VLAN with a name and a tag", n:"In ELS the VLAN name is the handle you use everywhere else. Numbers live only in the vlan-id statement.", x:"set vlans SERVERS vlan-id 10\nset vlans SERVERS description Customer-facing servers"},
+ {c:"set vlans SERVERS l3-interface irb.10", d:"Give the VLAN a gateway interface", n:"irb is the routed virtual interface for a VLAN. The unit number does not have to match the VLAN id, but make it match anyway so the config reads itself."},
+ {c:"set interfaces irb unit 10 family inet address 10.0.10.1/24", d:"Address the VLAN gateway", n:"This is the default gateway your servers in VLAN 10 will point at. The irb stays down until at least one access port in that VLAN is up."},
+ {c:"set vlans SERVERS vlan-id 10 vlan-id-list 10-20", d:"Create a range of VLANs at once", n:"A shortcut for building lab or customer ranges. Each id gets its own VLAN named with the range prefix."},
+ {c:"set interfaces ge-0/0/2 unit 0 family ethernet-switching native-vlan-id 99", d:"Set the untagged VLAN on a trunk", n:"Frames arriving untagged on the trunk land in VLAN 99. Mismatched native VLANs between two switches are a classic silent misconfiguration."},
+ {c:"show ethernet-switching table", d:"See which MAC addresses are learned where", n:"Your first stop for 'is the server actually plugged in'. Add vlan SERVERS to narrow it, or interface ge-0/0/1 to check one port."}
+]},
+{t:"Link aggregation and LACP", e:[
+ {c:"set chassis aggregated-devices ethernet device-count 4", d:"Reserve ae interfaces before you can use them", n:"Nothing works without this. The count is how many ae bundles exist (ae0 to ae3), not how many members each has. Forgetting it is the most common LAG mistake."},
+ {c:"set interfaces ge-0/0/1 ether-options 802.3ad ae0", d:"Add a physical port to a bundle", n:"The member port must have no family statements of its own. All configuration (VLANs, mode, MTU) moves to ae0."},
+ {c:"set interfaces ae0 aggregated-ether-options lacp active", d:"Turn on LACP negotiation", n:"Active sends LACP packets, passive only answers. At least one side must be active. Both passive means the bundle never forms.", x:"set interfaces ae0 aggregated-ether-options lacp active\nset interfaces ae0 aggregated-ether-options lacp periodic fast\nset interfaces ae0 unit 0 family ethernet-switching interface-mode trunk"},
+ {c:"show lacp interfaces ae0", d:"Check the bundle negotiated", n:"You want Collecting and Distributing on both sides. Defaulted or Expired means the far end is not talking LACP, usually because it is static or misconfigured."}
+]},
+{t:"Virtual Chassis", e:[
+ {c:"show virtual-chassis", d:"See members, roles and neighbour IDs", n:"Roles are Master, Backup and Linecard. Prsnt means the member is up. This is the command you run first when a stack behaves oddly."},
+ {c:"request virtual-chassis vc-port set pic-slot 1 port 0", d:"Convert an uplink port into a VC port", n:"Run it on the member you are cabling, in operational mode. Dedicated VC ports on the rear need no conversion."},
+ {c:"set virtual-chassis preprovisioned", d:"Pin roles to serial numbers", n:"Preprovisioning stops the stack from electing a different master after a reboot. You list each member's serial and role explicitly.", x:"set virtual-chassis preprovisioned\nset virtual-chassis member 0 role routing-engine serial-number PE3714120001\nset virtual-chassis member 1 role line-card serial-number PE3714120002"},
+ {c:"show virtual-chassis vc-port statistics", d:"Check VC link health and errors", n:"Rising errors on a VC port mean a bad cable or optic, and show up as members flapping in and out of the stack."}
+]},
+{t:"Spanning tree and port protection", e:[
+ {c:"set protocols rstp bridge-priority 4096", d:"Influence which switch becomes root", n:"Lower wins, in steps of 4096. Set the core switch low on purpose rather than letting the lowest MAC address decide for you."},
+ {c:"set protocols rstp interface ge-0/0/1 edge", d:"Mark an access port as an edge port", n:"Edge ports go to forwarding immediately instead of waiting through listening and learning. Only ever on ports facing hosts, never switches."},
+ {c:"set protocols rstp bpdu-block-on-edge", d:"Shut down an edge port that receives BPDUs", n:"Protection against someone plugging a switch into a desk port. The port is disabled until you clear it."},
+ {c:"show spanning-tree bridge", d:"See the root bridge and this switch's role", n:"Confirms whether your priority change actually took effect. show spanning-tree interface shows per-port state and cost."},
+ {c:"set forwarding-options storm-control-profiles SC all bandwidth-percentage 5", d:"Cap broadcast and unknown traffic per port", n:"Applied with storm-control SC under the port's ethernet-switching family. It limits a broadcast storm to a slice of the link instead of the whole thing.", x:"set forwarding-options storm-control-profiles SC all bandwidth-percentage 5\nset interfaces ge-0/0/1 unit 0 family ethernet-switching storm-control SC"}
+]},
+{t:"Routing", e:[
+ {c:"set routing-options static route 0.0.0.0/0 next-hop 10.0.0.1", d:"Add a default route", n:"On a switch this is often all the routing you need. Check it landed with show route 0.0.0.0/0."},
+ {c:"set routing-options autonomous-system 65001", d:"Set the local AS number before configuring BGP", n:"BGP will not commit without it. Private AS range is 64512 to 65534."},
+ {c:"set protocols ospf area 0.0.0.0 interface irb.10", d:"Run OSPF on an interface", n:"Area 0 is the backbone and every other area must touch it. Junos enables OSPF per interface, not per network statement.", x:"set protocols ospf area 0.0.0.0 interface irb.10\nset protocols ospf area 0.0.0.0 interface lo0.0 passive"},
+ {c:"set protocols ospf area 0.0.0.0 interface irb.20 passive", d:"Advertise a subnet without forming neighbours there", n:"Use it on user-facing VLANs. The prefix still gets advertised but the switch stops sending hellos where no router lives."},
+ {c:"show ospf neighbor", d:"Check adjacencies", n:"Full is what you want. Stuck in ExStart usually means an MTU mismatch, stuck in Init means hellos are only going one way. Mismatched area, timers or subnet mask means no neighbour at all."},
+ {c:"set protocols bgp group EXT type external peer-as 65002", d:"Define an external BGP peer group", n:"Group first, then neighbours inside it. type internal is for peers in your own AS.", x:"set protocols bgp group EXT type external\nset protocols bgp group EXT peer-as 65002\nset protocols bgp group EXT neighbor 192.0.2.2"},
+ {c:"show bgp summary", d:"Check peer state and prefix counts", n:"State Establ means the session is up and the number after it is prefixes received. Active means it is trying and failing, usually reachability or a wrong peer-as."},
+ {c:"show route 10.0.10.0/24 detail", d:"Inspect how a prefix was learned", n:"Shows protocol, preference and next hop. Junos calls administrative distance preference: direct 0, static 5, OSPF internal 10, BGP external 170."}
+]},
+{t:"Gateway redundancy", e:[
+ {c:"set interfaces irb unit 10 family inet address 10.0.10.2/24 vrrp-group 10 virtual-address 10.0.10.1", d:"Share a virtual gateway IP between two switches", n:"Each switch keeps its own real address and both answer for the virtual one. Servers point at the virtual address and never notice a failover.", x:"set interfaces irb unit 10 family inet address 10.0.10.2/24 vrrp-group 10 virtual-address 10.0.10.1\nset interfaces irb unit 10 family inet address 10.0.10.2/24 vrrp-group 10 priority 200"},
+ {c:"set interfaces irb unit 10 family inet address 10.0.10.2/24 vrrp-group 10 priority 200", d:"Decide which switch is master", n:"Higher wins, default 100. Set the primary explicitly so failback is predictable. Add preempt or no-preempt to control whether it takes the role back after recovering."},
+ {c:"show vrrp", d:"See master and backup state per group", n:"Both sides reporting master means they cannot hear each other, usually a VLAN missing from the trunk between them."}
+]},
+{t:"DHCP", e:[
+ {c:"set forwarding-options dhcp-relay server-group DC 10.0.1.5", d:"Relay client DHCP requests to a central server", n:"The switch forwards broadcasts from the VLAN to the server's unicast address. Without a relay, DHCP stops at the VLAN boundary.", x:"set forwarding-options dhcp-relay server-group DC 10.0.1.5\nset forwarding-options dhcp-relay group CLIENTS interface irb.10"},
+ {c:"set system services dhcp-local-server group LAB interface irb.10", d:"Let the switch itself hand out addresses", n:"Handy in a lab. It needs an address pool under access address-assignment to draw from."},
+ {c:"show dhcp relay binding", d:"See which clients got which lease through the relay", n:"Empty bindings with clients complaining points at the relay group missing the right irb interface."}
+]},
+{t:"Firewall filters and policy", e:[
+ {c:"set firewall family inet filter MGMT term ALLOW from source-address 10.0.0.0/24", d:"Match traffic in a filter term", n:"Filters are ordered lists of terms, each with from (match) and then (action). Terms are evaluated top down and the first match wins."},
+ {c:"set firewall family inet filter MGMT term ALLOW then accept", d:"Act on a matched term", n:"Common actions are accept, discard, reject, count and log. discard drops silently, reject sends an ICMP message back."},
+ {c:"set firewall family inet filter MGMT term DENY-ALL then discard", d:"Close the list with an explicit deny", n:"There is an implicit discard at the end of every filter, but writing it out means you can attach a count and actually see what is being dropped."},
+ {c:"set interfaces irb.10 family inet filter input MGMT", d:"Apply the filter to an interface", n:"input is traffic arriving, output is traffic leaving. A filter that is configured but not applied does nothing at all, which is an easy hour to lose."},
+ {c:"set policy-options policy-statement EXPORT-LAN term 1 then accept", d:"Build a routing policy", n:"Policies control what routing protocols advertise and accept, filters control data traffic. Different tools, similar shape."}
+]},
+{t:"Verify and troubleshoot", e:[
+ {c:"show interfaces terse", d:"One line per interface: admin state, link state, address", n:"The fastest whole-switch overview. Add | match ge-0/0/1 to narrow, or | match down to find what is dark."},
+ {c:"show interfaces ge-0/0/1 extensive", d:"Full counters including errors and drops", n:"Pipe it with | match error to skip the wall of text. CRC errors point at cabling or an optic, input drops usually at congestion."},
+ {c:"show lldp neighbors", d:"See what is connected to each port", n:"Your cable map when you cannot be in the datacenter. Requires set protocols lldp interface all on both ends."},
+ {c:"show chassis hardware", d:"Model, serial numbers and installed modules", n:"Needed for support cases, licence checks and Virtual Chassis preprovisioning."},
+ {c:"show system alarms", d:"Current alarms with severity", n:"A red alarm on a new switch is often just a missing rescue config or an unused power supply."},
+ {c:"show log messages | last 40", d:"Read the tail of the system log", n:"Use | match interface-name to follow one port's flaps. monitor start messages streams it live, monitor stop ends it."},
+ {c:"monitor interface traffic", d:"Live per-second counters across interfaces", n:"Press f to freeze, q to quit. Good for spotting which port is actually moving traffic during an incident."},
+ {c:"show configuration | display set | match ge-0/0/1", d:"Find every line touching one interface", n:"The quickest way to audit a port when the config is thousands of lines long."}
+]},
+{t:"System, users and files", e:[
+ {c:"set system host-name SW-OOST1-ACCS4", d:"Name the switch", n:"The prompt updates on commit. Use a naming scheme that encodes site and role, because it ends up in every log line you will ever read."},
+ {c:"set system services ssh", d:"Enable SSH management access", n:"Junos ships with SSH off on some images. Pair it with root-authentication before you commit, or you will lock yourself out."},
+ {c:"set system login user kaatje class super-user authentication plain-text-password", d:"Create a login account", n:"Classes are read-only, operator, super-user or a custom one. The password is prompted for and stored hashed, never in plain text."},
+ {c:"set system ntp server 10.0.0.5", d:"Sync the clock", n:"Without NTP, log timestamps across switches do not line up and correlating an incident becomes guesswork."},
+ {c:"request system reboot at now", d:"Reboot the switch", n:"On a Virtual Chassis add member N to reboot one member only. request system halt stops it without restarting."},
+ {c:"file copy /var/tmp/backup.conf scp://user@10.0.0.9/backups/", d:"Move files off the switch", n:"Use it for config backups and log bundles. request support information gathers everything JTAC will ask for."}
+]}
+]});
+DATA.push({
+id:"python", sigil:"PY", name:"Python", sub:"Language and terminal", color:"#2f7a6f",
+blurb:"The working reference behind Pyle: syntax, the data types you reach for daily, and the terminal commands that run and manage it all.",
+groups:[
+{t:"Running Python", e:[
+ {c:"python3 script.py", d:"Run a script file", n:"On Windows the command is usually python or py. Add arguments after the filename and read them from sys.argv."},
+ {c:"python3", d:"Open the interactive shell (REPL)", n:"Type expressions and see results immediately. exit() or Ctrl+D leaves. Perfect for testing one line before putting it in a file."},
+ {c:"python3 -m http.server 8000", d:"Serve the current folder over HTTP", n:"A real web server in one line, for testing a static site. Visit localhost:8000. Ctrl+C stops it. Never use it in production."},
+ {c:"python3 -i script.py", d:"Run a script, then drop into the shell with its variables loaded", n:"Excellent for debugging: the script finishes and everything it created is still there to poke at."},
+ {c:"if __name__ == '__main__':", d:"Only run this part when the file is executed directly", n:"When another file imports yours, Python sets __name__ to the module name instead of '__main__', so this block stays quiet. It is how you keep a file usable as both a script and a library.", x:"def main():\n    print('doing the work')\n\nif __name__ == '__main__':\n    main()"},
+ {c:"print(value, sep=' ', end='\\n')", d:"Write to the screen", n:"print takes several values at once. end='' stops the newline, which is how you build a line piece by piece."}
+]},
+{t:"Variables and types", e:[
+ {c:"name = 'Kaatje'", d:"Assign a value to a name", n:"No declaration keyword and no type. The name is a label pointing at an object, and pointing it somewhere else later is fine."},
+ {c:"type(x)", d:"Ask what something is", n:"Returns the class: int, float, str, list, dict, bool, NoneType. Your first move whenever a value behaves strangely."},
+ {c:"int('42')  float('3.5')  str(42)", d:"Convert between types", n:"int and float are different types: 3 is not 3.0 in memory, and dividing with / always gives a float. int('3.5') raises an error because it will not guess whether you meant to round."},
+ {c:"x = None", d:"The explicit nothing value", n:"Not zero, not empty string. Test with is None, never == None. A function with no return statement returns None."},
+ {c:"True / False", d:"The two booleans", n:"Capitalised. Empty things (0, '', [], {}, None) count as false in a condition, everything else counts as true."},
+ {c:"a, b = b, a", d:"Swap or unpack several values at once", n:"The right side is built first, so no temporary variable is needed. Works for any sequence: first, rest = items[0], items[1:]."}
+]},
+{t:"Strings", e:[
+ {c:"f'Hello {name}, you have {n} tickets'", d:"Format values into a string (f-string)", n:"The f prefix lets you drop any expression inside braces. f'{price:.2f}' rounds to two decimals, f'{name:>10}' pads to the right."},
+ {c:"len(s)", d:"Count the characters", n:"Works on any sequence: strings, lists, dicts, tuples."},
+ {c:"s.strip()", d:"Remove whitespace from both ends", n:"The fix for input that arrived with a trailing newline. lstrip and rstrip do one side only."},
+ {c:"s.split(',')", d:"Break a string into a list", n:"With no argument it splits on any whitespace. ','.join(parts) is the reverse.", x:"line = 'ge-0/0/1,up,trunk'\nport, state, mode = line.split(',')"},
+ {c:"s.replace('old', 'new')", d:"Swap every occurrence", n:"Strings are immutable, so this returns a new string. s.replace(...) on its own changes nothing unless you assign the result."},
+ {c:"s.lower()  s.upper()  s.title()", d:"Change case", n:"Lowercase both sides before comparing user input, otherwise 'Yes' and 'yes' are two different answers."},
+ {c:"'error' in line", d:"Test whether a substring is present", n:"in works on strings, lists, dicts (checks keys) and sets. s.startswith('set ') is the anchored version."}
+]},
+{t:"Numbers and math", e:[
+ {c:"7 / 2  ->  3.5", d:"True division always returns a float", n:"Even 4 / 2 gives 2.0. Use // when you want a whole number."},
+ {c:"7 // 2  ->  3", d:"Floor division, and 7 % 2 gives the remainder", n:"% is the modulo operator. n % 2 == 0 tests for even, and modulo is how you wrap around a compass or a clock."},
+ {c:"round(3.14159, 2)", d:"Round to a number of decimals", n:"For money, floats will eventually betray you: use the decimal module when exactness matters."},
+ {c:"import random; random.randint(1, 6)", d:"Random integer, both ends included", n:"random.choice(list) picks an item, random.shuffle(list) reorders in place. Never use random for anything security related, use secrets."}
+]},
+{t:"Lists", e:[
+ {c:"items = [1, 2, 3]", d:"An ordered, changeable sequence", n:"Indexed from 0. items[-1] is the last one, and mixing types in one list is legal but usually a sign the data wants a dict."},
+ {c:"items.append(x)", d:"Add one item to the end", n:"extend(other) adds every item of another list. append(other_list) would nest the whole list as a single item instead."},
+ {c:"items.insert(0, x)  items.pop()  items.remove(x)", d:"Insert, take off the end, delete by value", n:"pop() returns the item it removed, pop(0) takes from the front. remove raises ValueError if the value is not there."},
+ {c:"items[1:3]", d:"Slice out a section", n:"Start is included, end is not, so [1:3] gives two items. items[:] makes a shallow copy, items[::-1] reverses.", x:"ports = ['ge-0/0/0','ge-0/0/1','ge-0/0/2','ge-0/0/3']\nprint(ports[1:3])\nprint(ports[-1])"},
+ {c:"sorted(items)", d:"Return a new sorted list", n:"items.sort() sorts in place and returns None, which is a classic trap. Add reverse=True, or key=len to sort by a computed value."},
+ {c:"len(items)  sum(items)  max(items)", d:"Count, total, largest", n:"min, sum and max only work when the items are comparable to each other."},
+ {c:"for i, item in enumerate(items, start=1):", d:"Loop with a counter", n:"Cleaner than tracking an index yourself. zip(a, b) walks two lists side by side in the same way."}
+]},
+{t:"Dictionaries, sets and tuples", e:[
+ {c:"d = {'port': 'ge-0/0/1', 'vlan': 10}", d:"Key to value lookup", n:"Keys must be immutable (string, number, tuple). Since 3.7 dicts remember insertion order."},
+ {c:"d['vlan']", d:"Read a value by key", n:"Raises KeyError if the key is missing. d.get('vlan', 0) returns a fallback instead of blowing up, which is what you usually want."},
+ {c:"d['state'] = 'up'", d:"Add or overwrite a key", n:"Same syntax for both, so a typo in a key silently creates a new entry rather than erroring."},
+ {c:"for key, value in d.items():", d:"Loop over pairs", n:"d.keys() and d.values() give one side only. Looping over d itself gives the keys."},
+ {c:"unique = set(items)", d:"An unordered collection with no duplicates", n:"Fast membership tests and set maths: a & b is the overlap, a - b is what only a has. Deduplicating a list is list(set(items))."},
+ {c:"point = (10, 20)", d:"A tuple: ordered and unchangeable", n:"Use it for fixed groups like coordinates or a returned pair. Because it cannot change, a tuple can be a dict key."}
+]},
+{t:"Control flow", e:[
+ {c:"if x > 10:\n    ...\nelif x > 5:\n    ...\nelse:\n    ...", d:"Branch on a condition", n:"The colon opens the block and the indentation is the block. Four spaces, consistently, or Python refuses to run the file."},
+ {c:"for item in items:", d:"Loop over a sequence", n:"Python's for is a for-each. To repeat a fixed number of times use for i in range(5), which counts 0 to 4."},
+ {c:"while condition:", d:"Loop until something stops being true", n:"Something inside the loop has to change the condition, or it runs forever. Ctrl+C is your escape."},
+ {c:"break / continue", d:"Leave the loop, or skip to the next round", n:"break exits entirely, continue abandons just this iteration. A for loop can have an else block that runs only when no break happened."},
+ {c:"and  or  not", d:"Combine conditions", n:"Written as words, not && and ||. Chained comparisons work too: if 0 < x < 10."},
+ {c:"x = 'up' if link else 'down'", d:"Conditional expression", n:"A one-line if/else that produces a value. Fine for short choices, unreadable if you nest them."}
+]},
+{t:"Comprehensions", e:[
+ {c:"[x * 2 for x in items]", d:"Build a list from another sequence", n:"Reads as: the doubled value, for each item. Replaces three lines of append-in-a-loop with one.", x:"ports = ['ge-0/0/1','ge-0/0/2']\nnames = [p.upper() for p in ports]\nup = [p for p in ports if p.endswith('1')]"},
+ {c:"[x for x in items if x > 3]", d:"Filter while you build", n:"The if goes at the end. Add both a transform and a filter and you have most of what map and filter used to do."},
+ {c:"{k: v for k, v in pairs}", d:"Dict and set comprehensions", n:"Same shape with braces. {x for x in items} builds a set instead."}
+]},
+{t:"Functions", e:[
+ {c:"def greet(name):\n    return f'Hello {name}'", d:"Define a function", n:"Arguments go in the brackets, the body is indented, return hands a value back. Without return you get None."},
+ {c:"def greet(name, greeting='Hello'):", d:"Give an argument a default", n:"Defaults must come after non-default arguments. Never use a mutable default like [] because it is created once and shared between calls."},
+ {c:"greet(name='Kaatje')", d:"Call with keyword arguments", n:"Order stops mattering and the call site documents itself. Especially worth it for booleans: send(retry=True) beats send(True)."},
+ {c:"def total(*numbers):", d:"Accept any number of positional arguments", n:"numbers arrives as a tuple. **kwargs does the same for keyword arguments and arrives as a dict."},
+ {c:"def area(w: float, h: float) -> float:", d:"Type hints", n:"Python does not enforce them, but editors and mypy use them to catch mistakes before you run anything."},
+ {c:"'''Docstring on the first line of the function.'''", d:"Document what a function does", n:"Triple-quoted string as the first statement. help(function) prints it, and it is the difference between code you can come back to and code you cannot."}
+]},
+{t:"Classes", e:[
+ {c:"class Switch:", d:"Define a class", n:"A class is a template: it bundles data and the functions that work on that data. CapWords naming by convention."},
+ {c:"def __init__(self, name):\n    self.name = name", d:"The constructor", n:"Runs when you create an instance. self is the instance itself and is always the first parameter, though you never pass it when calling.", x:"class Switch:\n    def __init__(self, name, ports=48):\n        self.name = name\n        self.ports = ports\n\n    def describe(self):\n        return f'{self.name} with {self.ports} ports'\n\nsw = Switch('ACCS4')\nprint(sw.describe())"},
+ {c:"sw = Switch('ACCS4')", d:"Create an instance", n:"Calling the class runs __init__. Each instance carries its own attributes."},
+ {c:"def __str__(self):", d:"Control what print() shows", n:"Return a readable string. Without it you get the unhelpful default with a memory address in it."},
+ {c:"class Access(Switch):", d:"Inherit from another class", n:"Access gets everything Switch has and can override any of it. super().__init__(...) calls the parent version."}
+]},
+{t:"Errors", e:[
+ {c:"try:\n    ...\nexcept ValueError as e:\n    ...", d:"Catch a specific error", n:"Name the exception type you expect. A bare except swallows everything including your own typos and Ctrl+C."},
+ {c:"finally:", d:"Run cleanup whether it failed or not", n:"else runs only when no exception happened, finally runs always. Closing things belongs here, or better, in a with block."},
+ {c:"raise ValueError('vlan id must be 1-4094')", d:"Throw your own error", n:"Fail loudly and early with a message that says what was expected. Silent wrong answers cost far more time than crashes."},
+ {c:"Traceback (most recent call last)", d:"How to read a traceback", n:"Read it bottom up: the last line is the error type and message, the lines above are the call chain, and the deepest file you recognise as your own is usually where the mistake is."}
+]},
+{t:"Files", e:[
+ {c:"with open('data.txt') as f:", d:"Open a file and close it automatically", n:"The with block closes the file even if an error happens inside. Always prefer it to a bare open().", x:"with open('ports.txt') as f:\n    for line in f:\n        print(line.strip())"},
+ {c:"open('log.txt', 'w')", d:"Modes: r read, w overwrite, a append", n:"w truncates the file the moment it opens, with no warning. Use a when you mean to add to it."},
+ {c:"f.read()  f.readlines()  for line in f", d:"Three ways to get the content", n:"read() gives one big string, readlines() a list, and looping over the file streams it line by line without loading it all into memory."},
+ {c:"import json; json.load(f) / json.dump(obj, f)", d:"Read and write JSON", n:"json.loads and json.dumps work on strings instead of files. dump with indent=2 makes it human readable."}
+]},
+{t:"Modules and the standard library", e:[
+ {c:"import os", d:"Import a whole module", n:"You then use os.path.join(...). Keep imports at the top of the file, standard library first, then third party, then your own."},
+ {c:"from pathlib import Path", d:"Import one name from a module", n:"Shorter to use but easier to collide with your own names. Avoid from module import * entirely."},
+ {c:"import numpy as np", d:"Import under a shorter alias", n:"Only use aliases the community already knows, otherwise your code stops being readable to anyone else."},
+ {c:"from pathlib import Path; Path('logs/app.log')", d:"Modern path handling", n:"Path objects join with /, and carry .exists(), .read_text() and .mkdir(parents=True). Cleaner than stitching strings with os.path."},
+ {c:"import sys; sys.argv", d:"Command-line arguments", n:"sys.argv[0] is the script name, the rest are what the user typed. argparse turns that into a real CLI with flags and help text."},
+ {c:"import datetime; datetime.datetime.now()", d:"Dates and times", n:"strftime('%Y-%m-%d') formats one, strptime parses one. Store timestamps in UTC and convert only when displaying."}
+]},
+{t:"Environments and tooling", e:[
+ {c:"python3 -m venv .venv", d:"Create an isolated environment for a project", n:"Keeps each project's packages separate, so upgrading one project cannot break another. The folder is disposable, delete and recreate it freely."},
+ {c:"source .venv/bin/activate", d:"Activate the environment", n:"Your prompt gains a (.venv) prefix. On Windows it is .venv\\Scripts\\activate. deactivate leaves it."},
+ {c:"pip install requests", d:"Install a package", n:"Install inside an activated venv, not system-wide. pip install -r requirements.txt installs everything a project declares."},
+ {c:"pip freeze > requirements.txt", d:"Record exactly what is installed", n:"Commit that file so the environment can be rebuilt on another machine, or next year."},
+ {c:"python3 -m pdb script.py", d:"Step through code in the debugger", n:"Or drop breakpoint() into the code and run normally. n steps over, s steps in, c continues, p prints a variable."}
+]}
+]});
+DATA.push({
+id:"web", sigil:"HC", name:"HTML & CSS", sub:"Structure and style", color:"#7a5aa6",
+blurb:"The Style lab in reference form: the tags that build a page, the selectors that reach them, and the layout systems that arrange them.",
+groups:[
+{t:"Page skeleton", e:[
+ {c:"<!DOCTYPE html>", d:"First line of every page", n:"Tells the browser to use standards mode. Leave it out and you get quirks mode, where old broken layout rules apply and nothing behaves.", x:"<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Page title</title>\n</head>\n<body>\n</body>\n</html>"},
+ {c:"<html lang=\"en\">", d:"Wraps the whole document and declares the language", n:"Screen readers use lang to pick a voice, and browsers use it for hyphenation and spellcheck."},
+ {c:"<meta charset=\"UTF-8\">", d:"Character encoding, first thing in the head", n:"Without it accented characters and symbols turn into mojibake. It must appear within the first 1024 bytes of the document."},
+ {c:"<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">", d:"Make the page respect the device width", n:"Missing this is why a page looks zoomed out and tiny on a phone: mobile browsers otherwise pretend to be 980px wide."},
+ {c:"<head> vs <body>", d:"Instructions versus content", n:"head holds metadata, title, stylesheets and scripts. body holds everything a visitor actually sees."}
+]},
+{t:"Text and structure", e:[
+ {c:"<h1> through <h6>", d:"Headings, in order of rank", n:"One h1 per page, and never skip a level for size reasons. Headings are the outline that screen readers and search engines navigate by. Use CSS if you want a smaller h2."},
+ {c:"<p>", d:"A paragraph of text", n:"Block level, so it stacks. Browsers add a default margin you will usually reset."},
+ {c:"<span> vs <div>", d:"Meaningless containers: inline versus block", n:"Reach for them only when no meaningful element fits. A div stacks and takes full width, a span flows inside a line of text."},
+ {c:"<strong>  <em>", d:"Importance and emphasis", n:"They carry meaning, unlike <b> and <i> which only look bold and italic. Screen readers change intonation for em."},
+ {c:"<header> <nav> <main> <section> <article> <footer>", d:"Landmark elements", n:"Same visual result as divs, but they tell assistive technology what each region is. One main per page."},
+ {c:"<br> and &nbsp;", d:"Line break and non-breaking space", n:"Both are typography of last resort. Space between blocks belongs in CSS margin, not in a stack of br tags."}
+]},
+{t:"Links, images and media", e:[
+ {c:"<a href=\"/about\">About</a>", d:"A link", n:"Link text should make sense alone: 'read the setup guide', not 'click here'. Add target=\"_blank\" plus rel=\"noopener\" to open a new tab."},
+ {c:"<img src=\"cat.jpg\" alt=\"Black cat asleep on a switch\">", d:"An image with a text alternative", n:"alt is required. Describe the meaning, not the file. For purely decorative images use alt=\"\" so screen readers skip it."},
+ {c:"<img width=\"800\" height=\"600\">", d:"Declare the intrinsic size", n:"Lets the browser reserve the space before the file loads, so the page stops jumping around as images arrive."},
+ {c:"<svg viewBox=\"0 0 24 24\">", d:"Inline vector graphics", n:"Inline SVG can be styled with CSS, including stroke=\"currentColor\" so an icon takes the text colour around it."},
+ {c:"<video controls src=\"clip.mp4\">", d:"Embed video", n:"controls shows the player UI. Add muted if you want autoplay to be allowed at all."}
+]},
+{t:"Lists and tables", e:[
+ {c:"<ul> <li>", d:"Unordered list", n:"Use ol when the order carries meaning. li elements may only live directly inside ul, ol or menu."},
+ {c:"<dl> <dt> <dd>", d:"Description list: term and definition", n:"The right element for a glossary or a spec sheet of label and value pairs."},
+ {c:"<table> <thead> <tbody> <tr> <th> <td>", d:"A data table", n:"Only for tabular data, never for layout. th is a header cell and needs scope=\"col\" or scope=\"row\" so the relationship is announced."},
+ {c:"<caption>", d:"Table title, inside the table", n:"The accessible way to name a table. Visually styleable like anything else."}
+]},
+{t:"Forms", e:[
+ {c:"<form action=\"/save\" method=\"post\">", d:"Wrap inputs so they can be submitted", n:"get puts the data in the URL (searches), post sends it in the body (anything that changes state or is private)."},
+ {c:"<label for=\"email\">Email</label>\n<input id=\"email\" name=\"email\">", d:"Tie a label to its field", n:"for must match the input id. It makes the label clickable and tells screen readers what the field is. Every input needs one.", x:"<label for=\"site\">Site</label>\n<select id=\"site\" name=\"site\">\n  <option value=\"oost1\">Oostende</option>\n  <option value=\"okmp\">Oostkamp</option>\n</select>"},
+ {c:"<input type=\"email|number|date|password|checkbox\">", d:"The type picks the keyboard and the validation", n:"type=\"email\" gives a phone an @ key and free format checking. Correct types are the cheapest usability win in forms."},
+ {c:"name=\"field\"", d:"The key the server receives", n:"No name attribute means the value is never submitted, no matter how nice the field looks."},
+ {c:"required  placeholder  disabled  readonly", d:"Common input attributes", n:"placeholder is a hint, not a label, and disappears the moment someone types. disabled fields are not submitted, readonly ones are."},
+ {c:"<button type=\"submit\">Save changes</button>", d:"The submit control", n:"Inside a form a button defaults to type=\"submit\", which surprises people. Set type=\"button\" for anything that only runs JavaScript."}
+]},
+{t:"CSS syntax and selectors", e:[
+ {c:"selector { property: value; }", d:"The anatomy of a rule", n:"Selector picks the elements, the braces hold declarations, each declaration is property colon value semicolon. The whole thing is a rule set."},
+ {c:".card", d:"Class selector: reusable, many per page", n:"Your default tool. Elements can carry several classes separated by spaces."},
+ {c:"#main", d:"Id selector: unique, one per page", n:"Powerful specificity makes ids hard to override later. Use them as anchors and JavaScript hooks, style with classes."},
+ {c:".card p  vs  .card > p", d:"Descendant versus direct child", n:"A space means any depth below. The > means only immediate children, which stops styles leaking into nested components."},
+ {c:"a:hover  input:focus  li:nth-child(2n)", d:"Pseudo-classes: state and position", n:"They select based on a condition rather than markup. Always pair :hover styling with :focus-visible so keyboard users get the same signal."},
+ {c:".card::before { content: ''; }", d:"Pseudo-elements: generated boxes", n:"Two colons. They need a content property, even an empty one, to exist. Good for decorative marks you do not want in the HTML."}
+]},
+{t:"The cascade and specificity", e:[
+ {c:"style attribute > #id > .class > element", d:"Specificity ranking", n:"Scored as (inline, ids, classes, elements). A higher score wins regardless of order. Ties are broken by whichever rule comes last."},
+ {c:"!important", d:"Overrides everything in its layer", n:"A signal that specificity has gone wrong. Fixing the selector is almost always better than adding another important."},
+ {c:"inherit / initial / unset", d:"Explicit inheritance keywords", n:"Some properties inherit by default (colour, font), most do not (border, padding). These let you force either behaviour."},
+ {c:":root { --accent: #0d6a85; }", d:"Custom properties (CSS variables)", n:"Defined on a selector, read with var(--accent). Because they cascade, redefining them under a theme selector restyles a whole page at once.", x:":root { --accent: #0d6a85; }\n[data-theme=\"night\"] { --accent: #54c3dc; }\n.button { background: var(--accent); }"}
+]},
+{t:"The box model", e:[
+ {c:"box-sizing: border-box;", d:"Make width include padding and border", n:"Without it, adding padding makes a 300px box wider than 300px. Set it globally on * as the first rule of any stylesheet."},
+ {c:"margin: 12px 16px;", d:"Space outside the box", n:"Two values are vertical then horizontal, four go clockwise from the top. margin: 0 auto centres a block that has a width."},
+ {c:"padding: 12px;", d:"Space inside the box, within the background", n:"Padding grows the clickable area of a button, margin does not."},
+ {c:"Vertical margin collapse", d:"Adjacent top and bottom margins merge into the larger one", n:"Two stacked paragraphs with 20px margins sit 20px apart, not 40. Flex and grid containers do not collapse margins, which is one reason gap is easier to reason about."},
+ {c:"border: 1px solid var(--line);", d:"Width, style, colour in one line", n:"border-radius rounds the corners. outline draws outside the box without affecting layout, which is why focus rings use it."}
+]},
+{t:"Units, colour and text", e:[
+ {c:"px  rem  em  %", d:"Absolute and relative sizes", n:"rem is relative to the root font size and is the safe default for type and spacing. em compounds against the parent, which is useful inside a component and surprising everywhere else."},
+ {c:"vw / vh / dvh", d:"Viewport units", n:"100vh on mobile is taller than the visible area because of the browser bars. dvh tracks the real, changing height."},
+ {c:"color / background", d:"Foreground and background paint", n:"Accepts #hex, rgb(), hsl() and named colours. hsl is the one you can adjust by hand: same hue, different lightness gives a coherent palette."},
+ {c:"font-family: system-ui, sans-serif;", d:"A font stack with fallbacks", n:"The browser walks the list until it finds one it has. Always end with a generic family."},
+ {c:"line-height: 1.5;", d:"Space between lines", n:"Use a unitless number so it scales with the font size. Body text wants roughly 1.4 to 1.6, headings tighter."}
+]},
+{t:"Flexbox", e:[
+ {c:"display: flex;", d:"Lay children out in one direction", n:"The default direction is a row. Flex is for one dimension, grid for two.", x:".bar {\n  display: flex;\n  align-items: center;\n  justify-content: space-between;\n  gap: 12px;\n}"},
+ {c:"flex-direction: row | column;", d:"Choose the main axis", n:"Switching this swaps what justify-content and align-items control, which is the source of most flexbox confusion."},
+ {c:"justify-content: space-between;", d:"Distribute along the main axis", n:"flex-start, center, flex-end, space-between, space-around, space-evenly."},
+ {c:"align-items: center;", d:"Align across the cross axis", n:"With a row, this is the vertical centring people spend years looking for. stretch is the default."},
+ {c:"gap: 12px;", d:"Space between children", n:"Replaces margin hacks and never adds space on the outer edges. Works in flex and grid."},
+ {c:"flex: 1;", d:"Let a child take the remaining space", n:"Shorthand for grow 1, shrink 1, basis 0. flex: none keeps a child at its natural size, useful for icons and sidebars."}
+]},
+{t:"Grid", e:[
+ {c:"display: grid;", d:"Lay out in rows and columns at once", n:"Grid controls both dimensions from the parent, so children do not need widths."},
+ {c:"grid-template-columns: 200px 1fr;", d:"Define the columns", n:"fr is a fraction of the free space. 1fr next to 200px means a fixed sidebar and a flexible main area.", x:".layout {\n  display: grid;\n  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));\n  gap: 16px;\n}"},
+ {c:"repeat(auto-fit, minmax(240px, 1fr))", d:"Responsive columns with no media query", n:"Fit as many 240px-minimum columns as will go, then share the leftover space. One line replaces three breakpoints."},
+ {c:"grid-column: span 2;", d:"Make an item straddle columns", n:"Or name explicit lines: grid-column: 1 / 3 runs from line 1 to line 3."},
+ {c:"grid-template-areas", d:"Draw the layout as ASCII in CSS", n:"Name regions on children with grid-area, then sketch the arrangement in quoted strings. Rearranging for mobile becomes rewriting the sketch."},
+ {c:"place-items: center;", d:"Centre every item in both directions", n:"Shorthand for align-items and justify-items. On a grid parent, place-items: center is the shortest true centring in CSS."}
+]},
+{t:"Position, layers and flow", e:[
+ {c:"position: static | relative | absolute | fixed | sticky;", d:"How an element is placed", n:"static is the default flow. relative nudges from its own spot and creates a reference point. absolute is placed against the nearest positioned ancestor and leaves the flow."},
+ {c:"position: sticky; top: 0;", d:"Scroll with the page, then stick", n:"Needs an offset (top) to do anything, and fails silently if any ancestor has overflow: hidden."},
+ {c:"z-index: 10;", d:"Stacking order", n:"Only works on positioned elements, and only within the same stacking context. A parent with transform or opacity below 1 creates a new context, which is why a high z-index sometimes does nothing."},
+ {c:"overflow: auto | hidden | scroll;", d:"What happens to content that does not fit", n:"overflow-x: auto on a wide table or code block keeps the page itself from scrolling sideways."}
+]},
+{t:"Responsive and motion", e:[
+ {c:"@media (max-width: 900px) { ... }", d:"Apply rules below a width", n:"Set breakpoints where the layout actually breaks, not at device names. Mobile-first uses min-width and adds complexity as space appears."},
+ {c:"max-width: 100%;", d:"Stop images overflowing their container", n:"Pair with height: auto so the aspect ratio holds."},
+ {c:"clamp(1rem, 2.5vw, 1.5rem)", d:"A value with a floor, a preference and a ceiling", n:"Fluid type that never gets unreadably small or comically large, without a single media query."},
+ {c:"transition: background .18s ease;", d:"Animate a change in a property", n:"Put it on the base state, not inside :hover, so it plays both on and off. Name the property rather than using all."},
+ {c:"@media (prefers-reduced-motion: reduce)", d:"Respect people who turn motion off", n:"Wrap it around a rule that disables transitions and animations. It is one of the cheapest accessibility fixes there is."}
+]}
+]});
+DATA.push({
+id:"js", sigil:"JS", name:"JavaScript", sub:"Browser scripting", color:"#a8862c",
+blurb:"What Spelle teaches, written down: the language itself, then the browser half — reading the page, reacting to people, and talking to servers.",
+groups:[
+{t:"Basics", e:[
+ {c:"let count = 0;", d:"A variable you can reassign", n:"Block scoped, so it only exists inside the nearest braces. var is the old function-scoped version and is worth forgetting."},
+ {c:"const name = 'Kaatje';", d:"A binding you cannot reassign", n:"Default to const and only switch to let when you actually reassign. const on an object still lets you change what is inside it, it only locks the name."},
+ {c:"console.log(value)", d:"Print to the browser console", n:"console.table(arrayOfObjects) is far more readable for lists, and console.error shows a stack trace."},
+ {c:"typeof x", d:"Check a type", n:"Returns 'string', 'number', 'boolean', 'object', 'function', 'undefined'. typeof null returns 'object', a famous bug that can never be fixed."},
+ {c:"null vs undefined", d:"Deliberately empty versus never set", n:"undefined is what you get from a missing variable or a function with no return. null is a value you assign on purpose."}
+]},
+{t:"Numbers, strings and operators", e:[
+ {c:"`Hello ${name}, ${n} ports`", d:"Template literal", n:"Backticks let you interpolate expressions and write multi-line strings without concatenation."},
+ {c:"=== vs ==", d:"Strict versus loose equality", n:"=== compares value and type. == converts first, which is why '' == 0 is true. Always use === unless you have a specific reason."},
+ {c:"Number('42')  parseInt('42px')  String(42)", d:"Convert between types", n:"Number is strict and gives NaN on junk. parseInt reads until it hits a non-digit, so it survives '42px'."},
+ {c:"Math.floor(Math.random() * 6) + 1", d:"Random whole number in a range", n:"Math.random gives a float from 0 up to but not including 1. Multiply, floor, then shift."},
+ {c:"?? and ?.", d:"Nullish coalescing and optional chaining", n:"value ?? fallback uses the fallback only for null or undefined, unlike || which also fires on 0 and ''. user?.name returns undefined instead of throwing when user is missing."}
+]},
+{t:"Arrays", e:[
+ {c:"const items = [1, 2, 3];", d:"An ordered list", n:"items.length counts, items[0] reads the first, items.at(-1) reads the last."},
+ {c:"items.push(x) / items.pop()", d:"Add or remove at the end", n:"unshift and shift do the same at the start but are slower because everything reindexes."},
+ {c:"items.map(x => x * 2)", d:"Transform every item into a new array", n:"Returns a new array of the same length. The workhorse for turning data into HTML strings or objects.", x:"const ports = ['ge-0/0/1','ge-0/0/2'];\nconst rows = ports.map(p => `<li>${p}</li>`).join('');"},
+ {c:"items.filter(x => x > 2)", d:"Keep only the items that pass a test", n:"Returns a new, usually shorter array. Chain it before map to narrow first."},
+ {c:"items.find(x => x.id === 3)", d:"Get the first match, or undefined", n:"findIndex gives its position instead. some and every return booleans."},
+ {c:"items.forEach(x => ...)", d:"Run something for each item", n:"Returns nothing, so use it for side effects only. If you want a result back, you want map."},
+ {c:"items.reduce((acc, x) => acc + x, 0)", d:"Fold a list into a single value", n:"The accumulator carries between rounds and the last argument is its starting value. Sums, totals, grouping."}
+]},
+{t:"Objects", e:[
+ {c:"const sw = { name: 'ACCS4', ports: 48 };", d:"Key and value pairs", n:"Read with sw.name or sw['name']. The bracket form is for keys held in a variable."},
+ {c:"const { name, ports } = sw;", d:"Destructure into variables", n:"Pull several properties out in one line. Works on arrays too, with square brackets and by position."},
+ {c:"const copy = { ...sw, ports: 24 };", d:"Spread into a new object", n:"Copies the properties, then later keys override earlier ones. This is how you update state without mutating the original."},
+ {c:"Object.keys(o) / Object.values(o) / Object.entries(o)", d:"Turn an object into arrays", n:"entries gives [key, value] pairs, which you can then map or feed to a for...of loop."},
+ {c:"JSON.stringify(o, null, 2)", d:"Object to JSON text and back", n:"JSON.parse(text) reverses it. Functions and undefined are dropped by stringify, which surprises people."}
+]},
+{t:"Control flow", e:[
+ {c:"if (x > 10) { ... } else { ... }", d:"Branch on a condition", n:"Braces are optional for one statement but always write them. Empty string, 0, null, undefined and NaN are falsy."},
+ {c:"for (let i = 0; i < 5; i++)", d:"Classic counting loop", n:"Start, condition, step. Use it when you need the index or are walking backwards."},
+ {c:"for (const item of items)", d:"Loop over values", n:"for...of walks arrays and strings. for...in walks keys and will also pick up inherited ones, so avoid it for arrays."},
+ {c:"while (condition) { ... }", d:"Repeat until it stops being true", n:"Something inside must change the condition. In the browser an infinite loop freezes the whole tab."},
+ {c:"switch (value) { case 'a': ... break; }", d:"Match one value against many cases", n:"Forgetting break means execution falls through into the next case, which is occasionally useful and usually a bug."}
+]},
+{t:"Functions", e:[
+ {c:"function greet(name) { return `Hi ${name}`; }", d:"Declare a function", n:"Declarations are hoisted, so they can be called from above where they are written."},
+ {c:"const greet = (name) => `Hi ${name}`;", d:"Arrow function", n:"With no braces the expression is returned automatically. Arrows do not have their own this, which is exactly what you want inside callbacks."},
+ {c:"function tag(name, mode = 'access')", d:"Default parameter", n:"Used only when the argument is undefined, not when it is null or 0."},
+ {c:"function sum(...numbers)", d:"Rest parameters", n:"Collects any extra arguments into a real array. The mirror image of spreading an array into a call with fn(...args)."},
+ {c:"Callback functions", d:"Passing a function as an argument", n:"setTimeout(fn, 1000), items.map(fn), button.addEventListener('click', fn). Pass the name without brackets, otherwise you pass its result instead."},
+ {c:"Closure", d:"An inner function remembers the variables around it", n:"The variables stay alive as long as the inner function does. It is how a counter or an event handler keeps private state without a global."}
+]},
+{t:"Classes", e:[
+ {c:"class Switch { constructor(name) { this.name = name; } }", d:"Define a class and its constructor", n:"new Switch('ACCS4') runs the constructor. Methods go in the body with no function keyword.", x:"class Switch {\n  constructor(name, ports = 48) {\n    this.name = name;\n    this.ports = ports;\n  }\n  describe() {\n    return `${this.name} with ${this.ports} ports`;\n  }\n}"},
+ {c:"class Access extends Switch", d:"Inherit from another class", n:"Call super(...) first inside the child constructor, before touching this."},
+ {c:"this", d:"What object the method is running on", n:"Its value depends on how a function is called, not where it is written. Arrow functions inherit this from their surroundings, which sidesteps most of the pain."}
+]},
+{t:"Finding things on the page", e:[
+ {c:"document.querySelector('.card')", d:"First element matching a CSS selector", n:"Takes any selector you would write in CSS. Returns null when nothing matches, so guard before using it."},
+ {c:"document.querySelectorAll('.card')", d:"All matches, as a NodeList", n:"It has forEach but not map. Array.from(list) or [...list] converts it to a real array."},
+ {c:"document.getElementById('main')", d:"Fetch by id", n:"Slightly faster and self-documenting, but querySelector covers every case so most code sticks to one tool."},
+ {c:"el.closest('.row')", d:"Walk up to the nearest matching ancestor", n:"The key to event delegation: from whatever was clicked, find the row it belongs to."}
+]},
+{t:"Changing the page", e:[
+ {c:"el.textContent = 'Saved';", d:"Set text safely", n:"Escapes everything, so user input cannot inject markup. Use this unless you specifically need HTML."},
+ {c:"el.innerHTML = '<b>hi</b>';", d:"Set markup", n:"Parses the string as HTML. Never hand it raw user input: that is how cross-site scripting gets in."},
+ {c:"el.classList.add('open') / .remove() / .toggle()", d:"Change classes", n:"The clean way to change appearance: keep the styling in CSS and flip a class from JavaScript. contains() tests."},
+ {c:"el.setAttribute('aria-current', 'true')", d:"Read and write attributes", n:"getAttribute reads, removeAttribute clears. Dataset properties (data-id) are available as el.dataset.id."},
+ {c:"parent.append(child)  el.remove()", d:"Add and remove nodes", n:"document.createElement('li') makes one first. Build a fragment and append once rather than appending in a loop."}
+]},
+{t:"Events", e:[
+ {c:"el.addEventListener('click', handler)", d:"React to something happening", n:"Common types: click, input, change, submit, keydown, focus. removeEventListener needs the same function reference to undo it.", x:"button.addEventListener('click', (e) => {\n  e.preventDefault();\n  console.log('clicked', e.target);\n});"},
+ {c:"event.preventDefault()", d:"Stop the browser's default action", n:"Stops a form submitting or a link navigating so your script can handle it instead."},
+ {c:"event.target vs event.currentTarget", d:"What was clicked versus what is listening", n:"target is the deepest element under the pointer, currentTarget is the element the handler sits on."},
+ {c:"Event delegation", d:"One listener on a parent for many children", n:"Listen on the container, then use event.target.closest(...) to work out which row it was. Survives items being added later."},
+ {c:"document.addEventListener('keydown', e => ...)", d:"Keyboard shortcuts", n:"Check e.key for the character ('Escape', '/'), and e.ctrlKey or e.metaKey for modifiers. Ignore the event when the focus is inside an input."}
+]},
+{t:"Async and fetch", e:[
+ {c:"setTimeout(fn, 1000)", d:"Run something later", n:"Milliseconds. setInterval repeats until you clearInterval the id it returned."},
+ {c:"const res = await fetch('/api/ports');", d:"Request data from a server", n:"fetch returns a promise. Only await works inside an async function, or at the top level of a module.", x:"async function load() {\n  const res = await fetch('/api/ports');\n  if (!res.ok) throw new Error(res.status);\n  const data = await res.json();\n  return data;\n}"},
+ {c:"await res.json()", d:"Read and parse the response body", n:"It is a second promise because the body streams in. res.text() when it is not JSON."},
+ {c:"if (!res.ok) { ... }", d:"Check the HTTP status", n:"fetch only rejects on a network failure, so a 404 or 500 still counts as success. Checking res.ok yourself is not optional."},
+ {c:"Promise.all([a, b])", d:"Wait for several things at once", n:"Runs them in parallel and resolves when all are done. Awaiting them one after another in a loop is much slower."}
+]},
+{t:"Storage, errors and debugging", e:[
+ {c:"localStorage.setItem('key', JSON.stringify(obj))", d:"Persist data in the browser", n:"Strings only, so stringify going in and parse coming out. Per browser and per device, and it can be full or blocked, so wrap it in try/catch."},
+ {c:"try { ... } catch (err) { ... }", d:"Handle a thrown error", n:"catch gets the error object with .message and .stack. finally runs either way."},
+ {c:"throw new Error('vlan id out of range')", d:"Raise your own error", n:"Throw early with a clear message rather than returning a quietly wrong value."},
+ {c:"debugger;", d:"Pause execution where this line runs", n:"With devtools open, the browser stops here and lets you inspect every variable in scope. Faster than scattering console.log calls."}
+]}
+]});
+DATA.push({
+id:"php", sigil:"PH", name:"PHP", sub:"Server side", color:"#3a6ea8",
+blurb:"The Passle reference: the language that runs before the page is sent, handles the form, talks to the database, and decides what the browser ever sees.",
+groups:[
+{t:"Running PHP", e:[
+ {c:"<?php ... ?>", d:"Open and close a PHP block", n:"Anything outside the tags is sent to the browser untouched. In a file that is pure PHP, leave the closing tag off to avoid stray whitespace in the output."},
+ {c:"php -S localhost:8000", d:"Start the built-in development server", n:"Serves the current folder and runs .php files. Development only, single threaded, no config. Ctrl+C stops it."},
+ {c:"php script.php", d:"Run a file from the command line", n:"No web server involved. php -a opens an interactive shell, php -l file.php checks the syntax without running it."},
+ {c:"echo 'text';", d:"Send output to the page", n:"echo takes several comma-separated values. print_r($array) and var_dump($x) are the debugging versions and show types and structure."},
+ {c:"<?= $name ?>", d:"Short echo tag inside templates", n:"The readable way to drop a value into HTML. Always pass it through htmlspecialchars first when the value came from a user."}
+]},
+{t:"Syntax and variables", e:[
+ {c:"$name = 'Kaatje';", d:"Every variable starts with a dollar sign", n:"Case sensitive for variables, not for function names. Statements end with a semicolon, always."},
+ {c:"$total = $a + $b;", d:"Types are decided at runtime", n:"PHP converts between strings and numbers freely. gettype() tells you what something became, and declare(strict_types=1) at the top of a file stops silent conversions in function calls."},
+ {c:"define('SITE', 'DCU'); / const SITE = 'DCU';", d:"Constants", n:"No dollar sign when you use them. const is evaluated at compile time, define at runtime."},
+ {c:"=== vs ==", d:"Identical versus equal", n:"== converts types before comparing, which is a long-running source of security bugs. Use === and !== by default."},
+ {c:"$x ?? 'default'", d:"Null coalescing", n:"Gives the fallback when the left side is null or not set, without a notice. $a ?: $b is the older version that also fires on empty strings and zero."}
+]},
+{t:"Strings", e:[
+ {c:"\"Hello $name\"", d:"Double quotes interpolate variables", n:"Single quotes do not, and are marginally faster and safer to read. Use {$user['name']} braces when the expression is complex."},
+ {c:"$a . $b", d:"Concatenate with a dot", n:"Not a plus. .= appends to an existing string."},
+ {c:"strlen($s)  strtolower($s)  trim($s)", d:"Length, case, whitespace", n:"For anything with accented characters, reach for the mb_ versions such as mb_strlen and mb_strtolower."},
+ {c:"str_replace('old', 'new', $s)", d:"Replace every occurrence", n:"Accepts arrays for both search and replace, so you can run several substitutions in one call."},
+ {c:"explode(',', $line) / implode(',', $parts)", d:"String to array and back", n:"explode is PHP's split. sprintf('%05.2f', $n) formats numbers with padding and decimals."}
+]},
+{t:"Arrays", e:[
+ {c:"$items = ['a', 'b', 'c'];", d:"A list array, indexed from 0", n:"PHP has one array type that is both list and dictionary. count($items) gives the length."},
+ {c:"$row = ['port' => 'ge-0/0/1', 'vlan' => 10];", d:"An associative array", n:"Read with $row['vlan']. A missing key raises a warning and gives null, so check with isset() or use ?? first."},
+ {c:"$items[] = 'd';", d:"Append to the end", n:"Shorter than array_push and the idiomatic way to build up a list in a loop."},
+ {c:"foreach ($rows as $key => $value)", d:"Loop over an array", n:"The main tool for arrays. Add & before $value to modify in place, then unset($value) afterwards to avoid the classic reference bug.", x:"foreach ($ports as $name => $vlan) {\n    echo \"$name is in vlan $vlan\\n\";\n}"},
+ {c:"array_map / array_filter / array_column", d:"Transform, keep, or pull one field", n:"array_column($rows, 'name') is the fastest way to turn database rows into a plain list. array_filter with no callback drops falsy values."},
+ {c:"in_array($x, $a) / array_key_exists('k', $a)", d:"Test for a value or a key", n:"in_array with a third argument true does a strict comparison, which you almost always want."}
+]},
+{t:"Control flow", e:[
+ {c:"if (...) { } elseif (...) { } else { }", d:"Branch", n:"elseif is one word in PHP. The alternative syntax if(): ... endif; is nicer inside HTML templates."},
+ {c:"for ($i = 0; $i < 5; $i++)", d:"Counting loop", n:"Use foreach for arrays; for is for genuine counting."},
+ {c:"while (...) / do { } while (...)", d:"Repeat while a condition holds", n:"do-while always runs at least once, which matters when you are reading rows."},
+ {c:"switch ($v) { case 'a': ... break; }", d:"Match against several cases", n:"Needs break or it falls through. match($v) { 'a' => ..., default => ... } is the modern, strict, expression version."},
+ {c:"foreach with break and continue", d:"Leave or skip an iteration", n:"break 2 leaves two nested loops at once, which is rare but occasionally exactly right."}
+]},
+{t:"Functions", e:[
+ {c:"function total(array $rows): int { ... }", d:"Declare a function with types", n:"Type declarations on parameters and return values turn silent conversions into real errors. Worth it everywhere."},
+ {c:"function greet(string $name, string $greeting = 'Hello')", d:"Default arguments", n:"Defaults must come last. Named arguments at the call site, greet(greeting: 'Hi', name: 'K'), free you from the order."},
+ {c:"return", d:"Hand a value back", n:"A function without return gives null. Returning early on invalid input keeps the rest of the body free of nesting."},
+ {c:"$f = function () use ($x) { ... };", d:"Anonymous function with captured variables", n:"Unlike JavaScript, PHP closures do not capture automatically: you list what you need in use. Arrow functions fn($x) => ... capture by value automatically."},
+ {c:"Scope", d:"Variables inside a function are local", n:"There is no access to outer variables unless passed in. global is available and is almost always the wrong answer."}
+]},
+{t:"Forms and superglobals", e:[
+ {c:"$_POST['email']", d:"Data from a form submitted with post", n:"Never trust it. Validate the shape, then escape on output. Check with isset() or ?? before reading."},
+ {c:"$_GET['page']", d:"Data from the query string", n:"Visible in the URL and bookmarkable, so fine for filters and searches, wrong for passwords or anything that changes data."},
+ {c:"$_SERVER['REQUEST_METHOD']", d:"Details about the request", n:"Guard write actions with a check that the method is POST. Also holds REMOTE_ADDR, SCRIPT_NAME and the headers."},
+ {c:"filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL)", d:"Read and validate in one step", n:"Returns false when the value does not match the filter. Validation is about shape; escaping is a separate job done at output time."},
+ {c:"htmlspecialchars($value, ENT_QUOTES, 'UTF-8')", d:"Escape before printing user input", n:"Turns angle brackets and quotes into entities so a submitted script tag displays as text instead of running. This one line is your XSS defence.", x:"<p>Hello <?= htmlspecialchars($name, ENT_QUOTES, 'UTF-8') ?></p>"},
+ {c:"header('Location: /done.php'); exit;", d:"Redirect after a successful post", n:"Always exit straight after, or the rest of the script keeps running. Redirecting after post stops a refresh resubmitting the form."}
+]},
+{t:"Sessions and files", e:[
+ {c:"session_start();", d:"Begin or resume a session", n:"Must run before any output is sent. After it, $_SESSION persists per visitor across requests."},
+ {c:"$_SESSION['user'] = $id;", d:"Remember something about the visitor", n:"session_regenerate_id(true) right after login limits session fixation. session_destroy() ends it."},
+ {c:"require 'header.php'; / include 'nav.php';", d:"Pull in another file", n:"require fails hard if the file is missing, include only warns. The _once variants prevent double loading. Use require for anything your page cannot live without."},
+ {c:"file_get_contents / file_put_contents", d:"Read or write a whole file in one call", n:"fopen and fgets stream a large file line by line instead of loading it all. Check the return value; false means it failed."},
+ {c:"$_FILES['upload']", d:"Handle an uploaded file", n:"Check the error code, verify the real type rather than trusting the name, and move it with move_uploaded_file into a folder that is not web-servable."}
+]},
+{t:"Classes and objects", e:[
+ {c:"class Switchbox { public function __construct(private string $name) {} }", d:"Class with a constructor", n:"Constructor property promotion declares and assigns in one line. new Switchbox('ACCS4') creates an instance.", x:"class Ticket {\n    public function __construct(\n        private string $title,\n        private string $state = 'open'\n    ) {}\n\n    public function describe(): string {\n        return \"$this->title ($this->state)\";\n    }\n}"},
+ {c:"$this->name", d:"Reach the current object's own members", n:"An arrow, not a dot. Static members use self:: or the class name with ::."},
+ {c:"public / private / protected", d:"Visibility", n:"Default to private and expose only what callers need. protected is visible to subclasses too."},
+ {c:"class Access extends Base / implements Countable", d:"Inheritance and interfaces", n:"One parent class only, but as many interfaces as you like. An interface is a contract of method signatures with no bodies."},
+ {c:"namespace App\\Models; use App\\Models\\Ticket;", d:"Namespaces", n:"Keep class names from colliding across libraries. They mirror folder structure under PSR-4 autoloading."}
+]},
+{t:"Databases with PDO", e:[
+ {c:"$pdo = new PDO($dsn, $user, $pass, $options);", d:"Connect to a database", n:"One connection object for the request. Set ERRMODE_EXCEPTION so failures throw instead of returning false silently.", x:"$pdo = new PDO('mysql:host=localhost;dbname=app;charset=utf8mb4', $user, $pass, [\n    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,\n    PDO::ATTR_EMULATE_PREPARES => false,\n]);"},
+ {c:"$stmt = $pdo->prepare('SELECT * FROM tickets WHERE state = ?');", d:"Prepare a statement with placeholders", n:"Never build SQL by concatenating user input. Placeholders keep data as data, which is what stops SQL injection."},
+ {c:"$stmt->execute([$state]);", d:"Run the prepared statement with values", n:"Positional ? with an ordered array, or named :state with an associative one. Same statement can be executed repeatedly with different values."},
+ {c:"$stmt->fetch() / $stmt->fetchAll()", d:"Read one row or all of them", n:"fetch in a while loop for large results, fetchAll when the set is small. fetchColumn() grabs a single value."},
+ {c:"$pdo->lastInsertId()", d:"Get the id of the row you just inserted", n:"Call it immediately after the insert. For multi-step writes, wrap them in beginTransaction and commit, with rollBack in the catch."}
+]},
+{t:"Errors and tooling", e:[
+ {c:"try { ... } catch (PDOException $e) { ... }", d:"Catch an exception by type", n:"Catch \\Throwable to cover both errors and exceptions. Log $e->getMessage(), show the visitor something generic."},
+ {c:"throw new InvalidArgumentException('vlan out of range');", d:"Raise your own exception", n:"Pick a specific built-in type, or extend Exception for your own. It travels up until something catches it."},
+ {c:"error_reporting(E_ALL); ini_set('display_errors', '1');", d:"See every error while developing", n:"Turn display_errors off in production and log instead, because stack traces reveal paths and query structure."},
+ {c:"composer require vendor/package", d:"Install a dependency", n:"composer.json declares them, composer.lock pins exact versions. Add require 'vendor/autoload.php'; once and every class loads on demand."}
+]}
+]});
+const LAB_LINKS = {
+  junos: { label: "Junle", href: "junle.html" },
+  python: { label: "Pyle", href: "pyle.html" },
+  web: { label: "Style", href: "style.html" },
+  js: { label: "Spelle", href: "spelle.html" },
+  php: { label: "Passle", href: "passle.html" }
+};
+
+const AUG = {
+
+"junos::Modes and navigation": {
+  traps: [
+    "Typing a configuration command at the > prompt and getting 'unknown command' — you are still in operational mode.",
+    "Editing deep in a branch, forgetting where you are, and setting a statement twice at two different levels.",
+    "Leaving configuration mode with changes still uncommitted, then wondering why nothing changed."
+  ]
+},
+
+"junos::The commit workflow": {
+  concept: "Junos keeps two copies of the configuration. The active configuration is what the switch is running right now. The candidate configuration is a scratch copy you edit freely — you can make twenty changes, contradict yourself, and the switch keeps forwarding traffic as if nothing happened. Nothing you type takes effect until you commit, which validates the candidate and then swaps it in atomically. This is the single biggest difference from an IOS-style CLI, where each line applies the moment you press enter. It changes how you work: you make the whole change, read the diff, then apply it in one motion. It also means the two commands that matter most are not configuration commands at all. Before: show | compare, so you see exactly what you are about to do. After: commit confirmed, so a change that locks you out undoes itself while you are still driving to the site.",
+  figure: "  edit  ->  candidate config  --commit-->  active config\n                   |                              |\n            show | compare                  rollback 1\n            (what changes)                (previous copy)",
+  traps: [
+    "Editing without running show | compare first — the diff is the whole point of a candidate config.",
+    "Using commit confirmed and then forgetting the second commit, so your good change rolls itself back.",
+    "Thinking rollback applies immediately. It only loads the old config as the candidate; you still have to commit."
+  ],
+  quiz: [
+    { q: "You typed ten set commands and closed your laptop without committing. What is the switch running?", a: "The active configuration, exactly as before. Uncommitted candidate changes are discarded when the session ends." },
+    { q: "Why is commit confirmed 5 safer than commit when you are working remotely?", a: "If the change breaks your own access, the switch restores the previous configuration after five minutes without you having to be reachable." }
+  ],
+  lab: true
+},
+
+"junos::Interfaces": {
+  traps: [
+    "Configuring the physical interface and forgetting unit 0 — layer 2 and layer 3 settings live on the logical unit.",
+    "Looking for a shutdown command. Junos uses set interfaces ge-0/0/x disable.",
+    "Mixing family ethernet-switching and family inet on the same unit. A port is either switched or routed."
+  ]
+},
+
+"junos::VLANs and switching": {
+  concept: "A VLAN is a separate broadcast domain living on shared hardware. Two servers in VLAN 10 can talk to each other directly; a server in VLAN 20 on the same switch cannot reach them without passing through something that routes. The tag is how a frame carries that membership between switches: an access port strips tags and hands the device plain untagged Ethernet, a trunk port keeps the 802.1Q tag so the far switch knows which VLAN the frame belongs to. So access ports face things that do not know VLANs exist — servers, cameras, door controllers — and trunks face things that do. The moment you want traffic to cross between VLANs, you need a layer 3 interface. On an EX that is the irb: a virtual interface with an IP address that belongs to one VLAN and acts as the default gateway for everything in it.",
+  figure: "  server --untagged--> [access port]        switch A\n                                |\n                           [trunk port] ==tagged 10,20==\n                                |\n                           [trunk port]              switch B\n\n  VLAN 10 --+\n            +--> irb.10 (10.0.10.1) --routes--> irb.20",
+  traps: [
+    "Creating the VLAN but never adding it to the trunk between switches, so it works locally and nowhere else.",
+    "Mismatched native-vlan-id on the two ends of a trunk — untagged traffic silently lands in the wrong VLAN.",
+    "Expecting an irb to come up with no active access port in its VLAN. It stays down until something is there."
+  ],
+  quiz: [
+    { q: "A server is plugged into a port and gets no DHCP. The port is configured as a trunk. What is wrong?", a: "The server sends untagged frames, and a trunk expects tags. The port should be an access port in the server's VLAN." },
+    { q: "What does the irb interface actually provide?", a: "A gateway IP inside a VLAN, so traffic can be routed out of that broadcast domain to other VLANs or networks." }
+  ],
+  lab: true
+},
+
+"junos::Link aggregation and LACP": {
+  concept: "A link aggregation group makes several physical links behave as one logical interface. You get more bandwidth and, more usefully, you survive a cable, optic or line card failing without a spanning tree reconvergence. The traffic is not smoothly spread across the members: the switch hashes each flow, usually on MAC and IP, and pins that flow to one member. A single large transfer therefore never exceeds one member's speed — two 1G links do not make one 2G link for one file copy. LACP is the protocol that negotiates the bundle instead of trusting you. Each side advertises, both sides agree which links belong, and a member that is cabled to the wrong neighbour is left out rather than silently black-holing traffic. That is why static bundles are a bad habit: the failure mode of a mis-patched cable becomes a working-looking bundle that drops half the traffic.",
+  traps: [
+    "Forgetting set chassis aggregated-devices ethernet device-count. Nothing works and the error does not point at it.",
+    "Leaving family statements on the member ports. All configuration belongs on the ae interface.",
+    "Setting both sides to passive, so neither ever starts the negotiation and the bundle never forms."
+  ],
+  quiz: [
+    { q: "You bundle two 1G links and a backup job still runs at 1G. Is the LAG broken?", a: "No. One flow hashes to one member, so a single transfer is capped at one link's speed. Aggregation adds capacity across flows and adds resilience." },
+    { q: "Why prefer LACP over a static bundle?", a: "LACP verifies both ends agree before using a member, so a mis-patched or one-way link is excluded instead of silently dropping traffic." }
+  ],
+  lab: true
+},
+
+"junos::Virtual Chassis": {
+  traps: [
+    "Letting roles be elected automatically, then losing the master and having the stack renumber itself after a reboot.",
+    "Reusing a member number from a switch that was removed, producing a ghost member in show virtual-chassis.",
+    "Ignoring rising VC port errors — they show up as members flapping long before the link fully dies."
+  ]
+},
+
+"junos::Spanning tree and port protection": {
+  traps: [
+    "Leaving the root bridge to be chosen by lowest MAC address, which is usually the oldest switch in the building.",
+    "Marking a switch-facing port as edge, which skips the loop-preventing states exactly where loops happen.",
+    "Forgetting that a storm-control profile does nothing until it is applied to a port."
+  ]
+},
+
+"junos::Routing": {
+  concept: "Routing is the decision of where to send a packet whose destination is not in this broadcast domain. The switch holds a routing table, picks the most specific matching prefix, and forwards to that next hop. Longest match always wins, so a /24 beats a /16 beats the 0.0.0.0/0 default regardless of how each was learned. When two protocols offer the same prefix, Junos compares preference — its name for administrative distance — and the lower number wins: direct 0, static 5, OSPF 10, BGP external 170. Static routes are hand-written and never adapt; they are right for a default route out of a small site. OSPF learns the topology inside one organisation and reconverges by itself when a link dies. BGP is for exchanging routes between organisations, where policy rather than shortest path decides what you accept and advertise. Most access switches need only the first. Knowing why the other two exist is what stops you reaching for the wrong one.",
+  traps: [
+    "Configuring OSPF on an interface facing users and flooding hellos where no router lives. Use passive.",
+    "Expecting BGP to commit without set routing-options autonomous-system.",
+    "Assuming a route exists because the interface is up. Check show route, not show interfaces."
+  ],
+  quiz: [
+    { q: "The table holds 10.0.0.0/8 via OSPF and 10.0.10.0/24 via static. Which is used for 10.0.10.5?", a: "The static /24. Longest prefix match is decided before preference is ever consulted." },
+    { q: "What does OSPF give you that a static route does not?", a: "Automatic reconvergence. It learns the topology and finds another path when a link fails, with no human edit." }
+  ],
+  lab: true
+},
+
+"junos::Firewall filters and policy": {
+  traps: [
+    "Writing a perfect filter and never applying it to an interface.",
+    "Relying on the implicit discard at the end and then having no counters to explain what was dropped.",
+    "Applying an input filter on the management interface from a remote session, with no term permitting yourself."
+  ]
+},
+
+"junos::Verify and troubleshoot": {
+  traps: [
+    "Reading show interfaces extensive top to bottom instead of piping it through | match error.",
+    "Trusting LLDP when it is not enabled on both ends, then concluding nothing is connected.",
+    "Correlating logs between switches that have no NTP, where timestamps disagree by minutes."
+  ]
+},
+
+"python::Running Python": {
+  traps: [
+    "Running python instead of python3 on macOS or Linux and hitting an old interpreter.",
+    "Naming a file random.py or json.py, so your own file shadows the standard library module.",
+    "Editing one file and running another. Check the path in the traceback."
+  ]
+},
+
+"python::Variables and types": {
+  concept: "A Python variable is not a box that holds a value. It is a label tied to an object that lives elsewhere in memory. Assignment moves the label; it never copies the object. For numbers and strings this distinction is invisible, because those objects cannot be changed — any operation that looks like a change actually builds a new object and re-points the label. For lists, dicts and sets it becomes very visible: b = a gives you two labels on one list, so appending through b changes what a sees. This one fact explains a whole family of confusing bugs, and the fix is always the same: copy deliberately with list(a) or a.copy() when you want a second object rather than a second name. Type follows the object, not the label, which is why a name can hold an int now and a string later, and why type(x) is the fastest way to end an argument with yourself.",
+  figure: "  a = [1, 2]        a ---> [1, 2]\n  b = a             b ---^   (one list, two names)\n  b.append(3)       a is now [1, 2, 3]\n\n  b = list(a)       b ---> [1, 2, 3]  (a second list)",
+  traps: [
+    "Assigning one list to another name and expecting a copy.",
+    "Comparing to None with == instead of is.",
+    "Calling int('3.5') and being surprised it raises rather than rounding."
+  ],
+  quiz: [
+    { q: "x = [1,2]; y = x; y.append(3). What is x?", a: "[1, 2, 3]. Both names point at the same list object; nothing was copied." },
+    { q: "Why does the same trap not appear with strings?", a: "Strings are immutable. Any operation that looks like a change produces a new string and rebinds the name." }
+  ],
+  lab: true
+},
+
+"python::Strings": {
+  traps: [
+    "Calling s.replace(...) or s.strip() without assigning the result. Strings never change in place.",
+    "Comparing user input without lowercasing both sides first.",
+    "Building a long string by adding in a loop instead of collecting into a list and joining once."
+  ]
+},
+
+"python::Lists": {
+  concept: "A list is an ordered, mutable sequence, and mutability is the interesting half. Methods like append, sort and reverse change the list you already have and return None, while functions like sorted and reversed leave the original alone and hand you something new. Assigning the result of items.sort() to a variable is therefore one of the most common beginner bugs in the language: the variable holds None and the sorted data is still in the old name. The second thing worth internalising is that a slice always produces a new list, which makes items[:] the quickest way to copy one and makes slicing safe when a plain assignment would not be. Looping while removing items from the same list is the third hazard: the index moves under you and items get skipped, so build a new list with a comprehension instead of editing in place.",
+  traps: [
+    "x = items.sort() — sort returns None, use sorted(items) when you want a result.",
+    "Removing items from a list while looping over that same list.",
+    "Using a list where the data is really key-to-value and a dict would be clearer and faster."
+  ],
+  quiz: [
+    { q: "What is the difference between items.sort() and sorted(items)?", a: "sort() reorders the list in place and returns None; sorted() leaves the original untouched and returns a new list." },
+    { q: "How do you copy a list rather than name it twice?", a: "list(items), items.copy() or items[:] — all build a new list object." }
+  ],
+  lab: true
+},
+
+"python::Dictionaries, sets and tuples": {
+  traps: [
+    "Reading d['key'] for a key that might be missing instead of d.get('key', default).",
+    "Assuming a set keeps order. It does not, and it also drops duplicates you may have needed.",
+    "Trying to use a list as a dict key. Keys must be immutable — use a tuple."
+  ]
+},
+
+"python::Control flow": {
+  traps: [
+    "Mixing tabs and spaces. Pick four spaces and let the editor enforce it.",
+    "Writing if x = 5 instead of ==. Python catches this, but the habit carries into languages that do not.",
+    "Forgetting range(5) stops at 4."
+  ]
+},
+
+"python::Functions": {
+  concept: "A function is the unit you test, name and reuse, and the boundary it draws is scope. Names created inside a function are invisible outside it, and names outside are readable inside but not assignable unless you say so. That containment is a feature: it means calling a function cannot quietly change your state unless you handed it something mutable or it returned something you assigned. The one place the boundary leaks is the default argument. Defaults are evaluated once, when the function is defined, not each time it is called — so a mutable default like def add(item, bucket=[]) shares one list across every call and slowly accumulates data from calls you thought were independent. Use None as the default and build the real object in the body. Beyond that, a good function returns a value rather than printing one: printing is a decision about presentation, and burying it inside logic makes the logic impossible to reuse.",
+  traps: [
+    "A mutable default argument such as bucket=[] that persists between calls.",
+    "Printing inside a function that should return, which makes it useless to a caller.",
+    "Forgetting return entirely and getting None back."
+  ],
+  quiz: [
+    { q: "Why is def add(x, bucket=[]) dangerous?", a: "The default list is created once at definition time and shared by every call, so items accumulate across calls." },
+    { q: "When should a function print rather than return?", a: "Almost never in logic code. Return the value and let the caller decide how to display it." }
+  ],
+  lab: true
+},
+
+"python::Classes": {
+  traps: [
+    "Forgetting self as the first parameter of every method.",
+    "Reaching for a class when a function and a dict would do. Classes earn their keep when data and behaviour travel together.",
+    "Defining attributes outside __init__ so instances quietly share one object."
+  ]
+},
+
+"python::Errors": {
+  traps: [
+    "A bare except: that swallows typos, KeyboardInterrupt and everything else.",
+    "Catching an exception and passing silently, turning a crash into a wrong answer.",
+    "Reading a traceback from the top. The bottom line is the actual error."
+  ]
+},
+
+"python::Files": {
+  traps: [
+    "Opening with 'w' when you meant 'a', which truncates the file instantly.",
+    "Using open() without with, so the file stays open when something throws.",
+    "Reading a huge file with read() instead of streaming it line by line."
+  ]
+},
+
+"python::Environments and tooling": {
+  concept: "Every Python installation has one shared set of packages, and two projects will eventually disagree about a version. A virtual environment solves that by giving each project its own interpreter link and its own site-packages directory. Creating one makes a folder, activating it puts that folder's bin directory first on your PATH, and from then on python and pip mean this project's copies. Nothing is installed magically: the venv folder is disposable and rebuildable, which is exactly why it should never be committed. What you commit is requirements.txt, the declaration of what the project needs, so the environment can be recreated on a server, on a colleague's machine, or on yours next year. On a server the same discipline matters more, not less: system Python belongs to the operating system, and installing into it with sudo pip is how you break the tools your distribution depends on.",
+  figure: "  project/\n    .venv/            <- disposable, git-ignored\n    requirements.txt  <- committed, the real declaration\n    app.py\n\n  create   python3 -m venv .venv\n  enter    source .venv/bin/activate\n  record   pip freeze > requirements.txt",
+  traps: [
+    "Installing with pip before activating, so packages land system-wide.",
+    "Committing the .venv folder instead of requirements.txt.",
+    "Running sudo pip install on a server and breaking distribution tooling."
+  ],
+  quiz: [
+    { q: "What does activating a venv actually change?", a: "Your PATH. The venv's bin directory comes first, so python and pip resolve to the project's copies." },
+    { q: "Which of .venv and requirements.txt belongs in git?", a: "requirements.txt. The environment is rebuilt from it; the folder itself is disposable and machine-specific." }
+  ],
+  lab: true
+},
+
+"web::Page skeleton": {
+  concept: "A browser does not display your file, it builds a model from it. The HTML is parsed into the DOM, a tree of nodes. The CSS is parsed into rules and matched against that tree to compute a style for every node. Layout then works out where each box goes, paint fills in pixels, and only then do you see anything. Understanding that order explains most of the surprises. A stylesheet in the head blocks rendering because painting without it would flash unstyled content. A script in the middle of the body pauses parsing, because it might write more HTML. An image without width and height makes the page jump, because layout ran before the browser knew how much space to reserve. The DOM is also what JavaScript manipulates: you are never editing the file after load, you are editing the tree the browser built from it.",
+  figure: "  HTML --parse--> DOM tree  --+\n                              +--> render tree --> layout --> paint\n  CSS  --parse--> style rules-+\n\n  JS edits the DOM, which sends you back through layout and paint",
+  traps: [
+    "Leaving out the viewport meta tag and wondering why the phone renders a shrunken desktop page.",
+    "Putting a script before the elements it looks for, so querySelector returns null.",
+    "Skipping the charset declaration and getting broken accented characters."
+  ],
+  quiz: [
+    { q: "Why does a missing width and height on an image cause the page to jump?", a: "Layout runs before the image arrives, so no space is reserved; when the file loads, everything below is pushed down." },
+    { q: "What is the DOM?", a: "The tree of nodes the browser built from your HTML. It is what CSS is matched against and what JavaScript edits." }
+  ],
+  lab: true
+},
+
+"web::Forms": {
+  traps: [
+    "An input with no name attribute, which is never submitted.",
+    "Using placeholder as the label. It disappears the moment someone types.",
+    "A button inside a form without type=\"button\", which submits when you only wanted a click handler."
+  ]
+},
+
+"web::CSS syntax and selectors": {
+  traps: [
+    "Styling by element (div, p) so the rule leaks into every future use of that tag.",
+    "Deep descendant chains like .card div span, which break the moment the markup changes.",
+    "Styling :hover without :focus-visible, leaving keyboard users no feedback."
+  ]
+},
+
+"web::The cascade and specificity": {
+  concept: "When two rules set the same property on the same element, three things decide the winner, in order. First importance: an !important declaration beats a normal one. Then specificity, scored as a tuple of inline styles, ids, classes and elements — a higher number at the leftmost position wins outright, so a single id beats any number of classes. Only when specificity ties does source order decide, which is why the last rule wins in a stylesheet full of single-class selectors. Inheritance is a separate mechanism that people confuse with the cascade: some properties, mostly typographic ones, pass down to children automatically, and an inherited value always loses to any rule that targets the element directly, however weak. The practical consequence is to keep specificity low and flat. If your stylesheet is a ladder of ids and !important, each fix has to be stronger than the last, and eventually there is nothing stronger left.",
+  figure: "  0,1,0,0   #main          id\n  0,0,1,0   .card          class\n  0,0,0,1   p              element\n\n  .card p   = 0,0,1,1   beats   p   = 0,0,0,1\n  #main p   = 0,1,0,1   beats both, whatever the order",
+  traps: [
+    "Reaching for !important instead of fixing the selector.",
+    "Styling with ids and then being unable to override them anywhere.",
+    "Expecting an inherited value to beat a direct rule. It never does."
+  ],
+  quiz: [
+    { q: "Which wins: #main p or .card .body p?", a: "#main p. One id outranks any number of classes, regardless of source order." },
+    { q: "Two rules have identical specificity. What decides?", a: "Source order — the one that appears later in the stylesheet wins." }
+  ],
+  lab: true
+},
+
+"web::The box model": {
+  concept: "Every element is a rectangle made of four nested layers: the content, then padding, then the border, then the margin. The width property, by default, only sizes the content box, so a 300px box with 20px padding and a 1px border actually occupies 342px and your three-column layout breaks for reasons the CSS never mentions. Setting box-sizing: border-box changes width to mean the outer edge including padding and border, which is what everyone expects and why almost every stylesheet starts by setting it globally. The margin layer behaves differently again: it is outside the background, it can be negative, and vertical margins between siblings collapse into the larger of the two rather than adding up. That last rule catches everyone once. Modern layouts sidestep the whole thing by using gap on a flex or grid parent, where spacing is declared once and never collapses.",
+  figure: "  +-------------------- margin ---------------------+\n  |  +----------------- border ------------------+  |\n  |  |  +-------------- padding ---------------+  |  |\n  |  |  |             content                  |  |  |\n  |  |  +--------------------------------------+  |  |\n  |  +--------------------------------------------+  |\n  +--------------------------------------------------+",
+  traps: [
+    "Forgetting box-sizing: border-box and fighting layouts that are mysteriously too wide.",
+    "Expecting stacked margins to add up. They collapse to the larger one.",
+    "Using margin to make a button easier to tap. Padding grows the clickable area; margin does not."
+  ],
+  quiz: [
+    { q: "With default box-sizing, how wide is a 300px element with 20px padding and a 1px border?", a: "342px. Width sizes only the content box, so padding and border are added on top." },
+    { q: "Two paragraphs each have 20px vertical margins. How far apart are they?", a: "20px. Adjacent vertical margins collapse into the larger of the two." }
+  ],
+  lab: true
+},
+
+"web::Flexbox": {
+  concept: "Flexbox lays out along one axis at a time and lets the browser do the arithmetic. You pick a direction, and everything else is expressed relative to it: justify-content distributes along the main axis, align-items aligns across the cross axis. Switch flex-direction from row to column and those two swap meaning, which is why the properties feel unreliable until the axis idea clicks. The other half is flexibility. A flex child is not fixed: flex-grow lets it absorb leftover space, flex-shrink lets it give space back when the container is too small, and flex-basis is the size it starts from before either happens. flex: 1 is the common shorthand for grow, shrink and a zero basis — take whatever is left. Use flex when you are arranging things in a line: a toolbar, a row of buttons, a sidebar next to content. Reach for grid the moment you care about rows and columns at once.",
+  traps: [
+    "Reaching for justify-content to centre vertically in a row. That is align-items.",
+    "Setting widths on flex children and then wondering why they will not shrink.",
+    "Using margins between children instead of gap, which then also adds space at the edges."
+  ],
+  quiz: [
+    { q: "In flex-direction: column, which property centres items horizontally?", a: "align-items. In a column the horizontal direction is the cross axis." },
+    { q: "When is grid the better choice than flex?", a: "When the layout is two-dimensional — rows and columns that must line up with each other." }
+  ],
+  lab: true
+},
+
+"web::Grid": {
+  traps: [
+    "Setting widths on grid children, which fights the track sizes the parent already decided.",
+    "Using fixed column counts when repeat(auto-fit, minmax(...)) would be responsive for free.",
+    "Forgetting that grid line numbers start at 1, not 0."
+  ]
+},
+
+"web::Position, layers and flow": {
+  traps: [
+    "Setting z-index on an element that is still position: static, where it does nothing.",
+    "A sticky element that never sticks because an ancestor has overflow: hidden.",
+    "Absolute positioning against the wrong ancestor because no parent is positioned."
+  ]
+},
+
+"web::Responsive and motion": {
+  traps: [
+    "Choosing breakpoints by device name instead of where the layout actually breaks.",
+    "Using 100vh for a full-height mobile layout, which is taller than the visible area.",
+    "Putting the transition inside :hover, so it animates in and snaps out."
+  ]
+},
+
+"js::Basics": {
+  concept: "JavaScript in a page does one job: it changes the DOM in response to something happening. That is the whole mental model. The browser has already built the tree from your HTML and painted it; your script finds nodes in that tree, reads or changes them, and the browser re-runs layout and paint for what you touched. Everything else is detail around that loop. It also runs on a single thread, so while your code is running, nothing else happens — no clicks are handled, no pixels are painted. A long loop freezes the page. That constraint is why anything slow, like a network request, is asynchronous: your function starts it, returns immediately, and the result arrives later through a callback or a promise. Holding those two ideas — one thread, one tree — makes most JavaScript behaviour predictable, including the parts that look like magic.",
+  traps: [
+    "Running a script before the DOM exists, so every query returns null.",
+    "Using var out of habit, which is function-scoped and leaks out of blocks.",
+    "Checking a value with == and getting a surprising type conversion."
+  ],
+  quiz: [
+    { q: "Why does a long synchronous loop freeze the page?", a: "JavaScript runs on a single thread shared with rendering, so nothing is painted or handled until the loop finishes." },
+    { q: "What does a script actually modify when it changes the page?", a: "The DOM — the tree the browser built from your HTML — not the source file." }
+  ],
+  lab: true
+},
+
+"js::Numbers, strings and operators": {
+  traps: [
+    "Using == and relying on type conversion you did not intend.",
+    "Adding a number to a string and getting concatenation instead of arithmetic.",
+    "Using || for a default when 0 or an empty string is a legitimate value. Use ??."
+  ]
+},
+
+"js::Arrays": {
+  concept: "Three methods carry most array work, and they differ in what they return. map returns a new array of the same length, one output per input — use it to transform. filter returns a new, usually shorter array containing the items that passed a test — use it to narrow. reduce returns a single value built up across the items — use it to total, group or fold. All three leave the original array alone, which is why they chain: filter first to cut the data down, then map to shape it, then join or reduce to finish. forEach is the odd one out; it returns nothing at all, so it is only for side effects, and reaching for it to build a result is the sign you wanted map. Getting fluent with these replaces most of the index-juggling loops beginners write, and the resulting code says what it does rather than how it walks.",
+  figure: "  [1, 2, 3, 4]\n     |\n     +-- filter(x => x > 2)  -->  [3, 4]      fewer items\n     +-- map(x => x * 10)    -->  [10,20,30,40]  same count\n     +-- reduce((a,x)=>a+x,0)-->  10           one value",
+  traps: [
+    "Using forEach when you want a result back.",
+    "Forgetting to return inside a map callback with braces, producing an array of undefined.",
+    "Mutating the array inside a map, which breaks the promise that map is pure."
+  ],
+  quiz: [
+    { q: "You need the names of all active users. Which method?", a: "filter for the active ones, then map to pull out the names — two steps, chained." },
+    { q: "What does forEach return?", a: "undefined. It exists for side effects only; use map when you want a new array." }
+  ],
+  lab: true
+},
+
+"js::Objects": {
+  traps: [
+    "Spreading an object and assuming nested objects were copied too. The spread is shallow.",
+    "Reading a property on something that might be undefined instead of using ?. first.",
+    "Expecting JSON.stringify to keep functions or undefined values. It drops them."
+  ]
+},
+
+"js::Functions": {
+  traps: [
+    "Passing fn() instead of fn to an event listener, which calls it immediately.",
+    "Using a regular function as a callback and losing this. Arrow functions inherit it.",
+    "Forgetting that a function with braces needs an explicit return."
+  ]
+},
+
+"js::Changing the page": {
+  traps: [
+    "Using innerHTML with user input, which is the standard route for an XSS bug.",
+    "Rebuilding a container's innerHTML and silently dropping every event listener inside it.",
+    "Appending inside a loop, forcing layout on each pass, instead of building a fragment first."
+  ]
+},
+
+"js::Events": {
+  concept: "An event does not fire only on the element you clicked. It travels: down from the document to the target (capture), then back up through every ancestor (bubble). Handlers run on the way up by default, which means a listener on a container hears clicks on everything inside it. That is not a quirk to work around, it is the feature that makes delegation possible. Instead of attaching a hundred listeners to a hundred rows, attach one to the table and ask event.target.closest('tr') which row was involved. One listener, less memory, and it keeps working for rows added later — which the hundred-listener version does not. The two properties to keep straight are target, the deepest element under the pointer, and currentTarget, the element whose handler is running. preventDefault stops the browser's built-in reaction, such as submitting or navigating; stopPropagation stops the travel itself and should be rare, because it makes other people's handlers silently not run.",
+  figure: "  document\n    └ table        <- one listener here\n        └ tr\n            └ td   <- clicked (event.target)\n\n  click on td  ->  bubbles up  ->  table's handler runs\n  event.target.closest('tr') identifies the row",
+  traps: [
+    "Attaching listeners in a loop over items that get re-rendered later.",
+    "Confusing event.target with event.currentTarget inside a delegated handler.",
+    "Reaching for stopPropagation to fix a bug, which hides the real cause and breaks unrelated handlers."
+  ],
+  quiz: [
+    { q: "Why does event delegation survive new rows being added?", a: "The listener is on the parent, and events from any descendant bubble up to it — including elements that did not exist when it was attached." },
+    { q: "Inside a listener on a table, you click a cell. What is event.currentTarget?", a: "The table — the element whose handler is running. event.target is the cell." }
+  ],
+  lab: true
+},
+
+"js::Async and fetch": {
+  concept: "A network request takes hundreds of milliseconds, and the single thread cannot wait. So fetch returns immediately with a promise: an object that will hold either a result or an error later. await pauses only the async function it is written in, letting the rest of the page carry on, and resumes when the promise settles. Two things about fetch trip everyone up. First, it only rejects on a network failure — a 404 or a 500 is a perfectly successful round trip as far as fetch is concerned, so you must check res.ok yourself. Second, the body is a second promise, because it streams in after the headers, which is why res.json() also needs an await. And when you need several independent requests, awaiting them one after another in a loop makes them queue; Promise.all starts them together and waits once, which is usually the difference between a slow page and a fast one.",
+  figure: "  serial     await a   ---400ms--->\n             await b              ---400ms--->   total 800ms\n\n  parallel   Promise.all([a, b])\n             a ---400ms--->\n             b ---400ms--->                      total 400ms",
+  traps: [
+    "Treating a 404 as an error automatically. Check res.ok.",
+    "Forgetting the second await on res.json().",
+    "Awaiting inside a loop when the requests do not depend on each other."
+  ],
+  quiz: [
+    { q: "Your fetch returned 500 and no catch block fired. Why?", a: "fetch only rejects on network failure. A server error is a successful request, so you must test res.ok." },
+    { q: "When is Promise.all the right tool?", a: "When several requests are independent — it starts them together instead of queuing them." }
+  ],
+  lab: true
+},
+
+"js::Storage, errors and debugging": {
+  traps: [
+    "Storing an object without JSON.stringify and getting back the string [object Object].",
+    "Assuming localStorage is always available. Private mode and full quotas throw.",
+    "Leaving console.log calls in shipped code instead of using a breakpoint while debugging."
+  ]
+},
+
+"php::Running PHP": {
+  concept: "PHP runs once per request and then forgets everything. A visitor asks for a URL, the server starts a fresh PHP process, your script runs top to bottom, it produces a string of HTML, that string is sent, and every variable is destroyed. The next click starts again from nothing. This is the opposite of the browser-side model, where your JavaScript keeps state in memory for as long as the tab is open, and it explains almost every structural decision in PHP. Anything that must survive between requests has to be written somewhere: a session, a cookie, a file, a database. It also explains why output order matters — headers must be sent before any body content, so a stray blank line above your opening tag will break a redirect. And it is why PHP is comfortable being messy in small scripts and demanding about structure in large ones: nothing persists to hide your state, but nothing persists to protect it either.",
+  figure: "  request --> start PHP --> run script --> output HTML --> process dies\n                                |\n                       session / database\n                       (the only things that survive)",
+  traps: [
+    "Whitespace before the opening tag, which sends output early and breaks headers and redirects.",
+    "Expecting a variable to still exist on the next page load.",
+    "Leaving display_errors on in production, exposing paths and query structure."
+  ],
+  quiz: [
+    { q: "Why does a redirect sometimes fail with 'headers already sent'?", a: "Something was output before the header call — often a blank line before the opening PHP tag. Headers must precede any body content." },
+    { q: "Where does state live between two requests?", a: "In a session, cookie, file or database. Nothing in PHP memory survives the end of the request." }
+  ],
+  lab: true
+},
+
+"php::Syntax and variables": {
+  traps: [
+    "Comparing with == where type juggling produces a surprising true.",
+    "Forgetting the dollar sign on a variable, or adding one to a constant.",
+    "Assuming variable names are case-insensitive like function names. They are not."
+  ]
+},
+
+"php::Strings": {
+  traps: [
+    "Using + to join strings. PHP concatenates with a dot.",
+    "Interpolating in single quotes, where nothing is interpolated.",
+    "Using strlen on text with accented characters instead of mb_strlen."
+  ]
+},
+
+"php::Arrays": {
+  concept: "PHP has one array type doing two jobs. Give it no keys and it behaves like a list with integer indexes; give it string keys and it behaves like a dictionary. Both are the same ordered map underneath, which is convenient right up to the moment it is not: unset an item from the middle of a list and the remaining keys keep their original numbers, so a later json_encode produces an object rather than an array and your JavaScript silently receives the wrong shape. array_values reindexes and fixes it. The second thing worth knowing is that arrays are assigned by value, unlike objects — copying an array really copies it, which is safe but costly for large data. And foreach with a reference (&$value) is the one exception that leaves a dangling reference behind: unset the variable after the loop, or you will corrupt the last element the next time you loop over the same array.",
+  traps: [
+    "Unsetting a middle element and then finding json_encode produces an object, not an array.",
+    "Reading a missing key without isset or ??, which raises a warning and gives null.",
+    "Leaving a reference alive after foreach ($a as &$v), which quietly overwrites the last element later."
+  ],
+  quiz: [
+    { q: "You removed one item from a list array and the JSON output became an object. Why?", a: "The remaining keys are no longer sequential from 0, so PHP encodes it as an object. array_values reindexes it." },
+    { q: "Does copying an array copy the data?", a: "Yes. Arrays are assigned by value in PHP, unlike objects, which are handled by reference." }
+  ],
+  lab: true
+},
+
+"php::Control flow": {
+  traps: [
+    "Writing else if in a template where elseif is expected.",
+    "Forgetting break in a switch and falling through into the next case.",
+    "Nesting four levels of if instead of returning early."
+  ]
+},
+
+"php::Forms and superglobals": {
+  concept: "Everything in $_POST, $_GET, $_COOKIE and the request headers was typed by someone you have never met, and it arrives as a string of their choosing. The discipline has two halves, and confusing them is where vulnerabilities come from. Validation happens on the way in and asks whether the value is the right shape: is this an integer, does it look like an email, is this id one the current user is allowed to touch. Escaping happens on the way out and depends entirely on where the value is going. Text headed for HTML goes through htmlspecialchars, or a submitted script tag becomes a running script for every future visitor. A value headed for SQL goes through a prepared statement, so the database treats it as data and never as syntax. There is no single sanitize call that makes a value safe everywhere, because safety is a property of the destination, not of the value.",
+  figure: "  user input\n      |\n   validate  (right shape? allowed?)\n      |\n   store / use\n      |\n   escape at the boundary:\n      HTML page  -> htmlspecialchars()\n      SQL query  -> prepared statement\n      shell cmd  -> escapeshellarg()",
+  traps: [
+    "Trusting a hidden field or a select value because the form only offered valid options.",
+    "Escaping once on input and assuming it is safe for every destination.",
+    "Using $_GET for an action that changes data, which a crawler can then trigger."
+  ],
+  quiz: [
+    { q: "Where does htmlspecialchars belong: input or output?", a: "Output, at the moment the value is printed into HTML. Escaping depends on the destination." },
+    { q: "Why is escaping not a substitute for prepared statements?", a: "HTML escaping makes a value safe for a page, not for SQL. The database needs the value kept separate from the query syntax." }
+  ],
+  lab: true
+},
+
+"php::Sessions and files": {
+  traps: [
+    "Calling session_start after output has begun.",
+    "Not regenerating the session id at login, leaving session fixation open.",
+    "Trusting an uploaded file's name or reported type, or storing it inside the web root."
+  ]
+},
+
+"php::Classes and objects": {
+  traps: [
+    "Using -> to reach a static member instead of ::.",
+    "Making every property public, so nothing can change internally without breaking callers.",
+    "Namespacing files but forgetting the autoloader, then debugging a class-not-found error."
+  ]
+},
+
+"php::Databases with PDO": {
+  concept: "A prepared statement sends the query and the data to the database separately. First the SQL goes across with placeholders where the values belong, and the database parses and plans it right then, while the values are still absent. Then the values go across as data and are bound into the plan. Because the parsing already finished, a value containing quotes, semicolons or a DROP TABLE is never read as syntax — it is just a string that happens to contain those characters. That is the whole defence, and it is structural rather than a matter of filtering cleverly enough. Concatenating a value into the SQL string collapses the separation and there is no escaping routine that reliably restores it. Set ERRMODE_EXCEPTION so failures throw instead of returning false, turn off emulated prepares so the separation is real rather than simulated in the driver, and wrap multi-step writes in a transaction so a half-finished change is never left behind.",
+  figure: "  concatenated:  SELECT ... WHERE id = '  \" OR 1=1 --  '\n                 (value became syntax)\n\n  prepared:      SELECT ... WHERE id = ?     <- parsed first\n                 then bind value             <- can never be syntax",
+  traps: [
+    "Building SQL with string concatenation, even 'just this once' for an internal tool.",
+    "Leaving the default error mode, where a failed query returns false and the script continues.",
+    "Leaving emulated prepares on, which sends one assembled string rather than a real prepared statement."
+  ],
+  quiz: [
+    { q: "Why does a prepared statement stop SQL injection?", a: "The query is parsed before the values arrive, so a value can never be interpreted as SQL syntax." },
+    { q: "What does ATTR_ERRMODE set to exception change?", a: "Failures throw a PDOException instead of returning false, so a broken query stops the script rather than silently continuing." }
+  ],
+  lab: true
+},
+
+"php::Errors and tooling": {
+  traps: [
+    "Catching Exception and doing nothing with it.",
+    "Showing raw error messages to visitors, which leaks paths and query structure.",
+    "Committing vendor/ instead of composer.json and composer.lock."
+  ]
+}
+};
+
+const RECIPES = [
+{ vol:"junos", t:"Bring up a new access port, end to end", why:"The commonest change on an access switch, done in the order that keeps you safe.", steps:[
+ { c:"configure", n:"Enter configuration mode. Nothing you type now affects traffic." },
+ { c:"set interfaces ge-0/0/12 description SRV-BACKUP-01", n:"Label it first, while you still know what the cable is." },
+ { c:"set interfaces ge-0/0/12 unit 0 family ethernet-switching interface-mode access", n:"Untagged, one VLAN, for a device that knows nothing about tagging." },
+ { c:"set interfaces ge-0/0/12 unit 0 family ethernet-switching vlan members SERVERS", n:"The VLAN must already exist, by name." },
+ { c:"set protocols rstp interface ge-0/0/12 edge", n:"Host-facing, so it can go straight to forwarding instead of waiting." },
+ { c:"show | compare", n:"Read the diff. Five added lines, nothing removed. This is the step people skip." },
+ { c:"commit and-quit", n:"Apply and leave configuration mode." },
+ { c:"show interfaces ge-0/0/12 terse", n:"Link up, then confirm the MAC appears with show ethernet-switching table." }
+]},
+{ vol:"junos", t:"A port is down and you are not on site", why:"An ordered diagnosis, cheapest check first.", steps:[
+ { c:"show interfaces ge-0/0/12 terse", n:"Admin down means someone disabled it. Physical down means no link." },
+ { c:"show configuration | display set | match ge-0/0/12", n:"Every line touching the port, in one place. Look for disable." },
+ { c:"show lldp neighbors interface ge-0/0/12", n:"If a neighbour answers, the cable and optic are fine and the problem is configuration." },
+ { c:"show interfaces ge-0/0/12 extensive | match error", n:"CRC or framing errors point at the cable, the optic or a dirty connector." },
+ { c:"show log messages | match ge-0/0/12", n:"Flap history. Repeated up and down over hours is hardware, not configuration." },
+ { c:"show ethernet-switching table interface ge-0/0/12", n:"If the MAC is learned, the switch side is doing its job and the fault is further along." }
+]},
+{ vol:"python", t:"Read a messy CSV and write clean JSON", why:"The shape of most small automation jobs: read, filter, transform, write.", steps:[
+ { c:"import csv, json\nfrom pathlib import Path", n:"Standard library only. No dependency to install, nothing to break next year." },
+ { c:"rows = list(csv.DictReader(Path('in.csv').open()))", n:"DictReader uses the header line as keys, so you index by name instead of position." },
+ { c:"clean = [r for r in rows if r.get('email')]", n:"Filter first. Working on less data makes every later step simpler." },
+ { c:"clean = [{'name': r['name'].strip(), 'email': r['email'].lower()} for r in clean]", n:"Normalise while you reshape: strip whitespace, lowercase anything you will compare." },
+ { c:"Path('out.json').write_text(json.dumps(clean, indent=2))", n:"indent=2 so a human can read the result and spot a wrong field immediately." },
+ { c:"print(f'{len(clean)} of {len(rows)} rows kept')", n:"Always report what you dropped. A silent script that keeps 3 of 3000 rows looks identical to one that worked." }
+]},
+{ vol:"python", t:"Start a new project properly", why:"Five minutes now, versus an unreproducible environment later.", steps:[
+ { c:"mkdir myproject && cd myproject", n:"One folder per project, always." },
+ { c:"python3 -m venv .venv", n:"Its own interpreter and packages, isolated from every other project." },
+ { c:"source .venv/bin/activate", n:"Now python and pip mean this project's copies. Check with which python." },
+ { c:"pip install requests", n:"Installs into .venv, not system-wide." },
+ { c:"pip freeze > requirements.txt", n:"The declaration of what the project needs. This is what gets committed." },
+ { c:"printf '.venv/\\n__pycache__/\\n' > .gitignore", n:"The environment is disposable and machine-specific. Never commit it." }
+]},
+{ vol:"web", t:"An accessible form that does not fight the user", why:"Forms are where accessibility and usability are usually lost.", steps:[
+ { c:"<form action=\"/subscribe\" method=\"post\">", n:"post, because this changes something on the server." },
+ { c:"<label for=\"email\">Email address</label>", n:"A real label, not a placeholder. for matches the input id." },
+ { c:"<input id=\"email\" name=\"email\" type=\"email\" required autocomplete=\"email\">", n:"type gives the right keyboard and free validation; name is what the server receives; autocomplete lets the browser fill it." },
+ { c:"<button type=\"submit\">Subscribe</button>", n:"Say what happens, not 'Submit'. The confirmation should use the same word." },
+ { c:"input:focus-visible { outline: 2px solid var(--accent); }", n:"Keyboard users must see where they are. Never remove the focus ring without replacing it." }
+]},
+{ vol:"web", t:"A responsive card layout with no media queries", why:"One line of grid replaces three breakpoints.", steps:[
+ { c:".grid { display: grid; }", n:"Two dimensions, sized by the parent, so the children need no widths." },
+ { c:"grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));", n:"Fit as many 240px-minimum columns as the space allows, then share the remainder." },
+ { c:"gap: 16px;", n:"Spacing declared once, with no edge margins to undo." },
+ { c:"img { max-width: 100%; height: auto; }", n:"Stops an image forcing a column wider than its track." },
+ { c:"Resize the window to check", n:"The column count should change with no breakpoint written anywhere." }
+]},
+{ vol:"js", t:"Load data and render it, handling failure", why:"The standard shape of every small front end.", steps:[
+ { c:"const list = document.querySelector('#rows');", n:"Find the target once, outside the function, not on every render." },
+ { c:"async function load() {", n:"async so you can await inside it." },
+ { c:"const res = await fetch('/api/rows');", n:"Returns as soon as the headers arrive, not the body." },
+ { c:"if (!res.ok) throw new Error(`HTTP ${res.status}`);", n:"fetch does not treat a 500 as a failure. You have to." },
+ { c:"const data = await res.json();", n:"A second await, because the body streams in separately." },
+ { c:"list.innerHTML = data.map(r => `<li>${r.name}</li>`).join('');", n:"Build the whole string, then write once. Only safe because this data is yours — escape anything a user typed." },
+ { c:"} catch (err) { list.textContent = 'Could not load rows.'; }", n:"An empty screen with no message is a bug report you will receive by phone." }
+]},
+{ vol:"js", t:"One listener for a whole table", why:"Delegation, instead of a listener per row.", steps:[
+ { c:"table.addEventListener('click', handler);", n:"One listener on the container, attached once." },
+ { c:"const row = event.target.closest('tr');", n:"Walk up from whatever was clicked to the row that owns it." },
+ { c:"if (!row) return;", n:"The click might have landed on the header or on padding. Leave early." },
+ { c:"const id = row.dataset.id;", n:"Keep the identifier on the element as data-id, not in a parallel array." },
+ { c:"Add a row later and it still works", n:"The listener is on the parent, so rows that did not exist at setup time are covered too." }
+]},
+{ vol:"php", t:"Handle a form post safely", why:"Validate in, escape out — the two halves, in order.", steps:[
+ { c:"if ($_SERVER['REQUEST_METHOD'] !== 'POST') { http_response_code(405); exit; }", n:"Refuse anything that is not the method you designed for." },
+ { c:"$email = filter_input(INPUT_POST, 'email', FILTER_VALIDATE_EMAIL);", n:"Validation: is this the right shape? false means it is not." },
+ { c:"if ($email === false) { $errors[] = 'Enter a valid email address.'; }", n:"Collect errors and redisplay the form. Never silently drop input." },
+ { c:"$stmt = $pdo->prepare('INSERT INTO subscribers (email) VALUES (?)');\n$stmt->execute([$email]);", n:"Escaping for SQL: the value can never be read as syntax." },
+ { c:"header('Location: /thanks.php'); exit;", n:"Redirect after a successful post so a refresh cannot resubmit it." },
+ { c:"<?= htmlspecialchars($email, ENT_QUOTES, 'UTF-8') ?>", n:"Escaping for HTML, at the moment of output, every time." }
+]},
+{ vol:"php", t:"Set up a PDO connection you can trust", why:"Four lines of configuration that prevent a category of silent bugs.", steps:[
+ { c:"$dsn = 'mysql:host=localhost;dbname=app;charset=utf8mb4';", n:"Set the charset in the DSN. utf8mb4 is the one that holds every character, including emoji." },
+ { c:"PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION", n:"Failures throw instead of returning false and letting the script carry on with nothing." },
+ { c:"PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC", n:"Rows come back as associative arrays only, not duplicated with numeric keys as well." },
+ { c:"PDO::ATTR_EMULATE_PREPARES => false", n:"Use real prepared statements so the separation between query and data is genuine." },
+ { c:"Keep credentials out of the file", n:"Read them from the environment or a config file outside the web root, never hardcoded in a committed script." }
+]}
+];
+
+const GLOSSARY = [
+{ vol:"junos", c:"ELS", d:"Enhanced Layer 2 Software", n:"The newer Junos switching syntax used on EX4300 and later. interface-mode replaces port-mode, and VLANs are referenced by name." },
+{ vol:"junos", c:"Candidate configuration", d:"The editable scratch copy", n:"Where your set commands land. It becomes the active configuration only when you commit." },
+{ vol:"junos", c:"irb", d:"Integrated routing and bridging interface", n:"A virtual layer 3 interface attached to a VLAN. It holds the gateway IP for everything in that VLAN." },
+{ vol:"junos", c:"ae", d:"Aggregated Ethernet interface", n:"The logical bundle that several physical ports join. All configuration lives on the ae, not on its members." },
+{ vol:"junos", c:"LACP", d:"Link Aggregation Control Protocol", n:"Negotiates a bundle with the far end so mis-cabled members are excluded rather than silently used." },
+{ vol:"junos", c:"Virtual Chassis", d:"Several switches acting as one", n:"One management address, one configuration, roles of master, backup and linecard." },
+{ vol:"junos", c:"RSTP", d:"Rapid Spanning Tree Protocol", n:"Blocks redundant paths so a layer 2 loop cannot form, and reconverges in seconds when a link changes." },
+{ vol:"junos", c:"Trunk port", d:"A port carrying tagged VLANs", n:"Used between switches or to a hypervisor. An access port is the untagged, single-VLAN counterpart." },
+{ vol:"junos", c:"Preference", d:"Junos name for administrative distance", n:"Decides which protocol's route wins when the prefix is identical. Lower is better." },
+{ vol:"junos", c:"VRRP", d:"Virtual Router Redundancy Protocol", n:"Two switches share one virtual gateway IP so clients survive a failover without noticing." },
+{ vol:"junos", c:"Rescue configuration", d:"A saved known-good config", n:"Restored with rollback rescue. Save one once a switch is working and before any risky change." },
+{ vol:"python", c:"venv", d:"Virtual environment", n:"A per-project folder with its own interpreter link and packages, so projects cannot break each other." },
+{ vol:"python", c:"PEP 8", d:"The Python style guide", n:"Four-space indentation, snake_case names, lines under 79 to 100 characters. Tools like black apply it for you." },
+{ vol:"python", c:"Immutable", d:"Cannot be changed after creation", n:"Strings, numbers and tuples. Operations that look like edits return a new object instead." },
+{ vol:"python", c:"Comprehension", d:"Building a collection in one expression", n:"[x*2 for x in items] replaces the loop-and-append pattern." },
+{ vol:"python", c:"Traceback", d:"The error report", n:"Read it bottom up: the last line is the error, the lines above are the call chain that reached it." },
+{ vol:"python", c:"Module", d:"A single .py file you can import", n:"A package is a folder of modules. Both are imported with import." },
+{ vol:"python", c:"pip", d:"The package installer", n:"Installs from PyPI into the active environment. requirements.txt records what a project needs." },
+{ vol:"python", c:"REPL", d:"Read, evaluate, print, loop", n:"The interactive shell you get from typing python3 with no filename." },
+{ vol:"web", c:"DOM", d:"Document Object Model", n:"The tree the browser builds from your HTML. CSS matches against it and JavaScript edits it." },
+{ vol:"web", c:"Cascade", d:"How conflicting CSS rules are resolved", n:"Importance, then specificity, then source order." },
+{ vol:"web", c:"Specificity", d:"The weight of a selector", n:"Scored as inline, ids, classes, elements. A higher leftmost number wins outright." },
+{ vol:"web", c:"Box model", d:"Content, padding, border, margin", n:"box-sizing: border-box makes width mean the outer edge, which is what you expect." },
+{ vol:"web", c:"Viewport", d:"The visible area of the page", n:"The viewport meta tag tells a phone to use its real width instead of pretending to be a desktop." },
+{ vol:"web", c:"Semantic HTML", d:"Elements chosen for meaning", n:"header, nav, main, article. Same appearance as a div, but assistive technology can navigate it." },
+{ vol:"web", c:"Flex vs grid", d:"One dimension versus two", n:"Flex arranges along a line; grid arranges rows and columns that must line up." },
+{ vol:"web", c:"Breakpoint", d:"A width where the layout changes", n:"Chosen where the design actually breaks, not by device name." },
+{ vol:"web", c:"Stacking context", d:"A separate z-index universe", n:"Created by transform, opacity below 1 and others. A child's z-index only competes inside its own context." },
+{ vol:"js", c:"Event bubbling", d:"An event travelling up through ancestors", n:"What makes delegation possible: one listener on a parent hears every descendant." },
+{ vol:"js", c:"Delegation", d:"One listener for many elements", n:"Listen on the container, use event.target.closest() to identify what was hit. Survives later additions." },
+{ vol:"js", c:"Promise", d:"A value that arrives later", n:"Returned by fetch and anything asynchronous. await pauses the async function until it settles." },
+{ vol:"js", c:"Closure", d:"A function remembering its surroundings", n:"The variables in scope when the function was created stay alive as long as the function does." },
+{ vol:"js", c:"Truthy and falsy", d:"How non-booleans behave in a condition", n:"0, '', null, undefined and NaN are falsy. Everything else, including [] and {}, is truthy." },
+{ vol:"js", c:"XSS", d:"Cross-site scripting", n:"Injecting script through unescaped user content. Avoided by using textContent, or escaping before innerHTML." },
+{ vol:"js", c:"NodeList", d:"What querySelectorAll returns", n:"Array-like, has forEach, lacks map. Convert with Array.from() or a spread." },
+{ vol:"js", c:"Single thread", d:"One line of execution", n:"Shared with rendering, so blocking code freezes the page. Slow work must be asynchronous." },
+{ vol:"php", c:"Superglobal", d:"An array available in every scope", n:"$_POST, $_GET, $_SESSION, $_SERVER, $_FILES. All request data, all untrusted." },
+{ vol:"php", c:"Prepared statement", d:"Query and data sent separately", n:"The database parses the SQL before the values arrive, so a value can never become syntax." },
+{ vol:"php", c:"PDO", d:"PHP Data Objects", n:"The database access layer that works across engines and supports prepared statements properly." },
+{ vol:"php", c:"Session", d:"Per-visitor state on the server", n:"Keyed by a cookie. The main way anything survives between two requests." },
+{ vol:"php", c:"Composer", d:"The dependency manager", n:"composer.json declares packages, composer.lock pins versions, vendor/autoload.php loads classes on demand." },
+{ vol:"php", c:"PSR-4", d:"The autoloading standard", n:"Maps namespaces to folders so a class name tells the autoloader exactly which file to load." },
+{ vol:"php", c:"Type juggling", d:"Automatic type conversion in comparisons", n:"Why == produces surprising results. Use === to compare value and type." },
+{ vol:"php", c:"Request lifecycle", d:"Start, run, output, die", n:"PHP forgets everything at the end of a request. Anything that must persist has to be written somewhere." },
+{ vol:"php", c:"SQL injection", d:"User input read as query syntax", n:"Prevented structurally by prepared statements, not by escaping cleverly enough." }
+];
+const KEY_THEME = "codex.theme";
+const KEY_PINS = "codex.pins";
+const KEY_VOL = "codex.vol";
+const KEY_READ = "codex.read";
+const KEY_RESUME = "codex.resume";
+
+const railEl = document.getElementById("rail");
+const pageEl = document.getElementById("page");
+const searchEl = document.getElementById("search");
+const toastEl = document.getElementById("toast");
+const pinCountEl = document.getElementById("pinCount");
+
+const state = { vol: "junos", q: "" };
+let pins = [];
+let reads = [];
+let resume = null;
+
+function store(key, fallback){
+  try { const raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); }
+  catch (e) { return fallback; }
+}
+function save(key, value){
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+
+DATA.forEach(vol => {
+  vol.groups.forEach(g => {
+    const extra = AUG[vol.id + "::" + g.t];
+    if (extra) {
+      g.concept = extra.concept;
+      g.figure = extra.figure;
+      g.traps = extra.traps;
+      g.quiz = extra.quiz;
+      g.lab = extra.lab;
+    }
+  });
+});
+
+const FLAT = [];
+DATA.forEach(vol => {
+  vol.groups.forEach(g => {
+    g.e.forEach(entry => {
+      FLAT.push({
+        key: vol.id + "::" + g.t + "::" + entry.c,
+        vol: vol, group: g.t, entry: entry,
+        hay: (entry.c + " " + entry.d + " " + (entry.n || "") + " " + g.t + " " + vol.name).toLowerCase()
+      });
+    });
+  });
+});
+GLOSSARY.forEach(item => {
+  const vol = DATA.filter(v => v.id === item.vol)[0];
+  if (!vol) return;
+  FLAT.push({
+    key: "glossary::" + item.vol + "::" + item.c,
+    vol: vol, group: "Glossary", glossary: true,
+    entry: { c: item.c, d: item.d, n: item.n },
+    hay: (item.c + " " + item.d + " " + item.n + " glossary " + vol.name).toLowerCase()
+  });
+});
+
+function svgIcon(kind){
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("width", "15"); svg.setAttribute("height", "15");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "1.7");
+  const p = document.createElementNS(ns, "path");
+  if (kind === "pin") p.setAttribute("d", "M6 3h12v18l-6-4.5L6 21z");
+  else p.setAttribute("d", "M9 9h10v12H9zM5 15V3h10v2");
+  svg.appendChild(p);
+  return svg;
+}
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => toastEl.classList.remove("show"), 1400);
+}
+
+function copy(text){
+  const done = () => toast("Copied");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => toast("Copy blocked by the browser"));
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { toast("Copy blocked by the browser"); }
+    ta.remove();
+  }
+}
+
+function el(tag, cls, text){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function buildEntry(item){
+  const art = el("article", "entry");
+  const head = el("div", "head");
+  head.tabIndex = 0;
+  head.setAttribute("role", "button");
+  head.setAttribute("aria-expanded", "false");
+
+  const code = el("code", "code", item.entry.c);
+  const gloss = el("p", "gloss", item.entry.d);
+  const tools = el("div", "tools");
+
+  const pinBtn = document.createElement("button");
+  pinBtn.appendChild(svgIcon("pin"));
+  pinBtn.title = "Pin this entry";
+  pinBtn.setAttribute("aria-label", "Pin this entry");
+  if (pins.indexOf(item.key) !== -1) pinBtn.classList.add("pinned");
+  pinBtn.addEventListener("click", ev => {
+    ev.stopPropagation();
+    const i = pins.indexOf(item.key);
+    if (i === -1) { pins.push(item.key); pinBtn.classList.add("pinned"); toast("Pinned"); }
+    else { pins.splice(i, 1); pinBtn.classList.remove("pinned"); toast("Unpinned"); }
+    save(KEY_PINS, pins);
+    pinCountEl.textContent = pins.length;
+    if (state.vol === "pins" && !state.q) render();
+  });
+
+  const copyBtn = document.createElement("button");
+  copyBtn.appendChild(svgIcon("copy"));
+  copyBtn.title = "Copy";
+  copyBtn.setAttribute("aria-label", "Copy");
+  copyBtn.addEventListener("click", ev => { ev.stopPropagation(); copy(item.entry.c); });
+
+  tools.appendChild(pinBtn);
+  tools.appendChild(copyBtn);
+  head.appendChild(code);
+  head.appendChild(gloss);
+  head.appendChild(tools);
+
+  const note = el("div", "note");
+  if (item.entry.n) note.appendChild(el("p", null, item.entry.n));
+  if (item.entry.x) note.appendChild(el("pre", null, item.entry.x));
+
+  const toggle = () => {
+    const open = art.classList.toggle("open");
+    head.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  head.addEventListener("click", toggle);
+  head.addEventListener("keydown", ev => {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggle(); }
+  });
+
+  art.appendChild(head);
+  art.appendChild(note);
+  return art;
+}
+
+function volById(id){ return DATA.filter(v => v.id === id)[0]; }
+function readKey(volId, title){ return volId + "::" + title; }
+function isRead(volId, title){ return reads.indexOf(readKey(volId, title)) !== -1; }
+function volProgress(vol){
+  const done = vol.groups.filter(g => isRead(vol.id, g.t)).length;
+  return { done: done, total: vol.groups.length };
+}
+
+function pageHead(title, blurb, count){
+  const wrap = el("div", "vol-head");
+  wrap.appendChild(el("h1", null, title));
+  if (blurb) wrap.appendChild(el("p", null, blurb));
+  if (count) wrap.appendChild(el("span", "count", count));
+  return wrap;
+}
+
+function buildQuiz(quiz){
+  const block = el("div", "block");
+  block.appendChild(el("h3", null, "Check yourself"));
+  quiz.forEach(item => {
+    const wrap = el("div", "qa");
+    const b = el("button", null, item.q);
+    const a = el("p", null, item.a);
+    b.addEventListener("click", () => wrap.classList.toggle("open"));
+    wrap.appendChild(b); wrap.appendChild(a);
+    block.appendChild(wrap);
+  });
+  return block;
+}
+
+function buildSection(vol, g, gi, total){
+  const sec = el("section", "group");
+  sec.id = vol.id + "-" + gi;
+
+  const head = el("div", "sec-head");
+  const num = el("span", "sec-num", (gi + 1) + " / " + total);
+  if (isRead(vol.id, g.t)) num.classList.add("done");
+  head.appendChild(num);
+  head.appendChild(el("h2", null, g.t));
+
+  const readBtn = el("button", "readbtn", isRead(vol.id, g.t) ? "Read" : "Mark read");
+  if (isRead(vol.id, g.t)) readBtn.classList.add("done");
+  readBtn.addEventListener("click", () => {
+    const k = readKey(vol.id, g.t);
+    const i = reads.indexOf(k);
+    if (i === -1) {
+      reads.push(k);
+      resume = { vol: vol.id, gi: Math.min(gi + 1, total - 1) };
+      save(KEY_RESUME, resume);
+    } else {
+      reads.splice(i, 1);
+    }
+    save(KEY_READ, reads);
+    render();
+    const target = document.getElementById(vol.id + "-" + gi);
+    if (target) target.scrollIntoView({ block: "start" });
+  });
+  head.appendChild(readBtn);
+  sec.appendChild(head);
+
+  if (g.concept) {
+    const c = el("div", "concept");
+    c.appendChild(el("p", null, g.concept));
+    if (g.figure) c.appendChild(el("pre", null, g.figure));
+    sec.appendChild(c);
+  }
+
+  g.e.forEach(entry => {
+    sec.appendChild(buildEntry({ key: vol.id + "::" + g.t + "::" + entry.c, vol: vol, group: g.t, entry: entry }));
+  });
+
+  if (g.traps) {
+    const block = el("div", "block");
+    block.appendChild(el("h3", null, "Where this goes wrong"));
+    const ul = document.createElement("ul");
+    g.traps.forEach(t => ul.appendChild(el("li", null, t)));
+    block.appendChild(ul);
+    sec.appendChild(block);
+  }
+
+  if (g.quiz) sec.appendChild(buildQuiz(g.quiz));
+
+  const foot = el("div", "sec-foot");
+  if (g.lab && LAB_LINKS[vol.id]) {
+    const a = document.createElement("a");
+    a.href = LAB_LINKS[vol.id].href;
+    a.textContent = "Drill this in " + LAB_LINKS[vol.id].label;
+    foot.appendChild(a);
+  }
+  const printBtn = el("button", null, "Print this section");
+  printBtn.addEventListener("click", () => {
+    document.body.classList.add("print-one");
+    sec.classList.add("print-me");
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("print-one");
+      sec.classList.remove("print-me");
+    }, 500);
+  });
+  foot.appendChild(printBtn);
+
+  if (gi + 1 < total) {
+    const next = el("button", "next", "Next: " + vol.groups[gi + 1].t);
+    next.addEventListener("click", () => {
+      const target = document.getElementById(vol.id + "-" + (gi + 1));
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    foot.appendChild(next);
+  }
+  sec.appendChild(foot);
+  return sec;
+}
+
+function renderVolume(vol){
+  pageEl.style.setProperty("--vc", vol.color);
+  const total = vol.groups.reduce((a, g) => a + g.e.length, 0);
+  const p = volProgress(vol);
+  pageEl.appendChild(pageHead(vol.name, vol.blurb,
+    vol.groups.length + " sections, " + total + " entries, " + p.done + " read"));
+
+  if (resume && resume.vol === vol.id && resume.gi > 0 && resume.gi < vol.groups.length) {
+    const bar = el("div", "resume");
+    const s = document.createElement("span");
+    s.appendChild(document.createTextNode("You stopped at section " + (resume.gi + 1) + ": "));
+    s.appendChild(el("b", null, vol.groups[resume.gi].t));
+    bar.appendChild(s);
+    const b = el("button", null, "Continue");
+    b.addEventListener("click", () => {
+      const target = document.getElementById(vol.id + "-" + resume.gi);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    bar.appendChild(b);
+    pageEl.appendChild(bar);
+  }
+
+  vol.groups.forEach((g, gi) => pageEl.appendChild(buildSection(vol, g, gi, vol.groups.length)));
+}
+
+function renderPins(){
+  pageEl.style.setProperty("--vc", "var(--pin)");
+  const items = FLAT.filter(i => pins.indexOf(i.key) !== -1);
+  pageEl.appendChild(pageHead("Pinned", "The entries you keep coming back to.", items.length + " pinned"));
+  if (!items.length) {
+    const box = el("div", "empty");
+    box.appendChild(el("h2", null, "Nothing pinned yet"));
+    box.appendChild(el("p", null, "Pin an entry with the bookmark button and it collects here, across every volume."));
+    pageEl.appendChild(box);
+    return;
+  }
+  DATA.forEach(vol => {
+    const mine = items.filter(i => i.vol.id === vol.id);
+    if (!mine.length) return;
+    const sec = el("section", "group");
+    sec.style.setProperty("--vc", vol.color);
+    const head = el("div", "sec-head");
+    head.appendChild(el("h2", null, vol.name));
+    sec.appendChild(head);
+    mine.forEach(i => sec.appendChild(buildEntry(i)));
+    pageEl.appendChild(sec);
+  });
+}
+
+function renderRecipes(){
+  pageEl.style.setProperty("--vc", "var(--accent)");
+  pageEl.appendChild(pageHead("Recipes",
+    "Whole tasks, start to finish, with the reasoning between the steps. Look here when you know what you want to achieve but not the order to do it in.",
+    RECIPES.length + " recipes"));
+  DATA.forEach(vol => {
+    const mine = RECIPES.filter(r => r.vol === vol.id);
+    if (!mine.length) return;
+    const sec = el("section", "group");
+    sec.style.setProperty("--vc", vol.color);
+    const head = el("div", "sec-head");
+    head.appendChild(el("h2", null, vol.name));
+    sec.appendChild(head);
+    mine.forEach(r => {
+      const card = el("div", "recipe");
+      card.appendChild(el("h2", null, r.t));
+      card.appendChild(el("p", null, r.why));
+      r.steps.forEach((s, i) => {
+        const step = el("div", "step");
+        step.appendChild(el("span", "n", String(i + 1)));
+        step.appendChild(el("code", null, s.c));
+        step.appendChild(el("p", null, s.n));
+        card.appendChild(step);
+      });
+      sec.appendChild(card);
+    });
+    pageEl.appendChild(sec);
+  });
+}
+
+function renderGlossary(){
+  pageEl.style.setProperty("--vc", "var(--accent)");
+  pageEl.appendChild(pageHead("Glossary",
+    "Every term the labs assume you already know, in one line each.",
+    GLOSSARY.length + " terms"));
+  DATA.forEach(vol => {
+    const mine = FLAT.filter(i => i.glossary && i.vol.id === vol.id);
+    if (!mine.length) return;
+    const sec = el("section", "group");
+    sec.style.setProperty("--vc", vol.color);
+    const head = el("div", "sec-head");
+    head.appendChild(el("h2", null, vol.name));
+    sec.appendChild(head);
+    mine.forEach(i => sec.appendChild(buildEntry(i)));
+    pageEl.appendChild(sec);
+  });
+}
+
+function renderSearch(q){
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hits = FLAT.filter(i => terms.every(t => i.hay.indexOf(t) !== -1));
+  hits.sort((a, b) => {
+    const sa = a.entry.c.toLowerCase().indexOf(terms[0]) !== -1 ? 0 : 1;
+    const sb = b.entry.c.toLowerCase().indexOf(terms[0]) !== -1 ? 0 : 1;
+    return sa - sb;
+  });
+  pageEl.style.setProperty("--vc", "var(--accent)");
+  pageEl.appendChild(pageHead("Search", null, hits.length + " matches for " + q));
+  if (!hits.length) {
+    const box = el("div", "empty");
+    box.appendChild(el("h2", null, "No match"));
+    box.appendChild(el("p", null, "Try a shorter term, or the plain word rather than the full command. Search looks at commands, descriptions, notes and the glossary."));
+    pageEl.appendChild(box);
+    return;
+  }
+  const sec = el("section", "group");
+  hits.slice(0, 80).forEach(i => {
+    const where = el("span", "hit-where", i.vol.name + " / " + i.group);
+    const node = buildEntry(i);
+    node.style.setProperty("--vc", i.vol.color);
+    node.insertBefore(where, node.firstChild);
+    sec.appendChild(node);
+  });
+  pageEl.appendChild(sec);
+}
+
+function railButton(id, name, sub, sigil, color, progress){
+  const b = el("button", "vol");
+  b.style.setProperty("--vc", color);
+  if (state.vol === id && !state.q) b.setAttribute("aria-current", "true");
+  const s = el("span", "sigil", sigil);
+  const meta = el("span", "vol-meta");
+  meta.appendChild(el("b", null, name));
+  meta.appendChild(el("small", null, sub));
+  if (progress) {
+    const bar = el("div", "bar");
+    const fill = document.createElement("i");
+    fill.style.width = Math.round(100 * progress.done / progress.total) + "%";
+    bar.appendChild(fill);
+    meta.appendChild(bar);
+  }
+  b.appendChild(s); b.appendChild(meta);
+  b.addEventListener("click", () => {
+    state.vol = id;
+    state.q = ""; searchEl.value = "";
+    save(KEY_VOL, id);
+    document.body.classList.remove("nav-open");
+    render();
+    window.scrollTo(0, 0);
+  });
+  railEl.appendChild(b);
+}
+
+function renderRail(){
+  railEl.textContent = "";
+  railEl.appendChild(el("div", "rail-label", "Volumes"));
+  DATA.forEach(v => {
+    const p = volProgress(v);
+    railButton(v.id, v.name, p.done + " of " + p.total + " sections read", v.sigil, v.color, p);
+  });
+  railEl.appendChild(el("div", "rail-sep"));
+  railButton("recipes", "Recipes", RECIPES.length + " whole tasks", "RC", "var(--accent)");
+  railButton("glossary", "Glossary", GLOSSARY.length + " terms", "GL", "var(--accent)");
+  railButton("pins", "Pinned", pins.length + " saved", "PN", "var(--pin)");
+
+  if (!state.q) {
+    const vol = volById(state.vol);
+    if (vol) {
+      railEl.appendChild(el("div", "rail-sep"));
+      railEl.appendChild(el("div", "rail-label", "Sections"));
+      vol.groups.forEach((g, gi) => {
+        const j = el("button", "jump", (isRead(vol.id, g.t) ? "\u2713 " : "") + (gi + 1) + ". " + g.t);
+        if (isRead(vol.id, g.t)) j.classList.add("on");
+        j.addEventListener("click", () => {
+          const target = document.getElementById(vol.id + "-" + gi);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+          document.body.classList.remove("nav-open");
+        });
+        railEl.appendChild(j);
+      });
+    }
+  }
+}
+
+function render(){
+  pageEl.textContent = "";
+  if (state.q) renderSearch(state.q);
+  else if (state.vol === "pins") renderPins();
+  else if (state.vol === "recipes") renderRecipes();
+  else if (state.vol === "glossary") renderGlossary();
+  else {
+    const vol = volById(state.vol) || DATA[0];
+    state.vol = vol.id;
+    renderVolume(vol);
+  }
+  renderRail();
+}
+
+function setTheme(mode){
+  document.documentElement.setAttribute("data-theme", mode);
+  const meta = document.querySelector("meta[name=theme-color]");
+  if (meta) meta.setAttribute("content", mode === "night" ? "#0e1419" : "#e7ebef");
+  save(KEY_THEME, mode);
+}
+
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const now = document.documentElement.getAttribute("data-theme");
+  setTheme(now === "night" ? "day" : "night");
+});
+
+document.getElementById("pinBtn").addEventListener("click", () => {
+  state.vol = "pins"; state.q = ""; searchEl.value = "";
+  render(); window.scrollTo(0, 0);
+});
+
+document.getElementById("drawerBtn").addEventListener("click", () => {
+  document.body.classList.toggle("nav-open");
+});
+document.getElementById("scrim").addEventListener("click", () => {
+  document.body.classList.remove("nav-open");
+});
+
+let searchTimer;
+searchEl.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.q = searchEl.value.trim();
+    render();
+  }, 120);
+});
+
+document.addEventListener("keydown", ev => {
+  const inField = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (ev.key === "/" && !inField) { ev.preventDefault(); searchEl.focus(); searchEl.select(); }
+  if (ev.key === "Escape") {
+    document.body.classList.remove("nav-open");
+    if (state.q) { searchEl.value = ""; state.q = ""; render(); }
+    searchEl.blur();
+  }
+});
+
+pins = store(KEY_PINS, []);
+if (!Array.isArray(pins)) pins = [];
+reads = store(KEY_READ, []);
+if (!Array.isArray(reads)) reads = [];
+resume = store(KEY_RESUME, null);
+pinCountEl.textContent = pins.length;
+setTheme(store(KEY_THEME, "day"));
+state.vol = store(KEY_VOL, "junos");
+render();
+</script>
+</body>
+</html>
