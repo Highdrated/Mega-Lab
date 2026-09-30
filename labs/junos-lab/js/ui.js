@@ -47,6 +47,7 @@ function completionsFor(dev, input){
       ["edit", "Descend into a hierarchy level"], ["up", "Up one level"], ["top", "Back to the top level"],
       ["commit", "Activate the candidate (also: confirmed <m>, check, and-quit)"],
       ["rollback", "Reset the candidate (0 = committed config)"],
+      ["annotate", "Attach a comment to a statement (annotate <stmt> \"why\")"],
       ["run", "Run an operational command"], ["exit", "Leave this level / config mode"],
     ];
     return { items: cmds.filter(([c]) => c.startsWith(partial)).map(([c, h]) => ({ label: c, help: h })) };
@@ -62,14 +63,17 @@ function completionsFor(dev, input){
     if(!items.length){ const res = trieWalk(CFG_TRIE[dev.type], full, dev); return { err: res.err || "no completions" }; }
     return { items };
   }
-  if(cmdName === "delete" || cmdName === "show"){
+  if(cmdName === "delete" || cmdName === "show" || cmdName === "annotate"){
     const res = resolveTreePath(dev.candidate, dev.cli.editKeys.concat(rest));
     if(typeof res.err === "string") return { items: [] };
     const node = res.arrayItem !== undefined ? [] : res.node;
     let items = [];
     if(Array.isArray(node)) items = node.map(v => ({ label: String(v), help: "" }));
-    else if(node && typeof node === "object") items = Object.keys(node).map(k => ({ label: k, help: "" }));
-    return { items: items.filter(i => i.label.startsWith(partial)) };
+    else if(node && typeof node === "object")
+      items = Object.keys(node).filter(k => k !== ANNOT_KEY).map(k => ({ label: k, help: "" }));
+    if(cmdName === "annotate" && rest.length)
+      items.push({ label: '<"comment">', help: "Quoted text \u2014 an empty \"\" removes the comment" });
+    return { items: items.filter(i => i.label.startsWith(partial) || i.label.startsWith("<")) };
   }
   if(cmdName === "run"){
     const items = trieCompletionsAll(OP_TRIE[dev.type], rest, dev, partial);
@@ -1829,19 +1833,23 @@ function confToSetLines(text){
   if(/^\s*set\s+/m.test(raw) && !/\{\s*$/m.test(raw)){
     return raw.split("\n")
       .map(l => l.replace(/^\s*#.*$/, "").trim())
-      .filter(l => /^set\s+/.test(l))
+      .filter(l => /^(set|annotate)\s+/.test(l))
       .map(l => l.replace(/;\s*$/, ""));
   }
   const out = [];
+  const notes = [];
   const stack = [];
   const lines = raw.split("\n");
   let inBlockComment = false;
+  let pendingNote = "";
   for(let line of lines){
     if(inBlockComment){
       if(line.indexOf("*/") !== -1) inBlockComment = false;
       continue;
     }
     if(line.indexOf("/*") !== -1 && line.indexOf("*/") === -1){ inBlockComment = true; continue; }
+    const solo = line.match(/^\s*\/\*([\s\S]*?)\*\/\s*$/);
+    if(solo){ pendingNote = solo[1].trim(); continue; }
     line = line.replace(/\/\*[\s\S]*?\*\//g, "");
     line = line.replace(/##.*$/, "").trim();
     if(!line || line.startsWith("#")) continue;
@@ -1850,12 +1858,16 @@ function confToSetLines(text){
     if(line.endsWith("{")){
       const head = line.slice(0, -1).trim();
       if(head) stack.push(head);
+      if(pendingNote && head){ notes.push([stack.join(" "), pendingNote]); }
+      pendingNote = "";
       continue;
     }
     if(line.endsWith(";")){
       const body = line.slice(0, -1).trim();
-      if(!body) continue;
+      if(!body){ pendingNote = ""; continue; }
       out.push("set " + stack.concat(body).join(" "));
+      if(pendingNote) notes.push([stack.concat(body.split(/\s+/)[0]).join(" "), pendingNote]);
+      pendingNote = "";
       continue;
     }
     if(line.endsWith("}")){
@@ -1864,6 +1876,7 @@ function confToSetLines(text){
       stack.pop();
     }
   }
+  for(const [path, note] of notes) out.push("annotate " + path + ' "' + note + '"');
   return out;
 }
 function importConfigInto(dev, text){
@@ -1936,12 +1949,12 @@ function exportConfigs(fmt){
     if(dev.type !== "switch" && dev.type !== "router") continue;
     const name = hostnameOf(dev);
     if(fmt === "set"){
-      const body = Object.keys(dev.config).length
+      const body = !cfgIsEmpty(dev.config)
         ? treeToDisplaySet(dev.config, []).join("\n")
         : "## (factory-default \u2014 empty configuration)";
       parts.push("## ===== " + name + " (" + dev.type + ") =====\n" + body);
     } else {
-      const body = Object.keys(dev.config).length
+      const body = !cfgIsEmpty(dev.config)
         ? treeToText(dev.config)
         : "## (factory-default \u2014 empty configuration)";
       parts.push("## ===== " + name + " (" + dev.type + ") =====\n" + confHeader(dev) + body);
@@ -2616,6 +2629,7 @@ const REF_CONCEPTS = [
   ["irb — the switch as a router", "Rooms are sealed on purpose. When you DO want staff and guests to exchange messages, someone must carry them between rooms: a router. A switch can be its own router using irb interfaces. Give a room a door with an address: set interfaces irb unit 10 family inet address 10.0.10.1/24. Then tell the room which door is its: set vlans staff l3-interface irb.10. The door's address (10.0.10.1) is what the computers in that room use as their gateway. Give two rooms doors, and the switch carries messages between them."],
   ["The commit model", "JunOS keeps two copies of the settings. The active configuration is what the box is really doing right now. The candidate is your scratch pad. Every set command writes only on the scratch pad — the real world does not change yet. show | compare shows the difference between pad and reality. commit copies the pad onto reality, all at once. rollback 0 wipes the pad and copies reality back onto it. This is why you can prepare a large change calmly, check it, and then apply the whole thing in one step."],
   ["commit confirmed", "A seatbelt for scary changes. commit confirmed 5 applies your change AND starts a five-minute countdown. If you type commit again before time runs out, the change stays. If you do nothing — for example, because the change locked you out and you cannot type anything at all — the box undoes everything by itself, and you are back in. Use it whenever a mistake could cut off your own access to the device you are configuring."],
+  ["Comments in the configuration", "A configuration says WHAT is set and never WHY, so Junos lets you write the why into the config itself. annotate interfaces ge-0/0/23 \"shut 2026-03-14 \u2014 CUST-4471 cancelled, re-enable when INC-8822 closes\" attaches that sentence to that statement. From then on it prints as /* ... */ on the line above, every time anyone looks. Three rules make it behave: the statement must already exist (annotate decorates config, it never creates it), the comment is itself configuration (so it shows in show | compare, needs a commit to become real, and vanishes on rollback 0), and deleting the statement takes its comment with it. An empty comment \u2014 annotate <statement> \"\" \u2014 is how you remove one. Because show configuration | display set prints comments back as annotate commands, a config you copy to another switch arrives with its reasoning intact. Comment the surprises and anything temporary; do not waste a line restating what the statement already says."],
   ["Routes & gateways", "A route is one line of directions: to reach that street, hand the packet to this address next. Routers (and switches with irb doors) automatically know the streets plugged directly into them. Every other street must be written down: set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1. The odd-looking 0.0.0.0/0 means anything I do not know better — the default route, the way out. Ordinary computers keep it even simpler: ip route add default via 10.0.10.1 means when in doubt, give it to the gateway."],
   ["The return path", "A ping is a round trip. Your request travels out, and a reply must travel back — and each direction needs its own directions. If the far side has no route back to you, your request arrives perfectly and the reply dies quietly. From your chair this looks identical to a broken network. The giveaway: traceroute reaches the target while ping keeps failing. When you see that, stop studying the way out and go check the way back."],
   ["Firewall filters", "A filter is a doorman holding a numbered checklist. The numbered rules are called terms. For every packet, the doorman reads the list from the top and obeys the FIRST line that matches: accept (come in), discard (thrown away, silently), or reject (thrown away, and a not-allowed note goes back). Now the trap everyone falls into exactly once: after your last term there is an invisible final rule that discards EVERYTHING. A filter that only says block guests from ops therefore also blocks guests from everything else — unless you end it with a term that says then accept. Post the doorman on a door with ... family inet filter input NAME."],
@@ -3416,6 +3430,10 @@ document.getElementById("tablet-tab-juno").onclick = () => setTabletTab("juno");
 document.getElementById("tablet-tab-proto").onclick = () => setTabletTab("proto");
 document.getElementById("tablet-close").onclick = closeTablet;
 document.getElementById("ref-btn").onclick = () => toggleTablet("ref");
+{
+  const nb = document.getElementById("notes-btn");
+  if(nb) nb.onclick = () => { if(typeof openNotes === "function") openNotes(); };
+}
 (function(){
   // drag by the head; buttons inside still click
   const head = document.getElementById("tablet-head");
@@ -3684,6 +3702,7 @@ wireToolbarMenu("plan-btn", "plan-menu", [
   { action: () => typeof exportDiagramPng === "function" && exportDiagramPng(), label: "Export diagram (PNG)", desc: "A bitmap snapshot for pasting into documents" },
 ]);
 wireToolbarMenu("lab-btn", "lab-menu", [
+  { action: () => typeof openNotes === "function" && openNotes(), label: "Notes for Claude\u2026", desc: "Ideas and bugs you spot between sessions \u2014 copy the briefing and say \"check my notes\"" },
   { action: () => showUnmodeled(), label: "Unmodeled commands", desc: "What you typed that this lab does not support \u2014 the gap list vs a real switch" },
   { action: () => injectGremlin(), label: "Inject a gremlin", desc: "A random live cable starts silently dropping packets — find it with show interfaces statistics" },
   { action: () => clearGremlins(), label: "Clear gremlins", desc: "All degraded cables recover" },

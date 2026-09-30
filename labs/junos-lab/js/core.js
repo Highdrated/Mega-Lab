@@ -264,22 +264,77 @@ function cfgDelete(tree, keys){
   }
 }
 
+/* ------------------------------------------------------------
+   CONFIG COMMENTS  (JunOS "annotate")
+   Comments hang off a statement, not inside it. They live in one
+   flat map at the tree root so that every Object.entries() walk
+   over interfaces / vlans / terms keeps seeing only real config.
+   ------------------------------------------------------------ */
+var ANNOT_KEY = "@annotations";
+
+function annotAll(tree){ return (tree && tree[ANNOT_KEY]) || null; }
+function annotGet(tree, keys){
+  const m = annotAll(tree);
+  return m ? m[keys.join(" ")] : undefined;
+}
+function annotSet(tree, keys, text){
+  if(!tree[ANNOT_KEY]) tree[ANNOT_KEY] = {};
+  tree[ANNOT_KEY][keys.join(" ")] = text;
+}
+function annotClear(tree, keys){
+  const m = tree[ANNOT_KEY];
+  if(!m) return false;
+  const k = keys.join(" ");
+  if(!(k in m)) return false;
+  delete m[k];
+  if(!Object.keys(m).length) delete tree[ANNOT_KEY];
+  return true;
+}
+function annotPrune(tree){
+  const m = tree && tree[ANNOT_KEY];
+  if(!m) return;
+  for(const k of Object.keys(m))
+    if(cfgGet(tree, k.split(" ")) === undefined) delete m[k];
+  if(!Object.keys(m).length) delete tree[ANNOT_KEY];
+}
+function cfgIsEmpty(tree){
+  if(!tree) return true;
+  return Object.keys(tree).filter(k => k !== ANNOT_KEY).length === 0;
+}
+function annotClean(text){
+  return String(text == null ? "" : text)
+    .replace(/[\r\n]+/g, " ")
+    .replace(/\*\//g, "* /")
+    .replace(/\/\*/g, "/ *")
+    .trim();
+}
+
 /* JunOS-style curly-brace rendering */
-function treeToText(t, ind){
+function treeToText(t, ind, annots, path){
   ind = ind || "";
+  if(annots === undefined){ annots = annotAll(t) || {}; path = []; }
+  path = path || [];
   const out = [];
   for(const k of Object.keys(t)){
+    if(k === ANNOT_KEY) continue;
     const v = t[k];
+    const here = path.concat(k);
+    const note = annots[here.join(" ")];
+    if(note) out.push(ind + "/* " + note + " */");
     if(v === true) out.push(ind + k + ";");
     else if(Array.isArray(v))
       out.push(ind + k + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
     else if(v && typeof v === "object"){
       if(Object.keys(v).length === 0) out.push(ind + k + ";");
-      else { out.push(ind + k + " {"); out.push(treeToText(v, ind + "    ")); out.push(ind + "}"); }
+      else { out.push(ind + k + " {"); out.push(treeToText(v, ind + "    ", annots, here)); out.push(ind + "}"); }
     }
     else out.push(ind + k + " " + v + ";");
   }
   return out.join("\n");
+}
+/* Render a subtree but keep the comments, which are stored at the root. */
+function treeToTextAt(root, keys, node, ind){
+  return treeToText(node, ind || "", annotAll(root) || {}, (keys || []).slice());
 }
 
 /* JunOS-style "show | compare" diff */
@@ -293,7 +348,7 @@ function diffTrees(applied, cand){
     else arr.push(sign + "  " + k + " " + v + ";");
   }
   function walk(pa, ca, path){
-    const keys = [...new Set([...Object.keys(pa || {}), ...Object.keys(ca || {})])];
+    const keys = [...new Set([...Object.keys(pa || {}), ...Object.keys(ca || {})])].filter(k => k !== ANNOT_KEY);
     const minus = [], plus = [], sub = [];
     for(const k of keys){
       const av = pa ? pa[k] : undefined, cv = ca ? ca[k] : undefined;
@@ -311,7 +366,27 @@ function diffTrees(applied, cand){
     for(const [k, av, cv] of sub) walk(av, cv, [...path, k]);
   }
   walk(applied, cand, []);
+  annotWalk(applied, cand, out);
   return out.join("\n");
+}
+/* Comment changes get their own hunk, anchored at the parent level and
+   echoing the statement underneath, the way "show | compare" prints them. */
+function annotWalk(applied, cand, out){
+  const am = annotAll(applied) || {}, cm = annotAll(cand) || {};
+  const keys = [...new Set([...Object.keys(am), ...Object.keys(cm)])].sort();
+  for(const k of keys){
+    if(am[k] === cm[k]) continue;
+    const parts = k.split(" ");
+    const parent = parts.slice(0, -1), leaf = parts[parts.length - 1];
+    const v = cfgGet(cand, parts) !== undefined ? cfgGet(cand, parts) : cfgGet(applied, parts);
+    out.push("[edit" + (parent.length ? " " + parent.join(" ") : "") + "]");
+    if(am[k]) out.push("-   /* " + am[k] + " */");
+    if(cm[k]) out.push("+   /* " + cm[k] + " */");
+    if(v === true || v === undefined) out.push("    " + leaf + ";");
+    else if(Array.isArray(v)) out.push("    " + leaf + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
+    else if(v && typeof v === "object") out.push("    " + leaf + " { ... }");
+    else out.push("    " + leaf + " " + v + ";");
+  }
 }
 
 var STRICT = true;
@@ -333,7 +408,7 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "3.12.0";
+var APP_VERSION = "3.13.0";
 
 function svgMark(kind){
   if(kind === "check") return '<svg class="mk mk-check" viewBox="0 0 14 14"><path d="M2.5 7.5 L5.8 10.8 L11.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';

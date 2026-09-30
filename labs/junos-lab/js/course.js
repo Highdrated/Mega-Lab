@@ -7,7 +7,7 @@ var TRACKS = {
       { g: "vlan" }, { s: "vlan-split" }, { s: "trunk-span" }, { s: "irb-intervlan" },
       { g: "rstp" }, { s: "rstp-loop" },
       { g: "lacp" }, { s: "lacp-bundle" },
-      { g: "junos-arch" }, { s: "commit-confirmed" },
+      { g: "junos-arch" }, { s: "commit-confirmed" }, { g: "comments" },
       { g: "dhcp" }, { s: "dhcp-serve" },
       { g: "filters" }, { s: "filtered-segment" },
       { g: "ospf" }, { s: "ospf-backbone" },
@@ -17,7 +17,7 @@ var TRACKS = {
     ],
     domains: {
       "Networking fundamentals": ["osi", "subnetting", "basic-connect"],
-      "Junos OS fundamentals": ["junos-arch", "commit-confirmed"],
+      "Junos OS fundamentals": ["junos-arch", "commit-confirmed", "comments"],
       "CLI & configuration": ["vlan", "vlan-split", "trunk-span", "irb-intervlan", "rstp", "rstp-loop", "lacp", "lacp-bundle"],
       "Monitoring & maintenance": ["dhcp", "dhcp-serve", "interconnect-recovery"],
       "Routing fundamentals": ["ospf", "ospf-backbone", "dia", "isp-onboarding", "nat-edge", "bgp", "speak-bgp"],

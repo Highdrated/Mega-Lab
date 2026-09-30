@@ -1,0 +1,27 @@
+name: lab-tests
+on:
+  push:
+    paths: ["labs/junos-lab/**", ".github/workflows/tests.yml"]
+  pull_request:
+    paths: ["labs/junos-lab/**"]
+  workflow_dispatch: {}
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: labs/junos-lab
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Unit and behavior tests
+        run: node tests/run.js
+      - name: No pictographic emoji in learning material
+        run: node tests/no-emoji.js
+      - name: Teaching coverage (every taught command must be accepted)
+        run: node tests/coverage.js
+        continue-on-error: true
+      - name: Soak (8k iterations)
+        run: node tests/soak.js 8000

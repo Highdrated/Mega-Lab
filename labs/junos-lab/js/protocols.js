@@ -684,6 +684,7 @@ var PROTO_GUIDES = [
     title: "Firewall Filters & Routing Policy",
     tag: "JNCIA \u00b7 traffic control",
     ready: true,
+    noTopology: true,
     scenarioId: "filtered-segment",
     problem: {
       text: ["First, defuse the name: on an EX switch, 'firewall' does NOT mean a firewall appliance. It isn't stateful, it doesn't track connections like an SRX would. It's a per-packet checklist — what other vendors call an ACL. Junos just reuses the word in config, and yes, that confuses everyone.", "A FIREWALL FILTER is a bouncer's checklist stapled to ONE interface, in ONE direction. Every packet crossing it walks the list: block the guest VLAN from reaching management, allow only icmp, drop a noisy host.", "ROUTING POLICY is the same checklist idea aimed at a different victim: ROUTES entering or leaving a protocol — what you accept from a BGP peer, what you advertise back. Filters eat packets; policies eat routes. That one sentence is worth an exam point."],
@@ -857,6 +858,7 @@ var PROTO_GUIDES = [
     title: "System Maintenance — users, rescue & the file system",
     tag: "JNCIA \u00b7 maintenance",
     ready: true,
+    noTopology: true,
     problem: {
       text: ["The unglamorous exam domain that saves real careers: who can log in, what happens when a config change goes wrong at a remote site, and why upgrades fail on full disks.", "Junos has an answer for each — login classes for access, the rescue config as your known-good parachute, and a file system you can actually inspect and clean. None of it is hard; all of it is asked."],
       svg: "maint-problem"
@@ -934,6 +936,93 @@ var PROTO_GUIDES = [
         opts: ["The switch is broken", "Type cli — root lands in the shell first", "Reboot"],
         right: 1,
         why: "Root logs into the underlying shell (%). Typing cli starts the Junos CLI (>). Everyone hits this once on real hardware; the exam makes sure you hit it on paper first." },
+    ],
+  },
+  {
+    id: "comments",
+    title: "Commenting a Configuration — annotate",
+    tag: "JNCIA · operations",
+    ready: true,
+    noTopology: true,
+    problem: {
+      text: ["A config tells you WHAT is set. It never tells you WHY. Six months later, nobody — including you — remembers whether ge-0/0/23 is shut because the customer left or because it was storming the ring, and so nobody dares re-enable it.", "Junos fixes this in the config itself. The annotate command attaches a comment to a statement; the comment is stored in the configuration, travels with commit and rollback, and prints above the statement every time anyone looks. The next engineer reads your reasoning without opening a ticket."],
+      svg: "comments-problem"
+    },
+    how: {
+      text: ["WHERE IT LIVES: a comment is not a note on the side — it is part of the candidate configuration. So it follows the same life cycle as any other change: annotate, see it in show | compare, commit to make it active, rollback to throw it away. Uncommitted comments are as temporary as uncommitted VLANs.", "THE SHAPE: annotate <statement> \"<text>\". The statement is named relative to where you are standing. At the top you write the whole path — annotate interfaces ge-0/0/23 \"...\". After edit interfaces ge-0/0/23 you write just annotate disable \"...\". The quotes are required whenever the comment has spaces, which is always.", "THE STATEMENT MUST EXIST FIRST. annotate does not create configuration; it decorates it. Set the thing, then comment it. Junos answers a comment on thin air with statement not found — the lab does the same.", "REMOVING ONE: annotate <statement> \"\" — an empty comment deletes it. Deleting the statement itself takes its comment along, because an orphan comment describing nothing is worse than no comment.", "HOW IT PRINTS: in the curly-brace view a comment sits on its own line, wrapped in /* ... */, directly above what it describes. In show configuration | display set it comes back as the annotate command that would recreate it — so a copy-pasted config carries its reasoning with it."]
+    },
+    prereqs: [
+      { desc: "A statement to comment on — anything committed will do",
+        test: function(){ return typeof devsBy === "function" && devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !cfgIsEmpty(d.candidate); }); } },
+      { desc: "A comment attached in the candidate (annotate <statement> \"...\")",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !!annotAll(d.candidate); }); } },
+      { desc: "The comment committed — it is configuration, so it needs a commit like anything else",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !!annotAll(d.config); }); } },
+      { desc: "Two or more comments on one device — a documented box, not a decorated one",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var m = annotAll(d.config); return m && Object.keys(m).length >= 2; }); } },
+    ],
+    try: [
+      ["show configuration", "The curly-brace view — comments print as /* ... */ above their statement"],
+      ["show configuration | display set", "The same comments come back as annotate commands, paste-able into another box"],
+      ["show | compare", "In configuration mode, after annotating — a comment change is a config change"]
+    ],
+    cfg: [
+      ["set interfaces ge-0/0/23 disable", "First the statement. annotate decorates config; it cannot create it"],
+      ["annotate interfaces ge-0/0/23 \"shut 2026-03-14 — CUST-4471 cancelled, keep down until INC-8822 closes\"", "Date, reason, and the ticket that would justify re-enabling it"],
+      ["show | compare", "The comment appears as a pending change — proof it lives in the candidate"],
+      ["commit", "Now it is part of the active configuration and everyone who logs in sees it"],
+      ["annotate interfaces ge-0/0/23 \"\"", "An empty comment is how you remove one (do not commit this if you want to keep it)"]
+    ],
+    nums: [
+      ["annotate <statement> \"<text>\"", "The whole syntax. Quotes are mandatory once the comment contains a space"],
+      ["/* ... */", "How a comment renders in the curly-brace config — one line, above its statement"],
+      ["\"\"", "The empty comment: the documented way to delete a comment"],
+      ["relative to [edit]", "The statement is named from where you stand, exactly like set and delete"],
+      ["commit", "Comments are configuration. No commit, no comment"]
+    ],
+    els: [
+      ["(identical on legacy and current code)", "annotate predates the ELS split and behaves the same on EX, QFX, MX and SRX"]
+    ],
+    real: [
+      "The comment worth writing answers WHY, not WHAT. \"description uplink\" already says it is an uplink; the comment says \"second uplink, only carries storage VLANs — do not add data VLANs here, see the ring diagram\".",
+      "Put a date and a ticket number in anything temporary. A disabled port with \"shut 2026-03-14, INC-8822\" gets re-enabled on time; a disabled port with no comment stays dead for years.",
+      "Comment the surprises: the MTU that is 9192 rather than 9216 because of one old NIC, the policy term that looks redundant but is not, the port left out of the bundle on purpose.",
+      "Because | display set round-trips them, comments survive the copy-paste build — a golden config you paste into a new switch arrives already documented."
+    ],
+    verify: [
+      ["show | compare", "Before committing — the comment shows as a change, with the statement it belongs to underneath"],
+      ["show configuration", "After committing — read it back the way the next engineer will find it"],
+      ["show configuration | display set", "Confirms the comment survives export; this is what you hand to a colleague"]
+    ],
+    breaks: [
+      "Annotating a statement that does not exist yet — statement not found. Set it first, then comment it.",
+      "Forgetting the quotes: annotate ge-0/0/1 uplink to core is a syntax error, because the comment is several words.",
+      "Writing the comment and never committing — rollback 0 or a reboot and your documentation is gone with the rest of the candidate.",
+      "Commenting WHAT instead of WHY: /* vlan 10 */ above vlan-id 10 costs a line and teaches nobody anything.",
+      "Deleting the statement to \"clean up\" and expecting the comment to survive — it does not. The comment belongs to the statement."
+    ],
+    answer: "Junos stores configuration comments inside the configuration itself, attached to a statement, using annotate <statement> \"<comment>\". Because a comment is configuration, it behaves like configuration: it appears in show | compare as a pending change, becomes active only after commit, is discarded by rollback, and disappears when its statement is deleted. The statement has to exist before it can be annotated. Comments render as /* ... */ above the statement in the curly-brace view and as annotate commands in | display set, so they travel with an exported config. An empty comment — annotate <statement> \"\" — removes one. The professional habit is to record WHY, with a date and ticket for anything temporary.",
+    quiz: [
+      { q: "You type annotate interfaces ge-0/0/9 \"spare\" on a box where ge-0/0/9 has no configuration. What happens?",
+        opts: ["The comment is stored for later", "Error: statement not found", "It silently creates the interface"],
+        right: 1,
+        why: "annotate decorates configuration; it never creates it. Set something on ge-0/0/9 first, then annotate it. A comment with no statement to describe would be meaningless." },
+      { q: "You annotate a statement and then type rollback 0. What happened to the comment?",
+        opts: ["It survives — comments are stored separately", "It is gone — a comment is part of the candidate", "It moved to the rescue config"],
+        right: 1,
+        why: "This is the whole point: a comment is configuration, not a sticky note. rollback 0 discards the candidate, comment and all. If you want it kept, commit it." },
+      { q: "How do you remove a comment from a statement without removing the statement?",
+        opts: ["delete annotate <statement>", "annotate <statement> \"\"", "Comments cannot be removed"],
+        right: 1,
+        why: "An empty comment is the documented removal. delete works on statements, not on the comments hanging off them — and deleting the statement would take the configuration with it." },
+      { q: "Which comment earns its line on a disabled customer port?",
+        opts: ["/* port is disabled */", "/* shut 2026-03-14 — CUST-4471 cancelled, re-enable when INC-8822 closes */", "/* ge-0/0/23 */"],
+        right: 1,
+        why: "The disable statement already says the port is down, and the port already knows its own name. Only the second one tells the next engineer whether they are allowed to turn it back on — that is what a comment is for." },
     ],
   },
   {
@@ -1696,6 +1785,18 @@ function protoSvg(kind){
     '<text x="40" y="105" fill="var(--dim)">L1 bits</text><text x="150" y="105" fill="var(--text)">cables \u00b7 optics \u00b7 CRC errors</text>' +
     '<text x="40" y="135" fill="var(--amber)">diagnosis = climbing this ladder one layer at a time</text>' +
     '</g>' + close;
+  if(kind === "comments-problem") return open +
+    '<text x="280" y="24" fill="var(--dim)" font-size="10.5">six months later, reading someone else\'s switch</text>' +
+    '<rect x="40" y="38" width="220" height="86" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +
+    '<text x="150" y="58" fill="var(--red)" font-size="10.5">without a comment</text>' +
+    '<text x="150" y="80" fill="var(--text)" font-size="10.5">ge-0/0/23 { disable; }</text>' +
+    '<text x="150" y="104" fill="var(--dim)" font-size="10">"...dare I turn it back on?"</text>' +
+    '<rect x="300" y="38" width="220" height="86" rx="4" fill="none" stroke="var(--green)" stroke-width="1.2"/>' +
+    '<text x="410" y="58" fill="var(--green)" font-size="10.5">with a comment</text>' +
+    '<text x="410" y="78" fill="var(--amber)" font-size="10">/* shut 2026-03-14 \u2014 CUST-4471 */</text>' +
+    '<text x="410" y="94" fill="var(--text)" font-size="10.5">ge-0/0/23 { disable; }</text>' +
+    '<text x="410" y="114" fill="var(--dim)" font-size="10">"...closed ticket, safe to re-enable"</text>' +
+    '<text x="280" y="144" fill="var(--amber)" font-size="10.5">annotate stores the WHY inside the configuration itself</text>' + close;
   if(kind === "maint-problem") return open +
     box(40, 30, 150, "login classes") +
     '<text x="115" y="80" fill="var(--dim)">who may do what</text>' +

@@ -187,7 +187,7 @@ Quick reference:
 }
 
 /* ---------- configuration mode ---------- */
-const CFG_COMMANDS = ["set", "delete", "show", "edit", "up", "top", "exit", "run", "commit", "rollback", "load"];
+const CFG_COMMANDS = ["set", "delete", "show", "edit", "up", "top", "exit", "run", "commit", "rollback", "load", "annotate"];
 
 function cfgBanner(dev){
   return "[edit" + (dev.cli.editKeys.length ? " " + dev.cli.editKeys.join(" ") : "") + "]";
@@ -200,6 +200,7 @@ function cfgExec(dev, cmd){
       "  show                  candidate configuration at this level\n" +
       "  show | compare        diff candidate against the committed config\n" +
       "  edit <path>           descend into a hierarchy level\n" +
+      "  annotate <stmt> \"<c>\" attach a comment to a statement (\"\" removes it)\n" +
       "  up / top              go up one level / back to the top\n" +
       "  commit                make the candidate active\n" +
       "  commit confirmed <m>  commit with automatic rollback unless confirmed\n" +
@@ -246,6 +247,7 @@ function cfgExec(dev, cmd){
       if(!rest.length) return lines("err", "usage: run <operational command>, e.g. run show interfaces terse");
       return opExec(dev, rest.join(" "));
     }
+    case "annotate": return cfgAnnotateCmd(dev, cmd);
     case "commit": return commitCmd(dev, rest);
     case "rollback": return rollbackCmd(dev, rest);
     case "load": {
@@ -275,7 +277,8 @@ function loadSetLines(dev, text){
     let out;
     if(toks[0] === "set") out = cfgSetCmd(dev, toks.slice(1));
     else if(toks[0] === "delete") out = cfgDeleteCmd(dev, toks.slice(1));
-    else { errors++; details.push("skipped (not set/delete): " + line); continue; }
+    else if(toks[0] === "annotate") out = cfgAnnotateCmd(dev, line);
+    else { errors++; details.push("skipped (not set/delete/annotate): " + line); continue; }
     if(out.some(l => l.cls === "err")){ errors++; details.push(line + "   <- " + out[0].text.split("\n")[0]); }
     else okc++;
   }
@@ -371,24 +374,54 @@ function cfgDeleteCmd(dev, rest){
     const arr = cfgGet(dev.candidate, res.keys);
     arr.splice(arr.indexOf(res.arrayItem), 1);
     if(!arr.length) cfgDelete(dev.candidate, res.keys);
+    annotPrune(dev.candidate);
     return [];
   }
   cfgDelete(dev.candidate, res.keys);
+  annotPrune(dev.candidate);
   return [];
 }
 
 function cfgShowCmd(dev, rest){
   const full = dev.cli.editKeys.concat(rest);
   if(!full.length){
-    const txt = Object.keys(dev.candidate).length ? treeToText(dev.candidate) : "## (candidate configuration is empty)";
+    const txt = cfgIsEmpty(dev.candidate) ? "## (candidate configuration is empty)" : treeToText(dev.candidate);
     return lines("out", txt);
   }
   const res = resolveTreePath(dev.candidate, full);
   if(typeof res.err === "string") return lines("out", "## (nothing configured at: " + full.join(" ") + ")");
   const node = res.arrayItem !== undefined ? res.arrayItem : res.node;
   if(node && typeof node === "object" && !Array.isArray(node))
-    return lines("out", Object.keys(node).length ? treeToText(node) : "## (empty)");
+    return lines("out", Object.keys(node).length ? treeToTextAt(dev.candidate, res.keys, node) : "## (empty)");
   return lines("out", String(Array.isArray(node) ? node.join(" ") : node));
+}
+
+/* annotate <statement> "comment"  — the comment rides along with the
+   candidate, survives commit, and prints above the statement. */
+function cfgAnnotateCmd(dev, raw){
+  const body = String(raw).replace(/^\s*\S+\s*/, "");
+  if(!body.trim())
+    return lines("err", 'usage: annotate <statement> "<comment>" — e.g. annotate ge-0/0/1 "uplink to core"');
+  const m = body.match(/^([\s\S]*?)\s*(?:"([\s\S]*)"|'([\s\S]*)')\s*$/);
+  if(!m)
+    return lines("err", 'syntax error: the comment must be quoted — annotate ge-0/0/1 "uplink to core"');
+  const stmt = m[1].trim();
+  const note = annotClean(m[2] !== undefined ? m[2] : m[3]);
+  if(!stmt)
+    return lines("err", 'usage: annotate <statement> "<comment>" — name the statement the comment belongs to');
+  const path = stmt.split(/\s+/);
+  const full = dev.cli.editKeys.concat(path);
+  if(cfgGet(dev.candidate, full) === undefined)
+    return lines("err", "error: statement not found: " + full.join(" ") +
+      "\n  annotate only comments on configuration that already exists — set it first, then annotate it");
+  if(!note){
+    const had = annotClear(dev.candidate, full);
+    if(typeof touchState === "function") touchState();
+    return lines("out", had ? "" : "warning: no comment was attached to " + full.join(" "));
+  }
+  annotSet(dev.candidate, full, note);
+  if(typeof touchState === "function") touchState();
+  return lines("out", "");
 }
 
 function cfgEditCmd(dev, rest){

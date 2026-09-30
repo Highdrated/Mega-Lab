@@ -1339,7 +1339,7 @@ PROTO_GUIDES.filter(g => g.ready).forEach(g => {
 }
 
 
-PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters" && g.id !== "maintenance").forEach(g => {
+PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g => {
   ok(typeof protoAnims[g.id] === "object" && typeof protoAnims[g.id].run === "function", "proto " + g.id + " has a canvas animation");
   ok(g.conceptual || (Array.isArray(PROTO_GLOW_TYPES[g.id]) && PROTO_GLOW_TYPES[g.id].length), "proto " + g.id + " has glow targets");
 });
@@ -2421,6 +2421,156 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && g.id !== "filters" && g.id 
   const loop = deviceExec(devices[sw], "show analyzer").map(l => l.text).join("\n");
   ok(/loops the copy back/.test(loop), "analyzer: catches mirroring a port back into itself");
 }
+
+/* ---------- T-ANNOTATE: configuration comments ---------- */
+{
+  wipeLab();
+  const sw = makeSwitch(0, 0, 8);
+  rebuildAllDerived();
+  const d = devices[sw];
+  const run = c => deviceExec(d, c).map(l => l.cls + "|" + l.text).join("\n");
+  run("configure");
+  run("set interfaces ge-0/0/1 description uplink");
+  run("set vlans data vlan-id 10");
+
+  ok(/statement not found/.test(run('annotate interfaces ge-0/0/9 "nope"')),
+     "annotate: refuses a statement that does not exist");
+  ok(/must be quoted/.test(run('annotate interfaces ge-0/0/1 bare words')),
+     "annotate: refuses an unquoted comment");
+  ok(/usage: annotate/.test(run("annotate")), "annotate: bare command prints usage");
+
+  ok(run('annotate interfaces ge-0/0/1 "uplink to core"') === "",
+     "annotate: succeeds silently, like real Junos");
+  ok(annotGet(d.candidate, ["interfaces", "ge-0/0/1"]) === "uplink to core",
+     "annotate: the comment lands in the candidate");
+  ok(cfgGet(d.candidate, ["interfaces", "ge-0/0/1", ANNOT_KEY]) === undefined &&
+     Object.keys(cfgGet(d.candidate, ["interfaces"])).indexOf(ANNOT_KEY) === -1,
+     "annotate: comments never pollute the statement subtree");
+
+  const shown = run("show");
+  ok(/\/\* uplink to core \*\//.test(shown) &&
+     shown.indexOf("/* uplink to core */") < shown.indexOf("ge-0/0/1 {"),
+     "annotate: comment prints above its statement in the curly view");
+
+  const cmp = run("show | compare");
+  ok(/\+   \/\* uplink to core \*\//.test(cmp), "annotate: a comment change shows in show | compare");
+
+  run("commit");
+  ok(annotGet(d.config, ["interfaces", "ge-0/0/1"]) === "uplink to core",
+     "annotate: the comment survives commit into the active config");
+  run("exit");
+  ok(/\/\* uplink to core \*\//.test(run("show configuration")),
+     "annotate: show configuration renders the comment");
+  const dset = run("show configuration | display set");
+  ok(/annotate interfaces ge-0\/0\/1 "uplink to core"/.test(dset),
+     "annotate: | display set round-trips the comment as an annotate command");
+
+  run("configure");
+  run("edit interfaces ge-0/0/1");
+  run('annotate description "why this name"');
+  ok(annotGet(d.candidate, ["interfaces", "ge-0/0/1", "description"]) === "why this name",
+     "annotate: works relative to the current edit level");
+  ok(/\/\* why this name \*\//.test(run("show")), "annotate: a subtree show keeps its comments");
+  run("top");
+
+  run('annotate interfaces ge-0/0/1 ""');
+  ok(annotGet(d.candidate, ["interfaces", "ge-0/0/1"]) === undefined,
+     'annotate: an empty comment removes it');
+  ok(annotGet(d.candidate, ["interfaces", "ge-0/0/1", "description"]) === "why this name",
+     "annotate: removing one comment leaves the others alone");
+
+  run('annotate vlans data "prod data"');
+  run("delete vlans data");
+  ok(annotGet(d.candidate, ["vlans", "data"]) === undefined,
+     "annotate: deleting a statement takes its comment with it");
+  ok(annotGet(d.candidate, ["interfaces", "ge-0/0/1", "description"]) === "why this name",
+     "annotate: pruning one comment does not disturb unrelated ones");
+
+  run("rollback 0");
+  ok(annotGet(d.candidate, ["interfaces", "ge-0/0/1", "description"]) === undefined &&
+     annotGet(d.candidate, ["interfaces", "ge-0/0/1"]) === "uplink to core",
+     "annotate: rollback restores the committed comments exactly");
+
+  const round = confToSetLines(
+    "interfaces {\n    /* rack note */\n    ge-0/0/2 {\n        /* leaf note */\n        disable;\n    }\n}");
+  ok(round.some(l => /^annotate interfaces ge-0\/0\/2 "rack note"$/.test(l)) &&
+     round.some(l => /^annotate interfaces ge-0\/0\/2 disable "leaf note"$/.test(l)) &&
+     round.indexOf("set interfaces ge-0/0/2 disable") < round.findIndex(l => /^annotate/.test(l)),
+     "annotate: importing a .conf turns /* */ comments into annotate lines, after the set lines");
+
+  wipeLab();
+  const sw2 = makeSwitch(0, 0, 8);
+  rebuildAllDerived();
+  importConfigInto(devices[sw2], "interfaces {\n    /* imported */\n    ge-0/0/3 {\n        disable;\n    }\n}");
+  ok(annotGet(devices[sw2].candidate, ["interfaces", "ge-0/0/3"]) === "imported",
+     "annotate: an imported comment reaches the candidate");
+
+  ok(cfgIsEmpty({}) && cfgIsEmpty({ [ANNOT_KEY]: { a: "b" } }) && !cfgIsEmpty({ system: true }),
+     "annotate: a tree holding only orphan comments still counts as empty");
+  ok(annotClean('a "quote" and */ and /* end') === 'a "quote" and * / and / * end',
+     "annotate: comment text can never break out of the /* */ wrapper");
+}
+
+
+/* ---------- T-NOTES: the "for Claude" notebook ---------- */
+{
+  localStorage.removeItem(NOTES_KEY);
+  ok(notesAll().length === 0 && notesCount() === 0, "notes: starts empty");
+  ok(/No open notes/.test(notesForClaude()), "notes: an empty notebook says so");
+
+  ok(notesAdd("bug", "   ") === null && notesAll().length === 0,
+     "notes: blank text is not a note");
+
+  const a = notesAdd("bug", "enter does nothing in the LACP guide", "v9.9 · guide: lacp");
+  ok(a && a.id && a.ts && a.lab === NOTES_LAB, "notes: a saved note carries id, timestamp and lab");
+  ok(a.kind === "bug" && a.ctx === "v9.9 · guide: lacp", "notes: kind and context are kept");
+  ok(notesAdd("nonsense-kind", "x").kind === "idea", "notes: an unknown kind falls back to idea");
+
+  const b = notesAdd("real", "lab accepts port-mode on an ELS box");
+  ok(notesAll().length === 3 && notesCount() === 3, "notes: notes accumulate");
+
+  ok(notesToggleDone(b.id) === true && notesCount() === 2, "notes: marking handled lowers the open count");
+  ok(notesToggleDone(b.id) === false && notesCount() === 3, "notes: it toggles back");
+  notesToggleDone(b.id);
+
+  const brief = notesForClaude();
+  ok(/^# Notes for Claude/.test(brief), "notes: the briefing has a heading Claude can spot");
+  ok(brief.indexOf("enter does nothing in the LACP guide") > -1, "notes: open notes appear in the briefing");
+  ok(brief.indexOf("lab accepts port-mode") === -1, "notes: handled notes are left out by default");
+  ok(notesForClaude(true).indexOf("lab accepts port-mode") > -1, "notes: ...but can be included");
+  ok(brief.indexOf("## " + NOTES_LAB) > -1, "notes: the briefing groups by lab");
+  ok(brief.indexOf("guide: lacp") > -1, "notes: the captured context reaches the briefing");
+
+  ok(notesUpdate(a.id, { text: "edited" }) && notesAll().some(n => n.text === "edited"),
+     "notes: a note can be edited");
+  ok(!notesUpdate("no-such-id", { text: "x" }), "notes: editing an unknown note fails cleanly");
+
+  ok(notesClearDone() === 1 && notesAll().length === 2, "notes: clearing handled removes only those");
+  ok(notesDelete(a.id) && notesAll().length === 1, "notes: a note can be deleted");
+  ok(!notesDelete(a.id), "notes: deleting twice fails cleanly");
+
+  localStorage.setItem(NOTES_KEY, "{not json");
+  ok(notesAll().length === 0, "notes: corrupt storage reads as empty rather than throwing");
+  localStorage.removeItem(NOTES_KEY);
+
+  const other = { id: "x1", ts: "2026-01-01T09:00:00.000Z", lab: "Pyle", kind: "idea",
+                  text: "loops lesson too fast", ctx: "", done: false };
+  localStorage.setItem(NOTES_KEY, JSON.stringify([other]));
+  notesAdd("idea", "more DIA scenarios");
+  const both = notesForClaude();
+  ok(/## Pyle/.test(both) && new RegExp("## " + NOTES_LAB).test(both),
+     "notes: one notebook is shared across labs, grouped per lab");
+  ok(both.indexOf("## " + NOTES_LAB) < both.indexOf("## Pyle"),
+     "notes: labs are listed in a stable alphabetical order");
+
+  localStorage.removeItem(NOTES_KEY);
+  ok(typeof noteContext() === "string", "notes: context capture never throws headless");
+  ok(NOTE_KINDS.every(k => k.length === 3 && typeof k[0] === "string"),
+     "notes: every kind has an id, a label and a description");
+  ok(NOTES_KEY.indexOf("junoslab") === -1,
+     "notes: the store key is lab-neutral so every Mega Lab app shares it");
+}
+
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 

@@ -1882,19 +1882,24 @@ function showVersionCmd(dev){
   return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: ${ver} (JunOS Lab edition)`;
 }
 function showConfigCmd(dev){
-  return Object.keys(dev.config).length ? treeToText(dev.config) : "## Last commit: never\n## (factory-default — empty configuration)";
+  return cfgIsEmpty(dev.config) ? "## Last commit: never\n## (factory-default — empty configuration)" : treeToText(dev.config);
 }
-function treeToDisplaySet(t, prefix){
+function treeToDisplaySet(t, prefix, annots){
   prefix = prefix || [];
+  if(annots === undefined) annots = (typeof annotAll === "function" && annotAll(t)) || {};
   const out = [];
   for(const [k, v] of Object.entries(t)){
-    if(v === true) out.push("set " + [...prefix, k].join(" "));
-    else if(Array.isArray(v)) v.forEach(item => out.push("set " + [...prefix, k, item].join(" ")));
+    if(k === ANNOT_KEY) continue;
+    const here = [...prefix, k];
+    if(v === true) out.push("set " + here.join(" "));
+    else if(Array.isArray(v)) v.forEach(item => out.push("set " + [...here, item].join(" ")));
     else if(v && typeof v === "object"){
-      if(!Object.keys(v).length) out.push("set " + [...prefix, k].join(" "));
-      else out.push(...treeToDisplaySet(v, [...prefix, k]));
+      if(!Object.keys(v).length) out.push("set " + here.join(" "));
+      else out.push(...treeToDisplaySet(v, here, annots));
     }
-    else out.push("set " + [...prefix, k, v].join(" "));
+    else out.push("set " + [...here, v].join(" "));
+    const note = annots[here.join(" ")];
+    if(note) out.push("annotate " + here.join(" ") + ' "' + note + '"');
   }
   return out;
 }
