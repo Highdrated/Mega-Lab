@@ -206,6 +206,8 @@
   body.full .app-desc { font-size: 12px; }
   body.full .chapter-body, body.full #learn, body.full #scenlist, body.full #track { max-width: 900px; }
   body.full #log { padding-right: 20px; }
+  body.full .dialogue { max-width: none; width: 100%; align-self: stretch; padding-right: 0; }
+  body.full #log::before { content: ""; margin-top: auto; }
   body.full .screen::before, body.full .screen::after { display: none; }
   body.full .screen {
     width: 100vw;
@@ -214,7 +216,7 @@
     border-radius: 0;
     padding: 26px 5vw;
   }
-  body.full #desktop {
+  body.full #desktop:not(.hidden) {
     display: flex;
     flex-direction: column;
     justify-content: center;
@@ -1437,6 +1439,7 @@
   body.full .deckhidden { display: inline; }
   body.full #wxlabel.hidden { display: none; }
   body.full .deckhidden button { margin-left: 14px; }
+  body.full #wxlabel, body.full #baramb, body.full #viewbtn, body.full #ambbtn { display: none; }
   #learn { padding: 30px 0 0; max-width: 1000px; width: 100%; align-self: center; }
   .chapter { border-bottom: 1px solid var(--line); }
   .chapter-header {
@@ -3095,6 +3098,7 @@
 
   let queue = [];
   let drill = null;
+  let runTotal = 0;
   let fails = 0;
   let moduleName = "";
   let currentModuleId = null;
@@ -3504,24 +3508,24 @@
   function whyFor(cmd) {
     if (WHY[cmd]) return WHY[cmd];
     const SHOW = {
-      "show interfaces terse": "one-line status of every interface \\u2014 your fastest up/down/IP overview.",
+      "show interfaces terse": "one-line status of every interface — your fastest up/down/IP overview.",
       "show version": "confirms the Junos release, which decides what syntax and features you have.",
-      "show chassis hardware": "serials and part numbers \\u2014 needed for RMA and to confirm what's installed.",
+      "show chassis hardware": "serials and part numbers — needed for RMA and to confirm what's installed.",
       "show system alarms": "active red/yellow alarms; always check before and after any change.",
-      "show ethernet-switching table": "the MAC table \\u2014 proves which port a device actually lives on.",
+      "show ethernet-switching table": "the MAC table — proves which port a device actually lives on.",
       "show system uptime": "how long it's been up; a recent reboot often explains a fresh problem.",
-      "show lldp neighbors": "who is directly connected to each port \\u2014 verifies your cabling.",
-      "show lldp neighbours": "who is directly connected to each port \\u2014 verifies your cabling.",
-      "show configuration | display set": "the running config as flat set commands \\u2014 easy to copy, diff, and paste.",
-      "show system users": "who else is logged in \\u2014 check before committing so you don't clash.",
+      "show lldp neighbors": "who is directly connected to each port — verifies your cabling.",
+      "show lldp neighbours": "who is directly connected to each port — verifies your cabling.",
+      "show configuration | display set": "the running config as flat set commands — easy to copy, diff, and paste.",
+      "show system users": "who else is logged in — check before committing so you don't clash.",
       "show system storage": "free disk; a full /var is a classic reason a commit fails.",
-      "show route": "the routing table \\u2014 shows how the switch reaches every destination.",
-      "show vlans": "which VLANs exist and which ports are in each \\u2014 verifies your L2 design.",
+      "show route": "the routing table — shows how the switch reaches every destination.",
+      "show vlans": "which VLANs exist and which ports are in each — verifies your L2 design.",
       "show lacp interfaces": "confirms both LAG members negotiated and are collecting/distributing.",
-      "show spanning-tree bridge": "who won root and your bridge priority \\u2014 confirms the tree is where you want it.",
+      "show spanning-tree bridge": "who won root and your bridge priority — confirms the tree is where you want it.",
       "show ospf neighbor": "adjacency state; Full means routes are exchanging, stuck states mean trouble.",
-      "show bgp summary": "peer state and route counts \\u2014 Established with 0 accepted means policy is dropping.",
-      "show virtual-chassis": "member roles (master/backup/linecard) \\u2014 confirms the stack formed cleanly.",
+      "show bgp summary": "peer state and route counts — Established with 0 accepted means policy is dropping.",
+      "show virtual-chassis": "member roles (master/backup/linecard) — confirms the stack formed cleanly.",
       "show vrrp": "which router is master for the VIP and whether failover is armed."
     };
     if (SHOW[cmd]) return SHOW[cmd];
@@ -3689,7 +3693,9 @@
 
   function reviewable(d) {
     const rm = requiredMode(d);
-    return rm !== "login" && rm !== "shell" && d.effect !== "logout" && d.effect !== "zeroize";
+    const a = normalize(d.answers[0]);
+    const nav = a === "configure" || a === "edit" || a === "exit" || a === "exit configuration-mode";
+    return rm !== "login" && rm !== "shell" && d.effect !== "logout" && d.effect !== "zeroize" && !nav;
   }
 
   function scheduleReview(d) {
@@ -3739,6 +3745,7 @@
     if (pool.length === 0) { speak("no fill-in drills available.", "sys"); return; }
     restoreSession();
     queue = shuffle(pool).slice(0, 8);
+    runTotal = queue.length;
     blanksRun = true;
     reviewRun = true;
     moduleName = "FILL-IN";
@@ -3778,6 +3785,12 @@
       });
     }
     queue = ordered.slice(0, 12);
+    if (!weakFirst) {
+      queue.sort(function(a, b) {
+        return (requiredMode(a) === "config" ? 1 : 0) - (requiredMode(b) === "config" ? 1 : 0);
+      });
+    }
+    runTotal = queue.length;
     reviewRun = true;
     moduleName = "REVIEW";
     currentModuleId = null;
@@ -3841,6 +3854,8 @@
     const items = quiz.map(function(q) { return { kind: "quiz", data: q }; });
     items.splice(Math.floor(Math.random() * (items.length + 1)), 0, { kind: "drill", data: drill });
     mixState = { items: items, idx: 0, correct: 0 };
+    runTotal = 0;
+    viewLabel.textContent = "TERMINAL";
     restoreSession();
     logEvent("training: daily mix started", "");
     speak("DAILY MIX \u2014 " + items.length + " items, ~10 min. Answer quiz with a/b/c.", "sys");
@@ -4638,6 +4653,7 @@
       }
     }
     queue = ordered ? drills.slice() : shuffle(drills);
+    runTotal = queue.length;
     logEvent("training: module " + moduleName.toLowerCase() + " started", "");
     speak("module " + moduleName + " — " + queue.length + " drills. Watch the side panel.", "sys");
     nextDrill();
@@ -4653,6 +4669,7 @@
     moduleName = s.name;
     currentModuleId = "sc-" + s.id;
     queue = s.steps.slice();
+    runTotal = queue.length;
     Object.keys(litFx).forEach(function (k) { delete litFx[k]; });
     logEvent("incident: " + s.name.toLowerCase() + " opened", "warn");
     renderPanel("l");
@@ -4675,6 +4692,8 @@
     if (queue.length === 0) {
       drill = null;
       reviewRun = false;
+      runTotal = 0;
+      viewLabel.textContent = "TERMINAL";
       paintReviewBadge();
       if (currentModuleId) {
         stats.done[currentModuleId] = true;
@@ -4692,8 +4711,18 @@
     }
     drill = queue.shift();
     fails = 0;
+    if (reviewRun) {
+      const rm = requiredMode(drill);
+      if ((rm === "oper" || rm === "config") && cliMode !== rm && cliMode !== "login" && cliMode !== "shell") {
+        cliMode = rm;
+        paintPrompt();
+      }
+    }
     if (drill._m !== currentScene) renderScene(drill._m);
     paintSideStatus();
+    if (runTotal > 0 && !mixState) {
+      viewLabel.textContent = (moduleName || "TERMINAL") + " \u00b7 " + (runTotal - queue.length) + "/" + runTotal;
+    }
     if (blanksRun) {
       const b = blankLine(drill.answers[0]);
       print("FILL IN:", "mix-tag");
