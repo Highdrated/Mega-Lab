@@ -299,7 +299,7 @@ function annotPrune(tree){
 }
 function cfgIsEmpty(tree){
   if(!tree) return true;
-  return Object.keys(tree).filter(k => k !== ANNOT_KEY).length === 0;
+  return Object.keys(tree).filter(k => k !== ANNOT_KEY && k !== INACT_KEY).length === 0;
 }
 function annotClean(text){
   return String(text == null ? "" : text)
@@ -309,32 +309,80 @@ function annotClean(text){
     .trim();
 }
 
+var INACT_KEY = "@inactive";
+
+function inactAll(tree){ return (tree && tree[INACT_KEY]) || null; }
+function inactGet(tree, keys){
+  const m = inactAll(tree);
+  return !!(m && m[keys.join(" ")]);
+}
+function inactSet(tree, keys){
+  if(!tree[INACT_KEY]) tree[INACT_KEY] = {};
+  tree[INACT_KEY][keys.join(" ")] = true;
+}
+function inactClear(tree, keys){
+  const m = tree[INACT_KEY];
+  if(!m) return false;
+  const k = keys.join(" ");
+  if(!(k in m)) return false;
+  delete m[k];
+  if(!Object.keys(m).length) delete tree[INACT_KEY];
+  return true;
+}
+function inactPrune(tree){
+  const m = tree && tree[INACT_KEY];
+  if(!m) return;
+  for(const k of Object.keys(m))
+    if(cfgGet(tree, k.split(" ")) === undefined) delete m[k];
+  if(!Object.keys(m).length) delete tree[INACT_KEY];
+}
+function inactCovered(tree, keys){
+  const m = inactAll(tree);
+  if(!m) return false;
+  for(let i = keys.length; i >= 1; i--)
+    if(m[keys.slice(0, i).join(" ")]) return true;
+  return false;
+}
+function activeOnly(tree){
+  const m = inactAll(tree);
+  const out = deepClone(tree);
+  delete out[INACT_KEY];
+  if(!m) return out;
+  for(const k of Object.keys(m)) cfgDelete(out, k.split(" "));
+  return out;
+}
+function committedTree(dev){
+  return dev.configFull || dev.config;
+}
+
 /* JunOS-style curly-brace rendering */
-function treeToText(t, ind, annots, path){
+function treeToText(t, ind, annots, path, inacts){
   ind = ind || "";
   if(annots === undefined){ annots = annotAll(t) || {}; path = []; }
+  if(inacts === undefined) inacts = inactAll(t) || {};
   path = path || [];
   const out = [];
   for(const k of Object.keys(t)){
-    if(k === ANNOT_KEY) continue;
+    if(k === ANNOT_KEY || k === INACT_KEY) continue;
     const v = t[k];
     const here = path.concat(k);
     const note = annots[here.join(" ")];
     if(note) out.push(ind + "/* " + note + " */");
-    if(v === true) out.push(ind + k + ";");
+    const tag = inacts[here.join(" ")] ? "inactive: " : "";
+    if(v === true) out.push(ind + tag + k + ";");
     else if(Array.isArray(v))
-      out.push(ind + k + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
+      out.push(ind + tag + k + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
     else if(v && typeof v === "object"){
-      if(Object.keys(v).length === 0) out.push(ind + k + ";");
-      else { out.push(ind + k + " {"); out.push(treeToText(v, ind + "    ", annots, here)); out.push(ind + "}"); }
+      if(Object.keys(v).length === 0) out.push(ind + tag + k + ";");
+      else { out.push(ind + tag + k + " {"); out.push(treeToText(v, ind + "    ", annots, here, inacts)); out.push(ind + "}"); }
     }
-    else out.push(ind + k + " " + v + ";");
+    else out.push(ind + tag + k + " " + v + ";");
   }
   return out.join("\n");
 }
 /* Render a subtree but keep the comments, which are stored at the root. */
 function treeToTextAt(root, keys, node, ind){
-  return treeToText(node, ind || "", annotAll(root) || {}, (keys || []).slice());
+  return treeToText(node, ind || "", annotAll(root) || {}, (keys || []).slice(), inactAll(root) || {});
 }
 
 /* JunOS-style "show | compare" diff */
@@ -348,7 +396,7 @@ function diffTrees(applied, cand){
     else arr.push(sign + "  " + k + " " + v + ";");
   }
   function walk(pa, ca, path){
-    const keys = [...new Set([...Object.keys(pa || {}), ...Object.keys(ca || {})])].filter(k => k !== ANNOT_KEY);
+    const keys = [...new Set([...Object.keys(pa || {}), ...Object.keys(ca || {})])].filter(k => k !== ANNOT_KEY && k !== INACT_KEY);
     const minus = [], plus = [], sub = [];
     for(const k of keys){
       const av = pa ? pa[k] : undefined, cv = ca ? ca[k] : undefined;
@@ -367,7 +415,25 @@ function diffTrees(applied, cand){
   }
   walk(applied, cand, []);
   annotWalk(applied, cand, out);
+  inactWalk(applied, cand, out);
   return out.join("\n");
+}
+function inactWalk(applied, cand, out){
+  const am = inactAll(applied) || {}, cm = inactAll(cand) || {};
+  const keys = [...new Set([...Object.keys(am), ...Object.keys(cm)])].sort();
+  for(const k of keys){
+    if(!!am[k] === !!cm[k]) continue;
+    const parts = k.split(" ");
+    const parent = parts.slice(0, -1), leaf = parts[parts.length - 1];
+    const v = cfgGet(cand, parts) !== undefined ? cfgGet(cand, parts) : cfgGet(applied, parts);
+    if(v === undefined) continue;
+    out.push("[edit" + (parent.length ? " " + parent.join(" ") : "") + "]");
+    const tag = cm[k] ? "inactive: " : "";
+    if(v === true) out.push("!   " + tag + leaf + ";");
+    else if(Array.isArray(v)) out.push("!   " + tag + leaf + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
+    else if(v && typeof v === "object") out.push("!   " + tag + leaf + " { ... }");
+    else out.push("!   " + tag + leaf + " " + v + ";");
+  }
 }
 /* Comment changes get their own hunk, anchored at the parent level and
    echoing the statement underneath, the way "show | compare" prints them. */
@@ -408,7 +474,7 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "3.13.0";
+var APP_VERSION = "3.14.0";
 
 function svgMark(kind){
   if(kind === "check") return '<svg class="mk mk-check" viewBox="0 0 14 14"><path d="M2.5 7.5 L5.8 10.8 L11.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';

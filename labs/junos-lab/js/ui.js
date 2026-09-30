@@ -208,7 +208,7 @@ function collectStatuses(){
       if(d.powered === false) add("warn", d.name + ": powered off", d.id);
       if(d.brandNew && d.powered !== false) add("info", d.name + ": day-zero setup incomplete", d.id);
       if(d.commitPending) add("warn", d.name + ": commit-confirmed rollback timer running", d.id);
-      else if(d.powered !== false && JSON.stringify(d.config) !== JSON.stringify(d.candidate))
+      else if(d.powered !== false && JSON.stringify(committedTree(d)) !== JSON.stringify(d.candidate))
         add("info", d.name + ": uncommitted changes", d.id);
       const nerr = Object.keys(d.errDisabled || {}).length;
       if(nerr) add("error", d.name + ": " + nerr + " port(s) error-disabled", d.id);
@@ -1949,13 +1949,13 @@ function exportConfigs(fmt){
     if(dev.type !== "switch" && dev.type !== "router") continue;
     const name = hostnameOf(dev);
     if(fmt === "set"){
-      const body = !cfgIsEmpty(dev.config)
-        ? treeToDisplaySet(dev.config, []).join("\n")
+      const body = !cfgIsEmpty(committedTree(dev))
+        ? treeToDisplaySet(committedTree(dev), []).join("\n")
         : "## (factory-default \u2014 empty configuration)";
       parts.push("## ===== " + name + " (" + dev.type + ") =====\n" + body);
     } else {
-      const body = !cfgIsEmpty(dev.config)
-        ? treeToText(dev.config)
+      const body = !cfgIsEmpty(committedTree(dev))
+        ? treeToText(committedTree(dev))
         : "## (factory-default \u2014 empty configuration)";
       parts.push("## ===== " + name + " (" + dev.type + ") =====\n" + confHeader(dev) + body);
     }

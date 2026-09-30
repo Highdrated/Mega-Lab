@@ -878,7 +878,7 @@ var PROTO_GUIDES = [
         test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){ return !!d.rescueConfig; }); } },
       { desc: "Prove the parachute: make a bad change, commit, rollback rescue, commit — back to known-good",
         test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
-          return d.rescueConfig && JSON.stringify(d.config) === JSON.stringify(d.rescueConfig) && (d.cfgHistory || []).length >= 2; }); } },
+          return d.rescueConfig && JSON.stringify(committedTree(d)) === JSON.stringify(d.rescueConfig) && (d.cfgHistory || []).length >= 2; }); } },
     ],
     try: [
       ["file list", "Walk the file system — active config, rollbacks, rescue, /var/tmp junk"],
@@ -936,6 +936,206 @@ var PROTO_GUIDES = [
         opts: ["The switch is broken", "Type cli — root lands in the shell first", "Reboot"],
         right: 1,
         why: "Root logs into the underlying shell (%). Typing cli starts the Junos CLI (>). Everyone hits this once on real hardware; the exam makes sure you hit it on paper first." },
+    ],
+  },
+  {
+    id: "pipes",
+    title: "Reading Output — the pipe",
+    tag: "JNCIA · user interfaces",
+    ready: true,
+    noTopology: true,
+    problem: {
+      text: ["show interfaces extensive on a 48-port switch is about two thousand lines. The number you need is one of them. Scrolling is not a diagnostic technique.",
+             "Junos answers this with a filter you bolt onto the end of any command: a vertical bar, then what you want done to the output. It is the difference between reading a switch and staring at one.",
+             "The exam tests this as \"filtering output\" under User Interfaces. The job tests it every single day, because nobody reads a real box without it."],
+      svg: "pipes-problem"
+    },
+    how: {
+      text: ["THE SHAPE: <command> | <filter> [argument]. The command runs exactly as it always would; the filter only changes what reaches your screen. Nothing on the device is altered, so a filter is always safe to try.",
+             "THE SIX YOU WILL LIVE ON: match <pattern> keeps only lines that match. except <pattern> throws those lines away. find <pattern> skips everything until the first match and then shows the rest, which is how you jump into the middle of a long config. count replaces the output with the number of lines. no-more turns off paging so nothing waits for a keypress. last <n> shows the final n lines, where the newest log entries live.",
+             "THE PATTERN IS A REGULAR EXPRESSION, not a wildcard. ge-0/0/1 also matches ge-0/0/10 through ge-0/0/19, because it is a substring match. It is CASE SENSITIVE, so | match Error and | match error are different questions. Quote anything containing a space or an operator.",
+             "FILTERS CHAIN, left to right. show log messages | match commit | count answers \"how many commits appear in the log\" in one line: the match narrows, then the count tallies what survived. Each stage only ever sees what the stage before it passed on.",
+             "TWO ARE ABOUT CONFIGURATION, not text. show configuration | display set re-renders the config as the set commands that would recreate it, which is what you paste into a new box. show configuration | compare rollback <n> diffs what is running now against an earlier commit. In configuration mode the same two hang off bare show.",
+             "AND ONE WRITES A FILE: | save <filename> puts the output in a file instead of on your screen and prints only a receipt. file show <filename> reads it back. That is how you capture a before-and-after around a risky change."]
+    },
+    prereqs: [
+      { desc: "A switch or router with a console open",
+        test: function(){ return typeof devsBy === "function" &&
+          devsBy("switch").concat(devsBy("router")).some(function(d){ return d.powered !== false; }); } },
+      { desc: "Something committed, so there is configuration worth filtering",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !cfgIsEmpty(d.config); }); } },
+      { desc: "A file captured with | save (try: show interfaces terse | save before.txt)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return d.files && Object.keys(d.files).length > 0; }); } },
+    ],
+    try: [
+      ["show interfaces terse | count", "How many interfaces this box has, as one number instead of a screenful"],
+      ["show interfaces terse | match irb", "Only the routed interfaces — the substring match does the work"],
+      ["show interfaces terse | except down", "The inverse: hide the boring lines and see what is actually up"],
+      ["show configuration | display set", "The whole config as paste-able set commands"],
+      ["show configuration | display set | match vlan", "Filters chain: re-render as set commands, then keep only the VLAN ones"]
+    ],
+    cfg: [
+      ["show interfaces terse | save before.txt", "Capture the state BEFORE you touch anything — prints a receipt, not the output"],
+      ["file show before.txt", "Read the capture back"],
+      ["show log messages | last 5", "The newest log lines, which is almost always the interesting end"],
+      ["show log messages | match commit | count", "How many commits this box has logged"],
+      ["show interfaces extensive | match errors", "The error counters from every port in one sweep — physical-fault hunting in one command"]
+    ],
+    nums: [
+      ["| match <pattern>", "Keep matching lines. Regular expression, case sensitive, substring by default"],
+      ["| except <pattern>", "Drop matching lines — the inverse of match"],
+      ["| find <pattern>", "Skip to the first match, then show everything after it"],
+      ["| count", "Replace the output with \"Count: N lines\""],
+      ["| last <n>", "The final n lines. No number means ten"],
+      ["| no-more", "Show it all at once instead of a screen at a time"],
+      ["| display set", "Configuration only: re-render as set commands"],
+      ["| save <file>", "Write the output to a file; file show reads it back"]
+    ],
+    els: [
+      ["(the pipe is the same on every Junos device)", "EX, QFX, MX, SRX, old code and new — filters are part of the CLI, not the platform"]
+    ],
+    real: [
+      "Build the habit of capturing before you change: show configuration | save before.txt, make the change, then compare. On a real box this is what saves you at 3 AM.",
+      "show interfaces extensive | match errors is the single most useful physical-layer sweep there is. Any non-zero error counter on an up link is a cable or optic, not a config.",
+      "| display set is how a golden configuration travels. Export from the box you trust, paste into the box you are building, commit.",
+      "Remember the case sensitivity when you hunt logs. Junos writes severities in capitals, so | match error can miss the very line you want."
+    ],
+    verify: [
+      ["show interfaces terse | count", "A line count proves the filter ran against the whole output, not a page of it"],
+      ["show configuration | display set | count", "Compare against show configuration | count — different renderings, different line counts, same configuration"],
+      ["show log messages | last 1", "The newest event. If your change did something, it is on this line"]
+    ],
+    breaks: [
+      "Treating the pattern as a wildcard: | match ge-0/0/1 matches ge-0/0/1 AND ge-0/0/10 to ge-0/0/19, because it is a substring regular expression.",
+      "Case: | match Interface and | match interface are different searches, and neither warns you.",
+      "Forgetting quotes around a pattern with a space, which makes the second word look like another filter.",
+      "Reaching for | display set on operational output — it only has meaning over configuration.",
+      "Piping a clear or request command and expecting the filter to make it safe. The command still runs; the filter only tidies what it printed."
+    ],
+    answer: "Junos filters the output of any command with a vertical bar followed by a filter. match keeps matching lines, except drops them, find skips forward to the first match, count replaces the output with a line count, no-more disables paging, and last n shows the tail. The pattern is a case-sensitive regular expression matched as a substring, so ge-0/0/1 also matches ge-0/0/10. Filters chain left to right, each seeing only what the one before it passed on. Two filters act on configuration rather than text: display set re-renders the configuration as the set commands that recreate it, and compare rollback n diffs the running configuration against an earlier commit. save writes the output to a file, which file show reads back. Filters never change the device, so they are always safe to try.",
+    quiz: [
+      { q: "show interfaces terse | match ge-0/0/2 on a 48-port switch returns eleven lines. Why more than one?",
+        opts: ["The command is broken", "The pattern is a substring regex, so it also matches ge-0/0/20 to ge-0/0/29", "Eleven ports share a VLAN"],
+        right: 1,
+        why: "Nothing anchors the pattern to the end of the name, so ge-0/0/2 is found inside ge-0/0/20, ge-0/0/21 and the rest. Add a trailing space or use the full interface name when you want exactly one port." },
+      { q: "You want to know how many lines of your configuration mention vlan. Which command?",
+        opts: ["show configuration | count vlan", "show configuration | match vlan | count", "show configuration vlan | count"],
+        right: 1,
+        why: "count takes no argument — it only tallies what reaches it. So you narrow first with match and then count what survived. That left-to-right chaining is the whole idea behind the pipe." },
+      { q: "show log messages | match error returns nothing, yet the log clearly has problems in it. Most likely reason?",
+        opts: ["The log is empty", "match is case sensitive and the log says Error or ERROR", "Filters do not work on logs"],
+        right: 1,
+        why: "There is no case-insensitive option on the Junos pipe. Junos writes many severities in capitals, so this is a real and very common trap. Match on a fragment whose case you are sure of, or try both." },
+      { q: "What does show configuration | display set give you that show configuration does not?",
+        opts: ["A shorter configuration", "The same configuration as set commands you can paste into another box", "Only the changed statements"],
+        right: 1,
+        why: "It is the same configuration in a different rendering. The curly-brace view is for reading; the set view is for rebuilding, which is how a golden config gets copied onto a new switch." },
+    ],
+  },
+  {
+    id: "cfgedit",
+    title: "Editing the Candidate — deactivate, insert, rename, copy",
+    tag: "JNCIA · user interfaces",
+    ready: true,
+    noTopology: true,
+    problem: {
+      text: ["set and delete are the only two config commands most people ever learn, and they force you into bad habits. Testing whether a statement is the problem means deleting it and hoping you can retype it correctly. Fixing the order of a firewall term means deleting three terms and putting them back.",
+             "Junos has commands for exactly these jobs. They are unglamorous, they are on the exam, and they are the difference between editing a configuration and retyping one.",
+             "The one that matters most is deactivate: it switches a statement off while leaving the text in place, so you can prove what a statement was doing and put it back with one word."],
+      svg: "cfgedit-problem"
+    },
+    how: {
+      text: ["DEACTIVATE / ACTIVATE. deactivate <statement> tags a statement inactive. It stays in the configuration, it prints with an inactive: prefix in front of it, and commit skips over it entirely — so the device behaves as though the statement were gone, while the text is still there for you to read. activate <statement> takes the tag off. This is the safe way to test a theory: deactivate, commit, see what changes.",
+             "An inactive statement is not validated either. A statement that would fail commit — a port pointing at a VLAN that does not exist, say — stops failing once it is deactivated, because commit never looks inside it.",
+             "INSERT. Junos reads firewall filter terms and routing-policy terms top to bottom and stops at the first match, so the ORDER of the terms IS the logic. A deny-all term written before your allow term silently breaks everything below it. insert <statement> before <statement> and insert <statement> after <statement> move one term without touching its contents.",
+             "RENAME. rename <statement> to <new-name> changes a name in place, keeping the statement's position in the hierarchy and carrying its comment and any inactive tag along with it. Retyping would lose both.",
+             "COPY. copy <statement> to <new-name> duplicates a statement and everything under it. This is how you build the second of four nearly-identical policy terms or interface stanzas: copy, then edit the copy.",
+             "ALL FOUR EDIT THE CANDIDATE. Nothing here touches the running device until you commit, and show | compare shows you exactly what you did first. A deactivate or activate appears in that diff with a ! in the margin, because the statement itself has not changed — only whether commit will read it."]
+    },
+    prereqs: [
+      { desc: "A switch or router in configuration mode",
+        test: function(){ return typeof devsBy === "function" &&
+          devsBy("switch").concat(devsBy("router")).some(function(d){ return d.cli && d.cli.mode === "cfg"; }); } },
+      { desc: "A firewall filter with two or more terms — something whose order matters",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var f = cfgGet(d.candidate, ["firewall", "family", "inet", "filter"]) || {};
+          return Object.keys(f).some(function(n){ return Object.keys((f[n] && f[n].term) || {}).length >= 2; }); } ); } },
+      { desc: "A deactivated statement in the candidate (try: deactivate <statement>)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var m = typeof inactAll === "function" && inactAll(d.candidate); return !!(m && Object.keys(m).length); }); } },
+      { desc: "That deactivation committed — it is a config change like any other",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var m = typeof inactAll === "function" && inactAll(committedTree(d));
+          return !!(m && Object.keys(m).length); }); } },
+    ],
+    try: [
+      ["show | compare", "Always your first look: what have I actually changed?"],
+      ["show configuration | display set", "The active config as set commands — a deactivated statement comes back as a deactivate line"],
+      ["status", "Who else is editing this configuration right now, and at which level"]
+    ],
+    cfg: [
+      ["set firewall family inet filter GUEST-IN term deny-all then discard", "A deny-all term, written first by mistake"],
+      ["set firewall family inet filter GUEST-IN term allow-dns from protocol udp", "The allow term, written second — so it never gets read"],
+      ["set firewall family inet filter GUEST-IN term allow-dns then accept", "Finish the term"],
+      ["insert firewall family inet filter GUEST-IN term allow-dns before term deny-all", "Move the allow above the deny — order is the logic"],
+      ["copy firewall family inet filter GUEST-IN term allow-dns to term allow-ntp", "Duplicate a whole term, then edit the copy"],
+      ["rename firewall family inet filter GUEST-IN term deny-all to term drop-the-rest", "Rename in place, keeping its position, comment and tags"],
+      ["deactivate firewall family inet filter GUEST-IN term allow-ntp", "Switch a term off without deleting it"],
+      ["show | compare", "The deactivate shows with a ! — the statement is unchanged, only its effect is"],
+      ["commit comment \"reordered guest filter\"", "Commit with a note; show system commit reads it back"],
+      ["activate firewall family inet filter GUEST-IN term allow-ntp", "And back on again, with one word"]
+    ],
+    nums: [
+      ["deactivate <statement>", "Keep the text, stop the effect. Renders as inactive: in the config"],
+      ["activate <statement>", "Remove the inactive tag"],
+      ["insert <statement> before|after <statement>", "Reorder terms — the only way without retyping them"],
+      ["rename <old> to <new>", "Rename in place; comment and inactive tag travel with it"],
+      ["copy <old> to <new>", "Duplicate a statement and its whole subtree"],
+      ["commit comment \"<text>\"", "Records WHY in the commit log, where show system commit finds it"],
+      ["!", "How show | compare marks an activate or deactivate"],
+      ["quit", "A synonym for exit — pops one level, or leaves configuration mode"]
+    ],
+    els: [
+      ["(unchanged by the ELS rewrite)", "These are CLI commands, not switching configuration, so they behave the same on every Junos box"]
+    ],
+    real: [
+      "deactivate is the professional way to test a theory on a live box. Deleting a statement to see what happens means you now have to remember how to type it back, under pressure, while the outage is running.",
+      "Use deactivate for anything seasonal or conditional: a maintenance-window filter, a peering session that comes up twice a year. The configuration documents itself and one word turns it on.",
+      "insert earns its keep the first time you inherit someone's firewall filter and find the deny term in the wrong place. Reordering by retyping is how you take a small mistake and make it a big one.",
+      "Pair commit comment with every non-obvious change. show system commit then reads back as a change log with reasons, which is the closest a switch gets to documentation."
+    ],
+    verify: [
+      ["show | compare", "Before committing — confirm you moved what you meant to move"],
+      ["show configuration", "After committing — a deactivated statement is still there, wearing its inactive: tag"],
+      ["show system commit", "Your commit comment, next to the rollback number that undoes it"]
+    ],
+    breaks: [
+      "Expecting deactivate to remove the statement from the configuration. It does not, and that is the point — the text stays, the effect stops.",
+      "Forgetting the commit. deactivate edits the candidate, exactly like set; the running device does not change until you commit.",
+      "Reordering firewall or policy terms by deleting and retyping them, which is where the typos come from. That is what insert is for.",
+      "Retyping a name instead of using rename, and losing the statement's comment and its place in the hierarchy.",
+      "Assuming an inactive statement still gets validated. It does not — commit skips it, errors and all, which can hide a mistake until you activate it again."
+    ],
+    answer: "Beyond set and delete, Junos has commands for editing configuration rather than retyping it. deactivate <statement> leaves the statement in the configuration but tags it inactive: so commit skips it, and activate removes the tag; this is the safe way to test whether a statement is the cause of something, and an inactive statement is not validated either. insert <statement> before|after <statement> reorders terms, which matters because Junos reads firewall filter and routing-policy terms top to bottom and stops at the first match, so the order is the logic. rename <old> to <new> changes a name in place and carries the statement's comment and inactive tag with it, and copy <old> to <new> duplicates a statement and its whole subtree. All of them edit the candidate only, show | compare marks an activate or deactivate with a ! because the statement itself has not changed, and commit comment \"<text>\" records why, retrievable later with show system commit.",
+    quiz: [
+      { q: "You deactivate interfaces ge-0/0/5 and commit. What does show configuration show?",
+        opts: ["ge-0/0/5 is gone from the configuration", "ge-0/0/5 is still there, prefixed with inactive:", "An error"],
+        right: 1,
+        why: "That is exactly the difference between deactivate and delete. The text stays so you can read it and put it back with one word; only the effect is gone, because commit skips anything tagged inactive." },
+      { q: "A guest firewall filter has term deny-all first and term allow-dns second. DNS is blocked. Best fix?",
+        opts: ["delete both terms and retype them in the right order", "insert term allow-dns before term deny-all", "Add another allow term at the end"],
+        right: 1,
+        why: "Junos evaluates terms top to bottom and stops at the first match, so deny-all matches everything and allow-dns is never reached. insert moves it without touching its contents, and without the typos that retyping invites." },
+      { q: "A statement fails commit because it points at a VLAN that does not exist. You deactivate it. What happens at the next commit?",
+        opts: ["It still fails — validation checks everything", "It commits, because commit does not validate inactive statements", "The VLAN is created automatically"],
+        right: 1,
+        why: "Commit skips inactive statements completely, validation included. Useful for parking a half-finished change, and a genuine trap: activating it later can fail a commit you thought was clean." },
+      { q: "Why use rename rather than setting the new name and deleting the old one?",
+        opts: ["It is fewer keystrokes", "rename keeps the statement's position, its comment and its inactive tag", "There is no difference"],
+        right: 1,
+        why: "Retyping creates a new statement at the end of the hierarchy and leaves its comment behind. For an ordered thing like a policy term, losing its position can change what the configuration actually does." },
     ],
   },
   {
@@ -1785,6 +1985,40 @@ function protoSvg(kind){
     '<text x="40" y="105" fill="var(--dim)">L1 bits</text><text x="150" y="105" fill="var(--text)">cables \u00b7 optics \u00b7 CRC errors</text>' +
     '<text x="40" y="135" fill="var(--amber)">diagnosis = climbing this ladder one layer at a time</text>' +
     '</g>' + close;
+  if(kind === "pipes-problem") return open +
+    '<text x="280" y="20" fill="var(--dim)" font-size="10.5">show interfaces extensive on a 48-port switch</text>' +
+    '<rect x="30" y="34" width="150" height="96" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +
+    '<text x="105" y="52" fill="var(--red)" font-size="10.5">2,100 lines</text>' +
+    '<g stroke="var(--line)" stroke-width="1">' +
+    '<line x1="45" y1="66" x2="165" y2="66"/><line x1="45" y1="76" x2="158" y2="76"/>' +
+    '<line x1="45" y1="86" x2="165" y2="86"/><line x1="45" y1="96" x2="150" y2="96"/>' +
+    '<line x1="45" y1="106" x2="165" y2="106"/><line x1="45" y1="116" x2="140" y2="116"/></g>' +
+    '<text x="105" y="146" fill="var(--dim)" font-size="10">scrolling is not diagnosis</text>' +
+    '<text x="255" y="76" fill="var(--amber)" font-size="13">|</text>' +
+    '<text x="255" y="94" fill="var(--amber)" font-size="10">match errors</text>' +
+    '<path d="M196 80 L236 80" stroke="var(--amber)" stroke-width="1.2" fill="none"/>' +
+    '<path d="M276 80 L316 80" stroke="var(--amber)" stroke-width="1.2" fill="none"/>' +
+    '<rect x="330" y="34" width="190" height="96" rx="4" fill="none" stroke="var(--green)" stroke-width="1.2"/>' +
+    '<text x="425" y="52" fill="var(--green)" font-size="10.5">3 lines</text>' +
+    '<text x="425" y="74" fill="var(--text)" font-size="10">Input errors : 0</text>' +
+    '<text x="425" y="90" fill="var(--text)" font-size="10">Input errors : 0</text>' +
+    '<text x="425" y="106" fill="var(--red)" font-size="10">Input errors : 48122</text>' +
+    '<text x="425" y="146" fill="var(--dim)" font-size="10">the answer, and only the answer</text>' + close;
+  if(kind === "cfgedit-problem") return open +
+    '<text x="280" y="20" fill="var(--dim)" font-size="10.5">a firewall filter is read top to bottom, first match wins</text>' +
+    '<rect x="30" y="34" width="200" height="100" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +
+    '<text x="130" y="52" fill="var(--red)" font-size="10.5">as typed</text>' +
+    '<text x="130" y="74" fill="var(--text)" font-size="10.5">term deny-all</text>' +
+    '<text x="130" y="92" fill="var(--dim)" font-size="10.5">term allow-dns</text>' +
+    '<text x="130" y="116" fill="var(--red)" font-size="10">never reached \u2014 DNS is dead</text>' +
+    '<text x="280" y="78" fill="var(--amber)" font-size="10">insert ... before</text>' +
+    '<path d="M246 86 L314 86" stroke="var(--amber)" stroke-width="1.2" fill="none"/>' +
+    '<path d="M308 82 L316 86 L308 90" stroke="var(--amber)" stroke-width="1.2" fill="none"/>' +
+    '<rect x="330" y="34" width="200" height="100" rx="4" fill="none" stroke="var(--green)" stroke-width="1.2"/>' +
+    '<text x="430" y="52" fill="var(--green)" font-size="10.5">after insert</text>' +
+    '<text x="430" y="74" fill="var(--text)" font-size="10.5">term allow-dns</text>' +
+    '<text x="430" y="92" fill="var(--text)" font-size="10.5">term deny-all</text>' +
+    '<text x="430" y="116" fill="var(--green)" font-size="10">same terms, working logic</text>' + close;
   if(kind === "comments-problem") return open +
     '<text x="280" y="24" fill="var(--dim)" font-size="10.5">six months later, reading someone else\'s switch</text>' +
     '<rect x="40" y="38" width="220" height="86" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +

@@ -397,7 +397,9 @@ ok(suggestFor(devices[sw], "show x") === null, "T20 no match suggests nothing");
     ok(/terse/.test(labels) && /statistics/.test(labels), "T20 completions include terse and statistics");
     ok((suggestFor(devices[sw2], "show interfaces t") || {}).text === "erse", "T20 completes uniquely once a letter disambiguates");
   }
-  ok((suggestFor(devices[sw2], "clear ") || {}).text === "ethernet-switching", "T20 chains the unique next word at a boundary");
+  ok((suggestFor(devices[sw2], "request ") || {}).text === "system", "T20 chains the unique next word at a boundary");
+  ok(/interfaces/.test((suggestFor(devices[sw2], "clear ") || {}).preview || ""),
+     "T20 a boundary with several children previews them instead of guessing");
   const pv2 = suggestFor(devices[sw2], "ping ");
   ok(!!(pv2 && pv2.preview && /target/.test(pv2.preview)), "T20 placeholder previewed after ping");
 }
@@ -2571,6 +2573,321 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
      "notes: the store key is lab-neutral so every Mega Lab app shares it");
 }
 
+
+{
+  wipeLab();
+  const s = makeSwitch(0, 0, 8, "EX4300-48T"), r = makeRouter(400, 0), hh = makeHost(0, 250);
+  cable(hh, "eth0", s, "ge-0/0/1");
+  cable(s, "ge-0/0/47", r, "ge-0/0/0");
+  rebuildAllDerived();
+
+  const all = cli(s, "show interfaces terse");
+  const nlines = all.split("\n").length;
+  ok(/^Count: \d+ lines$/.test(cli(s, "show interfaces terse | count").trim()),
+     "T60 | count prints the real-JunOS 'Count: N lines'");
+  ok(cli(s, "show interfaces terse | count").trim() === "Count: " + nlines + " lines",
+     "T60 | count counts every line of the unfiltered output");
+  const m = cli(s, "show interfaces terse | match ge-0/0/1");
+  ok(m.split("\n").every(l => /ge-0\/0\/1/.test(l)) && /ge-0\/0\/1 /.test(m),
+     "T60 | match keeps only matching lines");
+  ok(!/ge-0\/0\/1\b/.test(cli(s, "show interfaces terse | except ge-0/0/1")),
+     "T60 | except drops matching lines");
+  ok(cli(s, "show interfaces terse | match GE-0/0/1").trim() === "",
+     "T60 | match is case-sensitive, like the real POSIX regex");
+  ok(cli(s, "show interfaces terse | find me0").split("\n")[0].indexOf("me0") === 0,
+     "T60 | find starts the output at the first match");
+  ok(cli(s, "show interfaces terse | no-more") === all,
+     "T60 | no-more changes nothing except the paging that a browser has no need of");
+  ok(cli(s, "show interfaces terse | last 2").split("\n").length === 2,
+     "T60 | last <n> keeps the tail");
+  ok(cli(s, "show interfaces terse | last").split("\n").length === 10,
+     "T60 bare | last keeps ten lines");
+  ok(cli(s, "show interfaces terse | last 1") === all.split("\n").slice(-1)[0],
+     "T60 | last 1 is the final line");
+  ok(cli(s, "show interfaces terse | trim 4").split("\n")[0] === all.split("\n")[0].slice(4),
+     "T60 | trim <n> cuts n characters off the left of every line");
+  ok(/Count: 1 lines/.test(cli(s, "show interfaces terse | match me0 | count")),
+     "T60 filters chain left to right");
+  ok(/needs a pattern/.test(cli(s, "show interfaces terse | match")),
+     "T60 | match with no pattern says so instead of matching everything");
+  ok(/unknown filter/.test(cli(s, "show interfaces terse | nonsense")),
+     "T60 an unknown filter is named as such");
+  ok(/available filters/.test(cli(s, "show interfaces terse | nonsense")),
+     "T60 an unknown filter lists the ones that exist");
+  ok(/ambiguous filter/.test(cli(s, "show interfaces terse | c")),
+     "T60 an ambiguous filter abbreviation is reported, not guessed");
+  ok(cli(s, "show interfaces terse | m me0").indexOf("me0") === 0,
+     "T60 a unique filter abbreviation works, like every other JunOS keyword");
+  ok(/invalid regular expression/.test(cli(s, "show interfaces terse | match [unclosed")),
+     "T60 a broken regex is reported, not thrown");
+  ok(/nothing before/.test(cli(s, "| match ge")),
+     "T60 a pipe with no command in front of it is an error");
+  ok(/syntax error|empty filter/.test(cli(s, "show interfaces terse |")),
+     "T60 a trailing pipe with no filter is an error");
+  ok(/no meaning over operational output/.test(cli(s, "show route | display set")),
+     "T60 | display set is refused over operational output and points at the config form");
+  ok(/compare/.test(cli(s, "show interfaces terse | compare")),
+     "T60 | compare over operational output points at the configuration form");
+
+  const sv = cli(s, "show interfaces terse | save iflist.txt");
+  ok(/^Wrote \d+ lines of output to 'iflist\.txt'$/.test(sv.trim()),
+     "T60 | save prints the receipt and not the output");
+  ok(cli(s, "file show iflist.txt") === all, "T60 file show reads back what | save wrote");
+  ok(/No such file/.test(cli(s, "file show missing.txt")), "T60 file show on a missing file fails cleanly");
+  ok(/iflist.txt/.test(cli(s, "file show missing.txt")), "T60 that failure lists what HAS been saved");
+
+  cli(s, "configure");
+  ok(/Count: /.test(cli(s, "run show interfaces terse | count")),
+     "T60 run <command> | count filters the operational output");
+  cli(s, "exit");
+
+  ok(/Count: /.test(cli(r, "show interfaces terse | count")), "T60 routers filter output too");
+}
+
+{
+  wipeLab();
+  const s = makeSwitch(0, 0, 48, "EX4300-48T"), r = makeRouter(400, 0);
+  cable(s, "ge-0/0/47", r, "ge-0/0/0");
+  rebuildAllDerived();
+  cli(s, "configure");
+  cli(s, "set vlans staff vlan-id 10");
+  cli(s, "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff");
+  cli(s, "set interfaces ge-0/0/47 unit 0 family ethernet-switching interface-mode trunk");
+  cli(s, "set interfaces ge-0/0/47 unit 0 family ethernet-switching vlan members staff");
+  cli(s, "set interfaces irb unit 10 family inet address 10.0.10.1/24");
+  cli(s, "set vlans staff l3-interface irb.10");
+  cli(s, "set protocols rstp");
+  cli(s, "set protocols lldp interface all");
+  cli(s, "set routing-options static route 0.0.0.0/0 next-hop 10.0.10.9");
+  cli(s, "commit");
+  cli(s, "exit");
+
+  const esi = cli(s, "show ethernet-switching interface");
+  ok(/Logical/.test(esi) && /Vlan/.test(esi) && /interface flags/.test(esi),
+     "T61 show ethernet-switching interface prints the ELS column headings");
+  ok(/staff\s+10/.test(esi), "T61 it lists each port's VLAN membership and tag");
+  ok(/tagged/.test(esi) && /untagged/.test(esi), "T61 it distinguishes trunk (tagged) from access (untagged) ports");
+
+  const stb = cli(s, "show spanning-tree bridge");
+  ok(/STP bridge parameters/.test(stb), "T61 show spanning-tree bridge prints the bridge block");
+  ok(/Root ID\s+: 32768\./.test(stb), "T61 it prints a bridge-ID-shaped root id");
+  ok(/Hello time\s+: 2 seconds/.test(stb) && /Forward delay\s+: 15 seconds/.test(stb),
+     "T61 it prints the RSTP timers");
+  ok(/Bridge ID/.test(stb), "T61 it prints this switch's own bridge id");
+
+  const vd = cli(s, "show vlans detail");
+  ok(/VLAN Name: staff/.test(vd) && /Tag: 10/.test(vd), "T61 show vlans detail names each VLAN and its tag");
+  ok(/Layer 3 interface: irb\.10/.test(vd), "T61 show vlans detail names the L3 interface");
+
+  const ext = cli(s, "show interfaces extensive");
+  ok(/Physical interface: ge-0\/0\/1,/.test(ext) && /Physical interface: ge-0\/0\/47,/.test(ext),
+     "T61 bare show interfaces extensive covers every port");
+  ok(/Physical interface: ge-0\/0\/1,/.test(cli(s, "show interfaces ge-0/0/1 extensive")),
+     "T61 the per-interface form still works");
+
+  const rt = cli(s, "show route");
+  ok(/inet\.0: \d+ destinations?, \d+ routes? \(\d+ active, 0 holddown, 0 hidden\)/.test(rt),
+     "T61 show route prints the real inet.0 header");
+  ok(/\+ = Active Route, - = Last Active, \* = Both/.test(rt), "T61 show route prints the legend");
+  ok(/0\.0\.0\.0\/0\s+\*\[Static\/5\]/.test(cli(s, "show route 8.8.8.8")),
+     "T61 show route <destination> answers with the route that would carry it");
+  ok(/longest match wins/.test(cli(s, "show route 10.0.10.5")),
+     "T61 show route <destination> explains why the more specific route won");
+  ok(/\*\[Static\/5\]/.test(cli(s, "show route protocol static")),
+     "T61 show route protocol static filters to statics");
+  ok(!/\[Direct\/0\]/.test(cli(s, "show route protocol static")),
+     "T61 show route protocol static leaves the direct routes out");
+  ok(/no ospf routes/.test(cli(s, "show route protocol ospf")),
+     "T61 show route protocol <p> says so plainly when that protocol has no routes");
+
+  ok(cli(s, "show configuration | display set").indexOf("set protocols lldp interface all") > -1,
+     "T61 set protocols lldp interface all commits and renders back");
+  cli(s, "configure");
+  ok(cli(s, "set protocols lldp interface ge-0/0/1").join === undefined, "T61 per-interface lldp parses");
+  cli(s, "set protocols lldp advertisement-interval 30");
+  cli(s, "set protocols lldp hold-multiplier 4");
+  ok(!/syntax error/.test(cli(s, "show protocols lldp")), "T61 the lldp timers parse");
+  cli(s, "rollback 0");
+  cli(s, "exit");
+
+  const up = cli(s, "show system uptime");
+  ok(/Current time: /.test(up) && /System booted: /.test(up) && /up /.test(up),
+     "T61 show system uptime prints the four real lines");
+  ok(/Last configured: /.test(up), "T61 show system uptime says when the config last changed");
+
+  ok(cli(s, "clear interfaces statistics all") === "", "T61 clear interfaces statistics all is silent, like the real thing");
+  ok(cli(s, "clear interfaces statistics ge-0/0/1") === "", "T61 clear interfaces statistics <port> works");
+  ok(/syntax error/.test(cli(s, "clear interfaces statistics ge-9/9/9")),
+     "T61 clearing a port that does not exist is caught by the grammar");
+
+  cli(s, "configure");
+  cli(s, "set system host-name after-the-change");
+  cli(s, "commit");
+  cli(s, "exit");
+  const cr = cli(s, "show configuration | compare rollback 1");
+  ok(/host-name after-the-change/.test(cr), "T61 show configuration | compare rollback 1 shows what the last commit changed");
+  ok(/no such commit/.test(cli(s, "show configuration | compare rollback 40")),
+     "T61 comparing against a commit that is not in history fails cleanly");
+}
+
+{
+  wipeLab();
+  const s = makeSwitch(0, 0, 8, "EX4300-48T"), h1 = makeHost(0, 250), h2 = makeHost(100, 250);
+  cable(h1, "eth0", s, "ge-0/0/1");
+  cable(h2, "eth0", s, "ge-0/0/2");
+  rebuildAllDerived();
+  cli(h1, "ip addr add 10.0.0.1/24 dev eth0");
+  cli(h2, "ip addr add 10.0.0.2/24 dev eth0");
+  cli(s, "configure");
+  cli(s, "set vlans guest vlan-id 20");
+  cli(s, "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members guest");
+  cli(s, "commit");
+  ok(!pingOk(devices[h1], "10.0.0.2"),
+     "T62 moving ge-0/0/2 into its own VLAN isolates the two hosts to start with");
+
+  cli(s, "deactivate interfaces ge-0/0/2");
+  ok(/inactive: ge-0\/0\/2/.test(cli(s, "show interfaces")),
+     "T62 a deactivated statement renders with the inactive: tag");
+  ok(/^!/m.test(cli(s, "show | compare")), "T62 show | compare marks the change with !");
+  cli(s, "commit");
+  ok(/inactive: ge-0\/0\/2/.test(cli(s, "run show configuration")),
+     "T62 the inactive tag survives the commit and shows in the active config");
+  ok(pingOk(devices[h1], "10.0.0.2"),
+     "T62 a deactivated statement has no effect: ge-0/0/2 falls back to the default VLAN");
+  ok(/deactivate interfaces ge-0\/0\/2/.test(cli(s, "run show configuration | display set")),
+     "T62 display set emits the deactivate line so the config still round-trips");
+
+  cli(s, "activate interfaces ge-0/0/2");
+  cli(s, "commit");
+  ok(!/inactive:/.test(cli(s, "run show configuration")), "T62 activate removes the tag");
+  ok(!pingOk(devices[h1], "10.0.0.2"), "T62 the statement takes effect again once activated");
+
+  ok(/not deactivated/.test(cli(s, "activate interfaces ge-0/0/2")),
+     "T62 activating something that was never deactivated warns instead of pretending");
+  ok(/not found/.test(cli(s, "deactivate interfaces ge-0/0/7 disable")),
+     "T62 deactivating a statement that does not exist is an error");
+  ok(/usage/.test(cli(s, "deactivate")), "T62 bare deactivate explains itself");
+
+  cli(s, "set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members nowhere");
+  ok(/commit failed/.test(cli(s, "commit")), "T62 an undefined VLAN fails the commit");
+  cli(s, "deactivate interfaces ge-0/0/3");
+  ok(/commit complete/.test(cli(s, "commit")),
+     "T62 once deactivated, the same statement no longer fails validation");
+  cli(s, "exit");
+}
+
+{
+  wipeLab();
+  const s = makeSwitch(0, 0, 8, "EX4300-48T");
+  rebuildAllDerived();
+  cli(s, "configure");
+  cli(s, "set firewall family inet filter GUEST-IN term allow-dns from protocol udp");
+  cli(s, "set firewall family inet filter GUEST-IN term allow-dns then accept");
+  cli(s, "set firewall family inet filter GUEST-IN term deny-all then discard");
+  const order1 = cli(s, "show | display set")
+    .split("\n").filter(l => /term /.test(l)).map(l => l.split("term ")[1].split(" ")[0]);
+  ok(order1[0] === "allow-dns", "T63 terms start in the order they were typed");
+
+  cli(s, "insert firewall family inet filter GUEST-IN term deny-all before term allow-dns");
+  const order2 = cli(s, "show | display set")
+    .split("\n").filter(l => /term /.test(l)).map(l => l.split("term ")[1].split(" ")[0]);
+  ok(order2[0] === "deny-all", "T63 insert ... before moves a term up");
+  cli(s, "insert firewall family inet filter GUEST-IN term deny-all after term allow-dns");
+  const order3 = cli(s, "show | display set")
+    .split("\n").filter(l => /term /.test(l)).map(l => l.split("term ")[1].split(" ")[0]);
+  ok(order3[0] === "allow-dns", "T63 insert ... after moves it back down");
+  ok(/usage/.test(cli(s, "insert firewall family inet filter GUEST-IN term deny-all")),
+     "T63 insert without before/after explains itself");
+  ok(/not found/.test(cli(s, "insert firewall family inet filter GUEST-IN term deny-all before term ghost")),
+     "T63 inserting relative to a term that does not exist is an error");
+  ok(/itself/.test(cli(s, "insert firewall family inet filter GUEST-IN term deny-all before term deny-all")),
+     "T63 a term cannot be inserted relative to itself");
+
+  cli(s, "edit firewall family inet filter GUEST-IN");
+  cli(s, "insert term deny-all before term allow-dns");
+  ok(/deny-all/.test(cli(s, "show").split("\n")[1]), "T63 insert works at an edit level, with no path repeated");
+  cli(s, "top");
+
+  cli(s, "annotate firewall family inet filter GUEST-IN term allow-dns \"lets DNS out\"");
+  cli(s, "deactivate firewall family inet filter GUEST-IN term allow-dns");
+  cli(s, "rename firewall family inet filter GUEST-IN term allow-dns to term permit-dns");
+  const shown = cli(s, "show firewall");
+  ok(/permit-dns/.test(shown) && !/allow-dns/.test(shown), "T63 rename replaces the name in place");
+  ok(/lets DNS out/.test(shown), "T63 rename carries the statement's comment with it");
+  ok(/inactive: permit-dns/.test(shown), "T63 rename carries the inactive tag with it");
+  cli(s, "activate firewall family inet filter GUEST-IN term permit-dns");
+
+  cli(s, "copy firewall family inet filter GUEST-IN term permit-dns to term permit-ntp");
+  const copied = cli(s, "show firewall");
+  ok(/permit-dns/.test(copied) && /permit-ntp/.test(copied), "T63 copy leaves the original and adds the duplicate");
+  ok((copied.match(/protocol udp;/g) || []).length === 2, "T63 copy duplicates the whole subtree");
+  ok(/already exists/.test(cli(s, "copy firewall family inet filter GUEST-IN term permit-dns to term permit-ntp")),
+     "T63 copying onto a name that is taken is refused");
+  ok(/different name/.test(cli(s, "rename firewall family inet filter GUEST-IN term permit-dns to term permit-dns")),
+     "T63 renaming a statement to its own name is refused");
+  ok(/usage/.test(cli(s, "rename firewall family inet filter GUEST-IN term permit-dns")),
+     "T63 rename without 'to' explains itself");
+
+  const st = cli(s, "status");
+  ok(/Users currently editing the configuration:/.test(st), "T63 status prints the real heading");
+  ok(/\[edit/.test(st), "T63 status reports which hierarchy level the session is at");
+
+  ok(/commit complete/.test(cli(s, "commit comment \"opened DNS for the guest vlan\"")),
+     "T63 commit comment commits");
+  ok(/opened DNS for the guest vlan/.test(cli(s, "run show system commit")),
+     "T63 the comment shows up in the commit history");
+  ok(/usage/.test(cli(s, "commit comment")), "T63 commit comment with no text explains itself");
+  ok(!/opened DNS/.test(cli(s, "run show configuration")),
+     "T63 a commit comment annotates the commit, not the configuration");
+
+  cli(s, "edit firewall");
+  ok(/\[edit\]/.test(cli(s, "quit")), "T63 quit inside a hierarchy pops one level, like exit");
+  ok(/Exiting configuration mode/.test(cli(s, "quit")), "T63 quit at the top leaves configuration mode");
+  ok(devices[s].cli.mode === "op", "T63 and the session really is back in operational mode");
+}
+
+{
+  wipeLab();
+  const s = makeSwitch(0, 0, 8, "EX4300-48T");
+  rebuildAllDerived();
+  cli(s, "configure");
+  cli(s, "set system host-name committed-name");
+  cli(s, "commit");
+  cli(s, "set system host-name only-in-the-candidate");
+  cli(s, "exit");
+
+  ok(/Reboot the system \? \[yes,no\] \(no\)/.test(cli(s, "request system reboot")),
+     "T64 request system reboot asks first, the way a real box does");
+  ok(/cancelled/.test(cli(s, "no")), "T64 answering no does nothing");
+  ok(/only-in-the-candidate/.test(cli(s, "show configuration | display set") + cli(s, "configure") + cli(s, "show | compare")),
+     "T64 and the candidate is still there after a cancelled reboot");
+  cli(s, "exit");
+
+  cli(s, "request system reboot");
+  const boot = cli(s, "yes");
+  ok(/System going down for reboot/.test(boot), "T64 answering yes reboots");
+  ok(/uncommitted candidate configuration was discarded/.test(boot),
+     "T64 the reboot warns that the uncommitted candidate is gone");
+  ok(/committed-name/.test(cli(s, "show configuration")), "T64 the committed config survives the reboot");
+  cli(s, "configure");
+  ok(/no uncommitted/.test(cli(s, "show | compare")),
+     "T64 the candidate came back matching the committed config, not the pre-reboot edit");
+  cli(s, "exit");
+  ok(/booted/.test(cli(s, "show system uptime | match booted")), "T64 uptime reports a boot time after the reboot");
+
+  ok(/Power Off the system \? \[yes,no\] \(no\)/.test(cli(s, "request system power-off")),
+     "T64 request system power-off asks first too");
+  ok(/System shutting down/.test(cli(s, "yes")), "T64 confirming powers the box off");
+  ok(devices[s].powered === false, "T64 and the device really is off");
+  powerOn(devices[s]);
+
+  ok(/rpd restart initiated/.test(cli(s, "restart routing")), "T64 restart routing bounces rpd by its real name");
+  ok(/adjacency|flap/.test(cli(s, "restart routing")), "T64 and says what that costs");
+  ok(/l2ald restart initiated/.test(cli(s, "restart l2-learning")), "T64 restart l2-learning bounces l2ald");
+  ok(/chassisd restart initiated/.test(cli(s, "restart chassis-control")), "T64 restart chassis-control bounces chassisd");
+  ok(/syntax error/.test(cli(s, "restart nonsense")), "T64 a process that does not exist is caught by the grammar");
+  ok(devices[s].powered !== false, "T64 restarting a daemon leaves the box up");
+}
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 

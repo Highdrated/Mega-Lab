@@ -1276,7 +1276,8 @@ function showCommitHistCmd(dev){
   if(!log.length) return "(no commits yet on this device)";
   return log.map((c, i) =>
     pad(String(i), 4) + new Date(c.when).toISOString().replace("T", " ").slice(0, 19) + " UTC  by cli" +
-    (i === 0 ? "   (current — rollback " + (i + 1) + " returns to the one below)" : "")).join("\n") +
+    (i === 0 ? "   (current — rollback " + (i + 1) + " returns to the one below)" : "") +
+    (c.comment ? "\n      " + c.comment : "")).join("\n") +
     "\n\n" + log.length + " commits kept (max 49) — rollback <n> loads any of them into the candidate";
 }
 function showIfStatsCmd(dev){
@@ -1509,22 +1510,6 @@ function showMacTable(dev){
   return rows.map(r => pad(r[0], 12) + pad(r[1], 20) + pad(r[2], 6) + pad(r[3], 8) + r[4]).join("\n") +
     "\n(dynamic entries age out after ~300s of silence on real gear)";
 }
-function showRouteCmd(dev){
-  const out = [];
-  for(const i of ifacesOf(dev))
-    if(i.up) out.push(pad(networkOf(i.ip, i.bits) + "/" + i.bits, 20) + "*[Direct/0]  via " + i.name);
-  for(const r of routesOf(dev)){
-    const up = ifacesOf(dev).filter(i => i.up);
-    const via = up.find(i => sameSubnet(r.nh, i.ip, i.bits));
-    out.push(pad(r.net + "/" + r.bits, 20) + `*[Static/5]  to ${r.nh}` + (via ? ` via ${via.name}` : "  (next-hop currently unresolvable)"));
-  }
-  for(const r of ((dev.d && dev.d.ospfRoutes) || []))
-    out.push(pad(r.net + "/" + r.bits, 20) + `*[OSPF/10]   to ${r.nh} via ${r.via}`);
-  for(const r of ((dev.d && dev.d.bgpRoutes) || []))
-    out.push(pad(r.net + "/" + r.bits, 20) + `*[BGP/170]   to ${r.nh} (learned from AS${r.fromAs})`);
-  if(!out.length) return "inet.0: 0 destinations — no routes yet";
-  return `inet.0: ${out.length} destinations\n` + out.join("\n");
-}
 function showArpCmd(dev){
   const e = Object.entries(dev.arp || {});
   if(!e.length) return "(empty — the ARP cache fills when traffic flows)";
@@ -1727,7 +1712,7 @@ function storageCleanupCmd(dev){
     "Freed: enough. Run this BEFORE a software upgrade — a full /var is the classic upgrade killer.";
 }
 function rescueSaveCmd(dev){
-  dev.rescueConfig = JSON.parse(JSON.stringify(dev.config));
+  dev.rescueConfig = deepClone(committedTree(dev));
   dev.rescueWhen = Date.now();
   return "Saving active configuration to rescue.conf.gz — this is your known-good snapshot.\n" +
     "Restore it any time from configuration mode with: rollback rescue (then commit).";
@@ -1882,30 +1867,269 @@ function showVersionCmd(dev){
   return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: ${ver} (JunOS Lab edition)`;
 }
 function showConfigCmd(dev){
-  return cfgIsEmpty(dev.config) ? "## Last commit: never\n## (factory-default — empty configuration)" : treeToText(dev.config);
+  const t = committedTree(dev);
+  return cfgIsEmpty(t) ? "## Last commit: never\n## (factory-default — empty configuration)" : treeToText(t);
 }
-function treeToDisplaySet(t, prefix, annots){
+function treeToDisplaySet(t, prefix, annots, inacts){
   prefix = prefix || [];
   if(annots === undefined) annots = (typeof annotAll === "function" && annotAll(t)) || {};
+  if(inacts === undefined) inacts = (typeof inactAll === "function" && inactAll(t)) || {};
   const out = [];
   for(const [k, v] of Object.entries(t)){
-    if(k === ANNOT_KEY) continue;
+    if(k === ANNOT_KEY || k === INACT_KEY) continue;
     const here = [...prefix, k];
     if(v === true) out.push("set " + here.join(" "));
     else if(Array.isArray(v)) v.forEach(item => out.push("set " + [...here, item].join(" ")));
     else if(v && typeof v === "object"){
       if(!Object.keys(v).length) out.push("set " + here.join(" "));
-      else out.push(...treeToDisplaySet(v, here, annots));
+      else out.push(...treeToDisplaySet(v, here, annots, inacts));
     }
     else out.push("set " + [...here, v].join(" "));
     const note = annots[here.join(" ")];
     if(note) out.push("annotate " + here.join(" ") + ' "' + note + '"');
+    if(inacts[here.join(" ")]) out.push("deactivate " + here.join(" "));
   }
   return out;
 }
 function showConfigSetCmd(dev){
-  const ls = treeToDisplaySet(dev.config);
+  const ls = treeToDisplaySet(committedTree(dev));
   return ls.length ? ls.join("\n") : "## (factory-default — empty configuration)";
+}
+
+function routeRows(dev){
+  const rows = [];
+  for(const i of ifacesOf(dev))
+    if(i.up) rows.push({ net: networkOf(i.ip, i.bits), bits: i.bits, proto: "direct",
+      pref: 0, detail: "*[Direct/0]  via " + i.name });
+  for(const r of routesOf(dev)){
+    const up = ifacesOf(dev).filter(i => i.up);
+    const via = up.find(i => sameSubnet(r.nh, i.ip, i.bits));
+    rows.push({ net: r.net, bits: r.bits, proto: "static", pref: 5, nh: r.nh,
+      detail: `*[Static/5]  to ${r.nh}` + (via ? ` via ${via.name}` : "  (next-hop currently unresolvable)") });
+  }
+  for(const r of ((dev.d && dev.d.ospfRoutes) || []))
+    rows.push({ net: r.net, bits: r.bits, proto: "ospf", pref: 10, nh: r.nh,
+      detail: `*[OSPF/10]   to ${r.nh} via ${r.via}` });
+  for(const r of ((dev.d && dev.d.bgpRoutes) || []))
+    rows.push({ net: r.net, bits: r.bits, proto: "bgp", pref: 170, nh: r.nh, fromAs: r.fromAs,
+      detail: `*[BGP/170]   to ${r.nh} (learned from AS${r.fromAs})` });
+  return rows;
+}
+function routeTableHead(n){
+  return `inet.0: ${n} destination${n === 1 ? "" : "s"}, ${n} route${n === 1 ? "" : "s"} (${n} active, 0 holddown, 0 hidden)\n` +
+    "+ = Active Route, - = Last Active, * = Both\n";
+}
+function routeBody(rows){
+  return rows.map(r => pad(r.net + "/" + r.bits, 20) + r.detail).join("\n");
+}
+function showRouteCmd(dev){
+  const rows = routeRows(dev);
+  if(!rows.length) return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no routes yet)";
+  return routeTableHead(rows.length) + routeBody(rows);
+}
+function showRouteDestCmd(dev, keys){
+  const target = keys[keys.length - 1];
+  const rows = routeRows(dev).filter(r => sameSubnet(target, r.net, r.bits));
+  if(!rows.length)
+    return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n" +
+      "(nothing in the table matches " + target + " — not even a default route, so a packet for it would be dropped)";
+  const best = Math.max.apply(null, rows.map(r => r.bits));
+  const hit = rows.filter(r => r.bits === best);
+  return routeTableHead(hit.length) + routeBody(hit) +
+    (rows.length > hit.length ? "\n\n(" + (rows.length - hit.length) +
+      " less specific route" + (rows.length - hit.length === 1 ? "" : "s") + " also covers " + target +
+      " — longest match wins)" : "");
+}
+function showRouteProtoCmd(dev, keys){
+  const proto = keys[keys.length - 1];
+  const rows = routeRows(dev).filter(r => r.proto === proto);
+  if(!rows.length)
+    return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no " + proto + " routes in this table)";
+  return routeTableHead(rows.length) + routeBody(rows);
+}
+function showRouteReceiveCmd(dev, keys){
+  const peer = keys[keys.length - 1];
+  const groups = cfgGet(dev.config, ["protocols", "bgp", "group"]) || {};
+  let known = false;
+  for(const g in groups){
+    const nb = groups[g].neighbor;
+    if(nb && [].concat(nb).includes(peer)) known = true;
+  }
+  if(!known) return { text: "(" + peer + " is not a configured BGP neighbour on this device)", err: true };
+  const rows = ((dev.d && dev.d.bgpRoutes) || []).filter(r => r.nh === peer);
+  const head = routeTableHead(rows.length) +
+    "  " + pad("Prefix", 24) + pad("Nexthop", 21) + pad("MED", 8) + pad("Lclpref", 11) + "AS path";
+  if(!rows.length)
+    return head + "\n\n(nothing received from " + peer + " yet — check show bgp summary for the session state)";
+  return head + "\n" + rows.map(r =>
+    "* " + pad(r.net + "/" + r.bits, 24) + pad(r.nh, 21) + pad("", 8) + pad("", 11) +
+    r.fromAs + " I").join("\n");
+}
+
+function showIfExtensiveAll(dev){
+  const blocks = dev.ports.map(p => showIfExtensive(dev, [null, null, p.id]));
+  return blocks.join("\n\n");
+}
+
+function showEthSwIfCmd(dev){
+  const d = D(dev);
+  const out = ["Routing instance : default-switch",
+    "Logical interface flags: (DN - interface down, SCTL - shutdown by storm-control,",
+    "                          ED - error-disabled)",
+    "",
+    pad("Logical", 16) + pad("Vlan", 14) + pad("TAG", 6) + pad("MAC", 8) + pad("STP", 13) + "Logical",
+    pad("interface", 16) + pad("members", 14) + pad("", 6) + pad("limit", 8) + pad("state", 13) + "interface flags"];
+  const vlanName = id => {
+    for(const [n, v] of Object.entries(d.vlans)) if(v.id === id) return n;
+    return "vlan-" + id;
+  };
+  let any = false;
+  for(const p of dev.ports){
+    const pc = d.portCfg[p.id] || {};
+    if(pc.ae) continue;
+    const flags = [];
+    if(pc.disabled) flags.push("DN");
+    if(dev.errDisabled[p.id]) flags.push("ED");
+    if(!isLinked(dev.id, p.id) && !pc.disabled) flags.push("DN");
+    const limit = (cfgGet(dev.config, ["switch-options", "interface", p.id, "interface-mac-limit"]) || "294912");
+    any = true;
+    out.push(pad(p.id + ".0", 16) + pad("", 14) + pad("", 6) + pad(String(limit), 8) + pad("", 13) +
+      flags.concat([pc.mode === "trunk" ? "tagged" : "untagged"]).join(","));
+    const ids = pc.vlanIds || [];
+    for(const id of ids){
+      const blocked = NET.blocked && NET.blocked.has(dev.id + ":" + p.id);
+      out.push(pad("", 16) + pad(vlanName(id), 14) + pad(String(id), 6) + pad("65535", 8) +
+        pad(blocked ? "Discarding" : "Forwarding", 13) +
+        (pc.mode === "trunk" && id !== pc.nativeVlan ? "tagged" : "untagged"));
+    }
+  }
+  for(const [ae, aeCfg] of Object.entries(d.aes)){
+    any = true;
+    out.push(pad(ae + ".0", 16) + pad("", 14) + pad("", 6) + pad("294912", 8) + pad("", 13) +
+      (aeCfg.mode === "trunk" ? "tagged" : "untagged"));
+    for(const id of (aeCfg.vlanIds || []))
+      out.push(pad("", 16) + pad(vlanName(id), 14) + pad(String(id), 6) + pad("65535", 8) +
+        pad("Forwarding", 13) + (aeCfg.mode === "trunk" ? "tagged" : "untagged"));
+  }
+  if(!any) return "(no ethernet-switching interfaces on this device)";
+  return out.join("\n");
+}
+
+function showStpBridgeCmd(dev){
+  const d = D(dev);
+  if(!d.rstp) return { text: "RSTP is not enabled on this switch.\n(enable it with: set protocols rstp)", err: true };
+  const rootId = NET.stpRoot[dev.id];
+  const myMac = macOf(dev.id, "chassis");
+  const rootMac = rootId ? macOf(rootId, "chassis") : myMac;
+  const isRoot = !rootId || rootId === dev.id;
+  const out = [];
+  out.push("STP bridge parameters");
+  out.push(pad("Routing instance name", 34) + ": GLOBAL");
+  out.push(pad("Context ID", 34) + ": 0");
+  out.push(pad("Enabled protocol", 34) + ": RSTP");
+  out.push(pad("  Root ID", 34) + ": 32768." + rootMac);
+  out.push(pad("  Hello time", 34) + ": 2 seconds");
+  out.push(pad("  Maximum age", 34) + ": 20 seconds");
+  out.push(pad("  Forward delay", 34) + ": 15 seconds");
+  out.push(pad("  Message age", 34) + ": 0");
+  out.push(pad("  Number of topology changes", 34) + ": " + (dev.stpChanges || 0));
+  out.push("  Local parameters");
+  out.push(pad("    Bridge ID", 34) + ": 32768." + myMac);
+  out.push(pad("    Extended system ID", 34) + ": 0");
+  out.push("");
+  out.push(isRoot
+    ? "This switch IS the root bridge — every other switch computes its path towards this one."
+    : "Root bridge: " + hostnameOf(devices[rootId]) +
+      "  (lowest bridge ID wins the election; priority first, then MAC)");
+  return out.join("\n");
+}
+
+function showVlansDetailCmd(dev){
+  const d = D(dev);
+  const names = Object.keys(d.vlans);
+  if(!names.length) return "(no VLANs configured)";
+  const out = ["Routing instance: default-switch"];
+  for(const name of names){
+    const v = d.vlans[name];
+    const members = effSwitchPorts(dev).filter(p => p.vlanIds.includes(v.id));
+    const tagged = members.filter(p => p.mode === "trunk" && p.port !== undefined && v.id !== p.nativeVlan);
+    out.push("");
+    out.push(pad("VLAN Name: " + name, 34) + "State: Active");
+    out.push("Tag: " + v.id);
+    out.push("Internal index: " + (names.indexOf(name) + 3) + ", Origin: Static");
+    out.push("MAC aging time: 300 seconds");
+    if(v.l3) out.push("Layer 3 interface: " + v.l3);
+    out.push("Interfaces:");
+    if(!members.length) out.push("    (none — a VLAN with no member port carries nothing)");
+    for(const m of members){
+      const isTag = m.mode === "trunk" && v.id !== m.nativeVlan;
+      out.push("    " + m.port + ".0" + (isLinked(dev.id, m.port) ? "*" : "") +
+        ", " + (isTag ? "tagged" : "untagged") + ", " + (m.mode || "access"));
+    }
+    out.push("Number of interfaces: Tagged " + tagged.length + " , Untagged " + (members.length - tagged.length));
+    out.push("Total MAC count: " + (dev.macTable || []).filter(m => String(m.vlan) === String(name) || String(m.vlan) === String(v.id)).length);
+  }
+  out.push("");
+  out.push("(* marks an interface whose link is up)");
+  return out.join("\n");
+}
+
+function showSystemUptimeCmd(dev){
+  dev.bootedAt = dev.bootedAt || (Date.now() - 3600000);
+  const now = new Date();
+  const boot = new Date(dev.bootedAt);
+  const secs = Math.max(1, Math.floor((now - boot) / 1000));
+  const days = Math.floor(secs / 86400), hrs = Math.floor((secs % 86400) / 3600), mins = Math.floor((secs % 3600) / 60);
+  const ago = (days ? days + "d " : "") + String(hrs).padStart(2, "0") + ":" + String(mins).padStart(2, "0");
+  const iso = t => new Date(t).toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  const last = (dev.commitLog && dev.commitLog[0]) ? dev.commitLog[0].when : null;
+  const out = [];
+  out.push("Current time: " + iso(now.getTime()));
+  out.push("System booted: " + iso(dev.bootedAt) + " (" + ago + " ago)");
+  out.push("Protocols started: " + iso(dev.bootedAt + 137000) + " (" + ago + " ago)");
+  out.push("Last configured: " + (last ? iso(last) + " by " + (dev.user || "kaatje") : "(never committed)"));
+  if(cfgGet(dev.config, ["system", "ntp", "server"])) out.push("Time Source: NTP CLOCK");
+  out.push(new Date(now).toISOString().slice(11, 16) + "  up " +
+    (days ? days + " day" + (days === 1 ? "" : "s") + ", " : "") + String(hrs).padStart(2, "0") + ":" +
+    String(mins).padStart(2, "0") + ", 1 user, load averages: 0.08, 0.05, 0.02");
+  return out.join("\n");
+}
+
+function clearIfStatsCmd(dev, keys){
+  const target = keys[keys.length - 1];
+  const one = target !== "statistics" && target !== "all" ? target : null;
+  dev.ctr = dev.ctr || {};
+  if(one){
+    if(!dev.ports.some(p => p.id === one)) return { text: "error: interface " + one + " not found on this device", err: true };
+    dev.ctr[one] = { rx: 0, tx: 0, err: 0 };
+    dev.statsCleared = dev.statsCleared || {};
+    dev.statsCleared[one] = Date.now();
+  } else {
+    dev.statsCleared = dev.statsCleared || {};
+    for(const p of dev.ports){ dev.ctr[p.id] = { rx: 0, tx: 0, err: 0 }; dev.statsCleared[p.id] = Date.now(); }
+  }
+  if(typeof touchState === "function") touchState();
+  return "";
+}
+
+function fileShowCmd(dev, keys){
+  const name = keys[keys.length - 1];
+  const files = dev.files || {};
+  if(!(name in files))
+    return { text: "error: could not open file '" + name + "': No such file or directory\n" +
+      (Object.keys(files).length
+        ? "  saved in this session: " + Object.keys(files).join(", ")
+        : "  nothing saved yet — write some output first, e.g. show interfaces terse | save iflist.txt"), err: true };
+  return files[name] || "(the file is empty)";
+}
+
+function showCompareRollbackCmd(dev, keys){
+  const n = parseInt(keys[keys.length - 1], 10);
+  if(isNaN(n) || n < 1) return { text: "usage: show configuration | compare rollback <n>  (1 = the previous commit)", err: true };
+  const h = (dev.cfgHistory || [])[n - 1];
+  if(!h) return { text: "rollback " + n + ": no such commit in history (" + (dev.cfgHistory || []).length + " available)", err: true };
+  const d = diffTrees(h, committedTree(dev));
+  return d || "(the active configuration is identical to rollback " + n + ")";
 }
 
 const OP_SPECS = {
@@ -1941,9 +2165,25 @@ const OP_SPECS = {
     ["show interfaces <interface:physport> extensive", { help: "The full real-Junos interface wall: flags, MTU, last flapped, counters", fn: showIfExtensive }],
     ["file list", { help: "The Junos file system — configs, rollbacks, rescue, /var/tmp", fn: fileListCmd }],
     ["request system storage cleanup", { help: "Free space: rotate logs, remove old bundles — run before upgrades", fn: storageCleanupCmd }],
+    ["request system reboot", { help: "Reboot the box \u2014 asks first, and discards the uncommitted candidate", fn: dev => requestConfirm(dev, "reboot", "Reboot the system ? [yes,no] (no)") }],
+    ["request system power-off", { help: "Shut the box down \u2014 asks first", fn: dev => requestConfirm(dev, "power-off", "Power Off the system ? [yes,no] (no)") }],
+    ["restart <process:daemon>", { help: "Bounce one Junos daemon instead of the whole box", fn: restartDaemonCmd }],
     ["request system configuration rescue save", { help: "Snapshot the active config as the rescue config", fn: rescueSaveCmd }],
     ["ping <target:ip>", { help: "Ping from this device (sources from an irb)", fn: (dev, keys) => { const r = doDevicePing(dev, keys[1]); return joinLines(r); } }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
+    ["show configuration | compare rollback <n:num>", { help: "What changed between the running config and an older commit", fn: showCompareRollbackCmd }],
+    ["show interfaces extensive", { help: "The full interface wall for every port \u2014 pipe it into | match to hunt errors", fn: showIfExtensiveAll }],
+    ["show route <destination:ip>", { help: "Which route this destination would actually use (longest match wins)", fn: showRouteDestCmd }],
+    ["show route protocol <protocol:rtproto>", { help: "Only the routes one protocol put in the table", fn: showRouteProtoCmd }],
+    ["show route receive-protocol bgp <neighbor:ip>", { help: "What a BGP peer sent you, before import policy had its say", fn: showRouteReceiveCmd }],
+    ["show system uptime", { help: "How long the box has been up, and when it was last configured", fn: showSystemUptimeCmd }],
+    ["clear interfaces statistics", { help: "Zero the interface counters so the next reading is yours", fn: clearIfStatsCmd }],
+    ["clear interfaces statistics all", { help: "Zero the counters on every interface", fn: clearIfStatsCmd }],
+    ["clear interfaces statistics <interface:physport>", { help: "Zero the counters on one interface", fn: clearIfStatsCmd }],
+    ["file show <filename:word>", { help: "Print a file you wrote with | save", fn: fileShowCmd }],
+    ["show ethernet-switching interface", { help: "Per-port switching state: VLAN membership, tagging, STP state", fn: showEthSwIfCmd }],
+    ["show spanning-tree bridge", { help: "Bridge-wide RSTP: who is root, the timers, topology changes", fn: showStpBridgeCmd }],
+    ["show vlans detail", { help: "Each VLAN in long form \u2014 tag, L3 interface, member ports", fn: showVlansDetailCmd }],
     ["clear ethernet-switching table", { help: "Flush learned MACs", fn: dev => { dev.macTable = []; return "ethernet-switching table flushed"; } }],
     ["clear ethernet-switching error-disable <interface:physport>", { help: "Recover a storm-control-disabled port", fn: (dev, keys) => {
       const port = keys[3];
@@ -1983,7 +2223,20 @@ const OP_SPECS = {
     ["show interfaces <interface:physport> extensive", { help: "The full real-Junos interface wall: flags, MTU, last flapped, counters", fn: showIfExtensive }],
     ["file list", { help: "The Junos file system — configs, rollbacks, rescue, /var/tmp", fn: fileListCmd }],
     ["request system storage cleanup", { help: "Free space: rotate logs, remove old bundles — run before upgrades", fn: storageCleanupCmd }],
+    ["request system reboot", { help: "Reboot the box \u2014 asks first, and discards the uncommitted candidate", fn: dev => requestConfirm(dev, "reboot", "Reboot the system ? [yes,no] (no)") }],
+    ["request system power-off", { help: "Shut the box down \u2014 asks first", fn: dev => requestConfirm(dev, "power-off", "Power Off the system ? [yes,no] (no)") }],
+    ["restart <process:daemon>", { help: "Bounce one Junos daemon instead of the whole box", fn: restartDaemonCmd }],
     ["request system configuration rescue save", { help: "Snapshot the active config as the rescue config", fn: rescueSaveCmd }],
+    ["show configuration | compare rollback <n:num>", { help: "What changed between the running config and an older commit", fn: showCompareRollbackCmd }],
+    ["show interfaces extensive", { help: "The full interface wall for every port \u2014 pipe it into | match to hunt errors", fn: showIfExtensiveAll }],
+    ["show route <destination:ip>", { help: "Which route this destination would actually use (longest match wins)", fn: showRouteDestCmd }],
+    ["show route protocol <protocol:rtproto>", { help: "Only the routes one protocol put in the table", fn: showRouteProtoCmd }],
+    ["show route receive-protocol bgp <neighbor:ip>", { help: "What a BGP peer sent you, before import policy had its say", fn: showRouteReceiveCmd }],
+    ["show system uptime", { help: "How long the box has been up, and when it was last configured", fn: showSystemUptimeCmd }],
+    ["clear interfaces statistics", { help: "Zero the interface counters so the next reading is yours", fn: clearIfStatsCmd }],
+    ["clear interfaces statistics all", { help: "Zero the counters on every interface", fn: clearIfStatsCmd }],
+    ["clear interfaces statistics <interface:physport>", { help: "Zero the counters on one interface", fn: clearIfStatsCmd }],
+    ["file show <filename:word>", { help: "Print a file you wrote with | save", fn: fileShowCmd }],
     ["ping <target:ip>", { help: "Ping from this device", fn: (dev, keys) => joinLines(doDevicePing(dev, keys[1])) }],
     ["traceroute <target:ip>", { help: "Trace the L3 path", fn: (dev, keys) => joinLines(doTraceroute(dev, keys[1])) }],
     ["exit", { help: "(sessions close from the tab bar)", fn: () => "(this is the operational prompt — close the session from the tab bar or ✕)" }],

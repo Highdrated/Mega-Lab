@@ -47,6 +47,13 @@ function deviceExec(dev, raw){
     if(dev.powered === false)
       return lines("err", "(no power — the console is dark. Press the power button on the faceplate.)");
     const stage = dev.cli.stage;
+    if(stage === "confirm"){
+      dev.cli.stage = null;
+      const act = dev.cli.confirmAct;
+      dev.cli.confirmAct = null;
+      if(/^(y|yes)$/i.test(cmd)) return confirmRun(dev, act);
+      return lines("out", "(cancelled \u2014 nothing was done)");
+    }
     if(stage === "boot"){
       if(/^(break|ctrl\+c|\^c)$/i.test(cmd)){
         dev.cli.stage = "loader";
@@ -123,8 +130,25 @@ function deviceExec(dev, raw){
 
 /* ---------- operational mode (switch / router) ---------- */
 function opExec(dev, cmd){
-  const tokens = cmd.split(/\s+/);
   if(cmd === "?" || cmd === "help") return helpLines(dev);
+  const seg = pipeSplit(cmd);
+  if(seg.length > 1) return opPiped(dev, seg);
+  return opRun(dev, cmd);
+}
+function opPiped(dev, seg){
+  if(!seg[0]) return lines("err", 'syntax error: nothing before the "|" \u2014 a filter needs output to filter');
+  for(let k = seg.length; k >= 1; k--){
+    const base = seg.slice(0, k).join(" | ");
+    const res = trieWalk(OP_TRIE[dev.type], base.split(/\s+/), dev);
+    if(res.err || !res.node || !res.node.leaf) continue;
+    const out = opRun(dev, base);
+    const stages = seg.slice(k);
+    return stages.length ? pipeRun(dev, out, stages) : out;
+  }
+  return opRun(dev, seg[0]);
+}
+function opRun(dev, cmd){
+  const tokens = cmd.split(/\s+/);
   const trie = OP_TRIE[dev.type];
   const res = trieWalk(trie, tokens, dev);
   if(res.err) return opErr(res, dev, cmd);
@@ -174,7 +198,17 @@ Quick reference:
   show arp                       ARP cache
   show spanning-tree interface   RSTP port roles and states
   show lacp interfaces           LACP bundle status
-  ping <ip> / traceroute <ip>    test reachability from this device`
+  ping <ip> / traceroute <ip>    test reachability from this device
+
+Filter any output with a pipe:
+  ... | match <pattern>          only lines that match (case sensitive)
+  ... | except <pattern>         everything but those lines
+  ... | find <pattern>           skip forward to the first match
+  ... | count                    how many lines, instead of the lines
+  ... | last <n>                 the final n lines
+  ... | save <file>              write it to a file (file show <file> reads it back)
+  show configuration | display set          the config as paste-able set commands
+  show configuration | compare rollback <n> what changed since an earlier commit`
     : `Type any command followed by ? to see what can come next — that's the real JunOS way.
 Quick reference:
   configure                      enter configuration mode
@@ -182,12 +216,23 @@ Quick reference:
   show interfaces terse          interface / link / address summary
   show route                     routing table (connected + static)
   show arp                       ARP cache
-  ping <ip> / traceroute <ip>    test reachability from this device`;
+  ping <ip> / traceroute <ip>    test reachability from this device
+
+Filter any output with a pipe:
+  ... | match <pattern>          only lines that match (case sensitive)
+  ... | except <pattern>         everything but those lines
+  ... | find <pattern>           skip forward to the first match
+  ... | count                    how many lines, instead of the lines
+  ... | last <n>                 the final n lines
+  ... | save <file>              write it to a file (file show <file> reads it back)
+  show configuration | display set          the config as paste-able set commands
+  show configuration | compare rollback <n> what changed since an earlier commit`;
   return lines("out", t);
 }
 
 /* ---------- configuration mode ---------- */
-const CFG_COMMANDS = ["set", "delete", "show", "edit", "up", "top", "exit", "run", "commit", "rollback", "load", "annotate"];
+const CFG_COMMANDS = ["set", "delete", "show", "edit", "up", "top", "exit", "quit", "run", "commit", "rollback",
+  "load", "annotate", "activate", "deactivate", "insert", "rename", "copy", "status"];
 
 function cfgBanner(dev){
   return "[edit" + (dev.cli.editKeys.length ? " " + dev.cli.editKeys.join(" ") : "") + "]";
@@ -201,6 +246,12 @@ function cfgExec(dev, cmd){
       "  show | compare        diff candidate against the committed config\n" +
       "  edit <path>           descend into a hierarchy level\n" +
       "  annotate <stmt> \"<c>\" attach a comment to a statement (\"\" removes it)\n" +
+      "  deactivate <stmt>     keep the statement but stop it taking effect (renders inactive:)\n" +
+      "  activate <stmt>       switch a deactivated statement back on\n" +
+      "  insert <stmt> before|after <stmt>   reorder terms (order decides the verdict)\n" +
+      "  rename <stmt> to <new>  rename a statement in place\n" +
+      "  copy <stmt> to <new>    duplicate a statement and its whole subtree\n" +
+      "  status                who else is editing this configuration\n" +
       "  up / top              go up one level / back to the top\n" +
       "  commit                make the candidate active\n" +
       "  commit confirmed <m>  commit with automatic rollback unless confirmed\n" +
@@ -209,10 +260,61 @@ function cfgExec(dev, cmd){
       "  run <command>         run an operational command from here\n" +
       "  exit                  leave this level / leave configuration mode");
   }
-  if(/^show\s*\|\s*compare$/.test(cmd)){
-    const d = diffTrees(dev.config, dev.candidate);
-    return lines("out", d || "(no uncommitted changes)");
+  const seg = pipeSplit(cmd);
+  if(seg.length > 1) return cfgPiped(dev, seg);
+  return cfgRun(dev, cmd);
+}
+function cfgWordOf(w){
+  if(CFG_COMMANDS.includes(w)) return w;
+  const m = CFG_COMMANDS.filter(c => c.startsWith(w));
+  return m.length === 1 ? m[0] : null;
+}
+function cfgPiped(dev, seg){
+  const base = seg[0];
+  if(!base) return lines("err", 'syntax error: nothing before the "|" \u2014 a filter needs output to filter');
+  const word = cfgWordOf(base.split(/\s+/)[0]);
+  if(word === "run") return opExec(dev, seg.join(" | ").replace(/^\s*\S+\s*/, ""));
+  if(word !== "show")
+    return lines("err", 'error: a | filter needs output to filter \u2014 put it after show (or after run <command>)');
+  let stages = seg.slice(1);
+  const first = stages.length && stages[0] ? pipeResolve(stages[0].split(/\s+/)[0]) : null;
+  let out;
+  if(first && first.name === "compare"){
+    const a = stages[0].split(/\s+/).slice(1);
+    let against = committedTree(dev);
+    if(a.length){
+      if(!"rollback".startsWith(a[0]) || a.length > 2)
+        return lines("err", "usage: show | compare  (or show | compare rollback <n>)");
+      const n = a.length === 2 ? parseInt(a[1], 10) : 1;
+      if(isNaN(n) || n < 0) return lines("err", "usage: show | compare rollback <n>");
+      if(n > 0){
+        const h = (dev.cfgHistory || [])[n - 1];
+        if(!h) return lines("err", "rollback " + n + ": no such commit in history (" + (dev.cfgHistory || []).length + " available)");
+        against = h;
+      }
+    }
+    const d = diffTrees(against, dev.candidate);
+    out = lines("out", d || "(no uncommitted changes)");
+    stages = stages.slice(1);
+  } else if(first && first.name === "display"){
+    const sub = stages[0].split(/\s+/).slice(1).join(" ");
+    if(!sub || !"set".startsWith(sub))
+      return lines("err", 'error: this lab models | display set \u2014 the candidate re-rendered as set commands');
+    const full = dev.cli.editKeys.concat(base.split(/\s+/).slice(1));
+    const res = full.length ? resolveTreePath(dev.candidate, full) : { keys: [], node: dev.candidate };
+    if(typeof res.err === "string") return lines("out", "## (nothing configured at: " + full.join(" ") + ")");
+    const node = res.arrayItem !== undefined ? { [full[full.length - 1]]: res.arrayItem } : res.node;
+    const ls = (node && typeof node === "object")
+      ? treeToDisplaySet(node, res.keys, annotAll(dev.candidate) || {}, inactAll(dev.candidate) || {})
+      : ["set " + res.keys.concat([node]).join(" ")];
+    out = lines("out", ls.length ? ls.join("\n") : "## (nothing configured here)");
+    stages = stages.slice(1);
+  } else {
+    out = cfgRun(dev, base);
   }
+  return stages.length ? pipeRun(dev, out, stages) : out;
+}
+function cfgRun(dev, cmd){
   const tokens = cmd.split(/\s+/);
   const word = tokens[0];
   const matches = CFG_COMMANDS.filter(c => c.startsWith(word));
@@ -236,10 +338,11 @@ function cfgExec(dev, cmd){
     case "top":
       dev.cli.editKeys = [];
       return lines("out", cfgBanner(dev));
+    case "quit":
     case "exit": {
       if(dev.cli.editKeys.length){ dev.cli.editKeys = []; return lines("out", cfgBanner(dev)); }
       dev.cli.mode = "op";
-      const dirty = JSON.stringify(dev.config) !== JSON.stringify(dev.candidate);
+      const dirty = JSON.stringify(committedTree(dev)) !== JSON.stringify(dev.candidate);
       return lines("out", "Exiting configuration mode" +
         (dirty ? "\nwarning: uncommitted changes remain in the candidate configuration (rollback 0 discards them)" : ""));
     }
@@ -248,7 +351,13 @@ function cfgExec(dev, cmd){
       return opExec(dev, rest.join(" "));
     }
     case "annotate": return cfgAnnotateCmd(dev, cmd);
-    case "commit": return commitCmd(dev, rest);
+    case "deactivate": return cfgActivateCmd(dev, rest, false);
+    case "activate": return cfgActivateCmd(dev, rest, true);
+    case "insert": return cfgInsertCmd(dev, rest);
+    case "rename": return cfgMoveCmd(dev, rest, false);
+    case "copy": return cfgMoveCmd(dev, rest, true);
+    case "status": return cfgStatusCmd(dev);
+    case "commit": return commitCmd(dev, rest, cmd);
     case "rollback": return rollbackCmd(dev, rest);
     case "load": {
       if(!rest.length || !"set".startsWith(rest[0]) || !(rest[1] && "terminal".startsWith(rest[1])))
@@ -435,10 +544,123 @@ function cfgEditCmd(dev, rest){
   return lines("out", cfgBanner(dev));
 }
 
+function cfgActivateCmd(dev, rest, on){
+  const verb = on ? "activate" : "deactivate";
+  if(!rest.length) return lines("err", "usage: " + verb + " <statement>, e.g. " + verb + " interfaces ge-0/0/1");
+  const full = dev.cli.editKeys.concat(rest);
+  const res = resolveTreePath(dev.candidate, full);
+  if(typeof res.err === "string")
+    return lines("err", res.ambiguous
+      ? 'ambiguous statement: "' + res.err + '" matches more than one thing here'
+      : "error: statement not found: " + full.join(" ") +
+        "\n  " + verb + " only works on configuration that already exists \u2014 set it first");
+  if(res.arrayItem !== undefined)
+    return lines("err", "error: cannot " + verb + " one item of a list \u2014 name the statement above it");
+  const keys = res.keys;
+  if(on){
+    if(!inactClear(dev.candidate, keys))
+      return lines("err", "warning: " + keys.join(" ") + " is not deactivated");
+  } else {
+    inactSet(dev.candidate, keys);
+  }
+  if(typeof touchState === "function") touchState();
+  return [];
+}
+
+function cfgInsertCmd(dev, rest){
+  const at = rest.findIndex(t => t === "before" || t === "after");
+  if(at < 1 || at === rest.length - 1)
+    return lines("err", "usage: insert <statement> before|after <statement>\n" +
+      "  e.g. insert term allow-dns before term deny-all");
+  const where = rest[at];
+  const left = dev.cli.editKeys.concat(rest.slice(0, at));
+  const right = rest.slice(at + 1);
+  const res = resolveTreePath(dev.candidate, left);
+  if(typeof res.err === "string")
+    return lines("err", "error: statement not found: " + left.join(" "));
+  const keys = res.keys;
+  if(keys.length < 2) return lines("err", "error: nothing to reorder at the top level of the hierarchy");
+  const parentKeys = keys.slice(0, -1), item = keys[keys.length - 1];
+  const parent = cfgGet(dev.candidate, parentKeys);
+  if(!parent || typeof parent !== "object" || Array.isArray(parent))
+    return lines("err", "error: " + parentKeys.join(" ") + " holds no ordered statements");
+  const refName = right[right.length - 1];
+  const ref = (refName in parent) ? refName : Object.keys(parent).filter(k => k.startsWith(refName))[0];
+  if(!ref || ref === ANNOT_KEY || ref === INACT_KEY)
+    return lines("err", "error: statement not found: " + parentKeys.concat(right).join(" "));
+  if(ref === item) return lines("err", "error: cannot insert " + item + " relative to itself");
+  const order = Object.keys(parent).filter(k => k !== item);
+  const idx = order.indexOf(ref) + (where === "after" ? 1 : 0);
+  order.splice(idx, 0, item);
+  const rebuilt = {};
+  for(const k of order) rebuilt[k] = parent[k];
+  cfgSet(dev.candidate, parentKeys, rebuilt);
+  if(typeof touchState === "function") touchState();
+  return [];
+}
+
+function cfgMoveCmd(dev, rest, isCopy){
+  const verb = isCopy ? "copy" : "rename";
+  const at = rest.indexOf("to");
+  if(at < 1 || at === rest.length - 1)
+    return lines("err", "usage: " + verb + " <statement> to <new-name>\n" +
+      "  e.g. " + verb + " term allow-dns to term permit-dns");
+  const left = dev.cli.editKeys.concat(rest.slice(0, at));
+  const right = rest.slice(at + 1);
+  const res = resolveTreePath(dev.candidate, left);
+  if(typeof res.err === "string")
+    return lines("err", "error: statement not found: " + left.join(" "));
+  if(res.arrayItem !== undefined)
+    return lines("err", "error: cannot " + verb + " one item of a list");
+  const keys = res.keys;
+  const parentKeys = keys.slice(0, -1), item = keys[keys.length - 1];
+  const parent = parentKeys.length ? cfgGet(dev.candidate, parentKeys) : dev.candidate;
+  const dest = right[right.length - 1];
+  if(!/^[\w.\/:-]+$/.test(dest)) return lines("err", 'error: "' + dest + '" is not a valid statement name');
+  if(dest === item) return lines("err", "error: " + verb + " needs a different name");
+  if(dest in parent) return lines("err", "error: " + parentKeys.concat([dest]).join(" ") + " already exists");
+  const order = Object.keys(parent);
+  const rebuilt = {};
+  for(const k of order){
+    if(k === item){
+      if(isCopy){ rebuilt[k] = parent[k]; rebuilt[dest] = deepClone(parent[k]); }
+      else rebuilt[dest] = parent[k];
+    } else rebuilt[k] = parent[k];
+  }
+  if(parentKeys.length) cfgSet(dev.candidate, parentKeys, rebuilt);
+  else { for(const k of Object.keys(dev.candidate)) delete dev.candidate[k];
+         for(const k of Object.keys(rebuilt)) dev.candidate[k] = rebuilt[k]; }
+  moveSideMarks(dev.candidate, keys, parentKeys.concat([dest]), isCopy);
+  if(typeof touchState === "function") touchState();
+  return [];
+}
+function moveSideMarks(tree, fromKeys, toKeys, isCopy){
+  const from = fromKeys.join(" "), to = toKeys.join(" ");
+  for(const key of [ANNOT_KEY, INACT_KEY]){
+    const m = tree[key];
+    if(!m) continue;
+    for(const k of Object.keys(m)){
+      if(k !== from && k.indexOf(from + " ") !== 0) continue;
+      m[to + k.slice(from.length)] = m[k];
+      if(!isCopy) delete m[k];
+    }
+    if(!Object.keys(m).length) delete tree[key];
+  }
+}
+
+function cfgStatusCmd(dev){
+  const who = dev.user || "kaatje";
+  const pid = 40000 + (String(dev.id).split("").reduce((a, c) => a + c.charCodeAt(0), 0) % 20000);
+  return lines("out", "Users currently editing the configuration:\n" +
+    "  " + who + " terminal p0 (pid " + pid + ") on since " +
+    new Date(dev.cli.since || Date.now()).toISOString().replace("T", " ").slice(0, 19) + "\n" +
+    "      " + cfgBanner(dev));
+}
+
 /* ---------- commit / rollback ---------- */
 function validateCandidate(dev){
   const errs = [];
-  const c = dev.candidate;
+  const c = activeOnly(dev.candidate);
   const vlans = cfgGet(c, ["vlans"]) || {};
   const filters = cfgGet(c, ["firewall", "family", "inet", "filter"]) || {};
   const profiles = cfgGet(c, ["forwarding-options", "storm-control-profiles"]) || {};
@@ -518,10 +740,20 @@ function validateCandidate(dev){
   return errs;
 }
 
-function commitCmd(dev, rest){
+function commitCmd(dev, rest, raw){
+  let comment = null;
+  const ci = rest.indexOf("comment");
+  if(ci > -1){
+    const m = String(raw == null ? rest.join(" ") : raw).match(/\bcomment\s+(?:"([^"]*)"|'([^']*)'|(\S+))\s*$/);
+    if(!m)
+      return lines("err", 'usage: commit comment "<text>" — quote the text\n  e.g. commit comment "opened DNS for the guest vlan"');
+    comment = annotClean(m[1] !== undefined ? m[1] : (m[2] !== undefined ? m[2] : m[3]));
+    if(!comment) return lines("err", 'error: commit comment needs some text');
+    rest = rest.slice(0, ci);
+  }
   const sub = rest[0] || "";
   if(sub && !"check".startsWith(sub) && !"confirmed".startsWith(sub) && !"and-quit".startsWith(sub))
-    return lines("err", `unknown commit option "${sub}" — try commit, commit check, commit confirmed <minutes>, commit and-quit`);
+    return lines("err", `unknown commit option "${sub}" — try commit, commit check, commit confirmed <minutes>, commit and-quit, commit comment "<text>"`);
   const errs = validateCandidate(dev);
   if(dev.brandNew && !cfgGet(dev.candidate, ["system", "root-authentication"]))
     errs.push("Missing mandatory statement: [edit system] root-authentication — a factory-fresh box refuses to commit until root has a password (set system root-authentication plain-text-password)");
@@ -543,13 +775,14 @@ function commitCmd(dev, rest){
     dev.commitPending = null;
     confirmedNow = true;
   }
-  const prev = deepClone(dev.config);
+  const prev = deepClone(committedTree(dev));
   dev.cfgHistory.unshift(prev);
   if(dev.cfgHistory.length > 49) dev.cfgHistory.length = 49;
   dev.commitLog = dev.commitLog || [];
-  dev.commitLog.unshift({ when: Date.now() });
+  dev.commitLog.unshift({ when: Date.now(), comment: comment || null });
   if(dev.commitLog.length > 49) dev.commitLog.length = 49;
-  dev.config = deepClone(dev.candidate);
+  dev.configFull = deepClone(dev.candidate);
+  dev.config = activeOnly(dev.configFull);
   dev.name = hostnameOf(dev);
   if(confirmedMin){
     dev.stats.usedCommitConfirmed = true;
@@ -589,7 +822,7 @@ function autoRollback(dev){
   dev.commitPending = null;
   delete COMMIT_TIMERS[dev.id];
   const prev = dev.cfgHistory.shift();
-  if(prev){ dev.config = prev; dev.candidate = deepClone(prev); dev.name = hostnameOf(dev); }
+  if(prev){ dev.configFull = prev; dev.config = activeOnly(prev); dev.candidate = deepClone(prev); dev.name = hostnameOf(dev); }
   devLog(dev, "UI_COMMIT_NOT_CONFIRMED: automatic rollback — previous configuration restored");
   rebuildAllDerived();
   dev.cli.log.push({ cls:"sys", text: "Broadcast Message from root@" + hostnameOf(dev) +
@@ -606,13 +839,148 @@ function rollbackCmd(dev, rest){
   }
   const n = rest.length ? parseInt(rest[0], 10) : 0;
   if(isNaN(n) || n < 0) return lines("err", "usage: rollback <n> (0 = committed config, 1 = one commit ago ...)");
-  if(n === 0) dev.candidate = deepClone(dev.config);
+  if(n === 0) dev.candidate = deepClone(committedTree(dev));
   else {
     const h = dev.cfgHistory[n - 1];
     if(!h) return lines("err", `rollback ${n}: no such commit in history (${dev.cfgHistory.length} available)`);
     dev.candidate = deepClone(h);
   }
   return lines("out", "load complete");
+}
+
+const PIPE_FILTERS = {
+  "match":   "pattern",
+  "except":  "pattern",
+  "find":    "pattern",
+  "count":   null,
+  "no-more": null,
+  "last":    "optnum",
+  "trim":    "num",
+  "save":    "word",
+  "display": "other",
+  "compare": "other",
+};
+function pipeSplit(raw){
+  const parts = [];
+  let cur = "", q = null;
+  for(let i = 0; i < raw.length; i++){
+    const c = raw[i];
+    if(q){ cur += c; if(c === q) q = null; continue; }
+    if(c === '"' || c === "'"){ q = c; cur += c; continue; }
+    if(c === "|"){ parts.push(cur.trim()); cur = ""; continue; }
+    cur += c;
+  }
+  parts.push(cur.trim());
+  return parts;
+}
+function pipeResolve(word){
+  if(Object.prototype.hasOwnProperty.call(PIPE_FILTERS, word)) return { name: word };
+  const p = Object.keys(PIPE_FILTERS).filter(n => n.startsWith(word));
+  if(p.length === 1) return { name: p[0] };
+  if(p.length > 1) return { ambiguous: p };
+  return { unknown: word };
+}
+function pipeUnquote(s){
+  const t = String(s == null ? "" : s).trim();
+  if(t.length > 1 && ((t[0] === '"' && t[t.length - 1] === '"') || (t[0] === "'" && t[t.length - 1] === "'")))
+    return t.slice(1, -1);
+  return t;
+}
+function pipeFlatten(ls){
+  const out = [];
+  for(const l of ls) String(l.text).split("\n").forEach(t => out.push({ cls: l.cls, text: t }));
+  return out;
+}
+function pipeRejoin(flat){
+  const out = [];
+  for(const l of flat){
+    const last = out[out.length - 1];
+    if(last && last.cls === l.cls) last.text += "\n" + l.text;
+    else out.push({ cls: l.cls, text: l.text });
+  }
+  return out;
+}
+function pipeRegex(pat){
+  try{ return { re: new RegExp(pat) }; }
+  catch(e){ return { err: 'error: invalid regular expression: "' + pat + '"' }; }
+}
+const PIPE_MENU = "available filters: count, except, find, last, match, no-more, save, trim";
+
+function pipeStage(flat, stage){
+  const toks = stage.split(/\s+/).filter(Boolean);
+  if(!toks.length) return { err: 'syntax error: empty filter after "|"\n' + PIPE_MENU };
+  const r = pipeResolve(toks[0]);
+  if(r.ambiguous) return { err: 'ambiguous filter: "' + toks[0] + '" could be: ' + r.ambiguous.join(", ") };
+  if(r.unknown) return { err: 'unknown filter: "' + toks[0] + '"\n' + PIPE_MENU };
+  const name = r.name;
+  const argStr = stage.slice(stage.indexOf(toks[0]) + toks[0].length).trim();
+  const kind = PIPE_FILTERS[name];
+
+  if(name === "display")
+    return { err: "error: | display " + (argStr || "<what>") +
+      " has no meaning over operational output — | display set re-renders CONFIGURATION as set commands.\n" +
+      "  operational mode: show configuration | display set      configuration mode: show | display set" };
+  if(name === "compare")
+    return { err: "error: | compare compares CONFIGURATION, not operational output.\n" +
+      "  operational: show configuration | compare rollback <n>      configuration mode: show | compare" };
+
+  if(kind === null && argStr)
+    return { err: 'syntax error: "' + argStr + '" — | ' + name + ' takes no argument' };
+  if(kind === "pattern" && !argStr)
+    return { err: "syntax error: | " + name + " needs a pattern, e.g. | " + name + " ge-0/0/1" };
+
+  if(name === "no-more") return { flat };
+  if(name === "count") return { flat: [{ cls: "out", text: "Count: " + flat.length + " lines" }] };
+  if(name === "match" || name === "except"){
+    const g = pipeRegex(pipeUnquote(argStr));
+    if(g.err) return { err: g.err };
+    const keep = name === "match";
+    return { flat: flat.filter(l => g.re.test(l.text) === keep) };
+  }
+  if(name === "find"){
+    const g = pipeRegex(pipeUnquote(argStr));
+    if(g.err) return { err: g.err };
+    const i = flat.findIndex(l => g.re.test(l.text));
+    return { flat: i === -1 ? [] : flat.slice(i) };
+  }
+  if(name === "last"){
+    if(argStr && !/^\d{1,5}$/.test(argStr))
+      return { err: "syntax error: | last <lines> takes a line count, e.g. | last 20" };
+    const n = argStr ? parseInt(argStr, 10) : 10;
+    return { flat: n <= 0 ? [] : flat.slice(-n) };
+  }
+  if(name === "trim"){
+    if(!/^\d{1,5}$/.test(argStr))
+      return { err: argStr && /^-/.test(argStr)
+        ? "error: | trim only accepts positive values"
+        : "syntax error: | trim <columns> needs a column count, e.g. | trim 4" };
+    const n = parseInt(argStr, 10);
+    return { flat: flat.map(l => ({ cls: l.cls, text: l.text.slice(n) })) };
+  }
+  if(name === "save"){
+    if(!argStr) return { err: "syntax error: | save <filename>" };
+    return { flat, save: pipeUnquote(argStr) };
+  }
+  return { err: 'unknown filter: "' + name + '"' };
+}
+
+function pipeRun(dev, ls, stages){
+  let flat = pipeFlatten(ls);
+  const notes = [];
+  let saved = false;
+  for(const st of stages){
+    const r = pipeStage(flat, st);
+    if(r.err) return lines("err", r.err);
+    flat = r.flat;
+    if(r.save){
+      dev.files = dev.files || {};
+      dev.files[r.save] = flat.map(l => l.text).join("\n");
+      notes.push({ cls: "out", text: "Wrote " + flat.length + " lines of output to '" + r.save + "'" });
+      if(typeof touchState === "function") touchState();
+      saved = true;
+    }
+  }
+  return saved ? notes : pipeRejoin(flat).concat(notes);
 }
 
 /* ---------- host shell ---------- */
@@ -833,7 +1201,55 @@ function legacySyntaxHint(cmd){
       "  ELS: set interfaces irb unit 10 family inet address 10.0.10.1/24");
   return null;
 }
+function requestConfirm(dev, act, question){
+  dev.cli.stage = "confirm";
+  dev.cli.confirmAct = act;
+  return question;
+}
+function confirmRun(dev, act){
+  if(act === "reboot"){
+    const dirty = JSON.stringify(committedTree(dev)) !== JSON.stringify(dev.candidate);
+    devLog(dev, "mgd: UI_REBOOT_EVENT: System reboot requested by " + (dev.user || "kaatje"));
+    powerOff(dev);
+    dev.candidate = deepClone(committedTree(dev));
+    powerOn(dev);
+    return lines("out", "Shutdown NOW!\n[pid 1]\n\n*** System going down for reboot ***" +
+      (dirty ? "\nwarning: the uncommitted candidate configuration was discarded \u2014 a reboot keeps only what was committed" : ""));
+  }
+  if(act === "power-off"){
+    devLog(dev, "mgd: UI_POWER_OFF_EVENT: Power off requested by " + (dev.user || "kaatje"));
+    powerOff(dev);
+    return lines("out", "Shutdown NOW!\n[pid 1]\n\n*** System shutting down ***\n(press the power button on the faceplate to bring it back)");
+  }
+  return lines("out", "(nothing to confirm)");
+}
+const DAEMONS = {
+  "routing": ["rpd", "routing protocol daemon — OSPF, BGP, the routing table"],
+  "l2-learning": ["l2ald", "layer 2 address learning — MAC tables, VLANs"],
+  "chassis-control": ["chassisd", "chassis manager — FPCs, power, environment"],
+  "management": ["mgd", "management daemon — the CLI you are typing into"],
+  "dhcp": ["dhcpd", "DHCP server and relay"],
+  "snmp": ["snmpd", "SNMP agent"],
+  "interface-control": ["dcd", "device control — interface configuration"],
+};
+function restartDaemonCmd(dev, keys){
+  const name = keys[keys.length - 1];
+  const d = DAEMONS[name];
+  if(!d) return { text: 'error: "' + name + '" is not a restartable process', err: true };
+  const pid = 1000 + Math.floor(Math.random() * 9000);
+  devLog(dev, "mgd: UI_RESTART: " + d[0] + " restarted by " + (dev.user || "kaatje"));
+  if(typeof touchState === "function") touchState();
+  return d[0] + " restart initiated, pid " + pid + "\n" +
+    "(" + d[1] + ")\n" +
+    (name === "routing"
+      ? "Restarting rpd drops every routing adjacency and rebuilds it — OSPF and BGP sessions will flap."
+      : name === "l2-learning"
+        ? "The MAC table is relearned from traffic, so expect a short burst of flooding."
+        : "Only this daemon restarted; the box stayed up and forwarding continued in hardware.");
+}
+
 function powerOn(dev){
+  dev.bootedAt = Date.now();
   if(dev.powered !== false) return;
   dev.powered = true;
   if(typeof SFX !== "undefined") SFX.powerUp();

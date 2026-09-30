@@ -113,7 +113,7 @@ function junoDeviceReport(d){
       bits.push(`Running at ${t.toFixed(1)} degrees${t >= 45 ? " — dangerously hot, this is close to thermal shutdown" : t >= 35 ? " — warm; check the room's cooling" : ", which is comfortable"}.`);
       const nerr = Object.keys(d.errDisabled || {}).length;
       if(nerr) bits.push(`${nerr} port(s) are error-disabled — show log messages on it names the cause.`);
-      if(JSON.stringify(d.config) !== JSON.stringify(d.candidate)) bits.push("There are uncommitted changes sitting in its candidate config.");
+      if(JSON.stringify(committedTree(d)) !== JSON.stringify(d.candidate)) bits.push("There are uncommitted changes sitting in its candidate config.");
       if(d.brandNew) bits.push("It is still factory-fresh — day-zero setup was never finished.");
       const logs = (d.syslog || []).slice(-3);
       if(logs.length) bits.push("Recent log entries:\n- " + logs.join("\n- "));

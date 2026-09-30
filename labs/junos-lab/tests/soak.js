@@ -40,6 +40,26 @@ const script = `
     "sh int te", "?", "help", "", "   ",
     "set", "set interfaces", "garbage command here", "int", "commit confirmed 1",
     "request system reboot", "edit interfaces ge-0/0/2", "top", "up", "run show vlans",
+    "show ethernet-switching interface", "show vlans detail", "show interfaces extensive",
+    "show route 8.8.8.8", "show route protocol static", "show route protocol ospf",
+    "show route receive-protocol bgp 203.0.113.1", "show configuration | display set",
+    "show configuration | compare rollback 1", "show configuration | compare rollback 99",
+    "clear interfaces statistics all", "clear interfaces statistics ge-0/0/1",
+    "file show nothing.txt", "file show", "status", "quit",
+    "deactivate vlans staff", "activate vlans staff", "deactivate", "activate",
+    "deactivate interfaces ge-0/0/0", "activate interfaces ge-0/0/0",
+    "insert vlans staff before vlans guest", "insert", "insert vlans staff before",
+    "rename vlans staff to vlans crew", "rename vlans staff to", "rename",
+    "copy vlans staff to vlans clone", "copy", "copy vlans staff to vlans staff",
+    "commit comment \\"soak\\"", "commit comment", "show | compare", "show | compare rollback 1",
+    "show | display set", "show | display xml", "show | nonsense",
+  ];
+  const PIPES = [
+    "match ge", "match", "match [", "match \\"two words\\"", "except up", "except",
+    "find me0", "find", "count", "count 3", "no-more", "no-more x", "last", "last 3",
+    "last -1", "last zzz", "trim 4", "trim", "trim -2", "save soak.txt", "save",
+    "display set", "display xml", "compare", "compare rollback 1", "c", "", "   ",
+    "nonsense", "m ge", "co",
   ];
   const rnd = (n) => Math.floor(Math.random() * n);
   const pick = (a) => a[rnd(a.length)];
@@ -81,8 +101,13 @@ const script = `
     } else {
       const dev = devices[pick(devIds)];
       if(dev){
+        let cmd = pick(CMDS);
+        const pr = rnd(100);
+        if(pr < 18) cmd += " | " + pick(PIPES);
+        else if(pr < 24) cmd += " | " + pick(PIPES) + " | " + pick(PIPES);
+        else if(pr < 26) cmd += " |";
         const t0 = Date.now();
-        deviceExec(dev, pick(CMDS));
+        deviceExec(dev, cmd);
         results.execs++;
         const dt = Date.now() - t0;
         if(dt > results.worst) results.worst = dt;
