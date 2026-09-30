@@ -1,0 +1,1961 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7ebef">
+<title>Codex Microsoft — PowerShell Reference</title>
+<style>
+:root{
+  --sans: ui-sans-serif, system-ui, "Segoe UI", Roboto, sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+  --rail: 268px;
+  --r: 3px;
+}
+html[data-theme="day"]{
+  --bg:#e7ebef; --panel:#f8f9fb; --sunk:#eef1f4; --ink:#151e27; --strong:#0a1118;
+  --muted:#5d6b79; --faint:#8a97a3; --line:#d4dae0; --hair:#e3e8ec;
+  --accent:#0d6a85; --accent-soft:#d8e8ed; --pin:#a96c2e;
+}
+html[data-theme="night"]{
+  --bg:#0e1419; --panel:#151c22; --sunk:#111920; --ink:#d9e2e8; --strong:#f1f6f9;
+  --muted:#8a9dab; --faint:#65788a; --line:#242f38; --hair:#1d262e;
+  --accent:#54c3dc; --accent-soft:#12303a; --pin:#d3924b;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--bg); color:var(--ink); font-family:var(--sans);
+  font-size:15px; line-height:1.5; -webkit-text-size-adjust:100%;
+  padding-top:env(safe-area-inset-top,0px);
+}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+::selection{background:var(--accent-soft)}
+
+.top{
+  display:flex; align-items:center; gap:14px;
+  height:56px; padding:0 16px;
+  background:var(--panel); border-bottom:1px solid var(--line);
+  position:sticky; top:env(safe-area-inset-top,0px); z-index:40;
+}
+.brand{display:flex;align-items:baseline;gap:9px;flex:none}
+.brand b{font-family:var(--serif);font-weight:600;font-size:20px;color:var(--strong)}
+.brand span{color:var(--faint);font-size:12px}
+.drawer-btn{display:none;padding:6px;border-radius:var(--r)}
+.search-wrap{flex:1;max-width:520px;position:relative;display:flex;align-items:center}
+.search-wrap > svg{position:absolute;left:10px;opacity:.5;pointer-events:none}
+#search{
+  width:100%; padding:8px 12px 8px 32px; font:inherit;
+  background:var(--sunk); color:var(--ink);
+  border:1px solid var(--line); border-radius:var(--r);
+}
+#search::placeholder{color:var(--faint)}
+.kbd{
+  position:absolute;right:8px;color:var(--faint);font-family:var(--mono);font-size:11px;
+  border:1px solid var(--line);border-radius:2px;padding:1px 5px;pointer-events:none
+}
+#search:focus + .kbd{display:none}
+.top-tools{display:flex;gap:4px;margin-left:auto;flex:none}
+.tbtn{padding:7px 10px;border-radius:var(--r);color:var(--muted);display:flex;align-items:center;gap:6px;font-size:13px}
+.tbtn:hover{background:var(--sunk);color:var(--ink)}
+
+.shell{display:flex;min-height:calc(100vh - 56px);align-items:flex-start}
+
+.rail{
+  width:var(--rail); flex:none; position:sticky; top:56px;
+  height:calc(100vh - 56px); overflow-y:auto; overscroll-behavior:contain;
+  background:var(--panel); border-right:1px solid var(--line); padding:14px 0 40px;
+}
+.rail-label{font-size:11px;letter-spacing:.06em;color:var(--faint);padding:0 16px 8px}
+.vol{
+  display:flex;align-items:center;gap:11px;width:100%;
+  padding:9px 16px;text-align:left;border-left:2px solid transparent;color:var(--muted);
+}
+.vol:hover{background:var(--sunk);color:var(--ink)}
+.vol[aria-current="true"]{border-left-color:var(--vc,var(--accent));color:var(--strong);background:var(--sunk)}
+.sigil{
+  width:26px;height:26px;flex:none;display:grid;place-items:center;border-radius:2px;
+  font-family:var(--mono);font-size:12px;font-weight:600;
+  color:var(--vc);border:1px solid var(--vc);opacity:.85;
+}
+.vol-meta{display:flex;flex-direction:column;line-height:1.25;min-width:0}
+.vol-meta b{font-weight:600;font-size:14px}
+.vol-meta small{color:var(--faint);font-size:11.5px}
+.rail-sep{height:1px;background:var(--hair);margin:12px 16px}
+.jump{display:block;width:100%;text-align:left;padding:5px 16px 5px 26px;color:var(--muted);font-size:13px}
+.jump:hover{color:var(--accent)}
+.jump.on{color:var(--strong);font-weight:600}
+
+.page{flex:1;min-width:0;padding:34px 40px 140px;max-width:1180px}
+.vol-head{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.vol-head h1{font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.1;color:var(--strong)}
+.vol-head p{color:var(--muted);margin-top:7px;max-width:62ch;font-size:14.5px}
+.vol-head .count{color:var(--faint);font-size:12.5px;font-family:var(--mono);margin-top:10px;display:block}
+
+.group{margin-bottom:34px;scroll-margin-top:78px}
+.group > h2{
+  font-size:13px;font-weight:600;color:var(--vc,var(--accent));letter-spacing:.03em;
+  padding-bottom:7px;margin-bottom:0;border-bottom:1px solid var(--hair);
+}
+.entry{border-bottom:1px solid var(--hair);background:var(--panel)}
+.entry.open{background:var(--sunk)}
+.head{
+  display:grid;grid-template-columns:minmax(0,1fr) auto;gap:5px 14px;
+  align-items:baseline;padding:11px 12px;cursor:pointer;
+}
+.head:hover .code{color:var(--accent)}
+.code{font-family:var(--mono);font-size:13.5px;color:var(--strong);word-break:break-word;grid-column:1}
+.gloss{color:var(--muted);font-size:13.5px;grid-column:1;max-width:74ch}
+.tools{grid-column:2;grid-row:1 / span 2;display:flex;gap:2px;align-self:center}
+.tools button{padding:6px;border-radius:var(--r);color:var(--faint);opacity:.5;display:grid;place-items:center}
+.entry:hover .tools button,.entry:focus-within .tools button{opacity:1}
+.tools button:hover{background:var(--bg);color:var(--ink)}
+.tools button.pinned{color:var(--pin);opacity:1}
+.note{display:none;padding:2px 12px 16px 12px}
+.entry.open .note{display:block}
+.note p{font-family:var(--serif);font-size:15.5px;line-height:1.62;color:var(--ink);max-width:66ch}
+.note pre{
+  font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);
+  background:var(--bg);border:1px solid var(--hair);border-left:2px solid var(--vc,var(--accent));
+  border-radius:var(--r);padding:10px 12px;margin-top:11px;overflow-x:auto;max-width:80ch;white-space:pre;
+}
+.hit-where{font-size:11.5px;color:var(--faint);font-family:var(--mono);padding:9px 12px 0;display:block}
+.empty{padding:56px 4px;max-width:52ch}
+.empty h2{font-family:var(--serif);font-size:22px;color:var(--strong);margin-bottom:8px}
+.empty p{color:var(--muted)}
+.toast{
+  position:fixed;left:50%;bottom:28px;transform:translateX(-50%);
+  background:var(--strong);color:var(--panel);padding:8px 16px;border-radius:var(--r);
+  font-size:13px;z-index:80;opacity:0;pointer-events:none;transition:opacity .18s;
+}
+.toast.show{opacity:1}
+.scrim{display:none}
+
+.sec-head{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--hair);padding-bottom:7px;margin-bottom:0}
+.sec-head h2{font-size:13px;font-weight:600;color:var(--vc,var(--accent));letter-spacing:.03em;border:none;padding:0;margin:0;flex:1}
+.sec-num{
+  font-family:var(--mono);font-size:11px;color:var(--faint);
+  border:1px solid var(--line);border-radius:2px;padding:1px 6px;flex:none;
+}
+.sec-num.done{color:var(--vc,var(--accent));border-color:var(--vc,var(--accent))}
+.readbtn{font-size:12px;color:var(--faint);padding:3px 8px;border:1px solid var(--line);border-radius:var(--r);flex:none}
+.readbtn:hover{color:var(--ink);border-color:var(--muted)}
+.readbtn.done{color:var(--vc,var(--accent));border-color:var(--vc,var(--accent))}
+.concept{padding:16px 12px 18px;background:var(--panel);border-bottom:1px solid var(--hair)}
+.concept p{font-family:var(--serif);font-size:16px;line-height:1.66;color:var(--ink);max-width:68ch}
+.concept pre{
+  font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--muted);
+  background:var(--bg);border:1px solid var(--hair);border-radius:var(--r);
+  padding:12px 14px;margin-top:14px;overflow-x:auto;max-width:80ch;white-space:pre;
+}
+.block{padding:14px 12px 16px;background:var(--panel);border-top:1px solid var(--hair)}
+.block h3{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.03em}
+.block ul{list-style:none;max-width:72ch}
+.block li{position:relative;padding-left:16px;margin-bottom:6px;font-size:14px;color:var(--ink)}
+.block li::before{content:"–";position:absolute;left:0;color:var(--vc,var(--accent))}
+.qa{max-width:70ch;margin-bottom:10px}
+.qa button{
+  text-align:left;font-size:14px;color:var(--ink);padding:8px 10px;width:100%;
+  border:1px solid var(--line);border-radius:var(--r);background:var(--sunk);
+}
+.qa button:hover{border-color:var(--vc,var(--accent))}
+.qa p{
+  display:none;font-family:var(--serif);font-size:15px;line-height:1.6;
+  color:var(--muted);padding:9px 10px 2px;
+}
+.qa.open p{display:block}
+.sec-foot{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:14px 12px 0}
+.sec-foot a,.sec-foot button{
+  font-size:13px;color:var(--muted);border:1px solid var(--line);
+  border-radius:var(--r);padding:6px 11px;text-decoration:none;display:inline-block;
+}
+.sec-foot a:hover,.sec-foot button:hover{color:var(--strong);border-color:var(--vc,var(--accent))}
+.sec-foot .next{color:var(--vc,var(--accent));border-color:var(--vc,var(--accent))}
+.bar{height:2px;background:var(--line);border-radius:2px;margin-top:4px;overflow:hidden;width:150px}
+.bar i{display:block;height:100%;background:var(--vc,var(--accent))}
+.resume{
+  display:flex;flex-wrap:wrap;align-items:center;gap:12px;
+  background:var(--panel);border:1px solid var(--line);border-left:2px solid var(--vc,var(--accent));
+  border-radius:var(--r);padding:12px 14px;margin-bottom:24px;
+}
+.resume span{font-size:14px;color:var(--muted);flex:1;min-width:220px}
+.resume b{color:var(--strong);font-weight:600}
+.resume button{font-size:13px;color:var(--vc,var(--accent));border:1px solid var(--vc,var(--accent));border-radius:var(--r);padding:6px 12px}
+.recipe{background:var(--panel);border-bottom:1px solid var(--hair);padding:16px 12px 18px;margin-bottom:0}
+.recipe h2{font-family:var(--serif);font-size:20px;color:var(--strong);font-weight:600;border:none;padding:0}
+.recipe > p{color:var(--muted);font-size:13.5px;margin:4px 0 14px;max-width:70ch}
+.step{display:grid;grid-template-columns:24px minmax(0,1fr);gap:4px 12px;margin-bottom:12px}
+.step .n{font-family:var(--mono);font-size:11px;color:var(--faint);padding-top:3px}
+.step code{
+  font-family:var(--mono);font-size:13px;color:var(--strong);white-space:pre-wrap;
+  background:var(--bg);border:1px solid var(--hair);border-left:2px solid var(--vc,var(--accent));
+  border-radius:var(--r);padding:7px 10px;display:block;
+}
+.step p{grid-column:2;font-size:13.5px;color:var(--muted);max-width:70ch}
+
+@media (max-width:900px){
+  .drawer-btn{display:grid;place-items:center}
+  .rail{
+    position:fixed;top:0;left:0;height:100%;z-index:60;
+    transform:translateX(-100%);transition:transform .22s ease;
+    padding-top:calc(16px + env(safe-area-inset-top,0px));
+  }
+  body.nav-open .rail{transform:none}
+  body.nav-open .scrim{display:block;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:50}
+  .page{padding:22px 16px 140px}
+  .vol-head h1{font-size:27px}
+  .brand span{display:none}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media print{
+  .top,.rail,.tools,.sec-foot,.readbtn,.resume{display:none}
+  .page{padding:0;max-width:none}
+  .note,.qa p{display:block!important}
+  .entry{break-inside:avoid}
+  body.print-one .group{display:none}
+  body.print-one .group.print-me{display:block}
+  body.print-one .vol-head{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="drawer-btn tbtn" id="drawerBtn" aria-label="Open volumes">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+  </button>
+  <div class="brand"><b>Codex</b><span>Microsoft &amp; PowerShell</span></div>
+  <div class="search-wrap">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg>
+    <input id="search" type="search" placeholder="Search every volume" autocomplete="off" spellcheck="false">
+    <span class="kbd">/</span>
+  </div>
+  <div class="top-tools">
+    <button class="tbtn" id="pinBtn" title="Pinned entries">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 3h12v18l-6-4.5L6 21z"/></svg>
+      <span id="pinCount">0</span>
+    </button>
+    <button class="tbtn" id="themeBtn" title="Switch theme" aria-label="Switch theme">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg>
+    </button>
+  </div>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main class="page" id="page"></main>
+</div>
+<div class="scrim" id="scrim"></div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const DATA = [
+ {
+  "id": "connect",
+  "sigil": "CN",
+  "name": "Connect",
+  "sub": "Sessions and modules",
+  "color": "#0f6cbd",
+  "blurb": "Before any command works you open a door into Microsoft 365. Graph is the door for users, groups and licenses. Exchange Online is the door for mailboxes. Learn which door you are standing at.",
+  "groups": [
+   {
+    "t": "Install and update modules",
+    "e": [
+     {
+      "c": "Install-Module Microsoft.Graph -Scope CurrentUser",
+      "d": "Install the Microsoft Graph module",
+      "n": "One-time install. -Scope CurrentUser means no admin rights needed on your Mac. It is big, so give it a few minutes."
+     },
+     {
+      "c": "Install-Module ExchangeOnlineManagement -Scope CurrentUser",
+      "d": "Install the Exchange Online module",
+      "n": "Gives you Connect-ExchangeOnline, Get-EXOMailbox, Set-Mailbox and friends."
+     },
+     {
+      "c": "Install-Module PnP.PowerShell -Scope CurrentUser",
+      "d": "Install the SharePoint (PnP) module",
+      "n": "The SharePoint module that works on macOS. The official Microsoft.Online.SharePoint.PowerShell module is Windows-only."
+     },
+     {
+      "c": "Update-Module Microsoft.Graph",
+      "d": "Update a module to the newest version",
+      "n": "Run it every month or two. Old Graph versions sometimes miss newer properties."
+     },
+     {
+      "c": "Get-InstalledModule",
+      "d": "List what is installed and which version",
+      "n": "Quick way to check whether a module is there before you blame a command for not existing."
+     },
+     {
+      "c": "Import-Module Microsoft.Graph.Users",
+      "d": "Load just one part of Graph",
+      "n": "Graph is split into sub-modules. Loading only Users is much faster than loading everything, and PowerShell usually does this for you automatically."
+     }
+    ]
+   },
+   {
+    "t": "Open and close a session",
+    "e": [
+     {
+      "c": "Connect-MgGraph -Scopes \"User.ReadWrite.All\"",
+      "d": "Log into Microsoft Graph with specific permissions",
+      "n": "Scopes are the permissions you ask for. Read-only work: User.Read.All. Changing users: User.ReadWrite.All. Groups: Group.ReadWrite.All. Asking for the smallest scope is a good habit.",
+      "x": "Connect-MgGraph -Scopes \"User.Read.All\",\"Group.Read.All\""
+     },
+     {
+      "c": "Connect-MgGraph -Scopes \"User.Read.All\" -NoWelcome",
+      "d": "Log in without the welcome banner",
+      "n": "Same login, less noise in your terminal."
+     },
+     {
+      "c": "Connect-ExchangeOnline",
+      "d": "Log into Exchange Online",
+      "n": "Opens a browser to sign in. After this the EXO and mailbox commands work. Add -ShowBanner:$false to skip the banner."
+     },
+     {
+      "c": "Get-MgContext",
+      "d": "Show who you are logged in as and with which scopes",
+      "n": "Your first check when a Graph command says 'Insufficient privileges'. Look at the Scopes line.",
+      "x": "Get-MgContext | Select-Object Account, Scopes"
+     },
+     {
+      "c": "Disconnect-MgGraph",
+      "d": "Log out of Graph",
+      "n": "Do this after admin work, especially on a shared machine."
+     },
+     {
+      "c": "Disconnect-ExchangeOnline -Confirm:$false",
+      "d": "Log out of Exchange without the yes/no question",
+      "n": "-Confirm:$false answers the prompt for you."
+     },
+     {
+      "c": "Connect-PnPOnline -Url https://TENANT.sharepoint.com/sites/IT -Interactive -ClientId <app-id>",
+      "d": "Log into one SharePoint site",
+      "n": "PnP connects to one site at a time. Since 2024 PnP needs your own Entra app registration, so the ClientId is the id of that app."
+     },
+     {
+      "c": "Connect-MicrosoftTeams",
+      "d": "Log into Teams",
+      "n": "Needs the MicrosoftTeams module. Used for team membership and policies."
+     }
+    ]
+   },
+   {
+    "t": "Find your way around",
+    "e": [
+     {
+      "c": "Get-Command -Module Microsoft.Graph.Users",
+      "d": "List every command in a module",
+      "n": "When you know what you want to do but not the command name.",
+      "x": "Get-Command -Module Microsoft.Graph.Users -Verb Get"
+     },
+     {
+      "c": "Get-Command *mailbox*",
+      "d": "Search commands by name with wildcards",
+      "n": "The * means anything. This finds Get-Mailbox, Set-Mailbox, Get-MailboxStatistics and more."
+     },
+     {
+      "c": "Get-Help Set-Mailbox -Examples",
+      "d": "Show real examples for a command",
+      "n": "Examples are usually faster to learn from than the full help. -Online opens the docs in a browser."
+     },
+     {
+      "c": "Find-MgGraphCommand -Command Get-MgUser | Select-Object -Expand Permissions",
+      "d": "See which scopes a Graph command needs",
+      "n": "The fix for 'Insufficient privileges'. Tells you exactly what to put in Connect-MgGraph -Scopes."
+     },
+     {
+      "c": "$user | Get-Member",
+      "d": "Show every property and method an object has",
+      "n": "PowerShell returns objects, not text. Get-Member shows what is inside, so you know what you can select or filter on."
+     },
+     {
+      "c": "$PSVersionTable.PSVersion",
+      "d": "Show your PowerShell version",
+      "n": "Microsoft 365 modules want PowerShell 7 or newer."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "pipeline",
+  "sigil": "PL",
+  "name": "Pipeline",
+  "sub": "Filter, shape, export",
+  "color": "#5b5fc7",
+  "blurb": "The pipe | passes objects from one command to the next. Almost every admin one-liner is: get something, filter it, pick columns, sort it, output it.",
+  "groups": [
+   {
+    "t": "Filter and pick",
+    "e": [
+     {
+      "c": "Where-Object { $_.AccountEnabled -eq $true }",
+      "d": "Keep only the objects that match",
+      "n": "$_ is 'the current item' as it flows through the pipe. Everything inside the braces must be true for the item to pass.",
+      "x": "Get-MgUser -All -Property DisplayName,AccountEnabled |\n    Where-Object { $_.AccountEnabled -eq $true }"
+     },
+     {
+      "c": "Where-Object Conflict -eq \"False\"",
+      "d": "Short form of Where-Object for one simple check",
+      "n": "Same as { $_.Conflict -eq \"False\" }. Use braces as soon as you need -and / -or."
+     },
+     {
+      "c": "Select-Object DisplayName, UserPrincipalName",
+      "d": "Keep only some columns",
+      "n": "Makes output readable and CSV exports small."
+     },
+     {
+      "c": "Select-Object -First 1",
+      "d": "Take only the first item",
+      "n": "Your safety switch: run a change on one object first, check it, then remove -First 1."
+     },
+     {
+      "c": "Select-Object -Expand EmailAddresses",
+      "d": "Unpack a list inside a property",
+      "n": "Without -Expand you see {SMTP:..., smtp:...} squashed together. With it, one line per value."
+     },
+     {
+      "c": "Select-Object -Unique",
+      "d": "Drop duplicate values",
+      "n": "Handy after building lists of domains or departments."
+     }
+    ]
+   },
+   {
+    "t": "Sort, count, group",
+    "e": [
+     {
+      "c": "Sort-Object DisplayName",
+      "d": "Sort A to Z",
+      "n": "Add -Descending for Z to A, or sort on several columns: Sort-Object Department, DisplayName."
+     },
+     {
+      "c": "Group-Object Department",
+      "d": "Bucket objects by a value",
+      "n": "Each group has a Name and a Count. Perfect for 'how many users per site'.",
+      "x": "Get-MgUser -All -Property Department | Group-Object Department | Select-Object Name, Count"
+     },
+     {
+      "c": "Measure-Object",
+      "d": "Count objects",
+      "n": "Returns a Count. ($list).Count is the quicker way on a variable."
+     },
+     {
+      "c": "Group-Object NewUPN | Where-Object Count -gt 1",
+      "d": "Find duplicates",
+      "n": "Any group with more than one member is a duplicate. You used this to check the rename plan."
+     }
+    ]
+   },
+   {
+    "t": "Output and export",
+    "e": [
+     {
+      "c": "Format-Table",
+      "d": "Show results as a table",
+      "n": "Only for looking. Never pipe Format-Table into Export-Csv, because it turns objects into display text. Add -AutoSize to fit columns."
+     },
+     {
+      "c": "Export-Csv \"$HOME/Desktop/users.csv\" -NoTypeInformation -Encoding UTF8",
+      "d": "Save results as a CSV file",
+      "n": "UTF8 keeps accents like é intact. -NoTypeInformation removes a junk first line (it is the default in PowerShell 7 but harmless)."
+     },
+     {
+      "c": "Import-Csv \"$HOME/Desktop/users.csv\"",
+      "d": "Read a CSV back into objects",
+      "n": "Every column becomes a property. Note: every value comes back as text, so True becomes the string \"True\"."
+     },
+     {
+      "c": "-join \"; \"",
+      "d": "Glue a list into one string",
+      "n": "Turns a list of addresses into something you can paste into To or BCC.",
+      "x": "(Import-Csv \"$HOME/Desktop/rename-plan.csv\").OldUPN -join \"; \""
+     },
+     {
+      "c": "Set-Clipboard",
+      "d": "Copy the result to the clipboard",
+      "n": "Pipe anything into it, then Cmd+V. Works on Mac in PowerShell 7."
+     },
+     {
+      "c": "Out-File \"$HOME/Desktop/log.txt\"",
+      "d": "Save plain text to a file",
+      "n": "For logs and notes. Use Export-Csv when you want to open it in Excel."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "entra",
+  "sigil": "EN",
+  "name": "Entra users",
+  "sub": "Microsoft Graph",
+  "color": "#0a7ea4",
+  "blurb": "Accounts, sign-in names, groups and licenses live in Entra ID. You reach them through Microsoft Graph, so every command starts with Mg.",
+  "groups": [
+   {
+    "t": "Look up users",
+    "e": [
+     {
+      "c": "Get-MgUser -All",
+      "d": "Get every user in the tenant",
+      "n": "Without -All you only get the first 100. The most common 'where are the rest?' mistake."
+     },
+     {
+      "c": "Get-MgUser -All -Property Id,DisplayName,UserPrincipalName,AccountEnabled",
+      "d": "Get users with specific properties",
+      "n": "Graph only returns a handful of properties by default. If a column comes back empty, you probably forgot to ask for it in -Property."
+     },
+     {
+      "c": "Get-MgUser -UserId adv@datacenterunited.com",
+      "d": "Get one user by sign-in name or Id",
+      "n": "-UserId accepts the UPN or the Id (the long GUID)."
+     },
+     {
+      "c": "Get-MgUser -Filter \"userPrincipalName eq 'sra@datacenterunited.com'\"",
+      "d": "Find a user with a server-side filter",
+      "n": "The filter runs at Microsoft, so it is fast. No result means no match, not an error."
+     },
+     {
+      "c": "Get-MgUser -Filter \"startswith(displayName,'Aiko')\"",
+      "d": "Find users whose name starts with something",
+      "n": "Great when you are not sure of the exact spelling of a sign-in name."
+     },
+     {
+      "c": "Get-MgUser -Filter \"accountEnabled eq false\" -All",
+      "d": "List blocked accounts",
+      "n": "Useful for clean-up and for your GDPR retention checks."
+     },
+     {
+      "c": "Get-MgUser -UserId x -Property SignInActivity | Select-Object -Expand SignInActivity",
+      "d": "See when someone last signed in",
+      "n": "Needs the AuditLog.Read.All scope and an Entra P1 licence in the tenant."
+     }
+    ]
+   },
+   {
+    "t": "Change users",
+    "e": [
+     {
+      "c": "Update-MgUser -UserId x -UserPrincipalName \"new@datacenterunited.com\"",
+      "d": "Change a sign-in name",
+      "n": "The login name. Mailbox addresses are changed separately with Set-Mailbox. Teams follows the UPN on its own, within about 24 hours."
+     },
+     {
+      "c": "Update-MgUser -UserId x -AccountEnabled:$false",
+      "d": "Block sign-in",
+      "n": "The first step of offboarding. The colon form -Param:$false is how you pass false to a switch-style parameter."
+     },
+     {
+      "c": "Update-MgUser -UserId x -Department \"IT\" -JobTitle \"Custodian\"",
+      "d": "Update profile fields",
+      "n": "Shows up in Outlook and Teams contact cards."
+     },
+     {
+      "c": "Update-MgUser -UserId x -UsageLocation BE",
+      "d": "Set the usage location",
+      "n": "Required before a licence can be assigned. BE for Belgium."
+     },
+     {
+      "c": "Revoke-MgUserSignInSession -UserId x",
+      "d": "Sign someone out everywhere",
+      "n": "Kills refresh tokens so apps must log in again. Pair with blocking sign-in when someone leaves."
+     },
+     {
+      "c": "New-MgUser -DisplayName \"Jan Peeters\" -UserPrincipalName jpe@datacenterunited.com -MailNickname jpe -AccountEnabled -PasswordProfile @{Password='...'; ForceChangePasswordNextSignIn=$true}",
+      "d": "Create a new user",
+      "n": "MailNickname, AccountEnabled and PasswordProfile are required. @{ } is a hashtable, a little bag of name = value pairs."
+     }
+    ]
+   },
+   {
+    "t": "Groups",
+    "e": [
+     {
+      "c": "Get-MgGroup -Filter \"displayName eq 'IT Team'\"",
+      "d": "Find a group by name",
+      "n": "Returns the group object. You need its Id for the member commands."
+     },
+     {
+      "c": "Get-MgGroupMember -GroupId $g.Id -All",
+      "d": "List the members of a group",
+      "n": "Members come back as directory objects. The name is in .AdditionalProperties.displayName.",
+      "x": "Get-MgGroupMember -GroupId $g.Id -All | ForEach-Object { $_.AdditionalProperties.displayName }"
+     },
+     {
+      "c": "New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id",
+      "d": "Add a user to a group",
+      "n": "Both sides need the Id, not the name. Get the user first, then add."
+     },
+     {
+      "c": "Remove-MgGroupMemberDirectoryObjectByRef -GroupId $g.Id -DirectoryObjectId $u.Id",
+      "d": "Remove a user from a group",
+      "n": "Long name, same idea as adding."
+     },
+     {
+      "c": "Get-MgUserMemberOf -UserId x -All",
+      "d": "Which groups is this user in?",
+      "n": "Great before offboarding, so you know what access to take away."
+     }
+    ]
+   },
+   {
+    "t": "Licenses",
+    "e": [
+     {
+      "c": "Get-MgSubscribedSku",
+      "d": "List the licence types the tenant owns",
+      "n": "SkuPartNumber is the product (for example SPB = Business Premium). ConsumedUnits is how many are used."
+     },
+     {
+      "c": "Get-MgUserLicenseDetail -UserId x",
+      "d": "See which licences one user has",
+      "n": "Returns the SkuPartNumber for each licence."
+     },
+     {
+      "c": "Set-MgUserLicense -UserId x -AddLicenses @{SkuId=$sku.SkuId} -RemoveLicenses @()",
+      "d": "Give a user a licence",
+      "n": "Both parameters are required, so pass an empty list @() for the one you do not use. UsageLocation must be set first."
+     },
+     {
+      "c": "Set-MgUserLicense -UserId x -AddLicenses @() -RemoveLicenses @($sku.SkuId)",
+      "d": "Take a licence away",
+      "n": "Do this after converting a leaver to a shared mailbox, so the mailbox keeps its data without costing a licence."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "exchange",
+  "sigil": "EX",
+  "name": "Exchange",
+  "sub": "Mailboxes and mail flow",
+  "color": "#0e7a5f",
+  "blurb": "Mailboxes, addresses, aliases, permissions and mail flow live in Exchange Online. Connect-ExchangeOnline first.",
+  "groups": [
+   {
+    "t": "Find mailboxes",
+    "e": [
+     {
+      "c": "Get-EXOMailbox -ResultSize Unlimited",
+      "d": "Get every mailbox",
+      "n": "The EXO commands are the fast modern versions. Without Unlimited you stop at 1000."
+     },
+     {
+      "c": "Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize Unlimited",
+      "d": "Only personal mailboxes",
+      "n": "Swap in RoomMailbox, SharedMailbox or EquipmentMailbox. This is how you kept meeting rooms out of the rename."
+     },
+     {
+      "c": "Get-Mailbox x | Select-Object -Expand EmailAddresses",
+      "d": "List all addresses on a mailbox",
+      "n": "SMTP: in capitals is the primary address. smtp: in lowercase are aliases. SIP: is the Teams address."
+     },
+     {
+      "c": "Get-EXORecipient -Filter \"EmailAddresses -eq 'smtp:ave@datacenterunited.com'\"",
+      "d": "Who owns this address?",
+      "n": "Searches every recipient type, including aliases. The check you ran before the rename."
+     },
+     {
+      "c": "Get-MailboxStatistics x | Select-Object DisplayName, TotalItemSize, ItemCount",
+      "d": "How big is a mailbox?",
+      "n": "TotalItemSize comes back as text. See the Formulas volume for turning it into a number of GB."
+     }
+    ]
+   },
+   {
+    "t": "Addresses and aliases",
+    "e": [
+     {
+      "c": "Set-Mailbox -Identity x -WindowsEmailAddress new@datacenterunited.com",
+      "d": "Change the primary email address",
+      "n": "The old primary is kept as an alias automatically, so mail to it still arrives."
+     },
+     {
+      "c": "Set-Mailbox -Identity x -EmailAddresses @{Add='smtp:alias@datacenterunited.com'}",
+      "d": "Add an alias",
+      "n": "Lowercase smtp: means alias. @{Add=...} adds without touching the others."
+     },
+     {
+      "c": "Set-Mailbox -Identity x -EmailAddresses @{Remove='smtp:old@datacenterunited.com'}",
+      "d": "Remove an alias",
+      "n": "Careful: mail to that address will bounce from now on."
+     },
+     {
+      "c": "Set-Mailbox -Identity x -CustomAttribute1 \"OOST1\"",
+      "d": "Store your own tag on a mailbox",
+      "n": "CustomAttribute1 to 15 are free fields. Your all@ sync script reads CustomAttribute1."
+     }
+    ]
+   },
+   {
+    "t": "Permissions and shared mailboxes",
+    "e": [
+     {
+      "c": "Add-MailboxPermission -Identity shared@ -User x -AccessRights FullAccess -AutoMapping $true",
+      "d": "Give someone full access to a mailbox",
+      "n": "AutoMapping makes it appear in their Outlook by itself."
+     },
+     {
+      "c": "Add-RecipientPermission -Identity shared@ -Trustee x -AccessRights SendAs -Confirm:$false",
+      "d": "Let someone send as a mailbox",
+      "n": "FullAccess lets you read. SendAs lets you send. They are separate on purpose."
+     },
+     {
+      "c": "Get-MailboxPermission -Identity x",
+      "d": "Who can open this mailbox?",
+      "n": "Ignore the NT AUTHORITY lines, those are system entries."
+     },
+     {
+      "c": "Set-Mailbox -Identity x -Type Shared",
+      "d": "Convert a leaver's mailbox to shared",
+      "n": "Shared mailboxes under 50 GB need no licence, so you can remove it after this."
+     }
+    ]
+   },
+   {
+    "t": "Mail flow and rooms",
+    "e": [
+     {
+      "c": "Set-MailboxAutoReplyConfiguration -Identity x -AutoReplyState Enabled -InternalMessage \"...\" -ExternalMessage \"...\"",
+      "d": "Set an out-of-office",
+      "n": "For sick leave or leavers. Use Disabled to switch it off."
+     },
+     {
+      "c": "Set-Mailbox -Identity x -ForwardingSmtpAddress \"smtp:y@datacenterunited.com\" -DeliverToMailboxAndForward $true",
+      "d": "Forward mail to someone else",
+      "n": "$true keeps a copy in the original mailbox too."
+     },
+     {
+      "c": "Get-MessageTraceV2 -RecipientAddress x -StartDate (Get-Date).AddDays(-2) -EndDate (Get-Date)",
+      "d": "Did this mail arrive?",
+      "n": "Traces the last few days of mail flow. The V2 version replaced the old Get-MessageTrace."
+     },
+     {
+      "c": "Set-CalendarProcessing -Identity room@ -AutomateProcessing AutoAccept",
+      "d": "Make a meeting room accept bookings automatically",
+      "n": "Add -AddOrganizerToSubject $false -DeleteSubject $false to keep the real meeting title visible."
+     },
+     {
+      "c": "Get-DistributionGroupMember -Identity all@datacenterunited.com -ResultSize Unlimited",
+      "d": "Who is in a distribution list?",
+      "n": "Add-DistributionGroupMember and Remove-DistributionGroupMember change it."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "script",
+  "sigil": "SC",
+  "name": "Scripting",
+  "sub": "Building blocks",
+  "color": "#8a5a2b",
+  "blurb": "The pieces that turn one-liners into scripts that run safely on their own: variables, loops, decisions, error handling and waiting.",
+  "groups": [
+   {
+    "t": "Variables and objects",
+    "e": [
+     {
+      "c": "$rows = Import-Csv $csv",
+      "d": "Store a result in a variable",
+      "n": "Anything starting with $ is a variable. You can reuse it without asking Microsoft again."
+     },
+     {
+      "c": "$HOME",
+      "d": "Your home folder",
+      "n": "On your Mac: /Users/kaatjenagels. So $HOME/Desktop is your Desktop."
+     },
+     {
+      "c": "[pscustomobject]@{ User = $u; Status = \"OK\" }",
+      "d": "Build your own object",
+      "n": "A tidy row you can export to CSV. You used this for the rename plan and the log."
+     },
+     {
+      "c": "\"$($r.OldUPN) -> $($r.NewUPN)\"",
+      "d": "Put a property inside a string",
+      "n": "$( ) runs what is inside first. Without it, \"$r.OldUPN\" prints the whole object plus the text .OldUPN."
+     },
+     {
+      "c": "@()  and  @{}",
+      "d": "Empty list and empty hashtable",
+      "n": "@() is a list of things. @{} is name = value pairs."
+     }
+    ]
+   },
+   {
+    "t": "Loops and decisions",
+    "e": [
+     {
+      "c": "foreach ($u in $all) { ... }",
+      "d": "Do something for every item",
+      "n": "Reads as English: for each u in all."
+     },
+     {
+      "c": "$list | ForEach-Object { ... }",
+      "d": "Pipeline version of foreach",
+      "n": "Use $_ for the current item inside the braces."
+     },
+     {
+      "c": "if (-not $u.AccountEnabled) { continue }",
+      "d": "Skip this item and move to the next",
+      "n": "continue jumps to the next loop round. break stops the loop completely."
+     },
+     {
+      "c": "-and  -or  -not",
+      "d": "Combine conditions",
+      "n": "Where-Object { $_.A -eq 1 -and $_.B -ne 2 }. -not flips true to false."
+     },
+     {
+      "c": "-eq -ne -gt -lt -like -match -contains",
+      "d": "Comparison operators",
+      "n": "No = or ==. PowerShell uses words: equals, not-equals, greater-than, less-than, wildcard, regex, list-contains."
+     }
+    ]
+   },
+   {
+    "t": "Safety and error handling",
+    "e": [
+     {
+      "c": "try { ... -ErrorAction Stop } catch { $_.Exception.Message }",
+      "d": "Catch errors so the script keeps going",
+      "n": "Many cmdlets only show red text and carry on. -ErrorAction Stop turns that into a real error that catch can handle.",
+      "x": "try {\n    Update-MgUser -UserId $r.OldUPN -UserPrincipalName $r.NewUPN -ErrorAction Stop\n    \"OK\"\n} catch {\n    $_.Exception.Message\n}"
+     },
+     {
+      "c": "-WhatIf",
+      "d": "Show what would happen, change nothing",
+      "n": "Supported by most Exchange Set- commands. A free dry run."
+     },
+     {
+      "c": "& { ... }",
+      "d": "Run a whole block as one command",
+      "n": "Pasting lines one by one means Ctrl+C can leave half a script behind. Wrapping in & { } makes it all-or-nothing."
+     },
+     {
+      "c": "Start-Sleep -Seconds 60",
+      "d": "Wait",
+      "n": "Used to hold a script until a set time."
+     },
+     {
+      "c": "Test-Path \"$HOME/Desktop/plan.csv\"",
+      "d": "Does this file exist?",
+      "n": "Returns True or False. Check before Import-Csv so you get a clear message instead of an error."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "sharepoint",
+  "sigil": "SP",
+  "name": "SharePoint & Teams",
+  "sub": "PnP and Teams",
+  "color": "#037f8a",
+  "blurb": "Sites, lists, files and teams. On a Mac use PnP.PowerShell for SharePoint, since the official SPO module only runs on Windows.",
+  "groups": [
+   {
+    "t": "Sites and lists",
+    "e": [
+     {
+      "c": "Get-PnPList",
+      "d": "List every list and library on the connected site",
+      "n": "Connect to the site first with Connect-PnPOnline."
+     },
+     {
+      "c": "Get-PnPListItem -List \"Documents\" -PageSize 500",
+      "d": "Read all items from a list",
+      "n": "PageSize stops big lists from timing out."
+     },
+     {
+      "c": "Add-PnPFile -Path \"$HOME/Desktop/file.docx\" -Folder \"Shared Documents/IT\"",
+      "d": "Upload a file",
+      "n": "Folder is the path inside the site."
+     },
+     {
+      "c": "Get-PnPSiteCollectionAdmin",
+      "d": "Who are the site admins?",
+      "n": "Add-PnPSiteCollectionAdmin -Owners x adds one."
+     },
+     {
+      "c": "Get-PnPTenantSite",
+      "d": "List all sites in the tenant",
+      "n": "Needs a connection to the admin site: https://TENANT-admin.sharepoint.com."
+     }
+    ]
+   },
+   {
+    "t": "Teams",
+    "e": [
+     {
+      "c": "Get-Team -User x",
+      "d": "Which teams is this person in?",
+      "n": "Handy for offboarding."
+     },
+     {
+      "c": "Add-TeamUser -GroupId $team.GroupId -User x -Role Member",
+      "d": "Add someone to a team",
+      "n": "Use -Role Owner for owners."
+     },
+     {
+      "c": "Remove-TeamUser -GroupId $team.GroupId -User x",
+      "d": "Remove someone from a team",
+      "n": "A team is really a Microsoft 365 group underneath, so Graph group commands work too."
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "formulas",
+  "sigil": "FX",
+  "name": "Formulas",
+  "sub": "Patterns, applied",
+  "color": "#b3553c",
+  "blurb": "The little calculations and patterns you keep reusing. Each one is shown applied to a real example: input, formula, result.",
+  "groups": [
+   {
+    "t": "Name and address formulas",
+    "e": [
+     {
+      "c": "($u.GivenName.Substring(0,1) + $last.Substring(0,2)).ToLower()",
+      "d": "Standard DCU address: 1 letter first name + 2 letters last name",
+      "n": "Substring(start, length). Counting starts at 0, so Substring(0,1) is the first letter and Substring(0,2) the first two.",
+      "x": "GivenName  = \"Stijn\"   -> Substring(0,1) = \"S\"\nSurname    = \"Raes\"    -> Substring(0,2) = \"Ra\"\n\"S\" + \"Ra\"  = \"SRa\"    -> ToLower() = \"sra\"\nResult: sra@datacenterunited.com"
+     },
+     {
+      "c": "($u.GivenName.Substring(0,2) + $u.Surname.Substring(0,1)).ToLower()",
+      "d": "Fallback when the standard address is taken: 2 + 1",
+      "n": "Same formula with the numbers swapped.",
+      "x": "GivenName = \"Geoffrey\"  -> \"Ge\"\nSurname   = \"Vanderhaegen\" -> \"V\"\nResult: gev@datacenterunited.com"
+     },
+     {
+      "c": "$u.Surname -replace '\\s',''",
+      "d": "Remove spaces from a surname first",
+      "n": "\\s means any whitespace. Without this, 'Van Laer' would give 'va' plus a space.",
+      "x": "\"Van Laer\" -replace '\\s','' = \"VanLaer\"\nSubstring(0,2) = \"Va\"  -> bva@"
+     },
+     {
+      "c": "($upn -split '@')[1]",
+      "d": "Get the domain of an address",
+      "n": "-split cuts the text at @ into a list. [0] is the part before, [1] the part after.",
+      "x": "\"sra@datacenterunited.com\" -split '@'\n[0] = \"sra\"\n[1] = \"datacenterunited.com\""
+     }
+    ]
+   },
+   {
+    "t": "Matching patterns",
+    "e": [
+     {
+      "c": "-match '^[^.@]+\\.[^@]+@datacenterunited\\.com$'",
+      "d": "Is it a firstname.lastname address?",
+      "n": "Regex. ^ start, [^.@]+ one or more characters that are not a dot or @, \\. a real dot, [^@]+ the rest, $ end.",
+      "x": "stijn.raes@datacenterunited.com  -> True\nsra@datacenterunited.com         -> False  (no dot before @)"
+     },
+     {
+      "c": "-like \"*security@*\"",
+      "d": "Simple wildcard match",
+      "n": "* means anything. Easier than regex when you only need 'contains'.",
+      "x": "\"johan.security@datacenterunited.com\" -like \"*security@*\"  -> True\n\"stijn.raes@datacenterunited.com\"     -like \"*security@*\"  -> False"
+     },
+     {
+      "c": "$taken -contains $new",
+      "d": "Is this value in my list?",
+      "n": "-contains checks a whole list for one exact value. -in is the same thing written the other way round: $new -in $taken.",
+      "x": "$taken = \"ave@..\",\"gva@..\"\n$taken -contains \"ave@..\"  -> True   (conflict)\n$taken -contains \"adu@..\"  -> False  (free)"
+     },
+     {
+      "c": "\"userPrincipalName eq '$upn'\"",
+      "d": "Build a Graph filter from a variable",
+      "n": "Double quotes outside so $upn gets filled in, single quotes inside around the value, as Graph expects.",
+      "x": "$upn = \"sra@datacenterunited.com\"\nresult: userPrincipalName eq 'sra@datacenterunited.com'"
+     }
+    ]
+   },
+   {
+    "t": "Time formulas",
+    "e": [
+     {
+      "c": "(Get-Date \"17:00\") - (Get-Date)",
+      "d": "Time left until a moment today",
+      "n": "Subtracting two dates gives a TimeSpan. .TotalSeconds turns it into one number.",
+      "x": "Now 13:24:00\n17:00 - 13:24 = 03:36:00\n.TotalSeconds  = 3*3600 + 36*60 = 12960"
+     },
+     {
+      "c": "[int]((Get-Date \"18:00\") - (Get-Date)).TotalSeconds",
+      "d": "Whole seconds, for commands that hate decimals",
+      "n": "[int] rounds. You used it with caffeinate -t.",
+      "x": "caffeinate -d -t 16560   (13:24 -> 18:00)"
+     },
+     {
+      "c": "(Get-Date).AddDays(-30)",
+      "d": "A date in the past",
+      "n": "Negative numbers go back in time. Use it to find accounts not used in 30 days.",
+      "x": "Today 2026-09-30 -> 2026-08-31"
+     },
+     {
+      "c": "(New-TimeSpan -Start $u.CreatedDateTime -End (Get-Date)).Days",
+      "d": "How many days since something",
+      "n": "Days since an account was created, or since the last sign-in.",
+      "x": "Created 2026-06-01, today 2026-09-30 -> 121"
+     }
+    ]
+   },
+   {
+    "t": "Number formulas",
+    "e": [
+     {
+      "c": "$sku.PrepaidUnits.Enabled - $sku.ConsumedUnits",
+      "d": "Free licences",
+      "n": "Bought minus used.",
+      "x": "Enabled 25, Consumed 22 -> 3 free"
+     },
+     {
+      "c": "[math]::Round($used / $total * 100, 1)",
+      "d": "Percentage, rounded to 1 decimal",
+      "n": "Divide, times 100, round.",
+      "x": "22 / 25 * 100 = 88.0 %"
+     },
+     {
+      "c": "[math]::Round($bytes / 1GB, 2)",
+      "d": "Bytes to gigabytes",
+      "n": "PowerShell knows KB, MB, GB, TB as numbers. 1GB = 1073741824.",
+      "x": "5368709120 / 1GB = 5.00 GB"
+     },
+     {
+      "c": "[long]($s.TotalItemSize.ToString() -replace '.*\\(|,| bytes\\)','')",
+      "d": "Mailbox size text into a number of bytes",
+      "n": "Exchange returns '1.2 GB (1,288,490,188 bytes)'. The regex throws away everything except the digits in brackets.",
+      "x": "\"1.2 GB (1,288,490,188 bytes)\"\n-> 1288490188\n/ 1GB -> 1.2"
+     },
+     {
+      "c": "@{Name='Domain'; Expression={($_.UserPrincipalName -split '@')[1]}}",
+      "d": "Calculated column: a column that does not exist yet",
+      "n": "Put it inside Select-Object. Name is the header, Expression is the formula run on each row.",
+      "x": "Get-MgUser -All | Select-Object DisplayName, @{Name='Domain'; Expression={($_.UserPrincipalName -split '@')[1]}}"
+     }
+    ]
+   }
+  ]
+ }
+];
+const LAB_LINKS = {};
+const AUG = {
+ "connect::Open and close a session": {
+  "concept": "Microsoft 365 is not one system you talk to, it is several services behind one login. Microsoft Graph answers questions about identity: users, sign-in names, groups, licences. Exchange Online answers questions about mail: mailboxes, addresses, permissions, mail flow. Each has its own module and its own Connect command, and a session only lets you use the commands of the door you opened. That is why the rename needed both: Update-MgUser changed the sign-in name in Entra, and Set-Mailbox changed the email address in Exchange. Scopes are a second layer. Even as Global Admin, a Graph session only has the permissions you asked for when you connected, which keeps a read-only report from accidentally being able to change anything.",
+  "figure": "            you (PowerShell)\n           /                \\\n Connect-MgGraph       Connect-ExchangeOnline\n        |                        |\n  Entra ID (Graph)         Exchange Online\n  users, UPN, groups,      mailboxes, SMTP,\n  licences                 aliases, permissions",
+  "traps": [
+   "Running Set-Mailbox in a Graph-only session: 'term not recognized'. You opened the wrong door.",
+   "Connecting with User.Read.All and then trying Update-MgUser: 'Insufficient privileges'. Reconnect with User.ReadWrite.All.",
+   "Leaving a session open for hours before a scheduled change. Tokens usually refresh, but a fresh connect right before is safer."
+  ],
+  "quiz": [
+   {
+    "q": "You need to change someone's sign-in name and their email address. Which two commands, in which modules?",
+    "a": "Update-MgUser -UserPrincipalName (Microsoft Graph) and Set-Mailbox -WindowsEmailAddress (Exchange Online)."
+   },
+   {
+    "q": "Get-MgContext shows Scopes: User.Read.All. Can you block an account?",
+    "a": "No. Blocking uses Update-MgUser, which needs User.ReadWrite.All. Reconnect with that scope."
+   }
+  ]
+ },
+ "pipeline::Filter and pick": {
+  "concept": "The pipe does not pass text, it passes objects: complete little records with properties like DisplayName and AccountEnabled. That is what makes PowerShell different from a normal terminal. Where-Object looks at each object and decides whether it continues, Select-Object decides which properties to keep, and the next command receives real objects it can act on. The key habit is filter left: filter as early as possible, ideally at Microsoft with -Filter, because every object you don't download is time saved. Use Where-Object for checks Graph cannot do, like a regex.",
+  "figure": "Get-MgUser -All  |  Where-Object {...}  |  Select-Object ...  |  Export-Csv\n  500 users           23 users               3 columns           file\n  (everything)        (the ones you want)    (what you need)",
+  "traps": [
+   "Piping Format-Table into Export-Csv. The CSV fills with formatting junk. Format-Table always goes last.",
+   "Forgetting -Property on Get-MgUser, then filtering on a property that is empty for everyone.",
+   "Comparing Import-Csv values to $true. CSV values are text, so compare to \"True\"."
+  ],
+  "quiz": [
+   {
+    "q": "Your Where-Object { $_.Department -eq 'IT' } returns nothing, but IT users exist. Most likely cause?",
+    "a": "Department was not requested in Get-MgUser -Property, so it is empty on every object."
+   },
+   {
+    "q": "What does $_ mean?",
+    "a": "The current object flowing through the pipeline."
+   }
+  ]
+ },
+ "entra::Change users": {
+  "concept": "A user has two names that look the same but live in different places. The UserPrincipalName (UPN) is the sign-in name, stored in Entra ID. The primary SMTP address is the email address, stored in Exchange. Usually they match, and they should, but changing one never changes the other. Teams builds its chat address (SIP) from the UPN, which is why Adelheid's card showed the old chat address for a while after the rename.",
+  "figure": "  UPN   (Entra)     adv@...   <- login, Teams SIP follows this\n  SMTP  (Exchange)  adv@...   <- primary email\n  smtp  (Exchange)  adelheid.vermeyen@...  <- old alias, still receives",
+  "traps": [
+   "Changing only the UPN: people log in with the new name but still send from the old address.",
+   "Changing only the email: people are told the new address but must still log in with the old one.",
+   "Assigning a licence before UsageLocation is set: the command fails."
+  ],
+  "quiz": [
+   {
+    "q": "After a rename, Teams still shows the old chat address. Broken?",
+    "a": "No. Teams syncs from the UPN and can take up to 24 hours."
+   }
+  ]
+ },
+ "exchange::Addresses and aliases": {
+  "traps": [
+   "Using SMTP: (capitals) in @{Add=...} when you meant an alias. Capitals makes it the new primary.",
+   "Removing an old alias right after a rename. Keep it so mail to the old address still arrives."
+  ]
+ },
+ "script::Safety and error handling": {
+  "concept": "A script that changes 22 accounts should behave like a careful person: try one first, keep going when one fails, and write down what happened. That is three tools. Select-Object -First 1 for the test run. try / catch with -ErrorAction Stop so one failing user does not stop the other 21. A [pscustomobject] log exported to CSV so tomorrow you can read exactly who is OK and who needs a fix. Your rename log showed Aiko failing and the other 11 succeeding, which is this pattern working exactly as intended.",
+  "figure": "preview CSV -> test 1 user -> run all (try/catch) -> log.csv\n  nothing      one change    everyone else,         receipt\n  changes                    errors recorded",
+  "traps": [
+   "Pasting a long script line by line, then Ctrl+C. The remaining lines still run. Wrap it in & { }.",
+   "try/catch without -ErrorAction Stop. Many errors are 'non-terminating' and catch never sees them.",
+   "Running the full batch again after a partial failure. Filter out the rows that are already OK first."
+  ],
+  "quiz": [
+   {
+    "q": "Why add -ErrorAction Stop inside a try block?",
+    "a": "Without it, many cmdlet errors are non-terminating: they print red text and continue, so catch never runs."
+   }
+  ]
+ },
+ "formulas::Name and address formulas": {
+  "quiz": [
+   {
+    "q": "Apply the standard formula to Inge Collet.",
+    "a": "I + Co = ico@datacenterunited.com"
+   },
+   {
+    "q": "Apply the fallback formula to Pascal Paquay.",
+    "a": "Pa + P = pap@datacenterunited.com"
+   }
+  ]
+ },
+ "formulas::Time formulas": {
+  "quiz": [
+   {
+    "q": "It is 16:30. How many seconds until 17:00?",
+    "a": "30 minutes x 60 = 1800 seconds."
+   }
+  ]
+ }
+};
+const RECIPES = [
+ {
+  "vol": "entra",
+  "t": "Rename users to the 3-letter standard",
+  "why": "The exact workflow you ran on 29 September, cleaned up.",
+  "steps": [
+   {
+    "c": "Connect-MgGraph -Scopes \"User.ReadWrite.All\"\nConnect-ExchangeOnline",
+    "n": "Open both doors: Graph for the sign-in name, Exchange for the email address."
+   },
+   {
+    "c": "$people = (Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize Unlimited).UserPrincipalName.ToLower()",
+    "n": "Only personal mailboxes, so rooms and shared boxes are skipped."
+   },
+   {
+    "c": "$all = Get-MgUser -All -Property Id,DisplayName,GivenName,Surname,UserPrincipalName,AccountEnabled\n$taken = $all.UserPrincipalName.ToLower()",
+    "n": "Everyone, including blocked accounts, because a blocked user still owns an address."
+   },
+   {
+    "c": "Build $plan with the name formula, skipping blocked, non-personal and non-firstname.lastname accounts",
+    "n": "See Formulas > Name and address formulas."
+   },
+   {
+    "c": "$plan | Export-Csv \"$HOME/Desktop/rename-plan.csv\" -NoTypeInformation -Encoding UTF8",
+    "n": "The preview. Nothing has changed yet. Review it in Excel."
+   },
+   {
+    "c": "Get-EXORecipient -Filter \"EmailAddresses -eq 'smtp:$new'\"",
+    "n": "Alias check on every new address. No output means free."
+   },
+   {
+    "c": "Set-Mailbox ... ; Update-MgUser ...  on ONE user",
+    "n": "Test run. Check with Get-Mailbox x | Select -Expand EmailAddresses."
+   },
+   {
+    "c": "Run the rest inside & { try { ... } catch { ... } } and export a log",
+    "n": "Read rename-log.csv afterwards and fix only the failed rows."
+   }
+  ]
+ },
+ {
+  "vol": "entra",
+  "t": "Offboard a leaver",
+  "why": "Cut access fast, keep the data, stop paying for the licence.",
+  "steps": [
+   {
+    "c": "Update-MgUser -UserId x -AccountEnabled:$false",
+    "n": "Block sign-in first."
+   },
+   {
+    "c": "Revoke-MgUserSignInSession -UserId x",
+    "n": "Kick them out of every app they are already signed into."
+   },
+   {
+    "c": "Set-Mailbox -Identity x -Type Shared",
+    "n": "Keep the mailbox as a shared one."
+   },
+   {
+    "c": "Add-MailboxPermission -Identity x -User manager@ -AccessRights FullAccess",
+    "n": "Give the manager access to the mail."
+   },
+   {
+    "c": "Set-MailboxAutoReplyConfiguration -Identity x -AutoReplyState Enabled -ExternalMessage \"...\"",
+    "n": "Tell external senders who to contact now."
+   },
+   {
+    "c": "Get-MgUserMemberOf -UserId x -All",
+    "n": "Note which groups they were in, then remove them."
+   },
+   {
+    "c": "Set-MgUserLicense -UserId x -AddLicenses @() -RemoveLicenses @($sku.SkuId)",
+    "n": "Free the licence."
+   }
+  ]
+ },
+ {
+  "vol": "exchange",
+  "t": "Give someone access to a shared mailbox",
+  "why": "The most common mailbox ticket.",
+  "steps": [
+   {
+    "c": "Connect-ExchangeOnline",
+    "n": "Exchange door."
+   },
+   {
+    "c": "Add-MailboxPermission -Identity shared@ -User x -AccessRights FullAccess -AutoMapping $true",
+    "n": "Read access, shows up in Outlook by itself."
+   },
+   {
+    "c": "Add-RecipientPermission -Identity shared@ -Trustee x -AccessRights SendAs -Confirm:$false",
+    "n": "Only if they also need to send as the shared mailbox."
+   },
+   {
+    "c": "Get-MailboxPermission -Identity shared@",
+    "n": "Check. Outlook can take up to an hour to show it."
+   }
+  ]
+ },
+ {
+  "vol": "pipeline",
+  "t": "Export a user list for Excel",
+  "why": "Every audit or 'can you send me a list' request.",
+  "steps": [
+   {
+    "c": "Get-MgUser -All -Property DisplayName,UserPrincipalName,Department,AccountEnabled",
+    "n": "Ask for every column you want."
+   },
+   {
+    "c": "| Where-Object AccountEnabled",
+    "n": "Only active users."
+   },
+   {
+    "c": "| Select-Object DisplayName, UserPrincipalName, Department",
+    "n": "Pick columns."
+   },
+   {
+    "c": "| Sort-Object Department, DisplayName",
+    "n": "Sorted by site/department, then name."
+   },
+   {
+    "c": "| Export-Csv \"$HOME/Desktop/users.csv\" -NoTypeInformation -Encoding UTF8",
+    "n": "Opens straight in Excel."
+   }
+  ]
+ },
+ {
+  "vol": "script",
+  "t": "Run a change at a set time",
+  "why": "Changes after working hours without staying at your desk.",
+  "steps": [
+   {
+    "c": "caffeinate -d -t ([int]((Get-Date \"18:00\") - (Get-Date)).TotalSeconds)",
+    "n": "In a second tab. Keeps the Mac awake until 18:00."
+   },
+   {
+    "c": "& {",
+    "n": "Start one block so nothing runs half-way."
+   },
+   {
+    "c": "$wait = (Get-Date \"17:00\") - (Get-Date)\nif ($wait.TotalSeconds -gt 0) { Start-Sleep -Seconds $wait.TotalSeconds }",
+    "n": "Sleep until 17:00."
+   },
+   {
+    "c": "foreach (...) { try { ... -ErrorAction Stop } catch { ... } }",
+    "n": "Do the work, record every result."
+   },
+   {
+    "c": "$log | Export-Csv \"$HOME/Desktop/log.csv\" -NoTypeInformation\n}",
+    "n": "Close the block. Read the log the next morning."
+   }
+  ]
+ }
+];
+const GLOSSARY = [
+ {
+  "vol": "connect",
+  "c": "Module",
+  "d": "A package of commands",
+  "n": "Install once with Install-Module. Microsoft.Graph, ExchangeOnlineManagement, PnP.PowerShell."
+ },
+ {
+  "vol": "connect",
+  "c": "Cmdlet",
+  "d": "A PowerShell command",
+  "n": "Always Verb-Noun: Get-MgUser, Set-Mailbox. Get reads, Set/Update changes, New creates, Remove deletes."
+ },
+ {
+  "vol": "connect",
+  "c": "Scope",
+  "d": "A Graph permission you ask for at login",
+  "n": "User.Read.All, User.ReadWrite.All. The session can only do what its scopes allow."
+ },
+ {
+  "vol": "connect",
+  "c": "Microsoft Graph",
+  "d": "The API behind Entra and most of Microsoft 365",
+  "n": "Every Mg command talks to Graph."
+ },
+ {
+  "vol": "entra",
+  "c": "Entra ID",
+  "d": "Microsoft's identity system (formerly Azure AD)",
+  "n": "Where accounts, sign-in names, groups and licences live."
+ },
+ {
+  "vol": "entra",
+  "c": "UPN",
+  "d": "UserPrincipalName, the sign-in name",
+  "n": "Looks like an email address, lives in Entra. Teams follows it."
+ },
+ {
+  "vol": "entra",
+  "c": "Id (GUID)",
+  "d": "A user's permanent unique code",
+  "n": "Never changes, even when the name does. The safest way to point at a user."
+ },
+ {
+  "vol": "entra",
+  "c": "SKU",
+  "d": "A licence product",
+  "n": "SkuPartNumber is the readable name, SkuId the code you pass to Set-MgUserLicense."
+ },
+ {
+  "vol": "entra",
+  "c": "UsageLocation",
+  "d": "The country a user works in",
+  "n": "Must be set before a licence can be assigned."
+ },
+ {
+  "vol": "exchange",
+  "c": "Primary SMTP",
+  "d": "The main email address",
+  "n": "Shown as SMTP: in capitals. Mail goes out from this address."
+ },
+ {
+  "vol": "exchange",
+  "c": "Alias / proxy address",
+  "d": "An extra address that also receives mail",
+  "n": "Shown as smtp: in lowercase."
+ },
+ {
+  "vol": "exchange",
+  "c": "SIP address",
+  "d": "The Teams chat address",
+  "n": "Shown as SIP: in EmailAddresses."
+ },
+ {
+  "vol": "exchange",
+  "c": "RecipientTypeDetails",
+  "d": "What kind of mailbox it is",
+  "n": "UserMailbox, SharedMailbox, RoomMailbox, EquipmentMailbox."
+ },
+ {
+  "vol": "exchange",
+  "c": "Shared mailbox",
+  "d": "A mailbox without its own login",
+  "n": "Several people open it. No licence needed under 50 GB."
+ },
+ {
+  "vol": "exchange",
+  "c": "CustomAttribute1-15",
+  "d": "Free-text fields on a mailbox",
+  "n": "Your own tags, for example the site. Scripts can read them."
+ },
+ {
+  "vol": "pipeline",
+  "c": "Pipeline",
+  "d": "The | that passes objects along",
+  "n": "Each command receives the objects the previous one produced."
+ },
+ {
+  "vol": "pipeline",
+  "c": "$_",
+  "d": "The current object in the pipeline",
+  "n": "Used inside Where-Object and ForEach-Object braces."
+ },
+ {
+  "vol": "pipeline",
+  "c": "Filter left",
+  "d": "Filter as early as possible",
+  "n": "Prefer -Filter on the Get command over Where-Object afterwards."
+ },
+ {
+  "vol": "script",
+  "c": "Hashtable",
+  "d": "@{ Name = Value }",
+  "n": "A bag of named values. Used for PasswordProfile, @{Add=...} and calculated columns."
+ },
+ {
+  "vol": "script",
+  "c": "Non-terminating error",
+  "d": "An error that does not stop the command",
+  "n": "Red text, but the script keeps going. -ErrorAction Stop turns it into one catch can handle."
+ },
+ {
+  "vol": "formulas",
+  "c": "Regex",
+  "d": "A pattern language for text",
+  "n": "Used with -match and -replace. ^ start, $ end, . any character, \\. a real dot, + one or more."
+ },
+ {
+  "vol": "formulas",
+  "c": "TimeSpan",
+  "d": "The result of subtracting two dates",
+  "n": "Has .Days, .Hours, .TotalSeconds and more."
+ },
+ {
+  "vol": "formulas",
+  "c": "Calculated property",
+  "d": "@{Name=...; Expression={...}}",
+  "n": "A column computed on the fly inside Select-Object."
+ },
+ {
+  "vol": "formulas",
+  "c": "OData filter",
+  "d": "The language of Graph -Filter",
+  "n": "eq, ne, startswith(prop,'x'), and, or. Values in single quotes."
+ }
+];
+const KEY_THEME = "mscodex.theme";
+const KEY_PINS = "mscodex.pins";
+const KEY_VOL = "mscodex.vol";
+const KEY_READ = "mscodex.read";
+const KEY_RESUME = "mscodex.resume";
+
+const railEl = document.getElementById("rail");
+const pageEl = document.getElementById("page");
+const searchEl = document.getElementById("search");
+const toastEl = document.getElementById("toast");
+const pinCountEl = document.getElementById("pinCount");
+
+const state = { vol: "connect", q: "" };
+let pins = [];
+let reads = [];
+let resume = null;
+
+function store(key, fallback){
+  try { const raw = localStorage.getItem(key); return raw === null ? fallback : JSON.parse(raw); }
+  catch (e) { return fallback; }
+}
+function save(key, value){
+  try { localStorage.setItem(key, JSON.stringify(value)); } catch (e) {}
+}
+
+DATA.forEach(vol => {
+  vol.groups.forEach(g => {
+    const extra = AUG[vol.id + "::" + g.t];
+    if (extra) {
+      g.concept = extra.concept;
+      g.figure = extra.figure;
+      g.traps = extra.traps;
+      g.quiz = extra.quiz;
+      g.lab = extra.lab;
+    }
+  });
+});
+
+const FLAT = [];
+DATA.forEach(vol => {
+  vol.groups.forEach(g => {
+    g.e.forEach(entry => {
+      FLAT.push({
+        key: vol.id + "::" + g.t + "::" + entry.c,
+        vol: vol, group: g.t, entry: entry,
+        hay: (entry.c + " " + entry.d + " " + (entry.n || "") + " " + g.t + " " + vol.name).toLowerCase()
+      });
+    });
+  });
+});
+GLOSSARY.forEach(item => {
+  const vol = DATA.filter(v => v.id === item.vol)[0];
+  if (!vol) return;
+  FLAT.push({
+    key: "glossary::" + item.vol + "::" + item.c,
+    vol: vol, group: "Glossary", glossary: true,
+    entry: { c: item.c, d: item.d, n: item.n },
+    hay: (item.c + " " + item.d + " " + item.n + " glossary " + vol.name).toLowerCase()
+  });
+});
+
+function svgIcon(kind){
+  const ns = "http://www.w3.org/2000/svg";
+  const svg = document.createElementNS(ns, "svg");
+  svg.setAttribute("width", "15"); svg.setAttribute("height", "15");
+  svg.setAttribute("viewBox", "0 0 24 24"); svg.setAttribute("fill", "none");
+  svg.setAttribute("stroke", "currentColor"); svg.setAttribute("stroke-width", "1.7");
+  const p = document.createElementNS(ns, "path");
+  if (kind === "pin") p.setAttribute("d", "M6 3h12v18l-6-4.5L6 21z");
+  else p.setAttribute("d", "M9 9h10v12H9zM5 15V3h10v2");
+  svg.appendChild(p);
+  return svg;
+}
+
+function toast(msg){
+  toastEl.textContent = msg;
+  toastEl.classList.add("show");
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => toastEl.classList.remove("show"), 1400);
+}
+
+function copy(text){
+  const done = () => toast("Copied");
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(done, () => toast("Copy blocked by the browser"));
+  } else {
+    const ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); done(); } catch (e) { toast("Copy blocked by the browser"); }
+    ta.remove();
+  }
+}
+
+function el(tag, cls, text){
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text !== undefined) n.textContent = text;
+  return n;
+}
+
+function buildEntry(item){
+  const art = el("article", "entry");
+  const head = el("div", "head");
+  head.tabIndex = 0;
+  head.setAttribute("role", "button");
+  head.setAttribute("aria-expanded", "false");
+
+  const code = el("code", "code", item.entry.c);
+  const gloss = el("p", "gloss", item.entry.d);
+  const tools = el("div", "tools");
+
+  const pinBtn = document.createElement("button");
+  pinBtn.appendChild(svgIcon("pin"));
+  pinBtn.title = "Pin this entry";
+  pinBtn.setAttribute("aria-label", "Pin this entry");
+  if (pins.indexOf(item.key) !== -1) pinBtn.classList.add("pinned");
+  pinBtn.addEventListener("click", ev => {
+    ev.stopPropagation();
+    const i = pins.indexOf(item.key);
+    if (i === -1) { pins.push(item.key); pinBtn.classList.add("pinned"); toast("Pinned"); }
+    else { pins.splice(i, 1); pinBtn.classList.remove("pinned"); toast("Unpinned"); }
+    save(KEY_PINS, pins);
+    pinCountEl.textContent = pins.length;
+    if (state.vol === "pins" && !state.q) render();
+  });
+
+  const copyBtn = document.createElement("button");
+  copyBtn.appendChild(svgIcon("copy"));
+  copyBtn.title = "Copy";
+  copyBtn.setAttribute("aria-label", "Copy");
+  copyBtn.addEventListener("click", ev => { ev.stopPropagation(); copy(item.entry.c); });
+
+  tools.appendChild(pinBtn);
+  tools.appendChild(copyBtn);
+  head.appendChild(code);
+  head.appendChild(gloss);
+  head.appendChild(tools);
+
+  const note = el("div", "note");
+  if (item.entry.n) note.appendChild(el("p", null, item.entry.n));
+  if (item.entry.x) note.appendChild(el("pre", null, item.entry.x));
+
+  const toggle = () => {
+    const open = art.classList.toggle("open");
+    head.setAttribute("aria-expanded", open ? "true" : "false");
+  };
+  head.addEventListener("click", toggle);
+  head.addEventListener("keydown", ev => {
+    if (ev.key === "Enter" || ev.key === " ") { ev.preventDefault(); toggle(); }
+  });
+
+  art.appendChild(head);
+  art.appendChild(note);
+  return art;
+}
+
+function volById(id){ return DATA.filter(v => v.id === id)[0]; }
+function readKey(volId, title){ return volId + "::" + title; }
+function isRead(volId, title){ return reads.indexOf(readKey(volId, title)) !== -1; }
+function volProgress(vol){
+  const done = vol.groups.filter(g => isRead(vol.id, g.t)).length;
+  return { done: done, total: vol.groups.length };
+}
+
+function pageHead(title, blurb, count){
+  const wrap = el("div", "vol-head");
+  wrap.appendChild(el("h1", null, title));
+  if (blurb) wrap.appendChild(el("p", null, blurb));
+  if (count) wrap.appendChild(el("span", "count", count));
+  return wrap;
+}
+
+function buildQuiz(quiz){
+  const block = el("div", "block");
+  block.appendChild(el("h3", null, "Check yourself"));
+  quiz.forEach(item => {
+    const wrap = el("div", "qa");
+    const b = el("button", null, item.q);
+    const a = el("p", null, item.a);
+    b.addEventListener("click", () => wrap.classList.toggle("open"));
+    wrap.appendChild(b); wrap.appendChild(a);
+    block.appendChild(wrap);
+  });
+  return block;
+}
+
+function buildSection(vol, g, gi, total){
+  const sec = el("section", "group");
+  sec.id = vol.id + "-" + gi;
+
+  const head = el("div", "sec-head");
+  const num = el("span", "sec-num", (gi + 1) + " / " + total);
+  if (isRead(vol.id, g.t)) num.classList.add("done");
+  head.appendChild(num);
+  head.appendChild(el("h2", null, g.t));
+
+  const readBtn = el("button", "readbtn", isRead(vol.id, g.t) ? "Read" : "Mark read");
+  if (isRead(vol.id, g.t)) readBtn.classList.add("done");
+  readBtn.addEventListener("click", () => {
+    const k = readKey(vol.id, g.t);
+    const i = reads.indexOf(k);
+    if (i === -1) {
+      reads.push(k);
+      resume = { vol: vol.id, gi: Math.min(gi + 1, total - 1) };
+      save(KEY_RESUME, resume);
+    } else {
+      reads.splice(i, 1);
+    }
+    save(KEY_READ, reads);
+    render();
+    const target = document.getElementById(vol.id + "-" + gi);
+    if (target) target.scrollIntoView({ block: "start" });
+  });
+  head.appendChild(readBtn);
+  sec.appendChild(head);
+
+  if (g.concept) {
+    const c = el("div", "concept");
+    c.appendChild(el("p", null, g.concept));
+    if (g.figure) c.appendChild(el("pre", null, g.figure));
+    sec.appendChild(c);
+  }
+
+  g.e.forEach(entry => {
+    sec.appendChild(buildEntry({ key: vol.id + "::" + g.t + "::" + entry.c, vol: vol, group: g.t, entry: entry }));
+  });
+
+  if (g.traps) {
+    const block = el("div", "block");
+    block.appendChild(el("h3", null, "Where this goes wrong"));
+    const ul = document.createElement("ul");
+    g.traps.forEach(t => ul.appendChild(el("li", null, t)));
+    block.appendChild(ul);
+    sec.appendChild(block);
+  }
+
+  if (g.quiz) sec.appendChild(buildQuiz(g.quiz));
+
+  const foot = el("div", "sec-foot");
+  if (g.lab && LAB_LINKS[vol.id]) {
+    const a = document.createElement("a");
+    a.href = LAB_LINKS[vol.id].href;
+    a.textContent = "Drill this in " + LAB_LINKS[vol.id].label;
+    foot.appendChild(a);
+  }
+  const printBtn = el("button", null, "Print this section");
+  printBtn.addEventListener("click", () => {
+    document.body.classList.add("print-one");
+    sec.classList.add("print-me");
+    window.print();
+    setTimeout(() => {
+      document.body.classList.remove("print-one");
+      sec.classList.remove("print-me");
+    }, 500);
+  });
+  foot.appendChild(printBtn);
+
+  if (gi + 1 < total) {
+    const next = el("button", "next", "Next: " + vol.groups[gi + 1].t);
+    next.addEventListener("click", () => {
+      const target = document.getElementById(vol.id + "-" + (gi + 1));
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    foot.appendChild(next);
+  }
+  sec.appendChild(foot);
+  return sec;
+}
+
+function renderVolume(vol){
+  pageEl.style.setProperty("--vc", vol.color);
+  const total = vol.groups.reduce((a, g) => a + g.e.length, 0);
+  const p = volProgress(vol);
+  pageEl.appendChild(pageHead(vol.name, vol.blurb,
+    vol.groups.length + " sections, " + total + " entries, " + p.done + " read"));
+
+  if (resume && resume.vol === vol.id && resume.gi > 0 && resume.gi < vol.groups.length) {
+    const bar = el("div", "resume");
+    const s = document.createElement("span");
+    s.appendChild(document.createTextNode("You stopped at section " + (resume.gi + 1) + ": "));
+    s.appendChild(el("b", null, vol.groups[resume.gi].t));
+    bar.appendChild(s);
+    const b = el("button", null, "Continue");
+    b.addEventListener("click", () => {
+      const target = document.getElementById(vol.id + "-" + resume.gi);
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    bar.appendChild(b);
+    pageEl.appendChild(bar);
+  }
+
+  vol.groups.forEach((g, gi) => pageEl.appendChild(buildSection(vol, g, gi, vol.groups.length)));
+}
+
+function renderPins(){
+  pageEl.style.setProperty("--vc", "var(--pin)");
+  const items = FLAT.filter(i => pins.indexOf(i.key) !== -1);
+  pageEl.appendChild(pageHead("Pinned", "The entries you keep coming back to.", items.length + " pinned"));
+  if (!items.length) {
+    const box = el("div", "empty");
+    box.appendChild(el("h2", null, "Nothing pinned yet"));
+    box.appendChild(el("p", null, "Pin an entry with the bookmark button and it collects here, across every volume."));
+    pageEl.appendChild(box);
+    return;
+  }
+  DATA.forEach(vol => {
+    const mine = items.filter(i => i.vol.id === vol.id);
+    if (!mine.length) return;
+    const sec = el("section", "group");
+    sec.style.setProperty("--vc", vol.color);
+    const head = el("div", "sec-head");
+    head.appendChild(el("h2", null, vol.name));
+    sec.appendChild(head);
+    mine.forEach(i => sec.appendChild(buildEntry(i)));
+    pageEl.appendChild(sec);
+  });
+}
+
+function renderRecipes(){
+  pageEl.style.setProperty("--vc", "var(--accent)");
+  pageEl.appendChild(pageHead("Recipes",
+    "Whole tasks, start to finish, with the reasoning between the steps. Look here when you know what you want to achieve but not the order to do it in.",
+    RECIPES.length + " recipes"));
+  DATA.forEach(vol => {
+    const mine = RECIPES.filter(r => r.vol === vol.id);
+    if (!mine.length) return;
+    const sec = el("section", "group");
+    sec.style.setProperty("--vc", vol.color);
+    const head = el("div", "sec-head");
+    head.appendChild(el("h2", null, vol.name));
+    sec.appendChild(head);
+    mine.forEach(r => {
+      const card = el("div", "recipe");
+      card.appendChild(el("h2", null, r.t));
+      card.appendChild(el("p", null, r.why));
+      r.steps.forEach((s, i) => {
+        const step = el("div", "step");
+        step.appendChild(el("span", "n", String(i + 1)));
+        step.appendChild(el("code", null, s.c));
+        step.appendChild(el("p", null, s.n));
+        card.appendChild(step);
+      });
+      sec.appendChild(card);
+    });
+    pageEl.appendChild(sec);
+  });
+}
+
+function renderGlossary(){
+  pageEl.style.setProperty("--vc", "var(--accent)");
+  pageEl.appendChild(pageHead("Glossary",
+    "Every term the labs assume you already know, in one line each.",
+    GLOSSARY.length + " terms"));
+  DATA.forEach(vol => {
+    const mine = FLAT.filter(i => i.glossary && i.vol.id === vol.id);
+    if (!mine.length) return;
+    const sec = el("section", "group");
+    sec.style.setProperty("--vc", vol.color);
+    const head = el("div", "sec-head");
+    head.appendChild(el("h2", null, vol.name));
+    sec.appendChild(head);
+    mine.forEach(i => sec.appendChild(buildEntry(i)));
+    pageEl.appendChild(sec);
+  });
+}
+
+function renderSearch(q){
+  const terms = q.toLowerCase().split(/\s+/).filter(Boolean);
+  const hits = FLAT.filter(i => terms.every(t => i.hay.indexOf(t) !== -1));
+  hits.sort((a, b) => {
+    const sa = a.entry.c.toLowerCase().indexOf(terms[0]) !== -1 ? 0 : 1;
+    const sb = b.entry.c.toLowerCase().indexOf(terms[0]) !== -1 ? 0 : 1;
+    return sa - sb;
+  });
+  pageEl.style.setProperty("--vc", "var(--accent)");
+  pageEl.appendChild(pageHead("Search", null, hits.length + " matches for " + q));
+  if (!hits.length) {
+    const box = el("div", "empty");
+    box.appendChild(el("h2", null, "No match"));
+    box.appendChild(el("p", null, "Try a shorter term, or the plain word rather than the full command. Search looks at commands, descriptions, notes and the glossary."));
+    pageEl.appendChild(box);
+    return;
+  }
+  const sec = el("section", "group");
+  hits.slice(0, 80).forEach(i => {
+    const where = el("span", "hit-where", i.vol.name + " / " + i.group);
+    const node = buildEntry(i);
+    node.style.setProperty("--vc", i.vol.color);
+    node.insertBefore(where, node.firstChild);
+    sec.appendChild(node);
+  });
+  pageEl.appendChild(sec);
+}
+
+function railButton(id, name, sub, sigil, color, progress){
+  const b = el("button", "vol");
+  b.style.setProperty("--vc", color);
+  if (state.vol === id && !state.q) b.setAttribute("aria-current", "true");
+  const s = el("span", "sigil", sigil);
+  const meta = el("span", "vol-meta");
+  meta.appendChild(el("b", null, name));
+  meta.appendChild(el("small", null, sub));
+  if (progress) {
+    const bar = el("div", "bar");
+    const fill = document.createElement("i");
+    fill.style.width = Math.round(100 * progress.done / progress.total) + "%";
+    bar.appendChild(fill);
+    meta.appendChild(bar);
+  }
+  b.appendChild(s); b.appendChild(meta);
+  b.addEventListener("click", () => {
+    state.vol = id;
+    state.q = ""; searchEl.value = "";
+    save(KEY_VOL, id);
+    document.body.classList.remove("nav-open");
+    render();
+    window.scrollTo(0, 0);
+  });
+  railEl.appendChild(b);
+}
+
+function renderRail(){
+  railEl.textContent = "";
+  railEl.appendChild(el("div", "rail-label", "Volumes"));
+  DATA.forEach(v => {
+    const p = volProgress(v);
+    railButton(v.id, v.name, p.done + " of " + p.total + " sections read", v.sigil, v.color, p);
+  });
+  railEl.appendChild(el("div", "rail-sep"));
+  railButton("recipes", "Recipes", RECIPES.length + " whole tasks", "RC", "var(--accent)");
+  railButton("glossary", "Glossary", GLOSSARY.length + " terms", "GL", "var(--accent)");
+  railButton("pins", "Pinned", pins.length + " saved", "PN", "var(--pin)");
+
+  if (!state.q) {
+    const vol = volById(state.vol);
+    if (vol) {
+      railEl.appendChild(el("div", "rail-sep"));
+      railEl.appendChild(el("div", "rail-label", "Sections"));
+      vol.groups.forEach((g, gi) => {
+        const j = el("button", "jump", (isRead(vol.id, g.t) ? "\u2713 " : "") + (gi + 1) + ". " + g.t);
+        if (isRead(vol.id, g.t)) j.classList.add("on");
+        j.addEventListener("click", () => {
+          const target = document.getElementById(vol.id + "-" + gi);
+          if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+          document.body.classList.remove("nav-open");
+        });
+        railEl.appendChild(j);
+      });
+    }
+  }
+}
+
+function render(){
+  pageEl.textContent = "";
+  if (state.q) renderSearch(state.q);
+  else if (state.vol === "pins") renderPins();
+  else if (state.vol === "recipes") renderRecipes();
+  else if (state.vol === "glossary") renderGlossary();
+  else {
+    const vol = volById(state.vol) || DATA[0];
+    state.vol = vol.id;
+    renderVolume(vol);
+  }
+  renderRail();
+}
+
+function setTheme(mode){
+  document.documentElement.setAttribute("data-theme", mode);
+  const meta = document.querySelector("meta[name=theme-color]");
+  if (meta) meta.setAttribute("content", mode === "night" ? "#0e1419" : "#e7ebef");
+  save(KEY_THEME, mode);
+}
+
+document.getElementById("themeBtn").addEventListener("click", () => {
+  const now = document.documentElement.getAttribute("data-theme");
+  setTheme(now === "night" ? "day" : "night");
+});
+
+document.getElementById("pinBtn").addEventListener("click", () => {
+  state.vol = "pins"; state.q = ""; searchEl.value = "";
+  render(); window.scrollTo(0, 0);
+});
+
+document.getElementById("drawerBtn").addEventListener("click", () => {
+  document.body.classList.toggle("nav-open");
+});
+document.getElementById("scrim").addEventListener("click", () => {
+  document.body.classList.remove("nav-open");
+});
+
+let searchTimer;
+searchEl.addEventListener("input", () => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    state.q = searchEl.value.trim();
+    render();
+  }, 120);
+});
+
+document.addEventListener("keydown", ev => {
+  const inField = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+  if (ev.key === "/" && !inField) { ev.preventDefault(); searchEl.focus(); searchEl.select(); }
+  if (ev.key === "Escape") {
+    document.body.classList.remove("nav-open");
+    if (state.q) { searchEl.value = ""; state.q = ""; render(); }
+    searchEl.blur();
+  }
+});
+
+pins = store(KEY_PINS, []);
+if (!Array.isArray(pins)) pins = [];
+reads = store(KEY_READ, []);
+if (!Array.isArray(reads)) reads = [];
+resume = store(KEY_RESUME, null);
+pinCountEl.textContent = pins.length;
+setTheme(store(KEY_THEME, "day"));
+state.vol = store(KEY_VOL, "connect");
+render();
+</script>
+</body>
+</html>

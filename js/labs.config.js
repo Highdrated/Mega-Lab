@@ -78,6 +78,15 @@ const LABS_CONFIG = [
     glyph: '<path d="M3 3h4a2 2 0 0 1 1 1v9a2 2 0 0 0-1-1H3z"/><path d="M13 3H9a2 2 0 0 0-1 1v9a2 2 0 0 1 1-1h4z"/>'
     },
   {
+    id: "mscodex",
+    name: "Codex Microsoft",
+    tag: "Reference",
+    path: "labs/mscodex.html",
+    ring: "ring-inner",
+    angle: 290,
+    glyph: '<rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/>'
+  },
+  {
     id: "modle",
     name: "Modle",
     tag: "Math",
