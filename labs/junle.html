@@ -292,6 +292,13 @@
   #track { padding: 24px 0 24px; max-width: 1000px; width: 100%; align-self: center; }
   .track-head { font-size: 11px; letter-spacing: 3px; color: var(--dim); margin-bottom: 6px; }
   .track-sub { font-size: 12px; color: var(--dim); margin-bottom: 18px; opacity: 0.8; }
+  #tracktabs { display: flex; gap: 10px; margin-bottom: 20px; flex-wrap: wrap; }
+  .tracktab { font-size: 11px; letter-spacing: 2px; color: var(--dim); border: 1px solid var(--line); border-radius: 3px; padding: 7px 14px; cursor: pointer; background: none; font-family: inherit; }
+  .tracktab:hover { color: var(--text); }
+  .tracktab.on { color: var(--green); border-color: var(--green); }
+  .stage.planned { opacity: 0.55; }
+  .stage.planned .stage-dot { border-color: var(--line); border-style: dashed; background: none; box-shadow: none; }
+  .stage-planned-tag { font-size: 10px; letter-spacing: 2px; color: var(--amber); border: 1px dashed var(--line); border-radius: 3px; padding: 3px 9px; display: inline-block; margin-top: 10px; }
   .stage {
     display: grid;
     grid-template-columns: 34px 1fr;
@@ -1803,8 +1810,9 @@
   </div>
 
   <div id="track" class="hidden">
-    <div class="track-head">LEARNING TRACK &#8212; from zero to a switch you can install</div>
-    <div class="track-sub">Follow it top to bottom. Each stage unlocks the next by getting you to competence, not just clicks.</div>
+    <div class="track-head" id="track-head">LEARNING TRACK</div>
+    <div class="track-sub" id="track-sub">Follow it top to bottom. Each stage unlocks the next by getting you to competence, not just clicks.</div>
+    <div id="tracktabs"></div>
     <div id="trackrows"></div>
   </div>
 
@@ -3146,7 +3154,8 @@
     });
     g("ss-mastery").textContent = seen ? Math.round(sum / seen) + "%" : "0%";
     const idx = nextStageIndex();
-    g("ss-nextstage").textContent = idx >= TRACK.length ? "ALL DONE" : TRACK[idx].label;
+    const _cs = currentStages();
+    g("ss-nextstage").textContent = idx >= _cs.length ? "ALL DONE" : _cs[idx].label;
   }
   setTimeout(function() { paintReviewBadge(); paintMixCard(); paintTnyCard(); buildOnly(); paintTrackCard(); paintSessionStrip(); }, 0);
 
@@ -3453,6 +3462,29 @@
     { topic: "storm", label: "STORM CONTROL", blurb: "Cap floods before they drown the CPU.", modules: ["storm"], guide: "storm" },
     { topic: "commit", label: "COMMIT MODEL", blurb: "Candidate, compare, confirm, rollback.", modules: ["rescue", "commit"], guide: "commit" }
   ];
+
+  const TRACK_DC = [
+    { topic: "vlans", label: "ETHERNET SWITCHING & VLANs", blurb: "Access ports, trunks, tagging \u2014 the fabric's ground floor.", modules: ["basics", "vlans"], guide: null },
+    { topic: "dc-l2sec", label: "LAYER 2 SECURITY", blurb: "DHCP snooping, dynamic ARP inspection, MAC limiting.", modules: [], guide: null, planned: true },
+    { topic: "lacp", label: "LINK AGGREGATION", blurb: "Bundle links into one logical pipe (ae).", modules: ["lacp"], guide: "lacp" },
+    { topic: "dc-loadbal", label: "LOAD BALANCING (ECMP)", blurb: "Spread traffic across equal-cost paths.", modules: [], guide: null, planned: true },
+    { topic: "dc-rpolicy", label: "ROUTING POLICY", blurb: "Match-and-act: control which routes go where.", modules: [], guide: null, planned: true },
+    { topic: "dc-fbf", label: "FILTER-BASED FORWARDING", blurb: "Steer packets by filter, not just destination.", modules: [], guide: null, planned: true },
+    { topic: "dc-rinstance", label: "ROUTING INSTANCES", blurb: "Separate routing tables on one box (VRFs).", modules: [], guide: null, planned: true },
+    { topic: "ospf", label: "OSPF", blurb: "Interior routing that heals itself.", modules: ["routing", "ospf"], guide: "ospf" },
+    { topic: "bgp", label: "BGP", blurb: "Talk to the spine and the outside world.", modules: ["bgp"], guide: "bgp" },
+    { topic: "dc-gr", label: "GRACEFUL RESTART", blurb: "Keep forwarding while the control plane restarts.", modules: [], guide: null, planned: true },
+    { topic: "dc-bfd", label: "BFD", blurb: "Sub-second failure detection for your protocols.", modules: [], guide: null, planned: true },
+    { topic: "dc-evpn", label: "EVPN-VXLAN", blurb: "The DC overlay: MAC/IP mobility over an IP fabric.", modules: [], guide: null, planned: true }
+  ];
+
+  const TRACKS = {
+    junos: { name: "JNCIA-JUNOS", stages: TRACK },
+    dc: { name: "DATA CENTER (JNCIA-DC)", stages: TRACK_DC }
+  };
+  let activeTrack = "junos";
+  try { const _t = localStorage.getItem("junle_track"); if (_t && (_t === "junos" || _t === "dc")) activeTrack = _t; } catch (e) {}
+  function currentStages() { return (TRACKS[activeTrack] || TRACKS.junos).stages; }
 
   let mastery = {};
   function loadMastery() {
@@ -4135,14 +4167,40 @@
   const trackEl = document.getElementById("trackrows");
 
   function nextStageIndex() {
-    for (let i = 0; i < TRACK.length; i++) {
-      if (masteryLevel(TRACK[i].topic) < 2) return i;
+    const st = currentStages();
+    for (let i = 0; i < st.length; i++) {
+      if (st[i].planned) continue;
+      if (masteryLevel(st[i].topic) < 2) return i;
     }
-    return TRACK.length;
+    return st.length;
+  }
+
+  function setActiveTrack(k) {
+    if (!TRACKS[k]) return;
+    activeTrack = k;
+    try { localStorage.setItem("junle_track", k); } catch (e) {}
+    buildTrack();
+    paintSessionStrip();
   }
 
   function buildTrack() {
     trackEl.innerHTML = "";
+    const tabsWrap = document.getElementById("tracktabs");
+    if (tabsWrap) {
+      tabsWrap.innerHTML = "";
+      Object.keys(TRACKS).forEach(function(k) {
+        const tb = document.createElement("button");
+        tb.className = "tracktab" + (k === activeTrack ? " on" : "");
+        tb.textContent = TRACKS[k].name;
+        tb.addEventListener("click", function() { setActiveTrack(k); });
+        tabsWrap.appendChild(tb);
+      });
+    }
+    const subEl = document.getElementById("track-sub");
+    if (subEl) subEl.textContent = activeTrack === "dc"
+      ? "JNCIA-DC syllabus. Built stages are drillable now; PLANNED stages are next in line."
+      : "Follow it top to bottom. Each stage unlocks the next by getting you to competence, not just clicks.";
+    const stages = currentStages();
     const weak = weakestTopics(3).filter(function(t) { return masteryPct(t) < 80; });
     if (weak.length) {
       const banner = document.createElement("div");
@@ -4158,7 +4216,31 @@
       trackEl.appendChild(banner);
     }
     const nextIdx = nextStageIndex();
-    TRACK.forEach(function(st, i) {
+    stages.forEach(function(st, i) {
+      if (st.planned) {
+        const prow = document.createElement("div");
+        prow.className = "stage planned";
+        const pdot = document.createElement("div");
+        pdot.className = "stage-dot";
+        const pbody = document.createElement("div");
+        pbody.className = "stage-body";
+        const ptitle = document.createElement("div");
+        ptitle.className = "stage-title";
+        ptitle.textContent = (i + 1) + ".  " + st.label;
+        const pblurb = document.createElement("div");
+        pblurb.className = "stage-blurb";
+        pblurb.textContent = st.blurb;
+        const ptag = document.createElement("div");
+        ptag.className = "stage-planned-tag";
+        ptag.textContent = "PLANNED — not built yet";
+        pbody.appendChild(ptitle);
+        pbody.appendChild(pblurb);
+        pbody.appendChild(ptag);
+        prow.appendChild(pdot);
+        prow.appendChild(pbody);
+        trackEl.appendChild(prow);
+        return;
+      }
       const lv = masteryLevel(st.topic);
       const pct = masteryPct(st.topic);
       const row = document.createElement("div");
@@ -4711,7 +4793,7 @@
     }
     drill = queue.shift();
     fails = 0;
-    if (reviewRun) {
+    {
       const rm = requiredMode(drill);
       if ((rm === "oper" || rm === "config") && cliMode !== rm && cliMode !== "login" && cliMode !== "shell") {
         cliMode = rm;
@@ -5105,7 +5187,9 @@
       const isDrill = drill && drill.answers.some(function(a) { return normalize(a) === typed; });
       if (cliMode === "config") {
         if (isDrill) {
-          speak("you're already in configuration mode — 'exit' first, then show me you can get back in.", "hint");
+          speak("already in configuration mode.", "sys");
+          handleCorrect(drill);
+          paintStats();
         } else {
           speak("already in configuration mode.", "sys");
         }
@@ -5135,7 +5219,9 @@
           return;
         }
         if (isDrill) {
-          speak("you're in OPER — there's nothing to leave yet. 'configure' to get in, then exit.", "hint");
+          speak("already back in operational mode.", "sys");
+          handleCorrect(drill);
+          paintStats();
           return;
         }
         speak("exit here would log you out. staying.", "sys");
