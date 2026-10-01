@@ -1329,13 +1329,35 @@ function pingRun(dev, target, opts){
     return { ok: false, lines: lines("err", why) };
   }
   if(srcIfaces.some(i => i.ip === target))
-    return { ok: true, lines: lines("out", pingOkText(target, 64, 0.05)) };
-  const srcIp = (routeLookup(dev, target) || {}).iface ? routeLookup(dev, target).iface.ip : srcIfaces[0].ip;
+    return { ok: true, lines: lines("out", pingOkText(target, 64, 0.05, opts)) };
+  let srcIp;
+  if(opts.source){
+    const own = srcIfaces.find(i => i.ip === opts.source);
+    if(!own) return { ok: false, lines: lines("err",
+      "ping: sendto: Can't assign requested address\n" +
+      "  (" + opts.source + " is not an address on this device — source must be one of its own:\n" +
+      "   " + (srcIfaces.map(i => i.ip).join(", ") || "none") + ")") };
+    srcIp = opts.source;
+  } else {
+    srcIp = (routeLookup(dev, target) || {}).iface ? routeLookup(dev, target).iface.ip : srcIfaces[0].ip;
+  }
+  if(opts.dnf){
+    const eg = (routeLookup(dev, target) || {}).iface;
+    const mtu = (eg && eg.mtu) || 1514;
+    const need = pingSize(opts) + 28;
+    if(need > mtu)
+      return { ok: false, lines: lines("err",
+        "ping: sendto: Message too long\n" +
+        "  (" + need + " bytes with do-not-fragment set, but " + ((eg && eg.name) || "the egress interface") +
+        " has MTU " + mtu + ")\n" +
+        "  This is the real path-MTU test: without do-not-fragment the packet would just be\n" +
+        "  fragmented and you would never learn the link was too narrow.") };
+  }
   const pkt = { src: srcIp, dst: target, proto: opts.proto || "icmp" };
   const natTable = [], natEvents = [];
   const walkOpts = { ...opts, natTable, natEvents };
   const fwd = pingWalk(dev, pkt, walkOpts);
-  const head = `PING ${target} (${target}): 56 data bytes`;
+  const head = `PING ${target} (${target}): ${pingSize(opts)} data bytes`;
   if(fwd.ok){
     const gremlin = degradedLoss(fwd.segs);
     if(gremlin){
@@ -1343,7 +1365,7 @@ function pingRun(dev, target, opts){
       return { ok: false, lines: [
         { cls: "out", text: head },
         { cls: "err", text: "Request timeout — packets are being LOST mid-path, not blocked.\n(intermittent loss smells like a bad cable or dying optic: run show interfaces statistics and look for climbing errors)" +
-          "\n\n--- " + target + " ping statistics ---\n2 packets transmitted, 0 packets received, 100.0% packet loss" }] };
+          "\n\n" + pingLostText(target, opts) }] };
     }
   }
   const anim = (segs, ok, revSegs, meta) => {
@@ -1353,7 +1375,7 @@ function pingRun(dev, target, opts){
     anim(fwd.segs, false, null, { short: fwd.short, srcDev: dev, natEvents });
     return { ok: false, lines: [
       { cls: "out", text: head },
-      { cls: "err", text: fwd.text + "\n\n--- " + target + " ping statistics ---\n2 packets transmitted, 0 packets received, 100.0% packet loss" }] };
+      { cls: "err", text: fwd.text + "\n\n" + pingLostText(target, opts) }] };
   }
   countSegs(fwd.segs, 2);
   // reply must be able to route back (to the NAT address, if we were translated)
@@ -1366,11 +1388,11 @@ function pingRun(dev, target, opts){
       { cls: "out", text: head },
       { cls: "err", text:
         `Request timeout  (your ping REACHED ${target}, but the reply died on the way back:\n  ${rev.text}\n  — asymmetric routing: the far side needs a route back to ${backTo})` +
-        "\n\n--- " + target + " ping statistics ---\n2 packets transmitted, 0 packets received, 100.0% packet loss" }] };
+        "\n\n" + pingLostText(target, opts) }] };
   }
   anim(fwd.segs, true, rev.segs, { natEvents });
   const ttl = 64 - fwd.hops.length;
-  return { ok: true, lines: lines("out", pingOkText(target, ttl, 0.2 + fwd.hops.length * 0.17)) };
+  return { ok: true, lines: lines("out", pingOkText(target, ttl, 0.2 + fwd.hops.length * 0.17, opts)) };
 }
 
 /* ============================================================
@@ -1423,17 +1445,55 @@ function runDhclient(host){
     `\nDHCPACK — eth0: ${ip}/${pool.net.bits}` +
     (pool.router ? `, default gateway ${pool.router}` : "  (no router option in the pool — no gateway was set)"));
 }
-function pingOkText(target, ttl, ms){
-  const t1 = ms.toFixed(3), t2 = (ms * 0.92).toFixed(3);
-  return `PING ${target} (${target}): 56 data bytes\n` +
-    `64 bytes from ${target}: icmp_seq=0 ttl=${ttl} time=${t1} ms\n` +
-    `64 bytes from ${target}: icmp_seq=1 ttl=${ttl} time=${t2} ms\n\n` +
-    `--- ${target} ping statistics ---\n2 packets transmitted, 2 packets received, 0.0% packet loss`;
+function pingCount(opts){
+  const n = parseInt((opts || {}).count, 10);
+  return (!isNaN(n) && n >= 1) ? Math.min(n, 50) : 2;
 }
-function doDevicePing(dev, target){
-  const res = pingRun(dev, target, { learn: true, animate: true });
+function pingSize(opts){
+  const n = parseInt((opts || {}).size, 10);
+  return (!isNaN(n) && n >= 0) ? Math.min(n, 65468) : 56;
+}
+function pingStatsText(target, sent, recv){
+  const loss = sent ? ((sent - recv) * 100 / sent) : 0;
+  return `--- ${target} ping statistics ---\n` +
+    `${sent} packets transmitted, ${recv} packets received, ${loss.toFixed(1)}% packet loss`;
+}
+function pingLostText(target, opts){
+  return pingStatsText(target, pingCount(opts), 0);
+}
+function pingOkText(target, ttl, ms, opts){
+  const n = pingCount(opts), size = pingSize(opts), bytes = size + 8;
+  const head = `PING ${target} (${target}): ${size} data bytes`;
+  const rtt = i => Math.max(0.001, ms * (1 - i * 0.04));
+  const stats = pingStatsText(target, n, n);
+  const mn = rtt(n - 1), mx = rtt(0), avg = (mn + mx) / 2;
+  const summary = `\nround-trip min/avg/max/stddev = ${mn.toFixed(3)}/${avg.toFixed(3)}/${mx.toFixed(3)}/0.0${n % 10} ms`;
+  if(opts && opts.rapid)
+    return head + "\n" + "!".repeat(n) + "\n\n" + stats + summary;
+  const rows = [];
+  for(let i = 0; i < n; i++)
+    rows.push(`${bytes} bytes from ${target}: icmp_seq=${i} ttl=${ttl} time=${rtt(i).toFixed(3)} ms`);
+  return head + "\n" + rows.join("\n") + "\n\n" + stats + summary;
+}
+function doDevicePing(dev, target, opts){
+  const res = pingRun(dev, target, { ...(opts || {}), learn: true, animate: true });
   touchState();
   return res.lines;
+}
+function pingOptsFrom(keys){
+  const o = {};
+  for(let i = 2; i < keys.length; i++){
+    const k = keys[i];
+    if(k === "rapid") o.rapid = true;
+    else if(k === "do-not-fragment") o.dnf = true;
+    else if(k === "count") o.count = keys[++i];
+    else if(k === "size") o.size = keys[++i];
+    else if(k === "source") o.source = keys[++i];
+  }
+  return o;
+}
+function pingWithOpts(dev, keys){
+  return joinLines(doDevicePing(dev, keys[1], pingOptsFrom(keys)));
 }
 function doTraceroute(dev, target){
   if(!validIp(target)) return lines("err", "usage: traceroute <ip>");
@@ -1879,12 +1939,12 @@ function treeToDisplaySet(t, prefix, annots, inacts){
     if(k === ANNOT_KEY || k === INACT_KEY) continue;
     const here = [...prefix, k];
     if(v === true) out.push("set " + here.join(" "));
-    else if(Array.isArray(v)) v.forEach(item => out.push("set " + [...here, item].join(" ")));
+    else if(Array.isArray(v)) v.forEach(item => out.push("set " + [...here, cfgQuote(item)].join(" ")));
     else if(v && typeof v === "object"){
       if(!Object.keys(v).length) out.push("set " + here.join(" "));
       else out.push(...treeToDisplaySet(v, here, annots, inacts));
     }
-    else out.push("set " + [...here, v].join(" "));
+    else out.push("set " + [...here, cfgQuote(v)].join(" "));
     const note = annots[here.join(" ")];
     if(note) out.push("annotate " + here.join(" ") + ' "' + note + '"');
     if(inacts[here.join(" ")]) out.push("deactivate " + here.join(" "));
@@ -2132,6 +2192,237 @@ function showCompareRollbackCmd(dev, keys){
   return d || "(the active configuration is identical to rollback " + n + ")";
 }
 
+function showConfigPathCmd(dev, path){
+  const tree = committedTree(dev);
+  if(!path || !path.length) return showConfigCmd(dev);
+  if(cfgIsEmpty(tree))
+    return "## (factory-default — empty configuration)\n" +
+      "## show configuration reads the ACTIVE config; if you only typed set, commit first";
+  const res = resolveTreePath(tree, path);
+  if(typeof res.err === "string")
+    return "## (nothing configured at: " + path.join(" ") + ")\n" +
+      "## show configuration reads the ACTIVE config; if you only typed set, commit first";
+  const node = res.arrayItem !== undefined ? res.arrayItem : res.node;
+  if(node && typeof node === "object" && !Array.isArray(node)){
+    const real = Object.keys(node).filter(k => k !== ANNOT_KEY && k !== INACT_KEY);
+    return real.length ? treeToTextAt(tree, res.keys, node) : "## (empty)";
+  }
+  return String(Array.isArray(node) ? node.join(" ") : node);
+}
+
+function showIfDescCmd(dev){
+  const d = D(dev);
+  const rows = [];
+  for(const p of dev.ports){
+    const pc = d.portCfg[p.id] || {};
+    if(!pc.desc) continue;
+    const admin = pc.disabled ? "down" : "up";
+    const link = (!pc.disabled && !dev.errDisabled[p.id] && isLinked(dev.id, p.id)) ? "up" : "down";
+    rows.push([p.id, admin, link, pc.desc]);
+  }
+  if(!rows.length)
+    return "(no interface has a description yet)\n" +
+      "Real Junos only lists ports you described: set interfaces ge-0/0/1 description \"uplink to core\"";
+  return pad("Interface", 16) + pad("Admin", 7) + pad("Link", 6) + "Description\n" +
+    rows.map(r => pad(r[0], 16) + pad(r[1], 7) + pad(r[2], 6) + r[3]).join("\n");
+}
+
+function showSystemAlarmsCmd(dev){
+  const alarms = [];
+  if(!dev.rescueConfig)
+    alarms.push(["Minor", "Rescue configuration is not set"]);
+  if(!cfgGet(committedTree(dev), ["system", "root-authentication"]))
+    alarms.push(["Minor", "Should set root authentication password"]);
+  if(!alarms.length) return "No alarms currently active";
+  return alarms.length + " alarm" + (alarms.length === 1 ? "" : "s") + " currently active\n" +
+    pad("Alarm time", 25) + pad("Class", 8) + "Description\n" +
+    alarms.map(a => pad(new Date(dev.bootedAt || Date.now()).toISOString().replace("T", " ").slice(0, 19) + " UTC", 25) +
+      pad(a[0], 8) + a[1]).join("\n") +
+    "\n\n(these are SYSTEM alarms — software and config hygiene. Hardware faults show up under show chassis alarms)";
+}
+
+function showSystemStorageCmd(dev){
+  const clean = !!dev.cleaned;
+  const usedPct = clean ? 41 : 63;
+  const sizeMb = dev.type === "router" ? 3800 : 1900;
+  const usedMb = Math.round(sizeMb * usedPct / 100);
+  const availMb = sizeMb - usedMb;
+  const mb = n => (n >= 1024 ? (n / 1024).toFixed(1) + "G" : n + "M");
+  const rows = [
+    ["/dev/gpt/junos", mb(sizeMb), mb(usedMb), mb(availMb), usedPct + "%", "/.mount"],
+    ["/dev/gpt/config", "95M", clean ? "11M" : "18M", clean ? "84M" : "77M", clean ? "12%" : "19%", "/.mount/config"],
+    ["/dev/gpt/var", "500M", clean ? "96M" : "402M", clean ? "404M" : "98M", clean ? "19%" : "80%", "/.mount/var"],
+  ];
+  return pad("Filesystem", 20) + pad("Size", 10) + pad("Used", 10) + pad("Avail", 10) + pad("Capacity", 11) + "Mounted on\n" +
+    rows.map(r => pad(r[0], 20) + pad(r[1], 10) + pad(r[2], 10) + pad(r[3], 10) + pad(r[4], 11) + r[5]).join("\n") +
+    "\n\n" + (clean
+      ? "/var has room again — request system storage cleanup did its job."
+      : "A full /var is the classic upgrade killer: run request system storage cleanup before any software install.");
+}
+
+function showSystemUsersCmd(dev){
+  dev.bootedAt = dev.bootedAt || (Date.now() - 3600000);
+  const secs = Math.max(1, Math.floor((Date.now() - dev.bootedAt) / 1000));
+  const days = Math.floor(secs / 86400), hrs = Math.floor((secs % 86400) / 3600), mins = Math.floor((secs % 3600) / 60);
+  const hm = t => String(new Date(t).getUTCHours() % 12 || 12) + ":" +
+    String(new Date(t).getUTCMinutes()).padStart(2, "0") + (new Date(t).getUTCHours() < 12 ? "AM" : "PM");
+  const who = dev.user || "kaatje";
+  const extra = Object.keys(cfgGet(dev.config, ["system", "login", "user"]) || {}).filter(u => u !== who);
+  const rows = [[who, "u0", "-", hm(dev.cli.since || dev.bootedAt), "-", "cli"]];
+  const head = hm(Date.now()) + "  up " +
+    (days ? days + " day" + (days === 1 ? "" : "s") + ", " : "") +
+    hrs + ":" + String(mins).padStart(2, "0") + ", " + rows.length + " user" + (rows.length === 1 ? "" : "s") +
+    ", load averages: 0.08, 0.05, 0.02";
+  return head + "\n" +
+    pad("USER", 10) + pad("TTY", 9) + pad("FROM", 13) + pad("LOGIN@", 9) + pad("IDLE", 6) + "WHAT\n" +
+    rows.map(r => pad(r[0], 10) + pad(r[1], 9) + pad(r[2], 13) + pad(r[3], 9) + pad(r[4], 6) + r[5]).join("\n") +
+    (extra.length
+      ? "\n\n(" + extra.join(", ") + " " + (extra.length === 1 ? "is" : "are") + " configured but not logged in — this command shows sessions, not accounts)"
+      : "");
+}
+
+function showReCmd(dev){
+  dev.bootedAt = dev.bootedAt || (Date.now() - 3600000);
+  const t = (typeof THERMAL !== "undefined" && THERMAL.devices[dev.id]) || 21;
+  const reTemp = t + 6;
+  const totalMb = dev.type === "router" ? 8192 : 2048;
+  const usedPct = 33;
+  const secs = Math.max(1, Math.floor((Date.now() - dev.bootedAt) / 1000));
+  const days = Math.floor(secs / 86400), hrs = Math.floor((secs % 86400) / 3600), mins = Math.floor((secs % 3600) / 60);
+  const iso = x => new Date(x).toISOString().replace("T", " ").slice(0, 19) + " UTC";
+  const upt = (days ? days + " day" + (days === 1 ? "" : "s") + ", " : "") +
+    hrs + " hour" + (hrs === 1 ? "" : "s") + ", " + mins + " minute" + (mins === 1 ? "" : "s");
+  return [
+    "Routing Engine status:",
+    "  Slot 0:",
+    "    Current state                  Master",
+    "    Election priority              Master (default)",
+    "    Temperature                    " + reTemp.toFixed(0) + " degrees C / " + Math.round(reTemp * 9 / 5 + 32) + " degrees F",
+    "    DRAM                           " + totalMb + " MB",
+    "    Memory utilization             " + usedPct + " percent",
+    "    CPU utilization:",
+    "      User                         6 percent",
+    "      Background                   0 percent",
+    "      Kernel                       4 percent",
+    "      Idle                         90 percent",
+    "    Model                          RE-" + (dev.model || (dev.type === "switch" ? "EX4300" : "MX204")),
+    "    Serial ID                      " + serialOf(dev) + "R",
+    "    Start time                     " + iso(dev.bootedAt),
+    "    Uptime                         " + upt,
+    "    Last reboot reason             0x200:normal shutdown",
+    "    Load averages:                 1 minute   5 minute  15 minute",
+    "                                       0.08       0.05       0.02",
+    "",
+    "The Routing Engine is the control plane: it runs the CLI, rpd and the config.",
+    "Transit traffic never touches it — that is the PFE, in hardware.",
+  ].join("\n");
+}
+
+function routeTerseRow(r){
+  const flag = "* ";
+  const code = r.proto === "direct" ? "D" : r.proto === "static" ? "S" : r.proto === "ospf" ? "O" : r.proto === "bgp" ? "B" : "?";
+  const nh = r.nh ? ">" + r.nh : ">" + (r.detail.split("via ")[1] || "");
+  return flag + "? " + pad(r.net + "/" + r.bits, 19) + pad(code, 2) + pad(String(r.pref), 6) +
+    pad("", 11) + pad("", 11) + pad(nh, 17) + (r.fromAs ? String(r.fromAs) : "");
+}
+function showRouteTerseCmd(dev){
+  const rows = routeRows(dev);
+  if(!rows.length) return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no routes yet)";
+  return routeTableHead(rows.length) +
+    "A V " + pad("Destination", 19) + pad("P", 2) + pad("Prf", 6) + pad("Metric 1", 11) + pad("Metric 2", 11) +
+    pad("Next hop", 17) + "AS path\n" +
+    rows.map(routeTerseRow).join("\n") +
+    "\n\n(terse is the one-line-per-route view: A = active, P = protocol, Prf = preference.\nLower preference wins, which is why Direct/0 beats Static/5 beats OSPF/10 beats BGP/170.)";
+}
+function showRouteSummaryCmd(dev){
+  const rows = routeRows(dev);
+  const byProto = {};
+  for(const r of rows) byProto[r.proto] = (byProto[r.proto] || 0) + 1;
+  const rid = (ifacesOf(dev).filter(i => i.up)[0] || {}).ip || null;
+  const asn = cfgGet(dev.config, ["routing-options", "autonomous-system"]) || null;
+  const out = [];
+  if(asn) out.push("Autonomous system number: " + asn);
+  out.push("Router ID: " + (rid || "(none — no interface has an address and a live link)"));
+  out.push("");
+  out.push("inet.0: " + rows.length + " destination" + (rows.length === 1 ? "" : "s") + ", " +
+    rows.length + " route" + (rows.length === 1 ? "" : "s") +
+    " (" + rows.length + " active, 0 holddown, 0 hidden)");
+  const label = { direct: "Direct", static: "Static", ospf: "OSPF", bgp: "BGP", local: "Local" };
+  for(const p of ["direct", "static", "ospf", "bgp", "local"]){
+    if(!byProto[p]) continue;
+    const n = String(byProto[p]);
+    const padL = (t, w) => " ".repeat(Math.max(1, w - String(t).length)) + t;
+    out.push(" ".repeat(13) + padL(label[p] + ":", 7) + padL(n, 7) + " routes," + padL(n, 7) + " active");
+  }
+  if(!rows.length) out.push("              (nothing in the table yet)");
+  return out.join("\n");
+}
+
+function clearArpCmd(dev){
+  const n = Object.keys(dev.arp || {}).length;
+  dev.arp = {};
+  if(typeof touchState === "function") touchState();
+  return n
+    ? "(" + n + " ARP entr" + (n === 1 ? "y" : "ies") + " flushed — the next packet re-ARPs for its next hop)"
+    : "(the ARP cache was already empty)";
+}
+function clearLogCmd(dev){
+  const n = (dev.syslog || []).length;
+  dev.syslog = [];
+  if(typeof touchState === "function") touchState();
+  return n
+    ? "(messages cleared — " + n + " line" + (n === 1 ? "" : "s") + " gone. Clear the log BEFORE you reproduce a fault, so what is left is only the fault.)"
+    : "(the log was already empty)";
+}
+
+function monitorIfTrafficCmd(dev){
+  const c = dev.ctr || {};
+  const d = D(dev);
+  const rows = [];
+  for(const p of dev.ports){
+    const pc = d.portCfg[p.id] || {};
+    const link = (!pc.disabled && !dev.errDisabled[p.id] && isLinked(dev.id, p.id)) ? "Up" : "Down";
+    if(link === "Down" && !c[p.id]) continue;
+    const ctr = c[p.id] || { rx: 0, tx: 0 };
+    rows.push([p.id, link, String(ctr.rx || 0), "0", String(ctr.tx || 0), "0"]);
+  }
+  const head = "Interface: all, Enter: bps, Delta: packets\n" +
+    hostnameOf(dev) + "   Seconds: 1   Time: " + new Date().toTimeString().slice(0, 8) + "\n\n" +
+    pad("Interface", 14) + pad("Link", 6) + pad("Input packets", 18) + pad("(pps)", 8) +
+    pad("Output packets", 18) + "(pps)";
+  if(!rows.length) return head + "\n(no interface is up and nothing has been counted yet)";
+  return head + "\n" +
+    rows.map(r => pad(r[0], 14) + pad(r[1], 6) + pad(r[2], 18) + pad(r[3], 8) + pad(r[4], 18) + r[5]).join("\n") +
+    "\n\nOn a real box this screen repaints every second until you press q, and the (pps)\n" +
+    "columns are the per-second delta. Nothing moves in the lab between your commands,\n" +
+    "so the rates read zero — send a ping and run it again to watch the totals climb.";
+}
+
+const SYS_FILES = {
+  "/var/log/messages": dev => showLogCmd(dev),
+  "/config/juniper.conf.gz": dev => showConfigCmd(dev),
+  "/config/rescue.conf.gz": dev => dev.rescueConfig
+    ? treeToText(dev.rescueConfig)
+    : { text: "error: could not open file '/config/rescue.conf.gz': No such file or directory\n" +
+        "  no rescue config saved yet — request system configuration rescue save", err: true },
+};
+function fileShowPathCmd(dev, keys){
+  const name = keys[keys.length - 1];
+  if(name in SYS_FILES){
+    const v = SYS_FILES[name](dev);
+    return typeof v === "string" ? (v || "(the file is empty)") : v;
+  }
+  if(/^\/config\/juniper\.conf\.(\d+)\.gz$/.test(name)){
+    const n = parseInt(name.match(/juniper\.conf\.(\d+)\.gz/)[1], 10);
+    const h = (dev.cfgHistory || [])[n - 1];
+    if(!h) return { text: "error: could not open file '" + name + "': No such file or directory\n" +
+      "  only " + (dev.cfgHistory || []).length + " rollback file(s) exist on this box", err: true };
+    return treeToText(h) || "## (that commit held an empty configuration)";
+  }
+  return { text: "error: could not open file '" + name + "': No such file or directory\n" +
+    "  real files on this box: " + Object.keys(SYS_FILES).join(", ") + " (see file list)", err: true };
+}
+
 const OP_SPECS = {
   switch: [
     ["configure", { help: "Enter configuration mode", fn: dev => { dev.cli.mode = "cfg"; dev.cli.editKeys = []; return "Entering configuration mode\n[edit]"; } }],
@@ -2247,10 +2538,64 @@ function joinLines(ls){
   const err = ls.some(l => l.cls === "err");
   return { text: ls.map(l => l.text).join("\n"), err };
 }
+function rescueDeleteCmd(dev){
+  if(!dev.rescueConfig) return { text: "error: no rescue configuration is saved on this box", err: true };
+  dev.rescueConfig = null;
+  dev.rescueWhen = null;
+  if(typeof touchState === "function") touchState();
+  return "Rescue configuration deleted.\n" +
+    "(nothing to fall back on now — request system configuration rescue save makes a new one)";
+}
+function showConfigViaTrie(dev, keys){
+  return showConfigPathCmd(dev, keys.slice(2));
+}
+const SHARED_OP_SPECS = [
+  ["show configuration <statement:cfgnode>", { help: "One branch of the active configuration, e.g. show configuration interfaces ge-0/0/1", fn: showConfigViaTrie }],
+  ["show interfaces descriptions", { help: "Only the ports you described — the fastest way to read a patch panel", fn: showIfDescCmd }],
+  ["show system alarms", { help: "System alarms: config and software hygiene (hardware lives under show chassis alarms)", fn: showSystemAlarmsCmd }],
+  ["show system storage", { help: "Disk usage per filesystem — check /var before any software upgrade", fn: showSystemStorageCmd }],
+  ["show system users", { help: "Who is logged in right now, and for how long", fn: showSystemUsersCmd }],
+  ["show chassis routing-engine", { help: "RE health: memory, CPU, temperature, uptime, last reboot reason", fn: showReCmd }],
+  ["show route terse", { help: "One line per route — protocol and preference side by side", fn: showRouteTerseCmd }],
+  ["show route summary", { help: "How many routes each protocol put in the table", fn: showRouteSummaryCmd }],
+  ["clear arp", { help: "Flush the ARP cache — forces a fresh ARP for every next hop", fn: clearArpCmd }],
+  ["clear log messages", { help: "Empty the log so what appears next is only your fault reproduction", fn: clearLogCmd }],
+  ["monitor interface traffic", { help: "Per-interface packet counters (a real box repaints this until you press q)", fn: monitorIfTrafficCmd }],
+  ["request system halt", { help: "Stop the OS without powering down — asks first", fn: dev => requestConfirm(dev, "halt", "Halt the system ? [yes,no] (no)") }],
+  ["request system zeroize", { help: "Wipe to factory default and reboot — the real one asks, and means it", fn: dev => requestConfirm(dev, "zeroize", "warning: System will be rebooted and may not boot without configuration\nErase all data, including configuration and log files ? [yes,no] (no)") }],
+  ["request system configuration rescue delete", { help: "Throw away the rescue config snapshot", fn: rescueDeleteCmd }],
+  ["file show <path:syspath>", { help: "Read a real file on the box: /var/log/messages, /config/juniper.conf.gz", fn: fileShowPathCmd }],
+];
+const PING_OPT_FORMS = [
+  ["ping <target:ip> count <count:num>", "Send exactly n probes instead of running until you stop it"],
+  ["ping <target:ip> rapid", "Fire the probes back to back and print one character each"],
+  ["ping <target:ip> size <size:num>", "Payload size in bytes (default 56, so 64 on the wire)"],
+  ["ping <target:ip> source <source:ip>", "Send from one of this device's own addresses"],
+  ["ping <target:ip> do-not-fragment", "Set DF — the packet is dropped rather than fragmented, which is how you find an MTU"],
+  ["ping <target:ip> count <count:num> rapid", "n probes, back to back"],
+  ["ping <target:ip> rapid count <count:num>", "n probes, back to back"],
+  ["ping <target:ip> count <count:num> size <size:num>", "n probes of a given size"],
+  ["ping <target:ip> count <count:num> source <source:ip>", "n probes from a chosen source address"],
+  ["ping <target:ip> count <count:num> do-not-fragment", "n probes with DF set"],
+  ["ping <target:ip> size <size:num> do-not-fragment", "An MTU probe: this size, unfragmented, or nothing"],
+  ["ping <target:ip> count <count:num> size <size:num> do-not-fragment", "An MTU probe repeated n times"],
+];
+["switch", "router"].forEach(function(t){
+  SHARED_OP_SPECS.forEach(function(e){ OP_SPECS[t].push([e[0], e[1]]); });
+  PING_OPT_FORMS.forEach(function(f){ OP_SPECS[t].push([f[0], { help: f[1], fn: pingWithOpts }]); });
+});
+
 const OP_TRIE = {
   switch: buildTrie(OP_SPECS.switch.map(([s, o]) => [s, { ...o, kind: "op" }])),
   router: buildTrie(OP_SPECS.router.map(([s, o]) => [s, { ...o, kind: "op" }])),
 };
+["switch", "router"].forEach(function(t){
+  const cfgNode = OP_TRIE[t].lits["show"] && OP_TRIE[t].lits["show"].lits["configuration"];
+  if(!cfgNode) return;
+  const edge = cfgNode.phs.find(p => p.ph === "cfgnode");
+  if(edge && !edge.node.phs.some(p => p.ph === "cfgnode"))
+    edge.node.phs.push({ ph: "cfgnode", label: edge.label, node: edge.node });
+});
 
 /* ============================================================
    WI-FI — association helpers (APs are cloud-managed: no CLI)

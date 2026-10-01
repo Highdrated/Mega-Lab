@@ -1035,6 +1035,122 @@ var PROTO_GUIDES = [
     ],
   },
   {
+    id: "health",
+    title: "Reading the Box — health, state and the ping you can trust",
+    tag: "JNCIA · operational monitoring and maintenance",
+    ready: true,
+    noTopology: true,
+    problem: {
+      text: ["A box is misbehaving and nobody can tell you how. The ticket says \"the network is slow\". You have one console and no idea which of forty things is wrong.",
+             "Junos answers this with a fixed set of questions you ask in a fixed order, each one narrowing the search: is the hardware healthy, is the control plane healthy, is the interface up, is the path there, is the path back. Guessing is what you do instead of knowing this order.",
+             "Operational Monitoring and Maintenance is a whole exam domain, and it is the one that matches the job most closely: on a real network you spend far more hours reading boxes than configuring them."],
+      svg: "health-problem"
+    },
+    how: {
+      text: ["START WITH THE BOX, NOT THE NETWORK. show chassis alarms and show system alarms are two different questions. Chassis alarms are hardware: a dead fan, a hot chassis, a failed power supply. System alarms are software and housekeeping: no rescue configuration, no root password. A hardware alarm explains symptoms that no amount of configuration will fix, so you look there first.",
+             "THEN THE CONTROL PLANE. show chassis routing-engine is the Routing Engine's own vital signs: memory, CPU, temperature, uptime and, most usefully, the last reboot reason. A box that says it rebooted for a reason you did not choose has just explained your outage. show system storage matters for the same reason: a full /var is the classic cause of a failed upgrade and of a box that stops logging.",
+             "THEN THE INTERFACES. show interfaces terse is the one-screen answer to what is up. show interfaces descriptions is the one you reach for in a rack you did not build, because it prints only the ports somebody bothered to label. show interfaces statistics and show interfaces extensive carry the error counters, and monitor interface traffic watches the packet counts move.",
+             "THEN THE ROUTES. show route is the full table; show route terse is one line per route with the protocol and the preference side by side, which is how you see WHY one route won. show route summary counts routes per protocol, which is how you notice that OSPF is contributing nothing. show route <destination> performs the actual longest-match lookup for one address.",
+             "THEN THE PATH, WITH A PING YOU CONTROL. A bare ping on a real box runs until you stop it, which is why every real ping carries options. count n sends exactly n and stops. rapid fires them back to back and prints one character each, so a handful of dropped packets is visible as a gap. source lets you choose which of the device's own addresses to send from, which is how you test a return path that depends on it. size with do-not-fragment is the MTU test: the packet is refused rather than quietly fragmented, so you find the narrow link instead of living with it.",
+             "AND READ THE CONFIGURATION WITHOUT ENTERING IT. show configuration prints the active configuration; add a path and it prints only that branch, so show configuration interfaces ge-0/0/1 answers one question instead of a thousand. This reads the ACTIVE configuration — if you only typed set, there is nothing here to see yet.",
+             "CLEAR BEFORE YOU REPRODUCE. clear interfaces statistics, clear arp and clear log messages all do the same favour: they empty a counter or a buffer so that whatever appears next belongs to the thing you are about to do. Reading a log that already has a thousand lines in it is how a fault hides."]
+    },
+    prereqs: [
+      { desc: "A powered switch or router with a console open",
+        test: function(){ return typeof devsBy === "function" &&
+          devsBy("switch").concat(devsBy("router")).some(function(d){ return d.powered !== false; }); } },
+      { desc: "Something committed, so there is state worth reading",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !cfgIsEmpty(d.config); }); } },
+      { desc: "A described interface (set interfaces ge-0/0/1 description \"uplink to core\")",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var pc = (d.d && d.d.portCfg) || {};
+          return Object.keys(pc).some(function(p){ return !!pc[p].desc; }); } ); } },
+      { desc: "A rescue configuration saved, which clears one system alarm",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !!d.rescueConfig; }); } },
+    ],
+    try: [
+      ["show system alarms", "Software and housekeeping alarms — a fresh box always has at least one"],
+      ["show chassis alarms", "The other question: hardware. Fans, power, temperature"],
+      ["show chassis routing-engine", "The control plane's vital signs, including the last reboot reason"],
+      ["show system storage", "Disk per filesystem. Look at /var before you ever install software"],
+      ["show system users", "Who is logged in right now — not who has an account"],
+      ["show interfaces descriptions", "Only the ports somebody labelled, which is the fastest way to read a rack"],
+      ["show route terse", "One line per route, with the protocol letter and the preference that decided it"],
+      ["show route summary", "How many routes each protocol contributed. A zero here is a diagnosis"]
+    ],
+    cfg: [
+      ["show configuration interfaces", "The interfaces branch of the ACTIVE configuration, without entering configuration mode"],
+      ["clear log messages", "Empty the log, THEN reproduce the fault, so what is left is only the fault"],
+      ["clear interfaces statistics", "Zero the counters so the next reading is yours and not last week's"],
+      ["clear arp", "Force a fresh ARP for every next hop"],
+      ["monitor interface traffic", "Watch the packet counters. On a real box this repaints every second until you press q"],
+      ["request system configuration rescue save", "Snapshot the known-good config — and watch one system alarm disappear"]
+    ],
+    nums: [
+      ["show system alarms", "Software: rescue config missing, root password unset, licence problems"],
+      ["show chassis alarms", "Hardware: fans, power supplies, temperature"],
+      ["show chassis routing-engine", "RE memory, CPU, temperature, uptime, last reboot reason"],
+      ["show route terse", "A = active, P = protocol letter, Prf = preference. Lower preference wins"],
+      ["Direct 0 · Static 5 · OSPF 10 · BGP 170", "The default preferences, which is the whole of route selection on one line"],
+      ["ping <ip> count <n>", "Exactly n probes. Without it a real box pings until you stop it"],
+      ["ping <ip> rapid", "Back-to-back probes, one character each: ! is a reply, . is a timeout"],
+      ["ping <ip> source <ip>", "Choose which of this device's own addresses to send from"],
+      ["ping <ip> size <n> do-not-fragment", "The MTU test: refused rather than fragmented"],
+      ["monitor interface traffic", "Packet counters per interface, refreshing on a real box until q"]
+    ],
+    els: [
+      ["(every command here is platform-independent)", "EX, QFX, MX, SRX: monitoring is part of Junos, not of the hardware"],
+      ["show ethernet-switching interface", "Switches only — a router has no switching table to describe"],
+      ["show chassis routing-engine on a Virtual Chassis", "Reports the master RE. Add the member number on real multi-member stacks"]
+    ],
+    real: [
+      "The order matters more than the commands. Hardware, then control plane, then interface, then route, then path. Skipping to the path is how you spend an hour on a routing problem that was a dead fan.",
+      "ping count 100 rapid is the real loss test. Two probes can both get lucky; a hundred cannot, and the gaps in the output show you exactly where the loss sits.",
+      "Always ping with source when the return path is the thing you doubt. The far side may have a route back to one of your addresses and not the other, and a default-source ping will never tell you.",
+      "show configuration <path> is the command that keeps you out of configuration mode on a production box. If you never entered it, you can never accidentally commit.",
+      "Clear the counters and the log before you reproduce anything. A clean baseline is worth more than any amount of staring at accumulated noise."
+    ],
+    verify: [
+      ["show system alarms", "After a rescue save, the no-rescue-configuration alarm is gone. State you changed, visible"],
+      ["show route terse", "Every route with its preference. If the wrong one is active, the Prf column says why"],
+      ["show interfaces descriptions", "Proves the description committed, and reads like a patch panel"],
+      ["show system storage", "Run it before and after request system storage cleanup and watch /var drop"]
+    ],
+    breaks: [
+      "Confusing show system alarms with show chassis alarms. They answer different questions, and the hardware one comes first.",
+      "Trusting a two-packet ping. The lab default and the muscle-memory default are both too small to see intermittent loss — use count.",
+      "Expecting show configuration to show what you just typed. It reads the ACTIVE configuration; an uncommitted set lives only in the candidate, where show | compare finds it.",
+      "Reading error counters you never cleared, then blaming a change you made five minutes ago for errors from last Tuesday.",
+      "Using size without do-not-fragment to hunt an MTU problem. Without DF the packet is simply fragmented and the ping succeeds, which tells you nothing.",
+      "Giving ping a source address the device does not own. A real box refuses it outright, and so does this lab: the source must be one of its own interfaces."
+    ],
+    answer: "Junos monitoring follows a fixed order: hardware, control plane, interface, route, path. show chassis alarms is hardware and show system alarms is software housekeeping, and they are different questions. show chassis routing-engine gives the Routing Engine's memory, CPU, temperature, uptime and last reboot reason; show system storage warns you about a full /var before an upgrade does. show interfaces terse is what is up, show interfaces descriptions is only the labelled ports, and monitor interface traffic watches the counters move. show route terse puts each route's protocol and preference side by side, which is how route selection becomes visible: Direct 0, Static 5, OSPF 10, BGP 170, lowest wins. show route summary counts routes per protocol. A real ping takes options because a bare one never stops: count n bounds it, rapid makes loss visible as gaps, source chooses which of the device's own addresses to send from, and size with do-not-fragment is the MTU test because the packet is refused rather than silently fragmented. show configuration with a path reads one branch of the active configuration without entering configuration mode. Clear counters, ARP and the log before you reproduce a fault, so that what appears next belongs to the fault.",
+    quiz: [
+      { q: "A switch is dropping traffic intermittently. Which command do you run first?",
+        opts: ["ping through it", "show chassis alarms", "show route terse"],
+        right: 1,
+        why: "Hardware first. A failed fan or a hot chassis produces symptoms that look exactly like a configuration problem, and no amount of config work will fix one. Ruling the hardware out costs a single command." },
+      { q: "You run ping 10.0.0.9 and get two replies. Can you conclude the path is healthy?",
+        opts: ["Yes, both replies came back", "No — two probes is far too small a sample for intermittent loss, use count", "Only if you also run traceroute"],
+        right: 1,
+        why: "Intermittent loss is exactly the kind that two lucky packets miss. ping 10.0.0.9 count 100 rapid gives you a hundred probes and prints one character each, so the gaps show you where the loss actually is." },
+      { q: "show configuration interfaces ge-0/0/1 prints nothing, but you definitely typed the set command. Why?",
+        opts: ["The interface does not exist", "The statement is still only in the candidate — show configuration reads the ACTIVE configuration", "You need to be in configuration mode"],
+        right: 1,
+        why: "Junos keeps a candidate and an active configuration, and show configuration only ever reads the active one. Your statement is sitting in the candidate, where show | compare will find it, until you commit." },
+      { q: "Two routes to the same prefix exist, one from OSPF and one static. show route terse shows the static one active. Why?",
+        opts: ["Static routes are configured manually, so they always win", "Preference: Static is 5 and OSPF is 10, and the lower preference wins", "OSPF routes are never installed"],
+        right: 1,
+        why: "Route selection is preference first, and lower is better: Direct 0, Static 5, OSPF 10, BGP 170. The terse view puts the Prf column right beside the protocol letter precisely so you can read that decision rather than guess at it." },
+      { q: "You suspect a link somewhere in the path has a small MTU. Which command actually proves it?",
+        opts: ["ping with size 1500", "ping with size 1500 and do-not-fragment", "show interfaces extensive"],
+        right: 1,
+        why: "Without do-not-fragment the oversized packet is simply fragmented and the ping succeeds, hiding the narrow link. With DF set the packet is refused instead, and the refusal names the MTU that stopped it." },
+    ],
+  },
+  {
     id: "cfgedit",
     title: "Editing the Candidate — deactivate, insert, rename, copy",
     tag: "JNCIA · user interfaces",
@@ -1985,6 +2101,29 @@ function protoSvg(kind){
     '<text x="40" y="105" fill="var(--dim)">L1 bits</text><text x="150" y="105" fill="var(--text)">cables \u00b7 optics \u00b7 CRC errors</text>' +
     '<text x="40" y="135" fill="var(--amber)">diagnosis = climbing this ladder one layer at a time</text>' +
     '</g>' + close;
+  if(kind === "health-problem") return open +
+    '<text x="90" y="18" fill="var(--dim)" font-size="10.5">ask in this order</text>' +
+    '<g font-size="10" text-anchor="start">' +
+    '<rect x="24" y="28" width="132" height="22" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<text x="34" y="43" fill="var(--text)">1  hardware</text>' +
+    '<text x="164" y="43" fill="var(--dim)">show chassis alarms</text>' +
+    '<rect x="24" y="54" width="132" height="22" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<text x="34" y="69" fill="var(--text)">2  control plane</text>' +
+    '<text x="164" y="69" fill="var(--dim)">show chassis routing-engine</text>' +
+    '<rect x="24" y="80" width="132" height="22" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<text x="34" y="95" fill="var(--text)">3  interface</text>' +
+    '<text x="164" y="95" fill="var(--dim)">show interfaces terse</text>' +
+    '<rect x="24" y="106" width="132" height="22" rx="4" fill="none" stroke="var(--line)"/>' +
+    '<text x="34" y="121" fill="var(--text)">4  route</text>' +
+    '<text x="164" y="121" fill="var(--dim)">show route terse</text>' +
+    '<rect x="24" y="132" width="132" height="22" rx="4" fill="none" stroke="var(--amber)"/>' +
+    '<text x="34" y="147" fill="var(--amber)">5  path</text>' +
+    '<text x="164" y="147" fill="var(--amber)">ping count n rapid</text>' +
+    '</g>' +
+    '<path d="M18 39 L18 143" stroke="var(--line)" stroke-width="1" fill="none"/>' +
+    '<text x="430" y="18" fill="var(--red)" font-size="10">skipping to 5 is how an hour</text>' +
+    '<text x="430" y="30" fill="var(--red)" font-size="10">goes into a dead fan</text>' +
+    close;
   if(kind === "pipes-problem") return open +
     '<text x="280" y="20" fill="var(--dim)" font-size="10.5">show interfaces extensive on a 48-port switch</text>' +
     '<rect x="30" y="34" width="150" height="96" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +

@@ -232,7 +232,7 @@ Filter any output with a pipe:
 
 /* ---------- configuration mode ---------- */
 const CFG_COMMANDS = ["set", "delete", "show", "edit", "up", "top", "exit", "quit", "run", "commit", "rollback",
-  "load", "annotate", "activate", "deactivate", "insert", "rename", "copy", "status"];
+  "load", "annotate", "activate", "deactivate", "insert", "rename", "copy", "status", "save", "wildcard"];
 
 function cfgBanner(dev){
   return "[edit" + (dev.cli.editKeys.length ? " " + dev.cli.editKeys.join(" ") : "") + "]";
@@ -252,6 +252,8 @@ function cfgExec(dev, cmd){
       "  rename <stmt> to <new>  rename a statement in place\n" +
       "  copy <stmt> to <new>    duplicate a statement and its whole subtree\n" +
       "  status                who else is editing this configuration\n" +
+      "  save <file>           write the candidate to a file (file show <file> reads it back)\n" +
+      "  wildcard delete <stmt with *>   delete every statement the pattern matches\n" +
       "  up / top              go up one level / back to the top\n" +
       "  commit                make the candidate active\n" +
       "  commit confirmed <m>  commit with automatic rollback unless confirmed\n" +
@@ -314,8 +316,24 @@ function cfgPiped(dev, seg){
   }
   return stages.length ? pipeRun(dev, out, stages) : out;
 }
+function cfgTokens(cmd){
+  const out = [];
+  let cur = "", q = null, started = false;
+  for(let i = 0; i < cmd.length; i++){
+    const c = cmd[i];
+    if(q){
+      if(c === q){ q = null; continue; }
+      cur += c; continue;
+    }
+    if(c === '"' || c === "'"){ q = c; started = true; continue; }
+    if(/\s/.test(c)){ if(started){ out.push(cur); cur = ""; started = false; } continue; }
+    cur += c; started = true;
+  }
+  if(started) out.push(cur);
+  return out.length ? out : [""];
+}
 function cfgRun(dev, cmd){
-  const tokens = cmd.split(/\s+/);
+  const tokens = cfgTokens(cmd);
   const word = tokens[0];
   const matches = CFG_COMMANDS.filter(c => c.startsWith(word));
   const cmdName = CFG_COMMANDS.includes(word) ? word : (matches.length === 1 ? matches[0] : null);
@@ -357,6 +375,8 @@ function cfgRun(dev, cmd){
     case "rename": return cfgMoveCmd(dev, rest, false);
     case "copy": return cfgMoveCmd(dev, rest, true);
     case "status": return cfgStatusCmd(dev);
+    case "save": return cfgSaveCmd(dev, rest);
+    case "wildcard": return cfgWildcardCmd(dev, rest);
     case "commit": return commitCmd(dev, rest, cmd);
     case "rollback": return rollbackCmd(dev, rest);
     case "load": {
@@ -382,7 +402,7 @@ function loadSetLines(dev, text){
   for(const raw of String(text).split(/\n+/)){
     const line = raw.trim();
     if(!line || line.startsWith("#")) continue;
-    const toks = line.split(/\s+/);
+    const toks = cfgTokens(line);
     let out;
     if(toks[0] === "set") out = cfgSetCmd(dev, toks.slice(1));
     else if(toks[0] === "delete") out = cfgDeleteCmd(dev, toks.slice(1));
@@ -646,6 +666,74 @@ function moveSideMarks(tree, fromKeys, toKeys, isCopy){
     }
     if(!Object.keys(m).length) delete tree[key];
   }
+}
+
+/* ---------- save / wildcard delete ---------- */
+function cfgSaveCmd(dev, rest){
+  if(!rest.length)
+    return lines("err", "usage: save <filename>\n" +
+      "  writes the candidate configuration at this level to a file on the box");
+  if(rest.length > 1)
+    return lines("err", 'usage: save <filename> — one name, no spaces (got "' + rest.join(" ") + '")');
+  const name = rest[0];
+  if(!/^[\w.-]+$/.test(name))
+    return lines("err", 'error: "' + name + '" is not a usable filename here — letters, digits, dot, dash, underscore');
+  const keys = dev.cli.editKeys;
+  let node = dev.candidate;
+  if(keys.length){
+    const res = resolveTreePath(dev.candidate, keys);
+    if(typeof res.err === "string") return lines("err", "error: nothing configured at " + keys.join(" "));
+    node = res.node;
+  }
+  const body = (node && typeof node === "object") ? treeToTextAt(dev.candidate, keys, node) : String(node);
+  dev.files = dev.files || {};
+  dev.files[name] = body || "## (nothing configured at this level)";
+  const n = dev.files[name].split("\n").length;
+  if(typeof touchState === "function") touchState();
+  return lines("out", "Wrote " + n + " line" + (n === 1 ? "" : "s") + " of configuration to " + name + "\n" +
+    "  save writes the CANDIDATE, not the active config, and only from the level you are at.\n" +
+    "  Read it back with: run file show " + name);
+}
+
+function globToRe(pat){
+  return new RegExp("^" + pat.split("*").map(s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join(".*") + "$");
+}
+function cfgWildcardCmd(dev, rest){
+  if(!rest.length || !"delete".startsWith(rest[0]))
+    return lines("err", "usage: wildcard delete <statement with *>\n" +
+      "  e.g. wildcard delete interfaces ge-0/0/*");
+  const path = rest.slice(1);
+  if(!path.length)
+    return lines("err", "usage: wildcard delete <statement with *>, e.g. wildcard delete interfaces ge-0/0/*");
+  const starAt = path.findIndex(t => t.indexOf("*") >= 0);
+  if(starAt < 0)
+    return lines("err", "error: wildcard delete needs a * in the statement\n" +
+      "  without one it is just delete — use that instead");
+  if(starAt !== path.length - 1)
+    return lines("err", "error: this lab matches the * on the LAST word of the statement\n" +
+      "  e.g. wildcard delete interfaces ge-0/0/*  (not  wildcard delete interfaces * unit 0)");
+  const parentPath = dev.cli.editKeys.concat(path.slice(0, -1));
+  const pat = path[path.length - 1];
+  let parent = dev.candidate, parentKeys = [];
+  if(parentPath.length){
+    const res = resolveTreePath(dev.candidate, parentPath);
+    if(typeof res.err === "string")
+      return lines("err", "warning: statement not found: " + parentPath.join(" "));
+    parent = res.node; parentKeys = res.keys;
+  }
+  if(!parent || typeof parent !== "object" || Array.isArray(parent))
+    return lines("err", "error: " + parentPath.join(" ") + " holds no named statements to match against");
+  const re = globToRe(pat);
+  const hits = Object.keys(parent).filter(k => k !== ANNOT_KEY && k !== INACT_KEY && re.test(k));
+  if(!hits.length)
+    return lines("err", "warning: nothing matched " + parentKeys.concat([pat]).join(" ") +
+      "\n  candidates here: " + (Object.keys(parent).filter(k => k !== ANNOT_KEY && k !== INACT_KEY).join(", ") || "(none)"));
+  for(const k of hits) cfgDelete(dev.candidate, parentKeys.concat([k]));
+  annotPrune(dev.candidate);
+  inactPrune(dev.candidate);
+  if(typeof touchState === "function") touchState();
+  return lines("out", hits.length + " statement" + (hits.length === 1 ? "" : "s") + " deleted: " + hits.join(", ") +
+    "\n  (nothing is live until you commit — show | compare first)");
 }
 
 function cfgStatusCmd(dev){
@@ -1215,6 +1303,34 @@ function confirmRun(dev, act){
     powerOn(dev);
     return lines("out", "Shutdown NOW!\n[pid 1]\n\n*** System going down for reboot ***" +
       (dirty ? "\nwarning: the uncommitted candidate configuration was discarded \u2014 a reboot keeps only what was committed" : ""));
+  }
+  if(act === "halt"){
+    devLog(dev, "mgd: UI_HALT_EVENT: System halt requested by " + (dev.user || "kaatje"));
+    powerOff(dev);
+    return lines("out", "Shutdown NOW!\n[pid 1]\n\n*** The operating system has halted ***\n" +
+      "(a halt stops Junos but leaves the chassis powered — on a real box in a rack you now need\n" +
+      " console or a power cycle, which is why nobody halts a switch they cannot touch)");
+  }
+  if(act === "zeroize"){
+    devLog(dev, "mgd: UI_ZEROIZE_EVENT: System zeroize requested by " + (dev.user || "kaatje"));
+    dev.config = {};
+    dev.configFull = {};
+    dev.candidate = {};
+    dev.cfgHistory = [];
+    dev.commitLog = [];
+    dev.syslog = [];
+    dev.rescueConfig = null;
+    dev.rescueWhen = null;
+    dev.files = {};
+    dev.cli.editKeys = [];
+    dev.cli.mode = "op";
+    powerOff(dev);
+    powerOn(dev);
+    if(typeof rebuildAllDerived === "function") rebuildAllDerived();
+    if(typeof touchState === "function") touchState();
+    return lines("out", "warning: zeroizing re0\n\n*** System rebooting to factory default ***\n" +
+      "Everything is gone: configuration, rollbacks, rescue config, logs.\n" +
+      "This is what you run before a box leaves your hands — and never on one in service.");
   }
   if(act === "power-off"){
     devLog(dev, "mgd: UI_POWER_OFF_EVENT: Power off requested by " + (dev.user || "kaatje"));

@@ -87,6 +87,41 @@ const PH = {
   hashv: { help: "Password hash", validate: t => /^\S+$/.test(t), complete: () => [] },
   loginclass: { help: "Login class", validate: t => ["super-user", "operator", "read-only"].includes(t),
     complete: () => ["super-user", "operator", "read-only"] },
+  cfgnode: {
+    help: "A configuration hierarchy level or statement name",
+    validate: t => /^[\w.\/:@+-]+$/.test(t),
+    complete: dev => {
+      const tree = (typeof committedTree === "function" && committedTree(dev)) || {};
+      const toks = PH_TOKENS || [];
+      let at = -1;
+      for(let i = 0; i < toks.length; i++)
+        if("configuration".startsWith(toks[i]) && toks[i].length >= 2){ at = i; break; }
+      const path = at >= 0 ? toks.slice(at + 1).filter(t => t !== "|") : [];
+      let node = tree;
+      if(path.length && typeof resolveTreePath === "function"){
+        const res = resolveTreePath(tree, path);
+        if(typeof res.err === "string") return [];
+        node = res.node;
+      }
+      if(!node || typeof node !== "object" || Array.isArray(node)) return [];
+      return Object.keys(node).filter(k => k !== ANNOT_KEY && k !== INACT_KEY);
+    },
+  },
+  syspath: {
+    help: "An absolute path on the box, e.g. /var/log/messages",
+    validate: t => /^\/[\w.\/-]+$/.test(t),
+    complete: () => ["/var/log/messages", "/config/juniper.conf.gz", "/config/rescue.conf.gz"],
+  },
+  text: {
+    help: "Free text — quote it if it contains spaces",
+    validate: t => /^[^\n]+$/.test(t) && !/^["']|["']$/.test(t),
+    complete: () => [],
+  },
+  globpath: {
+    help: "A statement name that may contain * (e.g. ge-0/0/*)",
+    validate: t => /^[\w.\/:@+*-]+$/.test(t),
+    complete: () => [],
+  },
 };
 
 /* spec string -> token descriptors */
@@ -172,7 +207,9 @@ function trieWalkAll(root, tokens, dev){
   step(root, 0);
   return ends;
 }
+var PH_TOKENS = [];
 function trieCompletionsAll(root, tokens, dev, partial){
+  PH_TOKENS = tokens || [];
   const ends = trieWalkAll(root, tokens, dev);
   const seen = new Map();
   for(const node of ends)
@@ -219,7 +256,7 @@ const SWITCH_CFG_SPECS = [
   ["interfaces <interface:ifname> disable", { kind:"presence", help:"Administratively disable this interface" }],
   ["interfaces <interface:ifname> mtu <mtu:num>", { kind:"value", help:"Interface MTU in bytes (default 1514) — mismatches stall OSPF adjacencies" }],
 
-  ["interfaces <interface:ifname> description <text:word>", { kind:"value", help:"Interface description" }],
+  ["interfaces <interface:ifname> description <text:text>", { kind:"value", help:"Interface description — quote it if it has spaces" }],
   ["interfaces <interface:physport> ether-options 802.3ad <bundle:aeref>", { kind:"value", help:"Make this port a member of an aggregated (LACP) bundle" }],
   ["interfaces <interface:ifname> aggregated-ether-options lacp active", { kind:"enumvalue", help:"Run LACP in active mode on this bundle" }],
   ["interfaces <interface:ifname> aggregated-ether-options lacp passive", { kind:"enumvalue", help:"Run LACP in passive mode on this bundle" }],
@@ -292,7 +329,7 @@ const ROUTER_CFG_SPECS = [
   ["system host-name <hostname:word>", { kind:"value", help:"Set the system hostname" }],
   ["interfaces <interface:ifname> mtu <mtu:num>", { kind:"value", help:"Interface MTU in bytes (default 1514) — mismatches stall OSPF adjacencies" }],
   ["interfaces <interface:physport> disable", { kind:"presence", help:"Administratively disable this interface" }],
-  ["interfaces <interface:physport> description <text:word>", { kind:"value", help:"Interface description" }],
+  ["interfaces <interface:physport> description <text:text>", { kind:"value", help:"Interface description — quote it if it has spaces" }],
   ["interfaces <interface:physport> unit <unit:unit> family inet address <address:prefix>", { kind:"list", help:"IPv4 address on this interface" }],
   ["interfaces <interface:physport> unit <unit:unit> family inet filter input <filter:filterref>", { kind:"value", help:"Apply a firewall filter to inbound traffic" }],
   ["interfaces <interface:physport> unit <unit:unit> family inet filter output <filter:filterref>", { kind:"value", help:"Apply a firewall filter to outbound traffic" }],

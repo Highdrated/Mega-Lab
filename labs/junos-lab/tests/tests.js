@@ -2889,6 +2889,154 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(devices[s].powered !== false, "T64 restarting a daemon leaves the box up");
 }
 
+/* ---------- T65: operational monitoring, config views, ping options ---------- */
+{
+  wipeLab();
+  const r = makeRouter(0, 0), hh = makeHost(0, 250);
+  cable(hh, "eth0", r, "ge-0/0/0");
+  rebuildAllDerived();
+  cli(hh, "ip addr add 10.0.0.9/24 dev eth0");
+  cli(hh, "ip route add default via 10.0.0.1");
+  cli(r, "configure");
+  cli(r, "set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/24");
+  cli(r, 'set interfaces ge-0/0/0 description "uplink to core 1"');
+  cli(r, "set interfaces ge-0/0/1 description spare");
+  cli(r, "set routing-options static route 192.168.9.0/24 next-hop 10.0.0.9");
+
+  /* a description with spaces: a real box takes it quoted, so this one must too */
+  const cmp = cli(r, "show | compare");
+  ok(/description "uplink to core 1";/.test(cmp),
+     "T65 a quoted description with spaces is accepted and renders quoted");
+  ok(/description spare;/.test(cmp), "T65 a one-word description still renders bare");
+  const dset = cli(r, "show | display set");
+  ok(/set interfaces ge-0\/0\/0 description "uplink to core 1"/.test(dset),
+     "T65 display set re-quotes the description so the line pastes back");
+  cli(r, "commit");
+
+  /* save writes the candidate to a file that file show reads back */
+  const sv = cli(r, "save mycfg");
+  ok(/Wrote \d+ lines? of configuration to mycfg/.test(sv), "T65 save writes the candidate to a file");
+  ok(/description "uplink to core 1"/.test(cli(r, "run file show mycfg")),
+     "T65 file show reads the saved configuration back");
+  ok(/not a usable filename/.test(cli(r, "save /etc/passwd")), "T65 save refuses a path, not just a name");
+
+  /* wildcard delete */
+  ok(/needs a \*/.test(cli(r, "wildcard delete interfaces ge-0/0/0")),
+     "T65 wildcard delete without a * tells you to use plain delete");
+  ok(/nothing matched/.test(cli(r, "wildcard delete interfaces zz*")),
+     "T65 a pattern that matches nothing warns instead of pretending");
+  const wd = cli(r, "wildcard delete interfaces ge-0/0/*");
+  ok(/2 statements deleted/.test(wd), "T65 wildcard delete removes every matching statement");
+  ok(/ge-0\/0\/0/.test(wd) && /ge-0\/0\/1/.test(wd), "T65 and names what it deleted");
+  cli(r, "rollback 0");
+  ok(/no uncommitted/.test(cli(r, "show | compare")), "T65 rollback 0 undoes the wildcard delete");
+  cli(r, "exit");
+
+  /* show configuration <path> */
+  ok(/address 10\.0\.0\.1\/24/.test(cli(r, "show configuration interfaces ge-0/0/0")),
+     "T65 show configuration <path> prints that branch of the active config");
+  ok(/route/.test(cli(r, "show configuration routing-options")),
+     "T65 show configuration reaches any depth of the hierarchy");
+  ok(/nothing configured at/.test(cli(r, "show configuration protocols")),
+     "T65 show configuration on an unconfigured branch says so instead of erroring");
+  ok(/address 10\.0\.0\.1/.test(cli(r, "show configuration interfaces | match address")),
+     "T65 show configuration <path> still pipes");
+
+  /* show interfaces descriptions */
+  const desc = cli(r, "show interfaces descriptions");
+  ok(/uplink to core 1/.test(desc) && /spare/.test(desc),
+     "T65 show interfaces descriptions lists the ports you described");
+  ok(!/ge-0\/0\/2/.test(desc), "T65 and only those (a real box omits undescribed ports)");
+
+  /* route views */
+  const terse = cli(r, "show route terse");
+  ok(/10\.0\.0\.0\/24/.test(terse) && /192\.168\.9\.0\/24/.test(terse), "T65 show route terse lists every route");
+  ok(/\bD\b/.test(terse) && /\bS\b/.test(terse), "T65 terse shows the protocol letter per route");
+  const summ = cli(r, "show route summary");
+  ok(/Router ID: 10\.0\.0\.1/.test(summ), "T65 show route summary reports a router id");
+  ok(/Direct:\s+1 routes/.test(summ) && /Static:\s+1 routes/.test(summ),
+     "T65 show route summary counts routes per protocol");
+
+  /* device health */
+  ok(/Rescue configuration is not set/.test(cli(r, "show system alarms")),
+     "T65 show system alarms raises the real no-rescue-config alarm");
+  cli(r, "request system configuration rescue save");
+  ok(!/Rescue configuration is not set/.test(cli(r, "show system alarms")),
+     "T65 and the alarm clears once a rescue config exists");
+  ok(/Rescue configuration deleted/.test(cli(r, "request system configuration rescue delete")),
+     "T65 rescue delete throws the snapshot away");
+  ok(/Rescue configuration is not set/.test(cli(r, "show system alarms")),
+     "T65 and the alarm comes back");
+  ok(/Filesystem/.test(cli(r, "show system storage")), "T65 show system storage lists filesystems");
+  ok(/\/\.mount\/var/.test(cli(r, "show system storage")), "T65 including /var, the one that fills up");
+  ok(/cli/.test(cli(r, "show system users")), "T65 show system users shows the session you are typing in");
+  const re = cli(r, "show chassis routing-engine");
+  ok(/Current state\s+Master/.test(re), "T65 show chassis routing-engine reports RE state");
+  ok(/Last reboot reason/.test(re), "T65 and the last reboot reason");
+
+  /* clear commands */
+  cli(r, "ping 10.0.0.9");
+  ok(/flushed/.test(cli(r, "clear arp")), "T65 clear arp empties the ARP cache");
+  ok(/already empty/.test(cli(r, "clear arp")), "T65 and says so if it was already empty");
+  ok(/gone/.test(cli(r, "clear log messages")), "T65 clear log messages empties the log");
+  ok(/log is empty/.test(cli(r, "show log messages")), "T65 and show log messages confirms it");
+
+  /* monitor interface traffic */
+  const mon = cli(r, "monitor interface traffic");
+  ok(/Input packets/.test(mon) && /ge-0\/0\/0/.test(mon),
+     "T65 monitor interface traffic shows per-interface counters");
+  ok(/press q/.test(mon), "T65 and says what a real box does differently");
+
+  /* file show on real paths */
+  ok(/address 10\.0\.0\.1/.test(cli(r, "file show /config/juniper.conf.gz")),
+     "T65 file show /config/juniper.conf.gz prints the active configuration");
+  cli(r, "configure"); cli(r, "set system host-name R-ONE"); cli(r, "commit"); cli(r, "exit");
+  ok(/address 10\.0\.0\.1/.test(cli(r, "file show /config/juniper.conf.1.gz")) &&
+     !/R-ONE/.test(cli(r, "file show /config/juniper.conf.1.gz")),
+     "T65 file show reads a numbered rollback file, which predates the newest commit");
+  ok(/No such file/.test(cli(r, "file show /config/juniper.conf.9.gz")),
+     "T65 a rollback file that does not exist is refused");
+  ok(/No such file/.test(cli(r, "file show /var/log/nope")), "T65 and so is a file that was never there");
+
+  /* ping options */
+  const p4 = cli(r, "ping 10.0.0.9 count 4");
+  ok(/4 packets transmitted, 4 packets received/.test(p4), "T65 ping count n sends exactly n probes");
+  ok((p4.match(/icmp_seq=/g) || []).length === 4, "T65 and prints one line per probe");
+  ok(/round-trip min\/avg\/max/.test(p4), "T65 and the round-trip summary a real box prints");
+  const pr = cli(r, "ping 10.0.0.9 count 6 rapid");
+  ok(/^!{6}$/m.test(pr), "T65 ping rapid prints one character per probe");
+  ok(/6 packets transmitted, 6 packets received/.test(pr), "T65 and still counts them");
+  ok(/1000 data bytes/.test(cli(r, "ping 10.0.0.9 size 1000")), "T65 ping size sets the payload size");
+  ok(/1008 bytes from/.test(cli(r, "ping 10.0.0.9 size 1000")), "T65 and the reply reports payload + 8");
+  ok(/icmp_seq=0/.test(cli(r, "ping 10.0.0.9 count 1 source 10.0.0.1")),
+     "T65 ping source works from one of the device's own addresses");
+  const badsrc = cli(r, "ping 10.0.0.9 count 1 source 1.2.3.4");
+  ok(/Can't assign requested address/.test(badsrc),
+     "T65 ping source refuses an address this device does not own, like a real box");
+  const dnf = cli(r, "ping 10.0.0.9 size 2000 do-not-fragment");
+  ok(/Message too long/.test(dnf), "T65 do-not-fragment refuses a packet bigger than the egress MTU");
+  ok(/MTU 1514/.test(dnf), "T65 and names the MTU that stopped it");
+  const big = cli(r, "ping 10.0.0.9 size 2000");
+  ok(/2000 data bytes/.test(big) && !/Message too long/.test(big),
+     "T65 without do-not-fragment the same oversized packet is allowed (it would just fragment)");
+  const lost = cli(r, "ping 10.0.0.77 count 3");
+  ok(/3 packets transmitted, 0 packets received, 100\.0% packet loss/.test(lost),
+     "T65 a failed ping reports the count you asked for, not a hardcoded 2");
+
+  /* halt and zeroize */
+  ok(/Halt the system \? \[yes,no\] \(no\)/.test(cli(r, "request system halt")),
+     "T65 request system halt asks first");
+  ok(/operating system has halted/.test(cli(r, "yes")), "T65 confirming halts the box");
+  ok(devices[r].powered === false, "T65 and the box really is down");
+  powerOn(devices[r]);
+  rebuildAllDerived();
+  ok(/Erase all data/.test(cli(r, "request system zeroize")), "T65 request system zeroize warns before wiping");
+  ok(/factory default/.test(cli(r, "yes")), "T65 confirming zeroizes");
+  ok(cfgIsEmpty(committedTree(devices[r])), "T65 and the configuration is genuinely gone");
+  ok((devices[r].cfgHistory || []).length === 0, "T65 zeroize takes the rollback history with it");
+  ok(!devices[r].rescueConfig, "T65 and the rescue config too");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

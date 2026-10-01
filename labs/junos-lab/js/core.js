@@ -355,6 +355,13 @@ function committedTree(dev){
   return dev.configFull || dev.config;
 }
 
+/* JunOS quotes a value only when it has to: spaces or a # would otherwise
+   break the curly-brace file it writes to disk. */
+function cfgQuote(v){
+  const s = String(v);
+  return /[\s#;{}]/.test(s) ? '"' + s.replace(/"/g, '\\"') + '"' : s;
+}
+
 /* JunOS-style curly-brace rendering */
 function treeToText(t, ind, annots, path, inacts){
   ind = ind || "";
@@ -371,12 +378,12 @@ function treeToText(t, ind, annots, path, inacts){
     const tag = inacts[here.join(" ")] ? "inactive: " : "";
     if(v === true) out.push(ind + tag + k + ";");
     else if(Array.isArray(v))
-      out.push(ind + tag + k + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
+      out.push(ind + tag + k + (v.length === 1 ? " " + cfgQuote(v[0]) : " [ " + v.map(cfgQuote).join(" ") + " ]") + ";");
     else if(v && typeof v === "object"){
       if(Object.keys(v).length === 0) out.push(ind + tag + k + ";");
       else { out.push(ind + tag + k + " {"); out.push(treeToText(v, ind + "    ", annots, here, inacts)); out.push(ind + "}"); }
     }
-    else out.push(ind + tag + k + " " + v + ";");
+    else out.push(ind + tag + k + " " + cfgQuote(v) + ";");
   }
   return out.join("\n");
 }
@@ -390,10 +397,10 @@ function diffTrees(applied, cand){
   const out = [];
   function entry(arr, sign, k, v){
     if(v === true) arr.push(sign + "  " + k + ";");
-    else if(Array.isArray(v)) arr.push(sign + "  " + k + (v.length === 1 ? " " + v[0] : " [ " + v.join(" ") + " ]") + ";");
+    else if(Array.isArray(v)) arr.push(sign + "  " + k + (v.length === 1 ? " " + cfgQuote(v[0]) : " [ " + v.map(cfgQuote).join(" ") + " ]") + ";");
     else if(v && typeof v === "object")
       ("" + treeToText({ [k]: v }, "")).split("\n").forEach(l => arr.push(sign + "  " + l));
-    else arr.push(sign + "  " + k + " " + v + ";");
+    else arr.push(sign + "  " + k + " " + cfgQuote(v) + ";");
   }
   function walk(pa, ca, path){
     const keys = [...new Set([...Object.keys(pa || {}), ...Object.keys(ca || {})])].filter(k => k !== ANNOT_KEY && k !== INACT_KEY);
@@ -474,7 +481,7 @@ function chassisAeCount(dev){
   }catch(e){ return 0; }
 }
 
-var APP_VERSION = "3.14.0";
+var APP_VERSION = "3.15.0";
 
 function svgMark(kind){
   if(kind === "check") return '<svg class="mk mk-check" viewBox="0 0 14 14"><path d="M2.5 7.5 L5.8 10.8 L11.5 3.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';

@@ -56,6 +56,12 @@ No build step, no dependencies — open `index.html` in a browser.
   NAT** (the internet genuinely refuses private sources), **DHCP** (pools +
   dhclient), LACP, RSTP, storm control, **port security**, **LLDP**
   (`show lldp neighbors`), and a per-device syslog (`show log messages`).
+- **Operational monitoring**: the JNCIA "Operational Monitoring and Maintenance"
+  domain as working commands — `show system alarms` / `storage` / `users`,
+  `show chassis routing-engine`, `show interfaces descriptions`,
+  `show route terse` / `summary`, `monitor interface traffic`, the `clear`
+  family, `show configuration <path>`, and `ping` with real options
+  (`count`, `rapid`, `size`, `source`, `do-not-fragment`).
 - **Operations layer**: manage boxes over the network itself — hosts `ssh` into
   any switch with `system services ssh` committed (lock yourself out and the
   session really drops mid-commit), and switches stream their logs to a server
