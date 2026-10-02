@@ -3166,6 +3166,62 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(RENDER_ERRORS.length === 0, "T66 and the error list resets on the next clean render");
 }
 
+/* ---------- T67: audio that cannot start is not an application error ---------- */
+{
+  /* A real browser refuses to start audio until it trusts the page, and refuses
+     it as a REJECTED PROMISE from resume(). A synchronous try/catch never sees
+     that, so the rejection escaped to window.onunhandledrejection and the app
+     reported it as "internal error in async" — a red toast, on something as
+     harmless as the power-on beep. */
+  let resumeCalls = 0, catchAttached = 0;
+  function FakeNode(){
+    return {
+      connect(){}, start(){}, stop(){},
+      frequency: { setValueAtTime(){}, exponentialRampToValueAtTime(){}, value: 0 },
+      gain: { setValueAtTime(){}, exponentialRampToValueAtTime(){}, value: 0 },
+      Q: { value: 0 }, type: "", buffer: null,
+    };
+  }
+  function BlockedAudioContext(){
+    this.state = "suspended";
+    this.currentTime = 0;
+    this.sampleRate = 48000;
+    this.destination = {};
+    this.resume = function(){
+      resumeCalls++;
+      return { catch(fn){ catchAttached++; return this; }, then(){ return this; } };
+    };
+    this.createGain = FakeNode;
+    this.createOscillator = FakeNode;
+    this.createBufferSource = FakeNode;
+    this.createBiquadFilter = FakeNode;
+    this.createBuffer = function(ch, n){ return { getChannelData(){ return new Array(n).fill(0); } }; };
+  }
+  const hadAC = window.AudioContext;
+  window.AudioContext = BlockedAudioContext;
+
+  let threw = null;
+  try{ SFX.powerUp(); }catch(e){ threw = e; }
+
+  ok(threw === null, "T67 the power-on beep does not throw when audio is blocked");
+  ok(resumeCalls > 0, "T67 and it really did try to resume a suspended context");
+  ok(catchAttached === resumeCalls,
+     "T67 every resume() gets a rejection handler, so a blocked beep never becomes an unhandled rejection");
+
+  /* Powering a switch on is the path she hit: powerOn calls SFX.powerUp. */
+  wipeLab();
+  const sw67 = makeSwitch(100, 100, 24, "EX4300-24T");
+  powerOff(devices[sw67]);
+  const before = catchAttached;
+  let powerThrew = null;
+  try{ powerOn(devices[sw67]); }catch(e){ powerThrew = e; }
+  ok(powerThrew === null, "T67 turning a switch on survives blocked audio");
+  ok(devices[sw67].powered === true, "T67 and the switch actually powers on");
+  ok(catchAttached > before, "T67 and that path is the one that guards the resume");
+
+  window.AudioContext = hadAC;
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

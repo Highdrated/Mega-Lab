@@ -18,7 +18,16 @@ var SFX = (function(){
     if(!enabled) return null;
     var c = ac();
     if(!c) return null;
-    if(c.state === "suspended"){ try{ c.resume(); }catch(e){} }
+    if(c.state === "suspended"){
+      /* resume() returns a promise, so a synchronous catch never sees its
+         rejection. Browsers reject it whenever audio may not start yet, and an
+         unhandled rejection reaches window.onunhandledrejection, which the app
+         reports as an internal error. A lab that cannot beep is not an error. */
+      try{
+        var r = c.resume();
+        if(r && typeof r.catch === "function") r.catch(function(){});
+      }catch(e){}
+    }
     return c;
   }
   function env(c, t0, peak, dur){
