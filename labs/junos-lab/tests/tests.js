@@ -3037,6 +3037,135 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(!devices[r].rescueConfig, "T65 and the rescue config too");
 }
 
+/* ---------- T66: the canvas survives every shape of lab ---------- */
+{
+  function drawnDevices(){
+    let n = 0;
+    (function walk(node){
+      for(const c of (node.children || [])){
+        if(c.attrs && c.attrs["data-dev"]) n++;
+        walk(c);
+      }
+    })(svg);
+    return n;
+  }
+  function world(){
+    wipeLab();
+    const a = makeSwitch(100, 100, 24, "EX4300-24T");
+    const b = makeSwitch(100, 400, 48, "EX4300-48T");
+    const r = makeRouter(600, 100);
+    const hh = makeHost(700, 400);
+    const sv = makeServer(100, 600);
+    cable(a, "ge-0/0/23", b, "ge-0/0/23");
+    cable(a, "ge-0/0/22", r, "ge-0/0/0");
+    cable(hh, "eth0", b, "ge-0/0/1");
+    cable(sv, "eth0", a, "ge-0/0/2");
+    rebuildAllDerived();
+    return { a, b, r, hh, sv };
+  }
+  function roomAround(){
+    zones["zn-room"] = { id: "zn-room", name: "SERVER ROOM", x: 50, y: 50, w: 420, h: 420, hue: 0, kind: "building" };
+  }
+
+  world();
+  render();
+  ok(RENDER_ERRORS.length === 0, "T66 a plain lab renders with no errors: " + RENDER_ERRORS.join(" | "));
+  ok(drawnDevices() === Object.keys(devices).length, "T66 and every device reaches the canvas");
+
+  /* The reported bug: a room with cables crossing its wall blanked the canvas.
+     renderLink read an undeclared `kind`, the throw aborted the forEach, and
+     the devices, scale bar and status row never rendered at all. */
+  world();
+  roomAround();
+  rebuildAllDerived();
+  render();
+  ok(RENDER_ERRORS.length === 0,
+     "T66 a cable leaving a zone renders: " + RENDER_ERRORS.join(" | "));
+  ok(drawnDevices() === Object.keys(devices).length,
+     "T66 and the devices still draw when a link crosses a zone wall");
+
+  /* Same bug, second trigger: any link whose speed is not the 1 Gbps default. */
+  world();
+  Object.values(links).forEach(l => { l.speed = 10; });
+  render();
+  ok(RENDER_ERRORS.length === 0, "T66 a link with a non-default speed renders: " + RENDER_ERRORS.join(" | "));
+  ok(drawnDevices() === Object.keys(devices).length, "T66 and a speed label does not cost the devices");
+
+  /* Every link kind, both zone kinds, every speed step, all at once. */
+  world();
+  roomAround();
+  zones["zn-b"] = { id: "zn-b", name: "BUILDING B", x: 560, y: 50, w: 420, h: 420, hue: 140, kind: "building" };
+  zones["zn-rack"] = { id: "zn-rack", name: "RACK A", x: 80, y: 80, w: 200, h: 360, hue: 0, kind: "rack" };
+  let i = 0;
+  Object.values(links).forEach(l => {
+    l.kind = ["lan", "remote", "console", "wifi"][i % 4];
+    l.speed = [1, 10, 0.1, 40][i % 4];
+    i++;
+  });
+  rebuildAllDerived();
+  render();
+  ok(RENDER_ERRORS.length === 0, "T66 racks, buildings, every link kind and speed: " + RENDER_ERRORS.join(" | "));
+  ok(drawnDevices() === Object.keys(devices).length, "T66 and all devices survive that too");
+
+  /* Degraded states. */
+  const degraded = {
+    "powered off": d => { devices[d.a].powered = false; },
+    "failed device": d => { devices[d.r].failed = true; },
+    "error-disabled port": d => { devices[d.b].errDisabled["ge-0/0/1"] = true; },
+    "failed link": () => { Object.values(links).forEach(l => { l.failed = true; }); },
+    "degraded link": () => { Object.values(links).forEach(l => { l.degraded = true; }); },
+    "deleted device behind a link": d => { delete devices[d.hh]; },
+    "device with no ports": d => { devices[d.sv].ports = []; },
+    "negative coordinates": () => { Object.values(devices).forEach(x => { x.x = -400; x.y = -400; }); },
+  };
+  for(const name of Object.keys(degraded)){
+    const d = world();
+    roomAround();
+    degraded[name](d);
+    rebuildAllDerived();
+    render();
+    ok(RENDER_ERRORS.length === 0, "T66 canvas survives " + name + ": " + RENDER_ERRORS.join(" | "));
+  }
+
+  /* VLAN paint is a whole second rendering path over the same links. */
+  world();
+  roomAround();
+  cli(Object.values(devices).find(d => d.type === "switch").id, "configure");
+  rebuildAllDerived();
+  const sw66 = Object.values(devices).find(d => d.type === "switch").id;
+  cli(sw66, "set vlans staff vlan-id 10");
+  cli(sw66, "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff");
+  cli(sw66, "commit");
+  cli(sw66, "exit");
+  vlanView = true;
+  render();
+  ok(RENDER_ERRORS.length === 0, "T66 VLAN colour view renders: " + RENDER_ERRORS.join(" | "));
+  ok(drawnDevices() === Object.keys(devices).length, "T66 and VLAN paint does not cost the devices");
+  vlanView = false;
+
+  /* The guard itself: a deliberately broken item must cost only that item. */
+  world();
+  const victim = Object.keys(links)[0];
+  const realRenderLink = renderLink;
+  renderLink = function(lid, l, parent){
+    if(lid === victim) throw new Error("synthetic");
+    return realRenderLink(lid, l, parent);
+  };
+  const realWarn = console.warn;
+  console.warn = function(){};
+  render();
+  console.warn = realWarn;
+  renderLink = realRenderLink;
+  ok(RENDER_ERRORS.length === 1 && /synthetic/.test(RENDER_ERRORS[0]),
+     "T66 one broken link is reported, not swallowed");
+  ok(drawnDevices() === Object.keys(devices).length,
+     "T66 and one broken link no longer blanks the devices");
+  ok(collectStatuses().some(s => /failed to draw/.test(s.text)),
+     "T66 a draw failure reaches the status row, so it is visible rather than silent");
+  render();
+  ok(RENDER_ERRORS.length === 0, "T66 and the error list resets on the next clean render");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

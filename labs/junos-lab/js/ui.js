@@ -180,24 +180,38 @@ function portTitle(dev, portId){
   return t;
 }
 
+var RENDER_ERRORS = [];
+/* One broken item must never cost the whole canvas. Before this guard a single
+   throw inside a link or device aborted the forEach, leaving cables drawn over
+   an empty canvas with no devices, no scale bar and no status row. */
+function renderSafe(label, fn){
+  try{ fn(); }
+  catch(e){
+    RENDER_ERRORS.push(label + ": " + ((e && e.message) || e));
+    if(typeof console !== "undefined" && console.warn) console.warn("render failed on " + label, e);
+  }
+}
 function render(){
   if(!svg) return;
+  RENDER_ERRORS = [];
   svg.innerHTML = "";
   worldG = el("g", { id: "world", transform: `translate(${view.x},${view.y}) scale(${view.scale})` }, svg);
   const zoneLayer = el("g", {}, worldG);
   Object.values(zones)
     .sort((a, b) => ((a.kind === "rack" ? 1 : 0) - (b.kind === "rack" ? 1 : 0)) || (b.w * b.h) - (a.w * a.h))
-    .forEach(z => renderZone(z, zoneLayer));
+    .forEach(z => renderSafe("zone " + (z.name || z.id), () => renderZone(z, zoneLayer)));
   const linkLayer = el("g", {}, worldG);
   const devLayer = el("g", {}, worldG);
   animLayer = el("g", {}, worldG);
-  Object.entries(links).forEach(([lid, l]) => renderLink(lid, l, linkLayer));
-  Object.values(devices).forEach(dev => renderDevice(dev, devLayer));
-  updateScaleBar();
-  renderStatusbar();
-  renderVlanLegend();
-  renderStatusRow();
-  if(lensOn) buildLens();
+  Object.entries(links).forEach(([lid, l]) =>
+    renderSafe("link " + lid, () => renderLink(lid, l, linkLayer)));
+  Object.values(devices).forEach(dev =>
+    renderSafe("device " + (dev.name || dev.id), () => renderDevice(dev, devLayer)));
+  renderSafe("scale bar", updateScaleBar);
+  renderSafe("status bar", renderStatusbar);
+  renderSafe("vlan legend", renderVlanLegend);
+  renderSafe("status row", renderStatusRow);
+  if(lensOn) renderSafe("lens", buildLens);
 }
 function collectStatuses(){
   const out = [];
@@ -239,6 +253,8 @@ function collectStatuses(){
       if(zt.status === "crit") add("error", zn + ": " + zt.temp.toFixed(1) + "°C — gear will shut down");
       else if(zt.status === "warn") add("warn", zn + ": " + zt.temp.toFixed(1) + "°C — running hot");
     }
+  if(typeof RENDER_ERRORS !== "undefined" && RENDER_ERRORS.length)
+    add("error", "canvas: " + RENDER_ERRORS.length + " item(s) failed to draw \u2014 " + RENDER_ERRORS[0]);
   if(NET && NET.stormLinks.size) add("error", "broadcast storm on " + NET.stormLinks.size + " link(s)");
   const nFailL = Object.values(links).filter(l => l.failed).length;
   if(nFailL) add("warn", nFailL + " link(s) in simulated failure");
@@ -543,6 +559,7 @@ function linkStatusLabel(lid){
 function renderLink(lid, l, parent){
   const devA = devices[l.a.dev], devB = devices[l.b.dev];
   if(!devA || !devB) return;
+  const kind = l.kind || "lan";
   const [ax, ay] = portXY(devA, l.a.port);
   const [bx, by] = portXY(devB, l.b.port);
   const hit = el("line", { x1: ax, y1: ay, x2: bx, y2: by, class: "linkhit" }, parent);
