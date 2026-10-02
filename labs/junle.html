@@ -2374,6 +2374,20 @@
         { task: "Show who made the last commit and when.", answers: ["show system commit"], fx: "commits", chip: "COMMIT LOG" },
         { task: "Take a snapshot of the current software as a backup.", answers: ["request system snapshot"], fx: "snap", chip: "SNAPSHOT" }
       ]
+    },
+    {
+      id: "dcl2sec",
+      name: "LAYER 2 SECURITY",
+      intro: "Lock down the access edge: DHCP snooping, ARP inspection, IP source guard, MAC limiting. ELS syntax, in order.",
+      ordered: true,
+      drills: [
+        { task: "Turn on DHCP snooping for the klanten VLAN.", answers: ["set vlans klanten forwarding-options dhcp-security"], fx: "snoop", chip: "DHCP SNOOP", why: "builds a binding table of IP/MAC-to-port from real DHCP leases \u2014 the base the other three features check against." },
+        { task: "Trust the uplink group that reaches the real DHCP server (call it servers).", answers: ["set vlans klanten forwarding-options dhcp-security group servers overrides trusted"], fx: "trust", chip: "TRUST GRP", why: "snooping drops server-class DHCP replies on untrusted ports; the port to your real server must be trusted." },
+        { task: "Bind that trusted group to uplink ge-0/0/0.", answers: ["set vlans klanten forwarding-options dhcp-security group servers interface ge-0/0/0.0"], fx: "trustif", chip: "TRUST PORT", why: "names which physical port is the trusted one \u2014 without it the group trusts nothing." },
+        { task: "Enable dynamic ARP inspection on the VLAN.", answers: ["set vlans klanten forwarding-options dhcp-security arp-inspection"], fx: "dai", chip: "DAI", why: "checks every ARP against the snooping table \u2014 blocks ARP spoofing and man-in-the-middle." },
+        { task: "Enable IP source guard on the VLAN.", answers: ["set vlans klanten forwarding-options dhcp-security ip-source-guard"], fx: "isg", chip: "IP SRC GUARD", why: "drops packets whose source IP/MAC does not match the binding table \u2014 stops IP spoofing." },
+        { task: "Cap access port ge-0/0/5 to 2 MAC addresses and drop the excess.", answers: ["set switch-options interface ge-0/0/5 interface-mac-limit 2 packet-action drop"], fx: "maclimit", chip: "MAC LIMIT", why: "a port that learns unlimited MACs can be flooded to overflow the table; capping it stops CAM-exhaustion attacks." }
+      ]
     }
   ];
 
@@ -2550,6 +2564,31 @@
       gotcha: "Old guides show 'set interfaces X ... storm-control' \u2014 that is legacy non-ELS syntax and fails on the EX4300. Verify on the bench switch.",
       recap: "Every port now has a storm-control ceiling using the ELS forwarding-options syntax, so a broadcast storm can't take management with it.",
       next: "COMMIT MODEL \u2014 you've built a lot; now master the safety net that makes changing it survivable. read commit."
+    },
+    {
+      id: "dcl2sec",
+      name: "LAYER 2 SECURITY",
+      what: "Four ELS features that protect the access edge: DHCP snooping, dynamic ARP inspection, IP source guard, and MAC limiting.",
+      why: "The access edge is where untrusted hosts plug in. Left open, one laptop can run a rogue DHCP server, poison ARP, spoof an IP, or flood the MAC table.",
+      diagram: [
+        "  host --> [EX4300 access port] --> uplink --> real DHCP server",
+        "               |",
+        "  snooping records   IP + MAC + port   into a binding table",
+        "  DAI + ip-source-guard   check every frame against that table",
+        "  mac-limit   caps how many MACs the port will learn"
+      ],
+      steps: [
+        ["1. enable DHCP snooping on the access VLAN", "set vlans klanten forwarding-options dhcp-security", "records IP/MAC-to-port from real DHCP leases into a binding table.", "a rogue DHCP server on an access port can hand out a fake gateway and hijack the subnet."],
+        ["2. trust the port that reaches the real DHCP server", "set vlans klanten forwarding-options dhcp-security group servers overrides trusted", "server-class DHCP replies are only allowed from trusted ports.", "the switch drops your own server's OFFER/ACK and clients never get a lease."],
+        ["3. bind that trusted group to the uplink interface", "set vlans klanten forwarding-options dhcp-security group servers interface ge-0/0/0.0", "names the physical uplink as the trusted one.", "the group exists but trusts no port, so legitimate DHCP is still dropped."],
+        ["4. turn on dynamic ARP inspection", "set vlans klanten forwarding-options dhcp-security arp-inspection", "validates every ARP on access ports against the binding table.", "an attacker ARP-poisons the gateway and silently intercepts traffic."],
+        ["5. turn on IP source guard", "set vlans klanten forwarding-options dhcp-security ip-source-guard", "drops frames whose source IP/MAC does not match the binding table.", "a host spoofs another's IP to evade filters or frame someone else."],
+        ["6. cap MAC learning on the access port", "set switch-options interface ge-0/0/5 interface-mac-limit 2 packet-action drop", "limits how many MACs the port learns and drops the rest.", "a MAC flood overflows the table and the switch floods every frame \u2014 a passive tap."]
+      ],
+      verify: ["show dhcp-security binding", "show ethernet-switching table", "show configuration vlans klanten forwarding-options"],
+      gotcha: "This is ELS syntax (EX4300 / vEX, Junos 17.1R1+). Older EX used 'set ethernet-switching-options secure-access-port ...' which fails on ELS. DAI and IP source guard both read the snooping binding table, so DHCP snooping must be on first or they have nothing to check. Verify every command and show output on a real vEX/EX before exam day.",
+      recap: "The klanten VLAN now snoops DHCP into a binding table, trusts only the server uplink, validates ARP and source IP against that table, and caps MAC learning per port \u2014 the JNCIA-DC Layer 2 security stack.",
+      next: "LINK AGGREGATION \u2014 bundle links into one logical pipe for bandwidth and redundancy. read lacp."
     },
     {
       id: "commit",
@@ -3435,7 +3474,7 @@
     basics: "basics", dayzero: "basics", rescue: "commit",
     vlans: "vlans", irb: "irb", routing: "ospf", loops: "rstp",
     lacp: "lacp", vrrp: "vrrp", ospf: "ospf", bgp: "bgp", rstp: "rstp",
-    vc: "vc", storm: "storm", commit: "commit",
+    vc: "vc", storm: "storm", commit: "commit", dcl2sec: "dc-l2sec",
     ghost: "vc", splitvc: "vc", deadport: "basics", safechange: "commit",
     bgpdown: "bgp", ospfstuck: "ospf", rogueroot: "rstp", serverlag: "lacp",
     mtublackhole: "ospf", asymroute: "ospf", policydrop: "bgp",
@@ -3446,7 +3485,8 @@
   const TOPIC_LABEL = {
     basics: "FOUNDATIONS", vlans: "VLANs", irb: "INTER-VLAN (IRB)",
     lacp: "LACP / LAG", rstp: "SPANNING TREE", vc: "VIRTUAL CHASSIS",
-    ospf: "OSPF", bgp: "BGP", vrrp: "VRRP", storm: "STORM CONTROL", commit: "COMMIT MODEL"
+    ospf: "OSPF", bgp: "BGP", vrrp: "VRRP", storm: "STORM CONTROL", commit: "COMMIT MODEL",
+    "dc-l2sec": "LAYER 2 SECURITY"
   };
 
   const TRACK = [
@@ -3465,7 +3505,7 @@
 
   const TRACK_DC = [
     { topic: "vlans", label: "ETHERNET SWITCHING & VLANs", blurb: "Access ports, trunks, tagging \u2014 the fabric's ground floor.", modules: ["basics", "vlans"], guide: null },
-    { topic: "dc-l2sec", label: "LAYER 2 SECURITY", blurb: "DHCP snooping, dynamic ARP inspection, MAC limiting.", modules: [], guide: null, planned: true },
+    { topic: "dc-l2sec", label: "LAYER 2 SECURITY", blurb: "DHCP snooping, dynamic ARP inspection, MAC limiting.", modules: ["dcl2sec"], guide: "dcl2sec" },
     { topic: "lacp", label: "LINK AGGREGATION", blurb: "Bundle links into one logical pipe (ae).", modules: ["lacp"], guide: "lacp" },
     { topic: "dc-loadbal", label: "LOAD BALANCING (ECMP)", blurb: "Spread traffic across equal-cost paths.", modules: [], guide: null, planned: true },
     { topic: "dc-rpolicy", label: "ROUTING POLICY", blurb: "Match-and-act: control which routes go where.", modules: [], guide: null, planned: true },
