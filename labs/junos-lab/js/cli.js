@@ -253,6 +253,13 @@ function cfgExec(dev, cmd){
       "  copy <stmt> to <new>    duplicate a statement and its whole subtree\n" +
       "  status                who else is editing this configuration\n" +
       "  save <file>           write the candidate to a file (file show <file> reads it back)\n" +
+      "  load merge <src>      fold curly-brace configuration into the candidate\n" +
+      "  load override <src>   throw the candidate away and use the loaded configuration\n" +
+      "  load replace <src>    merge, but empty any level tagged replace: first\n" +
+      "  load patch <src>      read a show | compare diff back in\n" +
+      "  load set <src>        load set / delete statements rather than curly braces\n" +
+      "                        <src> is terminal (paste) or a file you saved; add relative\n" +
+      "                        to load at the level you are standing at\n" +
       "  wildcard delete <stmt with *>   delete every statement the pattern matches\n" +
       "  up / top              go up one level / back to the top\n" +
       "  commit                make the candidate active\n" +
@@ -379,23 +386,306 @@ function cfgRun(dev, cmd){
     case "wildcard": return cfgWildcardCmd(dev, rest);
     case "commit": return commitCmd(dev, rest, cmd);
     case "rollback": return rollbackCmd(dev, rest);
-    case "load": {
-      if(!rest.length || !"set".startsWith(rest[0]) || !(rest[1] && "terminal".startsWith(rest[1])))
-        return lines("err", "usage: load set terminal — then paste set/delete statements");
-      if(typeof modalInput !== "function" || typeof window === "undefined")
-        return lines("err", "load set terminal needs the UI (use loadSetLines() headless)");
-      setTimeout(async () => {
-        const text = await modalInput("load set terminal",
-          "Paste set/delete statements, one per line. They load into the candidate — commit afterwards to apply.", "", "textarea");
-        if(text === null) return;
-        const res = loadSetLines(dev, text);
-        dev.cli.log.push({ cls: res.errors ? "err" : "out", text: res.summary });
-        if(typeof refreshCliView === "function") refreshCliView();
-        touchState();
-      }, 0);
-      return lines("out", "(paste buffer opened — statements load into the candidate; commit to apply)");
-    }
+    case "load": return cfgLoadCmd(dev, rest);
   }
+}
+
+const LOAD_MODES = ["set", "merge", "override", "replace", "patch", "update"];
+
+function curlyTokens(text){
+  const s = String(text);
+  const toks = [];
+  let i = 0, note = null;
+  const take = () => { const n = note; note = null; return n; };
+  while(i < s.length){
+    const c = s[i];
+    if(c === "/" && s[i + 1] === "*"){
+      const end = s.indexOf("*/", i + 2);
+      if(end === -1) return { err: "unterminated /* comment" };
+      note = s.slice(i + 2, end).replace(/\s+/g, " ").trim();
+      i = end + 2;
+      continue;
+    }
+    if(c === "#"){ while(i < s.length && s[i] !== "\n") i++; continue; }
+    if(/\s/.test(c)){ i++; continue; }
+    if("{};[]".includes(c)){ toks.push({ t: c }); i++; continue; }
+    if(c === '"' || c === "'"){
+      const q = c; let v = ""; i++;
+      while(i < s.length && s[i] !== q){
+        if(s[i] === "\\" && i + 1 < s.length){ v += s[i + 1]; i += 2; }
+        else { v += s[i]; i++; }
+      }
+      if(i >= s.length) return { err: "unterminated quoted string" };
+      i++;
+      toks.push({ t: "word", v, note: take() });
+      continue;
+    }
+    let v = "";
+    while(i < s.length && !/[\s{};[\]]/.test(s[i])){ v += s[i]; i++; }
+    toks.push({ t: "word", v, note: take() });
+  }
+  return { toks };
+}
+
+function parseCurlyConfig(text, prefix, honourReplace){
+  const tk = curlyTokens(text);
+  if(tk.err) return { err: "syntax error: " + tk.err };
+  const toks = tk.toks;
+  const stmts = [];
+  let i = 0;
+  const path = (ws) => ws.map(w => cfgQuote(w)).join(" ");
+  function statement(){
+    const words = [];
+    let note = null, inactive = false, replaceMark = false, protectMark = false;
+    while(i < toks.length){
+      const t = toks[i];
+      if(t.t === "{" || t.t === ";" || t.t === "}")
+        return { words, note, inactive, replaceMark, protectMark, term: t.t };
+      if(t.t === "]") return { err: '"]" without a matching "["' };
+      if(t.t === "["){
+        if(!words.length) return { err: '"[" where a statement name was expected' };
+        words.push("["); i++;
+        while(i < toks.length && toks[i].t !== "]"){
+          if(toks[i].t !== "word") return { err: 'unexpected "' + toks[i].t + '" inside [ ... ]' };
+          words.push(toks[i].v); i++;
+        }
+        if(i >= toks.length) return { err: "unterminated [ ... ] list" };
+        words.push("]"); i++;
+        continue;
+      }
+      if(!words.length){
+        if(t.note) note = t.note;
+        if(t.v === "inactive:"){ inactive = true; i++; continue; }
+        if(t.v === "replace:"){ replaceMark = true; i++; continue; }
+        if(t.v === "protect:"){ protectMark = true; i++; continue; }
+      }
+      words.push(t.v); i++;
+    }
+    return { words, note, inactive, replaceMark, protectMark, term: "eof" };
+  }
+  function decorate(here, st){
+    if(st.note) stmts.push({ kind: "annotate", toks: here.slice(), text: path(here), note: st.note });
+    if(st.inactive) stmts.push({ kind: "deactivate", toks: here.slice(), text: path(here) });
+    if(st.protectMark) stmts.push({ kind: "unsupported", text: path(here),
+      why: "protect: is not modelled in this lab" });
+  }
+  function level(pre){
+    while(i < toks.length){
+      if(toks[i].t === "}") return null;
+      if(toks[i].t === ";"){ i++; continue; }
+      const st = statement();
+      if(st.err) return "syntax error: " + st.err;
+      if(st.term === "eof" && !st.words.length) return null;
+      if(st.term === "eof")
+        return 'syntax error: configuration ends after "' + st.words.join(" ") + '" — a ";" or "}" is missing';
+      if(!st.words.length){ i++; continue; }
+      if(st.term === "{"){
+        if(st.words.includes("["))
+          return 'syntax error: "[ ... ]" cannot name a hierarchy level (' + st.words.join(" ") + ")";
+        i++;
+        const here = pre.concat(st.words);
+        if(st.replaceMark && honourReplace)
+          stmts.push({ kind: "delete", toks: here.slice(), text: path(here), quiet: true });
+        const err = level(here);
+        if(err) return err;
+        if(i >= toks.length) return 'syntax error: "' + st.words.join(" ") + ' {" is never closed';
+        i++;
+        if(!stmts.some(s => s.kind === "set" && s.toks.length > here.length &&
+            s.toks.slice(0, here.length).join(" ") === here.join(" ")))
+          stmts.push({ kind: "set", toks: here.slice(), text: path(here) });
+        decorate(here, st);
+        continue;
+      }
+      i++;
+      const here = pre.concat(st.words);
+      if(st.replaceMark && honourReplace)
+        stmts.push({ kind: "delete", toks: pre.concat([st.words[0]]), text: path(pre.concat([st.words[0]])), quiet: true });
+      stmts.push({ kind: "set", toks: here.slice(), text: path(here) });
+      decorate(here, st);
+    }
+    return null;
+  }
+  const err = level((prefix || []).slice());
+  if(err) return { err };
+  if(i < toks.length && toks[i].t === "}") return { err: 'syntax error: "}" without a matching "{"' };
+  return { stmts };
+}
+
+function parsePatchText(text){
+  const stmts = [];
+  let ctx = [], sign = null, buf = [];
+  const flush = () => {
+    if(!buf.length) return null;
+    const body = buf.join("\n");
+    buf = [];
+    const res = parseCurlyConfig(body, ctx, false);
+    if(res.err) return res.err;
+    if(sign === "+") stmts.push(...res.stmts);
+    else {
+      const seen = new Set();
+      for(const s of res.stmts){
+        if(s.kind !== "set") continue;
+        const key = s.toks.slice(0, ctx.length + 1).join(" ");
+        if(seen.has(key)) continue;
+        seen.add(key);
+        stmts.push({ kind: "delete", toks: s.toks.slice(0, ctx.length + 1), text: key });
+      }
+    }
+    return null;
+  };
+  for(const raw of String(text).split(/\r?\n/)){
+    const line = raw.trim();
+    if(!line) continue;
+    const edit = line.match(/^\[edit(?:\s+(.*))?\]$/);
+    if(edit){
+      const err = flush();
+      if(err) return { err };
+      ctx = edit[1] ? cfgTokens(edit[1]) : [];
+      sign = null;
+      continue;
+    }
+    const m = line.match(/^([-+!])\s*(.*)$/);
+    if(!m) return { err: 'syntax error: patch lines start with + or - (got "' + line + '")' };
+    if(m[1] === "!"){
+      const err = flush();
+      if(err) return { err };
+      sign = null;
+      continue;
+    }
+    if(m[1] !== sign){
+      const err = flush();
+      if(err) return { err };
+      sign = m[1];
+    }
+    buf.push(m[2]);
+  }
+  const err = flush();
+  if(err) return { err };
+  return { stmts };
+}
+
+function loadWhy(out){
+  for(const l of out)
+    for(const line of String(l.text).split("\n")){
+      const t = line.trim();
+      if(t && !/^\^+$/.test(t)) return t;
+    }
+  return "rejected";
+}
+function loadApplyStmts(dev, stmts){
+  let okc = 0, errors = 0, skipped = 0;
+  const details = [];
+  for(const st of stmts){
+    if(st.kind === "unsupported"){
+      skipped++;
+      details.push(st.text + "   <- " + st.why);
+      continue;
+    }
+    let out = [];
+    if(st.kind === "set") out = cfgSetCmd(dev, st.toks.slice(), "set " + st.text);
+    else if(st.kind === "delete") out = cfgDeleteCmd(dev, st.toks.slice());
+    else if(st.kind === "deactivate") out = cfgActivateCmd(dev, st.toks.slice(), false);
+    else if(st.kind === "annotate") out = cfgAnnotateCmd(dev, "annotate " + st.text + ' "' + annotClean(st.note) + '"');
+    const bad = out.some(l => l.cls === "err");
+    if(bad && st.quiet){ continue; }
+    if(bad){ errors++; details.push(st.text + "   <- " + loadWhy(out)); }
+    else okc++;
+  }
+  return { ok: okc, errors, skipped, details };
+}
+
+function loadConfigText(dev, text, mode, relative){
+  const body = String(text == null ? "" : text);
+  if(!body.trim()) return { errors: 1, summary: "error: nothing to load (the paste was empty)" };
+  const keep = dev.cli.editKeys;
+  if(!relative) dev.cli.editKeys = [];
+  const before = deepClone(dev.candidate);
+  try{
+    let parsed;
+    if(mode === "set"){
+      dev.cli.editKeys = keep;
+      return loadSetLines(dev, body);
+    }
+    if(mode === "patch") parsed = parsePatchText(body);
+    else parsed = parseCurlyConfig(body, [], mode === "replace");
+    if(parsed.err) return { errors: 1, summary: parsed.err + "\n  nothing was loaded — the candidate is unchanged" };
+    if(!parsed.stmts.length) return { errors: 1, summary: "error: no configuration statements found in that text" };
+    if(mode === "override" || mode === "update"){
+      if(relative && mode === "override")
+        return { errors: 1, summary: "error: load override replaces the whole configuration, so it cannot be relative" };
+      if(relative && keep.length) cfgDelete(dev.candidate, keep.slice());
+      else dev.candidate = {};
+    }
+    const res = loadApplyStmts(dev, parsed.stmts);
+    if(res.ok) dev.cli.loadedConfig = true;
+    if(res.errors && (mode === "override" || mode === "update")) dev.candidate = before;
+    const noun = res.ok === 1 ? "statement" : "statements";
+    let summary = res.errors
+      ? "load " + mode + ": " + res.errors + " error" + (res.errors === 1 ? "" : "s") +
+        (mode === "override" || mode === "update"
+          ? "\n  nothing was loaded — load " + mode + " is all-or-nothing, so the candidate is unchanged"
+          : res.ok
+            ? "\n  the other " + res.ok + " " + noun + " did load; show | compare to see what you actually got"
+            : "\n  nothing loaded")
+      : "load complete (" + res.ok + " " + noun + " loaded into the candidate)";
+    if(res.skipped) summary += "\n  " + res.skipped + " skipped";
+    if(res.details.length) summary += "\n" + res.details.slice(0, 6).join("\n");
+    if(!res.errors) summary += "\n  nothing is active yet — show | compare to read it, commit to apply";
+    return { ok: res.ok, errors: res.errors, summary };
+  } finally {
+    dev.cli.editKeys = keep;
+  }
+}
+
+function cfgLoadCmd(dev, rest){
+  const usage = "usage: load <merge|override|replace|patch|set|update> <terminal|filename> [relative]\n" +
+    "  merge      fold the pasted configuration into the candidate\n" +
+    "  override   throw the candidate away and use the pasted configuration instead\n" +
+    "  replace    like merge, but a level tagged replace: is emptied first\n" +
+    "  patch      read back a show | compare diff\n" +
+    "  set        paste configuration-mode commands rather than curly braces\n" +
+    "  update     end up matching the pasted configuration, committing only the differences\n" +
+    "  relative   load at the level you are standing at (not override or patch)";
+  if(!rest.length) return lines("err", usage);
+  const modes = LOAD_MODES.filter(m => m.startsWith(rest[0]));
+  const mode = LOAD_MODES.includes(rest[0]) ? rest[0] : (modes.length === 1 ? modes[0] : null);
+  if(!mode)
+    return lines("err", modes.length > 1
+      ? 'ambiguous load option: "' + rest[0] + '" could be: ' + modes.join(", ")
+      : 'unknown load option: "' + rest[0] + '"\n' + usage);
+  let src = rest[1], relative = false;
+  const tail = rest.slice(2);
+  if(tail.length === 1 && tail[0].length >= 3 && "relative".startsWith(tail[0])) relative = true;
+  else if(tail.length) return lines("err", 'load: unexpected "' + tail.join(" ") + '"\n' + usage);
+  if(relative && (mode === "override" || mode === "patch"))
+    return lines("err", "error: load " + mode + " cannot be relative" +
+      (mode === "override"
+        ? " — it replaces the whole configuration\n  relative works with merge, replace, set and update"
+        : " — a patch carries its own [edit ...] headers\n  relative works with merge, replace, set and update"));
+  if(!src) return lines("err", "load " + mode + ": name a source — terminal, or a file you saved\n" + usage);
+  if(src.length >= 2 && "terminal".startsWith(src)){
+    if(typeof modalInput !== "function" || typeof window === "undefined")
+      return lines("err", "load " + mode + " terminal needs the UI (use loadConfigText() headless)");
+    setTimeout(async () => {
+      const text = await modalInput("load " + mode + " terminal",
+        mode === "set" ? "Paste set / delete statements, one per line."
+          : mode === "patch" ? "Paste a show | compare diff — [edit ...] headers with + and - lines."
+          : "Paste curly-brace configuration. It loads into the candidate — commit afterwards to apply.",
+        "", "textarea");
+      if(text === null) return;
+      const res = loadConfigText(dev, text, mode, relative);
+      dev.cli.log.push({ cls: res.errors ? "err" : "out", text: res.summary });
+      if(typeof refreshCliView === "function") refreshCliView();
+      touchState();
+    }, 0);
+    return lines("out", "(paste buffer opened — " + mode + " into the candidate; commit to apply)");
+  }
+  const files = dev.files || {};
+  if(!(src in files))
+    return lines("err", 'error: file "' + src + '" not found on this device' +
+      (Object.keys(files).length ? "\n  files here: " + Object.keys(files).join(", ") : "\n  write one first: save <filename>"));
+  const res = loadConfigText(dev, files[src], mode, relative);
+  return lines(res.errors ? "err" : "out", res.summary);
 }
 function loadSetLines(dev, text){
   let okc = 0, errors = 0; const details = [];
@@ -407,7 +697,11 @@ function loadSetLines(dev, text){
     if(toks[0] === "set") out = cfgSetCmd(dev, toks.slice(1));
     else if(toks[0] === "delete") out = cfgDeleteCmd(dev, toks.slice(1));
     else if(toks[0] === "annotate") out = cfgAnnotateCmd(dev, line);
-    else { errors++; details.push("skipped (not set/delete/annotate): " + line); continue; }
+    else if(toks[0] === "edit") out = cfgEditCmd(dev, toks.slice(1));
+    else if(toks[0] === "top"){ dev.cli.editKeys = []; out = []; }
+    else if(toks[0] === "up"){ dev.cli.editKeys.pop(); out = []; }
+    else if(toks[0] === "exit" || toks[0] === "quit"){ dev.cli.editKeys.pop(); out = []; }
+    else { errors++; details.push("skipped (not a configuration command): " + line); continue; }
     if(out.some(l => l.cls === "err")){ errors++; details.push(line + "   <- " + out[0].text.split("\n")[0]); }
     else okc++;
   }

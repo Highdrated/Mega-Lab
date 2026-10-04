@@ -48,6 +48,8 @@ function completionsFor(dev, input){
       ["commit", "Activate the candidate (also: confirmed <m>, check, and-quit)"],
       ["rollback", "Reset the candidate (0 = committed config)"],
       ["annotate", "Attach a comment to a statement (annotate <stmt> \"why\")"],
+      ["load", "Load configuration in (load merge terminal, load override <file>)"],
+      ["save", "Write the candidate to a file on the box"],
       ["run", "Run an operational command"], ["exit", "Leave this level / config mode"],
     ];
     return { items: cmds.filter(([c]) => c.startsWith(partial)).map(([c, h]) => ({ label: c, help: h })) };
@@ -86,6 +88,24 @@ function completionsFor(dev, input){
     { label: "confirmed", help: "Commit with automatic rollback unless confirmed" },
     { label: "and-quit", help: "Commit, then leave configuration mode" },
   ].filter(i => i.label.startsWith(partial) || i.label.startsWith("<")) };
+  if(cmdName === "load"){
+    if(!rest.length) return { items: [
+      { label: "merge", help: "Fold the loaded configuration into the candidate" },
+      { label: "override", help: "Discard the candidate and use the loaded configuration" },
+      { label: "replace", help: "Merge, but empty any level tagged replace: first" },
+      { label: "patch", help: "Read a show | compare diff back in" },
+      { label: "set", help: "Load set / delete statements rather than curly braces" },
+      { label: "update", help: "Like override, but commit only the differences" },
+    ].filter(i => i.label.startsWith(partial)) };
+    if(rest.length === 1){
+      const files = Object.keys(dev.files || {});
+      return { items: [{ label: "terminal", help: "Paste the configuration in" }]
+        .concat(files.map(f => ({ label: f, help: "A file you saved on this device" })))
+        .filter(i => i.label.startsWith(partial)) };
+    }
+    return { items: [{ label: "relative", help: "Load at the level you are standing at" }]
+      .filter(i => i.label.startsWith(partial)) };
+  }
   if(cmdName === "rollback") return { items: [
     { label: "0", help: "Discard uncommitted changes (candidate = committed)" },
     ...dev.cfgHistory.map((_, i) => ({ label: String(i + 1), help: i === 0 ? "One commit ago" : `${i + 1} commits ago` })),

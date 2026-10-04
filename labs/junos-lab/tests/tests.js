@@ -3222,6 +3222,161 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   window.AudioContext = hadAC;
 }
 
+/* ---------- T68: load merge / override / replace / patch (curly-brace config) ---------- */
+{
+  wipeLab();
+  const sw68 = makeSwitch(0, 0, 8);
+  rebuildAllDerived();
+  cli(sw68, "configure");
+  cfgDo(sw68, [
+    "set system host-name core-sw",
+    "set vlans staff vlan-id 10",
+    "set vlans guest vlan-id 20",
+    "set interfaces ge-0/0/1 description \"desk 14\"",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+  ]);
+  cli(sw68, "configure");
+  cli(sw68, "commit");
+  const d68 = devices[sw68];
+
+  cli(sw68, "save golden.conf");
+  const golden = d68.files["golden.conf"];
+  ok(/vlans \{/.test(golden) && /host-name core-sw;/.test(golden), "T68 save writes curly-brace configuration");
+  const rt = cli(sw68, "load override golden.conf");
+  ok(/load complete/.test(rt), "T68 load override from a saved file succeeds");
+  ok(/no uncommitted changes/.test(cli(sw68, "show | compare")),
+     "T68 save -> load override round-trips with a zero diff");
+
+  cli(sw68, "rollback 0");
+  const m68 = loadConfigText(d68, "vlans { voice { vlan-id 30; } }", "merge", false);
+  ok(m68.errors === 0 && m68.ok === 1, "T68 load merge accepts a curly-brace fragment");
+  ok(/\+\s+voice \{/.test(cli(sw68, "show | compare")), "T68 merged statement shows as a pending addition");
+  ok(cfgGet(d68.candidate, ["vlans", "staff", "vlan-id"]) === "10", "T68 merge leaves the existing config alone");
+
+  cli(sw68, "rollback 0");
+  loadConfigText(d68, "vlans { staff { vlan-id 10; } }", "override", false);
+  ok(cfgGet(d68.candidate, ["system", "host-name"]) === undefined,
+     "T68 load override discards everything not in the loaded config");
+  ok(cfgGet(d68.candidate, ["vlans", "staff", "vlan-id"]) === "10", "T68 load override keeps what was loaded");
+
+  cli(sw68, "rollback 0");
+  const bad68 = loadConfigText(d68, "vlans { staff { vlan-id 10; } }\nnonsense { x; }", "override", false);
+  ok(bad68.errors > 0 && /all-or-nothing/.test(bad68.summary), "T68 load override refuses a config it cannot fully parse");
+  ok(cfgGet(d68.candidate, ["system", "host-name"]) === "core-sw", "T68 and a refused override leaves the candidate alone");
+
+  cli(sw68, "rollback 0");
+  loadConfigText(d68,
+    "interfaces { replace: ge-0/0/1 { unit { 0 { family { ethernet-switching { vlan { members guest; } } } } } } }",
+    "replace", false);
+  ok(cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "description"]) === undefined,
+     "T68 replace: empties the level first, so the old description is gone");
+  const rep68 = cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "unit", "0", "family", "ethernet-switching", "vlan", "members"]);
+  ok(String(rep68) === "guest", "T68 replace: loads the new contents");
+
+  cli(sw68, "rollback 0");
+  loadConfigText(d68, "interfaces { replace: ge-0/0/1 { disable; } }", "merge", false);
+  ok(cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "description"]) === "desk 14",
+     "T68 load merge ignores a replace: tag rather than acting on it");
+  cli(sw68, "rollback 0");
+  loadConfigText(d68, "interfaces { replace: ge-0/0/1 { disable; } }", "override", false);
+  ok(cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "disable"]) !== undefined,
+     "T68 load override loads a replace:-tagged level");
+  ok(cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "description"]) === undefined,
+     "T68 and override emptied it the way override empties everything, not the way replace: asks");
+
+  cli(sw68, "rollback 0");
+  loadConfigText(d68, "vlans { staff { vlan-id 10; } }", "update", false);
+  ok(cfgGet(d68.candidate, ["system", "host-name"]) === undefined,
+     "T68 load update leaves the candidate matching the loaded configuration");
+  cli(sw68, "rollback 0");
+  cli(sw68, "edit vlans");
+  loadConfigText(d68, "voice { vlan-id 30; }", "update", true);
+  cli(sw68, "top");
+  ok(cfgGet(d68.candidate, ["vlans", "staff"]) === undefined,
+     "T68 load update relative empties the level it is standing at");
+  ok(cfgGet(d68.candidate, ["vlans", "voice", "vlan-id"]) === "30", "T68 and loads the new contents there");
+  ok(cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "description"]) === "desk 14",
+     "T68 and leaves every other level alone");
+
+  cli(sw68, "rollback 0");
+  const ls68 = loadConfigText(d68, "edit vlans\nset lab vlan-id 44\ntop\nset system host-name via-load", "set", false);
+  ok(ls68.errors === 0, "T68 load set accepts edit and top alongside set");
+  ok(cfgGet(d68.candidate, ["vlans", "lab", "vlan-id"]) === "44", "T68 the statement after edit landed at that level");
+  ok(cfgGet(d68.candidate, ["system", "host-name"]) === "via-load", "T68 and top took the next statement back to the root");
+  ok(JSON.stringify(d68.cli.editKeys) === "[]", "T68 a load leaves you standing where you started");
+
+  cli(sw68, "rollback 0");
+  loadConfigText(d68,
+    "interfaces { ge-0/0/1 { unit { 0 { family { ethernet-switching { vlan { members guest; } } } } } } }",
+    "merge", false);
+  ok(cfgGet(d68.candidate, ["interfaces", "ge-0/0/1", "description"]) === "desk 14",
+     "T68 merge keeps the description the replace: form removed");
+
+  cli(sw68, "rollback 0");
+  cli(sw68, "set vlans voice vlan-id 30");
+  const diff68 = cli(sw68, "show | compare");
+  cli(sw68, "rollback 0");
+  const p68 = loadConfigText(d68, diff68, "patch", false);
+  ok(p68.errors === 0, "T68 load patch reads back show | compare output");
+  ok(cli(sw68, "show | compare") === diff68, "T68 and reproduces the same diff");
+
+  cli(sw68, "rollback 0");
+  cli(sw68, "delete vlans guest");
+  const del68 = cli(sw68, "show | compare");
+  cli(sw68, "rollback 0");
+  loadConfigText(d68, del68, "patch", false);
+  ok(cfgGet(d68.candidate, ["vlans", "guest"]) === undefined, "T68 load patch applies a removal too");
+
+  cli(sw68, "rollback 0");
+  cli(sw68, "annotate vlans staff \"finance and HR\"");
+  cli(sw68, "deactivate vlans guest");
+  cli(sw68, "commit");
+  cli(sw68, "save g2.conf");
+  ok(/inactive: guest/.test(d68.files["g2.conf"]), "T68 a saved config carries the inactive: tag");
+  ok(/finance and HR/.test(d68.files["g2.conf"]), "T68 a saved config carries its comments");
+  cli(sw68, "load override g2.conf");
+  ok(/no uncommitted changes/.test(cli(sw68, "show | compare")),
+     "T68 comments and inactive tags round-trip through load override");
+
+  cli(sw68, "rollback 0");
+  const brk = loadConfigText(d68, "vlans { staff { vlan-id 10; ", "merge", false);
+  ok(brk.errors > 0 && /never closed/.test(brk.summary), "T68 an unclosed brace is a syntax error");
+  ok(/no uncommitted changes/.test(cli(sw68, "show | compare")), "T68 and a broken paste changes nothing");
+
+  const unk = loadConfigText(d68, "vlans { staff { banana 7; } }", "merge", false);
+  ok(unk.errors === 1 && /banana/.test(unk.summary), "T68 load names the statement it could not parse");
+
+  cli(sw68, "rollback 0");
+  cli(sw68, "edit vlans");
+  loadConfigText(d68, "lab { vlan-id 40; }", "merge", true);
+  ok(cfgGet(d68.candidate, ["vlans", "lab", "vlan-id"]) === "40", "T68 load merge relative loads at the edit level");
+  cli(sw68, "top");
+  cli(sw68, "rollback 0");
+
+  cli(sw68, "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members [ staff guest ]");
+  cli(sw68, "save g3.conf");
+  ok(/members \[ staff guest \]/.test(d68.files["g3.conf"]), "T68 a saved config renders a bracket list");
+  cli(sw68, "rollback 0");
+  loadConfigText(d68, d68.files["g3.conf"], "override", false);
+  const mem68 = cfgGet(d68.candidate, ["interfaces", "ge-0/0/2", "unit", "0", "family", "ethernet-switching", "vlan", "members"]);
+  ok(Array.isArray(mem68) && mem68.join(",") === "staff,guest", "T68 a bracket list round-trips through load");
+
+  cli(sw68, "rollback 0");
+  ok(/usage: load/.test(cli(sw68, "load")), "T68 bare load prints usage");
+  ok(/unknown load option/.test(cli(sw68, "load sideways terminal")), "T68 an unknown load option is rejected");
+  ok(/name a source/.test(cli(sw68, "load merge")), "T68 load merge with no source asks for one");
+  ok(/not found on this device/.test(cli(sw68, "load merge nosuch.conf")), "T68 loading a file that is not there says so");
+  ok(/cannot be relative/.test(cli(sw68, "load override g2.conf relative")),
+     "T68 load override cannot be relative, because it replaces everything");
+  ok(/cannot be relative/.test(cli(sw68, "load patch g2.conf relative")),
+     "T68 load patch cannot be relative — a diff carries its own [edit ...] headers");
+  ok(!/cannot be relative/.test(cli(sw68, "load update g2.conf relative")),
+     "T68 load update CAN be relative, which is where it parts company with override");
+  ok(/load complete/.test(cli(sw68, "load mer g2.conf")), "T68 load options abbreviate like every other Junos keyword");
+  cli(sw68, "rollback 0");
+  cli(sw68, "exit");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

@@ -1255,6 +1255,128 @@ var PROTO_GUIDES = [
     ],
   },
   {
+    id: "cfgload",
+    title: "Loading a Configuration — merge, override, replace, patch",
+    tag: "JNCIA · configuration basics",
+    ready: true,
+    noTopology: true,
+    problem: {
+      text: ["Typing a switch in one set statement at a time is fine for one switch. It does not survive the second one, and it does not survive a rebuild at 2 AM. The way a configuration actually travels is as text: a block of curly braces, pasted in.",
+             "That is what load is for, and the reason there are five of them is that \"paste this in\" is five different questions. Do you want the pasted text added to what is already there, or instead of it? If a level appears in both, do you want them merged or do you want yours to win outright?",
+             "Get that choice wrong on a live box and you do not lose the paste — you lose everything you did not paste. load override on a fragment is the classic way to take a working switch off the network from the comfort of your own keyboard."],
+      svg: "cfgload-problem"
+    },
+    how: {
+      text: ["EVERY LOAD IS INTO THE CANDIDATE. load does not touch the running device, exactly like set. It changes the candidate, show | compare shows you what you are about to do, and commit is still the moment it becomes real. This is the whole reason it is safe to paste a config you are not completely sure about: you get to read the diff first.",
+             "THE SOURCE. load <what> terminal opens a paste box. load <what> <filename> reads a file on the box — the kind save <filename> writes. So save golden.conf on a switch you have got right, then load override golden.conf on the next one, is a two-command switch build.",
+             "MERGE — add to what is there. Statements in the paste are added. Statements already in the candidate and not in the paste are left alone. Where both have the same leaf, the paste wins; where both have the same LIST, the values are combined, so merging vlan members guest onto members staff gives you both. Merge is the right default for adding a feature to a box that is already configured.",
+             "OVERRIDE — use this instead of what is there. The candidate is thrown away first, so whatever you paste is the entire configuration. It needs a COMPLETE config, which is why it is the right partner for save: a saved file is complete by construction. In this lab it is all-or-nothing — if any statement in the paste is rejected, nothing loads at all, because a half-loaded override is a bricked switch.",
+             "REPLACE — merge, but let me win on the bits I mark. Tag a level with replace: in the pasted text and that level is emptied before the paste goes in. Everything you did not tag merges normally. This is how you hand over one interface stanza or one firewall filter wholesale without touching the rest of the box. Only load replace reads those tags — merge and override ignore them completely, so the same file behaves differently depending on which loader you hand it to.",
+             "PATCH — read a diff back in. load patch takes show | compare output: the [edit ...] headers with + and - lines. A + line is applied, a - line is removed. This is how a change travels between two switches as a change rather than as a whole configuration.",
+             "SET — the one that is not curly braces. load set takes configuration-mode commands, one per line — set and delete, and also edit, top and up to move around between them. That is what show configuration | display set produces. Same idea, different notation; useful because set lines are easier to read in an email and easier to edit by hand.",
+             "UPDATE — end up matching the paste, change only what differs. Like override, the candidate ends up being the pasted configuration; unlike override, commit touches only the statements that actually changed, so system processes that had nothing to do with your change are left alone. On a real box that is the difference between a quiet commit and every daemon rereading the configuration.",
+             "RELATIVE. Add relative on the end and the paste loads at the level you are standing at, so you can paste an interface stanza after edit interfaces instead of wrapping it in interfaces { ... } yourself. It works with merge, replace, set and update. override cannot be relative, because replacing everything from halfway down the tree is not a thing, and patch does not need it — a diff carries its own [edit ...] headers.",
+             "IT IS STILL VALIDATED. Every statement in the paste goes through the same grammar your keyboard does, so a typo in a pasted config is caught and named at load time, not silently accepted and then mysteriously missing afterwards."]
+    },
+    prereqs: [
+      { desc: "A switch or router in configuration mode",
+        test: function(){ return typeof devsBy === "function" &&
+          devsBy("switch").concat(devsBy("router")).some(function(d){ return d.cli && d.cli.mode === "cfg"; }); } },
+      { desc: "Something worth saving in the candidate (a VLAN, an interface, anything)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return typeof cfgIsEmpty === "function" && !cfgIsEmpty(d.candidate); }); } },
+      { desc: "A saved configuration file on the box (try: save golden.conf)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          var f = d.files || {};
+          return Object.keys(f).some(function(n){ return /\{/.test(String(f[n])); }); }); } },
+      { desc: "That file loaded back in (try: load override golden.conf)",
+        test: function(){ return devsBy("switch").concat(devsBy("router")).some(function(d){
+          return !!(d.cli && d.cli.loadedConfig); }); } },
+    ],
+    try: [
+      ["show | compare", "After any load, before any commit — this is the whole safety net"],
+      ["show configuration | display set", "The active config as set lines, ready for load set elsewhere"],
+      ["file show golden.conf", "Read back what save actually wrote"]
+    ],
+    cfg: [
+      ["set vlans staff vlan-id 10", "Something to save"],
+      ["set vlans guest vlan-id 20", "And something else"],
+      ["commit", "Make it the active configuration"],
+      ["save golden.conf", "Write the candidate out as curly-brace text"],
+      ["run file show golden.conf", "That is the file a load reads — have a look at it"],
+      ["delete vlans guest", "Break it on purpose"],
+      ["load merge golden.conf", "Fold the file back in — guest returns, staff untouched"],
+      ["show | compare", "Read the diff BEFORE committing. Every time."],
+      ["rollback 0", "Throw the load away — it was only ever a candidate"],
+      ["load replace terminal", "Paste: vlans { replace: staff { vlan-id 99; } } — staff is emptied first"],
+      ["rollback 0", "And again, nothing was ever at risk"],
+      ["load override golden.conf", "The two-command switch build: the candidate becomes the file"],
+      ["show | compare", "Zero diff — a saved config loaded back is the same config"]
+    ],
+    nums: [
+      ["load merge <src>", "Add the paste to what is there; lists combine, leaves are overwritten"],
+      ["load override <src>", "Discard the candidate first — needs a COMPLETE configuration"],
+      ["load replace <src>", "Merge, but empty any level tagged replace: before loading it"],
+      ["load patch <src>", "Apply a show | compare diff: + lines set, - lines delete"],
+      ["load set <src>", "Load configuration-mode commands instead of curly braces"],
+      ["load update <src>", "End up matching the paste, but commit only what actually differs"],
+      ["<src>", "terminal to paste, or the name of a file you wrote with save"],
+      ["relative", "Load at the level you are standing at. merge, replace, set, update only"],
+      ["replace:", "The tag, written in the pasted text, that only load replace acts on"],
+      ["save <file>", "The other half of the pair — writes the candidate as loadable text"]
+    ],
+    els: [
+      ["(unchanged by the ELS rewrite)", "load is a CLI command, not switching configuration, so it is the same on every Junos box"]
+    ],
+    real: [
+      "save on a switch you have got right, load override on the next one, is how a rack of identical access switches gets built without typing the same thing nine times.",
+      "load merge is the one you want almost every time you are adding something to a box that is already in service. Reach for override only when you mean to replace the entire configuration, and only with a file you know is complete.",
+      "The habit that saves you: load, then show | compare, then commit. The diff is the last chance to notice that the config you pasted was for the OTHER switch.",
+      "load patch is how a reviewed change travels. You make it on a lab box, paste the show | compare output into the ticket, and the person doing the maintenance window loads exactly that — no retyping, no interpretation.",
+      "load override terminal on a live box, with a fragment rather than a complete config, is a genuine outage waiting to happen. Everything you did not paste disappears at commit. This is the single most dangerous command in configuration mode."
+    ],
+    verify: [
+      ["show | compare", "The only check that matters: what is this load about to change?"],
+      ["show configuration", "After committing — the loaded configuration, now active"],
+      ["show system commit", "Which commit the load became, and the rollback number that undoes it"]
+    ],
+    breaks: [
+      "Using load override with a fragment instead of a complete configuration. Everything you did not paste is gone at the next commit. Merge was almost certainly what you wanted.",
+      "Committing straight after a load without reading show | compare. The load is the easy part; the diff is where you find out you pasted the wrong switch's config.",
+      "Expecting merge to replace a list. Merging members guest onto members staff gives you BOTH — that is merge behaving correctly. Tag the level replace: if you want yours to win.",
+      "Pasting curly braces into load set, or set lines into load merge. They are different notations and each loader only reads its own.",
+      "Expecting a replace: tag to do something under load merge or load override. It does not — only load replace reads it, and the other two ignore it silently, which is how a file you meant to replace with quietly merges instead.",
+      "Forgetting that a load is still a candidate change. Nothing you load is live until commit, which is good news, but it also means nothing happens if you walk away."
+    ],
+    answer: "load brings configuration in as text rather than as individual set statements, always into the candidate, so show | compare still shows the change and commit is still what activates it. The source is either terminal, which opens a paste box, or the name of a file on the box written by save. load merge adds the pasted statements to what is already in the candidate, overwriting matching leaves and combining matching lists; load override discards the candidate first, so the paste must be a complete configuration, and it is the natural partner for save when building identical switches; load replace merges but empties any hierarchy level tagged replace: in the pasted text before loading it, so you can hand over one stanza wholesale; load patch applies show | compare output, setting its + lines and deleting its - lines, which is how one change travels between boxes; load set takes configuration-mode commands, the notation show configuration | display set produces; and load update ends up matching the paste like override but commits only the statements that differ. Only load replace reads replace: tags — merge and override ignore them. Adding relative loads at the current edit level and works with merge, replace, set and update, but not override or patch. Every pasted statement is validated by the same grammar as typing it, and the professional habit is load, then show | compare, then commit.",
+    quiz: [
+      { q: "A switch is in service with ten VLANs. You paste one new VLAN with load override terminal and commit. What happens?",
+        opts: ["The new VLAN is added to the ten", "The ten VLANs are gone and only the new one remains", "The commit is refused"],
+        right: 1,
+        why: "override means \"use this instead of what is there\" — it throws the candidate away before loading. For adding one VLAN to a working switch you wanted load merge. This is the mistake that takes a switch off the network." },
+      { q: "A port is configured with vlan members staff. You load merge a stanza saying vlan members guest. What is on the port?",
+        opts: ["guest only", "staff and guest", "An error, because the port already has a VLAN"],
+        right: 1,
+        why: "Merge combines lists rather than replacing them, which is usually what you want on a trunk and occasionally a surprise on an access port. Tag the level replace: in the pasted text if you want your version to win outright." },
+      { q: "You have a switch configured exactly right. What is the fastest safe way to build an identical second one?",
+        opts: ["Retype it, carefully", "save golden.conf on the first, then load override golden.conf on the second", "load patch the whole configuration"],
+        right: 1,
+        why: "save writes the candidate as complete curly-brace text and override replaces the second switch's configuration with it. Complete is the key word: override needs a whole configuration, and a saved file is one by construction." },
+      { q: "You have just run load merge golden.conf. What should the next command be?",
+        opts: ["commit", "show | compare", "rollback 0"],
+        right: 1,
+        why: "The load only changed the candidate, so nothing is at risk yet — and that is exactly the moment to look. show | compare is the last point at which pasting the wrong file is a shrug rather than an outage." },
+      { q: "What does the replace: tag in a pasted configuration do?",
+        opts: ["Marks the statement as inactive", "Empties that hierarchy level before loading the pasted contents into it", "Tells commit to replace the whole configuration"],
+        right: 1,
+        why: "It is per-level, written inside the text, and only load replace acts on it. Everything you did not tag still merges normally, which is what makes it the precise tool for handing over one stanza without touching the rest of the box." },
+      { q: "You hand a file full of replace: tags to load merge. What happens to the tags?",
+        opts: ["They are ignored and everything merges", "The load is refused", "They work exactly as they would under load replace"],
+        right: 0,
+        why: "Only load replace reads those tags; merge and override ignore them. This is a quiet one to get caught by — the load succeeds, nothing complains, and the levels you meant to hand over wholesale have been merged into instead. show | compare is where you would notice." },
+    ],
+  },
+  {
     id: "comments",
     title: "Commenting a Configuration — annotate",
     tag: "JNCIA · operations",
@@ -2158,6 +2280,33 @@ function protoSvg(kind){
     '<text x="430" y="74" fill="var(--text)" font-size="10.5">term allow-dns</text>' +
     '<text x="430" y="92" fill="var(--text)" font-size="10.5">term deny-all</text>' +
     '<text x="430" y="116" fill="var(--green)" font-size="10">same terms, working logic</text>' + close;
+  if(kind === "cfgload-problem") return open +
+    '<text x="280" y="16" fill="var(--dim)" font-size="10.5">the same paste, two loaders, two very different switches</text>' +
+    '<rect x="14" y="30" width="150" height="104" rx="4" fill="none" stroke="var(--line)" stroke-width="1.2"/>' +
+    '<text x="89" y="47" fill="var(--text)" font-size="10.5">on the box</text>' +
+    '<text x="89" y="66" fill="var(--text)" font-size="10">vlans staff</text>' +
+    '<text x="89" y="81" fill="var(--text)" font-size="10">vlans guest</text>' +
+    '<text x="89" y="96" fill="var(--text)" font-size="10">interfaces ge-0/0/1</text>' +
+    '<text x="89" y="124" fill="var(--amber)" font-size="10">+ paste: vlans voice</text>' +
+    '<path d="M168 60 L212 60" stroke="var(--green)" stroke-width="1.2" fill="none"/>' +
+    '<path d="M206 56 L214 60 L206 64" stroke="var(--green)" stroke-width="1.2" fill="none"/>' +
+    '<text x="190" y="52" fill="var(--green)" font-size="9.5">merge</text>' +
+    '<path d="M168 110 L212 110" stroke="var(--red)" stroke-width="1.2" fill="none"/>' +
+    '<path d="M206 106 L214 110 L206 114" stroke="var(--red)" stroke-width="1.2" fill="none"/>' +
+    '<text x="190" y="126" fill="var(--red)" font-size="9.5">override</text>' +
+    '<rect x="216" y="30" width="160" height="50" rx="4" fill="none" stroke="var(--green)" stroke-width="1.2"/>' +
+    '<text x="296" y="46" fill="var(--green)" font-size="10">staff \u00b7 guest \u00b7 voice</text>' +
+    '<text x="296" y="62" fill="var(--green)" font-size="10">ge-0/0/1 still there</text>' +
+    '<text x="296" y="74" fill="var(--dim)" font-size="9.5">added to what was there</text>' +
+    '<rect x="216" y="88" width="160" height="50" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +
+    '<text x="296" y="104" fill="var(--red)" font-size="10">voice</text>' +
+    '<text x="296" y="120" fill="var(--red)" font-size="10">everything else gone</text>' +
+    '<text x="296" y="132" fill="var(--dim)" font-size="9.5">used instead of what was there</text>' +
+    '<rect x="392" y="46" width="154" height="72" rx="4" fill="none" stroke="var(--amber)" stroke-width="1.2"/>' +
+    '<text x="469" y="64" fill="var(--amber)" font-size="10.5">either way:</text>' +
+    '<text x="469" y="82" fill="var(--text)" font-size="10">it is only the candidate</text>' +
+    '<text x="469" y="100" fill="var(--text)" font-size="10">show | compare first</text>' +
+    '<text x="469" y="112" fill="var(--dim)" font-size="9.5">commit is the point of no return</text>' + close;
   if(kind === "comments-problem") return open +
     '<text x="280" y="24" fill="var(--dim)" font-size="10.5">six months later, reading someone else\'s switch</text>' +
     '<rect x="40" y="38" width="220" height="86" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +

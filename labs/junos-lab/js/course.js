@@ -7,7 +7,7 @@ var TRACKS = {
       { g: "vlan" }, { s: "vlan-split" }, { s: "trunk-span" }, { s: "irb-intervlan" },
       { g: "rstp" }, { s: "rstp-loop" },
       { g: "lacp" }, { s: "lacp-bundle" },
-      { g: "junos-arch" }, { g: "pipes" }, { g: "health" }, { s: "commit-confirmed" }, { g: "comments" }, { g: "cfgedit" },
+      { g: "junos-arch" }, { g: "pipes" }, { g: "health" }, { s: "commit-confirmed" }, { g: "comments" }, { g: "cfgedit" }, { g: "cfgload" },
       { g: "dhcp" }, { s: "dhcp-serve" },
       { g: "filters" }, { s: "filtered-segment" },
       { g: "ospf" }, { s: "ospf-backbone" },
@@ -18,7 +18,7 @@ var TRACKS = {
     domains: {
       "Networking fundamentals": ["osi", "subnetting", "basic-connect"],
       "Junos OS fundamentals": ["junos-arch", "commit-confirmed", "comments"],
-      "CLI & configuration": ["pipes", "cfgedit", "vlan", "vlan-split", "trunk-span", "irb-intervlan", "rstp", "rstp-loop", "lacp", "lacp-bundle"],
+      "CLI & configuration": ["pipes", "cfgedit", "cfgload", "vlan", "vlan-split", "trunk-span", "irb-intervlan", "rstp", "rstp-loop", "lacp", "lacp-bundle"],
       "Monitoring & maintenance": ["health", "dhcp", "dhcp-serve", "interconnect-recovery"],
       "Routing fundamentals": ["ospf", "ospf-backbone", "dia", "isp-onboarding", "nat-edge", "bgp", "speak-bgp"],
       "Policy & filters": ["filters", "filtered-segment"],

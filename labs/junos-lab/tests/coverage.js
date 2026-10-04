@@ -78,7 +78,7 @@ function tryOn(devId, cmd){
     d.cli = freshCli();
     d.cli.stage = null;
     d.cli.mode = "op";
-    var cfgWord = /^(set|delete|edit|commit|rollback|annotate|activate|deactivate|insert|rename|copy|wildcard|replace|protect|save|load|top|up|status|quit)\\b/;
+    var cfgWord = /^(set|delete|edit|commit|rollback|annotate|activate|deactivate|insert|rename|copy|wildcard|replace|protect|save|load|run|top|up|status|quit)\\b/;
     if(cfgWord.test(__cmd) || /^show\\s*\\|/.test(__cmd)) deviceExec(d, "configure");
     var out = deviceExec(d, __cmd).map(function(l){ return l.cls + "|" + l.text; }).join("\\n");
     return out;
