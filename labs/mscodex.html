@@ -629,6 +629,129 @@ const DATA = [
   ]
  },
  {
+  "id": "tap",
+  "sigil": "TP",
+  "name": "Temporary Access Pass",
+  "sub": "Sign-in without a password",
+  "color": "#7a4fb3",
+  "blurb": "A Temporary Access Pass (TAP) is a short code that lets someone sign in for a limited time, so they can set up the Authenticator app or get into a new laptop without ever knowing a password.",
+  "groups": [
+   {
+    "t": "What a TAP is",
+    "e": [
+     {
+      "c": "Temporary Access Pass",
+      "d": "A time-limited passcode created by an admin",
+      "n": "Counts as a strong sign-in, so the user can register MFA or passwordless right away. Typical uses: a new colleague's first day, a lost or new phone, setting up a new laptop."
+     },
+     {
+      "c": "lifetimeInMinutes",
+      "d": "How long the pass works",
+      "n": "The tenant policy sets the limits. Default policy: 1 hour default, 8 hours (480 minutes) maximum."
+     },
+     {
+      "c": "isUsableOnce",
+      "d": "One-time or reusable",
+      "n": "$true: the code dies after the first sign-in. $false: it keeps working until the lifetime ends, handy when someone needs to sign in on a laptop and a phone."
+     },
+     {
+      "c": "One TAP per user",
+      "d": "A user can only have one pass at a time",
+      "n": "Creating a second one fails. Remove the old one first."
+     },
+     {
+      "c": "Shown only once",
+      "d": "The code itself is only visible at the moment you create it",
+      "n": "Listing the TAP later shows its Id and times, never the code again. Lost the code? Remove and create a new one."
+     }
+    ]
+   },
+   {
+    "t": "TAP commands",
+    "e": [
+     {
+      "c": "Connect-MgGraph -Scopes \"UserAuthenticationMethod.ReadWrite.All\",\"Policy.Read.All\",\"User.ReadWrite.All\"",
+      "d": "Connect with the scopes TAP needs",
+      "n": "UserAuthenticationMethod.ReadWrite.All is the important one: it lets you create and remove sign-in methods. Policy.Read.All lets you read the TAP policy."
+     },
+     {
+      "c": "Get-MgPolicyAuthenticationMethodPolicyAuthenticationMethodConfiguration -AuthenticationMethodConfigurationId TemporaryAccessPass",
+      "d": "Is TAP switched on in the tenant?",
+      "n": "State must be enabled. If not, creating a pass fails no matter what scopes you have."
+     },
+     {
+      "c": "$u = \"jpe@datacenterunited.com\"",
+      "d": "Store the user first",
+      "n": "Every TAP command needs -UserId. Putting it in $u once means no typos in the next three commands."
+     },
+     {
+      "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false } | Select-Object TemporaryAccessPass",
+      "d": "Create a TAP and show the code",
+      "n": "The Select-Object is the important part: without it the table is too wide and the code gets cut off.",
+      "x": "TemporaryAccessPass\n-------------------\nRq4#mT9z"
+     },
+     {
+      "c": "Get-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u",
+      "d": "List the user's current TAP",
+      "n": "Shows Id, start time, lifetime and IsUsable. Not the code."
+     },
+     {
+      "c": "Remove-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -TemporaryAccessPassAuthenticationMethodId $id",
+      "d": "Delete a TAP",
+      "n": "Needs the Id from the create or Get output. Do this when the person is done, or when you need to make a new one."
+     },
+     {
+      "c": "Get-MgUserAuthenticationMethod -UserId $u",
+      "d": "List every sign-in method the user has",
+      "n": "After they used the TAP, you should see the Authenticator app here. That is your proof the setup worked."
+     }
+    ]
+   },
+   {
+    "t": "Real-life example",
+    "e": [
+     {
+      "c": "Connect-MgGraph -Scopes \"UserAuthenticationMethod.ReadWrite.All\",\"Policy.Read.All\",\"User.ReadWrite.All\"",
+      "d": "Step 1: connect",
+      "n": "Jan Peeters (jpe@) gets a new laptop and needs to sign in before his Authenticator is set up."
+     },
+     {
+      "c": "$u = \"jpe@datacenterunited.com\"Connect-MgGraph ...",
+      "d": "Mistake 1: two commands glued on one line",
+      "n": "ParserError: Unexpected token 'Connect-MgGraph'. Two pastes ran together with no Enter between them. One command per line, or separate them with ;"
+     },
+     {
+      "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u ...",
+      "d": "Mistake 2: $u is empty",
+      "n": "Cannot bind argument to parameter 'UserId' because it is an empty string. The line that set $u failed, so $u was never filled. Run $u on its own to check what is inside."
+     },
+     {
+      "c": "$u = \"jpe@datacenterunited.com\"",
+      "d": "Fix: set $u again, on its own line",
+      "n": "Now the create command works."
+     },
+     {
+      "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false }",
+      "d": "Mistake 3: the code is not visible",
+      "n": "The pass is created (IsUsable True, EnabledByPolicy) but the table is so wide that the TemporaryAccessPass column falls off the screen.",
+      "x": "Id                                   IsUsable LifetimeInMinutes MethodUsabilityReason ...\n7c1e2a90-4b3d-4f8e-9a61-2d5b8e0f13aa True     480               EnabledByPolicy       ..."
+     },
+     {
+      "c": "Remove-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -TemporaryAccessPassAuthenticationMethodId \"7c1e2a90-4b3d-4f8e-9a61-2d5b8e0f13aa\"",
+      "d": "Fix part 1: remove the invisible pass",
+      "n": "Only one TAP per user, and the code is shown only once, so the clean way out is delete and recreate."
+     },
+     {
+      "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false } | Select-Object TemporaryAccessPass",
+      "d": "Fix part 2: create again and show only the code",
+      "n": "Select-Object keeps just the one column you need.",
+      "x": "TemporaryAccessPass\n-------------------\nRq4#mT9z"
+     }
+    ]
+   }
+  ]
+ },
+ {
   "id": "exchange",
   "sigil": "EX",
   "name": "Exchange",
@@ -1137,6 +1260,44 @@ const AUG = {
     "a": "30 minutes x 60 = 1800 seconds."
    }
   ]
+ },
+ "tap::What a TAP is": {
+  "concept": "A password proves who you are with something you know. MFA adds something you have, like the Authenticator app. But a brand-new user, or someone with a new phone, has neither set up yet, so how do they prove who they are the first time? The Temporary Access Pass solves that chicken-and-egg problem. You, as admin, create a short code with an expiry time and hand it over in person or by phone. Entra treats that code as a strong sign-in, so the user can log in and immediately register the Authenticator app or a passkey. After the lifetime ends the code is useless, so even if it ends up on a sticky note it cannot be used tomorrow.",
+  "figure": "  admin creates TAP --hands over code--> user signs in with TAP\n         |                                        |\n   lifetime 480 min                     registers Authenticator\n         |                                        |\n   expires by itself                normal MFA sign-in from now on",
+  "traps": [
+   "Sending the TAP in an email to the same mailbox the user cannot open yet. Hand it over in person, by phone or via the manager.",
+   "Choosing isUsableOnce $true when the user still has to sign in on two devices. The second sign-in fails.",
+   "Forgetting to remove a long-lived TAP after setup. It keeps working until it expires."
+  ],
+  "quiz": [
+   {
+    "q": "You created a TAP yesterday but lost the code. Can you look it up?",
+    "a": "No. The code is shown only once. Remove the TAP and create a new one."
+   },
+   {
+    "q": "Why does creating a second TAP for the same user fail?",
+    "a": "A user can only have one Temporary Access Pass at a time. Remove the old one first."
+   }
+  ]
+ },
+ "tap::Real-life example": {
+  "concept": "This is a real session, with the name changed. Three small mistakes happened in a row, and each one teaches something that comes back in every PowerShell job. First, two pasted commands stuck together on one line, so PowerShell could not tell where one ended and the next began. Second, because that line failed, the variable $u was never filled, and the next command complained about an empty UserId. The error was not about TAP at all: it was about the failed line before it. Third, the pass was created fine but the output table was wider than the window, so the code itself was cut off. Because a TAP is shown only once and only one can exist, the fix was to remove it and create it again, this time piping into Select-Object TemporaryAccessPass so only the code was printed.",
+  "figure": "  $u = \"..\"Connect-MgGraph   -> ParserError (two commands, one line)\n          |\n  $u is empty               -> 'UserId is an empty string'\n          |\n  $u = \"jpe@..\"             -> fixed\n          |\n  New-...TAP                -> created, code off-screen\n          |\n  Remove-...TAP + New-... | Select-Object TemporaryAccessPass\n          |\n  Rq4#mT9z                  -> hand it to Jan",
+  "traps": [
+   "Reading the last error only. 'Empty string' was caused by the line before it, not by the TAP command.",
+   "Re-running New-... without removing the first pass. It fails because only one TAP can exist.",
+   "Copying the code from a screenshot or chat log later. Treat it like a password and do not keep it anywhere."
+  ],
+  "quiz": [
+   {
+    "q": "PowerShell says 'Cannot bind argument to parameter UserId because it is an empty string'. First thing to check?",
+    "a": "Type $u on its own and press Enter. If nothing comes back, the variable was never set."
+   },
+   {
+    "q": "The TAP column is cut off in the table. What do you add to the command?",
+    "a": "| Select-Object TemporaryAccessPass"
+   }
+  ]
  }
 };
 const RECIPES = [
@@ -1290,6 +1451,41 @@ const RECIPES = [
     "n": "Close the block. Read the log the next morning."
    }
   ]
+ },
+ {
+  "vol": "tap",
+  "t": "Give someone a Temporary Access Pass",
+  "why": "New colleague, new laptop or lost phone: sign-in without a password, then set up MFA.",
+  "steps": [
+   {
+    "c": "Connect-MgGraph -Scopes \"UserAuthenticationMethod.ReadWrite.All\",\"Policy.Read.All\"",
+    "n": "The scope that allows creating sign-in methods."
+   },
+   {
+    "c": "$u = \"jpe@datacenterunited.com\"",
+    "n": "On its own line. Check it with $u."
+   },
+   {
+    "c": "Get-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u",
+    "n": "Already has one? Remove it first, only one can exist."
+   },
+   {
+    "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false } | Select-Object TemporaryAccessPass",
+    "n": "Copy the code now, it is never shown again."
+   },
+   {
+    "c": "Hand the code over in person or by phone",
+    "n": "Not to the mailbox they cannot open yet."
+   },
+   {
+    "c": "Get-MgUserAuthenticationMethod -UserId $u",
+    "n": "After they signed in: the Authenticator should be listed."
+   },
+   {
+    "c": "Remove-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -TemporaryAccessPassAuthenticationMethodId $id",
+    "n": "Clean up once setup is done."
+   }
+  ]
  }
 ];
 const GLOSSARY = [
@@ -1436,6 +1632,24 @@ const GLOSSARY = [
   "c": "OData filter",
   "d": "The language of Graph -Filter",
   "n": "eq, ne, startswith(prop,'x'), and, or. Values in single quotes."
+ },
+ {
+  "vol": "tap",
+  "c": "TAP",
+  "d": "Temporary Access Pass",
+  "n": "A time-limited code that counts as a strong sign-in, used to set up MFA or a new device."
+ },
+ {
+  "vol": "tap",
+  "c": "Authentication method",
+  "d": "A way of proving who you are",
+  "n": "Password, Authenticator app, passkey, phone, TAP. Listed with Get-MgUserAuthenticationMethod."
+ },
+ {
+  "vol": "tap",
+  "c": "ParserError",
+  "d": "PowerShell could not read the line",
+  "n": "Nothing ran at all. Usually a typo, a missing quote, or two commands stuck together."
  }
 ];
 const KEY_THEME = "mscodex.theme";
