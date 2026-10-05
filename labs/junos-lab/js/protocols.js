@@ -1739,6 +1739,100 @@ var PROTO_GUIDES = [
     ],
   },
   {
+    id: "ribfib",
+    title: "The Routing Table and the Forwarding Table",
+    tag: "L3 · routing fundamentals",
+    ready: true,
+    problem: {
+      text: ["You write a static route, commit it, and the box still will not forward. The configuration is right there in show configuration. So why is nothing moving?",
+             "Because a route existing and a route being used are two different things, and show route tells you which is which in a header most people skim past. inet.0: 2 destinations, 3 routes (2 active, 0 holddown, 1 hidden) is four different numbers, and they disagree with each other on purpose.",
+             "Until you can read that line, every routing fault looks the same: the config is correct and the traffic is not arriving."],
+      svg: "rib-fib-problem"
+    },
+    how: {
+      text: ["A Junos box keeps two tables. The routing engine keeps inet.0, the routing table, where it files every route it hears from every source. The packet-forwarding engine keeps the forwarding table, which holds only the routes that won, already resolved down to an outgoing interface. Packets are forwarded by the second table and only ever by the second table.",
+             "Choosing winners is what preference is for. When two sources offer a route to the same destination, the lower preference wins: Direct 0, Local 0, Static 5, OSPF internal 10, OSPF external 150, BGP 170. The winner is marked with a star and is called active; the loser stays in the table, unstarred, ready to take over the moment the winner disappears. That standby copy is the whole point of keeping it.",
+             "A route can also fail before preference is ever consulted. If its next hop does not sit on a subnet this device has a live interface in, the box cannot work out which interface to send the packet out of, so the route is hidden: kept, never used, and not printed by plain show route. This is the single most common reason a static route looks like it vanished.",
+             "So the four numbers in the header mean: destinations, how many distinct prefixes; routes, how many entries across all of them; active, how many are forwarding; hidden, how many could not be resolved. Routes minus active minus hidden is the number of standby copies waiting."]
+    },
+    prereqs: [
+      { desc: "A device with at least one live interface address",
+        test: function(){ return typeof devsBy === "function" && devsBy("router").concat(devsBy("switch")).some(function(d){
+          return ifacesOf(d).some(function(i){ return i.up; }); }); } },
+      { desc: "At least one static route configured somewhere",
+        test: function(){ return typeof devsBy === "function" && devsBy("router").concat(devsBy("switch")).some(function(d){
+          return ((D(d).routes) || []).length > 0; }); } },
+      { desc: "A route that resolved: its next hop sits on a live subnet, so it reached the forwarding table",
+        test: function(){ return typeof devsBy === "function" && devsBy("router").concat(devsBy("switch")).some(function(d){
+          var up = ifacesOf(d).filter(function(i){ return i.up; });
+          return ((D(d).routes) || []).some(function(rt){
+            return up.some(function(i){ return sameSubnet(rt.nh, i.ip, i.bits); }); }); }); } },
+    ],
+    try: [
+      ["show route", "Read the header first, then look at which lines carry a star"],
+      ["show route terse", "One line per route with the preference in its own column"],
+      ["show route summary", "Routes against active, per protocol — the gap is your standby copies"],
+      ["show route hidden", "The ones that could not be resolved, and why"],
+      ["show route forwarding-table", "What the hardware actually has. Shorter than show route, always"]
+    ],
+    cfg: [
+      ["set routing-options static route 10.60.0.0/24 next-hop 10.0.0.2", "A route whose next hop is on a live subnet — this one will resolve"],
+      ["set routing-options static route 192.168.99.0/24 next-hop 172.31.1.1", "A next hop on no subnet this box owns — this one will go hidden"],
+      ["commit", "Now compare: show route shows one of them, show route hidden shows the other"]
+    ],
+    nums: [
+      ["0 / 0", "Direct and Local — an address on this box beats anything you can configure"],
+      ["5", "Static — you said so, and you outrank every routing protocol"],
+      ["10 / 150", "OSPF internal and external"],
+      ["170", "BGP — the least trusted, because it came from another network"],
+      ["active", "Starred, forwarding, and present in the forwarding table"],
+      ["hidden", "Next hop unresolvable — not forwarding, not even printed by show route"]
+    ],
+    els: [
+      ["(preference is platform-independent)", "The same numbers apply on EX, QFX, MX and SRX — ELS changed switching syntax, not routing"]
+    ],
+    real: [
+      "On a real box the separation is physical: the routing table lives in the routing engine's memory and the forwarding table is pushed into the line cards. That is why a routing engine can be rebooted on a dual-RE chassis while traffic keeps flowing — the forwarding table in the hardware does not need the routing engine to keep working.",
+      "It is also why show route and show route forwarding-table can genuinely disagree during a fault, and why checking both is the real troubleshooting step rather than a formality.",
+      "Preference is configurable per route and per protocol, which is how an operator makes a backup static lose to OSPF on purpose: give the static a preference above 10 and it sits as a standby copy until OSPF stops offering the prefix."
+    ],
+    verify: [
+      ["show route", "A starred line is forwarding; an unstarred line under the same prefix lost on preference"],
+      ["show route hidden", "Anything listed here has a next hop this device cannot reach"],
+      ["show route forwarding-table", "If a prefix is missing here, nothing will forward to it no matter what the configuration says"],
+      ["show route forwarding-table destination 10.60.0.1", "The single entry one packet would hit — longest match, one lookup"]
+    ],
+    breaks: [
+      "A next hop that is not on any of this box's live subnets — the route goes hidden and plain show route never mentions it.",
+      "An interface that went down, taking its Direct route with it and hiding every static that pointed through that subnet.",
+      "Reading show route, seeing the prefix, and assuming it forwards — the line may be unstarred, which means it is a standby copy doing nothing.",
+      "Expecting a static route to lose to OSPF. Static is preference 5 and OSPF is 10, so the static wins and keeps winning even when it points somewhere broken."
+    ],
+    answer: "Junos keeps the routes it knows in the routing table, inet.0, and the routes it uses in the forwarding table. Every route it hears is filed in inet.0; for each destination the lowest preference wins and is marked active with a star, while losing routes stay as unstarred standby copies. A route whose next hop is not on a live subnet of this device cannot be resolved to an outgoing interface, so it is hidden: kept but not used and not printed by show route, which is the usual reason a configured static appears to be missing. Only active, resolved routes are handed to the packet-forwarding engine, so show route forwarding-table is always the shorter list and is the one that decides what happens to a packet. Preference order is Direct and Local 0, Static 5, OSPF 10 internal and 150 external, BGP 170.",
+    quiz: [
+      { q: "show route prints: inet.0: 2 destinations, 3 routes (2 active, 0 holddown, 1 hidden). How many routes are forwarding traffic?",
+        opts: ["3", "2", "1"],
+        right: 1,
+        why: "Active is the count that forwards. Three routes exist, two are active, and one is hidden because its next hop could not be resolved. The difference between routes and active is where routing faults hide." },
+      { q: "You configure a static route and commit, but it does not appear in show route at all. What is the most likely reason?",
+        opts: ["The commit failed", "The next hop is not on a subnet this device has a live interface in, so the route is hidden", "Static routes need a routing protocol first"],
+        right: 1,
+        why: "An unresolvable next hop makes the route hidden, and plain show route does not print hidden routes. show route hidden lists them. Verify the next hop is an address on a subnet this box already reaches." },
+      { q: "A destination has both a static route (preference 5) and an OSPF route (preference 10). What does show route display?",
+        opts: ["Only the static — the OSPF route is discarded", "Both, with the star on the static and the OSPF line unstarred", "Both starred, load sharing between them"],
+        right: 1,
+        why: "The lower preference wins and is marked active, but the loser is kept unstarred as a standby copy, ready to become active if the static is withdrawn. Load sharing needs equal preference, not merely the same destination." },
+      { q: "Why is show route forwarding-table usually shorter than show route?",
+        opts: ["It hides routes you lack permission for", "Only active, resolved routes are pushed to the forwarding engine", "It only shows static routes"],
+        right: 1,
+        why: "The forwarding table holds what the hardware needs to move a packet: one resolved next hop per destination. Inactive and hidden routes live only in the routing engine, so they never reach it." },
+      { q: "Which of these can forward a packet on its own?",
+        opts: ["The routing table, inet.0", "The forwarding table", "Both equally"],
+        right: 1,
+        why: "The packet-forwarding engine does the forwarding, using the forwarding table. The routing table is the routing engine's working set for choosing what belongs in it. This split is why forwarding continues on a dual-RE chassis while a routing engine reboots." },
+    ],
+  },
+  {
     id: "lldp",
     title: "LLDP — Neighbor Discovery",
     tag: "L2 · operations",
@@ -2307,6 +2401,29 @@ function protoSvg(kind){
     '<text x="469" y="82" fill="var(--text)" font-size="10">it is only the candidate</text>' +
     '<text x="469" y="100" fill="var(--text)" font-size="10">show | compare first</text>' +
     '<text x="469" y="112" fill="var(--dim)" font-size="9.5">commit is the point of no return</text>' + close;
+  if(kind === "rib-fib-problem") return '<svg viewBox="0 0 560 200" class="pg-svg"><g font-size="11" fill="var(--dim)" text-anchor="middle">' +
+    '<text x="280" y="18" fill="var(--dim)" font-size="10.5">every route the box heard, and the few it will actually use</text>' +
+    '<rect x="24" y="32" width="230" height="146" rx="5" fill="none" stroke="var(--blue)" stroke-width="1.2"/>' +
+    '<text x="139" y="50" fill="var(--blue)" font-size="11">inet.0 — the routing table</text>' +
+    '<text x="139" y="64" fill="var(--dim)" font-size="9.5">routing engine · show route</text>' +
+    '<text x="139" y="88" fill="var(--green)" font-size="10">* 10.0.0.0/30 Direct/0</text>' +
+    '<text x="139" y="106" fill="var(--dim)" font-size="10">  10.0.0.0/30 Static/5</text>' +
+    '<text x="139" y="118" fill="var(--dim)" font-size="9">lost on preference — inactive</text>' +
+    '<text x="139" y="138" fill="var(--green)" font-size="10">* 0.0.0.0/0 Static/5</text>' +
+    '<text x="139" y="158" fill="var(--red)" font-size="10">192.168.99.0/24 hidden</text>' +
+    '<text x="139" y="170" fill="var(--dim)" font-size="9">next hop on no live subnet</text>' +
+    '<path d="M258 105 L302 105" stroke="var(--amber)" stroke-width="1.6"/>' +
+    '<path d="M296 100 L304 105 L296 110 Z" fill="var(--amber)"/>' +
+    '<text x="280" y="96" fill="var(--amber)" font-size="9">winners only</text>' +
+    '<rect x="306" y="32" width="230" height="146" rx="5" fill="none" stroke="var(--green)" stroke-width="1.2"/>' +
+    '<text x="421" y="50" fill="var(--green)" font-size="11">the forwarding table</text>' +
+    '<text x="421" y="64" fill="var(--dim)" font-size="9.5">packet-forwarding engine</text>' +
+    '<text x="421" y="78" fill="var(--dim)" font-size="9.5">show route forwarding-table</text>' +
+    '<text x="421" y="102" fill="var(--text)" font-size="10">10.0.0.0/30 rslv ge-0/0/0.0</text>' +
+    '<text x="421" y="122" fill="var(--text)" font-size="10">default ucst ge-0/0/0.0</text>' +
+    '<text x="421" y="150" fill="var(--amber)" font-size="10">two entries, not four</text>' +
+    '<text x="421" y="166" fill="var(--dim)" font-size="9.5">this is what forwards your packet</text>' +
+    '</g></svg>';
   if(kind === "comments-problem") return open +
     '<text x="280" y="24" fill="var(--dim)" font-size="10.5">six months later, reading someone else\'s switch</text>' +
     '<rect x="40" y="38" width="220" height="86" rx="4" fill="none" stroke="var(--red)" stroke-width="1.2"/>' +
@@ -2530,6 +2647,16 @@ var protoAnims = {
     ], "one logical switch");
     return true;
   } },
+  ribfib: { need: "Cable a router to a switch or another router first.", run: function(){
+    var lk = protoFindLink("router", "switch") || protoFindLink("router", "router") ||
+             protoFindLink("switch", "switch");
+    if(!lk) return false;
+    protoVolley([
+      { p: [lk.pa, lk.pb], label: "lookup: longest match in the forwarding table" },
+      { p: [lk.pa, lk.pb], label: "resolved next hop \u2192 out this interface" },
+    ], "forwarded by the forwarding table, not inet.0");
+    return true;
+  } },
   lldp: { need: "Cable two switches or routers together first.", run: function(){
     var lk = protoFindLink("switch", "switch") || protoFindLink("router", "switch");
     if(!lk) return false;
@@ -2546,7 +2673,7 @@ var PROTO_GLOW_TYPES = {
   ospf: ["router"], bgp: ["router", "isp"],
   filters: ["switch", "router"], maintenance: ["switch", "router"],
   vrrp: ["router"], ecmp: ["router"], lldp: ["switch", "router"],
-  vc: ["switch"],
+  vc: ["switch"], ribfib: ["router", "switch"],
 };
 function protoGlow(guideId, on){
   if(typeof document.querySelectorAll !== "function") return;

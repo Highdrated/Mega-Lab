@@ -1573,9 +1573,21 @@ function showMacTable(dev){
 function showArpCmd(dev){
   const e = Object.entries(dev.arp || {});
   if(!e.length) return "(empty — the ARP cache fills when traffic flows)";
+  const rows = [["MAC Address", "Address", "Name", "Interface"]];
+  for(const [ip, a] of e) rows.push([a.mac, ip, arpNameFor(ip), a.iface]);
+  return rows.map(r => pad(r[0], 20) + pad(r[1], 17) + pad(r[2], 20) + r[3]).join("\n");
+}
+function arpNameFor(ip){
+  const d = findDeviceByIp(ip);
+  return d ? hostnameOf(d) : ip;
+}
+function showArpNoResolveCmd(dev){
+  const e = Object.entries(dev.arp || {});
+  if(!e.length) return "(empty — the ARP cache fills when traffic flows)";
   const rows = [["MAC Address", "Address", "Interface"]];
   for(const [ip, a] of e) rows.push([a.mac, ip, a.iface]);
-  return rows.map(r => pad(r[0], 20) + pad(r[1], 17) + r[2]).join("\n");
+  return rows.map(r => pad(r[0], 20) + pad(r[1], 17) + r[2]).join("\n") +
+    "\n\n(no-resolve skips the name lookup. On a real box that lookup is what makes\nshow arp hang when DNS is unreachable, so this is the one you reach for.)";
 }
 function showStpCmd(dev){
   const d = D(dev);
@@ -1958,34 +1970,98 @@ function showConfigSetCmd(dev){
 
 function routeRows(dev){
   const rows = [];
-  for(const i of ifacesOf(dev))
-    if(i.up) rows.push({ net: networkOf(i.ip, i.bits), bits: i.bits, proto: "direct",
-      pref: 0, detail: "*[Direct/0]  via " + i.name });
+  const up = ifacesOf(dev).filter(i => i.up);
+  for(const i of up)
+    rows.push({ net: networkOf(i.ip, i.bits), bits: i.bits, proto: "direct",
+      pref: 0, iface: i.name, detail: "[Direct/0]  via " + i.name });
   for(const r of routesOf(dev)){
-    const up = ifacesOf(dev).filter(i => i.up);
     const via = up.find(i => sameSubnet(r.nh, i.ip, i.bits));
     rows.push({ net: r.net, bits: r.bits, proto: "static", pref: 5, nh: r.nh,
-      detail: `*[Static/5]  to ${r.nh}` + (via ? ` via ${via.name}` : "  (next-hop currently unresolvable)") });
+      iface: via ? via.name : null, hidden: !via,
+      detail: `[Static/5]  to ${r.nh}` + (via ? ` via ${via.name}` : "") });
   }
   for(const r of ((dev.d && dev.d.ospfRoutes) || []))
-    rows.push({ net: r.net, bits: r.bits, proto: "ospf", pref: 10, nh: r.nh,
-      detail: `*[OSPF/10]   to ${r.nh} via ${r.via}` });
-  for(const r of ((dev.d && dev.d.bgpRoutes) || []))
+    rows.push({ net: r.net, bits: r.bits, proto: "ospf", pref: 10, nh: r.nh, iface: r.via,
+      detail: `[OSPF/10]   to ${r.nh} via ${r.via}` });
+  for(const r of ((dev.d && dev.d.bgpRoutes) || [])){
+    const via = up.find(i => sameSubnet(r.nh, i.ip, i.bits));
     rows.push({ net: r.net, bits: r.bits, proto: "bgp", pref: 170, nh: r.nh, fromAs: r.fromAs,
-      detail: `*[BGP/170]   to ${r.nh} (learned from AS${r.fromAs})` });
-  return rows;
+      iface: via ? via.name : null, hidden: !via,
+      detail: `[BGP/170]   to ${r.nh} (learned from AS${r.fromAs})` });
+  }
+  return markActive(rows);
 }
-function routeTableHead(n){
-  return `inet.0: ${n} destination${n === 1 ? "" : "s"}, ${n} route${n === 1 ? "" : "s"} (${n} active, 0 holddown, 0 hidden)\n` +
+/* Real Junos keeps every route it hears in the table but forwards on exactly
+   one per destination: the lowest preference wins, and routes at the same
+   preference share the load. A route whose next hop sits on no live subnet
+   cannot be resolved, so it is hidden rather than active. */
+function markActive(rows){
+  const groups = new Map();
+  for(const r of rows){
+    const key = r.net + "/" + r.bits;
+    if(!groups.has(key)) groups.set(key, []);
+    groups.get(key).push(r);
+  }
+  const out = [];
+  for(const g of groups.values()){
+    const live = g.filter(r => !r.hidden);
+    const best = live.length ? Math.min.apply(null, live.map(r => r.pref)) : null;
+    g.sort((a, b) => (a.hidden ? 1 : 0) - (b.hidden ? 1 : 0) || a.pref - b.pref);
+    for(const r of g) r.active = !r.hidden && r.pref === best;
+    out.push(...g);
+  }
+  return out;
+}
+function routeCounts(rows){
+  const shown = rows.filter(r => !r.hidden);
+  return {
+    dests: new Set(shown.map(r => r.net + "/" + r.bits)).size,
+    routes: shown.length,
+    active: shown.filter(r => r.active !== false).length,
+    hidden: rows.length - shown.length,
+  };
+}
+function routeTableHead(rows){
+  const c = routeCounts(Array.isArray(rows) ? rows : []);
+  return `inet.0: ${c.dests} destination${c.dests === 1 ? "" : "s"}, ${c.routes} route${c.routes === 1 ? "" : "s"} ` +
+    `(${c.active} active, 0 holddown, ${c.hidden} hidden)\n` +
     "+ = Active Route, - = Last Active, * = Both\n";
 }
+function hiddenFooter(rows){
+  const n = rows.filter(r => r.hidden).length;
+  if(!n) return "";
+  return "\n\n(" + n + " hidden route" + (n === 1 ? "" : "s") + " — the next hop is not on any live subnet of this device," +
+    "\nso the route cannot be resolved and is not used. show route hidden lists them.)";
+}
 function routeBody(rows){
-  return rows.map(r => pad(r.net + "/" + r.bits, 20) + r.detail).join("\n");
+  const out = [];
+  let last = null;
+  for(const r of rows){
+    if(r.hidden) continue;
+    const key = r.net + "/" + r.bits;
+    const label = key === last ? "" : key;
+    last = key;
+    out.push(pad(label, 20) + (r.active === false ? " " : "*") + r.detail);
+  }
+  return out.join("\n");
 }
 function showRouteCmd(dev){
   const rows = routeRows(dev);
   if(!rows.length) return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no routes yet)";
-  return routeTableHead(rows.length) + routeBody(rows);
+  return routeTableHead(rows) + routeBody(rows) + hiddenFooter(rows);
+}
+function showRouteHiddenCmd(dev){
+  const rows = routeRows(dev);
+  const hid = rows.filter(r => r.hidden);
+  if(!hid.length)
+    return routeTableHead(rows) +
+      "\n(no hidden routes — every route in this table resolved to a live next hop)";
+  const body = hid.map(r => pad(r.net + "/" + r.bits, 20) + " " + r.detail +
+    "  (next hop " + r.nh + " is on no live subnet of this device)").join("\n");
+  return routeTableHead(rows) + body +
+    "\n\n(a hidden route is one the box kept but could not resolve. It is not used and it does\n" +
+    "not appear in plain show route, which is why a static route can look missing: the\n" +
+    "next hop has to sit on a subnet this device already has a live interface in.)";
 }
 function showRouteDestCmd(dev, keys){
   const target = keys[keys.length - 1];
@@ -1995,7 +2071,7 @@ function showRouteDestCmd(dev, keys){
       "(nothing in the table matches " + target + " — not even a default route, so a packet for it would be dropped)";
   const best = Math.max.apply(null, rows.map(r => r.bits));
   const hit = rows.filter(r => r.bits === best);
-  return routeTableHead(hit.length) + routeBody(hit) +
+  return routeTableHead(hit) + routeBody(hit) + hiddenFooter(hit) +
     (rows.length > hit.length ? "\n\n(" + (rows.length - hit.length) +
       " less specific route" + (rows.length - hit.length === 1 ? "" : "s") + " also covers " + target +
       " — longest match wins)" : "");
@@ -2005,7 +2081,10 @@ function showRouteProtoCmd(dev, keys){
   const rows = routeRows(dev).filter(r => r.proto === proto);
   if(!rows.length)
     return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no " + proto + " routes in this table)";
-  return routeTableHead(rows.length) + routeBody(rows);
+  const inact = rows.filter(r => r.active === false && !r.hidden).length;
+  return routeTableHead(rows) + routeBody(rows) + hiddenFooter(rows) +
+    (inact ? "\n\n(" + inact + " of these route" + (inact === 1 ? " is" : "s are") + " in the table but not active:\n" +
+      "another protocol reached the same destination with a lower preference.)" : "");
 }
 function showRouteReceiveCmd(dev, keys){
   const peer = keys[keys.length - 1];
@@ -2017,13 +2096,104 @@ function showRouteReceiveCmd(dev, keys){
   }
   if(!known) return { text: "(" + peer + " is not a configured BGP neighbour on this device)", err: true };
   const rows = ((dev.d && dev.d.bgpRoutes) || []).filter(r => r.nh === peer);
-  const head = routeTableHead(rows.length) +
+  const head = routeTableHead(rows) +
     "  " + pad("Prefix", 24) + pad("Nexthop", 21) + pad("MED", 8) + pad("Lclpref", 11) + "AS path";
   if(!rows.length)
     return head + "\n\n(nothing received from " + peer + " yet — check show bgp summary for the session state)";
   return head + "\n" + rows.map(r =>
     "* " + pad(r.net + "/" + r.bits, 24) + pad(r.nh, 21) + pad("", 8) + pad("", 11) +
     r.fromAs + " I").join("\n");
+}
+
+/* The forwarding table is not a second copy of the routing table. The routing
+   engine keeps every route it hears in inet.0 and chooses one per destination;
+   only those winners are handed to the packet-forwarding engine, already
+   resolved down to an outgoing interface. So the FIB is always the shorter
+   list, and anything inactive or hidden in show route is simply absent here. */
+function fibIndex(dev, key){
+  let h = 0;
+  const s = (dev.id || "") + "|" + key;
+  for(let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) >>> 0;
+  return 320 + (h % 200);
+}
+function broadcastOf(ip, bits){
+  const base = ipToInt32(networkOf(ip, bits));
+  const host = bits >= 32 ? 0 : (0xFFFFFFFF >>> bits);
+  const b = (base + host) >>> 0;
+  return [b >>> 24, (b >>> 16) & 255, (b >>> 8) & 255, b & 255].join(".");
+}
+function fibRows(dev){
+  const rows = [];
+  const add = (dest, type, rtref, nh, nhtype, netif) =>
+    rows.push({ dest, type, rtref, nh: nh || "", nhtype, netif: netif || "",
+      index: fibIndex(dev, dest + nhtype) });
+  const live = ifacesOf(dev).filter(i => i.up);
+  const all = routeRows(dev);
+  const def = all.find(r => r.bits === 0 && r.active);
+  if(def) add("default", "user", 2, def.nh || "", "ucst", def.iface || "");
+  else add("default", "perm", 0, "", "rjct", "");
+  add("0.0.0.0/32", "perm", 0, "", "dscd", "");
+  for(const i of live){
+    const net = networkOf(i.ip, i.bits);
+    add(net + "/" + i.bits, "intf", 0, "rslv", "rslv", i.name);
+    add(i.ip + "/32", "intf", 0, i.ip, "locl", "");
+    if(i.bits < 31) add(broadcastOf(i.ip, i.bits) + "/32", "intf", 0, "", "bcst", i.name);
+  }
+  for(const [ip, a] of Object.entries(dev.arp || {})){
+    if(live.some(i => i.ip === ip)) continue;
+    add(ip + "/32", "dest", 0, a.mac, "ucst", a.iface);
+  }
+  for(const r of all){
+    if(!r.active || r.bits === 0) continue;
+    if(r.proto === "direct") continue;
+    const arp = (dev.arp || {})[r.nh];
+    add(r.net + "/" + r.bits, "user", 1, arp ? arp.mac : r.nh, r.iface ? "ucst" : "hold", r.iface || "");
+  }
+  add("224.0.0.0/4", "perm", 0, "", "mdsc", "");
+  add("255.255.255.255/32", "perm", 0, "", "bcst", "");
+  return rows;
+}
+const FIB_LEGEND =
+  "\n\nRoute types: perm = built in by the kernel, intf = came with an interface address,\n" +
+  "dest = a neighbour this box has ARPed, user = put here by a route you configured or learned.\n" +
+  "Next-hop types: ucst = send it to one next hop, locl = this is my own address,\n" +
+  "bcst = broadcast, mdsc = multicast discard, rjct = reject, dscd = drop silently,\n" +
+  "rslv = ARP for whoever answers, hold = waiting on a next hop that is not resolved yet.";
+function fibTable(dev, rows){
+  const head = "Routing table: default.inet\nInternet:\n" +
+    pad("Destination", 20) + pad("Type", 7) + pad("RtRef", 7) +
+    pad("Next hop", 20) + pad("Type", 6) + pad("Index", 7) + pad("NhRef", 7) + "Netif";
+  const body = rows.map(r =>
+    pad(r.dest, 20) + pad(r.type, 7) + pad(String(r.rtref), 7) +
+    pad(r.nhtype === "rslv" ? "" : r.nh, 20) + pad(r.nhtype, 6) +
+    pad(String(r.index), 7) + pad("1", 7) + r.netif).join("\n");
+  return head + "\n" + body;
+}
+function showFibCmd(dev){
+  const rows = fibRows(dev);
+  const all = routeRows(dev);
+  const notForwarded = all.filter(r => r.hidden || r.active === false).length;
+  return fibTable(dev, rows) + FIB_LEGEND +
+    (notForwarded ? "\n\n(" + notForwarded + " route" + (notForwarded === 1 ? "" : "s") +
+      " in show route did not make it here: a route is only handed to the\nforwarding " +
+      "plane if it won its destination and its next hop resolved.)" : "");
+}
+function showFibDestCmd(dev, keys){
+  const target = keys[keys.length - 1];
+  const rows = fibRows(dev).filter(r => {
+    if(r.dest === "default") return true;
+    const m = r.dest.match(/^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/);
+    return m && sameSubnet(target, m[1], +m[2]);
+  });
+  if(!rows.length)
+    return { text: "(nothing in the forwarding table covers " + target + " — a packet for it would be dropped)", err: true };
+  const best = rows.reduce((a, r) => {
+    const bits = r.dest === "default" ? 0 : +r.dest.split("/")[1];
+    return bits > a.bits ? { bits, r } : a;
+  }, { bits: -1, r: null });
+  return fibTable(dev, [best.r]) +
+    "\n\n(the forwarding plane does one lookup per packet and takes the longest match,\n" +
+    "which for " + target + " is " + best.r.dest + ".)";
 }
 
 function showIfExtensiveAll(dev){
@@ -2319,40 +2489,46 @@ function showReCmd(dev){
 }
 
 function routeTerseRow(r){
-  const flag = "* ";
+  const flag = (r.active === false ? "  " : "* ");
   const code = r.proto === "direct" ? "D" : r.proto === "static" ? "S" : r.proto === "ospf" ? "O" : r.proto === "bgp" ? "B" : "?";
   const nh = r.nh ? ">" + r.nh : ">" + (r.detail.split("via ")[1] || "");
   return flag + "? " + pad(r.net + "/" + r.bits, 19) + pad(code, 2) + pad(String(r.pref), 6) +
     pad("", 11) + pad("", 11) + pad(nh, 17) + (r.fromAs ? String(r.fromAs) : "");
 }
 function showRouteTerseCmd(dev){
-  const rows = routeRows(dev);
+  const rows = routeRows(dev).filter(r => !r.hidden);
   if(!rows.length) return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no routes yet)";
-  return routeTableHead(rows.length) +
+  return routeTableHead(routeRows(dev)) +
     "A V " + pad("Destination", 19) + pad("P", 2) + pad("Prf", 6) + pad("Metric 1", 11) + pad("Metric 2", 11) +
     pad("Next hop", 17) + "AS path\n" +
     rows.map(routeTerseRow).join("\n") +
     "\n\n(terse is the one-line-per-route view: A = active, P = protocol, Prf = preference.\nLower preference wins, which is why Direct/0 beats Static/5 beats OSPF/10 beats BGP/170.)";
 }
 function showRouteSummaryCmd(dev){
-  const rows = routeRows(dev);
-  const byProto = {};
-  for(const r of rows) byProto[r.proto] = (byProto[r.proto] || 0) + 1;
+  const all = routeRows(dev);
+  const rows = all.filter(r => !r.hidden);
+  const byProto = {}, activeByProto = {};
+  for(const r of rows){
+    byProto[r.proto] = (byProto[r.proto] || 0) + 1;
+    if(r.active !== false) activeByProto[r.proto] = (activeByProto[r.proto] || 0) + 1;
+  }
   const rid = (ifacesOf(dev).filter(i => i.up)[0] || {}).ip || null;
   const asn = cfgGet(dev.config, ["routing-options", "autonomous-system"]) || null;
   const out = [];
   if(asn) out.push("Autonomous system number: " + asn);
   out.push("Router ID: " + (rid || "(none — no interface has an address and a live link)"));
   out.push("");
-  out.push("inet.0: " + rows.length + " destination" + (rows.length === 1 ? "" : "s") + ", " +
-    rows.length + " route" + (rows.length === 1 ? "" : "s") +
-    " (" + rows.length + " active, 0 holddown, 0 hidden)");
+  const c = routeCounts(all);
+  out.push("inet.0: " + c.dests + " destination" + (c.dests === 1 ? "" : "s") + ", " +
+    c.routes + " route" + (c.routes === 1 ? "" : "s") +
+    " (" + c.active + " active, 0 holddown, " + c.hidden + " hidden)");
   const label = { direct: "Direct", static: "Static", ospf: "OSPF", bgp: "BGP", local: "Local" };
   for(const p of ["direct", "static", "ospf", "bgp", "local"]){
     if(!byProto[p]) continue;
     const n = String(byProto[p]);
+    const a = String(activeByProto[p] || 0);
     const padL = (t, w) => " ".repeat(Math.max(1, w - String(t).length)) + t;
-    out.push(" ".repeat(13) + padL(label[p] + ":", 7) + padL(n, 7) + " routes," + padL(n, 7) + " active");
+    out.push(" ".repeat(13) + padL(label[p] + ":", 7) + padL(n, 7) + " routes," + padL(a, 7) + " active");
   }
   if(!rows.length) out.push("              (nothing in the table yet)");
   return out.join("\n");
@@ -2557,6 +2733,10 @@ const SHARED_OP_SPECS = [
   ["show system users", { help: "Who is logged in right now, and for how long", fn: showSystemUsersCmd }],
   ["show chassis routing-engine", { help: "RE health: memory, CPU, temperature, uptime, last reboot reason", fn: showReCmd }],
   ["show route terse", { help: "One line per route — protocol and preference side by side", fn: showRouteTerseCmd }],
+  ["show route hidden", { help: "Routes the table kept but could not resolve — the reason a static can look missing", fn: showRouteHiddenCmd }],
+  ["show route forwarding-table", { help: "The forwarding table: only the routes that won, resolved down to an outgoing interface", fn: showFibCmd }],
+  ["show route forwarding-table destination <destination:ip>", { help: "The one forwarding entry a packet for this address would hit", fn: showFibDestCmd }],
+  ["show arp no-resolve", { help: "ARP cache without looking up hostnames — what you use when DNS is slow or wrong", fn: showArpNoResolveCmd }],
   ["show route summary", { help: "How many routes each protocol put in the table", fn: showRouteSummaryCmd }],
   ["clear arp", { help: "Flush the ARP cache — forces a fresh ARP for every next hop", fn: clearArpCmd }],
   ["clear log messages", { help: "Empty the log so what appears next is only your fault reproduction", fn: clearLogCmd }],

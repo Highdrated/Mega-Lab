@@ -2741,7 +2741,7 @@ const REF_WITHOUT = {
   "On each host: ip route add default via 10.0.10.1 (its own room's door)": "Without a default route the HOST gives up without even trying — network unreachable, locally, instantly. The switch never sees the packet; the failure lives on the sender's own machine.",
 
   "set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1": "Anything not in the routing table is dropped at this box. 0.0.0.0/0 is the everything-else entry — the difference between an office network and an island.",
-  "commit, then run show route": "Without reading the table you assume instead of know: an unresolvable next-hop sits there uselessly while the config looks perfect. show route shows what the box will actually DO.",
+  "commit, then run show route": "Without reading the table you assume instead of know: a next-hop the box cannot reach makes the route hidden, so it never appears at all while the config looks perfect. show route shows what the box will actually DO.",
   "Now think about the reply": "Forget the return path and you earn the lab's signature ticket: your ping ARRIVES and its answer dies on the way home. Half of all 'it does not work' is the other direction.",
 
   "Cable a Console connection into the CON port, then press the power button": "Without console you cannot reach a box that has no network settings yet — chicken and egg. The CON port is the one door that works before any address exists.",
@@ -2834,7 +2834,7 @@ const REF_HOWTO = [
     intro: "Routers only know the streets plugged into them. Every other destination needs a written line of directions — and so does the REPLY.",
     steps: [
       ["set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1", "The strange 0.0.0.0/0 means anything I have no better directions for — the default route, the way out. The next-hop must be an address on a street this router is actually plugged into."],
-      ["commit, then run show route", "Read the table: Direct lines are streets it touches, Static lines are directions you wrote. If your route shows next-hop unresolvable, the next-hop is not on any of its streets."],
+      ["commit, then run show route", "Read the table: Direct lines are streets it touches, Static lines are directions you wrote. If your route is missing entirely, it is hidden — the next-hop is not on any of its streets. show route hidden names it."],
       ["Now think about the reply", "Your packet arriving is half the journey. The far-side router needs directions BACK to your street, or the answer dies quietly out there. Ping fails while traceroute succeeds? That is the signature of a missing return route."],
     ],
     done: "ping succeeds only once BOTH directions have directions. When it does, run traceroute and read your route working, hop by hop.",

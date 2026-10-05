@@ -3377,6 +3377,95 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   cli(sw68, "exit");
 }
 
+
+/* ---------- T69: route preference, active/hidden, and the forwarding table ---------- */
+{
+  wipeLab();
+  const r69 = makeRouter(0, 0);
+  const sw69 = makeSwitch(300, 0, 8);
+  cable(r69, "ge-0/0/0", sw69, "ge-0/0/1");
+  rebuildAllDerived();
+  cli(r69, "configure");
+  cli(r69, "set interfaces ge-0/0/0 unit 0 family inet address 10.0.0.1/30");
+  cli(r69, "set routing-options static route 10.0.0.0/30 next-hop 10.0.0.2");
+  cli(r69, "set routing-options static route 0.0.0.0/0 next-hop 10.0.0.2");
+  cli(r69, "set routing-options static route 192.168.99.0/24 next-hop 172.31.1.1");
+  cli(r69, "commit");
+  cli(r69, "exit");
+
+  const rt = cli(r69, "show route");
+  ok(/2 destinations, 3 routes \(2 active, 0 holddown, 1 hidden\)/.test(rt),
+     "T69 the header counts destinations, routes, active and hidden as four different numbers");
+  ok(/10\.0\.0\.0\/30\s+\*\[Direct\/0\]/.test(rt),
+     "T69 the lower-preference route is the active one");
+  ok(/\n\s+\[Static\/5\]  to 10\.0\.0\.2/.test(rt),
+     "T69 the route that lost on preference stays in the table without a star");
+  ok(!/192\.168\.99\.0\/24/.test(rt.split("(1 hidden route")[0]),
+     "T69 a hidden route is not printed by plain show route, exactly as on a real box");
+  ok(/1 hidden route/.test(rt), "T69 but show route says one is hidden rather than leaving her guessing");
+
+  const hid = cli(r69, "show route hidden");
+  ok(/192\.168\.99\.0\/24/.test(hid) && /172\.31\.1\.1 is on no live subnet/.test(hid),
+     "T69 show route hidden names the route and why it could not resolve");
+
+  const terse69 = cli(r69, "show route terse");
+  ok(/\* \? 10\.0\.0\.0\/30\s+D/.test(terse69), "T69 terse stars the active route");
+  ok(/\n  \? 10\.0\.0\.0\/30\s+S/.test(terse69), "T69 terse leaves the inactive route unstarred");
+  ok(!/192\.168\.99/.test(terse69), "T69 terse omits hidden routes too");
+
+  const sum69 = cli(r69, "show route summary");
+  ok(/Static:\s+2 routes,\s+1 active/.test(sum69),
+     "T69 summary separates how many static routes exist from how many are forwarding");
+  ok(/1 hidden\)/.test(sum69), "T69 summary carries the hidden count");
+
+  const prot69 = cli(r69, "show route protocol static");
+  ok(/not active/.test(prot69),
+     "T69 show route protocol explains why a listed route is not forwarding");
+
+  const fib = cli(r69, "show route forwarding-table");
+  ok(/Routing table: default\.inet/.test(fib) && /Destination\s+Type\s+RtRef\s+Next hop/.test(fib),
+     "T69 the forwarding table prints the real Junos columns");
+  ok(/default\s+user\s+2\s+10\.0\.0\.2\s+ucst/.test(fib),
+     "T69 the default route reaches the forwarding table as a unicast next hop");
+  ok(/10\.0\.0\.0\/30\s+intf\s+0\s+rslv/.test(fib),
+     "T69 a connected subnet is an intf entry that resolves by ARP");
+  ok(/10\.0\.0\.1\/32\s+intf\s+0\s+10\.0\.0\.1\s+locl/.test(fib),
+     "T69 the device's own address is a local entry, so packets for it are punted up");
+  ok(/224\.0\.0\.0\/4\s+perm/.test(fib), "T69 the kernel's permanent entries are there");
+  ok(!/192\.168\.99/.test(fib), "T69 a hidden route never reaches the forwarding table");
+  ok(/did not make it here/.test(fib),
+     "T69 and the forwarding table says how many routes it dropped on the way");
+
+  const one = cli(r69, "show route forwarding-table destination 8.8.8.8");
+  ok(/default/.test(one) && /longest match/.test(one),
+     "T69 forwarding-table destination answers with the single entry a packet would hit");
+
+  /* no default route at all: the forwarding table rejects rather than inventing one */
+  cli(r69, "configure");
+  cli(r69, "delete routing-options static route 0.0.0.0/0");
+  cli(r69, "commit");
+  cli(r69, "exit");
+  ok(/default\s+perm\s+0\s+rjct/.test(cli(r69, "show route forwarding-table")),
+     "T69 with no default route the forwarding table holds a permanent reject entry");
+
+  /* show arp no-resolve */
+  const arpnr = cli(r69, "show arp no-resolve");
+  ok(!/syntax error|unknown command/.test(arpnr),
+     "T69 show arp no-resolve is a real option and the lab takes it");
+
+  /* set vlans <name> description — real on an EX, and the lab used to refuse it */
+  cli(sw69, "configure");
+  cli(sw69, "set vlans staff vlan-id 10");
+  const vd = cli(sw69, "set vlans staff description \"Staff users and printers\"");
+  ok(!/syntax error/.test(vd), "T69 a VLAN takes a description, the same as an interface does");
+  ok(/description \"Staff users and printers\"/.test(cli(sw69, "show")),
+     "T69 and the description renders inside the vlan stanza");
+  cli(sw69, "commit");
+  ok(/Staff users and printers/.test(cli(sw69, "run show configuration vlans")),
+     "T69 the VLAN description survives a commit");
+  cli(sw69, "exit");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

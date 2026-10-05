@@ -278,6 +278,7 @@ const SWITCH_CFG_SPECS = [
   ["interfaces <interface:ifname> unit <unit:unit> family inet filter output <filter:filterref>", { kind:"value", help:"Apply a firewall filter to outbound traffic" }],
   ["vlans <vlan-name:word> vlan-id <id:vlanid>", { kind:"value", help:"Create a VLAN with this 802.1Q id" }],
   ["vlans <vlan-name:vlanref> l3-interface <irb:irbref>", { kind:"value", help:"Attach an irb unit as this VLAN's L3 gateway" }],
+  ["vlans <vlan-name:vlanref> description <text:text>", { kind:"value", help:"A note on the VLAN itself — why it exists, who is in it" }],
   ["routing-options static route <destination:prefix> next-hop <next-hop:ip>", { kind:"list", help:"Static route (0.0.0.0/0 = default; repeat next-hop for ECMP load sharing)" }],
   ["protocols lldp", { kind:"presence", help:"Enable LLDP \u2014 neighbour discovery, the cable-tracing tool" }],
   ["protocols lldp interface all", { kind:"list", help:"Run LLDP on every interface" }],
