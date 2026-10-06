@@ -33,7 +33,7 @@ const LABS_CONFIG = [
     path: "labs/junle.html",
     ring: "ring-mid",
     angle: 150,
-    glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+    glyph: '<rect x="2" y="2" width="12" height="12"/><path d="M2 6h12M6 2v12M9 9h3v3"/>'
   },
     {
     id: "pyle",
@@ -43,7 +43,7 @@ const LABS_CONFIG = [
     path: "labs/pyle.html",
     ring: "ring-outer",
     angle: 100,
-    glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+    glyph: '<path d="M2.5 5l3 3-3 3"/><path d="M7.5 11.5h6"/>'
   },
     {
     id: "git-lab",
@@ -53,7 +53,7 @@ const LABS_CONFIG = [
     path: "labs/git-lab.html",
     ring: "ring-inner",
     angle: 200,
-    glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+    glyph: '<circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="6" r="1.5"/><path d="M4 5v6M12 7.5c0 2.5-3 2.5-8 3.5"/>'
   },
     {
     id: "spelle",
@@ -63,7 +63,7 @@ const LABS_CONFIG = [
     path: "labs/spelle.html",
     ring: "ring-outer",
     angle: 180,
-    glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+    glyph: '<path d="M3 13L11 5"/><path d="M12 1.5v3M10.5 3h3M13.5 7.5v2M12.5 8.5h2M6.5 2v2M5.5 3h2"/>'
   },
     {
     id: "style",
@@ -73,7 +73,7 @@ const LABS_CONFIG = [
     path: "labs/style.html",
     ring: "ring-outer",
     angle: 300,
-    glyph: '<path d="M8 2v4M8 10v4M2 8h4M10 8h4"/><circle cx="8" cy="8" r="2"/>'
+    glyph: '<path d="M6 2.5c-2 0-2 1-2 2.5s-1 2.5-2 3c1 .5 2 1.5 2 3s0 2.5 2 2.5M10 2.5c2 0 2 1 2 2.5s1 2.5 2 3c-1 .5-2 1.5-2 3s0 2.5-2 2.5"/>'
   },
     {
     id: "codex",
