@@ -184,7 +184,13 @@ iframe{border:0;width:100%;height:100%;display:block;background:var(--field)}
 .plot .cap{flex:none;height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mute);background:var(--panel2)}
 .idle{display:flex;gap:12px;align-items:flex-start}
 .idle img{width:84px;height:84px;flex:none}
-#v-rules{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:repeat(2,minmax(0,1fr))}
+#v-rules{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}
+.rb .rcard p{display:none}
+.rb .rex{margin-top:8px}
+.tabs{display:flex;gap:4px}
+.tab{height:28px;padding:0 10px;text-transform:none;letter-spacing:.02em;font-family:var(--mono);font-size:12px}
+.tab.on,.tab.on:hover:not(:disabled){border-color:var(--amb);box-shadow:inset 0 -2px 0 var(--amb);color:var(--ink)}
+body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spacing:0;font-size:12px}
 .rb.locked{opacity:.55}
 .rb .lockmsg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:13px}
 .rb .rcard{border:0;border-radius:0;background:transparent}
@@ -217,7 +223,8 @@ iframe{border:0;width:100%;height:100%;display:block;background:var(--field)}
     <button class="stg" data-v="school"><span class="ck">✓</span>School</button><i>›</i>
     <button class="stg" data-v="target"><span class="ck">✓</span>Target</button><i>›</i>
     <button class="stg" data-v="village">Village</button><i>·</i>
-    <button class="stg" data-v="rules">Rulebook</button>
+    <button class="stg" data-v="rules">Rulebook</button><i>·</i>
+    <button class="stg" data-v="practice">Practice</button>
   </nav>
   <select id="tsel" aria-label="Choose target"></select>
   <div id="comms"><img id="junie" alt="" width="22" height="22"><span id="cmsg">Systems online. Welcome back, operator.</span></div>
@@ -249,7 +256,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:var(--field)}
     <div class="panel"><div class="ph"><b>Your build</b><span class="sp meter" id="meter"><span class="bar"><i></i></span><b>0%</b></span></div>
       <div class="fr"><iframe id="bframe" title="Your build"></iframe><iframe id="ovl" title="Target overlay" tabindex="-1"></iframe></div>
       <div class="slide">Mine<input id="slider" type="range" min="0" max="100" step="1" value="0" aria-label="Fade the target over your build">Target</div></div>
-    <div class="panel edp"><div class="ph"><b>index.html</b><span class="sp" style="display:flex;gap:8px"><button id="reset">Reset</button><button id="check" class="pri">Check · Ctrl+Enter</button></span></div>
+    <div class="panel edp"><div class="ph"><b id="fname">index.html</b><span id="tabs" class="tabs"></span><span class="sp" style="display:flex;gap:8px"><button id="reset">Reset</button><button id="check" class="pri">Check · Ctrl+Enter</button></span></div>
       <div class="ed"><pre class="gut" id="gut">1</pre><div class="code"><pre id="hl" aria-hidden="true"></pre><textarea id="ed" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Code editor"></textarea></div></div>
       <div class="efoot"><span id="scan">Scanner idle.</span><span class="sp">Tab indents · live preview</span></div></div>
   </section>
@@ -262,7 +269,7 @@ const ART_O={"witch": "data:image/webp;base64,UklGRgRcAABXRUJQVlA4WAoAAAAQAAAA3w
 const art=k=>(S.theme==='orbital'&&ART_O[k])||ART[k];
 const BASE_ORB='body{margin:18px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#232a31;background:#fff;line-height:1.4}img{display:block;max-width:100%}';
 const BASE_GROVE='body{margin:18px;font-family:Georgia,"Times New Roman",serif;color:#2a2418;background:#f2e9d6;line-height:1.4}img{display:block;max-width:100%}';
-const TEAL='rgb(0, 128, 128)',PURPLE='rgb(128, 0, 128)';
+const TEAL='rgb(0, 128, 128)',PURPLE='rgb(128, 0, 128)',DARKRED='rgb(139, 0, 0)';
 
 const RULES={
   r1:{n:'01',title:'Tags come in pairs',syn:'<span class="k">&lt;p&gt;</span>text<span class="k">&lt;/p&gt;</span>',note:'The opening tag starts something. The closing tag, with a slash, ends it. Everything in between is the content.',ex:'<p>Knock twice.</p>\n<p>Mind the cat.</p>',cat:'Structure',t:0},
@@ -270,7 +277,13 @@ const RULES={
   r3:{n:'03',title:'Images need src and alt',syn:'<span class="k">&lt;img</span> src="<span class="v">file</span>" alt="<span class="v">words</span>"<span class="k">&gt;</span>',note:'img has no closing tag. src picks the file to show. alt describes it in words, for screen readers and for when the file fails to load.',ex:'<img src="witch.png" alt="A witch waving">',cat:'Media',t:1},
   r4:{n:'04',title:'CSS lives in a style block',syn:'<span class="v">selector</span> { <span class="k">property</span>: <span class="v">value</span>; }',note:'Write CSS between <style> and </style>. The selector picks elements, the property says what to change, the value says how.',ex:'<style>\n  h1 { color: teal; }\n</style>\n<h1>Teal title</h1>',cat:'Colour and font',t:1},
   r5:{n:'05',title:'Classes name things',syn:'class="<span class="v">sign</span>"  →  <span class="k">.sign</span> { }',note:'Add class="name" to a tag in HTML, then reach it in CSS with a dot in front: .name. One class can be used on many elements.',ex:'<style>\n  .tag { color: purple; }\n</style>\n<p class="tag">Purple, thanks to its class</p>\n<p>Plain paragraph</p>',cat:'Structure',t:2},
-  r6:{n:'06',title:'CSS draws borders',syn:'border: <span class="v">size</span> <span class="k">style</span> <span class="v">colour</span>;',note:'Size like 2px, style like solid, dashed or dotted, then a colour, in that order.',ex:'<style>\n  .box { border: 2px dashed teal; padding: 10px; }\n</style>\n<div class="box">A box with a dashed line</div>',cat:'Box',t:2}
+  r6:{n:'06',title:'CSS draws borders',syn:'border: <span class="v">size</span> <span class="k">style</span> <span class="v">colour</span>;',note:'Usually written as size, style, colour, like 2px solid teal. The style (solid, dashed, dotted) is the part you cannot skip: without it, no border is drawn.',ex:'<style>\n  .box { border: 2px dashed teal; padding: 10px; }\n</style>\n<div class="box">A box with a dashed line</div>',cat:'Box',t:2},
+  r7:{n:'07',title:'Three places for CSS',syn:'<span class="k">style=""</span> · <span class="k">&lt;style&gt;</span> · <span class="k">&lt;link href="styles.css"&gt;</span>',note:'Inline: style="..." on one tag, for a one-off. Internal: a <style> block at the top, for one page. External: a separate styles.css file, linked with <link>, shared by every page of a site. Real websites mostly use the external file.',ex:'<style>\n  h1 { color: teal; }\n</style>\n<h1>Internal: teal</h1>\n<p style="color: purple;">Inline: purple</p>',cat:'CSS placement',t:3},
+  r8:{n:'08',title:'Inline beats the rest',syn:'<span class="k">inline</span> › <span class="v">&lt;style&gt;</span> / <span class="v">styles.css</span>',note:'When two rules disagree about the same thing, inline style wins. Between the style block and styles.css, the rule that comes last in the page wins.',ex:'<style>\n  p { color: teal; }\n</style>\n<p>Teal from the style block</p>\n<p style="color: purple;">Inline wins: purple</p>',cat:'CSS placement',t:3},
+  r9:{n:'09',title:'Lists: ul and li',syn:'<span class="k">&lt;ul&gt;</span> <span class="v">&lt;li&gt;</span>item<span class="v">&lt;/li&gt;</span> <span class="k">&lt;/ul&gt;</span>',note:'ul is the list, li is one item inside it. ol makes a numbered list instead. CSS list-style changes the bullets: disc, circle, square or none.',ex:'<style>\n  ul { list-style: square; }\n</style>\n<ul>\n  <li>Mushrooms</li>\n  <li>Moon fruit</li>\n</ul>',cat:'Lists and links',t:4},
+  r10:{n:'10',title:'Links: a with href',syn:'<span class="k">&lt;a</span> href="<span class="v">where</span>"<span class="k">&gt;</span>words<span class="k">&lt;/a&gt;</span>',note:'href says where the link goes: another page, a website, or #name for a spot on the same page. The words between the tags are what you click.',ex:'<a href="#map">Find the stall</a>\n<p>Click the underlined words.</p>',cat:'Lists and links',t:4},
+  r11:{n:'11',title:'Fonts: family and size',syn:'font-family: <span class="v">monospace</span>; font-size: <span class="v">20px</span>;',note:'font-family picks the typeface, like serif, sans-serif or monospace. font-size sets how big the letters are, usually in px.',ex:'<style>\n  h1 { font-family: monospace; }\n  p { font-size: 20px; }\n</style>\n<h1>Typewriter title</h1>\n<p>Bigger text</p>',cat:'Colour and font',t:5},
+  r12:{n:'12',title:'Space: padding and margin',syn:'<span class="k">padding</span> inside the border · <span class="k">margin</span> outside it',note:'padding is the space between the content and its border. margin is the space outside the border that pushes other things away.',ex:'<style>\n  .box { border: 2px solid teal; padding: 20px; margin: 20px; }\n</style>\n<div class="box">Padding inside, margin outside</div>',cat:'Box',t:5}
 };
 
 const q=(d,s)=>d.querySelector(s);
@@ -292,7 +305,9 @@ const TARGETS=[
   {k:'pick',r:'r1',q:'Which one is a correct paragraph?',o:['<p>Hi<p>','<p>Hi</p>','<p>Hi</>','<p Hi /p>'],a:1,h:'The closing tag repeats the name, with a / in front.'},
   {k:'gap',r:'r2',q:'Close the title',pre:'<h1>Moon Market</',post:'>',a:['h1'],prev:v=>'<h1>Moon Market</'+v+'>',h:'The closing tag repeats the name of the opening tag.'},
   {k:'type',r:'r1',q:'Write a paragraph that says: Mind the cat.',ph:'<p>…</p>',test:/^<p>\s*mind the cat\.?\s*<\/p>$/i,prev:v=>v,h:'Start with `<p>`, then the words, then `</p>`.'},
-  {k:'fix',r:'r2',q:'Fix the bug in this title',bug:'<h1>The Hut</h2>',test:/^<h1>\s*the hut\s*<\/h1>$/i,prev:v=>v,h:'The opening and closing tag must have the same name.'}
+  {k:'fix',r:'r2',q:'Fix the bug in this title',bug:'<h1>The Hut</h2>',test:/^<h1>\s*the hut\s*<\/h1>$/i,prev:v=>v,h:'The opening and closing tag must have the same name.'},
+  {k:'pick',r:'r2',q:'Which tag makes the biggest heading?',o:['<h6>','<h3>','<h1>','<head>'],a:2,h:'The smaller the number, the bigger the heading.'},
+  {k:'gap',r:'r1',q:'Close the paragraph',pre:'<p>Brew time</',post:'>',a:['p'],prev:v=>'<p>Brew time</'+v+'>',h:'Same name as the opening tag, after the slash.'}
  ]},
 {id:'path',name:'Path welcome sign',plot:1,rules:['r3','r4'],
  starter:'<img>\n<h1>Welcome, traveller</h1>\n',
@@ -307,7 +322,9 @@ const TARGETS=[
   {k:'pick',r:'r3',q:'Which image tag is complete?',o:['<img src="cat.png">','<img src="cat.png" alt="A black cat">','<img>cat.png</img>','<image src="cat.png">'],a:1,h:'An img needs both src and alt, and it never gets a closing tag.'},
   {k:'gap',r:'r3',q:'Add the attribute that describes the picture',pre:'<img src="moon.png" ',post:'="A full moon">',a:['alt'],h:'It starts with an a and is three letters long.'},
   {k:'type',r:'r4',q:'Write a CSS rule that makes every h1 purple',ph:'h1 { … }',test:/^h1\s*\{\s*color\s*:\s*purple\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><h1>A purple title?</h1>',h:'Selector `h1`, then curly braces with `color: purple;` inside.'},
-  {k:'fix',r:'r4',q:'Fix the bug in this CSS',bug:'p { color teal; }',test:/^p\s*\{\s*color\s*:\s*teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Should be teal</p>',h:'Between a property and its value there is always a colon.'}
+  {k:'fix',r:'r4',q:'Fix the bug in this CSS',bug:'p { color teal; }',test:/^p\s*\{\s*color\s*:\s*teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Should be teal</p>',h:'Between a property and its value there is always a colon.'},
+  {k:'type',r:'r3',q:'Write an img that shows owl.png, with alt text describing it',ph:'<img src="owl.png" alt="…">',test:/^<img src="owl\.png" alt="[^"]{2,}">$/i,prev:v=>v,h:'`<img src="owl.png" alt="…">`. There is no owl.png here, so the preview shows your alt text. That is exactly what alt is for.'},
+  {k:'pick',r:'r4',q:'In `h1 { color: teal; }`, what is `color`?',o:['The selector','The property','The value','The tag'],a:1,h:'Selector picks, property says what to change, value says how.'}
  ],
  review:[{k:'type',r:'r2',rv:1,q:'Review: write an h1 that says Spells',ph:'<h1>…</h1>',test:/^<h1>\s*spells\s*<\/h1>$/i,prev:v=>v,h:'`<h1>`, the word, then `</h1>`.'}]},
 {id:'shop',name:'Potion shop sign',plot:2,rules:['r5','r6'],
@@ -322,23 +339,81 @@ const TARGETS=[
   {k:'pick',r:'r5',q:'In CSS, how do you reach `class="sign"`?',o:['sign { }','#sign { }','.sign { }','class.sign { }'],a:2,h:'Classes are reached with a dot.'},
   {k:'gap',r:'r6',q:'Make it a dashed line',pre:'border: 1px ',post:' red;',a:['dashed'],prev:v=>'<div style="border:1px '+v+' red;padding:12px">Preview box</div>',h:'The style is the word that describes the line: solid, dashed or dotted.'},
   {k:'type',r:'r6',q:'Give .box a 2px solid teal border',ph:'.box { … }',test:/^\.box\s*\{\s*border\s*:\s*2px\s+solid\s+teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><div class="box" style="padding:12px">I am .box</div>',h:'Selector `.box`, property `border`, then size, style, colour.'},
-  {k:'fix',r:'r5',q:'Fix the bug in this tag',bug:'<div class=".shop">Herbs</div>',test:/^<div class="shop">\s*herbs\s*<\/div>$/i,prev:v=>'<style>.shop{border:2px solid teal;padding:10px}</style>'+v,h:'The dot belongs in CSS only, never inside class="…".'}
+  {k:'fix',r:'r5',q:'Fix the bug in this tag',bug:'<div class=".shop">Herbs</div>',test:/^<div class="shop">\s*herbs\s*<\/div>$/i,prev:v=>'<style>.shop{border:2px solid teal;padding:10px}</style>'+v,h:'The dot belongs in CSS only, never inside class="…".'},
+  {k:'type',r:'r5',q:'Give this div the class box: <div>Hi</div>',ph:'<div class="…">Hi</div>',test:/^<div class="box">\s*hi\s*<\/div>$/i,prev:v=>'<style>.box{border:2px dashed teal;padding:10px}</style>'+v,h:'Add `class="box"` inside the opening tag.'},
+  {k:'pick',r:'r6',q:'Which border will actually show up?',o:['border: 2px teal;','border: 2px solid teal;','border: teal 2px;','border: 2px;'],a:1,h:'Without a style like solid, no border is drawn.'}
  ],
- review:[{k:'pick',r:'r3',rv:1,q:'Review: what does alt do?',o:['Makes the image bigger','Describes the image in words','Picks which file to show','Closes the img tag'],a:1,h:'src picks the file. The other one describes it.'}]}
+ review:[{k:'pick',r:'r3',rv:1,q:'Review: what does alt do?',o:['Makes the image bigger','Describes the image in words','Picks which file to show','Closes the img tag'],a:1,h:'src picks the file. The other one describes it.'}]},{id:'library',name:'Spellbook library sign',plot:3,rules:['r7','r8'],
+ starter:'<style>\n</style>\n<h1>The Spellbook Library</h1>\n<p>Open from dusk till dawn</p>\n<p>Whisper only. The books bite.</p>\n',
+ css:'p { font-style: italic; }\n',
+ solution:'<link rel="stylesheet" href="styles.css">\n<style>\n  h1 { color: teal; }\n</style>\n<h1>The Spellbook Library</h1>\n<p>Open from dusk till dawn</p>\n<p style="color: darkred;">Whisper only. The books bite.</p>',
+ solCss:'p { font-style: italic; color: purple; }\n',
+ steps:[
+  {t:'Link `styles.css` at the top of `index.html`',c:(d,w,code,raw)=>{const l=q(raw,'link[rel="stylesheet"]');return !!l&&l.getAttribute('href')==='styles.css'},help:['styles.css already has CSS in it, but index.html does not know the file exists yet.','Put a `<link>` tag on line 1 with `rel="stylesheet"` and `href="styles.css"`.','Linking a file called site.css: `<link rel="stylesheet" href="site.css">`','<link rel="stylesheet" href="styles.css">']},
+  {t:'In the `styles.css` tab, make paragraphs `purple`',c:(d,w,code,raw,css)=>/(^|\})\s*p\s*\{[^}]*color\s*:\s*purple/i.test(css||'')&&cs(w,q(d,'p'),'color')===PURPLE,help:['Click the styles.css tab above the editor. There is already a rule for p.','Add `color: purple;` inside the `p { }` rule, next to font-style.','Two properties in one rule: `h1 { color: teal; font-style: italic; }`','p { font-style: italic; color: purple; }']},
+  {t:'In the `<style>` block, make the `h1` teal',c:(d,w,code)=>/<style>[\s\S]*h1\s*\{[^}]*color\s*:\s*teal[\s\S]*<\/style>/i.test(code)&&cs(w,q(d,'h1'),'color')===TEAL,help:['Back to the index.html tab. The style block is empty and waiting.','Inside `<style>` write a rule for `h1` with `color: teal;`.','`p { color: purple; }` is a rule for paragraphs.','<style>\n  h1 { color: teal; }\n</style>']},
+  {t:'Make the last paragraph `darkred` with an inline style',c:(d,w,code,raw)=>{const ps=raw.querySelectorAll('p'),l=ps[ps.length-1];const rp=d.querySelectorAll('p');return !!l&&/color\s*:\s*darkred/i.test(l.getAttribute('style')||'')&&cs(w,rp[rp.length-1],'color')===DARKRED},help:['Only one paragraph should change, so a rule for all p will not work.','Add `style="color: darkred;"` inside the opening `<p>` of the last paragraph.','`<h1 style="color: teal;">Title</h1>`','<p style="color: darkred;">Whisper only. The books bite.</p>']}
+ ],
+ drills:[
+  {k:'pick',r:'r7',q:'Which line links a separate CSS file?',o:['<style src="styles.css">','<link rel="stylesheet" href="styles.css">','<css href="styles.css">','<script src="styles.css">'],a:1,h:'It is the link tag, with rel and href.'},
+  {k:'gap',r:'r7',q:'Point the link at styles.css',pre:'<link rel="stylesheet" ',post:'="styles.css">',a:['href'],h:'Same attribute a link uses to say where it goes.'},
+  {k:'type',r:'r7',q:'Make this paragraph green with an inline style: <p>Moss</p>',ph:'<p style="…">Moss</p>',test:/^<p style="color:\s*green;?">\s*moss\s*<\/p>$/i,prev:v=>v,h:'Put `style="color: green;"` inside the opening tag.'},
+  {k:'fix',r:'r7',q:'Fix the bug in this inline style',bug:'<p style="color teal">Herbs</p>',test:/^<p style="color:\s*teal;?">\s*herbs\s*<\/p>$/i,prev:v=>v,h:'Inline styles still need the colon between property and value.'},
+  {k:'pick',r:'r8',q:'styles.css says p is purple. The tag says style="color: red;". What colour is the text?',o:['Purple','Red','Black','A mix of both'],a:1,h:'Inline style beats the other two.'},
+  {k:'pick',r:'r7',q:'Where should the styling for a whole website live?',o:['Inline on every tag','A separate styles.css file','Inside the h1','In the alt text'],a:1,h:'One file, linked from every page, so one change updates the whole site.'}
+ ],
+ review:[{k:'type',r:'r6',rv:1,q:'Review: give .box a 1px dashed teal border',ph:'.box { … }',test:/^\.box\s*\{\s*border\s*:\s*1px\s+dashed\s+teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><div class="box" style="padding:12px">I am .box</div>',h:'`.box { border: size style colour; }`'}]},
+{id:'market',name:'Moonlight market board',plot:4,rules:['r9','r10'],
+ starter:'<h1>Moonlight Market</h1>\n<p>Today\'s wares:</p>\n',
+ solution:'<style>\n  ul { list-style: square; }\n</style>\n<h1>Moonlight Market</h1>\n<p>Today\'s wares:</p>\n<ul>\n  <li>Mushrooms</li>\n  <li>Moon fruit</li>\n  <li>Dried lavender</li>\n</ul>\n<a href="#map">Find the stall</a>',
+ steps:[
+  {t:'Add a list `<ul>` under the paragraph',c:(d)=>!!q(d,'p ~ ul'),help:['The wares need a list. Lists have an outer tag that holds all the items.','The outer tag for a bullet list is `<ul>`, closed with `</ul>`.','An empty list: `<ul>\n</ul>`','<ul>\n</ul>']},
+  {t:'Put three items in it: `Mushrooms`, `Moon fruit`, `Dried lavender`',c:(d)=>{const li=d.querySelectorAll('ul li');const t=[...li].map(x=>tx(x)).join('|');return li.length>=3&&t.includes('mushroom')&&t.includes('moon fruit')&&t.includes('lavender')},help:['Each ware is one item inside the ul.','Each item is an `<li>` with the words between `<li>` and `</li>`.','`<ul>\n  <li>Candles</li>\n  <li>Herbs</li>\n</ul>`','<ul>\n  <li>Mushrooms</li>\n  <li>Moon fruit</li>\n  <li>Dried lavender</li>\n</ul>']},
+  {t:'Under the list, add a link to `#map` that says `Find the stall`',c:(d,w,code,raw)=>{const a=q(raw,'a');return !!a&&a.getAttribute('href')==='#map'&&tx(a).includes('stall')},help:['A link is its own tag. Where it goes lives in an attribute.','Use `<a href="#map">` with the words, then `</a>`.','`<a href="#top">Back to top</a>`','<a href="#map">Find the stall</a>']},
+  {t:'Make the bullets `square` with CSS',c:(d,w)=>cs(w,q(d,'ul'),'listStyleType')==='square',help:['Bullets are styled on the ul, in a style block at the top.','Add a `<style>` block with `ul { list-style: square; }`.','`ul { list-style: circle; }` makes hollow circles.','<style>\n  ul { list-style: square; }\n</style>']}
+ ],
+ drills:[
+  {k:'pick',r:'r9',q:'Which makes a bullet list?',o:['<list>','<ul> with <li> inside','<li> with <ul> inside','<ol> with <p> inside'],a:1,h:'The outer tag is the list, the inner ones are the items.'},
+  {k:'gap',r:'r9',q:'Finish the list item',pre:'<ul><',post:'>Herbs</li></ul>',a:['li'],prev:v=>'<ul><'+v+'>Herbs</li></ul>',h:'Short for list item.'},
+  {k:'type',r:'r9',q:'Write a list with one item: Candles',ph:'<ul><li>…</li></ul>',test:/^<ul>\s*<li>\s*candles\s*<\/li>\s*<\/ul>$/i,prev:v=>v,h:'`<ul>`, then `<li>Candles</li>`, then `</ul>`.'},
+  {k:'pick',r:'r10',q:'Which attribute tells a link where to go?',o:['src','alt','href','class'],a:2,h:'Images use src. Links use something else.'},
+  {k:'type',r:'r10',q:'Write a link to #map that says Map',ph:'<a href="…">…</a>',test:/^<a href="#map">\s*map\s*<\/a>$/i,prev:v=>v,h:'`<a href="#map">Map</a>`'},
+  {k:'fix',r:'r9',q:'Fix the bug in this CSS',bug:'ul { list-style square; }',test:/^ul\s*\{\s*list-style\s*:\s*square\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><ul><li>Moss</li><li>Fern</li></ul>',h:'Property, colon, value.'}
+ ],
+ review:[{k:'pick',r:'r7',rv:1,q:'Review: which one is an inline style?',o:['<link href="styles.css">','<style> p { } </style>','<p style="color: teal;">','p { color: teal; }'],a:2,h:'Inline means it sits on the tag itself.'}]},
+{id:'tower',name:'Watchtower log',plot:5,rules:['r11','r12'],
+ starter:'<style>\n  .tower { border: 2px solid teal; }\n</style>\n<div class="tower">\n  <h1>Watchtower Log</h1>\n  <p>Night 7: the moon is shy.</p>\n</div>\n',
+ solution:'<style>\n  .tower { border: 2px solid teal; padding: 20px; margin: 30px; }\n  h1 { font-family: monospace; }\n  p { font-size: 20px; }\n</style>\n<div class="tower">\n  <h1>Watchtower Log</h1>\n  <p>Night 7: the moon is shy.</p>\n</div>',
+ steps:[
+  {t:'Give `.tower` `20px` of padding',c:(d,w)=>cs(w,q(d,'.tower'),'paddingTop')==='20px',help:['The text is squashed against the border. It needs room inside.','Add `padding: 20px;` to the `.tower` rule.','`.box { padding: 10px; }`','.tower { border: 2px solid teal; padding: 20px; }']},
+  {t:'Give `.tower` `30px` of margin',c:(d,w)=>cs(w,q(d,'.tower'),'marginTop')==='30px',help:['Now the whole box needs room around the outside.','Add `margin: 30px;` to the same rule.','`.box { margin: 10px; }`','.tower { border: 2px solid teal; padding: 20px; margin: 30px; }']},
+  {t:'Make the `h1` use the `monospace` font',c:(d,w)=>/monospace/i.test(cs(w,q(d,'h1'),'fontFamily')),help:['A log should look typed. Which property picks the typeface?','Add a rule for `h1` with `font-family: monospace;`.','`p { font-family: serif; }`','h1 { font-family: monospace; }']},
+  {t:'Make the paragraph `20px` big',c:(d,w)=>cs(w,q(d,'p'),'fontSize')==='20px',help:['Text size has its own font property.','Add a rule for `p` with `font-size: 20px;`.','`h1 { font-size: 40px; }`','p { font-size: 20px; }']}
+ ],
+ drills:[
+  {k:'pick',r:'r12',q:'Padding is space…',o:['outside the border','inside the border, around the content','between the letters','above the page'],a:1,h:'Padding is the cushion inside the box.'},
+  {k:'pick',r:'r12',q:'Margin is space…',o:['inside the border','outside the border, pushing other things away','inside the text','in the alt text'],a:1,h:'Margin keeps neighbours at a distance.'},
+  {k:'gap',r:'r11',q:'Set the text size',pre:'p { font-',post:': 18px; }',a:['size'],prev:v=>'<p style="font-'+v+': 18px">Sized text</p>',h:'font-… what? The property for how big the letters are.'},
+  {k:'type',r:'r11',q:'Make every h1 use the monospace font',ph:'h1 { … }',test:/^h1\s*\{\s*font-family\s*:\s*monospace\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><h1>Typewriter</h1>',h:'Property `font-family`, value `monospace`.'},
+  {k:'type',r:'r12',q:'Give .box 10px of padding',ph:'.box { … }',test:/^\.box\s*\{\s*padding\s*:\s*10px\s*;?\s*\}$/i,prev:v=>'<style>.box{border:2px solid teal}'+v+'</style><div class="box">Room to breathe</div>',h:'`.box { padding: 10px; }`'},
+  {k:'fix',r:'r11',q:'Fix the bug in this CSS',bug:'p { font size: 20px; }',test:/^p\s*\{\s*font-size\s*:\s*20px\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Bigger?</p>',h:'CSS property names use a dash, never a space.'}
+ ],
+ review:[{k:'type',r:'r9',rv:1,q:'Review: write a list with one item: Stars',ph:'<ul><li>…</li></ul>',test:/^<ul>\s*<li>\s*stars\s*<\/li>\s*<\/ul>$/i,prev:v=>v,h:'`<ul><li>Stars</li></ul>`'}]}
 ];
+
 
 const PLOTS=[
  {name:'Witch hut',art:'hut',t:0,icon:'<path d="M12 46V26L32 10l20 16v20z"/><path d="M26 46V34h12v12"/>'},
  {name:'Path',art:'path',t:1,icon:'<path d="M32 54V14"/><path d="M18 18h26l6 6-6 6H18z"/><path d="M22 54c4-8 16-8 20 0"/>'},
  {name:'Potion shop',art:'shop',t:2,icon:'<path d="M26 10h12M28 10v14L16 46a4 4 0 0 0 4 6h24a4 4 0 0 0 4-6L36 24V10"/><path d="M20 40h24"/>'},
- {name:'Spellbook',art:'book',icon:'<path d="M10 14h18a4 4 0 0 1 4 4v32a4 4 0 0 0-4-4H10z"/><path d="M54 14H36a4 4 0 0 0-4 4v32a4 4 0 0 1 4-4h18z"/>'},
- {name:'Market',art:'market',icon:'<path d="M10 24l4-12h36l4 12z"/><path d="M14 24v26h36V24"/><path d="M26 50V36h12v14"/>'},
- {name:'Watchtower',art:'tower',icon:'<path d="M22 54l4-36h12l4 36z"/><path d="M20 18h24l-4-8H24z"/><path d="M30 28h4v6h-4z"/>'}
+ {name:'Spellbook library',art:'book',t:3,icon:'<path d="M10 14h18a4 4 0 0 1 4 4v32a4 4 0 0 0-4-4H10z"/><path d="M54 14H36a4 4 0 0 0-4 4v32a4 4 0 0 1 4-4h18z"/>'},
+ {name:'Market',art:'market',t:4,icon:'<path d="M10 24l4-12h36l4 12z"/><path d="M14 24v26h36V24"/><path d="M26 50V36h12v14"/>'},
+ {name:'Watchtower',art:'tower',t:5,icon:'<path d="M22 54l4-36h12l4 36z"/><path d="M20 18h24l-4-8H24z"/><path d="M30 28h4v6h-4z"/>'}
 ];
 
 const KEY='hexle.v1';
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
-let S=Object.assign({theme:'grove',t:0,stage:'school',drill:0,code:{},done:{},built:{},learned:[],flag:[],sfx:true,vol:70,keys:false,ft:0},load()||{});
+let S=Object.assign({theme:'grove',t:0,stage:'school',drill:0,code:{},css:{},builtCss:{},done:{},built:{},learned:[],flag:[],sfx:true,vol:70,keys:false,ft:0},load()||{});
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
 
 let AC;
@@ -359,7 +434,8 @@ const sfx={
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
-const wrap=code=>'<!doctype html><html><head><meta charset="utf-8"><style>'+(S.theme==='grove'?BASE_GROVE:BASE_ORB)+'</style></head><body>'+String(code).replace(/witch\.png/g,art('witchpng'))+'</body></html>';
+const linked=code=>/<link[^>]*href=["']styles\.css["']/i.test(code);
+const wrap=(code,css)=>'<!doctype html><html><head><meta charset="utf-8"><style>'+(S.theme==='grove'?BASE_GROVE:BASE_ORB)+'</style>'+(css!=null&&linked(code)?'<style>'+String(css).replace(/<\/style/gi,'')+'</style>':'')+'</head><body>'+String(code).replace(/witch\.png/g,art('witchpng'))+'</body></html>';
 let commsT;function comms(m){const c=$('comms');$('cmsg').textContent=m;c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
 const T=()=>TARGETS[S.t];
 const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[m])m++;return m};
@@ -373,13 +449,13 @@ function drillsFor(t){
 
 function go(v){S.stage=v;save();render()}
 function render(){
-  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+S.stage));
+  const vw=S.stage==='practice'?'school':S.stage;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
   const sel=$('tsel');sel.innerHTML='';TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT();sel.appendChild(o)});sel.value=S.t;
   document.body.dataset.theme=S.theme;$('theme').textContent=S.theme==='grove'?'Grove':'Orbital';$('junie').src=art('drone');
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
-  $('st1').textContent=S.learned.length+' / 6';$('st2').textContent=S.ft;$('st3').textContent=Object.keys(S.built).length+' / 3';
-  if(S.stage==='school')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else renderRules();
+  $('st1').textContent=S.learned.length+' / '+Object.keys(RULES).length;$('st2').textContent=S.ft;$('st3').textContent=Object.keys(S.built).length+' / '+TARGETS.length;
+  if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else renderRules();
 }
 
 function ruleCard(id){
@@ -389,13 +465,31 @@ function ruleCard(id){
 }
 
 let dState={};
+let PR=null;
+function practiceList(){
+  const pool=[];TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))}));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  return pool.slice(0,8);
+}
 function renderSchool(){
-  const tg=T(),list=drillsFor(S.t);
-  const box=$('srules');box.innerHTML='';tg.rules.forEach(id=>box.appendChild(ruleCard(id)));
-  $('rcount').textContent='Target '+(S.t+1)+' · '+tg.name;
-  const p=$('pips');p.innerHTML='';list.forEach((d,i)=>{const s=document.createElement('span');if(i<S.drill)s.className='ok';else if(i===S.drill)s.className='now';if(d.rv)s.classList.add('rv');p.appendChild(s)});
-  if(S.drill>=list.length){schoolComplete(list);return}
-  renderDrill(list[S.drill],S.drill,list.length,list);
+  const prac=S.stage==='practice';
+  if(prac&&!PR)PR={list:practiceList(),i:0,ft:0};
+  const tg=T(),list=prac?PR.list:drillsFor(S.t),idx=prac?PR.i:S.drill;
+  const box=$('srules');box.innerHTML='';
+  if(prac&&!list.length){$('rcount').textContent='Practice';$('dtitle').textContent='Practice';$('pips').innerHTML='';$('dbox').innerHTML='<div class="donecard"><h2>Nothing to practise yet</h2><div class="hint0">Finish your first School and its rules unlock here.</div></div>';return}
+  const shown=prac?[list[Math.min(idx,list.length-1)].r]:tg.rules;shown.forEach(id=>box.appendChild(ruleCard(id)));
+  $('rcount').textContent=prac?'Practice · random drills':'Target '+(S.t+1)+' · '+tg.name;
+  const p=$('pips');p.innerHTML='';list.forEach((d,i)=>{const s=document.createElement('span');if(i<idx)s.className='ok';else if(i===idx)s.className='now';if(d.rv)s.classList.add('rv');p.appendChild(s)});
+  if(idx>=list.length){prac?practiceDone():schoolComplete(list);return}
+  renderDrill(list[idx],idx,list.length,list);
+}
+function practiceDone(){
+  $('dtitle').textContent='Practice complete';
+  const box=$('dbox');box.innerHTML='';const c=document.createElement('div');c.className='donecard';
+  c.innerHTML='<div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">Practice mixes drills from every rule you have learned. Run it whenever you have five minutes.</div>';
+  const row=document.createElement('div');row.className='drow';
+  const again=document.createElement('button');again.className='pri';again.textContent='New round';again.onclick=()=>{PR=null;sfx.click();renderSchool()};
+  row.appendChild(again);c.appendChild(row);box.appendChild(c);sfx.rule();
 }
 function setPrev(html,label){$('dprev').srcdoc=wrap(html);$('plabel').textContent=label}
 function renderDrill(d,i,n,list){
@@ -435,7 +529,8 @@ function passDrill(){
   if(dState.locked)return;dState.locked=true;
   if(dState.tries===0)S.ft++;
   const fb=$('fb');fb.className='fb ok';fb.textContent=['Locked in.','Correct. Nice.','Clean. Next one.','Spot on.'][Math.floor(Math.random()*4)];
-  sfx.ok();S.drill++;save();setTimeout(()=>{if(S.stage==='school')renderSchool();$('st2').textContent=S.ft},650);
+  if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
+  sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool();$('st2').textContent=S.ft},650);
 }
 function failDrill(d){dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);sfx.bad()}
 function schoolComplete(list){
@@ -454,18 +549,30 @@ let lastPass=null,lv=0,curStep=-1,runT;
 function renderTarget(){
   const tg=T();
   $('tname').textContent=tg.name;$('tcount').textContent='Target '+(S.t+1)+' / '+TARGETS.length;
-  $('tframe').srcdoc=wrap(tg.solution);$('ovl').srcdoc=wrap(tg.solution);
-  const ed=$('ed');if(ed.dataset.t!==String(S.t)){ed.value=S.code[S.t]!=null?S.code[S.t]:tg.starter;ed.dataset.t=S.t;lastPass=null;curStep=-1;lv=0}
-  paint();run();
+  $('tframe').srcdoc=wrap(tg.solution,tg.solCss);$('ovl').srcdoc=wrap(tg.solution,tg.solCss);
+  if(S.code[S.t]==null)S.code[S.t]=tg.starter;
+  if(tg.css!=null&&S.css[S.t]==null)S.css[S.t]=tg.css;
+  const ed=$('ed');if(ed.dataset.t!==String(S.t)){file='html';ed.dataset.t=S.t;lastPass=null;curStep=-2;lv=0}
+  if(tg.css==null)file='html';
+  ed.value=file==='css'?S.css[S.t]:S.code[S.t];
+  renderTabs();paint();run();
+}
+let file='html';
+function renderTabs(){
+  const tg=T(),tb=$('tabs');tb.innerHTML='';
+  $('fname').style.display=tg.css!=null?'none':'';
+  if(tg.css==null)return;
+  [['html','index.html'],['css','styles.css']].forEach(([k,n])=>{const b=document.createElement('button');b.className='tab'+(file===k?' on':'');b.textContent=n;b.onclick=()=>{if(file===k)return;file=k;sfx.click();$('ed').value=k==='css'?S.css[S.t]:S.code[S.t];renderTabs();paint()};tb.appendChild(b)});
 }
 function run(){
-  const code=$('ed').value;S.code[S.t]=code;save();
-  const f=$('bframe');f.onload=()=>evaluate(code);f.srcdoc=wrap(code);
+  const v=$('ed').value;if(file==='css')S.css[S.t]=v;else S.code[S.t]=v;save();
+  const code=S.code[S.t],css=T().css!=null?S.css[S.t]:null;
+  const f=$('bframe');f.onload=()=>evaluate(code,css);f.srcdoc=wrap(code,css);
 }
-function evaluate(code){
+function evaluate(code,css){
   const tg=T(),f=$('bframe'),d=f.contentDocument,w=f.contentWindow;if(!d)return;
   const raw=new DOMParser().parseFromString(code,'text/html');
-  const res=tg.steps.map(s=>{try{return !!s.c(d,w,code,raw)}catch(e){return false}});
+  const res=tg.steps.map(s=>{try{return !!s.c(d,w,code,raw,css)}catch(e){return false}});
   if(lastPass&&res.some((r,i)=>r&&!lastPass[i]))sfx.ok();
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
@@ -474,8 +581,8 @@ function evaluate(code){
   const ol=$('steps');ol.innerHTML='';
   tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
   if(now!==curStep){curStep=now;lv=0;renderHelp()}
-  if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;save();sfx.target();comms('Target matched. Build approved for the village.');render()}
-  else if(now===-1&&S.done[S.t]){S.built[S.t]=code;save()}
+  if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;save();sfx.target();comms('Target matched. Build approved for the village.');render()}
+  else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;save()}
 }
 function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
@@ -502,7 +609,8 @@ function scan(code){
   return out;
 }
 function checkNow(){
-  const code=$('ed').value,issues=scan(code),s=$('scan');
+  const code=S.code[S.t]||'',css=S.css[S.t],s=$('scan');const issues=scan(code);
+  if(T().css!=null&&css!=null){if(count(css,/\{/g)!==count(css,/\}/g))issues.push('styles.css: braces { } do not match');if(T().css!=null&&!linked(code))issues.push('index.html does not link styles.css yet')}
   if(lastPass&&lastPass.every(Boolean)){s.className='ok';s.textContent='Scanner: everything matches.';sfx.ok();return}
   sfx.bad();
   s.className='bad';s.textContent='Scanner: '+(issues.length?issues.join(' · '):'no syntax problems. Look at the highlighted step.');
@@ -527,7 +635,7 @@ function highlight(src){
   return out+'\n ';
 }
 function paint(){
-  const ed=$('ed'),v=ed.value;$('hl').innerHTML=highlight(v);
+  const ed=$('ed'),v=ed.value;$('hl').innerHTML=file==='css'?hlCss(v)+'\n ':highlight(v);
   const n=v.split('\n').length;$('gut').textContent=Array.from({length:n},(_,i)=>i+1).join('\n')+'\n ';
   syncScroll();
 }
@@ -542,7 +650,7 @@ function renderVillage(){
     const st=built?'<span class="st b">BUILT</span>':(next?'<span class="st n">TARGET '+(p.t+1)+'</span>':'<span class="st s">V2</span>');
     el.innerHTML='<div class="ph"><b>Plot '+String(i+1).padStart(2,'0')+' · '+esc(p.name)+'</b><span class="sp">'+st+'</span></div>';
     const a=document.createElement('div');a.className='art'+(built?'':' dim');a.style.backgroundImage='url('+art(p.art)+')';el.appendChild(a);
-    if(built){const fr=document.createElement('div');fr.className='fr';const f=document.createElement('iframe');f.title=p.name;f.srcdoc=wrap(S.built[p.t]);fr.appendChild(f);el.appendChild(fr)}
+    if(built){const fr=document.createElement('div');fr.className='fr';const f=document.createElement('iframe');f.title=p.name;f.srcdoc=wrap(S.built[p.t],S.builtCss[p.t]);fr.appendChild(f);el.appendChild(fr)}
     else{const c=document.createElement('div');c.className='cap';c.textContent=next?'Finish target '+(p.t+1)+' to build this':'Arrives in a later version';el.appendChild(c)}
     v.appendChild(el);
   });
@@ -563,17 +671,23 @@ function renderRules(){
   });
 }
 
+function dl(href,name){const a=document.createElement('a');a.href=href;a.download=name;document.body.appendChild(a);a.click();a.remove()}
 function takeHome(){
   const code=S.code[S.t]!=null?S.code[S.t]:T().starter;
   const style=(code.match(/<style>[\s\S]*?<\/style>/i)||[''])[0];
-  const body=code.replace(style,'').trim();
-  const file='<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>'+T().name+'</title>\n'+(style?'  '+style.replace(/\n/g,'\n  ')+'\n':'')+'</head>\n<body>\n  '+body.replace(/\n/g,'\n  ')+'\n</body>\n</html>\n';
-  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([file],{type:'text/html'}));a.download='hexle-'+T().id+'.html';document.body.appendChild(a);a.click();a.remove();
+  const links=(code.match(/<link[^>]*>/gi)||[]);
+  let body=code.replace(style,'');links.forEach(l=>body=body.replace(l,''));body=body.trim();
+  const head=links.map(l=>'  '+l+'\n').join('')+(style?'  '+style.replace(/\n/g,'\n  ')+'\n':'');
+  const page='<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>'+T().name+'</title>\n'+head+'</head>\n<body>\n  '+body.replace(/\n/g,'\n  ')+'\n</body>\n</html>\n';
+  const two=T().css!=null;
+  dl(URL.createObjectURL(new Blob([page],{type:'text/html'})),two?'index.html':'hexle-'+T().id+'.html');
+  if(two)setTimeout(()=>dl(URL.createObjectURL(new Blob([S.css[S.t]!=null?S.css[S.t]:T().css],{type:'text/css'})),'styles.css'),300);
+  const file=page;
   if(/witch\.png/.test(file)){const b=document.createElement('a');b.href=art('witchpng');b.download='witch.png';document.body.appendChild(b);b.click();b.remove()}
   sfx.blip();comms('Downloaded. Put the files in one folder and open it in VS Code.');
 }
 
-document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{sfx.click();go(b.dataset.v)});
+document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{sfx.click();if(b.dataset.v==='practice')PR=null;go(b.dataset.v)});
 $('tsel').onchange=e=>{S.t=+e.target.value;S.drill=schoolDone(S.t)?drillsFor(S.t).length:0;S.stage=schoolDone(S.t)?'target':'school';save();sfx.click();render()};
 $('theme').onclick=()=>{S.theme=S.theme==='grove'?'orbital':'grove';save();sfx.click();$('ed').dataset.t='';render();comms(S.theme==='grove'?'Grove theme: lanterns lit.':'Orbital theme online.')};
 $('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.keys=true}else{S.sfx=false;S.keys=false}save();render();sfx.click()};
@@ -590,7 +704,7 @@ ed.addEventListener('keydown',e=>{
   if(e.key==='Enter'){const s=ed.selectionStart,ls=ed.value.lastIndexOf('\n',s-1)+1,ind=(ed.value.slice(ls,s).match(/^[ \t]*/)||[''])[0];e.preventDefault();ed.setRangeText('\n'+ind,s,ed.selectionEnd,'end');ed.dispatchEvent(new Event('input'))}
 });
 $('check').onclick=checkNow;
-let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';ed.value=T().starter;paint();run();comms('Editor reset to the starter code.')};
+let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';if(file==='css')ed.value=T().css;else ed.value=T().starter;paint();run();comms('This file was reset to the starter code.')};
 render();
 </script>
 </body>
