@@ -5,9 +5,9 @@ const CACHE = "workshop-v9";
 const PRECACHE = [
   "./",
   "./index.html",
-  "./css/launcher.css?v=8",
-  "./js/labs.config.js?v=8",
-  "./js/launcher.js?v=8",
+  "./css/launcher.css?v=9",
+  "./js/labs.config.js?v=9",
+  "./js/launcher.js?v=9",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",

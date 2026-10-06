@@ -88,7 +88,7 @@ roomsEl.appendChild(emptyEl);
 labs.forEach((lab, i) => {
   const { x, y } = lab;
   const right = x >= CX - 4;
-  const lx = right ? x + 18 : x - 18;
+  const lx = right ? x + 12 : x - 12;
   const anchor = right ? "start" : "end";
   const g = document.createElementNS(SVGNS, "g");
   g.setAttribute("class", "marker");
@@ -98,14 +98,13 @@ labs.forEach((lab, i) => {
   g.dataset.id = lab.id;
   g.style.setProperty("--i", i);
   g.innerHTML = `
-    <circle class="hit" cx="${x}" cy="${y}" r="22"/>
-    <circle class="halo" cx="${x}" cy="${y}" r="14"/>
-    <path class="bracket" d="M${x - 14} ${y - 20}h-6v6M${x + 14} ${y - 20}h6v6M${x - 14} ${y + 20}h-6v-6M${x + 14} ${y + 20}h6v-6"/>
-    <circle class="planet" cx="${x}" cy="${y}" r="8"/>
-    <circle class="dotm" cx="${x}" cy="${y}" r="2.5"/>
-    <line class="leader" x1="${right ? x + 10 : x - 10}" y1="${y}" x2="${right ? lx - 3 : lx + 3}" y2="${y}"/>
+    <circle class="hit" cx="${x}" cy="${y}" r="20"/>
+    <circle class="halo" cx="${x}" cy="${y}" r="10"/>
+    <path class="bracket" d="M${x - 9} ${y - 13}h-4v4M${x + 9} ${y - 13}h4v4M${x - 9} ${y + 13}h-4v-4M${x + 9} ${y + 13}h4v-4"/>
+    <circle class="planet" cx="${x}" cy="${y}" r="4.5"/>
+    <circle class="dotm" cx="${x}" cy="${y}" r="1.4"/>
     <text class="mlabel" x="${lx}" y="${y + 1}" text-anchor="${anchor}">${esc(lab.name)}</text>
-    <text class="mtag" x="${lx}" y="${y + 12}" text-anchor="${anchor}">${esc(lab.sector)}</text>`;
+    <text class="mtag" x="${lx}" y="${y + 11}" text-anchor="${anchor}">${esc(lab.sub || lab.sector)}</text>`;
   markersEl.appendChild(g);
 });
 
@@ -130,8 +129,8 @@ $("sectorCount").textContent = sectors.length;
 
 (function buildTicks() {
   const g = $("ticks"), r = 240;
-  for (let i = 0; i < 72; i++) {
-    const a = (i / 72) * Math.PI * 2, major = i % 6 === 0, len = major ? 8 : 4;
+  for (let i = 0; i < 120; i++) {
+    const a = (i / 120) * Math.PI * 2, major = i % 10 === 0, len = major ? 6 : 2.5;
     const line = document.createElementNS(SVGNS, "line");
     line.setAttribute("x1", CX + Math.cos(a) * r); line.setAttribute("y1", CY + Math.sin(a) * r);
     line.setAttribute("x2", CX + Math.cos(a) * (r + len)); line.setAttribute("y2", CY + Math.sin(a) * (r + len));
