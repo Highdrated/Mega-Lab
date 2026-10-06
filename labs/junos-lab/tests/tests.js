@@ -3466,6 +3466,89 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   cli(sw69, "exit");
 }
 
+
+/* ---------- T70: the exam bank is big enough, balanced, and free of duplicates ---------- */
+{
+  const trackBefore = activeTrackId();
+  setTrack("jncia");
+  const pool = examAllQuestions();
+  ok(pool.length >= 180, "T70 the JNCIA pool is deep enough that a 65-question exam is not most of it (" + pool.length + ")");
+  ok(pool.length >= 65 * 3, "T70 and deep enough for three distinct full-length sittings");
+
+  const byDom = {};
+  pool.forEach(q => { byDom[q.d] = (byDom[q.d] || 0) + 1; });
+  Object.keys(TRACKS.jncia.domains).forEach(d => {
+    ok((byDom[d] || 0) >= 20, "T70 domain has enough questions to examine fairly: " + d + " (" + (byDom[d] || 0) + ")");
+  });
+  ok((byDom["CLI & configuration"] || 0) >= 2 * 20,
+     "T70 CLI & configuration carries double weight, because it covers two real blueprint domains");
+
+  const seen = new Map();
+  pool.forEach(q => {
+    const key = String(q.q).toLowerCase().replace(/[^a-z0-9]/g, "");
+    ok(!seen.has(key), "T70 no two questions are literally the same: " + q.id);
+    seen.set(key, q.id);
+  });
+
+  pool.forEach(q => {
+    ok(typeof q.why === "string" && q.why.length > 30,
+       "T70 every question explains its answer rather than just marking it: " + q.id);
+    if(!q.typed){
+      ok(Array.isArray(q.opts) && q.opts.length >= 2, "T70 mcq has options: " + q.id);
+      ok(new Set(q.opts).size === q.opts.length, "T70 no repeated option within a question: " + q.id);
+      ok(q.right >= 0 && q.right < q.opts.length, "T70 the right index points at a real option: " + q.id);
+    }
+  });
+
+  /* the blueprint topics that were missing entirely before tonight */
+  const allText = pool.map(q => q.q + " " + q.why).join(" ");
+  [["reverse-path", "unicast RPF"], ["IPv6", "IPv6"], ["authentication-order", "authentication order"],
+   ["apply-groups", "configuration groups"], ["archival", "configuration archival"],
+   ["root password", "root password recovery"], ["snapshot", "software snapshot"],
+   ["routing instance", "routing instances"], ["web-management", "J-Web"]].forEach(([needle, label]) => {
+    ok(new RegExp(needle, "i").test(allText), "T70 the bank now covers " + label);
+  });
+
+  /* missed questions are a reserved share of every draw, not a dice roll */
+  try{ localStorage.setItem("junoslab-wrongq", "b:0|b:1|b:2"); }catch(e){}
+  let always = 0;
+  for(let t = 0; t < 200; t++){
+    const d = examDraw(10, Math.random);
+    if(d.filter(q => ["b:0", "b:1", "b:2"].includes(q.id)).length === 3) always++;
+  }
+  ok(always === 200, "T70 questions you got wrong come back in every exam, not just often (" + always + "/200)");
+  const big = examDraw(65, Math.random);
+  ok(big.length === 65 && new Set(big.map(q => q.id)).size === 65,
+     "T70 a full-length draw is 65 distinct questions");
+  const share = big.filter(q => ["b:0", "b:1", "b:2"].includes(q.id)).length;
+  ok(share === 3, "T70 and the reserved share never exceeds the number of questions actually missed");
+  try{ localStorage.removeItem("junoslab-wrongq"); }catch(e){}
+  ok(examDraw(10, Math.random).length === 10, "T70 drawing works with no missed questions recorded");
+
+  /* a bare snmp community is valid on a real box and defaults to read-only */
+  {
+    wipeLab();
+    const sn = makeSwitch(0, 0, 8);
+    rebuildAllDerived();
+    cli(sn, "configure");
+    ok(!/syntax error|incomplete/.test(cli(sn, "set snmp community public")),
+       "T70 set snmp community <name> is accepted without an authorization statement");
+    ok(/community public;/.test(cli(sn, "show")),
+       "T70 and renders the way a real box does, with no authorization line invented");
+    ok(/commit complete/.test(cli(sn, "commit")), "T70 and it commits");
+    cli(sn, "exit");
+  }
+
+  /* Junos internals must not leak into the Network+ pool */
+  setTrack("netplus");
+  const np = examAllQuestions();
+  ok(!np.some(q => /authentication-order|apply-groups|web-management|rpf-check|juniper\.conf/i.test(q.q)),
+     "T70 Junos-specific bank questions stay out of the Network+ pool");
+  ok(np.length >= 90, "T70 the Network+ pool is still substantial (" + np.length + ")");
+  setTrack(trackBefore);
+  ok(activeTrackId() === trackBefore, "T70 track restored");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 
