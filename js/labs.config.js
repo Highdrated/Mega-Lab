@@ -7,7 +7,8 @@
 // Fields:
 //   id     unique, no spaces (used for "last opened" memory)
 //   name   shown in the list
-//   tag    small label under the name
+//   tag    sector the room is grouped under (Network, Code, Reference, Practice)
+//   sub    short hint under the name (language / topic)
 //   path   relative path to the lab's index.html
 //   ring   which orbit the marker sits on: ring-inner | ring-mid | ring-outer
 //   angle  degrees around the orbit, 0 = right, -90 = top, 90 = bottom
@@ -17,7 +18,8 @@ const LABS_CONFIG = [
   {
     id: "junos-lab",
     name: "JunOS lab",
-    tag: "networking",
+    tag: "Network",
+    sub: "junos cli",
     path: "labs/junos-lab/index.html",
     ring: "ring-mid",
     angle: -30,
@@ -26,7 +28,8 @@ const LABS_CONFIG = [
   {
     id: "junle",
     name: "Junle",
-    tag: "networking",
+    tag: "Network",
+    sub: "blueprints",
     path: "labs/junle.html",
     ring: "ring-mid",
     angle: 150,
@@ -35,7 +38,8 @@ const LABS_CONFIG = [
     {
     id: "pyle",
     name: "Pyle",
-    tag: "Programming",
+    tag: "Code",
+    sub: "python",
     path: "labs/pyle.html",
     ring: "ring-outer",
     angle: 100,
@@ -44,7 +48,8 @@ const LABS_CONFIG = [
     {
     id: "git-lab",
     name: "Git Lab",
-    tag: "General",
+    tag: "Practice",
+    sub: "git",
     path: "labs/git-lab.html",
     ring: "ring-inner",
     angle: 200,
@@ -53,7 +58,8 @@ const LABS_CONFIG = [
     {
     id: "spelle",
     name: "Java",
-    tag: "Programming",
+    tag: "Code",
+    sub: "javascript",
     path: "labs/spelle.html",
     ring: "ring-outer",
     angle: 180,
@@ -62,7 +68,8 @@ const LABS_CONFIG = [
     {
     id: "style",
     name: "Style",
-    tag: "Programming",
+    tag: "Code",
+    sub: "html / css",
     path: "labs/style.html",
     ring: "ring-outer",
     angle: 300,
@@ -72,6 +79,7 @@ const LABS_CONFIG = [
     id: "codex",
     name: "Codex",
     tag: "Reference",
+    sub: "all labs",
     path: "labs/codex.html",
     ring: "ring-inner",
     angle: 20,
@@ -81,15 +89,17 @@ const LABS_CONFIG = [
     id: "mscodex",
     name: "Codex Microsoft",
     tag: "Reference",
+    sub: "microsoft 365",
     path: "labs/mscodex.html",
     ring: "ring-inner",
-    angle: 290,
+    angle: 250,
     glyph: '<rect x="2" y="2" width="5" height="5"/><rect x="9" y="2" width="5" height="5"/><rect x="2" y="9" width="5" height="5"/><rect x="9" y="9" width="5" height="5"/>'
   },
   {
     id: "modle",
     name: "Modle",
-    tag: "Math",
+    tag: "Practice",
+    sub: "math",
     path: "labs/modle/index.html",
     ring: "ring-inner",
     angle: 110,
@@ -98,7 +108,8 @@ const LABS_CONFIG = [
   {
     id: "passle",
     name: "Passle",
-    tag: "Programming",
+    tag: "Code",
+    sub: "php",
     path: "labs/passle-home.html",
     ring: "ring-outer",
     angle: 240,

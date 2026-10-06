@@ -23,6 +23,7 @@ const labs = LABS_CONFIG.map((lab, i) => {
   return { ...lab, ring, index: i, angle, x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r, sector: (lab.tag || "general").trim() };
 });
 
+const SECTOR_ORDER = ["network", "code", "practice", "reference"];
 const sectors = [];
 for (const lab of labs) {
   const key = lab.sector.toLowerCase();
@@ -30,43 +31,53 @@ for (const lab of labs) {
   if (!s) { s = { key, name: lab.sector, labs: [] }; sectors.push(s); }
   s.labs.push(lab);
 }
+const rank = (k) => { const i = SECTOR_ORDER.indexOf(k); return i < 0 ? 99 : i; };
+sectors.sort((a, b) => rank(a.key) - rank(b.key));
 
 function bearing(lab) { return String(Math.round((lab.angle + 90) % 360)).padStart(3, "0") + "°"; }
 
+const chipsEl = $("sectorChips");
+let activeSector = lsGet("workshop-sector") || "all";
+if (activeSector !== "all" && !sectors.some((s) => s.key === activeSector)) activeSector = "all";
+for (const s of [{ key: "all", name: "All", labs }, ...sectors]) {
+  const chip = document.createElement("button");
+  chip.className = "chip";
+  chip.dataset.sector = s.key;
+  chip.innerHTML = `${esc(s.name)}<span>${s.labs.length}</span>`;
+  chip.addEventListener("click", () => { activeSector = s.key; lsSet("workshop-sector", s.key); applyFilter(); });
+  chipsEl.appendChild(chip);
+}
+
 let order = 0;
 for (const s of sectors) {
+  const group = document.createElement("section");
+  group.className = "sector-group";
+  group.dataset.sector = s.key;
   const head = document.createElement("div");
   head.className = "sector";
-  head.dataset.sector = s.key;
   head.style.setProperty("--i", order++);
-  head.innerHTML = `<span>sector <b>${esc(s.name)}</b></span><span>${s.labs.length}</span>`;
-  roomsEl.appendChild(head);
+  head.innerHTML = `<span>${esc(s.name)}</span><span class="count">${s.labs.length}</span>`;
+  const grid = document.createElement("div");
+  grid.className = "room-grid";
+  group.append(head, grid);
+  roomsEl.appendChild(group);
   for (const lab of s.labs) {
     const btn = document.createElement("button");
     btn.className = "room";
     btn.dataset.id = lab.id;
     btn.dataset.sector = s.key;
+    btn.title = `${lab.name} · ${RING_NAMES[lab.ring]} · ${bearing(lab)}`;
     btn.style.setProperty("--i", order++);
     btn.innerHTML = `
-      <span class="idx">${String(lab.index + 1).padStart(2, "0")}</span>
-      <span>
+      <svg class="glyph" viewBox="0 0 16 16">${lab.glyph || ""}</svg>
+      <span class="body">
         <span class="name">${esc(lab.name)}<span class="last">last</span><span class="open-dot">open</span></span>
-        <span class="tag">${RING_NAMES[lab.ring]} · ${bearing(lab)}</span>
+        <span class="tag">${esc(lab.sub || lab.sector)}</span>
       </span>
-      <svg class="glyph" viewBox="0 0 16 16">${lab.glyph || ""}</svg>`;
-    roomsEl.appendChild(btn);
+      <span class="idx">${String(lab.index + 1).padStart(2, "0")}</span>`;
+    grid.appendChild(btn);
   }
 }
-
-const addBtn = document.createElement("button");
-addBtn.className = "room add";
-addBtn.dataset.id = "__add";
-addBtn.style.setProperty("--i", order++);
-addBtn.innerHTML = `
-  <span class="idx">+</span>
-  <span><span class="name">Add a room</span><span class="tag">js/labs.config.js</span></span>
-  <svg class="glyph" viewBox="0 0 16 16"><path d="M8 3v10M3 8h10"/></svg>`;
-roomsEl.appendChild(addBtn);
 
 const emptyEl = document.createElement("div");
 emptyEl.className = "empty";
@@ -201,7 +212,7 @@ const starfield = (() => {
 function setTheme(t) {
   document.body.className = t === "orbital" ? "theme-orbital" : "";
   for (const b of document.querySelectorAll("#themeToggle button")) b.classList.toggle("on", b.dataset.theme === t);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "orbital" ? "#b4bcc4" : "#05070B");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "orbital" ? "#eef1f4" : "#05070B");
   lsSet("workshop-theme", t);
   lsSet("junoslab-theme", t === "orbital" ? "space" : "terminal");
   starfield.recolor();
@@ -357,10 +368,7 @@ for (const row of document.querySelectorAll(".room")) {
   row.addEventListener("mouseleave", () => setLit(id, false));
   row.addEventListener("focus", () => setLit(id, true));
   row.addEventListener("blur", () => setLit(id, false));
-  row.addEventListener("click", () => {
-    if (id === "__add") { toast("edit js/labs.config.js to add a room"); return; }
-    launch(labs.find((l) => l.id === id));
-  });
+  row.addEventListener("click", () => launch(labs.find((l) => l.id === id)));
 }
 
 for (const m of document.querySelectorAll(".marker")) {
@@ -382,23 +390,26 @@ const search = $("search");
 function applyFilter() {
   const q = search.value.trim().toLowerCase();
   let shown = 0;
+  for (const chip of chipsEl.querySelectorAll(".chip")) chip.classList.toggle("on", chip.dataset.sector === activeSector);
   for (const lab of labs) {
-    const hit = !q || lab.name.toLowerCase().includes(q) || lab.sector.toLowerCase().includes(q) || lab.id.includes(q);
+    const inSector = activeSector === "all" || lab.sector.toLowerCase() === activeSector;
+    const hit = inSector && (!q || lab.name.toLowerCase().includes(q) || lab.sector.toLowerCase().includes(q) || (lab.sub || "").toLowerCase().includes(q) || lab.id.includes(q));
     const row = document.querySelector(`.room[data-id="${CSS.escape(lab.id)}"]`);
     row.hidden = !hit;
     document.querySelector(`.marker[data-id="${CSS.escape(lab.id)}"]`).style.opacity = hit ? "" : "0.18";
     if (hit) shown++;
   }
-  for (const head of document.querySelectorAll(".sector")) {
-    head.hidden = !document.querySelector(`.room[data-sector="${head.dataset.sector}"]:not([hidden])`);
+  for (const group of document.querySelectorAll(".sector-group")) {
+    group.hidden = !group.querySelector(".room:not([hidden])");
   }
-  addBtn.hidden = !!q;
   emptyEl.hidden = shown > 0;
 }
 search.addEventListener("input", applyFilter);
+applyFilter();
+$("addRoom").addEventListener("click", () => toast("edit js/labs.config.js to add a room"));
 search.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    const first = document.querySelector(".room:not(.add):not([hidden])");
+    const first = document.querySelector(".room:not([hidden])");
     if (first) launch(labs.find((l) => l.id === first.dataset.id));
   } else if (e.key === "Escape") {
     search.value = ""; applyFilter(); search.blur();
