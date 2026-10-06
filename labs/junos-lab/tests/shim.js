@@ -56,6 +56,10 @@ function __makeEl(tag){
     },
     contains: (c) => el._classes.has(c),
   };
+  Object.defineProperty(el, "className", {
+    get(){ return Array.from(this._classes).join(" "); },
+    set(v){ this._classes = new Set(String(v == null ? "" : v).split(/\s+/).filter(Boolean)); },
+  });
   Object.defineProperty(el, "innerHTML", {
     get(){ return this._innerHTML; },
     set(v){ this._innerHTML = v; this.children = []; },

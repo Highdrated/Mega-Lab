@@ -246,3 +246,116 @@ function quickSession(){
   pager.parentNode.insertBefore(nextHost, pager);
   renderCourseBar();
 })();
+
+function resumeEl(tag, cls, parent, text){
+  var e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(text !== undefined) e.textContent = text;
+  if(parent) parent.appendChild(e);
+  return e;
+}
+function resumeHost(){
+  var h = document.getElementById("resume");
+  if(!h){
+    h = document.createElement("div");
+    h.id = "resume";
+    document.body.appendChild(h);
+  }
+  return h;
+}
+function hideResume(){
+  var h = document.getElementById("resume");
+  if(h) h.style.display = "none";
+}
+function renderResume(){
+  var h = resumeHost();
+  h.innerHTML = "";
+  var card = resumeEl("div", "resume-card", h);
+
+  var track = typeof activeTrack === "function" ? activeTrack() : null;
+  resumeEl("div", "resume-kicker", card, "Junos Lab" + (track ? " · " + track.name + " path" : ""));
+
+  var rp = typeof rankProgress === "function" ? rankProgress() : null;
+  if(rp){
+    var rank = resumeEl("div", "resume-rank", card);
+    resumeEl("span", "resume-rank-title", rank, rp.rank.title);
+    resumeEl("span", "resume-xp", rank, rp.next
+      ? rp.xp + " XP · " + (rp.next.xp - rp.xp) + " to " + rp.next.title
+      : rp.xp + " XP · top of the ladder");
+  }
+
+  var done = courseDoneCount(), total = COURSE.length;
+  var pct = total ? Math.round((done / total) * 100) : 0;
+  var line = resumeEl("div", "resume-courseline", card);
+  resumeEl("span", null, line, done + " of " + total + " units");
+  resumeEl("span", "resume-pct", line, pct + "%");
+  var bar = resumeEl("div", "resume-bar", card);
+  resumeEl("div", "resume-bar-fill", bar).style.width = pct + "%";
+
+  var next = courseNext();
+  var go = resumeEl("button", "resume-continue", card);
+  if(next){
+    resumeEl("span", "resume-go-label", go, done ? "Continue" : "Start here");
+    resumeEl("span", "resume-go-unit", go, unitTitle(next.unit));
+    go.onclick = function(){ hideResume(); courseGoTo(next.unit); };
+  } else {
+    resumeEl("span", "resume-go-label", go, "Course complete");
+    resumeEl("span", "resume-go-unit", go, "Every unit done — sit a mock exam");
+    go.onclick = function(){
+      hideResume();
+      if(typeof startMockExam === "function") startMockExam();
+    };
+  }
+
+  var stats = typeof courseDomainStats === "function" ? courseDomainStats() : {};
+  var keys = Object.keys(stats);
+  if(keys.length){
+    var doms = resumeEl("div", "resume-domains", card);
+    resumeEl("div", "resume-domains-head", doms, "Where you stand, by exam domain");
+    keys.forEach(function(d){
+      var row = resumeEl("div", "resume-dom", doms);
+      resumeEl("span", "resume-dom-name", row, d);
+      var mini = resumeEl("span", "resume-dom-bar", row);
+      var w = stats[d].total ? Math.round((stats[d].done / stats[d].total) * 100) : 0;
+      resumeEl("span", "resume-dom-fill", mini).style.width = w + "%";
+      resumeEl("span", "resume-dom-num", row, stats[d].done + "/" + stats[d].total);
+    });
+  }
+
+  var alt = resumeEl("div", "resume-alt", card);
+  var mock = resumeEl("button", "resume-altbtn", alt, "Mock exam");
+  mock.onclick = function(){
+    hideResume();
+    if(typeof startMockExam === "function") startMockExam();
+  };
+  var scen = resumeEl("button", "resume-altbtn", alt, "Scenarios");
+  scen.onclick = function(){
+    hideResume();
+    if(typeof setTabletTab === "function") setTabletTab("scen");
+    if(typeof openTablet === "function") openTablet("scen");
+  };
+  var free = resumeEl("button", "resume-altbtn", alt, "Free lab");
+  free.onclick = hideResume;
+
+  resumeEl("div", "resume-hint", card, "Esc or Free lab goes straight to the bench");
+  return h;
+}
+function showResume(){
+  if(typeof document === "undefined" || !document.body) return null;
+  var h = renderResume();
+  h.style.display = "flex";
+  return h;
+}
+if(typeof document !== "undefined" && document.addEventListener){
+  document.addEventListener("keydown", function(e){
+    if(e.key !== "Escape") return;
+    var h = document.getElementById("resume");
+    if(h && h.style.display === "flex") hideResume();
+  });
+  document.addEventListener("DOMContentLoaded", function(){ showResume(); });
+  if(typeof window !== "undefined" && window.addEventListener)
+    window.addEventListener("load", function(){
+      var h = document.getElementById("resume");
+      if(!h) showResume();
+    });
+}

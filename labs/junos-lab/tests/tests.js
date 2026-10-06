@@ -3549,6 +3549,84 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(activeTrackId() === trackBefore, "T70 track restored");
 }
 
+
+/* ---------- T71: the front door, and full screen that is actually full screen ---------- */
+{
+  /* full-screen tablet must cover the viewport with nothing showing round the edge */
+  if(typeof __CSS === "string"){
+    const rule = (__CSS.match(/#tablet\.tablet-max\{[^}]*\}/) || [""])[0];
+    ok(rule.length > 0, "T71 the maximized-tablet rule still exists");
+    ["top:0", "left:0", "right:0", "bottom:0"].forEach(side => {
+      ok(rule.indexOf(side) !== -1,
+         "T71 maximized tablet sits flush to the viewport edge (" + side + ")");
+    });
+    ok(!/:\s*10px/.test(rule),
+       "T71 and leaves no gap for the canvas behind it to show through");
+    ok(/border-radius:\s*0/.test(rule),
+       "T71 no rounded corners in full screen, which would let the background show at the corners");
+    const z = +((rule.match(/z-index:\s*(\d+)/) || [])[1] || 0);
+    const floatRule = (__CSS.match(/#cli\.floating\{[^}]*\}/) || [""])[0];
+    const fz = +((floatRule.match(/z-index:\s*(\d+)/) || [])[1] || 0);
+    ok(z > fz, "T71 a full-screen guide sits above a floating terminal (" + z + " > " + fz + ")");
+    const modalRule = (__CSS.match(/#modal-root\{[^}]*\}/) || [""])[0];
+    const mz = +((modalRule.match(/z-index:\s*(\d+)/) || [])[1] || 0);
+    ok(z < mz, "T71 but still below modals, so a quiz answer is not hidden behind it (" + z + " < " + mz + ")");
+  }
+
+  /* the resume screen: what greets her on load */
+  ok(typeof renderResume === "function" && typeof showResume === "function" &&
+     typeof hideResume === "function", "T71 the resume screen exists");
+  const host = renderResume();
+  const txt = n => (n && n.textContent) || "";
+  const one = sel => host.querySelectorAll(sel)[0];
+
+  ok(!!one(".resume-card"), "T71 it renders a card");
+  ok(/JNCIA/.test(txt(one(".resume-kicker"))), "T71 naming the track she is studying");
+  ok(txt(one(".resume-rank-title")).length > 0, "T71 and her current rank");
+  const line = one(".resume-courseline");
+  ok(/of/.test(txt(line.children[0])), "T71 how many units are done out of how many");
+  ok(/%$/.test(txt(line.children[1])), "T71 and that as a percentage");
+  ok(!!one(".resume-bar-fill"), "T71 with a progress bar");
+
+  const go = one(".resume-continue");
+  ok(!!go, "T71 there is one obvious thing to click");
+  const next = courseNext();
+  if(next){
+    ok(txt(one(".resume-go-unit")) === unitTitle(next.unit),
+       "T71 and it names the exact next unit on her path, not a generic greeting");
+    ok(/Continue|Start here/.test(txt(one(".resume-go-label"))),
+       "T71 labelled so she knows it resumes rather than restarts");
+  }
+
+  const domRows = host.querySelectorAll(".resume-dom");
+  ok(domRows.length === Object.keys(COURSE_DOMAINS).length,
+     "T71 every exam domain gets a row, so a weak one is visible at a glance");
+  ok(host.querySelectorAll(".resume-dom-fill").length === domRows.length,
+     "T71 each with its own bar");
+  const alt = host.querySelectorAll(".resume-altbtn");
+  ok(alt.length === 3, "T71 and three ways past it: mock exam, scenarios, free lab");
+  ok(alt.some(b => /Free lab/i.test(txt(b))), "T71 including a way straight to the bench");
+
+  /* show and hide actually toggle */
+  showResume();
+  ok(document.getElementById("resume").style.display === "flex", "T71 showResume displays it");
+  hideResume();
+  ok(document.getElementById("resume").style.display === "none", "T71 hideResume puts it away");
+
+  /* clicking continue dismisses and navigates */
+  if(next && next.unit.g){
+    showResume();
+    renderResume().querySelectorAll(".resume-continue")[0].onclick();
+    ok(document.getElementById("resume").style.display === "none",
+       "T71 clicking continue gets out of the way");
+  }
+
+  /* the course bar it mirrors is still only inside the tablet, so the resume
+     screen is the only thing that greets her before she opens anything */
+  ok(typeof __HTML !== "string" || __HTML.indexOf('id="course-bar"') === -1,
+     "T71 the course bar is still tablet-only, which is why this screen exists");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

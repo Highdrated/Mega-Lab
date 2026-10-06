@@ -10,6 +10,8 @@ const root = path.join(__dirname, "..");
 const order = ["core.js", "rank.js", "sound.js", "grammar.js", "cli.js", "engine.js", "ui.js", "planner.js", "juno.js", "scenarios.js", "protocols.js", "course.js", "mockexam.js", "ops.js", "notes.js"];
 
 const ctx = vm.createContext({ console });
+ctx.__CSS = fs.readFileSync(path.join(root, "css", "style.css"), "utf8");
+ctx.__HTML = fs.readFileSync(path.join(root, "index.html"), "utf8");
 vm.runInContext(fs.readFileSync(path.join(__dirname, "shim.js"), "utf8"), ctx, { filename: "shim.js" });
 for(const f of order)
   vm.runInContext(fs.readFileSync(path.join(root, "js", f), "utf8"), ctx, { filename: f });

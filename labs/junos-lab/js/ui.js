@@ -3423,7 +3423,17 @@ function setTabletTab(tab){
 }
 (function(){
   const t = document.getElementById("tablet"), grip = document.getElementById("tablet-grip"), mx = document.getElementById("tablet-max");
-  if(mx) mx.onclick = () => { t.classList.toggle("tablet-max"); };
+  if(mx) mx.onclick = () => { t.classList.toggle("tablet-max"); saveTabletState(); };
+  document.addEventListener("keydown", (e) => {
+    if(e.key !== "Escape") return;
+    if(!t.classList.contains("tablet-max")) return;
+    const mr = document.getElementById("modal-root");
+    if(mr && mr.classList.contains("open")) return;
+    const ae = document.activeElement;
+    if(ae && (ae.tagName === "INPUT" || ae.tagName === "TEXTAREA")) return;
+    t.classList.remove("tablet-max");
+    saveTabletState();
+  });
   if(!grip) return;
   let sz = null;
   grip.addEventListener("pointerdown", (e) => {
@@ -3456,6 +3466,7 @@ function saveTabletState(){
   try{
     localStorage.setItem("junoslab-tablet", JSON.stringify({
       open: tabletEl.classList.contains("open"), tab: tabletTab,
+      max: tabletEl.classList.contains("tablet-max"),
       left: tabletEl.style.left || null, top: tabletEl.style.top || null,
       w: tabletEl.style.width || null, h: tabletEl.style.height || null,
     }));
@@ -3499,6 +3510,7 @@ document.getElementById("ref-btn").onclick = () => toggleTablet("ref");
       if(st.w) tabletEl.style.width = st.w;
       if(st.h) tabletEl.style.height = st.h;
       if(st.tab) tabletTab = st.tab;
+      if(st.max) tabletEl.classList.add("tablet-max");
       if(st.open) openTablet(tabletTab);
     }
   }catch(e){}
