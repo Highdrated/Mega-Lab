@@ -94,5 +94,14 @@ const LABS_CONFIG = [
     ring: "ring-inner",
     angle: 110,
     glyph: '<circle cx="4.5" cy="4.5" r="2"/><circle cx="11.5" cy="11.5" r="2"/><path d="M13 3L3 13"/>'
+  },
+  {
+    id: "passle",
+    name: "Passle",
+    tag: "Programming",
+    path: "labs/passle-home.html",
+    ring: "ring-outer",
+    angle: 240,
+    glyph: '<path d="M3 11a5 5 0 0 1 10 0"/><path d="M2 11h12"/><path d="M8 6V5"/>'
   }
 ];

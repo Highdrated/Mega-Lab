@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASSLE · the larder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Spectral:ital,wght@0,400;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4efe4; --panel:#fbf8f1; --panel2:#efe7d6; --text:#2b2119; --dim:#7c6f5c;
+    --line:#e2d8c4; --brass:#9c6b1f; --brass-soft:#c9a45e; --herb:#4f7a33; --chili:#b23b2e; --ember:#b5561d;
+    --code-bg:#f1ead9; --code-text:#3a2f22;
+    --mono:"JetBrains Mono","Consolas",ui-monospace,monospace; --serif:"Spectral",Georgia,serif; --disp:"Fraunces",Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:linear-gradient(#f7f2e8,#f1ebdf) fixed; color:var(--text); font-family:var(--serif); font-size:17px; line-height:1.6; min-height:100vh; }
+
+  .top { position:sticky; top:0; z-index:10; background:rgba(246,241,231,0.94); backdrop-filter:blur(8px); border-bottom:1px solid var(--line); padding:16px 20px 14px; }
+  .top-in { max-width:960px; margin:0 auto; }
+  .head { display:flex; align-items:baseline; gap:13px; margin-bottom:12px; }
+  .mark { font-family:var(--disp); font-weight:900; font-size:24px; letter-spacing:1px; color:var(--brass); }
+  .sub { font-family:var(--disp); font-style:italic; font-size:14px; color:var(--dim); }
+  .search { width:100%; font-family:var(--mono); font-size:15px; color:var(--text); background:#fffdf8; border:1px solid var(--line); border-radius:10px; padding:12px 15px; outline:none; }
+  .search:focus { border-color:var(--brass-soft); box-shadow:0 0 0 3px rgba(156,107,31,0.1); }
+  .search::placeholder { color:var(--dim); }
+  .chips { display:flex; gap:7px; flex-wrap:wrap; margin-top:11px; }
+  .chip { font-family:var(--mono); font-size:11px; letter-spacing:.5px; color:var(--dim); background:#fffdf8; border:1px solid var(--line); padding:6px 11px; border-radius:999px; cursor:pointer; white-space:nowrap; }
+  .chip:hover { color:var(--text); }
+  .chip.on { color:var(--brass); border-color:var(--brass-soft); background:rgba(156,107,31,0.1); }
+  .count { font-family:var(--mono); font-size:11px; color:var(--dim); margin-top:10px; }
+
+  .wrap { max-width:960px; margin:0 auto; padding:26px 20px 90px; }
+  .cat { font-family:var(--disp); font-weight:600; font-size:20px; color:var(--brass); margin:30px 0 4px; padding-bottom:7px; border-bottom:1px solid var(--line); }
+  .cat:first-child { margin-top:6px; }
+  .cards { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; margin-top:14px; }
+
+  .card { border:1px solid var(--line); border-left:3px solid var(--brass-soft); border-radius:10px; background:var(--panel); padding:13px 15px; box-shadow:0 1px 2px rgba(43,33,25,0.05); }
+  .card.function { border-left-color:var(--brass); }
+  .card.keyword { border-left-color:var(--herb); }
+  .card.operator { border-left-color:var(--ember); }
+  .card.super { border-left-color:var(--chili); }
+  .card.type { border-left-color:var(--brass-soft); }
+  .card-top { display:flex; align-items:baseline; gap:9px; margin-bottom:3px; }
+  .name { font-family:var(--mono); font-weight:600; font-size:15.5px; color:var(--text); }
+  .kind { font-family:var(--mono); font-size:9px; letter-spacing:1.5px; color:var(--dim); margin-left:auto; text-transform:uppercase; }
+  .sy { font-family:var(--mono); font-size:12px; color:var(--dim); margin-bottom:7px; word-break:break-word; }
+  .what { font-size:14.5px; line-height:1.5; margin-bottom:9px; color:#392d20; }
+  .ex { background:var(--code-bg); border:1px solid var(--line); border-radius:7px; padding:9px 11px; overflow-x:auto; }
+  .ex code { font-family:var(--mono); font-size:12.5px; line-height:1.65; color:var(--code-text); white-space:pre; }
+  .ex .arrow { color:var(--dim); }
+  .ex .res { color:var(--herb); }
+
+  .empty { text-align:center; color:var(--dim); font-style:italic; padding:60px 20px; }
+
+  @media (max-width:520px) { .cards { grid-template-columns:1fr; } body { font-size:16px; } }
+</style>
+</head>
+<body>
+  <div class="top">
+    <div class="top-in">
+      <div class="head"><span class="mark">THE LARDER</span><span class="sub">Passle reference — every ingredient in the kitchen</span></div>
+      <input class="search" id="search" type="search" placeholder="search a command, function or symbol…" autocomplete="off" spellcheck="false">
+      <div class="chips" id="chips"></div>
+      <div class="count" id="count"></div>
+    </div>
+  </div>
+  <div class="wrap" id="wrap"></div>
+
+<script>
+(function () {
+  "use strict";
+
+  var CATS = ["Output","Variables & types","Operators","Strings","Arrays","Control flow","Functions","The web","JSON","Objects","Database","Files"];
+
+  var D = [
+    { n:"echo", k:"keyword", c:"Output", sy:"echo $v, ...;", w:"Print one or more values to the page. PHP does nothing visible until you echo.", ex:"echo \"Hi\", \"!\";", o:"Hi!" },
+    { n:"print", k:"keyword", c:"Output", sy:"print $v;", w:"Print a single value; unlike echo it returns 1, so it counts as an expression.", ex:"print \"Hi\";", o:"Hi" },
+    { n:"<?= ?>", k:"keyword", c:"Output", sy:"<?= $v ?>", w:"Short echo tag — the tidy way to drop a value into HTML.", ex:"<p><?= $name ?></p>" },
+    { n:"printf", k:"function", c:"Output", sy:"printf($fmt, ...);", w:"Print a string with placeholders filled in (%d number, %s string, %02d padded).", ex:"printf(\"%d euro\", 6);", o:"6 euro" },
+    { n:"sprintf", k:"function", c:"Output", sy:"$s = sprintf($fmt, ...);", w:"Like printf, but returns the built string instead of printing it.", ex:"sprintf(\"#%02d\", 5);", o:"\"#05\"" },
+    { n:"var_dump", k:"function", c:"Output", sy:"var_dump($v);", w:"Dump the exact type and value of anything — your debugging tasting spoon.", ex:"var_dump(\"6\");", o:"string(1) \"6\"" },
+    { n:"print_r", k:"function", c:"Output", sy:"print_r($v);", w:"Human-readable dump of an array or object.", ex:"print_r([1, 2]);", o:"Array ( [0] => 1 [1] => 2 )" },
+
+    { n:"$", k:"operator", c:"Variables & types", sy:"$name = ...;", w:"Every variable name starts with a dollar sign.", ex:"$dish = \"soup\";" },
+    { n:"int", k:"type", c:"Variables & types", w:"A whole number.", ex:"$n = 6;" },
+    { n:"float", k:"type", c:"Variables & types", w:"A decimal number.", ex:"$p = 6.5;" },
+    { n:"string", k:"type", c:"Variables & types", w:"Text, wrapped in quotes.", ex:"$s = \"soup\";" },
+    { n:"bool", k:"type", c:"Variables & types", w:"true or false.", ex:"$open = true;" },
+    { n:"null", k:"type", c:"Variables & types", w:"\"Nothing here yet.\"", ex:"$x = null;" },
+    { n:"const", k:"keyword", c:"Variables & types", sy:"const NAME = value;", w:"Define a constant — a value that can't be reassigned.", ex:"const VAT = 21;" },
+    { n:"isset", k:"keyword", c:"Variables & types", sy:"isset($x)", w:"Is this variable set and not null? Safe way to check a key exists.", ex:"isset($_GET[\"q\"]);", o:"true / false" },
+    { n:"empty", k:"keyword", c:"Variables & types", sy:"empty($x)", w:"Is this missing, null, 0, \"\" or false? (careful — \"0\" counts as empty).", ex:"empty($cart);", o:"true / false" },
+    { n:"gettype", k:"function", c:"Variables & types", sy:"gettype($v)", w:"Get the name of a value's type.", ex:"gettype(6);", o:"\"integer\"" },
+    { n:"(int) (string)", k:"operator", c:"Variables & types", sy:"(int) $v", w:"Cast — force a value to another type.", ex:"(int) \"6.9\";", o:"6" },
+
+    { n:".", k:"operator", c:"Operators", sy:"$a . $b", w:"Concatenation — glue values into one string. (Not +, that's maths.)", ex:"\"a\" . \"b\";", o:"\"ab\"" },
+    { n:".=", k:"operator", c:"Operators", sy:"$s .= $more;", w:"Append to the end of a string.", ex:"$s = \"soup\"; $s .= \"!\";", o:"\"soup!\"" },
+    { n:"==", k:"operator", c:"Operators", sy:"$a == $b", w:"Loosely equal — converts types before comparing. Fewer surprises with ===.", ex:"5 == \"5\";", o:"true" },
+    { n:"===", k:"operator", c:"Operators", sy:"$a === $b", w:"Strictly equal — same value AND same type. Prefer this.", ex:"5 === \"5\";", o:"false" },
+    { n:"!= !==", k:"operator", c:"Operators", sy:"$a !== $b", w:"Not equal / not strictly equal (the opposites of == and ===).", ex:"5 !== \"5\";", o:"true" },
+    { n:"??", k:"operator", c:"Operators", sy:"$a ?? $fallback", w:"Null coalescing — use the left value, or the right one if it's null or missing.", ex:"$_GET[\"q\"] ?? \"none\";" },
+    { n:"?:", k:"operator", c:"Operators", sy:"$a ?: $b", w:"Short ternary — $a if it's truthy, otherwise $b.", ex:"$name ?: \"guest\";" },
+    { n:"=>", k:"operator", c:"Operators", sy:"$key => $value", w:"Maps a key to a value — in arrays, foreach, and match.", ex:"[\"soup\" => 6];" },
+    { n:"->", k:"operator", c:"Operators", sy:"$obj->member", w:"Reach a property or method on an object.", ex:"$dish->price;" },
+    { n:"[]", k:"operator", c:"Operators", sy:"$a[$k]  /  $a[] = $v;", w:"Read an array item by key, or append when the brackets are empty.", ex:"$a[] = 4;" },
+    { n:"% ** ", k:"operator", c:"Operators", sy:"$a % $b   $a ** $b", w:"Remainder (modulo) and power. Basic maths: + - * / too (/ can give a float).", ex:"7 % 3;", o:"1" },
+    { n:"++ --", k:"operator", c:"Operators", sy:"$n++;", w:"Increase / decrease a number by one.", ex:"$n = 5; $n++;", o:"6" },
+
+    { n:"\" \" vs ' '", k:"keyword", c:"Strings", sy:"\"$name\"  vs  '$name'", w:"Double quotes read $variables inside them; single quotes are completely literal.", ex:"$n=\"Kaatje\"; echo \"Hi $n\";", o:"Hi Kaatje" },
+    { n:"strlen", k:"function", c:"Strings", sy:"strlen($s)", w:"How many characters are in the string.", ex:"strlen(\"soup\");", o:"4" },
+    { n:"strtoupper", k:"function", c:"Strings", sy:"strtoupper($s)", w:"Uppercase (strtolower for the reverse).", ex:"strtoupper(\"soup\");", o:"\"SOUP\"" },
+    { n:"ucfirst", k:"function", c:"Strings", sy:"ucfirst($s)", w:"Capitalise the first letter.", ex:"ucfirst(\"soup\");", o:"\"Soup\"" },
+    { n:"trim", k:"function", c:"Strings", sy:"trim($s)", w:"Strip whitespace off both ends.", ex:"trim(\"  hi  \");", o:"\"hi\"" },
+    { n:"str_replace", k:"function", c:"Strings", sy:"str_replace($find, $to, $s)", w:"Replace every occurrence of one bit of text with another.", ex:"str_replace(\"6\", \"7\", \"table6\");", o:"\"table7\"" },
+    { n:"substr", k:"function", c:"Strings", sy:"substr($s, $start, $len)", w:"Slice a piece out of a string (positions start at 0).", ex:"substr(\"soup\", 0, 2);", o:"\"so\"" },
+    { n:"str_contains", k:"function", c:"Strings", sy:"str_contains($s, $needle)", w:"Does the string contain this bit of text? (PHP 8).", ex:"str_contains(\"soup\", \"ou\");", o:"true" },
+    { n:"explode", k:"function", c:"Strings", sy:"explode($sep, $s)", w:"Split a string into an array on a separator.", ex:"explode(\",\", \"a,b\");", o:"[\"a\", \"b\"]" },
+    { n:"implode", k:"function", c:"Strings", sy:"implode($glue, $arr)", w:"Join an array into a string (the opposite of explode).", ex:"implode(\"-\", [\"a\", \"b\"]);", o:"\"a-b\"" },
+
+    { n:"[ ]", k:"keyword", c:"Arrays", sy:"$a = [1, 2, 3];", w:"Make an array. Indexed arrays number from 0; associative arrays use your own keys.", ex:"$prices = [\"soup\" => 6];" },
+    { n:"count", k:"function", c:"Arrays", sy:"count($arr)", w:"How many items are in the array.", ex:"count([1, 2, 3]);", o:"3" },
+    { n:"array_keys", k:"function", c:"Arrays", sy:"array_keys($arr)", w:"Get just the keys (array_values for just the values).", ex:"array_keys([\"a\" => 1]);", o:"[\"a\"]" },
+    { n:"in_array", k:"function", c:"Arrays", sy:"in_array($v, $arr)", w:"Is this value somewhere in the array?", ex:"in_array(3, [1, 2, 3]);", o:"true" },
+    { n:"array_key_exists", k:"function", c:"Arrays", sy:"array_key_exists($k, $arr)", w:"Does this key exist in the array?", ex:"array_key_exists(\"soup\", $menu);", o:"true" },
+    { n:"array_merge", k:"function", c:"Arrays", sy:"array_merge($a, $b)", w:"Combine arrays into one.", ex:"array_merge([1], [2]);", o:"[1, 2]" },
+    { n:"array_map", k:"function", c:"Arrays", sy:"array_map($fn, $arr)", w:"Run a function over every item and collect the results.", ex:"array_map('strtoupper', [\"a\"]);", o:"[\"A\"]" },
+    { n:"array_filter", k:"function", c:"Arrays", sy:"array_filter($arr, $fn)", w:"Keep only the items that pass a test.", ex:"array_filter([0, 1, 2]);", o:"[1, 2]" },
+    { n:"sort", k:"function", c:"Arrays", sy:"sort($arr);", w:"Sort an array in place (ksort by key, rsort reverse).", ex:"$a = [3, 1, 2]; sort($a);", o:"[1, 2, 3]" },
+
+    { n:"if / elseif / else", k:"keyword", c:"Control flow", sy:"if ($c) { } elseif ($d) { } else { }", w:"Run a block when a condition is true; fall through to the next.", ex:"if ($stock > 0) {\n  echo \"in\";\n} else {\n  echo \"86 it\";\n}" },
+    { n:"match", k:"keyword", c:"Control flow", sy:"match($v) { a => r, default => r }", w:"Expression switch (PHP 8): strict, returns a value, no fall-through.", ex:"$label = match($n) {\n  1 => \"one\",\n  default => \"many\",\n};" },
+    { n:"switch", k:"keyword", c:"Control flow", sy:"switch ($v) { case x: ...; break; }", w:"Branch on a value; remember break or cases fall through.", ex:"switch ($n) {\n  case 1: echo \"one\"; break;\n}" },
+    { n:"foreach", k:"keyword", c:"Control flow", sy:"foreach ($arr as $k => $v) { }", w:"The PHP workhorse — walk through every item in an array.", ex:"foreach ($menu as $item => $price) {\n  echo \"$item: $price\\n\";\n}" },
+    { n:"for", k:"keyword", c:"Control flow", sy:"for ($i=0; $i<$n; $i++) { }", w:"Count-controlled loop when you know how many times.", ex:"for ($i = 0; $i < 3; $i++) {\n  echo $i;\n}", o:"012" },
+    { n:"while", k:"keyword", c:"Control flow", sy:"while ($c) { }", w:"Loop as long as the condition stays true.", ex:"while ($n > 0) { $n--; }" },
+    { n:"break / continue", k:"keyword", c:"Control flow", sy:"break;  continue;", w:"break leaves the loop; continue skips to the next round.", ex:"foreach ($a as $x) {\n  if ($x == 0) continue;\n}" },
+
+    { n:"function", k:"keyword", c:"Functions", sy:"function name($p): type { }", w:"Define a reusable recipe. Type the parameters, give defaults, declare a return type.", ex:"function tip(int $b, int $p = 10): int {\n  return $b + $b * $p / 100;\n}" },
+    { n:"return", k:"keyword", c:"Functions", sy:"return $v;", w:"Hand a value back to whoever called the function, and stop.", ex:"return $total;" },
+    { n:"fn", k:"keyword", c:"Functions", sy:"fn($x) => expr", w:"Arrow function — a short one-expression function that can see outside variables.", ex:"$double = fn($x) => $x * 2;\necho $double(5);", o:"10" },
+    { n:"...$args", k:"operator", c:"Functions", sy:"function f(...$args) { }", w:"Variadic — collect any number of extra arguments into an array.", ex:"function sum(...$n) {\n  return array_sum($n);\n}" },
+
+    { n:"$_GET", k:"super", c:"The web", sy:"$_GET[\"key\"]", w:"Data sent in the URL query string (?key=value).", ex:"$q = $_GET[\"q\"] ?? \"\";" },
+    { n:"$_POST", k:"super", c:"The web", sy:"$_POST[\"key\"]", w:"Data sent by a submitted form (method=\"post\").", ex:"$name = $_POST[\"name\"] ?? \"\";" },
+    { n:"$_REQUEST", k:"super", c:"The web", sy:"$_REQUEST[\"key\"]", w:"GET, POST and cookie data combined into one array.", ex:"$_REQUEST[\"id\"];" },
+    { n:"$_SERVER", k:"super", c:"The web", sy:"$_SERVER[\"key\"]", w:"Info about the request and server — e.g. REQUEST_METHOD, HTTP_HOST.", ex:"$_SERVER[\"REQUEST_METHOD\"];", o:"\"POST\"" },
+    { n:"$_SESSION", k:"super", c:"The web", sy:"$_SESSION[\"key\"]", w:"Per-visitor data that persists across pages (call session_start first).", ex:"$_SESSION[\"user\"] = $id;" },
+    { n:"session_start", k:"function", c:"The web", sy:"session_start();", w:"Begin or resume the visitor's session. Must run before any output.", ex:"session_start();" },
+    { n:"header", k:"function", c:"The web", sy:"header($string);", w:"Send a raw HTTP header — redirects, content type. Must come before any output.", ex:"header(\"Location: /home\");" },
+    { n:"htmlspecialchars", k:"function", c:"The web", sy:"htmlspecialchars($s)", w:"Escape < > & \" so user text shows as text, not runs as HTML/JS. Stops XSS — reflex on every echo of outside data.", ex:"echo htmlspecialchars($name);" },
+
+    { n:"json_encode", k:"function", c:"JSON", sy:"json_encode($v)", w:"Turn a PHP value (usually an array) into JSON text.", ex:"json_encode([\"a\" => 1]);", o:"{\"a\":1}" },
+    { n:"json_decode", k:"function", c:"JSON", sy:"json_decode($s, true)", w:"Turn JSON text into PHP. Pass true for an associative array instead of an object.", ex:"json_decode('{\"a\":1}', true);", o:"[\"a\" => 1]" },
+
+    { n:"class", k:"keyword", c:"Objects", sy:"class Name { }", w:"A blueprint bundling related data (properties) and behaviour (methods) into one thing.", ex:"class Dish {\n  public string $name;\n}" },
+    { n:"new", k:"keyword", c:"Objects", sy:"$obj = new Class(...);", w:"Create an object (an instance) from a class.", ex:"$d = new Dish(\"soup\");" },
+    { n:"$this", k:"keyword", c:"Objects", sy:"$this->prop", w:"Inside a class: \"this particular object.\"", ex:"return $this->name;" },
+    { n:"__construct", k:"keyword", c:"Objects", sy:"function __construct(...) { }", w:"Runs automatically when an object is created — the setup step.", ex:"function __construct(public string $name) {}" },
+    { n:"visibility", k:"keyword", c:"Objects", sy:"public / private / protected", w:"Who may reach a property or method: everyone / only this class / this + children.", ex:"private int $count = 0;" },
+    { n:"promotion", k:"keyword", c:"Objects", sy:"__construct(public $x)", w:"Constructor property promotion (PHP 8) — declare and fill a property in one move.", ex:"public function __construct(\n  public int $price\n) {}" },
+    { n:"static ::", k:"keyword", c:"Objects", sy:"Class::member", w:"Belongs to the class itself, not to any one object; reached with ::.", ex:"echo Dish::$count;" },
+    { n:"extends", k:"keyword", c:"Objects", sy:"class B extends A { }", w:"Inherit properties and methods from a parent class.", ex:"class Soup extends Dish {}" },
+
+    { n:"new PDO", k:"keyword", c:"Database", sy:"new PDO($dsn, $user, $pass)", w:"Connect to a database (MySQL, SQLite, …) through PHP's PDO layer.", ex:"$pdo = new PDO(\"sqlite:shop.db\");" },
+    { n:"prepare", k:"function", c:"Database", sy:"$pdo->prepare($sql)", w:"Build a query with ? or :name placeholders instead of pasting in values.", ex:"$stmt = $pdo->prepare(\n  \"SELECT * FROM dishes WHERE id = ?\"\n);" },
+    { n:"execute", k:"function", c:"Database", sy:"$stmt->execute([$v]);", w:"Run a prepared query, passing the values separately — this is what stops SQL injection.", ex:"$stmt->execute([$_GET[\"id\"]]);" },
+    { n:"fetch / fetchAll", k:"function", c:"Database", sy:"$stmt->fetch()", w:"Get the next row, or fetchAll() for every matching row.", ex:"$row = $stmt->fetch();" },
+
+    { n:"require / include", k:"keyword", c:"Files", sy:"require \"file.php\";", w:"Pull another PHP file in here. require errors if it's missing; include only warns.", ex:"require \"config.php\";" },
+    { n:"require_once", k:"keyword", c:"Files", sy:"require_once \"file.php\";", w:"Same, but won't pull the file in twice — safe for shared config and function files.", ex:"require_once \"db.php\";" },
+    { n:"file_get_contents", k:"function", c:"Files", sy:"file_get_contents($path)", w:"Read a whole file into a string in one call.", ex:"$txt = file_get_contents(\"menu.txt\");" },
+    { n:"file_put_contents", k:"function", c:"Files", sy:"file_put_contents($path, $data)", w:"Write a string to a file (creates or overwrites).", ex:"file_put_contents(\"log.txt\", $line);" }
+  ];
+
+  var search = document.getElementById("search");
+  var chipsEl = document.getElementById("chips");
+  var countEl = document.getElementById("count");
+  var wrap = document.getElementById("wrap");
+  var activeCat = "All";
+  var query = "";
+
+  var cats = ["All"].concat(CATS);
+  cats.forEach(function (c) {
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "chip" + (c === "All" ? " on" : "");
+    b.textContent = c;
+    b.addEventListener("click", function () {
+      activeCat = c;
+      [].forEach.call(chipsEl.children, function (x) { x.classList.toggle("on", x === b); });
+      renderList();
+    });
+    chipsEl.appendChild(b);
+  });
+
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  function match(entry) {
+    if (activeCat !== "All" && entry.c !== activeCat) return false;
+    if (!query) return true;
+    var hay = (entry.n + " " + entry.w + " " + (entry.sy || "") + " " + entry.c).toLowerCase();
+    return hay.indexOf(query) !== -1;
+  }
+
+  function cardEl(e) {
+    var card = document.createElement("div");
+    card.className = "card " + e.k;
+    var top = document.createElement("div"); top.className = "card-top";
+    var nm = document.createElement("span"); nm.className = "name"; nm.textContent = e.n;
+    var kd = document.createElement("span"); kd.className = "kind"; kd.textContent = e.k === "super" ? "superglobal" : e.k;
+    top.appendChild(nm); top.appendChild(kd); card.appendChild(top);
+    if (e.sy) { var sy = document.createElement("div"); sy.className = "sy"; sy.textContent = e.sy; card.appendChild(sy); }
+    var w = document.createElement("div"); w.className = "what"; w.textContent = e.w; card.appendChild(w);
+    if (e.ex) {
+      var ex = document.createElement("div"); ex.className = "ex";
+      var code = document.createElement("code");
+      var html = esc(e.ex);
+      if (e.o) html += "<span class=\"arrow\">  \u2192  </span><span class=\"res\">" + esc(e.o) + "</span>";
+      code.innerHTML = html;
+      ex.appendChild(code); card.appendChild(ex);
+    }
+    return card;
+  }
+
+  function renderList() {
+    wrap.innerHTML = "";
+    var shown = 0;
+    CATS.forEach(function (cat) {
+      var items = D.filter(function (e) { return e.c === cat && match(e); });
+      if (!items.length) return;
+      var h = document.createElement("div"); h.className = "cat"; h.textContent = cat;
+      wrap.appendChild(h);
+      var grid = document.createElement("div"); grid.className = "cards";
+      items.forEach(function (e) { grid.appendChild(cardEl(e)); shown++; });
+      wrap.appendChild(grid);
+    });
+    if (!shown) {
+      var em = document.createElement("div"); em.className = "empty";
+      em.textContent = "Nothing in the larder matches that.";
+      wrap.appendChild(em);
+    }
+    countEl.textContent = shown + " of " + D.length + " ingredients";
+  }
+
+  search.addEventListener("input", function () { query = search.value.trim().toLowerCase(); renderList(); });
+  renderList();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASSLE · tutorial · your first dynamic page</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4efe4; --panel:#fbf8f1; --panel2:#efe7d6; --text:#2b2119; --dim:#7c6f5c;
+    --line:#e2d8c4; --brass:#9c6b1f; --brass-soft:#c9a45e; --herb:#4f7a33; --chili:#b23b2e; --ember:#b5561d;
+    --code-bg:#f1ead9; --code-text:#3a2f22;
+    --mono:"JetBrains Mono","Consolas",ui-monospace,monospace; --serif:"Spectral",Georgia,serif; --disp:"Fraunces",Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:linear-gradient(#f7f2e8,#f1ebdf) fixed; color:var(--text); font-family:var(--serif); font-size:18px; line-height:1.62; min-height:100vh; padding:26px 18px 90px; }
+  .wrap { max-width:720px; margin:0 auto; }
+  .head { display:flex; align-items:baseline; gap:13px; flex-wrap:wrap; }
+  .mark { font-family:var(--disp); font-weight:900; font-size:23px; letter-spacing:1px; color:var(--brass); }
+  .sub { font-family:var(--disp); font-style:italic; font-size:15px; color:var(--dim); }
+  .stages { display:flex; gap:5px; margin:22px 0 6px; flex-wrap:wrap; }
+  .sbtn { flex:1; min-width:80px; font-family:var(--mono); font-size:10.5px; letter-spacing:.5px; color:var(--dim); background:var(--panel); border:1px solid var(--line); border-bottom:2px solid var(--line); padding:8px 5px; border-radius:8px; cursor:pointer; text-align:center; }
+  .sbtn .n { display:block; font-size:9px; color:var(--brass-soft); margin-bottom:2px; }
+  .sbtn.on { color:var(--brass); border-color:var(--brass-soft); border-bottom-color:var(--brass); background:rgba(156,107,31,0.09); }
+  .sbtn.done .n { color:var(--herb); }
+  .kick { font-family:var(--mono); font-size:11px; letter-spacing:3px; color:var(--ember); margin:24px 0 8px; }
+  .title { font-family:var(--disp); font-weight:600; font-size:28px; color:var(--text); margin-bottom:14px; }
+  p.t { margin-bottom:15px; max-width:62ch; }
+  p.t b { color:var(--brass); font-weight:500; }
+  p.t code, li code { font-family:var(--mono); font-size:0.86em; background:rgba(156,107,31,0.1); color:#7a5416; padding:1px 5px; border-radius:4px; }
+  h3.sec { font-family:var(--disp); font-weight:600; font-size:20px; color:var(--brass); margin:26px 0 10px; }
+  ul.t { margin:0 0 15px 22px; } ul.t li { margin-bottom:7px; max-width:60ch; }
+  pre { background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:15px; overflow-x:auto; margin:14px 0; }
+  code.block { font-family:var(--mono); font-size:14px; line-height:1.75; color:var(--code-text); white-space:pre; }
+  .cap { font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--dim); margin:-6px 0 14px 2px; }
+  .out { background:#fffdf8; border:1px solid var(--line); border-radius:10px; padding:13px 15px; margin:14px 0; }
+  .out .l { font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--dim); display:block; margin-bottom:6px; }
+  .out samp { font-family:var(--mono); font-size:14px; color:var(--herb); white-space:pre-wrap; }
+  .why { border-left:3px solid var(--ember); background:rgba(181,86,29,0.07); border-radius:0 8px 8px 0; padding:11px 15px; margin:16px 0; font-size:15.5px; max-width:62ch; }
+  .why b { color:var(--ember); font-family:var(--mono); font-size:10px; letter-spacing:2px; display:block; margin-bottom:4px; }
+  .do { border:1px solid var(--brass-soft); border-radius:10px; background:#fffdf8; padding:15px; margin:22px 0; }
+  .do-h { font-family:var(--mono); font-size:11px; letter-spacing:2px; color:var(--ember); margin-bottom:10px; }
+  .q { margin-bottom:12px; font-size:16px; }
+  .opts { display:flex; flex-direction:column; gap:8px; }
+  .opt { text-align:left; font-family:var(--mono); font-size:13.5px; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:11px 13px; cursor:pointer; white-space:pre-wrap; }
+  .opt:hover:not(:disabled) { border-color:var(--brass-soft); }
+  .opt.right { border-color:var(--herb); background:rgba(79,122,51,0.12); }
+  .opt.wrong { border-color:var(--chili); background:rgba(178,59,46,0.1); }
+  .verdict { margin-top:13px; padding:11px 13px; border-radius:8px; font-size:15px; display:none; }
+  .verdict.show { display:block; }
+  .verdict.ok { background:rgba(79,122,51,0.1); border:1px solid rgba(79,122,51,0.4); }
+  .verdict.no { background:rgba(178,59,46,0.09); border:1px solid rgba(178,59,46,0.4); }
+  .verdict b { font-family:var(--mono); font-size:11px; letter-spacing:1px; display:block; margin-bottom:4px; }
+  .verdict.ok b { color:var(--herb); } .verdict.no b { color:var(--chili); }
+  .nav { display:flex; justify-content:space-between; margin-top:34px; padding-top:18px; border-top:1px solid var(--line); }
+  .btn { font-family:var(--mono); font-weight:600; font-size:12px; letter-spacing:1px; color:#fffdf8; background:var(--brass); border:1px solid var(--brass); padding:11px 18px; border-radius:8px; cursor:pointer; }
+  .btn:hover { filter:brightness(1.06); }
+  .btn.ghost { background:none; color:var(--dim); border-color:var(--line); font-weight:400; }
+  a { color:var(--brass); }
+  @media (max-width:520px){ body{font-size:17px;} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <span class="mark">TUTORIAL</span>
+      <span class="sub">Your first dynamic page — a page that knows your name</span>
+    </div>
+    <div class="stages" id="stages"></div>
+    <div class="stage" id="stage"></div>
+    <div class="nav">
+      <button class="btn ghost" id="prev" type="button">← back</button>
+      <button class="btn" id="next" type="button">next →</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var STAGES = [
+    {
+      tag:"IDEA", title:"Static vs dynamic",
+      render:function(h){
+        h.appendChild(P("A <b>static</b> page shows the same words to everyone \u2014 like a printed menu. A <b>dynamic</b> page, which is what PHP makes, can change for each visitor."));
+        h.appendChild(P("In this short tutorial you'll build the simplest dynamic page there is: one that greets you by name. Six small steps, and you'll have it."));
+        h.appendChild(why("Why start here","Every \u201cwelcome back, Kaatje\u201d you've ever seen is this one idea. Get these few lines and the whole notion of a page that responds to you clicks into place."));
+        markDone(0);
+      }
+    },
+    {
+      tag:"ECHO", title:"Step 1 · Make PHP speak",
+      render:function(h){
+        h.appendChild(P("PHP shows nothing until you tell it to. <code>echo</code> is how it speaks \u2014 it puts text onto the page. PHP code lives between <code>&lt;?php</code> and <code>?&gt;</code>."));
+        h.appendChild(codeBlock("<?php echo \"Hello!\"; ?>"));
+        h.appendChild(outBlock("Hello!"));
+        h.appendChild(why("What's happening","Anything outside the PHP tags is plain HTML, sent to the browser untouched. echo is how PHP adds its own words into that page. Nothing appears unless something echoes it."));
+        markDone(1);
+      }
+    },
+    {
+      tag:"VARIABLE", title:"Step 2 · Remember a name",
+      render:function(h){
+        h.appendChild(P("Put the name in a <b>variable</b> \u2014 a labelled box \u2014 then drop it into the greeting. Inside <b>double</b> quotes, PHP swaps <code>$name</code> for its value."));
+        h.appendChild(codeBlock("<?php\n$name = \"Kaatje\";\necho \"Hello, $name!\";"));
+        h.appendChild(outBlock("Hello, Kaatje!"));
+        mcq(h,
+          "Careful with quote types. What does <code>echo 'Hello, $name!';</code> print \u2014 with <b>single</b> quotes?",
+          ["Hello, Kaatje!","Hello, $name!","Hello, !","An error"],
+          1,
+          "Single quotes are literal \u2014 they don't read variables. So you get the characters $name, not the value. Double quotes are the ones that swap in the value."
+        );
+        markDone(2);
+      }
+    },
+    {
+      tag:"FROM URL", title:"Step 3 · Now it's dynamic",
+      render:function(h){
+        h.appendChild(P("So far the name is hard-coded. To make the page <b>dynamic</b>, read the name from the address bar. Anything after the <code>?</code> in a URL arrives in <code>$_GET</code>."));
+        h.appendChild(codeBlock("<?php\n$name = $_GET[\"name\"];\necho \"Hello, $name!\";", "visited as  greet.php?name=Kaatje"));
+        h.appendChild(outBlock("Hello, Kaatje!"));
+        h.appendChild(why("This is the whole idea of 'dynamic'","The bit after the ? \u2014 ?name=Kaatje \u2014 is the visitor's input. PHP hands it to you in the $_GET array, keyed by the name from the URL. Change the URL, change the page. Same code, different visitor, different greeting."));
+        mcq(h,
+          "The page is opened as <code>greet.php?name=Sam</code>. What is <code>$_GET[\"name\"]</code>?",
+          ["\"Sam\"","\"name\"","\"Kaatje\"","empty"],
+          0,
+          "$_GET is keyed by the name in the URL, and its value is what came after the = \u2014 so $_GET[\"name\"] is \"Sam\"."
+        );
+        markDone(3);
+      }
+    },
+    {
+      tag:"POLISH", title:"Step 4 · Safe and friendly",
+      render:function(h){
+        h.appendChild(P("Two small touches make it real: a <b>default</b> for when no name is given, and <b>safety</b> so a stranger can't sneak anything onto your page."));
+        h.appendChild(codeBlock("<?php\n$name = $_GET[\"name\"] ?? \"friend\";\necho \"Hello, \" . htmlspecialchars($name) . \"!\";"));
+        h.appendChild(why("Why these two","?? \"friend\" means the page still greets nicely if the URL has no name \u2014 no warning, no blank. And htmlspecialchars makes sure that if someone puts HTML in the name, it's shown as plain text instead of running. That output-hygiene habit goes on every page you'll ever write."));
+        mcq(h,
+          "Which line safely shows a name that came from the visitor?",
+          ["echo $name;","echo htmlspecialchars($name);","echo strtoupper($name);","echo \"$name\";"],
+          1,
+          "htmlspecialchars defuses any HTML in the value, so a submitted <script> shows as text. The others print the value raw \u2014 unsafe with outside input."
+        );
+        markDone(4);
+      }
+    },
+    {
+      tag:"DONE", title:"Step 5 · You built a dynamic page",
+      render:function(h){
+        h.appendChild(P("Here it is \u2014 <b>greet.php</b>, all together."));
+        h.appendChild(codeBlock("<?php\n$name = $_GET[\"name\"] ?? \"friend\";\n?>\n<h1>Hello, <?= htmlspecialchars($name) ?>!</h1>\n<p>Welcome to your first dynamic page.</p>", "greet.php"));
+        h.appendChild(sec("What you'll see"));
+        h.appendChild(outBlock("Hello, friend!\nWelcome to your first dynamic page.", "PLAIN VISIT"));
+        h.appendChild(outBlock("Hello, Kaatje!\nWelcome to your first dynamic page.", "greet.php?name=Kaatje"));
+        h.appendChild(why("Run it for real","Drop greet.php on your server (or paste it into the PHP runner), open it, then add ?name=you to the address and watch the page change. Try ?name=<b>&lt;i&gt;hi&lt;/i&gt;</b> too \u2014 htmlspecialchars keeps it as text."));
+        h.appendChild(sec("What you now know"));
+        var ul=document.createElement("ul"); ul.className="t";
+        ["<code>echo</code> makes PHP put text on the page.",
+         "Variables + double-quote interpolation drop values into text.",
+         "<code>$_GET</code> reads input from the URL \u2014 the source of \u201cdynamic\u201d.",
+         "<code>??</code> gives a friendly default when input is missing.",
+         "<code>htmlspecialchars</code> keeps outside input safe on the way out."
+        ].forEach(function(t){ var li=document.createElement("li"); li.innerHTML=t; ul.appendChild(li); });
+        h.appendChild(ul);
+        markDone(5);
+      }
+    }
+  ];
+
+  var idx=0, done={};
+  var stage=document.getElementById("stage"), stagesEl=document.getElementById("stages");
+  var prevBtn=document.getElementById("prev"), nextBtn=document.getElementById("next");
+
+  function P(html){ var p=document.createElement("p"); p.className="t"; p.innerHTML=html; return p; }
+  function sec(text){ var h=document.createElement("h3"); h.className="sec"; h.textContent=text; return h; }
+  function codeBlock(text, cap){ var d=document.createElement("div"); var pre=document.createElement("pre"); var c=document.createElement("code"); c.className="block"; c.textContent=text; pre.appendChild(c); d.appendChild(pre); if(cap){ var cp=document.createElement("div"); cp.className="cap"; cp.textContent=cap; d.appendChild(cp); } return d; }
+  function outBlock(text, label){ var d=document.createElement("div"); d.className="out"; var l=document.createElement("span"); l.className="l"; l.textContent=label||"RESULT"; var s=document.createElement("samp"); s.textContent=text; d.appendChild(l); d.appendChild(s); return d; }
+  function why(head, body){ var d=document.createElement("div"); d.className="why"; var b=document.createElement("b"); b.textContent=head; var s=document.createElement("span"); s.innerHTML=body; d.appendChild(b); d.appendChild(s); return d; }
+  function showV(v, ok, html){ v.className="verdict show "+(ok?"ok":"no"); v.innerHTML="<b>"+(ok?"YES":"NOT QUITE")+"</b>"+html; }
+
+  function mcq(host, qHtml, options, answer, explain){
+    var box=document.createElement("div"); box.className="do";
+    var hh=document.createElement("div"); hh.className="do-h"; hh.textContent="YOUR TURN"; box.appendChild(hh);
+    var q=document.createElement("div"); q.className="q"; q.innerHTML=qHtml; box.appendChild(q);
+    var opts=document.createElement("div"); opts.className="opts"; var v=document.createElement("div");
+    options.forEach(function(t,i){
+      var b=document.createElement("button"); b.type="button"; b.className="opt"; b.textContent=t;
+      b.addEventListener("click", function(){
+        [].forEach.call(opts.querySelectorAll(".opt"), function(x){ x.disabled=true; });
+        if(i===answer){ b.classList.add("right"); showV(v,true,explain); }
+        else { b.classList.add("wrong"); opts.querySelectorAll(".opt")[answer].classList.add("right"); showV(v,false,explain); }
+      });
+      opts.appendChild(b);
+    });
+    box.appendChild(opts); box.appendChild(v); host.appendChild(box);
+  }
+
+  function markDone(i){ done[i]=true; paintStages(); }
+  function paintStages(){
+    stagesEl.innerHTML="";
+    STAGES.forEach(function(s,i){
+      var b=document.createElement("button"); b.type="button";
+      b.className="sbtn"+(i===idx?" on":"")+(done[i]?" done":"");
+      b.innerHTML='<span class="n">'+i+(done[i]?" \u2713":"")+'</span>'+s.tag;
+      b.addEventListener("click", function(){ render(i); });
+      stagesEl.appendChild(b);
+    });
+  }
+  function render(i){
+    idx=i; stage.innerHTML="";
+    var s=STAGES[i];
+    var k=document.createElement("div"); k.className="kick"; k.textContent="STEP "+i+" · "+s.tag;
+    var t=document.createElement("div"); t.className="title"; t.textContent=s.title;
+    stage.appendChild(k); stage.appendChild(t); s.render(stage);
+    prevBtn.style.visibility=i===0?"hidden":"visible";
+    nextBtn.style.visibility=i===STAGES.length-1?"hidden":"visible";
+    paintStages(); window.scrollTo(0,0);
+  }
+  prevBtn.addEventListener("click", function(){ if(idx>0) render(idx-1); });
+  nextBtn.addEventListener("click", function(){ if(idx<STAGES.length-1) render(idx+1); });
+  render(0);
+})();
+</script>
+</body>
+</html>

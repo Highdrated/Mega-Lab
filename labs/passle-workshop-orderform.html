@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASSLE · workshop · the order form</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4efe4; --panel:#fbf8f1; --panel2:#efe7d6; --text:#2b2119; --dim:#7c6f5c;
+    --line:#e2d8c4; --brass:#9c6b1f; --brass-soft:#c9a45e; --herb:#4f7a33; --chili:#b23b2e; --ember:#b5561d;
+    --code-bg:#f1ead9; --code-text:#3a2f22;
+    --mono:"JetBrains Mono","Consolas",ui-monospace,monospace; --serif:"Spectral",Georgia,serif; --disp:"Fraunces",Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:linear-gradient(#f7f2e8,#f1ebdf) fixed; color:var(--text); font-family:var(--serif); font-size:18px; line-height:1.62; min-height:100vh; padding:26px 18px 90px; }
+  .wrap { max-width:760px; margin:0 auto; }
+
+  .head { display:flex; align-items:baseline; gap:13px; flex-wrap:wrap; }
+  .mark { font-family:var(--disp); font-weight:900; font-size:23px; letter-spacing:1px; color:var(--brass); }
+  .sub { font-family:var(--disp); font-style:italic; font-size:15px; color:var(--dim); }
+
+  .stages { display:flex; gap:5px; margin:22px 0 6px; flex-wrap:wrap; }
+  .sbtn { flex:1; min-width:84px; font-family:var(--mono); font-size:10.5px; letter-spacing:.5px; color:var(--dim); background:var(--panel); border:1px solid var(--line); border-bottom:2px solid var(--line); padding:8px 5px; border-radius:8px; cursor:pointer; text-align:center; }
+  .sbtn .n { display:block; font-size:9px; color:var(--brass-soft); margin-bottom:2px; }
+  .sbtn.on { color:var(--brass); border-color:var(--brass-soft); border-bottom-color:var(--brass); background:rgba(156,107,31,0.09); }
+  .sbtn.done .n { color:var(--herb); }
+
+  .kick { font-family:var(--mono); font-size:11px; letter-spacing:3px; color:var(--ember); margin:24px 0 8px; }
+  .title { font-family:var(--disp); font-weight:600; font-size:28px; color:var(--text); margin-bottom:14px; }
+  p.t { margin-bottom:15px; max-width:64ch; }
+  p.t b { color:var(--brass); font-weight:500; }
+  p.t code, li code, .inline { font-family:var(--mono); font-size:0.86em; background:rgba(156,107,31,0.1); color:#7a5416; padding:1px 5px; border-radius:4px; }
+  h3.sec { font-family:var(--disp); font-weight:600; font-size:20px; color:var(--brass); margin:26px 0 10px; }
+  ul.t { margin:0 0 15px 22px; } ul.t li { margin-bottom:7px; max-width:62ch; }
+
+  pre { background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:15px; overflow-x:auto; margin:14px 0; }
+  code.block { font-family:var(--mono); font-size:14px; line-height:1.75; color:var(--code-text); white-space:pre; }
+  .cap { font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--dim); margin:-6px 0 14px 2px; }
+
+  .out { background:#fffdf8; border:1px solid var(--line); border-radius:10px; padding:13px 15px; margin:14px 0; }
+  .out .l { font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--dim); display:block; margin-bottom:6px; }
+  .out samp { font-family:var(--mono); font-size:13.5px; color:var(--herb); white-space:pre-wrap; }
+
+  .why { border-left:3px solid var(--ember); background:rgba(181,86,29,0.07); border-radius:0 8px 8px 0; padding:11px 15px; margin:16px 0; font-size:15.5px; max-width:64ch; }
+  .why b { color:var(--ember); font-family:var(--mono); font-size:10px; letter-spacing:2px; display:block; margin-bottom:4px; }
+
+  .do { border:1px solid var(--brass-soft); border-radius:10px; background:#fffdf8; padding:15px; margin:22px 0; }
+  .do-h { font-family:var(--mono); font-size:11px; letter-spacing:2px; color:var(--ember); margin-bottom:10px; }
+  .q { margin-bottom:12px; font-size:16px; }
+  .opts { display:flex; flex-direction:column; gap:8px; }
+  .opt { text-align:left; font-family:var(--mono); font-size:13.5px; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:11px 13px; cursor:pointer; white-space:pre-wrap; }
+  .opt:hover:not(:disabled) { border-color:var(--brass-soft); }
+  .opt.right { border-color:var(--herb); background:rgba(79,122,51,0.12); }
+  .opt.wrong { border-color:var(--chili); background:rgba(178,59,46,0.1); }
+  .blank { color:var(--ember); background:rgba(181,86,29,0.14); border-radius:4px; padding:0 7px; }
+  .pool,.target { display:flex; flex-direction:column; gap:7px; margin:10px 0; }
+  .target { min-height:50px; border:1px dashed var(--line); border-radius:9px; padding:9px; }
+  .lbl2 { font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--dim); margin-top:6px; }
+  .chip { text-align:left; font-family:var(--mono); font-size:13.5px; color:var(--code-text); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; cursor:pointer; white-space:pre; overflow-x:auto; }
+  .chip:hover { border-color:var(--brass-soft); }
+
+  .verdict { margin-top:13px; padding:11px 13px; border-radius:8px; font-size:15px; display:none; }
+  .verdict.show { display:block; }
+  .verdict.ok { background:rgba(79,122,51,0.1); border:1px solid rgba(79,122,51,0.4); }
+  .verdict.no { background:rgba(178,59,46,0.09); border:1px solid rgba(178,59,46,0.4); }
+  .verdict b { font-family:var(--mono); font-size:11px; letter-spacing:1px; display:block; margin-bottom:4px; }
+  .verdict.ok b { color:var(--herb); } .verdict.no b { color:var(--chili); }
+
+  .aid svg { width:100%; max-width:600px; height:auto; display:block; margin:8px 0 4px; }
+
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+  .btn { font-family:var(--mono); font-weight:600; font-size:12px; letter-spacing:1px; color:#fffdf8; background:var(--brass); border:1px solid var(--brass); padding:11px 18px; border-radius:8px; cursor:pointer; }
+  .btn:hover { filter:brightness(1.06); }
+  .btn.ghost { background:none; color:var(--dim); border-color:var(--line); font-weight:400; }
+  .btn.ghost:hover { color:var(--brass); border-color:var(--brass-soft); filter:none; }
+  .nav { display:flex; justify-content:space-between; margin-top:34px; padding-top:18px; border-top:1px solid var(--line); }
+
+  a { color:var(--brass); }
+  @media (max-width:520px){ body{font-size:17px;} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <span class="mark">WORKSHOP</span>
+      <span class="sub">The Order Form — build a working PHP page, end to end</span>
+    </div>
+    <div class="stages" id="stages"></div>
+    <div class="stage" id="stage"></div>
+    <div class="nav">
+      <button class="btn ghost" id="prev" type="button">← back</button>
+      <button class="btn" id="next" type="button">next stage →</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SVG_FLOW =
+    '<svg viewBox="0 0 600 132" role="img" aria-label="The browser sends the order to the PHP page, which reads it and sends back a confirmation page.">' +
+    '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9c6b1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
+    '<rect x="12" y="40" width="150" height="54" rx="9" fill="#fbf8f1" stroke="#c9a45e"/>' +
+    '<text x="87" y="63" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">The form</text>' +
+    '<text x="87" y="82" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">customer\'s order</text>' +
+    '<rect x="225" y="40" width="150" height="54" rx="9" fill="#f1ead9" stroke="#9c6b1f"/>' +
+    '<text x="300" y="63" text-anchor="middle" fill="#9c6b1f" font-family="Spectral,serif" font-size="15">order.php</text>' +
+    '<text x="300" y="82" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">reads $_POST</text>' +
+    '<rect x="438" y="40" width="150" height="54" rx="9" fill="#fbf8f1" stroke="#c9a45e"/>' +
+    '<text x="513" y="63" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">confirmation</text>' +
+    '<text x="513" y="82" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">safe HTML page</text>' +
+    '<line x1="166" y1="60" x2="220" y2="60" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#a)"/>' +
+    '<text x="193" y="52" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">POST</text>' +
+    '<line x1="379" y1="74" x2="433" y2="74" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#a)"/>' +
+    '<text x="406" y="66" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">serve</text>' +
+    '</svg>';
+
+  var FORM_CODE = [
+    "<form method=\"post\">",
+    "  <label>Name: <input name=\"name\"></label>",
+    "  <label>Size:",
+    "    <select name=\"size\">",
+    "      <option>small</option>",
+    "      <option>medium</option>",
+    "      <option>large</option>",
+    "    </select>",
+    "  </label>",
+    "  <label>Notes: <input name=\"notes\"></label>",
+    "  <button type=\"submit\">Order</button>",
+    "</form>"
+  ];
+
+  var RECEIVE_CODE = [
+    "<?php",
+    "$submitted = $_SERVER[\"REQUEST_METHOD\"] === \"POST\";",
+    "$name  = $_POST[\"name\"]  ?? \"\";",
+    "$size  = $_POST[\"size\"]  ?? \"medium\";",
+    "$notes = $_POST[\"notes\"] ?? \"\";"
+  ];
+
+  var PLATE_CODE = [
+    "<h1>Order confirmed</h1>",
+    "<p>Name: <?= htmlspecialchars($name) ?></p>",
+    "<p>Size: <?= htmlspecialchars($size) ?></p>",
+    "<p>Notes: <?= htmlspecialchars($notes) ?: \"\u2014\" ?></p>"
+  ];
+
+  var FULL_CODE = [
+    "<?php",
+    "$submitted = $_SERVER[\"REQUEST_METHOD\"] === \"POST\";",
+    "$name  = $_POST[\"name\"]  ?? \"\";",
+    "$size  = $_POST[\"size\"]  ?? \"medium\";",
+    "$notes = $_POST[\"notes\"] ?? \"\";",
+    "?>",
+    "<!DOCTYPE html>",
+    "<body>",
+    "<?php if ($submitted): ?>",
+    "  <h1>Order confirmed</h1>",
+    "  <p>Name: <?= htmlspecialchars($name) ?></p>",
+    "  <p>Size: <?= htmlspecialchars($size) ?></p>",
+    "  <p>Notes: <?= htmlspecialchars($notes) ?: \"\u2014\" ?></p>",
+    "  <p><a href=\"order.php\">Place another</a></p>",
+    "<?php else: ?>",
+    "  <h1>Place your order</h1>",
+    "  <form method=\"post\">",
+    "    <label>Name: <input name=\"name\"></label>",
+    "    <label>Size:",
+    "      <select name=\"size\">",
+    "        <option>small</option>",
+    "        <option>medium</option>",
+    "        <option>large</option>",
+    "      </select>",
+    "    </label>",
+    "    <label>Notes: <input name=\"notes\"></label>",
+    "    <button type=\"submit\">Order</button>",
+    "  </form>",
+    "<?php endif; ?>",
+    "</body>"
+  ];
+
+  var STAGES = [
+    {
+      tag: "PLAN",
+      title: "What we're building",
+      render: function (h) {
+        h.appendChild(P("By the end of this workshop you'll have <b>order.php</b> \u2014 one real page where a customer places a coffee order and gets a tidy confirmation back. It's small, but it's the exact shape of nearly every PHP page you'll ever write."));
+        var aid = document.createElement("div"); aid.className = "aid"; aid.innerHTML = SVG_FLOW; h.appendChild(aid);
+        h.appendChild(sec("The four jobs"));
+        var ul = document.createElement("ul"); ul.className = "t";
+        [
+          "<b>The form</b> collects the order in the browser.",
+          "<b>order.php</b> receives it \u2014 PHP reads the request.",
+          "It <b>plates the order safely</b> and sends back a confirmation page.",
+          "One file does <b>both jobs</b>: shows the form, and handles the order."
+        ].forEach(function (t) { var li = document.createElement("li"); li.innerHTML = t; ul.appendChild(li); });
+        h.appendChild(ul);
+        h.appendChild(why("Why this is worth building", "A form going out, data coming back, shown safely \u2014 that's the heartbeat of the whole web. Get this one page and you've got the pattern behind logins, checkouts, comment boxes, your lunch tool, everything."));
+        markDone(0);
+      }
+    },
+    {
+      tag: "THE FORM",
+      title: "Stage 1 · The form",
+      render: function (h) {
+        h.appendChild(P("First the order pad \u2014 a plain HTML form. Two things matter most here: <code>method=\"post\"</code> and the <code>name</code> on every field."));
+        h.appendChild(codeBlock(FORM_CODE.join("\n"), "the form"));
+        h.appendChild(why("How the form talks to PHP", "When the customer hits Order, the browser bundles up every field and sends it. <b>method=\"post\"</b> means \u201csend it in the request body\u201d (the right choice for something you're submitting, not a link you'd bookmark). And each field's <b>name</b> becomes the key PHP reads it by: a field named \"size\" arrives as $_POST[\"size\"]. No name, no data \u2014 the field is invisible to PHP."));
+        mcq(h,
+          "The input is <code>&lt;input name=\"notes\"&gt;</code>. How will PHP read what the customer typed there?",
+          null,
+          ["$_POST[\"input\"]", "$_POST[\"notes\"]", "$_GET[\"notes\"]", "$notes automatically"],
+          1,
+          "The field's name is \"notes\", and the form is POST \u2014 so it lands in $_POST[\"notes\"]. The name attribute is the label PHP looks it up by."
+        );
+        markDone(1);
+      }
+    },
+    {
+      tag: "RECEIVE",
+      title: "Stage 2 · Receive the order",
+      render: function (h) {
+        h.appendChild(P("Now the kitchen side. At the very top of order.php, before any HTML, we read the order and work out whether the customer has actually submitted yet."));
+        h.appendChild(codeBlock(RECEIVE_CODE.join("\n"), "top of order.php"));
+        h.appendChild(why("Why the ?? and the REQUEST_METHOD check", "The <b>first</b> time someone opens order.php they haven't submitted anything \u2014 $_POST is empty. Reading $_POST[\"name\"] straight would throw a warning. <b>?? \"\"</b> says \u201cuse it if it's there, otherwise an empty string,\u201d so the page is calm on the first visit. And <b>$_SERVER[\"REQUEST_METHOD\"]</b> tells us how the page was opened: a plain visit is \"GET\", a submitted form is \"POST\". That one boolean, $submitted, is how the page will know which face to show."));
+        mcq(h,
+          "Someone opens order.php for the first time (a normal visit, nothing submitted). What is $name?",
+          RECEIVE_CODE.join("\n"),
+          ["An empty string \"\"", "A warning / error", "null", "\"medium\""],
+          0,
+          "On a first visit $_POST is empty, so $_POST[\"name\"] is missing and ?? falls back to \"\". That's exactly why the ?? is there \u2014 no warning, a safe default."
+        );
+        markDone(2);
+      }
+    },
+    {
+      tag: "PLATE SAFELY",
+      title: "Stage 3 · Plate it safely",
+      render: function (h) {
+        h.appendChild(P("Time to show the order back. This looks trivial \u2014 and it's where beginners get hacked. The order came from a <b>stranger</b>, so every value gets wrapped in <code>htmlspecialchars()</code> on its way onto the page."));
+        h.appendChild(codeBlock(PLATE_CODE.join("\n"), "the confirmation"));
+        h.appendChild(why("Why htmlspecialchars, every time", "Imagine a \u201ccustomer\u201d types <b>&lt;script&gt;steal()&lt;/script&gt;</b> as their name. If you echo it raw, that script runs in the browser of whoever views the page next \u2014 that's an XSS attack. htmlspecialchars turns the dangerous &lt; &gt; into harmless display characters, so it shows as text instead of running. Rule of the kitchen: anything from outside gets htmlspecialchars on the way out. Every time, no exceptions."));
+        mcq(h,
+          "Which line safely shows the customer's name on the page?",
+          null,
+          ["<?= $name ?>", "<?= htmlspecialchars($name) ?>", "<?= strtoupper($name) ?>", "<?= trim($name) ?>"],
+          1,
+          "htmlspecialchars() defuses HTML in the value, so a submitted <script> shows as text. strtoupper and trim only tidy the text \u2014 they don't make it safe."
+        );
+        markDone(3);
+      }
+    },
+    {
+      tag: "ONE PAGE",
+      title: "Stage 4 · One page, both jobs",
+      render: function (h) {
+        h.appendChild(P("Here's the classic PHP move: <b>the same file shows the form and handles the submission.</b> We use $submitted to pick which half to show."));
+        h.appendChild(P("This uses PHP's template style \u2014 <code>if (...):</code> \u2026 <code>else:</code> \u2026 <code>endif;</code> \u2014 which reads cleanly when it's wrapped around chunks of HTML."));
+        arrange(h,
+          "Tap these into the right order to build the page's logic:",
+          [
+            "<?php if ($submitted): ?>",
+            "  ... show the confirmation ...",
+            "<?php else: ?>",
+            "  ... show the order form ...",
+            "<?php endif; ?>"
+          ],
+          "That's the whole shape: if they submitted, plate the order; otherwise, hand them the form. One URL, two faces."
+        );
+        h.appendChild(why("Why one file instead of two", "The form posts back to the same address it came from. So order.php gets opened twice: once as a GET (show the form) and once as a POST (show the result). Keeping both in one file means the form and the code that reads it live together \u2014 easier to follow, and the norm in real PHP."));
+        markDone(4);
+      }
+    },
+    {
+      tag: "SHIP IT",
+      title: "Stage 5 · Ship it",
+      render: function (h) {
+        h.appendChild(P("Here's the finished <b>order.php</b> \u2014 every piece you just built, assembled."));
+        h.appendChild(codeBlock(FULL_CODE.join("\n"), "order.php"));
+        h.appendChild(sec("What you'll see"));
+        h.appendChild(outBlock("Place your order\n[ Name ] [ Size v ] [ Notes ]  ( Order )", "FIRST VISIT (GET)"));
+        h.appendChild(outBlock("Order confirmed\nName: Kaatje\nSize: large\nNotes: extra hot", "AFTER SUBMITTING (POST)"));
+        h.appendChild(why("Run it for real", "Drop order.php on your GitHub Pages or a local server (or paste it into the PHP runner), open it, and place an order. Then \u2014 the fun part \u2014 type <b>&lt;b&gt;hi&lt;/b&gt;</b> as your name and submit. Because of htmlspecialchars, it shows as literal text, not bold. That's your XSS defence working."));
+        h.appendChild(sec("What you now own"));
+        var ul = document.createElement("ul"); ul.className = "t";
+        [
+          "A form that <b>POSTs</b> data, keyed by each field's <code>name</code>.",
+          "Reading the order safely with <code>$_POST[...] ?? default</code>.",
+          "Detecting a submission with <code>$_SERVER[\"REQUEST_METHOD\"]</code>.",
+          "<b>htmlspecialchars</b> on every value \u2014 output hygiene as a reflex.",
+          "The one-file <b>form-and-handler</b> pattern behind most PHP pages."
+        ].forEach(function (t) { var li = document.createElement("li"); li.innerHTML = t; ul.appendChild(li); });
+        h.appendChild(ul);
+        markDone(5);
+      }
+    }
+  ];
+
+  var idx = 0, done = {};
+  var stage = document.getElementById("stage");
+  var stagesEl = document.getElementById("stages");
+  var prevBtn = document.getElementById("prev");
+  var nextBtn = document.getElementById("next");
+
+  function P(html){ var p=document.createElement("p"); p.className="t"; p.innerHTML=html; return p; }
+  function sec(text){ var h=document.createElement("h3"); h.className="sec"; h.textContent=text; return h; }
+  function codeBlock(text, cap){ var pre=document.createElement("pre"); var c=document.createElement("code"); c.className="block"; c.textContent=text; pre.appendChild(c); var wrap=document.createDocumentFragment(); wrap.appendChild(pre); if(cap){ var d=document.createElement("div"); d.className="cap"; d.textContent=cap; wrap.appendChild(d); } var span=document.createElement("div"); span.appendChild(wrap); return span; }
+  function outBlock(text, label){ var d=document.createElement("div"); d.className="out"; var l=document.createElement("span"); l.className="l"; l.textContent=label||"RESULT"; var s=document.createElement("samp"); s.textContent=text; d.appendChild(l); d.appendChild(s); return d; }
+  function why(head, body){ var d=document.createElement("div"); d.className="why"; var b=document.createElement("b"); b.textContent=head; var s=document.createElement("span"); s.innerHTML=body; d.appendChild(b); d.appendChild(s); return d; }
+  function verdictEl(){ return document.createElement("div"); }
+  function showV(v, ok, html){ v.className="verdict show "+(ok?"ok":"no"); v.innerHTML="<b>"+(ok?"SERVICE":"NOT YET")+"</b>"+html; }
+
+  function mcq(host, qHtml, code, options, answer, explain){
+    var box=document.createElement("div"); box.className="do";
+    var hh=document.createElement("div"); hh.className="do-h"; hh.textContent="YOUR TURN"; box.appendChild(hh);
+    var q=document.createElement("div"); q.className="q"; q.innerHTML=qHtml; box.appendChild(q);
+    if(code){ var pre=document.createElement("pre"); var c=document.createElement("code"); c.className="block"; c.textContent=code; pre.appendChild(c); box.appendChild(pre); }
+    var opts=document.createElement("div"); opts.className="opts";
+    var v=verdictEl();
+    options.forEach(function(t,i){
+      var b=document.createElement("button"); b.type="button"; b.className="opt"; b.textContent=t;
+      b.addEventListener("click", function(){
+        [].forEach.call(opts.querySelectorAll(".opt"), function(x){ x.disabled=true; });
+        if(i===answer){ b.classList.add("right"); showV(v,true,explain); }
+        else { b.classList.add("wrong"); opts.querySelectorAll(".opt")[answer].classList.add("right"); showV(v,false,explain); }
+      });
+      opts.appendChild(b);
+    });
+    box.appendChild(opts); box.appendChild(v); host.appendChild(box);
+  }
+
+  function arrange(host, intro, correct, success){
+    var box=document.createElement("div"); box.className="do";
+    var hh=document.createElement("div"); hh.className="do-h"; hh.textContent="YOUR TURN"; box.appendChild(hh);
+    var q=document.createElement("div"); q.className="q"; q.innerHTML=intro; box.appendChild(q);
+    var tl=document.createElement("div"); tl.className="lbl2"; tl.textContent="YOUR PAGE"; box.appendChild(tl);
+    var target=document.createElement("div"); target.className="target"; box.appendChild(target);
+    var pl=document.createElement("div"); pl.className="lbl2"; pl.textContent="LINES"; box.appendChild(pl);
+    var pool=document.createElement("div"); pool.className="pool"; box.appendChild(pool);
+    var order=shuffle(correct.slice());
+    while(order.join("\u0001")===correct.join("\u0001")) order=shuffle(correct.slice());
+    function chip(text, inT){ var c=document.createElement("button"); c.type="button"; c.className="chip"; c.textContent=text; c.addEventListener("click", function(){ c.remove(); if(inT) pool.appendChild(chip(text,false)); else target.appendChild(chip(text,true)); }); return c; }
+    order.forEach(function(t){ pool.appendChild(chip(t,false)); });
+    var v=verdictEl();
+    var row=document.createElement("div"); row.className="row";
+    var check=document.createElement("button"); check.type="button"; check.className="btn"; check.textContent="Check the order";
+    check.addEventListener("click", function(){
+      var got=[].map.call(target.querySelectorAll(".chip"), function(c){ return c.textContent; });
+      if(got.join("\u0001")===correct.join("\u0001")) showV(v,true,success);
+      else showV(v,false,"Not yet \u2014 think about the flow: test $submitted first, show the confirmation when it's true, the form when it's not, and close with endif.");
+    });
+    var reset=document.createElement("button"); reset.type="button"; reset.className="btn ghost"; reset.textContent="reset";
+    reset.addEventListener("click", function(){ render(idx); });
+    row.appendChild(check); row.appendChild(reset);
+    box.appendChild(row); box.appendChild(v); host.appendChild(box);
+  }
+
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function markDone(i){ done[i]=true; paintStages(); }
+
+  function paintStages(){
+    stagesEl.innerHTML="";
+    STAGES.forEach(function(s,i){
+      var b=document.createElement("button"); b.type="button";
+      b.className="sbtn"+(i===idx?" on":"")+(done[i]?" done":"");
+      b.innerHTML='<span class="n">'+i+(done[i]?" \u2713":"")+'</span>'+s.tag;
+      b.addEventListener("click", function(){ render(i); });
+      stagesEl.appendChild(b);
+    });
+  }
+
+  function render(i){
+    idx=i; stage.innerHTML="";
+    var s=STAGES[i];
+    var k=document.createElement("div"); k.className="kick"; k.textContent="STAGE "+i+" · "+s.tag;
+    var t=document.createElement("div"); t.className="title"; t.textContent=s.title;
+    stage.appendChild(k); stage.appendChild(t);
+    s.render(stage);
+    prevBtn.style.visibility=i===0?"hidden":"visible";
+    nextBtn.style.visibility=i===STAGES.length-1?"hidden":"visible";
+    paintStages(); window.scrollTo(0,0);
+  }
+
+  prevBtn.addEventListener("click", function(){ if(idx>0) render(idx-1); });
+  nextBtn.addEventListener("click", function(){ if(idx<STAGES.length-1) render(idx+1); });
+  render(0);
+})();
+</script>
+</body>
+</html>

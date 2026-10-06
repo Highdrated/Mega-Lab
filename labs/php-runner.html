@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASSLE · service</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4efe4; --panel: #fbf8f1; --panel2: #efe7d6; --text: #2b2119;
+    --dim: #7c6f5c; --line: #e2d8c4; --brass: #9c6b1f; --brass-dim: #c9a45e;
+    --herb: #4f7a33; --chili: #b23b2e; --ember: #b5561d;
+    --mono: "JetBrains Mono", "Consolas", ui-monospace, monospace;
+    --disp: "Fraunces", Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: linear-gradient(#f7f2e8,#f1ebdf);
+    background-attachment: fixed; color: var(--text);
+    font-family: var(--mono); min-height: 100vh; padding: 24px 18px 60px;
+  }
+  .wrap { max-width: 1040px; margin: 0 auto; }
+  .head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 2px; }
+  .mark { font-family: var(--disp); font-weight: 900; font-size: 26px; letter-spacing: 2px; color: var(--brass); }
+  .sub { font-family: var(--disp); font-size: 15px; font-style: italic; color: var(--dim); }
+  .tag { font-size: 10px; letter-spacing: 3px; color: var(--ember); margin: 12px 0 16px; }
+
+  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  @media (max-width: 860px) { .grid { grid-template-columns: 1fr; } }
+
+  .panel { border: 1px solid var(--line); border-radius: 12px; background: var(--panel); overflow: hidden; }
+  .panel-head { display: flex; align-items: center; gap: 10px; padding: 9px 14px; background: var(--panel2); border-bottom: 1px solid var(--line); }
+  .panel-head .lbl { font-size: 11px; letter-spacing: 1px; color: var(--dim); flex: 1; }
+  .panel-head .role { font-size: 10px; letter-spacing: 1px; color: var(--brass); }
+
+  textarea {
+    width: 100%; min-height: 200px; resize: vertical; border: none; outline: none;
+    background: transparent; color: #3a2f22; font-family: var(--mono); font-size: 14.5px;
+    line-height: 1.7; padding: 15px; tab-size: 4;
+  }
+
+  .req { padding: 13px 14px; }
+  .method { display: flex; gap: 8px; margin-bottom: 12px; }
+  .mbtn { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--dim); background: var(--panel2); border: 1px solid var(--line); padding: 7px 14px; border-radius: 7px; cursor: pointer; }
+  .mbtn.on { color: var(--brass); border-color: var(--brass-dim); background: rgba(203,154,81,0.08); }
+  .fields { display: flex; flex-direction: column; gap: 8px; }
+  .field { display: flex; gap: 8px; align-items: center; }
+  .field input {
+    flex: 1; min-width: 0; font-family: var(--mono); font-size: 13px; color: var(--text);
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 7px; padding: 9px 11px; outline: none;
+  }
+  .field input:focus { border-color: var(--brass-dim); }
+  .field .eq { color: var(--dim); }
+  .field .rm { color: var(--dim); background: none; border: 1px solid var(--line); border-radius: 6px; width: 30px; height: 32px; cursor: pointer; flex: none; }
+  .field .rm:hover { color: var(--chili); border-color: var(--chili); }
+  .addf { margin-top: 10px; font-family: var(--mono); font-size: 12px; color: var(--dim); background: none; border: 1px dashed var(--line); border-radius: 7px; padding: 8px 12px; cursor: pointer; width: 100%; }
+  .addf:hover { color: var(--brass); border-color: var(--brass-dim); }
+
+  .bar { display: flex; align-items: center; gap: 14px; margin: 16px 0; }
+  .fire { font-family: var(--mono); font-weight: 600; font-size: 13px; letter-spacing: 1px; color: var(--bg); background: var(--brass); border: 1px solid var(--brass); padding: 12px 22px; border-radius: 9px; cursor: pointer; }
+  .fire:hover:not(:disabled) { filter: brightness(1.08); }
+  .fire:disabled { opacity: .5; cursor: not-allowed; }
+  .status { font-size: 12px; letter-spacing: .5px; margin-left: auto; }
+  .status.wait { color: var(--ember); } .status.ok { color: var(--herb); } .status.err { color: var(--chili); }
+
+  .tabs { display: flex; gap: 6px; }
+  .tb { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--dim); background: none; border: 1px solid transparent; padding: 5px 10px; border-radius: 6px; cursor: pointer; }
+  .tb.on { color: var(--brass); border-color: var(--brass-dim); background: rgba(203,154,81,0.08); }
+
+  #preview { width: 100%; min-height: 140px; border: none; background: #fff; display: block; }
+  .raw { padding: 15px; min-height: 140px; white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.7; color: #3a2f22; }
+  .raw:empty::before { content: "Send a request to plate something up."; color: var(--dim); font-style: italic; }
+  .hidden { display: none; }
+  .errbox { border-top: 1px dashed var(--line); padding: 11px 15px; color: var(--chili); font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+  .errbox:empty { display: none; }
+
+  details { margin-top: 18px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); overflow: hidden; }
+  summary { cursor: pointer; padding: 12px 16px; font-family: var(--disp); font-weight: 600; color: var(--brass); font-size: 15px; list-style: none; }
+  summary::-webkit-details-marker { display: none; }
+  summary::before { content: "▸ "; color: var(--ember); }
+  details[open] summary::before { content: "▾ "; }
+  .why { padding: 4px 18px 18px; font-size: 13.5px; line-height: 1.75; color: var(--text); }
+  .why p { margin: 0 0 12px; max-width: 70ch; }
+  .why b { color: var(--brass); }
+  .why code { font-family: var(--mono); font-size: 0.9em; background: rgba(203,154,81,0.1); color: #7a5416; padding: 1px 5px; border-radius: 4px; }
+
+  .note { margin-top: 16px; font-size: 12px; color: var(--dim); line-height: 1.7; border-left: 3px solid var(--ember); padding: 10px 14px; background: rgba(217,119,47,0.06); border-radius: 0 8px 8px 0; }
+  .note b { color: var(--ember); }
+  .samples { display: flex; flex-wrap: wrap; gap: 8px; margin: 4px 0 14px; }
+  .chip { font-family: var(--mono); font-size: 12px; color: var(--dim); background: var(--panel); border: 1px solid var(--line); padding: 7px 12px; border-radius: 999px; cursor: pointer; }
+  .chip:hover { color: var(--brass); border-color: var(--brass-dim); }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <span class="mark">PASSLE</span>
+      <span class="sub">service — a real request becomes a real page</span>
+    </div>
+    <div class="tag">ORDER IN · COOK · PLATE IT OUT</div>
+
+    <div class="samples" id="samples"></div>
+
+    <div class="grid">
+      <div class="panel">
+        <div class="panel-head"><span class="lbl">order.php</span><span class="role">THE KITCHEN</span></div>
+        <textarea id="editor" spellcheck="false" autocapitalize="off" autocomplete="off"><?php
+$name = $_POST["name"] ?? "guest";
+$size = $_POST["size"] ?? "medium";
+?>
+<h1>Order up</h1>
+<p>Table for: <?= htmlspecialchars($name) ?></p>
+<p>Coffee: <?= htmlspecialchars($size) ?></p></textarea>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><span class="lbl">the request</span><span class="role">THE CUSTOMER</span></div>
+        <div class="req">
+          <div class="method" id="method">
+            <button class="mbtn" type="button" data-m="GET">GET</button>
+            <button class="mbtn on" type="button" data-m="POST">POST</button>
+          </div>
+          <div class="fields" id="fields"></div>
+          <button class="addf" id="addf" type="button">+ add field</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="bar">
+      <button class="fire" id="run" disabled>▶ Send request</button>
+      <span class="status wait" id="status">warming up the kitchen…</span>
+    </div>
+
+    <div class="panel">
+      <div class="panel-head">
+        <span class="lbl">the response</span>
+        <div class="tabs" id="tabs">
+          <button class="tb on" type="button" data-v="page">Page</button>
+          <button class="tb" type="button" data-v="raw">Raw HTML</button>
+        </div>
+      </div>
+      <iframe id="preview" sandbox="allow-scripts" title="Rendered PHP output"></iframe>
+      <div class="raw hidden" id="raw"></div>
+      <div class="errbox" id="err"></div>
+    </div>
+
+    <details>
+      <summary>Why it works this way</summary>
+      <div class="why">
+        <p><b>Why the two panels?</b> A PHP page always has two sides: a <b>request</b> coming in (the customer's order) and a <b>response</b> going out (the plated dish). The left panel is your kitchen — the PHP. The right panel is the customer placing an order. In real life a browser and web server sit between them; here this tool plays both.</p>
+        <p><b>How the order reaches your code.</b> When you hit Send, the tool fills PHP's built-in request arrays before your script runs: <code>$_GET</code> for fields sent in the URL, <code>$_POST</code> for fields sent by a form, and <code>$_SERVER["REQUEST_METHOD"]</code> for which kind it was. That is <em>exactly</em> what a real web server does the instant a request arrives — it hands your script these ready-made arrays. Your code just reads the order off them.</p>
+        <p><b>Why the response looks like a real web page.</b> Because it is one. Everything your PHP <code>echo</code>es — including the HTML tags — is plain text. PHP hands that text back, and a browser renders it into a page. The <b>Page</b> tab shows the rendered result; the <b>Raw HTML</b> tab shows the exact text PHP produced, so you can see there's no magic — just text becoming a page.</p>
+        <p><b>Why <code>htmlspecialchars()</code> is in the sample.</b> The name comes from the customer — a stranger. Wrapping it on the way out means if someone submits <code>&lt;script&gt;</code> as their name, it shows as harmless text instead of running. Output hygiene, every time, as a reflex.</p>
+      </div>
+    </details>
+
+    <p class="note"><b>Heads up:</b> open this from a web address (your GitHub Pages, or a local server) — not by double-clicking; <code>file://</code> blocks the engine. First send downloads the PHP engine once, then it's instant. If it can't load, the status turns red — open the console (F12), copy the error, and send it to me.</p>
+  </div>
+
+<script type="module">
+  const editor = document.getElementById("editor");
+  const runBtn = document.getElementById("run");
+  const statusEl = document.getElementById("status");
+  const fieldsEl = document.getElementById("fields");
+  const methodEl = document.getElementById("method");
+  const preview = document.getElementById("preview");
+  const rawEl = document.getElementById("raw");
+  const errEl = document.getElementById("err");
+  const tabsEl = document.getElementById("tabs");
+
+  preview.srcdoc = "<body style=\"margin:0;background:#f4efe4;color:#7c6f5c;font-family:monospace;font-size:13px;padding:14px\">the plate arrives here once you send a request</body>";
+
+  let method = "POST";
+  let php = null, ready = false, outBuf = "", errBuf = "";
+
+  const SAMPLES = {
+    "Order form": [
+      '<?php',
+      '$name = $_POST["name"] ?? "guest";',
+      '$size = $_POST["size"] ?? "medium";',
+      '?>',
+      '<h1>Order up</h1>',
+      '<p>Table for: <?= htmlspecialchars($name) ?></p>',
+      '<p>Coffee: <?= htmlspecialchars($size) ?></p>'
+    ].join("\n"),
+    "GET vs POST": [
+      '<?php',
+      '$method = $_SERVER["REQUEST_METHOD"];',
+      '?>',
+      '<h2>This was a <?= $method ?> request</h2>',
+      '<p>Query (GET): <?= htmlspecialchars($_GET["q"] ?? "-") ?></p>',
+      '<p>Form (POST): <?= htmlspecialchars($_POST["q"] ?? "-") ?></p>'
+    ].join("\n"),
+    "The XSS lesson": [
+      '<?php $name = $_POST["name"] ?? ""; ?>',
+      '<p>Unsafe: <?= $name ?></p>',
+      '<p>Safe: <?= htmlspecialchars($name) ?></p>',
+      '<!-- try sending name = <b>hi</b> and watch the difference -->'
+    ].join("\n"),
+    "Build a list": [
+      '<?php',
+      '$items = ["soup" => 6, "bread" => 3, "salad" => 5];',
+      '?>',
+      '<h1>Menu</h1>',
+      '<ul>',
+      '<?php foreach ($items as $name => $price): ?>',
+      '  <li><?= htmlspecialchars($name) ?> — &euro;<?= $price ?></li>',
+      '<?php endforeach; ?>',
+      '</ul>'
+    ].join("\n")
+  };
+  const samplesEl = document.getElementById("samples");
+  Object.keys(SAMPLES).forEach(function (name) {
+    const c = document.createElement("button");
+    c.className = "chip"; c.type = "button"; c.textContent = name;
+    c.addEventListener("click", function () { editor.value = SAMPLES[name]; editor.focus(); });
+    samplesEl.appendChild(c);
+  });
+
+  const defaults = [["name", "Kaatje"], ["size", "large"]];
+  function addField(k, v) {
+    const row = document.createElement("div");
+    row.className = "field";
+    const ki = document.createElement("input"); ki.placeholder = "key"; ki.value = k || ""; ki.className = "k";
+    const eq = document.createElement("span"); eq.className = "eq"; eq.textContent = "=";
+    const vi = document.createElement("input"); vi.placeholder = "value"; vi.value = v || ""; vi.className = "v";
+    const rm = document.createElement("button"); rm.className = "rm"; rm.type = "button"; rm.textContent = "×";
+    rm.addEventListener("click", function () { row.remove(); });
+    row.appendChild(ki); row.appendChild(eq); row.appendChild(vi); row.appendChild(rm);
+    fieldsEl.appendChild(row);
+  }
+  defaults.forEach(function (p) { addField(p[0], p[1]); });
+  document.getElementById("addf").addEventListener("click", function () { addField("", ""); });
+
+  methodEl.addEventListener("click", function (e) {
+    const b = e.target.closest(".mbtn");
+    if (!b) return;
+    method = b.getAttribute("data-m");
+    methodEl.querySelectorAll(".mbtn").forEach(function (x) { x.classList.toggle("on", x === b); });
+  });
+
+  tabsEl.addEventListener("click", function (e) {
+    const b = e.target.closest(".tb");
+    if (!b) return;
+    const v = b.getAttribute("data-v");
+    tabsEl.querySelectorAll(".tb").forEach(function (x) { x.classList.toggle("on", x === b); });
+    preview.classList.toggle("hidden", v !== "page");
+    rawEl.classList.toggle("hidden", v !== "raw");
+  });
+
+  function readFields() {
+    const obj = {};
+    fieldsEl.querySelectorAll(".field").forEach(function (row) {
+      const k = row.querySelector(".k").value.trim();
+      const v = row.querySelector(".v").value;
+      if (k) obj[k] = v;
+    });
+    return obj;
+  }
+
+  function phpString(s) { return s.replace(/\\/g, "\\\\").replace(/'/g, "\\'"); }
+
+  function preamble() {
+    const data = readFields();
+    const json = phpString(JSON.stringify(data));
+    const target = method === "GET" ? "$_GET" : "$_POST";
+    return "<?php\n$__req = json_decode('" + json + "', true) ?: [];\n" +
+      target + " = $__req;\n$_REQUEST = $__req;\n" +
+      "$_SERVER['REQUEST_METHOD'] = '" + method + "';\n?>\n";
+  }
+
+  function setStatus(t, cls) { statusEl.textContent = t; statusEl.className = "status " + (cls || ""); }
+  function chunk(d) { return Array.isArray(d) ? d.join("") : (d == null ? "" : String(d)); }
+  function enable() { if (!ready) { ready = true; setStatus("kitchen ready", "ok"); runBtn.disabled = false; } }
+
+  async function boot() {
+    try {
+      const mod = await import("https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs");
+      const PhpWeb = mod.PhpWeb;
+      php = new PhpWeb();
+      php.addEventListener("output", function (e) { outBuf += chunk(e.detail); });
+      php.addEventListener("error", function (e) { errBuf += chunk(e.detail); });
+      php.addEventListener("ready", enable);
+      if (php.binary && typeof php.binary.then === "function") { php.binary.then(enable); }
+      setTimeout(enable, 7000);
+    } catch (err) {
+      setStatus("couldn't load the PHP engine — open over http(s), not file://", "err");
+      errEl.textContent = String(err && err.message ? err.message : err);
+    }
+  }
+
+  async function send() {
+    if (!ready || !php) return;
+    outBuf = ""; errBuf = ""; errEl.textContent = "";
+    setStatus("sending…", "wait");
+    runBtn.disabled = true;
+    try {
+      await php.run(preamble() + editor.value);
+      preview.srcdoc = outBuf;
+      rawEl.textContent = outBuf;
+      errEl.textContent = errBuf;
+      setStatus("served", "ok");
+    } catch (err) {
+      errEl.textContent = (errBuf ? errBuf + "\n" : "") + chunk(err && err.message ? err.message : err);
+      setStatus("sent back — read the error", "err");
+    }
+    runBtn.disabled = false;
+  }
+
+  runBtn.addEventListener("click", send);
+  boot();
+</script>
+</body>
+</html>

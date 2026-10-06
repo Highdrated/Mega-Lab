@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASSLE · workshop · the guestbook</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#f4efe4; --panel:#fbf8f1; --panel2:#efe7d6; --text:#2b2119; --dim:#7c6f5c;
+    --line:#e2d8c4; --brass:#9c6b1f; --brass-soft:#c9a45e; --herb:#4f7a33; --chili:#b23b2e; --ember:#b5561d;
+    --code-bg:#f1ead9; --code-text:#3a2f22;
+    --mono:"JetBrains Mono","Consolas",ui-monospace,monospace; --serif:"Spectral",Georgia,serif; --disp:"Fraunces",Georgia,serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:linear-gradient(#f7f2e8,#f1ebdf) fixed; color:var(--text); font-family:var(--serif); font-size:18px; line-height:1.62; min-height:100vh; padding:26px 18px 90px; }
+  .wrap { max-width:760px; margin:0 auto; }
+  .head { display:flex; align-items:baseline; gap:13px; flex-wrap:wrap; }
+  .mark { font-family:var(--disp); font-weight:900; font-size:23px; letter-spacing:1px; color:var(--brass); }
+  .sub { font-family:var(--disp); font-style:italic; font-size:15px; color:var(--dim); }
+  .stages { display:flex; gap:5px; margin:22px 0 6px; flex-wrap:wrap; }
+  .sbtn { flex:1; min-width:84px; font-family:var(--mono); font-size:10.5px; letter-spacing:.5px; color:var(--dim); background:var(--panel); border:1px solid var(--line); border-bottom:2px solid var(--line); padding:8px 5px; border-radius:8px; cursor:pointer; text-align:center; }
+  .sbtn .n { display:block; font-size:9px; color:var(--brass-soft); margin-bottom:2px; }
+  .sbtn.on { color:var(--brass); border-color:var(--brass-soft); border-bottom-color:var(--brass); background:rgba(156,107,31,0.09); }
+  .sbtn.done .n { color:var(--herb); }
+  .kick { font-family:var(--mono); font-size:11px; letter-spacing:3px; color:var(--ember); margin:24px 0 8px; }
+  .title { font-family:var(--disp); font-weight:600; font-size:28px; color:var(--text); margin-bottom:14px; }
+  p.t { margin-bottom:15px; max-width:64ch; }
+  p.t b { color:var(--brass); font-weight:500; }
+  p.t code, li code { font-family:var(--mono); font-size:0.86em; background:rgba(156,107,31,0.1); color:#7a5416; padding:1px 5px; border-radius:4px; }
+  h3.sec { font-family:var(--disp); font-weight:600; font-size:20px; color:var(--brass); margin:26px 0 10px; }
+  ul.t { margin:0 0 15px 22px; } ul.t li { margin-bottom:7px; max-width:62ch; }
+  pre { background:var(--code-bg); border:1px solid var(--line); border-radius:10px; padding:15px; overflow-x:auto; margin:14px 0; }
+  code.block { font-family:var(--mono); font-size:14px; line-height:1.75; color:var(--code-text); white-space:pre; }
+  .cap { font-family:var(--mono); font-size:10px; letter-spacing:1px; color:var(--dim); margin:-6px 0 14px 2px; }
+  .out { background:#fffdf8; border:1px solid var(--line); border-radius:10px; padding:13px 15px; margin:14px 0; }
+  .out .l { font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--dim); display:block; margin-bottom:6px; }
+  .out samp { font-family:var(--mono); font-size:13.5px; color:var(--herb); white-space:pre-wrap; }
+  .why { border-left:3px solid var(--ember); background:rgba(181,86,29,0.07); border-radius:0 8px 8px 0; padding:11px 15px; margin:16px 0; font-size:15.5px; max-width:64ch; }
+  .why b { color:var(--ember); font-family:var(--mono); font-size:10px; letter-spacing:2px; display:block; margin-bottom:4px; }
+  .do { border:1px solid var(--brass-soft); border-radius:10px; background:#fffdf8; padding:15px; margin:22px 0; }
+  .do-h { font-family:var(--mono); font-size:11px; letter-spacing:2px; color:var(--ember); margin-bottom:10px; }
+  .q { margin-bottom:12px; font-size:16px; }
+  .opts { display:flex; flex-direction:column; gap:8px; }
+  .opt { text-align:left; font-family:var(--mono); font-size:13.5px; color:var(--text); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:11px 13px; cursor:pointer; white-space:pre-wrap; }
+  .opt:hover:not(:disabled) { border-color:var(--brass-soft); }
+  .opt.right { border-color:var(--herb); background:rgba(79,122,51,0.12); }
+  .opt.wrong { border-color:var(--chili); background:rgba(178,59,46,0.1); }
+  .pool,.target { display:flex; flex-direction:column; gap:7px; margin:10px 0; }
+  .target { min-height:50px; border:1px dashed var(--line); border-radius:9px; padding:9px; }
+  .lbl2 { font-family:var(--mono); font-size:10px; letter-spacing:2px; color:var(--dim); margin-top:6px; }
+  .chip { text-align:left; font-family:var(--mono); font-size:13.5px; color:var(--code-text); background:var(--panel2); border:1px solid var(--line); border-radius:8px; padding:10px 12px; cursor:pointer; white-space:pre; overflow-x:auto; }
+  .chip:hover { border-color:var(--brass-soft); }
+  .verdict { margin-top:13px; padding:11px 13px; border-radius:8px; font-size:15px; display:none; }
+  .verdict.show { display:block; }
+  .verdict.ok { background:rgba(79,122,51,0.1); border:1px solid rgba(79,122,51,0.4); }
+  .verdict.no { background:rgba(178,59,46,0.09); border:1px solid rgba(178,59,46,0.4); }
+  .verdict b { font-family:var(--mono); font-size:11px; letter-spacing:1px; display:block; margin-bottom:4px; }
+  .verdict.ok b { color:var(--herb); } .verdict.no b { color:var(--chili); }
+  .aid svg { width:100%; max-width:600px; height:auto; display:block; margin:8px 0 4px; }
+  .row { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin-top:14px; }
+  .btn { font-family:var(--mono); font-weight:600; font-size:12px; letter-spacing:1px; color:#fffdf8; background:var(--brass); border:1px solid var(--brass); padding:11px 18px; border-radius:8px; cursor:pointer; }
+  .btn:hover { filter:brightness(1.06); }
+  .btn.ghost { background:none; color:var(--dim); border-color:var(--line); font-weight:400; }
+  .nav { display:flex; justify-content:space-between; margin-top:34px; padding-top:18px; border-top:1px solid var(--line); }
+  a { color:var(--brass); }
+  @media (max-width:520px){ body{font-size:17px;} }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="head">
+      <span class="mark">WORKSHOP</span>
+      <span class="sub">The Guestbook — a page that remembers everyone who signs it</span>
+    </div>
+    <div class="stages" id="stages"></div>
+    <div class="stage" id="stage"></div>
+    <div class="nav">
+      <button class="btn ghost" id="prev" type="button">← back</button>
+      <button class="btn" id="next" type="button">next stage →</button>
+    </div>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SVG_FLOW =
+    '<svg viewBox="0 0 600 132" role="img" aria-label="A visitor signs the form, the message is saved to a JSON file, and the whole list is read back and shown.">' +
+    '<defs><marker id="a" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9c6b1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
+    '<rect x="12" y="40" width="150" height="54" rx="9" fill="#fbf8f1" stroke="#c9a45e"/>' +
+    '<text x="87" y="63" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">Sign the form</text>' +
+    '<text x="87" y="82" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">name + message</text>' +
+    '<rect x="225" y="40" width="150" height="54" rx="9" fill="#f1ead9" stroke="#9c6b1f"/>' +
+    '<text x="300" y="63" text-anchor="middle" fill="#9c6b1f" font-family="Spectral,serif" font-size="15">guestbook.json</text>' +
+    '<text x="300" y="82" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">saved to a file</text>' +
+    '<rect x="438" y="40" width="150" height="54" rx="9" fill="#fbf8f1" stroke="#c9a45e"/>' +
+    '<text x="513" y="63" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">The list</text>' +
+    '<text x="513" y="82" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">everyone\'s messages</text>' +
+    '<line x1="166" y1="67" x2="220" y2="67" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#a)"/>' +
+    '<text x="193" y="59" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">save</text>' +
+    '<line x1="379" y1="67" x2="433" y2="67" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#a)"/>' +
+    '<text x="406" y="59" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">read</text>' +
+    '</svg>';
+
+  var FORM_CODE = [
+    "<form method=\"post\">",
+    "  <input name=\"name\" placeholder=\"your name\">",
+    "  <input name=\"message\" placeholder=\"say hi\">",
+    "  <button type=\"submit\">Sign</button>",
+    "</form>"
+  ];
+  var LOAD_CODE = [
+    "<?php",
+    "$file = \"guestbook.json\";",
+    "$entries = [];",
+    "if (file_exists($file)) {",
+    "    $entries = json_decode(file_get_contents($file), true) ?? [];",
+    "}"
+  ];
+  var SAVE_CODE = [
+    "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+    "    $entries[] = [",
+    "        \"name\"    => $_POST[\"name\"]    ?? \"anon\",",
+    "        \"message\" => $_POST[\"message\"] ?? \"\",",
+    "    ];",
+    "    file_put_contents($file, json_encode($entries));",
+    "}"
+  ];
+  var LIST_CODE = [
+    "<?php foreach ($entries as $e): ?>",
+    "  <p><b><?= htmlspecialchars($e[\"name\"]) ?></b>:",
+    "     <?= htmlspecialchars($e[\"message\"]) ?></p>",
+    "<?php endforeach; ?>"
+  ];
+  var FULL_CODE = [
+    "<?php",
+    "$file = \"guestbook.json\";",
+    "$entries = [];",
+    "if (file_exists($file)) {",
+    "    $entries = json_decode(file_get_contents($file), true) ?? [];",
+    "}",
+    "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+    "    $entries[] = [",
+    "        \"name\"    => $_POST[\"name\"]    ?? \"anon\",",
+    "        \"message\" => $_POST[\"message\"] ?? \"\",",
+    "    ];",
+    "    file_put_contents($file, json_encode($entries));",
+    "}",
+    "?>",
+    "<!DOCTYPE html>",
+    "<body>",
+    "<h1>Guestbook</h1>",
+    "<form method=\"post\">",
+    "  <input name=\"name\" placeholder=\"your name\">",
+    "  <input name=\"message\" placeholder=\"say hi\">",
+    "  <button type=\"submit\">Sign</button>",
+    "</form>",
+    "<?php foreach ($entries as $e): ?>",
+    "  <p><b><?= htmlspecialchars($e[\"name\"]) ?></b>:",
+    "     <?= htmlspecialchars($e[\"message\"]) ?></p>",
+    "<?php endforeach; ?>",
+    "</body>"
+  ];
+
+  var STAGES = [
+    {
+      tag:"PLAN", title:"What we're building",
+      render:function(h){
+        h.appendChild(P("A <b>guestbook</b>: visitors leave a short message, and every message ever left shows up on the page. Unlike the order form, this one has to <b>remember</b> \u2014 so we bring in a file to store the messages between visits."));
+        var aid=document.createElement("div"); aid.className="aid"; aid.innerHTML=SVG_FLOW; h.appendChild(aid);
+        h.appendChild(why("What's new here","The order form forgot everything the moment it finished. A guestbook has to keep the messages. We'll store them in a small JSON file \u2014 read it in when the page loads, add to it when someone signs, write it back out. That read-change-write loop is how a huge amount of software works."));
+        markDone(0);
+      }
+    },
+    {
+      tag:"THE FORM", title:"Stage 1 · The form",
+      render:function(h){
+        h.appendChild(P("You know this shape from the order form: a POST form, one <code>name</code> per field. Two fields here \u2014 a name and a message."));
+        h.appendChild(codeBlock(FORM_CODE.join("\n"), "the sign-in form"));
+        h.appendChild(why("Nothing new, on purpose","Reusing what you already built is the point \u2014 the form is the same idea, so your attention is free for the new part: remembering. name and message will arrive as $_POST[\"name\"] and $_POST[\"message\"]."));
+        markDone(1);
+      }
+    },
+    {
+      tag:"LOAD", title:"Stage 2 · Load what's there",
+      render:function(h){
+        h.appendChild(P("When the page opens, first read any messages already saved. We keep them as <b>JSON</b> in a file, and turn that text back into a PHP array."));
+        h.appendChild(codeBlock(LOAD_CODE.join("\n"), "top of guestbook.php"));
+        h.appendChild(why("How the read works, line by line","<code>file_exists</code> checks the file is there (the very first visit ever, it isn't \u2014 so $entries stays the empty array we set up). <code>file_get_contents</code> reads the whole file into a string. <code>json_decode(..., true)</code> turns that JSON text into a PHP array \u2014 the true asks for an associative array. And <code>?? []</code> is a safety net: if the file is empty or unreadable, decode gives null, so we fall back to an empty array and the page still works."));
+        mcq(h,
+          "The file exists but is empty, so <code>json_decode</code> returns <code>null</code>. What does <code>?? []</code> do?",
+          ["Crashes the page","Gives $entries an empty array, so the loop still runs","Deletes the file","Turns null into the text \"null\""],
+          1,
+          "?? swaps a null (or missing) value for the fallback on its right \u2014 here an empty array. So $entries is always a real array to loop over, empty or not. That one operator prevents a whole class of \u201con null\u201d errors."
+        );
+        markDone(2);
+      }
+    },
+    {
+      tag:"SAVE", title:"Stage 3 · Save a new message",
+      render:function(h){
+        h.appendChild(P("If the page was opened by <b>submitting the form</b> (a POST), add the new message to the array and write the whole lot back to the file."));
+        h.appendChild(codeBlock(SAVE_CODE.join("\n"), "still at the top"));
+        h.appendChild(why("The read-change-write loop","We already loaded $entries. Here we <code>$entries[] = [...]</code> to append the new one (an associative array with a name and message), then <code>json_encode</code> turns the whole array back into JSON text and <code>file_put_contents</code> writes it over the file. Load \u2192 change \u2192 save. Next visitor reads the updated file and sees your message."));
+        arrange(h,
+          "Put the save block in order:",
+          [
+            "if ($_SERVER[\"REQUEST_METHOD\"] === \"POST\") {",
+            "    $entries[] = [ \"name\" => ..., \"message\" => ... ];",
+            "    file_put_contents($file, json_encode($entries));",
+            "}"
+          ],
+          "That's it: only on a POST, append the new entry, then write the whole array back as JSON. Read earlier, change here, save now."
+        );
+        markDone(3);
+      }
+    },
+    {
+      tag:"LIST", title:"Stage 4 · Show them all",
+      render:function(h){
+        h.appendChild(P("Now the easy, satisfying part \u2014 loop over every entry and print it. And, as always with anything a stranger typed: <code>htmlspecialchars</code> on the way out."));
+        h.appendChild(codeBlock(LIST_CODE.join("\n"), "below the form"));
+        h.appendChild(why("Why wrap both values","name and message both came from visitors, so both get htmlspecialchars \u2014 otherwise a signer could drop a &lt;script&gt; into their message and attack everyone who views the guestbook afterwards. A guestbook is a classic place this goes wrong. Wrap every value, every time."));
+        mcq(h,
+          "Which line safely prints each message inside the loop?",
+          ["<?= $e[\"message\"] ?>","<?= htmlspecialchars($e[\"message\"]) ?>","<?= strtoupper($e[\"message\"]) ?>","<?php echo $e; ?>"],
+          1,
+          "htmlspecialchars keeps a message that contains HTML as plain text. Printing it raw would let one visitor's <script> run for every later visitor \u2014 exactly what a public guestbook must prevent."
+        );
+        markDone(4);
+      }
+    },
+    {
+      tag:"SHIP IT", title:"Stage 5 · Ship it",
+      render:function(h){
+        h.appendChild(P("Everything assembled \u2014 the whole <b>guestbook.php</b>."));
+        h.appendChild(codeBlock(FULL_CODE.join("\n"), "guestbook.php"));
+        h.appendChild(sec("What you'll see"));
+        h.appendChild(outBlock("Guestbook\n[ your name ] [ say hi ]  ( Sign )\n\nKaatje: first!\nSam: hello there", "AFTER A FEW SIGN-INS"));
+        h.appendChild(why("Run it for real","Put guestbook.php on your server (it needs write access to its folder so it can create guestbook.json). Sign it a few times, then refresh \u2014 your messages persist because they're on disk now. Sign once with <b>&lt;b&gt;hi&lt;/b&gt;</b> as the message and confirm it shows as text, not bold."));
+        h.appendChild(sec("What you now own"));
+        var ul=document.createElement("ul"); ul.className="t";
+        ["Storing data between visits in a <b>JSON file</b>.",
+         "<code>file_get_contents</code> / <code>file_put_contents</code> to read and write it.",
+         "<code>json_decode</code> / <code>json_encode</code> to move between text and array.",
+         "The <b>read \u2192 change \u2192 save</b> loop behind most data-keeping apps.",
+         "<code>foreach</code> + <code>htmlspecialchars</code> to list user content safely."
+        ].forEach(function(t){ var li=document.createElement("li"); li.innerHTML=t; ul.appendChild(li); });
+        h.appendChild(ul);
+        markDone(5);
+      }
+    }
+  ];
+
+  var idx=0, done={};
+  var stage=document.getElementById("stage"), stagesEl=document.getElementById("stages");
+  var prevBtn=document.getElementById("prev"), nextBtn=document.getElementById("next");
+
+  function P(html){ var p=document.createElement("p"); p.className="t"; p.innerHTML=html; return p; }
+  function sec(text){ var h=document.createElement("h3"); h.className="sec"; h.textContent=text; return h; }
+  function codeBlock(text, cap){ var d=document.createElement("div"); var pre=document.createElement("pre"); var c=document.createElement("code"); c.className="block"; c.textContent=text; pre.appendChild(c); d.appendChild(pre); if(cap){ var cp=document.createElement("div"); cp.className="cap"; cp.textContent=cap; d.appendChild(cp); } return d; }
+  function outBlock(text, label){ var d=document.createElement("div"); d.className="out"; var l=document.createElement("span"); l.className="l"; l.textContent=label||"RESULT"; var s=document.createElement("samp"); s.textContent=text; d.appendChild(l); d.appendChild(s); return d; }
+  function why(head, body){ var d=document.createElement("div"); d.className="why"; var b=document.createElement("b"); b.textContent=head; var s=document.createElement("span"); s.innerHTML=body; d.appendChild(b); d.appendChild(s); return d; }
+  function showV(v, ok, html){ v.className="verdict show "+(ok?"ok":"no"); v.innerHTML="<b>"+(ok?"SERVICE":"NOT YET")+"</b>"+html; }
+
+  function mcq(host, qHtml, options, answer, explain){
+    var box=document.createElement("div"); box.className="do";
+    var hh=document.createElement("div"); hh.className="do-h"; hh.textContent="YOUR TURN"; box.appendChild(hh);
+    var q=document.createElement("div"); q.className="q"; q.innerHTML=qHtml; box.appendChild(q);
+    var opts=document.createElement("div"); opts.className="opts"; var v=document.createElement("div");
+    options.forEach(function(t,i){
+      var b=document.createElement("button"); b.type="button"; b.className="opt"; b.textContent=t;
+      b.addEventListener("click", function(){
+        [].forEach.call(opts.querySelectorAll(".opt"), function(x){ x.disabled=true; });
+        if(i===answer){ b.classList.add("right"); showV(v,true,explain); }
+        else { b.classList.add("wrong"); opts.querySelectorAll(".opt")[answer].classList.add("right"); showV(v,false,explain); }
+      });
+      opts.appendChild(b);
+    });
+    box.appendChild(opts); box.appendChild(v); host.appendChild(box);
+  }
+
+  function arrange(host, intro, correct, success){
+    var box=document.createElement("div"); box.className="do";
+    var hh=document.createElement("div"); hh.className="do-h"; hh.textContent="YOUR TURN"; box.appendChild(hh);
+    var q=document.createElement("div"); q.className="q"; q.innerHTML=intro; box.appendChild(q);
+    var tl=document.createElement("div"); tl.className="lbl2"; tl.textContent="YOUR CODE"; box.appendChild(tl);
+    var target=document.createElement("div"); target.className="target"; box.appendChild(target);
+    var pl=document.createElement("div"); pl.className="lbl2"; pl.textContent="LINES"; box.appendChild(pl);
+    var pool=document.createElement("div"); pool.className="pool"; box.appendChild(pool);
+    var order=shuffle(correct.slice());
+    while(order.join("\u0001")===correct.join("\u0001")) order=shuffle(correct.slice());
+    function chip(text, inT){ var c=document.createElement("button"); c.type="button"; c.className="chip"; c.textContent=text; c.addEventListener("click", function(){ c.remove(); if(inT) pool.appendChild(chip(text,false)); else target.appendChild(chip(text,true)); }); return c; }
+    order.forEach(function(t){ pool.appendChild(chip(t,false)); });
+    var v=document.createElement("div");
+    var row=document.createElement("div"); row.className="row";
+    var check=document.createElement("button"); check.type="button"; check.className="btn"; check.textContent="Check the order";
+    check.addEventListener("click", function(){
+      var got=[].map.call(target.querySelectorAll(".chip"), function(c){ return c.textContent; });
+      if(got.join("\u0001")===correct.join("\u0001")) showV(v,true,success);
+      else showV(v,false,"Not yet \u2014 only run on a POST, append the new entry inside, then write the whole array back, and close the brace.");
+    });
+    var reset=document.createElement("button"); reset.type="button"; reset.className="btn ghost"; reset.textContent="reset";
+    reset.addEventListener("click", function(){ render(idx); });
+    row.appendChild(check); row.appendChild(reset);
+    box.appendChild(row); box.appendChild(v); host.appendChild(box);
+  }
+
+  function shuffle(a){ for(var i=a.length-1;i>0;i--){ var j=Math.floor(Math.random()*(i+1)); var t=a[i]; a[i]=a[j]; a[j]=t; } return a; }
+  function markDone(i){ done[i]=true; paintStages(); }
+  function paintStages(){
+    stagesEl.innerHTML="";
+    STAGES.forEach(function(s,i){
+      var b=document.createElement("button"); b.type="button";
+      b.className="sbtn"+(i===idx?" on":"")+(done[i]?" done":"");
+      b.innerHTML='<span class="n">'+i+(done[i]?" \u2713":"")+'</span>'+s.tag;
+      b.addEventListener("click", function(){ render(i); });
+      stagesEl.appendChild(b);
+    });
+  }
+  function render(i){
+    idx=i; stage.innerHTML="";
+    var s=STAGES[i];
+    var k=document.createElement("div"); k.className="kick"; k.textContent="STAGE "+i+" · "+s.tag;
+    var t=document.createElement("div"); t.className="title"; t.textContent=s.title;
+    stage.appendChild(k); stage.appendChild(t); s.render(stage);
+    prevBtn.style.visibility=i===0?"hidden":"visible";
+    nextBtn.style.visibility=i===STAGES.length-1?"hidden":"visible";
+    paintStages(); window.scrollTo(0,0);
+  }
+  prevBtn.addEventListener("click", function(){ if(idx>0) render(idx-1); });
+  nextBtn.addEventListener("click", function(){ if(idx<STAGES.length-1) render(idx+1); });
+  render(0);
+})();
+</script>
+</body>
+</html>

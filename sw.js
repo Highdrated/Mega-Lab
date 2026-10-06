@@ -1,13 +1,13 @@
 /* Workshop service worker.
    Precaches the launcher; caches labs the first time they're opened.
    Network-first so updates from GitHub land when online; cache when offline. */
-const CACHE = "workshop-v5";
+const CACHE = "workshop-v6";
 const PRECACHE = [
   "./",
   "./index.html",
-  "./css/launcher.css?v=5",
-  "./js/labs.config.js?v=5",
-  "./js/launcher.js?v=5",
+  "./css/launcher.css?v=6",
+  "./js/labs.config.js?v=6",
+  "./js/launcher.js?v=6",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
