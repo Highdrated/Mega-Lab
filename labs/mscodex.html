@@ -119,7 +119,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .note pre{
   font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);
   background:var(--bg);border:1px solid var(--hair);border-left:2px solid var(--vc,var(--accent));
-  border-radius:var(--r);padding:10px 12px;margin-top:11px;overflow-x:auto;max-width:80ch;white-space:pre;
+  border-radius:var(--r);padding:10px 12px;margin-top:11px;overflow-x:auto;max-width:100%;white-space:pre-wrap;overflow-wrap:anywhere;
 }
 .hit-where{font-size:11.5px;color:var(--faint);font-family:var(--mono);padding:9px 12px 0;display:block}
 .empty{padding:56px 4px;max-width:52ch}
@@ -148,7 +148,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .concept pre{
   font-family:var(--mono);font-size:12.5px;line-height:1.5;color:var(--muted);
   background:var(--bg);border:1px solid var(--hair);border-radius:var(--r);
-  padding:12px 14px;margin-top:14px;overflow-x:auto;max-width:80ch;white-space:pre;
+  padding:12px 14px;margin-top:14px;overflow-x:auto;max-width:100%;white-space:pre;
 }
 .block{padding:14px 12px 16px;background:var(--panel);border-top:1px solid var(--hair)}
 .block h3{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:8px;letter-spacing:.03em}
@@ -1033,6 +1033,434 @@ const DATA = [
   ]
  },
  {
+  "id": "incident",
+  "sigil": "IR",
+  "name": "Incident response",
+  "sub": "Compromised mailbox",
+  "color": "#b42318",
+  "blurb": "What to understand when a mailbox gets taken over: how the attacker got in, where the evidence lives, what you may and must do, and the order to do it in.",
+  "groups": [
+   {
+    "t": "The playbook",
+    "e": [
+     {
+      "c": "Detect",
+      "d": "Something looks wrong",
+      "n": "Usually a sign-in from an IP or country that does not fit the user, or a colleague asking about a strange mail.",
+      "x": "Sign-in for user@contoso.com from 203.0.113.10 at 03:12, while the user was asleep"
+     },
+     {
+      "c": "Contain",
+      "d": "Stop the bleeding first",
+      "n": "Disable the account, revoke all sessions, reset the password. Investigating comes after, because the attacker keeps reading while you look.",
+      "x": "Update-MgUser -UserId user@contoso.com -AccountEnabled:$false\nRevoke-MgUserSignInSession -UserId user@contoso.com"
+     },
+     {
+      "c": "Investigate",
+      "d": "Collect the evidence",
+      "n": "Sign-in logs, unified audit log, message trace, inbox rules, forwarding and OAuth app consents. Export everything to files before it ages out.",
+      "x": "Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'user@contoso.com'\" -All |\n    Export-Csv ~/Desktop/signins.csv -NoTypeInformation"
+     },
+     {
+      "c": "Scope",
+      "d": "Work out what was touched",
+      "n": "Which mails were read (MailItemsAccessed), which were sent (message trace), and to whom.",
+      "x": "MailItemsAccessed: 42 message IDs\nMessage trace: 180 mails sent to 95 external recipients"
+     },
+     {
+      "c": "Notify",
+      "d": "Tell the people who need to know",
+      "n": "Affected clients, management, and if personal data leaked, the data protection authority within 72 hours.",
+      "x": "Belgium: Gegevensbeschermingsautoriteit (GBA / APD)"
+     },
+     {
+      "c": "Harden",
+      "d": "Make sure it cannot happen again",
+      "n": "Phishing-resistant MFA and Conditional Access policies. Write a short post-mortem.",
+      "x": "Passkeys for all admins, token protection policy for Outlook and Teams"
+     }
+    ]
+   },
+   {
+    "t": "How the attack works",
+    "e": [
+     {
+      "c": "AiTM phishing",
+      "d": "Adversary-in-the-middle: a fake login page that relays to Microsoft",
+      "n": "The user types their password and approves MFA on the real Microsoft, through the attacker's proxy. The attacker keeps the session token that comes back, so normal MFA does not stop it.",
+      "x": "Sign-in log, Status.AdditionalDetails:\nMFA requirement satisfied by claim in the token"
+     },
+     {
+      "c": "Token replay",
+      "d": "Using a stolen token from another device or IP",
+      "n": "The token already says 'MFA done', so the attacker gets in without a password prompt. A password reset alone does not kill it. Revoke sessions, reset the password and disable the account.",
+      "x": "Same user, two IPs in one minute:\n09:01  198.51.100.7   Belgium   Outlook\n09:01  203.0.113.10   Elsewhere OWA"
+     },
+     {
+      "c": "Client=OWA;Action=ViaProxy",
+      "d": "Mailbox opened through a proxy",
+      "n": "Shows up in ClientInfoString of the audit log. A strong sign of AiTM: the attacker's proxy sits between the browser and Outlook on the web.",
+      "x": "\"ClientInfoString\": \"Client=OWA;Action=ViaProxy\""
+     },
+     {
+      "c": "Token protection",
+      "d": "Conditional Access setting that binds a token to one device",
+      "n": "A stolen token then does not work on the attacker's machine. It covers native apps like Outlook and Teams, NOT Outlook on the web in a browser. Macs need the Enterprise SSO plug-in / Platform SSO pushed via MDM.",
+      "x": "Conditional Access > Session > Require token protection for sign-in sessions"
+     },
+     {
+      "c": "Phishing-resistant MFA",
+      "d": "The real fix against AiTM",
+      "n": "Passkeys, FIDO2 keys and Windows Hello are tied to the real Microsoft domain, so they refuse to sign in on a fake page.",
+      "x": "Fake page login.contoso-secure.example asks for a passkey -> the passkey refuses, the domain does not match"
+     }
+    ]
+   },
+   {
+    "t": "Reading the evidence",
+    "e": [
+     {
+      "c": "Audit log vs message trace",
+      "d": "Inside the mailbox vs leaving the mailbox",
+      "n": "Audit log = what happens inside the mailbox (opened, moved, deleted), delayed, can take hours to show up. Message trace = what goes through mail flow, near real-time. The message trace is your proof that something was sent.",
+      "x": "Audit log:     MailItemsAccessed, Send, New-InboxRule\nMessage trace: Sender, Recipient, Subject, Status Delivered"
+     },
+     {
+      "c": "MailItemsAccessed: Bind",
+      "d": "A specific mail was opened",
+      "n": "Lists the InternetMessageId of each mail. You can say exactly which mails the attacker read.",
+      "x": "\"MailAccessType\": \"Bind\"\nFolderItems: <ABC123@contoso.com>, <DEF456@contoso.com>"
+     },
+     {
+      "c": "MailItemsAccessed: Sync",
+      "d": "A whole folder was downloaded",
+      "n": "No per-mail list. Assume every mail in that folder was read.",
+      "x": "\"MailAccessType\": \"Sync\"\nFolder: \\Inbox"
+     },
+     {
+      "c": "ClientIPAddress",
+      "d": "Where the IP lives in MailItemsAccessed",
+      "n": "Not in ClientIP like most other audit events. Filtering on the wrong field gives you empty results and a false 'all clear'.",
+      "x": "$d.ClientIPAddress   -> 203.0.113.10\n$d.ClientIP          -> empty"
+     },
+     {
+      "c": "Audit times are UTC",
+      "d": "Convert before you compare",
+      "n": "Belgium is UTC+2 in summer and UTC+1 in winter. A log line at 07:12 UTC happened at 09:12 Belgian summer time.",
+      "x": "([datetime]\"2026-10-01T07:12:00Z\").ToLocalTime()\n-> 1 October 2026 09:12:00"
+     }
+    ]
+   },
+   {
+    "t": "Roles, offboarding and legal",
+    "e": [
+     {
+      "c": "Global Admin is not eDiscovery",
+      "d": "Searching mail content needs its own role",
+      "n": "Add yourself to eDiscovery Manager (or Administrator). It takes 15 to 60 minutes before the role works, so do it at the start of an incident, not when you need it.",
+      "x": "Add-RoleGroupMember -Identity \"eDiscoveryManager\" -Member admin@contoso.com"
+     },
+     {
+      "c": "Removing the license deletes the mailbox",
+      "d": "After 30 days it is gone",
+      "n": "Convert to a shared mailbox first. Shared mailboxes under 50 GB need no license, and they keep their auto-reply.",
+      "x": "Set-Mailbox -Identity user@contoso.com -Type Shared\nthen remove the license"
+     },
+     {
+      "c": "AutoReplyState Enabled vs Scheduled",
+      "d": "Only Scheduled uses start and end times",
+      "n": "Enabled ignores StartTime and EndTime and stays on until you switch it off.",
+      "x": "Enabled    -> on now, forever\nScheduled  -> only between StartTime and EndTime"
+     },
+     {
+      "c": "GDPR breach notification",
+      "d": "72 hours to report",
+      "n": "If personal data leaked, notify the data protection authority within 72 hours of finding out. Note when you found out.",
+      "x": "Found 2026-10-01 09:00 -> report by 2026-10-04 09:00"
+     },
+     {
+      "c": "CAO 81 (Belgium)",
+      "d": "Rules for reading an employee's mailbox",
+      "n": "Monitoring e-mail needs a clear purpose, proportionality and transparency. Get approval (management, HR or legal) before you read anyone's mail content.",
+      "x": "Approval mail from management in the incident folder, then eDiscovery search"
+     }
+    ]
+   },
+   {
+    "t": "Mac PowerShell gotchas",
+    "e": [
+     {
+      "c": "Sort-Object, not sort",
+      "d": "On a Mac, sort is the Unix sort command",
+      "n": "PowerShell aliases like sort and ls point to the Mac tools instead, which do not understand objects.",
+      "x": "$list | Sort-Object CreatedDateTime"
+     },
+     {
+      "c": "~/Desktop, not C:\\Temp",
+      "d": "Mac paths",
+      "n": "Windows paths from Microsoft docs do not exist on your Mac. Use ~ or $HOME.",
+      "x": "Export-Csv ~/Desktop/audit.csv -NoTypeInformation"
+     },
+     {
+      "c": "open file",
+      "d": "Open a file from the terminal",
+      "n": "Same as double-clicking it in Finder.",
+      "x": "open ~/Desktop/audit.csv\nopen -a \"Microsoft Excel\" ~/Desktop/audit.csv"
+     },
+     {
+      "c": "Excel turns IPs into numbers",
+      "d": "Opening a CSV directly can mangle IP addresses",
+      "n": "Use Export-Excel (ImportExcel module) instead of a CSV, or import via Data > From Text and set the column to Text.",
+      "x": "203.0.113.10 in CSV -> Excel shows a number\nExport-Excel        -> stays 203.0.113.10"
+     }
+    ]
+   }
+  ]
+ },
+ {
+  "id": "ircmd",
+  "sigil": "IC",
+  "name": "IR commands",
+  "sub": "Incident PowerShell",
+  "color": "#c4320a",
+  "blurb": "Every command from an incident investigation, grouped by job. Each entry has a worked example with placeholder names and addresses.",
+  "groups": [
+   {
+    "t": "Connect",
+    "e": [
+     {
+      "c": "Connect-ExchangeOnline",
+      "d": "Exchange: mailboxes, inbox rules, message trace, audit log search",
+      "n": "Search-UnifiedAuditLog runs in this session.",
+      "x": "Connect-ExchangeOnline -ShowBanner:$false"
+     },
+     {
+      "c": "Connect-IPPSSession",
+      "d": "Security & Compliance: eDiscovery and compliance roles",
+      "n": "A separate session from Exchange, needed for Add-RoleGroupMember and eDiscovery commands.",
+      "x": "Connect-IPPSSession"
+     },
+     {
+      "c": "Connect-MgGraph -Scopes \"AuditLog.Read.All\",\"User.ReadWrite.All\"",
+      "d": "Graph: sign-in logs and changing accounts",
+      "n": "AuditLog.Read.All for sign-ins and directory audits, User.ReadWrite.All to disable and revoke.",
+      "x": "Connect-MgGraph -Scopes \"AuditLog.Read.All\",\"User.ReadWrite.All\" -NoWelcome"
+     }
+    ]
+   },
+   {
+    "t": "Identity & sign-ins (Graph)",
+    "e": [
+     {
+      "c": "Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'user@contoso.com'\"",
+      "d": "Sign-in history for one user",
+      "n": "Look at IpAddress, AppDisplayName and Status.AdditionalDetails. Needs an Entra P1 license in the tenant.",
+      "x": "Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'user@contoso.com'\" -All |\n    Select-Object CreatedDateTime, IpAddress, AppDisplayName, @{n=\"Detail\";e={$_.Status.AdditionalDetails}}"
+     },
+     {
+      "c": "Get-MgAuditLogDirectoryAudit",
+      "d": "Changes made in Entra: passwords, MFA methods, app consents",
+      "n": "Shows whether the attacker added an MFA method or consented to an app.",
+      "x": "Get-MgAuditLogDirectoryAudit -Filter \"initiatedBy/user/userPrincipalName eq 'user@contoso.com'\" -All |\n    Select-Object ActivityDateTime, ActivityDisplayName, Result"
+     },
+     {
+      "c": "Revoke-MgUserSignInSession -UserId user@contoso.com",
+      "d": "Kill every session and refresh token",
+      "n": "Forces every device, including the attacker's, to sign in again.",
+      "x": "Revoke-MgUserSignInSession -UserId user@contoso.com"
+     },
+     {
+      "c": "Update-MgUser -UserId user@contoso.com -AccountEnabled:$false",
+      "d": "Block sign-in",
+      "n": "Do this together with revoking sessions.",
+      "x": "Update-MgUser -UserId user@contoso.com -AccountEnabled:$false\nGet-MgUser -UserId user@contoso.com -Property AccountEnabled | Select-Object AccountEnabled"
+     },
+     {
+      "c": "Get-MgUserAuthenticationMethod -UserId user@contoso.com",
+      "d": "Which MFA methods are registered",
+      "n": "An unknown phone or Authenticator added during the incident means the attacker set up their own way back in.",
+      "x": "Get-MgUserAuthenticationMethod -UserId user@contoso.com |\n    Select-Object Id, @{n=\"Type\";e={$_.AdditionalProperties.\"@odata.type\"}}"
+     },
+     {
+      "c": "Get-MgUserOauth2PermissionGrant -UserId user@contoso.com",
+      "d": "Which apps the user gave access to",
+      "n": "Attackers sometimes consent to a malicious app that keeps reading mail after a password reset. ClientId is the app's service principal id.",
+      "x": "Get-MgUserOauth2PermissionGrant -UserId user@contoso.com |\n    Select-Object ClientId, Scope"
+     },
+     {
+      "c": "Get-MgServicePrincipal -ServicePrincipalId <id> | Format-List DisplayName,AppId,PublisherName",
+      "d": "Turn an app id into a name",
+      "n": "Feed it the ClientId from the permission grant.",
+      "x": "Get-MgServicePrincipal -ServicePrincipalId $g.ClientId |\n    Format-List DisplayName, AppId, PublisherName"
+     }
+    ]
+   },
+   {
+    "t": "Audit log",
+    "e": [
+     {
+      "c": "Search-UnifiedAuditLog -StartDate -EndDate -UserIds -Operations",
+      "d": "Search what happened inside the mailbox",
+      "n": "Results can take hours to appear. Times are UTC.",
+      "x": "Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds user@contoso.com -Operations MailItemsAccessed -ResultSize 5000"
+     },
+     {
+      "c": "-SessionId <guid> -SessionCommand ReturnLargeSet",
+      "d": "Page through more than 5000 results",
+      "n": "Same SessionId on every call, keep asking until a call returns nothing.",
+      "x": "$sid = [guid]::NewGuid().ToString()\n$all = @()\ndo {\n    $page = Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds user@contoso.com -SessionId $sid -SessionCommand ReturnLargeSet -ResultSize 5000\n    $all += $page\n} while ($page.Count -gt 0)"
+     },
+     {
+      "c": "$_.AuditData | ConvertFrom-Json",
+      "d": "Read the details of an audit record",
+      "n": "AuditData is a JSON text blob. ConvertFrom-Json turns it into an object you can pick fields from.",
+      "x": "$d = $all[0].AuditData | ConvertFrom-Json\n$d.Operation\n$d.ClientIPAddress\n$d.ClientInfoString"
+     },
+     {
+      "c": "$d.Folders.FolderItems.InternetMessageId",
+      "d": "List which mails were opened (MailItemsAccessed, Bind)",
+      "n": "Folders is a list, each with FolderItems. The InternetMessageId can be searched in message trace or eDiscovery.",
+      "x": "$ids = foreach ($r in $all) {\n    $d = $r.AuditData | ConvertFrom-Json\n    $d.Folders.FolderItems.InternetMessageId\n}\n$ids | Sort-Object -Unique"
+     }
+    ]
+   },
+   {
+    "t": "Mail flow",
+    "e": [
+     {
+      "c": "Get-MessageTraceV2 -SenderAddress user@contoso.com -StartDate -EndDate -ResultSize 5000",
+      "d": "Everything a user sent",
+      "n": "Near real-time. One query covers at most 10 days.",
+      "x": "Get-MessageTraceV2 -SenderAddress user@contoso.com -StartDate (Get-Date).AddDays(-3) -EndDate (Get-Date) -ResultSize 5000"
+     },
+     {
+      "c": "Get-MessageTraceV2 -RecipientAddress / -MessageId",
+      "d": "Everything a user received, or one specific mail",
+      "n": "Use -MessageId with an InternetMessageId from the audit log.",
+      "x": "Get-MessageTraceV2 -MessageId \"<ABC123@contoso.com>\" -StartDate (Get-Date).AddDays(-10) -EndDate (Get-Date)"
+     },
+     {
+      "c": "| Where-Object Subject -match \"keyword\"",
+      "d": "Find the phishing mail by subject",
+      "n": "-match is a regex and not case-sensitive.",
+      "x": "$t = Get-MessageTraceV2 -SenderAddress user@contoso.com -StartDate (Get-Date).AddDays(-3) -EndDate (Get-Date) -ResultSize 5000\n$t | Where-Object Subject -match \"invoice\""
+     },
+     {
+      "c": "Group-Object { ($_.RecipientAddress -split \"@\")[1] }",
+      "d": "Count recipients per domain",
+      "n": "Shows which clients received mail from the attacker.",
+      "x": "$t | Group-Object { ($_.RecipientAddress -split \"@\")[1] } |\n    Sort-Object Count -Descending |\n    Select-Object Name, Count"
+     }
+    ]
+   },
+   {
+    "t": "Mailbox settings",
+    "e": [
+     {
+      "c": "Get-MailboxAutoReplyConfiguration -Identity user@contoso.com",
+      "d": "Check the out-of-office",
+      "n": "Attackers sometimes set one to buy time or phish senders.",
+      "x": "Get-MailboxAutoReplyConfiguration -Identity user@contoso.com |\n    Select-Object AutoReplyState, StartTime, EndTime"
+     },
+     {
+      "c": "Set-MailboxAutoReplyConfiguration -AutoReplyState Enabled -InternalMessage $msg -ExternalMessage $msg -ExternalAudience All",
+      "d": "Set an auto-reply for everyone",
+      "n": "Enabled ignores start and end times. -ExternalAudience All also answers people outside your contacts.",
+      "x": "$msg = \"This mailbox is no longer in use. Please contact info@contoso.com.\"\nSet-MailboxAutoReplyConfiguration -Identity user@contoso.com -AutoReplyState Enabled -InternalMessage $msg -ExternalMessage $msg -ExternalAudience All"
+     },
+     {
+      "c": "Get-InboxRule -Mailbox user@contoso.com",
+      "d": "List inbox rules",
+      "n": "Classic attacker trick: a rule that moves replies to RSS Feeds or deletes them, so the user does not notice.",
+      "x": "Get-InboxRule -Mailbox user@contoso.com |\n    Select-Object Name, Enabled, MoveToFolder, DeleteMessage, ForwardTo"
+     },
+     {
+      "c": "Get-Mailbox | Format-List ForwardingSmtpAddress,DeliverToMailboxAndForward",
+      "d": "Check mailbox-level forwarding",
+      "n": "A forwarding address set by the attacker silently copies every mail out.",
+      "x": "Get-Mailbox -Identity user@contoso.com |\n    Format-List ForwardingSmtpAddress, DeliverToMailboxAndForward"
+     },
+     {
+      "c": "Set-Mailbox -Type Shared",
+      "d": "Convert to a shared mailbox",
+      "n": "Keeps the mail and auto-reply without a license (under 50 GB).",
+      "x": "Set-Mailbox -Identity user@contoso.com -Type Shared"
+     },
+     {
+      "c": "Set-Mailbox -HiddenFromAddressListsEnabled $true",
+      "d": "Hide from the address book",
+      "n": "Colleagues no longer pick the old mailbox by accident.",
+      "x": "Set-Mailbox -Identity user@contoso.com -HiddenFromAddressListsEnabled $true"
+     },
+     {
+      "c": "Add-MailboxPermission -User admin@contoso.com -AccessRights FullAccess -AutoMapping $false",
+      "d": "Give yourself access to investigate",
+      "n": "AutoMapping $false keeps it out of your own Outlook. Only with approval (CAO 81).",
+      "x": "Add-MailboxPermission -Identity user@contoso.com -User admin@contoso.com -AccessRights FullAccess -AutoMapping $false"
+     }
+    ]
+   },
+   {
+    "t": "Compliance roles",
+    "e": [
+     {
+      "c": "Add-RoleGroupMember -Identity \"eDiscoveryManager\" -Member admin@contoso.com",
+      "d": "Give yourself eDiscovery rights",
+      "n": "Run in a Connect-IPPSSession session. Takes 15 to 60 minutes to work.",
+      "x": "Add-RoleGroupMember -Identity \"eDiscoveryManager\" -Member admin@contoso.com\nGet-RoleGroupMember -Identity \"eDiscoveryManager\""
+     },
+     {
+      "c": "Add-eDiscoveryCaseAdmin -User admin@contoso.com",
+      "d": "Make yourself eDiscovery Administrator",
+      "n": "Can see and manage every eDiscovery case, not only your own.",
+      "x": "Add-eDiscoveryCaseAdmin -User admin@contoso.com\nGet-eDiscoveryCaseAdmin"
+     }
+    ]
+   },
+   {
+    "t": "Export & data handling",
+    "e": [
+     {
+      "c": "Export-Csv -NoTypeInformation / Import-Csv",
+      "d": "Save evidence and read it back",
+      "n": "Save every result straight away. Logs age out, files do not.",
+      "x": "$t | Export-Csv ~/Desktop/trace.csv -NoTypeInformation -Encoding UTF8\n$t = Import-Csv ~/Desktop/trace.csv"
+     },
+     {
+      "c": "Export-Excel -WorksheetName -AutoFilter -FreezeTopRow",
+      "d": "Several tabs in one Excel file",
+      "n": "Install once with Install-Module ImportExcel -Scope CurrentUser. Same path, different WorksheetName = a new tab.",
+      "x": "$x = \"~/Desktop/incident.xlsx\"\n$s | Export-Excel $x -WorksheetName \"Sign-ins\" -AutoFilter -FreezeTopRow -AutoSize\n$t | Export-Excel $x -WorksheetName \"Sent mail\" -AutoFilter -FreezeTopRow -AutoSize"
+     },
+     {
+      "c": "Sort-Object -Unique / Group-Object",
+      "d": "Remove duplicates, count per value",
+      "n": "Sort-Object -Unique keeps one of each. Group-Object counts how often each value appears.",
+      "x": "$t.RecipientAddress | Sort-Object -Unique\n$s | Group-Object IpAddress | Select-Object Name, Count"
+     },
+     {
+      "c": "Select-Object @{n=\"Name\";e={...}}",
+      "d": "Calculated column",
+      "n": "n is the header, e is the formula run on each row.",
+      "x": "$s | Select-Object CreatedDateTime, IpAddress, @{n=\"City\";e={$_.Location.City}}"
+     },
+     {
+      "c": "$h = @{}",
+      "d": "Hashtable lookup for speed",
+      "n": "Ask Microsoft once, then look values up in memory, instead of 80 separate calls in a loop.",
+      "x": "$h = @{}\nGet-MgUser -All -Property UserPrincipalName,DisplayName | ForEach-Object { $h[$_.UserPrincipalName] = $_.DisplayName }\n$h[\"user@contoso.com\"]"
+     },
+     {
+      "c": "open file.csv / open -a \"Microsoft Excel\" file.csv",
+      "d": "Open the result on a Mac",
+      "n": "open uses the default app. -a picks the app.",
+      "x": "open ~/Desktop/trace.csv\nopen -a \"Microsoft Excel\" ~/Desktop/trace.csv"
+     }
+    ]
+   }
+  ]
+ },
+ {
   "id": "formulas",
   "sigil": "FX",
   "name": "Formulas",
@@ -1298,6 +1726,56 @@ const AUG = {
     "a": "| Select-Object TemporaryAccessPass"
    }
   ]
+ },
+ "incident::The playbook": {
+  "concept": "During an incident the instinct is to start digging to find out what happened. Resist it. Every minute you investigate while the attacker still has a valid token, they keep reading and sending. So the order is fixed: contain first, then investigate. Investigation has its own order too: first the sign-ins (how did they get in), then the audit log (what did they do inside), then the message trace (what left), then inbox rules and app consents (what did they leave behind to come back). Scope turns that evidence into a list of mails and recipients, which is what clients and the authority need to hear about. Harden closes the door so it cannot happen the same way again.",
+  "figure": "  DETECT        strange sign-in IP\n     |\n     v\n  CONTAIN       disable account . revoke sessions . reset password\n     |\n     v\n  INVESTIGATE   sign-ins . audit log . message trace\n                inbox rules . OAuth apps\n     |\n     v\n  SCOPE         mails read . mails sent . recipients\n     |\n     v\n  NOTIFY        clients . GDPR (72h)\n     |\n     v\n  HARDEN        phishing-resistant MFA . Conditional Access policies",
+  "traps": [
+   "Resetting the password but not revoking sessions. The stolen token keeps working.",
+   "Starting the investigation before containing. The attacker is still inside while you read logs.",
+   "Forgetting inbox rules and OAuth apps. Those are how attackers come back after a reset."
+  ],
+  "quiz": [
+   {
+    "q": "What are the three containment actions, and why all three?",
+    "a": "Disable the account, revoke sessions, reset the password. Revoking kills stolen tokens, the reset kills the stolen password, and disabling stops everything while you investigate."
+   },
+   {
+    "q": "Which log proves that a mail was actually sent?",
+    "a": "The message trace. The audit log shows activity inside the mailbox and can lag by hours."
+   }
+  ]
+ },
+ "incident::How the attack works": {
+  "concept": "Normal MFA protects the moment of signing in. AiTM phishing skips that moment. The fake page passes everything to the real Microsoft login, so the user really does complete MFA. Microsoft hands back a session token, and the proxy keeps a copy. From then on the attacker replays that token, and Microsoft sees a session where MFA is already done, which is why the sign-in log says 'MFA requirement satisfied by claim in the token'. Two defences break this. Token protection makes a token useless on another device, but only for native apps. Phishing-resistant MFA like passkeys stops it earlier, because a passkey checks the website's real domain and will not sign in on a fake one.",
+  "figure": "  user --> fake page (proxy) --> real Microsoft login\n                 |                     |\n                 |<---- session token ---+\n                 |\n          attacker keeps a copy --> replays it from 203.0.113.10",
+  "traps": [
+   "Thinking 'they had MFA, so it cannot be phishing'. AiTM works because MFA happens for real.",
+   "Relying on token protection alone. It does not cover Outlook on the web in a browser."
+  ],
+  "quiz": [
+   {
+    "q": "What line in the sign-in log points at a replayed token?",
+    "a": "MFA requirement satisfied by claim in the token."
+   },
+   {
+    "q": "Why does a passkey stop AiTM?",
+    "a": "It is bound to the real Microsoft domain and refuses to sign in on the fake page."
+   }
+  ]
+ },
+ "incident::Reading the evidence": {
+  "traps": [
+   "Filtering MailItemsAccessed on ClientIP. The IP is in ClientIPAddress.",
+   "Comparing UTC audit times with Belgian clock times without converting.",
+   "Concluding 'nothing was read' because the audit log is still empty. It can lag by hours."
+  ]
+ },
+ "ircmd::Audit log": {
+  "traps": [
+   "Stopping at 5000 results without paging. The rest is silently missing.",
+   "Reusing a SessionId from a previous, different search. Use a fresh guid per search."
+  ]
  }
 };
 const RECIPES = [
@@ -1486,6 +1964,45 @@ const RECIPES = [
     "n": "Clean up once setup is done."
    }
   ]
+ },
+ {
+  "vol": "incident",
+  "t": "Contain a compromised mailbox",
+  "why": "The first 15 minutes, in order.",
+  "steps": [
+   {
+    "c": "Connect-MgGraph -Scopes \"AuditLog.Read.All\",\"User.ReadWrite.All\"\nConnect-ExchangeOnline",
+    "n": "Both doors open."
+   },
+   {
+    "c": "Update-MgUser -UserId user@contoso.com -AccountEnabled:$false",
+    "n": "Block sign-in."
+   },
+   {
+    "c": "Revoke-MgUserSignInSession -UserId user@contoso.com",
+    "n": "Kill stolen tokens."
+   },
+   {
+    "c": "Reset the password in the Entra admin center",
+    "n": "Kill the stolen password."
+   },
+   {
+    "c": "Get-InboxRule -Mailbox user@contoso.com",
+    "n": "Remove any rule the user did not make."
+   },
+   {
+    "c": "Get-Mailbox -Identity user@contoso.com | Format-List ForwardingSmtpAddress,DeliverToMailboxAndForward",
+    "n": "Remove attacker forwarding."
+   },
+   {
+    "c": "Get-MgUserAuthenticationMethod -UserId user@contoso.com",
+    "n": "Remove MFA methods the user does not recognise."
+   },
+   {
+    "c": "Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'user@contoso.com'\" -All | Export-Csv ~/Desktop/signins.csv -NoTypeInformation",
+    "n": "Save the evidence before it ages out. Then continue with Investigate."
+   }
+  ]
  }
 ];
 const GLOSSARY = [
@@ -1650,6 +2167,66 @@ const GLOSSARY = [
   "c": "ParserError",
   "d": "PowerShell could not read the line",
   "n": "Nothing ran at all. Usually a typo, a missing quote, or two commands stuck together."
+ },
+ {
+  "vol": "incident",
+  "c": "AiTM",
+  "d": "Adversary-in-the-middle phishing",
+  "n": "A fake login page that relays to the real one and steals the session token."
+ },
+ {
+  "vol": "incident",
+  "c": "Session token",
+  "d": "Proof that you already signed in",
+  "n": "Lets apps work without asking again. Stealing it means skipping the password and MFA."
+ },
+ {
+  "vol": "incident",
+  "c": "Token replay",
+  "d": "Using a stolen token from somewhere else",
+  "n": "Stopped by revoking sessions."
+ },
+ {
+  "vol": "incident",
+  "c": "MailItemsAccessed",
+  "d": "Audit event for reading mail",
+  "n": "Bind = specific mails opened, Sync = whole folder downloaded."
+ },
+ {
+  "vol": "incident",
+  "c": "InternetMessageId",
+  "d": "The unique id of one mail",
+  "n": "Links audit log, message trace and eDiscovery to the same message."
+ },
+ {
+  "vol": "incident",
+  "c": "Unified audit log",
+  "d": "Microsoft 365's activity log",
+  "n": "Searched with Search-UnifiedAuditLog. Times in UTC, can lag by hours."
+ },
+ {
+  "vol": "incident",
+  "c": "Message trace",
+  "d": "Log of mail flow",
+  "n": "Near real-time proof of what was sent and received."
+ },
+ {
+  "vol": "incident",
+  "c": "Phishing-resistant MFA",
+  "d": "MFA bound to the real website",
+  "n": "Passkeys, FIDO2 keys, Windows Hello."
+ },
+ {
+  "vol": "incident",
+  "c": "CAO 81",
+  "d": "Belgian collective agreement on monitoring e-mail",
+  "n": "Purpose, proportionality, transparency. Get approval before reading a mailbox."
+ },
+ {
+  "vol": "ircmd",
+  "c": "OAuth consent",
+  "d": "Permission a user gave an app",
+  "n": "Listed with Get-MgUserOauth2PermissionGrant. Malicious apps survive a password reset."
  }
 ];
 const KEY_THEME = "mscodex.theme";
