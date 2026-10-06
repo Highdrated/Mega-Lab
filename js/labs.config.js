@@ -116,6 +116,16 @@ const LABS_CONFIG = [
     glyph: '<path d="M3 11a5 5 0 0 1 10 0"/><path d="M2 11h12"/><path d="M8 6V5"/>'
   },
   {
+    id: "poshle",
+    name: "Poshle",
+    tag: "Practice",
+    sub: "powershell",
+    path: "labs/poshle.html",
+    ring: "ring-mid",
+    angle: 60,
+    glyph: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M4 6.5l2.5 1.8L4 10.1M8 10.5h4"/>'
+  },
+  {
     id: "hexle",
     name: "Hexle",
     tag: "Code",

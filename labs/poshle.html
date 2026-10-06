@@ -1,0 +1,1248 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7ebef">
+<title>Poshle — PowerShell muscle memory</title>
+<style>
+:root{
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", Consolas, monospace;
+  --r: 4px;
+  --rail: 256px;
+  --keys: 316px;
+  --top: 56px;
+}
+html[data-theme="day"]{
+  --bg:#e7ebef; --panel:#f8f9fb; --sunk:#eef1f4; --ink:#151e27; --strong:#0a1118;
+  --muted:#5d6b79; --faint:#8a97a3; --line:#d4dae0; --hair:#e2e7ec;
+  --accent:#1f6feb; --accent-soft:#dbe7fb; --good:#1a7f4b; --good-soft:#d9efe3; --warn:#b5532a;
+}
+html[data-theme="night"]{
+  --bg:#0e1419; --panel:#151c22; --sunk:#111920; --ink:#d9e2e8; --strong:#f1f6f9;
+  --muted:#8a9dab; --faint:#65788a; --line:#242f38; --hair:#1d262e;
+  --accent:#5aa2ff; --accent-soft:#132b47; --good:#4cc38a; --good-soft:#12301f; --warn:#e98a5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{height:var(--top);display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:9px;flex:none}
+.brand b{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--strong);letter-spacing:-.01em}
+.brand span{font-size:12px;color:var(--faint)}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none}
+.seg button{padding:6px 12px;font-size:12.5px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.stats{display:flex;gap:18px;margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.stats div{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.stats b{font-size:15px;color:var(--strong);font-weight:600}
+.tbtn{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r);color:var(--muted);flex:none}
+.tbtn:hover{background:var(--sunk);color:var(--ink)}
+
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr) var(--keys);height:calc(100vh - var(--top))}
+.rail{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:14px 0 24px}
+.rail h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:0 16px 8px}
+.rail hr{border:none;border-top:1px solid var(--line);margin:12px 16px}
+.sc{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;width:100%;text-align:left;padding:8px 16px;border-left:3px solid transparent}
+.sc:hover{background:var(--sunk)}
+.sc.on{background:var(--sunk);border-left-color:var(--accent)}
+.sc i{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:600;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r);color:var(--muted);background:var(--panel)}
+.sc.on i{border-color:var(--accent);color:var(--accent)}
+.sc.full i{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.sc b{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:600;color:var(--strong)}
+.sc b em{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--faint)}
+.sc.full b em{color:var(--good)}
+.sc small{display:block;font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc > span{min-width:0}
+.bar{height:3px;background:var(--hair);border-radius:2px;margin-top:5px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+.sc.full .bar span{background:var(--good)}
+
+.stage{display:flex;flex-direction:column;gap:14px;padding:16px;min-width:0;min-height:0}
+.brief{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;flex:none}
+.bhead{display:flex;align-items:center;gap:12px}
+.bhead h2{font-size:15px;font-weight:650;color:var(--strong)}
+.bhead .count{font-family:var(--mono);font-size:12px;color:var(--faint)}
+.bhead .acts{margin-left:auto;display:flex;gap:6px}
+.chip{font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);color:var(--muted);background:var(--panel)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.prime{background:var(--accent);border-color:var(--accent);color:#fff}
+.task{margin-top:8px;font-size:14.5px;color:var(--ink);max-width:88ch}
+.task kbd,.kbd{font-family:var(--mono);font-size:11.5px;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--sunk);color:var(--strong);white-space:nowrap}
+.target{margin-top:10px;font-family:var(--mono);font-size:13px;padding:8px 10px;background:var(--sunk);border:1px solid var(--hair);border-radius:var(--r);color:var(--strong);white-space:pre-wrap;overflow-wrap:anywhere}
+.target.hidden{color:var(--faint);font-style:italic;font-family:var(--sans)}
+.dots{display:flex;gap:5px;margin-top:12px;flex-wrap:wrap}
+.dots span{width:18px;height:6px;border-radius:2px;background:var(--hair)}
+.dots span.done{background:var(--faint)}
+.dots span.clean{background:var(--good)}
+.dots span.cur{background:var(--accent)}
+
+.term{flex:1;min-height:0;display:flex;flex-direction:column;background:#1e1e1e;border-radius:8px;border:1px solid #000;box-shadow:0 8px 30px rgba(0,0,0,.18);overflow:hidden;position:relative}
+.tbar{height:30px;flex:none;display:flex;align-items:center;padding:0 12px;background:linear-gradient(#3a3a3a,#2e2e2e);border-bottom:1px solid #111;position:relative}
+.tbar .lights{display:flex;gap:8px}
+.tbar .lights span{width:12px;height:12px;border-radius:50%}
+.tbar .lights span:nth-child(1){background:#ff5f57}
+.tbar .lights span:nth-child(2){background:#febc2e}
+.tbar .lights span:nth-child(3){background:#28c840}
+.tbar .ttl{position:absolute;left:0;right:0;text-align:center;font-size:12px;color:#a8a8a8;pointer-events:none}
+.screen{flex:1;min-height:0;overflow-y:auto;padding:8px 10px 14px;font-family:var(--mono);font-size:13.5px;line-height:1.45;color:#d4d4d4;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.screen::-webkit-scrollbar{width:10px}
+.screen::-webkit-scrollbar-thumb{background:#444;border-radius:5px}
+.ln{min-height:1.45em}
+.p{color:#d4d4d4}
+.cp{color:#7a7a7a}
+.k-cmd{color:#e5e510}
+.k-str{color:#29b8db}
+.k-var{color:#23d18b}
+.k-par{color:#8a8a8a}
+.k-op{color:#8a8a8a}
+.k-num{color:#ffffff}
+.k-type{color:#b0b0b0}
+.k-com{color:#3c9b3c}
+.ghost{color:#6b6b6b}
+.cur{background:#d4d4d4;color:#1e1e1e}
+.blur .cur{background:transparent;color:inherit;outline:1px solid #9a9a9a;outline-offset:-1px}
+.err{color:#f14c4c}
+.coach{color:#c586c0}
+.coach b{color:#e0a8dc;font-weight:600}
+.ok{color:#23d18b}
+.dim{color:#8a8a8a}
+.srch{color:#d4d4d4}
+.srch.fail{color:#f14c4c}
+.hl{background:#5a4b00}
+#ta{position:absolute;left:-9999px;top:0;width:10px;height:10px;opacity:0}
+
+.keys{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:14px 14px 24px}
+.keys h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
+.keys h4:first-child{margin-top:0}
+.kr{display:grid;grid-template-columns:78px 1fr 24px;gap:8px;align-items:center;min-height:30px;padding:3px 6px;border-radius:var(--r);font-size:12.5px;color:var(--muted);transition:background .25s}
+.kr .ks{display:flex;gap:3px}
+.kr .also{display:block;font-size:11px;color:var(--faint)}
+.kr .n{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:right}
+.kr.flash{background:var(--accent-soft);color:var(--strong)}
+.kr.used .n{color:var(--accent)}
+.tip{margin-top:16px;font-size:12px;color:var(--muted);padding:10px;border:1px dashed var(--line);border-radius:var(--r)}
+.tip b{color:var(--strong)}
+
+@media (max-width:1180px){
+  .shell{grid-template-columns:var(--rail) minmax(0,1fr)}
+  .keys{display:none}
+  .keys.open{display:block;position:fixed;right:0;top:var(--top);bottom:0;width:var(--keys);z-index:30;box-shadow:-8px 0 30px rgba(0,0,0,.15)}
+  #keysBtn{display:grid}
+}
+@media (min-width:1181px){ #keysBtn{display:none} }
+@media (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  .rail{display:none}
+  .rail.open{display:block;position:fixed;left:0;top:var(--top);bottom:0;width:var(--rail);z-index:30;box-shadow:8px 0 30px rgba(0,0,0,.15)}
+  .stats div:nth-child(n+3){display:none}
+  .brand span{display:none}
+  .stage{padding:10px}
+  #railBtn{display:grid}
+}
+@media (min-width:761px){ #railBtn{display:none} }
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="tbtn" id="railBtn" aria-label="Scenarios"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="brand"><b>Poshle</b><span>PowerShell muscle memory</span></div>
+  <div class="seg" id="modeSeg">
+    <button data-mode="ghost">Ghost</button>
+    <button data-mode="recall">Recall</button>
+  </div>
+  <div class="stats">
+    <div><b id="stWpm">–</b>last wpm</div>
+    <div><b id="stAvg">–</b>avg wpm</div>
+    <div><b id="stClean">0/0</b>clean</div>
+    <div><b id="stStreak">0</b>streak</div>
+  </div>
+  <button class="tbtn" id="keysBtn" aria-label="Shortcuts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h0M7 14h10"/></svg></button>
+  <button class="tbtn" id="themeBtn" aria-label="Switch theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main class="stage">
+    <section class="brief" id="brief"></section>
+    <section class="term" id="term">
+      <div class="tbar"><div class="lights"><span></span><span></span><span></span></div><div class="ttl">pwsh — kaatjenagels — 120×32</div></div>
+      <div class="screen" id="screen"><div id="scroll"></div><div class="ln" id="live"></div></div>
+      <textarea id="ta" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+    </section>
+  </main>
+  <aside class="keys" id="keys"></aside>
+</div>
+
+<script>
+const PROMPT = "PS /Users/kaatjenagels> ";
+const CONT = ">> ";
+
+const USER_TABLE = "\nDisplayName Id                                   Mail             UserPrincipalName\n----------- --                                   ----             -----------------\nLena Maes   6f1c2e8a-0b4d-4f7e-9c2a-1d3e5f7a9b0c user@contoso.com user@contoso.com\n";
+const ADMIN_TABLE = "\nDisplayName Id                                   Mail              UserPrincipalName\n----------- --                                   ----              -----------------\nIT Admin    0a9e4c71-3b2f-4d8a-b6e5-7c1f2a3d4e5f admin@contoso.com admin@contoso.com\n";
+const WELCOME = "Welcome to Microsoft Graph!\n\nConnected via delegated access using 14d82eec-204b-4c2f-b7e8-296a70dab67e\nReadme: https://aka.ms/graph/sdk/powershell\nSDK Docs: https://aka.ms/graph/sdk/powershell/docs\nAPI Docs: https://aka.ms/graph/docs\n\nNOTE: You can use the -NoWelcome parameter to suppress this message.\n";
+const CONTEXT = "\nClientId     : 14d82eec-204b-4c2f-b7e8-296a70dab67e\nTenantId     : 3c5e7a91-2d4f-4b6a-8e1c-9f0a2b4c6d8e\nScopes       : {openid, profile, User.Read.All, email}\nAuthType     : Delegated\nAccount      : admin@contoso.com\nAppName      : Microsoft Graph Command Line Tools\nContextScope : CurrentUser\n";
+
+function fmtDate(d){
+  const days = ["Sunday","Monday","Tuesday","Wednesday","Thursday","Friday","Saturday"];
+  const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+  const p = n => String(n).padStart(2,"0");
+  return "\n" + days[d.getDay()] + " " + d.getDate() + " " + months[d.getMonth()] + " " + d.getFullYear() + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds()) + "\n";
+}
+
+const SCEN = [
+{id:"start", name:"Start here", sub:"How Poshle works", steps:[
+ {task:"Every step gives you a job. Type the command and press <kbd>Enter</kbd>, exactly like in your real terminal. Start with the date.", cmd:"Get-Date", out:()=>fmtDate(new Date())},
+ {task:"Press <kbd>↑</kbd> to bring the last command back, then <kbd>Enter</kbd>. Your history works like real pwsh, and it is saved between visits.", cmd:"Get-Date", use:["hist"], out:()=>fmtDate(new Date())},
+ {task:"Type <b>get-hi</b> and press <kbd>Tab</kbd>. PowerShell completes it to Get-History and fixes the capitals for you.", cmd:"Get-History", use:["tab"], out:()=>historyOut()},
+ {task:"In <b>Ghost</b> mode the rest of the command shows in grey, like PSReadLine's prediction. <kbd>→</kbd> at the end would accept it, but then the line doesn't count as clean. Type this one fully.", cmd:"Get-MgContext", out:CONTEXT},
+ {task:"Switch to <b>Recall</b> at the top when a scenario feels easy: then only the job is shown and you type from memory. Clear the screen with <kbd>Ctrl</kbd><kbd>L</kbd>, then run Get-Date.", cmd:"Get-Date", use:["C-l"], out:()=>fmtDate(new Date())}
+]},
+{id:"connect", name:"Connect & check", sub:"Sessions and scopes", steps:[
+ {task:"Log into Microsoft Graph with read rights on users.", cmd:'Connect-MgGraph -Scopes "User.Read.All"', out:WELCOME},
+ {task:"Show which account and scopes this session has.", cmd:"Get-MgContext | Select-Object Account, Scopes", out:"\nAccount           Scopes\n-------           ------\nadmin@contoso.com {openid, profile, User.Read.All, email}\n"},
+ {task:"Reconnect with write rights on users, without the welcome banner.", cmd:'Connect-MgGraph -Scopes "User.ReadWrite.All" -NoWelcome'},
+ {task:"Open the Exchange Online door too, without the banner.", cmd:"Connect-ExchangeOnline -ShowBanner:$false"},
+ {task:"Check your PowerShell version.", cmd:"$PSVersionTable.PSVersion", out:"\nMajor  Minor  Patch  PreReleaseLabel BuildLabel\n-----  -----  -----  --------------- ----------\n7      5      3\n"},
+ {task:"Find which scopes Get-MgUser needs.", cmd:"Find-MgGraphCommand -Command Get-MgUser | Select-Object -Expand Permissions", out:"\nName               IsAdmin Description\n----               ------- -----------\nUser.Read.All      True    Read all users' full profiles\nUser.ReadWrite.All True    Read and write all users' full profiles\nDirectory.Read.All True    Read directory data\n"}
+]},
+{id:"users", name:"Find users", sub:"Get-MgUser and filters", steps:[
+ {task:"Store every user with the properties you need in $all.", cmd:"$all = Get-MgUser -All -Property Id,DisplayName,UserPrincipalName,AccountEnabled"},
+ {task:"Count them.", cmd:"$all.Count", out:"214\n"},
+ {task:"Find one user by sign-in name with a server-side filter.", cmd:"Get-MgUser -Filter \"userPrincipalName eq 'user@contoso.com'\"", out:USER_TABLE},
+ {task:"Find users whose display name starts with Jan.", cmd:"Get-MgUser -Filter \"startswith(displayName,'Jan')\"", out:"\nDisplayName  Id                                   Mail                     UserPrincipalName\n-----------  --                                   ----                     -----------------\nJan Peeters  2b7d9f13-6c4a-4e81-a0d2-5f8b3c1e7a46 jan.peeters@contoso.com  jan.peeters@contoso.com\nJana Wouters 9e3a1c5b-7d2f-4b86-8c0e-1a4f6d2b9e73 jana.wouters@contoso.com jana.wouters@contoso.com\n"},
+ {task:"From $all, keep only the blocked accounts and show name and sign-in name.", cmd:"$all | Where-Object { $_.AccountEnabled -eq $false } | Select-Object DisplayName, UserPrincipalName", out:"\nDisplayName  UserPrincipalName\n-----------  -----------------\nTom Claes    tom.claes@contoso.com\nSara Jacobs  sara.jacobs@contoso.com\n"},
+ {task:"Active users only, sorted by name, first 5 names.", cmd:"$all | Where-Object AccountEnabled | Sort-Object DisplayName | Select-Object -First 5 DisplayName", out:"\nDisplayName\n-----------\nAiko Haring\nAnke Dumon\nBart Lenaerts\nCas Verbeke\nDries Wouters\n"}
+]},
+{id:"rename", name:"Bulk rename", sub:"Plan, check, export", steps:[
+ {task:"Fetch personal mailboxes only, as lowercase sign-in names, into $people.", cmd:"$people = (Get-EXOMailbox -RecipientTypeDetails UserMailbox -ResultSize Unlimited).UserPrincipalName.ToLower()"},
+ {task:"Collect every sign-in name already in use into $taken.", cmd:"$taken = $all.UserPrincipalName.ToLower()"},
+ {task:"Is jpe@contoso.com already taken?", cmd:'$taken -contains "jpe@contoso.com"', out:"False\n"},
+ {task:"Save $plan to your Desktop as rename-plan.csv, UTF8, without type info.", cmd:"$plan | Export-Csv ~/Desktop/rename-plan.csv -NoTypeInformation -Encoding UTF8"},
+ {task:"Read it back into $rows, keeping only rows without a conflict.", cmd:'$rows = Import-Csv ~/Desktop/rename-plan.csv | Where-Object Conflict -eq "False"'},
+ {task:"How many rows are ready?", cmd:"$rows.Count", out:"12\n"},
+ {task:"Copy all old addresses to the clipboard, separated by semicolons, for the BCC field.", cmd:'(Import-Csv ~/Desktop/rename-plan.csv).OldUPN -join "; " | Set-Clipboard'}
+]},
+{id:"addr", name:"Mailbox addresses", sub:"Primary, alias, UPN", steps:[
+ {task:"List every address on Jan's mailbox, one per line.", cmd:"Get-Mailbox jan.peeters@contoso.com | Select-Object -Expand EmailAddresses", out:"SMTP:jan.peeters@contoso.com\nSIP:jan.peeters@contoso.com\n"},
+ {task:"Make jpe@contoso.com his primary email address.", cmd:"Set-Mailbox -Identity jan.peeters@contoso.com -WindowsEmailAddress jpe@contoso.com"},
+ {task:"Change his sign-in name to match.", cmd:"Update-MgUser -UserId jan.peeters@contoso.com -UserPrincipalName jpe@contoso.com"},
+ {task:"Check again: the new primary in capitals, the old one kept as alias.", cmd:"Get-Mailbox jpe@contoso.com | Select-Object -Expand EmailAddresses", out:"SMTP:jpe@contoso.com\nsmtp:jan.peeters@contoso.com\nSIP:jan.peeters@contoso.com\n"},
+ {task:"Add jan@contoso.com as an extra alias.", cmd:"Set-Mailbox -Identity jpe@contoso.com -EmailAddresses @{Add='smtp:jan@contoso.com'}"},
+ {task:"Who owns jan@contoso.com?", cmd:"Get-EXORecipient -Filter \"EmailAddresses -eq 'smtp:jan@contoso.com'\"", out:"\nName         RecipientType\n----         -------------\nJan Peeters  UserMailbox\n"}
+]},
+{id:"tap", name:"Temp Access Pass", sub:"Sign-in without a password", steps:[
+ {task:"Connect with the scope that lets you create sign-in methods, no banner.", cmd:'Connect-MgGraph -Scopes "UserAuthenticationMethod.ReadWrite.All" -NoWelcome'},
+ {task:"Store the user in $u, on its own line.", cmd:'$u = "user@contoso.com"'},
+ {task:"Check whether the user already has a TAP.", cmd:"Get-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u"},
+ {task:"Create an 8-hour, reusable TAP and show only the code.", cmd:"New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false } | Select-Object TemporaryAccessPass", out:"\nTemporaryAccessPass\n-------------------\nRq4#mT9z\n"},
+ {task:"Store the TAP's Id in $id.", cmd:"$id = (Get-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u).Id"},
+ {task:"Remove the TAP once setup is done.", cmd:"Remove-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -TemporaryAccessPassAuthenticationMethodId $id"}
+]},
+{id:"shared", name:"Shared mailboxes", sub:"FullAccess and SendAs", steps:[
+ {task:"Give user@ full access to sales@, appearing in Outlook automatically.", cmd:"Add-MailboxPermission -Identity sales@contoso.com -User user@contoso.com -AccessRights FullAccess -AutoMapping $true", out:"\nIdentity User             AccessRights  IsInherited Deny\n-------- ----             ------------  ----------- ----\nSales    user@contoso.com {FullAccess}  False       False\n"},
+ {task:"Let user@ send as sales@, without the confirmation prompt.", cmd:"Add-RecipientPermission -Identity sales@contoso.com -Trustee user@contoso.com -AccessRights SendAs -Confirm:$false", out:"\nIdentity Trustee          AccessControlType AccessRights Inherited\n-------- -------          ----------------- ------------ ---------\nSales    user@contoso.com Allow             {SendAs}     False\n"},
+ {task:"Show who has access to sales@, without the inherited system entries.", cmd:"Get-MailboxPermission -Identity sales@contoso.com | Where-Object IsInherited -eq $false", out:"\nIdentity User                 AccessRights IsInherited Deny\n-------- ----                 ------------ ----------- ----\nSales    NT AUTHORITY\\SELF    {FullAccess} False       False\nSales    user@contoso.com     {FullAccess} False       False\n"},
+ {task:"Take the full access away again, no prompt.", cmd:"Remove-MailboxPermission -Identity sales@contoso.com -User user@contoso.com -AccessRights FullAccess -Confirm:$false"}
+]},
+{id:"offboard", name:"Offboard a leaver", sub:"Block, keep, free", steps:[
+ {task:"Block sign-in.", cmd:"Update-MgUser -UserId user@contoso.com -AccountEnabled:$false"},
+ {task:"Sign the user out everywhere.", cmd:"Revoke-MgUserSignInSession -UserId user@contoso.com", out:"\nValue\n-----\nTrue\n"},
+ {task:"Convert the mailbox to a shared mailbox.", cmd:"Set-Mailbox -Identity user@contoso.com -Type Shared"},
+ {task:"Give the manager full access.", cmd:"Add-MailboxPermission -Identity user@contoso.com -User manager@contoso.com -AccessRights FullAccess -AutoMapping $true", out:"\nIdentity  User                AccessRights  IsInherited Deny\n--------  ----                ------------  ----------- ----\nLena Maes manager@contoso.com {FullAccess}  False       False\n"},
+ {task:"Set an auto-reply for everyone outside too.", cmd:'Set-MailboxAutoReplyConfiguration -Identity user@contoso.com -AutoReplyState Enabled -ExternalMessage "Please contact info@contoso.com." -ExternalAudience All'},
+ {task:"Hide the mailbox from the address book.", cmd:"Set-Mailbox -Identity user@contoso.com -HiddenFromAddressListsEnabled $true"},
+ {task:"Which licence does the user still have?", cmd:"Get-MgUserLicenseDetail -UserId user@contoso.com | Select-Object SkuPartNumber", out:"\nSkuPartNumber\n-------------\nSPB\n"}
+]},
+{id:"contain", name:"Compromise", sub:"Contain: the first 15 min", steps:[
+ {task:"Connect with sign-in log and user write rights, no banner.", cmd:'Connect-MgGraph -Scopes "AuditLog.Read.All","User.ReadWrite.All" -NoWelcome'},
+ {task:"Block the account.", cmd:"Update-MgUser -UserId user@contoso.com -AccountEnabled:$false"},
+ {task:"Kill every session and stolen token.", cmd:"Revoke-MgUserSignInSession -UserId user@contoso.com", out:"\nValue\n-----\nTrue\n"},
+ {task:"List the inbox rules: name, enabled, move-to folder, delete.", cmd:"Get-InboxRule -Mailbox user@contoso.com | Select-Object Name, Enabled, MoveToFolder, DeleteMessage", out:"\nName      Enabled MoveToFolder DeleteMessage\n----      ------- ------------ -------------\nInvoices  True    Invoices     False\n.         True    RSS Feeds    False\n"},
+ {task:"Remove the suspicious rule called . without a prompt.", cmd:'Remove-InboxRule -Mailbox user@contoso.com -Identity "." -Confirm:$false'},
+ {task:"Check mailbox forwarding.", cmd:"Get-Mailbox -Identity user@contoso.com | Format-List ForwardingSmtpAddress, DeliverToMailboxAndForward", out:"\nForwardingSmtpAddress      : smtp:collect@example.net\nDeliverToMailboxAndForward : True\n"},
+ {task:"Remove the forwarding.", cmd:"Set-Mailbox -Identity user@contoso.com -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false"}
+]},
+{id:"investigate", name:"Investigate", sub:"Sign-ins, trace, audit", steps:[
+ {task:"Store all sign-ins for user@ in $s.", cmd:"$s = Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'user@contoso.com'\" -All"},
+ {task:"Count sign-ins per IP address.", cmd:"$s | Group-Object IpAddress | Select-Object Name, Count", out:"\nName          Count\n----          -----\n198.51.100.7     31\n203.0.113.10      6\n"},
+ {task:"Show time and app for the strange IP 203.0.113.10.", cmd:'$s | Where-Object IpAddress -eq "203.0.113.10" | Select-Object CreatedDateTime, AppDisplayName', out:"\nCreatedDateTime     AppDisplayName\n---------------     --------------\n01/10/2026 03:12:44 OfficeHome\n01/10/2026 03:13:02 Office 365 Exchange Online\n"},
+ {task:"Store everything user@ sent in the last 3 days in $t.", cmd:"$t = Get-MessageTraceV2 -SenderAddress user@contoso.com -StartDate (Get-Date).AddDays(-3) -EndDate (Get-Date) -ResultSize 5000"},
+ {task:"Count recipients per domain, biggest first.", cmd:'$t | Group-Object { ($_.RecipientAddress -split "@")[1] } | Sort-Object Count -Descending | Select-Object Name, Count', out:"\nName          Count\n----          -----\nfabrikam.com     58\nexample.org      41\ncontoso.com      12\n"},
+ {task:"Search the audit log for mails the account opened, into $a.", cmd:"$a = Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds user@contoso.com -Operations MailItemsAccessed -ResultSize 5000"},
+ {task:"Read the client IP from the first audit record.", cmd:"($a[0].AuditData | ConvertFrom-Json).ClientIPAddress", out:"203.0.113.10\n"}
+]},
+{id:"export", name:"Export & data", sub:"CSV, Excel, clipboard", steps:[
+ {task:"Save the sign-ins in $s to your Desktop as signins.csv, UTF8.", cmd:"$s | Export-Csv ~/Desktop/signins.csv -NoTypeInformation -Encoding UTF8"},
+ {task:"Open it from the terminal.", cmd:"open ~/Desktop/signins.csv"},
+ {task:"Write $s to a Sign-ins tab in incident.xlsx with filters, frozen header, auto width.", cmd:'$s | Export-Excel ~/Desktop/incident.xlsx -WorksheetName "Sign-ins" -AutoFilter -FreezeTopRow -AutoSize'},
+ {task:"Add $t as a second tab called Sent mail in the same file.", cmd:'$t | Export-Excel ~/Desktop/incident.xlsx -WorksheetName "Sent mail" -AutoFilter -FreezeTopRow -AutoSize'},
+ {task:"Copy every unique recipient address to the clipboard.", cmd:"$t.RecipientAddress | Sort-Object -Unique | Set-Clipboard"},
+ {task:"Check the Excel file exists.", cmd:"Test-Path ~/Desktop/incident.xlsx", out:"True\n"}
+]},
+{id:"gym", name:"Shortcut gym", sub:"Editing without the mouse", gym:true, steps:[
+ {task:"The G is missing. <kbd>Ctrl</kbd><kbd>A</kbd> jumps to the start of the line. Type G and press <kbd>Enter</kbd>.", pre:"et-MgUser -UserId user@contoso.com", cmd:"Get-MgUser -UserId user@contoso.com", use:["C-a"], out:USER_TABLE},
+ {task:"Wrong address. <kbd>Ctrl</kbd><kbd>E</kbd> to the end, <kbd>Ctrl</kbd><kbd>W</kbd> cuts the word before the cursor, then type user@contoso.com.", pre:"Get-MgUser -UserId wrong@contoso.com", at:0, cmd:"Get-MgUser -UserId user@contoso.com", use:["C-e","C-w"], out:USER_TABLE},
+ {task:"<kbd>↑</kbd> brings back the last command. <kbd>Ctrl</kbd><kbd>W</kbd> the address away and type admin@contoso.com.", cmd:"Get-MgUser -UserId admin@contoso.com", use:["hist","C-w"], out:ADMIN_TABLE},
+ {task:"Type <b>Revoke-MgUserSignInSession -UserId </b> and press <kbd>⌥</kbd><kbd>.</kbd> to drop in the last argument of the previous command.", cmd:"Revoke-MgUserSignInSession -UserId admin@contoso.com", use:["M-."], out:"\nValue\n-----\nTrue\n"},
+ {task:"Throw the whole line away with <kbd>Ctrl</kbd><kbd>U</kbd>, then type Get-MgContext.", pre:"Get-Mailbox -Identity typo@contosso.com", cmd:"Get-MgContext", use:["C-u"], out:CONTEXT},
+ {task:"The cursor sits just after the address. <kbd>Ctrl</kbd><kbd>U</kbd> cuts everything before it, <kbd>Ctrl</kbd><kbd>E</kbd> jumps to the end, <kbd>Ctrl</kbd><kbd>Y</kbd> pastes it back.", pre:"user@contoso.com Get-MgUser -UserId ", at:17, cmd:"Get-MgUser -UserId user@contoso.com", use:["C-u","C-e","C-y"], out:USER_TABLE},
+ {task:"Change Shared into Regular: <kbd>⌥</kbd><kbd>B</kbd> jumps back one word, <kbd>⌥</kbd><kbd>D</kbd> cuts the word after the cursor, then type Regular.", pre:"Set-Mailbox -Identity user@contoso.com -Type Shared", cmd:"Set-Mailbox -Identity user@contoso.com -Type Regular", use:["M-b","M-d"]},
+ {task:"Two letters are swapped and the cursor is on the s. <kbd>Ctrl</kbd><kbd>T</kbd> swaps the letter before the cursor with the one under it.", pre:"Get-MgUesr -All", at:8, cmd:"Get-MgUser -All", use:["C-t"]},
+ {task:"<kbd>⌥</kbd><kbd>F</kbd> jumps forward word by word. Press it three times to land after -UserId, cut the rest with <kbd>Ctrl</kbd><kbd>K</kbd>, then type a space and user@contoso.com.", pre:"Get-MgUser -UserId nobody@contoso.com", at:0, cmd:"Get-MgUser -UserId user@contoso.com", use:["M-f","C-k"], out:USER_TABLE},
+ {task:"Wipe the line with <kbd>Ctrl</kbd><kbd>U</kbd>, then undo with <kbd>Ctrl</kbd><kbd>_</kbd> (Ctrl+Shift+-) and run it.", pre:"Get-MgUser -All", cmd:"Get-MgUser -All", use:["C-u","undo"]},
+ {task:"Let Tab do the typing: type <b>get-mgu</b> + <kbd>Tab</kbd>, then <b>-Us</b> + <kbd>Tab</kbd>, then the address.", cmd:"Get-MgUser -UserId user@contoso.com", use:["tab"], out:USER_TABLE},
+ {task:"Run this once so it is in your history.", cmd:'Connect-MgGraph -Scopes "User.Read.All" -NoWelcome'},
+ {task:"Run something else in between.", cmd:"Get-Date", out:()=>fmtDate(new Date())},
+ {task:"Find it again: <kbd>Ctrl</kbd><kbd>R</kbd>, type <b>conn</b>, press <kbd>Enter</kbd>. <kbd>Ctrl</kbd><kbd>R</kbd> again jumps to older matches.", cmd:'Connect-MgGraph -Scopes "User.Read.All" -NoWelcome', use:["C-r"]},
+ {task:"Split a pipeline: type <b>Get-MgUser -All |</b> and press <kbd>Enter</kbd>. pwsh waits with <b>&gt;&gt;</b>. Type Select-Object DisplayName and press <kbd>Enter</kbd>.", cmd:"Get-MgUser -All | Select-Object DisplayName", use:["cont"], out:"\nDisplayName\n-----------\nAiko Haring\nAnke Dumon\nBart Lenaerts\n...\n"},
+ {task:"Start typing anything, cancel the line with <kbd>Ctrl</kbd><kbd>C</kbd>, then run Get-MgContext.", cmd:"Get-MgContext", use:["C-c"], out:CONTEXT}
+]}
+];
+
+const EXTRA_CMDS = ["Get-Date","Get-History","Clear-Host","Get-Help","Get-Member","Get-Command","Where-Object","Select-Object","Sort-Object","Group-Object","Measure-Object","ForEach-Object","Format-Table","Format-List","Export-Csv","Import-Csv","Set-Clipboard","Get-Clipboard","Out-File","Test-Path","Get-ChildItem","Set-Location","Get-Location","Start-Sleep","Write-Host","Write-Output","Get-InstalledModule","Install-Module","Update-Module","Import-Module","Disconnect-MgGraph","Disconnect-ExchangeOnline","Get-MgUser","Update-MgUser","New-MgUser","Remove-MgUser","Get-MgGroup","Get-MgGroupMember","New-MgGroupMember","Get-MgSubscribedSku","Set-MgUserLicense","Get-MgUserMemberOf","Get-MgUserAuthenticationMethod","Get-EXOMailbox","Get-Mailbox","Set-Mailbox","Get-MailboxStatistics","Get-MessageTraceV2","Search-UnifiedAuditLog","Connect-IPPSSession","Add-RoleGroupMember","Get-RoleGroupMember","Get-InboxRule","Remove-InboxRule","Get-MailboxAutoReplyConfiguration","Set-MailboxAutoReplyConfiguration","Get-MgServicePrincipal","Get-MgUserOauth2PermissionGrant","Get-MgAuditLogDirectoryAudit","Get-MgAuditLogSignIn","Export-Excel","Import-Excel","ConvertFrom-Json","ConvertTo-Json","Find-MgGraphCommand","Get-MgContext","Get-Team","Add-TeamUser","Connect-MicrosoftTeams","Get-DistributionGroupMember","Add-DistributionGroupMember","Get-MailboxPermission","Remove-MailboxPermission","Add-MailboxPermission","Add-RecipientPermission","Get-EXORecipient","New-TimeSpan","Get-Random","Revoke-MgUserSignInSession","Get-MgUserLicenseDetail","Set-CalendarProcessing","Connect-PnPOnline","Get-PnPList","Add-eDiscoveryCaseAdmin","Clear-History","Get-Process","Get-Content","Set-Content","Copy-Item","Move-Item","Remove-Item","New-Item","Invoke-RestMethod","Out-GridView","Tee-Object","Compare-Object","Get-Variable","Get-Alias","Get-PSReadLineKeyHandler","Set-PSReadLineOption"];
+const ALIASES = ["open","clear","cls","exit","history","h","sort","ls","cd","pwd","cat","echo","man","help","caffeinate","code","dir","select","where","foreach","%","?","gm","ft","fl","r"];
+const MANUAL_PARAMS = {
+ "select-object":["Property","ExcludeProperty","ExpandProperty","First","Last","Skip","Unique","Index"],
+ "sort-object":["Property","Descending","Unique","Top","Bottom","CaseSensitive"],
+ "where-object":["Property","Value","FilterScript","EQ","NE","GT","LT","Like","Match","Contains","In","Not"],
+ "export-csv":["Path","LiteralPath","NoTypeInformation","Encoding","Delimiter","Append","Force","UseQuotes"],
+ "import-csv":["Path","LiteralPath","Delimiter","Header","Encoding"],
+ "get-mguser":["UserId","All","Filter","Property","Search","Top","ConsistencyLevel","CountVariable","Sort","ExpandProperty"],
+ "format-table":["Property","AutoSize","Wrap","GroupBy","HideTableHeaders"],
+ "format-list":["Property","GroupBy"],
+ "group-object":["Property","NoElement","AsHashTable","CaseSensitive"],
+ "get-date":["Format","UFormat","Date","Year","Month","Day","Hour","Minute","AsUTC"],
+ "get-history":["Id","Count"],
+ "connect-mggraph":["Scopes","NoWelcome","TenantId","ClientId","UseDeviceCode","ContextScope","Environment"],
+ "connect-exchangeonline":["ShowBanner","UserPrincipalName","Organization","Device","ShowProgress"]
+};
+const COMMON = ["Verbose","Debug","ErrorAction","WarningAction","InformationAction","ErrorVariable","WarningVariable","OutVariable","OutBuffer","PipelineVariable","WhatIf","Confirm"];
+const FS = {"~/":["Desktop/","Documents/","Downloads/",".config/"],"~/Desktop/":["incident.xlsx","rename-log.csv","rename-plan.csv","signins.csv","trace.csv","users.csv"],"~/Documents/":["scripts/","notes.txt"],"~/Downloads/":["export.csv"]};
+const AUTO_VARS = ["$HOME","$PSVersionTable","$true","$false","$null","$_","$PWD","$Error","$PROFILE","$Host"];
+const WD = ";:,.[]{}()/\\|^&*-=+'\"–—―";
+
+const KEYMAP = [
+ {g:"Move", rows:[
+  {ids:["C-a","home"], k:[["Ctrl","A"],["Home"]], t:"Start of line"},
+  {ids:["C-e","end"], k:[["Ctrl","E"],["End"]], t:"End of line"},
+  {ids:["C-b","left"], k:[["Ctrl","B"],["←"]], t:"One character left"},
+  {ids:["C-f","right"], k:[["Ctrl","F"],["→"]], t:"Right · at end: take grey"},
+  {ids:["M-b"], k:[["⌥","B"]], t:"One word left"},
+  {ids:["M-f"], k:[["⌥","F"]], t:"One word right"}
+ ]},
+ {g:"Cut & delete", rows:[
+  {ids:["C-u"], k:[["Ctrl","U"]], t:"Cut to start of line"},
+  {ids:["C-k"], k:[["Ctrl","K"]], t:"Cut to end of line"},
+  {ids:["C-w"], k:[["Ctrl","W"]], t:"Cut word before cursor"},
+  {ids:["M-bs"], k:[["⌥","⌫"]], t:"Cut part-word before"},
+  {ids:["M-d"], k:[["⌥","D"]], t:"Cut word after cursor"},
+  {ids:["C-d","del"], k:[["Ctrl","D"]], t:"Delete char · empty: exit"},
+  {ids:["C-h","bs"], k:[["⌫"],["Ctrl","H"]], t:"Delete char before"},
+  {ids:["C-t"], k:[["Ctrl","T"]], t:"Swap two characters"}
+ ]},
+ {g:"Paste & undo", rows:[
+  {ids:["C-y"], k:[["Ctrl","Y"]], t:"Paste last cut"},
+  {ids:["M-y"], k:[["⌥","Y"]], t:"Older cuts (after Ctrl+Y)"},
+  {ids:["undo"], k:[["Ctrl","_"]], t:"Undo (Ctrl+Shift+-)"},
+  {ids:["M-."], k:[["⌥","."]], t:"Last arg of previous line"}
+ ]},
+ {g:"History", rows:[
+  {ids:["hist"], k:[["↑"],["Ctrl","P"]], t:"Previous command"},
+  {ids:["hist-next"], k:[["↓"],["Ctrl","N"]], t:"Next command"},
+  {ids:["C-r"], k:[["Ctrl","R"]], t:"Search history backwards"},
+  {ids:["C-s"], k:[["Ctrl","S"]], t:"Search forward, in a search"},
+  {ids:["C-g"], k:[["Ctrl","G"]], t:"Cancel the search"}
+ ]},
+ {g:"Complete", rows:[
+  {ids:["tab"], k:[["Tab"]], t:"Complete · twice: list options"},
+  {ids:["list"], k:[["⌥","="]], t:"List all options"}
+ ]},
+ {g:"Control", rows:[
+  {ids:["enter"], k:[["Enter"]], t:"Run · unfinished line: >>"},
+  {ids:["cont"], k:[["Shift","Enter"]], t:"New line without running"},
+  {ids:["C-c"], k:[["Ctrl","C"]], t:"Cancel the line"},
+  {ids:["C-l"], k:[["Ctrl","L"]], t:"Clear the screen"},
+  {ids:["cmd-k"], k:[["⌘","K"]], t:"Clear (Terminal.app)"},
+  {ids:["esc"], k:[["Esc"]], t:"Then a key = ⌥ + that key"}
+ ]}
+];
+const USE_LABEL = {"C-a":"Ctrl+A","C-e":"Ctrl+E","C-w":"Ctrl+W","C-u":"Ctrl+U","C-k":"Ctrl+K","C-y":"Ctrl+Y","C-t":"Ctrl+T","C-r":"Ctrl+R","C-l":"Ctrl+L","C-c":"Ctrl+C","M-b":"⌥B","M-f":"⌥F","M-d":"⌥D","M-.":"⌥.","undo":"Ctrl+_","hist":"↑","tab":"Tab","cont":"Enter on an unfinished line (>>)"};
+
+const KNOWN = new Map();
+const PARAMS = {};
+(function buildDict(){
+  const add = n => KNOWN.set(n.toLowerCase(), n);
+  EXTRA_CMDS.forEach(add);
+  SCEN.forEach(s => s.steps.forEach(st => {
+    (st.cmd.match(/\b[A-Z][a-z]+-[A-Z][A-Za-z0-9]+/g) || []).forEach(add);
+  }));
+  Object.keys(MANUAL_PARAMS).forEach(k => PARAMS[k] = MANUAL_PARAMS[k].slice());
+  SCEN.forEach(s => s.steps.forEach(st => {
+    splitSegments(st.cmd).forEach(seg => {
+      const m = seg.trim().replace(/^\$[\w:]+\s*=\s*/, "").replace(/^\(/, "").match(/^([A-Za-z]+-[A-Za-z0-9]+)/);
+      if (!m) return;
+      const key = m[1].toLowerCase();
+      if (!PARAMS[key]) PARAMS[key] = [];
+      const list = PARAMS[key];
+      (seg.match(/(?:^|\s)-([A-Za-z][A-Za-z0-9]*)/g) || []).forEach(p => {
+        const name = p.trim().slice(1);
+        if (/^(eq|ne|gt|lt|ge|le|like|notlike|match|notmatch|contains|in|join|split|replace|and|or|not)$/i.test(name) && !MANUAL_PARAMS[key]) return;
+        if (list.some(x => x.toLowerCase() === name.toLowerCase())) return;
+        if (list.some(x => x.toLowerCase().startsWith(name.toLowerCase()))) return;
+        list.push(name);
+      });
+    });
+  }));
+})();
+
+function splitSegments(s){
+  const out = []; let cur = ""; let q = null; let depth = 0;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (q){ cur += c; if (c === q) q = null; continue; }
+    if (c === "'" || c === '"'){ q = c; cur += c; continue; }
+    if (c === "{" || c === "(") depth++;
+    if (c === "}" || c === ")") depth--;
+    if ((c === "|" || c === ";") && depth <= 0){ out.push(cur); cur = ""; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+const KEY_STORE = "poshle.v1";
+const KEY_HIST = "poshle.hist";
+const KEY_THEME = "poshle.theme";
+function load(k, f){ try { const r = localStorage.getItem(k); return r === null ? f : JSON.parse(r); } catch(e){ return f; } }
+function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+const store = load(KEY_STORE, {steps:{}, mode:"ghost", scen:"start"});
+if (!store.steps) store.steps = {};
+let hist = load(KEY_HIST, []);
+if (!Array.isArray(hist)) hist = [];
+
+const $ = id => document.getElementById(id);
+const screenEl = $("screen"), scrollEl = $("scroll"), liveEl = $("live"), ta = $("ta");
+
+const S = {
+  scen: null, idx: 0, list: null,
+  buf: "", cur: 0,
+  undo: [], kill: [], killIdx: 0,
+  hIdx: hist.length, pending: "",
+  last: "", yank: null, lastArg: null,
+  search: null, meta: false,
+  used: new Set(), assisted: false, pasted: false, revealed: false, misses: 0,
+  t0: 0, focused: false, vars: new Set(),
+  session: {lines: 0, clean: 0, done: 0, wpmSum: 0, wpmN: 0, streak: 0}
+};
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function classify(s){
+  const cls = new Array(s.length).fill("");
+  let i = 0, cmdPos = true, prev = "";
+  const set = (a, b, c) => { for (let k = a; k < b; k++) cls[k] = c; };
+  while (i < s.length){
+    const c = s[i];
+    if (c === "\n" || c === " " || c === "\t"){ if (c === "\n") cmdPos = true; i++; continue; }
+    if (c === "#"){ let j = s.indexOf("\n", i); if (j < 0) j = s.length; set(i, j, "k-com"); i = j; continue; }
+    if (c === "'" || c === '"'){
+      let j = i + 1;
+      while (j < s.length && s[j] !== c){ if (c === '"' && s[j] === "`") j++; j++; }
+      j = Math.min(j + 1, s.length);
+      set(i, j, "k-str"); i = j; cmdPos = false; prev = "str"; continue;
+    }
+    if (c === "$"){
+      const m = s.slice(i).match(/^\$(\{[^}]*\}?|[\w:?^$]+)?/);
+      const j = i + Math.max(1, m[0].length);
+      set(i, j, "k-var"); i = j; cmdPos = false; prev = "var"; continue;
+    }
+    if (c === "-" && /[A-Za-z]/.test(s[i+1] || "") && (i === 0 || /[\s(]/.test(s[i-1]))){
+      const m = s.slice(i).match(/^-[A-Za-z][\w-]*:?/);
+      set(i, i + m[0].length, "k-par"); i += m[0].length; prev = "par"; continue;
+    }
+    if (/[0-9]/.test(c) && (i === 0 || !/[\w.@-]/.test(s[i-1]))){
+      const m = s.slice(i).match(/^\d[\d.]*(?:[kKmMgGtT][bB])?/);
+      const after = s[i + m[0].length] || "";
+      if (!/[A-Za-z@_]/.test(after)){ set(i, i + m[0].length, "k-num"); i += m[0].length; cmdPos = false; continue; }
+    }
+    if (c === "["){
+      const m = s.slice(i).match(/^\[[\w.]+\]/);
+      if (m){ set(i, i + m[0].length, "k-type"); i += m[0].length; continue; }
+    }
+    if (/[\w~./%?]/.test(c)){
+      const m = s.slice(i).match(/^[\w~./@%?:-]+/);
+      const w = m[0];
+      if (prev !== "dot" && cmdPos && (/^[A-Za-z]+-[A-Za-z0-9]+$/.test(w) || ALIASES.indexOf(w.toLowerCase()) >= 0)) set(i, i + w.length, "k-cmd");
+      i += w.length; cmdPos = false; prev = "word"; continue;
+    }
+    if (c === "|" || c === ";" || c === "{" || c === "(" || c === "="){ cmdPos = true; if (c === "|" || c === "=" || c === ";") cls[i] = "k-op"; i++; prev = "op"; continue; }
+    if (c === "@" && (s[i+1] === "{" || s[i+1] === "(")){ i++; continue; }
+    if (c === ","){ cls[i] = "k-op"; i++; continue; }
+    i++;
+  }
+  return cls;
+}
+
+function renderLine(text, opt){
+  opt = opt || {};
+  const cls = classify(text);
+  let html = '<span class="p">' + esc(PROMPT) + "</span>";
+  let run = "", runCls = null;
+  const flush = () => { if (run) html += runCls ? '<span class="' + runCls + '">' + esc(run) + "</span>" : esc(run); run = ""; };
+  for (let i = 0; i <= text.length; i++){
+    if (opt.cursor !== undefined && i === opt.cursor && !(i === text.length && opt.ghost)){
+      flush();
+      const ch = i < text.length && text[i] !== "\n" ? text[i] : " ";
+      html += '<span class="cur ' + (cls[i] || "") + '">' + esc(ch) + "</span>";
+      if (i < text.length && text[i] === "\n"){ html += '\n<span class="cp">' + CONT + "</span>"; }
+      runCls = null;
+      continue;
+    }
+    if (i === text.length) break;
+    const ch = text[i];
+    if (ch === "\n"){ flush(); html += '\n<span class="cp">' + CONT + "</span>"; runCls = null; continue; }
+    let c = cls[i] || null;
+    if (opt.hl && i >= opt.hl[0] && i < opt.hl[1]) c = (c ? c + " " : "") + "hl";
+    if (c !== runCls){ flush(); runCls = c; }
+    run += ch;
+  }
+  flush();
+  if (opt.ghost){
+    const g = opt.ghost;
+    if (opt.cursor === text.length){
+      html += '<span class="cur">' + esc(g[0]) + '</span><span class="ghost">' + esc(g.slice(1)) + "</span>";
+    } else {
+      html += '<span class="ghost">' + esc(g) + "</span>";
+    }
+  }
+  return html;
+}
+
+function suggestion(){
+  if (S.search || S.cur !== S.buf.length || !S.buf) return "";
+  const st = curStep();
+  if (store.mode === "ghost" && st && !st.pre){
+    if (st.cmd.toLowerCase().startsWith(S.buf.toLowerCase()) && st.cmd.length > S.buf.length) return st.cmd.slice(S.buf.length);
+    return "";
+  }
+  if (store.mode === "ghost" && st && st.pre) return "";
+  for (let i = hist.length - 1; i >= 0; i--){
+    const h = hist[i];
+    if (h.length > S.buf.length && h.toLowerCase().startsWith(S.buf.toLowerCase()) && h.indexOf("\n") < 0) return h.slice(S.buf.length);
+  }
+  return "";
+}
+
+function render(){
+  const g = suggestion();
+  let html = renderLine(S.buf, {cursor: S.cur, ghost: g || null, hl: S.search && S.search.hit ? S.search.hit : null});
+  if (S.search){
+    html += '\n<span class="srch' + (S.search.fail ? " fail" : "") + '">' + (S.search.fail ? "failing " : "") + (S.search.dir < 0 ? "bck" : "fwd") + "-i-search: " + esc(S.search.q) + "_</span>";
+  }
+  liveEl.innerHTML = html;
+  screenEl.classList.toggle("blur", !S.focused);
+  screenEl.scrollTop = screenEl.scrollHeight;
+}
+
+function print(html, cls){
+  const d = document.createElement("div");
+  d.className = "ln" + (cls ? " " + cls : "");
+  d.innerHTML = html;
+  scrollEl.appendChild(d);
+  while (scrollEl.childNodes.length > 500) scrollEl.removeChild(scrollEl.firstChild);
+}
+function printText(t, cls){ print(esc(t.replace(/\n$/, "")), cls); }
+function coach(html){ print('<span class="coach">poshle › ' + html + "</span>"); }
+function freeze(){ print(renderLine(S.buf, {})); }
+function clearScreen(){ scrollEl.innerHTML = ""; }
+
+function flashKey(id){
+  S.used.add(id);
+  const row = document.querySelector('.kr[data-ids~="' + CSS.escape(id) + '"]');
+  if (!row) return;
+  const n = row.querySelector(".n");
+  n.textContent = String((parseInt(n.textContent, 10) || 0) + 1);
+  row.classList.add("used", "flash");
+  clearTimeout(row._t);
+  row._t = setTimeout(() => row.classList.remove("flash"), 450);
+}
+
+function snap(){ return {buf: S.buf, cur: S.cur}; }
+function pushUndo(kind){
+  if (kind === "ins" && S.last === "ins") return;
+  const top = S.undo[S.undo.length - 1];
+  if (top && top.buf === S.buf && top.cur === S.cur) return;
+  S.undo.push(snap());
+  if (S.undo.length > 200) S.undo.shift();
+}
+function setBuf(b, c){ S.buf = b; S.cur = Math.max(0, Math.min(c, b.length)); }
+function startClock(){ if (!S.t0) S.t0 = performance.now(); }
+
+function insert(text){
+  if (!text) return;
+  startClock();
+  if (S.search){ S.search.q += text; doSearch(false); render(); return; }
+  pushUndo("ins");
+  setBuf(S.buf.slice(0, S.cur) + text + S.buf.slice(S.cur), S.cur + text.length);
+  S.last = "ins";
+  render();
+}
+
+function isW(c){ return c !== undefined && !/\s/.test(c) && WD.indexOf(c) < 0; }
+function backWord(){ let i = S.cur; while (i > 0 && !isW(S.buf[i-1])) i--; while (i > 0 && isW(S.buf[i-1])) i--; return i; }
+function fwdWord(){ let i = S.cur; const n = S.buf.length; while (i < n && !isW(S.buf[i])) i++; while (i < n && isW(S.buf[i])) i++; return i; }
+function lineStart(){ const i = S.buf.lastIndexOf("\n", S.cur - 1); return i + 1; }
+function lineEnd(){ const i = S.buf.indexOf("\n", S.cur); return i < 0 ? S.buf.length : i; }
+
+function killRange(a, b, backward){
+  if (a === b) return;
+  pushUndo("kill");
+  const text = S.buf.slice(a, b);
+  if (S.last === "kill" && S.kill.length){ S.kill[0] = backward ? text + S.kill[0] : S.kill[0] + text; }
+  else { S.kill.unshift(text); if (S.kill.length > 30) S.kill.pop(); }
+  setBuf(S.buf.slice(0, a) + S.buf.slice(b), a);
+}
+
+function tokenize(line){
+  const out = []; let cur = ""; let q = null;
+  for (const c of line){
+    if (q){ cur += c; if (c === q) q = null; continue; }
+    if (c === "'" || c === '"'){ q = c; cur += c; continue; }
+    if (/\s/.test(c)){ if (cur){ out.push(cur); cur = ""; } continue; }
+    cur += c;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+function acceptSuggestion(word){
+  const g = suggestion();
+  if (!g) return false;
+  let add = g;
+  if (word){ const m = g.match(/^\s*[^\s]+/); add = m ? m[0] : g; }
+  pushUndo("acc");
+  setBuf(S.buf + add, S.buf.length + add.length);
+  S.assisted = true;
+  return true;
+}
+
+function histMove(dir){
+  if (S.buf.indexOf("\n") >= 0){
+    const ls = lineStart();
+    if (dir < 0 && ls > 0){ const col = S.cur - ls; const pe = ls - 1; const ps = S.buf.lastIndexOf("\n", pe - 1) + 1; S.cur = Math.min(ps + col, pe); return; }
+    const le = lineEnd();
+    if (dir > 0 && le < S.buf.length){ const col = S.cur - ls; const ns = le + 1; let ne = S.buf.indexOf("\n", ns); if (ne < 0) ne = S.buf.length; S.cur = Math.min(ns + col, ne); return; }
+  }
+  if (dir < 0){
+    if (S.hIdx <= 0) return;
+    if (S.hIdx === hist.length) S.pending = S.buf;
+    S.hIdx--; setBuf(hist[S.hIdx], hist[S.hIdx].length);
+  } else {
+    if (S.hIdx >= hist.length) return;
+    S.hIdx++;
+    const b = S.hIdx === hist.length ? S.pending : hist[S.hIdx];
+    setBuf(b, b.length);
+  }
+}
+
+function startSearch(dir){
+  if (!S.search){ S.search = {dir, q: "", idx: hist.length, fail: false, hit: null, save: snap()}; }
+  else { S.search.dir = dir; doSearch(true); }
+}
+function doSearch(next){
+  const s = S.search;
+  if (!s.q){ s.fail = false; s.hit = null; return; }
+  const q = s.q.toLowerCase();
+  let i = next ? s.idx + s.dir : (s.idx >= hist.length ? hist.length - 1 : s.idx);
+  if (!next && s.dir > 0) i = Math.max(0, s.idx);
+  for (; i >= 0 && i < hist.length; i += s.dir){
+    const p = hist[i].toLowerCase().indexOf(q);
+    if (p >= 0){ s.idx = i; s.fail = false; setBuf(hist[i], p); s.hit = [p, p + q.length]; return; }
+  }
+  s.fail = true;
+}
+function endSearch(keep){
+  if (!S.search) return;
+  if (!keep) setBuf(S.search.save.buf, S.search.save.cur);
+  S.hIdx = S.search.fail || !S.search.q ? hist.length : S.search.idx;
+  S.search = null;
+}
+
+function curStep(){ return S.list ? S.list[S.idx] || null : null; }
+
+function completionCtx(){
+  let s = S.cur;
+  while (s > 0 && !/[\s|;({,=]/.test(S.buf[s-1])) s--;
+  return {start: s, tok: S.buf.slice(s, S.cur)};
+}
+function commandBefore(pos){
+  const segs = splitSegments(S.buf.slice(0, pos));
+  const seg = segs[segs.length - 1].trim().replace(/^\$[\w:]+\s*=\s*/, "").replace(/^\(/, "");
+  const m = seg.match(/^([A-Za-z]+-[A-Za-z0-9]+)/);
+  return m ? m[1].toLowerCase() : null;
+}
+function candidates(tok, start){
+  const lo = tok.toLowerCase();
+  if (tok.startsWith("-")){
+    const cmd = commandBefore(start);
+    const list = (cmd && PARAMS[cmd] ? PARAMS[cmd] : []).concat(COMMON);
+    return [...new Set(list)].filter(p => ("-" + p).toLowerCase().startsWith(lo)).map(p => "-" + p);
+  }
+  if (tok.startsWith("$")){
+    const all = AUTO_VARS.concat([...S.vars]);
+    return [...new Set(all)].filter(v => v.toLowerCase().startsWith(lo) && v.toLowerCase() !== "$_").sort();
+  }
+  if (tok.startsWith("~/")){
+    const slash = tok.lastIndexOf("/");
+    const dir = tok.slice(0, slash + 1), rest = tok.slice(slash + 1).toLowerCase();
+    return (FS[dir] || []).filter(f => f.toLowerCase().startsWith(rest)).map(f => dir + f);
+  }
+  if (!tok) return [];
+  const names = [...KNOWN.values()];
+  return names.filter(n => n.toLowerCase().startsWith(lo)).sort();
+}
+function commonPrefix(list){
+  let p = list[0];
+  for (const x of list){ let i = 0; while (i < p.length && i < x.length && p[i].toLowerCase() === x[i].toLowerCase()) i++; p = p.slice(0, i); }
+  return p;
+}
+function complete(listNow){
+  const {start, tok} = completionCtx();
+  const c = candidates(tok, start);
+  if (!c.length) return;
+  if (!listNow && c.length === 1){
+    pushUndo("tab");
+    setBuf(S.buf.slice(0, start) + c[0] + S.buf.slice(S.cur), start + c[0].length);
+    return;
+  }
+  const p = commonPrefix(c);
+  if (!listNow && p.length > tok.length){
+    pushUndo("tab");
+    setBuf(S.buf.slice(0, start) + p + S.buf.slice(S.cur), start + p.length);
+    return;
+  }
+  if (listNow || S.last === "tab"){
+    freeze();
+    const w = Math.max(...c.map(x => x.length)) + 2;
+    const cols = Math.max(1, Math.floor(110 / w));
+    let out = "";
+    c.slice(0, 60).forEach((x, i) => { out += x.padEnd(w); if ((i + 1) % cols === 0) out += "\n"; });
+    if (c.length > 60) out += "\n… " + (c.length - 60) + " more";
+    printText(out.replace(/\s+$/, ""));
+  }
+}
+
+function yankLastArg(){
+  const chain = S.last === "lastarg" && S.lastArg;
+  const k = chain ? S.lastArg.k + 1 : 0;
+  const line = hist[hist.length - 1 - k];
+  if (line === undefined) return;
+  const toks = tokenize(line);
+  const arg = toks.length ? toks[toks.length - 1] : "";
+  if (chain){
+    setBuf(S.buf.slice(0, S.lastArg.at) + arg + S.buf.slice(S.lastArg.at + S.lastArg.len), S.lastArg.at + arg.length);
+  } else {
+    pushUndo("lastarg");
+    setBuf(S.buf.slice(0, S.cur) + arg + S.buf.slice(S.cur), S.cur + arg.length);
+  }
+  S.lastArg = {k, at: S.cur - arg.length, len: arg.length};
+}
+
+function incomplete(s){
+  let q = null, d = 0;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (q){ if (c === "`" && q === '"'){ i++; continue; } if (c === q) q = null; continue; }
+    if (c === "#"){ const j = s.indexOf("\n", i); if (j < 0) break; i = j; continue; }
+    if (c === "'" || c === '"'){ q = c; continue; }
+    if (c === "{" || c === "(" || c === "[") d++;
+    if (c === "}" || c === ")" || c === "]") d--;
+  }
+  if (q || d > 0) return true;
+  const t = s.replace(/\s+$/, "");
+  return /\|$/.test(t) || /`$/.test(t);
+}
+
+function norm(s){
+  return s.replace(/\s+/g, " ").trim().replace(/\s*([|;,(){}=])\s*/g, "$1").replace(/;$/, "").toLowerCase();
+}
+function firstDiff(a, b){
+  const x = a.replace(/\s+/g, " ").trim(), y = b.replace(/\s+/g, " ").trim();
+  let i = 0; while (i < x.length && i < y.length && x[i].toLowerCase() === y[i].toLowerCase()) i++;
+  return {i, typed: x, want: y};
+}
+
+function unknownCommand(line){
+  for (const raw of splitSegments(line)){
+    let seg = raw.trim().replace(/^\$[\w:.]+\s*=\s*/, "");
+    while (seg.startsWith("(")) seg = seg.slice(1).trim();
+    if (!seg) continue;
+    if (/^[$'"@\[0-9.!-]/.test(seg)) continue;
+    const w = seg.match(/^[^\s(){}]+/);
+    if (!w) continue;
+    const word = w[0];
+    if (KNOWN.has(word.toLowerCase())) continue;
+    if (ALIASES.indexOf(word.toLowerCase()) >= 0) continue;
+    return word;
+  }
+  return null;
+}
+function notRecognized(word){
+  print('<span class="err">' + esc(word + ": The term '" + word + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.") + "</span>");
+}
+
+function historyOut(){
+  const rows = hist.slice(-12);
+  const base = hist.length - rows.length + 1;
+  let out = "\n  Id     Duration CommandLine\n  --     -------- -----------\n";
+  rows.forEach((h, i) => { out += String(base + i).padStart(4) + "        0.0" + String(Math.floor(Math.random() * 90) + 10) + " " + h.replace(/\n/g, " ") + "\n"; });
+  return out;
+}
+
+function builtin(t){
+  const lo = t.toLowerCase();
+  if (lo === "clear" || lo === "cls" || lo === "clear-host"){ clearScreen(); return true; }
+  if (lo === "exit"){ coach("in real pwsh this closes the session. Here you stay."); return true; }
+  if (lo === "history" || lo === "h"){ printText(historyOut()); return true; }
+  if (lo === "clear-history"){ hist = []; save(KEY_HIST, hist); S.hIdx = 0; return true; }
+  return false;
+}
+
+function keyOf(scId, st, i){ return st.rk || scId + ":" + i; }
+function stepKey(){ return keyOf(S.scen.id, S.list[S.idx], S.idx); }
+function rec(key){ if (!store.steps[key]) store.steps[key] = {done: 0, clean: 0, miss: 0, best: 0}; return store.steps[key]; }
+
+function addHist(line){
+  if (!line.trim()) return;
+  if (hist[hist.length - 1] !== line) hist.push(line);
+  if (hist.length > 400) hist = hist.slice(-400);
+  save(KEY_HIST, hist);
+}
+
+function run(line){
+  const t = line.trim();
+  addHist(line);
+  S.hIdx = hist.length;
+  const m = t.match(/^\$([\w]+)\s*=/);
+  if (!t) return;
+  if (builtin(t)) return;
+  const st = curStep();
+  if (st){
+    const wanted = [st.cmd].concat(st.alt || []);
+    if (wanted.some(w => norm(w) === norm(t))){
+      const missing = (st.use || []).filter(id => !S.used.has(id));
+      if (missing.length){
+        coach("right line — now do it with <b>" + missing.map(id => USE_LABEL[id] || id).join("</b>, <b>") + "</b>. That's the muscle you're training.");
+        S.misses++;
+        rec(stepKey()).miss++;
+        resetStep();
+        return;
+      }
+      if (m) S.vars.add("$" + m[1]);
+      const out = typeof st.out === "function" ? st.out() : st.out;
+      if (out) printText(out);
+      finishStep();
+      return;
+    }
+    const bad = unknownCommand(t);
+    if (bad) notRecognized(bad);
+    else {
+      const d = firstDiff(t, st.cmd);
+      const pad = " ".repeat(PROMPT.length + d.i);
+      if (store.mode === "ghost" || S.revealed){
+        coach("not quite. First difference at column " + (d.i + 1) + ":");
+        print('<span class="dim">' + esc(PROMPT) + "</span>" + esc(d.typed) + "\n" + '<span class="coach">' + pad + "^</span>\n" + '<span class="coach">' + " ".repeat(PROMPT.length - 10) + "expected: </span><span class=\"ok\">" + esc(d.want) + "</span>");
+      } else {
+        coach("not quite. Correct up to column " + d.i + ": <b>" + esc(d.want.slice(0, d.i)) + "</b>…");
+      }
+    }
+    S.misses++;
+    rec(stepKey()).miss++;
+    save(KEY_STORE, store);
+    renderRail();
+    return;
+  }
+  const bad = unknownCommand(t);
+  if (bad){ notRecognized(bad); return; }
+  if (m) S.vars.add("$" + m[1]);
+  for (const sc of SCEN) for (const s2 of sc.steps){
+    if (norm(s2.cmd) === norm(t)){ const out = typeof s2.out === "function" ? s2.out() : s2.out; if (out) printText(out); return; }
+  }
+}
+
+function wpmNow(len){
+  if (!S.t0) return 0;
+  const min = (performance.now() - S.t0) / 60000;
+  return min > 0 ? Math.round((len / 5) / min) : 0;
+}
+
+let lastLen = 0;
+function finishStep(){
+  const key = stepKey();
+  const r = rec(key);
+  const clean = S.misses === 0 && !S.assisted && !S.pasted && !S.revealed;
+  r.done++;
+  if (clean) r.clean++;
+  const w = wpmNow(lastLen);
+  if (clean && w > r.best) r.best = w;
+  const ss = S.session;
+  ss.done++;
+  if (clean){ ss.clean++; ss.streak++; } else ss.streak = 0;
+  if (w > 0 && w < 300){ ss.wpmSum += w; ss.wpmN++; $("stWpm").textContent = w; }
+  save(KEY_STORE, store);
+  if (!clean){
+    const why = [];
+    if (S.misses) why.push(S.misses + (S.misses === 1 ? " miss" : " misses"));
+    if (S.assisted) why.push("grey suggestion accepted");
+    if (S.pasted) why.push("pasted");
+    if (S.revealed) why.push("answer shown");
+    coach('<span class="ok">✓</span> done, not clean (' + why.join(", ") + ")");
+  }
+  S.idx++;
+  if (S.idx >= S.list.length){
+    const n = S.list.length;
+    const c = S.list.filter((st, i) => { const k = keyOf(S.scen.id, st, i); return store.steps[k] && store.steps[k].clean; }).length;
+    coach('<span class="ok">✓ ' + esc(S.scen.name) + " complete.</span> " + c + "/" + n + " steps have a clean run. Press <b>Enter</b> on an empty line or pick the next scenario.");
+  }
+  stats();
+  newStep();
+  renderRail();
+}
+
+function resetStep(){
+  S.used = new Set(); S.assisted = false; S.pasted = false; S.t0 = 0;
+  const st = curStep();
+  if (st && st.pre){ setBuf(st.pre, st.at === undefined ? st.pre.length : st.at); }
+}
+
+function newStep(){
+  S.used = new Set(); S.misses = 0; S.assisted = false; S.pasted = false; S.revealed = false; S.t0 = 0;
+  S.undo = []; S.last = "";
+  const st = curStep();
+  if (st && st.pre) setBuf(st.pre, st.at === undefined ? st.pre.length : st.at);
+  else setBuf("", 0);
+  renderBrief();
+  render();
+}
+
+function stats(){
+  const s = S.session;
+  $("stAvg").textContent = s.wpmN ? Math.round(s.wpmSum / s.wpmN) : "–";
+  $("stClean").textContent = s.clean + "/" + s.done;
+  $("stStreak").textContent = s.streak;
+}
+
+function acceptLine(shift){
+  if (S.search){ endSearch(true); }
+  if (shift || incomplete(S.buf)){
+    flashKey("cont");
+    pushUndo("nl");
+    setBuf(S.buf.slice(0, S.cur) + "\n" + S.buf.slice(S.cur), S.cur + 1);
+    S.last = "nl";
+    render();
+    return;
+  }
+  flashKey("enter");
+  const line = S.buf;
+  lastLen = line.length;
+  freeze();
+  setBuf("", 0);
+  S.undo = [];
+  S.last = "";
+  if (!line.trim()){
+    if (S.list && S.idx >= S.list.length) nextScenario();
+    render();
+    return;
+  }
+  run(line);
+  S.t0 = 0;
+  render();
+}
+
+function cancelLine(){
+  if (S.search) endSearch(true);
+  print(renderLine(S.buf, {}) + '<span class="dim">^C</span>');
+  setBuf("", 0); S.undo = []; S.hIdx = hist.length; S.t0 = 0;
+  const st = curStep();
+  if (st && st.pre) setBuf(st.pre, st.at === undefined ? st.pre.length : st.at);
+}
+
+function act(id){
+  const prevLast = S.last;
+  let keepLast = false;
+  switch (id){
+    case "C-a": case "home": { const ls = lineStart(); S.cur = S.cur === ls ? 0 : ls; break; }
+    case "C-e": case "end": {
+      if (S.cur === S.buf.length && acceptSuggestion(false)) break;
+      const le = lineEnd(); S.cur = S.cur === le ? S.buf.length : le; break;
+    }
+    case "C-b": case "left": if (S.cur > 0) S.cur--; break;
+    case "C-f": case "right": if (S.cur < S.buf.length) S.cur++; else acceptSuggestion(false); break;
+    case "M-b": S.cur = backWord(); break;
+    case "M-f": if (S.cur === S.buf.length) acceptSuggestion(true); else S.cur = fwdWord(); break;
+    case "bs": case "C-h":
+      if (S.search){ S.search.q = S.search.q.slice(0, -1); S.search.idx = hist.length; doSearch(false); break; }
+      if (S.cur > 0){ pushUndo("del"); setBuf(S.buf.slice(0, S.cur - 1) + S.buf.slice(S.cur), S.cur - 1); } break;
+    case "del": if (S.cur < S.buf.length){ pushUndo("del"); setBuf(S.buf.slice(0, S.cur) + S.buf.slice(S.cur + 1), S.cur); } break;
+    case "C-d":
+      if (!S.buf){ coach("Ctrl+D on an empty line closes pwsh in a real terminal."); break; }
+      if (S.cur < S.buf.length){ pushUndo("del"); setBuf(S.buf.slice(0, S.cur) + S.buf.slice(S.cur + 1), S.cur); } break;
+    case "C-u": killRange(lineStart(), S.cur, true); keepLast = "kill"; break;
+    case "C-k": killRange(S.cur, lineEnd(), false); keepLast = "kill"; break;
+    case "C-w": { let i = S.cur; while (i > 0 && /\s/.test(S.buf[i-1])) i--; while (i > 0 && !/\s/.test(S.buf[i-1])) i--; killRange(i, S.cur, true); keepLast = "kill"; break; }
+    case "M-bs": killRange(backWord(), S.cur, true); keepLast = "kill"; break;
+    case "M-d": killRange(S.cur, fwdWord(), false); keepLast = "kill"; break;
+    case "C-y": {
+      if (!S.kill.length) break;
+      pushUndo("yank");
+      const t = S.kill[0];
+      S.yank = {at: S.cur, len: t.length, i: 0};
+      setBuf(S.buf.slice(0, S.cur) + t + S.buf.slice(S.cur), S.cur + t.length);
+      keepLast = "yank"; break;
+    }
+    case "M-y": {
+      if (prevLast !== "yank" || !S.yank || S.kill.length < 2) break;
+      const i = (S.yank.i + 1) % S.kill.length;
+      const t = S.kill[i];
+      setBuf(S.buf.slice(0, S.yank.at) + t + S.buf.slice(S.yank.at + S.yank.len), S.yank.at + t.length);
+      S.yank = {at: S.yank.at, len: t.length, i};
+      keepLast = "yank"; break;
+    }
+    case "C-t": {
+      if (S.buf.length < 2 || S.cur === 0) break;
+      pushUndo("swap");
+      let p = S.cur === S.buf.length ? S.cur - 1 : S.cur;
+      const a = S.buf.split("");
+      [a[p-1], a[p]] = [a[p], a[p-1]];
+      setBuf(a.join(""), Math.min(p + 1, a.length));
+      break;
+    }
+    case "undo": { const u = S.undo.pop(); if (u) setBuf(u.buf, u.cur); break; }
+    case "M-.": yankLastArg(); keepLast = "lastarg"; break;
+    case "hist": if (S.search) endSearch(true); histMove(-1); break;
+    case "hist-next": if (S.search) endSearch(true); histMove(1); break;
+    case "C-r": startSearch(-1); break;
+    case "C-s": if (S.search) startSearch(1); break;
+    case "C-g": if (S.search) endSearch(false); break;
+    case "tab": complete(false); keepLast = "tab"; break;
+    case "list": complete(true); break;
+    case "C-l": clearScreen(); break;
+    case "cmd-k": clearScreen(); break;
+    case "C-c": cancelLine(); break;
+  }
+  S.last = keepLast || id;
+  render();
+}
+
+function bindingFor(e, meta){
+  const c = e.code, k = e.key;
+  if (e.ctrlKey && !e.altKey && !e.metaKey){
+    if (e.shiftKey && (c === "Minus" || k === "_")) return "undo";
+    if (c === "Space") return "list";
+    const map = {KeyA:"C-a",KeyE:"C-e",KeyB:"C-b",KeyF:"C-f",KeyU:"C-u",KeyK:"C-k",KeyW:"C-w",KeyY:"C-y",KeyT:"C-t",KeyD:"C-d",KeyH:"C-h",KeyP:"hist",KeyN:"hist-next",KeyR:"C-r",KeyS:"C-s",KeyG:"C-g",KeyL:"C-l",KeyC:"C-c"};
+    if (map[c]) return map[c];
+    if (c === "ArrowLeft") return "M-b";
+    if (c === "ArrowRight") return "M-f";
+    return "ctrl-other";
+  }
+  if ((e.altKey || meta) && !e.ctrlKey && !e.metaKey){
+    const map = {KeyB:"M-b",KeyF:"M-f",KeyD:"M-d",KeyY:"M-y",Period:"M-.",Backspace:"M-bs",Equal:"list",ArrowLeft:"M-b",ArrowRight:"M-f"};
+    if (map[c]) return map[c];
+    if (meta) return "meta-other";
+    return null;
+  }
+  if (e.metaKey) return null;
+  switch (k){
+    case "Enter": return e.shiftKey ? "S-enter" : "enter";
+    case "Backspace": return "bs";
+    case "Delete": return "del";
+    case "ArrowLeft": return "left";
+    case "ArrowRight": return "right";
+    case "ArrowUp": return "hist";
+    case "ArrowDown": return "hist-next";
+    case "Home": return "home";
+    case "End": return "end";
+    case "Tab": return "tab";
+    case "Escape": return "esc";
+  }
+  return null;
+}
+
+ta.addEventListener("keydown", e => {
+  if (e.isComposing) return;
+  if (e.metaKey && !e.ctrlKey && !e.altKey){
+    if (e.code === "KeyK"){ e.preventDefault(); flashKey("cmd-k"); act("cmd-k"); }
+    return;
+  }
+  const meta = S.meta;
+  const b = bindingFor(e, meta);
+  if (!b) { S.meta = false; return; }
+  e.preventDefault();
+  S.meta = false;
+  startClock();
+  if (b === "ctrl-other" || b === "meta-other") return;
+  if (b === "esc"){
+    if (S.search){ endSearch(true); render(); return; }
+    S.meta = true; flashKey("esc"); return;
+  }
+  if (b === "enter" || b === "S-enter"){ acceptLine(b === "S-enter"); return; }
+  if (S.search && !["bs","C-h","C-r","C-s","C-g"].includes(b)) endSearch(true);
+  flashKey(b);
+  act(b);
+});
+ta.addEventListener("input", e => {
+  if (e.isComposing) return;
+  const v = ta.value; ta.value = "";
+  if (!v) return;
+  if (e.inputType === "insertFromPaste"){ S.pasted = true; insert(v.replace(/\r\n?/g, "\n")); return; }
+  insert(v);
+});
+ta.addEventListener("compositionend", () => { const v = ta.value; ta.value = ""; if (v) insert(v); });
+ta.addEventListener("focus", () => { S.focused = true; render(); });
+ta.addEventListener("blur", () => { S.focused = false; render(); });
+screenEl.addEventListener("mouseup", () => { const sel = window.getSelection(); if (!sel || sel.isCollapsed) ta.focus({preventScroll: true}); });
+
+function renderKeys(){
+  const el = $("keys");
+  let h = "";
+  KEYMAP.forEach(g => {
+    h += "<h4>" + g.g + "</h4>";
+    g.rows.forEach(r => {
+      const ks = r.k[0].map(x => '<span class="kbd">' + esc(x) + "</span>").join("");
+      const also = r.k.slice(1).map(c => c.join("+")).join(", ");
+      h += '<div class="kr" data-ids="' + r.ids.join(" ") + '"><div class="ks">' + ks + "</div><div>" + esc(r.t) + (also ? '<span class="also">also ' + esc(also) + "</span>" : "") + '</div><div class="n"></div></div>';
+    });
+  });
+  h += '<div class="tip"><b>Same keys in your real terminal.</b> pwsh on a Mac uses PSReadLine in Emacs mode, which is what Poshle copies. For the ⌥ shortcuts, turn on <b>Use Option as Meta key</b> in Terminal → Settings → Profiles → Keyboard (iTerm2: Profiles → Keys → Left Option = Esc+). Without it, press <span class="kbd">Esc</span> and then the letter.</div>';
+  el.innerHTML = h;
+}
+
+function scenProgress(sc){
+  let d = 0, c = 0;
+  sc.steps.forEach((st, i) => { const r = store.steps[keyOf(sc.id, st, i)]; if (r && r.done) d++; if (r && r.clean) c++; });
+  return {d, c, n: sc.steps.length};
+}
+
+function weakList(){
+  const out = [];
+  SCEN.forEach(sc => { if (sc.gym || sc.id === "start") return; sc.steps.forEach((st, i) => { const r = store.steps[sc.id + ":" + i]; if (r && r.miss > 0) out.push({st, sc, i, score: r.miss / (r.clean + 1)}); }); });
+  out.sort((a, b) => b.score - a.score);
+  return out.slice(0, 10).map(o => Object.assign({}, o.st, {rk: o.sc.id + ":" + o.i, from: o.sc.name}));
+}
+
+function renderRail(){
+  const el = $("rail");
+  let h = "<h4>Scenarios</h4>";
+  SCEN.forEach((sc, i) => {
+    const p = scenProgress(sc);
+    const on = S.scen && S.scen.id === sc.id;
+    const full = p.c === p.n;
+    h += '<button class="sc' + (on ? " on" : "") + (full ? " full" : "") + '" data-id="' + sc.id + '"><i>' + (sc.gym ? "⌘" : i === 0 ? "?" : String(i).padStart(2, "0")) + "</i><span><b>" + esc(sc.name) + "<em>" + p.c + "/" + p.n + "</em></b><small>" + esc(sc.sub) + '</small><div class="bar"><span style="width:' + Math.round(p.d / p.n * 100) + '%"></span></div></span></button>';
+  });
+  const weak = weakList();
+  h += "<hr><h4>Practice</h4>";
+  h += '<button class="sc' + (S.scen && S.scen.id === "weak" ? " on" : "") + '" data-id="weak"><i>!</i><span><b>Review weak spots</b><small>' + (weak.length ? weak.length + " steps you missed before" : "nothing missed yet") + "</small></span></button>";
+  h += '<button class="sc' + (S.scen && S.scen.id === "free" ? " on" : "") + '" data-id="free"><i>&gt;_</i><span><b>Free terminal</b><small>no task, just type</small></span></button>';
+  el.innerHTML = h;
+  el.querySelectorAll(".sc").forEach(b => b.addEventListener("click", () => { openScenario(b.dataset.id); el.classList.remove("open"); }));
+}
+
+function renderBrief(){
+  const el = $("brief");
+  const sc = S.scen;
+  if (!S.list){
+    el.innerHTML = '<div class="bhead"><h2>Free terminal</h2><span class="count">no task</span></div><p class="task">Type anything. Commands from the scenarios answer with their simulated output, unknown commands give the real PowerShell error. Every shortcut works.</p>';
+    return;
+  }
+  const st = curStep();
+  const n = S.list.length;
+  let h = '<div class="bhead"><h2>' + esc(sc.name) + '</h2><span class="count">' + (st ? "step " + (S.idx + 1) + " of " + n : "complete") + (st && st.from ? " · " + esc(st.from) : "") + '</span><div class="acts">';
+  if (st){
+    if (store.mode === "recall" && !S.revealed) h += '<button class="chip" id="bReveal">Show answer</button>';
+    h += '<button class="chip" id="bSkip">Skip</button>';
+  }
+  h += '<button class="chip" id="bRestart">Restart</button>';
+  if (!st){ const nx = nextScenarioId(); if (nx) h += '<button class="chip prime" id="bNext">Next scenario</button>'; }
+  h += "</div></div>";
+  if (st){
+    h += '<p class="task">' + st.task + "</p>";
+    if (store.mode === "ghost" || S.revealed || sc.gym) h += '<div class="target">' + esc(st.cmd) + "</div>";
+    else h += '<div class="target hidden">Recall mode: type it from memory. Tab completion still helps.</div>';
+  } else {
+    const p = sc.id === "weak" ? null : scenProgress(sc);
+    h += '<p class="task">Scenario done' + (p ? " — " + p.c + " of " + p.n + " steps have a clean run" : "") + ". Repeat it in <b>Recall</b> mode to make it stick, or move on.</p>";
+  }
+  h += '<div class="dots">';
+  S.list.forEach((s2, i) => {
+    const r = store.steps[keyOf(sc.id, s2, i)];
+    let c = "";
+    if (i === S.idx) c = "cur"; else if (r && r.clean) c = "clean"; else if (r && r.done) c = "done";
+    h += '<span class="' + c + '"></span>';
+  });
+  h += "</div>";
+  el.innerHTML = h;
+  const bind = (id, fn) => { const b = $(id); if (b) b.addEventListener("click", () => { fn(); ta.focus({preventScroll: true}); }); };
+  bind("bReveal", () => { S.revealed = true; renderBrief(); render(); });
+  bind("bSkip", () => { coach("skipped."); S.idx++; newStep(); renderRail(); });
+  bind("bRestart", () => { S.idx = 0; coach("restarted " + esc(sc.name) + "."); newStep(); renderRail(); });
+  bind("bNext", () => nextScenario());
+}
+
+function nextScenarioId(){
+  if (!S.scen) return null;
+  const i = SCEN.findIndex(s => s.id === S.scen.id);
+  return i >= 0 && i < SCEN.length - 1 ? SCEN[i + 1].id : null;
+}
+function nextScenario(){ const id = nextScenarioId(); if (id) openScenario(id); }
+
+function openScenario(id){
+  if (S.search) endSearch(false);
+  if (id === "free"){ S.scen = {id: "free", name: "Free terminal"}; S.list = null; S.idx = 0; }
+  else if (id === "weak"){
+    const list = weakList();
+    S.scen = {id: "weak", name: "Review weak spots"};
+    S.list = list.length ? list : null;
+    S.idx = 0;
+    if (!list.length) S.scen = {id: "free", name: "Free terminal"};
+  } else {
+    S.scen = SCEN.find(s => s.id === id) || SCEN[0];
+    S.list = S.scen.steps;
+    S.idx = 0;
+  }
+  store.scen = S.scen.id === "weak" ? store.scen : S.scen.id;
+  save(KEY_STORE, store);
+  print('<span class="dim">── ' + esc(S.scen.name) + " ──</span>");
+  newStep();
+  renderRail();
+  ta.focus({preventScroll: true});
+}
+
+function setMode(m){
+  store.mode = m; save(KEY_STORE, store);
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+  renderBrief(); render();
+}
+document.querySelectorAll("#modeSeg button").forEach(b => b.addEventListener("click", () => { setMode(b.dataset.mode); ta.focus({preventScroll: true}); }));
+
+function setTheme(t){ document.documentElement.dataset.theme = t; save(KEY_THEME, t); }
+$("themeBtn").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "day" ? "night" : "day"));
+$("keysBtn").addEventListener("click", () => $("keys").classList.toggle("open"));
+$("railBtn").addEventListener("click", () => $("rail").classList.toggle("open"));
+
+setTheme(load(KEY_THEME, "day"));
+renderKeys();
+document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === store.mode));
+printText("PowerShell 7.5.3");
+print('<span class="dim">Poshle — every key behaves like pwsh on your Mac. Click the terminal and start typing.</span>');
+print("");
+openScenario(store.scen && (SCEN.some(s => s.id === store.scen) || store.scen === "free") ? store.scen : "start");
+</script>
+</body>
+</html>
