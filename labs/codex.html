@@ -218,6 +218,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   body.print-one .group.print-me{display:block}
   body.print-one .vol-head{display:none}
 }
+.entry.locked{opacity:.5}.entry.locked .head{cursor:default}
 </style>
 </head>
 <body>
@@ -733,12 +734,34 @@ groups:[
  {c:"composer require vendor/package", d:"Install a dependency", n:"composer.json declares them, composer.lock pins exact versions. Add require 'vendor/autoload.php'; once and every class loads on demand."}
 ]}
 ]});
+DATA.push({
+id:"hexle", sigil:"HX", name:"Hexle rulebook", sub:"Rules from Hexle School", color:"#0e8a76",
+blurb:"Every rule you learn in Hexle School lands here, sorted by category. Locked entries open up as you learn them.",
+groups:[
+{t:"Structure", lab:true, e:[
+ {r:"r1", w:"Target 1 · Witch hut doorplate", c:"<p>text</p>", d:"Tags come in pairs", n:"The opening tag starts something. The closing tag, with a slash, ends it. Everything in between is the content. Learned in Target 1: Witch hut doorplate.", x:"<p>Knock twice.</p>\n<p>Mind the cat.</p>"},
+ {r:"r5", w:"Target 3 · Potion shop sign", c:"class=\"sign\"  →  .sign { }", d:"Classes name things", n:"Add class=\"name\" to a tag in HTML, then reach it in CSS with a dot in front. One class can be used on many elements. The dot never goes inside class=\"…\". Learned in Target 3: Potion shop sign.", x:"<style>\n  .tag { color: purple; }\n</style>\n<p class=\"tag\">Purple, thanks to its class</p>"}
+]},
+{t:"Text", lab:true, e:[
+ {r:"r2", w:"Target 1 · Witch hut doorplate", c:"<h1>Title</h1>", d:"h1 is the big title", n:"Headings run from h1, the biggest, to h6, the smallest. A page gets one h1: its main title. Learned in Target 1: Witch hut doorplate.", x:"<h1>The Witch's Hut</h1>\n<p>Open at moonrise.</p>"}
+]},
+{t:"Media", lab:true, e:[
+ {r:"r3", w:"Target 2 · Path welcome sign", c:"<img src=\"file\" alt=\"words\">", d:"Images need src and alt", n:"img has no closing tag. src picks the file to show. alt describes it in words, for screen readers and for when the file fails to load. Learned in Target 2: Path welcome sign.", x:"<img src=\"witch.png\" alt=\"A witch waving\">"}
+]},
+{t:"Colour and font", lab:true, e:[
+ {r:"r4", w:"Target 2 · Path welcome sign", c:"selector { property: value; }", d:"CSS lives in a style block", n:"Write CSS between <style> and </style>. The selector picks elements, the property says what to change, the value says how. A colon always sits between property and value. Learned in Target 2: Path welcome sign.", x:"<style>\n  h1 { color: teal; }\n</style>\n<h1>Teal title</h1>"}
+]},
+{t:"Box", lab:true, e:[
+ {r:"r6", w:"Target 3 · Potion shop sign", c:"border: size style colour;", d:"CSS draws borders", n:"Size like 2px, style like solid, dashed or dotted, then a colour, in that order. Learned in Target 3: Potion shop sign.", x:"<style>\n  .box { border: 2px dashed teal; padding: 10px; }\n</style>\n<div class=\"box\">A box with a dashed line</div>"}
+]}
+]});
 const LAB_LINKS = {
   junos: { label: "Junle", href: "junle.html" },
   python: { label: "Pyle", href: "pyle.html" },
   web: { label: "Style", href: "style.html" },
   js: { label: "Spelle", href: "spelle.html" },
-  php: { label: "Passle", href: "passle.html" }
+  php: { label: "Passle", href: "passle.html" },
+  hexle: { label: "Hexle", href: "hexle.html" }
 };
 
 const AUG = {
@@ -1498,8 +1521,18 @@ function el(tag, cls, text){
   return n;
 }
 
+const HEX_LEARNED = (function(){ try { const h = JSON.parse(localStorage.getItem("hexle.v1")); return (h && h.learned) || []; } catch (e) { return []; } })();
+
 function buildEntry(item){
   const art = el("article", "entry");
+  if (item.entry.r && HEX_LEARNED.indexOf(item.entry.r) === -1) {
+    art.classList.add("locked");
+    const lh = el("div", "head");
+    lh.appendChild(el("code", "code", "Locked"));
+    lh.appendChild(el("p", "gloss", "Learn this in Hexle School · " + item.entry.w));
+    art.appendChild(lh);
+    return art;
+  }
   const head = el("div", "head");
   head.tabIndex = 0;
   head.setAttribute("role", "button");
