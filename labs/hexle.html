@@ -449,6 +449,80 @@ const TARGETS=[
 ];
 
 
+const MORE=[
+ {k:'pick',r:'r1',q:'Which line has a tag that is never closed?',o:['<p>Owls</p>','<p>Owls','<h1>Owls</h1>','<p></p>'],a:1,h:'Look for an opening tag with no `</…>` partner.'},
+ {k:'type',r:'r1',q:'Write two paragraphs: Moss, then Fern',ph:'<p>…</p><p>…</p>',test:/^<p>\s*moss\s*<\/p>\s*<p>\s*fern\s*<\/p>$/i,prev:v=>v,h:'Two complete pairs: `<p>Moss</p><p>Fern</p>`.'},
+ {k:'fix',r:'r1',q:'Fix the bug in this paragraph',bug:'<p>Brew slowly<p>',test:/^<p>\s*brew slowly\s*<\/p>$/i,prev:v=>v,h:'The second tag should be a closing tag, with a slash.'},
+ {k:'pick',r:'r1',q:'In `<p>Hello</p>`, what is `Hello`?',o:['The attribute','The content','The selector','The closing tag'],a:1,h:'It is what sits between the two tags.'},
+ {k:'gap',r:'r1',q:'Open the paragraph',pre:'<',post:'>Fresh toadstools</p>',a:['p'],prev:v=>'<'+v+'>Fresh toadstools</p>',h:'Look at the closing tag. The opening tag uses the same name.'},
+
+ {k:'type',r:'r2',q:'Write an h2 that says Potions',ph:'<h2>…</h2>',test:/^<h2>\s*potions\s*<\/h2>$/i,prev:v=>v,h:'Same as h1, just the number 2: `<h2>Potions</h2>`.'},
+ {k:'pick',r:'r2',q:'How many h1 titles does a page usually have?',o:['One','One per paragraph','At least six','None'],a:0,h:'h1 is the main title, like the title on a book cover.'},
+ {k:'fix',r:'r2',q:'Fix the bug in this heading',bug:'<h3>Herbs</h1>',test:/^<h3>\s*herbs\s*<\/h3>$/i,prev:v=>v,h:'Opening and closing must match: both h3.'},
+ {k:'type',r:'r2',q:'Write an h1 that says Spell Shop, with a paragraph under it that says Open',ph:'<h1>…</h1><p>…</p>',test:/^<h1>\s*spell shop\s*<\/h1>\s*<p>\s*open\s*<\/p>$/i,prev:v=>v,h:'Title first, then the paragraph: `<h1>Spell Shop</h1><p>Open</p>`.'},
+ {k:'pick',r:'r2',q:'Which heading is a sub-section under an h2?',o:['<h1>','<h3>','<head>','<hr>'],a:1,h:'One number down from h2.'},
+
+ {k:'fix',r:'r3',q:'Fix the bug in this image',bug:'<img src="cat.png" alt="A cat"></img>',test:/^<img src="cat\.png" alt="a cat">$/i,prev:v=>v,h:'img never gets a closing tag. Delete it.'},
+ {k:'gap',r:'r3',q:'Add the attribute that picks the file',pre:'<img ',post:'="broom.png" alt="A broom">',a:['src'],h:'Short for source. Three letters.'},
+ {k:'pick',r:'r3',q:'Which attribute picks the picture file?',o:['alt','href','src','file'],a:2,h:'alt describes it. The other one points at the file.'},
+ {k:'fix',r:'r3',q:'Fix the bug in this image',bug:'<img src=frog.png alt="A frog">',test:/^<img src="frog\.png" alt="a frog">$/i,prev:v=>v,h:'Attribute values go inside double quotes.'},
+ {k:'type',r:'r3',q:'Write an img that shows hat.png with the alt text A pointy hat',ph:'<img src="…" alt="…">',test:/^<img src="hat\.png" alt="a pointy hat">$/i,prev:v=>v,h:'`<img src="hat.png" alt="A pointy hat">`'},
+
+ {k:'fix',r:'r4',q:'Fix the bug in this CSS',bug:'h1 ( color: teal; )',test:/^h1\s*\{\s*color\s*:\s*teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><h1>Teal?</h1>',h:'CSS rules use curly braces `{ }`, not round ones.'},
+ {k:'type',r:'r4',q:'Write a CSS rule that makes every p teal',ph:'p { … }',test:/^p\s*\{\s*color\s*:\s*teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Teal paragraph?</p>',h:'Selector `p`, then `{ color: teal; }`.'},
+ {k:'pick',r:'r4',q:'In `p { color: purple; }`, what is `p`?',o:['The value','The property','The selector','The class'],a:2,h:'It picks which elements the rule talks to.'},
+ {k:'gap',r:'r4',q:'What goes between the property and the value?',pre:'h1 { color',post:' teal; }',a:[':'],prev:v=>'<style>h1 { color'+v+' teal; }</style><h1>Title</h1>',h:'A single punctuation mark. Not a semicolon.'},
+ {k:'fix',r:'r4',q:'Fix the bug in this CSS',bug:'p { colour: teal; }',test:/^p\s*\{\s*color\s*:\s*teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Teal?</p>',h:'CSS uses American spelling: color.'},
+
+ {k:'type',r:'r5',q:'Write a CSS rule that makes .note purple',ph:'.note { … }',test:/^\.note\s*\{\s*color\s*:\s*purple\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p class="note">I am .note</p><p>I am not</p>',h:'Classes start with a dot: `.note { color: purple; }`.'},
+ {k:'fix',r:'r5',q:'Fix the bug in this CSS',bug:'sign { color: teal; }',test:/^\.sign\s*\{\s*color\s*:\s*teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><div class="sign">I am .sign</div>',h:'Without the dot, CSS looks for a `<sign>` tag.'},
+ {k:'pick',r:'r5',q:'Can two elements share the same class?',o:['No, never','Yes, as many as you like','Only if they are both divs','Only in styles.css'],a:1,h:'A class is a group name. Groups can be big.'},
+ {k:'gap',r:'r5',q:'Give the paragraph a class',pre:'<p ',post:'="note">Read me</p>',a:['class'],prev:v=>'<style>.note{color:purple}</style><p '+v+'="note">Read me</p>',h:'The attribute is literally the word for it.'},
+ {k:'type',r:'r5',q:'Give this paragraph the class warn: <p>Hot!</p>',ph:'<p class="…">Hot!</p>',test:/^<p class="warn">\s*hot!?\s*<\/p>$/i,prev:v=>'<style>.warn{color:darkred}</style>'+v,h:'`class="warn"` goes inside the opening tag. No dot here.'},
+
+ {k:'type',r:'r6',q:'Give .card a 4px dotted purple border',ph:'.card { … }',test:/^\.card\s*\{\s*border\s*:\s*4px\s+dotted\s+purple\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><div class="card" style="padding:12px">I am .card</div>',h:'`border:` then size, style, colour.'},
+ {k:'pick',r:'r6',q:'In `border: 3px solid teal;`, which part is the style?',o:['3px','solid','teal','border'],a:1,h:'The style says what the line looks like.'},
+ {k:'fix',r:'r6',q:'Fix the bug in this CSS',bug:'.box { border: 2px soild teal; }',test:/^\.box\s*\{\s*border\s*:\s*2px\s+solid\s+teal\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><div class="box" style="padding:12px">Border?</div>',h:'Check the spelling of the style word.'},
+ {k:'gap',r:'r6',q:'Give the border a thickness',pre:'border: ',post:' dashed purple;',a:['1px','2px','3px','4px','5px'],prev:v=>'<div style="border:'+v+' dashed purple;padding:12px">Preview box</div>',h:'The first part is a number with px, like `2px`.'},
+ {k:'pick',r:'r6',q:'Which border is the thickest?',o:['1px solid teal','5px solid teal','3px solid teal','2px dashed teal'],a:1,h:'Bigger number, thicker line.'},
+
+ {k:'pick',r:'r7',q:'Where does the `<link>` to styles.css usually go?',o:['At the top of the page','Inside a <p>','At the end of styles.css','Inside the <style> block'],a:0,h:'The browser should know the styles before it draws anything.'},
+ {k:'fix',r:'r7',q:'Fix the bug in this link',bug:'<link rel="stylesheet" src="styles.css">',test:/^<link rel="stylesheet" href="styles\.css">$/i,h:'Images use src. Link tags use href.'},
+ {k:'type',r:'r7',q:'Write a style block that makes p purple',ph:'<style> … </style>',test:/^<style>\s*p\s*\{\s*color\s*:\s*purple\s*;?\s*\}\s*<\/style>$/i,prev:v=>v+'<p>Purple?</p>',h:'`<style>`, the rule, then `</style>`.'},
+ {k:'pick',r:'r7',q:'Which file holds only CSS, no HTML tags?',o:['index.html','styles.css','witch.png','The <style> tag'],a:1,h:'Its name ends in .css.'},
+ {k:'fix',r:'r7',q:'Fix the bug in this style block',bug:'<style> p { color: teal; } <style>',test:/^<style>\s*p\s*\{\s*color\s*:\s*teal\s*;?\s*\}\s*<\/style>$/i,prev:v=>v+'<p>Teal?</p>',h:'The second style tag should close the block.'},
+
+ {k:'pick',r:'r8',q:'The CSS says `.note { color: teal; }` and `p { color: purple; }`. What colour is `<p class="note">`?',o:['Purple','Teal','Black','A mix'],a:1,h:'A class selector beats a plain tag selector.'},
+ {k:'pick',r:'r8',q:'Same style block: `p { color: red; }` and below it `p { color: blue; }`. What colour?',o:['Red','Blue','Purple','Black'],a:1,h:'Two equal rules? The later one wins.'},
+ {k:'pick',r:'r8',q:'Which one wins over all the others?',o:['A tag selector','A class selector','An inline style','A rule in styles.css'],a:2,h:'The one sitting right on the tag.'},
+ {k:'type',r:'r8',q:'The CSS makes every p teal. Use an inline style so this one is red: <p>Danger</p>',ph:'<p style="…">Danger</p>',test:/^<p style="color:\s*red;?">\s*danger\s*<\/p>$/i,prev:v=>'<style>p{color:teal}</style>'+v+'<p>I stay teal</p>',h:'`style="color: red;"` inside the opening tag.'},
+ {k:'pick',r:'r8',q:'You changed `p { color: teal; }` but nothing happens. What is the most likely reason?',o:['A later rule or inline style still wins','CSS is broken','p cannot be coloured','You need an h1'],a:0,h:'Something stronger or later is overruling your rule.'},
+
+ {k:'type',r:'r9',q:'Write a list with two items: Salt and Sage',ph:'<ul>…</ul>',test:/^<ul>\s*<li>\s*salt\s*<\/li>\s*<li>\s*sage\s*<\/li>\s*<\/ul>$/i,prev:v=>v,h:'One `<li>` per item, both inside `<ul>`.'},
+ {k:'pick',r:'r9',q:'Which list shows numbers instead of bullets?',o:['<ul>','<ol>','<li>','<nl>'],a:1,h:'o for ordered.'},
+ {k:'fix',r:'r9',q:'Fix the bug in this list',bug:'<ul><li>Moss</ul>',test:/^<ul>\s*<li>\s*moss\s*<\/li>\s*<\/ul>$/i,prev:v=>v,h:'The li needs its own closing tag before the list closes.'},
+ {k:'type',r:'r9',q:'Write a numbered list with one item: Stir',ph:'<ol>…</ol>',test:/^<ol>\s*<li>\s*stir\s*<\/li>\s*<\/ol>$/i,prev:v=>v,h:'Same as ul, but the outer tag is `<ol>`.'},
+ {k:'fix',r:'r9',q:'Fix the bug in this list',bug:'<ul><p>Moss</p></ul>',test:/^<ul>\s*<li>\s*moss\s*<\/li>\s*<\/ul>$/i,prev:v=>v,h:'Only li belongs directly inside a ul.'},
+
+ {k:'fix',r:'r10',q:'Fix the bug in this link',bug:'<a src="#map">Map</a>',test:/^<a href="#map">\s*map\s*<\/a>$/i,prev:v=>v,h:'Links use href, not src.'},
+ {k:'type',r:'r10',q:'Write a link to shop.html that says Shop',ph:'<a href="…">…</a>',test:/^<a href="shop\.html">\s*shop\s*<\/a>$/i,prev:v=>v,h:'`<a href="shop.html">Shop</a>`'},
+ {k:'pick',r:'r10',q:'What does `href="#top"` do?',o:['Opens a new website','Jumps to a spot on the same page','Makes the link bold','Loads a picture'],a:1,h:'The # means: somewhere on this page.'},
+ {k:'gap',r:'r10',q:'Add the attribute that says where the link goes',pre:'<a ',post:'="#map">Map</a>',a:['href'],prev:v=>'<a '+v+'="#map">Map</a>',h:'Four letters, starts with h.'},
+ {k:'fix',r:'r10',q:'Fix the bug in this link',bug:'<a href="#map">Map<a>',test:/^<a href="#map">\s*map\s*<\/a>$/i,prev:v=>v,h:'The last tag needs a slash to close the link.'},
+
+ {k:'type',r:'r11',q:'Make every p use the serif font',ph:'p { … }',test:/^p\s*\{\s*font-family\s*:\s*serif\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Old book letters</p>',h:'`font-family: serif;`'},
+ {k:'pick',r:'r11',q:'Which value makes every letter the same width, like a typewriter?',o:['serif','sans-serif','monospace','italic'],a:2,h:'mono means one: one width for all.'},
+ {k:'type',r:'r11',q:'Make every h1 40px big',ph:'h1 { … }',test:/^h1\s*\{\s*font-size\s*:\s*40px\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><h1>Big</h1>',h:'`font-size: 40px;`'},
+ {k:'fix',r:'r11',q:'Fix the bug in this CSS',bug:'p { font-size: 20; }',test:/^p\s*\{\s*font-size\s*:\s*20px\s*;?\s*\}$/i,prev:v=>'<style>'+v+'</style><p>Sized?</p>',h:'Sizes need a unit, like px.'},
+ {k:'gap',r:'r11',q:'Pick the typeface',pre:'h1 { font-',post:': monospace; }',a:['family'],prev:v=>'<style>h1 { font-'+v+': monospace; }</style><h1>Typewriter</h1>',h:'A font family: the property that picks the typeface.'},
+
+ {k:'type',r:'r12',q:'Give .box 25px of margin',ph:'.box { … }',test:/^\.box\s*\{\s*margin\s*:\s*25px\s*;?\s*\}$/i,prev:v=>'<style>.box{border:2px solid teal}'+v+'</style><div class="box">Pushed away</div>',h:'`.box { margin: 25px; }`'},
+ {k:'fix',r:'r12',q:'Fix the bug in this CSS',bug:'.box { padding 10px; }',test:/^\.box\s*\{\s*padding\s*:\s*10px\s*;?\s*\}$/i,prev:v=>'<style>.box{border:2px solid teal}'+v+'</style><div class="box">Room?</div>',h:'Property, colon, value.'},
+ {k:'pick',r:'r12',q:'You want more space between the text and its border. What do you change?',o:['margin','padding','font-size','border'],a:1,h:'Space inside the box.'},
+ {k:'pick',r:'r12',q:'Two boxes sit too close together. What do you change?',o:['padding','margin','color','alt'],a:1,h:'Space outside the box.'},
+ {k:'type',r:'r12',q:'Give .card 10px padding and 20px margin in one rule',ph:'.card { … }',test:/^\.card\s*\{\s*(padding\s*:\s*10px\s*;\s*margin\s*:\s*20px|margin\s*:\s*20px\s*;\s*padding\s*:\s*10px)\s*;?\s*\}$/i,prev:v=>'<style>.card{border:2px solid teal}'+v+'</style><div class="card">Card</div>',h:'Two declarations inside one pair of braces, each ending with `;`.'}
+];
+
 const PLOTS=[
  {name:'Witch hut',art:'hut',t:0,icon:'<path d="M12 46V26L32 10l20 16v20z"/><path d="M26 46V34h12v12"/>'},
  {name:'Path',art:'path',t:1,icon:'<path d="M32 54V14"/><path d="M18 18h26l6 6-6 6H18z"/><path d="M22 54c4-8 16-8 20 0"/>'},
@@ -514,8 +588,9 @@ let dState={};
 let PR=null;
 function practiceList(){
   const pool=[];TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))}));
+  MORE.forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))});
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-  return pool.slice(0,8);
+  return pool.slice(0,10);
 }
 const LESSONS={
  r1:{why:'HTML is made of elements. Most elements have an opening tag, some content, and a closing tag. The browser uses the pair to know where something starts and stops: forget the closing tag and the rest of the page can get swallowed into the element.',parts:[['<p>','opening tag: starts the paragraph'],['Knock twice.','content: what shows on the page'],['</p>','closing tag: the slash ends it']],mistakes:['Forgetting the slash: <p>Hi<p> opens a second paragraph instead of closing the first.','Mixing names: <h1>Title</h2> does not close the h1.','Leaving the closing tag off at the end of the page.'],ex2:'<p>First paragraph.</p>\n<p>Second paragraph, on its own line.</p>'},
