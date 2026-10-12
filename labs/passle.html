@@ -1979,6 +1979,812 @@ MORE.push(
  {k:'pick',r:'pz26',q:"`$x ??= 5;` when `$x` is already 3. Afterwards `$x` is…",o:['3','5','8','null'],a:0,h:'Only fills in when missing or null.'}
 );
 
+const JSON_FILE='data/recipes.json',SRC_DB='src/db.php',SRC_REC='src/recipes.php',TPL_HOME='templates/home.php';
+const rows=(r,sel)=>r&&r.doc?[...r.doc.querySelectorAll(sel)].map(e=>norm(e.textContent)):[];
+const firstCells=r=>r&&r.doc?[...r.doc.querySelectorAll('table tr')].filter(tr=>tr.querySelector('td')).map(tr=>norm(tr.querySelector('td').textContent)):[];
+const noSqlConcat=s=>!/(query|exec|prepare)\s*\([^;]*\$_(POST|GET|REQUEST)/.test(s)&&!/(query|exec|prepare)\s*\(\s*(['"])[^'"]*\2\s*\.\s*\$/.test(s)&&!/(query|exec|prepare)\s*\(\s*"[^"]*\$\w/.test(s);
+
+Object.assign(RULES,{
+ pz28:{n:'28',title:'Reading a JSON file',cat:'Data',t:9,
+  syn:"$json = <span class=\"k\">file_get_contents</span>($file); · $data = <span class=\"k\">json_decode</span>($json, <span class=\"v\">true</span>, flags: <span class=\"v\">JSON_THROW_ON_ERROR</span>);",
+  note:'file_get_contents reads a whole file into a string. json_decode with true turns JSON into keyed arrays. JSON_THROW_ON_ERROR makes broken JSON throw an exception instead of quietly returning null.',
+  why:'JSON is the simplest way to keep data between requests without a database, and it is what most APIs speak. file_get_contents($file) reads the file into one string. json_decode($json, true) turns that string into PHP arrays: JSON objects become keyed arrays, JSON lists become lists. Without true you get stdClass objects instead. By default a typo in the file makes json_decode return null without complaint; the flag JSON_THROW_ON_ERROR turns that into a JsonException you will actually notice. Guard with is_file() when the file might not exist yet.',
+  parts:[['file_get_contents($file)','whole file → string'],['json_decode($json, true, …)','JSON → arrays'],['flags: JSON_THROW_ON_ERROR','broken JSON throws'],['is_file($file)','does it exist?']],
+  mistakes:['Forgetting true: you get objects, and $recipe[\'name\'] fails.','No JSON_THROW_ON_ERROR: a broken file silently becomes null.','A path relative to the working directory instead of __DIR__.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$json = '[{"name": "Onion soup", "minutes": 45}]';
+$recipes = json_decode($json, true, flags: JSON_THROW_ON_ERROR);
+
+echo $recipes[0]['name'] . ' takes ' . $recipes[0]['minutes'] . ' minutes';`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+try {
+    json_decode('{"name": "soup",}', true, flags: JSON_THROW_ON_ERROR);
+} catch (JsonException $e) {
+    echo 'Broken JSON: ' . $e->getMessage();
+}`},
+ pz29:{n:'29',title:'Writing JSON back',cat:'Data',t:9,
+  syn:"<span class=\"k\">file_put_contents</span>($file, <span class=\"k\">json_encode</span>($data, <span class=\"v\">JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR</span>), <span class=\"v\">LOCK_EX</span>);",
+  note:'json_encode turns arrays back into JSON; JSON_PRETTY_PRINT keeps the file readable. file_put_contents writes it, and LOCK_EX stops two requests writing at the same moment.',
+  why:'Saving is the mirror of reading: change the array, encode it, write it. json_encode($data) produces a JSON string; JSON_PRETTY_PRINT adds line breaks and indentation so the file stays readable in VS Code, and JSON_UNESCAPED_UNICODE keeps letters like é as they are. Flags combine with |. file_put_contents($file, $json) replaces the file. On a real server two guests can save at the same instant; LOCK_EX makes the second wait until the first has finished, so the file never ends up half-written. Validate before you save: whatever lands in the file comes back on every page load.',
+  parts:[['json_encode($data, …)','arrays → JSON string'],['JSON_PRETTY_PRINT','readable file'],['A | B','combine flags'],['file_put_contents($file, $json, LOCK_EX)','write, safely']],
+  mistakes:['Saving before validating: bad data is now permanent.','Forgetting LOCK_EX on a file many requests write to.','Writing into public/: anyone can download the file.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$recipes = [['name' => 'Crème brûlée', 'minutes' => 70]];
+
+echo json_encode($recipes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$file = __DIR__ . '/../data/demo.json';
+file_put_contents($file, json_encode(['saved' => true], JSON_THROW_ON_ERROR), LOCK_EX);
+
+echo file_get_contents($file);`},
+ pz30:{n:'30',title:'Sorting with usort and <=>',cat:'Arrays',t:9,
+  syn:"<span class=\"k\">usort</span>($recipes, <span class=\"k\">fn</span> (array $a, array $b): int =&gt; $a['minutes'] <span class=\"v\">&lt;=&gt;</span> $b['minutes']);",
+  note:'usort sorts a list with your own rule. The rule gets two items and returns a negative number, 0 or a positive number. The spaceship operator <=> does exactly that. fn (…) => … is a short arrow function.',
+  why:'sort works for plain lists, but recipes are arrays: sort by what? usort($list, $compare) lets you decide. PHP hands your compare function two items, $a and $b, and wants back below zero if $a goes first, zero if they tie, above zero if $b goes first. The spaceship operator <=> returns exactly -1, 0 or 1. The arrow function fn (array $a, array $b): int => … is a one-line function you can pass straight in, and it can read variables from around it. Like sort, usort changes the array in place.',
+  parts:[['usort($list, $compare)','sort with your own rule'],['$a <=> $b','-1, 0 or 1'],['fn (…): int => …','arrow function'],['$b <=> $a','reverse order']],
+  mistakes:['$list = usort(…): it returns true, not the sorted list.','Returning a bool from the compare function instead of an int.','Sorting before adding the new item, then wondering why it is last.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$recipes = [['name' => 'Tart', 'minutes' => 60], ['name' => 'Soup', 'minutes' => 45]];
+
+usort($recipes, fn (array $a, array $b): int => $a['minutes'] <=> $b['minutes']);
+
+echo $recipes[0]['name'];`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump(1 <=> 2, 2 <=> 2, 3 <=> 2);`},
+ pz31:{n:'31',title:'Connecting with PDO',cat:'Databases',t:10,
+  syn:"new <span class=\"k\">PDO</span>(<span class=\"v\">'sqlite:' . __DIR__ . '/../data/cellar.sqlite'</span>, null, null, [PDO::ATTR_ERRMODE =&gt; <span class=\"v\">PDO::ERRMODE_EXCEPTION</span>, …])",
+  note:'PDO is PHP\'s one way to talk to databases. The DSN names the driver and the file or server. Always set ERRMODE_EXCEPTION so a broken query throws, and FETCH_ASSOC so rows come back as keyed arrays.',
+  why:'PDO works the same for SQLite, MySQL and PostgreSQL; only the connection string (DSN) changes. For SQLite the DSN is sqlite: followed by the path of the database file, which is created on first use. The fourth argument holds options. PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION is not optional in practice: without it, older PHP versions let failed queries return false quietly. PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC makes every row a keyed array like [\'name\' => …]. Put the connection in one function, db(), so the rest of the code never repeats the details.',
+  parts:[["'sqlite:' . $path",'DSN: driver and file'],['PDO::ERRMODE_EXCEPTION','errors throw'],['PDO::FETCH_ASSOC','rows as keyed arrays'],['function db(): PDO','one place to connect']],
+  mistakes:['Leaving the default error mode and missing failed queries.','Putting the database file in public/, where it can be downloaded.','Connecting again in every function instead of passing $pdo along.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);
+
+echo $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+
+try {
+    $pdo->query('SELECT * FROM missing_table');
+} catch (PDOException $e) {
+    echo 'Caught: ' . $e->getMessage();
+}`},
+ pz32:{n:'32',title:'Prepared statements',cat:'Databases',t:10,
+  syn:"$stmt = $pdo-&gt;<span class=\"k\">prepare</span>('DELETE FROM wines WHERE id = <span class=\"v\">:id</span>'); · $stmt-&gt;<span class=\"k\">execute</span>(['id' =&gt; $id]);",
+  note:'Never glue user input into SQL. prepare() sends the query with placeholders, execute() sends the values separately, so input can never change the query. Placeholders stand for values only, not table or column names.',
+  why:'SQL injection is building a query by gluing in text a stranger typed: one quote in a name and the stranger is writing your SQL. Prepared statements end that whole class of bugs. prepare() sends the query with named placeholders like :id. execute([\'id\' => $id]) sends the values separately, and the database treats them strictly as data, whatever they contain. The rule has no exceptions for "safe" values: if it comes from outside, it goes through a placeholder. Placeholders only work for values; table and column names come from your own allowlist.',
+  parts:[[":id, :name",'named placeholders'],['prepare(…)','query without values'],["execute(['id' => $id])",'values, separately'],['WHERE id = :id','a value slot']],
+  mistakes:["'… WHERE id = ' . $_POST['id']: SQL injection.",'Quoting the placeholder: WHERE name = \':name\' compares with the literal text :name.','Using a placeholder for a column name in ORDER BY.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$pdo->exec('CREATE TABLE wines (name TEXT)');
+
+$add = $pdo->prepare('INSERT INTO wines (name) VALUES (:name)');
+$add->execute(['name' => "Bob'); DROP TABLE wines; --"]);
+
+echo $pdo->query('SELECT name FROM wines')->fetchColumn();`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$pdo->exec('CREATE TABLE t (n INTEGER)');
+$stmt = $pdo->prepare('INSERT INTO t (n) VALUES (:n)');
+
+foreach ([1, 2, 3] as $n) {
+    $stmt->execute(['n' => $n]);
+}
+
+echo $pdo->query('SELECT SUM(n) FROM t')->fetchColumn();`},
+ pz33:{n:'33',title:'Reading rows',cat:'Databases',t:10,
+  syn:"$pdo-&gt;<span class=\"k\">query</span>('SELECT … ORDER BY name')-&gt;<span class=\"k\">fetchAll</span>() · -&gt;<span class=\"k\">fetch</span>() · -&gt;<span class=\"k\">fetchColumn</span>()",
+  note:'query() runs fixed SQL with no input in it. fetchAll() returns every row, fetch() one row, fetchColumn() the first value of the next row. Let SQL do the counting and summing with COUNT() and SUM().',
+  why:'When a query contains no outside input at all, query() is fine: it runs it immediately and returns a statement. From a statement you fetch results: fetchAll() gives a list of rows, each a keyed array with FETCH_ASSOC; fetch() gives the next row or false; fetchColumn() gives one value, perfect for COUNT(*). Ask the database for exactly what you need: ORDER BY to sort, COUNT() and SUM() to total, rather than loading everything and doing it in PHP.',
+  parts:[["query('SELECT …')",'fixed SQL only'],['fetchAll()','all rows'],['fetch()','one row'],['fetchColumn()','one value'],['COUNT(*) · SUM(bottles)','let SQL total']],
+  mistakes:['Using query() with input glued in: that needs prepare().','Calling fetch() and expecting a list.','Counting rows in PHP with a loop when COUNT(*) would do.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+$pdo->exec("CREATE TABLE wines (name TEXT, bottles INTEGER); INSERT INTO wines VALUES ('Rioja', 12), ('Sancerre', 8)");
+
+print_r($pdo->query('SELECT name, bottles FROM wines ORDER BY name')->fetchAll());`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]);
+$pdo->exec("CREATE TABLE wines (name TEXT, bottles INTEGER); INSERT INTO wines VALUES ('Rioja', 12), ('Sancerre', 8)");
+
+print_r($pdo->query('SELECT COUNT(*) AS wines, SUM(bottles) AS bottles FROM wines')->fetch());`},
+ pz34:{n:'34',title:'Post, redirect, get',cat:'Web',t:11,
+  syn:"header(<span class=\"v\">'Location: /'</span>, true, <span class=\"v\">303</span>); <span class=\"k\">return;</span> · $_SESSION['flash'] = 'Saved.';",
+  note:'After a successful POST, send the browser elsewhere with a 303 redirect and stop. The browser then GETs the page, so a refresh never resends the form. Carry a one-time message across in the session: a flash.',
+  why:'If a POST answers with a page, pressing refresh resends the form and saves the recipe twice. The standard fix is Post/Redirect/Get: when the POST succeeds, answer with header(\'Location: /\', true, 303) and nothing else. The 303 status tells the browser to fetch that address with GET. Stop the script straight after; at the top level of index.php, return; ends it cleanly. To say "Recipe saved." on the next page, put the message in $_SESSION, read it on the next GET, and unset it so it shows exactly once. That pattern is called a flash message.',
+  parts:[["header('Location: /', true, 303)",'redirect, as GET'],['return;','stop here'],["$_SESSION['flash'] = …",'remember a message'],["unset($_SESSION['flash'])",'show it only once']],
+  mistakes:['Printing HTML before header(): headers already sent.','Forgetting to stop after the redirect: the rest of the page still runs.','Showing the flash without unsetting it: it appears on every page.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$session = ['flash' => 'Recipe saved.'];
+
+$flash = $session['flash'] ?? null;
+unset($session['flash']);
+
+var_dump($flash, $session['flash'] ?? null);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+header('Location: /', true, 303);
+echo 'Nothing after the redirect should be needed.';`},
+ pz35:{n:'35',title:'LIKE searches, safely',cat:'Databases',t:11,
+  syn:"prepare('… WHERE name <span class=\"k\">LIKE</span> :q') · execute(['q' =&gt; <span class=\"v\">'%' . $q . '%'</span>])",
+  note:'LIKE matches patterns: % stands for any text. Build the pattern in PHP and pass it as a value; the placeholder stays a plain :q. A search is a GET form, and its term is printed back escaped.',
+  why:'A search box is input like any other. The pattern for "contains soup" is %soup%, and it belongs in the value, not in the SQL: prepare(\'… WHERE name LIKE :q\') and execute([\'q\' => \'%\' . $q . \'%\']). In SQLite, LIKE ignores upper and lower case for plain letters. Searching does not change anything, so the form uses GET: the address becomes /?q=soup, which can be bookmarked and shared. Print the term back into the search field so the guest sees what they searched for, escaped like every other value.',
+  parts:[["LIKE :q",'pattern match'],["'%' . $q . '%'",'contains'],['<form method="get">','search reads, so GET'],["value=\"<?= htmlspecialchars($q) ?>\"",'sticky, safe']],
+  mistakes:["Gluing the term into the SQL: '… LIKE \\'%' . $q . '%\\''.",'Putting % inside the SQL around the placeholder: :q must stay alone.','A POST search form: results cannot be bookmarked.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$pdo->exec("CREATE TABLE r (name TEXT); INSERT INTO r VALUES ('Onion soup'), ('Tarte tatin')");
+
+$find = $pdo->prepare('SELECT name FROM r WHERE name LIKE :q');
+$find->execute(['q' => '%SOUP%']);
+
+print_r($find->fetchAll(PDO::FETCH_COLUMN));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$q = "' OR 1=1 --";
+
+echo '%' . $q . '%';`},
+ pz36:{n:'36',title:'A small app, layered',cat:'Files',t:11,
+  syn:'public/index.php <span class="k">→</span> src/db.php · src/recipes.php <span class="k">→</span> templates/home.php',
+  note:'The controller (public/index.php) reads the request, calls functions in src/ and requires one template. Functions get $pdo and plain values as parameters and return data. The template prints.',
+  why:'Everything so far comes together in one shape that scales: a thin controller, a few focused function files, and templates. index.php starts the session, loads src/, connects once, decides what this request wants, calls functions, and finally hands variables to a template. Functions in src/ never read $_POST themselves and never print; they receive $pdo and values and return results, which makes them easy to test. When you meet a framework later, you will recognise this same split under fancier names.',
+  parts:[['public/index.php','controller: request in, template out'],['src/db.php','connect + schema'],['src/recipes.php','find, validate, add'],['templates/home.php','HTML only']],
+  mistakes:['Functions reading $_POST directly: they cannot be reused or tested.','Queries inside the template.','Connecting to the database in every function.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function validateRecipe(array $input): array
+{
+    $errors = [];
+    if (trim((string) ($input['name'] ?? '')) === '') {
+        $errors[] = 'Give the recipe a name.';
+    }
+
+    return $errors;
+}
+
+print_r(validateRecipe(['name' => '  ']));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function total(array $minutes): int
+{
+    return array_sum($minutes);
+}
+
+echo total([45, 60]);`}
+});
+
+const RECIPES_JSON=`[
+    {"name": "Onion soup", "minutes": 45, "serves": 4},
+    {"name": "Tarte tatin", "minutes": 60, "serves": 6},
+    {"name": "Ratatouille", "minutes": 50, "serves": 4}
+]
+`;
+const PREP_CELLAR=`function prepareCellar(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS wines (id INTEGER PRIMARY KEY, name TEXT NOT NULL, year INTEGER NOT NULL, bottles INTEGER NOT NULL)');
+
+    if ((int) $pdo->query('SELECT COUNT(*) FROM wines')->fetchColumn() === 0) {
+        $seed = $pdo->prepare('INSERT INTO wines (name, year, bottles) VALUES (:name, :year, :bottles)');
+        $seed->execute(['name' => 'Château Margaux', 'year' => 2015, 'bottles' => 3]);
+        $seed->execute(['name' => 'Rioja Reserva', 'year' => 2018, 'bottles' => 12]);
+        $seed->execute(['name' => 'Sancerre', 'year' => 2022, 'bottles' => 8]);
+    }
+}
+`;
+const PREP_BISTRO=`function prepareBistro(PDO $pdo): void
+{
+    $pdo->exec('CREATE TABLE IF NOT EXISTS recipes (id INTEGER PRIMARY KEY, name TEXT NOT NULL, minutes INTEGER NOT NULL)');
+
+    if ((int) $pdo->query('SELECT COUNT(*) FROM recipes')->fetchColumn() === 0) {
+        $seed = $pdo->prepare('INSERT INTO recipes (name, minutes) VALUES (:name, :minutes)');
+        foreach ([['Onion soup', 45], ['Tarte tatin', 60], ['Ratatouille', 50], ['Coq au vin', 150]] as [$name, $minutes]) {
+            $seed->execute(['name' => $name, 'minutes' => $minutes]);
+        }
+    }
+}
+`;
+const DB_FN=(file,prep)=>`function db(): PDO
+{
+    $pdo = new PDO('sqlite:' . __DIR__ . '/../data/${file}', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+    ${prep}($pdo);
+
+    return $pdo;
+}
+`;
+const BISTRO_SESSION='bistro-guest';
+
+TARGETS.push(
+{id:'recipe-book',name:'Recipe book',dish:'Recipe book',rules:['pz28','pz29','pz30'],
+ request:{method:'POST',post:{name:'Coq au vin',minutes:'150',serves:'4'}},
+ probes:{visit:{method:'GET'},bad:{method:'POST',post:{name:'',minutes:'soon',serves:'4'}},saved:[{method:'POST',post:{name:'Coq au vin',minutes:'150',serves:'4'}},{method:'GET'}]},
+ files:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+?>
+`+page('Recipe book',`    <h1>Recipe book</h1>
+`),[JSON_FILE]:RECIPES_JSON},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+$file = __DIR__ . '/../data/recipes.json';
+$recipes = is_file($file) ? json_decode(file_get_contents($file), true, flags: JSON_THROW_ON_ERROR) : [];
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $minutes = filter_var($_POST['minutes'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+    $serves = filter_var($_POST['serves'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+
+    if ($name === '' || $minutes === false || $serves === false) {
+        $errors[] = 'Give a name and whole numbers for minutes and servings.';
+    } else {
+        $recipes[] = ['name' => $name, 'minutes' => $minutes, 'serves' => $serves];
+        file_put_contents($file, json_encode($recipes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), LOCK_EX);
+    }
+}
+
+usort($recipes, fn (array $a, array $b): int => $a['minutes'] <=> $b['minutes']);
+?>
+`+page('Recipe book',`    <h1>Recipe book</h1>
+    <p class="count"><?= count($recipes) ?> recipes</p>
+    <?php if ($errors !== []): ?>
+        <ul class="errors">
+            <?php foreach ($errors as $error): ?>
+                <li><?= htmlspecialchars($error) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+    <ol class="recipes">
+        <?php foreach ($recipes as $recipe): ?>
+            <li><?= htmlspecialchars($recipe['name']) ?> · <?= $recipe['minutes'] ?> min · serves <?= $recipe['serves'] ?></li>
+        <?php endforeach; ?>
+    </ol>
+    <p>Quickest: <?= htmlspecialchars($recipes[0]['name']) ?></p>
+    <form method="post" action="/">
+        <label for="name">Recipe</label>
+        <input id="name" name="name">
+        <label for="minutes">Minutes</label>
+        <input id="minutes" name="minutes" type="number" min="1">
+        <label for="serves">Serves</label>
+        <input id="serves" name="serves" type="number" min="1">
+        <button type="submit">Add to the book</button>
+    </form>
+`),[JSON_FILE]:RECIPES_JSON},
+ steps:[
+  {t:"Point at the data file: `$file = __DIR__ . '/../data/recipes.json';`",c:c=>/\$file\s*=\s*__DIR__\s*\.\s*'\/\.\.\/data\/recipes\.json'\s*;/.test(src(c)),help:['Open the Folder: the JSON lives in data/, outside public/.','Build the path from __DIR__, up one folder, into data.',`$file = __DIR__ . '/../data/wines.json';`,`$file = __DIR__ . '/../data/recipes.json';`]},
+  {t:'Read and decode it into arrays, with `JSON_THROW_ON_ERROR`',c:c=>/json_decode\(\s*file_get_contents\(\s*\$file\s*\)\s*,\s*true/.test(src(c))&&/JSON_THROW_ON_ERROR/.test(src(c))&&rows(c.p.visit,'ol.recipes li').length===3,help:['Two functions: one reads the file, one turns JSON into arrays.','`json_decode(file_get_contents($file), true, flags: JSON_THROW_ON_ERROR)`, guarded with `is_file($file) ? … : []`.',`$wines = is_file($file) ? json_decode(file_get_contents($file), true, flags: JSON_THROW_ON_ERROR) : [];`,`$recipes = is_file($file) ? json_decode(file_get_contents($file), true, flags: JSON_THROW_ON_ERROR) : [];`]},
+  {t:'An `<ol class="recipes">`: `Onion soup · 45 min · serves 4` for each recipe',c:c=>(rows(c.p.visit,'ol.recipes li')[0]||'')==='Onion soup · 45 min · serves 4',help:['One li per recipe, built with foreach.',"`<?= htmlspecialchars($recipe['name']) ?> · <?= $recipe['minutes'] ?> min · serves <?= $recipe['serves'] ?>`",`<li><?= htmlspecialchars($wine['name']) ?> · <?= $wine['year'] ?></li>`,`<ol class="recipes">
+    <?php foreach ($recipes as $recipe): ?>
+        <li><?= htmlspecialchars($recipe['name']) ?> · <?= $recipe['minutes'] ?> min · serves <?= $recipe['serves'] ?></li>
+    <?php endforeach; ?>
+</ol>`]},
+  {t:'`<p class="count">3 recipes</p>` on a plain visit',c:c=>ptxt(c.p.visit,'p.count')==='3 recipes',help:['count() on the decoded array.','`<p class="count"><?= count($recipes) ?> recipes</p>`',`<p class="count"><?= count($wines) ?> wines</p>`,`<p class="count"><?= count($recipes) ?> recipes</p>`]},
+  {t:'Quickest first: `usort` with `<=>` on `minutes`',c:c=>JSON.stringify(rows(c.p.visit,'ol.recipes li').map(s=>s.split(' · ')[0]))===JSON.stringify(['Onion soup','Ratatouille','Tarte tatin'])&&/usort\(\s*\$recipes/.test(src(c))&&/<=>/.test(src(c)),help:['Sort just before printing, after any new recipe was added.',"`usort($recipes, fn (array $a, array $b): int => $a['minutes'] <=> $b['minutes']);`",`usort($wines, fn (array $a, array $b): int => $a['year'] <=> $b['year']);`,`usort($recipes, fn (array $a, array $b): int => $a['minutes'] <=> $b['minutes']);`]},
+  {t:'`Quickest: Onion soup` from the first recipe after sorting',c:c=>ptxt(c.p.visit,'p:last-of-type')==='Quickest: Onion soup'||rows(c.p.visit,'p').includes('Quickest: Onion soup'),help:['After usort, index 0 is the quickest.',"`<p>Quickest: <?= htmlspecialchars($recipes[0]['name']) ?></p>`",`<p>Oldest: <?= htmlspecialchars($wines[0]['name']) ?></p>`,`<p>Quickest: <?= htmlspecialchars($recipes[0]['name']) ?></p>`]},
+  {t:'A post form with labelled fields `name`, `minutes` and `serves`',c:c=>['name','minutes','serves'].every(n=>!!c.doc.querySelector('form[method="post"] input#'+n+'[name="'+n+'"]')&&!!c.doc.querySelector('label[for="'+n+'"]')),help:['Same pattern as the Order slip.','Three label + input pairs and a submit button inside `<form method="post" action="/">`.',`<label for="year">Year</label>
+<input id="year" name="year" type="number">`,`<form method="post" action="/">
+    <label for="name">Recipe</label>
+    <input id="name" name="name">
+    <label for="minutes">Minutes</label>
+    <input id="minutes" name="minutes" type="number" min="1">
+    <label for="serves">Serves</label>
+    <input id="serves" name="serves" type="number" min="1">
+    <button type="submit">Add to the book</button>
+</form>`]},
+  {t:'Validate before saving: a bad recipe shows an error and the book stays at 3',c:c=>rows(c.p.bad,'ul.errors li').length>0&&ptxt(c.p.bad,'p.count')==='3 recipes'&&/filter_var\(/.test(src(c)),help:['Passle posts an empty name and "soon" as minutes.','trim the name, filter_var both numbers with min_range 1, add one message to $errors if anything fails.',`if ($name === '' || $year === false) {
+    $errors[] = 'Give a name and a year.';
+}`,`$minutes = filter_var($_POST['minutes'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+$serves = filter_var($_POST['serves'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1]]);
+if ($name === '' || $minutes === false || $serves === false) {
+    $errors[] = 'Give a name and whole numbers for minutes and servings.';
+}`]},
+  {t:'A good recipe is added and written back with `json_encode(… JSON_PRETTY_PRINT …)` and `LOCK_EX`',c:c=>rows(c,'ol.recipes li').length===4&&(rows(c,'ol.recipes li')[3]||'').startsWith('Coq au vin')&&/file_put_contents\(\s*\$file\s*,\s*json_encode\(/.test(src(c))&&/JSON_PRETTY_PRINT/.test(src(c))&&/LOCK_EX/.test(src(c)),help:['Add to the array, then save the whole array.',"In the else: `$recipes[] = [...];` then `file_put_contents($file, json_encode($recipes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), LOCK_EX);`",`$wines[] = ['name' => $name, 'year' => $year];
+file_put_contents($file, json_encode($wines, JSON_PRETTY_PRINT | JSON_THROW_ON_ERROR), LOCK_EX);`,`$recipes[] = ['name' => $name, 'minutes' => $minutes, 'serves' => $serves];
+file_put_contents($file, json_encode($recipes, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR), LOCK_EX);`]},
+  {t:'Saved for real: the next visit still shows 4 recipes',c:c=>ptxt(c.p.saved,'p.count')==='4 recipes',help:['Passle posts a recipe, then makes a fresh GET request. Only the file remembers.','Make sure file_put_contents runs with the whole array, before the page is printed.',`file_put_contents($file, …, LOCK_EX);`,'Save inside the else of your validation, then read the same $file at the top.']},
+  cleanStep(c=>allClean(c)&&rows(c,'ol.recipes li').length===4&&escaped(c,["['name']",'$error']))
+ ],
+ drills:[
+  {k:'pick',r:'pz28',q:'What does `json_decode($json, true)` give for a JSON object?',o:['A stdClass object','A keyed array','A string','null'],a:1,h:'true means associative arrays.'},
+  {k:'gap',r:'pz28',q:'Make broken JSON throw',pre:'json_decode($json, true, flags: ',post:')',a:['JSON_THROW_ON_ERROR'],h:'JSON, THROW, ON, ERROR.'},
+  {k:'type',r:'pz29',q:'Write `$json` to `$file`, locked',ph:'file_put_contents(…);',test:/^file_put_contents\(\$file, \$json, LOCK_EX\);$/,ans:'file_put_contents($file, $json, LOCK_EX);',h:'`file_put_contents($file, $json, LOCK_EX);`'},
+  {k:'pick',r:'pz29',q:'How do you combine two JSON flags?',o:['A + B','A | B','A & B','[A, B]'],a:1,h:'Bitwise or.'},
+  {k:'pick',r:'pz30',q:'What does `5 <=> 3` return?',o:['-1','0','1','true'],a:2,h:'Left is bigger.'},
+  {k:'fix',r:'pz30',q:'This replaces the list with true. Fix it',bug:'$recipes = usort($recipes, $byTime);',test:/^usort\(\$recipes, \$byTime\);$/,ans:'usort($recipes, $byTime);',h:'usort sorts in place.'}
+ ]},
+
+{id:'cellar',name:'The cellar',dish:'Cellar',rules:['pz31','pz32','pz33'],
+ request:[{method:'POST',post:{action:'add',name:'Chablis',year:'2021',bottles:'6'}},{method:'POST',post:{action:'pour',id:'1'}},{method:'POST',post:{action:'remove',id:'2'}},{method:'GET'}],
+ probes:{visit:{method:'GET'},inject:[{method:'POST',post:{action:'add',name:"Bob'); DROP TABLE wines; --",year:'2020',bottles:'1'}},{method:'GET'}]},
+ ingredients:{[SRC_DB]:PREP_CELLAR},
+ files:{[IDX]:`<?php
+
+declare(strict_types=1);
+`,[SRC_DB]:`<?php
+
+declare(strict_types=1);
+
+`+PREP_CELLAR},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../src/db.php';
+
+$pdo = db();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+    $id = filter_var($_POST['id'] ?? '', FILTER_VALIDATE_INT);
+
+    if ($action === 'add') {
+        $add = $pdo->prepare('INSERT INTO wines (name, year, bottles) VALUES (:name, :year, :bottles)');
+        $add->execute([
+            'name' => trim($_POST['name'] ?? ''),
+            'year' => (int) ($_POST['year'] ?? 0),
+            'bottles' => (int) ($_POST['bottles'] ?? 0),
+        ]);
+    } elseif ($action === 'pour' && $id !== false) {
+        $pour = $pdo->prepare('UPDATE wines SET bottles = bottles - 1 WHERE id = :id AND bottles > 0');
+        $pour->execute(['id' => $id]);
+    } elseif ($action === 'remove' && $id !== false) {
+        $remove = $pdo->prepare('DELETE FROM wines WHERE id = :id');
+        $remove->execute(['id' => $id]);
+    }
+}
+
+$wines = $pdo->query('SELECT id, name, year, bottles FROM wines ORDER BY name')->fetchAll();
+$totals = $pdo->query('SELECT COUNT(*) AS wines, SUM(bottles) AS bottles FROM wines')->fetch();
+?>
+`+page('The cellar',`    <h1>The cellar</h1>
+    <p class="count"><?= $totals['wines'] ?> wines · <?= $totals['bottles'] ?> bottles</p>
+    <table>
+        <tr>
+            <th>Wine</th>
+            <th>Year</th>
+            <th>Bottles</th>
+            <th>Service</th>
+        </tr>
+        <?php foreach ($wines as $wine): ?>
+            <tr>
+                <td><?= htmlspecialchars($wine['name']) ?></td>
+                <td><?= $wine['year'] ?></td>
+                <td><?= $wine['bottles'] ?></td>
+                <td>
+                    <form method="post" action="/">
+                        <input type="hidden" name="id" value="<?= $wine['id'] ?>">
+                        <button name="action" value="pour">Pour one</button>
+                        <button name="action" value="remove">Remove</button>
+                    </form>
+                </td>
+            </tr>
+        <?php endforeach; ?>
+    </table>
+    <form method="post" action="/">
+        <input type="hidden" name="action" value="add">
+        <label for="name">Wine</label>
+        <input id="name" name="name">
+        <label for="year">Year</label>
+        <input id="year" name="year" type="number">
+        <label for="bottles">Bottles</label>
+        <input id="bottles" name="bottles" type="number" min="1">
+        <button type="submit">Add to the cellar</button>
+    </form>
+`),[SRC_DB]:`<?php
+
+declare(strict_types=1);
+
+`+DB_FN('cellar.sqlite','prepareCellar')+`
+`+PREP_CELLAR},
+ steps:[
+  {t:"In `src/db.php`: `function db(): PDO` connecting to `'sqlite:' . __DIR__ . '/../data/cellar.sqlite'`",c:c=>/function\s+db\s*\(\s*\)\s*:\s*PDO/.test(src(c,SRC_DB))&&/new\s+PDO\(\s*'sqlite:'\s*\.\s*__DIR__\s*\.\s*'\/\.\.\/data\/cellar\.sqlite'/.test(src(c,SRC_DB)),help:['One function, one place that knows where the database lives.','DSN: the text sqlite: glued to the path of the file in data/.',`function db(): PDO
+{
+    $pdo = new PDO('sqlite:' . __DIR__ . '/../data/shop.sqlite');
+
+    return $pdo;
+}`,`function db(): PDO
+{
+    $pdo = new PDO('sqlite:' . __DIR__ . '/../data/cellar.sqlite', null, null, [
+        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+    ]);
+    prepareCellar($pdo);
+
+    return $pdo;
+}`]},
+  {t:'Connect with `PDO::ERRMODE_EXCEPTION` and `PDO::FETCH_ASSOC` in the options',c:c=>/PDO::ATTR_ERRMODE\s*=>\s*PDO::ERRMODE_EXCEPTION/.test(src(c,SRC_DB))&&/PDO::ATTR_DEFAULT_FETCH_MODE\s*=>\s*PDO::FETCH_ASSOC/.test(src(c,SRC_DB)),help:['The fourth argument of new PDO is an options array.','`null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION, PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC]`',`new PDO($dsn, null, null, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+]);`,`$pdo = new PDO('sqlite:' . __DIR__ . '/../data/cellar.sqlite', null, null, [
+    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
+    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
+]);`]},
+  {t:'`db()` calls `prepareCellar($pdo)` and returns `$pdo`; index.php loads it and calls `$pdo = db();`',c:c=>/prepareCellar\(\s*\$pdo\s*\)/.test(src(c,SRC_DB))&&/return\s+\$pdo\s*;/.test(src(c,SRC_DB))&&/require_once\s+__DIR__\s*\.\s*'\/\.\.\/src\/db\.php'/.test(src(c))&&/\$pdo\s*=\s*db\(\s*\)\s*;/.test(src(c)),help:['prepareCellar creates the table and the three starting wines.','In db(): call it, return $pdo. In index.php: require_once the file, then connect once.',`$pdo = shopDb();`,`require_once __DIR__ . '/../src/db.php';
+
+$pdo = db();`]},
+  {t:'Read the wines: `query(\'SELECT … ORDER BY name\')->fetchAll()`, one table row each',c:c=>JSON.stringify(firstCells(c.p.visit))===JSON.stringify(['Château Margaux','Rioja Reserva','Sancerre'])&&/->fetchAll\(\)/.test(src(c)),help:['The SQL has no input in it, so query() is fine.',"`$wines = $pdo->query('SELECT id, name, year, bottles FROM wines ORDER BY name')->fetchAll();` then a table with a foreach.",`$rows = $pdo->query('SELECT name FROM cheeses ORDER BY name')->fetchAll();`,`$wines = $pdo->query('SELECT id, name, year, bottles FROM wines ORDER BY name')->fetchAll();
+…
+<?php foreach ($wines as $wine): ?>
+    <tr>
+        <td><?= htmlspecialchars($wine['name']) ?></td>
+        <td><?= $wine['year'] ?></td>
+        <td><?= $wine['bottles'] ?></td>
+        <td>…</td>
+    </tr>
+<?php endforeach; ?>`]},
+  {t:'`<p class="count">3 wines · 23 bottles</p>` with `COUNT(*)` and `SUM(bottles)`',c:c=>ptxt(c.p.visit,'p.count')==='3 wines · 23 bottles'&&/COUNT\(\*\)/i.test(src(c))&&/SUM\(\s*bottles\s*\)/i.test(src(c)),help:['Let SQL do the totals in one query, then fetch() that one row.',"`SELECT COUNT(*) AS wines, SUM(bottles) AS bottles FROM wines`",`$totals = $pdo->query('SELECT COUNT(*) AS n FROM cheeses')->fetch();`,`$totals = $pdo->query('SELECT COUNT(*) AS wines, SUM(bottles) AS bottles FROM wines')->fetch();
+…
+<p class="count"><?= $totals['wines'] ?> wines · <?= $totals['bottles'] ?> bottles</p>`]},
+  {t:'Add a wine with a prepared `INSERT` and named placeholders',c:c=>firstCells(c).includes('Chablis')&&/prepare\(\s*'INSERT INTO wines[^']*VALUES\s*\(\s*:name/i.test(src(c)),help:['The first request posts action=add with a name, year and bottles.',"`$add = $pdo->prepare('INSERT INTO wines (name, year, bottles) VALUES (:name, :year, :bottles)');` then `$add->execute([...])`.",`$add = $pdo->prepare('INSERT INTO cheeses (name) VALUES (:name)');
+$add->execute(['name' => $name]);`,`if ($action === 'add') {
+    $add = $pdo->prepare('INSERT INTO wines (name, year, bottles) VALUES (:name, :year, :bottles)');
+    $add->execute([
+        'name' => trim($_POST['name'] ?? ''),
+        'year' => (int) ($_POST['year'] ?? 0),
+        'bottles' => (int) ($_POST['bottles'] ?? 0),
+    ]);
+}`]},
+  {t:'Pour one bottle with a prepared `UPDATE … WHERE id = :id`: Château Margaux drops to 2',c:c=>{const t=c.doc&&[...c.doc.querySelectorAll('table tr')].find(tr=>/Margaux/.test(tr.textContent));return !!t&&norm(t.querySelectorAll('td')[2].textContent)==='2'&&/prepare\(\s*'UPDATE wines SET bottles = bottles - 1 WHERE id = :id/i.test(src(c))},help:['Request 2 posts action=pour with id=1. Validate the id first.',"`$id = filter_var($_POST['id'] ?? '', FILTER_VALIDATE_INT);` then a prepared UPDATE when it is not false.",`$eat = $pdo->prepare('UPDATE cheeses SET left = left - 1 WHERE id = :id');
+$eat->execute(['id' => $id]);`,`} elseif ($action === 'pour' && $id !== false) {
+    $pour = $pdo->prepare('UPDATE wines SET bottles = bottles - 1 WHERE id = :id AND bottles > 0');
+    $pour->execute(['id' => $id]);
+}`]},
+  {t:'Remove a wine with a prepared `DELETE … WHERE id = :id`: the Rioja is gone',c:c=>firstCells(c).length===3&&!firstCells(c).some(n=>/Rioja/.test(n))&&/prepare\(\s*'DELETE FROM wines WHERE id = :id'/i.test(src(c)),help:['Request 3 posts action=remove with id=2.',"A prepared `DELETE FROM wines WHERE id = :id`.",`$drop = $pdo->prepare('DELETE FROM cheeses WHERE id = :id');
+$drop->execute(['id' => $id]);`,`} elseif ($action === 'remove' && $id !== false) {
+    $remove = $pdo->prepare('DELETE FROM wines WHERE id = :id');
+    $remove->execute(['id' => $id]);
+}`]},
+  {t:'Every row has its own post form with a hidden `id` and `Pour one` / `Remove` buttons',c:c=>{const r=c.doc?[...c.doc.querySelectorAll('table tr')].filter(tr=>tr.querySelector('td')):[];return r.length===3&&r.every(tr=>!!tr.querySelector('form[method="post"] input[type="hidden"][name="id"]')&&!!tr.querySelector('button[name="action"][value="pour"]')&&!!tr.querySelector('button[name="action"][value="remove"]'))},help:['A hidden input travels with the form without being shown.','In the last cell: a form, `<input type="hidden" name="id" value="<?= $wine[\'id\'] ?>">`, and two buttons named action.',`<form method="post" action="/">
+    <input type="hidden" name="id" value="<?= $cheese['id'] ?>">
+    <button name="action" value="eat">Eat one</button>
+</form>`,`<form method="post" action="/">
+    <input type="hidden" name="id" value="<?= $wine['id'] ?>">
+    <button name="action" value="pour">Pour one</button>
+    <button name="action" value="remove">Remove</button>
+</form>`]},
+  {t:'An injection attempt is stored as plain text and the table survives',c:c=>firstCells(c.p.inject).length===4&&firstCells(c.p.inject).includes("Bob'); DROP TABLE wines; --")&&noSqlConcat(src(c))&&!/<td>Bob'\); DROP/.test('')&&!c.p.inject.bad,help:['Passle adds a wine whose name is a piece of SQL.','Every value from the request goes through a placeholder; nothing is glued into the SQL string.',`$stmt = $pdo->prepare('… WHERE name = :name');
+$stmt->execute(['name' => $name]);`,'Use prepare + execute for add, pour and remove. Never put $_POST inside the SQL text.']},
+  cleanStep(c=>allClean(c)&&firstCells(c).length===3&&escaped(c,["['name']"]))
+ ],
+ drills:[
+  {k:'pick',r:'pz31',q:'Which option makes failed queries throw?',o:['PDO::FETCH_ASSOC','PDO::ERRMODE_EXCEPTION','PDO::ATTR_PERSISTENT','LOCK_EX'],a:1,h:'Error mode.'},
+  {k:'gap',r:'pz31',q:'DSN for a SQLite file',pre:"new PDO('",post:":' . $path)",a:['sqlite'],h:'The driver name.'},
+  {k:'fix',r:'pz32',q:'SQL injection. Rewrite as a prepared query string',bug:"$pdo->query('DELETE FROM wines WHERE id = ' . $id);",test:/^\$pdo->prepare\('DELETE FROM wines WHERE id = :id'\)->execute\(\[(['"])id\1 => \$id\]\);$/,ans:"$pdo->prepare('DELETE FROM wines WHERE id = :id')->execute(['id' => $id]);",h:"`$pdo->prepare('DELETE FROM wines WHERE id = :id')->execute(['id' => $id]);`"},
+  {k:'pick',r:'pz32',q:'Can a placeholder stand for a column name in ORDER BY?',o:['Yes','No, only values','Only in SQLite','Only with FETCH_ASSOC'],a:1,h:'Placeholders are for values.'},
+  {k:'type',r:'pz33',q:'Get every row from `$stmt` into `$rows`',ph:'$rows = …;',test:/^\$rows = \$stmt->fetchAll\(\);$/,ans:'$rows = $stmt->fetchAll();',h:'`$rows = $stmt->fetchAll();`'},
+  {k:'pick',r:'pz33',q:'Best way to get one number like a count?',o:['fetchAll()','fetch()','fetchColumn()','a foreach'],a:2,h:'One column, one value.'}
+ ]},
+
+{id:'bistro',name:"Roux's Bistro",dish:"Roux's Bistro",rules:['pz34','pz35','pz36'],
+ request:[{method:'POST',post:{name:'Soupe au pistou',minutes:'40'},session:BISTRO_SESSION},{method:'GET',get:{q:'soup'},session:BISTRO_SESSION}],
+ probes:{twice:[{method:'POST',post:{name:'Soupe au pistou',minutes:'40'},session:'b2'},{method:'GET',session:'b2'},{method:'GET',session:'b2'}],bad:{method:'POST',post:{name:' ',minutes:'999'},session:'b3'},xss:{method:'GET',get:{q:'"><script>alert(1)<\/script>'}},inject:{method:'GET',get:{q:"' OR 1=1 --"}},visit:{method:'GET'}},
+ ingredients:{[SRC_DB]:PREP_BISTRO},
+ files:{[IDX]:`<?php
+
+declare(strict_types=1);
+`,[SRC_DB]:`<?php
+
+declare(strict_types=1);
+
+`+DB_FN('bistro.sqlite','prepareBistro')+`
+`+PREP_BISTRO,[SRC_REC]:`<?php
+
+declare(strict_types=1);
+`,[TPL_HOME]:`<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Roux's Bistro</title>
+</head>
+<body>
+    <h1>Roux's Bistro</h1>
+</body>
+</html>
+`},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+session_start();
+
+require_once __DIR__ . '/../src/db.php';
+require_once __DIR__ . '/../src/recipes.php';
+
+$pdo = db();
+$errors = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $errors = validateRecipe($_POST);
+
+    if ($errors === []) {
+        addRecipe($pdo, trim($_POST['name']), (int) $_POST['minutes']);
+        $_SESSION['flash'] = 'Recipe saved.';
+        header('Location: /', true, 303);
+
+        return;
+    }
+}
+
+$q = trim($_GET['q'] ?? '');
+$recipes = findRecipes($pdo, $q);
+$flash = $_SESSION['flash'] ?? null;
+unset($_SESSION['flash']);
+
+require __DIR__ . '/../templates/home.php';
+`,[SRC_DB]:`<?php
+
+declare(strict_types=1);
+
+`+DB_FN('bistro.sqlite','prepareBistro')+`
+`+PREP_BISTRO,[SRC_REC]:`<?php
+
+declare(strict_types=1);
+
+function findRecipes(PDO $pdo, string $q): array
+{
+    $find = $pdo->prepare('SELECT name, minutes FROM recipes WHERE name LIKE :q ORDER BY name');
+    $find->execute(['q' => '%' . $q . '%']);
+
+    return $find->fetchAll();
+}
+
+function validateRecipe(array $input): array
+{
+    $errors = [];
+
+    if (trim((string) ($input['name'] ?? '')) === '') {
+        $errors[] = 'Give the recipe a name.';
+    }
+    if (filter_var($input['minutes'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 600]]) === false) {
+        $errors[] = 'Minutes must be 1 to 600.';
+    }
+
+    return $errors;
+}
+
+function addRecipe(PDO $pdo, string $name, int $minutes): void
+{
+    $add = $pdo->prepare('INSERT INTO recipes (name, minutes) VALUES (:name, :minutes)');
+    $add->execute(['name' => $name, 'minutes' => $minutes]);
+}
+`,[TPL_HOME]:`<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Roux's Bistro</title>
+</head>
+<body>
+    <h1>Roux's Bistro</h1>
+    <?php if ($flash !== null): ?>
+        <p class="flash"><?= htmlspecialchars($flash) ?></p>
+    <?php endif; ?>
+    <form method="get" action="/" class="search">
+        <label for="q">Search</label>
+        <input id="q" name="q" value="<?= htmlspecialchars($q) ?>">
+        <button type="submit">Find</button>
+    </form>
+    <?php if ($recipes === []): ?>
+        <p class="none">No recipes found.</p>
+    <?php else: ?>
+        <ul class="recipes">
+            <?php foreach ($recipes as $recipe): ?>
+                <li><?= htmlspecialchars($recipe['name']) ?> · <?= $recipe['minutes'] ?> min</li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+    <?php if ($errors !== []): ?>
+        <ul class="errors">
+            <?php foreach ($errors as $error): ?>
+                <li><?= htmlspecialchars($error) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+    <form method="post" action="/" class="add">
+        <label for="name">Recipe</label>
+        <input id="name" name="name">
+        <label for="minutes">Minutes</label>
+        <input id="minutes" name="minutes" type="number" min="1" max="600">
+        <button type="submit">Add</button>
+    </form>
+</body>
+</html>
+`},
+ steps:[
+  {t:'`public/index.php`: `session_start();`, then `require_once` both `src/db.php` and `src/recipes.php`',c:c=>/^<\?php\s+declare\s*\([^)]*\)\s*;\s*session_start\(\s*\)\s*;/.test(raw(c))&&/require_once\s+__DIR__\s*\.\s*'\/\.\.\/src\/db\.php'/.test(src(c))&&/require_once\s+__DIR__\s*\.\s*'\/\.\.\/src\/recipes\.php'/.test(src(c)),help:['The controller starts the session first, then loads its tools.','session_start(); right after declare, then two require_once lines.',`session_start();
+
+require_once __DIR__ . '/../src/db.php';`,`session_start();
+
+require_once __DIR__ . '/../src/db.php';
+require_once __DIR__ . '/../src/recipes.php';`]},
+  {t:'In `src/recipes.php`: `findRecipes(PDO $pdo, string $q): array` with a prepared `LIKE :q`',c:c=>/function\s+findRecipes\s*\(\s*PDO\s+\$pdo\s*,\s*string\s+\$q\s*\)\s*:\s*array/.test(src(c,SRC_REC))&&/LIKE\s+:q/i.test(src(c,SRC_REC))&&/'%'\s*\.\s*\$q\s*\.\s*'%'/.test(src(c,SRC_REC)),help:['The search term goes into the value, wrapped in %, never into the SQL.','prepare `SELECT name, minutes FROM recipes WHERE name LIKE :q ORDER BY name`, execute with `[\'q\' => \'%\' . $q . \'%\']`, return fetchAll().',`function findWines(PDO $pdo, string $q): array
+{
+    $find = $pdo->prepare('SELECT name FROM wines WHERE name LIKE :q ORDER BY name');
+    $find->execute(['q' => '%' . $q . '%']);
+
+    return $find->fetchAll();
+}`,`function findRecipes(PDO $pdo, string $q): array
+{
+    $find = $pdo->prepare('SELECT name, minutes FROM recipes WHERE name LIKE :q ORDER BY name');
+    $find->execute(['q' => '%' . $q . '%']);
+
+    return $find->fetchAll();
+}`]},
+  {t:"Controller: `$q = trim($_GET['q'] ?? '');` and `$recipes = findRecipes($pdo, $q);`, then the template lists them",c:c=>rows(c.p.visit,'ul.recipes li').length===4&&(rows(c.p.visit,'ul.recipes li')[0]||'')==='Coq au vin · 150 min'&&/findRecipes\(\s*\$pdo\s*,\s*\$q\s*\)/.test(src(c)),help:['A plain visit searches for the empty string, which matches everything.','In index.php: connect with `$pdo = db();`, read q from $_GET, call findRecipes. In the template: a ul with one li per recipe.',`$q = trim($_GET['q'] ?? '');
+$wines = findWines($pdo, $q);`,`$pdo = db();
+…
+$q = trim($_GET['q'] ?? '');
+$recipes = findRecipes($pdo, $q);
+
+require __DIR__ . '/../templates/home.php';
+…
+<ul class="recipes">
+    <?php foreach ($recipes as $recipe): ?>
+        <li><?= htmlspecialchars($recipe['name']) ?> · <?= $recipe['minutes'] ?> min</li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'A GET search form with a sticky, escaped `q`',c:c=>!!c.doc.querySelector('form[method="get"] input#q[name="q"]')&&!!c.doc.querySelector('label[for="q"]')&&(()=>{const e=c.p.xss.doc.querySelector('#q');return !!e&&e.getAttribute('value')==='"><script>alert(1)<\/script>'&&!/<script>alert/.test(c.p.xss.out)})(),help:['Searching only reads, so it is a GET form. Print the term back into value.','`<form method="get" action="/">`, a label for q, `<input id="q" name="q" value="<?= htmlspecialchars($q) ?>">`.',`<input id="q" name="q" value="<?= htmlspecialchars($term) ?>">`,`<form method="get" action="/" class="search">
+    <label for="q">Search</label>
+    <input id="q" name="q" value="<?= htmlspecialchars($q) ?>">
+    <button type="submit">Find</button>
+</form>`]},
+  {t:'An injection search finds nothing: `<p class="none">No recipes found.</p>`',c:c=>ptxt(c.p.inject,'p.none')==='No recipes found.'&&!c.p.inject.doc.querySelector('ul.recipes'),help:["Passle searches for ' OR 1=1 --. With a placeholder that is just odd text.",'Show the paragraph when `$recipes === []`, the list otherwise.',`<?php if ($wines === []): ?>
+    <p class="none">No wines found.</p>
+<?php else: ?>
+    …
+<?php endif; ?>`,`<?php if ($recipes === []): ?>
+    <p class="none">No recipes found.</p>
+<?php else: ?>
+    <ul class="recipes">…</ul>
+<?php endif; ?>`]},
+  {t:'`validateRecipe(array $input): array` returns every problem',c:c=>/function\s+validateRecipe\s*\(\s*array\s+\$\w+\s*\)\s*:\s*array/.test(src(c,SRC_REC))&&rows(c.p.bad,'ul.errors li').length===2,help:['Validation is a function: input in, list of messages out. It never prints.','Check the name is not empty after trim, and minutes is an int from 1 to 600 with filter_var.',`function validateWine(array $input): array
+{
+    $errors = [];
+    if (trim((string) ($input['name'] ?? '')) === '') {
+        $errors[] = 'Give the wine a name.';
+    }
+
+    return $errors;
+}`,`function validateRecipe(array $input): array
+{
+    $errors = [];
+
+    if (trim((string) ($input['name'] ?? '')) === '') {
+        $errors[] = 'Give the recipe a name.';
+    }
+    if (filter_var($input['minutes'] ?? '', FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 600]]) === false) {
+        $errors[] = 'Minutes must be 1 to 600.';
+    }
+
+    return $errors;
+}`]},
+  {t:'`addRecipe(PDO $pdo, string $name, int $minutes): void` with a prepared `INSERT`',c:c=>/function\s+addRecipe\s*\(\s*PDO\s+\$pdo\s*,\s*string\s+\$name\s*,\s*int\s+\$minutes\s*\)\s*:\s*void/.test(src(c,SRC_REC))&&/prepare\(\s*'INSERT INTO recipes/i.test(src(c,SRC_REC)),help:['It saves, and returns nothing: void.','prepare the INSERT with :name and :minutes, execute with the two values.',`function addWine(PDO $pdo, string $name): void
+{
+    $add = $pdo->prepare('INSERT INTO wines (name) VALUES (:name)');
+    $add->execute(['name' => $name]);
+}`,`function addRecipe(PDO $pdo, string $name, int $minutes): void
+{
+    $add = $pdo->prepare('INSERT INTO recipes (name, minutes) VALUES (:name, :minutes)');
+    $add->execute(['name' => $name, 'minutes' => $minutes]);
+}`]},
+  {t:"Post/Redirect/Get: a good POST saves, sets `$_SESSION['flash']`, sends `header('Location: /', true, 303)` and `return;`s with no page",c:c=>(c.all&&c.all[0]&&c.all[0].out.trim()==='')&&/header\(\s*'Location: \/'\s*,\s*true\s*,\s*303\s*\)\s*;\s*return\s*;/.test(src(c))&&/\$_SESSION\[\s*'flash'\s*\]\s*=/.test(src(c)),help:['Request 1 is the POST. Its answer should be empty: only a redirect.',"If validateRecipe returned no errors: addRecipe, set the flash, send the 303 header, then `return;`.",`if ($errors === []) {
+    addWine($pdo, trim($_POST['name']));
+    $_SESSION['flash'] = 'Wine saved.';
+    header('Location: /', true, 303);
+
+    return;
+}`,`if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $errors = validateRecipe($_POST);
+
+    if ($errors === []) {
+        addRecipe($pdo, trim($_POST['name']), (int) $_POST['minutes']);
+        $_SESSION['flash'] = 'Recipe saved.';
+        header('Location: /', true, 303);
+
+        return;
+    }
+}`]},
+  {t:'The next page shows `<p class="flash">Recipe saved.</p>` once, and the new recipe in the search',c:c=>ptxt(c,'p.flash')==='Recipe saved.'&&JSON.stringify(rows(c,'ul.recipes li'))===JSON.stringify(['Onion soup · 45 min','Soupe au pistou · 40 min'])&&ptxt(c.p.twice.all[1],'p.flash')==='Recipe saved.'&&!c.p.twice.doc.querySelector('p.flash'),help:['Read the flash, then forget it, before the template.',"`$flash = $_SESSION['flash'] ?? null;` then `unset($_SESSION['flash']);`. In the template: show it when not null.",`$notice = $_SESSION['notice'] ?? null;
+unset($_SESSION['notice']);`,`$flash = $_SESSION['flash'] ?? null;
+unset($_SESSION['flash']);
+…
+<?php if ($flash !== null): ?>
+    <p class="flash"><?= htmlspecialchars($flash) ?></p>
+<?php endif; ?>`]},
+  {t:'Bad input stays on the page with a `<ul class="errors">` and an add form',c:c=>rows(c.p.bad,'ul.errors li').length===2&&!!c.p.bad.doc.querySelector('form[method="post"] input#name')&&!!c.p.bad.doc.querySelector('input#minutes[name="minutes"]'),help:['When validation fails, no redirect: render the page with the errors.','After the POST block, the normal page code runs and the template lists `$errors`.',`<?php if ($errors !== []): ?>
+    <ul class="errors">…</ul>
+<?php endif; ?>`,`<?php if ($errors !== []): ?>
+    <ul class="errors">
+        <?php foreach ($errors as $error): ?>
+            <li><?= htmlspecialchars($error) ?></li>
+        <?php endforeach; ?>
+    </ul>
+<?php endif; ?>
+<form method="post" action="/" class="add">
+    <label for="name">Recipe</label>
+    <input id="name" name="name">
+    <label for="minutes">Minutes</label>
+    <input id="minutes" name="minutes" type="number" min="1" max="600">
+    <button type="submit">Add</button>
+</form>`]},
+  {t:'Layers: index.php has no HTML, functions never read `$_POST`, the template has no queries',c:c=>!outside(raw(c)).trim()&&!/\$_(POST|GET)/.test(src(c,SRC_REC))&&!/->(query|prepare|exec)\(|\$_(POST|GET)/.test(src(c,TPL_HOME))&&/require\s+__DIR__\s*\.\s*'\/\.\.\/templates\/home\.php'/.test(src(c)),help:['Each file has one job. The scanner checks all three.','Pass `$_POST` into validateRecipe as a parameter; keep SQL in src/; keep tags in templates/.',`$errors = validateWine($_POST);`,'Move any HTML out of index.php, any $_POST out of src/recipes.php, any query out of the template.']},
+  cleanStep(c=>allClean(c)&&!!c.doc.querySelector('ul.recipes')&&escaped(c,["['name']",'$flash','$error','$q'],TPL_HOME))
+ ],
+ drills:[
+  {k:'pick',r:'pz34',q:'Why redirect after a successful POST?',o:['It is faster','So a refresh does not resend the form','Browsers require it','To clear the session'],a:1,h:'Refresh repeats the last request.'},
+  {k:'gap',r:'pz34',q:'Redirect as GET',pre:"header('Location: /', true, ",post:');',a:['303'],h:'See Other.'},
+  {k:'fix',r:'pz35',q:'The term is glued into the SQL. Fix the execute values',bug:"$find->execute(['q' => $q]);",test:/^\$find->execute\(\[(['"])q\1 => (['"])%\2 \. \$q \. (['"])%\3\]\);$/,ans:"$find->execute(['q' => '%' . $q . '%']);",h:'The % signs go around the value.'},
+  {k:'pick',r:'pz35',q:'A search form should use…',o:['POST','GET','either','PUT'],a:1,h:'It only reads.'},
+  {k:'type',r:'pz36',q:'Validate the posted fields with your function, into `$errors`',ph:'$errors = …;',test:/^\$errors = validateRecipe\(\$_POST\);$/,ans:'$errors = validateRecipe($_POST);',h:'`$errors = validateRecipe($_POST);`'},
+  {k:'pick',r:'pz36',q:'Which file may read `$_POST`?',o:['public/index.php','src/recipes.php','templates/home.php','data/'],a:0,h:'The controller handles the request.'}
+ ]}
+);
+
+MORE.push(
+ {k:'pick',r:'pz29',q:'Which flag keeps é readable in the JSON file?',o:['JSON_PRETTY_PRINT','JSON_UNESCAPED_UNICODE','LOCK_EX','JSON_THROW_ON_ERROR'],a:1,h:'Unicode, unescaped.'},
+ {k:'pick',r:'pz32',q:'Prepared statements protect against…',o:['XSS','SQL injection','CSRF','Typos'],a:1,h:'Values never become SQL.'},
+ {k:'pick',r:'pz33',q:'`fetch()` when there are no more rows returns…',o:['[]','null','false','0'],a:2,h:'It signals the end with false.'}
+);
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
@@ -2251,7 +3057,9 @@ function run(){
 }
 function show(r){
   lastRes=r;$('bframe').srcdoc=r.out;$('braw').textContent=r.out;
-  const eb=$('errbox');eb.textContent=r.errs.join('\n');eb.classList.toggle('on',r.bad);
+  const eb=$('errbox');let msg=r.errs.join('\n');
+  if(/could not find driver|Class "PDO" not found/.test(r.out))msg+='\n\nThis browser could not load the SQLite driver for PHP. Your code is probably fine: Take it home and run it with php -S to check.';
+  eb.textContent=msg;eb.classList.toggle('on',r.bad);
 }
 function habits(files){
   const out=[];
