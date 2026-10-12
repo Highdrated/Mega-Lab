@@ -63,7 +63,13 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .fr.raw .rawout{display:block}.fr.raw iframe{visibility:hidden}
 .errbox{display:none;flex:none;max-height:38%;overflow:auto;border-top:1px solid #e9c1b9;background:var(--chili2);color:var(--chili);font-family:var(--mono);font-size:12px;line-height:1.55;padding:9px 14px;white-space:pre-wrap;word-break:break-word}
 .errbox.on{display:block}
-.reqline{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:none;color:var(--plum);background:var(--plum2);border-radius:4px;padding:2px 7px}
+.pick{display:flex;align-items:center;gap:8px}
+.seg.mode button{height:30px;padding:0 11px;font-size:10px}
+.seg.mode button.on{background:var(--ink);color:#fbf3e3}
+.pcap .mst{display:block;margin-top:3px;font-family:var(--mono);font-size:8.5px;letter-spacing:.32em;color:var(--brass)}
+#reqbox{display:none;position:absolute;right:14px;top:46px;z-index:6;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);padding:12px 16px;font-family:var(--mono);font-size:12px;line-height:1.65;white-space:pre-wrap;color:var(--ink2);box-shadow:0 12px 30px rgba(60,40,15,.18);max-width:90%}
+#reqbox.on{display:block}#reqbox b{color:var(--brass)}#reqbox em{color:var(--mute);font-style:normal}
+.reqline{cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:none;color:var(--plum);background:var(--plum2);border-radius:4px;padding:2px 7px}
 
 #v-school{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
 .drill{display:flex;flex-direction:column;gap:14px;padding:18px 20px;flex:1;min-height:0;overflow:auto}
@@ -235,7 +241,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .nempty{padding:22px 0;text-align:center;color:var(--mute)}
 #nbox .nfoot{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
 
-@media (max-width:1500px) and (min-width:901px){#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}}
+@media (max-width:1500px) and (min-width:901px){#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:200px}}
 @media (max-width:1150px){#v-target{grid-template-columns:270px minmax(0,1fr) minmax(0,1fr)}.plates{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:220px}#v-rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:900px){
   body{overflow:auto;grid-template-rows:auto auto}
@@ -261,7 +267,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
     <button class="stg" data-v="rules">Rulebook</button><i>·</i>
     <button class="stg" data-v="practice">Practice</button>
   </nav>
-  <select id="tsel" aria-label="Choose plate"></select>
+  <div class="pick"><select id="tsel" aria-label="Choose plate"></select><span class="seg mode" id="modeseg" title="Learning lays out the skeleton for you. Mastery starts from a blank file."><button data-mode="learn">Learning</button><button data-mode="master">Mastery</button></span></div>
   <div id="comms"><img id="rmini" src="img/roux/idle.png" alt=""><span id="eng">stove cold</span><span id="cmsg">Roux is tying on the apron.</span></div>
   <div class="snd">
     <button id="notes" title="Notes for Claude: jot a bug or idea, hand it over next session (Ctrl+Shift+Y)">Notes</button>
@@ -288,7 +294,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
     <div class="panel"><div class="ph"><b>Target</b><span class="sp"><span class="seg" data-for="tfr"><button data-m="page" class="on">Page</button><button data-m="raw">Output</button></span></span></div>
       <div class="fr" id="tfr"><iframe id="tframe" title="Target"></iframe><pre class="rawout" id="traw"></pre></div></div>
     <div class="panel"><div class="ph"><b>Your build</b><span class="sp"><span class="reqline" id="req">GET /</span><span class="seg" data-for="bfr"><button data-m="page" class="on">Page</button><button data-m="raw">Output</button></span><span class="meter" id="meter"><span class="bar"><i></i></span><b>0%</b></span></span></div>
-      <div class="fr" id="bfr"><iframe id="bframe" title="Your build"></iframe><iframe id="ovl" title="Target overlay" tabindex="-1"></iframe><pre class="rawout" id="braw"></pre></div>
+      <div id="reqbox"></div><div class="fr" id="bfr"><iframe id="bframe" title="Your build"></iframe><iframe id="ovl" title="Target overlay" tabindex="-1"></iframe><pre class="rawout" id="braw"></pre></div>
       <div class="errbox" id="errbox"></div>
       <div class="slide">Mine<input id="slider" type="range" min="0" max="100" step="1" value="0" aria-label="Fade the target over your build">Target</div></div>
     <div class="panel edp"><div class="ph"><span id="tabs" class="tabs"></span><span class="sp"><button id="treeb">Folder</button><button id="reset">Reset</button><button id="check" class="pri">Check · Ctrl+Enter</button></span></div>
@@ -328,6 +334,39 @@ const NUMERIC=/^(strlen|count|number_format|intdiv|round|array_sum)\s*\(/;
 const escaped=(c,needles,p)=>echoes(src(c,p)).every(e=>!needles.some(n=>e.includes(n))||/^htmlspecialchars\s*\(/.test(e)||NUMERIC.test(e));
 const strictFirst=(c,p)=>/^<\?php\s+declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;/.test(raw(c,p));
 const q1="['\"]";
+const phpFiles=c=>Object.keys(c.files).filter(p=>/\.php$/.test(p));
+function masterSteps(tg){
+  return [
+   {t:'Every `.php` file opens with `<?php` and `declare(strict_types=1);`',c:c=>phpFiles(c).every(p=>strictFirst(c,p)),help:['Mastery starts from nothing. What are the first two things in every PHP file in this kitchen?','Line 1 `<?php`, a blank line, then the declare with its semicolon. In a template, close it again with `?>` before the HTML.',`<?php
+
+declare(strict_types=1);`,`<?php
+
+declare(strict_types=1);
+?>
+<!DOCTYPE html>`]},
+   tg.noPage?null:{t:'Write the page skeleton: `<!DOCTYPE html>`, `<html lang="en">`, a `<head>` with `<meta charset="UTF-8">` and a `<title>`, then `<body>`',c:c=>/^\s*<!DOCTYPE html>/i.test(c.out)&&!!(c.doc&&c.doc.querySelector('html[lang="en"]'))&&/<meta charset="UTF-8">/i.test(c.out)&&txt(c,'title')!==''&&/<body[\s>]/i.test(c.out)&&/<\/html>\s*$/i.test(c.out),help:['The browser needs the same frame around every page. Where does the visible content go, and where the setup?','Doctype first. Then `<html lang="en">` holding a `<head>` (charset, title) and a `<body>`. Close every tag.',`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Kitchen</title>
+</head>
+<body>
+</body>
+</html>`,`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>…the title from the target…</title>
+</head>
+<body>
+    …your content…
+</body>
+</html>`]},
+   {t:'House rules: `===` and `!==` only, and no closing `?>` at the end of a pure-PHP file',c:c=>String(c.out).trim()!==''&&phpFiles(c).every(p=>strictFirst(c,p))&&!habits(c.files).some(h=>/===|closing/.test(h)),help:['Look at the scanner line under the editor. It names the file.','Loose `==` becomes `===`. A file with only PHP in it ends without `?>`.',`if ($qty === 0) {
+    return;
+}`,'Replace every `==` with `===`, every `!=` with `!==`, and delete a final `?>` in files that hold no HTML.']}
+  ].filter(Boolean);
+}
 const cleanStep=gate=>({t:'Clean run: no warnings, no errors, nothing before `<?php`',c:c=>okRun(c)&&/^<\?php/.test(raw(c))&&gate(c),help:['Look under Your build: a red box means PHP complained.','Read the first line of the message. It names the file and the line number.',"Warning: Undefined variable $dish in /app/public/index.php on line 14\n\nmeans: line 14 uses $dish before it was given a value.",'Fix the line the message points at, then let it run again.']});
 
 const RULES={
@@ -577,7 +616,7 @@ $chef = 'Roux';
     <pre><?php var_dump($price, $portions, $vegetarian); ?></pre>
 `)},
  steps:[
-  {t:'Under `<?php`: a blank line, then `declare(strict_types=1);`',c:c=>strictFirst(c),help:['Every PHP file in this kitchen opens the same way.','Line 1 is `<?php`, line 2 stays empty, line 3 is the declare statement with its semicolon.',`<?php
+  {learnOnly:1,t:'Under `<?php`: a blank line, then `declare(strict_types=1);`',c:c=>strictFirst(c),help:['Every PHP file in this kitchen opens the same way.','Line 1 is `<?php`, line 2 stays empty, line 3 is the declare statement with its semicolon.',`<?php
 
 declare(strict_types=1);
 
@@ -616,6 +655,12 @@ declare(strict_types=1);`]},
  ]},
 
 {id:'dish-label',name:'Dish label',dish:'Dish label',rules:['pz4','pz5','pz6'],
+ ingredients:{[IDX]:`$name = '  coq au vin ';
+$price = 21.5;
+$grams = 1250;
+$allergens = 'gluten, celery';
+$table = 7;
+`},
  files:{[IDX]:`<?php
 
 declare(strict_types=1);
@@ -754,7 +799,1188 @@ const MORE=[
  {k:'pick',r:'pz9',q:'Which joins a list into `a, b, c`?',o:["implode(', ', $a)","explode(', ', $a)","join($a)","str_replace(', ', $a)"],a:0,h:'Glue first, then the list.'}
 ];
 
+const SRC_MENU='src/menu.php',TPL_MENU='templates/menu.php';
+const outside=s=>String(s||'').replace(/<\?(php|=)[\s\S]*?(\?>|$)/g,'');
+const lis=c=>all(c,'li');
+
+Object.assign(RULES,{
+ pz10:{n:'10',title:'foreach: one pass per item',cat:'Control flow',t:3,
+  syn:'<span class="k">foreach</span> ($menu <span class="k">as</span> $dish) { … } · foreach ($stock as <span class="v">$item =&gt; $grams</span>) · <span class="k">foreach (…): … endforeach;</span>',
+  note:'foreach runs its block once for every item, with the item in a variable you name. as $key => $value gives you the key too. Inside HTML, use foreach (…): and endforeach; instead of braces.',
+  why:'Arrays become useful when you can walk through them. foreach takes an array and runs its block once per item, putting the current item in the variable after as. With as $key => $value you get the key too: the name in a keyed array, the number in a list. In plain PHP blocks you write braces. Inside HTML, braces get lost between tags, so PHP has an alternative syntax: foreach ($menu as $dish): opens the loop and endforeach; closes it. Real templates use that form.',
+  parts:[['foreach ($menu as $dish)','one pass per dish'],['$item => $grams','key and value'],['{ … }','the block that repeats'],['foreach (…): … endforeach;','the same loop inside HTML']],
+  mistakes:['Swapping the order: foreach ($dish as $menu) loops over the wrong thing.','Changing $dish inside the loop and expecting the array to change: it is a copy.','Forgetting endforeach; inside HTML: Parse error, unexpected end of file.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$stock = ['flour' => 2000, 'butter' => 375];
+
+foreach ($stock as $item => $grams) {
+    echo $item . ': ' . $grams . ' g' . PHP_EOL;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$herbs = ['thyme', 'sage', 'bay'];
+?>
+<ul>
+    <?php foreach ($herbs as $herb): ?>
+        <li><?= htmlspecialchars($herb) ?></li>
+    <?php endforeach; ?>
+</ul>`},
+ pz11:{n:'11',title:'if, elseif and else',cat:'Control flow',t:3,
+  syn:'<span class="k">if</span> ($price <span class="v">&lt;</span> 15) { … } <span class="k">elseif</span> (…) { … } <span class="k">else</span> { … } · <span class="v">=== !== &lt; &gt; &amp;&amp; || !</span>',
+  note:'if runs a block only when its condition is true. elseif tries the next condition, else catches the rest. Compare with === and !==, combine with && (and), || (or), ! (not).',
+  why:'Kitchens are full of decisions: if the soup is vegetarian, mark it; if it costs more than the rest, remember it. if (condition) { … } runs the block only when the condition is true. elseif adds another test, else catches everything left. Conditions are built from comparisons: === means same value and same type, !== means different, and <, >, <=, >= compare numbers. && needs both sides true, || needs one, ! flips true and false. A very common pattern: start with a guess, loop over the items, and replace the guess when an item beats it.',
+  parts:[['if (…) { … }','runs only when true'],['elseif (…)','next test'],['else { … }','everything else'],['=== / !==','same / different, type included'],['&& || !','and, or, not']],
+  mistakes:['if ($qty = 0): a single = assigns, it does not compare.','== instead of ===: \'1\' == 1 is true, \'1\' === 1 is false. Strict is the house rule.','A semicolon after the condition: if ($x); { … } always runs the block.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$price = 18.5;
+
+if ($price < 10) {
+    echo 'budget';
+} elseif ($price < 20) {
+    echo 'classic';
+} else {
+    echo 'chef special';
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$prices = [7.5, 21.5, 14.0];
+$top = $prices[0];
+
+foreach ($prices as $price) {
+    if ($price > $top) {
+        $top = $price;
+    }
+}
+
+echo $top;`},
+ pz12:{n:'12',title:'match: pick a value by value',cat:'Control flow',t:3,
+  syn:'$heat = <span class="k">match</span> ($spice) { <span class="v">0</span> =&gt; \'mild\', <span class="v">1</span> =&gt; \'warm\', <span class="k">default</span> =&gt; \'hot\', };',
+  note:'match compares one value against a list of arms with === and returns the result of the first that fits. default catches the rest; without it, an unmatched value throws an UnhandledMatchError.',
+  why:'When one value decides between several results, a chain of elseifs gets long. match takes the value, compares it strictly with each arm, and returns the result of the first arm that fits. Because it returns a value, you can store it straight in a variable or print it. Several values can share an arm: 1, 2 => \'warm\'. default catches everything else. Leave default out on purpose only when every possible value is listed: then an unexpected value throws an error instead of silently doing the wrong thing.',
+  parts:[['match ($spice)','the value to test'],["0 => 'mild',",'an arm: value => result'],["1, 2 => 'warm',",'several values, one result'],["default => 'hot',",'everything else'],['$heat = match …;','it returns a value']],
+  mistakes:["Expecting '1' to match 1: match compares with ===.",'Forgetting the semicolon after the closing brace: it is an expression.','No default and an unexpected value: UnhandledMatchError.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$spice = 2;
+
+$heat = match ($spice) {
+    0 => 'mild',
+    1 => 'warm',
+    default => 'hot',
+};
+
+echo $heat;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$course = 'dessert';
+
+echo match ($course) {
+    'starter', 'soup' => 'first',
+    'main' => 'second',
+    'dessert' => 'last',
+};`},
+ pz13:{n:'13',title:'Functions with types',cat:'Functions',t:4,
+  syn:'<span class="k">function</span> price(<span class="v">float</span> $amount): <span class="v">string</span><br>{<br>&nbsp;&nbsp;&nbsp;&nbsp;<span class="k">return</span> \'€\' . number_format($amount, 2);<br>}',
+  note:'A function is a named recipe: parameters go in, return sends one value out. Type every parameter and the return value. PSR-12 puts the opening brace of a function on its own line.',
+  why:'When the same few lines appear twice, they belong in a function. function name(type $param): returnType declares it; the body runs only when you call it, and return hands one value back to the caller. Typing every parameter and the return value is the professional default: with strict_types on, calling price(\'7.5\') fails loudly instead of quietly guessing. Name functions after what they give back, keep them small, and let them do one job. PSR-12, the common style guide, puts the opening brace of a function on the next line.',
+  parts:[['function price(…)','declare it once'],['float $amount','typed parameter'],[': string','return type'],['return …;','send the result back'],['price(7.5)','call it as often as you like']],
+  mistakes:['Forgetting return: the function gives back null, and the string return type throws a TypeError.','Echoing inside the function instead of returning: the caller cannot reuse the result.','Passing a string where a float is typed: with strict_types that is a TypeError.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function price(float $amount): string
+{
+    return '€' . number_format($amount, 2);
+}
+
+echo price(7.5) . PHP_EOL;
+echo price(21.5);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function portions(int $guests, int $perGuest): int
+{
+    return $guests * $perGuest;
+}
+
+var_dump(portions(6, 2));`},
+ pz14:{n:'14',title:'Defaults and named arguments',cat:'Functions',t:4,
+  syn:'function withVat(float $net, float <span class="v">$rate = 0.21</span>): float · withVat(6.2, <span class="k">rate:</span> 0.06)',
+  note:'A parameter with = value is optional; callers can leave it out. Named arguments (rate: 0.06) say which parameter a value is for, so calls read like sentences and order stops mattering.',
+  why:'Most dishes are taxed at the standard rate, a few at a lower one. Give the parameter a default value, $rate = 0.21, and callers only mention it when it differs. Optional parameters go after the required ones. Since PHP 8 you can also name the argument at the call: withVat(6.2, rate: 0.06). That makes the call self-explaining and lets you skip optional parameters in the middle. round($n, 2) rounds a float to two decimals, which is what you want for money before formatting.',
+  parts:[['float $rate = 0.21','optional, with a default'],['withVat(6.2)','uses the default'],['withVat(6.2, rate: 0.06)','named argument'],['round($n, 2)','round to 2 decimals']],
+  mistakes:['A required parameter after an optional one: deprecated, and confusing.','Misspelling a named argument: Error: Unknown named parameter.','Relying on float maths for money without rounding: 7.502 shows up.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function withVat(float $net, float $rate = 0.21): float
+{
+    return round($net * (1 + $rate), 2);
+}
+
+echo withVat(6.2) . PHP_EOL;
+echo withVat(6.2, rate: 0.06);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function greet(string $name, string $greeting = 'Bonsoir'): string
+{
+    return $greeting . ', ' . $name;
+}
+
+echo greet(greeting: 'Bonjour', name: 'Mia');`},
+ pz15:{n:'15',title:'Scope: functions only see what you pass',cat:'Functions',t:4,
+  syn:'$vat = 0.21; function f(): float { return <span class="v">$vat</span>; } <span class="k">// undefined</span> · pass it in: f(<span class="v">$vat</span>)',
+  note:'Variables outside a function are invisible inside it, and the other way round. Pass values in as parameters and get results out with return. Avoid global.',
+  why:'Every function is its own little kitchen with a closed door. A variable created outside is not visible inside, and a variable created inside disappears when the function returns. That sounds strict, and it is the point: a function that only uses its parameters can be read, tested and reused on its own. The global keyword pokes a hole in the wall and makes functions depend on whatever happens to be lying around; professional code avoids it. If a function needs a value, it becomes a parameter.',
+  parts:[['outside variable','not visible inside'],['parameter','the way in'],['return','the way out'],['global $x','avoid: hidden dependency']],
+  mistakes:['Using a variable from the page inside a function: Warning: Undefined variable.','Using global to fix that warning instead of adding a parameter.','Expecting a change to a parameter to change the caller\'s variable.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$rate = 0.21;
+
+function vatOn(float $net, float $rate): float
+{
+    return round($net * $rate, 2);
+}
+
+echo vatOn(10.0, $rate);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function addSalt(array $pot): array
+{
+    $pot[] = 'salt';
+    return $pot;
+}
+
+$pot = ['water'];
+$seasoned = addSalt($pot);
+
+echo count($pot) . ' / ' . count($seasoned);`},
+ pz16:{n:'16',title:'require and require_once',cat:'Files',t:5,
+  syn:'<span class="k">require_once</span> __DIR__ . \'/../src/menu.php\'; · <span class="k">require</span> __DIR__ . \'/../templates/menu.php\';',
+  note:'require pulls another PHP file in and runs it right there; a missing file stops the script. require_once skips a file that was already loaded, which is what you want for files full of functions. include only warns, so prefer require.',
+  why:'One file per job keeps a project readable. require \'file.php\' runs that file at that exact spot, as if its code were pasted in; variables you set before are visible in it. If the file is missing, require stops with a fatal error, which is good: a page without its functions should not half-work. include does the same but only warns and carries on. require_once remembers which files it already loaded and skips repeats, so a file of functions is never declared twice (that would be a fatal Cannot redeclare error). Use require_once for code, require for templates.',
+  parts:[['require','load and run, stop if missing'],['require_once','same, but only once'],['include','only warns if missing'],['…/src/menu.php','functions and data'],['…/templates/menu.php','the HTML']],
+  mistakes:['include for code the page cannot live without: the page half-renders.','Requiring a functions file twice with require: Fatal error, Cannot redeclare.','Expecting a variable set inside a function in the required file to appear outside it.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$dishes = ['Onion soup', 'Tarte tatin'];
+
+echo count($dishes) . ' dishes' . PHP_EOL;
+echo __FILE__;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$found = @include __DIR__ . '/missing.php';
+
+var_dump($found);`},
+ pz17:{n:'17',title:'__DIR__ and the project folders',cat:'Files',t:5,
+  syn:'<span class="k">__DIR__</span> . \'<span class="v">/../src/menu.php</span>\' · public/ · src/ · templates/ · data/',
+  note:'__DIR__ is the folder of the file you are in. Build every path from it, so it works no matter where the server was started. Only public/ is reachable from the browser; src/, templates/ and data/ live next to it.',
+  why:'A path like \'../src/menu.php\' is resolved from the current working directory, which depends on how the server was started. __DIR__ is the folder of the file that contains it, always. __DIR__ . \'/../src/menu.php\' means: from this file\'s folder, go up one level, into src. Real projects use exactly this layout: public/ is the web root, the only folder a browser can request files from. Your functions in src/, your HTML in templates/ and your data in data/ sit beside it, out of reach. That is a security boundary, not decoration.',
+  parts:[['__DIR__','folder of this file'],['/../','go up one folder'],['public/','web root: index.php lives here'],['src/ · templates/ · data/','outside the web root']],
+  mistakes:["require 'src/menu.php' without __DIR__: works on your machine, breaks on the server.",'Forgetting the slash: __DIR__ . \'../src\' glues the names together.','Putting config or data files inside public/, where anyone can download them.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+echo __DIR__ . PHP_EOL;
+echo __DIR__ . '/../src/menu.php' . PHP_EOL;
+echo realpath(__DIR__ . '/..');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump(is_dir(__DIR__ . '/../src'), is_dir(__DIR__ . '/../templates'));`},
+ pz18:{n:'18',title:'Templates: HTML with a little PHP',cat:'Files',t:5,
+  syn:'index.php: $title = …; <span class="k">require</span> template · template: &lt;h1&gt;<span class="v">&lt;?= htmlspecialchars($title) ?&gt;</span>&lt;/h1&gt;',
+  note:'Logic decides, the template shows. index.php prepares variables, then requires the template, which only prints, loops and escapes. No database calls, no calculations, no functions declared in a template.',
+  why:'Mixing calculations and HTML in one file works for a menu card and becomes a swamp for a real site. The professional split: index.php (the controller) gathers everything the page needs into variables, then requires a template. The template is mostly HTML and only uses <?= ?>, foreach: endforeach; and if: endif;. Because require runs the template in the same scope, the variables arrive without any magic. A designer can edit the template without touching logic, and you can change where the data comes from without touching HTML.',
+  parts:[['public/index.php','prepare variables, pure PHP'],['require …/templates/menu.php','last line of index.php'],['<?= htmlspecialchars($x) ?>','print, escaped'],['foreach (…): endforeach;','loop in HTML'],['if (…): endif;','condition in HTML']],
+  mistakes:['HTML in index.php after the split: keep it in the template.','Calculations or database queries inside the template.','Forgetting to escape in the template because "the data came from my own code".'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$title = 'Specials';
+$dishes = ['Soup', 'Tart'];
+?>
+<h1><?= htmlspecialchars($title) ?></h1>
+<?php if (count($dishes) > 0): ?>
+    <p><?= count($dishes) ?> today</p>
+<?php endif; ?>`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$open = false;
+?>
+<?php if ($open): ?>
+    <p>Kitchen open</p>
+<?php else: ?>
+    <p>Kitchen closed</p>
+<?php endif; ?>`}
+});
+
+const MENU4=`$menu = [
+    ['name' => 'Onion soup', 'price' => 7.5, 'veg' => true, 'spice' => 0],
+    ['name' => 'Coq au vin', 'price' => 21.5, 'veg' => false, 'spice' => 1],
+    ['name' => 'Ratatouille', 'price' => 14.0, 'veg' => true, 'spice' => 2],
+    ['name' => 'Bouillabaisse', 'price' => 18.5, 'veg' => false, 'spice' => 1],
+];
+`;
+const MENU5=`$menu = [
+    ['name' => 'Onion soup', 'price' => 6.2],
+    ['name' => 'Coq au vin', 'price' => 17.77],
+    ['name' => 'Tarte tatin', 'price' => 7.44],
+];
+`;
+const head=(t)=>`<?php
+
+declare(strict_types=1);
+
+${t}`;
+
+TARGETS.push(
+{id:'menu-board',name:'Menu board',dish:'Menu board',rules:['pz10','pz11','pz12'],
+ ingredients:{[IDX]:MENU4},
+ files:{[IDX]:head(MENU4)+`?>
+`+page('Menu board',`    <h1>Menu board</h1>
+`)},
+ solution:{[IDX]:head(MENU4)+`
+$vegCount = 0;
+foreach ($menu as $dish) {
+    if ($dish['veg']) {
+        $vegCount++;
+    }
+}
+
+$top = $menu[0];
+foreach ($menu as $dish) {
+    if ($dish['price'] > $top['price']) {
+        $top = $dish;
+    }
+}
+
+$cheap = [];
+foreach ($menu as $dish) {
+    if ($dish['price'] < 15) {
+        $cheap[] = $dish['name'];
+    }
+}
+?>
+`+page('Menu board',`    <h1>Menu board</h1>
+    <ul class="menu">
+        <?php foreach ($menu as $dish): ?>
+            <?php $heat = match ($dish['spice']) {
+                0 => 'mild',
+                1 => 'warm',
+                default => 'hot',
+            }; ?>
+            <li class="<?= $dish['veg'] ? 'veg' : 'meat' ?>"><?= htmlspecialchars($dish['name']) ?> · €<?= number_format($dish['price'], 2) ?> · <?= $heat ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p><?= $vegCount ?> vegetarian dishes</p>
+    <p>Top price: <?= htmlspecialchars($top['name']) ?></p>
+    <p>Under €15: <?= htmlspecialchars(implode(', ', $cheap)) ?></p>
+`)},
+ steps:[
+  {t:'A `<ul class="menu">` with one `<li>` per dish, built with `foreach`',c:c=>c.doc.querySelectorAll('ul.menu > li').length===4&&/foreach\s*\(\s*\$menu\s+as\s+\$\w+\s*\)/.test(src(c))&&(lis(c)[0]||'').startsWith('Onion soup'),help:['Four dishes, four list items. Let the loop write them.','Inside `<ul class="menu">`, open `foreach ($menu as $dish):` and print the name in an `<li>`.',`<ul>
+    <?php foreach ($herbs as $herb): ?>
+        <li><?= htmlspecialchars($herb) ?></li>
+    <?php endforeach; ?>
+</ul>`,`<ul class="menu">
+    <?php foreach ($menu as $dish): ?>
+        <li><?= htmlspecialchars($dish['name']) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'Use the HTML form of the loop: `foreach (…):` and `endforeach;`',c:c=>/foreach\s*\([^)]*\)\s*:\s*\?>/.test(src(c))&&/endforeach\s*;/.test(src(c)),help:['Braces get lost between HTML tags.','Colon after the foreach, `endforeach;` where the loop ends.',`<?php foreach ($herbs as $herb): ?>
+    …
+<?php endforeach; ?>`,`<?php foreach ($menu as $dish): ?>
+    <li>…</li>
+<?php endforeach; ?>`]},
+  {t:'Add the price after each name: `Onion soup · €7.50`',c:c=>(lis(c)[0]||'').startsWith('Onion soup · €7.50')&&(lis(c)[1]||'').startsWith('Coq au vin · €21.50'),help:['Each dish is a keyed array. Its price sits under `price`.',"`€<?= number_format($dish['price'], 2) ?>` after a ` · `.",`<li><?= htmlspecialchars($herb['name']) ?> · <?= $herb['grams'] ?> g</li>`,`<li><?= htmlspecialchars($dish['name']) ?> · €<?= number_format($dish['price'], 2) ?></li>`]},
+  {t:'Vegetarian dishes get `class="veg"`, the others `class="meat"`',c:c=>{const l=c.doc.querySelectorAll('ul.menu > li');return l.length===4&&['veg','meat','veg','meat'].every((k,i)=>l[i].className===k)},help:['`veg` is a bool. A ternary turns it into one of two words.',"`class=\"<?= $dish['veg'] ? 'veg' : 'meat' ?>\"` on the li.",`<li class="<?= $item['fresh'] ? 'fresh' : 'old' ?>">`,`<li class="<?= $dish['veg'] ? 'veg' : 'meat' ?>">`]},
+  {t:"Use `match` on `$dish['spice']` to add ` · mild`, ` · warm` or ` · hot`",c:c=>['mild','warm','hot','warm'].every((h,i)=>(lis(c)[i]||'').endsWith('· '+h))&&/match\s*\(\s*\$dish\[\s*'spice'\s*\]\s*\)/.test(src(c)),help:['0 is mild, 1 is warm, 2 is hot. One value picks one word.','Inside the loop: `<?php $heat = match ($dish[\'spice\']) { … }; ?>` then print `$heat`.',`<?php $size = match ($dish['portions']) {
+    1 => 'single',
+    default => 'sharing',
+}; ?>`,`<?php $heat = match ($dish['spice']) {
+    0 => 'mild',
+    1 => 'warm',
+    default => 'hot',
+}; ?>
+… · <?= $heat ?></li>`]},
+  {t:'Your `match` ends with a `default` arm',c:c=>/match\s*\([\s\S]*?default\s*=>/.test(src(c)),help:['What if a dish gets spice level 3 one day?','Make the last arm `default => \'hot\',`.',`default => 'other',`,`default => 'hot',`]},
+  {t:'In the PHP block, count vegetarian dishes with `foreach` and `if`: `2 vegetarian dishes`',c:c=>hasP(c,'2 vegetarian dishes')&&/\$vegCount\s*(\+\+|\+=\s*1)/.test(src(c)),help:['Start a counter at 0 before the loop and add 1 when a dish is vegetarian.','`$vegCount = 0;` then `foreach` with `if ($dish[\'veg\']) { $vegCount++; }`.',`$fresh = 0;
+foreach ($items as $item) {
+    if ($item['fresh']) {
+        $fresh++;
+    }
+}`,`$vegCount = 0;
+foreach ($menu as $dish) {
+    if ($dish['veg']) {
+        $vegCount++;
+    }
+}
+…
+<p><?= $vegCount ?> vegetarian dishes</p>`]},
+  {t:'Find the most expensive dish with a loop: `Top price: Coq au vin`',c:c=>hasP(c,'Top price: Coq au vin')&&/>\s*\$\w+\[\s*'price'\s*\]/.test(src(c)),help:['Start with a guess, the first dish. Every dish that costs more becomes the new guess.','`$top = $menu[0];` then a loop with `if ($dish[\'price\'] > $top[\'price\'])`.',`$best = $scores[0];
+foreach ($scores as $score) {
+    if ($score > $best) {
+        $best = $score;
+    }
+}`,`$top = $menu[0];
+foreach ($menu as $dish) {
+    if ($dish['price'] > $top['price']) {
+        $top = $dish;
+    }
+}
+…
+<p>Top price: <?= htmlspecialchars($top['name']) ?></p>`]},
+  {t:'Collect the cheap ones: `Under €15: Onion soup, Ratatouille`',c:c=>hasP(c,'Under €15: Onion soup, Ratatouille')&&/<\s*15/.test(src(c)),help:['An empty list, filled inside a loop, joined at the end.','`$cheap = [];` then `if ($dish[\'price\'] < 15) { $cheap[] = $dish[\'name\']; }`, then implode.',`$light = [];
+foreach ($menu as $dish) {
+    if ($dish['veg']) {
+        $light[] = $dish['name'];
+    }
+}`,`$cheap = [];
+foreach ($menu as $dish) {
+    if ($dish['price'] < 15) {
+        $cheap[] = $dish['name'];
+    }
+}
+…
+<p>Under €15: <?= htmlspecialchars(implode(', ', $cheap)) ?></p>`]},
+  {t:'Every name printed is escaped, and the run is clean',c:c=>lis(c).length===4&&escaped(c,["['name']",'$top','implode','$cheap'])&&okRun(c),help:['Names are strings, so they go through htmlspecialchars.',"Check the li, the top price and the implode.",`<?= htmlspecialchars($dish['name']) ?>`,`htmlspecialchars(…) around every name`]}
+ ],
+ drills:[
+  {k:'pick',r:'pz10',q:'In `foreach ($stock as $item => $grams)`, what is in `$item`?',o:['The value','The key','The whole array','The index count'],a:1,h:'Left of => is the key.'},
+  {k:'gap',r:'pz10',q:'Close the loop inside HTML',pre:'<?php ',post:'; ?>',a:['endforeach'],h:'end + foreach.'},
+  {k:'fix',r:'pz11',q:'This always runs the block. Fix the condition',bug:'if ($qty = 0) {',test:/^if \(\$qty === 0\) \{$/,ans:'if ($qty === 0) {',h:'One = assigns. Three compare strictly.'},
+  {k:'pick',r:'pz11',q:"What is `'7' === 7`?",o:['true','false','an error','null'],a:1,h:'=== checks the type too.'},
+  {k:'type',r:'pz12',q:"Write the match arm that turns `2` into `'hot'`",ph:"2 => …,",test:/^2 => (['"])hot\1,?$/,ans:"2 => 'hot',",h:"`2 => 'hot',`"},
+  {k:'gap',r:'pz12',q:'Catch every other value',pre:'',post:" => 'unknown',",a:['default'],h:'The arm for everything else.'}
+ ]},
+
+{id:'kitchen-helpers',name:'Kitchen helpers',dish:'Kitchen helpers',rules:['pz13','pz14','pz15'],
+ ingredients:{[IDX]:MENU5},
+ files:{[IDX]:head(MENU5)+`?>
+`+page('Kitchen helpers',`    <h1>Kitchen helpers</h1>
+`)},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+function price(float $amount): string
+{
+    return '€' . number_format($amount, 2);
+}
+
+function withVat(float $net, float $rate = 0.21): float
+{
+    return round($net * (1 + $rate), 2);
+}
+
+function label(array $dish): string
+{
+    return $dish['name'] . ' · ' . price(withVat($dish['price']));
+}
+
+function isCheap(array $dish, float $limit = 15.0): bool
+{
+    return withVat($dish['price']) < $limit;
+}
+
+`+MENU5+`
+$cheapCount = 0;
+foreach ($menu as $dish) {
+    if (isCheap($dish)) {
+        $cheapCount++;
+    }
+}
+?>
+`+page('Kitchen helpers',`    <h1>Kitchen helpers</h1>
+    <ul>
+        <?php foreach ($menu as $dish): ?>
+            <li><?= htmlspecialchars(label($dish)) ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p>Takeaway soup: <?= price(withVat($menu[0]['price'], rate: 0.06)) ?></p>
+    <p>Cheap dishes: <?= $cheapCount ?></p>
+`)},
+ steps:[
+  {t:'Declare `price(float $amount): string`, returning `€` plus two decimals',c:c=>/function\s+price\s*\(\s*float\s+\$\w+\s*\)\s*:\s*string/.test(src(c))&&/return\s+'€'\s*\.\s*number_format\(/.test(src(c)),help:['A typed parameter goes in, a typed string comes out.','`function price(float $amount): string`, brace on the next line, then `return \'€\' . number_format($amount, 2);`.',`function grams(int $amount): string
+{
+    return $amount . ' g';
+}`,`function price(float $amount): string
+{
+    return '€' . number_format($amount, 2);
+}`]},
+  {t:'Declare `withVat(float $net, float $rate = 0.21): float`, rounded to 2 decimals',c:c=>/function\s+withVat\s*\(\s*float\s+\$net\s*,\s*float\s+\$rate\s*=\s*0\.21\s*\)\s*:\s*float/.test(src(c))&&/round\(/.test(src(c)),help:['The rate is optional: most dishes use 21%.','Default value in the parameter list; `return round($net * (1 + $rate), 2);`.',`function withTip(float $bill, float $tip = 0.1): float
+{
+    return round($bill * (1 + $tip), 2);
+}`,`function withVat(float $net, float $rate = 0.21): float
+{
+    return round($net * (1 + $rate), 2);
+}`]},
+  {t:'Declare `label(array $dish): string` that returns `name · €price` using `price()` and `withVat()`',c:c=>/function\s+label\s*\(\s*array\s+\$\w+\s*\)\s*:\s*string/.test(src(c))&&/price\(\s*withVat\(/.test(src(c)),help:['Functions can call functions.',"Return the name, ` · `, then `price(withVat($dish['price']))`.",`function line(array $item): string
+{
+    return $item['name'] . ': ' . grams($item['grams']);
+}`,`function label(array $dish): string
+{
+    return $dish['name'] . ' · ' . price(withVat($dish['price']));
+}`]},
+  {t:'List every dish with `label()`: `Onion soup · €7.50`',c:c=>JSON.stringify(lis(c))===JSON.stringify(['Onion soup · €7.50','Coq au vin · €21.50','Tarte tatin · €9.00'])&&/label\(\s*\$\w+\s*\)/.test(src(c)),help:['Loop over the menu, call label() per dish.','A `<ul>` with `foreach ($menu as $dish):` and `<li><?= htmlspecialchars(label($dish)) ?></li>`.',`<?php foreach ($items as $item): ?>
+    <li><?= htmlspecialchars(line($item)) ?></li>
+<?php endforeach; ?>`,`<ul>
+    <?php foreach ($menu as $dish): ?>
+        <li><?= htmlspecialchars(label($dish)) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'Takeaway soup at 6% VAT with a named argument: `Takeaway soup: €6.57`',c:c=>hasP(c,'Takeaway soup: €6.57')&&/rate:\s*0\.06/.test(src(c)),help:['Same function, different rate, named so it reads clearly.',"`withVat($menu[0]['price'], rate: 0.06)` inside `price()`.",`withTip($bill, tip: 0.15)`,`<p>Takeaway soup: <?= price(withVat($menu[0]['price'], rate: 0.06)) ?></p>`]},
+  {t:'Declare `isCheap(array $dish, float $limit = 15.0): bool`',c:c=>/function\s+isCheap\s*\(\s*array\s+\$\w+\s*,\s*float\s+\$limit\s*=\s*15(\.0)?\s*\)\s*:\s*bool/.test(src(c)),help:['A function can return true or false. Compare the price with VAT to the limit.','`return withVat($dish[\'price\']) < $limit;`',`function isHeavy(array $item, int $limit = 1000): bool
+{
+    return $item['grams'] > $limit;
+}`,`function isCheap(array $dish, float $limit = 15.0): bool
+{
+    return withVat($dish['price']) < $limit;
+}`]},
+  {t:'Count with `isCheap()` in a loop: `Cheap dishes: 2`',c:c=>hasP(c,'Cheap dishes: 2')&&/if\s*\(\s*isCheap\(/.test(src(c)),help:['Counter at 0, loop, add one when isCheap says true.','`if (isCheap($dish)) { $cheapCount++; }`',`$heavy = 0;
+foreach ($items as $item) {
+    if (isHeavy($item)) {
+        $heavy++;
+    }
+}`,`$cheapCount = 0;
+foreach ($menu as $dish) {
+    if (isCheap($dish)) {
+        $cheapCount++;
+    }
+}
+…
+<p>Cheap dishes: <?= $cheapCount ?></p>`]},
+  {t:'PSR-12: the opening brace of every function sits on its own line',c:c=>/function\s+\w+\s*\(/.test(src(c))&&!/function\s+\w+\s*\([^)]*\)[ \t]*(:[ \t]*\??\w+)?[ \t]*\{/.test(src(c)),help:['Look at the line where each function starts.','Move each `{` to the next line, under the f of function.',`function price(float $amount): string
+{`,`)…: string
+{`]},
+  {t:'No `global`: every function gets what it needs through parameters',c:c=>/function\s+\w+/.test(src(c))&&!/\bglobal\b/.test(src(c))&&!/\$GLOBALS/.test(src(c)),help:['A function should not reach outside its own walls.','Remove global and add a parameter instead.',`function vatOn(float $net, float $rate): float`,`Delete every global line and pass the value in.`]},
+  {t:'Labels are escaped, and the run is clean',c:c=>lis(c).length===3&&escaped(c,['label('])&&okRun(c),help:['label() returns a dish name, which is text.','`htmlspecialchars(label($dish))`.',`<?= htmlspecialchars(line($item)) ?>`,`<li><?= htmlspecialchars(label($dish)) ?></li>`]}
+ ],
+ drills:[
+  {k:'pick',r:'pz13',q:'What does a function give back if it has no `return`?',o:['0','null','an empty string','false'],a:1,h:'Nothing at all is null.'},
+  {k:'type',r:'pz13',q:'Write the first line of `price`, taking a float and returning a string',ph:'function …',test:/^function price\(float \$\w+\): string$/,ans:'function price(float $amount): string',h:'`function price(float $amount): string` — brace goes on the next line.'},
+  {k:'gap',r:'pz14',q:'Make the rate optional',pre:'function withVat(float $net, float $rate ',post:'): float',a:['= 0.21','=0.21'],h:'An equals sign and the default value.'},
+  {k:'gap',r:'pz14',q:'Name the argument',pre:'withVat(6.2, ',post:' 0.06)',a:['rate:'],h:'The parameter name and a colon.'},
+  {k:'pick',r:'pz15',q:'`$rate` is set on the page. A function uses `$rate` without a parameter. What happens?',o:['It reads the page value','Warning: Undefined variable','It is 0.21','Fatal error'],a:1,h:'Functions have their own scope.'},
+  {k:'fix',r:'pz15',q:'Replace the hidden dependency with a parameter',bug:'function vat(float $net): float',test:/^function vat\(float \$net, float \$rate\): float$/,ans:'function vat(float $net, float $rate): float',h:'Add `float $rate` as a second parameter.'}
+ ]},
+
+{id:'split-kitchen',name:'Split the kitchen',dish:'Split kitchen',rules:['pz16','pz17','pz18'],
+ ingredients:{[SRC_MENU]:`function menu(): array
+{
+    return [
+        ['name' => 'Onion soup', 'price' => 7.5],
+        ['name' => 'Coq au vin', 'price' => 21.5],
+        ['name' => 'Tarte tatin', 'price' => 9.0],
+    ];
+}
+`},
+ files:{[IDX]:`<?php
+
+declare(strict_types=1);
+`,[SRC_MENU]:`<?php
+
+declare(strict_types=1);
+
+function menu(): array
+{
+    return [
+        ['name' => 'Onion soup', 'price' => 7.5],
+        ['name' => 'Coq au vin', 'price' => 21.5],
+        ['name' => 'Tarte tatin', 'price' => 9.0],
+    ];
+}
+`,[TPL_MENU]:`<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title></title>
+</head>
+<body>
+</body>
+</html>
+`},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+require_once __DIR__ . '/../src/menu.php';
+
+$title = 'Menu board';
+$dishes = menu();
+
+require __DIR__ . '/../templates/menu.php';
+`,[SRC_MENU]:`<?php
+
+declare(strict_types=1);
+
+function menu(): array
+{
+    return [
+        ['name' => 'Onion soup', 'price' => 7.5],
+        ['name' => 'Coq au vin', 'price' => 21.5],
+        ['name' => 'Tarte tatin', 'price' => 9.0],
+    ];
+}
+
+function price(float $amount): string
+{
+    return '€' . number_format($amount, 2);
+}
+`,[TPL_MENU]:`<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title><?= htmlspecialchars($title) ?></title>
+</head>
+<body>
+    <h1><?= htmlspecialchars($title) ?></h1>
+    <ul>
+        <?php foreach ($dishes as $dish): ?>
+            <li><?= htmlspecialchars($dish['name']) ?> · <?= price($dish['price']) ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p><?= count($dishes) ?> dishes tonight</p>
+</body>
+</html>
+`},
+ steps:[
+  {t:'In `src/menu.php`, add `price(float $amount): string` under `menu()`',c:c=>/function\s+price\s*\(\s*float\s+\$\w+\s*\)\s*:\s*string/.test(src(c,SRC_MENU)),help:['Functions live in src/. Open its tab.','The same price() you wrote for Kitchen helpers.',`function grams(int $amount): string
+{
+    return $amount . ' g';
+}`,`function price(float $amount): string
+{
+    return '€' . number_format($amount, 2);
+}`]},
+  {t:'`src/menu.php` is pure PHP, so it has no closing `?>`',c:c=>/function\s+menu/.test(src(c,SRC_MENU))&&!/\?>\s*$/.test(raw(c,SRC_MENU))&&!outside(raw(c,SRC_MENU)).trim(),help:['A stray newline after ?> gets sent to the browser before your page.','Delete the final `?>` in src/menu.php, if there is one.','A pure-PHP file simply ends after its last }.','Remove the closing ?> at the end of src/menu.php.']},
+  {t:"`public/index.php` loads the functions: `require_once __DIR__ . '/../src/menu.php';`",c:c=>/require(_once)?\s+__DIR__\s*\.\s*'\/\.\.\/src\/menu\.php'\s*;/.test(src(c)),help:['Build the path from this file\'s folder, then up one, then into src.','Under the declare in index.php: `require_once`, `__DIR__`, a dot, and the path in quotes.',`require_once __DIR__ . '/../src/helpers.php';`,`require_once __DIR__ . '/../src/menu.php';`]},
+  {t:"Prepare the page: `$title = 'Menu board';` and `$dishes = menu();`",c:c=>new RegExp('\\$title\\s*=\\s*'+q1+'Menu board'+q1).test(src(c))&&/\$dishes\s*=\s*menu\(\s*\)\s*;/.test(src(c)),help:['The controller gathers everything the template will need.','Two variables in index.php, after the require.',`$title = 'Wine list';
+$wines = wines();`,`$title = 'Menu board';
+$dishes = menu();`]},
+  {t:"Last line of index.php: `require __DIR__ . '/../templates/menu.php';`",c:c=>/require\s+__DIR__\s*\.\s*'\/\.\.\/templates\/menu\.php'\s*;\s*$/.test(src(c).trim()+'\n')&&/<body/i.test(c.out),help:['Once the variables are ready, hand over to the template.','Same pattern as the src require, pointing into templates/.',`require __DIR__ . '/../templates/wines.php';`,`require __DIR__ . '/../templates/menu.php';`]},
+  {t:'`public/index.php` holds no HTML at all',c:c=>/require/.test(src(c))&&!outside(raw(c)).trim()&&!/\?>/.test(raw(c)),help:['Everything visible belongs in the template now.','index.php: declare, require, variables, require. No `?>`, no tags.',`<?php
+
+declare(strict_types=1);
+
+require_once …;
+
+$title = …;
+
+require …;`,'Move any HTML from index.php into templates/menu.php.']},
+  {t:'In the template, `<title>` and `<h1>` both print `$title`, escaped',c:c=>txt(c,'title')==='Menu board'&&txt(c,'h1')==='Menu board'&&(src(c,TPL_MENU).match(/htmlspecialchars\(\s*\$title\s*\)/g)||[]).length>=2,help:['The template already received $title from index.php.','`<?= htmlspecialchars($title) ?>` in both places.',`<h1><?= htmlspecialchars($heading) ?></h1>`,`<title><?= htmlspecialchars($title) ?></title>
+…
+<h1><?= htmlspecialchars($title) ?></h1>`]},
+  {t:'A `<ul>` with one `<li>` per dish, using `foreach (…):` and `endforeach;`',c:c=>c.doc.querySelectorAll('ul > li').length===3&&/foreach\s*\(\s*\$dishes\s+as\s+\$\w+\s*\)\s*:/.test(src(c,TPL_MENU))&&/endforeach\s*;/.test(src(c,TPL_MENU)),help:['The template loops over $dishes.','`<?php foreach ($dishes as $dish): ?>` … `<?php endforeach; ?>` inside a ul.',`<ul>
+    <?php foreach ($wines as $wine): ?>
+        <li>…</li>
+    <?php endforeach; ?>
+</ul>`,`<ul>
+    <?php foreach ($dishes as $dish): ?>
+        <li>…</li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'Each item reads `Onion soup · €7.50`: name escaped, price through `price()`',c:c=>JSON.stringify(lis(c))===JSON.stringify(['Onion soup · €7.50','Coq au vin · €21.50','Tarte tatin · €9.00'])&&escaped(c,["['name']"],TPL_MENU)&&/price\(\s*\$dish\[/.test(src(c,TPL_MENU)),help:['The template can call functions that index.php loaded.',"`<?= htmlspecialchars($dish['name']) ?> · <?= price($dish['price']) ?>`",`<li><?= htmlspecialchars($wine['name']) ?> · <?= price($wine['price']) ?></li>`,`<li><?= htmlspecialchars($dish['name']) ?> · <?= price($dish['price']) ?></li>`]},
+  {t:'`3 dishes tonight`, counted in the template',c:c=>hasP(c,'3 dishes tonight')&&/count\(\s*\$dishes\s*\)/.test(src(c,TPL_MENU)),help:['count() is fine in a template: it only reads.','`<p><?= count($dishes) ?> dishes tonight</p>`',`<p><?= count($wines) ?> wines</p>`,`<p><?= count($dishes) ?> dishes tonight</p>`]},
+  {t:'The template only prints and loops: no functions, no requires, no assignments',c:c=>/foreach/.test(src(c,TPL_MENU))&&!/\bfunction\s|\brequire|\binclude/.test(src(c,TPL_MENU))&&!/\$\w+\s*(=|\.=|\+=|-=)[^=>]/.test(src(c,TPL_MENU).replace(/foreach\s*\([^)]*\)/g,'')),help:['Logic belongs in index.php and src/.','Move any calculation into index.php and pass the result as a variable.',`$dishes = menu();
+$count = count($dishes);`,'Keep only <?= ?>, foreach and endforeach in the template.']},
+  cleanStep(c=>lis(c).length===3)
+ ],
+ drills:[
+  {k:'pick',r:'pz16',q:'The file in a `require` is missing. What happens?',o:['A warning, the page continues','A fatal error, the script stops','Nothing','The browser shows a 404'],a:1,h:'require is strict. include only warns.'},
+  {k:'gap',r:'pz16',q:'Load a functions file only once',pre:'',post:" __DIR__ . '/../src/menu.php';",a:['require_once'],h:'require plus once.'},
+  {k:'type',r:'pz17',q:'From `public/index.php`, require `templates/menu.php`',ph:'require …;',test:/^require __DIR__ \. '\/\.\.\/templates\/menu\.php';$/,ans:"require __DIR__ . '/../templates/menu.php';",h:"`require __DIR__ . '/../templates/menu.php';`"},
+  {k:'pick',r:'pz17',q:'Which folder can a browser request files from?',o:['src/','templates/','public/','data/'],a:2,h:'The web root.'},
+  {k:'fix',r:'pz17',q:'The path glues the names together. Fix it',bug:"require __DIR__ . '../src/menu.php';",test:/^require __DIR__ \. '\/\.\.\/src\/menu\.php';$/,ans:"require __DIR__ . '/../src/menu.php';",h:'__DIR__ has no slash at the end.'},
+  {k:'pick',r:'pz18',q:'Where does `$dishes = menu();` belong?',o:['In the template','In public/index.php','In the CSS','In data/'],a:1,h:'Logic before the template.'}
+ ]}
+);
+
+MORE.push(
+ {k:'pick',r:'pz10',q:'Which loop gives you each key and value of `$stock`?',o:['foreach ($stock as $k => $v)','foreach ($k => $v in $stock)','for ($stock as $v)','while ($stock)'],a:0,h:'as key => value.'},
+ {k:'pick',r:'pz12',q:"What does `match ('1') { 1 => 'a', default => 'b' }` return?",o:["'a'","'b'",'an error','null'],a:1,h:'match is strict.'},
+ {k:'pick',r:'pz13',q:'With strict_types on, `price(\'7.5\')` where price takes a float…',o:['works','throws a TypeError','returns null','rounds'],a:1,h:'No silent conversion.'},
+ {k:'pick',r:'pz18',q:'Which syntax belongs in a template?',o:['foreach (…): … endforeach;','function render() {}','$db = new PDO(…)','require_once of src files'],a:0,h:'Templates loop and print.'}
+);
+
+const allClean=c=>!c.bad&&(c.all||[]).every(r=>!r.bad)&&Object.values(c.p||{}).every(r=>!r.bad&&(r.all||[]).every(x=>!x.bad));
+const ptxt=(r,sel)=>{const e=r&&r.doc&&r.doc.querySelector(sel);return e?norm(e.textContent):''};
+const DISHES=`$dishes = ['Onion soup', 'Coq au vin', 'Tarte tatin'];
+`;
+
+Object.assign(RULES,{
+ pz19:{n:'19',title:'Forms send requests',cat:'Web',t:6,
+  syn:'&lt;form <span class="k">method="post"</span> action="/"&gt; · &lt;input <span class="v">name="qty"</span>&gt; · <span class="k">$_SERVER[\'REQUEST_METHOD\'] === \'POST\'</span>',
+  note:'A form turns fields into a request. Each input needs a name: that becomes the key in $_POST. method="post" sends the fields in the request body. Your script checks $_SERVER[\'REQUEST_METHOD\'] to know whether a form was sent.',
+  why:'Every page load is a request from the browser. A plain visit is a GET request. When a guest presses a submit button, the browser sends a new request to the form\'s action, carrying every named field. With method="post" the fields travel in the body, and PHP hands them to you in $_POST, keyed by each input\'s name attribute. Fields without a name are never sent. The same index.php now runs for two situations, so it asks $_SERVER[\'REQUEST_METHOD\'] which one it is in. Labels matter too: <label for="qty"> points at the input with id="qty", so clicking the label focuses the field and screen readers announce it.',
+  parts:[['<form method="post" action="/">','send the fields to / as POST'],['name="qty"','the key in $_POST'],['<label for="qty">','linked to id="qty"'],['<button type="submit">','sends the form'],["$_SERVER['REQUEST_METHOD']",'GET or POST?']],
+  mistakes:['An input without name: it is never sent.','for on the label not matching the input id.',"Comparing the method with == or lowercase 'post': it is 'POST', compared with ===."],
+  ex:`<?php
+
+declare(strict_types=1);
+?>
+<form method="post" action="/">
+    <label for="qty">Portions</label>
+    <input id="qty" name="qty" type="number">
+    <button type="submit">Send</button>
+</form>`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+echo $_SERVER['REQUEST_METHOD'] . PHP_EOL;
+var_dump($_POST);`},
+ pz20:{n:'20',title:'Reading input with ??',cat:'Web',t:6,
+  syn:"$name = trim($_POST['name'] <span class=\"k\">??</span> <span class=\"v\">''</span>); · $qty = <span class=\"k\">(int)</span> ($_POST['qty'] ?? 0);",
+  note:'$x ?? $default gives $x when it exists and is not null, otherwise the default, without a warning. Everything from a form arrives as a string. (int) converts roughly; real checking comes next plate.',
+  why:'A guest can send any field, or leave one out. Reading $_POST[\'name\'] when it was not sent raises a warning and gives null. The null coalescing operator ?? is the clean answer: $_POST[\'name\'] ?? \'\' means use the field if it is there, otherwise an empty string. Every value from a form is a string, even a number field: "2", not 2. (int) "2" turns it into an int, but (int) "2 plates" is also 2 and (int) "abc" is 0: quick, lossy and silent. Fine for showing a number back, not for deciding anything. That is what validation is for.',
+  parts:[["$_POST['name'] ?? ''",'the field, or a default'],["trim(…)",'drop stray spaces'],['(int) $x','rough conversion to int'],['"2"','form values are always strings']],
+  mistakes:["$_POST['name'] without ??: Warning: Undefined array key on a plain visit.","Trusting (int): (int) 'abc' is 0 and (int) '3 bottles' is 3.",'Forgetting trim: "  Mia  " and "Mia" become two different guests.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$post = ['name' => '  Mia ', 'qty' => '2'];
+
+$name = trim($post['name'] ?? '');
+$note = $post['note'] ?? 'no note';
+$qty = (int) ($post['qty'] ?? 0);
+
+var_dump($name, $note, $qty);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump((int) '3 bottles', (int) 'abc', '2' === 2);`},
+ pz21:{n:'21',title:'GET reads, POST changes',cat:'Web',t:6,
+  syn:'<span class="v">/menu?course=dessert</span> → $_GET[\'course\'] · forms that order, save or delete → <span class="k">method="post"</span>',
+  note:'GET puts fields in the address (?key=value) and should only read: searching, filtering, paging. POST carries fields in the body and is for actions that change something. Never put passwords in a GET address.',
+  why:'Both methods send data, but they promise different things. A GET request can be bookmarked, shared, cached and repeated: everything sits in the address as ?course=dessert, which PHP gives you in $_GET. That makes it right for filters and searches, and wrong for anything that changes state: a crawler following a GET link should never place an order. POST keeps fields out of the address and browsers warn before resending it. Rule of thumb: if pressing it twice would do something twice, it is POST.',
+  parts:[['?course=dessert','query string in the address'],["$_GET['course']",'read it in PHP'],['GET','read: search, filter, page'],['POST','change: order, save, delete']],
+  mistakes:['Deleting or ordering through a GET link.','Passwords or personal data in a GET address: they end up in logs and history.','Expecting $_POST to hold query string values: those are in $_GET.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$query = ['course' => 'dessert'];
+
+$course = $query['course'] ?? 'all';
+echo 'Showing: ' . $course;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+echo '/menu?' . http_build_query(['course' => 'main', 'veg' => 1]);`},
+ pz22:{n:'22',title:'Validate with filter_var',cat:'Security',t:7,
+  syn:"$n = <span class=\"k\">filter_var</span>($qty, <span class=\"v\">FILTER_VALIDATE_INT</span>, ['options' => ['min_range' => 1, 'max_range' => 10]]); · <span class=\"k\">if ($n === false)</span>",
+  note:'filter_var checks a string strictly: it returns the clean value, or false. FILTER_VALIDATE_INT with min_range and max_range accepts only whole numbers in range. Always compare the result with === false.',
+  why:'(int) guesses; filter_var judges. filter_var($value, FILTER_VALIDATE_INT) accepts "2" and returns the int 2, but rejects "2 plates", "2.5" and "abc" by returning false. Add min_range and max_range and it also rejects 0 or 99. Other filters work the same way: FILTER_VALIDATE_EMAIL, FILTER_VALIDATE_FLOAT. Compare the result with === false: a valid 0 is falsy, so a loose check would treat a real zero as an error. And remember the HTML min and max attributes are only a hint for honest browsers; anyone can send any request.',
+  parts:[['filter_var($x, FILTER_VALIDATE_INT)','int or false'],["['options' => ['min_range' => 1]]",'add limits'],['=== false','the only safe check'],['FILTER_VALIDATE_EMAIL','same idea for e-mail']],
+  mistakes:['if (!$n): a valid 0 counts as failure.','Relying on min and max in the HTML: they are skipped by anyone sending requests directly.',"Forgetting the 'options' wrapper around min_range."],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$limits = ['options' => ['min_range' => 1, 'max_range' => 10]];
+
+var_dump(
+    filter_var('2', FILTER_VALIDATE_INT, $limits),
+    filter_var('2 plates', FILTER_VALIDATE_INT, $limits),
+    filter_var('12', FILTER_VALIDATE_INT, $limits)
+);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump(filter_var('mia@bistro.be', FILTER_VALIDATE_EMAIL), filter_var('mia@', FILTER_VALIDATE_EMAIL));`},
+ pz23:{n:'23',title:'Allowlists and an errors list',cat:'Security',t:7,
+  syn:"$errors = []; · if (!<span class=\"k\">in_array</span>($dish, $dishes, <span class=\"v\">true</span>)) { $errors[] = '…'; } · <span class=\"k\">if ($errors === [])</span>",
+  note:'Only accept values you expect: check them against an allowlist with in_array(…, true). Collect every problem in an $errors array, show them all at once, and act only when the list is empty.',
+  why:'There are endless bad inputs and only a few good ones, so list the good ones. A dish must be one of the dishes on the menu: in_array($dish, $dishes, true) checks exactly that, and anything else, including a crafted value, is refused. Validation code reads best as a series of small checks, each adding a message to an $errors array. At the end, $errors === [] means everything passed. Showing every problem at once is kinder than making the guest fix them one per submit.',
+  parts:[['$errors = [];','start empty'],["$errors[] = 'Pick a dish';",'add a message'],['in_array($x, $list, true)','allowlist check'],['$errors === []','all good?']],
+  mistakes:['A blocklist of forbidden words instead of an allowlist of allowed values.','Stopping at the first error, so the guest finds problems one submit at a time.','Running the action before checking that $errors is empty.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$dishes = ['Onion soup', 'Coq au vin'];
+$errors = [];
+
+$dish = 'Pizza';
+if (!in_array($dish, $dishes, true)) {
+    $errors[] = 'Pick a dish from the menu.';
+}
+
+var_dump($errors, $errors === []);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$errors = [];
+$name = trim('   ');
+
+if ($name === '') {
+    $errors[] = 'Tell us your name.';
+}
+
+echo count($errors) . ' problem(s)';`},
+ pz24:{n:'24',title:'Never trust the user',cat:'Security',t:7,
+  syn:'validate <span class="k">input</span> · escape <span class="k">output</span> · <span class="v">value="&lt;?= htmlspecialchars($name) ?&gt;"</span>',
+  note:'Two separate jobs: validate what comes in, escape what goes out. Escape in attributes too: a value printed back into value="…" must go through htmlspecialchars, which also encodes quotes.',
+  why:'Treat every request as written by a stranger who reads your source code. Validation decides whether input is acceptable at all. Escaping makes sure that whatever you print, even accepted text like a guest\'s name, can never become HTML or JavaScript. They are different jobs and you always need both. A classic trap is printing a value back into a form, value="…", so the guest does not have to retype it: without htmlspecialchars, a name containing a quote can close the attribute and inject a script. htmlspecialchars encodes double and single quotes as well as < > &.',
+  parts:[['validate','is this input acceptable?'],['escape','print it safely'],['value="<?= htmlspecialchars($x) ?>"','sticky field, safe'],['"  and  \'','encoded by htmlspecialchars']],
+  mistakes:['Escaping on the way in and storing &lt; in the database: escape at the moment of output.','Forgetting attributes: value="<?= $name ?>" is an injection point.','Thinking validation makes escaping unnecessary.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$name = '"><script>alert(1)<\/script>';
+?>
+<input value="<?= htmlspecialchars($name) ?>">
+<p>Raw would have been: <?= htmlspecialchars('<input value="' . $name . '">') ?></p>`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+echo htmlspecialchars('Rock & "jazz" & <roll>');`},
+ pz25:{n:'25',title:'Sessions: memory between requests',cat:'Web',t:8,
+  syn:'<span class="k">session_start();</span> · $_SESSION[\'cart\'] · cookie <span class="v">PHPSESSID</span>',
+  note:'Each request starts from nothing. session_start() gives every guest a private $_SESSION array that survives between requests, kept on the server and found again through a cookie. Call it before any output.',
+  why:'HTTP forgets: every request is a fresh run of your script with empty variables. Sessions add memory. session_start() looks for the guest\'s session cookie (PHPSESSID); if there is one, it loads that guest\'s saved $_SESSION array from the server, otherwise it creates a new session and sends the cookie. Whatever you put in $_SESSION is saved when the script ends. The data stays on the server, the browser only holds the id. session_start() sends a cookie header, and headers must go before any output, so it comes right after declare, before a single character of HTML.',
+  parts:[['session_start()','load or create this guest\'s session'],["$_SESSION['cart']",'their private storage'],['PHPSESSID cookie','how the server recognises them'],['before any output','it sends a header']],
+  mistakes:['HTML or a blank line before session_start(): Warning, headers already sent.','Storing secrets in a cookie instead of the session.','Expecting $_SESSION to work without session_start().'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+session_start();
+
+$_SESSION['visits'] = ($_SESSION['visits'] ?? 0) + 1;
+
+echo 'Visit number ' . $_SESSION['visits'];`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+session_start();
+
+echo session_status() === PHP_SESSION_ACTIVE ? 'session active' : 'no session';`},
+ pz26:{n:'26',title:'??= and counting in a cart',cat:'Web',t:8,
+  syn:"$_SESSION['cart'] <span class=\"k\">??=</span> []; · $cart[$dish] = ($cart[$dish] <span class=\"k\">??</span> 0) + 1; · <span class=\"k\">array_sum</span>($cart)",
+  note:'$x ??= $default sets $x only if it is missing or null. Count things in a keyed array: key = dish, value = how many. array_sum adds up all values.',
+  why:'A cart is a keyed array: the dish is the key, the count is the value. The first visit has no cart yet, so $_SESSION[\'cart\'] ??= [] creates an empty one only when it does not exist, and leaves an existing cart alone. Adding a dish reads the current count with ?? 0 (a dish not in the cart yet counts as zero), adds one and stores it back. array_sum($cart) totals the counts. Before adding, check the dish against your price list: the cart only ever holds keys you know.',
+  parts:[["$a['cart'] ??= [];",'create if missing'],['($cart[$d] ?? 0) + 1','count up from zero'],['array_sum($cart)','total of all values'],['array_key_exists($d, $prices)','known dish?']],
+  mistakes:["$_SESSION['cart'] = []; on every request: the cart empties each time.","$cart[$dish]++ on a missing key: Warning, Undefined array key.",'Adding any posted value to the cart without checking it.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$cart = [];
+foreach (['soup', 'tart', 'soup'] as $dish) {
+    $cart[$dish] = ($cart[$dish] ?? 0) + 1;
+}
+
+print_r($cart);
+echo array_sum($cart);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$box = null;
+$box ??= [];
+$box ??= ['never used'];
+
+var_dump($box);`},
+ pz27:{n:'27',title:'Clearing session data',cat:'Web',t:8,
+  syn:"$_SESSION['cart'] = []; · <span class=\"k\">unset</span>($_SESSION['cart']); · $_SESSION = []; <span class=\"k\">session_destroy</span>();",
+  note:'Reset one value by assigning an empty array or with unset. To log someone out completely, empty $_SESSION and call session_destroy().',
+  why:'Sessions keep everything until you remove it. To empty a cart, set it back to [] (or unset the key and let ??= recreate it next time). To end a whole visit, for example on logout, clear the array with $_SESSION = [] and call session_destroy(), which deletes the stored data on the server. A button that clears something changes state, so it is a POST, never a GET link.',
+  parts:[["$_SESSION['cart'] = []",'empty one thing'],["unset($_SESSION['cart'])",'remove the key'],['$_SESSION = []','forget everything now'],['session_destroy()','delete it on the server']],
+  mistakes:['A Clear link with GET: a prefetching browser could empty the cart.','session_destroy() alone: $_SESSION still holds the data until the script ends.','Unsetting $_SESSION itself with unset($_SESSION).'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$session = ['cart' => ['soup' => 2], 'name' => 'Mia'];
+unset($session['cart']);
+
+print_r($session);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$session = ['cart' => ['soup' => 2]];
+$session['cart'] = [];
+
+var_dump($session['cart'] === []);`}
+});
+
+const FORM7=`    <form method="post" action="/">
+        <label for="name">Name</label>
+        <input id="name" name="name">
+        <label for="dish">Dish</label>
+        <select id="dish" name="dish">
+            <?php foreach ($dishes as $option): ?>
+                <option><?= htmlspecialchars($option) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <label for="qty">Portions</label>
+        <input id="qty" name="qty" type="number" min="1" max="10">
+        <button type="submit">Send to the pass</button>
+    </form>
+`;
+const FORM8=FORM7.replace('<input id="name" name="name">','<input id="name" name="name" value="<?= htmlspecialchars($name) ?>">').replace('<input id="qty" name="qty" type="number" min="1" max="10">','<input id="qty" name="qty" type="number" min="1" max="10" value="<?= htmlspecialchars($qty) ?>">');
+
+TARGETS.push(
+{id:'order-slip',name:'Order slip',dish:'Order slip',rules:['pz19','pz20','pz21'],
+ request:{method:'POST',post:{name:'Mia',dish:'Onion soup',qty:'2'}},
+ probes:{visit:{method:'GET'}},
+ ingredients:{[IDX]:DISHES},
+ files:{[IDX]:head(DISHES)+`?>
+`+page('Order slip',`    <h1>Order slip</h1>
+`)},
+ solution:{[IDX]:head(DISHES)+`
+$ordered = false;
+$name = '';
+$dish = '';
+$qty = 0;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $ordered = true;
+    $name = trim($_POST['name'] ?? '');
+    $dish = $_POST['dish'] ?? '';
+    $qty = (int) ($_POST['qty'] ?? 0);
+}
+?>
+`+page('Order slip',`    <h1>Order slip</h1>
+    <?php if ($ordered): ?>
+        <p class="ok">Order received: <?= $qty ?> × <?= htmlspecialchars($dish) ?> for <?= htmlspecialchars($name) ?></p>
+    <?php endif; ?>
+`+FORM7)},
+ steps:[
+  {t:'A `<form method="post" action="/">`',c:c=>!!c.doc.querySelector('form[method="post"][action="/"]'),help:['A form decides where and how its fields travel.','Under the h1: `<form method="post" action="/">` … `</form>`.',`<form method="post" action="/book">
+</form>`,`<form method="post" action="/">
+</form>`]},
+  {t:'A labelled text field: `<label for="name">Name</label>` and `<input id="name" name="name">`',c:c=>!!c.doc.querySelector('form label[for="name"]')&&!!c.doc.querySelector('form input#name[name="name"]'),help:['The label points at the input through for and id. name is what gets sent.','Inside the form: a label with for="name", then an input with id="name" and name="name".',`<label for="email">E-mail</label>
+<input id="email" name="email">`,`<label for="name">Name</label>
+<input id="name" name="name">`]},
+  {t:'A `<select id="dish" name="dish">` with one `<option>` per dish, from a `foreach`',c:c=>c.doc.querySelectorAll('select#dish[name="dish"] option').length===3&&/foreach\s*\(\s*\$dishes\s+as/.test(src(c))&&!!c.doc.querySelector('label[for="dish"]'),help:['Let the loop write the options from $dishes. Label it like the name field.','A label for="dish", then `<select id="dish" name="dish">` with `foreach ($dishes as $option):` and one `<option>` each.',`<select id="wine" name="wine">
+    <?php foreach ($wines as $option): ?>
+        <option><?= htmlspecialchars($option) ?></option>
+    <?php endforeach; ?>
+</select>`,`<label for="dish">Dish</label>
+<select id="dish" name="dish">
+    <?php foreach ($dishes as $option): ?>
+        <option><?= htmlspecialchars($option) ?></option>
+    <?php endforeach; ?>
+</select>`]},
+  {t:'A labelled number field `qty` with `min="1"` and `max="10"`, and a submit button',c:c=>!!c.doc.querySelector('input#qty[name="qty"][type="number"][min="1"][max="10"]')&&!!c.doc.querySelector('label[for="qty"]')&&!!c.doc.querySelector('form button[type="submit"]'),help:['type="number" brings up the number keyboard on phones.','Label, input with id, name, type, min, max. Then `<button type="submit">`.',`<label for="guests">Guests</label>
+<input id="guests" name="guests" type="number" min="1" max="8">
+<button type="submit">Book</button>`,`<label for="qty">Portions</label>
+<input id="qty" name="qty" type="number" min="1" max="10">
+<button type="submit">Send to the pass</button>`]},
+  {t:"Ask which request this is: `if ($_SERVER['REQUEST_METHOD'] === 'POST')`",c:c=>/if\s*\(\s*\$_SERVER\[\s*'REQUEST_METHOD'\s*\]\s*===\s*'POST'\s*\)/.test(src(c)),help:['The same file runs for a plain visit and for a sent form.','In the PHP block at the top, an if on the request method, compared strictly.',`if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+}`,`if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+}`]},
+  {t:"Read the fields with `??`: `trim($_POST['name'] ?? '')`, `$_POST['dish'] ?? ''`, `(int) ($_POST['qty'] ?? 0)`",c:c=>/trim\(\s*\$_POST\[\s*'name'\s*\]\s*\?\?\s*''\s*\)/.test(src(c))&&/\$_POST\[\s*'dish'\s*\]\s*\?\?/.test(src(c))&&/\(int\)\s*\(\s*\$_POST\[\s*'qty'\s*\]\s*\?\?\s*0\s*\)/.test(src(c)),help:['A missing field must not cause a warning.','Inside the POST if: one line per field, each with `?? default`.',`$email = trim($_POST['email'] ?? '');
+$guests = (int) ($_POST['guests'] ?? 0);`,`$name = trim($_POST['name'] ?? '');
+$dish = $_POST['dish'] ?? '';
+$qty = (int) ($_POST['qty'] ?? 0);`]},
+  {t:'After a POST: `<p class="ok">Order received: 2 × Onion soup for Mia</p>`',c:c=>ptxt(c,'p.ok')==='Order received: 2 × Onion soup for Mia',help:['Set `$ordered = true;` inside the POST if, and show the paragraph only then.','`<?php if ($ordered): ?>` … `<?php endif; ?>` around the paragraph, above the form.',`<?php if ($booked): ?>
+    <p class="ok">Booked for <?= $guests ?></p>
+<?php endif; ?>`,`<?php if ($ordered): ?>
+    <p class="ok">Order received: <?= $qty ?> × <?= htmlspecialchars($dish) ?> for <?= htmlspecialchars($name) ?></p>
+<?php endif; ?>`]},
+  {t:'A plain visit (GET) shows the form without a confirmation and without warnings',c:c=>{const v=c.p.visit;return !!v&&!v.bad&&!!v.doc.querySelector('form')&&!v.doc.querySelector('p.ok')},help:['Open Your build → the Request line: Passle also tries a plain GET visit.','Give $ordered, $name, $dish and $qty a starting value before the if, so a GET finds them.',`$booked = false;
+$guests = 0;`,`$ordered = false;
+$name = '';
+$dish = '';
+$qty = 0;`]},
+  {t:'Name and dish are escaped where they are printed',c:c=>!!c.doc.querySelector('p.ok')&&escaped(c,['$name','$dish','$option']),help:['They came from a stranger.','htmlspecialchars around `$name`, `$dish` and the options.',`<?= htmlspecialchars($email) ?>`,`<?= htmlspecialchars($dish) ?> for <?= htmlspecialchars($name) ?>`]},
+  cleanStep(c=>allClean(c)&&!!c.doc.querySelector('p.ok'))
+ ],
+ drills:[
+  {k:'pick',r:'pz19',q:'An input has `id="qty"` but no `name`. What arrives in `$_POST`?',o:["$_POST['qty']","$_POST['id']",'Nothing for that field','An error'],a:2,h:'Only named fields are sent.'},
+  {k:'gap',r:'pz19',q:'Send the fields in the request body',pre:'<form method="',post:'" action="/">',a:['post'],h:'Not get.'},
+  {k:'type',r:'pz20',q:"Read `name` from `$_POST`, defaulting to `''`, trimmed, into `$name`",ph:'$name = …;',test:/^\$name = trim\(\$_POST\[(['"])name\1\] \?\? (['"])\2\);$/,ans:"$name = trim($_POST['name'] ?? '');",h:"`$name = trim($_POST['name'] ?? '');`"},
+  {k:'pick',r:'pz20',q:"What is `(int) '3 bottles'`?",o:['0','3','false','TypeError'],a:1,h:'The cast reads digits until it cannot.'},
+  {k:'fix',r:'pz20',q:'This warns on a plain visit. Fix it',bug:"$dish = $_POST['dish'];",test:/^\$dish = \$_POST\[(['"])dish\1\] \?\? (['"])\2;$/,ans:"$dish = $_POST['dish'] ?? '';",h:'Add a default with ??.'},
+  {k:'pick',r:'pz21',q:'Which belongs in a GET request?',o:['Placing an order','Deleting a booking','Filtering the menu by course','Logging in with a password'],a:2,h:'GET only reads.'}
+ ]},
+
+{id:'safe-orders',name:'Safe orders',dish:'Safe orders',rules:['pz22','pz23','pz24'],
+ request:{method:'POST',post:{name:'  ',dish:'Pizza',qty:'12'}},
+ probes:{good:{method:'POST',post:{name:'Mia',dish:'Coq au vin',qty:'2'}},evil:{method:'POST',post:{name:'"><script>alert(1)<\/script>',dish:'Onion soup',qty:'1'}},visit:{method:'GET'}},
+ ingredients:{[IDX]:DISHES},
+ files:{[IDX]:head(DISHES)+`
+$name = '';
+$dish = '';
+$qty = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $dish = $_POST['dish'] ?? '';
+    $qty = $_POST['qty'] ?? '';
+}
+?>
+`+page('Safe orders',`    <h1>Safe orders</h1>
+`+FORM7)},
+ solution:{[IDX]:head(DISHES)+`
+$errors = [];
+$ordered = false;
+$name = '';
+$dish = '';
+$qty = '';
+$portions = 0;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $dish = $_POST['dish'] ?? '';
+    $qty = $_POST['qty'] ?? '';
+
+    if ($name === '') {
+        $errors[] = 'Tell us your name.';
+    }
+    if (!in_array($dish, $dishes, true)) {
+        $errors[] = 'Pick a dish from the menu.';
+    }
+    $portions = filter_var($qty, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 10]]);
+    if ($portions === false) {
+        $errors[] = 'Portions must be 1 to 10.';
+    }
+
+    $ordered = $errors === [];
+}
+?>
+`+page('Safe orders',`    <h1>Safe orders</h1>
+    <?php if ($errors !== []): ?>
+        <ul class="errors">
+            <?php foreach ($errors as $error): ?>
+                <li><?= htmlspecialchars($error) ?></li>
+            <?php endforeach; ?>
+        </ul>
+    <?php endif; ?>
+    <?php if ($ordered): ?>
+        <p class="ok">Order received: <?= $portions ?> × <?= htmlspecialchars($dish) ?> for <?= htmlspecialchars($name) ?></p>
+    <?php endif; ?>
+`+FORM8)},
+ steps:[
+  {t:'Start an empty list: `$errors = [];` before the POST check',c:c=>/\$errors\s*=\s*\[\s*\]\s*;/.test(src(c)),help:['Every problem will be added to one list.','At the top of the PHP block, before the if.',`$problems = [];`,`$errors = [];`]},
+  {t:"An empty name adds `Tell us your name.`",c:c=>all(c,'ul.errors li').includes('Tell us your name.')&&/\$name\s*===\s*''/.test(src(c)),help:['After trim, an empty name is exactly an empty string.',"Inside the POST if: `if ($name === '') { $errors[] = 'Tell us your name.'; }`",`if ($email === '') {
+    $errors[] = 'We need your e-mail.';
+}`,`if ($name === '') {
+    $errors[] = 'Tell us your name.';
+}`]},
+  {t:'Only dishes on the menu: a strict `in_array` adds `Pick a dish from the menu.`',c:c=>all(c,'ul.errors li').includes('Pick a dish from the menu.')&&/in_array\(\s*\$dish\s*,\s*\$dishes\s*,\s*true\s*\)/.test(src(c)),help:['Pizza is not on this menu. Check against the list you trust.',"`if (!in_array($dish, $dishes, true)) { $errors[] = 'Pick a dish from the menu.'; }`",`if (!in_array($wine, $wines, true)) {
+    $errors[] = 'Pick a wine from the list.';
+}`,`if (!in_array($dish, $dishes, true)) {
+    $errors[] = 'Pick a dish from the menu.';
+}`]},
+  {t:'Portions through `filter_var` with `FILTER_VALIDATE_INT`, 1 to 10: else `Portions must be 1 to 10.`',c:c=>all(c,'ul.errors li').includes('Portions must be 1 to 10.')&&/filter_var\(\s*\$qty\s*,\s*FILTER_VALIDATE_INT/.test(src(c))&&/min_range/.test(src(c))&&/max_range/.test(src(c))&&/===\s*false/.test(src(c)),help:['12 is a whole number, but too many. filter_var can check the range too.',"`$portions = filter_var($qty, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 10]]);` then `if ($portions === false)`.",`$guests = filter_var($input, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 8]]);
+if ($guests === false) {
+    $errors[] = 'Guests must be 1 to 8.';
+}`,`$portions = filter_var($qty, FILTER_VALIDATE_INT, ['options' => ['min_range' => 1, 'max_range' => 10]]);
+if ($portions === false) {
+    $errors[] = 'Portions must be 1 to 10.';
+}`]},
+  {t:'Show all errors in a `<ul class="errors">`, only when there are any',c:c=>c.doc.querySelectorAll('ul.errors li').length===3&&!c.p.visit.doc.querySelector('ul.errors'),help:['One list item per message. A plain visit shows no list.',"`<?php if ($errors !== []): ?>` around a ul with a foreach over `$errors`.",`<?php if ($problems !== []): ?>
+    <ul class="errors">
+        <?php foreach ($problems as $problem): ?>
+            <li><?= htmlspecialchars($problem) ?></li>
+        <?php endforeach; ?>
+    </ul>
+<?php endif; ?>`,`<?php if ($errors !== []): ?>
+    <ul class="errors">
+        <?php foreach ($errors as $error): ?>
+            <li><?= htmlspecialchars($error) ?></li>
+        <?php endforeach; ?>
+    </ul>
+<?php endif; ?>`]},
+  {t:'A valid order shows `Order received: 2 × Coq au vin for Mia`',c:c=>ptxt(c.p.good,'p.ok')==='Order received: 2 × Coq au vin for Mia'&&!c.p.good.doc.querySelector('ul.errors'),help:['Passle also sends a good order. Only an empty $errors may confirm it.','`$ordered = $errors === [];` at the end of the POST block, then print the confirmation when `$ordered`.',`$booked = $errors === [];`,`$ordered = $errors === [];
+…
+<?php if ($ordered): ?>
+    <p class="ok">Order received: <?= $portions ?> × <?= htmlspecialchars($dish) ?> for <?= htmlspecialchars($name) ?></p>
+<?php endif; ?>`]},
+  {t:'A bad order is never confirmed',c:c=>!c.doc.querySelector('p.ok')&&!!c.doc.querySelector('ul.errors'),help:['The target shows errors and no confirmation.','Confirm only when `$errors === []`.',`$booked = $errors === [];`,`$ordered = $errors === [];`]},
+  {t:'Sticky fields: `value="…"` keeps the name and portions, escaped',c:c=>{const e=c.p.evil.doc.querySelector('#name');return !!e&&e.getAttribute('value')==='"><script>alert(1)<\/script>'&&/value="<\?=\s*htmlspecialchars\(\s*\$qty\s*\)/.test(src(c))},help:['A guest should not retype everything after an error. Print the values back, safely.','`value="<?= htmlspecialchars($name) ?>"` on the name input, the same with `$qty` on the portions input.',`<input id="email" name="email" value="<?= htmlspecialchars($email) ?>">`,`<input id="name" name="name" value="<?= htmlspecialchars($name) ?>">
+…
+<input id="qty" name="qty" type="number" min="1" max="10" value="<?= htmlspecialchars($qty) ?>">`]},
+  {t:'A hostile name never becomes a script, anywhere on the page',c:c=>!/<script>alert/.test(c.p.evil.out)&&c.p.evil.out.includes('&lt;script&gt;'),help:['Passle sends a name containing a script tag. Look at Output.','Every place that prints `$name` needs htmlspecialchars: the confirmation and the value attribute.',`<?= htmlspecialchars($email) ?>`,`htmlspecialchars($name) everywhere $name is printed`]},
+  cleanStep(c=>allClean(c)&&!!c.doc.querySelector('ul.errors'))
+ ],
+ drills:[
+  {k:'pick',r:'pz22',q:"What does `filter_var('2 plates', FILTER_VALIDATE_INT)` return?",o:['2','false','0','null'],a:1,h:'It refuses anything that is not a clean integer.'},
+  {k:'gap',r:'pz22',q:'The only safe check',pre:'if ($portions ',post:' false) {',a:['==='],h:'Strict, because 0 is falsy.'},
+  {k:'type',r:'pz23',q:"Add `'Pick a dish.'` to the `$errors` list",ph:'$errors…',test:/^\$errors\[\] = (['"])Pick a dish\.\1;$/,ans:"$errors[] = 'Pick a dish.';",h:"`$errors[] = 'Pick a dish.';`"},
+  {k:'pick',r:'pz23',q:'When may the order be accepted?',o:['When $errors === []','When $errors exists','After the first check','Always, errors are only shown'],a:0,h:'An empty list means no problems.'},
+  {k:'fix',r:'pz24',q:'This sticky field is an injection point. Fix it',bug:'<input name="name" value="<?= $name ?>">',test:/^<input name="name" value="<\?= htmlspecialchars\(\$name\) \?>">$/,ans:'<input name="name" value="<?= htmlspecialchars($name) ?>">',h:'Attributes need escaping too.'},
+  {k:'pick',r:'pz24',q:'The HTML input has `max="10"`. Do you still need to check the maximum in PHP?',o:['No, the browser blocks it','Yes, anyone can send any request','Only on phones','Only for GET'],a:1,h:'HTML limits are hints for honest browsers.'}
+ ]},
+
+{id:'table-service',name:'Table service',dish:'Table service',rules:['pz25','pz26','pz27'],
+ request:[{method:'POST',post:{dish:'Onion soup'},session:'table-7'},{method:'POST',post:{dish:'Tarte tatin'},session:'table-7'},{method:'POST',post:{dish:'Onion soup'},session:'table-7'},{method:'GET',session:'table-7'}],
+ probes:{stranger:[{method:'POST',post:{dish:'Coq au vin'},session:'table-7'},{method:'GET',session:'table-9'}],fake:[{method:'POST',post:{dish:'Lobster'},session:'table-3'},{method:'GET',session:'table-3'}],clear:[{method:'POST',post:{dish:'Onion soup'},session:'table-5'},{method:'POST',post:{clear:'1'},session:'table-5'},{method:'GET',session:'table-5'}]},
+ ingredients:{[IDX]:`$prices = ['Onion soup' => 7.5, 'Coq au vin' => 21.5, 'Tarte tatin' => 9.0];
+`},
+ files:{[IDX]:head(`$prices = ['Onion soup' => 7.5, 'Coq au vin' => 21.5, 'Tarte tatin' => 9.0];
+`)+`?>
+`+page('Table service',`    <h1>Table service</h1>
+`)},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+session_start();
+
+$prices = ['Onion soup' => 7.5, 'Coq au vin' => 21.5, 'Tarte tatin' => 9.0];
+
+$_SESSION['cart'] ??= [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['clear'])) {
+        $_SESSION['cart'] = [];
+    } else {
+        $dish = $_POST['dish'] ?? '';
+        if (array_key_exists($dish, $prices)) {
+            $_SESSION['cart'][$dish] = ($_SESSION['cart'][$dish] ?? 0) + 1;
+        }
+    }
+}
+
+$cart = $_SESSION['cart'];
+$total = 0.0;
+foreach ($cart as $dish => $count) {
+    $total += $prices[$dish] * $count;
+}
+?>
+`+page('Table service',`    <h1>Table service</h1>
+    <?php if ($cart === []): ?>
+        <p class="empty">Your table is empty.</p>
+    <?php else: ?>
+        <ul class="cart">
+            <?php foreach ($cart as $dish => $count): ?>
+                <li><?= htmlspecialchars($dish) ?> × <?= $count ?></li>
+            <?php endforeach; ?>
+        </ul>
+        <p class="total"><?= array_sum($cart) ?> items · €<?= number_format($total, 2) ?></p>
+    <?php endif; ?>
+    <form method="post" action="/">
+        <?php foreach ($prices as $dish => $price): ?>
+            <button name="dish" value="<?= htmlspecialchars($dish) ?>">Add <?= htmlspecialchars($dish) ?></button>
+        <?php endforeach; ?>
+        <button name="clear" value="1">Clear the table</button>
+    </form>
+`)},
+ steps:[
+  {t:'`session_start();` right after the declare, before any output',c:c=>/^<\?php\s+declare\s*\([^)]*\)\s*;\s*session_start\(\s*\)\s*;/.test(raw(c)),help:['A session sends a cookie header, and headers go before the page.','Line after `declare(strict_types=1);`: `session_start();`.',`<?php
+
+declare(strict_types=1);
+
+session_start();`,`<?php
+
+declare(strict_types=1);
+
+session_start();`]},
+  {t:"Create the cart only when it is missing: `$_SESSION['cart'] ??= [];`",c:c=>/\$_SESSION\[\s*'cart'\s*\]\s*\?\?=\s*\[\s*\]\s*;/.test(src(c)),help:['A returning guest already has a cart. Do not wipe it.','The ??= operator: assign only if missing or null.',`$_SESSION['seen'] ??= [];`,`$_SESSION['cart'] ??= [];`]},
+  {t:"On POST, count the dish up: `($_SESSION['cart'][$dish] ?? 0) + 1`",c:c=>/\$_SESSION\[\s*'cart'\s*\]\[\s*\$dish\s*\]\s*=\s*\(\s*\$_SESSION\[\s*'cart'\s*\]\[\s*\$dish\s*\]\s*\?\?\s*0\s*\)\s*\+\s*1/.test(src(c))&&c.doc.querySelectorAll('ul.cart li').length===2,help:['The cart is keyed by dish; the value is how many.',"Inside the POST if: read `$_POST['dish'] ?? ''` into `$dish`, then add one to its count.",`$_SESSION['seen'][$page] = ($_SESSION['seen'][$page] ?? 0) + 1;`,`$dish = $_POST['dish'] ?? '';
+$_SESSION['cart'][$dish] = ($_SESSION['cart'][$dish] ?? 0) + 1;`]},
+  {t:'Only known dishes go in: check `$prices` with `array_key_exists`',c:c=>/array_key_exists\(\s*\$dish\s*,\s*\$prices\s*\)|isset\(\s*\$prices\[\s*\$dish\s*\]\s*\)/.test(src(c))&&ptxt(c.p.fake,'p.empty')==='Your table is empty.',help:['Passle also tries to order a Lobster. It is not on the menu.','Wrap the counting line in `if (array_key_exists($dish, $prices)) { … }`.',`if (array_key_exists($page, $pages)) {
+}`,`if (array_key_exists($dish, $prices)) {
+    $_SESSION['cart'][$dish] = ($_SESSION['cart'][$dish] ?? 0) + 1;
+}`]},
+  {t:'After four requests the table shows `Onion soup × 2` and `Tarte tatin × 1` in a `<ul class="cart">`',c:c=>JSON.stringify(all(c,'ul.cart li'))===JSON.stringify(['Onion soup × 2','Tarte tatin × 1']),help:['Open the Request line: three dishes are posted, then the page is visited. Same cookie each time.',"Copy the cart into `$cart = $_SESSION['cart'];` and loop `foreach ($cart as $dish => $count):`.",`<?php foreach ($seen as $page => $times): ?>
+    <li><?= htmlspecialchars($page) ?> × <?= $times ?></li>
+<?php endforeach; ?>`,`<ul class="cart">
+    <?php foreach ($cart as $dish => $count): ?>
+        <li><?= htmlspecialchars($dish) ?> × <?= $count ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`<p class="total">3 items · €24.00</p>`, with `array_sum` and a total from `$prices`',c:c=>ptxt(c,'p.total')==='3 items · €24.00'&&/array_sum\(/.test(src(c)),help:['Count with array_sum; money with a loop over the cart.','`$total = 0.0;` then `$total += $prices[$dish] * $count;` per line in the cart.',`$total = 0.0;
+foreach ($basket as $item => $count) {
+    $total += $costs[$item] * $count;
+}`,`$total = 0.0;
+foreach ($cart as $dish => $count) {
+    $total += $prices[$dish] * $count;
+}
+…
+<p class="total"><?= array_sum($cart) ?> items · €<?= number_format($total, 2) ?></p>`]},
+  {t:'Another table (another cookie) sees `<p class="empty">Your table is empty.</p>`',c:c=>ptxt(c.p.stranger,'p.empty')==='Your table is empty.'&&!c.p.stranger.doc.querySelector('ul.cart'),help:['Table 9 has its own session. Show a friendly line when the cart is empty.',"`<?php if ($cart === []): ?>` the empty paragraph `<?php else: ?>` the list and total `<?php endif; ?>`.",`<?php if ($seen === []): ?>
+    <p class="empty">Nothing yet.</p>
+<?php else: ?>
+    …
+<?php endif; ?>`,`<?php if ($cart === []): ?>
+    <p class="empty">Your table is empty.</p>
+<?php else: ?>
+    <ul class="cart">…</ul>
+    <p class="total">…</p>
+<?php endif; ?>`]},
+  {t:'Buttons: one `Add …` per dish with `name="dish"`, and `Clear the table` with `name="clear"`',c:c=>c.doc.querySelectorAll('form[method="post"] button[name="dish"]').length===3&&!!c.doc.querySelector('form[method="post"] button[name="clear"]'),help:['A button can carry a value: name and value are sent like an input.','A post form with `foreach ($prices as $dish => $price):` making a button per dish, plus one clear button.',`<button name="page" value="<?= htmlspecialchars($page) ?>">Visit</button>`,`<form method="post" action="/">
+    <?php foreach ($prices as $dish => $price): ?>
+        <button name="dish" value="<?= htmlspecialchars($dish) ?>">Add <?= htmlspecialchars($dish) ?></button>
+    <?php endforeach; ?>
+    <button name="clear" value="1">Clear the table</button>
+</form>`]},
+  {t:"Clearing empties the cart: `$_SESSION['cart'] = [];` when `clear` is posted",c:c=>ptxt(c.p.clear,'p.empty')==='Your table is empty.'&&/isset\(\s*\$_POST\[\s*'clear'\s*\]\s*\)/.test(src(c)),help:['Passle orders a soup at table 5, presses Clear, then visits.',"In the POST block: `if (isset($_POST['clear'])) { $_SESSION['cart'] = []; } else { … add the dish … }`",`if (isset($_POST['reset'])) {
+    $_SESSION['seen'] = [];
+}`,`if (isset($_POST['clear'])) {
+    $_SESSION['cart'] = [];
+} else {
+    …
+}`]},
+  {t:'Dish names escaped everywhere, and every request runs clean',c:c=>allClean(c)&&escaped(c,['$dish'])&&!!c.doc.querySelector('ul.cart'),help:['Four requests and three probes all have to run without a warning.','Escape `$dish` in the list and in the buttons. Read any red box for its request.',`<?= htmlspecialchars($page) ?>`,`htmlspecialchars($dish) everywhere`]}
+ ],
+ drills:[
+  {k:'pick',r:'pz25',q:'Where is `$_SESSION` data stored?',o:['In the cookie','On the server','In the URL','In localStorage'],a:1,h:'The browser only holds the id.'},
+  {k:'fix',r:'pz25',q:'This gives "headers already sent". Fix the order',bug:'<p>Hi</p><?php session_start(); ?>',test:/^<\?php session_start\(\); \?><p>Hi<\/p>$/,ans:'<?php session_start(); ?><p>Hi</p>',h:'session_start() before any output.'},
+  {k:'gap',r:'pz26',q:'Create the cart only if missing',pre:"$_SESSION['cart'] ",post:' [];',a:['??='],h:'Null coalescing assignment.'},
+  {k:'type',r:'pz26',q:'Total number of items in `$cart`',ph:'$items = …;',test:/^\$items = array_sum\(\$cart\);$/,ans:'$items = array_sum($cart);',h:'`$items = array_sum($cart);`'},
+  {k:'pick',r:'pz27',q:'Logging someone out completely:',o:['unset($_SESSION)','$_SESSION = []; session_destroy();','session_start() again',"setcookie('PHPSESSID')"],a:1,h:'Empty it now, delete it on the server.'},
+  {k:'pick',r:'pz27',q:'The Clear button should send…',o:['GET','POST','either','a cookie'],a:1,h:'It changes state.'}
+ ]}
+);
+
+MORE.push(
+ {k:'pick',r:'pz19',q:"`$_SERVER['REQUEST_METHOD']` on a plain page visit is…",o:["'GET'","'POST'","'VISIT'",'null'],a:0,h:'A visit is a GET.'},
+ {k:'pick',r:'pz22',q:'Why `=== false` and not `!` after filter_var?',o:['Style only','A valid 0 is falsy','filter_var returns null','It is faster'],a:1,h:'Zero.'},
+ {k:'pick',r:'pz26',q:"`$x ??= 5;` when `$x` is already 3. Afterwards `$x` is…",o:['3','5','8','null'],a:0,h:'Only fills in when missing or null.'}
+);
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
+const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
 const KEY='passle.v2';
 const PLATE_NAMES=['Menu card','Dish label','The pantry','Menu board','Kitchen helpers','Split the kitchen','Order slip','Safe orders','Table service','Recipe book','The cellar',"Roux's Bistro"];
@@ -762,7 +1988,8 @@ const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
-let S=Object.assign({t:0,stage:'school',drill:0,les:0,code:{},file:{},done:{},built:{},learned:[],flag:[],sfx:true,keys:false,vol:70,ft:0},load()||{});
+let S=Object.assign({t:0,stage:'school',drill:0,les:0,mode:'learn',code:{},file:{},done:{},mastered:{},built:{},learned:[],flag:[],sfx:true,keys:false,vol:70,ft:0},load()||{});
+if(!S.mastered)S.mastered={};
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
 
 let AC;
@@ -798,14 +2025,17 @@ function typing(){const now=Date.now();if(now-typeT<420)return;typeT=now;['hroux
 
 function chunk(d){return Array.isArray(d)?d.join(''):(d==null?'':String(d))}
 function phpStr(s){return "'"+String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"}
+const reqList=r=>Array.isArray(r)?r:[r||{}];
 function shim(req){
   req=req||{};const m=req.method||'GET',g=req.get||{},p=req.post||{};
   const qs=Object.keys(g).length?'?'+new URLSearchParams(g).toString():'';
-  return '<?php\nerror_reporting(E_ALL);\nini_set(\'display_errors\', \'1\');\nini_set(\'html_errors\', \'0\');\n'
+  let s='<?php\nerror_reporting(E_ALL);\nini_set(\'display_errors\', \'1\');\nini_set(\'html_errors\', \'0\');\n'
    +'$_SERVER[\'REQUEST_METHOD\'] = '+phpStr(m)+';\n$_SERVER[\'REQUEST_URI\'] = '+phpStr((req.path||'/')+qs)+';\n$_SERVER[\'SCRIPT_NAME\'] = \'/index.php\';\n$_SERVER[\'DOCUMENT_ROOT\'] = \'/app/public\';\n'
-   +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n'
-   +'chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
+   +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n';
+  if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\n';
+  return s+'chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
 }
+const CLEAN="<?php\n$rm = function (string $d) use (&$rm): void {\n    if (!is_dir($d)) {\n        return;\n    }\n    foreach (scandir($d) as $f) {\n        if ($f === '.' || $f === '..') {\n            continue;\n        }\n        $p = $d . '/' . $f;\n        is_dir($p) ? $rm($p) : unlink($p);\n    }\n};\n$rm('/app/data');\n$rm('/app/.sessions');\n";
 const Engine={st:'off',php:null,mod:null,q:Promise.resolve(),written:[],out:'',err:'',
   boot(){
     if(this.booting)return this.booting;
@@ -813,27 +2043,34 @@ const Engine={st:'off',php:null,mod:null,q:Promise.resolve(),written:[],out:'',e
     this.booting=(async()=>{
       try{
         const m=await import(PHPWASM);
-        const php=new m.PhpWeb();this.php=php;
-        php.addEventListener('output',e=>{this.out+=chunk(e.detail)});
-        php.addEventListener('error',e=>{this.err+=chunk(e.detail)});
-        await new Promise(res=>{let d=false;const ok=()=>{if(!d){d=true;res()}};php.addEventListener('ready',ok);if(php.binary&&php.binary.then)php.binary.then(ok,ok);setTimeout(ok,20000)});
-        this.mod=await php.binary;this.st='ready';engBadge();
+        let libs=null;try{libs=[await import(SQLITE)]}catch(e){libs=null}
+        const make=async opts=>{
+          const php=new m.PhpWeb(opts);
+          php.addEventListener('output',e=>{if(this.php===php)this.out+=chunk(e.detail)});
+          php.addEventListener('error',e=>{if(this.php===php)this.err+=chunk(e.detail)});
+          this.php=php;
+          const mod=await Promise.race([php.binary,new Promise((_,no)=>setTimeout(()=>no(new Error('PHP engine timed out')),30000))]);
+          return mod;
+        };
+        try{this.mod=await make(libs?{sharedLibs:libs}:{})}catch(e){if(!libs)throw e;this.mod=await make({})}
+        this.st='ready';engBadge();
       }catch(e){this.st='fail';this.failMsg=String(e&&e.message||e);engBadge();throw e}
     })();
     return this.booting;
   },
   mkdirp(path){const FS=this.mod.FS;let cur='';path.split('/').filter(Boolean).forEach(seg=>{cur+='/'+seg;try{if(!FS.analyzePath(cur).exists)FS.mkdir(cur)}catch(e){}})},
   run(files,req){const p=this.q.then(()=>this._run(files,req));this.q=p.catch(()=>{});return p},
+  async exec(code){if(this.php.refresh){try{await this.php.refresh()}catch(e){}}this.out='';this.err='';try{await this.php.run(code)}catch(e){this.err+='\n'+String(e&&e.message||e)}return mkResult(this.out,this.err)},
   async _run(files,req){
     await this.boot();
     const FS=this.mod.FS;
     this.written.forEach(f=>{try{FS.unlink(f)}catch(e){}});this.written=[];
-    ['/app/public','/app/src','/app/templates','/app/data'].forEach(d=>this.mkdirp(d));
+    ['/app/public','/app/src','/app/templates','/app/data','/app/tests','/app/.sessions'].forEach(d=>this.mkdirp(d));
+    await this.exec(CLEAN);
     Object.keys(files).forEach(p=>{const full='/app/'+p;this.mkdirp(full.slice(0,full.lastIndexOf('/')));FS.writeFile(full,String(files[p]));this.written.push(full)});
-    if(this.php.refresh){try{await this.php.refresh()}catch(e){}}
-    this.out='';this.err='';
-    try{await this.php.run(shim(req))}catch(e){this.err+='\n'+String(e&&e.message||e)}
-    return mkResult(this.out,this.err);
+    const all=[];
+    for(const rq of reqList(req))all.push(await this.exec(shim(rq)));
+    const last=all[all.length-1];last.all=all;return last;
   }
 };
 function mkResult(out,err){
@@ -855,7 +2092,8 @@ function render(){
   document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
   const sel=$('tsel');sel.innerHTML='';
-  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':'Plate '+ROM[i]+' · ')+tg.name;o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
+  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':'Plate '+ROM[i]+' · ')+tg.name+(S.mastered[tg.id]?'  ★':'');o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
+  document.querySelectorAll('#modeseg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='kitchen')renderKitchen();else renderRules();
 }
@@ -977,14 +2215,27 @@ function schoolComplete(){
 
 const SOL={};
 function solOut(tg){if(!SOL[tg.id])SOL[tg.id]=Engine.run(tg.solution,tg.request).catch(()=>{delete SOL[tg.id];return {fail:1,out:'',err:'',doc:null}});return SOL[tg.id]}
-const curFiles=()=>{const tg=T();if(!S.code[tg.id])S.code[tg.id]=clone(tg.files);return S.code[tg.id]};
-let file=IDX,lastPass=null,lv=0,curStep=-2,runSeq=0,runT,lastRes=null;
+const modeKey=tg=>(S.mode==='master'?'m:':'')+tg.id;
+function starter(tg){const f=clone(tg.files);if(S.mode!=='master')return f;Object.keys(f).forEach(p=>{if(/\.php$/.test(p))f[p]=(tg.ingredients&&tg.ingredients[p])||''});return f}
+const curFiles=()=>{const tg=T(),k=modeKey(tg);if(!S.code[k])S.code[k]=starter(tg);return S.code[k]};
+const stepsFor=tg=>S.mode==='master'?masterSteps(tg).concat(tg.steps.filter(s=>!s.learnOnly)):tg.steps;
+async function check(tg,files){
+  const r=await Engine.run(files,tg.request);
+  const p={};for(const k of Object.keys(tg.probes||{}))p[k]=await Engine.run(files,tg.probes[k]);
+  const c={files,out:r.out,err:r.err,bad:r.bad,doc:r.doc,all:r.all,p};
+  const st=stepsFor(tg);
+  return {r,c,st,res:st.map(s=>{try{return !!s.c(c)}catch(e){return false}})};
+}
+function reqText(tg){
+  return reqList(tg.request).map((q,i)=>{const g=q.get&&Object.keys(q.get).length?'?'+new URLSearchParams(q.get):'';let s=(i+1)+'. '+(q.method||'GET')+' '+(q.path||'/')+g;if(q.post&&Object.keys(q.post).length)s+='\n   body: '+Object.entries(q.post).map(([k,v])=>k+'='+v).join('&');if(q.session)s+='\n   Cookie: PHPSESSID='+q.session;return s}).join('\n');
+}
+let curSteps=[],file=IDX,lastPass=null,lv=0,curStep=-2,runSeq=0,runT,lastRes=null;
 function renderTarget(){
   const tg=T();$('tree').classList.remove('on');
   $('tname').textContent=tg.name;$('tcount').textContent=isMaster(tg)?'Master plate':'Plate '+ROM[S.t]+' / '+PLATE_NAMES.length;
   const fs=curFiles();
-  const ed=$('ed');if(ed.dataset.t!==tg.id){ed.dataset.t=tg.id;lastPass=null;curStep=-2;lv=0;file=S.file[tg.id]&&fs[S.file[tg.id]]!=null?S.file[tg.id]:Object.keys(fs)[0]}
-  $('req').textContent=(tg.request&&tg.request.method||'GET')+' '+(tg.request&&tg.request.path||'/');
+  const ed=$('ed');if(ed.dataset.t!==modeKey(tg)){ed.dataset.t=modeKey(tg);lastPass=null;curStep=-2;lv=0;file=S.file[tg.id]&&fs[S.file[tg.id]]!=null?S.file[tg.id]:(fs[IDX]!=null?IDX:Object.keys(fs)[0])}
+  const rl=reqList(tg.request);$('req').textContent=(rl.length>1?rl.length+' requests':(rl[0].method||'GET')+' '+(rl[0].path||'/'))+(rl.some(q=>q.session)?' · cookie':'');$('reqbox').classList.remove('on');
   $('traw').textContent='';$('tframe').srcdoc='';
   solOut(tg).then(r=>{if(T()!==tg)return;$('tframe').srcdoc=r.out;$('ovl').srcdoc=r.out;$('traw').textContent=r.fail?'The PHP engine is not running.':r.out});
   ed.value=fs[file];renderTabs();paint();renderHelp();run();
@@ -996,7 +2247,7 @@ function renderTabs(){
 function run(){
   const tg=T(),seq=++runSeq,files=clone(curFiles());
   $('scan').className='';$('scan').textContent=Engine.st==='ready'?'Cooking…':'Waiting for the stove…';
-  Engine.run(files,tg.request).then(r=>{if(seq!==runSeq||T()!==tg)return;show(r);evaluate(r,files)}).catch(()=>{if(seq!==runSeq)return;$('scan').className='bad';$('scan').textContent='No PHP engine: open Passle over http(s) with an internet connection.'});
+  check(tg,files).then(k=>{if(seq!==runSeq||T()!==tg)return;show(k.r);evaluate(k,files)}).catch(()=>{if(seq!==runSeq)return;$('scan').className='bad';$('scan').textContent='No PHP engine: open Passle over http(s) with an internet connection.'});
 }
 function show(r){
   lastRes=r;$('bframe').srcdoc=r.out;$('braw').textContent=r.out;
@@ -1014,24 +2265,23 @@ function habits(files){
   });
   return out;
 }
-function evaluate(r,files){
-  const tg=T();const c={files,out:r.out,err:r.err,bad:r.bad,doc:r.doc};
-  const res=tg.steps.map(s=>{try{return !!s.c(c)}catch(e){return false}});
+function evaluate(k,files){
+  const tg=T(),r=k.r,res=k.res,steps=k.st;
   if(lastPass&&res.some((x,i)=>x&&!lastPass[i])){sfx.ok();pose($('hroux'),'happy',1300);pose($('rmini'),'happy',1300)}
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
   const now=res.indexOf(false);
   const ol=$('steps');ol.innerHTML='';
-  tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
+  steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
   const hb=habits(files);
   const sc=$('scan');
   if(r.bad){sc.className='bad';sc.textContent=r.errs[0]||'PHP reported a problem.'}
   else if(hb.length){sc.className='warn';sc.textContent='Habit: '+hb.join(' · ')}
   else{sc.className=now===-1?'ok':'';sc.textContent=now===-1?'Plate matches the target.':'Served without errors. '+n+' of '+res.length+' steps done.'}
-  if(now!==curStep){curStep=now;lv=0;renderHelp()}
+  curSteps=steps;if(now!==curStep){curStep=now;lv=0;renderHelp()}
   if(now===-1){
-    const first=!S.done[tg.id];S.done[tg.id]=true;S.built[tg.id]={out:r.out,files};save();
+    const first=S.mode==='master'?!S.mastered[tg.id]:!S.done[tg.id];S.done[tg.id]=true;if(S.mode==='master')S.mastered[tg.id]=true;S.built[tg.id]={out:r.out,files,mode:S.mode};save();
     if(first){sfx.target();pose($('hroux'),'cheer',2600);pose($('rmini'),'cheer',2600);comms(tg.name+' matches. Send it to the kitchen.');render()}
   }
 }
@@ -1039,11 +2289,11 @@ function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
   if(curStep===-1){
     $('hstep').textContent='all steps done';
-    lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt=""><div class="win"><b>Plate matched.</b> '+esc(tg.name)+' is ready for the menu board.</div></div><div class="hint0">Take it home in the top bar downloads this as a real project folder you can run with <code>php -S localhost:8000 -t public</code>.</div>';
+    lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt=""><div class="win"><b>'+(S.mode==='master'?'Mastered.':'Plate matched.')+'</b> '+esc(tg.name)+(S.mode==='master'?' built from a blank file, by heart.':' is ready for the menu board.')+(S.mode==='learn'&&!S.mastered[tg.id]?' Next challenge: switch to Mastery and build it from nothing.':'')+'</div></div><div class="hint0">Take it home in the top bar downloads this as a real project folder you can run with <code>php -S localhost:8000 -t public</code>.</div>';
     const b=document.createElement('button');b.className='pri';b.textContent='Send to the kitchen';b.onclick=()=>{freshPlate=tg.id;sfx.serve();comms(tg.name+' is on the menu board.');go('kitchen')};foot.appendChild(b);return;
   }
   $('hstep').textContent=curStep>=0?'step '+(curStep+1):'';
-  const st=curStep>=0?tg.steps[curStep]:null,names=['Nudge','Point','Example','Answer'];
+  const st=curStep>=0?curSteps[curStep]:null,names=['Nudge','Point','Example','Answer'];
   const base=lv>0?'call':'idle';
   lad.innerHTML='<div class="idle"><img id="hroux" data-base="'+base+'" src="'+ROUX+base+'.png" alt=""><div class="hint0">'+(lv===0?'Try it yourself first. Stuck? Roux helps in four steps, from a small nudge to the full answer.':'Roux is on it. One more click shows a bigger hint.')+'</div></div>';
   if(st)for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&!/`/.test(st.help[i]);div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
@@ -1107,7 +2357,8 @@ function renderKitchen(){
     }else{
       fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(tg&&unlocked(i)?'awaiting your plate':'not on the menu yet')+'</span>';
     }
-    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>';
+    const mst=tg&&S.mastered[tg.id];
+    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+(mst?'<span class="mst">by heart</span>':'');
     el.appendChild(fr);el.appendChild(cap);box.appendChild(el);
   });
   $('kcnt').textContent=served+' of '+PLATE_NAMES.length+' plated';
@@ -1165,6 +2416,8 @@ $('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.key
 $('vol').oninput=e=>{S.vol=+e.target.value;save()};
 $('vol').onchange=()=>sfx.ok();
 $('home').onclick=takeHome;
+document.querySelectorAll('#modeseg button').forEach(b=>b.onclick=()=>{if(S.mode===b.dataset.mode)return;S.mode=b.dataset.mode;save();sfx.blip();$('ed').dataset.t='';comms(S.mode==='master'?'Mastery: blank files. You write everything, the skeleton too.':'Learning: the skeleton is laid out for you.');render()});
+$('req').onclick=()=>{const b=$('reqbox');b.innerHTML='<b>What the browser sends</b>\n'+esc(reqText(T()))+'\n\n<em>Every check starts with an empty data/ folder and a fresh session.\nErrors are shown, like a local dev server.</em>';b.classList.toggle('on');sfx.click()};
 $('slider').oninput=e=>{$('ovl').style.opacity=e.target.value/100};
 $('vclose').onclick=()=>{sfx.click();$('viewer').classList.remove('on')};
 $('viewer').onclick=e=>{if(e.target.id==='viewer')$('viewer').classList.remove('on')};
@@ -1178,7 +2431,7 @@ ed.addEventListener('keydown',e=>{
   if(e.key==='Enter'){const s=ed.selectionStart,ls=ed.value.lastIndexOf('\n',s-1)+1,ind=(ed.value.slice(ls,s).match(/^[ \t]*/)||[''])[0];e.preventDefault();ed.setRangeText('\n'+ind,s,ed.selectionEnd,'end');ed.dispatchEvent(new Event('input'))}
 });
 $('check').onclick=checkNow;
-let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';curFiles()[file]=T().files[file];save();ed.value=curFiles()[file];paint();run();comms(file+' is back to the starter code.')};
+let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';curFiles()[file]=starter(T())[file];save();ed.value=curFiles()[file];paint();run();comms(file+' is back to the starter code.')};
 if(S.t>=TARGETS.length)S.t=0;
 render();
 Engine.boot().then(()=>comms('Stove is hot. Bon appétit.')).catch(()=>{});
