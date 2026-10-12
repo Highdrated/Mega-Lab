@@ -66,6 +66,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .pick{display:flex;align-items:center;gap:8px}
 .seg.mode button{height:30px;padding:0 11px;font-size:10px}
 .seg.mode button.on{background:var(--ink);color:#fbf3e3}
+.pcap .mst.off{visibility:hidden}
 .pcap .mst{display:block;margin-top:3px;font-family:var(--mono);font-size:8.5px;letter-spacing:.32em;color:var(--brass)}
 #reqbox{display:none;position:absolute;right:14px;top:46px;z-index:6;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);padding:12px 16px;font-family:var(--mono);font-size:12px;line-height:1.65;white-space:pre-wrap;color:var(--ink2);box-shadow:0 12px 30px rgba(60,40,15,.18);max-width:90%}
 #reqbox.on{display:block}#reqbox b{color:var(--brass)}#reqbox em{color:var(--mute);font-style:normal}
@@ -2785,6 +2786,1620 @@ MORE.push(
  {k:'pick',r:'pz33',q:'`fetch()` when there are no more rows returns…',o:['[]','null','false','0'],a:2,h:'It signals the end with false.'}
 );
 
+const PHPHEAD=`<?php
+
+declare(strict_types=1);
+`;
+const pure=(c,p)=>{const r=raw(c,p);return r.trim()!==''&&!/\?>\s*$/.test(r)&&!outside(r).trim()};
+const pout=(c,k)=>norm(c.p&&c.p[k]?c.p[k].out:'');
+const F={dish:'src/Dish.php',lab:'src/Labelled.php',alg:'src/Allergen.php',wine:'src/Wine.php',shelf:'src/Pantry/Shelf.php',stock:'src/Pantry/Stock.php',auto:'src/autoload.php',oos:'src/OutOfStock.php',pan:'src/Pantry.php',tplAbout:'templates/about.php',tpl404:'templates/not-found.php',auth:'src/auth.php',kit:'src/kitchen.php',exp:'tests/expect.php',kt:'tests/kitchen_test.php'};
+
+Object.assign(RULES,{
+ pz37:{n:'37',title:'Classes and objects',cat:'Objects',t:12,
+  syn:'<span class="k">final class</span> Dish { … } · $d = <span class="k">new</span> Dish(…); · $d<span class="k">-&gt;</span>name · <span class="k">$this</span>-&gt;price',
+  note:'A class is a blueprint: properties hold the data, methods are functions that work on it. new builds an object, -> reaches inside it, $this is the object a method is running on.',
+  why:'Arrays of dishes work, but nothing stops a typo like $dish[\'prise\'], and the functions that belong to a dish float around separately. A class bundles both. Properties are typed variables inside the object; methods are functions that use $this to reach the object they belong to. new Dish(…) creates one object from the blueprint, and $dish->formattedPrice() asks it to do something. One class per file, file named after the class, is the professional habit. Mark classes final unless you design them to be extended.',
+  parts:[['final class Dish','the blueprint'],['new Dish(…)','build an object'],['$dish->name','read a property'],['$dish->isAvailable()','call a method'],['$this->price','the object, from inside']],
+  mistakes:['Using . instead of -> to reach a property.','Forgetting $this inside a method: $price is an undefined local variable.','Several classes in one file: autoloaders and readers both expect one.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+final class Timer
+{
+    public int $minutes = 0;
+
+    public function add(int $minutes): void
+    {
+        $this->minutes += $minutes;
+    }
+}
+
+$timer = new Timer();
+$timer->add(20);
+$timer->add(25);
+
+echo $timer->minutes;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Plate
+{
+    public function describe(): string
+    {
+        return 'I am a ' . static::class;
+    }
+}
+
+echo (new Plate())->describe();`},
+ pz38:{n:'38',title:'Constructor promotion and readonly',cat:'Objects',t:12,
+  syn:'public function __construct(<span class="k">public readonly</span> string $name, <span class="k">public readonly</span> float $price) {} · return <span class="k">new self</span>(…);',
+  note:'Writing public readonly in front of constructor parameters declares, types and fills the properties in one go. readonly properties can be set once and never changed. To "change" an object, return a new one.',
+  why:'The constructor runs when you write new. Since PHP 8, constructor promotion lets you declare a property right in its parameter list: public readonly string $name both creates the property and assigns the argument. readonly means it can only be set once, inside the class; any later assignment throws an Error. That makes the object a value you can pass around without fear that some other code changes it. When you need a variation, a method like withPortions(0) returns a new object with the change and leaves the original untouched.',
+  parts:[['__construct(…)','runs on new'],['public readonly string $name','declare + type + fill'],['= false','default for a promoted property'],['new self(…)','a fresh copy, changed']],
+  mistakes:['Assigning to a readonly property after construction: Error.','Forgetting the property type: readonly requires one.','A required promoted parameter after an optional one.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+final class Wine
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly int $year,
+    ) {
+    }
+}
+
+$wine = new Wine('Sancerre', 2022);
+
+try {
+    $wine->year = 2023;
+} catch (Error $e) {
+    echo $e->getMessage();
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Order
+{
+    public function __construct(public readonly int $qty)
+    {
+    }
+
+    public function withQty(int $qty): self
+    {
+        return new self($qty);
+    }
+}
+
+$a = new Order(1);
+$b = $a->withQty(3);
+
+echo $a->qty . ' ' . $b->qty;`},
+ pz39:{n:'39',title:'Interfaces: a promise of methods',cat:'Objects',t:13,
+  syn:'<span class="k">interface</span> Labelled { public function label(): string; } · final class Wine <span class="k">implements</span> Labelled',
+  note:'An interface lists methods without bodies. A class that implements it promises to have them all. Code can then ask for "anything Labelled" and work with dishes and wines alike.',
+  why:'A menu prints dishes, wines and desserts. They are different classes, but the menu only needs one thing from each: a label. An interface names that promise: interface Labelled { public function label(): string; }. Every class that says implements Labelled must provide a label() method with that exact signature, or PHP refuses to load it. A loop can now call $item->label() on a mixed list without caring which class each item is. That is polymorphism, and it is how frameworks plug your classes into theirs.',
+  parts:[['interface Labelled','the promise'],['public function label(): string;','method, no body'],['implements Labelled','keeps the promise'],['$item instanceof Labelled','check at runtime']],
+  mistakes:['Giving the interface method a body.','A different return type in the class than in the interface: fatal error.','Requiring the class file before the interface file it implements.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+interface Priced
+{
+    public function price(): float;
+}
+
+final class Soup implements Priced
+{
+    public function price(): float
+    {
+        return 7.5;
+    }
+}
+
+$item = new Soup();
+var_dump($item instanceof Priced, $item->price());`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+interface Named
+{
+    public function name(): string;
+}
+
+final class Cat implements Named
+{
+    public function name(): string
+    {
+        return 'Roux';
+    }
+}
+
+function greet(Named $thing): string
+{
+    return 'Bonjour, ' . $thing->name();
+}
+
+echo greet(new Cat());`},
+ pz40:{n:'40',title:'Enums: a fixed set of values',cat:'Objects',t:13,
+  syn:"<span class=\"k\">enum</span> Allergen: string { <span class=\"k\">case</span> Gluten = 'gluten'; … } · Allergen::<span class=\"v\">tryFrom</span>('nuts') · $a-&gt;value",
+  note:'An enum lists every allowed value as a case. A backed enum gives each case a string or int value: from() turns a value back into a case (or throws), tryFrom() returns null instead. Enums can have methods.',
+  why:'Allergens are not just any strings: there is a fixed list, and "glutin" is a bug. An enum makes that list a type. enum Allergen: string with case Gluten = \'gluten\' gives you Allergen::Gluten, which can be type-hinted, compared with === and never misspelled. The backing value is what you store or receive in a form: Allergen::from(\'gluten\') turns it back into the case and throws on unknown input; Allergen::tryFrom(\'nuts\') returns null instead, which suits user input. Allergen::cases() lists them all, and methods like label() live right inside the enum.',
+  parts:[['enum Allergen: string','backed by strings'],["case Gluten = 'gluten';",'one allowed value'],['Allergen::Gluten->value',"'gluten'"],["Allergen::tryFrom($x)",'case or null'],['Allergen::cases()','all of them']],
+  mistakes:['from() on user input: an unknown value throws a ValueError.','Comparing a case with its string: Allergen::Gluten === \'gluten\' is false.','Adding properties to an enum: only constants and methods are allowed.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+enum Course: string
+{
+    case Starter = 'starter';
+    case Main = 'main';
+
+    public function label(): string
+    {
+        return ucfirst($this->value);
+    }
+}
+
+echo Course::from('main')->label() . PHP_EOL;
+var_dump(Course::tryFrom('brunch'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+enum Heat: int
+{
+    case Mild = 0;
+    case Hot = 2;
+}
+
+echo count(Heat::cases()) . ' levels, hot is ' . Heat::Hot->value;`},
+ pz41:{n:'41',title:'Namespaces and use',cat:'Namespaces',t:14,
+  syn:'<span class="k">namespace</span> Bistro\\Pantry; · <span class="k">use</span> Bistro\\Pantry\\Shelf; · Shelf<span class="v">::class</span>',
+  note:'A namespace is a surname for classes, so two libraries can both have a Shelf. Declare it right after strict_types. use imports a class by its short name. ::class gives the full name as a string.',
+  why:'Real projects pull in other people\'s code, and sooner or later two packages both ship a class called Logger. Namespaces solve that: namespace Bistro\\Pantry; at the top of a file makes the class inside Bistro\\Pantry\\Shelf. Other files bring it in with use Bistro\\Pantry\\Shelf; and then simply write Shelf. The namespace mirrors the folder: Bistro\\Pantry\\Shelf lives in src/Pantry/Shelf.php. That one-to-one mapping (PSR-4) is what lets an autoloader find files on its own. Shelf::class returns the full name, handy for messages and for checking.',
+  parts:[['namespace Bistro\\Pantry;','after declare, before the class'],['use Bistro\\Pantry\\Shelf;','import by full name'],['new Shelf()','use the short name'],['Shelf::class','full name as a string'],['src/Pantry/Shelf.php','folder mirrors namespace']],
+  mistakes:['Forward slashes in a namespace: it is always a backslash.','Putting namespace before declare(strict_types=1): declare must come first.','Forgetting use and getting Class "Shelf" not found.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+namespace Bistro\\Kitchen;
+
+final class Oven
+{
+}
+
+echo Oven::class . PHP_EOL;
+echo strlen('works: global functions still resolve');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+namespace Bistro;
+
+echo __NAMESPACE__ . ' / ' . \\strtoupper('global function');`},
+ pz42:{n:'42',title:'Autoloading',cat:'Namespaces',t:14,
+  syn:'<span class="k">spl_autoload_register</span>(function (string $class): void { … require $path; });',
+  note:'An autoloader is a function PHP calls the first time an unknown class is used. Map the namespace to a path, check the file exists, require it. Then index.php only requires the autoloader.',
+  why:'With twenty classes, twenty require lines at the top of every page is fragile. spl_autoload_register(fn) hands PHP a function to call whenever it meets a class it has not seen. Yours receives the full name, Bistro\\Pantry\\Shelf, strips the Bistro\\ prefix, turns backslashes into slashes and requires src/Pantry/Shelf.php. Return quietly for classes that are not yours, so other autoloaders get a turn, and check is_file before requiring. This is exactly what Composer generates for you in real projects: vendor/autoload.php.',
+  parts:[['spl_autoload_register(…)','register the loader'],["str_starts_with($class, 'Bistro\\\\')",'only our classes'],["str_replace('\\\\', '/', …)",'namespace → path'],['is_file($path)','never require a missing file']],
+  mistakes:['Requiring without is_file: one typo in a class name becomes a fatal error.','Forgetting to strip the prefix: src/Bistro/Pantry/Shelf.php.','Still requiring the class files by hand next to the autoloader.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+spl_autoload_register(function (string $class): void {
+    echo 'Asked to load: ' . $class . PHP_EOL;
+});
+
+var_dump(class_exists('Bistro\\\\Pantry\\\\Jar'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$class = 'Bistro\\\\Pantry\\\\Shelf';
+$relative = substr($class, strlen('Bistro\\\\'));
+
+echo __DIR__ . '/../src/' . str_replace('\\\\', '/', $relative) . '.php';`},
+ pz43:{n:'43',title:'Exceptions: throw, try, catch, finally',cat:'Errors',t:15,
+  syn:"<span class=\"k\">throw new</span> InvalidArgumentException('…'); · <span class=\"k\">try</span> { … } <span class=\"k\">catch</span> (OutOfStock $e) { … } <span class=\"k\">finally</span> { … }",
+  note:'throw stops the function and sends an exception up to the nearest matching catch. Catch the most specific type first. finally runs whether or not something was thrown.',
+  why:'Returning false for "something went wrong" forces every caller to check, and they forget. An exception cannot be ignored: throw new InvalidArgumentException(\'Grams must be positive\') stops the method on the spot and travels up the call stack until a try block with a matching catch receives it. If nothing catches it, the script ends with a fatal Uncaught error, which is better than carrying on with wrong data. List catch blocks from most to least specific. finally always runs, perfect for counting, closing or cleaning up.',
+  parts:[['throw new …Exception(…)','stop and report'],['try { … }','code that may throw'],['catch (Type $e)','handle one kind'],['$e->getMessage()','what went wrong'],['finally { … }','always runs']],
+  mistakes:['catch (Exception $e) above a more specific catch: the specific one never runs.','Catching an exception and doing nothing with it.','Using exceptions for normal flow, like "no results found".'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function portions(int $guests): int
+{
+    if ($guests < 1) {
+        throw new InvalidArgumentException('At least one guest');
+    }
+
+    return $guests * 2;
+}
+
+try {
+    echo portions(0);
+} catch (InvalidArgumentException $e) {
+    echo 'Refused: ' . $e->getMessage();
+} finally {
+    echo PHP_EOL . 'checked';
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+try {
+    intdiv(1, 0);
+} catch (DivisionByZeroError $e) {
+    echo get_class($e) . ': ' . $e->getMessage();
+}`},
+ pz44:{n:'44',title:'Your own exception classes',cat:'Errors',t:15,
+  syn:'final class OutOfStock <span class="k">extends</span> RuntimeException · <span class="k">parent::__construct</span>($message)',
+  note:'Extend a built-in exception to name a problem from your own domain. Pass the message to parent::__construct and keep useful details as readonly properties.',
+  why:'"RuntimeException: not enough" tells a catch block very little. A class named OutOfStock does: callers can catch exactly that case and let everything else bubble up. Extend the built-in that fits: RuntimeException for things that go wrong while running, LogicException for programming mistakes, InvalidArgumentException for bad input to a function. Your constructor can take domain values, build a readable message with sprintf, hand it to parent::__construct, and expose details like $e->item as properties for the code that catches it.',
+  parts:[['extends RuntimeException','pick the right parent'],['parent::__construct($msg)','set the message'],['public readonly string $item','extra detail'],['catch (OutOfStock $e)','catch exactly this']],
+  mistakes:['Extending Exception directly for everything: callers cannot tell problems apart.','Forgetting parent::__construct: getMessage() is empty.','Putting the details only in the message string, where code cannot read them.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+final class TableFull extends RuntimeException
+{
+    public function __construct(public readonly int $table)
+    {
+        parent::__construct(sprintf('Table %d is full', $table));
+    }
+}
+
+try {
+    throw new TableFull(7);
+} catch (TableFull $e) {
+    echo $e->getMessage() . ' / ' . $e->table;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump(new InvalidArgumentException('x') instanceof LogicException, new RuntimeException('x') instanceof Exception);`},
+ pz45:{n:'45',title:'One front door: a router',cat:'Web',t:16,
+  syn:"$path = <span class=\"k\">parse_url</span>($_SERVER['REQUEST_URI'], <span class=\"v\">PHP_URL_PATH</span>); · [$status, $template, $vars] = <span class=\"k\">match</span> ($path) { … };",
+  note:'A front controller sends every request through public/index.php. It reads the path, picks a page with match, and renders a template. One entry point means one place for sessions, security and errors.',
+  why:'With one PHP file per page, every file repeats the same setup and any forgotten file is an unguarded door. A front controller turns that around: the web server sends every request to public/index.php, which looks at the path and decides. parse_url($_SERVER[\'REQUEST_URI\'], PHP_URL_PATH) gives /about without the ?ref=… part. match maps each path to what should happen, default catches everything unknown. A small render() function extracts the variables and requires the named template. With PHP\'s built-in server you start it as php -S localhost:8000 -t public public/index.php so every path reaches the router.',
+  parts:[['parse_url(…, PHP_URL_PATH)','path only, no query'],["'/' => …",'one route'],['default => …','everything else: 404'],['render($template, $vars)','one way to show pages'],['extract($vars, EXTR_SKIP)','array keys → variables']],
+  mistakes:['Matching on REQUEST_URI directly: /about?ref=x no longer matches /about.','Building a template path from the URL: a visitor could include any file.','Forgetting the default arm and getting an UnhandledMatchError on a typo.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+foreach (['/', '/about?ref=menu', '/missing'] as $uri) {
+    $path = parse_url($uri, PHP_URL_PATH);
+    echo $path . ' → ' . match ($path) {
+        '/' => 'menu',
+        '/about' => 'about',
+        default => 'not found',
+    } . PHP_EOL;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$vars = ['title' => 'About', 'chef' => 'Roux'];
+extract($vars, EXTR_SKIP);
+
+echo $title . ' by ' . $chef;`},
+ pz46:{n:'46',title:'HTTP status codes',cat:'Web',t:16,
+  syn:'<span class="k">http_response_code</span>(<span class="v">404</span>); · 200 OK · 303 See Other · 403 Forbidden · 404 Not Found · 500',
+  note:'Every response carries a status code. Pages that do not exist must answer 404, not a cheerful 200, so browsers, search engines and monitoring know. Set it before any output.',
+  why:'A friendly "not found" page that answers 200 OK tells search engines the page exists and tells your monitoring everything is fine. The status code is the machine-readable part of the answer: 2xx success, 3xx go elsewhere, 4xx the request was wrong, 5xx the server failed. http_response_code(404) sets it; called without arguments it returns the current code. Like all headers it has to be set before the first byte of output, which is one more reason the router decides everything before it renders.',
+  parts:[['200','OK'],['303','See Other: redirect after POST'],['404','Not Found'],['403','Forbidden'],['http_response_code()','read or set']],
+  mistakes:['A not-found page with status 200.','Setting the status after HTML was sent.','Using 302 after a POST when you mean 303.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+http_response_code(404);
+
+echo 'Status is now ' . http_response_code();`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+foreach ([200, 303, 404, 500] as $code) {
+    echo $code . ' is a ' . match (intdiv($code, 100)) {
+        2 => 'success',
+        3 => 'redirect',
+        4 => 'client error',
+        default => 'server error',
+    } . PHP_EOL;
+}`},
+ pz47:{n:'47',title:'Passwords: hash, never store',cat:'Security',t:17,
+  syn:'$hash = <span class="k">password_hash</span>($pw, <span class="v">PASSWORD_DEFAULT</span>); · <span class="k">password_verify</span>($pw, $hash)',
+  note:'Never store a password, store a hash made by password_hash. To check a login, password_verify compares the typed password with the hash. Each hash includes its own salt, so identical passwords look different.',
+  why:'If your user list leaks, plain passwords leak with it, and people reuse passwords everywhere. password_hash($password, PASSWORD_DEFAULT) runs a deliberately slow one-way algorithm (bcrypt today) with a random salt and returns a string starting with $2y$. You store that string. At login, password_verify($typed, $hash) re-does the work and answers true or false; you never decrypt anything. Do not invent your own scheme, do not use md5 or sha1 for passwords, and answer a failed login with one vague message so attackers cannot tell which half was wrong.',
+  parts:[['password_hash($pw, PASSWORD_DEFAULT)','make a hash to store'],['password_verify($pw, $hash)','true or false'],['$2y$10$…','bcrypt, cost 10, salt included'],["'Wrong name or password.'",'one vague message']],
+  mistakes:['Storing the password itself, or md5 of it.','Comparing hashes with === instead of password_verify.','Saying "unknown user" or "wrong password" separately.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$hash = password_hash('mise-en-place', PASSWORD_DEFAULT);
+
+echo substr($hash, 0, 7) . '…' . PHP_EOL;
+var_dump(password_verify('mise-en-place', $hash), password_verify('guess', $hash));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump(password_hash('same', PASSWORD_DEFAULT) === password_hash('same', PASSWORD_DEFAULT));`},
+ pz48:{n:'48',title:'Safe logins: new session id, CSRF token',cat:'Security',t:17,
+  syn:'<span class="k">session_regenerate_id</span>(true); · bin2hex(<span class="k">random_bytes</span>(16)) · <span class="k">hash_equals</span>($_SESSION[\'csrf\'], $token)',
+  note:'Give the guest a new session id the moment they log in, so a stolen or planted old id is worthless. Put a random token in every form and check it with hash_equals, so other sites cannot submit forms in your guest\'s name.',
+  why:'Two classic attacks target logins. Session fixation: an attacker plants a session id in your browser, waits for you to log in, then uses that same id. session_regenerate_id(true) on login issues a fresh id and deletes the old session, so the planted one is useless. Cross-site request forgery: another website quietly posts a form to yours while you are logged in, and your browser adds the cookie. A random token, made with random_bytes, stored in the session and printed in a hidden field, proves the form came from your own page. Compare it with hash_equals, which takes the same time whether the first or last character differs.',
+  parts:[['session_regenerate_id(true)','new id at login'],['random_bytes(16)','unpredictable bytes'],['bin2hex(…)','as 32 hex characters'],['<input type="hidden" name="csrf">','token in every form'],['hash_equals($known, $given)','timing-safe compare']],
+  mistakes:['Logging in without regenerating the session id.','A CSRF token made with rand() or time().','Comparing tokens with ===.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$token = bin2hex(random_bytes(16));
+
+echo strlen($token) . ' characters' . PHP_EOL;
+var_dump(hash_equals($token, $token), hash_equals($token, 'forged'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+session_start();
+$before = session_id();
+session_regenerate_id(true);
+
+var_dump($before !== session_id());`},
+ pz49:{n:'49',title:'Tests: code that checks code',cat:'Testing',t:18,
+  syn:"'name' =&gt; <span class=\"k\">function</span> (): void { <span class=\"v\">expectSame</span>('€7.50', price(7.5)); } · throw new <span class=\"k\">AssertionError</span>(…)",
+  note:'A test calls your code with a known input and checks the exact result. If the result is wrong, it throws. A runner calls every test and reports which passed. Each test checks one behaviour and is named after it.',
+  why:'Clicking through pages after every change does not scale, and you will forget the one case that broke. A test is a tiny function: arrange the input, act by calling your code, assert the result with expectSame($expected, $actual), which compares with === and throws an AssertionError on a mismatch. A test file returns an array of named closures; a runner loops over them inside try/catch and lists what passed. Real projects use PHPUnit, which follows exactly this pattern with more comfort. Name each test after the behaviour it protects: the name is what you read when it turns red.',
+  parts:[['expectSame($expected, $actual)','=== or throw'],["'price shows two decimals' => function () …",'one behaviour, one name'],['return [ … ];','a test file returns its tests'],['catch (Throwable $e)','the runner survives any failure']],
+  mistakes:['Testing with == and missing a type change.','One huge test that checks everything: when it fails you do not know what broke.','Tests that print instead of throwing.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function expectSame(mixed $expected, mixed $actual): void
+{
+    if ($expected !== $actual) {
+        throw new AssertionError(sprintf('expected %s, got %s', var_export($expected, true), var_export($actual, true)));
+    }
+}
+
+try {
+    expectSame('7.50', number_format(7.5, 2));
+    expectSame(8, 7 + 0.5);
+} catch (AssertionError $e) {
+    echo 'Red: ' . $e->getMessage();
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$tests = [
+    'addition' => fn () => 1 + 1 === 2,
+    'strings' => fn () => 'a' . 'b' === 'ab',
+];
+
+foreach ($tests as $name => $test) {
+    echo ($test() ? '✓ ' : '✗ ') . $name . PHP_EOL;
+}`},
+ pz50:{n:'50',title:'Tests that bite',cat:'Testing',t:18,
+  syn:'test the <span class="k">edges</span>: 14.99 · 15.00 · -1 · <span class="v">expectThrows</span>(InvalidArgumentException::class, fn () =&gt; price(-1.0))',
+  note:'Good tests sit on the boundaries, where bugs live: exactly at the limit, just under it, zero, negative. Test that bad input throws. A test suite is only as good as the bugs it would catch.',
+  why:'A test that only checks the happy middle passes for half-broken code. Bugs cluster at edges: < versus <=, zero, negative numbers, the empty list. Write one test just inside the limit and one exactly on it. Test failures too: expectThrows(InvalidArgumentException::class, fn () => price(-1.0)) passes only if the right exception is thrown. The honest check of a suite is to break the code on purpose, a mutation, and see whether a test turns red. Passle does exactly that to your tests on this plate.',
+  parts:[['15.0 vs 14.99','the boundary and just inside'],['expectThrows($class, $fn)','failure is a result too'],['red → fix → green','let the test find the bug'],['mutation','break the code: does a test notice?']],
+  mistakes:['Only testing typical values.','Fixing the test instead of the code when it turns red.','Catching the exception inside the code under test so nothing ever throws.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function isCheap(float $price, float $limit = 15.0): bool
+{
+    return $price <= $limit;
+}
+
+var_dump(isCheap(14.99), isCheap(15.0));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function expectThrows(string $class, callable $action): string
+{
+    try {
+        $action();
+    } catch (Throwable $e) {
+        return $e instanceof $class ? 'ok' : 'wrong type';
+    }
+
+    return 'nothing thrown';
+}
+
+echo expectThrows(DivisionByZeroError::class, fn () => intdiv(1, 0));`}
+});
+
+const DISH_M1=PHPHEAD+`
+final class Dish
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly float $price,
+        public readonly int $portions,
+        public readonly bool $vegetarian = false,
+    ) {
+    }
+
+    public function formattedPrice(): string
+    {
+        return '€' . number_format($this->price, 2);
+    }
+
+    public function isAvailable(): bool
+    {
+        return $this->portions > 0;
+    }
+
+    public function withPortions(int $portions): self
+    {
+        return new self($this->name, $this->price, $portions, $this->vegetarian);
+    }
+}
+`;
+const RQ=(...fs)=>fs.map(f=>"require_once __DIR__ . '/../"+f+"';").join('\n')+'\n';
+
+const LAB_M2=PHPHEAD+`
+interface Labelled
+{
+    public function label(): string;
+}
+`;
+const ALG_M2=PHPHEAD+`
+enum Allergen: string
+{
+    case Gluten = 'gluten';
+    case Celery = 'celery';
+    case Egg = 'egg';
+
+    public function label(): string
+    {
+        return ucfirst($this->value);
+    }
+}
+`;
+const DISH_M2=PHPHEAD+`
+final class Dish implements Labelled
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly float $price,
+        public readonly array $allergens = [],
+    ) {
+    }
+
+    public function label(): string
+    {
+        return strtoupper($this->name) . ' · €' . number_format($this->price, 2);
+    }
+
+    public function allergenList(): string
+    {
+        return implode(' · ', array_map(fn (Allergen $allergen): string => $allergen->label(), $this->allergens));
+    }
+}
+`;
+const WINE_M2=PHPHEAD+`
+final class Wine implements Labelled
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly int $year,
+    ) {
+    }
+
+    public function label(): string
+    {
+        return $this->name . ' ' . $this->year;
+    }
+}
+`;
+const SHELF_M3=PHPHEAD+`
+namespace Bistro\\Pantry;
+
+final class Shelf
+{
+    private array $jars = [];
+
+    public function add(string $jar): void
+    {
+        $this->jars[] = $jar;
+        sort($this->jars);
+    }
+
+    public function jars(): array
+    {
+        return $this->jars;
+    }
+
+    public function count(): int
+    {
+        return count($this->jars);
+    }
+}
+`;
+const STOCK_M3=PHPHEAD+`
+namespace Bistro\\Pantry;
+
+final class Stock
+{
+    private array $grams = [];
+
+    public function set(string $item, int $grams): void
+    {
+        $this->grams[$item] = $grams;
+    }
+
+    public function take(string $item, int $grams): void
+    {
+        $this->grams[$item] = $this->left($item) - $grams;
+    }
+
+    public function left(string $item): int
+    {
+        return $this->grams[$item] ?? 0;
+    }
+}
+`;
+const AUTO_M3=PHPHEAD+`
+spl_autoload_register(function (string $class): void {
+    $prefix = 'Bistro\\\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+
+    $path = __DIR__ . '/' . str_replace('\\\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($path)) {
+        require $path;
+    }
+});
+`;
+const OOS_M4=PHPHEAD+`
+final class OutOfStock extends RuntimeException
+{
+    public function __construct(
+        public readonly string $item,
+        int $missing,
+    ) {
+        parent::__construct(sprintf('Not enough %s: %d g short', $item, $missing));
+    }
+}
+`;
+const PAN_M4=PHPHEAD+`
+final class Pantry
+{
+    public function __construct(private array $stock)
+    {
+    }
+
+    public function take(string $item, int $grams): void
+    {
+        if ($grams <= 0) {
+            throw new InvalidArgumentException('Grams must be positive');
+        }
+
+        $left = $this->left($item);
+        if ($grams > $left) {
+            throw new OutOfStock($item, $grams - $left);
+        }
+
+        $this->stock[$item] = $left - $grams;
+    }
+
+    public function left(string $item): int
+    {
+        return $this->stock[$item] ?? 0;
+    }
+}
+`;
+const MENU_M5=PHPHEAD+`
+function menu(): array
+{
+    return [
+        ['name' => 'Onion soup', 'price' => 7.5],
+        ['name' => 'Coq au vin', 'price' => 21.5],
+        ['name' => 'Tarte tatin', 'price' => 9.0],
+    ];
+}
+
+function price(float $amount): string
+{
+    return '€' . number_format($amount, 2);
+}
+`;
+const RENDER_M5=`
+function render(string $template, array $vars): void
+{
+    extract($vars, EXTR_SKIP);
+    require __DIR__ . '/../templates/' . $template . '.php';
+}
+`;
+const skel=(title,body)=>`<?php declare(strict_types=1); ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+</head>
+<body>
+${body}</body>
+</html>
+`;
+const T_MENU5=skel('<?= htmlspecialchars($title) ?>',`    <h1><?= htmlspecialchars($title) ?></h1>
+    <ul>
+        <?php foreach ($dishes as $dish): ?>
+            <li><?= htmlspecialchars($dish['name']) ?> · <?= price($dish['price']) ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p><a href="/about">About the kitchen</a></p>
+`);
+const T_ABOUT5=skel('<?= htmlspecialchars($title) ?>',`    <h1><?= htmlspecialchars($title) ?></h1>
+    <p>Roux runs the pass since 2019.</p>
+    <p><a href="/">Back to the menu</a></p>
+`);
+const T_404=skel('<?= htmlspecialchars($title) ?>',`    <h1><?= htmlspecialchars($title) ?></h1>
+    <p class="status">Error <?= http_response_code() ?>: nothing is served at <?= htmlspecialchars($path) ?></p>
+    <p><a href="/">Back to the menu</a></p>
+`);
+const HASH='$2y$10$GXrv3mqjbgUVIgXS6bh5v.DnUMmJ44fhKsF0j5HYipF8lwcsLYLTG';
+const USERS_M6=`function users(): array
+{
+    return [
+        'roux' => '${HASH}',
+    ];
+}
+`;
+const AUTH_M6=PHPHEAD+`
+`+USERS_M6+`
+function csrfToken(): string
+{
+    $_SESSION['csrf'] ??= bin2hex(random_bytes(16));
+
+    return $_SESSION['csrf'];
+}
+
+function validCsrf(string $token): bool
+{
+    return hash_equals($_SESSION['csrf'] ?? '', $token);
+}
+
+function login(string $user, string $password): bool
+{
+    $hash = users()[$user] ?? null;
+    if ($hash === null || !password_verify($password, $hash)) {
+        return false;
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['user'] = $user;
+
+    return true;
+}
+
+function logout(): void
+{
+    $_SESSION = [];
+    session_regenerate_id(true);
+}
+`;
+const KIT_OK=(price,vat,cheap,guard)=>PHPHEAD+`
+function price(float $amount): string
+{
+`+(guard?`    if ($amount < 0) {
+        throw new InvalidArgumentException('Prices cannot be negative');
+    }
+
+`:'')+`    return '€' . number_format($amount, ${price});
+}
+
+function withVat(float $net, float $rate = 0.21): float
+{
+    return round($net * (1 + ${vat}), 2);
+}
+
+function isCheap(float $price, float $limit = 15.0): bool
+{
+    return $price ${cheap} $limit;
+}
+`;
+const EXP_SAME=PHPHEAD+`
+function expectSame(mixed $expected, mixed $actual): void
+{
+    if ($expected !== $actual) {
+        throw new AssertionError(sprintf('expected %s, got %s', var_export($expected, true), var_export($actual, true)));
+    }
+}
+`;
+const EXP_FULL=EXP_SAME+`
+function expectThrows(string $class, callable $action): void
+{
+    try {
+        $action();
+    } catch (Throwable $e) {
+        if ($e instanceof $class) {
+            return;
+        }
+
+        throw new AssertionError(sprintf('expected %s, got %s', $class, $e::class));
+    }
+
+    throw new AssertionError(sprintf('expected %s, nothing was thrown', $class));
+}
+`;
+const KT_FULL=PHPHEAD+`
+return [
+    'price shows two decimals' => function (): void {
+        expectSame('€7.50', price(7.5));
+    },
+    'price refuses negative amounts' => function (): void {
+        expectThrows(InvalidArgumentException::class, fn () => price(-1.0));
+    },
+    'VAT uses 21% by default' => function (): void {
+        expectSame(7.5, withVat(6.2));
+    },
+    'VAT accepts another rate' => function (): void {
+        expectSame(6.57, withVat(6.2, rate: 0.06));
+    },
+    'a dish under the limit is cheap' => function (): void {
+        expectSame(true, isCheap(14.99));
+    },
+    'a dish at the limit is not cheap' => function (): void {
+        expectSame(false, isCheap(15.0));
+    },
+];
+`;
+const RUNNER=PHPHEAD+`
+require_once __DIR__ . '/../src/kitchen.php';
+require_once __DIR__ . '/../tests/expect.php';
+
+$tests = require __DIR__ . '/../tests/kitchen_test.php';
+$results = [];
+
+foreach ($tests as $name => $test) {
+    try {
+        $test();
+        $results[] = ['name' => $name, 'ok' => true, 'why' => ''];
+    } catch (Throwable $e) {
+        $results[] = ['name' => $name, 'ok' => false, 'why' => $e->getMessage()];
+    }
+}
+
+$failed = count(array_filter($results, fn (array $result): bool => !$result['ok']));
+?>
+`+page('Kitchen tests',`    <h1>Kitchen tests</h1>
+    <ul class="tests">
+        <?php foreach ($results as $result): ?>
+            <li class="<?= $result['ok'] ? 'pass' : 'fail' ?>"><?= htmlspecialchars($result['name']) ?><?= $result['ok'] ? '' : ': ' . htmlspecialchars($result['why']) ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p class="summary"><?= count($results) - $failed ?> passed, <?= $failed ?> failed</p>
+`);
+const caught=r=>{const m=/(\d+) passed, (\d+) failed/.exec(norm(r&&r.doc?(r.doc.querySelector('p.summary')||{}).textContent:''));return !!m&&+m[2]>0};
+
+TARGETS.push(
+{id:'menu-card-master',master:0,name:'Menu card as a class',dish:'Menu card',rules:['pz37','pz38'],
+ probes:{readonly:{over:{[IDX]:PHPHEAD+`
+require_once __DIR__ . '/../src/Dish.php';
+
+$dish = new Dish('Soup', 7.5, 3);
+try {
+    $dish->price = 1.0;
+    echo 'changed';
+} catch (Error $e) {
+    echo 'protected';
+}
+$later = $dish->withPortions(0);
+echo ' ' . $dish->portions . ' ' . $later->portions . ' ' . var_export($dish->vegetarian, true);
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page("Today's special",`    <h1>Today's special</h1>
+`),[F.dish]:PHPHEAD+`
+final class Dish
+{
+}
+`},
+ solution:{[IDX]:PHPHEAD+`
+require_once __DIR__ . '/../src/Dish.php';
+
+$special = new Dish('Bouillabaisse', 18.5, 12);
+$later = $special->withPortions(0);
+?>
+`+page("Today's special",`    <h1>Today's special</h1>
+    <h2><?= htmlspecialchars($special->name) ?></h2>
+    <p>Price: <?= $special->formattedPrice() ?></p>
+    <p>Portions left: <?= $special->portions ?></p>
+    <p>Status: <?= $special->isAvailable() ? 'available' : 'sold out' ?></p>
+    <p>Later tonight: <?= $later->isAvailable() ? 'available' : 'sold out' ?></p>
+`),[F.dish]:DISH_M1},
+ steps:[
+  {t:'`src/Dish.php`: a constructor with four promoted `public readonly` properties: `name`, `price`, `portions`, `vegetarian = false`',c:c=>{const s=src(c,F.dish);return /function\s+__construct\s*\(/.test(s)&&(s.match(/public\s+readonly\s+(string|float|int|bool)\s+\$/g)||[]).length===4&&/bool\s+\$vegetarian\s*=\s*false/.test(s)},help:['The constructor parameters can declare the properties themselves.','`public function __construct(` then one line per property, each `public readonly type $name,`, then `) {` `}`.',`public function __construct(
+    public readonly string $name,
+    public readonly int $year,
+) {
+}`,`public function __construct(
+    public readonly string $name,
+    public readonly float $price,
+    public readonly int $portions,
+    public readonly bool $vegetarian = false,
+) {
+}`]},
+  {t:'`formattedPrice(): string` returns `€` and two decimals of `$this->price`',c:c=>/function\s+formattedPrice\s*\(\s*\)\s*:\s*string/.test(src(c,F.dish))&&/number_format\(\s*\$this->price/.test(src(c,F.dish)),help:['A method reads the object\'s own data through $this.','`return \'€\' . number_format($this->price, 2);`',`public function label(): string
+{
+    return $this->name . ' ' . $this->year;
+}`,`public function formattedPrice(): string
+{
+    return '€' . number_format($this->price, 2);
+}`]},
+  {t:'`isAvailable(): bool` is true while portions are left',c:c=>/function\s+isAvailable\s*\(\s*\)\s*:\s*bool/.test(src(c,F.dish))&&/\$this->portions\s*>\s*0/.test(src(c,F.dish)),help:['Return a comparison: it is already a bool.','`return $this->portions > 0;`',`public function isVintage(): bool
+{
+    return $this->year < 2000;
+}`,`public function isAvailable(): bool
+{
+    return $this->portions > 0;
+}`]},
+  {t:'`withPortions(int $portions): self` returns a `new self(…)` instead of changing this one',c:c=>/function\s+withPortions\s*\(\s*int\s+\$portions\s*\)\s*:\s*(self|static|Dish)/.test(src(c,F.dish))&&/new\s+(self|static|Dish)\(/.test(src(c,F.dish)),help:['readonly properties cannot change. Build a copy with the new value.','`return new self($this->name, $this->price, $portions, $this->vegetarian);`',`public function withYear(int $year): self
+{
+    return new self($this->name, $year);
+}`,`public function withPortions(int $portions): self
+{
+    return new self($this->name, $this->price, $portions, $this->vegetarian);
+}`]},
+  {t:"index.php loads the class and builds `$special = new Dish('Bouillabaisse', 18.5, 12);`",c:c=>/require(_once)?\s+__DIR__\s*\.\s*'\/\.\.\/src\/Dish\.php'/.test(src(c))&&new RegExp("\\$special\\s*=\\s*new\\s+Dish\\(\\s*"+q1+"Bouillabaisse"+q1+"\\s*,\\s*18\\.5\\s*,\\s*12\\s*\\)").test(src(c)),help:['One require for the class file, then new.','`require_once __DIR__ . \'/../src/Dish.php\';` then the new line.',`require_once __DIR__ . '/../src/Wine.php';
+
+$wine = new Wine('Sancerre', 2022);`,`require_once __DIR__ . '/../src/Dish.php';
+
+$special = new Dish('Bouillabaisse', 18.5, 12);`]},
+  {t:'An `<h2>` with the name read from the object, escaped',c:c=>txt(c,'h1 ~ h2')==='Bouillabaisse'&&/htmlspecialchars\(\s*\$special->name\s*\)/.test(src(c)),help:['Properties are read with the arrow.','`<h2><?= htmlspecialchars($special->name) ?></h2>`',`<h2><?= htmlspecialchars($wine->name) ?></h2>`,`<h2><?= htmlspecialchars($special->name) ?></h2>`]},
+  {t:'`Price: €18.50` from `formattedPrice()`',c:c=>hasP(c,'Price: €18.50')&&/\$special->formattedPrice\(\)/.test(src(c)),help:['Ask the object to format itself.','`<p>Price: <?= $special->formattedPrice() ?></p>`',`<p><?= $wine->label() ?></p>`,`<p>Price: <?= $special->formattedPrice() ?></p>`]},
+  {t:'`Portions left: 12` and `Status: available`',c:c=>hasP(c,'Portions left: 12')&&hasP(c,'Status: available')&&/\$special->isAvailable\(\)/.test(src(c)),help:['A property and a method, two paragraphs.','`$special->portions` and a ternary on `$special->isAvailable()`.',`<p>Vintage: <?= $wine->isVintage() ? 'yes' : 'no' ?></p>`,`<p>Portions left: <?= $special->portions ?></p>
+<p>Status: <?= $special->isAvailable() ? 'available' : 'sold out' ?></p>`]},
+  {t:'`Later tonight: sold out`, from a copy made with `withPortions(0)`',c:c=>hasP(c,'Later tonight: sold out')&&/withPortions\(\s*0\s*\)/.test(src(c))&&hasP(c,'Status: available'),help:['The special itself stays available; the copy has no portions left.','`$later = $special->withPortions(0);` then a ternary on `$later->isAvailable()`.',`$older = $wine->withYear(1999);`,`$later = $special->withPortions(0);
+…
+<p>Later tonight: <?= $later->isAvailable() ? 'available' : 'sold out' ?></p>`]},
+  {t:'readonly holds: Passle tries to change a price and must be refused',c:c=>pout(c,'readonly')==='protected 3 0 false',help:['Passle builds its own Dish and tries `$dish->price = 1.0;`.','Every promoted property needs `readonly`, and withPortions must leave the original alone.','public readonly float $price,','All four promoted properties: public readonly, typed.']},
+  cleanStep(c=>pure(c,F.dish)&&hasP(c,'Later tonight: sold out'))
+ ],
+ drills:[
+  {k:'pick',r:'pz37',q:'How do you call `isAvailable` on `$dish`?',o:['$dish.isAvailable()','$dish->isAvailable()','Dish::isAvailable($dish)','isAvailable($dish)'],a:1,h:'The arrow.'},
+  {k:'gap',r:'pz37',q:'Inside a method, reach the object\'s own price',pre:'return ',post:'->price;',a:['$this'],h:'The object itself.'},
+  {k:'type',r:'pz37',q:"Build a `Dish` for 'Soup', 7.5, 3 into `$soup`",ph:'$soup = …;',test:/^\$soup = new Dish\((['"])Soup\1, 7\.5, 3\);$/,ans:"$soup = new Dish('Soup', 7.5, 3);",h:"`$soup = new Dish('Soup', 7.5, 3);`"},
+  {k:'pick',r:'pz38',q:'What happens on `$dish->price = 1.0;` when price is readonly?',o:['It changes','An Error is thrown','A warning, then it changes','Nothing'],a:1,h:'Set once, never again.'},
+  {k:'fix',r:'pz38',q:'Make this promoted property unchangeable',bug:'public string $name,',test:/^public readonly string \$name,$/,ans:'public readonly string $name,',h:'Add readonly after public.'},
+  {k:'pick',r:'pz38',q:'How do you "change" an immutable object?',o:['Assign to the property','Return a new object with the change','Use unset','You cannot use it any more'],a:1,h:'withSomething(): self.'}
+ ]},
+
+{id:'labels-master',master:1,name:'Labels with interfaces',dish:'Dish label',rules:['pz39','pz40'],
+ probes:{contract:{over:{[IDX]:PHPHEAD+`
+`+RQ('src/Labelled.php','src/Allergen.php','src/Dish.php','src/Wine.php')+`
+$things = [new Dish('Soup', 7.5), new Wine('Rioja', 2018)];
+foreach ($things as $thing) {
+    echo $thing instanceof Labelled ? 'L' : '-';
+}
+echo ' ' . Allergen::from('egg')->label() . ' ' . count(Allergen::cases());
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Labels',`    <h1>Labels</h1>
+`),[F.lab]:PHPHEAD,[F.alg]:PHPHEAD,[F.dish]:PHPHEAD,[F.wine]:PHPHEAD},
+ solution:{[IDX]:PHPHEAD+`
+`+RQ('src/Labelled.php','src/Allergen.php','src/Dish.php','src/Wine.php')+`
+$items = [
+    new Dish('Coq au vin', 21.5, [Allergen::Gluten, Allergen::Celery]),
+    new Wine('Sancerre', 2022),
+];
+$asked = Allergen::tryFrom('nuts');
+?>
+`+page('Labels',`    <h1>Labels</h1>
+    <ul class="labels">
+        <?php foreach ($items as $item): ?>
+            <li><?= htmlspecialchars($item->label()) ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p>Allergens: <?= htmlspecialchars($items[0]->allergenList()) ?></p>
+    <p><?= $asked === null ? 'Unknown allergen: nuts' : htmlspecialchars($asked->label()) ?></p>
+`),[F.lab]:LAB_M2,[F.alg]:ALG_M2,[F.dish]:DISH_M2,[F.wine]:WINE_M2},
+ steps:[
+  {t:'`src/Labelled.php`: `interface Labelled` promising `public function label(): string;`',c:c=>/interface\s+Labelled\s*\{\s*public\s+function\s+label\s*\(\s*\)\s*:\s*string\s*;\s*\}/.test(src(c,F.lab)),help:['An interface lists method signatures, ending in a semicolon instead of a body.','`interface Labelled` with one line inside.',`interface Priced
+{
+    public function price(): float;
+}`,`interface Labelled
+{
+    public function label(): string;
+}`]},
+  {t:"`src/Allergen.php`: `enum Allergen: string` with `Gluten`, `Celery` and `Egg`",c:c=>{const s=src(c,F.alg);return /enum\s+Allergen\s*:\s*string/.test(s)&&["Gluten = 'gluten'","Celery = 'celery'","Egg = 'egg'"].every(x=>new RegExp('case\\s+'+x.replace(/'/g,q1)).test(s))},help:['A backed enum: each case has a string value.',"`case Gluten = 'gluten';` and so on, inside `enum Allergen: string { }`.",`enum Course: string
+{
+    case Starter = 'starter';
+    case Main = 'main';
+}`,`enum Allergen: string
+{
+    case Gluten = 'gluten';
+    case Celery = 'celery';
+    case Egg = 'egg';
+}`]},
+  {t:'The enum gets a method `label(): string` returning `ucfirst($this->value)`',c:c=>/function\s+label\s*\(\s*\)\s*:\s*string/.test(src(c,F.alg))&&/ucfirst\(\s*\$this->value\s*\)/.test(src(c,F.alg)),help:['Inside an enum method, $this is the case.','`return ucfirst($this->value);`',`public function label(): string
+{
+    return strtoupper($this->value);
+}`,`public function label(): string
+{
+    return ucfirst($this->value);
+}`]},
+  {t:'`Dish implements Labelled`, with promoted `name`, `price` and `allergens = []`',c:c=>/class\s+Dish\s+implements\s+Labelled/.test(src(c,F.dish))&&/public\s+readonly\s+array\s+\$allergens\s*=\s*\[\s*\]/.test(src(c,F.dish)),help:['The class keeps the interface\'s promise.','`final class Dish implements Labelled` and a constructor with three promoted readonly properties.',`final class Soup implements Priced
+{
+    public function __construct(public readonly float $cost)
+    {
+    }
+}`,`final class Dish implements Labelled
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly float $price,
+        public readonly array $allergens = [],
+    ) {
+    }
+}`]},
+  {t:"`Dish::label()` returns `COQ AU VIN · €21.50`",c:c=>(all(c,'ul.labels li')[0]||'')==='COQ AU VIN · €21.50',help:['Capitals for the name, price with two decimals.',"`return strtoupper($this->name) . ' · €' . number_format($this->price, 2);`",`public function label(): string
+{
+    return strtoupper($this->name);
+}`,`public function label(): string
+{
+    return strtoupper($this->name) . ' · €' . number_format($this->price, 2);
+}`]},
+  {t:'`Wine implements Labelled` too: `Sancerre 2022`',c:c=>/class\s+Wine\s+implements\s+Labelled/.test(src(c,F.wine))&&(all(c,'ul.labels li')[1]||'')==='Sancerre 2022',help:['A completely different class, the same promise.','Promoted `name` and `int $year`; `label()` returns name, a space, year.',`final class Cheese implements Labelled
+{
+    public function __construct(public readonly string $name)
+    {
+    }
+
+    public function label(): string
+    {
+        return $this->name;
+    }
+}`,`final class Wine implements Labelled
+{
+    public function __construct(
+        public readonly string $name,
+        public readonly int $year,
+    ) {
+    }
+
+    public function label(): string
+    {
+        return $this->name . ' ' . $this->year;
+    }
+}`]},
+  {t:'index.php requires the four files (interface first) and lists every item with `->label()`',c:c=>all(c,'ul.labels li').length===2&&/\$item->label\(\)/.test(src(c))&&src(c).indexOf('Labelled.php')>-1&&src(c).indexOf('Labelled.php')<src(c).indexOf('Dish.php'),help:['The loop does not care which class each item is.','`$items = [new Dish(…), new Wine(…)];` then a ul with `$item->label()` escaped.',`foreach ($items as $item) {
+    echo $item->label();
+}`,`$items = [
+    new Dish('Coq au vin', 21.5, [Allergen::Gluten, Allergen::Celery]),
+    new Wine('Sancerre', 2022),
+];
+…
+<ul class="labels">
+    <?php foreach ($items as $item): ?>
+        <li><?= htmlspecialchars($item->label()) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`allergenList()` maps each case to its label: `Allergens: Gluten · Celery`',c:c=>hasP(c,'Allergens: Gluten · Celery')&&/array_map\(/.test(src(c,F.dish)),help:['array_map runs a function on every item and returns the new list.',"`implode(' · ', array_map(fn (Allergen $allergen): string => $allergen->label(), $this->allergens))`",`array_map(fn (int $n): int => $n * 2, [1, 2])`,`public function allergenList(): string
+{
+    return implode(' · ', array_map(fn (Allergen $allergen): string => $allergen->label(), $this->allergens));
+}`]},
+  {t:"Form input meets the enum: `Allergen::tryFrom('nuts')` gives null → `Unknown allergen: nuts`",c:c=>hasP(c,'Unknown allergen: nuts')&&/Allergen::tryFrom\(/.test(src(c)),help:['tryFrom is the safe door for outside values.',"`$asked = Allergen::tryFrom('nuts');` then a ternary on `$asked === null`.",`$course = Course::tryFrom($_GET['course'] ?? '');`,`$asked = Allergen::tryFrom('nuts');
+…
+<p><?= $asked === null ? 'Unknown allergen: nuts' : htmlspecialchars($asked->label()) ?></p>`]},
+  {t:'The contract holds: both classes are `Labelled`, `Allergen::from(\'egg\')` labels as `Egg`, three cases',c:c=>pout(c,'contract')==='LL Egg 3',help:['Passle loads your four files and checks them from outside.','Check `implements Labelled` on both classes and the three cases.',"var_dump(new Wine('X', 2000) instanceof Labelled);",'Both classes implement Labelled; the enum has Gluten, Celery, Egg.']},
+  cleanStep(c=>[F.lab,F.alg,F.dish,F.wine].every(p=>pure(c,p))&&all(c,'ul.labels li').length===2)
+ ],
+ drills:[
+  {k:'pick',r:'pz39',q:'What does an interface method have?',o:['A body','Only a signature','A default value','A property'],a:1,h:'It ends with a semicolon.'},
+  {k:'gap',r:'pz39',q:'Keep the promise',pre:'final class Wine ',post:' Labelled',a:['implements'],h:'Not extends.'},
+  {k:'pick',r:'pz40',q:"`Allergen::from('nuts')` when there is no such case:",o:['null','ValueError is thrown','Allergen::Gluten','false'],a:1,h:'tryFrom gives null; from throws.'},
+  {k:'type',r:'pz40',q:"Declare the case `Egg` with value `'egg'`",ph:'case …;',test:/^case Egg = (['"])egg\1;$/,ans:"case Egg = 'egg';",h:"`case Egg = 'egg';`"},
+  {k:'fix',r:'pz40',q:'This compares a case with a string. Compare cases',bug:"$a === 'gluten'",test:/^\$a === Allergen::Gluten$/,ans:'$a === Allergen::Gluten',h:'Use the case itself.'},
+  {k:'pick',r:'pz40',q:'All cases of an enum:',o:['Allergen::all()','Allergen::cases()','Allergen::values()','count(Allergen)'],a:1,h:'cases().'}
+ ]},
+
+{id:'pantry-master',master:2,name:'Pantry with namespaces',dish:'The pantry',rules:['pz41','pz42'],
+ probes:{boundary:{over:{[IDX]:PHPHEAD+`
+require __DIR__ . '/../src/autoload.php';
+
+$shelf = new Bistro\\Pantry\\Shelf();
+try {
+    $shelf->jars = [];
+    echo 'open';
+} catch (Error $e) {
+    echo 'private';
+}
+echo ' ' . (class_exists('Bistro\\Pantry\\Stock') ? 'autoloaded' : 'missing');
+echo ' ' . (class_exists('Bistro\\Nope\\Thing') ? 'odd' : 'skipped');
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('The pantry',`    <h1>The pantry</h1>
+`),[F.shelf]:PHPHEAD,[F.stock]:PHPHEAD,[F.auto]:PHPHEAD},
+ solution:{[IDX]:PHPHEAD+`
+use Bistro\\Pantry\\Shelf;
+use Bistro\\Pantry\\Stock;
+
+require __DIR__ . '/../src/autoload.php';
+
+$shelf = new Shelf();
+foreach (['flour', 'butter', 'thyme', 'saffron'] as $jar) {
+    $shelf->add($jar);
+}
+
+$stock = new Stock();
+$stock->set('butter', 500);
+$stock->take('butter', 125);
+?>
+`+page('The pantry',`    <h1>The pantry</h1>
+    <p><?= $shelf->count() ?> jars on the shelf</p>
+    <p>Shelf: <?= htmlspecialchars(implode(', ', $shelf->jars())) ?></p>
+    <p>Butter left: <?= $stock->left('butter') ?> g</p>
+    <p>Class: <?= htmlspecialchars(Shelf::class) ?></p>
+`),[F.shelf]:SHELF_M3,[F.stock]:STOCK_M3,[F.auto]:AUTO_M3},
+ steps:[
+  {t:'`src/Pantry/Shelf.php` opens with `namespace Bistro\\Pantry;` right after the declare',c:c=>/^<\?php\s+declare\s*\([^)]*\)\s*;\s*namespace\s+Bistro\\Pantry\s*;/.test(raw(c,F.shelf)),help:['The namespace mirrors the folder: src/Pantry → Bistro\\Pantry.','Line after declare: `namespace Bistro\\Pantry;` with backslashes.',`namespace Bistro\\Kitchen;`,`<?php
+
+declare(strict_types=1);
+
+namespace Bistro\\Pantry;`]},
+  {t:'`Shelf` keeps a `private array $jars`, with `add()` (sorted), `jars()` and `count()`',c:c=>{const s=src(c,F.shelf);return /private\s+array\s+\$jars\s*=\s*\[\s*\]/.test(s)&&/function\s+add\s*\(\s*string\s+\$\w+\s*\)\s*:\s*void/.test(s)&&/function\s+jars\s*\(\s*\)\s*:\s*array/.test(s)&&/function\s+count\s*\(\s*\)\s*:\s*int/.test(s)&&/sort\(\s*\$this->jars\s*\)/.test(s)},help:['private: only the class itself may touch the list.','Three small methods. add() appends and sorts; jars() returns the list; count() counts it.',`final class Rack
+{
+    private array $items = [];
+
+    public function add(string $item): void
+    {
+        $this->items[] = $item;
+    }
+}`,`final class Shelf
+{
+    private array $jars = [];
+
+    public function add(string $jar): void
+    {
+        $this->jars[] = $jar;
+        sort($this->jars);
+    }
+
+    public function jars(): array
+    {
+        return $this->jars;
+    }
+
+    public function count(): int
+    {
+        return count($this->jars);
+    }
+}`]},
+  {t:'`src/Pantry/Stock.php`: same namespace, `private array $grams`, with `set()`, `take()` and `left()`',c:c=>{const s=src(c,F.stock);return /^<\?php\s+declare\s*\([^)]*\)\s*;\s*namespace\s+Bistro\\Pantry\s*;/.test(raw(c,F.stock))&&/private\s+array\s+\$grams/.test(s)&&['set','take','left'].every(m=>new RegExp('function\\s+'+m+'\\s*\\(').test(s))},help:['A keyed array inside: item => grams.','set stores, take subtracts, left reads with `?? 0`.',`public function left(string $item): int
+{
+    return $this->grams[$item] ?? 0;
+}`,`final class Stock
+{
+    private array $grams = [];
+
+    public function set(string $item, int $grams): void
+    {
+        $this->grams[$item] = $grams;
+    }
+
+    public function take(string $item, int $grams): void
+    {
+        $this->grams[$item] = $this->left($item) - $grams;
+    }
+
+    public function left(string $item): int
+    {
+        return $this->grams[$item] ?? 0;
+    }
+}`]},
+  {t:'`src/autoload.php`: `spl_autoload_register` maps `Bistro\\…` to `src/…`, with `is_file` before `require`',c:c=>{const s=src(c,F.auto);return /spl_autoload_register\(/.test(s)&&/str_starts_with\(/.test(s)&&/str_replace\(/.test(s)&&/is_file\(/.test(s)},help:['Strip the Bistro\\ prefix, turn backslashes into slashes, add .php.','Return early for other prefixes; only require when is_file says yes.',`spl_autoload_register(function (string $class): void {
+    echo $class;
+});`,`spl_autoload_register(function (string $class): void {
+    $prefix = 'Bistro\\\\';
+    if (!str_starts_with($class, $prefix)) {
+        return;
+    }
+
+    $path = __DIR__ . '/' . str_replace('\\\\', '/', substr($class, strlen($prefix))) . '.php';
+    if (is_file($path)) {
+        require $path;
+    }
+});`]},
+  {t:'index.php imports both classes with `use`',c:c=>/use\s+Bistro\\Pantry\\Shelf\s*;/.test(src(c))&&/use\s+Bistro\\Pantry\\Stock\s*;/.test(src(c)),help:['After declare, before the code: one use line per class.','`use Bistro\\Pantry\\Shelf;` and the same for Stock.',`use Bistro\\Kitchen\\Oven;`,`use Bistro\\Pantry\\Shelf;
+use Bistro\\Pantry\\Stock;`]},
+  {t:'index.php requires only the autoloader, never a class file',c:c=>/require(_once)?\s+__DIR__\s*\.\s*'\/\.\.\/src\/autoload\.php'/.test(src(c))&&!/require[^;]*Pantry/.test(src(c)),help:['The autoloader finds Shelf.php and Stock.php by itself.','One line: `require __DIR__ . \'/../src/autoload.php\';`.',`require __DIR__ . '/../vendor/autoload.php';`,`require __DIR__ . '/../src/autoload.php';`]},
+  {t:'`4 jars on the shelf` and `Shelf: butter, flour, saffron, thyme`',c:c=>hasP(c,'4 jars on the shelf')&&hasP(c,'Shelf: butter, flour, saffron, thyme'),help:['Add the four jars in a loop, then ask the shelf.','`$shelf->count()` and `implode(\', \', $shelf->jars())`, escaped.',`foreach (['a', 'b'] as $item) {
+    $rack->add($item);
+}`,`$shelf = new Shelf();
+foreach (['flour', 'butter', 'thyme', 'saffron'] as $jar) {
+    $shelf->add($jar);
+}
+…
+<p><?= $shelf->count() ?> jars on the shelf</p>
+<p>Shelf: <?= htmlspecialchars(implode(', ', $shelf->jars())) ?></p>`]},
+  {t:'`Butter left: 375 g` from a `Stock` object',c:c=>hasP(c,'Butter left: 375 g')&&/->take\(\s*'butter'\s*,\s*125\s*\)/.test(src(c)),help:['Set 500, take 125, ask what is left.','`$stock->set(\'butter\', 500);` `$stock->take(\'butter\', 125);` then `$stock->left(\'butter\')`.',`$stock->set('salt', 900);`,`$stock = new Stock();
+$stock->set('butter', 500);
+$stock->take('butter', 125);
+…
+<p>Butter left: <?= $stock->left('butter') ?> g</p>`]},
+  {t:'`Class: Bistro\\Pantry\\Shelf` with `Shelf::class`',c:c=>hasP(c,'Class: Bistro\\Pantry\\Shelf')&&/Shelf::class/.test(src(c)),help:['::class turns the short name back into the full one.','`<?= htmlspecialchars(Shelf::class) ?>`',`<?= htmlspecialchars(Oven::class) ?>`,`<p>Class: <?= htmlspecialchars(Shelf::class) ?></p>`]},
+  {t:'Boundaries hold: `$jars` is private, Stock autoloads, unknown classes are skipped safely',c:c=>pout(c,'boundary')==='private autoloaded skipped',help:['Passle loads only your autoloader and pokes at the classes.','private on $jars; is_file before require in the autoloader.','private array $jars = [];','private property + is_file guard.']},
+  cleanStep(c=>[F.shelf,F.stock,F.auto].every(p=>pure(c,p))&&hasP(c,'4 jars on the shelf'))
+ ],
+ drills:[
+  {k:'pick',r:'pz41',q:'Where does `namespace Bistro\\Pantry;` go?',o:['Before declare','Right after declare','Inside the class','At the end'],a:1,h:'declare is always first.'},
+  {k:'type',r:'pz41',q:'Import the class `Bistro\\Pantry\\Stock`',ph:'use …;',test:/^use Bistro\\Pantry\\Stock;$/,ans:'use Bistro\\Pantry\\Stock;',h:'`use Bistro\\Pantry\\Stock;`'},
+  {k:'pick',r:'pz41',q:'Which file holds `Bistro\\Pantry\\Shelf` under PSR-4?',o:['src/Shelf.php','src/Pantry/Shelf.php','src/Bistro/Pantry.php','Pantry/Shelf/index.php'],a:1,h:'Folder mirrors namespace, minus the prefix.'},
+  {k:'gap',r:'pz42',q:'Register the loader',pre:'',post:'(function (string $class): void { … });',a:['spl_autoload_register'],h:'Standard PHP Library.'},
+  {k:'fix',r:'pz42',q:'A typo in a class name now kills the page. Guard it',bug:'require $path;',test:/^if \(is_file\(\$path\)\) \{ require \$path; \}$/,ans:'if (is_file($path)) { require $path; }',h:'Check before requiring.'},
+  {k:'pick',r:'pz42',q:'What does Composer generate for this?',o:['index.php','vendor/autoload.php','.htaccess','composer.lock only'],a:1,h:'One require for everything.'}
+ ]},
+
+{id:'board-master',master:3,name:'Menu board with exceptions',dish:'Menu board',rules:['pz43','pz44'],
+ probes:{types:{over:{[IDX]:PHPHEAD+`
+`+RQ('src/OutOfStock.php','src/Pantry.php')+`
+$pantry = new Pantry(['butter' => 1]);
+try {
+    $pantry->take('nuts', 5);
+} catch (OutOfStock $e) {
+    echo $e->item . ' ' . ($e instanceof RuntimeException ? 'runtime' : 'other');
+}
+try {
+    $pantry->take('butter', 0);
+} catch (InvalidArgumentException $e) {
+    echo ' refused';
+}
+echo ' ' . $pantry->left('butter');
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Menu board',`    <h1>Menu board</h1>
+`),[F.oos]:PHPHEAD,[F.pan]:PHPHEAD},
+ solution:{[IDX]:PHPHEAD+`
+`+RQ('src/OutOfStock.php','src/Pantry.php')+`
+$pantry = new Pantry(['butter' => 375, 'flour' => 2000, 'saffron' => 2]);
+$orders = [['butter', 200], ['butter', 300], ['flour', -5], ['saffron', 1]];
+$log = [];
+$checked = 0;
+
+foreach ($orders as [$item, $grams]) {
+    try {
+        $pantry->take($item, $grams);
+        $log[] = sprintf('%s: took %d g', $item, $grams);
+    } catch (OutOfStock $e) {
+        $log[] = 'Short: ' . $e->getMessage();
+    } catch (InvalidArgumentException $e) {
+        $log[] = 'Refused: ' . $e->getMessage();
+    } finally {
+        $checked++;
+    }
+}
+?>
+`+page('Menu board',`    <h1>Menu board</h1>
+    <ul class="log">
+        <?php foreach ($log as $line): ?>
+            <li><?= htmlspecialchars($line) ?></li>
+        <?php endforeach; ?>
+    </ul>
+    <p><?= $checked ?> orders checked</p>
+    <p>Butter left: <?= $pantry->left('butter') ?> g</p>
+`),[F.oos]:OOS_M4,[F.pan]:PAN_M4},
+ steps:[
+  {t:'`src/OutOfStock.php`: `final class OutOfStock extends RuntimeException`',c:c=>/class\s+OutOfStock\s+extends\s+RuntimeException/.test(src(c,F.oos)),help:['Name the problem with its own class.','`final class OutOfStock extends RuntimeException { }`',`final class TableFull extends RuntimeException
+{
+}`,`final class OutOfStock extends RuntimeException
+{
+}`]},
+  {t:'Its constructor promotes `public readonly string $item`, takes `int $missing`, and passes a message to `parent::__construct`',c:c=>/public\s+readonly\s+string\s+\$item/.test(src(c,F.oos))&&/int\s+\$missing/.test(src(c,F.oos))&&/parent::__construct\(/.test(src(c,F.oos)),help:['The message reads: Not enough butter: 125 g short.',"`parent::__construct(sprintf('Not enough %s: %d g short', $item, $missing));`",`public function __construct(public readonly int $table)
+{
+    parent::__construct(sprintf('Table %d is full', $table));
+}`,`public function __construct(
+    public readonly string $item,
+    int $missing,
+) {
+    parent::__construct(sprintf('Not enough %s: %d g short', $item, $missing));
+}`]},
+  {t:'`src/Pantry.php`: a constructor with `private array $stock`, and `left(string $item): int`',c:c=>/private\s+array\s+\$stock/.test(src(c,F.pan))&&/function\s+left\s*\(\s*string\s+\$item\s*\)\s*:\s*int/.test(src(c,F.pan)),help:['Promotion works with private too.','`public function __construct(private array $stock)` and `left()` with `?? 0`.',`public function __construct(private array $seats)
+{
+}`,`public function __construct(private array $stock)
+{
+}
+
+public function left(string $item): int
+{
+    return $this->stock[$item] ?? 0;
+}`]},
+  {t:'`take()` throws `InvalidArgumentException` when grams are not positive',c:c=>/function\s+take\s*\(\s*string\s+\$item\s*,\s*int\s+\$grams\s*\)\s*:\s*void/.test(src(c,F.pan))&&/throw\s+new\s+InvalidArgumentException\(/.test(src(c,F.pan)),help:['Bad input to a method is a programming problem. Refuse it first.',"`if ($grams <= 0) { throw new InvalidArgumentException('Grams must be positive'); }`",`if ($guests < 1) {
+    throw new InvalidArgumentException('At least one guest');
+}`,`public function take(string $item, int $grams): void
+{
+    if ($grams <= 0) {
+        throw new InvalidArgumentException('Grams must be positive');
+    }
+}`]},
+  {t:'`take()` throws `OutOfStock` when there is not enough, and subtracts otherwise',c:c=>/throw\s+new\s+OutOfStock\(/.test(src(c,F.pan))&&hasP(c,'Butter left: 175 g'),help:['Compare with what is left; throw with the shortfall, or update the stock.','`if ($grams > $left) { throw new OutOfStock($item, $grams - $left); }` then `$this->stock[$item] = $left - $grams;`',`if ($wanted > $free) {
+    throw new TableFull($table);
+}`,`$left = $this->left($item);
+if ($grams > $left) {
+    throw new OutOfStock($item, $grams - $left);
+}
+
+$this->stock[$item] = $left - $grams;`]},
+  {t:'index.php: a `try` per order with two specific `catch` blocks, `OutOfStock` first',c:c=>/try\s*\{/.test(src(c))&&/catch\s*\(\s*OutOfStock\s+\$\w+\s*\)[\s\S]*catch\s*\(\s*InvalidArgumentException\s+\$\w+\s*\)/.test(src(c))&&!/catch\s*\(\s*(\\?Exception|\\?Throwable)\s/.test(src(c)),help:['Catch exactly what you can handle; nothing broader.','Inside the foreach: `try { … } catch (OutOfStock $e) { … } catch (InvalidArgumentException $e) { … }`.',`try {
+    $kitchen->book($table);
+} catch (TableFull $e) {
+    $log[] = $e->getMessage();
+}`,`foreach ($orders as [$item, $grams]) {
+    try {
+        $pantry->take($item, $grams);
+        $log[] = sprintf('%s: took %d g', $item, $grams);
+    } catch (OutOfStock $e) {
+        $log[] = 'Short: ' . $e->getMessage();
+    } catch (InvalidArgumentException $e) {
+        $log[] = 'Refused: ' . $e->getMessage();
+    }
+}`]},
+  {t:'A `<ul class="log">` with all four outcomes',c:c=>JSON.stringify(all(c,'ul.log li'))===JSON.stringify(['butter: took 200 g','Short: Not enough butter: 125 g short','Refused: Grams must be positive','saffron: took 1 g']),help:['The orders are butter 200, butter 300, flour -5, saffron 1.','Collect lines in `$log` and print them escaped in the ul.',`<ul class="log">
+    <?php foreach ($log as $line): ?>
+        <li><?= htmlspecialchars($line) ?></li>
+    <?php endforeach; ?>
+</ul>`,`$orders = [['butter', 200], ['butter', 300], ['flour', -5], ['saffron', 1]];
+…
+<ul class="log">
+    <?php foreach ($log as $line): ?>
+        <li><?= htmlspecialchars($line) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`finally` counts every attempt: `4 orders checked`',c:c=>hasP(c,'4 orders checked')&&/finally\s*\{[^}]*\$\w+\s*(\+\+|\+=\s*1)/.test(src(c)),help:['finally runs after success and after a catch.','Add `finally { $checked++; }` after the catch blocks.',`} finally {
+    $attempts++;
+}`,`} finally {
+    $checked++;
+}
+…
+<p><?= $checked ?> orders checked</p>`]},
+  {t:'From outside: an unknown item throws `OutOfStock` (a `RuntimeException`) and zero grams is refused',c:c=>pout(c,'types')==='nuts runtime refused 1',help:['Passle uses your two classes directly.','Unknown items count as 0 left, so any amount is short. Check `<= 0` before anything else.','$left = $this->stock[$item] ?? 0;','left() with ?? 0, and the grams check first in take().']},
+  cleanStep(c=>pure(c,F.oos)&&pure(c,F.pan)&&all(c,'ul.log li').length===4&&escaped(c,['$line']))
+ ],
+ drills:[
+  {k:'pick',r:'pz43',q:'Which catch runs for an `OutOfStock` if `catch (Exception $e)` comes first?',o:['catch (OutOfStock)','catch (Exception)','Both','Neither'],a:1,h:'The first match wins.'},
+  {k:'type',r:'pz43',q:"Throw an `InvalidArgumentException` with message `'Grams must be positive'`",ph:'throw …;',test:/^throw new InvalidArgumentException\((['"])Grams must be positive\1\);$/,ans:"throw new InvalidArgumentException('Grams must be positive');",h:"`throw new InvalidArgumentException('Grams must be positive');`"},
+  {k:'gap',r:'pz43',q:'Always run this',pre:'} ',post:' { $checked++; }',a:['finally'],h:'After try and catch.'},
+  {k:'pick',r:'pz44',q:'Best parent for "not enough stock while cooking"?',o:['LogicException','RuntimeException','Error','TypeError'],a:1,h:'It goes wrong while running.'},
+  {k:'gap',r:'pz44',q:'Pass the message up',pre:'',post:"::__construct($message);",a:['parent'],h:'The class you extend.'},
+  {k:'fix',r:'pz44',q:'Extend the right class',bug:'final class OutOfStock',test:/^final class OutOfStock extends RuntimeException$/,ans:'final class OutOfStock extends RuntimeException',h:'extends RuntimeException.'}
+ ]},
+
+{id:'router-master',master:5,name:'Kitchen with a router',dish:'Split kitchen',rules:['pz45','pz46'],serve:'php -S localhost:8000 -t public public/index.php',
+ request:{method:'GET',path:'/'},
+ probes:{about:{method:'GET',path:'/about'},missing:{method:'GET',path:'/wine-list'},query:{method:'GET',path:'/about',get:{ref:'menu'}},evil:{method:'GET',path:'/<script>alert(1)<\/script>'}},
+ ingredients:{[SRC_MENU]:`function menu(): array
+{
+    return [
+        ['name' => 'Onion soup', 'price' => 7.5],
+        ['name' => 'Coq au vin', 'price' => 21.5],
+        ['name' => 'Tarte tatin', 'price' => 9.0],
+    ];
+}
+`},
+ files:{[IDX]:PHPHEAD,[SRC_MENU]:MENU_M5,[TPL_MENU]:skel('',''),[F.tplAbout]:skel('',''),[F.tpl404]:skel('','')},
+ solution:{[IDX]:PHPHEAD+`
+require_once __DIR__ . '/../src/menu.php';
+
+$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+
+[$status, $template, $vars] = match ($path) {
+    '/' => [200, 'menu', ['title' => 'Menu board', 'dishes' => menu()]],
+    '/about' => [200, 'about', ['title' => 'About Roux']],
+    default => [404, 'not-found', ['title' => 'Not found', 'path' => $path]],
+};
+
+http_response_code($status);
+render($template, $vars);
+`,[SRC_MENU]:MENU_M5+RENDER_M5,[TPL_MENU]:T_MENU5,[F.tplAbout]:T_ABOUT5,[F.tpl404]:T_404},
+ steps:[
+  {t:"index.php reads the path: `parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH)`",c:c=>/parse_url\(\s*\$_SERVER\[\s*'REQUEST_URI'\s*\]\s*,\s*PHP_URL_PATH\s*\)/.test(src(c)),help:['The address may carry ?ref=… behind the path.','`$path = parse_url($_SERVER[\'REQUEST_URI\'], PHP_URL_PATH) ?: \'/\';`',`$path = parse_url('/x?y=1', PHP_URL_PATH);`,`$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';`]},
+  {t:"A `match ($path)` with `'/'`, `'/about'` and a `default` arm",c:c=>/match\s*\(\s*\$path\s*\)/.test(src(c))&&/'\/'\s*=>/.test(src(c))&&/'\/about'\s*=>/.test(src(c))&&/default\s*=>/.test(src(c)),help:['Each arm returns what the page needs: status, template, variables.',"`[$status, $template, $vars] = match ($path) { '/' => [200, 'menu', [...]], … };`",`[$a, $b] = match ($x) {
+    1 => ['one', 'uno'],
+    default => ['other', 'otro'],
+};`,`[$status, $template, $vars] = match ($path) {
+    '/' => [200, 'menu', ['title' => 'Menu board', 'dishes' => menu()]],
+    '/about' => [200, 'about', ['title' => 'About Roux']],
+    default => [404, 'not-found', ['title' => 'Not found', 'path' => $path]],
+};`]},
+  {t:'`src/menu.php`: `render(string $template, array $vars): void` extracts and requires the template',c:c=>/function\s+render\s*\(\s*string\s+\$template\s*,\s*array\s+\$vars\s*\)\s*:\s*void/.test(src(c,SRC_MENU))&&/extract\(\s*\$vars/.test(src(c,SRC_MENU))&&/require\s+__DIR__\s*\.\s*'\/\.\.\/templates\/'\s*\.\s*\$template\s*\.\s*'\.php'/.test(src(c,SRC_MENU)),help:['The template name comes from your own match, never from the address.','`extract($vars, EXTR_SKIP);` then require the template file.',`function show(string $page, array $data): void
+{
+    extract($data, EXTR_SKIP);
+    require __DIR__ . '/../pages/' . $page . '.php';
+}`,`function render(string $template, array $vars): void
+{
+    extract($vars, EXTR_SKIP);
+    require __DIR__ . '/../templates/' . $template . '.php';
+}`]},
+  {t:'Set the status with `http_response_code($status)`, then `render()`',c:c=>/http_response_code\(\s*\$status\s*\)\s*;\s*render\(/.test(src(c)),help:['Headers before output.','Two lines at the end of index.php.',`http_response_code(200);
+show('home', []);`,`http_response_code($status);
+render($template, $vars);`]},
+  {t:'`/` shows the menu: `<h1>Menu board</h1>` and three dishes',c:c=>txt(c,'h1')==='Menu board'&&lis(c).length===3&&(lis(c)[0]||'')==='Onion soup · €7.50',help:['templates/menu.php gets $title and $dishes.','Escaped title in title and h1, a foreach over $dishes.',`<h1><?= htmlspecialchars($title) ?></h1>`,`<h1><?= htmlspecialchars($title) ?></h1>
+<ul>
+    <?php foreach ($dishes as $dish): ?>
+        <li><?= htmlspecialchars($dish['name']) ?> · <?= price($dish['price']) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`/about` shows `<h1>About Roux</h1>` and `Roux runs the pass since 2019.`',c:c=>ptxt(c.p.about,'h1')==='About Roux'&&rows(c.p.about,'p').includes('Roux runs the pass since 2019.'),help:['templates/about.php is a separate page.','Skeleton with the escaped title, and the paragraph.',`<p>Opened in spring.</p>`,`<h1><?= htmlspecialchars($title) ?></h1>
+<p>Roux runs the pass since 2019.</p>
+<p><a href="/">Back to the menu</a></p>`]},
+  {t:'Unknown paths answer 404: `Error 404: nothing is served at /wine-list`',c:c=>ptxt(c.p.missing,'h1')==='Not found'&&ptxt(c.p.missing,'p.status')==='Error 404: nothing is served at /wine-list',help:['The default arm sets status 404 and passes the path along.','templates/not-found.php prints `http_response_code()` and the escaped `$path`.',`<p>Error <?= http_response_code() ?></p>`,`<p class="status">Error <?= http_response_code() ?>: nothing is served at <?= htmlspecialchars($path) ?></p>`]},
+  {t:'The query string does not confuse the router: `/about?ref=menu` is still About',c:c=>ptxt(c.p.query,'h1')==='About Roux',help:['Match on the path, not the whole REQUEST_URI.','parse_url with PHP_URL_PATH drops ?ref=menu.',`parse_url('/about?ref=menu', PHP_URL_PATH)`,"$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';"]},
+  {t:'A hostile path is printed as text on the 404 page',c:c=>!/<script>alert/.test(c.p.evil.out)&&ptxt(c.p.evil,'h1')==='Not found',help:['Passle asks for /<script>alert(1)<\/script>.','htmlspecialchars($path) in the not-found template.',`<?= htmlspecialchars($path) ?>`,'Escape $path in templates/not-found.php.']},
+  {t:'index.php holds no HTML; the templates only print',c:c=>!outside(raw(c)).trim()&&!/\?>/.test(raw(c))&&[TPL_MENU,F.tplAbout,F.tpl404].every(p=>!/\bfunction\s|\brequire|match\s*\(/.test(src(c,p))),help:['Routing and rendering live in PHP files; HTML in templates.','Move any logic out of the templates.',`render('menu', ['title' => 'Menu board']);`,'Keep only <?= ?>, foreach and endforeach in templates.']},
+  cleanStep(c=>allClean(c)&&pure(c,SRC_MENU)&&lis(c).length===3)
+ ],
+ drills:[
+  {k:'pick',r:'pz45',q:"`parse_url('/about?ref=menu', PHP_URL_PATH)` gives…",o:["'/about?ref=menu'","'/about'","'ref=menu'","['about']"],a:1,h:'Path only.'},
+  {k:'pick',r:'pz45',q:'Why not build the template path from the URL?',o:['It is slower','A visitor could include any file','PHP forbids it','Templates must be numbered'],a:1,h:'Path traversal.'},
+  {k:'gap',r:'pz45',q:'Turn array keys into variables',pre:'',post:'($vars, EXTR_SKIP);',a:['extract'],h:'The opposite of compact.'},
+  {k:'type',r:'pz46',q:'Answer "Not Found"',ph:'http_response_code(…);',test:/^http_response_code\(404\);$/,ans:'http_response_code(404);',h:'`http_response_code(404);`'},
+  {k:'pick',r:'pz46',q:'Status for "redirect after a successful POST"?',o:['200','301','303','404'],a:2,h:'See Other.'},
+  {k:'pick',r:'pz46',q:'Start PHP\'s server so every path reaches index.php:',o:['php -S localhost:8000','php -S localhost:8000 -t public public/index.php','php public/index.php','php -r router'],a:1,h:'The last argument is the router script.'}
+ ]},
+
+{id:'login-master',master:8,name:'Staff login',dish:'Table service',rules:['pz47','pz48'],
+ request:[{method:'GET',session:'staff'},{method:'POST',post:{action:'login',user:'roux',password:'mise-en-place',csrf:'{{csrf}}'},session:'staff'},{method:'GET',session:'staff'}],
+ probes:{wrong:[{method:'GET',session:'w1'},{method:'POST',post:{action:'login',user:'roux',password:'guess',csrf:'{{csrf}}'},session:'w1'}],forged:[{method:'GET',session:'f1'},{method:'POST',post:{action:'login',user:'roux',password:'mise-en-place',csrf:'forged'},session:'f1'},{method:'GET',session:'f1'}],out:[{method:'GET',session:'o1'},{method:'POST',post:{action:'login',user:'roux',password:'mise-en-place',csrf:'{{csrf}}'},session:'o1'},{method:'GET',session:'o1'},{method:'POST',post:{action:'logout',csrf:'{{csrf}}'},session:'o1'},{method:'GET',session:'o1'}]},
+ ingredients:{[F.auth]:USERS_M6},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Table service',`    <h1>Staff only</h1>
+`),[F.auth]:PHPHEAD+`
+`+USERS_M6},
+ solution:{[IDX]:PHPHEAD+`
+session_start();
+
+require_once __DIR__ . '/../src/auth.php';
+
+$error = null;
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $action = $_POST['action'] ?? '';
+
+    if (!validCsrf((string) ($_POST['csrf'] ?? ''))) {
+        $error = 'This form expired. Try again.';
+    } elseif ($action === 'login') {
+        if (login((string) ($_POST['user'] ?? ''), (string) ($_POST['password'] ?? ''))) {
+            header('Location: /', true, 303);
+
+            return;
+        }
+        $error = 'Wrong name or password.';
+    } elseif ($action === 'logout') {
+        logout();
+        header('Location: /', true, 303);
+
+        return;
+    }
+}
+
+$user = $_SESSION['user'] ?? null;
+$token = csrfToken();
+?>
+`+page('Table service',`    <h1>Staff only</h1>
+    <?php if ($error !== null): ?>
+        <p class="error"><?= htmlspecialchars($error) ?></p>
+    <?php endif; ?>
+    <?php if ($user !== null): ?>
+        <p class="welcome">Welcome back, <?= htmlspecialchars($user) ?></p>
+        <form method="post" action="/">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars($token) ?>">
+            <button name="action" value="logout">Log out</button>
+        </form>
+    <?php else: ?>
+        <form method="post" action="/" class="login">
+            <input type="hidden" name="csrf" value="<?= htmlspecialchars($token) ?>">
+            <input type="hidden" name="action" value="login">
+            <label for="user">Name</label>
+            <input id="user" name="user" autocomplete="username">
+            <label for="password">Password</label>
+            <input id="password" name="password" type="password" autocomplete="current-password">
+            <button type="submit">Log in</button>
+        </form>
+    <?php endif; ?>
+`),[F.auth]:AUTH_M6},
+ steps:[
+  {t:'`src/auth.php` stores only a hash: no plain password anywhere in your code',c:c=>/\$2y\$\d\d\$/.test(src(c,F.auth))&&!/mise-en-place/.test(Object.values(c.files).join('\n')),help:['The users() list holds a password_hash result, never the password.','Keep the $2y$… string you were given. Never type the password into a file.',`'mia' => '$2y$10$…'`,'Leave users() as given: only the hash.']},
+  {t:'`login(string $user, string $password): bool` checks with `password_verify`',c:c=>/function\s+login\s*\(\s*string\s+\$\w+\s*,\s*string\s+\$\w+\s*\)\s*:\s*bool/.test(src(c,F.auth))&&/password_verify\(/.test(src(c,F.auth)),help:['Look up the hash for that name, then let password_verify decide.',"`$hash = users()[$user] ?? null;` then `if ($hash === null || !password_verify($password, $hash)) { return false; }`",`if (!password_verify($typed, $stored)) {
+    return false;
+}`,`function login(string $user, string $password): bool
+{
+    $hash = users()[$user] ?? null;
+    if ($hash === null || !password_verify($password, $hash)) {
+        return false;
+    }
+
+    session_regenerate_id(true);
+    $_SESSION['user'] = $user;
+
+    return true;
+}`]},
+  {t:'A successful login gets a new session id: `session_regenerate_id(true)`',c:c=>/session_regenerate_id\(\s*true\s*\)/.test(src(c,F.auth))&&!!(c.all&&c.all[1]&&c.all[1].sid&&c.all[1].sid!=='staff'),help:['Passle watches the session cookie: it must change at login.','Call it inside login(), right before storing the user.','session_regenerate_id(true);',`session_regenerate_id(true);
+$_SESSION['user'] = $user;`]},
+  {t:'`csrfToken(): string` makes 32 hex characters with `random_bytes` and keeps them in the session',c:c=>/function\s+csrfToken\s*\(\s*\)\s*:\s*string/.test(src(c,F.auth))&&/bin2hex\(\s*random_bytes\(\s*16\s*\)\s*\)/.test(src(c,F.auth)),help:['Make it once per session, reuse it after.',"`$_SESSION['csrf'] ??= bin2hex(random_bytes(16));` then return it.",`$_SESSION['token'] ??= bin2hex(random_bytes(16));`,`function csrfToken(): string
+{
+    $_SESSION['csrf'] ??= bin2hex(random_bytes(16));
+
+    return $_SESSION['csrf'];
+}`]},
+  {t:'`validCsrf(string $token): bool` compares with `hash_equals`',c:c=>/function\s+validCsrf\s*\(\s*string\s+\$\w+\s*\)\s*:\s*bool/.test(src(c,F.auth))&&/hash_equals\(/.test(src(c,F.auth)),help:['Timing-safe comparison, known value first.',"`return hash_equals($_SESSION['csrf'] ?? '', $token);`",`return hash_equals($known, $given);`,`function validCsrf(string $token): bool
+{
+    return hash_equals($_SESSION['csrf'] ?? '', $token);
+}`]},
+  {t:'index.php: `session_start()` first, and every form carries `<input type="hidden" name="csrf">`',c:c=>/^<\?php\s+declare\s*\([^)]*\)\s*;\s*session_start\(\s*\)\s*;/.test(raw(c))&&(()=>{const f=c.all&&c.all[0]&&c.all[0].doc.querySelector('form input[type="hidden"][name="csrf"]');return !!f&&/^[0-9a-f]{32}$/.test(f.getAttribute('value')||'')})(),help:['The token goes out with the page and comes back with the form.','`$token = csrfToken();` before the HTML, then a hidden input in each form.',`<input type="hidden" name="csrf" value="<?= htmlspecialchars($token) ?>">`,`$token = csrfToken();
+…
+<input type="hidden" name="csrf" value="<?= htmlspecialchars($token) ?>">`]},
+  {t:'Logging in redirects with 303, and the next page says `Welcome back, roux`',c:c=>ptxt(c,'p.welcome')==='Welcome back, roux'&&c.all[1].out.trim()===''&&/header\(\s*'Location: \/'\s*,\s*true\s*,\s*303\s*\)/.test(src(c)),help:['Request 2 posts the login form. On success: redirect, nothing else.',"`if (login(…)) { header('Location: /', true, 303); return; }`, then show the welcome when `$_SESSION['user']` is set.",`if (login($name, $pass)) {
+    header('Location: /', true, 303);
+
+    return;
+}`,`} elseif ($action === 'login') {
+    if (login((string) ($_POST['user'] ?? ''), (string) ($_POST['password'] ?? ''))) {
+        header('Location: /', true, 303);
+
+        return;
+    }
+    $error = 'Wrong name or password.';
+}`]},
+  {t:'A wrong password shows `Wrong name or password.` and nothing else',c:c=>ptxt(c.p.wrong,'p.error')==='Wrong name or password.'&&!c.p.wrong.doc.querySelector('p.welcome'),help:['One vague message for any failure.','Set `$error` when login() returns false, print it escaped.',`<p class="error"><?= htmlspecialchars($error) ?></p>`,`$error = 'Wrong name or password.';`]},
+  {t:'A forged token is refused: `This form expired. Try again.`, and nobody is logged in',c:c=>ptxt(c.p.forged.all[1],'p.error')==='This form expired. Try again.'&&!c.p.forged.doc.querySelector('p.welcome'),help:['Check the token before anything else in the POST block.',"`if (!validCsrf((string) ($_POST['csrf'] ?? ''))) { $error = 'This form expired. Try again.'; } elseif …`",`if (!validCsrf($given)) {
+    $error = 'Form expired.';
+}`,`if (!validCsrf((string) ($_POST['csrf'] ?? ''))) {
+    $error = 'This form expired. Try again.';
+} elseif ($action === 'login') {
+    …
+}`]},
+  {t:'Logging out (with its own token) brings the login form back',c:c=>!!c.p.out.doc.querySelector('form.login')&&!c.p.out.doc.querySelector('p.welcome')&&/function\s+logout\s*\(\s*\)\s*:\s*void/.test(src(c,F.auth)),help:['The logout button lives in a form with the csrf field too.',"`logout()` empties `$_SESSION` and regenerates the id; then redirect.",`function logout(): void
+{
+    $_SESSION = [];
+    session_regenerate_id(true);
+}`,`} elseif ($action === 'logout') {
+    logout();
+    header('Location: /', true, 303);
+
+    return;
+}`]},
+  {t:'The password field is `type="password"` with `autocomplete="current-password"`',c:c=>!!(c.all&&c.all[0]&&c.all[0].doc.querySelector('form.login input#password[type="password"][autocomplete="current-password"]'))&&!!c.all[0].doc.querySelector('label[for="password"]'),help:['Hidden typing, and password managers know what to fill.','Label plus `<input id="password" name="password" type="password" autocomplete="current-password">`.',`<input id="pin" name="pin" type="password" autocomplete="one-time-code">`,`<label for="password">Password</label>
+<input id="password" name="password" type="password" autocomplete="current-password">`]},
+  cleanStep(c=>allClean(c)&&pure(c,F.auth)&&ptxt(c,'p.welcome')!==''&&escaped(c,['$user','$error','$token']))
+ ],
+ drills:[
+  {k:'pick',r:'pz47',q:'What do you store for a password?',o:['The password','md5 of it','password_hash() of it','base64 of it'],a:2,h:'Slow, salted, one-way.'},
+  {k:'type',r:'pz47',q:'Check `$typed` against `$hash`',ph:'password_verify(…)',test:/^password_verify\(\$typed, \$hash\)$/,ans:'password_verify($typed, $hash)',h:'`password_verify($typed, $hash)` — typed first.'},
+  {k:'pick',r:'pz47',q:'A login fails. What do you tell the guest?',o:['"Unknown user"','"Wrong password"','"Wrong name or password."','Nothing'],a:2,h:'Do not reveal which half.'},
+  {k:'gap',r:'pz48',q:'New id at login, old one deleted',pre:'session_regenerate_id(',post:');',a:['true'],h:'Delete the old session.'},
+  {k:'fix',r:'pz48',q:'Make this token comparison timing-safe',bug:"$_SESSION['csrf'] === $token",test:/^hash_equals\(\$_SESSION\[(['"])csrf\1\], \$token\)$/,ans:"hash_equals($_SESSION['csrf'], $token)",h:'hash_equals(known, given).'},
+  {k:'pick',r:'pz48',q:'Which makes a good CSRF token?',o:['time()','rand(1, 9999)','bin2hex(random_bytes(16))','session_id()'],a:2,h:'Cryptographically random.'}
+ ]},
+
+{id:'tests-master',master:4,name:'Tested helpers',dish:'Kitchen helpers',rules:['pz49','pz50'],
+ probes:{mutA:{over:{[F.kit]:KIT_OK(1,'$rate','<',true)}},mutB:{over:{[F.kit]:KIT_OK(2,'0.21','<',true)}},mutC:{over:{[F.kit]:KIT_OK(2,'$rate','<=',true)}},mutD:{over:{[F.kit]:KIT_OK(2,'$rate','<',false)}}},
+ ingredients:{[F.kit]:KIT_OK(2,'$rate','<=',false).replace(PHPHEAD+'\n','')},
+ files:{[IDX]:RUNNER,[F.kit]:KIT_OK(2,'$rate','<=',false),[F.exp]:EXP_SAME,[F.kt]:PHPHEAD+`
+return [
+    'price shows two decimals' => function (): void {
+        expectSame('€7.50', price(7.5));
+    },
+];
+`},
+ solution:{[IDX]:RUNNER,[F.kit]:KIT_OK(2,'$rate','<',true),[F.exp]:EXP_FULL,[F.kt]:KT_FULL},
+ steps:[
+  {t:'`tests/expect.php`: `expectSame(mixed $expected, mixed $actual): void` throws an `AssertionError` unless `===`',c:c=>/function\s+expectSame\s*\(\s*mixed\s+\$expected\s*,\s*mixed\s+\$actual\s*\)\s*:\s*void/.test(src(c,F.exp))&&/!==/.test(src(c,F.exp))&&/throw\s+new\s+AssertionError\(/.test(src(c,F.exp)),help:['A test helper does nothing when all is well and throws when it is not.','Compare with `!==`, throw an AssertionError with both values in the message.',`function expectTrue(bool $value): void
+{
+    if ($value !== true) {
+        throw new AssertionError('expected true');
+    }
+}`,`function expectSame(mixed $expected, mixed $actual): void
+{
+    if ($expected !== $actual) {
+        throw new AssertionError(sprintf('expected %s, got %s', var_export($expected, true), var_export($actual, true)));
+    }
+}`]},
+  {t:'`expectThrows(string $class, callable $action): void` passes only if that exception is thrown',c:c=>/function\s+expectThrows\s*\(\s*string\s+\$class\s*,\s*callable\s+\$action\s*\)\s*:\s*void/.test(src(c,F.exp))&&/instanceof\s+\$class/.test(src(c,F.exp)),help:['Run the action in try. Right type caught: return. Anything else: fail.','Catch Throwable, check `$e instanceof $class`, and throw an AssertionError when nothing was thrown.',`try {
+    $action();
+} catch (Throwable $e) {
+    return;
+}`,`function expectThrows(string $class, callable $action): void
+{
+    try {
+        $action();
+    } catch (Throwable $e) {
+        if ($e instanceof $class) {
+            return;
+        }
+
+        throw new AssertionError(sprintf('expected %s, got %s', $class, $e::class));
+    }
+
+    throw new AssertionError(sprintf('expected %s, nothing was thrown', $class));
+}`]},
+  {t:'`tests/kitchen_test.php` returns at least six named tests, one behaviour each',c:c=>/^\s*return\s*\[/m.test(src(c,F.kt))&&all(c,'ul.tests li').length>=6,help:['Cover price, VAT with and without a rate, and both sides of the cheap limit.',"Each entry: `'what it checks' => function (): void { expectSame(…); },`",`'VAT accepts another rate' => function (): void {
+    expectSame(6.57, withVat(6.2, rate: 0.06));
+},`,`return [
+    'price shows two decimals' => function (): void {
+        expectSame('€7.50', price(7.5));
+    },
+    'price refuses negative amounts' => function (): void {
+        expectThrows(InvalidArgumentException::class, fn () => price(-1.0));
+    },
+    'VAT uses 21% by default' => function (): void {
+        expectSame(7.5, withVat(6.2));
+    },
+    'VAT accepts another rate' => function (): void {
+        expectSame(6.57, withVat(6.2, rate: 0.06));
+    },
+    'a dish under the limit is cheap' => function (): void {
+        expectSame(true, isCheap(14.99));
+    },
+    'a dish at the limit is not cheap' => function (): void {
+        expectSame(false, isCheap(15.0));
+    },
+];`]},
+  {t:'Test the boundary: a dish at exactly `15.0` is not cheap',c:c=>/isCheap\(\s*15(\.0+)?\s*\)/.test(src(c,F.kt)),help:['Bugs live on the edge. Test the limit itself.',"`expectSame(false, isCheap(15.0));`",`expectSame(false, isFull(8));`,`'a dish at the limit is not cheap' => function (): void {
+    expectSame(false, isCheap(15.0));
+},`]},
+  {t:'Test the failure: `price(-1.0)` must throw `InvalidArgumentException`',c:c=>/expectThrows\(\s*InvalidArgumentException::class/.test(src(c,F.kt)),help:['A good test suite also checks what must not work.','`expectThrows(InvalidArgumentException::class, fn () => price(-1.0));`',`expectThrows(DivisionByZeroError::class, fn () => intdiv(1, 0));`,`'price refuses negative amounts' => function (): void {
+    expectThrows(InvalidArgumentException::class, fn () => price(-1.0));
+},`]},
+  {t:'Fix the first bug your tests find: `isCheap` must use `<`, not `<=`',c:c=>/return\s+\$price\s*<\s*\$limit\s*;/.test(src(c,F.kit)),help:['Red test: a dish at the limit counted as cheap.','In src/kitchen.php, change `<=` to `<`.','return $count < $max;','return $price < $limit;']},
+  {t:'Fix the second bug: `price()` throws `InvalidArgumentException` for negative amounts',c:c=>/throw\s+new\s+InvalidArgumentException\(/.test(src(c,F.kit)),help:['Red test: price(-1.0) printed €-1.00.','Guard at the top of price().',`if ($amount < 0) {
+    throw new InvalidArgumentException('Negative');
+}`,`if ($amount < 0) {
+    throw new InvalidArgumentException('Prices cannot be negative');
+}`]},
+  {t:'All green: `<p class="summary">6 passed, 0 failed</p>` (or more passed)',c:c=>/^(\d+) passed, 0 failed$/.test(ptxt(c,'p.summary'))&&+ptxt(c,'p.summary').split(' ')[0]>=6,help:['Every test passes once both bugs are fixed.','Read any red line in the list: it says expected and got.','✗ a dish at the limit is not cheap: expected false, got true','Fix src/kitchen.php until the list is all green.']},
+  {t:'Your tests catch a rounding bug and a VAT bug that Passle plants',c:c=>caught(c.p.mutA)&&caught(c.p.mutB),help:['Passle swaps in a kitchen.php that shows one decimal, and one that ignores the rate.','Make sure one test checks `€7.50` exactly and one uses `rate: 0.06`.',"expectSame('€7.50', price(7.5));","expectSame(6.57, withVat(6.2, rate: 0.06));"]},
+  {t:'Your tests catch a boundary bug and a missing guard that Passle plants',c:c=>caught(c.p.mutC)&&caught(c.p.mutD),help:['Passle puts the `<=` back, then removes the negative check.','Keep the 15.0 boundary test and the expectThrows test.','expectSame(false, isCheap(15.0));','expectThrows(InvalidArgumentException::class, fn () => price(-1.0));']},
+  cleanStep(c=>allClean(c)&&[F.kit,F.exp,F.kt].every(p=>pure(c,p))&&!/\becho\b|print\(|var_dump/.test(src(c,F.kt)))
+ ],
+ drills:[
+  {k:'pick',r:'pz49',q:'A test helper finds a mismatch. It should…',o:['echo a warning','return false','throw an AssertionError','exit'],a:2,h:'Make the runner notice.'},
+  {k:'gap',r:'pz49',q:'Compare strictly in expectSame',pre:'if ($expected ',post:' $actual) {',a:['!=='],h:'Not identical.'},
+  {k:'type',r:'pz49',q:"Assert that `price(7.5)` is `'€7.50'`",ph:'expectSame(…);',test:/^expectSame\((['"])€7\.50\1, price\(7\.5\)\);$/,ans:"expectSame('€7.50', price(7.5));",h:'Expected first, actual second.'},
+  {k:'pick',r:'pz50',q:'Best pair of values to test a `< 15` limit?',o:['5 and 10','14.99 and 15.0','0 and 100','15 and 20'],a:1,h:'Just inside and exactly on.'},
+  {k:'pick',r:'pz50',q:'A test turns red after a change you meant. You…',o:['delete the test','fix the code, or update the test if the behaviour really changed','ignore it','catch the error'],a:1,h:'Red means look closer.'},
+  {k:'fix',r:'pz50',q:'This test can never fail. Make it check the result',bug:'isCheap(15.0);',test:/^expectSame\(false, isCheap\(15\.0\)\);$/,ans:'expectSame(false, isCheap(15.0));',h:'Wrap it in expectSame.'}
+ ]}
+);
+
+MORE.push(
+ {k:'pick',r:'pz37',q:'Inside a method, `$this` is…',o:['the class','the object the method runs on','the parent','the file'],a:1,h:'This object.'},
+ {k:'pick',r:'pz39',q:'Can one class implement two interfaces?',o:['No','Yes, comma-separated','Only with extends','Only abstract classes'],a:1,h:'implements A, B.'},
+ {k:'pick',r:'pz43',q:'An exception is never caught. What happens?',o:['It is ignored','Fatal error: Uncaught …','The function returns null','A warning'],a:1,h:'The script stops.'},
+ {k:'pick',r:'pz47',q:'Which is NOT safe for passwords?',o:['password_hash','password_verify','md5','PASSWORD_DEFAULT'],a:2,h:'Fast hashes are crackable.'}
+);
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
@@ -2838,7 +4453,7 @@ function shim(req){
   let s='<?php\nerror_reporting(E_ALL);\nini_set(\'display_errors\', \'1\');\nini_set(\'html_errors\', \'0\');\n'
    +'$_SERVER[\'REQUEST_METHOD\'] = '+phpStr(m)+';\n$_SERVER[\'REQUEST_URI\'] = '+phpStr((req.path||'/')+qs)+';\n$_SERVER[\'SCRIPT_NAME\'] = \'/index.php\';\n$_SERVER[\'DOCUMENT_ROOT\'] = \'/app/public\';\n'
    +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n';
-  if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\n';
+  if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\nregister_shutdown_function(function (): void {\n    if (session_id() !== \'\') {\n        echo "\\x1ePASSLE-SID:" . session_id() . "\\x1e";\n    }\n});\n';
   return s+'chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
 }
 const CLEAN="<?php\n$rm = function (string $d) use (&$rm): void {\n    if (!is_dir($d)) {\n        return;\n    }\n    foreach (scandir($d) as $f) {\n        if ($f === '.' || $f === '..') {\n            continue;\n        }\n        $p = $d . '/' . $f;\n        is_dir($p) ? $rm($p) : unlink($p);\n    }\n};\n$rm('/app/data');\n$rm('/app/.sessions');\n";
@@ -2874,16 +4489,24 @@ const Engine={st:'off',php:null,mod:null,q:Promise.resolve(),written:[],out:'',e
     ['/app/public','/app/src','/app/templates','/app/data','/app/tests','/app/.sessions'].forEach(d=>this.mkdirp(d));
     await this.exec(CLEAN);
     Object.keys(files).forEach(p=>{const full='/app/'+p;this.mkdirp(full.slice(0,full.lastIndexOf('/')));FS.writeFile(full,String(files[p]));this.written.push(full)});
-    const all=[];
-    for(const rq of reqList(req))all.push(await this.exec(shim(rq)));
+    const all=[],jar={};
+    for(const rq0 of reqList(req)){
+      const rq=clone(rq0),prev=all[all.length-1];
+      if(rq.session&&jar[rq.session])rq.session=jar[rq.session];
+      if(rq.post)Object.keys(rq.post).forEach(k=>{const m=/^\{\{(\w+)\}\}$/.exec(rq.post[k]);if(m){const el=prev&&prev.doc&&prev.doc.querySelector('input[name="'+m[1]+'"]');rq.post[k]=el?el.getAttribute('value')||'':''}});
+      const r=await this.exec(shim(rq));
+      if(rq0.session&&r.sid)jar[rq0.session]=r.sid;
+      all.push(r);
+    }
     const last=all[all.length-1];last.all=all;return last;
   }
 };
 function mkResult(out,err){
-  out=String(out||'');err=String(err||'');
+  out=String(out||'');err=String(err||'');let sid=null;
+  out=out.replace(/\x1ePASSLE-SID:([^\x1e]*)\x1e/g,(m,s)=>{sid=s;return ''});
   const lines=(out+'\n'+err).split('\n').map(l=>l.replace(/^PHP /,'').trim()).filter(l=>BAD_RE.test(l));
   const bad=lines.length>0;
-  return {out,err,bad,errs:[...new Set(lines)],doc:new DOMParser().parseFromString(out,'text/html')};
+  return {out,err,bad,sid,errs:[...new Set(lines)],doc:new DOMParser().parseFromString(out,'text/html')};
 }
 function engBadge(){const b=$('eng');b.className=Engine.st==='ready'?'ready':(Engine.st==='fail'?'fail':'');b.textContent={off:'stove cold',warm:'lighting stove',ready:'stove hot',fail:'no stove'}[Engine.st];if(Engine.st==='fail')comms('PHP engine did not load. Open Passle over http(s) with an internet connection.')}
 
@@ -3027,13 +4650,13 @@ const curFiles=()=>{const tg=T(),k=modeKey(tg);if(!S.code[k])S.code[k]=starter(t
 const stepsFor=tg=>S.mode==='master'?masterSteps(tg).concat(tg.steps.filter(s=>!s.learnOnly)):tg.steps;
 async function check(tg,files){
   const r=await Engine.run(files,tg.request);
-  const p={};for(const k of Object.keys(tg.probes||{}))p[k]=await Engine.run(files,tg.probes[k]);
+  const p={};for(const k of Object.keys(tg.probes||{})){const sp=tg.probes[k];p[k]=await Engine.run(sp&&sp.over?Object.assign({},files,sp.over):files,sp&&sp.over?(sp.req||{}):sp)}
   const c={files,out:r.out,err:r.err,bad:r.bad,doc:r.doc,all:r.all,p};
   const st=stepsFor(tg);
   return {r,c,st,res:st.map(s=>{try{return !!s.c(c)}catch(e){return false}})};
 }
 function reqText(tg){
-  return reqList(tg.request).map((q,i)=>{const g=q.get&&Object.keys(q.get).length?'?'+new URLSearchParams(q.get):'';let s=(i+1)+'. '+(q.method||'GET')+' '+(q.path||'/')+g;if(q.post&&Object.keys(q.post).length)s+='\n   body: '+Object.entries(q.post).map(([k,v])=>k+'='+v).join('&');if(q.session)s+='\n   Cookie: PHPSESSID='+q.session;return s}).join('\n');
+  return reqList(tg.request).map((q,i)=>{const g=q.get&&Object.keys(q.get).length?'?'+new URLSearchParams(q.get):'';let s=(i+1)+'. '+(q.method||'GET')+' '+(q.path||'/')+g;if(q.post&&Object.keys(q.post).length)s+='\n   body: '+Object.entries(q.post).map(([k,v])=>k+'='+(/^\{\{\w+\}\}$/.test(v)?'(token from the page)':v)).join('&');if(q.session)s+='\n   Cookie: PHPSESSID='+q.session;return s}).join('\n');
 }
 let curSteps=[],file=IDX,lastPass=null,lv=0,curStep=-2,runSeq=0,runT,lastRes=null;
 function renderTarget(){
@@ -3166,7 +4789,7 @@ function renderKitchen(){
       fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(tg&&unlocked(i)?'awaiting your plate':'not on the menu yet')+'</span>';
     }
     const mst=tg&&S.mastered[tg.id];
-    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+(mst?'<span class="mst">by heart</span>':'');
+    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst?'':' off')+'">by heart</span>';
     el.appendChild(fr);el.appendChild(cap);box.appendChild(el);
   });
   $('kcnt').textContent=served+' of '+PLATE_NAMES.length+' plated';
@@ -3183,7 +4806,7 @@ function renderRules(){
     el.innerHTML='<div class="ph"><b>Rule '+r.n+'</b><span class="sp">'+esc(r.cat)+'</span></div>';
     const body=document.createElement('div');
     if(ok){body.className='rbody';body.innerHTML='<h3>'+esc(r.title)+'</h3><div class="syn">'+r.syn+'</div><p>'+esc(r.note)+'</p><pre>'+hlPHP(r.ex)+'</pre>'}
-    else{body.className='lockmsg';body.textContent='Locked · learn it in School for Plate '+ROM[r.t]}
+    else{const rt=TARGETS[r.t];body.className='lockmsg';body.textContent='Locked · learn it in School for '+(rt&&isMaster(rt)?'the master plate '+rt.name:'Plate '+ROM[r.t])}
     el.appendChild(body);
     const cx=document.createElement('div');cx.className='cx';cx.innerHTML='<span>Codex · Passle rulebook</span><a href="codex.html">Open Codex</a>';el.appendChild(cx);
     v.appendChild(el);
@@ -3199,12 +4822,13 @@ function makeZip(files){const enc=new TextEncoder(),parts=[],cen=[];let off=0;
     off+=30+nm.length+d.length});
   const size=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,size,true);e.setUint32(16,off,true);
   return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/zip'})}
-const DIRS=['public/','src/','templates/','data/'];
+const DIRS=['public/','src/','templates/','data/','tests/'];
 function projectFiles(){
   const tg=T(),fs=curFiles(),enc=new TextEncoder(),root='rouxs-bistro/';
   const list=DIRS.map(d=>({name:root+d,data:new Uint8Array(0)}));
   Object.keys(fs).sort().forEach(p=>list.push({name:root+p,data:enc.encode(fs[p])}));
-  list.push({name:root+'README.md',data:enc.encode("# Roux's Bistro · "+tg.name+"\n\nRun it on your own machine:\n\n```\ncd rouxs-bistro\nphp -S localhost:8000 -t public\n```\n\nThen open http://localhost:8000 in your browser. Ctrl+C stops the server.\n\n- public/ is the only folder the browser can reach\n- src/ holds PHP logic\n- templates/ holds HTML with small bits of PHP\n- data/ holds files and databases your code writes\n")});
+  const serve=tg.serve||'php -S localhost:8000 -t public';
+  list.push({name:root+'README.md',data:enc.encode("# Roux's Bistro · "+tg.name+"\n\nRun it on your own machine:\n\n```\ncd rouxs-bistro\n"+serve+"\n```\n\nThen open http://localhost:8000 in your browser. Ctrl+C stops the server.\n\n- public/ is the only folder the browser can reach\n- src/ holds PHP logic\n- templates/ holds HTML with small bits of PHP\n- data/ holds files and databases your code writes\n")});
   return list;
 }
 function takeHome(){dl(URL.createObjectURL(makeZip(projectFiles())),'passle-'+T().id+'.zip');sfx.blip();comms('Downloaded. Unzip, open the folder in VS Code, run php -S localhost:8000 -t public.')}
