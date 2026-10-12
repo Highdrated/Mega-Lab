@@ -199,8 +199,24 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 @keyframes fresh{50%{border-color:var(--acc);box-shadow:0 0 0 4px var(--acc2)}}
 #junie{flex:none;object-fit:contain}
 #cmsg{overflow:hidden;text-overflow:ellipsis}
-.plot .art{flex:1.15;min-height:0;background:center/contain no-repeat;border-bottom:1px solid var(--line)}
-.plot .art.dim{filter:grayscale(.85) brightness(.5)}
+.plot .scene{flex:1;min-height:0;position:relative;overflow:hidden;background:radial-gradient(ellipse 45% 55% at 31% 52%,color-mix(in srgb,var(--acc) 16%,transparent),transparent 70%),linear-gradient(to bottom,transparent 55%,color-mix(in srgb,var(--panel2) 85%,#000) 100%)}
+.plot .art{position:absolute;left:2%;width:58%;top:6%;bottom:10%;background:center bottom/contain no-repeat;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
+.plot .ground{position:absolute;left:8%;width:46%;bottom:6%;height:12%;border-radius:50%;background:radial-gradient(closest-side,rgba(0,0,0,.45),transparent)}
+.plot .plaque{position:absolute;right:5%;top:50%;width:44%;max-height:84%;aspect-ratio:4/3;transform:translateY(-50%) rotate(1.2deg);cursor:zoom-in;transition:transform .25s}
+.plot .plaque:hover{transform:translateY(calc(-50% - 3px)) rotate(0deg)}
+.plot .pframe{position:absolute;inset:0;display:flex;box-sizing:border-box;transition:box-shadow .25s,background .25s}
+#v-village:not(.custom) .plot .pframe{background:#f2e9d6;border-radius:6px;border:1px solid color-mix(in srgb,var(--acc) 55%,transparent);box-shadow:0 0 0 4px color-mix(in srgb,var(--panel) 80%,transparent),0 14px 30px rgba(0,0,0,.5),0 0 40px color-mix(in srgb,var(--acc) 18%,transparent)}
+#v-village:not(.custom) .plot .plaque:hover .pframe{box-shadow:0 0 0 4px color-mix(in srgb,var(--panel) 80%,transparent),0 18px 36px rgba(0,0,0,.55),0 0 50px color-mix(in srgb,var(--acc) 30%,transparent)}
+.plot .pview{position:relative;flex:1;overflow:hidden;border-radius:inherit;background:#f2e9d6}
+.plot .pview iframe{position:absolute;left:0;top:0;width:800px;height:600px;border:0;transform-origin:0 0;transform:scale(var(--s,.35));pointer-events:none;background:#f2e9d6}
+#v-village:not(.custom) .plot .pview::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 22px rgba(40,28,10,.35)}
+.plot .plaque.empty{border-radius:6px;cursor:default;display:flex;align-items:center;justify-content:center;text-align:center;padding:0 12px;line-height:1.5;font-size:12px;letter-spacing:.06em;color:var(--mute);background:color-mix(in srgb,var(--panel2) 70%,transparent);border:1px dashed var(--line);box-shadow:none}
+.plot .plaque.empty{transform:translateY(-50%)}.plot .plaque.empty:hover{transform:translateY(-50%)}
+.viewer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(6,10,8,.72);backdrop-filter:blur(3px)}
+.viewer.on{display:flex}
+.viewer .vbox{width:min(1000px,92vw);height:min(680px,86vh);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.viewer iframe{flex:1;border:0;background:#f2e9d6}
+.plot .art.dim{filter:grayscale(.85) brightness(.5) drop-shadow(0 10px 14px rgba(0,0,0,.45))}
 .plot .cap{flex:none;height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mute);background:var(--panel2)}
 .idle{display:flex;gap:12px;align-items:flex-start}
 .idle img{width:84px;height:84px;flex:none}
@@ -847,6 +863,55 @@ MORE.push(
 
 PLOTS.forEach((p,i)=>{if(i>=6)p.t=i});
 
+Object.assign(RULES,{
+ r27:{n:'27',title:'Shadows that lift a box',syn:'box-shadow: <span class="v">0 10px 20px</span> rgba(0, 0, 0, 0.5);',note:'box-shadow draws a soft shadow: right offset, down offset, blur, colour. rgba is a colour you can see through: the last number is how solid, from 0 to 1.',ex:'<style>\n  .card { background-color: #f2e9d6; padding: 16px; box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); }\n</style>\n<div class="card">Floating card</div>',cat:'Box',t:12},
+ r28:{n:'28',title:'Gradients: soft colour fades',syn:'background-image: <span class="k">linear-gradient</span>(<span class="v">#f2e9d6</span>, <span class="v">#e3d3b0</span>);',note:'A gradient fades one colour into another. It counts as an image, so it goes in background-image. Two colours run from top to bottom.',ex:'<style>\n  .g { background-image: linear-gradient(#f2e9d6, #c9a227); padding: 20px; }\n</style>\n<div class="g">Parchment to gold</div>',cat:'Colour and font',t:12}
+});
+Object.assign(NEWLESSONS,{
+ r27:{why:'Shadows make a box look lifted off the page, which is what makes things blend instead of looking pasted on. box-shadow takes four parts: how far right, how far down, how blurry, and the colour. 0 10px 20px means straight down, 10px, nicely blurred. For the colour use rgba: red, green and blue from 0 to 255, plus alpha, how solid it is, from 0 invisible to 1 fully solid. A half see-through black shadow takes on whatever lies behind it.',parts:[['0','right offset'],['10px','down offset'],['20px','blur'],['rgba(0, 0, 0, 0.5)','black, half see-through']],mistakes:['Forgetting the commas inside rgba(…).','An alpha of 50 instead of 0.5: it runs from 0 to 1.','A blur of 0: the shadow becomes a hard second box.'],ex2:'<style>\n  .a { padding: 12px; box-shadow: 4px 4px 0 #2f4f3a; }\n  .b { padding: 12px; margin-top: 16px; box-shadow: 0 0 20px rgba(201, 162, 39, 0.8); }\n</style>\n<div class="a">Hard offset shadow</div>\n<div class="b">Golden glow</div>'},
+ r28:{why:'Flat colours can look like plastic. A gradient fades from one colour to the next, like lamplight falling on paper. linear-gradient() builds the fade, and it goes in background-image because the browser treats it as a picture. With two colours it runs top to bottom. Put a direction first, like to right, to turn it sideways. Colours close to each other look soft and natural.',parts:[['background-image','gradients are images'],['linear-gradient(…)','a straight fade'],['#f2e9d6, #e3d3b0','from this colour to that one'],['to right,','optional direction, first']],mistakes:['A gradient in background-color. It is an image, so background-image.','Forgetting the comma between the colours.','Two colours far apart: it looks like a rainbow, not light.'],ex2:'<style>\n  .side { background-image: linear-gradient(to right, #2f4f3a, #5b3a6b); color: #f2e9d6; padding: 20px; }\n</style>\n<div class="side">Moss to plum, left to right</div>'}
+});
+TARGETS.push({id:'noticeboard',name:'Village notice boards',plot:null,rules:['r27','r28'],
+ starter:skel('',shell('Notice Board','')),css:HEADCSS,
+ solution:skel('Notice Board',shell('Notice Board','    <div class="plaque">\n      <h2>Moonlight Market</h2>\n      <p>Open from dusk. Bring your own basket.</p>\n    </div>\n')),
+ solCss:HEADCSS+'\n.plaque {\n  max-width: 320px;\n  padding: 16px;\n  background-color: #f2e9d6;\n  background-image: linear-gradient(#f2e9d6, #e3d3b0);\n  border: 1px solid #c9a227;\n  border-radius: 6px;\n  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);\n}\n\n.plaque:hover {\n  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.6);\n}\n',
+ steps:[
+  stTitle('notice','Notice Board'),
+  {t:'In `<main>`: a `<div class="plaque">` holding an `<h2>` and a `<p>`',c:(d,w,code,raw)=>!!q(raw,'main div.plaque h2')&&!!q(raw,'main div.plaque p'),help:['This is a test notice. Every notice board in your village will wear the CSS you write for it.','A div with class plaque, with a heading and a paragraph inside.','<div class="card">\n  <h2>Title</h2>\n  <p>Text</p>\n</div>','<div class="plaque">\n  <h2>Moonlight Market</h2>\n  <p>Open from dusk. Bring your own basket.</p>\n</div>']},
+  {t:'In `styles.css`: `.plaque` gets `max-width: 320px` and `16px` padding',c:(d,w)=>{const p=q(d,'.plaque');return cs(w,p,'maxWidth')==='320px'&&cs(w,p,'paddingTop')==='16px'},help:['A notice is small, with a margin of paper around the words.','A `.plaque` rule with max-width and padding. In the village, the padding becomes a paper mat around your page.','.card {\n  max-width: 300px;\n  padding: 10px;\n}','.plaque {\n  max-width: 320px;\n  padding: 16px;\n}']},
+  {t:'Parchment: `background-color: #f2e9d6`',c:(d,w)=>cs(w,q(d,'.plaque'),'backgroundColor')===rgb('#f2e9d6'),help:['The paper colour.','Add `background-color` to .plaque.','`background-color: #c9a227;`','  background-color: #f2e9d6;']},
+  {t:'A thin gold edge: `1px solid #c9a227` with `6px` rounded corners',c:(d,w)=>{const p=q(d,'.plaque');return cs(w,p,'borderTopWidth')==='1px'&&cs(w,p,'borderTopColor')===rgb('#c9a227')&&cs(w,p,'borderTopLeftRadius')==='6px'},help:['Border plus border-radius.','Add both to .plaque.','`border: 2px solid teal; border-radius: 8px;`','  border: 1px solid #c9a227;\n  border-radius: 6px;']},
+  {t:'Lift it off the wall: `box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5)`',c:(d,w)=>{const b=cs(w,q(d,'.plaque'),'boxShadow');return b.includes('rgba(0, 0, 0, 0.5)')&&b.includes('0px 10px 20px')},help:['This is what makes it blend instead of looking pasted on.','`box-shadow`: right, down, blur, then an rgba colour.','`box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);`','  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5);']},
+  {t:'Lamplight on paper: `background-image: linear-gradient(#f2e9d6, #e3d3b0)`',c:(d,w,code,raw,css)=>/#e3d3b0/i.test(css||'')&&cs(w,q(d,'.plaque'),'backgroundImage').includes('linear-gradient'),help:['A fade from light parchment to slightly darker parchment.','`background-image` with `linear-gradient(colour, colour)`.','`background-image: linear-gradient(#2f4f3a, #1f3327);`','  background-image: linear-gradient(#f2e9d6, #e3d3b0);']},
+  {t:'On hover, a deeper shadow: `.plaque:hover` with `0 14px 28px rgba(0, 0, 0, 0.6)`',c:(d,w,code,raw,css)=>ruleHas(css,/^\.plaque:hover$/i,/box-shadow\s*:\s*0\s+14px\s+28px\s+rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0?\.6\s*\)/i),help:['A hover rule, like the cat café button. Hover over the preview to test it.','A new rule `.plaque:hover` with a bigger box-shadow.','.btn:hover {\n  background-color: #2f4f3a;\n}','.plaque:hover {\n  box-shadow: 0 14px 28px rgba(0, 0, 0, 0.6);\n}']}
+ ],
+ drills:[
+  {k:'pick',r:'r27',q:'In `box-shadow: 0 10px 20px black`, what is `20px`?',o:['Right offset','Down offset','Blur','Size of the box'],a:2,h:'Order: right, down, blur, colour.'},
+  {k:'type',r:'r27',q:'Give .card a 0 10px 20px shadow in rgba(0, 0, 0, 0.5)',ph:'.card { … }',test:/^\.card\s*\{\s*box-shadow\s*:\s*0\s+10px\s+20px\s+rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0?\.5\s*\)\s*;?\s*\}$/i,ans:'.card { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); }',prev:v=>'<style>.card{background:#f2e9d6;padding:14px;margin:10px}'+v+'</style><div class="card">Card</div>',h:'`.card { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); }`'},
+  {k:'fix',r:'r27',q:'Fix the bug: the shadow is far too dark',bug:'.card { box-shadow: 0 10px 20px rgba(0, 0, 0, 50); }',test:/^\.card\s*\{\s*box-shadow\s*:\s*0\s+10px\s+20px\s+rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*0?\.5\s*\)\s*;?\s*\}$/i,ans:'.card { box-shadow: 0 10px 20px rgba(0, 0, 0, 0.5); }',h:'Alpha runs from 0 to 1. Half is 0.5.'},
+  {k:'pick',r:'r28',q:'Where does `linear-gradient(…)` go?',o:['background-color','background-image','color','border'],a:1,h:'A gradient counts as an image.'},
+  {k:'type',r:'r28',q:'Give .g a gradient from #f2e9d6 to #c9a227',ph:'.g { … }',test:/^\.g\s*\{\s*background-image\s*:\s*linear-gradient\(\s*#f2e9d6\s*,\s*#c9a227\s*\)\s*;?\s*\}$/i,ans:'.g { background-image: linear-gradient(#f2e9d6, #c9a227); }',prev:v=>'<style>.g{padding:20px}'+v+'</style><div class="g">Gradient</div>',h:'`.g { background-image: linear-gradient(#f2e9d6, #c9a227); }`'},
+  {k:'fix',r:'r28',q:'Fix the bug: the gradient does not show',bug:'.g { background-color: linear-gradient(#f2e9d6, #c9a227); }',test:/^\.g\s*\{\s*background-image\s*:\s*linear-gradient\(\s*#f2e9d6\s*,\s*#c9a227\s*\)\s*;?\s*\}$/i,ans:'.g { background-image: linear-gradient(#f2e9d6, #c9a227); }',prev:v=>'<style>.g{padding:20px}'+v+'</style><div class="g">Gradient?</div>',h:'Gradients are images: background-image.'}
+ ],
+ review:[{k:'type',r:'r22',rv:1,q:'Review: make .plaque turn #e3d3b0 on hover',ph:'.plaque:hover { … }',test:/^\.plaque:hover\s*\{\s*background-color\s*:\s*#e3d3b0\s*;?\s*\}$/i,ans:'.plaque:hover { background-color: #e3d3b0; }',h:'`.plaque:hover { background-color: #e3d3b0; }`'}]});
+MORE.push(
+ {k:'gap',r:'r27',q:'Add the blur',pre:'box-shadow: 0 10px ',post:' rgba(0, 0, 0, 0.5);',a:['10px','15px','20px','25px','30px'],h:'A size in px, like 20px.'},
+ {k:'pick',r:'r27',q:'In rgba, an alpha of 1 means…',o:['Invisible','Fully solid','Half see-through','Blurry'],a:1,h:'1 is the maximum.'},
+ {k:'pick',r:'r27',q:'Which one is half see-through black?',o:['rgba(0, 0, 0, 0.5)','rgb(0, 0, 0)','#000000','rgba(0, 0, 0, 5)'],a:0,h:'Alpha between 0 and 1.'},
+ {k:'gap',r:'r28',q:'Fade from left to right',pre:'linear-gradient(',post:' #2f4f3a, #5b3a6b)',a:['to right,'],h:'Two words and a comma: the direction.'},
+ {k:'pick',r:'r28',q:'Why pick two colours close to each other?',o:['It looks soft and natural','It loads faster','CSS requires it','It makes text bigger'],a:0,h:'Think lamplight, not rainbow.'},
+ {k:'type',r:'r28',q:'Give header a gradient from #2f4f3a to #1f3327',ph:'header { … }',test:/^header\s*\{\s*background-image\s*:\s*linear-gradient\(\s*#2f4f3a\s*,\s*#1f3327\s*\)\s*;?\s*\}$/i,ans:'header { background-image: linear-gradient(#2f4f3a, #1f3327); }',prev:v=>'<style>header{color:#f2e9d6;padding:10px}'+v+'</style><header><h1>Header</h1></header>',h:'`header { background-image: linear-gradient(#2f4f3a, #1f3327); }`'}
+);
+const FRAME_OK=/^(background(-color|-image)?|border(-[a-z-]+)?|box-shadow|padding(-[a-z]+)?|outline(-[a-z]+)?|filter)$/i;
+function userFrameCss(){
+  const i=TARGETS.findIndex(t=>t.id==='noticeboard');if(i<0||!S.done[i])return '';
+  const css=String(S.builtCss[i]!=null?S.builtCss[i]:'').replace(/\/\*[\s\S]*?\*\//g,'');let out='';
+  css.split('}').forEach(ch=>{const k=ch.indexOf('{');if(k<0)return;const sel=ch.slice(0,k).trim().replace(/\s+/g,' ').toLowerCase();
+    const map={'.plaque':'#v-village.custom .plot .pframe','.plaque:hover':'#v-village.custom .plot .plaque:hover .pframe'}[sel];if(!map)return;
+    const decl=ch.slice(k+1).split(';').map(x=>x.trim()).filter(x=>{const c=x.indexOf(':');return c>0&&FRAME_OK.test(x.slice(0,c).trim())&&!/[<>{}]/.test(x)}).join(';');
+    if(decl)out+=map+'{'+decl+'}'});
+  return out}
+
 const KEY='hexle.v1';
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 let S=Object.assign({theme:'grove',t:0,stage:'school',drill:0,code:{},css:{},builtCss:{},done:{},built:{},learned:[],flag:[],sfx:true,vol:70,keys:false,ft:0},load()||{});
@@ -1123,19 +1188,27 @@ function paint(){
 function syncScroll(){const ed=$('ed');$('hl').scrollTop=ed.scrollTop;$('hl').scrollLeft=ed.scrollLeft;$('gut').scrollTop=ed.scrollTop}
 
 let freshPlot=null;
+function fitPlaques(){requestAnimationFrame(()=>document.querySelectorAll('.plot .pview').forEach(p=>p.style.setProperty('--s',p.clientWidth/800)))}
+window.addEventListener('resize',()=>{if(S.stage==='village')fitPlaques()});
+function openViewer(name,code,css){let v=$('viewer');if(!v){v=document.createElement('div');v.id='viewer';v.className='viewer';v.innerHTML='<div class="vbox"><div class="ph"><b id="vname"></b><span class="sp"><button id="vclose">Close · Esc</button></span></div><iframe id="vframe" title="Your build"></iframe></div>';document.body.appendChild(v);v.onclick=e=>{if(e.target===v)v.classList.remove('on')};$('vclose').onclick=()=>{sfx.click();v.classList.remove('on')};document.addEventListener('keydown',e=>{if(e.key==='Escape')v.classList.remove('on')})}
+  $('vname').textContent=name+' · your build';$('vframe').srcdoc=wrap(code,css);v.classList.add('on')}
 function renderVillage(){
-  const v=$('v-village');v.innerHTML='';
+  const v=$('v-village');v.innerHTML='';const uc=userFrameCss();v.classList.toggle('custom',!!uc);let us=$('userframe');if(!us){us=document.createElement('style');us.id='userframe';document.head.appendChild(us)}us.textContent=uc;
   PLOTS.forEach((p,i)=>{
     const built=p.t!=null&&S.built[p.t]!=null,next=p.t!=null&&!built;
     const el=document.createElement('div');el.className='panel plot'+(freshPlot===i?' fresh':'');
     const st=built?'<span class="st b">BUILT</span>':(next?'<span class="st n">TARGET '+(p.t+1)+'</span>':'<span class="st s">V2</span>');
     el.innerHTML='<div class="ph"><b>Plot '+String(i+1).padStart(2,'0')+' · '+esc(p.name)+'</b><span class="sp">'+st+'</span></div>';
-    const a=document.createElement('div');a.className='art'+(built?'':' dim');a.style.backgroundImage='url('+art(p.art)+')';el.appendChild(a);
-    if(built){const fr=document.createElement('div');fr.className='fr';const f=document.createElement('iframe');f.title=p.name;f.srcdoc=wrap(S.built[p.t],S.builtCss[p.t]);fr.appendChild(f);el.appendChild(fr)}
-    else{const c=document.createElement('div');c.className='cap';c.textContent=next?'Finish target '+(p.t+1)+' to build this':'Arrives in a later version';el.appendChild(c)}
+    const sc=document.createElement('div');sc.className='scene';
+    const a=document.createElement('div');a.className='art'+(built?'':' dim');a.style.backgroundImage='url('+art(p.art)+')';
+    const g=document.createElement('div');g.className='ground';sc.appendChild(g);sc.appendChild(a);
+    const pl=document.createElement('div');
+    if(built){pl.className='plaque';pl.title='Open your build';const fr=document.createElement('div');fr.className='pframe';const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=p.name;f.tabIndex=-1;f.srcdoc=wrap(S.built[p.t],S.builtCss[p.t]);pv.appendChild(f);fr.appendChild(pv);pl.appendChild(fr);pl.onclick=()=>{sfx.blip();openViewer(p.name,S.built[p.t],S.builtCss[p.t])}}
+    else{pl.className='plaque empty';pl.textContent=next?'Finish target '+(p.t+1)+' to build this':'Arrives in a later version'}
+    sc.appendChild(pl);el.appendChild(sc);
     v.appendChild(el);
   });
-  freshPlot=null;
+  freshPlot=null;fitPlaques();
   const nx=TARGETS.findIndex((t,i)=>!S.done[i]);
   if(nx!==-1&&nx!==S.t&&S.done[S.t]){S.t=nx;S.drill=0;S.les=0;save();comms('Next target unlocked: '+TARGETS[nx].name+'. School first.');setTimeout(render,0)}
 }
