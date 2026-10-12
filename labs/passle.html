@@ -4519,8 +4519,10 @@ function shim(req){
   let s='<?php\nerror_reporting(E_ALL);\nini_set(\'display_errors\', \'1\');\nini_set(\'html_errors\', \'0\');\n'
    +'$_SERVER[\'REQUEST_METHOD\'] = '+phpStr(m)+';\n$_SERVER[\'REQUEST_URI\'] = '+phpStr((req.path||'/')+qs)+';\n$_SERVER[\'SCRIPT_NAME\'] = \'/index.php\';\n$_SERVER[\'DOCUMENT_ROOT\'] = \'/app/public\';\n'
    +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n';
-  if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\nregister_shutdown_function(function (): void {\n    if (session_id() !== \'\') {\n        echo "\\x1ePASSLE-SID:" . session_id() . "\\x1e";\n    }\n});\n';
-  return s+'chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
+  if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\n';
+  s+='chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
+  if(req.session)s+='if (session_status() === PHP_SESSION_ACTIVE) {\n    session_write_close();\n}\necho "\\x1ePASSLE-SID:" . session_id() . "\\x1e";\n';
+  return s;
 }
 const CLEAN="<?php\n$rm = function (string $d) use (&$rm): void {\n    if (!is_dir($d)) {\n        return;\n    }\n    foreach (scandir($d) as $f) {\n        if ($f === '.' || $f === '..') {\n            continue;\n        }\n        $p = $d . '/' . $f;\n        is_dir($p) ? $rm($p) : unlink($p);\n    }\n};\n$rm('/app/data');\n$rm('/app/.sessions');\n";
 const Engine={st:'off',php:null,mod:null,q:Promise.resolve(),written:[],out:'',err:'',
