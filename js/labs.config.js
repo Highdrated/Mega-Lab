@@ -110,7 +110,7 @@ const LABS_CONFIG = [
     name: "Passle",
     tag: "Code",
     sub: "php",
-    path: "labs/passle-home.html",
+    path: "labs/passle.html",
     ring: "ring-outer",
     angle: 240,
     glyph: '<path d="M3 11a5 5 0 0 1 10 0"/><path d="M2 11h12"/><path d="M8 6V5"/>'

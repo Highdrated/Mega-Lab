@@ -2,1198 +2,1271 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PASSLE</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Passle · PHP</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,800&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
-  :root {
-    --bg: #f4efe4;
-    --panel: #fbf8f1;
-    --panel2: #efe7d6;
-    --text: #2b2119;
-    --dim: #7c6f5c;
-    --line: #e2d8c4;
-    --brass: #9c6b1f;
-    --brass-dim: #c9a45e;
-    --herb: #4f7a33;
-    --chili: #b23b2e;
-    --ember: #b5561d;
-    --mono: "JetBrains Mono", "Consolas", ui-monospace, monospace;
-    --serif: "Spectral", Georgia, serif;
-    --disp: "Fraunces", Georgia, serif;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  html { -webkit-text-size-adjust: 100%; }
-  body {
-    background: linear-gradient(#f7f2e8,#f1ebdf);
-    background-attachment: fixed;
-    color: var(--text);
-    font-family: var(--serif);
-    font-size: 18px;
-    line-height: 1.65;
-    min-height: 100vh;
-  }
-  a { color: var(--brass); }
+:root{
+  --bg:#f4efe4;--panel:#fbf8f1;--panel2:#f2ebdc;--field:#fffdf8;--line:#e2d8c4;--line2:#d3c4a6;
+  --ink:#2b2119;--ink2:#5a4a3a;--mute:#8d7d67;
+  --brass:#9c6b1f;--brass2:#c9a45e;--brass3:#f3e7cf;--gold:rgba(176,132,52,.55);
+  --herb:#4f7a33;--herb2:#e6eedb;--chili:#b23b2e;--chili2:#f8e4df;--ember:#b5561d;--ember2:#f9ebda;--plum:#7a4a6b;--plum2:#f1e6ec;
+  --disp:"Fraunces",Georgia,serif;--serif:"Spectral",Georgia,serif;--mono:"JetBrains Mono",Consolas,ui-monospace,monospace;
+  --gap:12px;--r:6px;--sel:rgba(201,164,94,.32);
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--serif);color:var(--ink);background:linear-gradient(#f7f2e8,#efe7d6);display:grid;grid-template-rows:58px minmax(0,1fr);overflow:hidden;font-size:15px}
+button,select,input,textarea{font:inherit;color:inherit}
+button{cursor:pointer;border:1px solid var(--line);background:var(--field);border-radius:var(--r);height:34px;padding:0 13px;font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);transition:background .15s,border-color .15s,color .15s}
+button:hover:not(:disabled){border-color:var(--brass2);color:var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+button.pri{background:var(--brass);border-color:var(--brass);color:#fffdf8}
+button.pri:hover:not(:disabled){background:#86591a;border-color:#86591a;color:#fffdf8}
+code{font-family:var(--mono);font-size:.86em;background:var(--brass3);border:1px solid var(--line);border-radius:4px;padding:0 5px;color:#4a3519}
+#bar{display:grid;grid-template-columns:auto auto auto minmax(0,1fr) auto auto;align-items:center;gap:14px;padding:0 16px;background:rgba(251,248,241,.94);border-bottom:1px solid var(--line);position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:10px}
+.brand b{font-family:var(--disp);font-weight:800;font-size:22px;letter-spacing:.12em;color:var(--brass);line-height:1}
+.brand small{display:block;font-family:var(--mono);font-size:9px;letter-spacing:.24em;color:var(--mute);margin-top:4px}
+.stages{display:flex;align-items:center;gap:3px}
+.stages i{color:var(--line2);font-style:normal;font-size:12px}
+.stg{display:flex;align-items:center;gap:6px;border-color:transparent;background:transparent;padding:0 10px}
+.stg.on,.stg.on:hover:not(:disabled){background:var(--ink);border-color:var(--ink);color:#fbf3e3}
+.stg .ck{color:var(--herb);display:none}
+.stg.done .ck{display:inline}.stg.on .ck{color:#bcd59e}
+#tsel{height:34px;border:1px solid var(--line);border-radius:var(--r);background:var(--field);padding:0 8px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;color:var(--ink2);cursor:pointer;max-width:270px;text-overflow:ellipsis}
+#comms{display:flex;align-items:center;gap:8px;font-size:13px;font-style:italic;color:var(--ink2);white-space:nowrap;overflow:hidden;min-width:0}
+#comms img{width:30px;height:30px;object-fit:contain;flex:none}
+#cmsg{overflow:hidden;text-overflow:ellipsis}
+#comms.flash #cmsg{color:var(--brass)}
+#eng{font-family:var(--mono);font-style:normal;font-size:10px;letter-spacing:.1em;text-transform:uppercase;padding:3px 7px;border-radius:999px;border:1px solid var(--line);color:var(--mute);flex:none}
+#eng.ready{color:var(--herb);border-color:#b7cba1}#eng.fail{color:var(--chili);border-color:#e3b2a9}
+.snd{display:flex;align-items:center;gap:8px}
+.snd input[type=range]{width:70px;accent-color:var(--brass)}
+.snd button.off{color:var(--mute);text-decoration:line-through}
+#notes.has{color:var(--ember);border-color:var(--ember)}
+main{min-height:0;padding:var(--gap)}
+.view{display:none;height:100%;gap:var(--gap);min-height:0}
+.view.on{display:grid}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-height:0;min-width:0;position:relative;overflow:hidden}
+.ph{display:flex;align-items:center;gap:10px;height:40px;flex:none;padding:0 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.ph b{color:var(--ink);font-weight:600;border-left:3px solid var(--brass2);padding-left:8px;white-space:nowrap}
+.ph .sp{margin-left:auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:flex;align-items:center;gap:8px}
+iframe{border:0;width:100%;height:100%;display:block;background:#fff}
+.fr{flex:1;min-height:0;position:relative;background:#fff}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:999px;overflow:hidden}
+.seg button{height:24px;border:0;border-radius:0;padding:0 10px;font-size:9.5px;background:transparent}
+.seg button.on{background:var(--brass3);color:var(--brass)}
+.rawout{position:absolute;inset:0;margin:0;padding:12px 14px;overflow:auto;font-family:var(--mono);font-size:12.5px;line-height:1.6;white-space:pre-wrap;word-break:break-word;background:#fffdf8;color:#3a2f22;display:none}
+.fr.raw .rawout{display:block}.fr.raw iframe{visibility:hidden}
+.errbox{display:none;flex:none;max-height:38%;overflow:auto;border-top:1px solid #e9c1b9;background:var(--chili2);color:var(--chili);font-family:var(--mono);font-size:12px;line-height:1.55;padding:9px 14px;white-space:pre-wrap;word-break:break-word}
+.errbox.on{display:block}
+.reqline{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:none;color:var(--plum);background:var(--plum2);border-radius:4px;padding:2px 7px}
 
-  /* ---- the pass (top bar) ---- */
-  .pass {
-    position: sticky; top: 0; z-index: 20;
-    display: flex; align-items: center; gap: 18px;
-    padding: 12px 22px;
-    background: rgba(246,241,231,0.9);
-    backdrop-filter: blur(8px);
-    border-bottom: 1px solid var(--line);
-  }
-  .mark {
-    font-family: var(--disp);
-    font-weight: 900;
-    font-size: 22px;
-    letter-spacing: 2px;
-    color: var(--brass);
-    line-height: 1;
-  }
-  .mark small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 3px; color: var(--dim); font-weight: 400; margin-top: 3px; }
-  .tabs { display: flex; gap: 6px; flex: 1; overflow-x: auto; scrollbar-width: none; }
-  .tabs::-webkit-scrollbar { display: none; }
-  .tab {
-    font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
-    color: var(--dim); background: none; border: 1px solid transparent;
-    padding: 7px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap;
-    transition: color .18s, border-color .18s, background .18s;
-  }
-  .tab:hover { color: var(--text); }
-  .tab.on { color: var(--brass); border-color: var(--brass-dim); background: rgba(203,154,81,0.08); }
-  .tab .dot { color: var(--herb); }
-  .progress { font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: nowrap; }
-  .progress b { color: var(--brass); }
-  .rdbtn {
-    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
-    color: var(--dim); background: none; border: 1px solid var(--line);
-    padding: 7px 11px; border-radius: 7px; cursor: pointer; white-space: nowrap;
-    transition: color .18s, border-color .18s;
-  }
-  .rdbtn:hover { color: var(--brass); border-color: var(--brass-dim); }
+#v-school{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.drill{display:flex;flex-direction:column;gap:14px;padding:18px 20px;flex:1;min-height:0;overflow:auto}
+.lhead{display:flex;align-items:flex-end;gap:14px}
+.lhead>div{flex:1;min-width:0}
+.lhead img{width:86px;height:86px;object-fit:contain;flex:none}
+.dk{font-family:var(--mono);font-weight:600;font-size:10.5px;letter-spacing:.16em;color:var(--ember);text-transform:uppercase}
+.lt{margin:4px 0 0;font-family:var(--disp);font-size:30px;font-weight:600;letter-spacing:.005em;line-height:1.15}
+.why{margin:0;font-size:16.5px;line-height:1.7;color:var(--ink2);max-width:72ch}
+.sec{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:12px 14px}
+.sec small{display:block;font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.16em;color:var(--brass);text-transform:uppercase;margin-bottom:8px}
+.sec.warn{border-left:3px solid var(--ember)}.sec.warn small{color:var(--ember)}
+.sec ul{margin:0;padding-left:18px;color:var(--ink2);font-size:14.5px;line-height:1.7}
+.parts{display:grid;grid-template-columns:auto 1fr;gap:7px 14px;align-items:center;font-size:14.5px;color:var(--ink2)}
+.parts code{justify-self:start}
+.syn{font-family:var(--mono);font-size:12.5px;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:7px 10px;line-height:1.6}
+.syn .k{color:var(--brass);font-weight:600}.syn .v{color:var(--plum)}
+.sec.play{display:flex;flex-direction:column}
+.sec.play textarea{min-height:150px;width:100%;resize:vertical;border:1px solid var(--line);border-radius:4px;background:var(--field);color:var(--ink);font-family:var(--mono);font-size:13px;line-height:1.6;padding:10px 12px;outline:0;tab-size:4}
+.sec.play textarea:focus{border-color:var(--brass2)}
+.drow{display:flex;gap:10px;margin-top:auto}
+.drow .pri{flex:1}
+.sside{flex:1;min-height:0;display:flex;flex-direction:column}
+.exb{flex:1;min-height:0;display:grid;grid-template-rows:auto minmax(0,1fr);border-bottom:1px solid var(--line)}
+.exb:last-child{border-bottom:0}
+.exb .eh{display:flex;align-items:center;justify-content:space-between;padding:8px 14px;font-family:var(--mono);font-weight:600;font-size:10px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase;border-bottom:1px solid var(--line)}
+.exb .eb{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);min-height:0}
+.exb pre.code{margin:0;padding:12px 14px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow:auto;background:var(--field);border-right:1px solid var(--line)}
+.res{position:relative;min-height:0;background:#fff;overflow:hidden}
+.res pre{position:absolute;inset:0;margin:0;padding:12px 14px;font-family:var(--mono);font-size:12px;line-height:1.6;white-space:pre-wrap;overflow:auto;color:#3a2f22;background:#fffdf8}
+.res pre.err{color:var(--chili);background:var(--chili2)}
+.res .wait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--mute);font-style:italic;font-size:13px}
+.rstrip{display:flex;align-items:center;gap:10px;flex-wrap:wrap;border:1px solid var(--line);border-left:3px solid var(--plum);border-radius:var(--r);background:var(--panel2);padding:8px 12px}
+.rstrip b{font-size:14.5px;font-family:var(--disp);font-weight:600}
+.rstrip .syn{padding:3px 8px}
+.rstrip button{margin-left:auto;height:28px;padding:0 10px}
+.tagn{font-family:var(--mono);font-weight:600;font-size:9.5px;letter-spacing:.14em;color:var(--plum);background:var(--plum2);border-radius:4px;padding:3px 7px}
+.dmain{flex:1;display:grid;grid-template-columns:minmax(0,1fr) 128px;gap:18px;align-content:center;min-height:0}
+.dbody{display:flex;flex-direction:column;gap:16px;min-width:0}
+.droux{align-self:end;justify-self:center;width:128px;height:128px;object-fit:contain}
+.dq{font-size:22px;font-family:var(--disp);font-weight:500;line-height:1.35}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts button{height:auto;min-height:64px;text-transform:none;letter-spacing:0;font-family:var(--mono);font-weight:400;font-size:13px;text-align:left;padding:10px 12px;background:var(--panel2);color:var(--ink)}
+.opts button.bad{border-color:var(--chili);background:var(--chili2)}
+.opts button.good{border-color:var(--herb);background:var(--herb2)}
+.gap{display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-family:var(--mono);font-size:16px;background:var(--panel2);border:1px solid var(--line);border-radius:var(--r);padding:16px;white-space:pre}
+.gap input{width:150px;height:36px;border:1px solid var(--line2);border-radius:4px;background:var(--field);padding:0 8px;font-family:var(--mono);font-size:15px}
+.line{width:100%;height:50px;border:1px solid var(--line2);border-radius:var(--r);background:var(--field);padding:0 12px;font-family:var(--mono);font-size:15px}
+.gap input:focus,.line:focus{outline:2px solid var(--brass3);border-color:var(--brass2)}
+.fb{min-height:22px;font-size:14px}
+.fb.err{color:var(--chili)}.fb.ok{color:var(--herb)}
+.pips{display:flex;gap:5px}
+.pips span{width:20px;height:6px;border-radius:3px;background:var(--line)}
+.pips span.ok{background:var(--herb)}.pips span.now{background:var(--ember)}.pips span.rv{outline:1px dashed var(--plum);outline-offset:1px}
+.donecard{display:flex;flex-direction:column;gap:14px;padding:6px 2px;flex:1}
+.donecard h2{margin:0;font-family:var(--disp);font-size:26px;font-weight:600}
+.donecard ul{margin:0;padding-left:18px;color:var(--ink2);line-height:1.8}
+.donecard .lhead img{width:120px;height:120px}
+.win{border:1px solid #c7d8b3;border-left:3px solid var(--herb);background:var(--herb2);border-radius:var(--r);padding:12px;font-size:14px;line-height:1.5}
+.hint0{color:var(--mute);font-size:14px;line-height:1.55}
 
-  /* ---- layout ---- */
-  .wrap { display: grid; grid-template-columns: 232px 1fr; gap: 0; }
-  .rail {
-    border-right: 1px solid var(--line);
-    padding: 24px 14px;
-    position: sticky; top: 59px; align-self: start;
-    height: calc(100vh - 59px); overflow-y: auto;
-  }
-  .rail h4 { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--dim); font-weight: 400; margin: 0 8px 12px; }
-  .station {
-    display: block; width: 100%; text-align: left;
-    background: none; border: none; cursor: pointer;
-    color: var(--dim); padding: 11px 12px; border-radius: 8px;
-    font-family: var(--serif); font-size: 16px; line-height: 1.3;
-    border-left: 2px solid transparent;
-    transition: color .18s, background .18s, border-color .18s;
-  }
-  .station:hover { color: var(--text); background: rgba(0,0,0,0.02); }
-  .station.on { color: var(--text); background: rgba(203,154,81,0.07); border-left-color: var(--brass); }
-  .station .no { font-family: var(--mono); font-size: 11px; color: var(--brass); margin-right: 9px; }
-  .station .tick { float: right; color: var(--herb); font-family: var(--mono); font-size: 12px; }
+#v-target{grid-template-columns:330px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1.15fr)}
+#v-target .left{grid-row:1/3}
+#v-target .edp{grid-column:2/4}
+.steps{list-style:none;margin:0;padding:4px 0;flex:0 1 auto;overflow:auto;min-height:120px}
+.steps li{display:flex;gap:10px;align-items:flex-start;padding:6px 14px;font-size:13.5px;line-height:1.45;border-left:3px solid transparent}
+.steps .n{flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10.5px;font-weight:600;background:var(--panel2);border:1px solid var(--line);color:var(--mute)}
+.steps li.ok{color:var(--ink2)}
+.steps li.ok .n{background:var(--herb);border-color:var(--herb);color:#fff}
+.steps li.now{background:var(--panel2);border-left-color:var(--ember)}
+.steps li.now .n{background:var(--field);border-color:var(--ember);color:var(--ember)}
+.steps li.pulse{animation:pulse .5s 2}
+@keyframes pulse{50%{background:var(--ember2)}}
+.help{border-top:1px solid var(--line);display:flex;flex-direction:column;flex:1 0 210px;min-height:210px}
+.ladder{flex:1;min-height:0;overflow:auto;padding:12px 14px;display:flex;flex-direction:column;gap:8px}
+.lv{border:1px solid var(--line);border-left:3px solid var(--brass2);border-radius:var(--r);padding:9px 11px;font-size:14px;line-height:1.5;background:var(--panel2)}
+.lv small{display:block;font-family:var(--mono);font-weight:600;font-size:9.5px;letter-spacing:.14em;color:var(--brass);text-transform:uppercase;margin-bottom:2px}
+.lv.ans{border-color:#ebcfae;border-left-color:var(--ember);background:var(--ember2)}
+.lv.ans small{color:var(--ember)}
+.lv pre{margin:6px 0 0;font-family:var(--mono);font-size:12px;white-space:pre-wrap}
+.idle{display:flex;gap:12px;align-items:center}
+.idle img{width:92px;height:92px;object-fit:contain;flex:none}
+.hfoot{display:flex;gap:8px;padding:12px 14px;border-top:1px solid var(--line);flex:none}
+.hfoot button{flex:1}
+.meter{display:flex;align-items:center;gap:8px}
+.meter .bar{width:100px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:var(--ember);transition:width .3s}
+.meter.full .bar i{background:var(--herb)}
+.meter b{min-width:36px;text-align:right;border:0!important;padding:0!important}
+#ovl{position:absolute;inset:0;opacity:0;pointer-events:none}
+.slide{display:flex;align-items:center;gap:10px;padding:7px 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:10px;color:var(--mute);letter-spacing:.1em;text-transform:uppercase;flex:none}
+.slide input{flex:1;accent-color:var(--brass)}
+#v-target .edp{position:relative}
+.tabs{display:flex;gap:4px;min-width:0;overflow-x:auto;scrollbar-width:none}
+.tab{height:28px;padding:0 10px;text-transform:none;letter-spacing:0;font-weight:400;font-size:12px;flex:none}
+.tab.on,.tab.on:hover:not(:disabled){border-color:var(--brass2);background:var(--brass3);color:var(--ink)}
+.ed{flex:1;min-height:0;display:grid;grid-template-columns:48px minmax(0,1fr);background:var(--field);font-family:var(--mono);font-size:13.5px;line-height:22px}
+.gut{margin:0;padding:12px 10px 12px 0;text-align:right;color:#b9aa90;background:var(--panel2);border-right:1px solid var(--line);overflow:hidden;user-select:none;white-space:pre}
+.code{position:relative;min-height:0;overflow:hidden}
+.code pre,.code textarea{position:absolute;inset:0;margin:0;padding:12px 14px;font:inherit;line-height:inherit;white-space:pre;overflow:auto;tab-size:4;border:0}
+.code pre{pointer-events:none;color:var(--ink)}
+#ed{background:transparent;color:transparent;caret-color:var(--ink);resize:none;outline:0}
+#ed::selection{background:var(--sel);color:transparent}
+.h-tg{color:#8a5a2b}.h-at{color:var(--ember)}.h-st{color:var(--herb)}.h-pt{color:var(--mute)}
+.h-c{color:#a6987f;font-style:italic}.h-s{color:var(--herb)}.h-v{color:var(--plum)}.h-n{color:var(--ember)}.h-k{color:var(--brass);font-weight:600}.h-f{color:#2f6b8a}.h-o{color:#b04a7a}
+.efoot{display:flex;align-items:center;gap:10px;padding:0 14px;height:38px;border-top:1px solid var(--line);font-family:var(--mono);font-size:11.5px;color:var(--ink2);flex:none;min-width:0}
+.efoot .sp{margin-left:auto;color:var(--mute);white-space:nowrap}
+#scan{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#scan.bad{color:var(--chili)}#scan.ok{color:var(--herb)}#scan.warn{color:var(--ember)}
+.tree{display:none;position:absolute;right:14px;top:46px;z-index:6;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);padding:14px 18px;font-family:var(--mono);font-size:12.5px;line-height:1.65;white-space:pre;color:var(--ink2);box-shadow:0 12px 30px rgba(60,40,15,.18)}
+.tree.on{display:block}
+.tree b{color:var(--brass)}.tree em{color:var(--mute);font-style:normal}
 
-  .stage { padding: 40px 42px 120px; max-width: 820px; }
+#v-kitchen{grid-template-rows:auto minmax(0,1fr);background:transparent}
+.board{display:flex;align-items:center;gap:18px;padding:4px 10px 0}
+.board img{width:72px;height:72px;object-fit:contain}
+.board h2{margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:.02em}
+.board p{margin:2px 0 0;color:var(--mute);font-size:14px;font-style:italic}
+.board .cnt{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass)}
+.plates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:22px 28px;padding:14px 18px 30px;min-height:0;overflow:auto}
+.plate{display:flex;flex-direction:column;align-items:center;gap:12px;min-height:0}
+.pframe{position:relative;width:100%;flex:1;min-height:120px;border:1px solid var(--gold);outline:1px solid rgba(176,132,52,.18);outline-offset:5px;background:#fffdf8;box-shadow:0 14px 26px -16px rgba(70,45,15,.45);cursor:zoom-in;overflow:hidden;transition:border-color .3s,outline-color .3s}
+.pframe:hover{border-color:rgba(176,132,52,.9);outline-color:rgba(176,132,52,.4)}
+.pview{position:absolute;inset:0;overflow:hidden}
+.pview iframe{position:absolute;left:0;top:0;width:640px;height:480px;border:0;transform-origin:0 0;transform:scale(var(--s,.3));pointer-events:none;background:#fff}
+.pframe::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 18px rgba(80,55,20,.12)}
+.pframe.empty{cursor:default;background:transparent;border-color:rgba(176,132,52,.25);box-shadow:none;outline-color:rgba(176,132,52,.08);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
+.pframe.empty img{width:46%;max-width:110px;opacity:.55;filter:saturate(.7)}
+.pframe.empty span{font-style:italic;font-size:13px;color:var(--mute)}
+.pframe.empty::after{display:none}
+.pframe.fresh{animation:fresh 1.4s 2}
+@keyframes fresh{50%{border-color:var(--brass);outline-color:rgba(176,132,52,.6)}}
+.pcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--mute);white-space:nowrap;text-align:center}
+.pcap i{display:inline-block;width:16px;height:1px;background:var(--gold);vertical-align:middle;margin:0 8px}
+.pcap em{display:block;margin-top:5px;font-family:var(--disp);font-style:italic;font-size:14px;letter-spacing:.02em;text-transform:none;color:var(--ink2)}
+.pcap .ms{color:var(--brass)}
+.viewer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(43,33,25,.55);backdrop-filter:blur(3px)}
+.viewer.on{display:flex}
+.viewer .vbox{width:min(1040px,92vw);height:min(720px,88vh);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);box-shadow:0 30px 80px rgba(40,25,10,.4);overflow:hidden}
+.viewer .fr{flex:1}
 
-  /* ---- lesson content ---- */
-  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 3px; color: var(--ember); margin-bottom: 10px; }
-  .title { font-family: var(--disp); font-weight: 900; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; color: var(--text); margin-bottom: 6px; }
-  .subtitle { font-family: var(--serif); font-style: italic; font-size: 19px; color: var(--dim); margin-bottom: 34px; }
-  .prose { max-width: 66ch; }
-  .prose p { margin: 0 0 18px; }
-  .prose h3 { font-family: var(--disp); font-weight: 600; font-size: 25px; color: var(--brass); margin: 40px 0 14px; }
-  .prose code { font-family: var(--mono); font-size: 0.86em; background: rgba(203,154,81,0.10); color: #7a5416; padding: 1px 6px; border-radius: 4px; }
-  .prose strong { color: var(--text); font-weight: 500; }
+#v-rules{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:minmax(300px,auto);overflow-y:auto;align-content:start}
+.rb.locked{opacity:.55}
+.rb .lockmsg{flex:1;display:flex;align-items:center;justify-content:center;color:var(--mute);font-size:14px;font-style:italic;padding:24px}
+.rbody{padding:12px 14px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
+.rbody h3{margin:0;font-family:var(--disp);font-weight:600;font-size:19px}
+.rbody p{margin:0;color:var(--ink2);font-size:14px;line-height:1.55}
+.rbody pre{margin:0;font-family:var(--mono);font-size:11.5px;line-height:1.55;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 10px;white-space:pre-wrap;overflow:auto;max-height:180px}
+.cx{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:38px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute);flex:none}
+.cx a{color:var(--brass);font-family:var(--mono);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:10.5px;text-decoration:none}
 
-  /* ---- code recipe card ---- */
-  .recipe { margin: 24px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
-  .recipe-head {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 14px; background: var(--panel2); border-bottom: 1px solid var(--line);
-  }
-  .recipe-head .dish { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--dim); flex: 1; }
-  .recipe-head .dot3 { display: flex; gap: 5px; }
-  .recipe-head .dot3 i { width: 9px; height: 9px; border-radius: 50%; display: block; }
-  .recipe-head .dot3 i:nth-child(1) { background: #4a3a24; }
-  .recipe-head .dot3 i:nth-child(2) { background: #4a3a24; }
-  .recipe-head .dot3 i:nth-child(3) { background: #4a3a24; }
-  .copy { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--dim); background: none; border: 1px solid var(--line); padding: 4px 9px; border-radius: 5px; cursor: pointer; transition: color .18s, border-color .18s; }
-  .copy:hover { color: var(--brass); border-color: var(--brass-dim); }
-  .recipe pre { margin: 0; padding: 16px 16px; overflow-x: auto; }
-  .recipe code { font-family: var(--mono); font-size: 14.5px; line-height: 1.7; color: #3a2f22; white-space: pre; }
-  .recipe .out { border-top: 1px dashed var(--line); padding: 11px 16px; background: rgba(156,107,31,0.06); }
-  .recipe .out .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--dim); display: block; margin-bottom: 5px; }
-  .recipe .out samp { font-family: var(--mono); font-size: 14px; color: var(--herb); white-space: pre-wrap; }
+#nbk{position:fixed;inset:0;background:rgba(43,33,25,.45);display:none;align-items:center;justify-content:center;z-index:60;padding:16px}
+#nbk.on{display:flex}
+#nbox{width:min(720px,100%);max-height:min(86vh,820px);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);box-shadow:0 18px 50px rgba(40,25,10,.3)}
+#nbox .nbody{padding:14px;display:flex;flex-direction:column;gap:10px;min-height:0;flex:1}
+#nbox .nintro{margin:0;color:var(--ink2);line-height:1.5}
+#nbox textarea{width:100%;min-height:76px;resize:vertical;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:10px;line-height:1.45}
+#nbox textarea:focus{outline:none;border-color:var(--brass2)}
+#nbox .nrow{display:flex;gap:8px;align-items:center}
+#nbox select{height:34px;border:1px solid var(--line);border-radius:4px;background:var(--field);padding:0 8px;font-family:var(--mono);font-size:11px}
+#nbox .nctx{color:var(--mute);font-size:12px;margin-left:auto;text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+#nlist{flex:1;min-height:80px;overflow:auto;border-top:1px solid var(--line);display:flex;flex-direction:column}
+.nitem{display:grid;grid-template-columns:28px minmax(0,1fr) 28px;gap:10px;align-items:start;padding:10px 0;border-bottom:1px solid var(--line)}
+.nitem button{height:24px;width:24px;padding:0;letter-spacing:0;font-size:13px}
+.nitem.done .ntxt{text-decoration:line-through;color:var(--mute)}
+.nkind{display:inline-block;font-family:var(--mono);font-size:10px;font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--ember);margin-right:8px}
+.ntxt{line-height:1.45;white-space:pre-wrap;word-break:break-word}
+.nmeta{display:block;color:var(--mute);font-size:11.5px;margin-top:3px}
+.nempty{padding:22px 0;text-align:center;color:var(--mute)}
+#nbox .nfoot{display:flex;gap:8px;justify-content:flex-end;padding:12px 14px;border-top:1px solid var(--line);flex-wrap:wrap}
 
-  /* ---- chef's note ---- */
-  .note { margin: 22px 0; padding: 14px 18px; border-left: 3px solid var(--ember); background: rgba(217,119,47,0.06); border-radius: 0 8px 8px 0; }
-  .note .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--ember); display: block; margin-bottom: 5px; }
-  .note p { margin: 0; font-size: 16px; color: var(--text); }
-
-  /* ---- run-it callout ---- */
-  .runit { display: inline-flex; align-items: center; gap: 9px; margin: 6px 0 2px; font-family: var(--mono); font-size: 12px; color: var(--dim); }
-  .runit a { text-decoration: none; border-bottom: 1px solid var(--brass-dim); }
-
-  /* ---- diagram aid ---- */
-  .aid { margin: 26px 0; }
-  .aid svg { width: 100%; max-width: 620px; height: auto; display: block; }
-
-  /* ---- ticket (drill) ---- */
-  .tickets { margin-top: 54px; }
-  .tickets > h3 { font-family: var(--disp); font-weight: 600; font-size: 25px; color: var(--brass); margin-bottom: 4px; }
-  .tickets > .sub { font-family: var(--serif); font-style: italic; color: var(--dim); margin-bottom: 20px; }
-  .ticket {
-    margin: 20px 0; border: 1px solid var(--line); border-radius: 10px;
-    background: var(--panel); overflow: hidden;
-  }
-  .ticket-top {
-    display: flex; align-items: center; gap: 10px;
-    padding: 10px 16px; border-bottom: 1px dashed var(--line);
-    background: repeating-linear-gradient(45deg, rgba(0,0,0,0.015) 0 10px, transparent 10px 20px);
-  }
-  .ticket-top .kind { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--ember); }
-  .ticket-top .num { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
-  .ticket-body { padding: 16px; }
-  .ticket-body .q { font-size: 16px; margin-bottom: 14px; }
-  .ticket-body pre { background: rgba(156,107,31,0.06); border: 1px solid var(--line); border-radius: 8px; padding: 13px 15px; overflow-x: auto; margin-bottom: 16px; }
-  .ticket-body pre code { font-family: var(--mono); font-size: 14px; line-height: 1.7; color: #3a2f22; white-space: pre; }
-  .opts { display: flex; flex-direction: column; gap: 9px; }
-  .opt {
-    text-align: left; width: 100%; cursor: pointer;
-    font-family: var(--mono); font-size: 14px; color: var(--text);
-    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
-    padding: 12px 14px; transition: border-color .15s, background .15s;
-    display: flex; align-items: center; gap: 11px;
-  }
-  .opt:hover:not(:disabled) { border-color: var(--brass-dim); }
-  .opt .pip { width: 20px; height: 20px; flex: none; border-radius: 5px; border: 1px solid var(--brass-dim); display: grid; place-items: center; font-size: 11px; color: var(--dim); }
-  .opt span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
-  .opt.right { border-color: var(--herb); background: rgba(134,180,92,0.10); color: var(--text); }
-  .opt.right .pip { border-color: var(--herb); color: var(--herb); }
-  .opt.wrong { border-color: var(--chili); background: rgba(207,91,78,0.10); }
-  .opt.wrong .pip { border-color: var(--chili); color: var(--chili); }
-  .opt:disabled { cursor: default; }
-  .verdict { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 15px; display: none; }
-  .verdict.show { display: block; }
-  .verdict.ok { background: rgba(134,180,92,0.09); border: 1px solid rgba(134,180,92,0.35); }
-  .verdict.no { background: rgba(207,91,78,0.09); border: 1px solid rgba(207,91,78,0.35); }
-  .verdict b { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; display: block; margin-bottom: 4px; }
-  .verdict.ok b { color: var(--herb); }
-  .verdict.no b { color: var(--chili); }
-
-  /* ---- rank + progress ---- */
-  .progress { display: flex; align-items: center; gap: 9px; }
-  .rank { font-family: var(--disp); font-weight: 600; font-size: 13px; color: var(--brass); white-space: nowrap; }
-  .bar { width: 84px; height: 6px; border-radius: 3px; background: var(--panel2); border: 1px solid var(--line); overflow: hidden; }
-  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brass-dim), var(--brass)); transition: width .4s; }
-  .ptxt { font-family: var(--mono); font-size: 10px; color: var(--dim); white-space: nowrap; }
-
-  /* ---- buttons ---- */
-  .btn { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--bg); background: var(--brass); border: 1px solid var(--brass); padding: 11px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: filter .15s; }
-  .btn:hover { filter: brightness(1.08); }
-  .btn.ghost { background: none; color: var(--dim); border-color: var(--line); font-weight: 400; }
-  .btn.ghost:hover { color: var(--brass); border-color: var(--brass-dim); filter: none; }
-  .btn.next { margin-top: 16px; }
-  .act-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 42px; }
-
-  /* ---- rush ---- */
-  .rush-meta { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-bottom: 18px; }
-  .rush-meta b { color: var(--brass); }
-  .result { margin: 10px 0 8px; padding: 26px 24px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
-  .result .score { font-family: var(--disp); font-weight: 900; font-size: 48px; line-height: 1; margin-bottom: 10px; }
-  .result p { margin: 0; font-size: 17px; color: var(--text); }
-  .result.ok { border-color: rgba(134,180,92,0.4); } .result.ok .score { color: var(--herb); }
-  .result.mid { border-color: rgba(203,154,81,0.4); } .result.mid .score { color: var(--brass); }
-  .result.no { border-color: rgba(207,91,78,0.4); } .result.no .score { color: var(--chili); }
-
-  /* ---- brief cta ---- */
-  .cta { margin: 34px 0 4px; padding: 20px 22px; border-radius: 12px; border: 1px solid var(--brass-dim); background: linear-gradient(180deg, rgba(203,154,81,0.08), rgba(203,154,81,0.02)); }
-  .cta h4 { font-family: var(--disp); font-weight: 600; font-size: 22px; color: var(--brass); margin-bottom: 8px; }
-  .cta p { margin: 0 0 16px; font-size: 16px; }
-  .cta em { color: var(--text); font-style: italic; }
-
-  /* ---- rail rush ---- */
-  .rail-sep { height: 1px; background: var(--line); margin: 14px 10px; }
-  .station.rush, .station.rush .no, .station.weak .no { color: var(--brass); }
-  .station.weak { color: var(--dim); }
-  .station .cnt { float: right; font-family: var(--mono); font-size: 11px; color: var(--ember); background: rgba(217,119,47,0.12); padding: 0 7px; border-radius: 8px; }
-
-  /* ---- reading mode ---- */
-  body.reading .rail { display: none; }
-  body.reading .wrap { grid-template-columns: 1fr; }
-  body.reading .tabs { display: none; }
-  body.reading .stage { max-width: 720px; margin: 0 auto; font-size: 19px; }
-  body.reading .prose { max-width: 72ch; }
-
-  /* ---- focus + motion ---- */
-  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
-  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
-
-  /* ---- responsive ---- */
-  @media (max-width: 880px) {
-    .wrap { grid-template-columns: 1fr; }
-    .rail { display: none; }
-    .stage { padding: 30px 22px 110px; }
-    body { font-size: 17px; }
-  }
-  @media (min-width: 881px) { .pass .tabs { display: none; } .pass .progress { margin-left: auto; } }
-  @media (max-width: 520px) {
-    .pass { gap: 12px; padding: 10px 14px; }
-    .bar, .ptxt { display: none; }
-    .stage { padding: 26px 18px 100px; }
-  }
+@media (max-width:1500px) and (min-width:901px){#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}}
+@media (max-width:1150px){#v-target{grid-template-columns:270px minmax(0,1fr) minmax(0,1fr)}.plates{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:220px}#v-rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:900px){
+  body{overflow:auto;grid-template-rows:auto auto}
+  #bar{grid-template-columns:1fr 1fr;padding:8px 12px;gap:8px}
+  #comms{grid-column:1/3}
+  main{height:auto}.view.on{height:auto}
+  #v-school,#v-target,#v-rules{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(340px,auto)}
+  #v-target .left,#v-target .edp{grid-row:auto;grid-column:auto}
+  .plates{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:200px}
+  .exb .eb{grid-template-columns:1fr}
+}
+@media (max-width:1250px) and (min-width:901px){#eng{display:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
-  <header class="pass">
-    <div class="mark">PASSLE<small>THE PASS · PHP</small></div>
-    <nav class="tabs" id="tabs" aria-label="Stations (compact)"></nav>
-    <span class="progress" id="progress"></span>
-    <button class="rdbtn" id="rdbtn" aria-pressed="false">READ MODE</button>
-  </header>
-
-  <div class="wrap">
-    <aside class="rail" aria-label="Stations">
-      <h4>THE LINE</h4>
-      <nav id="rail"></nav>
-    </aside>
-    <main class="stage" id="stage" tabindex="-1"></main>
+<header id="bar">
+  <div class="brand"><div><b>PASSLE</b><small>VOL VI · PHP KITCHEN</small></div></div>
+  <nav class="stages">
+    <button class="stg" data-v="school"><span class="ck">✓</span>School</button><i>›</i>
+    <button class="stg" data-v="target"><span class="ck">✓</span>Target</button><i>›</i>
+    <button class="stg" data-v="kitchen">Kitchen</button><i>·</i>
+    <button class="stg" data-v="rules">Rulebook</button><i>·</i>
+    <button class="stg" data-v="practice">Practice</button>
+  </nav>
+  <select id="tsel" aria-label="Choose plate"></select>
+  <div id="comms"><img id="rmini" src="img/roux/idle.png" alt=""><span id="eng">stove cold</span><span id="cmsg">Roux is tying on the apron.</span></div>
+  <div class="snd">
+    <button id="notes" title="Notes for Claude: jot a bug or idea, hand it over next session (Ctrl+Shift+Y)">Notes</button>
+    <button id="mute" title="Click to cycle: sound, sound with typing clicks, muted">Sound</button>
+    <input id="vol" type="range" min="0" max="100" step="1" aria-label="Volume">
   </div>
-
+  <button class="home" id="home" title="Download this plate as a real PHP project folder">Take it home</button>
+</header>
+<main>
+  <section class="view" id="v-school">
+    <div class="panel"><div class="ph"><b id="dtitle">Lesson</b><span class="sp pips" id="pips"></span></div><div id="dbox" class="drill"></div></div>
+    <div class="panel"><div class="ph"><b id="stitle">Examples</b><span class="sp" id="plabel"></span></div><div id="sside" class="sside"></div></div>
+  </section>
+  <section class="view" id="v-target">
+    <div class="panel left">
+      <div class="ph"><b id="tname">Plate</b><span class="sp" id="tcount"></span></div>
+      <ol class="steps" id="steps"></ol>
+      <div class="help">
+        <div class="ph"><b>Help</b><span class="sp" id="hstep"></span></div>
+        <div class="ladder" id="ladder"></div>
+        <div class="hfoot" id="hfoot"></div>
+      </div>
+    </div>
+    <div class="panel"><div class="ph"><b>Target</b><span class="sp"><span class="seg" data-for="tfr"><button data-m="page" class="on">Page</button><button data-m="raw">Output</button></span></span></div>
+      <div class="fr" id="tfr"><iframe id="tframe" title="Target"></iframe><pre class="rawout" id="traw"></pre></div></div>
+    <div class="panel"><div class="ph"><b>Your build</b><span class="sp"><span class="reqline" id="req">GET /</span><span class="seg" data-for="bfr"><button data-m="page" class="on">Page</button><button data-m="raw">Output</button></span><span class="meter" id="meter"><span class="bar"><i></i></span><b>0%</b></span></span></div>
+      <div class="fr" id="bfr"><iframe id="bframe" title="Your build"></iframe><iframe id="ovl" title="Target overlay" tabindex="-1"></iframe><pre class="rawout" id="braw"></pre></div>
+      <div class="errbox" id="errbox"></div>
+      <div class="slide">Mine<input id="slider" type="range" min="0" max="100" step="1" value="0" aria-label="Fade the target over your build">Target</div></div>
+    <div class="panel edp"><div class="ph"><span id="tabs" class="tabs"></span><span class="sp"><button id="treeb">Folder</button><button id="reset">Reset</button><button id="check" class="pri">Check · Ctrl+Enter</button></span></div>
+      <div class="tree" id="tree"></div>
+      <div class="ed"><pre class="gut" id="gut">1</pre><div class="code"><pre id="hl" aria-hidden="true"></pre><textarea id="ed" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Code editor"></textarea></div></div>
+      <div class="efoot"><span id="scan">Waiting for the stove.</span><span class="sp">Tab indents · runs as you type</span></div></div>
+  </section>
+  <section class="view" id="v-kitchen">
+    <div class="board"><img id="kroux" src="img/roux/idle.png" alt=""><div><h2>Roux's Bistro</h2><p>Every plate you match is served here. Click one to see it full size.</p></div><span class="cnt" id="kcnt"></span></div>
+    <div class="plates" id="plates"></div>
+  </section>
+  <section class="view" id="v-rules"></section>
+</main>
+<div class="viewer" id="viewer"><div class="vbox"><div class="ph"><b id="vname"></b><span class="sp"><span class="seg" data-for="vfr"><button data-m="page" class="on">Page</button><button data-m="raw">Output</button></span><button id="vclose">Close · Esc</button></span></div><div class="fr" id="vfr"><iframe id="vframe" title="Your plate"></iframe><pre class="rawout" id="vraw"></pre></div></div></div>
+<div id="nbk"><div id="nbox" role="dialog" aria-label="Notes for Claude">
+  <div class="ph"><b>Notes for Claude</b><span class="sp" id="ncount"></span></div>
+  <div class="nbody">
+    <p class="nintro">Spot a bug, a confusing lesson or an idea? Write it here. It is shared with every Mega Lab lab. Next session: <b>Copy for Claude</b>, paste it in, say "check my notes".</p>
+    <textarea id="ntext" placeholder="What did you notice? Plain words are fine. Passle records where you were."></textarea>
+    <div class="nrow"><select id="nkindsel"></select><button id="nsave" class="pri">Save note</button><span class="nctx" id="nctx"></span></div>
+    <div id="nlist"></div>
+  </div>
+  <div class="nfoot"><button id="ncopy">Copy for Claude</button><button id="ndl">Download .md</button><button id="nclear">Clear handled</button><button id="nclose" class="pri">Close</button></div>
+</div></div>
 <script>
-(function () {
-  "use strict";
+const IDX='public/index.php';
+const stripC=s=>String(s||'').replace(/\/\*[\s\S]*?\*\//g,'').replace(/(^|[^:'"\\])\/\/[^\n]*/g,'$1').replace(/^[ \t]*#(?!\[)[^\n]*/gm,'');
+const src=(c,p)=>stripC(c.files[p||IDX]);
+const raw=(c,p)=>String(c.files[p||IDX]||'');
+const norm=s=>String(s||'').replace(/\s+/g,' ').trim();
+const txt=(c,sel)=>{const e=c.doc&&c.doc.querySelector(sel);return e?norm(e.textContent):''};
+const all=(c,sel)=>c.doc?[...c.doc.querySelectorAll(sel)].map(e=>norm(e.textContent)):[];
+const hasP=(c,s)=>all(c,'p').includes(s);
+const okRun=c=>!c.bad;
+function echoes(s){const out=[];String(s).replace(/<\?=\s*([\s\S]*?)\s*;?\s*\?>/g,(m,e)=>{out.push(e.trim());return m});String(s).replace(/\becho\s+([^;]+);/g,(m,e)=>{out.push(e.trim());return m});return out}
+const NUMERIC=/^(strlen|count|number_format|intdiv|round|array_sum)\s*\(/;
+const escaped=(c,needles,p)=>echoes(src(c,p)).every(e=>!needles.some(n=>e.includes(n))||/^htmlspecialchars\s*\(/.test(e)||NUMERIC.test(e));
+const strictFirst=(c,p)=>/^<\?php\s+declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;/.test(raw(c,p));
+const q1="['\"]";
+const cleanStep=gate=>({t:'Clean run: no warnings, no errors, nothing before `<?php`',c:c=>okRun(c)&&/^<\?php/.test(raw(c))&&gate(c),help:['Look under Your build: a red box means PHP complained.','Read the first line of the message. It names the file and the line number.',"Warning: Undefined variable $dish in /app/public/index.php on line 14\n\nmeans: line 14 uses $dish before it was given a value.",'Fix the line the message points at, then let it run again.']});
 
-  var SVG_REQ =
-    '<svg viewBox="0 0 620 150" role="img" aria-label="A request goes from the browser to the PHP server, which cooks and serves back a finished page.">' +
-    '<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9c6b1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
-    '<rect x="14" y="45" width="150" height="60" rx="9" fill="#fbf8f1" stroke="#e2d8c4"/>' +
-    '<text x="89" y="70" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">Browser</text>' +
-    '<text x="89" y="90" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">the customer</text>' +
-    '<rect x="235" y="45" width="150" height="60" rx="9" fill="#efe7d6" stroke="#c9a45e"/>' +
-    '<text x="310" y="70" text-anchor="middle" fill="#9c6b1f" font-family="Spectral,serif" font-size="15">PHP server</text>' +
-    '<text x="310" y="90" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">the kitchen</text>' +
-    '<rect x="456" y="45" width="150" height="60" rx="9" fill="#fbf8f1" stroke="#e2d8c4"/>' +
-    '<text x="531" y="70" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">HTML page</text>' +
-    '<text x="531" y="90" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">the plated dish</text>' +
-    '<line x1="168" y1="66" x2="230" y2="66" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#ar)"/>' +
-    '<text x="199" y="58" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">order</text>' +
-    '<line x1="390" y1="84" x2="452" y2="84" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#ar)"/>' +
-    '<text x="421" y="76" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">serve</text>' +
-    '</svg>';
+const RULES={
+ pz1:{n:'01',title:'PHP runs first, then sends HTML',cat:'Running PHP',t:0,
+  syn:'<span class="k">&lt;?php</span> declare(strict_types=1); · <span class="v">&lt;?= $x ?&gt;</span>',
+  note:'The server runs the file top to bottom. Code lives between <?php and ?>; everything outside is sent as plain HTML. <?= $x ?> prints one value into the page. declare(strict_types=1); is the first statement of every file.',
+  why:'A browser never sees PHP. When a visitor asks for index.php, the server runs it first and sends only what it printed. Anything outside <?php … ?> is sent exactly as written; inside is code. echo prints text, and <?= $x ?> is the short form for dropping one value into HTML. Real projects start every file with declare(strict_types=1). From then on, a function that wants a string refuses an int instead of quietly converting it. Bugs show up at the line that causes them, not three pages later.',
+  parts:[['<?php','start of code'],['declare(strict_types=1);','first statement: strict type checks'],["echo 'text';",'print, ends with a semicolon'],['<?= $x ?>','short echo inside HTML'],['?>','back to plain HTML']],
+  mistakes:['Anything before <?php declare(...): even one blank line breaks strict_types.','A missing semicolon after echo: Parse error on the next line.','Writing <? instead of <?php. Short open tags are off on real servers.'],
+  ex:`<?php
 
-  var LESSONS = [
-    {
-      id: "brief",
-      tab: "Brief",
-      no: "0",
-      title: "Service brief",
-      subtitle: "What PHP is, and how this kitchen runs.",
-      blocks: [
-        { t: "p", html: "Welcome to the pass. Everything you have built so far \u2014 HTML, CSS, JavaScript \u2014 runs <strong>in the browser</strong>, where the customer sits. The customer watches it all happen on their table." },
-        { t: "p", html: "PHP is the odd one out, and that is the whole point of it. PHP runs on the <strong>server</strong> \u2014 back in the kitchen, out of sight. The customer never sees it work. They send an <strong>order</strong> (a request), the kitchen cooks, and a finished <strong>plate</strong> (an HTML page) is carried out to them." },
-        { t: "aid", svg: SVG_REQ },
-        { t: "p", html: "So when you write PHP, picture yourself behind the pass: you take the ticket, you decide what goes on the plate, and only the finished plate leaves the kitchen. The customer gets HTML \u2014 they never get your recipe." },
-        { t: "h", text: "How to taste your own cooking" },
-        { t: "p", html: "PHP has to <em>run somewhere</em> to produce output. You have two easy ways to taste a snippet:" },
-        { t: "p", html: "<strong>1. In the browser, no install.</strong> Paste a snippet into an online runner and hit go. Works on a tablet. Every code card below has a <code>copy</code> button for exactly this." },
-        { t: "runit", label: "Run any snippet online:", href: "https://3v4l.org/", text: "3v4l.org" },
-        { t: "p", html: "<strong>2. On your own machine.</strong> One line spins up a throwaway server:" },
-        { t: "code", dish: "terminal", php: "php -S localhost:8000", out: null },
-        { t: "h", text: "How to read PHP like the exam does" },
-        { t: "p", html: "The skill that matters most is <strong>reading a snippet and predicting its output</strong> before you run it. Every drill here (we call them <em>tickets</em>) trains that: look at the code, decide what it prints, tap your answer, then see if the kitchen agrees." },
-        { t: "note", html: "A <code>?</code> in code you don't recognise is not a failure \u2014 it's the next thing to learn. Guess first anyway. A wrong guess you understand afterwards sticks far better than a right one you never questioned." }
-      ],
-      drills: [
-        {
-          kind: "Warm-up",
-          q: "Where does PHP actually run?",
-          php: null,
-          options: [
-            "In the customer's browser, like JavaScript",
-            "On the server \u2014 the browser only receives the finished HTML",
-            "Nowhere; PHP is just a styling language",
-            "Only inside a database"
-          ],
-          answer: 1,
-          explain: "PHP runs server-side. It builds the page in the kitchen, then sends plain HTML to the browser. The browser never sees the PHP itself."
-        }
-      ]
-    },
+declare(strict_types=1);
 
-    {
-      id: "s1",
-      tab: "1 · Mise",
-      no: "1",
-      title: "Mise en place",
-      subtitle: "Everything laid out before service \u2014 output, variables, types, strings.",
-      blocks: [
-        { t: "p", html: "Mise en place is the chef's ritual of setting everything in its place before the rush. Ours is the same: the handful of pieces every PHP script is built from." },
-        { t: "h", text: "Output: echo" },
-        { t: "p", html: "PHP does nothing visible until you <code>echo</code> something. Think of <code>echo</code> as plating up \u2014 it puts text on the plate that leaves the kitchen. PHP code lives between <code>&lt;?php</code> and <code>?&gt;</code> tags." },
-        { t: "code", dish: "hello.php", php: "<?php\necho \"Hello from the pass\";", out: "Hello from the pass" },
-        { t: "h", text: "Variables and the $" },
-        { t: "p", html: "A variable is a labelled container. In PHP every variable name starts with a <code>$</code>. You put something in with <code>=</code>, and use the name to get it back." },
-        { t: "code", dish: "prep.php", php: "<?php\n$dish = \"tomato soup\";\n$price = 6;\necho $dish;", out: "tomato soup" },
-        { t: "h", text: "Types: what's in the container" },
-        { t: "p", html: "PHP sorts values into a few basic <strong>types</strong>. You rarely declare them \u2014 PHP reads them from what you write:" },
-        { t: "p", html: "<code>\"soup\"</code> is a <strong>string</strong> (text, in quotes) \u00b7 <code>6</code> is an <strong>int</strong> (whole number) \u00b7 <code>6.5</code> is a <strong>float</strong> (decimal) \u00b7 <code>true</code>/<code>false</code> are <strong>bool</strong> \u00b7 <code>null</code> is \u201cnothing here yet\u201d." },
-        { t: "p", html: "<code>var_dump()</code> is your tasting spoon \u2014 it tells you the exact type and value of anything." },
-        { t: "code", dish: "taste.php", php: "<?php\nvar_dump(6);\nvar_dump(6.5);\nvar_dump(\"6\");", out: "int(6)\nfloat(6.5)\nstring(1) \"6\"" },
-        { t: "h", text: "Strings: single vs double quotes" },
-        { t: "p", html: "This is the classic PHP gotcha, so learn it now. <strong>Double quotes</strong> read variables inside them (interpolation). <strong>Single quotes</strong> take the text completely literally \u2014 a <code>$name</code> inside single quotes prints the four characters, not the value." },
-        { t: "code", dish: "quotes.php", php: "<?php\n$name = \"Kaatje\";\necho \"Hi $name\";\necho ' / ';\necho 'Hi $name';", out: "Hi Kaatje / Hi $name" },
-        { t: "p", html: "To glue strings together yourself, use the <strong>dot</strong> <code>.</code> (concatenation). This is PHP's join \u2014 not <code>+</code>, which is only for maths." },
-        { t: "code", dish: "join.php", php: "<?php\n$dish = \"soup\";\n$price = 6;\necho $dish . \" is \" . $price . \" euro\";", out: "soup is 6 euro" },
-        { t: "note", html: "Watch the <code>.</code> vs <code>+</code> trap: <code>3 . 4</code> gives the string <code>\"34\"</code> (glued), while <code>3 + 4</code> gives <code>7</code> (added). Different tools." }
-      ],
-      drills: [
-        {
-          kind: "Predict the plate",
-          q: "What does this print?",
-          php: "<?php\n$name = \"Kaatje\";\necho 'Welcome, $name';",
-          options: ["Welcome, Kaatje", "Welcome, $name", "Welcome, ", "Error"],
-          answer: 1,
-          explain: "Single quotes take the text literally, so $name is printed as-is, not swapped for its value. Double quotes would have given \u201cWelcome, Kaatje\u201d."
-        },
-        {
-          kind: "Predict the plate",
-          q: "What does this print?",
-          php: "<?php\necho 3 . 4;",
-          options: ["7", "34", "12", "Error"],
-          answer: 1,
-          explain: "The dot glues values into one string, so 3 and 4 become \"34\". You'd use 3 + 4 to get 7."
-        },
-        {
-          kind: "Predict the plate",
-          q: "What does var_dump print here?",
-          php: "<?php\nvar_dump(\"6\" + 1);",
-          options: ["string(2) \"61\"", "int(7)", "string(1) \"7\"", "Error"],
-          answer: 1,
-          explain: "The + operator is maths, so PHP turns the numeric string \"6\" into 6 and adds 1, giving int(7). (Gluing with . instead would have made the string \"61\".)"
-        }
-      ]
-    },
+echo '<h1>Mise en place</h1>';
+?>
+<p>Knives sharp: <?= 'yes' ?></p>`,
+  ex2:`<?php
 
-    {
-      id: "s2",
-      tab: "2 · Line",
-      no: "2",
-      title: "On the line",
-      subtitle: "Cooking logic \u2014 arrays, decisions, loops, and recipes.",
-      blocks: [
-        { t: "p", html: "Service has started. Now you need to hold many things at once, make decisions, repeat work, and reuse recipes. That's arrays, conditionals, loops, and functions." },
-        { t: "h", text: "Arrays: the shelf" },
-        { t: "p", html: "An array is one variable holding many values \u2014 a shelf of containers. A plain (indexed) array numbers its slots from <strong>0</strong>. An <strong>associative</strong> array labels them with keys of your choosing, which is where PHP really lives." },
-        { t: "code", dish: "shelf.php", php: "<?php\n$sides = [\"bread\", \"salad\", \"fries\"];\necho $sides[0];\n\n$prices = [\"soup\" => 6, \"bread\" => 3];\necho $prices[\"soup\"];", out: "bread6" },
-        { t: "h", text: "foreach: every plate on the shelf" },
-        { t: "p", html: "<code>foreach</code> is the PHP workhorse: it walks through every item in an array. With an associative array you can grab the key and the value together." },
-        { t: "code", dish: "walk.php", php: "<?php\n$prices = [\"soup\" => 6, \"bread\" => 3];\nforeach ($prices as $item => $cost) {\n    echo \"$item costs $cost\\n\";\n}", out: "soup costs 6\nbread costs 3" },
-        { t: "h", text: "Decisions: if / elseif / else" },
-        { t: "p", html: "Tasting and deciding. A condition is a yes/no question; the matching block runs." },
-        { t: "code", dish: "decide.php", php: "<?php\n$stock = 0;\nif ($stock > 5) {\n    echo \"plenty\";\n} elseif ($stock > 0) {\n    echo \"running low\";\n} else {\n    echo \"86 it\";\n}", out: "86 it" },
-        { t: "h", text: "== vs === (the one that catches everyone)" },
-        { t: "p", html: "<code>==</code> asks \u201care these <em>loosely</em> equal?\u201d and will convert types to compare. <code>===</code> asks \u201care these the <em>same type and value</em>?\u201d. <strong>Prefer <code>===</code>.</strong> It has fewer surprises \u2014 and the exam loves testing the surprises." },
-        { t: "code", dish: "equal.php", php: "<?php\nvar_dump(5 == \"5\");\nvar_dump(5 === \"5\");", out: "bool(true)\nbool(false)" },
-        { t: "note", html: "PHP 8 quietly fixed the nastiest case: <code>0 == \"chips\"</code> is now <code>false</code> (in old PHP 7 it was <code>true</code>, which caused real bugs). Since your exam is PHP 8, learn the modern answer." },
-        { t: "h", text: "Functions: the written recipe" },
-        { t: "p", html: "A function is a recipe you write once and call by name. It can take <strong>parameters</strong> (ingredients) and <strong>return</strong> a result (the dish). You can type the ingredients and give defaults." },
-        { t: "code", dish: "recipe.php", php: "<?php\nfunction totalWithTip(int $bill, int $pct = 10): int {\n    return $bill + ($bill * $pct / 100);\n}\necho totalWithTip(200);\necho \" / \";\necho totalWithTip(200, 20);", out: "220 / 240" }
-      ],
-      drills: [
-        {
-          kind: "Predict the plate",
-          q: "What does this print?",
-          php: "<?php\n$menu = [\"soup\" => 6, \"bread\" => 3];\nforeach ($menu as $item => $price) {\n    echo $price;\n}",
-          options: ["9", "63", "soupbread", "6 3"],
-          answer: 1,
-          explain: "foreach visits each value in order and echo has no spaces or newlines between them, so you get 6 then 3 stuck together: \"63\"."
-        },
-        {
-          kind: "Predict the plate",
-          q: "What does var_dump print in PHP 8?",
-          php: "<?php\nvar_dump(0 == \"chips\");",
-          options: ["bool(true)", "bool(false)", "int(0)", "Error"],
-          answer: 1,
-          explain: "In PHP 8, comparing a number to a non-numeric string converts the number to a string instead of the string to 0. \"0\" == \"chips\" is false. (In PHP 7 this was the infamous true.)"
-        },
-        {
-          kind: "Fix the dish",
-          q: "You want to check the value is exactly the integer 1, type and all. Which line is right?",
-          php: null,
-          options: [
-            "if ($n = 1)",
-            "if ($n == 1)",
-            "if ($n === 1)",
-            "if ($n =:= 1)"
-          ],
-          answer: 2,
-          explain: "=== checks value AND type, so it only passes for the integer 1. Note the trap: a single = is assignment (it would set $n to 1), and == would also accept the string \"1\"."
-        }
-      ]
-    },
+declare(strict_types=1);
 
-    {
-      id: "s3",
-      tab: "3 · Pass",
-      no: "3",
-      title: "The pass",
-      subtitle: "Taking orders and serving them \u2014 forms, requests, JSON, and safety.",
-      blocks: [
-        { t: "p", html: "This is where PHP earns its living: reading the customer's order and serving a response. It's also where the theme is literally true \u2014 the pass is where the outside world meets your kitchen." },
-        { t: "h", text: "The order ticket: $_GET and $_POST" },
-        { t: "p", html: "When a browser sends a request, PHP hands you the details in two special arrays that are always available: <code>$_GET</code> (data in the URL, like <code>?name=Kaatje</code>) and <code>$_POST</code> (data sent from a submitted form). They're just associative arrays." },
-        { t: "code", dish: "order.php  (visited as ?dish=soup)", php: "<?php\n$dish = $_GET[\"dish\"];\necho \"One order of \" . $dish;", out: "One order of soup" },
-        { t: "h", text: "Never trust the ticket \u2014 kitchen hygiene" },
-        { t: "p", html: "Here is the single most important habit in this whole station: <strong>anything from <code>$_GET</code> or <code>$_POST</code> comes from a stranger.</strong> A customer could write a nasty script instead of a name. If you echo it straight onto the page, their script runs in the next visitor's browser \u2014 that's an <strong>XSS</strong> attack." },
-        { t: "p", html: "The fix is one function: <code>htmlspecialchars()</code>. It defuses dangerous characters so text stays text." },
-        { t: "code", dish: "safe.php", php: "<?php\n$name = $_GET[\"name\"] ?? \"guest\";\necho \"Welcome, \" . htmlspecialchars($name);", out: "Welcome, guest" },
-        { t: "note", html: "The <code>??</code> is the <em>null coalescing</em> operator: \u201cuse the left side, but if it's missing or null, use the right side instead.\u201d It's the clean way to supply a default and avoid warnings when a key isn't there." },
-        { t: "h", text: "JSON: food to go" },
-        { t: "p", html: "Sometimes the plate isn't a web page \u2014 it's data for another program (an app, some JavaScript). PHP packs an array into <strong>JSON</strong> text with <code>json_encode()</code>, and unpacks incoming JSON with <code>json_decode()</code>." },
-        { t: "code", dish: "togo.php", php: "<?php\n$order = [\"dish\" => \"soup\", \"price\" => 6];\necho json_encode($order);", out: "{\"dish\":\"soup\",\"price\":6}" },
-        { t: "p", html: "Going the other way, pass <code>true</code> as the second argument to get a friendly associative array back (instead of an object)." },
-        { t: "code", dish: "unpack.php", php: "<?php\n$json = '{\"dish\":\"soup\",\"price\":6}';\n$data = json_decode($json, true);\necho $data[\"price\"];", out: "6" },
-        { t: "note", html: "Full circle: your Mega Lab launcher's save/load feature is exactly this \u2014 <code>json_encode</code> to save your progress out, <code>json_decode</code> to read it back in." }
-      ],
-      drills: [
-        {
-          kind: "Predict the plate",
-          q: "What does this print?",
-          php: "<?php\n$order = [\"dish\" => \"soup\", \"price\" => 6];\necho json_encode($order);",
-          options: [
-            "{dish: soup, price: 6}",
-            "{\"dish\":\"soup\",\"price\":6}",
-            "[\"soup\", 6]",
-            "dish=soup&price=6"
-          ],
-          answer: 1,
-          explain: "json_encode turns the associative array into JSON text: keys and string values wrapped in double quotes, numbers left bare, all inside braces."
-        },
-        {
-          kind: "Fix the dish",
-          q: "This echoes a visitor's name straight onto the page. Which version is safe from XSS?",
-          php: "<?php\necho $_GET[\"name\"];",
-          options: [
-            "echo trim($_GET[\"name\"]);",
-            "echo strtolower($_GET[\"name\"]);",
-            "echo htmlspecialchars($_GET[\"name\"]);",
-            "echo \"$_GET[name]\";"
-          ],
-          answer: 2,
-          explain: "htmlspecialchars() converts characters like < and > into harmless entities, so a submitted <script> is shown as text instead of running. trim and strtolower only tidy the text \u2014 they don't make it safe."
-        },
-        {
-          kind: "Predict the plate",
-          q: "What does this print?",
-          php: "<?php\n$data = json_decode('{\"n\":2}', true);\necho $data[\"n\"] + 3;",
-          options: ["5", "23", "{\"n\":2}3", "Error"],
-          answer: 0,
-          explain: "json_decode with true gives an associative array, so $data[\"n\"] is the number 2, and 2 + 3 is 5."
-        }
-      ]
-    },
+echo 'Service starts at ';
+echo 19;
+echo ':00';`},
+ pz2:{n:'02',title:'Variables and the four basic types',cat:'Types',t:0,
+  syn:"<span class=\"k\">$dish</span> = <span class=\"v\">'Soup'</span>; · $price = <span class=\"v\">4.5</span>; · $left = <span class=\"v\">12</span>; · $hot = <span class=\"v\">true</span>;",
+  note:'A variable is $ plus a name. The value decides the type: string in quotes, int for whole numbers, float with a decimal point, bool for true or false. var_dump shows type and value.',
+  why:'A variable is a labelled jar: a $ then a name. PHP works out the type from what you put in. Text in quotes is a string. A whole number is an int. A number with a decimal point is a float. true and false are bools. When something behaves oddly, var_dump($x) is your x-ray: it prints the type, the length or value, and never lies. print and echo hide the type; var_dump shows it.',
+  parts:[['$dish','a variable: $ then a name'],["'Soup'",'string: text in quotes'],['12','int: whole number'],['4.5','float: has a decimal point'],['true / false','bool'],['var_dump($x)','show type and value']],
+  mistakes:['Forgetting the $: dish = 4 is a parse error.',"Quoting a number: '12' is a string, not an int.",'A comma as decimal point: 4,5 is not 4.5.','Names are case-sensitive: $Dish and $dish are two different jars.'],
+  ex:`<?php
 
-    {
-      id: "s4",
-      tab: "4 · Service",
-      no: "4",
-      title: "Full service",
-      subtitle: "Running the kitchen \u2014 objects, the database, and real safety.",
-      blocks: [
-        { t: "p", html: "This is the deep end \u2014 and it's where the exam earns its weight. Take it slowly; you don't need to master it today, only to meet it." },
-        { t: "h", text: "Objects: a station with its own tools" },
-        { t: "p", html: "So far, functions and data have floated around loose. A <strong>class</strong> bundles related data and the recipes that act on it into one thing \u2014 like a prep station that owns its own ingredients and tools. You define the station once (the <code>class</code>), then create as many as you like (each one an <strong>object</strong>)." },
-        { t: "p", html: "Inside a class, <code>$this</code> means \u201cthis particular station,\u201d and the arrow <code>-&gt;</code> reaches its properties and methods." },
-        { t: "code", dish: "Dish.php", php: "<?php\nclass Dish {\n    public function __construct(\n        public string $name,\n        public int $price\n    ) {}\n\n    public function label(): string {\n        return $this->name . \" \u2014 \u20ac\" . $this->price;\n    }\n}\n\n$soup = new Dish(\"Tomato soup\", 6);\necho $soup->label();", out: "Tomato soup \u2014 \u20ac6" },
-        { t: "note", html: "That <code>__construct</code> with <code>public</code> ingredients is <em>constructor property promotion</em> \u2014 a PHP 8 shortcut that declares and fills the properties in one move, instead of the long old way. Modern PHP, exactly what your exam expects." },
-        { t: "h", text: "The database, safely: PDO + prepared statements" },
-        { t: "p", html: "Most real kitchens keep their stock in a database. PHP talks to one through <strong>PDO</strong>. The golden rule mirrors the last station: <strong>never paste user input straight into a query.</strong>" },
-        { t: "p", html: "Gluing input into SQL text is how <strong>SQL injection</strong> happens \u2014 a crafted \u201cid\u201d could read or wreck your whole database. The fix is a <strong>prepared statement</strong>: you write the query with a <code>?</code> placeholder, then hand the value separately, so it can only ever be data, never commands." },
-        { t: "code", dish: "stock.php", php: "<?php\n$stmt = $pdo->prepare(\"SELECT name FROM dishes WHERE id = ?\");\n$stmt->execute([$_GET[\"id\"]]);\n$row = $stmt->fetch();\necho htmlspecialchars($row[\"name\"]);", out: null },
-        { t: "note", html: "Two habits, one lesson, running through the whole back half of PHP: <code>htmlspecialchars()</code> on the way <em>out</em> to a page, prepared statements on the way <em>in</em> to a database. Learn them as reflexes and half the security syllabus is yours." }
-      ],
-      drills: [
-        {
-          kind: "Predict the plate",
-          q: "What does this print?",
-          php: "<?php\nclass Dish {\n    public function __construct(public string $name) {}\n    public function shout(): string {\n        return strtoupper($this->name);\n    }\n}\necho (new Dish(\"stew\"))->shout();",
-          options: ["stew", "STEW", "Dish", "Error"],
-          answer: 1,
-          explain: "new Dish(\"stew\") builds an object whose name is \"stew\"; calling ->shout() runs strtoupper on it, giving \"STEW\"."
-        },
-        {
-          kind: "Fix the dish",
-          q: "This query pastes user input straight into SQL. Which version blocks SQL injection?",
-          php: "<?php\n$pdo->query(\"SELECT * FROM dishes WHERE id = \" . $_GET[\"id\"]);",
-          options: [
-            "$pdo->query(\"SELECT * FROM dishes WHERE id = '\" . $_GET[\"id\"] . \"'\");",
-            "$pdo->query(strtoupper(\"SELECT * FROM dishes WHERE id = \" . $_GET[\"id\"]));",
-            "$stmt = $pdo->prepare(\"SELECT * FROM dishes WHERE id = ?\"); $stmt->execute([$_GET[\"id\"]]);",
-            "$pdo->query(\"SELECT * FROM dishes WHERE id = \" . htmlspecialchars($_GET[\"id\"]));"
-          ],
-          answer: 2,
-          explain: "A prepared statement with a ? placeholder keeps the value separate from the SQL, so it can never be run as a command. Adding quotes doesn't help, and htmlspecialchars is for HTML output, not SQL."
-        }
-      ]
-    }
-  ];
+declare(strict_types=1);
 
-  var EXTRA = {
-    brief: [
-      {
-        kind: "Warm-up",
-        q: "You open a .php page in your browser and choose \u201cView Source\u201d. What do you see?",
-        php: null,
-        options: [
-          "The PHP code you wrote",
-          "The finished HTML the server produced",
-          "A database error",
-          "Nothing at all"
-        ],
-        answer: 1,
-        explain: "The browser only ever receives the HTML the server produced. Your PHP source stays in the kitchen \u2014 which is also why PHP can hold secrets like passwords that JavaScript can't."
-      }
-    ],
-    s1: [
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\necho \"a\", \"b\", \"c\";",
-        options: ["abc", "a,b,c", "a b c", "Error"],
-        answer: 0,
-        explain: "echo can take several values separated by commas and prints them one after another with nothing in between: \"abc\"."
-      },
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\n$s = \"soup\";\n$s .= \" du jour\";\necho $s;",
-        options: ["soup du jour", "soup", " du joursoup", "Error"],
-        answer: 0,
-        explain: "The .= operator appends to the end of a string \u2014 shorthand for $s = $s . \" du jour\". So \"soup\" becomes \"soup du jour\"."
-      }
-    ],
-    s2: [
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\n$sides = [\"bread\", \"salad\", \"fries\"];\n$sides[] = \"rice\";\necho count($sides);",
-        options: ["3", "4", "rice", "Error"],
-        answer: 1,
-        explain: "$sides[] = ... appends a new item to the end of the array, so it now holds four things, and count() reports 4."
-      },
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\nfunction greet(string $name = \"chef\"): string {\n    return \"Yes, $name\";\n}\necho greet();",
-        options: ["Yes, chef", "Yes, ", "Yes, $name", "Error"],
-        answer: 0,
-        explain: "No argument was passed, so the default value \"chef\" is used. Inside double quotes $name becomes its value, giving \"Yes, chef\"."
-      }
-    ],
-    s3: [
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\n$tips = [];\necho $tips[\"table5\"] ?? \"none yet\";",
-        options: ["none yet", "(empty string)", "null", "Error"],
-        answer: 0,
-        explain: "The key \"table5\" doesn't exist, so ?? falls back to the right-hand value \"none yet\" \u2014 with no undefined-key warning."
-      },
-      {
-        kind: "Fix the dish",
-        q: "A form posts a \u201cqty\u201d field. Which safely reads it with a fallback of 1 if it's missing?",
-        php: null,
-        options: [
-          "$q = $_POST[\"qty\"];",
-          "$q = $_POST[\"qty\"] ?? 1;",
-          "$q = POST(\"qty\");",
-          "$q = $qty;"
-        ],
-        answer: 1,
-        explain: "?? gives you the posted value, or 1 if the key isn't there \u2014 no warning, and you never assume a stranger sent the field you expected."
-      }
-    ],
-    s4: [
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\nclass Dish {\n    public function __construct(public int $price) {}\n}\n$d = new Dish(6);\necho $d->price;",
-        options: ["6", "price", "Error", "null"],
-        answer: 0,
-        explain: "Constructor promotion created a public property $price and filled it with 6. The arrow ->price reads it back off the object."
-      },
-      {
-        kind: "Predict the plate",
-        q: "What does this print?",
-        php: "<?php\nclass Counter {\n    private int $n = 0;\n    public function add(): void { $this->n++; }\n    public function total(): int { return $this->n; }\n}\n$c = new Counter();\n$c->add();\n$c->add();\necho $c->total();",
-        options: ["0", "1", "2", "Error"],
-        answer: 2,
-        explain: "The object keeps its own $n between calls. Two add() calls raise it from 0 to 2, and total() returns that. State living inside the object is the whole point of a class."
-      },
-      {
-        kind: "Fix the dish",
-        q: "You're about to print a dish name that came from the database onto a web page. What do you wrap it in?",
-        php: null,
-        options: [
-          "htmlspecialchars(...)",
-          "json_encode(...)",
-          "strtoupper(...)",
-          "nothing \u2014 database data is always safe"
-        ],
-        answer: 0,
-        explain: "Anything shown on a page gets htmlspecialchars() on the way out, even from your own database \u2014 it may hold text a user entered earlier. Output hygiene is a reflex, not a special case."
-      }
-    ]
-  };
-  LESSONS.forEach(function (l) {
-    if (EXTRA[l.id]) l.drills = l.drills.concat(EXTRA[l.id]);
+$dish = 'Soup';
+$price = 4.5;
+$left = 12;
+$hot = true;
+
+var_dump($dish, $price, $left, $hot);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$a = '12';
+$b = 12;
+
+var_dump($a, $b, $a === $b);`},
+ pz3:{n:'03',title:'Escape on the way out',cat:'Security',t:0,
+  syn:'<span class="k">&lt;?= htmlspecialchars(</span><span class="v">$name</span><span class="k">) ?&gt;</span>',
+  note:'htmlspecialchars turns < > & and quotes into entities, so text always stays text. Every string you print into HTML goes through it. Numbers cannot hold tags and, with strict_types, are not accepted.',
+  why:'The page is HTML, so the browser reads every < as the start of a tag. If a dish name or a visitor\'s comment contains <script>, printing it raw runs that script in every guest\'s browser: that is cross-site scripting, the most common web bug there is. htmlspecialchars turns the dangerous characters into entities like &lt; and &amp;, which the browser shows as the characters themselves. The kitchen rule from day one: every string printed into HTML is escaped, at the moment you print it.',
+  parts:[['htmlspecialchars($s)','make a string safe for HTML'],['<','becomes &lt;'],['&','becomes &amp;'],['"  and  \'','become &quot; and &#039;']],
+  mistakes:['Printing a string raw into HTML: one < in a name and the page breaks, or runs a stranger\'s script.','Passing an int with strict_types on: TypeError, it only accepts strings.','Escaping twice: the guest sees &amp;lt; on screen.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$dish = 'Fish & <b>chips</b>';
+?>
+<p>Raw: <?= $dish ?></p>
+<p>Safe: <?= htmlspecialchars($dish) ?></p>`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+echo htmlspecialchars('"Chef\\'s" <special>');`},
+ pz4:{n:'04',title:'Strings: quotes and joining',cat:'Strings',t:1,
+  syn:"<span class=\"v\">'as typed'</span> · <span class=\"v\">\"table {$t}\"</span> · $a <span class=\"k\">.</span> ' ' <span class=\"k\">.</span> $b · $s <span class=\"k\">.=</span> 'more'",
+  note:'Single quotes print exactly what you typed. Double quotes put variable values inside, best wrapped in { }. The dot joins strings; .= adds to the end of one.',
+  why:'PHP has two kinds of quotes. Single quotes are literal: \'table $t\' prints a dollar sign and a t. Double quotes look inside for variables: "table {$t}" prints table 7. Wrap the variable in curly braces so PHP knows exactly where the name ends. To glue strings together, use the dot, never the plus sign. .= appends to a string you already have. Habit: single quotes by default, double quotes only when a variable goes inside.',
+  parts:[["'Hi $x'",'single: printed exactly'],['"Hi {$x}"','double: the value goes in'],['$a . $b','the dot joins'],["$s .= '!'",'add to the end'],['PHP_EOL','a line break in plain-text output']],
+  mistakes:["Joining with +: 'a' + 'b' is maths and throws a TypeError.",'Expecting a variable to be filled in inside single quotes.','"$dishes" when you meant "{$dish}es": PHP looks for a variable called $dishes.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$table = 7;
+$dish = 'soup';
+
+echo 'Table $table' . PHP_EOL;
+echo "Table {$table}" . PHP_EOL;
+echo 'Two ' . $dish . 's';`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$order = 'Soup';
+$order .= ', bread';
+$order .= ', water';
+
+echo $order;`},
+ pz5:{n:'05',title:'The string toolbox',cat:'Strings',t:1,
+  syn:'<span class="k">trim</span>() · <span class="k">strtoupper</span>() · <span class="k">ucwords</span>() · <span class="k">strlen</span>() · <span class="k">str_replace</span>(<span class="v">find, replace, text</span>) · <span class="k">substr</span>()',
+  note:'Each function takes a string and returns a new one; the original only changes if you store the result. trim cleans the ends, strtoupper and ucwords change case, strlen counts, str_replace swaps, substr cuts.',
+  why:'Text from guests and files is messy: spaces at the ends, odd capitals. PHP\'s string functions each return a new, cleaned string. They never change your variable by themselves, so store the result: $clean = trim($name);. trim removes spaces and line breaks at both ends. strtoupper makes capitals, ucwords capitalises each word. strlen counts characters. str_replace(find, replace, text) swaps every match. substr(text, start, length) cuts out a piece, counting from 0. str_contains(text, part) answers true or false.',
+  parts:[['trim($s)','remove spaces at both ends'],['strtoupper($s)','ALL CAPITALS'],['ucwords($s)','Each Word Capitalised'],['strlen($s)','how many characters'],['str_replace($a, $b, $s)','swap every $a for $b'],['substr($s, 0, 3)','the first 3 characters'],['str_contains($s, $part)','true or false']],
+  mistakes:['trim($name); on its own line does nothing: store the result.','Argument order: str_replace is find, replace, text. substr starts counting at 0.','strlen counts bytes: é counts as 2. mb_strlen counts letters.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$name = '  coq au vin ';
+$clean = trim($name);
+
+echo strtoupper($clean) . PHP_EOL;
+echo ucwords($clean) . PHP_EOL;
+echo strlen($clean) . PHP_EOL;
+echo substr($clean, 0, 3);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$allergens = 'gluten, celery, egg';
+
+echo str_replace(', ', ' / ', $allergens) . PHP_EOL;
+var_dump(str_contains($allergens, 'egg'));`},
+ pz6:{n:'06',title:'Formatting numbers',cat:'Strings',t:1,
+  syn:'<span class="k">number_format</span>($n, <span class="v">2</span>) · <span class="k">sprintf</span>(<span class="v">\'%s-%03d\'</span>, $a, $b)',
+  note:'number_format gives fixed decimals and thousand separators, as a string. sprintf fills a pattern: %s a string, %d an int, %03d an int padded to 3 digits, %.2f a float with 2 decimals.',
+  why:'Money always shows two decimals, and big numbers read better with separators. number_format($n, 2) turns 21.5 into "21.50"; number_format(1250) gives "1,250". The result is a string, so do your maths first and format last. sprintf builds a string from a pattern with placeholders: %s for a string, %d for an int, %03d for an int padded with zeros to three digits, %.2f for a float with two decimals. printf does the same and prints right away.',
+  parts:[['number_format($n, 2)','21.5 → "21.50"'],['number_format(1250)','→ "1,250"'],['%s','a string goes here'],['%d','an int goes here'],['%03d','int, 3 digits, zero-padded'],['%.2f','float, 2 decimals']],
+  mistakes:['Printing a raw float for money: 21.5 instead of 21.50.','Doing maths on number_format\'s result: "1,250" is text now.','Fewer values than placeholders: ArgumentCountError.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$price = 21.5;
+$grams = 1250;
+
+echo number_format($price, 2) . PHP_EOL;
+echo number_format($grams) . PHP_EOL;
+echo sprintf('%s-%03d', 'COQ', 21);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+printf('%.2f euro for %d plates', 7.5, 3);`},
+ pz7:{n:'07',title:'Lists: numbered arrays',cat:'Arrays',t:2,
+  syn:"$shelf = <span class=\"v\">['flour', 'butter']</span>; · $shelf<span class=\"k\">[]</span> = 'thyme'; · $shelf<span class=\"k\">[0]</span>",
+  note:'An array holds many values in one variable. A list is numbered from 0. $a[0] reads the first item, $a[] = $x adds to the end, count($a) says how many.',
+  why:'One jar per ingredient gets silly fast. An array is a shelf: many values in one variable. Written with square brackets, a list numbers its items automatically, starting at 0, not 1. $shelf[0] is the first jar. $shelf[] = \'thyme\' puts a new jar at the end. count($shelf) tells you how many there are. Use the short [ ] syntax; array( ) is the old spelling you will still meet in older code.',
+  parts:[["['flour', 'butter']",'a list in square brackets'],['$shelf[0]','first item: counting starts at 0'],["$shelf[] = 'thyme'",'add to the end'],['count($shelf)','how many items'],['print_r($shelf)','show the whole array']],
+  mistakes:['Expecting $shelf[1] to be the first item.','Reading an index that does not exist: Warning: Undefined array key.','echo $shelf prints the word Array and a warning. Use implode or print_r.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$shelf = ['flour', 'butter'];
+$shelf[] = 'thyme';
+
+echo $shelf[0] . PHP_EOL;
+echo count($shelf) . PHP_EOL;
+print_r($shelf);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$shelf = ['flour', 'butter', 'thyme'];
+$shelf[1] = 'ghee';
+
+var_dump($shelf);`},
+ pz8:{n:'08',title:'Keyed arrays',cat:'Arrays',t:2,
+  syn:"$stock = [<span class=\"v\">'flour'</span> <span class=\"k\">=&gt;</span> 2000]; · $stock<span class=\"k\">['flour']</span> · $stock['butter'] <span class=\"k\">-=</span> 125;",
+  note:'An associative array uses your own keys: \'flour\' => 2000. Read and write with $stock[\'flour\']. Keys are unique; setting one again overwrites it.',
+  why:'Numbers are fine for a list, but a pantry wants labels. An associative array pairs a key with a value: \'flour\' => 2000 reads as flour is 2000. Read it with $stock[\'flour\'], add or overwrite with $stock[\'salt\'] = 50, and change it in place with -= or +=. Each key exists once. This is the shape PHP uses everywhere: form data, database rows and decoded JSON all arrive as keyed arrays.',
+  parts:[["'flour' => 2000",'key => value'],["$stock['flour']",'read by key'],["$stock['salt'] = 50",'add or overwrite'],["$stock['butter'] -= 125",'change in place']],
+  mistakes:["No quotes around a text key: $stock[flour] is an error in PHP 8.","= instead of => inside the brackets.",'Expecting duplicate keys: the second one wins.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$stock = ['flour' => 2000, 'butter' => 500];
+$stock['butter'] -= 125;
+$stock['salt'] = 50;
+
+echo $stock['butter'] . PHP_EOL;
+print_r($stock);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$dish = [
+    'name' => 'Soup',
+    'price' => 4.5,
+    'hot' => true,
+];
+
+var_dump($dish);`},
+ pz9:{n:'09',title:'The array toolbox',cat:'Arrays',t:2,
+  syn:"<span class=\"k\">implode</span>(', ', $a) · <span class=\"k\">sort</span>($a) · <span class=\"k\">in_array</span>($x, $a, <span class=\"v\">true</span>) · $ok <span class=\"k\">?</span> 'yes' <span class=\"k\">:</span> 'no'",
+  note:'implode glues a list into one string. sort orders a list in place. in_array with true checks a value strictly. The ternary $test ? a : b picks one of two values.',
+  why:'implode(glue, list) joins the items into one string, ready to print. sort($list) orders it A to Z in place: it changes the array itself and returns true, so never write $list = sort($list). in_array($value, $list, true) checks if a value is there; the third argument true makes it compare type and value, like ===. array_key_exists checks for a key. The ternary operator $test ? \'yes\' : \'no\' picks one of two values and is the tidy way to print a bool.',
+  parts:[["implode(', ', $shelf)",'list → one string'],['sort($shelf)','sorts in place'],["in_array('salt', $shelf, true)",'value there? strict'],["array_key_exists('salt', $stock)",'key there?'],["$ok ? 'yes' : 'no'",'ternary: pick one of two']],
+  mistakes:['$shelf = sort($shelf); replaces your list with true.','in_array without true compares loosely. Strict is always the safer habit.','implode arguments: glue first, then the array.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$shelf = ['thyme', 'butter', 'flour'];
+sort($shelf);
+
+echo implode(', ', $shelf) . PHP_EOL;
+$hasSalt = in_array('salt', $shelf, true);
+echo 'Salt: ' . ($hasSalt ? 'yes' : 'no');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$stock = ['flour' => 2000];
+
+var_dump(array_key_exists('flour', $stock), in_array('2000', $stock, true));`}
+};
+
+const page=(title,body)=>`<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>${title}</title>
+</head>
+<body>
+${body}</body>
+</html>
+`;
+
+const TARGETS=[
+{id:'menu-card',name:'Menu card',dish:'Menu card',rules:['pz1','pz2','pz3'],
+ files:{[IDX]:`<?php
+
+?>
+`+page('',`    <h1>Today's special</h1>
+`)},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+$dish = 'Bouillabaisse';
+$price = 18.5;
+$portions = 12;
+$vegetarian = false;
+$chef = 'Roux';
+?>
+`+page("Today's special",`    <h1>Today's special</h1>
+    <h2><?= htmlspecialchars($dish) ?></h2>
+    <p>Price: €<?= $price ?></p>
+    <p>Portions left: <?= $portions ?></p>
+    <p>Chef: <?= htmlspecialchars($chef) ?></p>
+    <pre><?php var_dump($price, $portions, $vegetarian); ?></pre>
+`)},
+ steps:[
+  {t:'Under `<?php`: a blank line, then `declare(strict_types=1);`',c:c=>strictFirst(c),help:['Every PHP file in this kitchen opens the same way.','Line 1 is `<?php`, line 2 stays empty, line 3 is the declare statement with its semicolon.',`<?php
+
+declare(strict_types=1);
+
+$x = 1;`,`<?php
+
+declare(strict_types=1);`]},
+  {t:"Store `'Bouillabaisse'` in `$dish`",c:c=>new RegExp('\\$dish\\s*=\\s*'+q1+'Bouillabaisse'+q1+'\\s*;').test(src(c)),help:['A variable is a $ and a name, then = and the value.','Text goes in quotes. End the line with a semicolon.',`$soup = 'Vichyssoise';`,`$dish = 'Bouillabaisse';`]},
+  {t:'Show `$dish` in an `<h2>` under the title, escaped',c:c=>txt(c,'h1 ~ h2')==='Bouillabaisse'&&/<h2>\s*<\?=\s*htmlspecialchars\(\s*\$dish\s*\)\s*;?\s*\?>\s*<\/h2>/.test(src(c)),help:['Strings go into HTML through htmlspecialchars, every time.','Inside `<h2></h2>`, use the short echo `<?= ?>` with `htmlspecialchars($dish)`.',`<h2><?= htmlspecialchars($soup) ?></h2>`,`<h2><?= htmlspecialchars($dish) ?></h2>`]},
+  {t:'Store the price `18.5` as a float in `$price`',c:c=>/\$price\s*=\s*18\.5\s*;/.test(src(c)),help:['A float is a number with a decimal point.','No quotes around numbers, and a dot, not a comma.',`$weight = 0.75;`,`$price = 18.5;`]},
+  {t:'A paragraph `Price: €18.5` that prints `$price`',c:c=>hasP(c,'Price: €18.5')&&/<\?=\s*\$price\s*;?\s*\?>/.test(src(c)),help:['Numbers cannot contain tags, so they print as they are.','`<p>Price: €` then the short echo of `$price`, then `</p>`.',`<p>Weight: <?= $weight ?> kg</p>`,`<p>Price: €<?= $price ?></p>`]},
+  {t:'Store `12` as an int in `$portions` and show `Portions left: 12`',c:c=>/\$portions\s*=\s*12\s*;/.test(src(c))&&hasP(c,'Portions left: 12')&&/<\?=\s*\$portions/.test(src(c)),help:['Two jobs: a variable at the top, a paragraph in the page.','An int is a whole number without quotes. Print it with `<?= $portions ?>`.',`$tables = 8;
+...
+<p>Tables: <?= $tables ?></p>`,`$portions = 12;
+...
+<p>Portions left: <?= $portions ?></p>`]},
+  {t:'Store `false` in `$vegetarian`',c:c=>/\$vegetarian\s*=\s*false\s*;/i.test(src(c)),help:['A bool is true or false.','No quotes: `\'false\'` would be a string.',`$spicy = true;`,`$vegetarian = false;`]},
+  {t:"Store `'Roux'` in `$chef` and show `Chef: Roux`, escaped",c:c=>new RegExp('\\$chef\\s*=\\s*'+q1+'Roux'+q1).test(src(c))&&hasP(c,'Chef: Roux')&&/htmlspecialchars\(\s*\$chef\s*\)/.test(src(c)),help:['A string variable, then a paragraph that prints it safely.','Same pattern as the dish name, inside a `<p>`.',`$waiter = 'Mia';
+...
+<p>Waiter: <?= htmlspecialchars($waiter) ?></p>`,`$chef = 'Roux';
+...
+<p>Chef: <?= htmlspecialchars($chef) ?></p>`]},
+  {t:'In a `<pre>`, `var_dump` the price, the portions and the vegetarian flag',c:c=>/float\(18\.5\)\s*int\(12\)\s*bool\(false\)/.test(txt(c,'pre'))&&/var_dump\s*\(/.test(src(c)),help:['var_dump shows type and value. A `<pre>` keeps its line breaks.','Inside `<pre></pre>`, open `<?php`, call `var_dump` with the three variables separated by commas, close with `?>`.',`<pre><?php var_dump($weight, $tables); ?></pre>`,`<pre><?php var_dump($price, $portions, $vegetarian); ?></pre>`]},
+  {t:"Set the `<title>` to `Today's special`",c:c=>txt(c,'title')==="Today's special",help:['The title is the text on the browser tab.','Between `<title>` and `</title>` in the head.',`<title>Menu</title>`,`<title>Today's special</title>`]},
+  cleanStep(c=>txt(c,'h2')!==''&&txt(c,'pre')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz1',q:'What is the very first statement in every PHP file here?',o:['echo','declare(strict_types=1);','?>','$x = 1;'],a:1,h:'It switches on strict type checks, before anything else.'},
+  {k:'gap',r:'pz1',q:'Open PHP mode',pre:'',post:'  declare(strict_types=1);',a:['<?php'],h:'Five characters: angle bracket, question mark, php.'},
+  {k:'pick',r:'pz2',q:'Which value is a float?',o:["'4.5'",'4.5','45','true'],a:1,h:'A number with a decimal point and no quotes.'},
+  {k:'type',r:'pz2',q:'Store the int `12` in `$left`',ph:'$left = …',test:/^\$left\s*=\s*12\s*;$/,ans:'$left = 12;',h:'`$left = 12;` No quotes, end with a semicolon.'},
+  {k:'fix',r:'pz2',q:'Spot the bug and fix the line',bug:"dish = 'Soup';",test:/^\$dish\s*=\s*(['"])Soup\1\s*;$/,ans:"$dish = 'Soup';",h:'Every variable starts with a $.'},
+  {k:'gap',r:'pz3',q:'Print a guest name safely',pre:'<p><?= ',post:'($guest) ?></p>',a:['htmlspecialchars'],h:'The function that turns < into &lt;.'}
+ ],
+ review:[
+  {k:'pick',r:'pz3',q:'What does the browser receive for `<?= htmlspecialchars(\'<b>\') ?>`?',o:['<b>','&lt;b&gt;','b','nothing'],a:1,h:'The angle brackets become entities.'}
+ ]},
+
+{id:'dish-label',name:'Dish label',dish:'Dish label',rules:['pz4','pz5','pz6'],
+ files:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+$name = '  coq au vin ';
+$price = 21.5;
+$grams = 1250;
+$allergens = 'gluten, celery';
+$table = 7;
+?>
+`+page('Dish label','')},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+$name = '  coq au vin ';
+$price = 21.5;
+$grams = 1250;
+$allergens = 'gluten, celery';
+$table = 7;
+
+$clean = trim($name);
+$serve = "Serve at table {$table}";
+$code = sprintf('%s-%03d', strtoupper(substr($clean, 0, 3)), $price);
+?>
+`+page('Dish label',`    <h1><?= htmlspecialchars(strtoupper($clean)) ?></h1>
+    <h2><?= htmlspecialchars(ucwords($clean)) ?></h2>
+    <p class="price">€<?= number_format($price, 2) ?></p>
+    <p>Weight: <?= number_format($grams) ?> g</p>
+    <p>Allergens: <?= htmlspecialchars(str_replace(', ', ' · ', ucwords($allergens))) ?></p>
+    <p><?= htmlspecialchars($serve) ?></p>
+    <p>Name: <?= strlen($clean) ?> letters</p>
+    <p>Code: <?= htmlspecialchars($code) ?></p>
+`)},
+ steps:[
+  {t:'Make `$clean`: `$name` without the spaces at both ends',c:c=>/\$clean\s*=\s*trim\(\s*\$name\s*\)\s*;/.test(src(c)),help:['The raw name has spaces at the start and end. One function cleans both.','`trim` returns a new string. Store it in `$clean`.',`$guest = trim($input);`,`$clean = trim($name);`]},
+  {t:'An `<h1>` in capitals: `COQ AU VIN`',c:c=>txt(c,'h1')==='COQ AU VIN'&&/strtoupper\(\s*\$clean\s*\)/.test(src(c)),help:['Work from `$clean`, not `$name`.','`strtoupper($clean)`, wrapped in htmlspecialchars, inside the h1.',`<h1><?= htmlspecialchars(strtoupper($guest)) ?></h1>`,`<h1><?= htmlspecialchars(strtoupper($clean)) ?></h1>`]},
+  {t:'Under it, an `<h2>` in Title Case: `Coq Au Vin`',c:c=>txt(c,'h1 ~ h2')==='Coq Au Vin'&&/ucwords\(\s*\$clean\s*\)/.test(src(c)),help:['One function capitalises the first letter of every word.','`ucwords($clean)`, escaped, in an h2.',`<h2><?= htmlspecialchars(ucwords($guest)) ?></h2>`,`<h2><?= htmlspecialchars(ucwords($clean)) ?></h2>`]},
+  {t:'`<p class="price">` with two decimals: `€21.50`',c:c=>txt(c,'p.price')==='€21.50'&&/number_format\(\s*\$price\s*,\s*2\s*\)/.test(src(c)),help:['A float prints as 21.5. Money needs two decimals.','`number_format($price, 2)` inside the paragraph, after the € sign.',`<p class="total">€<?= number_format($total, 2) ?></p>`,`<p class="price">€<?= number_format($price, 2) ?></p>`]},
+  {t:'`Weight: 1,250 g` with a thousands separator',c:c=>hasP(c,'Weight: 1,250 g')&&/number_format\(\s*\$grams\s*\)/.test(src(c)),help:['Same function, without the decimals argument.','`number_format($grams)` gives `1,250`.',`<p>Guests: <?= number_format($guests) ?></p>`,`<p>Weight: <?= number_format($grams) ?> g</p>`]},
+  {t:'`Allergens: Gluten · Celery`: capitals first, then swap `, ` for ` · `',c:c=>hasP(c,'Allergens: Gluten · Celery')&&/str_replace\(/.test(src(c))&&/ucwords\(\s*\$allergens\s*\)/.test(src(c)),help:['Two functions, one inside the other. The inner one runs first.','`str_replace(\', \', \' · \', ucwords($allergens))`, then escape the result.',`<?= htmlspecialchars(str_replace('-', ' ', ucwords($slug))) ?>`,`<p>Allergens: <?= htmlspecialchars(str_replace(', ', ' · ', ucwords($allergens))) ?></p>`]},
+  {t:'Build `$serve` with double quotes: `"Serve at table {$table}"`',c:c=>/\$serve\s*=\s*"Serve at table \{\$table\}"\s*;/.test(src(c)),help:['Double quotes fill in variables. Curly braces mark where the name ends.','In the PHP block at the top, under `$clean`.',`$greeting = "Welcome, {$guest}";`,`$serve = "Serve at table {$table}";`]},
+  {t:'Print `$serve` in a paragraph, escaped',c:c=>hasP(c,'Serve at table 7')&&/htmlspecialchars\(\s*\$serve\s*\)/.test(src(c)),help:['It is a string, so it gets escaped.','A `<p>` with `<?= htmlspecialchars($serve) ?>`.',`<p><?= htmlspecialchars($greeting) ?></p>`,`<p><?= htmlspecialchars($serve) ?></p>`]},
+  {t:'`Name: 10 letters`, counted with `strlen`',c:c=>hasP(c,'Name: 10 letters')&&/strlen\(\s*\$clean\s*\)/.test(src(c)),help:['Count the cleaned name, not the raw one with spaces.','`strlen($clean)` returns an int, so no escaping needed.',`<p>Length: <?= strlen($guest) ?></p>`,`<p>Name: <?= strlen($clean) ?> letters</p>`]},
+  {t:'Make `$code` with `sprintf`, then show `Code: COQ-021`',c:c=>hasP(c,'Code: COQ-021')&&/\$code\s*=\s*sprintf\(/.test(src(c)),help:['A pattern: three capital letters, a dash, the price as a 3-digit number.','`sprintf(\'%s-%03d\', …, $price)`. The first part is the first 3 letters of `$clean` in capitals.',`$ref = sprintf('%s-%03d', 'TAB', 7);`,`$code = sprintf('%s-%03d', strtoupper(substr($clean, 0, 3)), $price);
+...
+<p>Code: <?= htmlspecialchars($code) ?></p>`]},
+  {t:'Every string printed into the page goes through `htmlspecialchars`',c:c=>txt(c,'h1')!==''&&echoes(src(c)).length>=6&&escaped(c,['$clean','$serve','$code','$allergens','$name','ucwords','strtoupper','str_replace']),help:['Check each `<?= … ?>` that prints text.','Only `number_format` and `strlen` results are numbers-only. Everything else gets escaped.',`<?= htmlspecialchars($text) ?>`,`<?= htmlspecialchars(…) ?> around every string`]},
+  cleanStep(c=>hasP(c,'Code: COQ-021'))
+ ],
+ drills:[
+  {k:'pick',r:'pz4',q:"What does `echo 'Table $t';` print when `$t` is 7?",o:['Table 7','Table $t','Table','an error'],a:1,h:'Single quotes print exactly what you typed.'},
+  {k:'gap',r:'pz4',q:'Join the two strings',pre:"$full = $first ",post:" ' ' . $last;",a:['.'],h:'Not a plus sign.'},
+  {k:'type',r:'pz5',q:'Store `$name` without spaces at both ends in `$clean`',ph:'$clean = …',test:/^\$clean\s*=\s*trim\(\s*\$name\s*\)\s*;$/,ans:'$clean = trim($name);',h:'`$clean = trim($name);`'},
+  {k:'fix',r:'pz5',q:'This line runs, but `$name` still has its spaces. Fix it',bug:'trim($name);',test:/^\$name\s*=\s*trim\(\s*\$name\s*\)\s*;$/,ans:'$name = trim($name);',h:'String functions return a new string. Store it.'},
+  {k:'gap',r:'pz6',q:'Show 21.5 as `21.50`',pre:'number_format($price, ',post:')',a:['2'],h:'How many decimals?'},
+  {k:'pick',r:'pz6',q:"What does `sprintf('%03d', 7)` give?",o:['7','007','700','7.000'],a:1,h:'Zero-padded to 3 digits.'}
+ ]},
+
+{id:'pantry',name:'The pantry',dish:'Pantry',rules:['pz7','pz8','pz9'],
+ files:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+?>
+`+page('The pantry',`    <h1>The pantry</h1>
+`)},
+ solution:{[IDX]:`<?php
+
+declare(strict_types=1);
+
+$shelf = ['flour', 'butter', 'thyme'];
+$shelf[] = 'saffron';
+sort($shelf);
+
+$stock = [
+    'flour' => 2000,
+    'butter' => 500,
+    'thyme' => 30,
+    'saffron' => 2,
+];
+$stock['butter'] -= 125;
+
+$hasSaffron = in_array('saffron', $shelf, true);
+?>
+`+page('The pantry',`    <h1>The pantry</h1>
+    <p><?= count($shelf) ?> jars on the shelf</p>
+    <p>Shelf: <?= htmlspecialchars(implode(', ', $shelf)) ?></p>
+    <p>First jar: <?= htmlspecialchars($shelf[0]) ?></p>
+    <p>Butter left: <?= $stock['butter'] ?> g</p>
+    <p>Saffron in stock: <?= $hasSaffron ? 'yes' : 'no' ?></p>
+    <pre><?php print_r($stock); ?></pre>
+`)},
+ steps:[
+  {t:"Make the list `$shelf` with `'flour'`, `'butter'`, `'thyme'`",c:c=>new RegExp('\\$shelf\\s*=\\s*\\[\\s*'+q1+'flour'+q1+'\\s*,\\s*'+q1+'butter'+q1+'\\s*,\\s*'+q1+'thyme'+q1+'\\s*,?\\s*\\]\\s*;').test(src(c)),help:['A list lives in square brackets, items separated by commas.','In the PHP block: `$shelf = [ … ];` with the three words in quotes.',`$herbs = ['dill', 'mint'];`,`$shelf = ['flour', 'butter', 'thyme'];`]},
+  {t:"Add `'saffron'` to the end with `[]`",c:c=>new RegExp('\\$shelf\\[\\]\\s*=\\s*'+q1+'saffron'+q1+'\\s*;').test(src(c)),help:['Empty square brackets after the name mean: the next free spot.','`$shelf[] = …;` on its own line.',`$herbs[] = 'basil';`,`$shelf[] = 'saffron';`]},
+  {t:'Sort the shelf A to Z',c:c=>/(^|[;{}\n])\s*sort\(\s*\$shelf\s*\)\s*;/.test(src(c))&&!/=\s*sort\(/.test(src(c)),help:['sort changes the array itself. Do not store its result.','`sort($shelf);` on its own line, after adding saffron.',`sort($herbs);`,`sort($shelf);`]},
+  {t:'`4 jars on the shelf`, counted',c:c=>hasP(c,'4 jars on the shelf')&&/count\(\s*\$shelf\s*\)/.test(src(c)),help:['Let PHP count; never type the number yourself.','`<?= count($shelf) ?>` inside the paragraph.',`<p><?= count($herbs) ?> herbs</p>`,`<p><?= count($shelf) ?> jars on the shelf</p>`]},
+  {t:'`Shelf: butter, flour, saffron, thyme` with `implode`',c:c=>hasP(c,'Shelf: butter, flour, saffron, thyme')&&/implode\(/.test(src(c)),help:['implode glues a list into one string. It is a string, so escape it.',"`implode(', ', $shelf)` inside htmlspecialchars.",`<p><?= htmlspecialchars(implode(' / ', $herbs)) ?></p>`,`<p>Shelf: <?= htmlspecialchars(implode(', ', $shelf)) ?></p>`]},
+  {t:'`First jar: butter`',c:c=>hasP(c,'First jar: butter')&&/\$shelf\[\s*0\s*\]/.test(src(c)),help:['After sorting, butter is first. Which number is first in a list?','Counting starts at 0: `$shelf[0]`.',`<p><?= htmlspecialchars($herbs[0]) ?></p>`,`<p>First jar: <?= htmlspecialchars($shelf[0]) ?></p>`]},
+  {t:'Make `$stock`: flour `2000`, butter `500`, thyme `30`, saffron `2`',c:c=>{const s=src(c);return /\$stock\s*=\s*\[/.test(s)&&['flour',2000,'butter',500,'thyme',30,'saffron',2].every((v,i,a)=>i%2||new RegExp(q1+v+q1+'\\s*=>\\s*'+a[i+1]+'\\b').test(s))},help:['A keyed array: each line is key => value.','`$stock = [` then `\'flour\' => 2000,` and so on, then `];`.',`$spices = [
+    'pepper' => 40,
+    'salt' => 900,
+];`,`$stock = [
+    'flour' => 2000,
+    'butter' => 500,
+    'thyme' => 30,
+    'saffron' => 2,
+];`]},
+  {t:'Take `125` g of butter off with `-=`',c:c=>new RegExp('\\$stock\\['+q1+'butter'+q1+'\\]\\s*-=\\s*125\\s*;').test(src(c)),help:['Change the value in place instead of typing 375.',"`$stock['butter'] -= 125;` after the array.",`$spices['salt'] -= 50;`,`$stock['butter'] -= 125;`]},
+  {t:'`Butter left: 375 g`',c:c=>hasP(c,'Butter left: 375 g')&&new RegExp('<\\?=\\s*\\$stock\\['+q1+'butter'+q1+'\\]').test(src(c)),help:['Read the value by its key. It is an int.',"`<?= $stock['butter'] ?>`.",`<p>Salt: <?= $spices['salt'] ?> g</p>`,`<p>Butter left: <?= $stock['butter'] ?> g</p>`]},
+  {t:'`Saffron in stock: yes` with a strict `in_array` and a ternary',c:c=>hasP(c,'Saffron in stock: yes')&&/in_array\([^)]*,\s*true\s*\)/.test(src(c))&&/\?\s*'yes'\s*:\s*'no'/.test(src(c)),help:['in_array answers true or false. A ternary turns that into words.','`$hasSaffron = in_array(\'saffron\', $shelf, true);` at the top, then `$hasSaffron ? \'yes\' : \'no\'` in the page.',`$hasMint = in_array('mint', $herbs, true);
+...
+<p>Mint: <?= $hasMint ? 'yes' : 'no' ?></p>`,`$hasSaffron = in_array('saffron', $shelf, true);
+...
+<p>Saffron in stock: <?= $hasSaffron ? 'yes' : 'no' ?></p>`]},
+  {t:'In a `<pre>`, `print_r($stock)`',c:c=>/\[butter\]\s*=>\s*375/.test(c.doc?c.doc.querySelector('pre')?.textContent||'':'')&&/print_r\(\s*\$stock\s*\)/.test(src(c)),help:['print_r shows a whole array, key by key.','`<pre><?php print_r($stock); ?></pre>` at the end of the body.',`<pre><?php print_r($spices); ?></pre>`,`<pre><?php print_r($stock); ?></pre>`]},
+  {t:'Strings from the shelf are escaped, and the run is clean',c:c=>txt(c,'pre')!==''&&escaped(c,['implode','$shelf['])&&okRun(c),help:['Two prints use text from the list.','Wrap the implode and `$shelf[0]` in htmlspecialchars. Then read any red box.',`<?= htmlspecialchars($herbs[0]) ?>`,`<?= htmlspecialchars(implode(', ', $shelf)) ?>
+<?= htmlspecialchars($shelf[0]) ?>`]}
+ ],
+ drills:[
+  {k:'pick',r:'pz7',q:"In `['flour', 'butter', 'thyme']`, what is at index `1`?",o:['flour','butter','thyme','nothing'],a:1,h:'Counting starts at 0.'},
+  {k:'gap',r:'pz7',q:'Add salt to the end of the list',pre:'$shelf',post:" = 'salt';",a:['[]'],h:'Empty square brackets.'},
+  {k:'type',r:'pz8',q:"Make `$stock` with one key: `'salt'` is `50`",ph:'$stock = […];',test:/^\$stock\s*=\s*\[\s*(['"])salt\1\s*=>\s*50\s*,?\s*\]\s*;$/,ans:"$stock = ['salt' => 50];",h:"`$stock = ['salt' => 50];`"},
+  {k:'fix',r:'pz8',q:'Spot the bug and fix the line',bug:"$stock = ['flour' = 2000];",test:/^\$stock\s*=\s*\[\s*(['"])flour\1\s*=>\s*2000\s*,?\s*\]\s*;$/,ans:"$stock = ['flour' => 2000];",h:'Keys and values are joined with =>.'},
+  {k:'pick',r:'pz9',q:'What does `$shelf = sort($shelf);` leave in `$shelf`?',o:['The sorted list','true','null','The list in reverse'],a:1,h:'sort sorts in place and returns true.'},
+  {k:'gap',r:'pz9',q:'Check strictly',pre:"in_array('salt', $shelf, ",post:')',a:['true'],h:'The third argument switches on === comparison.'}
+ ]}
+];
+
+const MORE=[
+ {k:'pick',r:'pz1',q:'Which part of index.php does the browser receive?',o:['The PHP code','Only what the code printed and the HTML outside the tags','Both','Nothing'],a:1,h:'PHP runs on the server first.'},
+ {k:'pick',r:'pz2',q:"What does `var_dump('12')` print?",o:['int(12)','string(2) "12"','12','float(12)'],a:1,h:'Quotes make it a string.'},
+ {k:'pick',r:'pz4',q:'Which line prints `Table 7`?',o:["'Table {$t}'",'"Table {$t}"',"'Table ' + $t",'"Table" $t'],a:1,h:'Double quotes fill in variables.'},
+ {k:'gap',r:'pz5',q:'Cut the first 3 letters',pre:'substr($name, ',post:', 3)',a:['0'],h:'Counting starts at 0.'},
+ {k:'pick',r:'pz9',q:'Which joins a list into `a, b, c`?',o:["implode(', ', $a)","explode(', ', $a)","join($a)","str_replace(', ', $a)"],a:0,h:'Glue first, then the list.'}
+];
+
+const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
+const ROUX='img/roux/';
+const KEY='passle.v2';
+const PLATE_NAMES=['Menu card','Dish label','The pantry','Menu board','Kitchen helpers','Split the kitchen','Order slip','Safe orders','Table service','Recipe book','The cellar',"Roux's Bistro"];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
+
+function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
+let S=Object.assign({t:0,stage:'school',drill:0,les:0,code:{},file:{},done:{},built:{},learned:[],flag:[],sfx:true,keys:false,vol:70,ft:0},load()||{});
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
+
+let AC;
+function ctx(){if(!S.sfx)return null;if(!AC){try{AC=new(window.AudioContext||window.webkitAudioContext)()}catch(e){return null}}if(AC.state==='suspended')AC.resume();return AC}
+function beep(f,d,type,v,delay,f2){const c=ctx();if(!c)return;const t=c.currentTime+(delay||0),o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);const vol=(v||.05)*(S.vol/70);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(Math.max(vol,.0002),t+.006);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.03)}
+const sfx={
+ key(){if(S.keys)beep(1900+Math.random()*500,.015,'sine',.012)},
+ ok(){beep(660,.07,'sine',.04);beep(880,.09,'sine',.04,.07)},
+ bad(){beep(150,.13,'square',.025)},
+ hint(){beep(1320,.06,'sine',.035);beep(1760,.12,'sine',.025,.08)},
+ rule(){[523,659,784,1047].forEach((f,i)=>beep(f,.12,'triangle',.04,i*.09))},
+ target(){[392,523,659,784].forEach((f,i)=>beep(f,.14,'sine',.045,i*.11));beep(1047,.4,'triangle',.045,.46);beep(523,.4,'sine',.03,.46)},
+ serve(){[523,659,784].forEach((f,i)=>beep(f,.09,'triangle',.035,i*.07));beep(1319,.35,'sine',.03,.24)},
+ blip(){beep(1200,.05,'sine',.03,0,800);beep(900,.05,'sine',.025,.06,600)},
+ click(){beep(1000,.03,'sine',.02)}
+};
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+const clone=o=>JSON.parse(JSON.stringify(o));
+const T=()=>TARGETS[S.t];
+const isMaster=tg=>tg.master!=null;
+const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[TARGETS[m].id]&&!isMaster(TARGETS[m+1]))m++;return m};
+const unlocked=i=>i<=maxT()||(isMaster(TARGETS[i])&&!!S.done[TARGETS[TARGETS[i].master].id]);
+const schoolDone=t=>TARGETS[t].rules.every(r=>S.learned.includes(r));
+let commsT;function comms(m){$('cmsg').textContent=m;$('comms').classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>$('comms').classList.remove('flash'),1800)}
+
+const poseT=new WeakMap();
+function pose(el,p,ms){if(!el)return;clearTimeout(poseT.get(el));el.dataset.react=ms?'1':'';el.src=ROUX+p+'.png';if(ms)poseT.set(el,setTimeout(()=>{el.dataset.react='';el.src=ROUX+(el.dataset.base||'idle')+'.png'},ms))}
+let typeT=0;
+function typing(){const now=Date.now();if(now-typeT<420)return;typeT=now;['hroux','rmini'].forEach(id=>{const el=$(id);if(!el||el.dataset.react==='1')return;const nx=/idle2/.test(el.src)?'idle':'idle2';el.src=ROUX+nx+'.png'})}
+
+function chunk(d){return Array.isArray(d)?d.join(''):(d==null?'':String(d))}
+function phpStr(s){return "'"+String(s).replace(/\\/g,'\\\\').replace(/'/g,"\\'")+"'"}
+function shim(req){
+  req=req||{};const m=req.method||'GET',g=req.get||{},p=req.post||{};
+  const qs=Object.keys(g).length?'?'+new URLSearchParams(g).toString():'';
+  return '<?php\nerror_reporting(E_ALL);\nini_set(\'display_errors\', \'1\');\nini_set(\'html_errors\', \'0\');\n'
+   +'$_SERVER[\'REQUEST_METHOD\'] = '+phpStr(m)+';\n$_SERVER[\'REQUEST_URI\'] = '+phpStr((req.path||'/')+qs)+';\n$_SERVER[\'SCRIPT_NAME\'] = \'/index.php\';\n$_SERVER[\'DOCUMENT_ROOT\'] = \'/app/public\';\n'
+   +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n'
+   +'chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
+}
+const Engine={st:'off',php:null,mod:null,q:Promise.resolve(),written:[],out:'',err:'',
+  boot(){
+    if(this.booting)return this.booting;
+    this.st='warm';engBadge();
+    this.booting=(async()=>{
+      try{
+        const m=await import(PHPWASM);
+        const php=new m.PhpWeb();this.php=php;
+        php.addEventListener('output',e=>{this.out+=chunk(e.detail)});
+        php.addEventListener('error',e=>{this.err+=chunk(e.detail)});
+        await new Promise(res=>{let d=false;const ok=()=>{if(!d){d=true;res()}};php.addEventListener('ready',ok);if(php.binary&&php.binary.then)php.binary.then(ok,ok);setTimeout(ok,20000)});
+        this.mod=await php.binary;this.st='ready';engBadge();
+      }catch(e){this.st='fail';this.failMsg=String(e&&e.message||e);engBadge();throw e}
+    })();
+    return this.booting;
+  },
+  mkdirp(path){const FS=this.mod.FS;let cur='';path.split('/').filter(Boolean).forEach(seg=>{cur+='/'+seg;try{if(!FS.analyzePath(cur).exists)FS.mkdir(cur)}catch(e){}})},
+  run(files,req){const p=this.q.then(()=>this._run(files,req));this.q=p.catch(()=>{});return p},
+  async _run(files,req){
+    await this.boot();
+    const FS=this.mod.FS;
+    this.written.forEach(f=>{try{FS.unlink(f)}catch(e){}});this.written=[];
+    ['/app/public','/app/src','/app/templates','/app/data'].forEach(d=>this.mkdirp(d));
+    Object.keys(files).forEach(p=>{const full='/app/'+p;this.mkdirp(full.slice(0,full.lastIndexOf('/')));FS.writeFile(full,String(files[p]));this.written.push(full)});
+    if(this.php.refresh){try{await this.php.refresh()}catch(e){}}
+    this.out='';this.err='';
+    try{await this.php.run(shim(req))}catch(e){this.err+='\n'+String(e&&e.message||e)}
+    return mkResult(this.out,this.err);
+  }
+};
+function mkResult(out,err){
+  out=String(out||'');err=String(err||'');
+  const lines=(out+'\n'+err).split('\n').map(l=>l.replace(/^PHP /,'').trim()).filter(l=>BAD_RE.test(l));
+  const bad=lines.length>0;
+  return {out,err,bad,errs:[...new Set(lines)],doc:new DOMParser().parseFromString(out,'text/html')};
+}
+function engBadge(){const b=$('eng');b.className=Engine.st==='ready'?'ready':(Engine.st==='fail'?'fail':'');b.textContent={off:'stove cold',warm:'lighting stove',ready:'stove hot',fail:'no stove'}[Engine.st];if(Engine.st==='fail')comms('PHP engine did not load. Open Passle over http(s) with an internet connection.')}
+
+function drillsFor(t){
+  const tg=TARGETS[t];let list=tg.drills.concat(tg.review||[]);
+  S.flag.filter(id=>{const i=TARGETS.findIndex(x=>x.id===id);return i>=0&&i<t}).forEach(id=>{const d=TARGETS.find(x=>x.id===id).drills.find(x=>x.k==='type'||x.k==='fix');if(d)list=list.concat([Object.assign({},d,{rv:1,q:'Review: '+d.q})])});
+  return list;
+}
+function go(v){S.stage=v;save();render()}
+function render(){
+  const vw=S.stage==='practice'?'school':S.stage;
+  document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
+  document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
+  const sel=$('tsel');sel.innerHTML='';
+  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':'Plate '+ROM[i]+' · ')+tg.name;o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
+  $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
+  if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='kitchen')renderKitchen();else renderRules();
+}
+
+function resultInto(box,r){
+  box.innerHTML='';
+  if(!r){box.innerHTML='<div class="wait">Cooking…</div>';return}
+  if(r.fail){box.innerHTML='<pre class="err"></pre>';box.firstChild.textContent='The PHP engine is not running. Open Passle over http(s) with an internet connection.';return}
+  const html=/<[a-z!][^>]*>/i.test(r.out)&&!r.bad;
+  if(html){const f=document.createElement('iframe');f.title='Result';f.srcdoc=r.out;box.appendChild(f)}
+  else{const p=document.createElement('pre');if(r.bad)p.className='err';p.textContent=r.out.trim()||r.err.trim()||'(no output)';box.appendChild(p)}
+}
+function runSnippet(code){return Engine.run({[IDX]:code},{}).catch(()=>({fail:1}))}
+
+let dState={};
+let PR=null;
+function practiceList(){
+  const pool=[];TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))}));
+  MORE.forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))});
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  return pool.slice(0,10);
+}
+const lessonsDone=t=>(S.les||0)>=TARGETS[t].rules.length||S.drill>0;
+function exampleBlock(code,title,id){
+  const e=document.createElement('div');e.className='exb';
+  e.innerHTML='<div class="eh"><span>'+esc(title)+'</span><span>result →</span></div><div class="eb"><pre class="code"></pre><div class="res"></div></div>';
+  const pre=e.querySelector('pre.code'),res=e.querySelector('.res');pre.innerHTML=hlPHP(code);if(id){pre.id=id+'code';res.id=id+'res'}
+  resultInto(res,null);runSnippet(code).then(r=>{if(res.isConnected)resultInto(res,r)});
+  return e;
+}
+function renderLesson(id,k,n,back){
+  const r=RULES[id];
+  $('dtitle').textContent=back?'Lesson · Rule '+r.n:'Lesson '+(k+1)+' of '+n;$('pips').innerHTML='';
+  const box=$('dbox');
+  box.innerHTML='<div class="lhead"><div><div class="dk">Rule '+r.n+' · '+esc(r.cat)+'</div><h2 class="lt">'+esc(r.title)+'</h2></div><img id="lroux" src="'+ROUX+'idle.png" alt=""></div><p class="why">'+esc(r.why)+'</p>'
+   +'<div class="sec"><small>Anatomy</small><div class="parts">'+r.parts.map(([a,b])=>'<code>'+esc(a)+'</code><span>'+esc(b)+'</span>').join('')+'</div></div>'
+   +'<div class="sec"><small>Pattern</small><div class="syn">'+r.syn+'</div></div>'
+   +'<div class="sec warn"><small>Watch out</small><ul>'+r.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>'
+   +'<div class="sec play"><small>Your turn · change example 1 and watch it run</small><textarea id="playbox" spellcheck="false" aria-label="Edit example 1"></textarea></div>'
+   +'<div class="drow" id="lrow"></div>';
+  const row=$('lrow');
+  if(back){const b=document.createElement('button');b.className='pri';b.textContent='Back to the drill';b.onclick=()=>{sfx.click();renderSchool()};row.appendChild(b)}
+  else{
+    if(k>0){const b=document.createElement('button');b.textContent='Previous';b.onclick=()=>{S.les=k-1;save();sfx.click();renderSchool()};row.appendChild(b)}
+    const nx=document.createElement('button');nx.className='pri';nx.textContent=k+1<n?'Next lesson':'Start drills';nx.onclick=()=>{S.les=k+1;save();sfx.blip();renderSchool()};row.appendChild(nx);
+  }
+  const sd=$('sside');$('stitle').textContent='Examples';$('plabel').textContent='code and what PHP sends';sd.innerHTML='';
+  sd.appendChild(exampleBlock(r.ex,'Example 1','ex1'));sd.appendChild(exampleBlock(r.ex2,'Example 2'));
+  const pb=$('playbox');pb.value=r.ex;let pt;
+  pb.addEventListener('input',()=>{sfx.key();typingEl($('lroux'));clearTimeout(pt);pt=setTimeout(()=>{const v=pb.value;$('ex1code').innerHTML=hlPHP(v);resultInto($('ex1res'),null);runSnippet(v).then(rr=>{if($('ex1res'))resultInto($('ex1res'),rr)})},450)});
+  pb.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();const st=pb.selectionStart;pb.setRangeText('    ',st,pb.selectionEnd,'end');pb.dispatchEvent(new Event('input'))}});
+}
+let lrT=0;function typingEl(el){if(!el)return;const now=Date.now();if(now-lrT<420)return;lrT=now;el.src=ROUX+(/idle2/.test(el.src)?'idle':'idle2')+'.png'}
+function renderSchool(){
+  const prac=S.stage==='practice';
+  if(prac&&!PR)PR={list:practiceList(),i:0,ft:0};
+  const tg=T(),list=prac?PR.list:drillsFor(S.t),idx=prac?PR.i:S.drill;
+  if(prac&&!list.length){$('dtitle').textContent='Practice';$('pips').innerHTML='';$('sside').innerHTML='';$('dbox').innerHTML='<div class="donecard"><div class="lhead"><div><h2>Nothing to practise yet</h2><p class="hint0">Finish your first School and its rules unlock here.</p></div><img src="'+ROUX+'rest.png" alt=""></div></div>';return}
+  if(!prac&&!lessonsDone(S.t)){const k=S.les||0;renderLesson(tg.rules[k],k,tg.rules.length);return}
+  const p=$('pips');p.innerHTML='';list.forEach((d,i)=>{const s=document.createElement('span');if(i<idx)s.className='ok';else if(i===idx)s.className='now';if(d.rv)s.classList.add('rv');p.appendChild(s)});
+  if(idx>=list.length){prac?practiceDone():schoolComplete(list);return}
+  renderDrill(list[idx],idx,list.length);
+}
+function practiceDone(){
+  $('dtitle').textContent='Practice complete';sideRule(null);
+  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div><img src="'+ROUX+'cheer.png" alt=""></div><p class="hint0">Practice mixes drills from every rule you have learned. Run it whenever you have five minutes.</p><div class="drow"><button class="pri" id="again">New round</button></div></div>';
+  $('again').onclick=()=>{PR=null;sfx.click();renderSchool()};sfx.rule();
+}
+function sideRule(id){
+  const sd=$('sside');sd.innerHTML='';
+  if(!id){$('stitle').textContent='Examples';$('plabel').textContent='';return}
+  const r=RULES[id];$('stitle').textContent='Rule '+r.n;$('plabel').textContent=r.title;
+  sd.appendChild(exampleBlock(r.ex,'Rule example'));
+}
+function renderDrill(d,i,n){
+  dState={tries:0};
+  $('dtitle').textContent=(S.stage==='practice'?'Practice ':'Drill ')+(i+1)+' of '+n;
+  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug'}[d.k];
+  const R=RULES[d.r];
+  box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dbody"><div class="dk">'+(d.rv?'Review · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div><div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div></div><img class="droux" id="droux" src="'+ROUX+'idle.png" alt=""></div><div class="sec warn"><small>Watch out</small><ul>'+R.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>';
+  $('lessbtn').onclick=()=>{sfx.blip();renderLesson(d.r,0,1,true)};
+  sideRule(d.r);
+  const din=$('din');
+  if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>pick(d,j,b);din.appendChild(b)});$('dcheck').parentNode.style.display='none'}
+  else if(d.k==='gap'){din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="dval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>'}
+  else{din.innerHTML='<input id="dval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'')+'">';if(d.k==='fix')$('dval').value=d.bug}
+  const inp=$('dval');
+  if(inp){
+    inp.addEventListener('input',()=>{sfx.key();typingEl($('droux'));$('fb').textContent='';$('fb').className='fb'});
+    inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkDrill(d)}});
+    $('dcheck').onclick=()=>checkDrill(d);setTimeout(()=>inp.focus(),30);
+  }
+}
+function pick(d,j,b){if(dState.locked)return;if(j===d.a){b.classList.add('good');passDrill()}else{b.classList.add('bad');failDrill(d)}}
+function checkDrill(d){
+  const v=$('dval').value.trim(),fb=$('fb');
+  if(!v){fb.className='fb err';fb.textContent='Type an answer first.';sfx.bad();return}
+  const ok=d.k==='gap'?d.a.includes(v):d.test.test(v.replace(/\s+/g,' '));
+  ok?passDrill():failDrill(d);
+}
+function passDrill(){
+  if(dState.locked)return;dState.locked=true;
+  if(dState.tries===0)S.ft++;
+  const fb=$('fb');fb.className='fb ok';fb.textContent=['Oui, chef.','Clean plate.','Spot on.','Service!'][Math.floor(Math.random()*4)];
+  pose($('droux'),'happy',900);
+  if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
+  sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool()},800);
+}
+function failDrill(d){dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);pose($('droux'),'stern',1400);sfx.bad()}
+function schoolComplete(){
+  const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
+  if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();comms('New rules in the Rulebook and the Codex.');render();return}
+  $('dtitle').textContent='School complete';
+  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Session report</div><h2>Ready for the pass</h2></div><img src="'+ROUX+'cheer.png" alt=""></div><ul>'+tg.rules.map(r=>'<li>Rule '+RULES[r].n+': '+esc(RULES[r].title)+'</li>').join('')+'</ul><div class="win">Next up: <b>'+esc(tg.name)+'</b>. You only need what you just practised.</div><div class="drow"><button id="redo">Redo drills</button><button class="pri" id="goT">Start the plate</button></div></div>';
+  $('redo').onclick=()=>{S.drill=0;save();sfx.click();renderSchool()};
+  $('goT').onclick=()=>{sfx.click();go('target')};
+  $('stitle').textContent="Today's plate";$('plabel').textContent=tg.name;const sd=$('sside');sd.innerHTML='<div class="res" style="flex:1"></div>';const res=sd.firstChild;resultInto(res,null);solOut(tg).then(r=>{if(res.isConnected)resultInto(res,r)});
+}
+
+const SOL={};
+function solOut(tg){if(!SOL[tg.id])SOL[tg.id]=Engine.run(tg.solution,tg.request).catch(()=>{delete SOL[tg.id];return {fail:1,out:'',err:'',doc:null}});return SOL[tg.id]}
+const curFiles=()=>{const tg=T();if(!S.code[tg.id])S.code[tg.id]=clone(tg.files);return S.code[tg.id]};
+let file=IDX,lastPass=null,lv=0,curStep=-2,runSeq=0,runT,lastRes=null;
+function renderTarget(){
+  const tg=T();$('tree').classList.remove('on');
+  $('tname').textContent=tg.name;$('tcount').textContent=isMaster(tg)?'Master plate':'Plate '+ROM[S.t]+' / '+PLATE_NAMES.length;
+  const fs=curFiles();
+  const ed=$('ed');if(ed.dataset.t!==tg.id){ed.dataset.t=tg.id;lastPass=null;curStep=-2;lv=0;file=S.file[tg.id]&&fs[S.file[tg.id]]!=null?S.file[tg.id]:Object.keys(fs)[0]}
+  $('req').textContent=(tg.request&&tg.request.method||'GET')+' '+(tg.request&&tg.request.path||'/');
+  $('traw').textContent='';$('tframe').srcdoc='';
+  solOut(tg).then(r=>{if(T()!==tg)return;$('tframe').srcdoc=r.out;$('ovl').srcdoc=r.out;$('traw').textContent=r.fail?'The PHP engine is not running.':r.out});
+  ed.value=fs[file];renderTabs();paint();renderHelp();run();
+}
+function renderTabs(){
+  const tb=$('tabs');tb.innerHTML='';
+  Object.keys(curFiles()).forEach(p=>{const b=document.createElement('button');b.className='tab'+(file===p?' on':'');b.textContent=p;b.onclick=()=>{if(file===p)return;file=p;S.file[T().id]=p;save();sfx.click();$('ed').value=curFiles()[p];renderTabs();paint()};tb.appendChild(b)});
+}
+function run(){
+  const tg=T(),seq=++runSeq,files=clone(curFiles());
+  $('scan').className='';$('scan').textContent=Engine.st==='ready'?'Cooking…':'Waiting for the stove…';
+  Engine.run(files,tg.request).then(r=>{if(seq!==runSeq||T()!==tg)return;show(r);evaluate(r,files)}).catch(()=>{if(seq!==runSeq)return;$('scan').className='bad';$('scan').textContent='No PHP engine: open Passle over http(s) with an internet connection.'});
+}
+function show(r){
+  lastRes=r;$('bframe').srcdoc=r.out;$('braw').textContent=r.out;
+  const eb=$('errbox');eb.textContent=r.errs.join('\n');eb.classList.toggle('on',r.bad);
+}
+function habits(files){
+  const out=[];
+  Object.keys(files).forEach(p=>{
+    if(!/\.php$/.test(p))return;const s=String(files[p]),c=stripC(s);
+    if(/<\?php/.test(s)&&!/^<\?php\s+declare\s*\(\s*strict_types\s*=\s*1\s*\)\s*;/.test(s))out.push(p+': start with declare(strict_types=1);');
+    const code=c.replace(/'(?:\\.|[^'\\])*'|"(?:\\.|[^"\\])*"/g,"''");
+    if(/[^=!<>]==[^=]|!=[^=]/.test(code))out.push(p+': use === and !== for comparisons');
+    const outside=s.replace(/<\?(php|=)[\s\S]*?(\?>|$)/g,'');
+    if(/\?>\s*$/.test(s)&&!outside.trim())out.push(p+': pure PHP file, drop the closing ?>');
   });
+  return out;
+}
+function evaluate(r,files){
+  const tg=T();const c={files,out:r.out,err:r.err,bad:r.bad,doc:r.doc};
+  const res=tg.steps.map(s=>{try{return !!s.c(c)}catch(e){return false}});
+  if(lastPass&&res.some((x,i)=>x&&!lastPass[i])){sfx.ok();pose($('hroux'),'happy',1300);pose($('rmini'),'happy',1300)}
+  lastPass=res;
+  const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
+  const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
+  const now=res.indexOf(false);
+  const ol=$('steps');ol.innerHTML='';
+  tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
+  const hb=habits(files);
+  const sc=$('scan');
+  if(r.bad){sc.className='bad';sc.textContent=r.errs[0]||'PHP reported a problem.'}
+  else if(hb.length){sc.className='warn';sc.textContent='Habit: '+hb.join(' · ')}
+  else{sc.className=now===-1?'ok':'';sc.textContent=now===-1?'Plate matches the target.':'Served without errors. '+n+' of '+res.length+' steps done.'}
+  if(now!==curStep){curStep=now;lv=0;renderHelp()}
+  if(now===-1){
+    const first=!S.done[tg.id];S.done[tg.id]=true;S.built[tg.id]={out:r.out,files};save();
+    if(first){sfx.target();pose($('hroux'),'cheer',2600);pose($('rmini'),'cheer',2600);comms(tg.name+' matches. Send it to the kitchen.');render()}
+  }
+}
+function renderHelp(){
+  const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
+  if(curStep===-1){
+    $('hstep').textContent='all steps done';
+    lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt=""><div class="win"><b>Plate matched.</b> '+esc(tg.name)+' is ready for the menu board.</div></div><div class="hint0">Take it home in the top bar downloads this as a real project folder you can run with <code>php -S localhost:8000 -t public</code>.</div>';
+    const b=document.createElement('button');b.className='pri';b.textContent='Send to the kitchen';b.onclick=()=>{freshPlate=tg.id;sfx.serve();comms(tg.name+' is on the menu board.');go('kitchen')};foot.appendChild(b);return;
+  }
+  $('hstep').textContent=curStep>=0?'step '+(curStep+1):'';
+  const st=curStep>=0?tg.steps[curStep]:null,names=['Nudge','Point','Example','Answer'];
+  const base=lv>0?'call':'idle';
+  lad.innerHTML='<div class="idle"><img id="hroux" data-base="'+base+'" src="'+ROUX+base+'.png" alt=""><div class="hint0">'+(lv===0?'Try it yourself first. Stuck? Roux helps in four steps, from a small nudge to the full answer.':'Roux is on it. One more click shows a bigger hint.')+'</div></div>';
+  if(st)for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&!/`/.test(st.help[i]);div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
+  if(lv===4){const nt=document.createElement('div');nt.className='hint0';nt.textContent='Noted: this comes back as a review drill in a later School.';lad.appendChild(nt)}
+  const b=document.createElement('button');b.id='stuck';b.textContent=lv===0?"I'm stuck":(lv<4?'Still stuck':'Answer shown');b.disabled=lv>=4||!st;
+  b.onclick=()=>{if(lv>=4)return;lv++;sfx.hint();if(lv===4&&!S.flag.includes(tg.id)){S.flag.push(tg.id);save()}renderHelp()};
+  foot.appendChild(b);
+}
+function checkNow(){
+  clearTimeout(runT);run();
+  setTimeout(()=>{if(lastPass&&lastPass.every(Boolean)){sfx.ok();return}sfx.bad();const li=$('steps').querySelector('.now');if(li){li.classList.remove('pulse');void li.offsetWidth;li.classList.add('pulse')}},350);
+}
 
-  /* ---------- progress ---------- */
-  var STORE = "passle_progress";
-  var progress = load();
-
-  function load() {
-    try {
-      var raw = localStorage.getItem(STORE);
-      if (raw) {
-        var p = JSON.parse(raw);
-        if (p && typeof p === "object" && p.answered) return p;
-      }
-    } catch (e) {}
-    return { answered: {} };
-  }
-  function save() {
-    try { localStorage.setItem(STORE, JSON.stringify(progress)); } catch (e) {}
-  }
-  function totalDrills() {
-    return LESSONS.reduce(function (n, l) { return n + l.drills.length; }, 0);
-  }
-  function answeredCount() {
-    var n = 0, a = progress.answered;
-    for (var k in a) if (a.hasOwnProperty(k) && a[k]) n++;
-    return n;
-  }
-  function lessonDone(l) {
-    for (var i = 0; i < l.drills.length; i++) {
-      if (!progress.answered[l.id + "d" + i]) return false;
+const KW='declare|echo|print|if|else|elseif|foreach|for|while|do|as|function|return|fn|match|new|class|interface|implements|extends|public|private|protected|static|const|use|namespace|require|require_once|include|include_once|true|false|null|array|string|int|float|bool|void|mixed|throw|try|catch|finally|readonly|self|instanceof|default|switch|case|break|continue|isset|empty|unset|exit';
+const PHPTOK=new RegExp("(\\/\\*[\\s\\S]*?(?:\\*\\/|$)|\\/\\/[^\\n]*?(?=\\?>|\\n|$)|#[^\\n]*?(?=\\?>|\\n|$))|('(?:\\\\[\\s\\S]|[^'\\\\])*'?)|(\"(?:\\\\[\\s\\S]|[^\"\\\\])*\"?)|(\\$[A-Za-z_]\\w*)|(\\b\\d+(?:\\.\\d+)?\\b)|\\b("+KW+")\\b|([A-Za-z_]\\w*)(?=\\s*\\()|(===|!==|==|!=|=>|->|\\?\\?|&&|\\|\\||\\.=|-=|\\+=)",'y');
+const CLS=[null,'h-c','h-s','h-s','h-v','h-n','h-k','h-f','h-o'];
+function hlTag(tag){
+  const m=tag.match(/^<(\/?)([a-zA-Z0-9!-]*)([\s\S]*?)(\/?>)?$/);if(!m)return esc(tag);
+  const attrs=esc(m[3]).replace(/([\w-]+)(=)(&quot;[^&]*|"[^"]*"?|'[^']*'?)/g,'<span class="h-at">$1</span><span class="h-pt">$2</span><span class="h-st">$3</span>');
+  return '<span class="h-pt">&lt;'+m[1]+'</span><span class="h-tg">'+m[2]+'</span>'+attrs+(m[4]?'<span class="h-pt">'+esc(m[4])+'</span>':'');
+}
+function hlPHP(s){
+  s=String(s);let out='',i=0,php=false;
+  while(i<s.length){
+    if(!php){
+      if(s.startsWith('<?php',i)){out+='<span class="h-k">&lt;?php</span>';i+=5;php=true;continue}
+      if(s.startsWith('<?=',i)){out+='<span class="h-k">&lt;?=</span>';i+=3;php=true;continue}
+      if(s[i]==='<'){let j=s.indexOf('>',i);const nx=s.indexOf('<?',i+1);if(j<0||(nx>0&&nx<j))j=(nx>0?nx:s.length)-1;out+=hlTag(s.slice(i,j+1));i=j+1;continue}
+      let j=s.indexOf('<',i);if(j<0)j=s.length;out+=esc(s.slice(i,j));i=j;continue;
     }
-    return l.drills.length > 0;
+    if(s.startsWith('?>',i)){out+='<span class="h-k">?&gt;</span>';i+=2;php=false;continue}
+    PHPTOK.lastIndex=i;const m=PHPTOK.exec(s);
+    if(m&&m[0].length){let g=1;while(g<m.length&&m[g]==null)g++;out+='<span class="'+CLS[g]+'">'+esc(m[0])+'</span>';i+=m[0].length;continue}
+    out+=esc(s[i]);i++;
   }
+  return out;
+}
+function paint(){
+  const ed=$('ed'),v=ed.value;$('hl').innerHTML=(/\.(json|md|txt)$/.test(file)?esc(v):hlPHP(v))+'\n ';
+  const n=v.split('\n').length;$('gut').textContent=Array.from({length:n},(_,i)=>i+1).join('\n')+'\n ';
+  syncScroll();
+}
+function syncScroll(){const ed=$('ed');$('hl').scrollTop=ed.scrollTop;$('hl').scrollLeft=ed.scrollLeft;$('gut').scrollTop=ed.scrollTop}
 
-  /* ---------- rendering ---------- */
-  var stage = document.getElementById("stage");
-  var rail = document.getElementById("rail");
-  var tabs = document.getElementById("tabs");
-  var progressEl = document.getElementById("progress");
-  var current = "brief";
-
-  function esc(s) {
-    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
-  }
-
-  function el(tag, cls, html) {
-    var e = document.createElement(tag);
-    if (cls) e.className = cls;
-    if (html != null) e.innerHTML = html;
-    return e;
-  }
-
-  function codeCard(block) {
-    var card = el("div", "recipe");
-    var head = el("div", "recipe-head");
-    head.appendChild(el("span", "dish", esc(block.dish || "snippet.php")));
-    var dots = el("span", "dot3", "<i></i><i></i><i></i>");
-    head.appendChild(dots);
-    var copy = el("button", "copy", "copy");
-    copy.type = "button";
-    copy.addEventListener("click", function () {
-      copyText(block.php, copy);
-    });
-    head.appendChild(copy);
-    card.appendChild(head);
-
-    var pre = el("pre");
-    var code = document.createElement("code");
-    code.textContent = block.php;
-    pre.appendChild(code);
-    card.appendChild(pre);
-
-    if (block.out != null) {
-      var out = el("div", "out");
-      out.appendChild(el("span", "lbl", "ON THE PLATE"));
-      var samp = document.createElement("samp");
-      samp.textContent = block.out;
-      out.appendChild(samp);
-      card.appendChild(out);
+let freshPlate=null;
+function fitPlates(){requestAnimationFrame(()=>document.querySelectorAll('.pview').forEach(p=>p.style.setProperty('--s',p.clientWidth/640)))}
+window.addEventListener('resize',()=>{if(S.stage==='kitchen')fitPlates()});
+function openViewer(name,out){$('vname').textContent=name;$('vframe').srcdoc=out;$('vraw').textContent=out;$('viewer').classList.add('on')}
+function renderKitchen(){
+  const box=$('plates');box.innerHTML='';let served=0;
+  PLATE_NAMES.forEach((name,i)=>{
+    const tg=TARGETS[i]&&!isMaster(TARGETS[i])?TARGETS[i]:null;
+    const ms=tg?TARGETS.find(x=>x.master===i&&S.built[x.id]):null;
+    const show=ms||tg;const b=show?S.built[show.id]:null;if(b)served++;
+    const el=document.createElement('div');el.className='plate';
+    const fr=document.createElement('div');
+    if(b){
+      fr.className='pframe'+(freshPlate===show.id?' fresh':'');fr.title='Open your plate';
+      const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=name;f.tabIndex=-1;f.srcdoc=b.out;pv.appendChild(f);fr.appendChild(pv);
+      fr.onclick=()=>{sfx.blip();openViewer('Plate '+ROM[i]+' · '+(ms?ms.name:name),b.out)};
+    }else{
+      fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(tg&&unlocked(i)?'awaiting your plate':'not on the menu yet')+'</span>';
     }
-    return card;
-  }
-
-  function copyText(text, btn) {
-    var done = function () {
-      var old = btn.textContent;
-      btn.textContent = "copied";
-      setTimeout(function () { btn.textContent = old; }, 1200);
-    };
-    try {
-      if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
-      } else {
-        fallbackCopy(text, done);
-      }
-    } catch (e) { fallbackCopy(text, done); }
-  }
-  function fallbackCopy(text, done) {
-    try {
-      var ta = document.createElement("textarea");
-      ta.value = text;
-      ta.style.position = "fixed";
-      ta.style.opacity = "0";
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-      done();
-    } catch (e) {}
-  }
-
-  function ticketCard(lesson, drill, index) {
-    var did = lesson.id + "d" + index;
-    var card = el("div", "ticket");
-
-    var top = el("div", "ticket-top");
-    top.appendChild(el("span", "kind", esc(drill.kind)));
-    top.appendChild(el("span", "num", "TICKET " + (index + 1)));
-    card.appendChild(top);
-
-    var body = el("div", "ticket-body");
-    body.appendChild(el("div", "q", esc(drill.q)));
-
-    if (drill.php) {
-      var pre = el("pre");
-      var code = document.createElement("code");
-      code.textContent = drill.php;
-      pre.appendChild(code);
-      body.appendChild(pre);
-    }
-
-    var opts = el("div", "opts");
-    var verdict = el("div", "verdict");
-    var answered = !!progress.answered[did];
-
-    drill.options.forEach(function (text, i) {
-      var b = el("button", "opt");
-      b.type = "button";
-      var pip = el("span", "pip", String.fromCharCode(65 + i));
-      b.appendChild(pip);
-      var span = document.createElement("span");
-      span.textContent = text;
-      b.appendChild(span);
-
-      b.addEventListener("click", function () {
-        if (b.disabled) return;
-        reveal(i);
-        progress.answered[did] = (i === drill.answer);
-        save();
-        paintProgress();
-        paintRail();
-      });
-      opts.appendChild(b);
-    });
-
-    function reveal(chosen) {
-      var buttons = opts.querySelectorAll(".opt");
-      buttons.forEach(function (b, i) {
-        b.disabled = true;
-        if (i === drill.answer) b.classList.add("right");
-        if (i === chosen && chosen !== drill.answer) b.classList.add("wrong");
-      });
-      var ok = chosen === drill.answer;
-      verdict.className = "verdict show " + (ok ? "ok" : "no");
-      verdict.innerHTML = "<b>" + (ok ? "SERVICE" : "SENT BACK") + "</b>";
-      var p = document.createElement("span");
-      p.textContent = drill.explain;
-      verdict.appendChild(p);
-    }
-
-    body.appendChild(opts);
-    body.appendChild(verdict);
-    card.appendChild(body);
-
-    if (answered) {
-      // re-lock a previously answered ticket, showing the correct answer
-      var btns = opts.querySelectorAll(".opt");
-      btns.forEach(function (b, i) {
-        b.disabled = true;
-        if (i === drill.answer) b.classList.add("right");
-      });
-      verdict.className = "verdict show ok";
-      verdict.innerHTML = "<b>CLEARED</b>";
-      var pp = document.createElement("span");
-      pp.textContent = drill.explain;
-      verdict.appendChild(pp);
-    }
-
-    return card;
-  }
-
-  function openLesson(id) {
-    var lesson = null;
-    for (var i = 0; i < LESSONS.length; i++) if (LESSONS[i].id === id) lesson = LESSONS[i];
-    if (!lesson) return;
-    current = id;
-
-    stage.innerHTML = "";
-    stage.appendChild(el("div", "kicker", "STATION " + esc(lesson.no)));
-    stage.appendChild(el("h1", "title", esc(lesson.title)));
-    stage.appendChild(el("div", "subtitle", esc(lesson.subtitle)));
-
-    var prose = el("div", "prose");
-    lesson.blocks.forEach(function (block) {
-      if (block.t === "p") prose.appendChild(el("p", null, block.html));
-      else if (block.t === "h") prose.appendChild(el("h3", null, esc(block.text)));
-      else if (block.t === "note") {
-        var n = el("div", "note");
-        n.appendChild(el("span", "lbl", "CHEF'S NOTE"));
-        n.appendChild(el("p", null, block.html));
-        prose.appendChild(n);
-      }
-      else if (block.t === "code") prose.appendChild(codeCard(block));
-      else if (block.t === "aid") {
-        var a = el("div", "aid", block.svg);
-        prose.appendChild(a);
-      }
-      else if (block.t === "runit") {
-        var r = el("div", "runit");
-        r.appendChild(document.createTextNode(block.label + " "));
-        var link = document.createElement("a");
-        link.href = block.href;
-        link.target = "_blank";
-        link.rel = "noopener";
-        link.textContent = block.text;
-        r.appendChild(link);
-        prose.appendChild(r);
-      }
-    });
-    if (lesson.id === "brief") {
-      var cta = el("div", "cta");
-      cta.innerHTML = '<h4>Earn your whites</h4><p>Every ticket you clear moves you up the brigade \u2014 from <em>commis</em> to running the pass. When you can run a full Service Rush clean, you\u2019re ready for the real thing.</p>';
-      var go = el("button", "btn", "\u25B6 Start a service rush");
-      go.type = "button";
-      go.addEventListener("click", function () { openRush("all"); });
-      cta.appendChild(go);
-      prose.appendChild(cta);
-    }
-    stage.appendChild(prose);
-
-    if (lesson.drills.length) {
-      var wrap = el("div", "tickets");
-      wrap.appendChild(el("h3", null, "Tickets"));
-      wrap.appendChild(el("div", "sub", "Read the code, call the plate, tap your answer."));
-      lesson.drills.forEach(function (drill, i) {
-        wrap.appendChild(ticketCard(lesson, drill, i));
-      });
-      stage.appendChild(wrap);
-    }
-
-    var actions = el("div", "act-row");
-    if (lesson.drills.length) {
-      var rushThis = el("button", "btn", "\u25B6 Rush this station");
-      rushThis.type = "button";
-      rushThis.addEventListener("click", function () { openRush("station:" + lesson.id); });
-      actions.appendChild(rushThis);
-    }
-    var fullRush = el("button", "btn ghost", "Service rush \u00b7 all stations");
-    fullRush.type = "button";
-    fullRush.addEventListener("click", function () { openRush("all"); });
-    actions.appendChild(fullRush);
-    stage.appendChild(actions);
-
-    paintRail();
-    paintTabs();
-    window.scrollTo(0, 0);
-    stage.focus();
-  }
-
-  function paintRail() {
-    rail.innerHTML = "";
-    LESSONS.forEach(function (l) {
-      var b = el("button", "station" + (l.id === current ? " on" : ""));
-      b.type = "button";
-      var label = '<span class="no">' + esc(l.no) + '</span>' + esc(l.title);
-      if (lessonDone(l)) label += '<span class="tick">\u2714</span>';
-      b.innerHTML = label;
-      b.addEventListener("click", function () { openLesson(l.id); });
-      rail.appendChild(b);
-    });
-    rail.appendChild(el("div", "rail-sep"));
-    var rush = el("button", "station rush" + (current === "__rush__" ? " on" : ""));
-    rush.type = "button";
-    rush.innerHTML = '<span class="no">\u25B6</span>Service rush';
-    rush.addEventListener("click", function () { openRush("all"); });
-    rail.appendChild(rush);
-    var weakN = weakTickets().length;
-    if (weakN) {
-      var weak = el("button", "station weak");
-      weak.type = "button";
-      weak.innerHTML = '<span class="no">\u21BB</span>Weak spots<span class="cnt">' + weakN + '</span>';
-      weak.addEventListener("click", function () { openRush("weak"); });
-      rail.appendChild(weak);
-    }
-  }
-
-  function paintTabs() {
-    tabs.innerHTML = "";
-    LESSONS.forEach(function (l) {
-      var b = el("button", "tab" + (l.id === current ? " on" : ""));
-      b.type = "button";
-      b.innerHTML = esc(l.tab) + (lessonDone(l) ? ' <span class="dot">\u2714</span>' : "");
-      b.addEventListener("click", function () { openLesson(l.id); });
-      tabs.appendChild(b);
-    });
-    var rb = el("button", "tab" + (current === "__rush__" ? " on" : ""));
-    rb.type = "button";
-    rb.innerHTML = "\u25B6 Rush";
-    rb.addEventListener("click", function () { openRush("all"); });
-    tabs.appendChild(rb);
-  }
-
-  var RANKS = [
-    { at: 0.0, name: "Trial shift" },
-    { at: 0.01, name: "Commis" },
-    { at: 0.25, name: "Chef de partie" },
-    { at: 0.5, name: "Sous-chef" },
-    { at: 0.8, name: "Head chef" },
-    { at: 1.0, name: "Runs the pass" }
-  ];
-
-  function rankInfo() {
-    var cleared = answeredCount(), total = totalDrills();
-    var pct = total ? cleared / total : 0;
-    var idx = 0;
-    for (var i = 0; i < RANKS.length; i++) if (pct >= RANKS[i].at) idx = i;
-    var next = RANKS[idx + 1] || null;
-    var toNext = next ? Math.max(1, Math.ceil(next.at * total) - cleared) : 0;
-    return { cleared: cleared, total: total, pct: pct, name: RANKS[idx].name, next: next, toNext: toNext };
-  }
-
-  function paintProgress() {
-    var r = rankInfo();
-    var w = Math.round(r.pct * 100);
-    var tail = r.next ? (r.toNext + " to " + r.next.name) : "the pass is yours";
-    progressEl.innerHTML =
-      '<span class="rank">' + esc(r.name) + '</span>' +
-      '<span class="bar"><i style="width:' + w + '%"></i></span>' +
-      '<span class="ptxt">' + r.cleared + '/' + r.total + ' \u00b7 ' + esc(tail) + '</span>';
-  }
-
-  /* ---------- service rush ---------- */
-  function lessonById(id) {
-    for (var i = 0; i < LESSONS.length; i++) if (LESSONS[i].id === id) return LESSONS[i];
-    return null;
-  }
-  function allTickets() {
-    var out = [];
-    LESSONS.forEach(function (l) { l.drills.forEach(function (d, i) { out.push({ lid: l.id, idx: i }); }); });
-    return out;
-  }
-  function weakTickets() {
-    var out = [];
-    LESSONS.forEach(function (l) {
-      l.drills.forEach(function (d, i) { if (!progress.answered[l.id + "d" + i]) out.push({ lid: l.id, idx: i }); });
-    });
-    return out;
-  }
-  function shuffle(a) {
-    a = a.slice();
-    for (var i = a.length - 1; i > 0; i--) {
-      var j = Math.floor(Math.random() * (i + 1));
-      var t = a[i]; a[i] = a[j]; a[j] = t;
-    }
-    return a;
-  }
-
-  function openRush(mode) {
-    current = "__rush__";
-    var pool, title, sub;
-    if (mode === "weak") {
-      pool = weakTickets();
-      title = "Weak spots";
-      sub = "The tickets you haven't cleared yet \u2014 clear them.";
-    } else if (mode && mode.indexOf("station:") === 0) {
-      var l = lessonById(mode.split(":")[1]);
-      pool = [];
-      if (l) l.drills.forEach(function (d, i) { pool.push({ lid: l.id, idx: i }); });
-      title = "Rush \u00b7 " + (l ? l.title : "");
-      sub = "Every ticket from this station, shuffled.";
-    } else {
-      pool = allTickets();
-      title = "Service rush";
-      sub = "A dinner rush \u2014 tickets pulled from every station, shuffled.";
-    }
-
-    paintRail();
-    paintTabs();
-
-    if (!pool.length) {
-      stage.innerHTML = "";
-      stage.appendChild(el("div", "kicker", "SERVICE RUSH"));
-      stage.appendChild(el("h1", "title", esc(title)));
-      var clean = el("div", "prose");
-      clean.appendChild(el("p", null, mode === "weak"
-        ? "Kitchen's clean \u2014 every ticket has been cleared at least once. Run a full rush to keep your edge."
-        : "No tickets here yet."));
-      stage.appendChild(clean);
-      var row0 = el("div", "act-row");
-      var full = el("button", "btn", "\u25B6 Full service rush");
-      full.type = "button";
-      full.addEventListener("click", function () { openRush("all"); });
-      row0.appendChild(full);
-      stage.appendChild(row0);
-      window.scrollTo(0, 0);
-      return;
-    }
-
-    var queue = shuffle(pool);
-    if (mode === "all") queue = queue.slice(0, Math.min(10, queue.length));
-    var pos = 0, correct = 0;
-
-    function renderTicket() {
-      stage.innerHTML = "";
-      stage.appendChild(el("div", "kicker", "SERVICE RUSH"));
-      stage.appendChild(el("h1", "title", esc(title)));
-      stage.appendChild(el("div", "subtitle", esc(sub)));
-
-      var meta = el("div", "rush-meta");
-      meta.innerHTML = "Ticket <b>" + (pos + 1) + "</b> / " + queue.length + " \u00b7 " + correct + " served clean";
-      stage.appendChild(meta);
-
-      var ref = queue[pos];
-      var lesson = lessonById(ref.lid);
-      var drill = lesson.drills[ref.idx];
-      var did = ref.lid + "d" + ref.idx;
-
-      var card = el("div", "ticket");
-      var top = el("div", "ticket-top");
-      top.appendChild(el("span", "kind", esc(drill.kind)));
-      top.appendChild(el("span", "num", esc(lesson.title)));
-      card.appendChild(top);
-
-      var body = el("div", "ticket-body");
-      body.appendChild(el("div", "q", esc(drill.q)));
-      if (drill.php) {
-        var pre = el("pre");
-        var code = document.createElement("code");
-        code.textContent = drill.php;
-        pre.appendChild(code);
-        body.appendChild(pre);
-      }
-
-      var opts = el("div", "opts");
-      var verdict = el("div", "verdict");
-      var locked = false;
-
-      drill.options.forEach(function (text, i) {
-        var b = el("button", "opt");
-        b.type = "button";
-        b.appendChild(el("span", "pip", String.fromCharCode(65 + i)));
-        var span = document.createElement("span");
-        span.textContent = text;
-        b.appendChild(span);
-        b.addEventListener("click", function () {
-          if (locked) return;
-          locked = true;
-          var ok = (i === drill.answer);
-          if (ok) correct++;
-          progress.answered[did] = ok;
-          save();
-          opts.querySelectorAll(".opt").forEach(function (bb, k) {
-            bb.disabled = true;
-            if (k === drill.answer) bb.classList.add("right");
-            if (k === i && !ok) bb.classList.add("wrong");
-          });
-          verdict.className = "verdict show " + (ok ? "ok" : "no");
-          verdict.innerHTML = "<b>" + (ok ? "SERVICE" : "SENT BACK") + "</b>";
-          var p = document.createElement("span");
-          p.textContent = drill.explain;
-          verdict.appendChild(p);
-          paintProgress();
-
-          var next = el("button", "btn next", pos + 1 < queue.length ? "Next ticket \u2192" : "Finish service");
-          next.type = "button";
-          next.addEventListener("click", function () {
-            pos++;
-            if (pos < queue.length) renderTicket();
-            else renderResult();
-          });
-          body.appendChild(next);
-          next.focus();
-        });
-        opts.appendChild(b);
-      });
-
-      body.appendChild(opts);
-      body.appendChild(verdict);
-      card.appendChild(body);
-      stage.appendChild(card);
-      window.scrollTo(0, 0);
-    }
-
-    function renderResult() {
-      paintRail();
-      paintTabs();
-      stage.innerHTML = "";
-      stage.appendChild(el("div", "kicker", "SERVICE RUSH"));
-      stage.appendChild(el("h1", "title", "Service done"));
-
-      var score = Math.round(correct / queue.length * 100);
-      var tier, cls;
-      if (score === 100) { tier = "Spotless \u2014 not one plate sent back. You ran the whole pass clean."; cls = "ok"; }
-      else if (score >= 80) { tier = "Clean service. You'd hold your own on the line."; cls = "ok"; }
-      else if (score >= 60) { tier = "Solid shift. A few came back \u2014 drill those and you're there."; cls = "mid"; }
-      else { tier = "Rough service. That's exactly what the drilling is for \u2014 run it again."; cls = "no"; }
-
-      var res = el("div", "result " + cls);
-      var sc = el("div", "score", correct + " / " + queue.length);
-      res.appendChild(sc);
-      res.appendChild(el("p", null, esc(tier)));
-      stage.appendChild(res);
-
-      var row = el("div", "act-row");
-      var again = el("button", "btn", "\u21BB Run it again");
-      again.type = "button";
-      again.addEventListener("click", function () { openRush(mode); });
-      row.appendChild(again);
-      var back = el("button", "btn ghost", "Back to the line");
-      back.type = "button";
-      back.addEventListener("click", function () { openLesson("brief"); });
-      row.appendChild(back);
-      stage.appendChild(row);
-      window.scrollTo(0, 0);
-    }
-
-    renderTicket();
-  }
-
-  /* ---------- reading mode ---------- */
-  var rdbtn = document.getElementById("rdbtn");
-  rdbtn.addEventListener("click", function () {
-    var on = document.body.classList.toggle("reading");
-    rdbtn.setAttribute("aria-pressed", on ? "true" : "false");
-    rdbtn.textContent = on ? "EXIT READ" : "READ MODE";
+    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>';
+    el.appendChild(fr);el.appendChild(cap);box.appendChild(el);
   });
+  $('kcnt').textContent=served+' of '+PLATE_NAMES.length+' plated';
+  const k=$('kroux');if(freshPlate){pose(k,'serve',3200)}else k.src=ROUX+(served?'happy':'idle')+'.png';
+  freshPlate=null;fitPlates();
+  const nx=TARGETS.findIndex(t=>!isMaster(t)&&!S.done[t.id]);
+  if(nx!==-1&&nx!==S.t&&S.done[T().id]&&!isMaster(T())&&unlocked(nx)){S.t=nx;S.drill=0;S.les=0;save();comms('Next plate unlocked: '+TARGETS[nx].name+'. School first.');setTimeout(render,0)}
+}
+function renderRules(){
+  const v=$('v-rules');v.innerHTML='';
+  Object.keys(RULES).sort((a,b)=>+RULES[a].n-+RULES[b].n).forEach(id=>{
+    const r=RULES[id],ok=S.learned.includes(id);
+    const el=document.createElement('div');el.className='panel rb'+(ok?'':' locked');
+    el.innerHTML='<div class="ph"><b>Rule '+r.n+'</b><span class="sp">'+esc(r.cat)+'</span></div>';
+    const body=document.createElement('div');
+    if(ok){body.className='rbody';body.innerHTML='<h3>'+esc(r.title)+'</h3><div class="syn">'+r.syn+'</div><p>'+esc(r.note)+'</p><pre>'+hlPHP(r.ex)+'</pre>'}
+    else{body.className='lockmsg';body.textContent='Locked · learn it in School for Plate '+ROM[r.t]}
+    el.appendChild(body);
+    const cx=document.createElement('div');cx.className='cx';cx.innerHTML='<span>Codex · Passle rulebook</span><a href="codex.html">Open Codex</a>';el.appendChild(cx);
+    v.appendChild(el);
+  });
+}
 
-  /* ---------- go ---------- */
-  paintProgress();
-  openLesson("brief");
-})();
+function dl(href,name){const a=document.createElement('a');a.href=href;a.download=name;document.body.appendChild(a);a.click();a.remove()}
+function crc32(b){let t=crc32.t,c;if(!t){t=crc32.t=[];for(let n=0;n<256;n++){c=n;for(let k=0;k<8;k++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[n]=c>>>0}}c=0xFFFFFFFF;for(let i=0;i<b.length;i++)c=t[(c^b[i])&255]^(c>>>8);return(c^0xFFFFFFFF)>>>0}
+function makeZip(files){const enc=new TextEncoder(),parts=[],cen=[];let off=0;
+  files.forEach(f=>{const nm=enc.encode(f.name),d=f.data,crc=crc32(d),dir=/\/$/.test(f.name);
+    const h=new DataView(new ArrayBuffer(30));h.setUint32(0,0x04034b50,true);h.setUint16(4,20,true);h.setUint16(6,0x800,true);h.setUint16(12,0x21,true);h.setUint32(14,crc,true);h.setUint32(18,d.length,true);h.setUint32(22,d.length,true);h.setUint16(26,nm.length,true);parts.push(new Uint8Array(h.buffer),nm,d);
+    const c=new DataView(new ArrayBuffer(46));c.setUint32(0,0x02014b50,true);c.setUint16(4,20,true);c.setUint16(6,20,true);c.setUint16(8,0x800,true);c.setUint16(14,0x21,true);c.setUint32(16,crc,true);c.setUint32(20,d.length,true);c.setUint32(24,d.length,true);c.setUint16(28,nm.length,true);c.setUint32(38,dir?16:0,true);c.setUint32(42,off,true);cen.push(new Uint8Array(c.buffer),nm);
+    off+=30+nm.length+d.length});
+  const size=cen.reduce((a,b)=>a+b.length,0),e=new DataView(new ArrayBuffer(22));e.setUint32(0,0x06054b50,true);e.setUint16(8,files.length,true);e.setUint16(10,files.length,true);e.setUint32(12,size,true);e.setUint32(16,off,true);
+  return new Blob([...parts,...cen,new Uint8Array(e.buffer)],{type:'application/zip'})}
+const DIRS=['public/','src/','templates/','data/'];
+function projectFiles(){
+  const tg=T(),fs=curFiles(),enc=new TextEncoder(),root='rouxs-bistro/';
+  const list=DIRS.map(d=>({name:root+d,data:new Uint8Array(0)}));
+  Object.keys(fs).sort().forEach(p=>list.push({name:root+p,data:enc.encode(fs[p])}));
+  list.push({name:root+'README.md',data:enc.encode("# Roux's Bistro · "+tg.name+"\n\nRun it on your own machine:\n\n```\ncd rouxs-bistro\nphp -S localhost:8000 -t public\n```\n\nThen open http://localhost:8000 in your browser. Ctrl+C stops the server.\n\n- public/ is the only folder the browser can reach\n- src/ holds PHP logic\n- templates/ holds HTML with small bits of PHP\n- data/ holds files and databases your code writes\n")});
+  return list;
+}
+function takeHome(){dl(URL.createObjectURL(makeZip(projectFiles())),'passle-'+T().id+'.zip');sfx.blip();comms('Downloaded. Unzip, open the folder in VS Code, run php -S localhost:8000 -t public.')}
+function treeHtml(){
+  const fs=curFiles(),here='  <em>← you are here</em>';
+  const by={};DIRS.forEach(d=>by[d]=[]);Object.keys(fs).forEach(p=>{const d=p.slice(0,p.indexOf('/')+1);(by[d]=by[d]||[]).push(p.slice(d.length))});
+  let t='<b>rouxs-bistro/</b>\n';const ds=Object.keys(by);
+  ds.forEach((d,i)=>{const last=i===ds.length-1;t+=(last?'└─ ':'├─ ')+'<b>'+d+'</b>'+(by[d].length?'':'  <em>(empty)</em>')+'\n';by[d].forEach((f,j)=>{t+=(last?'   ':'│  ')+(j===by[d].length-1?'└─ ':'├─ ')+f+(file===d+f?here:'')+'\n'})});
+  return t+'\n<em>Run from the project folder:</em> php -S localhost:8000 -t public';
+}
+
+document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{sfx.click();if(b.dataset.v==='practice')PR=null;go(b.dataset.v)});
+document.querySelectorAll('.seg').forEach(sg=>sg.querySelectorAll('button').forEach(b=>b.onclick=()=>{sg.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));$(sg.dataset.for).classList.toggle('raw',b.dataset.m==='raw');sfx.click()}));
+$('treeb').onclick=()=>{const t=$('tree');t.innerHTML=treeHtml();t.classList.toggle('on');sfx.click()};
+$('tsel').onchange=e=>{S.t=+e.target.value;S.les=0;S.drill=schoolDone(S.t)?drillsFor(S.t).length:0;S.stage=schoolDone(S.t)?'target':'school';save();sfx.click();render()};
+$('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.keys=true}else{S.sfx=false;S.keys=false}save();render();sfx.click()};
+$('vol').oninput=e=>{S.vol=+e.target.value;save()};
+$('vol').onchange=()=>sfx.ok();
+$('home').onclick=takeHome;
+$('slider').oninput=e=>{$('ovl').style.opacity=e.target.value/100};
+$('vclose').onclick=()=>{sfx.click();$('viewer').classList.remove('on')};
+$('viewer').onclick=e=>{if(e.target.id==='viewer')$('viewer').classList.remove('on')};
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('viewer').classList.remove('on')});
+const ed=$('ed');
+ed.addEventListener('input',()=>{curFiles()[file]=ed.value;save();paint();sfx.key();typing();clearTimeout(runT);runT=setTimeout(run,700)});
+ed.addEventListener('scroll',syncScroll);
+ed.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();checkNow();return}
+  if(e.key==='Tab'){e.preventDefault();const s=ed.selectionStart;ed.setRangeText('    ',s,ed.selectionEnd,'end');ed.dispatchEvent(new Event('input'));return}
+  if(e.key==='Enter'){const s=ed.selectionStart,ls=ed.value.lastIndexOf('\n',s-1)+1,ind=(ed.value.slice(ls,s).match(/^[ \t]*/)||[''])[0];e.preventDefault();ed.setRangeText('\n'+ind,s,ed.selectionEnd,'end');ed.dispatchEvent(new Event('input'))}
+});
+$('check').onclick=checkNow;
+let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';curFiles()[file]=T().files[file];save();ed.value=curFiles()[file];paint();run();comms(file+' is back to the starter code.')};
+if(S.t>=TARGETS.length)S.t=0;
+render();
+Engine.boot().then(()=>comms('Stove is hot. Bon appétit.')).catch(()=>{});
+
+const NOTES_KEY='megalab-claude-notes',NOTES_LAB='Passle';
+const NOTE_KINDS=[['bug','Bug','Something behaves wrongly or breaks'],['real','Not real PHP','Passle accepts or shows something a real server would not'],['learn','Learning gap','Something explained badly, or not at all'],['idea','Idea','A feature, target or drill you want'],['question','Question','Something to ask Claude next session']];
+const nRead=()=>{try{const a=JSON.parse(localStorage.getItem(NOTES_KEY)||'[]');return Array.isArray(a)?a:[]}catch(e){return[]}};
+const nWrite=a=>{try{localStorage.setItem(NOTES_KEY,JSON.stringify(a.slice(-400)))}catch(e){}};
+const nOpenCount=()=>nRead().filter(n=>!n.done).length;
+const nKind=k=>(NOTE_KINDS.find(x=>x[0]===k)||[k,k])[1];
+const nWhen=ts=>String(ts).slice(0,16).replace('T',' ');
+function noteContext(){
+  const b=[];
+  try{
+    const st={school:'School',target:'Target',kitchen:'Kitchen',rules:'Rulebook',practice:'Practice'}[S.stage]||S.stage;
+    b.push('stage: '+st);
+    b.push('plate '+(S.t+1)+': '+T().name);
+    if(S.stage==='school'||S.stage==='practice')b.push('drill '+(S.drill+1));
+    if(S.stage==='target')b.push('file: '+file);
+  }catch(e){}
+  return b.join(' · ');
+}
+function noteAdd(kind,text,ctxStr){
+  const t=String(text||'').trim();if(!t)return null;
+  const a=nRead(),n={id:'n'+Date.now().toString(36)+Math.random().toString(36).slice(2,6),ts:new Date().toISOString(),lab:NOTES_LAB,kind:NOTE_KINDS.some(k=>k[0]===kind)?kind:'idea',text:t,ctx:ctxStr==null?noteContext():ctxStr,done:false};
+  a.push(n);nWrite(a);return n;
+}
+function notesForClaude(){
+  const a=nRead();if(!a.length)return'# Notes for Claude\n\nNo open notes.\n';
+  const by={};a.forEach(n=>(by[n.lab||'unknown lab']=by[n.lab||'unknown lab']||[]).push(n));
+  const out=['# Notes for Claude','','Written while working in the Mega Lab between sessions. '+a.length+' note'+(a.length===1?'':'s')+', oldest first.',''];
+  Object.keys(by).sort().forEach(lab=>{
+    out.push('## '+lab,'');
+    by[lab].sort((x,y)=>String(x.ts)<String(y.ts)?-1:1).forEach(n=>{
+      out.push('- **'+nKind(n.kind)+'** — '+n.text.replace(/\n+/g,' '));
+      const m=[nWhen(n.ts)];if(n.ctx)m.push(n.ctx);if(n.done)m.push('marked handled');
+      out.push('  - _'+m.join(' · ')+'_');
+    });
+    out.push('');
+  });
+  return out.join('\n');
+}
+function notesBadge(){const n=nOpenCount(),b=$('notes');b.textContent=n?'Notes ('+n+')':'Notes';b.classList.toggle('has',n>0)}
+function notesDraw(){
+  const L=$('nlist');L.innerHTML='';
+  const a=nRead().slice().sort((x,y)=>String(y.ts)<String(x.ts)?-1:1);
+  $('ncount').textContent=nOpenCount()+' open';
+  if(!a.length){L.innerHTML='<div class="nempty">No notes yet.</div>';notesBadge();return}
+  a.forEach(n=>{
+    const r=document.createElement('div');r.className='nitem'+(n.done?' done':'');
+    const tk=document.createElement('button');tk.textContent=n.done?'✓':'';tk.title=n.done?'Mark as still open':'Mark as handled';
+    tk.onclick=()=>{const all=nRead(),h=all.find(x=>x.id===n.id);if(h){h.done=!h.done;nWrite(all)}sfx.click();notesDraw()};
+    const bd=document.createElement('div');
+    const k=document.createElement('span');k.className='nkind k-'+n.kind;k.textContent=nKind(n.kind);
+    const tx=document.createElement('span');tx.className='ntxt';tx.textContent=n.text;
+    const mt=document.createElement('small');mt.className='nmeta';mt.textContent=[n.lab,nWhen(n.ts),n.ctx].filter(Boolean).join(' · ');
+    bd.append(k,tx,mt);
+    const dl=document.createElement('button');dl.textContent='×';dl.title='Delete this note';
+    dl.onclick=()=>{nWrite(nRead().filter(x=>x.id!==n.id));sfx.click();notesDraw()};
+    r.append(tk,bd,dl);L.appendChild(r);
+  });
+  notesBadge();
+}
+function openNotes(){
+  const sel=$('nkindsel');
+  if(!sel.options.length)NOTE_KINDS.forEach(k=>{const o=document.createElement('option');o.value=k[0];o.textContent=k[1];o.title=k[2];sel.appendChild(o)});
+  $('nctx').textContent=noteContext();$('nbk').classList.add('on');notesDraw();sfx.blip();setTimeout(()=>$('ntext').focus(),30);
+}
+function closeNotes(){$('nbk').classList.remove('on');notesBadge()}
+function noteSave(){const n=noteAdd($('nkindsel').value,$('ntext').value);if(!n){$('ntext').focus();return}$('ntext').value='';sfx.ok();notesDraw();comms('Note saved for Claude. '+nOpenCount()+' open.')}
+function copyText(t,done){
+  const fb=()=>{const x=document.createElement('textarea');x.value=t;x.style.position='fixed';x.style.opacity='0';document.body.appendChild(x);x.select();try{document.execCommand('copy')}catch(e){}x.remove();done()};
+  try{navigator.clipboard.writeText(t).then(done,fb)}catch(e){fb()}
+}
+$('notes').onclick=openNotes;
+$('nclose').onclick=closeNotes;
+$('nbk').onclick=e=>{if(e.target.id==='nbk')closeNotes()};
+$('nsave').onclick=noteSave;
+$('ntext').addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();noteSave()}});
+$('ncopy').onclick=e=>copyText(notesForClaude(),()=>{e.target.textContent='Copied';sfx.ok();setTimeout(()=>e.target.textContent='Copy for Claude',1400)});
+$('ndl').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([notesForClaude()],{type:'text/markdown'}));a.download='notes-for-claude.md';a.click()};
+$('nclear').onclick=e=>{const a=nRead(),o=a.filter(n=>!n.done);nWrite(o);const r=a.length-o.length;e.target.textContent=r?'Removed '+r:'Nothing handled';setTimeout(()=>e.target.textContent='Clear handled',1400);notesDraw()};
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'&&$('nbk').classList.contains('on')){closeNotes();return}
+  if((e.ctrlKey||e.metaKey)&&e.shiftKey&&String(e.key).toLowerCase()==='y'){e.preventDefault();$('nbk').classList.contains('on')?closeNotes():openNotes()}
+});
+window.addEventListener('storage',e=>{if(e.key===NOTES_KEY){notesBadge();if($('nbk').classList.contains('on'))notesDraw()}});
+notesBadge();
 </script>
 </body>
 </html>

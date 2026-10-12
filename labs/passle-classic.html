@@ -1,0 +1,1199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PASSLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,900&family=Spectral:ital,wght@0,400;0,500;1,400&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #f4efe4;
+    --panel: #fbf8f1;
+    --panel2: #efe7d6;
+    --text: #2b2119;
+    --dim: #7c6f5c;
+    --line: #e2d8c4;
+    --brass: #9c6b1f;
+    --brass-dim: #c9a45e;
+    --herb: #4f7a33;
+    --chili: #b23b2e;
+    --ember: #b5561d;
+    --mono: "JetBrains Mono", "Consolas", ui-monospace, monospace;
+    --serif: "Spectral", Georgia, serif;
+    --disp: "Fraunces", Georgia, serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: linear-gradient(#f7f2e8,#f1ebdf);
+    background-attachment: fixed;
+    color: var(--text);
+    font-family: var(--serif);
+    font-size: 18px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+  a { color: var(--brass); }
+
+  /* ---- the pass (top bar) ---- */
+  .pass {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 18px;
+    padding: 12px 22px;
+    background: rgba(246,241,231,0.9);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .mark {
+    font-family: var(--disp);
+    font-weight: 900;
+    font-size: 22px;
+    letter-spacing: 2px;
+    color: var(--brass);
+    line-height: 1;
+  }
+  .mark small { display: block; font-family: var(--mono); font-size: 9px; letter-spacing: 3px; color: var(--dim); font-weight: 400; margin-top: 3px; }
+  .tabs { display: flex; gap: 6px; flex: 1; overflow-x: auto; scrollbar-width: none; }
+  .tabs::-webkit-scrollbar { display: none; }
+  .tab {
+    font-family: var(--mono); font-size: 12px; letter-spacing: 1px;
+    color: var(--dim); background: none; border: 1px solid transparent;
+    padding: 7px 12px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+    transition: color .18s, border-color .18s, background .18s;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.on { color: var(--brass); border-color: var(--brass-dim); background: rgba(203,154,81,0.08); }
+  .tab .dot { color: var(--herb); }
+  .progress { font-family: var(--mono); font-size: 11px; color: var(--dim); white-space: nowrap; }
+  .progress b { color: var(--brass); }
+  .rdbtn {
+    font-family: var(--mono); font-size: 11px; letter-spacing: 1px;
+    color: var(--dim); background: none; border: 1px solid var(--line);
+    padding: 7px 11px; border-radius: 7px; cursor: pointer; white-space: nowrap;
+    transition: color .18s, border-color .18s;
+  }
+  .rdbtn:hover { color: var(--brass); border-color: var(--brass-dim); }
+
+  /* ---- layout ---- */
+  .wrap { display: grid; grid-template-columns: 232px 1fr; gap: 0; }
+  .rail {
+    border-right: 1px solid var(--line);
+    padding: 24px 14px;
+    position: sticky; top: 59px; align-self: start;
+    height: calc(100vh - 59px); overflow-y: auto;
+  }
+  .rail h4 { font-family: var(--mono); font-size: 10px; letter-spacing: 3px; color: var(--dim); font-weight: 400; margin: 0 8px 12px; }
+  .station {
+    display: block; width: 100%; text-align: left;
+    background: none; border: none; cursor: pointer;
+    color: var(--dim); padding: 11px 12px; border-radius: 8px;
+    font-family: var(--serif); font-size: 16px; line-height: 1.3;
+    border-left: 2px solid transparent;
+    transition: color .18s, background .18s, border-color .18s;
+  }
+  .station:hover { color: var(--text); background: rgba(0,0,0,0.02); }
+  .station.on { color: var(--text); background: rgba(203,154,81,0.07); border-left-color: var(--brass); }
+  .station .no { font-family: var(--mono); font-size: 11px; color: var(--brass); margin-right: 9px; }
+  .station .tick { float: right; color: var(--herb); font-family: var(--mono); font-size: 12px; }
+
+  .stage { padding: 40px 42px 120px; max-width: 820px; }
+
+  /* ---- lesson content ---- */
+  .kicker { font-family: var(--mono); font-size: 12px; letter-spacing: 3px; color: var(--ember); margin-bottom: 10px; }
+  .title { font-family: var(--disp); font-weight: 900; font-size: clamp(30px, 5vw, 46px); line-height: 1.05; color: var(--text); margin-bottom: 6px; }
+  .subtitle { font-family: var(--serif); font-style: italic; font-size: 19px; color: var(--dim); margin-bottom: 34px; }
+  .prose { max-width: 66ch; }
+  .prose p { margin: 0 0 18px; }
+  .prose h3 { font-family: var(--disp); font-weight: 600; font-size: 25px; color: var(--brass); margin: 40px 0 14px; }
+  .prose code { font-family: var(--mono); font-size: 0.86em; background: rgba(203,154,81,0.10); color: #7a5416; padding: 1px 6px; border-radius: 4px; }
+  .prose strong { color: var(--text); font-weight: 500; }
+
+  /* ---- code recipe card ---- */
+  .recipe { margin: 24px 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--panel); }
+  .recipe-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 14px; background: var(--panel2); border-bottom: 1px solid var(--line);
+  }
+  .recipe-head .dish { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; color: var(--dim); flex: 1; }
+  .recipe-head .dot3 { display: flex; gap: 5px; }
+  .recipe-head .dot3 i { width: 9px; height: 9px; border-radius: 50%; display: block; }
+  .recipe-head .dot3 i:nth-child(1) { background: #4a3a24; }
+  .recipe-head .dot3 i:nth-child(2) { background: #4a3a24; }
+  .recipe-head .dot3 i:nth-child(3) { background: #4a3a24; }
+  .copy { font-family: var(--mono); font-size: 10px; letter-spacing: 1px; color: var(--dim); background: none; border: 1px solid var(--line); padding: 4px 9px; border-radius: 5px; cursor: pointer; transition: color .18s, border-color .18s; }
+  .copy:hover { color: var(--brass); border-color: var(--brass-dim); }
+  .recipe pre { margin: 0; padding: 16px 16px; overflow-x: auto; }
+  .recipe code { font-family: var(--mono); font-size: 14.5px; line-height: 1.7; color: #3a2f22; white-space: pre; }
+  .recipe .out { border-top: 1px dashed var(--line); padding: 11px 16px; background: rgba(156,107,31,0.06); }
+  .recipe .out .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--dim); display: block; margin-bottom: 5px; }
+  .recipe .out samp { font-family: var(--mono); font-size: 14px; color: var(--herb); white-space: pre-wrap; }
+
+  /* ---- chef's note ---- */
+  .note { margin: 22px 0; padding: 14px 18px; border-left: 3px solid var(--ember); background: rgba(217,119,47,0.06); border-radius: 0 8px 8px 0; }
+  .note .lbl { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--ember); display: block; margin-bottom: 5px; }
+  .note p { margin: 0; font-size: 16px; color: var(--text); }
+
+  /* ---- run-it callout ---- */
+  .runit { display: inline-flex; align-items: center; gap: 9px; margin: 6px 0 2px; font-family: var(--mono); font-size: 12px; color: var(--dim); }
+  .runit a { text-decoration: none; border-bottom: 1px solid var(--brass-dim); }
+
+  /* ---- diagram aid ---- */
+  .aid { margin: 26px 0; }
+  .aid svg { width: 100%; max-width: 620px; height: auto; display: block; }
+
+  /* ---- ticket (drill) ---- */
+  .tickets { margin-top: 54px; }
+  .tickets > h3 { font-family: var(--disp); font-weight: 600; font-size: 25px; color: var(--brass); margin-bottom: 4px; }
+  .tickets > .sub { font-family: var(--serif); font-style: italic; color: var(--dim); margin-bottom: 20px; }
+  .ticket {
+    margin: 20px 0; border: 1px solid var(--line); border-radius: 10px;
+    background: var(--panel); overflow: hidden;
+  }
+  .ticket-top {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px; border-bottom: 1px dashed var(--line);
+    background: repeating-linear-gradient(45deg, rgba(0,0,0,0.015) 0 10px, transparent 10px 20px);
+  }
+  .ticket-top .kind { font-family: var(--mono); font-size: 10px; letter-spacing: 2px; color: var(--ember); }
+  .ticket-top .num { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-left: auto; }
+  .ticket-body { padding: 16px; }
+  .ticket-body .q { font-size: 16px; margin-bottom: 14px; }
+  .ticket-body pre { background: rgba(156,107,31,0.06); border: 1px solid var(--line); border-radius: 8px; padding: 13px 15px; overflow-x: auto; margin-bottom: 16px; }
+  .ticket-body pre code { font-family: var(--mono); font-size: 14px; line-height: 1.7; color: #3a2f22; white-space: pre; }
+  .opts { display: flex; flex-direction: column; gap: 9px; }
+  .opt {
+    text-align: left; width: 100%; cursor: pointer;
+    font-family: var(--mono); font-size: 14px; color: var(--text);
+    background: var(--panel2); border: 1px solid var(--line); border-radius: 8px;
+    padding: 12px 14px; transition: border-color .15s, background .15s;
+    display: flex; align-items: center; gap: 11px;
+  }
+  .opt:hover:not(:disabled) { border-color: var(--brass-dim); }
+  .opt .pip { width: 20px; height: 20px; flex: none; border-radius: 5px; border: 1px solid var(--brass-dim); display: grid; place-items: center; font-size: 11px; color: var(--dim); }
+  .opt span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+  .opt.right { border-color: var(--herb); background: rgba(134,180,92,0.10); color: var(--text); }
+  .opt.right .pip { border-color: var(--herb); color: var(--herb); }
+  .opt.wrong { border-color: var(--chili); background: rgba(207,91,78,0.10); }
+  .opt.wrong .pip { border-color: var(--chili); color: var(--chili); }
+  .opt:disabled { cursor: default; }
+  .verdict { margin-top: 14px; padding: 12px 14px; border-radius: 8px; font-size: 15px; display: none; }
+  .verdict.show { display: block; }
+  .verdict.ok { background: rgba(134,180,92,0.09); border: 1px solid rgba(134,180,92,0.35); }
+  .verdict.no { background: rgba(207,91,78,0.09); border: 1px solid rgba(207,91,78,0.35); }
+  .verdict b { font-family: var(--mono); font-size: 11px; letter-spacing: 1px; display: block; margin-bottom: 4px; }
+  .verdict.ok b { color: var(--herb); }
+  .verdict.no b { color: var(--chili); }
+
+  /* ---- rank + progress ---- */
+  .progress { display: flex; align-items: center; gap: 9px; }
+  .rank { font-family: var(--disp); font-weight: 600; font-size: 13px; color: var(--brass); white-space: nowrap; }
+  .bar { width: 84px; height: 6px; border-radius: 3px; background: var(--panel2); border: 1px solid var(--line); overflow: hidden; }
+  .bar i { display: block; height: 100%; background: linear-gradient(90deg, var(--brass-dim), var(--brass)); transition: width .4s; }
+  .ptxt { font-family: var(--mono); font-size: 10px; color: var(--dim); white-space: nowrap; }
+
+  /* ---- buttons ---- */
+  .btn { font-family: var(--mono); font-size: 12px; letter-spacing: 1px; color: var(--bg); background: var(--brass); border: 1px solid var(--brass); padding: 11px 16px; border-radius: 8px; cursor: pointer; font-weight: 600; transition: filter .15s; }
+  .btn:hover { filter: brightness(1.08); }
+  .btn.ghost { background: none; color: var(--dim); border-color: var(--line); font-weight: 400; }
+  .btn.ghost:hover { color: var(--brass); border-color: var(--brass-dim); filter: none; }
+  .btn.next { margin-top: 16px; }
+  .act-row { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 42px; }
+
+  /* ---- rush ---- */
+  .rush-meta { font-family: var(--mono); font-size: 12px; color: var(--dim); margin-bottom: 18px; }
+  .rush-meta b { color: var(--brass); }
+  .result { margin: 10px 0 8px; padding: 26px 24px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); }
+  .result .score { font-family: var(--disp); font-weight: 900; font-size: 48px; line-height: 1; margin-bottom: 10px; }
+  .result p { margin: 0; font-size: 17px; color: var(--text); }
+  .result.ok { border-color: rgba(134,180,92,0.4); } .result.ok .score { color: var(--herb); }
+  .result.mid { border-color: rgba(203,154,81,0.4); } .result.mid .score { color: var(--brass); }
+  .result.no { border-color: rgba(207,91,78,0.4); } .result.no .score { color: var(--chili); }
+
+  /* ---- brief cta ---- */
+  .cta { margin: 34px 0 4px; padding: 20px 22px; border-radius: 12px; border: 1px solid var(--brass-dim); background: linear-gradient(180deg, rgba(203,154,81,0.08), rgba(203,154,81,0.02)); }
+  .cta h4 { font-family: var(--disp); font-weight: 600; font-size: 22px; color: var(--brass); margin-bottom: 8px; }
+  .cta p { margin: 0 0 16px; font-size: 16px; }
+  .cta em { color: var(--text); font-style: italic; }
+
+  /* ---- rail rush ---- */
+  .rail-sep { height: 1px; background: var(--line); margin: 14px 10px; }
+  .station.rush, .station.rush .no, .station.weak .no { color: var(--brass); }
+  .station.weak { color: var(--dim); }
+  .station .cnt { float: right; font-family: var(--mono); font-size: 11px; color: var(--ember); background: rgba(217,119,47,0.12); padding: 0 7px; border-radius: 8px; }
+
+  /* ---- reading mode ---- */
+  body.reading .rail { display: none; }
+  body.reading .wrap { grid-template-columns: 1fr; }
+  body.reading .tabs { display: none; }
+  body.reading .stage { max-width: 720px; margin: 0 auto; font-size: 19px; }
+  body.reading .prose { max-width: 72ch; }
+
+  /* ---- focus + motion ---- */
+  :focus-visible { outline: 2px solid var(--brass); outline-offset: 2px; }
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+
+  /* ---- responsive ---- */
+  @media (max-width: 880px) {
+    .wrap { grid-template-columns: 1fr; }
+    .rail { display: none; }
+    .stage { padding: 30px 22px 110px; }
+    body { font-size: 17px; }
+  }
+  @media (min-width: 881px) { .pass .tabs { display: none; } .pass .progress { margin-left: auto; } }
+  @media (max-width: 520px) {
+    .pass { gap: 12px; padding: 10px 14px; }
+    .bar, .ptxt { display: none; }
+    .stage { padding: 26px 18px 100px; }
+  }
+</style>
+</head>
+<body>
+  <header class="pass">
+    <div class="mark">PASSLE<small>THE PASS · PHP</small></div>
+    <nav class="tabs" id="tabs" aria-label="Stations (compact)"></nav>
+    <span class="progress" id="progress"></span>
+    <button class="rdbtn" id="rdbtn" aria-pressed="false">READ MODE</button>
+  </header>
+
+  <div class="wrap">
+    <aside class="rail" aria-label="Stations">
+      <h4>THE LINE</h4>
+      <nav id="rail"></nav>
+    </aside>
+    <main class="stage" id="stage" tabindex="-1"></main>
+  </div>
+
+<script>
+(function () {
+  "use strict";
+
+  var SVG_REQ =
+    '<svg viewBox="0 0 620 150" role="img" aria-label="A request goes from the browser to the PHP server, which cooks and serves back a finished page.">' +
+    '<defs><marker id="ar" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M2 1L8 5L2 9" fill="none" stroke="#9c6b1f" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></marker></defs>' +
+    '<rect x="14" y="45" width="150" height="60" rx="9" fill="#fbf8f1" stroke="#e2d8c4"/>' +
+    '<text x="89" y="70" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">Browser</text>' +
+    '<text x="89" y="90" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">the customer</text>' +
+    '<rect x="235" y="45" width="150" height="60" rx="9" fill="#efe7d6" stroke="#c9a45e"/>' +
+    '<text x="310" y="70" text-anchor="middle" fill="#9c6b1f" font-family="Spectral,serif" font-size="15">PHP server</text>' +
+    '<text x="310" y="90" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">the kitchen</text>' +
+    '<rect x="456" y="45" width="150" height="60" rx="9" fill="#fbf8f1" stroke="#e2d8c4"/>' +
+    '<text x="531" y="70" text-anchor="middle" fill="#2b2119" font-family="Spectral,serif" font-size="15">HTML page</text>' +
+    '<text x="531" y="90" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="10">the plated dish</text>' +
+    '<line x1="168" y1="66" x2="230" y2="66" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#ar)"/>' +
+    '<text x="199" y="58" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">order</text>' +
+    '<line x1="390" y1="84" x2="452" y2="84" stroke="#9c6b1f" stroke-width="1.2" marker-end="url(#ar)"/>' +
+    '<text x="421" y="76" text-anchor="middle" fill="#7c6f5c" font-family="JetBrains Mono,monospace" font-size="9">serve</text>' +
+    '</svg>';
+
+  var LESSONS = [
+    {
+      id: "brief",
+      tab: "Brief",
+      no: "0",
+      title: "Service brief",
+      subtitle: "What PHP is, and how this kitchen runs.",
+      blocks: [
+        { t: "p", html: "Welcome to the pass. Everything you have built so far \u2014 HTML, CSS, JavaScript \u2014 runs <strong>in the browser</strong>, where the customer sits. The customer watches it all happen on their table." },
+        { t: "p", html: "PHP is the odd one out, and that is the whole point of it. PHP runs on the <strong>server</strong> \u2014 back in the kitchen, out of sight. The customer never sees it work. They send an <strong>order</strong> (a request), the kitchen cooks, and a finished <strong>plate</strong> (an HTML page) is carried out to them." },
+        { t: "aid", svg: SVG_REQ },
+        { t: "p", html: "So when you write PHP, picture yourself behind the pass: you take the ticket, you decide what goes on the plate, and only the finished plate leaves the kitchen. The customer gets HTML \u2014 they never get your recipe." },
+        { t: "h", text: "How to taste your own cooking" },
+        { t: "p", html: "PHP has to <em>run somewhere</em> to produce output. You have two easy ways to taste a snippet:" },
+        { t: "p", html: "<strong>1. In the browser, no install.</strong> Paste a snippet into an online runner and hit go. Works on a tablet. Every code card below has a <code>copy</code> button for exactly this." },
+        { t: "runit", label: "Run any snippet online:", href: "https://3v4l.org/", text: "3v4l.org" },
+        { t: "p", html: "<strong>2. On your own machine.</strong> One line spins up a throwaway server:" },
+        { t: "code", dish: "terminal", php: "php -S localhost:8000", out: null },
+        { t: "h", text: "How to read PHP like the exam does" },
+        { t: "p", html: "The skill that matters most is <strong>reading a snippet and predicting its output</strong> before you run it. Every drill here (we call them <em>tickets</em>) trains that: look at the code, decide what it prints, tap your answer, then see if the kitchen agrees." },
+        { t: "note", html: "A <code>?</code> in code you don't recognise is not a failure \u2014 it's the next thing to learn. Guess first anyway. A wrong guess you understand afterwards sticks far better than a right one you never questioned." }
+      ],
+      drills: [
+        {
+          kind: "Warm-up",
+          q: "Where does PHP actually run?",
+          php: null,
+          options: [
+            "In the customer's browser, like JavaScript",
+            "On the server \u2014 the browser only receives the finished HTML",
+            "Nowhere; PHP is just a styling language",
+            "Only inside a database"
+          ],
+          answer: 1,
+          explain: "PHP runs server-side. It builds the page in the kitchen, then sends plain HTML to the browser. The browser never sees the PHP itself."
+        }
+      ]
+    },
+
+    {
+      id: "s1",
+      tab: "1 · Mise",
+      no: "1",
+      title: "Mise en place",
+      subtitle: "Everything laid out before service \u2014 output, variables, types, strings.",
+      blocks: [
+        { t: "p", html: "Mise en place is the chef's ritual of setting everything in its place before the rush. Ours is the same: the handful of pieces every PHP script is built from." },
+        { t: "h", text: "Output: echo" },
+        { t: "p", html: "PHP does nothing visible until you <code>echo</code> something. Think of <code>echo</code> as plating up \u2014 it puts text on the plate that leaves the kitchen. PHP code lives between <code>&lt;?php</code> and <code>?&gt;</code> tags." },
+        { t: "code", dish: "hello.php", php: "<?php\necho \"Hello from the pass\";", out: "Hello from the pass" },
+        { t: "h", text: "Variables and the $" },
+        { t: "p", html: "A variable is a labelled container. In PHP every variable name starts with a <code>$</code>. You put something in with <code>=</code>, and use the name to get it back." },
+        { t: "code", dish: "prep.php", php: "<?php\n$dish = \"tomato soup\";\n$price = 6;\necho $dish;", out: "tomato soup" },
+        { t: "h", text: "Types: what's in the container" },
+        { t: "p", html: "PHP sorts values into a few basic <strong>types</strong>. You rarely declare them \u2014 PHP reads them from what you write:" },
+        { t: "p", html: "<code>\"soup\"</code> is a <strong>string</strong> (text, in quotes) \u00b7 <code>6</code> is an <strong>int</strong> (whole number) \u00b7 <code>6.5</code> is a <strong>float</strong> (decimal) \u00b7 <code>true</code>/<code>false</code> are <strong>bool</strong> \u00b7 <code>null</code> is \u201cnothing here yet\u201d." },
+        { t: "p", html: "<code>var_dump()</code> is your tasting spoon \u2014 it tells you the exact type and value of anything." },
+        { t: "code", dish: "taste.php", php: "<?php\nvar_dump(6);\nvar_dump(6.5);\nvar_dump(\"6\");", out: "int(6)\nfloat(6.5)\nstring(1) \"6\"" },
+        { t: "h", text: "Strings: single vs double quotes" },
+        { t: "p", html: "This is the classic PHP gotcha, so learn it now. <strong>Double quotes</strong> read variables inside them (interpolation). <strong>Single quotes</strong> take the text completely literally \u2014 a <code>$name</code> inside single quotes prints the four characters, not the value." },
+        { t: "code", dish: "quotes.php", php: "<?php\n$name = \"Kaatje\";\necho \"Hi $name\";\necho ' / ';\necho 'Hi $name';", out: "Hi Kaatje / Hi $name" },
+        { t: "p", html: "To glue strings together yourself, use the <strong>dot</strong> <code>.</code> (concatenation). This is PHP's join \u2014 not <code>+</code>, which is only for maths." },
+        { t: "code", dish: "join.php", php: "<?php\n$dish = \"soup\";\n$price = 6;\necho $dish . \" is \" . $price . \" euro\";", out: "soup is 6 euro" },
+        { t: "note", html: "Watch the <code>.</code> vs <code>+</code> trap: <code>3 . 4</code> gives the string <code>\"34\"</code> (glued), while <code>3 + 4</code> gives <code>7</code> (added). Different tools." }
+      ],
+      drills: [
+        {
+          kind: "Predict the plate",
+          q: "What does this print?",
+          php: "<?php\n$name = \"Kaatje\";\necho 'Welcome, $name';",
+          options: ["Welcome, Kaatje", "Welcome, $name", "Welcome, ", "Error"],
+          answer: 1,
+          explain: "Single quotes take the text literally, so $name is printed as-is, not swapped for its value. Double quotes would have given \u201cWelcome, Kaatje\u201d."
+        },
+        {
+          kind: "Predict the plate",
+          q: "What does this print?",
+          php: "<?php\necho 3 . 4;",
+          options: ["7", "34", "12", "Error"],
+          answer: 1,
+          explain: "The dot glues values into one string, so 3 and 4 become \"34\". You'd use 3 + 4 to get 7."
+        },
+        {
+          kind: "Predict the plate",
+          q: "What does var_dump print here?",
+          php: "<?php\nvar_dump(\"6\" + 1);",
+          options: ["string(2) \"61\"", "int(7)", "string(1) \"7\"", "Error"],
+          answer: 1,
+          explain: "The + operator is maths, so PHP turns the numeric string \"6\" into 6 and adds 1, giving int(7). (Gluing with . instead would have made the string \"61\".)"
+        }
+      ]
+    },
+
+    {
+      id: "s2",
+      tab: "2 · Line",
+      no: "2",
+      title: "On the line",
+      subtitle: "Cooking logic \u2014 arrays, decisions, loops, and recipes.",
+      blocks: [
+        { t: "p", html: "Service has started. Now you need to hold many things at once, make decisions, repeat work, and reuse recipes. That's arrays, conditionals, loops, and functions." },
+        { t: "h", text: "Arrays: the shelf" },
+        { t: "p", html: "An array is one variable holding many values \u2014 a shelf of containers. A plain (indexed) array numbers its slots from <strong>0</strong>. An <strong>associative</strong> array labels them with keys of your choosing, which is where PHP really lives." },
+        { t: "code", dish: "shelf.php", php: "<?php\n$sides = [\"bread\", \"salad\", \"fries\"];\necho $sides[0];\n\n$prices = [\"soup\" => 6, \"bread\" => 3];\necho $prices[\"soup\"];", out: "bread6" },
+        { t: "h", text: "foreach: every plate on the shelf" },
+        { t: "p", html: "<code>foreach</code> is the PHP workhorse: it walks through every item in an array. With an associative array you can grab the key and the value together." },
+        { t: "code", dish: "walk.php", php: "<?php\n$prices = [\"soup\" => 6, \"bread\" => 3];\nforeach ($prices as $item => $cost) {\n    echo \"$item costs $cost\\n\";\n}", out: "soup costs 6\nbread costs 3" },
+        { t: "h", text: "Decisions: if / elseif / else" },
+        { t: "p", html: "Tasting and deciding. A condition is a yes/no question; the matching block runs." },
+        { t: "code", dish: "decide.php", php: "<?php\n$stock = 0;\nif ($stock > 5) {\n    echo \"plenty\";\n} elseif ($stock > 0) {\n    echo \"running low\";\n} else {\n    echo \"86 it\";\n}", out: "86 it" },
+        { t: "h", text: "== vs === (the one that catches everyone)" },
+        { t: "p", html: "<code>==</code> asks \u201care these <em>loosely</em> equal?\u201d and will convert types to compare. <code>===</code> asks \u201care these the <em>same type and value</em>?\u201d. <strong>Prefer <code>===</code>.</strong> It has fewer surprises \u2014 and the exam loves testing the surprises." },
+        { t: "code", dish: "equal.php", php: "<?php\nvar_dump(5 == \"5\");\nvar_dump(5 === \"5\");", out: "bool(true)\nbool(false)" },
+        { t: "note", html: "PHP 8 quietly fixed the nastiest case: <code>0 == \"chips\"</code> is now <code>false</code> (in old PHP 7 it was <code>true</code>, which caused real bugs). Since your exam is PHP 8, learn the modern answer." },
+        { t: "h", text: "Functions: the written recipe" },
+        { t: "p", html: "A function is a recipe you write once and call by name. It can take <strong>parameters</strong> (ingredients) and <strong>return</strong> a result (the dish). You can type the ingredients and give defaults." },
+        { t: "code", dish: "recipe.php", php: "<?php\nfunction totalWithTip(int $bill, int $pct = 10): int {\n    return $bill + ($bill * $pct / 100);\n}\necho totalWithTip(200);\necho \" / \";\necho totalWithTip(200, 20);", out: "220 / 240" }
+      ],
+      drills: [
+        {
+          kind: "Predict the plate",
+          q: "What does this print?",
+          php: "<?php\n$menu = [\"soup\" => 6, \"bread\" => 3];\nforeach ($menu as $item => $price) {\n    echo $price;\n}",
+          options: ["9", "63", "soupbread", "6 3"],
+          answer: 1,
+          explain: "foreach visits each value in order and echo has no spaces or newlines between them, so you get 6 then 3 stuck together: \"63\"."
+        },
+        {
+          kind: "Predict the plate",
+          q: "What does var_dump print in PHP 8?",
+          php: "<?php\nvar_dump(0 == \"chips\");",
+          options: ["bool(true)", "bool(false)", "int(0)", "Error"],
+          answer: 1,
+          explain: "In PHP 8, comparing a number to a non-numeric string converts the number to a string instead of the string to 0. \"0\" == \"chips\" is false. (In PHP 7 this was the infamous true.)"
+        },
+        {
+          kind: "Fix the dish",
+          q: "You want to check the value is exactly the integer 1, type and all. Which line is right?",
+          php: null,
+          options: [
+            "if ($n = 1)",
+            "if ($n == 1)",
+            "if ($n === 1)",
+            "if ($n =:= 1)"
+          ],
+          answer: 2,
+          explain: "=== checks value AND type, so it only passes for the integer 1. Note the trap: a single = is assignment (it would set $n to 1), and == would also accept the string \"1\"."
+        }
+      ]
+    },
+
+    {
+      id: "s3",
+      tab: "3 · Pass",
+      no: "3",
+      title: "The pass",
+      subtitle: "Taking orders and serving them \u2014 forms, requests, JSON, and safety.",
+      blocks: [
+        { t: "p", html: "This is where PHP earns its living: reading the customer's order and serving a response. It's also where the theme is literally true \u2014 the pass is where the outside world meets your kitchen." },
+        { t: "h", text: "The order ticket: $_GET and $_POST" },
+        { t: "p", html: "When a browser sends a request, PHP hands you the details in two special arrays that are always available: <code>$_GET</code> (data in the URL, like <code>?name=Kaatje</code>) and <code>$_POST</code> (data sent from a submitted form). They're just associative arrays." },
+        { t: "code", dish: "order.php  (visited as ?dish=soup)", php: "<?php\n$dish = $_GET[\"dish\"];\necho \"One order of \" . $dish;", out: "One order of soup" },
+        { t: "h", text: "Never trust the ticket \u2014 kitchen hygiene" },
+        { t: "p", html: "Here is the single most important habit in this whole station: <strong>anything from <code>$_GET</code> or <code>$_POST</code> comes from a stranger.</strong> A customer could write a nasty script instead of a name. If you echo it straight onto the page, their script runs in the next visitor's browser \u2014 that's an <strong>XSS</strong> attack." },
+        { t: "p", html: "The fix is one function: <code>htmlspecialchars()</code>. It defuses dangerous characters so text stays text." },
+        { t: "code", dish: "safe.php", php: "<?php\n$name = $_GET[\"name\"] ?? \"guest\";\necho \"Welcome, \" . htmlspecialchars($name);", out: "Welcome, guest" },
+        { t: "note", html: "The <code>??</code> is the <em>null coalescing</em> operator: \u201cuse the left side, but if it's missing or null, use the right side instead.\u201d It's the clean way to supply a default and avoid warnings when a key isn't there." },
+        { t: "h", text: "JSON: food to go" },
+        { t: "p", html: "Sometimes the plate isn't a web page \u2014 it's data for another program (an app, some JavaScript). PHP packs an array into <strong>JSON</strong> text with <code>json_encode()</code>, and unpacks incoming JSON with <code>json_decode()</code>." },
+        { t: "code", dish: "togo.php", php: "<?php\n$order = [\"dish\" => \"soup\", \"price\" => 6];\necho json_encode($order);", out: "{\"dish\":\"soup\",\"price\":6}" },
+        { t: "p", html: "Going the other way, pass <code>true</code> as the second argument to get a friendly associative array back (instead of an object)." },
+        { t: "code", dish: "unpack.php", php: "<?php\n$json = '{\"dish\":\"soup\",\"price\":6}';\n$data = json_decode($json, true);\necho $data[\"price\"];", out: "6" },
+        { t: "note", html: "Full circle: your Mega Lab launcher's save/load feature is exactly this \u2014 <code>json_encode</code> to save your progress out, <code>json_decode</code> to read it back in." }
+      ],
+      drills: [
+        {
+          kind: "Predict the plate",
+          q: "What does this print?",
+          php: "<?php\n$order = [\"dish\" => \"soup\", \"price\" => 6];\necho json_encode($order);",
+          options: [
+            "{dish: soup, price: 6}",
+            "{\"dish\":\"soup\",\"price\":6}",
+            "[\"soup\", 6]",
+            "dish=soup&price=6"
+          ],
+          answer: 1,
+          explain: "json_encode turns the associative array into JSON text: keys and string values wrapped in double quotes, numbers left bare, all inside braces."
+        },
+        {
+          kind: "Fix the dish",
+          q: "This echoes a visitor's name straight onto the page. Which version is safe from XSS?",
+          php: "<?php\necho $_GET[\"name\"];",
+          options: [
+            "echo trim($_GET[\"name\"]);",
+            "echo strtolower($_GET[\"name\"]);",
+            "echo htmlspecialchars($_GET[\"name\"]);",
+            "echo \"$_GET[name]\";"
+          ],
+          answer: 2,
+          explain: "htmlspecialchars() converts characters like < and > into harmless entities, so a submitted <script> is shown as text instead of running. trim and strtolower only tidy the text \u2014 they don't make it safe."
+        },
+        {
+          kind: "Predict the plate",
+          q: "What does this print?",
+          php: "<?php\n$data = json_decode('{\"n\":2}', true);\necho $data[\"n\"] + 3;",
+          options: ["5", "23", "{\"n\":2}3", "Error"],
+          answer: 0,
+          explain: "json_decode with true gives an associative array, so $data[\"n\"] is the number 2, and 2 + 3 is 5."
+        }
+      ]
+    },
+
+    {
+      id: "s4",
+      tab: "4 · Service",
+      no: "4",
+      title: "Full service",
+      subtitle: "Running the kitchen \u2014 objects, the database, and real safety.",
+      blocks: [
+        { t: "p", html: "This is the deep end \u2014 and it's where the exam earns its weight. Take it slowly; you don't need to master it today, only to meet it." },
+        { t: "h", text: "Objects: a station with its own tools" },
+        { t: "p", html: "So far, functions and data have floated around loose. A <strong>class</strong> bundles related data and the recipes that act on it into one thing \u2014 like a prep station that owns its own ingredients and tools. You define the station once (the <code>class</code>), then create as many as you like (each one an <strong>object</strong>)." },
+        { t: "p", html: "Inside a class, <code>$this</code> means \u201cthis particular station,\u201d and the arrow <code>-&gt;</code> reaches its properties and methods." },
+        { t: "code", dish: "Dish.php", php: "<?php\nclass Dish {\n    public function __construct(\n        public string $name,\n        public int $price\n    ) {}\n\n    public function label(): string {\n        return $this->name . \" \u2014 \u20ac\" . $this->price;\n    }\n}\n\n$soup = new Dish(\"Tomato soup\", 6);\necho $soup->label();", out: "Tomato soup \u2014 \u20ac6" },
+        { t: "note", html: "That <code>__construct</code> with <code>public</code> ingredients is <em>constructor property promotion</em> \u2014 a PHP 8 shortcut that declares and fills the properties in one move, instead of the long old way. Modern PHP, exactly what your exam expects." },
+        { t: "h", text: "The database, safely: PDO + prepared statements" },
+        { t: "p", html: "Most real kitchens keep their stock in a database. PHP talks to one through <strong>PDO</strong>. The golden rule mirrors the last station: <strong>never paste user input straight into a query.</strong>" },
+        { t: "p", html: "Gluing input into SQL text is how <strong>SQL injection</strong> happens \u2014 a crafted \u201cid\u201d could read or wreck your whole database. The fix is a <strong>prepared statement</strong>: you write the query with a <code>?</code> placeholder, then hand the value separately, so it can only ever be data, never commands." },
+        { t: "code", dish: "stock.php", php: "<?php\n$stmt = $pdo->prepare(\"SELECT name FROM dishes WHERE id = ?\");\n$stmt->execute([$_GET[\"id\"]]);\n$row = $stmt->fetch();\necho htmlspecialchars($row[\"name\"]);", out: null },
+        { t: "note", html: "Two habits, one lesson, running through the whole back half of PHP: <code>htmlspecialchars()</code> on the way <em>out</em> to a page, prepared statements on the way <em>in</em> to a database. Learn them as reflexes and half the security syllabus is yours." }
+      ],
+      drills: [
+        {
+          kind: "Predict the plate",
+          q: "What does this print?",
+          php: "<?php\nclass Dish {\n    public function __construct(public string $name) {}\n    public function shout(): string {\n        return strtoupper($this->name);\n    }\n}\necho (new Dish(\"stew\"))->shout();",
+          options: ["stew", "STEW", "Dish", "Error"],
+          answer: 1,
+          explain: "new Dish(\"stew\") builds an object whose name is \"stew\"; calling ->shout() runs strtoupper on it, giving \"STEW\"."
+        },
+        {
+          kind: "Fix the dish",
+          q: "This query pastes user input straight into SQL. Which version blocks SQL injection?",
+          php: "<?php\n$pdo->query(\"SELECT * FROM dishes WHERE id = \" . $_GET[\"id\"]);",
+          options: [
+            "$pdo->query(\"SELECT * FROM dishes WHERE id = '\" . $_GET[\"id\"] . \"'\");",
+            "$pdo->query(strtoupper(\"SELECT * FROM dishes WHERE id = \" . $_GET[\"id\"]));",
+            "$stmt = $pdo->prepare(\"SELECT * FROM dishes WHERE id = ?\"); $stmt->execute([$_GET[\"id\"]]);",
+            "$pdo->query(\"SELECT * FROM dishes WHERE id = \" . htmlspecialchars($_GET[\"id\"]));"
+          ],
+          answer: 2,
+          explain: "A prepared statement with a ? placeholder keeps the value separate from the SQL, so it can never be run as a command. Adding quotes doesn't help, and htmlspecialchars is for HTML output, not SQL."
+        }
+      ]
+    }
+  ];
+
+  var EXTRA = {
+    brief: [
+      {
+        kind: "Warm-up",
+        q: "You open a .php page in your browser and choose \u201cView Source\u201d. What do you see?",
+        php: null,
+        options: [
+          "The PHP code you wrote",
+          "The finished HTML the server produced",
+          "A database error",
+          "Nothing at all"
+        ],
+        answer: 1,
+        explain: "The browser only ever receives the HTML the server produced. Your PHP source stays in the kitchen \u2014 which is also why PHP can hold secrets like passwords that JavaScript can't."
+      }
+    ],
+    s1: [
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\necho \"a\", \"b\", \"c\";",
+        options: ["abc", "a,b,c", "a b c", "Error"],
+        answer: 0,
+        explain: "echo can take several values separated by commas and prints them one after another with nothing in between: \"abc\"."
+      },
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\n$s = \"soup\";\n$s .= \" du jour\";\necho $s;",
+        options: ["soup du jour", "soup", " du joursoup", "Error"],
+        answer: 0,
+        explain: "The .= operator appends to the end of a string \u2014 shorthand for $s = $s . \" du jour\". So \"soup\" becomes \"soup du jour\"."
+      }
+    ],
+    s2: [
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\n$sides = [\"bread\", \"salad\", \"fries\"];\n$sides[] = \"rice\";\necho count($sides);",
+        options: ["3", "4", "rice", "Error"],
+        answer: 1,
+        explain: "$sides[] = ... appends a new item to the end of the array, so it now holds four things, and count() reports 4."
+      },
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\nfunction greet(string $name = \"chef\"): string {\n    return \"Yes, $name\";\n}\necho greet();",
+        options: ["Yes, chef", "Yes, ", "Yes, $name", "Error"],
+        answer: 0,
+        explain: "No argument was passed, so the default value \"chef\" is used. Inside double quotes $name becomes its value, giving \"Yes, chef\"."
+      }
+    ],
+    s3: [
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\n$tips = [];\necho $tips[\"table5\"] ?? \"none yet\";",
+        options: ["none yet", "(empty string)", "null", "Error"],
+        answer: 0,
+        explain: "The key \"table5\" doesn't exist, so ?? falls back to the right-hand value \"none yet\" \u2014 with no undefined-key warning."
+      },
+      {
+        kind: "Fix the dish",
+        q: "A form posts a \u201cqty\u201d field. Which safely reads it with a fallback of 1 if it's missing?",
+        php: null,
+        options: [
+          "$q = $_POST[\"qty\"];",
+          "$q = $_POST[\"qty\"] ?? 1;",
+          "$q = POST(\"qty\");",
+          "$q = $qty;"
+        ],
+        answer: 1,
+        explain: "?? gives you the posted value, or 1 if the key isn't there \u2014 no warning, and you never assume a stranger sent the field you expected."
+      }
+    ],
+    s4: [
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\nclass Dish {\n    public function __construct(public int $price) {}\n}\n$d = new Dish(6);\necho $d->price;",
+        options: ["6", "price", "Error", "null"],
+        answer: 0,
+        explain: "Constructor promotion created a public property $price and filled it with 6. The arrow ->price reads it back off the object."
+      },
+      {
+        kind: "Predict the plate",
+        q: "What does this print?",
+        php: "<?php\nclass Counter {\n    private int $n = 0;\n    public function add(): void { $this->n++; }\n    public function total(): int { return $this->n; }\n}\n$c = new Counter();\n$c->add();\n$c->add();\necho $c->total();",
+        options: ["0", "1", "2", "Error"],
+        answer: 2,
+        explain: "The object keeps its own $n between calls. Two add() calls raise it from 0 to 2, and total() returns that. State living inside the object is the whole point of a class."
+      },
+      {
+        kind: "Fix the dish",
+        q: "You're about to print a dish name that came from the database onto a web page. What do you wrap it in?",
+        php: null,
+        options: [
+          "htmlspecialchars(...)",
+          "json_encode(...)",
+          "strtoupper(...)",
+          "nothing \u2014 database data is always safe"
+        ],
+        answer: 0,
+        explain: "Anything shown on a page gets htmlspecialchars() on the way out, even from your own database \u2014 it may hold text a user entered earlier. Output hygiene is a reflex, not a special case."
+      }
+    ]
+  };
+  LESSONS.forEach(function (l) {
+    if (EXTRA[l.id]) l.drills = l.drills.concat(EXTRA[l.id]);
+  });
+
+  /* ---------- progress ---------- */
+  var STORE = "passle_progress";
+  var progress = load();
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORE);
+      if (raw) {
+        var p = JSON.parse(raw);
+        if (p && typeof p === "object" && p.answered) return p;
+      }
+    } catch (e) {}
+    return { answered: {} };
+  }
+  function save() {
+    try { localStorage.setItem(STORE, JSON.stringify(progress)); } catch (e) {}
+  }
+  function totalDrills() {
+    return LESSONS.reduce(function (n, l) { return n + l.drills.length; }, 0);
+  }
+  function answeredCount() {
+    var n = 0, a = progress.answered;
+    for (var k in a) if (a.hasOwnProperty(k) && a[k]) n++;
+    return n;
+  }
+  function lessonDone(l) {
+    for (var i = 0; i < l.drills.length; i++) {
+      if (!progress.answered[l.id + "d" + i]) return false;
+    }
+    return l.drills.length > 0;
+  }
+
+  /* ---------- rendering ---------- */
+  var stage = document.getElementById("stage");
+  var rail = document.getElementById("rail");
+  var tabs = document.getElementById("tabs");
+  var progressEl = document.getElementById("progress");
+  var current = "brief";
+
+  function esc(s) {
+    return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  }
+
+  function el(tag, cls, html) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (html != null) e.innerHTML = html;
+    return e;
+  }
+
+  function codeCard(block) {
+    var card = el("div", "recipe");
+    var head = el("div", "recipe-head");
+    head.appendChild(el("span", "dish", esc(block.dish || "snippet.php")));
+    var dots = el("span", "dot3", "<i></i><i></i><i></i>");
+    head.appendChild(dots);
+    var copy = el("button", "copy", "copy");
+    copy.type = "button";
+    copy.addEventListener("click", function () {
+      copyText(block.php, copy);
+    });
+    head.appendChild(copy);
+    card.appendChild(head);
+
+    var pre = el("pre");
+    var code = document.createElement("code");
+    code.textContent = block.php;
+    pre.appendChild(code);
+    card.appendChild(pre);
+
+    if (block.out != null) {
+      var out = el("div", "out");
+      out.appendChild(el("span", "lbl", "ON THE PLATE"));
+      var samp = document.createElement("samp");
+      samp.textContent = block.out;
+      out.appendChild(samp);
+      card.appendChild(out);
+    }
+    return card;
+  }
+
+  function copyText(text, btn) {
+    var done = function () {
+      var old = btn.textContent;
+      btn.textContent = "copied";
+      setTimeout(function () { btn.textContent = old; }, 1200);
+    };
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () { fallbackCopy(text, done); });
+      } else {
+        fallbackCopy(text, done);
+      }
+    } catch (e) { fallbackCopy(text, done); }
+  }
+  function fallbackCopy(text, done) {
+    try {
+      var ta = document.createElement("textarea");
+      ta.value = text;
+      ta.style.position = "fixed";
+      ta.style.opacity = "0";
+      document.body.appendChild(ta);
+      ta.select();
+      document.execCommand("copy");
+      document.body.removeChild(ta);
+      done();
+    } catch (e) {}
+  }
+
+  function ticketCard(lesson, drill, index) {
+    var did = lesson.id + "d" + index;
+    var card = el("div", "ticket");
+
+    var top = el("div", "ticket-top");
+    top.appendChild(el("span", "kind", esc(drill.kind)));
+    top.appendChild(el("span", "num", "TICKET " + (index + 1)));
+    card.appendChild(top);
+
+    var body = el("div", "ticket-body");
+    body.appendChild(el("div", "q", esc(drill.q)));
+
+    if (drill.php) {
+      var pre = el("pre");
+      var code = document.createElement("code");
+      code.textContent = drill.php;
+      pre.appendChild(code);
+      body.appendChild(pre);
+    }
+
+    var opts = el("div", "opts");
+    var verdict = el("div", "verdict");
+    var answered = !!progress.answered[did];
+
+    drill.options.forEach(function (text, i) {
+      var b = el("button", "opt");
+      b.type = "button";
+      var pip = el("span", "pip", String.fromCharCode(65 + i));
+      b.appendChild(pip);
+      var span = document.createElement("span");
+      span.textContent = text;
+      b.appendChild(span);
+
+      b.addEventListener("click", function () {
+        if (b.disabled) return;
+        reveal(i);
+        progress.answered[did] = (i === drill.answer);
+        save();
+        paintProgress();
+        paintRail();
+      });
+      opts.appendChild(b);
+    });
+
+    function reveal(chosen) {
+      var buttons = opts.querySelectorAll(".opt");
+      buttons.forEach(function (b, i) {
+        b.disabled = true;
+        if (i === drill.answer) b.classList.add("right");
+        if (i === chosen && chosen !== drill.answer) b.classList.add("wrong");
+      });
+      var ok = chosen === drill.answer;
+      verdict.className = "verdict show " + (ok ? "ok" : "no");
+      verdict.innerHTML = "<b>" + (ok ? "SERVICE" : "SENT BACK") + "</b>";
+      var p = document.createElement("span");
+      p.textContent = drill.explain;
+      verdict.appendChild(p);
+    }
+
+    body.appendChild(opts);
+    body.appendChild(verdict);
+    card.appendChild(body);
+
+    if (answered) {
+      // re-lock a previously answered ticket, showing the correct answer
+      var btns = opts.querySelectorAll(".opt");
+      btns.forEach(function (b, i) {
+        b.disabled = true;
+        if (i === drill.answer) b.classList.add("right");
+      });
+      verdict.className = "verdict show ok";
+      verdict.innerHTML = "<b>CLEARED</b>";
+      var pp = document.createElement("span");
+      pp.textContent = drill.explain;
+      verdict.appendChild(pp);
+    }
+
+    return card;
+  }
+
+  function openLesson(id) {
+    var lesson = null;
+    for (var i = 0; i < LESSONS.length; i++) if (LESSONS[i].id === id) lesson = LESSONS[i];
+    if (!lesson) return;
+    current = id;
+
+    stage.innerHTML = "";
+    stage.appendChild(el("div", "kicker", "STATION " + esc(lesson.no)));
+    stage.appendChild(el("h1", "title", esc(lesson.title)));
+    stage.appendChild(el("div", "subtitle", esc(lesson.subtitle)));
+
+    var prose = el("div", "prose");
+    lesson.blocks.forEach(function (block) {
+      if (block.t === "p") prose.appendChild(el("p", null, block.html));
+      else if (block.t === "h") prose.appendChild(el("h3", null, esc(block.text)));
+      else if (block.t === "note") {
+        var n = el("div", "note");
+        n.appendChild(el("span", "lbl", "CHEF'S NOTE"));
+        n.appendChild(el("p", null, block.html));
+        prose.appendChild(n);
+      }
+      else if (block.t === "code") prose.appendChild(codeCard(block));
+      else if (block.t === "aid") {
+        var a = el("div", "aid", block.svg);
+        prose.appendChild(a);
+      }
+      else if (block.t === "runit") {
+        var r = el("div", "runit");
+        r.appendChild(document.createTextNode(block.label + " "));
+        var link = document.createElement("a");
+        link.href = block.href;
+        link.target = "_blank";
+        link.rel = "noopener";
+        link.textContent = block.text;
+        r.appendChild(link);
+        prose.appendChild(r);
+      }
+    });
+    if (lesson.id === "brief") {
+      var cta = el("div", "cta");
+      cta.innerHTML = '<h4>Earn your whites</h4><p>Every ticket you clear moves you up the brigade \u2014 from <em>commis</em> to running the pass. When you can run a full Service Rush clean, you\u2019re ready for the real thing.</p>';
+      var go = el("button", "btn", "\u25B6 Start a service rush");
+      go.type = "button";
+      go.addEventListener("click", function () { openRush("all"); });
+      cta.appendChild(go);
+      prose.appendChild(cta);
+    }
+    stage.appendChild(prose);
+
+    if (lesson.drills.length) {
+      var wrap = el("div", "tickets");
+      wrap.appendChild(el("h3", null, "Tickets"));
+      wrap.appendChild(el("div", "sub", "Read the code, call the plate, tap your answer."));
+      lesson.drills.forEach(function (drill, i) {
+        wrap.appendChild(ticketCard(lesson, drill, i));
+      });
+      stage.appendChild(wrap);
+    }
+
+    var actions = el("div", "act-row");
+    if (lesson.drills.length) {
+      var rushThis = el("button", "btn", "\u25B6 Rush this station");
+      rushThis.type = "button";
+      rushThis.addEventListener("click", function () { openRush("station:" + lesson.id); });
+      actions.appendChild(rushThis);
+    }
+    var fullRush = el("button", "btn ghost", "Service rush \u00b7 all stations");
+    fullRush.type = "button";
+    fullRush.addEventListener("click", function () { openRush("all"); });
+    actions.appendChild(fullRush);
+    stage.appendChild(actions);
+
+    paintRail();
+    paintTabs();
+    window.scrollTo(0, 0);
+    stage.focus();
+  }
+
+  function paintRail() {
+    rail.innerHTML = "";
+    LESSONS.forEach(function (l) {
+      var b = el("button", "station" + (l.id === current ? " on" : ""));
+      b.type = "button";
+      var label = '<span class="no">' + esc(l.no) + '</span>' + esc(l.title);
+      if (lessonDone(l)) label += '<span class="tick">\u2714</span>';
+      b.innerHTML = label;
+      b.addEventListener("click", function () { openLesson(l.id); });
+      rail.appendChild(b);
+    });
+    rail.appendChild(el("div", "rail-sep"));
+    var rush = el("button", "station rush" + (current === "__rush__" ? " on" : ""));
+    rush.type = "button";
+    rush.innerHTML = '<span class="no">\u25B6</span>Service rush';
+    rush.addEventListener("click", function () { openRush("all"); });
+    rail.appendChild(rush);
+    var weakN = weakTickets().length;
+    if (weakN) {
+      var weak = el("button", "station weak");
+      weak.type = "button";
+      weak.innerHTML = '<span class="no">\u21BB</span>Weak spots<span class="cnt">' + weakN + '</span>';
+      weak.addEventListener("click", function () { openRush("weak"); });
+      rail.appendChild(weak);
+    }
+  }
+
+  function paintTabs() {
+    tabs.innerHTML = "";
+    LESSONS.forEach(function (l) {
+      var b = el("button", "tab" + (l.id === current ? " on" : ""));
+      b.type = "button";
+      b.innerHTML = esc(l.tab) + (lessonDone(l) ? ' <span class="dot">\u2714</span>' : "");
+      b.addEventListener("click", function () { openLesson(l.id); });
+      tabs.appendChild(b);
+    });
+    var rb = el("button", "tab" + (current === "__rush__" ? " on" : ""));
+    rb.type = "button";
+    rb.innerHTML = "\u25B6 Rush";
+    rb.addEventListener("click", function () { openRush("all"); });
+    tabs.appendChild(rb);
+  }
+
+  var RANKS = [
+    { at: 0.0, name: "Trial shift" },
+    { at: 0.01, name: "Commis" },
+    { at: 0.25, name: "Chef de partie" },
+    { at: 0.5, name: "Sous-chef" },
+    { at: 0.8, name: "Head chef" },
+    { at: 1.0, name: "Runs the pass" }
+  ];
+
+  function rankInfo() {
+    var cleared = answeredCount(), total = totalDrills();
+    var pct = total ? cleared / total : 0;
+    var idx = 0;
+    for (var i = 0; i < RANKS.length; i++) if (pct >= RANKS[i].at) idx = i;
+    var next = RANKS[idx + 1] || null;
+    var toNext = next ? Math.max(1, Math.ceil(next.at * total) - cleared) : 0;
+    return { cleared: cleared, total: total, pct: pct, name: RANKS[idx].name, next: next, toNext: toNext };
+  }
+
+  function paintProgress() {
+    var r = rankInfo();
+    var w = Math.round(r.pct * 100);
+    var tail = r.next ? (r.toNext + " to " + r.next.name) : "the pass is yours";
+    progressEl.innerHTML =
+      '<span class="rank">' + esc(r.name) + '</span>' +
+      '<span class="bar"><i style="width:' + w + '%"></i></span>' +
+      '<span class="ptxt">' + r.cleared + '/' + r.total + ' \u00b7 ' + esc(tail) + '</span>';
+  }
+
+  /* ---------- service rush ---------- */
+  function lessonById(id) {
+    for (var i = 0; i < LESSONS.length; i++) if (LESSONS[i].id === id) return LESSONS[i];
+    return null;
+  }
+  function allTickets() {
+    var out = [];
+    LESSONS.forEach(function (l) { l.drills.forEach(function (d, i) { out.push({ lid: l.id, idx: i }); }); });
+    return out;
+  }
+  function weakTickets() {
+    var out = [];
+    LESSONS.forEach(function (l) {
+      l.drills.forEach(function (d, i) { if (!progress.answered[l.id + "d" + i]) out.push({ lid: l.id, idx: i }); });
+    });
+    return out;
+  }
+  function shuffle(a) {
+    a = a.slice();
+    for (var i = a.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = a[i]; a[i] = a[j]; a[j] = t;
+    }
+    return a;
+  }
+
+  function openRush(mode) {
+    current = "__rush__";
+    var pool, title, sub;
+    if (mode === "weak") {
+      pool = weakTickets();
+      title = "Weak spots";
+      sub = "The tickets you haven't cleared yet \u2014 clear them.";
+    } else if (mode && mode.indexOf("station:") === 0) {
+      var l = lessonById(mode.split(":")[1]);
+      pool = [];
+      if (l) l.drills.forEach(function (d, i) { pool.push({ lid: l.id, idx: i }); });
+      title = "Rush \u00b7 " + (l ? l.title : "");
+      sub = "Every ticket from this station, shuffled.";
+    } else {
+      pool = allTickets();
+      title = "Service rush";
+      sub = "A dinner rush \u2014 tickets pulled from every station, shuffled.";
+    }
+
+    paintRail();
+    paintTabs();
+
+    if (!pool.length) {
+      stage.innerHTML = "";
+      stage.appendChild(el("div", "kicker", "SERVICE RUSH"));
+      stage.appendChild(el("h1", "title", esc(title)));
+      var clean = el("div", "prose");
+      clean.appendChild(el("p", null, mode === "weak"
+        ? "Kitchen's clean \u2014 every ticket has been cleared at least once. Run a full rush to keep your edge."
+        : "No tickets here yet."));
+      stage.appendChild(clean);
+      var row0 = el("div", "act-row");
+      var full = el("button", "btn", "\u25B6 Full service rush");
+      full.type = "button";
+      full.addEventListener("click", function () { openRush("all"); });
+      row0.appendChild(full);
+      stage.appendChild(row0);
+      window.scrollTo(0, 0);
+      return;
+    }
+
+    var queue = shuffle(pool);
+    if (mode === "all") queue = queue.slice(0, Math.min(10, queue.length));
+    var pos = 0, correct = 0;
+
+    function renderTicket() {
+      stage.innerHTML = "";
+      stage.appendChild(el("div", "kicker", "SERVICE RUSH"));
+      stage.appendChild(el("h1", "title", esc(title)));
+      stage.appendChild(el("div", "subtitle", esc(sub)));
+
+      var meta = el("div", "rush-meta");
+      meta.innerHTML = "Ticket <b>" + (pos + 1) + "</b> / " + queue.length + " \u00b7 " + correct + " served clean";
+      stage.appendChild(meta);
+
+      var ref = queue[pos];
+      var lesson = lessonById(ref.lid);
+      var drill = lesson.drills[ref.idx];
+      var did = ref.lid + "d" + ref.idx;
+
+      var card = el("div", "ticket");
+      var top = el("div", "ticket-top");
+      top.appendChild(el("span", "kind", esc(drill.kind)));
+      top.appendChild(el("span", "num", esc(lesson.title)));
+      card.appendChild(top);
+
+      var body = el("div", "ticket-body");
+      body.appendChild(el("div", "q", esc(drill.q)));
+      if (drill.php) {
+        var pre = el("pre");
+        var code = document.createElement("code");
+        code.textContent = drill.php;
+        pre.appendChild(code);
+        body.appendChild(pre);
+      }
+
+      var opts = el("div", "opts");
+      var verdict = el("div", "verdict");
+      var locked = false;
+
+      drill.options.forEach(function (text, i) {
+        var b = el("button", "opt");
+        b.type = "button";
+        b.appendChild(el("span", "pip", String.fromCharCode(65 + i)));
+        var span = document.createElement("span");
+        span.textContent = text;
+        b.appendChild(span);
+        b.addEventListener("click", function () {
+          if (locked) return;
+          locked = true;
+          var ok = (i === drill.answer);
+          if (ok) correct++;
+          progress.answered[did] = ok;
+          save();
+          opts.querySelectorAll(".opt").forEach(function (bb, k) {
+            bb.disabled = true;
+            if (k === drill.answer) bb.classList.add("right");
+            if (k === i && !ok) bb.classList.add("wrong");
+          });
+          verdict.className = "verdict show " + (ok ? "ok" : "no");
+          verdict.innerHTML = "<b>" + (ok ? "SERVICE" : "SENT BACK") + "</b>";
+          var p = document.createElement("span");
+          p.textContent = drill.explain;
+          verdict.appendChild(p);
+          paintProgress();
+
+          var next = el("button", "btn next", pos + 1 < queue.length ? "Next ticket \u2192" : "Finish service");
+          next.type = "button";
+          next.addEventListener("click", function () {
+            pos++;
+            if (pos < queue.length) renderTicket();
+            else renderResult();
+          });
+          body.appendChild(next);
+          next.focus();
+        });
+        opts.appendChild(b);
+      });
+
+      body.appendChild(opts);
+      body.appendChild(verdict);
+      card.appendChild(body);
+      stage.appendChild(card);
+      window.scrollTo(0, 0);
+    }
+
+    function renderResult() {
+      paintRail();
+      paintTabs();
+      stage.innerHTML = "";
+      stage.appendChild(el("div", "kicker", "SERVICE RUSH"));
+      stage.appendChild(el("h1", "title", "Service done"));
+
+      var score = Math.round(correct / queue.length * 100);
+      var tier, cls;
+      if (score === 100) { tier = "Spotless \u2014 not one plate sent back. You ran the whole pass clean."; cls = "ok"; }
+      else if (score >= 80) { tier = "Clean service. You'd hold your own on the line."; cls = "ok"; }
+      else if (score >= 60) { tier = "Solid shift. A few came back \u2014 drill those and you're there."; cls = "mid"; }
+      else { tier = "Rough service. That's exactly what the drilling is for \u2014 run it again."; cls = "no"; }
+
+      var res = el("div", "result " + cls);
+      var sc = el("div", "score", correct + " / " + queue.length);
+      res.appendChild(sc);
+      res.appendChild(el("p", null, esc(tier)));
+      stage.appendChild(res);
+
+      var row = el("div", "act-row");
+      var again = el("button", "btn", "\u21BB Run it again");
+      again.type = "button";
+      again.addEventListener("click", function () { openRush(mode); });
+      row.appendChild(again);
+      var back = el("button", "btn ghost", "Back to the line");
+      back.type = "button";
+      back.addEventListener("click", function () { openLesson("brief"); });
+      row.appendChild(back);
+      stage.appendChild(row);
+      window.scrollTo(0, 0);
+    }
+
+    renderTicket();
+  }
+
+  /* ---------- reading mode ---------- */
+  var rdbtn = document.getElementById("rdbtn");
+  rdbtn.addEventListener("click", function () {
+    var on = document.body.classList.toggle("reading");
+    rdbtn.setAttribute("aria-pressed", on ? "true" : "false");
+    rdbtn.textContent = on ? "EXIT READ" : "READ MODE";
+  });
+
+  /* ---------- go ---------- */
+  paintProgress();
+  openLesson("brief");
+})();
+</script>
+</body>
+</html>
