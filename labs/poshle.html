@@ -75,6 +75,7 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .task{margin-top:8px;font-size:14.5px;color:var(--ink);max-width:88ch}
 .task kbd,.kbd{font-family:var(--mono);font-size:11.5px;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--sunk);color:var(--strong);white-space:nowrap}
 .target{margin-top:10px;font-family:var(--mono);font-size:13px;padding:8px 10px;background:var(--sunk);border:1px solid var(--hair);border-radius:var(--r);color:var(--strong);white-space:pre-wrap;overflow-wrap:anywhere}
+.target.multi{white-space:pre;overflow-wrap:normal;overflow-x:auto}
 .target.hidden{color:var(--faint);font-style:italic;font-family:var(--sans)}
 .dots{display:flex;gap:5px;margin-top:12px;flex-wrap:wrap}
 .dots span{width:18px;height:6px;border-radius:2px;background:var(--hair)}
@@ -129,6 +130,27 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 .tip{margin-top:16px;font-size:12px;color:var(--muted);padding:10px;border:1px dashed var(--line);border-radius:var(--r)}
 .tip b{color:var(--strong)}
 
+.brief.case{max-height:56vh;overflow-y:auto}
+.cl-h{margin-top:12px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.clues{margin-top:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+.clue{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;align-items:start;padding:7px 10px;border:1px solid var(--hair);border-radius:var(--r);background:var(--sunk);font-size:12.5px;line-height:1.4;color:var(--faint)}
+.clue i{font-style:normal;font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.5}
+.clue.got{background:var(--good-soft);border-color:var(--good);color:var(--ink)}
+.clue.got i{color:var(--good)}
+.cnote{margin-top:10px;font-size:12.5px;color:var(--muted);max-width:88ch}
+.opts{display:grid;gap:6px;margin-top:6px}
+.opt{text-align:left;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);font-size:13.5px;line-height:1.4}
+.opt:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}
+.opt[disabled]{cursor:default}
+.opt.no{border-color:var(--warn);color:var(--warn)}
+.opt.yes{border-color:var(--good);background:var(--good-soft);color:var(--strong)}
+.verdict{margin-top:10px;padding:10px 12px;border-left:3px solid var(--good);background:var(--sunk);border-radius:0 var(--r) var(--r) 0;font-size:13.5px;max-width:88ch}
+.verdict.bad{border-left-color:var(--warn)}
+.verdict b{color:var(--strong)}
+.verdict .lesson{margin-top:8px;color:var(--ink)}
+.sc.solved i{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.sc.solved small{color:var(--good)}
+
 @media (max-width:1180px){
   .shell{grid-template-columns:var(--rail) minmax(0,1fr)}
   .keys{display:none}
@@ -140,7 +162,11 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
   .shell{grid-template-columns:1fr}
   .rail{display:none}
   .rail.open{display:block;position:fixed;left:0;top:var(--top);bottom:0;width:var(--rail);z-index:30;box-shadow:8px 0 30px rgba(0,0,0,.15)}
-  .stats div:nth-child(n+3){display:none}
+  .top{gap:10px}
+  .bhead{flex-wrap:wrap;row-gap:6px}
+  .bhead h2{flex-basis:100%}
+  .stats{display:none}
+  #keysBtn{margin-left:auto}
   .brand span{display:none}
   .stage{padding:10px}
   #railBtn{display:grid}
@@ -285,6 +311,54 @@ const SCEN = [
  {task:"Copy every unique recipient address to the clipboard.", cmd:"$t.RecipientAddress | Sort-Object -Unique | Set-Clipboard"},
  {task:"Check the Excel file exists.", cmd:"Test-Path ~/Desktop/incident.xlsx", out:"True\n"}
 ]},
+{id:"secrename", name:"Bulk rename: Security", sub:"Preview, dry run, timed run", steps:[
+ {task:"Graph <b>first</b>, always. Connect with write rights on users, no banner. Loading Exchange before Graph can break the Graph login (the Detective has a case on it).", cmd:'Connect-MgGraph -Scopes "User.ReadWrite.All" -NoWelcome'},
+ {task:"Now open the Exchange door, no banner.", cmd:"Connect-ExchangeOnline -ShowBanner:$false"},
+ {task:"Define a helper that turns a name into an address part: split accents off (FormD), strip the accent marks (<b>\\p{Mn}</b>), drop everything that is not a letter, lowercase. After the <b>{</b> press <kbd>Enter</kbd>: pwsh waits with <b>&gt;&gt;</b> until the braces close.", cmd:"function ConvertTo-NamePart($s) {\n  $t = $s.Normalize([Text.NormalizationForm]::FormD) -replace '\\p{Mn}', ''\n  ($t -replace '[^a-zA-Z]', '').ToLower()\n}", use:["cont"]},
+ {task:"Test it. Type <b>convertto-n</b> and press <kbd>Tab</kbd>, then the name. Spaces disappear, and Zoë would come out as zoe.", cmd:'ConvertTo-NamePart "Van den Broeck"', use:["tab"], out:"vandenbroeck\n"},
+ {task:"Fetch everyone with the properties the plan needs, Department included, into $users.", cmd:"$users = Get-MgUser -All -Property Id,GivenName,Surname,UserPrincipalName,Department"},
+ {task:"Every sign-in name already in use, lowercase, into $taken.", cmd:"$taken = $users.UserPrincipalName.ToLower()"},
+ {task:"Build $plan: Security department only, one [pscustomobject] row per person with the old name, the new name and two checks.", cmd:'$plan = $users | Where-Object Department -eq "Security" | ForEach-Object {\n  $new = "{0}.{1}.security@contoso.com" -f (ConvertTo-NamePart $_.GivenName), (ConvertTo-NamePart $_.Surname)\n  [pscustomobject]@{\n    OldUPN = $_.UserPrincipalName\n    NewUPN = $new\n    Same = $_.UserPrincipalName -eq $new\n    Conflict = $taken -contains $new\n  }\n}'},
+ {task:"Look at the plan before anything changes. Lena already has the right name (Same, and her own name counts as taken). Bart's new name belongs to a test account (Conflict).", cmd:"$plan | Format-Table", out:"\nOldUPN                         NewUPN                                 Same Conflict\n------                         ------                                 ---- --------\nsara.jacobs@contoso.com        sara.jacobs.security@contoso.com      False    False\nzvdb@contoso.com               zoe.vandenbroeck.security@contoso.com False    False\njan.peeters@contoso.com        jan.peeters.security@contoso.com      False    False\nlena.maes.security@contoso.com lena.maes.security@contoso.com         True     True\nbart.lenaerts@contoso.com      bart.lenaerts.security@contoso.com    False     True\n"},
+ {task:"Save the preview to your Desktop, UTF8, no type info.", cmd:"$plan | Export-Csv ~/Desktop/security-plan.csv -NoTypeInformation -Encoding UTF8"},
+ {task:"Read it back into $rows, keeping rows where Same and Conflict are both \"False\". CSV values are text, so compare to the word in quotes.", cmd:'$rows = Import-Csv ~/Desktop/security-plan.csv | Where-Object { $_.Same -eq "False" -and $_.Conflict -eq "False" }'},
+ {task:"How many rows are left?", cmd:"$rows.Count", out:"3\n"},
+ {task:"Alias check: does anyone already own one of the new addresses as an alias? No output means all free.", cmd:"$rows | ForEach-Object { Get-EXORecipient -Filter \"EmailAddresses -eq 'smtp:$($_.NewUPN)'\" }"},
+ {task:"Dry run. -WhatIf tells you what Set-Mailbox <i>would</i> do and changes nothing.", cmd:"$rows | ForEach-Object { Set-Mailbox -Identity $_.OldUPN -WindowsEmailAddress $_.NewUPN -WhatIf }", out:'What if: Setting mailbox "sara.jacobs@contoso.com".\nWhat if: Setting mailbox "zvdb@contoso.com".\nWhat if: Setting mailbox "jan.peeters@contoso.com".\n'},
+ {task:"The real run, after office hours. Wrap it in <b>&amp; { }</b> so it runs as one block. Start-Sleep waits until 18:00, try/catch with -ErrorAction Stop catches each failure, and every row lands in a log.", cmd:"& {\n  Start-Sleep -Seconds ((Get-Date \"18:00\") - (Get-Date)).TotalSeconds\n  $log = foreach ($r in $rows) {\n    try {\n      Set-Mailbox -Identity $r.OldUPN -WindowsEmailAddress $r.NewUPN -ErrorAction Stop\n      Update-MgUser -UserId $r.OldUPN -UserPrincipalName $r.NewUPN -ErrorAction Stop\n      $status = \"OK\"\n    } catch { $status = $_.Exception.Message }\n    [pscustomobject]@{ OldUPN = $r.OldUPN; NewUPN = $r.NewUPN; Status = $status }\n  }\n  $log | Export-Csv ~/Desktop/security-log.csv -NoTypeInformation -Encoding UTF8\n}", use:["cont"]},
+ {task:"It is past 18:00. Read the log.", cmd:"Import-Csv ~/Desktop/security-log.csv | Format-Table", out:"\nOldUPN                  NewUPN                                Status\n------                  ------                                ------\nsara.jacobs@contoso.com sara.jacobs.security@contoso.com      OK\nzvdb@contoso.com        zoe.vandenbroeck.security@contoso.com OK\njan.peeters@contoso.com jan.peeters.security@contoso.com      OK\n"},
+ {task:"Trust, but verify. Per row: is the mailbox found under the new name, is the new name the primary address, and is the old address kept as an alias?", cmd:"$check = foreach ($r in $rows) {\n  $m = Get-EXOMailbox -Identity $r.NewUPN -Properties EmailAddresses -ErrorAction SilentlyContinue\n  [pscustomobject]@{\n    NewUPN = $r.NewUPN\n    Found = [bool]$m\n    Primary = $m.PrimarySmtpAddress -eq $r.NewUPN\n    OldKept = $m.EmailAddresses -contains \"smtp:$($r.OldUPN)\"\n  }\n}"},
+ {task:"Show the check. Jan says Primary False even though the log said OK. The next scenario fixes that.", cmd:"$check | Format-Table", out:"\nNewUPN                                Found Primary OldKept\n------                                ----- ------- -------\nsara.jacobs.security@contoso.com       True    True    True\nzoe.vandenbroeck.security@contoso.com  True    True    True\njan.peeters.security@contoso.com       True   False    True\n"}
+]},
+{id:"primary", name:"Stuck primary address", sub:"SMTP vs smtp, the -ceq swap", steps:[
+ {task:"Jan's rename said OK, yet mail still goes out from his old address. Check his primary address.", cmd:"Get-Mailbox jan.peeters.security@contoso.com | Select-Object PrimarySmtpAddress", out:"\nPrimarySmtpAddress\n------------------\njp@contoso.com\n"},
+ {task:"List every address, one per line. <b>SMTP:</b> in capitals is the primary, small <b>smtp:</b> is an alias. The new address is there, but only as an alias.", cmd:"Get-Mailbox jan.peeters.security@contoso.com | Select-Object -Expand EmailAddresses", out:"SMTP:jp@contoso.com\nsmtp:jan.peeters.security@contoso.com\nsmtp:jan.peeters@contoso.com\nSIP:jan.peeters.security@contoso.com\n"},
+ {task:"The obvious fix: add it again with capitals. Exchange compares addresses without looking at case, sees it already has this one, and changes nothing.", cmd:'Set-Mailbox jan.peeters.security@contoso.com -EmailAddresses @{Add="SMTP:jan.peeters.security@contoso.com"}', out:"WARNING: The command completed successfully but no settings of 'Jan Peeters' have been modified.\n"},
+ {task:"Rebuild the list yourself. <b>-ceq</b> is the case-sensitive -eq: it only matches the exact capitals. Swap the two lines and keep every other line as it is.", cmd:'$list = (Get-Mailbox jan.peeters.security@contoso.com).EmailAddresses | ForEach-Object {\n  if ($_ -ceq "SMTP:jp@contoso.com") { "smtp:jp@contoso.com" }\n  elseif ($_ -ceq "smtp:jan.peeters.security@contoso.com") { "SMTP:jan.peeters.security@contoso.com" }\n  else { $_ }\n}'},
+ {task:"Print $list before you write anything. Exactly one SMTP: in capitals?", cmd:"$list", out:"smtp:jp@contoso.com\nSMTP:jan.peeters.security@contoso.com\nsmtp:jan.peeters@contoso.com\nSIP:jan.peeters.security@contoso.com\n"},
+ {task:"Write the whole list back. -EmailAddresses without @{Add=...} replaces the full list, which is exactly why you checked it first.", cmd:"Set-Mailbox jan.peeters.security@contoso.com -EmailAddresses $list"},
+ {task:"Verify with the command from step 2. Find it with <kbd>Ctrl</kbd><kbd>R</kbd>, type <b>expand</b>, press <kbd>Enter</kbd>.", cmd:"Get-Mailbox jan.peeters.security@contoso.com | Select-Object -Expand EmailAddresses", use:["C-r"], out:"SMTP:jan.peeters.security@contoso.com\nsmtp:jp@contoso.com\nsmtp:jan.peeters@contoso.com\nSIP:jan.peeters.security@contoso.com\n"},
+ {task:"Last check: primary address and sign-in name side by side.", cmd:"Get-Mailbox jan.peeters.security@contoso.com | Select-Object PrimarySmtpAddress, UserPrincipalName", out:"\nPrimarySmtpAddress               UserPrincipalName\n------------------               -----------------\njan.peeters.security@contoso.com jan.peeters.security@contoso.com\n"}
+]},
+{id:"newusers", name:"New users from a template", sub:"Splat, licence, shared box", steps:[
+ {task:"Graph first: user write rights plus the right to read licences, no banner.", cmd:'Connect-MgGraph -Scopes "User.ReadWrite.All","Organization.Read.All" -NoWelcome'},
+ {task:"Put the shared details in a hashtable called <b>$userInfo</b>. Not $profile: PowerShell already uses that name for your profile script. BusinessPhones is a list, so it gets @( ).", cmd:'$userInfo = @{\n  Department = "Security"\n  JobTitle = "Security Analyst"\n  OfficeLocation = "HQ"\n  City = "Brussels"\n  Country = "Belgium"\n  UsageLocation = "BE"\n  MobilePhone = "+32 470 00 00 00"\n  BusinessPhones = @("+32 2 000 00 00")\n}', use:["cont"]},
+ {task:"Make a random temporary password.", cmd:'$pw = "Tmp-" + (Get-Random -Minimum 100000 -Maximum 999999) + "!"'},
+ {task:"Add it to the template, forcing a new password at first sign-in.", cmd:"$userInfo.PasswordProfile = @{ Password = $pw; ForceChangePasswordNextSignIn = $true }"},
+ {task:"Create the user. <b>@userInfo</b> (an @, not a $) splats: every key becomes a parameter. The personal ones you add by hand.", cmd:'$new = New-MgUser @userInfo -DisplayName "Noor Haddad" -MailNickname "noor.haddad" -UserPrincipalName "noor.haddad@contoso.com" -AccountEnabled'},
+ {task:"Check what landed on the account.", cmd:"$new | Select-Object DisplayName, UserPrincipalName, Department, UsageLocation", out:"\nDisplayName UserPrincipalName       Department UsageLocation\n----------- -----------------       ---------- -------------\nNoor Haddad noor.haddad@contoso.com Security   BE\n"},
+ {task:"Which licence does a colleague in the same job have? Use them as the reference.", cmd:"Get-MgUserLicenseDetail -UserId user@contoso.com | Select-Object SkuPartNumber, SkuId", out:"\nSkuPartNumber         SkuId\n-------------         -----\nO365_BUSINESS_PREMIUM f245ecc8-75af-4f8e-b61f-27d8114de5f3\n"},
+ {task:"Store that SkuId in $sku.", cmd:"$sku = (Get-MgUserLicenseDetail -UserId user@contoso.com).SkuId"},
+ {task:"Are there free ones? <b>@{n=...;e={...}}</b> adds a calculated column. Free = Total minus ConsumedUnits.", cmd:'Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits, @{n="Total";e={$_.PrepaidUnits.Enabled}}', out:"\nSkuPartNumber            ConsumedUnits Total\n-------------            ------------- -----\nO365_BUSINESS_ESSENTIALS             6    10\nO365_BUSINESS_PREMIUM               38    40\nSPB                                 12    12\nFLOW_FREE                            9 10000\n"},
+ {task:"Give Noor the licence. Both parameters are required, so pass an empty @() for the one you don't use.", cmd:"Set-MgUserLicense -UserId $new.Id -AddLicenses @{SkuId = $sku} -RemoveLicenses @()", out:"\nDisplayName Id                                   Mail UserPrincipalName\n----------- --                                   ---- -----------------\nNoor Haddad 4d2c8e1f-7a3b-4c96-8e05-b1f2a9d6c374      noor.haddad@contoso.com\n"},
+ {task:"Now the Exchange door, no banner.", cmd:"Connect-ExchangeOnline -ShowBanner:$false"},
+ {task:"The mailbox appears a few minutes after the licence. Wait for it: -ErrorAction SilentlyContinue hides the 'not found' errors while you wait.", cmd:"while (-not (Get-EXOMailbox -Identity $new.UserPrincipalName -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 30 }"},
+ {task:"Create a shared mailbox for the team.", cmd:'New-Mailbox -Shared -Name "Security Desk" -PrimarySmtpAddress security@contoso.com', out:"\nName          Alias        Database           ProhibitSendQuota    ExternalDirectoryObjectId\n----          -----        --------           -----------------    -------------------------\nSecurity Desk SecurityDesk EURPR02DG115-db081 49.5 GB (53,150,...)\n"},
+ {task:"Give Noor full access, showing up in Outlook automatically.", cmd:"Add-MailboxPermission -Identity security@contoso.com -User $new.UserPrincipalName -AccessRights FullAccess -AutoMapping $true", out:"\nIdentity      User                    AccessRights IsInherited Deny\n--------      ----                    ------------ ----------- ----\nSecurity Desk noor.haddad@contoso.com {FullAccess} False       False\n"},
+ {task:"And let her send as the shared mailbox, no prompt.", cmd:"Add-RecipientPermission -Identity security@contoso.com -Trustee $new.UserPrincipalName -AccessRights SendAs -Confirm:$false", out:"\nIdentity      Trustee                 AccessControlType AccessRights Inherited\n--------      -------                 ----------------- ------------ ---------\nSecurity Desk noor.haddad@contoso.com Allow             {SendAs}     False\n"},
+ {task:"Label her mailbox. Custom attributes are free fields that scripts (like a group sync) can read.", cmd:'Set-Mailbox -Identity $new.UserPrincipalName -CustomAttribute1 "Employee" -CustomAttribute2 "Security"'},
+ {task:"Copy the login details to the clipboard, one per line. <b>\"`n\"</b> (backtick n) is a new line.", cmd:'@("Name: Noor Haddad", "Login: $($new.UserPrincipalName)", "Temp password: $pw") -join "`n" | Set-Clipboard'}
+]},
 {id:"gym", name:"Shortcut gym", sub:"Editing without the mouse", gym:true, steps:[
  {task:"The G is missing. <kbd>Ctrl</kbd><kbd>A</kbd> jumps to the start of the line. Type G and press <kbd>Enter</kbd>.", pre:"et-MgUser -UserId user@contoso.com", cmd:"Get-MgUser -UserId user@contoso.com", use:["C-a"], out:USER_TABLE},
  {task:"Wrong address. <kbd>Ctrl</kbd><kbd>E</kbd> to the end, <kbd>Ctrl</kbd><kbd>W</kbd> cuts the word before the cursor, then type user@contoso.com.", pre:"Get-MgUser -UserId wrong@contoso.com", at:0, cmd:"Get-MgUser -UserId user@contoso.com", use:["C-e","C-w"], out:USER_TABLE},
@@ -305,7 +379,248 @@ const SCEN = [
 ]}
 ];
 
-const EXTRA_CMDS = ["Get-Date","Get-History","Clear-Host","Get-Help","Get-Member","Get-Command","Where-Object","Select-Object","Sort-Object","Group-Object","Measure-Object","ForEach-Object","Format-Table","Format-List","Export-Csv","Import-Csv","Set-Clipboard","Get-Clipboard","Out-File","Test-Path","Get-ChildItem","Set-Location","Get-Location","Start-Sleep","Write-Host","Write-Output","Get-InstalledModule","Install-Module","Update-Module","Import-Module","Disconnect-MgGraph","Disconnect-ExchangeOnline","Get-MgUser","Update-MgUser","New-MgUser","Remove-MgUser","Get-MgGroup","Get-MgGroupMember","New-MgGroupMember","Get-MgSubscribedSku","Set-MgUserLicense","Get-MgUserMemberOf","Get-MgUserAuthenticationMethod","Get-EXOMailbox","Get-Mailbox","Set-Mailbox","Get-MailboxStatistics","Get-MessageTraceV2","Search-UnifiedAuditLog","Connect-IPPSSession","Add-RoleGroupMember","Get-RoleGroupMember","Get-InboxRule","Remove-InboxRule","Get-MailboxAutoReplyConfiguration","Set-MailboxAutoReplyConfiguration","Get-MgServicePrincipal","Get-MgUserOauth2PermissionGrant","Get-MgAuditLogDirectoryAudit","Get-MgAuditLogSignIn","Export-Excel","Import-Excel","ConvertFrom-Json","ConvertTo-Json","Find-MgGraphCommand","Get-MgContext","Get-Team","Add-TeamUser","Connect-MicrosoftTeams","Get-DistributionGroupMember","Add-DistributionGroupMember","Get-MailboxPermission","Remove-MailboxPermission","Add-MailboxPermission","Add-RecipientPermission","Get-EXORecipient","New-TimeSpan","Get-Random","Revoke-MgUserSignInSession","Get-MgUserLicenseDetail","Set-CalendarProcessing","Connect-PnPOnline","Get-PnPList","Add-eDiscoveryCaseAdmin","Clear-History","Get-Process","Get-Content","Set-Content","Copy-Item","Move-Item","Remove-Item","New-Item","Invoke-RestMethod","Out-GridView","Tee-Object","Compare-Object","Get-Variable","Get-Alias","Get-PSReadLineKeyHandler","Set-PSReadLineOption"];
+const ADD_FILTER = "\"activityDisplayName eq 'Add member to group'\"";
+const REM_FILTER = "\"activityDisplayName eq 'Remove member from group'\"";
+const ALL_FILTER = "\"mail eq 'all@contoso.com'\"";
+function mbx(id, tail){ return ["Get-Mailbox " + id + tail, "Get-Mailbox -Identity " + id + tail, "Get-EXOMailbox " + id + tail, "Get-EXOMailbox -Identity " + id + tail]; }
+function grp(tail){ return ["Get-MgGroup -Filter " + ALL_FILTER + tail, "Get-MgGroup -Filter " + ALL_FILTER + " -Property DisplayName,GroupTypes,MembershipRule" + tail]; }
+function links(tail){ return ["Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members" + tail, "Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Member" + tail, "Get-UnifiedGroupLinks all@contoso.com -LinkType Members" + tail]; }
+
+const G_DEFAULT = "\nDisplayName Id                                   MailNickname Description         GroupTypes\n----------- --                                   ------------ -----------         ----------\nContoso     8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c all          Everyone at Contoso {Unified}\n";
+const G_RULE = "\nDisplayName GroupTypes MembershipRule\n----------- ---------- --------------\nContoso     {Unified}\n";
+const G_LIST = "\nDisplayName                   : Contoso\nGroupTypes                    : {Unified}\nMembershipRule                :\nMembershipRuleProcessingState :\n";
+const MEMBERS = "\nName         RecipientType\n----         -------------\nIT Admin     UserMailbox\nLena Maes    UserMailbox\nSara Jacobs  UserMailbox\nJan Peeters  UserMailbox\nNoor Haddad  UserMailbox\nNew Hire     UserMailbox\n";
+const MEMBERS_NO_USER = "\nName         RecipientType\n----         -------------\nIT Admin     UserMailbox\nLena Maes    UserMailbox\nSara Jacobs  UserMailbox\nJan Peeters  UserMailbox\nNoor Haddad  UserMailbox\n";
+const ADD_ROWS = "\nActivityDateTime    ActivityDisplayName Category        Result\n----------------    ------------------- --------        ------\n13/10/2026 07:14:51 Add member to group GroupManagement success\n06/10/2026 12:02:37 Add member to group GroupManagement success\n29/09/2026 08:41:10 Add member to group GroupManagement success\n";
+const REM_ROWS = "\nActivityDateTime    ActivityDisplayName      Category        Result\n----------------    -------------------      --------        ------\n10/10/2026 01:41:07 Remove member from group GroupManagement success\n08/10/2026 00:14:33 Remove member from group GroupManagement success\n";
+const TEAMS_APP = "\nAppId                                DisplayName              ServicePrincipalId                   ServicePrincipalName\n-----                                -----------              ------------------                   --------------------\ncc15fd57-2c6c-4117-a88c-83b1d56b4bbe Microsoft Teams Services 5f3a9c2e-1b7d-4e8a-9c6f-2d4b8e1a7c30 Microsoft Teams Services\n";
+const MOD_PROPS = "\nDisplayName       NewValue\n-----------       --------\nGroup.ObjectID    \"8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c\"\nGroup.DisplayName \"Contoso\"\n";
+const GRAPH_ERR = "Connect-MgGraph: Method not found: 'Microsoft.Identity.Client.PublicClientApplicationBuilder Microsoft.Identity.Client.AbstractApplicationBuilder`1.WithLogging(Microsoft.IdentityModel.Abstractions.IIdentityLogger, Boolean)'.\n";
+const LOG_ROWS = "\nOldUPN                  NewUPN                                Status\n------                  ------                                ------\nsara.jacobs@contoso.com sara.jacobs.security@contoso.com      OK\nzvdb@contoso.com        zoe.vandenbroeck.security@contoso.com OK\njan.peeters@contoso.com jan.peeters.security@contoso.com      OK\n";
+const JAN = "jan.peeters.security@contoso.com";
+const JAN_ADDR = "SMTP:jp@contoso.com\nsmtp:jan.peeters.security@contoso.com\nsmtp:jan.peeters@contoso.com\nSIP:jan.peeters.security@contoso.com\n";
+const PLANS = {
+ O365_BUSINESS_ESSENTIALS: ["BPOS_S_TODO_1","EXCHANGE_S_STANDARD","FLOW_O365_P1","FORMS_PLAN_E1","MCOSTANDARD","POWERAPPS_O365_P1","PROJECTWORKMANAGEMENT","SHAREPOINTSTANDARD","SHAREPOINTWAC","STREAM_O365_SMB","SWAY","TEAMS1"],
+ O365_BUSINESS_PREMIUM: ["BPOS_S_TODO_1","EXCHANGE_S_STANDARD","FLOW_O365_P1","FORMS_PLAN_E1","MCOSTANDARD","MICROSOFTBOOKINGS","OFFICESUBSCRIPTION","POWERAPPS_O365_P1","PROJECTWORKMANAGEMENT","SHAREPOINTSTANDARD","SHAREPOINTWAC","STREAM_O365_SMB","SWAY","TEAMS1"],
+ SPB: ["AAD_PREMIUM","ATP_ENTERPRISE","BPOS_S_TODO_1","EXCHANGE_S_ARCHIVE_ADDON","EXCHANGE_S_STANDARD","INTUNE_A","MCOSTANDARD","MDE_SMB","MICROSOFTBOOKINGS","OFFICESUBSCRIPTION","RMS_S_PREMIUM","SHAREPOINTSTANDARD","SHAREPOINTWAC","TEAMS1"],
+ FLOW_FREE: ["DYN365_CDS_VIRAL","EXCHANGE_S_FOUNDATION","FLOW_P2_VIRAL"]
+};
+const SKU_CLUE = {O365_BUSINESS_ESSENTIALS:"ess", O365_BUSINESS_PREMIUM:"prem", SPB:"spb", FLOW_FREE:"flow"};
+function skuMap(){
+  const out = [];
+  Object.keys(PLANS).forEach(k => {
+    const plain = PLANS[k].join("\n") + "\n";
+    const table = "\nServicePlanName\n---------------\n" + plain;
+    const w = 'Where-Object SkuPartNumber -eq "' + k + '"';
+    const wb = 'Where-Object { $_.SkuPartNumber -eq "' + k + '" }';
+    [w, wb].forEach(f => {
+      out.push({cmd:["(Get-MgSubscribedSku | " + f + ").ServicePlans | Select-Object ServicePlanName", "(Get-MgSubscribedSku | " + f + ").ServicePlans | Select-Object -Expand ServicePlanName"], out: table, clue: SKU_CLUE[k]});
+      out.push({cmd:"(Get-MgSubscribedSku | " + f + ").ServicePlans.ServicePlanName", out: plain, clue: SKU_CLUE[k]});
+      out.push({cmd:["($skus | " + f + ").ServicePlans | Select-Object ServicePlanName", "($skus | " + f + ").ServicePlans | Select-Object -Expand ServicePlanName"], out: table, clue: SKU_CLUE[k], needs:"$skus"});
+      out.push({cmd:"($skus | " + f + ").ServicePlans.ServicePlanName", out: plain, clue: SKU_CLUE[k], needs:"$skus"});
+    });
+  });
+  return out;
+}
+const SKU_TABLE = "\nSkuPartNumber            ConsumedUnits\n-------------            -------------\nO365_BUSINESS_ESSENTIALS             6\nO365_BUSINESS_PREMIUM               38\nSPB                                 12\nFLOW_FREE                            9\n";
+
+const CASES = [
+{id:"alladds", name:"Who keeps adding people to all@?", sub:"Members appear by themselves",
+ problem:"<b>all@contoso.com</b> is a Microsoft 365 group. Every new account shows up in it within a minute of being created. Nobody on the team adds them and HR swears there is no flow. This morning <b>new.hire@contoso.com</b> was created and is already in. Who, or what, adds them?",
+ clues:[
+  {id:"unified", t:"all@ is a Microsoft 365 (Unified) group with an empty MembershipRule. Not dynamic."},
+  {id:"member", t:"The newest account, New Hire, is already a member."},
+  {id:"audit", t:"Directory audit: 'Add member to group' at 07:14:51 UTC, under a minute after the account was created."},
+  {id:"teams", t:"InitiatedBy is an app, Microsoft Teams Services. Not a person, not a script."},
+  {id:"name", t:"ModifiedProperties: Group.DisplayName = Contoso, the company name. The default name of an org-wide team."}
+ ],
+ map:[
+  {cmd:grp(""), out:G_DEFAULT},
+  {cmd:grp(" | Select-Object DisplayName, GroupTypes, MembershipRule"), out:G_RULE, clue:"unified"},
+  {cmd:grp(" | Format-List DisplayName, GroupTypes, MembershipRule, MembershipRuleProcessingState").concat(grp(" | Format-List DisplayName, GroupTypes, MembershipRule")), out:G_LIST, clue:"unified"},
+  {cmd:"$g = Get-MgGroup -Filter " + ALL_FILTER, out:""},
+  {cmd:["$g | Select-Object DisplayName, GroupTypes, MembershipRule"], out:G_RULE, clue:"unified", needs:"$g"},
+  {cmd:["$g | Format-List DisplayName, GroupTypes, MembershipRule"], out:G_LIST, clue:"unified", needs:"$g"},
+  {cmd:"$g.GroupTypes", out:"Unified\n", needs:"$g"},
+  {cmd:"$g.MembershipRule", out:"", clue:"unified", needs:"$g"},
+  {cmd:"Get-UnifiedGroup -Identity all@contoso.com | Format-List DisplayName, AccessType, GroupMemberCount", out:"\nDisplayName      : Contoso\nAccessType       : Public\nGroupMemberCount : 214\n"},
+  {cmd:links(""), out:MEMBERS, clue:"member"},
+  {cmd:"Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Owners", out:"\nName     RecipientType\n----     -------------\nIT Admin UserMailbox\n"},
+  {cmd:links(' | Where-Object PrimarySmtpAddress -eq "new.hire@contoso.com"'), out:"\nName     RecipientType\n----     -------------\nNew Hire UserMailbox\n", clue:"member"},
+  {cmd:["Get-MgUser -UserId new.hire@contoso.com -Property CreatedDateTime | Select-Object CreatedDateTime", "Get-MgUser -UserId new.hire@contoso.com -Property DisplayName,CreatedDateTime | Select-Object DisplayName, CreatedDateTime"], out:"\nCreatedDateTime\n---------------\n13/10/2026 07:14:02\n"},
+  {cmd:["Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 5", "Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 3", "Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER], out:ADD_ROWS, clue:"audit"},
+  {cmd:["$a = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 5", "$a = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 3", "$a = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER], out:""},
+  {cmd:["$a[0] | Select-Object ActivityDateTime, ActivityDisplayName, Result"], out:"\nActivityDateTime    ActivityDisplayName Result\n----------------    ------------------- ------\n13/10/2026 07:14:51 Add member to group success\n", clue:"audit", needs:"$a"},
+  {cmd:["$a[0].InitiatedBy.App", "$a[0].InitiatedBy.App | Format-Table"], out:TEAMS_APP, clue:"teams", needs:"$a"},
+  {cmd:["$a[0].InitiatedBy.App.DisplayName", "$a.InitiatedBy.App.DisplayName"], out:"Microsoft Teams Services\n", clue:"teams", needs:"$a"},
+  {cmd:"$a[0].InitiatedBy.User", out:"", needs:"$a"},
+  {cmd:"$a[0].InitiatedBy | Format-List", out:"\nApp  : Microsoft.Graph.PowerShell.Models.MicrosoftGraphAppIdentity\nUser : \n", needs:"$a"},
+  {cmd:["$a[0].TargetResources | Select-Object DisplayName, UserPrincipalName, Type", "$a[0].TargetResources | Format-Table DisplayName, UserPrincipalName, Type"], out:"\nDisplayName UserPrincipalName    Type\n----------- -----------------    ----\nNew Hire    new.hire@contoso.com User\n                                 Group\n", needs:"$a"},
+  {cmd:["$a[0].TargetResources[0].ModifiedProperties | Select-Object DisplayName, NewValue", "$a[0].TargetResources.ModifiedProperties | Select-Object DisplayName, NewValue", "$a[0].TargetResources[0].ModifiedProperties", "$a[0].TargetResources[0].ModifiedProperties | Format-Table DisplayName, NewValue"], out:MOD_PROPS, clue:"name", needs:"$a"},
+  {cmd:["Get-Team -DisplayName Contoso", "Get-Team -DisplayName \"Contoso\""], out:"\nGroupId                              DisplayName Visibility Archived MailNickName Description\n-------                              ----------- ---------- -------- ------------ -----------\n8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c Contoso     Public     False    all          Everyone at Contoso\n"},
+  {cmd:["Get-MgGroup -GroupId 8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c -Property ResourceProvisioningOptions | Select-Object -Expand ResourceProvisioningOptions", "(Get-MgGroup -GroupId 8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c -Property ResourceProvisioningOptions).ResourceProvisioningOptions"], out:""}
+ ],
+ hints:[
+  {cmd:"Get-MgGroup -Filter " + ALL_FILTER + " | Select-Object DisplayName, GroupTypes, MembershipRule", clue:"unified"},
+  {cmd:"Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members", clue:"member"},
+  {cmd:"Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 5", clue:"audit"},
+  {cmd:"$a = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 5", clue:"teams", sets:"$a"},
+  {cmd:"$a[0].InitiatedBy.App", clue:"teams"},
+  {cmd:"$a[0].TargetResources[0].ModifiedProperties | Select-Object DisplayName, NewValue", clue:"name"}
+ ],
+ options:[
+  {t:"A dynamic membership rule on all@ adds every new account.", why:"MembershipRule is empty and GroupTypes only says Unified. A dynamic group would also list DynamicMembership."},
+  {t:"all@ is the group behind an org-wide team. Teams adds every new account automatically.", ok:true, why:"The audit names Microsoft Teams Services as the initiator, and the group carries the company name, which is the default name of an org-wide team."},
+  {t:"An HR automation flow adds new accounts to the group.", why:"A flow signs in with a user or a service account of its own. The audit shows the Teams service as the initiator."},
+  {t:"Exchange puts every new mailbox in all@ because of an address list.", why:"Address lists decide what people see in the address book. They never change group membership."}
+ ],
+ lesson:"An org-wide team keeps its member list in sync with every active account in the tenant. Microsoft Teams Services adds each new account, usually within minutes, and the group behind the team gets the team's name, by default the company name. On older teams ResourceProvisioningOptions can be empty, so the audit log is the reliable way to spot it. To stop it, switch the team off as org-wide in the Teams admin center, or stop using its group as a mailing list."},
+{id:"vanished", name:"A colleague vanished from all@", sub:"Blocked, unblocked, gone",
+ problem:"<b>user@contoso.com</b> was blocked during last week's incident and unblocked on Monday morning. Today she asks why she no longer gets all@ mail. There is a cleanup script for blocked users in <b>~/Documents/scripts</b>. Who removed her, and what do you do now?",
+ clues:[
+  {id:"gone", t:"user@ is no longer a member of all@."},
+  {id:"enabled", t:"Her account is enabled again (AccountEnabled True)."},
+  {id:"removed", t:"Audit: 'Remove member from group' twice, at 00:14 and 01:41 UTC, while she was blocked."},
+  {id:"who", t:"Both removals were done by Microsoft Teams - Teams And Channels Service."},
+  {id:"script", t:"Red herring cleared: the cleanup script last ran on 22 September, and admin@ removed nobody from a group."},
+  {id:"readd", t:"No 'Add member to group' for user@ since she was unblocked."}
+ ],
+ map:[
+  {cmd:links(""), out:MEMBERS_NO_USER, clue:"gone"},
+  {cmd:links(' | Where-Object PrimarySmtpAddress -eq "user@contoso.com"').concat(links(' | Where-Object { $_.PrimarySmtpAddress -eq "user@contoso.com" }')), out:"", clue:"gone"},
+  {cmd:["Get-MgUser -UserId user@contoso.com -Property AccountEnabled | Select-Object AccountEnabled", "Get-MgUser -UserId user@contoso.com -Property DisplayName,AccountEnabled | Select-Object DisplayName, AccountEnabled", "(Get-MgUser -UserId user@contoso.com -Property AccountEnabled).AccountEnabled"], out:"\nAccountEnabled\n--------------\n          True\n", clue:"enabled"},
+  {cmd:["Get-MgAuditLogDirectoryAudit -Filter " + REM_FILTER + " -Top 5", "Get-MgAuditLogDirectoryAudit -Filter " + REM_FILTER], out:REM_ROWS, clue:"removed"},
+  {cmd:["$r = Get-MgAuditLogDirectoryAudit -Filter " + REM_FILTER + " -Top 5", "$r = Get-MgAuditLogDirectoryAudit -Filter " + REM_FILTER], out:""},
+  {cmd:["$r | Select-Object ActivityDateTime, ActivityDisplayName, Result"], out:"\nActivityDateTime    ActivityDisplayName      Result\n----------------    -------------------      ------\n10/10/2026 01:41:07 Remove member from group success\n08/10/2026 00:14:33 Remove member from group success\n", clue:"removed", needs:"$r"},
+  {cmd:["$r.InitiatedBy.App.DisplayName", "$r.InitiatedBy.App | Select-Object DisplayName"], out:"Microsoft Teams - Teams And Channels Service\nMicrosoft Teams - Teams And Channels Service\n", clue:"who", needs:"$r"},
+  {cmd:["$r[0].InitiatedBy.App", "$r[1].InitiatedBy.App"], out:"\nAppId                                DisplayName                                  ServicePrincipalId                   ServicePrincipalName\n-----                                -----------                                  ------------------                   --------------------\n2fd9ae0b-3c0b-4a4d-9c1e-7b5f1d3e8a24 Microsoft Teams - Teams And Channels Service 9a6c3e1f-4d2b-4f7a-8e5c-1b3d7f9a2c46 Microsoft Teams - Teams And Channels Service\n", clue:"who", needs:"$r"},
+  {cmd:["$r.InitiatedBy.User.UserPrincipalName"], out:"", needs:"$r"},
+  {cmd:["$r.TargetResources.UserPrincipalName"], out:"user@contoso.com\nuser@contoso.com\n", needs:"$r"},
+  {cmd:["Get-ChildItem ~/Documents/scripts", "Get-ChildItem ~/Documents/scripts/", "ls ~/Documents/scripts", "dir ~/Documents/scripts"], out:"\n    Directory: /Users/kaatjenagels/Documents/scripts\n\nUnixMode   User         Group LastWriteTime      Size Name\n--------   ----         ----- -------------      ---- ----\n-rw-r--r-- kaatjenagels staff 22/09/2026 17:03    118 cleanup.log\n-rw-r--r-- kaatjenagels staff 15/09/2026 10:21    472 Remove-BlockedFromAll.ps1\n"},
+  {cmd:["Get-Content ~/Documents/scripts/Remove-BlockedFromAll.ps1", "cat ~/Documents/scripts/Remove-BlockedFromAll.ps1"], out:"Connect-MgGraph -Scopes \"User.Read.All\" -NoWelcome\nConnect-ExchangeOnline -ShowBanner:$false\n$blocked = Get-MgUser -All -Filter \"accountEnabled eq false\" -Property UserPrincipalName\nforeach ($u in $blocked) {\n    Remove-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members -Links $u.UserPrincipalName -Confirm:$false\n    Add-Content ~/Documents/scripts/cleanup.log \"$(Get-Date -Format s) removed $($u.UserPrincipalName)\"\n}\n"},
+  {cmd:["Get-Content ~/Documents/scripts/cleanup.log", "cat ~/Documents/scripts/cleanup.log", "Get-Content ~/Documents/scripts/cleanup.log -Tail 5"], out:"2026-09-22T17:03:12 removed tom.claes@contoso.com\n2026-09-22T17:03:13 removed sara.old@contoso.com\n", clue:"script"},
+  {cmd:["Get-MgAuditLogDirectoryAudit -Filter \"initiatedBy/user/userPrincipalName eq 'admin@contoso.com'\" -Top 5", "Get-MgAuditLogDirectoryAudit -Filter \"initiatedBy/user/userPrincipalName eq 'admin@contoso.com'\""], out:"\nActivityDateTime    ActivityDisplayName Category       Result\n----------------    ------------------- --------       ------\n13/10/2026 06:05:12 Update user         UserManagement success\n06/10/2026 08:31:55 Reset user password UserManagement success\n06/10/2026 08:31:40 Update user         UserManagement success\n", clue:"script"},
+  {cmd:["Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -Top 5", "Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER], out:ADD_ROWS},
+  {cmd:["$add = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -All", "$add = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER], out:""},
+  {cmd:['$add | Where-Object { $_.TargetResources.UserPrincipalName -contains "user@contoso.com" }', '$add | Where-Object { $_.TargetResources.UserPrincipalName -eq "user@contoso.com" }'], out:"", clue:"readd", needs:"$add"},
+  {cmd:['$add.TargetResources.UserPrincipalName'], out:"new.hire@contoso.com\nnoor.haddad@contoso.com\nlena.maes.security@contoso.com\n", clue:"readd", needs:"$add"}
+ ],
+ hints:[
+  {cmd:'Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members | Where-Object PrimarySmtpAddress -eq "user@contoso.com"', clue:"gone"},
+  {cmd:"Get-MgUser -UserId user@contoso.com -Property AccountEnabled | Select-Object AccountEnabled", clue:"enabled"},
+  {cmd:"Get-MgAuditLogDirectoryAudit -Filter " + REM_FILTER + " -Top 5", clue:"removed"},
+  {cmd:"$r = Get-MgAuditLogDirectoryAudit -Filter " + REM_FILTER + " -Top 5", clue:"who", sets:"$r"},
+  {cmd:"$r.InitiatedBy.App.DisplayName", clue:"who"},
+  {cmd:"Get-Content ~/Documents/scripts/cleanup.log", clue:"script"},
+  {cmd:"$add = Get-MgAuditLogDirectoryAudit -Filter " + ADD_FILTER + " -All", clue:"readd", sets:"$add"},
+  {cmd:'$add | Where-Object { $_.TargetResources.UserPrincipalName -contains "user@contoso.com" }', clue:"readd"}
+ ],
+ options:[
+  {t:"The cleanup script removed her while she was blocked.", why:"The script's log stops on 22 September, and the audit shows no group removals by admin@. A script would show up under the account that ran it."},
+  {t:"Unblocking an account resets its group memberships.", why:"Unblocking only sets AccountEnabled back to True. It never touches groups."},
+  {t:"She left the group herself in Outlook.", why:"She was blocked at the time, and the audit would name her as the initiator."},
+  {t:"The org-wide team removed the blocked account at night and never added it back. Add her to all@ by hand.", ok:true, why:"Both removals were made by the Teams service while she was blocked, and nothing re-added her after the unblock."}
+ ],
+ lesson:"An org-wide team syncs with active accounts. While an account is blocked, the Teams sync can remove it, usually at night. After the unblock it does not reliably add the account back. So after every unblock, check all@ and other group memberships by hand and re-add with Add-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members -Links user@contoso.com."},
+{id:"graphlogin", name:"Graph won't log in", sub:"Method not found ... WithLogging",
+ problem:"Fresh terminal window. You checked a mailbox first, then tried to log into Graph. <b>Connect-MgGraph</b> fails every time, with the right account and the right scopes. Find out why before you reinstall anything.",
+ clues:[
+  {id:"error", t:"Connect-MgGraph throws MissingMethodException: Method not found ... Microsoft.Identity.Client ... WithLogging."},
+  {id:"history", t:"History: Get-EXOMailbox ran before Connect-MgGraph, and failed because Exchange was not connected."},
+  {id:"loaded", t:"ExchangeOnlineManagement is loaded in this session anyway. Running one of its commands auto-loads the module."},
+  {id:"msal", t:"The loaded Microsoft.Identity.Client (MSAL) comes from the Exchange module's folder, not from Graph's."}
+ ],
+ map:[
+  {cmd:["Connect-MgGraph", 'Connect-MgGraph -Scopes "User.Read.All"', 'Connect-MgGraph -Scopes "User.Read.All" -NoWelcome', 'Connect-MgGraph -Scopes "User.ReadWrite.All"', 'Connect-MgGraph -Scopes "User.ReadWrite.All" -NoWelcome', "Connect-MgGraph -NoWelcome"], out:GRAPH_ERR, err:true, clue:"error"},
+  {cmd:["Get-Error", "Get-Error -Newest 1", "$Error[0]"], out:"\nException             :\n    Type       : System.MissingMethodException\n    Message    : Method not found: 'Microsoft.Identity.Client.PublicClientApplicationBuilder Microsoft.Identity.Client.AbstractApplicationBuilder`1.WithLogging(Microsoft.IdentityModel.Abstractions.IIdentityLogger, Boolean)'.\n    Source     : Microsoft.Graph.Authentication.Core\n    HResult    : -2146233069\nCategoryInfo          : NotSpecified: (:) [Connect-MgGraph], MissingMethodException\nFullyQualifiedErrorId : System.MissingMethodException,Microsoft.Graph.PowerShell.Authentication.Cmdlets.ConnectMgGraph\nInvocationInfo        :\n    MyCommand        : Connect-MgGraph\n    Line             : Connect-MgGraph -Scopes \"User.Read.All\"\n", clue:"error"},
+  {cmd:["Get-History", "history", "h"], out:"\n  Id     Duration CommandLine\n  --     -------- -----------\n   1        0.412 Get-EXOMailbox user@contoso.com\n   2        2.871 Connect-MgGraph -Scopes \"User.Read.All\"\n   3        0.054 Connect-MgGraph -Scopes \"User.Read.All\"\n", clue:"history"},
+  {cmd:["Get-EXOMailbox user@contoso.com", "Get-EXOMailbox -Identity user@contoso.com", "Get-Mailbox user@contoso.com", "Get-Mailbox -Identity user@contoso.com"], out:"Get-EXOMailbox: You must call the Connect-ExchangeOnline cmdlet before calling any other cmdlets.\n", err:true},
+  {cmd:["Get-Module", "Get-Module | Select-Object Name, Version", "Get-Module | Format-Table Name, Version"], out:"\nModuleType Version    PreRelease Name                              ExportedCommands\n---------- -------    ---------- ----                              ----------------\nScript     3.7.1                 ExchangeOnlineManagement          {Add-VivaModuleFeaturePolicy, Get-EXOCasMailbox, Get-EXOMailbox…}\nScript     2.25.0                Microsoft.Graph.Authentication    {Add-MgEnvironment, Connect-MgGraph, Disconnect-MgGraph…}\nManifest   7.0.0.0               Microsoft.PowerShell.Management   {Add-Content, Clear-Content, Clear-Item…}\nManifest   7.0.0.0               Microsoft.PowerShell.Utility      {Add-Member, Add-Type, Clear-Variable…}\nScript     2.3.6                 PSReadLine                        {Get-PSReadLineKeyHandler, Get-PSReadLineOption…}\n", clue:"loaded"},
+  {cmd:["Get-Module ExchangeOnlineManagement", "Get-Module -Name ExchangeOnlineManagement"], out:"\nModuleType Version    PreRelease Name                              ExportedCommands\n---------- -------    ---------- ----                              ----------------\nScript     3.7.1                 ExchangeOnlineManagement          {Add-VivaModuleFeaturePolicy, Get-EXOCasMailbox, Get-EXOMailbox…}\n", clue:"loaded"},
+  {cmd:['[System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like "*Identity.Client*" | Select-Object FullName, Location', '[AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like "*Identity.Client*" | Select-Object FullName, Location', '[System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like "*Identity.Client*" | Format-List FullName, Location', '[AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like "*Identity.Client*" | Format-List FullName, Location'], out:"\nFullName : Microsoft.Identity.Client, Version=4.61.3.0, Culture=neutral, PublicKeyToken=0a613f4dd989e8ae\nLocation : /Users/kaatjenagels/.local/share/powershell/Modules/ExchangeOnlineManagement/3.7.1/netCore/Microsoft.Identity.Client.dll\n", clue:"msal"},
+  {cmd:["Get-InstalledModule ExchangeOnlineManagement, Microsoft.Graph.Authentication", "Get-InstalledModule -Name ExchangeOnlineManagement, Microsoft.Graph.Authentication", "Get-InstalledModule"], out:"\nVersion    Name                                Repository Description\n-------    ----                                ---------- -----------\n3.7.1      ExchangeOnlineManagement            PSGallery  This is a General Availability (GA) release of the Exchange…\n2.25.0     Microsoft.Graph.Authentication      PSGallery  Microsoft Graph PowerShell authentication module\n"},
+  {cmd:["Get-MgContext"], out:""}
+ ],
+ hints:[
+  {cmd:'Connect-MgGraph -Scopes "User.Read.All"', clue:"error"},
+  {cmd:"Get-History", clue:"history"},
+  {cmd:"Get-Module", clue:"loaded"},
+  {cmd:'[System.AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like "*Identity.Client*" | Select-Object FullName, Location', clue:"msal"}
+ ],
+ options:[
+  {t:"Wrong scopes. Ask for User.ReadWrite.All instead.", why:"Scope problems show up after a successful login, as 'Insufficient privileges'. This error is thrown before any login window opens."},
+  {t:"MFA is blocking the sign-in.", why:"MFA happens in the browser window. This fails before the browser is ever opened."},
+  {t:"The Graph module is corrupt. Reinstall it.", why:"Reinstalling does not help in this window: the Exchange copy of the library is already loaded and stays loaded."},
+  {t:"Exchange loaded its own copy of the login library (MSAL) first, and Graph cannot use that version. Connect Graph first in a fresh window, or update both modules.", ok:true, why:"The loaded Microsoft.Identity.Client comes from the Exchange module folder, and it was loaded by the failed Get-EXOMailbox before Graph got a chance."}
+ ],
+ lesson:"Both modules ship Microsoft.Identity.Client (MSAL), the library that handles the sign-in. One PowerShell process can only load one version of it, so whichever module loads first wins. PowerShell auto-loads a module the moment you run any of its commands, even a command that fails. Fix: close the window, open a new one, run Connect-MgGraph first and Connect-ExchangeOnline second. Long-term: Update-Module both, so their MSAL versions line up again."},
+{id:"stuckmail", name:"Rename says OK, mail says no", sub:"Mail still leaves from the old address",
+ problem:"Yesterday's rename log says <b>OK</b> for <b>jan.peeters.security@contoso.com</b>. He signs in with the new name, but people still see his mail coming from his old address. Why didn't the rename take?",
+ clues:[
+  {id:"log", t:"The rename log says OK for Jan: both commands ran without an error."},
+  {id:"upn", t:"His sign-in name (UPN) is the new one. Update-MgUser worked."},
+  {id:"primary", t:"PrimarySmtpAddress is still jp@contoso.com."},
+  {id:"alias", t:"The new address is in EmailAddresses, but as a small smtp: alias."},
+  {id:"differ", t:"Before the rename his primary was jp@ while his sign-in name was jan.peeters@. They already differed."}
+ ],
+ map:[
+  {cmd:["Import-Csv ~/Desktop/security-log.csv", "Import-Csv ~/Desktop/security-log.csv | Format-Table"], out:LOG_ROWS, clue:"log"},
+  {cmd:['Import-Csv ~/Desktop/security-log.csv | Where-Object NewUPN -eq "' + JAN + '"', 'Import-Csv ~/Desktop/security-log.csv | Where-Object { $_.NewUPN -eq "' + JAN + '" }'], out:"\nOldUPN                  NewUPN                           Status\n------                  ------                           ------\njan.peeters@contoso.com jan.peeters.security@contoso.com OK\n", clue:"log"},
+  {cmd:["Get-MgUser -UserId " + JAN], out:"\nDisplayName Id                                   Mail           UserPrincipalName\n----------- --                                   ----           -----------------\nJan Peeters 3a7e5c1d-9b2f-4d68-8e4a-6c1f0b9d2e57 jp@contoso.com jan.peeters.security@contoso.com\n", clue:"upn"},
+  {cmd:["Get-MgUser -UserId " + JAN + " | Select-Object UserPrincipalName, Mail"], out:"\nUserPrincipalName                Mail\n-----------------                ----\njan.peeters.security@contoso.com jp@contoso.com\n", clue:"upn"},
+  {cmd:mbx(JAN, " | Select-Object PrimarySmtpAddress"), out:"\nPrimarySmtpAddress\n------------------\njp@contoso.com\n", clue:"primary"},
+  {cmd:mbx(JAN, " | Select-Object UserPrincipalName, PrimarySmtpAddress").concat(mbx(JAN, " | Select-Object PrimarySmtpAddress, UserPrincipalName")), out:"\nUserPrincipalName                PrimarySmtpAddress\n-----------------                ------------------\njan.peeters.security@contoso.com jp@contoso.com\n", clue:["primary","upn"]},
+  {cmd:mbx(JAN, " | Select-Object UserPrincipalName, PrimarySmtpAddress, WindowsEmailAddress"), out:"\nUserPrincipalName                PrimarySmtpAddress WindowsEmailAddress\n-----------------                ------------------ -------------------\njan.peeters.security@contoso.com jp@contoso.com     jp@contoso.com\n", clue:["primary","upn"]},
+  {cmd:mbx(JAN, " | Select-Object -Expand EmailAddresses").concat(mbx(JAN, " -Properties EmailAddresses | Select-Object -Expand EmailAddresses"), mbx(JAN, " | Select-Object -ExpandProperty EmailAddresses")), out:JAN_ADDR, clue:["alias","differ"]},
+  {cmd:["(Get-Mailbox " + JAN + ").EmailAddresses", "(Get-Mailbox -Identity " + JAN + ").EmailAddresses"], out:JAN_ADDR, clue:["alias","differ"]},
+  {cmd:mbx("jp@contoso.com", ""), out:"\nName        Alias       Database           ProhibitSendQuota    ExternalDirectoryObjectId\n----        -----       --------           -----------------    -------------------------\nJan Peeters jp          EURPR02DG115-db034 99 GB (106,300,…)    3a7e5c1d-9b2f-4d68-8e4a-6c1f0b9d2e57\n"}
+ ],
+ hints:[
+  {cmd:"Import-Csv ~/Desktop/security-log.csv", clue:"log"},
+  {cmd:"Get-MgUser -UserId " + JAN + " | Select-Object UserPrincipalName, Mail", clue:"upn"},
+  {cmd:"Get-Mailbox " + JAN + " | Select-Object PrimarySmtpAddress", clue:"primary"},
+  {cmd:"Get-Mailbox " + JAN + " | Select-Object -Expand EmailAddresses", clue:"alias"}
+ ],
+ options:[
+  {t:"Exchange needs 24 hours. Wait until tomorrow.", why:"The mailbox itself already reports jp@ as primary. Waiting does not change a setting that was never made."},
+  {t:"His primary (jp@) already differed from his old sign-in name, so -WindowsEmailAddress only added the new address as an alias. Swap SMTP: and smtp: with the -ceq list.", ok:true, why:"EmailAddresses shows SMTP:jp@ and the new address as small smtp:, and jp@ was never his old sign-in name."},
+  {t:"Update-MgUser overwrote the primary address with the old one.", why:"Update-MgUser changes the sign-in name in Entra. It never touches Exchange addresses."},
+  {t:"Outlook caches the old address. Clear the cache.", why:"The server object itself says jp@ is primary. A cache cannot cause that."}
+ ],
+ lesson:"Exchange keeps one primary address (SMTP: in capitals) and any number of aliases (smtp: in small letters). On a mailbox where the primary already differed from the sign-in name, -WindowsEmailAddress can end up only adding the new address as an alias. And @{Add=\"SMTP:...\"} does nothing when the address already exists, because Exchange ignores case when it checks. The fix is to rebuild the list with -ceq, swapping SMTP: and smtp:, and write it back with Set-Mailbox -EmailAddresses $list. Poshle scenario: Stuck primary address."},
+{id:"skus", name:"Licence names", sub:"Which SKU is which plan?",
+ problem:"Finance wants to know how many <b>Business Basic</b>, <b>Business Standard</b> and <b>Business Premium</b> licences you have. PowerShell only shows SkuPartNumbers, and one of them says PREMIUM. Work out which code is which plan from what each licence contains.",
+ clues:[
+  {id:"list", t:"The tenant has O365_BUSINESS_ESSENTIALS, O365_BUSINESS_PREMIUM, SPB and FLOW_FREE."},
+  {id:"ess", t:"O365_BUSINESS_ESSENTIALS has no OFFICESUBSCRIPTION: web and mobile apps only. The entry plan."},
+  {id:"prem", t:"O365_BUSINESS_PREMIUM adds OFFICESUBSCRIPTION (the desktop apps) but has no Intune and no Entra P1."},
+  {id:"spb", t:"SPB has the desktop apps plus INTUNE_A, AAD_PREMIUM and MDE_SMB: device management and security on top."},
+  {id:"flow", t:"FLOW_FREE: 10,000 seats, only Power Automate. The free licence people sign up for themselves."}
+ ],
+ map:[
+  {cmd:["Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits", "Get-MgSubscribedSku | Select-Object SkuPartNumber"], out:SKU_TABLE, clue:"list"},
+  {cmd:['Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits, @{n="Total";e={$_.PrepaidUnits.Enabled}}'], out:"\nSkuPartNumber            ConsumedUnits Total\n-------------            ------------- -----\nO365_BUSINESS_ESSENTIALS             6    10\nO365_BUSINESS_PREMIUM               38    40\nSPB                                 12    12\nFLOW_FREE                            9 10000\n", clue:["list","flow"]},
+  {cmd:["Get-MgSubscribedSku"], out:"\nAppliesTo CapabilityStatus ConsumedUnits Id                                                                        SkuId                                SkuPartNumber\n--------- ---------------- ------------- --                                                                        -----                                -------------\nUser      Enabled                      6 3c5e7a91-2d4f-4b6a-8e1c-9f0a2b4c6d8e_3b555118-da6a-4418-894f-7df1e2096870 3b555118-da6a-4418-894f-7df1e2096870 O365_BUSINESS_ESSENTIALS\nUser      Enabled                     38 3c5e7a91-2d4f-4b6a-8e1c-9f0a2b4c6d8e_f245ecc8-75af-4f8e-b61f-27d8114de5f3 f245ecc8-75af-4f8e-b61f-27d8114de5f3 O365_BUSINESS_PREMIUM\nUser      Enabled                     12 3c5e7a91-2d4f-4b6a-8e1c-9f0a2b4c6d8e_cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46 cbdc14ab-d96c-4c30-b9f4-6ada7cdc1d46 SPB\nUser      Enabled                      9 3c5e7a91-2d4f-4b6a-8e1c-9f0a2b4c6d8e_f30db892-07e9-47e9-837c-80727f46fd3d f30db892-07e9-47e9-837c-80727f46fd3d FLOW_FREE\n", clue:"list"},
+  {cmd:"$skus = Get-MgSubscribedSku", out:""},
+  {cmd:["$skus | Select-Object SkuPartNumber, ConsumedUnits", "$skus.SkuPartNumber"], out:SKU_TABLE, clue:"list", needs:"$skus"}
+ ].concat(skuMap()),
+ hints:[
+  {cmd:"Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits", clue:"list"},
+  {cmd:'(Get-MgSubscribedSku | Where-Object SkuPartNumber -eq "O365_BUSINESS_ESSENTIALS").ServicePlans | Select-Object ServicePlanName', clue:"ess"},
+  {cmd:'(Get-MgSubscribedSku | Where-Object SkuPartNumber -eq "O365_BUSINESS_PREMIUM").ServicePlans | Select-Object ServicePlanName', clue:"prem"},
+  {cmd:'(Get-MgSubscribedSku | Where-Object SkuPartNumber -eq "SPB").ServicePlans | Select-Object ServicePlanName', clue:"spb"},
+  {cmd:'(Get-MgSubscribedSku | Where-Object SkuPartNumber -eq "FLOW_FREE").ServicePlans | Select-Object ServicePlanName', clue:"flow"}
+ ],
+ options:[
+  {t:"ESSENTIALS = Basic, O365_BUSINESS_PREMIUM = Premium, SPB = Standard.", why:"O365_BUSINESS_PREMIUM has no Intune or Entra P1, and those are exactly what makes Business Premium premium."},
+  {t:"ESSENTIALS = Standard, O365_BUSINESS_PREMIUM = Premium, SPB = Basic.", why:"SPB is the one with the most service plans. Basic is the one without desktop apps."},
+  {t:"ESSENTIALS = Basic, O365_BUSINESS_PREMIUM = Standard, SPB = Premium.", ok:true, why:"No desktop apps = Basic. Desktop apps = Standard. Desktop apps plus Intune and Entra P1 = Premium."},
+  {t:"SPB is SharePoint Plan B. The other two are mail-only plans.", why:"All three include Exchange, SharePoint and Teams. SPB has the most of everything."}
+ ],
+ lesson:"The codes are older than the product names. 'Office 365 Business Essentials' and 'Office 365 Business Premium' were renamed to Microsoft 365 Business Basic and Business Standard in 2020, but the SkuPartNumbers kept the old words. SPB stands for SMB Business Premium, today's Microsoft 365 Business Premium. FLOW_FREE is the free Power Automate licence a user can sign up for on their own. When a code is unclear, read its ServicePlans."}
+];
+
+const EXTRA_CMDS = ["Get-Date","Get-History","Clear-Host","Get-Help","Get-Member","Get-Command","Where-Object","Select-Object","Sort-Object","Group-Object","Measure-Object","ForEach-Object","Format-Table","Format-List","Export-Csv","Import-Csv","Set-Clipboard","Get-Clipboard","Out-File","Test-Path","Get-ChildItem","Set-Location","Get-Location","Start-Sleep","Write-Host","Write-Output","Get-InstalledModule","Install-Module","Update-Module","Import-Module","Disconnect-MgGraph","Disconnect-ExchangeOnline","Get-MgUser","Update-MgUser","New-MgUser","Remove-MgUser","Get-MgGroup","Get-MgGroupMember","New-MgGroupMember","Get-MgSubscribedSku","Set-MgUserLicense","Get-MgUserMemberOf","Get-MgUserAuthenticationMethod","Get-EXOMailbox","Get-Mailbox","Set-Mailbox","Get-MailboxStatistics","Get-MessageTraceV2","Search-UnifiedAuditLog","Connect-IPPSSession","Add-RoleGroupMember","Get-RoleGroupMember","Get-InboxRule","Remove-InboxRule","Get-MailboxAutoReplyConfiguration","Set-MailboxAutoReplyConfiguration","Get-MgServicePrincipal","Get-MgUserOauth2PermissionGrant","Get-MgAuditLogDirectoryAudit","Get-MgAuditLogSignIn","Export-Excel","Import-Excel","ConvertFrom-Json","ConvertTo-Json","Find-MgGraphCommand","Get-MgContext","Get-Team","Add-TeamUser","Connect-MicrosoftTeams","Get-DistributionGroupMember","Add-DistributionGroupMember","Get-MailboxPermission","Remove-MailboxPermission","Add-MailboxPermission","Add-RecipientPermission","Get-EXORecipient","New-TimeSpan","Get-Random","Revoke-MgUserSignInSession","Get-MgUserLicenseDetail","Set-CalendarProcessing","Connect-PnPOnline","Get-PnPList","Add-eDiscoveryCaseAdmin","Clear-History","Get-Process","Get-Content","Set-Content","Copy-Item","Move-Item","Remove-Item","New-Item","Invoke-RestMethod","Out-GridView","Tee-Object","Compare-Object","Get-Variable","Get-Alias","Get-PSReadLineKeyHandler","Set-PSReadLineOption","ConvertTo-NamePart","Get-UnifiedGroup","Get-UnifiedGroupLinks","Add-UnifiedGroupLinks","Remove-UnifiedGroupLinks","Get-MgGroupOwner","Get-Module","Get-Error","New-Mailbox","Get-Recipient"];
 const ALIASES = ["open","clear","cls","exit","history","h","sort","ls","cd","pwd","cat","echo","man","help","caffeinate","code","dir","select","where","foreach","%","?","gm","ft","fl","r"];
 const MANUAL_PARAMS = {
  "select-object":["Property","ExcludeProperty","ExpandProperty","First","Last","Skip","Unique","Index"],
@@ -320,10 +635,38 @@ const MANUAL_PARAMS = {
  "get-date":["Format","UFormat","Date","Year","Month","Day","Hour","Minute","AsUTC"],
  "get-history":["Id","Count"],
  "connect-mggraph":["Scopes","NoWelcome","TenantId","ClientId","UseDeviceCode","ContextScope","Environment"],
- "connect-exchangeonline":["ShowBanner","UserPrincipalName","Organization","Device","ShowProgress"]
+ "connect-exchangeonline":["ShowBanner","UserPrincipalName","Organization","Device","ShowProgress"],
+ "set-mailbox":["Identity","WindowsEmailAddress","EmailAddresses","PrimarySmtpAddress","CustomAttribute1","CustomAttribute2","CustomAttribute3","Type","HiddenFromAddressListsEnabled","ForwardingSmtpAddress","DeliverToMailboxAndForward","DisplayName"],
+ "update-mguser":["UserId","UserPrincipalName","AccountEnabled","DisplayName","Department","JobTitle","OfficeLocation","UsageLocation","MobilePhone","BusinessPhones","PasswordProfile"],
+ "new-mguser":["DisplayName","MailNickname","UserPrincipalName","AccountEnabled","PasswordProfile","GivenName","Surname","Department","JobTitle","OfficeLocation","City","Country","UsageLocation","MobilePhone","BusinessPhones","CompanyName"],
+ "get-exomailbox":["Identity","Properties","PropertySets","RecipientTypeDetails","ResultSize","UserPrincipalName","PrimarySmtpAddress"],
+ "get-exorecipient":["Identity","Filter","Properties","RecipientTypeDetails","ResultSize"],
+ "get-mailbox":["Identity","RecipientTypeDetails","ResultSize","Filter"],
+ "start-sleep":["Seconds","Milliseconds","Duration"],
+ "set-mguserlicense":["UserId","AddLicenses","RemoveLicenses"],
+ "get-mguserlicensedetail":["UserId","All","Property"],
+ "get-mgsubscribedsku":["SubscribedSkuId","All","Property"],
+ "new-mailbox":["Shared","Name","DisplayName","Alias","PrimarySmtpAddress","Room","Equipment"],
+ "add-mailboxpermission":["Identity","User","AccessRights","AutoMapping"],
+ "add-recipientpermission":["Identity","Trustee","AccessRights"],
+ "get-unifiedgrouplinks":["Identity","LinkType","ResultSize"],
+ "add-unifiedgrouplinks":["Identity","LinkType","Links"],
+ "remove-unifiedgrouplinks":["Identity","LinkType","Links"],
+ "get-unifiedgroup":["Identity","Filter","IncludeAllProperties","ResultSize"],
+ "get-mggroup":["GroupId","Filter","Property","All","Search","ConsistencyLevel","Top"],
+ "get-mgauditlogdirectoryaudit":["Filter","Top","All","Sort","Property"],
+ "get-module":["Name","ListAvailable","All"],
+ "get-error":["Newest"],
+ "get-installedmodule":["Name","AllVersions","MinimumVersion"],
+ "get-content":["Path","Tail","TotalCount","Raw"],
+ "get-childitem":["Path","Filter","Recurse","Name","Force"],
+ "foreach-object":["Process","Begin","End","MemberName","Parallel"],
+ "set-clipboard":["Value","Append"],
+ "get-random":["Minimum","Maximum","Count","InputObject"]
 };
 const COMMON = ["Verbose","Debug","ErrorAction","WarningAction","InformationAction","ErrorVariable","WarningVariable","OutVariable","OutBuffer","PipelineVariable","WhatIf","Confirm"];
-const FS = {"~/":["Desktop/","Documents/","Downloads/",".config/"],"~/Desktop/":["incident.xlsx","rename-log.csv","rename-plan.csv","signins.csv","trace.csv","users.csv"],"~/Documents/":["scripts/","notes.txt"],"~/Downloads/":["export.csv"]};
+const FS = {"~/":["Desktop/","Documents/","Downloads/",".config/"],"~/Desktop/":["incident.xlsx","rename-log.csv","rename-plan.csv","security-log.csv","security-plan.csv","signins.csv","trace.csv","users.csv"],"~/Documents/":["scripts/","notes.txt"],"~/Documents/scripts/":["Remove-BlockedFromAll.ps1","cleanup.log"],"~/Downloads/":["export.csv"]};
+const KEYWORDS = ["function","filter","if","elseif","else","foreach","for","while","do","until","switch","try","catch","finally","trap","return","break","continue","param","begin","process","end","throw","&","."];
 const AUTO_VARS = ["$HOME","$PSVersionTable","$true","$false","$null","$_","$PWD","$Error","$PROFILE","$Host"];
 const WD = ";:,.[]{}()/\\|^&*-=+'\"–—―";
 
@@ -383,22 +726,27 @@ const PARAMS = {};
     (st.cmd.match(/\b[A-Z][a-z]+-[A-Z][A-Za-z0-9]+/g) || []).forEach(add);
   }));
   Object.keys(MANUAL_PARAMS).forEach(k => PARAMS[k] = MANUAL_PARAMS[k].slice());
-  SCEN.forEach(s => s.steps.forEach(st => {
-    splitSegments(st.cmd).forEach(seg => {
+  const all = [];
+  SCEN.forEach(s => s.steps.forEach(st => all.push(st.cmd)));
+  CASES.forEach(c => c.map.forEach(e => [].concat(e.cmd).forEach(x => all.push(x))));
+  all.forEach(cmd => {
+    splitSegments(cmd).forEach(seg => {
       const m = seg.trim().replace(/^\$[\w:]+\s*=\s*/, "").replace(/^\(/, "").match(/^([A-Za-z]+-[A-Za-z0-9]+)/);
       if (!m) return;
       const key = m[1].toLowerCase();
       if (!PARAMS[key]) PARAMS[key] = [];
       const list = PARAMS[key];
-      (seg.match(/(?:^|\s)-([A-Za-z][A-Za-z0-9]*)/g) || []).forEach(p => {
+      let bare = seg.replace(/"[^"]*"|'[^']*'/g, '""');
+      while (/\{[^{}]*\}/.test(bare)) bare = bare.replace(/\{[^{}]*\}/g, "");
+      (bare.match(/(?:^|\s)-([A-Za-z][A-Za-z0-9]*)/g) || []).forEach(p => {
         const name = p.trim().slice(1);
-        if (/^(eq|ne|gt|lt|ge|le|like|notlike|match|notmatch|contains|in|join|split|replace|and|or|not)$/i.test(name) && !MANUAL_PARAMS[key]) return;
+        if (/^(eq|ne|gt|lt|ge|le|ceq|cne|like|notlike|match|notmatch|contains|notcontains|in|notin|join|split|replace|and|or|not|f)$/i.test(name) && !(MANUAL_PARAMS[key] || []).some(x => x.toLowerCase() === name.toLowerCase())) return;
         if (list.some(x => x.toLowerCase() === name.toLowerCase())) return;
         if (list.some(x => x.toLowerCase().startsWith(name.toLowerCase()))) return;
         list.push(name);
       });
     });
-  }));
+  });
 })();
 
 function splitSegments(s){
@@ -431,7 +779,7 @@ const $ = id => document.getElementById(id);
 const screenEl = $("screen"), scrollEl = $("scroll"), liveEl = $("live"), ta = $("ta");
 
 const S = {
-  scen: null, idx: 0, list: null,
+  scen: null, idx: 0, list: null, case: null,
   buf: "", cur: 0,
   undo: [], kill: [], killIdx: 0,
   hIdx: hist.length, pending: "",
@@ -529,7 +877,7 @@ function suggestion(){
   if (S.search || S.cur !== S.buf.length || !S.buf) return "";
   const st = curStep();
   if (store.mode === "ghost" && st && !st.pre){
-    if (st.cmd.toLowerCase().startsWith(S.buf.toLowerCase()) && st.cmd.length > S.buf.length) return st.cmd.slice(S.buf.length);
+    if (st.cmd.toLowerCase().startsWith(S.buf.toLowerCase()) && st.cmd.length > S.buf.length) return st.cmd.slice(S.buf.length).split("\n")[0];
     return "";
   }
   if (store.mode === "ghost" && st && st.pre) return "";
@@ -677,6 +1025,117 @@ function endSearch(keep){
 
 function curStep(){ return S.list ? S.list[S.idx] || null : null; }
 
+function cnorm(s){ return norm(s).replace(/'/g, '"'); }
+function caseRec(id){ if (!store.cases) store.cases = {}; if (!store.cases[id]) store.cases[id] = {solved: 0, best: 0, last: 0}; return store.cases[id]; }
+function newCase(c){ return {c, found: new Set(), vars: new Set(), cmds: 0, hints: 0, solving: false, tried: new Set(), closed: false}; }
+
+function caseHit(t){
+  const n = cnorm(t);
+  return S.case.c.map.find(e => [].concat(e.cmd).some(x => cnorm(x) === n)) || null;
+}
+
+function caseFind(ids){
+  const k = S.case;
+  [].concat(ids || []).forEach(id => {
+    if (k.found.has(id)) return;
+    const cl = k.c.clues.find(x => x.id === id);
+    if (!cl) return;
+    k.found.add(id);
+    coach('<span class="ok">new clue</span> ' + esc(cl.t));
+  });
+}
+
+function caseRun(t, m){
+  const k = S.case;
+  const hit = caseHit(t);
+  if (!hit && builtin(t)) return;
+  k.cmds++;
+  if (hit){
+    if (hit.needs && !k.vars.has(hit.needs)){
+      coach("<b>" + esc(hit.needs) + "</b> is empty in this session, so this prints nothing. Fill it first.");
+    } else {
+      if (m){ k.vars.add("$" + m[1]); S.vars.add("$" + m[1]); }
+      const out = typeof hit.out === "function" ? hit.out() : hit.out;
+      if (out){ if (hit.err) print('<span class="err">' + esc(out.replace(/\n$/, "")) + "</span>"); else printText(out); }
+      caseFind(hit.clue);
+    }
+  } else {
+    const bad = unknownCommand(t);
+    if (bad) notRecognized(bad);
+    else {
+      if (m){ k.vars.add("$" + m[1]); S.vars.add("$" + m[1]); }
+      print('<span class="dim">(no results)</span>');
+    }
+  }
+  renderBrief();
+}
+
+function caseHint(){
+  const k = S.case;
+  const h = k.c.hints.find(x => !k.found.has(x.clue) && !(x.sets && k.vars.has(x.sets)));
+  if (!h){ coach("you have every clue you need. Press <b>Solve</b>."); return; }
+  k.hints++;
+  coach("try: <b>" + esc(h.cmd) + "</b>");
+}
+
+function casePick(i){
+  const k = S.case, o = k.c.options[i];
+  if (k.closed || k.tried.has(i)) return;
+  k.tried.add(i);
+  if (o.ok){
+    k.closed = true;
+    const r = caseRec(k.c.id);
+    r.solved++;
+    r.last = k.cmds;
+    r.best = r.best ? Math.min(r.best, k.cmds) : k.cmds;
+    save(KEY_STORE, store);
+    coach('<span class="ok">✓ case closed</span> in ' + k.cmds + (k.cmds === 1 ? " command" : " commands") + (k.hints ? ", " + k.hints + (k.hints === 1 ? " hint" : " hints") : "") + ".");
+    renderRail();
+  }
+  renderBrief();
+  const v = document.querySelector("#brief .verdict");
+  if (v) v.scrollIntoView({block: "nearest"});
+}
+
+function renderCaseBrief(el){
+  const k = S.case, c = k.c, r = caseRec(c.id);
+  let h = '<div class="bhead"><h2>' + esc(c.name) + '</h2><span class="count">' + k.cmds + (k.cmds === 1 ? " command" : " commands") + " · " + k.found.size + "/" + c.clues.length + " clues" + (r.best ? " · best " + r.best : "") + '</span><div class="acts">';
+  if (!k.closed) h += '<button class="chip" id="bHint">Hint</button>';
+  h += '<button class="chip" id="bRestart">Restart</button>';
+  if (!k.closed && !k.solving) h += '<button class="chip prime" id="bSolve">Solve</button>';
+  h += "</div></div>";
+  h += '<p class="task">' + c.problem + "</p>";
+  h += '<div class="cl-h">Clues</div><div class="clues">';
+  c.clues.forEach(cl => {
+    const got = k.found.has(cl.id);
+    h += '<div class="clue' + (got ? " got" : "") + '"><i>' + (got ? "✓" : "?") + "</i><span>" + (got ? esc(cl.t) : "not found yet") + "</span></div>";
+  });
+  h += "</div>";
+  if (k.solving || k.closed){
+    h += '<div class="cl-h">Your diagnosis</div><div class="opts">';
+    c.options.forEach((o, i) => {
+      const t = k.tried.has(i);
+      const cls = t ? (o.ok ? " yes" : " no") : "";
+      h += '<button class="opt' + cls + '" data-i="' + i + '"' + (t || k.closed ? " disabled" : "") + ">" + esc(o.t) + "</button>";
+    });
+    h += "</div>";
+    const last = [...k.tried].pop();
+    if (last !== undefined){
+      const o = c.options[last];
+      h += '<div class="verdict' + (o.ok ? "" : " bad") + '"><b>' + (o.ok ? "Correct." : "Not this one.") + "</b> " + esc(o.why) + (o.ok ? '<p class="lesson">' + esc(c.lesson) + "</p>" : "") + "</div>";
+    }
+  } else {
+    h += '<p class="cnote">Type your own commands in the terminal. Scripted commands answer like the real tenant, other known cmdlets say (no results), unknown names give the real error. Press <b>Solve</b> when you know.</p>';
+  }
+  el.innerHTML = h;
+  const bind = (id, fn) => { const b = $(id); if (b) b.addEventListener("click", () => { fn(); ta.focus({preventScroll: true}); }); };
+  bind("bHint", () => { caseHint(); render(); });
+  bind("bSolve", () => { k.solving = true; renderBrief(); });
+  bind("bRestart", () => { S.case = newCase(c); coach("case reopened: " + esc(c.name) + "."); renderBrief(); render(); });
+  el.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => { casePick(parseInt(b.dataset.i, 10)); ta.focus({preventScroll: true}); }));
+}
+
+
 function completionCtx(){
   let s = S.cur;
   while (s > 0 && !/[\s|;({,=]/.test(S.buf[s-1])) s--;
@@ -788,6 +1247,7 @@ function unknownCommand(line){
     const w = seg.match(/^[^\s(){}]+/);
     if (!w) continue;
     const word = w[0];
+    if (KEYWORDS.indexOf(word.toLowerCase()) >= 0) continue;
     if (KNOWN.has(word.toLowerCase())) continue;
     if (ALIASES.indexOf(word.toLowerCase()) >= 0) continue;
     return word;
@@ -832,6 +1292,7 @@ function run(line){
   S.hIdx = hist.length;
   const m = t.match(/^\$([\w]+)\s*=/);
   if (!t) return;
+  if (S.case){ caseRun(t, m); return; }
   if (builtin(t)) return;
   const st = curStep();
   if (st){
@@ -1150,6 +1611,13 @@ function renderRail(){
   h += "<hr><h4>Practice</h4>";
   h += '<button class="sc' + (S.scen && S.scen.id === "weak" ? " on" : "") + '" data-id="weak"><i>!</i><span><b>Review weak spots</b><small>' + (weak.length ? weak.length + " steps you missed before" : "nothing missed yet") + "</small></span></button>";
   h += '<button class="sc' + (S.scen && S.scen.id === "free" ? " on" : "") + '" data-id="free"><i>&gt;_</i><span><b>Free terminal</b><small>no task, just type</small></span></button>';
+  const nSolved = CASES.filter(c => caseRec(c.id).solved).length;
+  h += "<hr><h4>Detective · " + nSolved + "/" + CASES.length + " solved</h4>";
+  CASES.forEach((c, i) => {
+    const r = caseRec(c.id);
+    const on = S.scen && S.scen.id === "case:" + c.id;
+    h += '<button class="sc' + (on ? " on" : "") + (r.solved ? " solved" : "") + '" data-id="case:' + c.id + '"><i>D' + (i + 1) + "</i><span><b>" + esc(c.name) + "</b><small>" + (r.solved ? "solved · best " + r.best + (r.best === 1 ? " command" : " commands") : esc(c.sub)) + "</small></span></button>";
+  });
   el.innerHTML = h;
   el.querySelectorAll(".sc").forEach(b => b.addEventListener("click", () => { openScenario(b.dataset.id); el.classList.remove("open"); }));
 }
@@ -1157,6 +1625,8 @@ function renderRail(){
 function renderBrief(){
   const el = $("brief");
   const sc = S.scen;
+  el.classList.toggle("case", !!S.case);
+  if (S.case){ renderCaseBrief(el); return; }
   if (!S.list){
     el.innerHTML = '<div class="bhead"><h2>Free terminal</h2><span class="count">no task</span></div><p class="task">Type anything. Commands from the scenarios answer with their simulated output, unknown commands give the real PowerShell error. Every shortcut works.</p>';
     return;
@@ -1173,7 +1643,7 @@ function renderBrief(){
   h += "</div></div>";
   if (st){
     h += '<p class="task">' + st.task + "</p>";
-    if (store.mode === "ghost" || S.revealed || sc.gym) h += '<div class="target">' + esc(st.cmd) + "</div>";
+    if (store.mode === "ghost" || S.revealed || sc.gym) h += '<div class="target' + (st.cmd.indexOf("\n") >= 0 ? " multi" : "") + '">' + esc(st.cmd) + "</div>";
     else h += '<div class="target hidden">Recall mode: type it from memory. Tab completion still helps.</div>';
   } else {
     const p = sc.id === "weak" ? null : scenProgress(sc);
@@ -1204,7 +1674,10 @@ function nextScenario(){ const id = nextScenarioId(); if (id) openScenario(id); 
 
 function openScenario(id){
   if (S.search) endSearch(false);
-  if (id === "free"){ S.scen = {id: "free", name: "Free terminal"}; S.list = null; S.idx = 0; }
+  S.case = null;
+  const cs = id.indexOf("case:") === 0 ? CASES.find(c => "case:" + c.id === id) : null;
+  if (cs){ S.scen = {id, name: "Case: " + cs.name}; S.list = null; S.idx = 0; S.case = newCase(cs); }
+  else if (id === "free" || id.indexOf("case:") === 0){ S.scen = {id: "free", name: "Free terminal"}; S.list = null; S.idx = 0; }
   else if (id === "weak"){
     const list = weakList();
     S.scen = {id: "weak", name: "Review weak spots"};
@@ -1242,7 +1715,7 @@ document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on
 printText("PowerShell 7.5.3");
 print('<span class="dim">Poshle — every key behaves like pwsh on your Mac. Click the terminal and start typing.</span>');
 print("");
-openScenario(store.scen && (SCEN.some(s => s.id === store.scen) || store.scen === "free") ? store.scen : "start");
+openScenario(store.scen && (SCEN.some(s => s.id === store.scen) || store.scen === "free" || CASES.some(c => "case:" + c.id === store.scen)) ? store.scen : "start");
 </script>
 </body>
 </html>

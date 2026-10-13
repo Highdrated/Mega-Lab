@@ -342,6 +342,35 @@ const DATA = [
     ]
    },
    {
+    "t": "Why Graph and Exchange fight",
+    "e": [
+     {
+      "c": "Connect-MgGraph -Scopes \"User.ReadWrite.All\" -NoWelcome",
+      "d": "Log into Graph first, before anything from Exchange",
+      "n": "The first module to load decides which sign-in library the whole window uses. Graph is the pickier one, so let it go first. Then Exchange works fine on top.",
+      "x": "Connect-MgGraph -Scopes \"User.ReadWrite.All\" -NoWelcome\nConnect-ExchangeOnline -ShowBanner:$false\nGet-MgContext | Select-Object Account\nGet-EXOMailbox -Identity user@contoso.com | Select-Object PrimarySmtpAddress"
+     },
+     {
+      "c": "Get-Module",
+      "d": "Show which modules are loaded in this window",
+      "n": "Running any command loads its module, even when that command fails. So one Get-EXOMailbox typed too early is enough to load Exchange first.",
+      "x": "Get-Module | Select-Object Name, Version\n\nName                           Version\n----                           -------\nExchangeOnlineManagement       3.7.1\nMicrosoft.Graph.Authentication 2.25.0"
+     },
+     {
+      "c": "[AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like \"*Identity.Client*\"",
+      "d": "Find out which copy of MSAL is loaded",
+      "n": "Lists the .NET libraries loaded in this window. Location tells you which module brought its copy of Microsoft.Identity.Client.",
+      "x": "[AppDomain]::CurrentDomain.GetAssemblies() | Where-Object FullName -like \"*Identity.Client*\" | Format-List FullName, Location\n\nFullName : Microsoft.Identity.Client, Version=4.61.3.0, ...\nLocation : .../Modules/ExchangeOnlineManagement/3.7.1/netCore/Microsoft.Identity.Client.dll"
+     },
+     {
+      "c": "Update-Module ExchangeOnlineManagement, Microsoft.Graph",
+      "d": "Update both modules together",
+      "n": "Matching recent versions usually ship compatible MSAL versions. Close every PowerShell window afterwards, because a loaded module stays loaded until the window closes.",
+      "x": "Update-Module ExchangeOnlineManagement, Microsoft.Graph\nGet-InstalledModule ExchangeOnlineManagement, Microsoft.Graph.Authentication | Select-Object Name, Version"
+     }
+    ]
+   },
+   {
     "t": "Find your way around",
     "e": [
      {
@@ -623,6 +652,35 @@ const DATA = [
       "c": "Set-MgUserLicense -UserId x -AddLicenses @() -RemoveLicenses @($sku.SkuId)",
       "d": "Take a licence away",
       "n": "Do this after converting a leaver to a shared mailbox, so the mailbox keeps its data without costing a licence."
+     }
+    ]
+   },
+   {
+    "t": "Licence names (SKUs)",
+    "e": [
+     {
+      "c": "O365_BUSINESS_ESSENTIALS",
+      "d": "Microsoft 365 Business Basic",
+      "n": "Mail, Teams, SharePoint and the web and mobile Office apps. No desktop apps, so no OFFICESUBSCRIPTION service plan.",
+      "x": "Get-MgSubscribedSku | Where-Object SkuPartNumber -eq \"O365_BUSINESS_ESSENTIALS\" | Select-Object SkuPartNumber, ConsumedUnits\n\nSkuPartNumber            ConsumedUnits\n-------------            -------------\nO365_BUSINESS_ESSENTIALS             6"
+     },
+     {
+      "c": "O365_BUSINESS_PREMIUM",
+      "d": "Microsoft 365 Business Standard (not Premium)",
+      "n": "Everything in Basic plus the desktop apps (OFFICESUBSCRIPTION). The code still says PREMIUM because the product used to be called Office 365 Business Premium.",
+      "x": "(Get-MgSubscribedSku | Where-Object SkuPartNumber -eq \"O365_BUSINESS_PREMIUM\").ServicePlans.ServicePlanName -contains \"OFFICESUBSCRIPTION\"\nTrue"
+     },
+     {
+      "c": "SPB",
+      "d": "Microsoft 365 Business Premium",
+      "n": "SMB Business Premium: Standard plus Intune (INTUNE_A), Entra ID P1 (AAD_PREMIUM) and Defender for Business (MDE_SMB).",
+      "x": "(Get-MgSubscribedSku | Where-Object SkuPartNumber -eq \"SPB\").ServicePlans.ServicePlanName -contains \"INTUNE_A\"\nTrue"
+     },
+     {
+      "c": "FLOW_FREE",
+      "d": "Power Automate Free (self-service)",
+      "n": "Appears when a user signs up for Power Automate on their own. Thousands of free seats, nothing to pay, nothing to assign by hand.",
+      "x": "Get-MgSubscribedSku | Where-Object SkuPartNumber -eq \"FLOW_FREE\" | Select-Object SkuPartNumber, ConsumedUnits, @{n=\"Total\";e={$_.PrepaidUnits.Enabled}}\n\nSkuPartNumber ConsumedUnits Total\n------------- ------------- -----\nFLOW_FREE                 9 10000"
      }
     ]
    }
@@ -969,6 +1027,59 @@ const DATA = [
       "n": "Returns True or False. Check before Import-Csv so you get a clear message instead of an error."
      }
     ]
+   },
+   {
+    "t": "Compare, test and splat",
+    "e": [
+     {
+      "c": "-eq  vs  -ceq",
+      "d": "Ignore capitals vs respect capitals",
+      "n": "PowerShell ignores case by default, so SMTP: and smtp: look the same to -eq. Put a c in front (-ceq, -clike, -cmatch) when capitals carry meaning, like the primary SMTP: versus an alias smtp:.",
+      "x": "\"SMTP:jp@contoso.com\" -eq \"smtp:jp@contoso.com\"\nTrue\n\"SMTP:jp@contoso.com\" -ceq \"smtp:jp@contoso.com\"\nFalse"
+     },
+     {
+      "c": "-like  vs  -match",
+      "d": "Wildcards vs regular expressions",
+      "n": "-like uses * and ? and must match the whole text. -match uses a regex, matches anywhere in the text, and puts what it found in $Matches.",
+      "x": "\"jan.peeters@contoso.com\" -like \"*@contoso.com\"\nTrue\n\"jan.peeters@contoso.com\" -match \"^([a-z]+)\\.([a-z]+)@\"\nTrue\n$Matches[1]\njan"
+     },
+     {
+      "c": "-in  /  -notin",
+      "d": "Is this value in a list?",
+      "n": "Value first, list second. -contains is the same check the other way round: list first, value second.",
+      "x": "$skip = \"admin@contoso.com\", \"test@contoso.com\"\n\"test@contoso.com\" -in $skip\nTrue\n$users | Where-Object { $_.UserPrincipalName -notin $skip }"
+     },
+     {
+      "c": "$rows | ForEach-Object { Set-Mailbox ... -WhatIf }",
+      "d": "Dry run a whole batch",
+      "n": "-WhatIf prints what each change would do and changes nothing. Run the batch with it first, read the lines, then run it again without.",
+      "x": "$rows | ForEach-Object { Set-Mailbox -Identity $_.OldUPN -WindowsEmailAddress $_.NewUPN -WhatIf }\nWhat if: Setting mailbox \"sara.jacobs@contoso.com\".\nWhat if: Setting mailbox \"zvdb@contoso.com\"."
+     },
+     {
+      "c": "New-MgUser @userInfo",
+      "d": "Splatting: a hashtable as parameters",
+      "n": "Write the parameters once as name = value, then pass the hashtable with @ instead of $. Every key becomes -Key value. Extra parameters still go after it.",
+      "x": "$userInfo = @{\n    Department = \"Security\"\n    UsageLocation = \"BE\"\n    BusinessPhones = @(\"+32 2 000 00 00\")\n}\nNew-MgUser @userInfo -DisplayName \"Noor Haddad\" -MailNickname \"noor.haddad\" -UserPrincipalName \"noor.haddad@contoso.com\" -AccountEnabled -PasswordProfile @{ Password = $pw; ForceChangePasswordNextSignIn = $true }"
+     },
+     {
+      "c": "$PROFILE",
+      "d": "Built in: the path to your profile script",
+      "n": "PowerShell already owns this name, and variable names ignore case, so $profile is the same variable. Overwrite it and your profile path is gone for the session. Use your own name, like $userInfo.",
+      "x": "$PROFILE\n/Users/kaatjenagels/.config/powershell/Microsoft.PowerShell_profile.ps1"
+     },
+     {
+      "c": "[bool]$m",
+      "d": "Turn 'is there something?' into True or False",
+      "n": "$null, an empty string, 0 and an empty list become False. Anything else becomes True. Ideal for a Found column in a check table.",
+      "x": "$m = Get-EXOMailbox -Identity user@contoso.com -ErrorAction SilentlyContinue\n[bool]$m\nTrue\n[bool](Get-EXOMailbox -Identity nobody@contoso.com -ErrorAction SilentlyContinue)\nFalse"
+     },
+     {
+      "c": "$a ?? $b",
+      "d": "Null-coalescing: use the right side when the left is $null",
+      "n": "PowerShell 7 and newer. Only $null counts as empty: an empty string is kept as it is.",
+      "x": "$dept = $user.Department ?? \"Unknown\"\n$null ?? \"fallback\"\nfallback\n\"\" ?? \"fallback\""
+     }
+    ]
    }
   ]
  },
@@ -1029,6 +1140,35 @@ const DATA = [
       "n": "A team is really a Microsoft 365 group underneath, so Graph group commands work too."
      }
     ]
+   },
+   {
+    "t": "Org-wide teams",
+    "e": [
+     {
+      "c": "Get-MgAuditLogDirectoryAudit -Filter \"activityDisplayName eq 'Add member to group'\" -Top 5",
+      "d": "See who added people to groups",
+      "n": "The directory audit keeps about 30 days. InitiatedBy tells you whether a person (User) or a service (App) did it.",
+      "x": "$a = Get-MgAuditLogDirectoryAudit -Filter \"activityDisplayName eq 'Add member to group'\" -Top 5\n$a[0].InitiatedBy.App.DisplayName\nMicrosoft Teams Services"
+     },
+     {
+      "c": "$a[0].TargetResources[0].ModifiedProperties | Select-Object DisplayName, NewValue",
+      "d": "Find out which group it was",
+      "n": "TargetResources[0] is the user. Its ModifiedProperties hold the group's id and name.",
+      "x": "$a[0].TargetResources[0].ModifiedProperties | Select-Object DisplayName, NewValue\n\nDisplayName       NewValue\n-----------       --------\nGroup.ObjectID    \"8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c\"\nGroup.DisplayName \"Contoso\""
+     },
+     {
+      "c": "(Get-MgGroup -GroupId $id -Property ResourceProvisioningOptions).ResourceProvisioningOptions",
+      "d": "Is this group behind a team?",
+      "n": "Says Team for groups that have a team. On older teams it can be empty, so empty does not prove there is no team. The audit log is the reliable check.",
+      "x": "$id = \"8b3f1d2e-4c5a-4e7b-9a1c-2d3e4f5a6b7c\"\n(Get-MgGroup -GroupId $id -Property ResourceProvisioningOptions).ResourceProvisioningOptions\nTeam"
+     },
+     {
+      "c": "Add-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members -Links user@contoso.com",
+      "d": "Put someone back by hand",
+      "n": "The org-wide sync does not reliably re-add an account after it was blocked. Check first, then add.",
+      "x": "Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members | Where-Object PrimarySmtpAddress -eq \"user@contoso.com\"\nAdd-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members -Links user@contoso.com"
+     }
+    ]
    }
   ]
  },
@@ -1078,6 +1218,12 @@ const DATA = [
       "d": "Make sure it cannot happen again",
       "n": "Phishing-resistant MFA and Conditional Access policies. Write a short post-mortem.",
       "x": "Passkeys for all admins, token protection policy for Outlook and Teams"
+     },
+     {
+      "c": "After unblocking",
+      "d": "Check all@ and other group memberships by hand",
+      "n": "An org-wide team can remove a blocked account at night and does not reliably add it back after the unblock. Unblocking itself never restores anything. Compare the user's groups with a colleague in the same role and re-add what is missing.",
+      "x": "Get-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members | Where-Object PrimarySmtpAddress -eq \"user@contoso.com\"\nAdd-UnifiedGroupLinks -Identity all@contoso.com -LinkType Members -Links user@contoso.com\nGet-MgUserMemberOf -UserId user@contoso.com | ForEach-Object { $_.AdditionalProperties.displayName }"
      }
     ]
    },
@@ -1733,7 +1879,8 @@ const AUG = {
   "traps": [
    "Resetting the password but not revoking sessions. The stolen token keeps working.",
    "Starting the investigation before containing. The attacker is still inside while you read logs.",
-   "Forgetting inbox rules and OAuth apps. Those are how attackers come back after a reset."
+   "Forgetting inbox rules and OAuth apps. Those are how attackers come back after a reset.",
+   "Unblocking the account and calling it done. Check all@ and the other group memberships by hand."
   ],
   "quiz": [
    {
@@ -1775,6 +1922,63 @@ const AUG = {
   "traps": [
    "Stopping at 5000 results without paging. The rest is silently missing.",
    "Reusing a SessionId from a previous, different search. Use a fresh guid per search."
+  ]
+ },
+ "connect::Why Graph and Exchange fight": {
+  "concept": "Signing in to Microsoft 365 is done by a library called MSAL (Microsoft.Identity.Client). The Graph module and the Exchange module each carry their own copy, and the copies are not always the same version. One PowerShell window can only have one version of a library loaded, so the first module that loads wins and the second module has to live with that version. When Exchange wins, Graph calls a method its own version has and the Exchange version does not, and Connect-MgGraph dies with 'Method not found ... WithLogging'. The trap is that you do not have to connect to Exchange for this to happen: PowerShell loads a module the moment you run any of its commands, even one that fails with 'call Connect-ExchangeOnline first'. The fix is order, not reinstalling: a fresh window, Graph first, Exchange second.",
+  "figure": "  one PowerShell window = room for ONE copy of MSAL\n\n  Get-EXOMailbox (even failing)          Connect-MgGraph\n          |                                     |\n          v                                     v\n  Exchange module loads                 Graph module loads\n  + MSAL 4.61 (Exchange copy)  ------>  finds MSAL already loaded\n          WINS                          'Method not found ... WithLogging'\n\n  fix:  close window -> new window -> Connect-MgGraph -> Connect-ExchangeOnline",
+  "traps": [
+   "Testing one Exchange command 'just to check' before connecting Graph. It loads the Exchange module anyway.",
+   "Reinstalling Graph in the same window. The wrong MSAL stays loaded until the window closes.",
+   "Updating only one of the two modules. Update both so their MSAL versions line up again."
+  ],
+  "quiz": [
+   {
+    "q": "Get-EXOMailbox failed with 'call Connect-ExchangeOnline first'. Can it still break Connect-MgGraph?",
+    "a": "Yes. Running the command loaded the Exchange module and its MSAL copy, even though the command itself failed."
+   },
+   {
+    "q": "What is the quickest fix for 'Method not found ... WithLogging'?",
+    "a": "Close the window, open a new one, run Connect-MgGraph first and Connect-ExchangeOnline second."
+   }
+  ]
+ },
+ "sharepoint::Org-wide teams": {
+  "concept": "An org-wide team is a team whose member list follows the whole tenant: every active account is in it, automatically. Behind every team sits a Microsoft 365 group, and if that group is also your all@ mailing list, the team's sync decides who gets all@ mail. That explains three things that look like magic. New accounts appear in all@ within minutes, added by Microsoft Teams Services. A blocked account can disappear from it, usually at night, removed by the Teams and Channels Service. And after the account is unblocked it is not reliably added back, so someone silently stops getting company mail. You cannot always see it on the group: ResourceProvisioningOptions can be empty on older teams. The audit log shows it every time.",
+  "figure": "  account created    --- minutes later --->  ADDED to all@     by Microsoft Teams Services\n  account blocked    --- some night ------>  REMOVED from all@ by Teams And Channels Service\n  account unblocked  --- nothing reliable ->  still missing  ->  add back by hand\n\n  how to prove it:  audit log -> InitiatedBy.App -> ModifiedProperties Group.DisplayName",
+  "traps": [
+   "Looking for a dynamic rule. MembershipRule is empty: the team, not the group, manages membership.",
+   "Blaming your own cleanup script without checking the audit. A script shows up under the account that ran it.",
+   "Trusting ResourceProvisioningOptions. On older teams it can be empty even when there is a team."
+  ],
+  "quiz": [
+   {
+    "q": "The audit says InitiatedBy: Microsoft Teams Services for 'Add member to group'. What do you suspect?",
+    "a": "An org-wide team whose group is the one gaining members."
+   },
+   {
+    "q": "An account was blocked during an incident and is unblocked now. What do you check?",
+    "a": "all@ and the other group memberships, by hand. The org-wide sync may have removed it and does not reliably re-add it."
+   }
+  ]
+ },
+ "entra::Licence names (SKUs)": {
+  "concept": "PowerShell never shows the product name you see in the admin center. It shows the SkuPartNumber, a code that was picked years ago and never renamed. In 2020 Office 365 Business Essentials became Microsoft 365 Business Basic and Office 365 Business Premium became Business Standard, but the codes kept the old words. That is how a licence called PREMIUM ends up being Standard. When a code is unclear, look at what is inside: the ServicePlans list. Desktop apps (OFFICESUBSCRIPTION) separate Basic from Standard, and Intune plus Entra ID P1 separate Standard from Premium.",
+  "figure": "  SkuPartNumber              Product name                       Tell-tale service plan\n  ------------------------   --------------------------------   -----------------------\n  O365_BUSINESS_ESSENTIALS   Microsoft 365 Business Basic       no OFFICESUBSCRIPTION\n  O365_BUSINESS_PREMIUM      Microsoft 365 Business Standard    OFFICESUBSCRIPTION\n  SPB                        Microsoft 365 Business Premium     INTUNE_A, AAD_PREMIUM\n  FLOW_FREE                  Power Automate Free (self-service) FLOW_P2_VIRAL",
+  "traps": [
+   "Reading O365_BUSINESS_PREMIUM as Business Premium. It is Business Standard.",
+   "Counting FLOW_FREE as a paid licence. It is free and users sign up for it themselves.",
+   "Assigning a licence before UsageLocation is set. Set-MgUserLicense fails."
+  ],
+  "quiz": [
+   {
+    "q": "Which SkuPartNumber is Microsoft 365 Business Premium?",
+    "a": "SPB."
+   },
+   {
+    "q": "How do you tell Basic from Standard in PowerShell?",
+    "a": "Standard has the OFFICESUBSCRIPTION service plan (desktop apps). Basic does not."
+   }
   ]
  }
 };
@@ -2003,6 +2207,131 @@ const RECIPES = [
     "n": "Save the evidence before it ages out. Then continue with Investigate."
    }
   ]
+ },
+ {
+  "vol": "entra",
+  "t": "Bulk rename with preview, dry run and timed run",
+  "why": "Give a whole team a new address format (here firstname.lastname.security@contoso.com) without surprises: look first, test without changing, change after hours, then verify.",
+  "steps": [
+   {
+    "c": "Connect-MgGraph -Scopes \"User.ReadWrite.All\" -NoWelcome\nConnect-ExchangeOnline -ShowBanner:$false",
+    "n": "Graph first, then Exchange. The other order can break the Graph login."
+   },
+   {
+    "c": "function ConvertTo-NamePart($s) {\n    $t = $s.Normalize([Text.NormalizationForm]::FormD) -replace '\\p{Mn}', ''\n    ($t -replace '[^a-zA-Z]', '').ToLower()\n}",
+    "n": "FormD splits ë into e plus a separate accent mark, \\p{Mn} removes the marks, then everything that is not a letter goes. Zoë Van den Broeck becomes zoe and vandenbroeck."
+   },
+   {
+    "c": "$users = Get-MgUser -All -Property Id,GivenName,Surname,UserPrincipalName,Department\n$taken = $users.UserPrincipalName.ToLower()",
+    "n": "Ask for Department explicitly, or it is empty for everyone and the filter finds nobody."
+   },
+   {
+    "c": "$plan = $users | Where-Object Department -eq \"Security\" | ForEach-Object {\n    $new = \"{0}.{1}.security@contoso.com\" -f (ConvertTo-NamePart $_.GivenName), (ConvertTo-NamePart $_.Surname)\n    [pscustomobject]@{\n        OldUPN = $_.UserPrincipalName\n        NewUPN = $new\n        Same = $_.UserPrincipalName -eq $new\n        Conflict = $taken -contains $new\n    }\n}",
+    "n": "One row per person. Same means nothing to do. Conflict means the new name already exists."
+   },
+   {
+    "c": "$plan | Export-Csv ~/Desktop/security-plan.csv -NoTypeInformation -Encoding UTF8",
+    "n": "The preview. Open it in Excel and read every row. Nothing has changed yet."
+   },
+   {
+    "c": "$rows = Import-Csv ~/Desktop/security-plan.csv | Where-Object { $_.Same -eq \"False\" -and $_.Conflict -eq \"False\" }",
+    "n": "CSV values are text, so compare to \"False\", not $false. Edit the CSV first if you want to drop someone."
+   },
+   {
+    "c": "$rows | ForEach-Object { Get-EXORecipient -Filter \"EmailAddresses -eq 'smtp:$($_.NewUPN)'\" }",
+    "n": "Alias check. No output means none of the new addresses is in use as an alias somewhere."
+   },
+   {
+    "c": "$rows | ForEach-Object { Set-Mailbox -Identity $_.OldUPN -WindowsEmailAddress $_.NewUPN -WhatIf }",
+    "n": "Dry run. One 'What if' line per mailbox, no changes."
+   },
+   {
+    "c": "& {\n    Start-Sleep -Seconds ((Get-Date \"18:00\") - (Get-Date)).TotalSeconds\n    $log = foreach ($r in $rows) {\n        try {\n            Set-Mailbox -Identity $r.OldUPN -WindowsEmailAddress $r.NewUPN -ErrorAction Stop\n            Update-MgUser -UserId $r.OldUPN -UserPrincipalName $r.NewUPN -ErrorAction Stop\n            $status = \"OK\"\n        } catch { $status = $_.Exception.Message }\n        [pscustomobject]@{ OldUPN = $r.OldUPN; NewUPN = $r.NewUPN; Status = $status }\n    }\n    $log | Export-Csv ~/Desktop/security-log.csv -NoTypeInformation -Encoding UTF8\n}",
+    "n": "The timed run. & { } makes it one block, Start-Sleep waits until 18:00, -ErrorAction Stop lets catch see every failure, and the log is your receipt."
+   },
+   {
+    "c": "$check = foreach ($r in $rows) {\n    $m = Get-EXOMailbox -Identity $r.NewUPN -Properties EmailAddresses -ErrorAction SilentlyContinue\n    [pscustomobject]@{\n        NewUPN = $r.NewUPN\n        Found = [bool]$m\n        Primary = $m.PrimarySmtpAddress -eq $r.NewUPN\n        OldKept = $m.EmailAddresses -contains \"smtp:$($r.OldUPN)\"\n    }\n}\n$check | Format-Table",
+    "n": "Verify instead of trusting the log. Any Primary False goes to the recipe 'Primary address won't change'."
+   }
+  ]
+ },
+ {
+  "vol": "exchange",
+  "t": "Primary address won't change",
+  "why": "The rename said OK, the new address is on the mailbox, but mail still goes out from the old one. Swap SMTP: and smtp: yourself.",
+  "steps": [
+   {
+    "c": "Get-Mailbox jan.peeters.security@contoso.com | Select-Object -Expand EmailAddresses",
+    "n": "SMTP: in capitals is the primary, small smtp: is an alias. Here the new address is only an alias."
+   },
+   {
+    "c": "Set-Mailbox jan.peeters.security@contoso.com -EmailAddresses @{Add=\"SMTP:jan.peeters.security@contoso.com\"}",
+    "n": "Does nothing: Exchange ignores case when it checks whether an address exists, sees it already has it, and leaves it alone."
+   },
+   {
+    "c": "$list = (Get-Mailbox jan.peeters.security@contoso.com).EmailAddresses | ForEach-Object {\n    if ($_ -ceq \"SMTP:jp@contoso.com\") { \"smtp:jp@contoso.com\" }\n    elseif ($_ -ceq \"smtp:jan.peeters.security@contoso.com\") { \"SMTP:jan.peeters.security@contoso.com\" }\n    else { $_ }\n}",
+    "n": "Rebuild the list. -ceq respects capitals, so each line matches exactly one entry. Everything else passes through unchanged."
+   },
+   {
+    "c": "$list",
+    "n": "Read it before writing. Exactly one SMTP: in capitals, and nothing lost."
+   },
+   {
+    "c": "Set-Mailbox jan.peeters.security@contoso.com -EmailAddresses $list",
+    "n": "Without @{Add=...} this replaces the whole list, which is why you checked it."
+   },
+   {
+    "c": "Get-Mailbox jan.peeters.security@contoso.com | Select-Object PrimarySmtpAddress, UserPrincipalName",
+    "n": "Primary and sign-in name now match. The old address still receives mail as an alias."
+   }
+  ]
+ },
+ {
+  "vol": "entra",
+  "t": "Create users from a template",
+  "why": "Same department, same job, same licence: write the shared details once, splat them, and finish with the mailbox side.",
+  "steps": [
+   {
+    "c": "Connect-MgGraph -Scopes \"User.ReadWrite.All\",\"Organization.Read.All\" -NoWelcome",
+    "n": "Organization.Read.All lets you read the licence counts."
+   },
+   {
+    "c": "$userInfo = @{\n    Department = \"Security\"\n    JobTitle = \"Security Analyst\"\n    OfficeLocation = \"HQ\"\n    City = \"Brussels\"\n    Country = \"Belgium\"\n    UsageLocation = \"BE\"\n    MobilePhone = \"+32 470 00 00 00\"\n    BusinessPhones = @(\"+32 2 000 00 00\")\n}",
+    "n": "The template. Not $profile: that name already belongs to PowerShell. BusinessPhones is a list."
+   },
+   {
+    "c": "$pw = \"Tmp-\" + (Get-Random -Minimum 100000 -Maximum 999999) + \"!\"\n$userInfo.PasswordProfile = @{ Password = $pw; ForceChangePasswordNextSignIn = $true }",
+    "n": "A random temporary password the user must change at first sign-in."
+   },
+   {
+    "c": "$new = New-MgUser @userInfo -DisplayName \"Noor Haddad\" -MailNickname \"noor.haddad\" -UserPrincipalName \"noor.haddad@contoso.com\" -AccountEnabled",
+    "n": "@userInfo splats the template. The personal parameters follow as usual."
+   },
+   {
+    "c": "$sku = (Get-MgUserLicenseDetail -UserId user@contoso.com).SkuId\nGet-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits, @{n=\"Total\";e={$_.PrepaidUnits.Enabled}}",
+    "n": "Copy the licence of a colleague in the same role, and check Total minus ConsumedUnits before you assign."
+   },
+   {
+    "c": "Set-MgUserLicense -UserId $new.Id -AddLicenses @{SkuId = $sku} -RemoveLicenses @()",
+    "n": "Works because UsageLocation came with the template."
+   },
+   {
+    "c": "Connect-ExchangeOnline -ShowBanner:$false\nwhile (-not (Get-EXOMailbox -Identity $new.UserPrincipalName -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 30 }",
+    "n": "The mailbox appears a few minutes after the licence. The loop waits for it quietly."
+   },
+   {
+    "c": "New-Mailbox -Shared -Name \"Security Desk\" -PrimarySmtpAddress security@contoso.com\nAdd-MailboxPermission -Identity security@contoso.com -User $new.UserPrincipalName -AccessRights FullAccess -AutoMapping $true\nAdd-RecipientPermission -Identity security@contoso.com -Trustee $new.UserPrincipalName -AccessRights SendAs -Confirm:$false",
+    "n": "A shared mailbox for the team, with FullAccess to read and SendAs to answer from it."
+   },
+   {
+    "c": "Set-Mailbox -Identity $new.UserPrincipalName -CustomAttribute1 \"Employee\" -CustomAttribute2 \"Security\"",
+    "n": "Labels that scripts, like a group sync, can read later."
+   },
+   {
+    "c": "@(\"Name: Noor Haddad\", \"Login: $($new.UserPrincipalName)\", \"Temp password: $pw\") -join \"`n\" | Set-Clipboard",
+    "n": "Login details on the clipboard, one per line, ready to hand over in person."
+   }
+  ]
  }
 ];
 const GLOSSARY = [
@@ -2227,6 +2556,41 @@ const GLOSSARY = [
   "c": "OAuth consent",
   "d": "Permission a user gave an app",
   "n": "Listed with Get-MgUserOauth2PermissionGrant. Malicious apps survive a password reset."
+ },
+ {
+  "vol": "sharepoint",
+  "c": "Org-wide team",
+  "d": "A team that automatically contains every active account",
+  "n": "Its group gains every new account and can lose blocked ones. Spotted via the audit log: InitiatedBy Microsoft Teams Services.",
+  "x": "$a = Get-MgAuditLogDirectoryAudit -Filter \"activityDisplayName eq 'Add member to group'\" -Top 5\n$a[0].InitiatedBy.App.DisplayName\nMicrosoft Teams Services"
+ },
+ {
+  "vol": "connect",
+  "c": "MSAL",
+  "d": "Microsoft Authentication Library, the code that signs you in",
+  "n": "Shipped inside both the Graph and the Exchange module. One window loads one version, so connect Graph first.",
+  "x": "Connect-MgGraph -NoWelcome\nConnect-ExchangeOnline -ShowBanner:$false"
+ },
+ {
+  "vol": "script",
+  "c": "Splatting",
+  "d": "Passing a hashtable as parameters with @",
+  "n": "Each key becomes -Key value. Write shared settings once and reuse them.",
+  "x": "$p = @{ Identity = \"user@contoso.com\"; CustomAttribute1 = \"Employee\" }\nSet-Mailbox @p"
+ },
+ {
+  "vol": "script",
+  "c": "Dry run",
+  "d": "Running a change in show-only mode",
+  "n": "-WhatIf on Exchange Set- commands, or a preview CSV before a bulk change.",
+  "x": "Set-Mailbox -Identity user@contoso.com -CustomAttribute1 \"Employee\" -WhatIf\nWhat if: Setting mailbox \"user@contoso.com\"."
+ },
+ {
+  "vol": "script",
+  "c": "Case-sensitive comparison",
+  "d": "A comparison where capitals count",
+  "n": "-ceq, -clike, -cmatch. Needed for SMTP: (primary) versus smtp: (alias).",
+  "x": "\"SMTP:a@contoso.com\" -ceq \"smtp:a@contoso.com\"\nFalse"
  }
 ];
 const KEY_THEME = "mscodex.theme";
@@ -2285,7 +2649,7 @@ GLOSSARY.forEach(item => {
   FLAT.push({
     key: "glossary::" + item.vol + "::" + item.c,
     vol: vol, group: "Glossary", glossary: true,
-    entry: { c: item.c, d: item.d, n: item.n },
+    entry: { c: item.c, d: item.d, n: item.n, x: item.x },
     hay: (item.c + " " + item.d + " " + item.n + " glossary " + vol.name).toLowerCase()
   });
 });
