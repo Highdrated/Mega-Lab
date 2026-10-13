@@ -67,6 +67,10 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .seg.mode button{height:30px;padding:0 11px;font-size:10px}
 .seg.mode button.on{background:var(--ink);color:#fbf3e3}
 .pcap .mst.off{visibility:hidden}
+.pcap .mst .medal{height:15px;width:auto;vertical-align:-3px;margin-right:6px}
+.ldish{height:78px;width:auto;object-fit:contain;flex:none;filter:drop-shadow(0 5px 7px rgba(80,55,20,.15))}
+.ldish.big{height:110px}
+.hmedal{height:70px;width:auto;flex:none}
 .pcap .mst{display:block;margin-top:3px;font-family:var(--mono);font-size:8.5px;letter-spacing:.32em;color:var(--brass)}
 #reqbox{display:none;position:absolute;right:14px;top:46px;z-index:6;background:var(--panel);border:1px solid var(--line2);border-radius:var(--r);padding:12px 16px;font-family:var(--mono);font-size:12px;line-height:1.65;white-space:pre-wrap;color:var(--ink2);box-shadow:0 12px 30px rgba(60,40,15,.18);max-width:90%}
 #reqbox.on{display:block}#reqbox b{color:var(--brass)}#reqbox em{color:var(--mute);font-style:normal}
@@ -191,14 +195,19 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .board p{margin:2px 0 0;color:var(--mute);font-size:14px;font-style:italic}
 .board .cnt{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass)}
 .plates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:22px 28px;padding:14px 18px 30px;min-height:0;overflow:auto}
-.plate{display:flex;flex-direction:column;align-items:center;gap:12px;min-height:0}
-.pframe{position:relative;width:100%;flex:1;min-height:120px;border:1px solid var(--gold);outline:1px solid rgba(176,132,52,.18);outline-offset:5px;background:#fffdf8;box-shadow:0 14px 26px -16px rgba(70,45,15,.45);cursor:zoom-in;overflow:hidden;transition:border-color .3s,outline-color .3s}
+.plate{display:flex;flex-direction:column;gap:10px;min-height:0}
+.scene{flex:1;min-height:120px;display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:14px;align-items:center;position:relative}
+.scene .art{position:relative;height:100%;min-height:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
+.scene .art::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:9px;border-radius:50%;background:radial-gradient(closest-side,rgba(90,60,25,.22),transparent)}
+.scene .art img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(80,55,20,.18));position:relative;z-index:1}
+.plate.waiting .art img{filter:grayscale(.75) sepia(.25) opacity(.42)}
+.pframe{position:relative;width:100%;aspect-ratio:4/3;max-height:100%;justify-self:center;border:1px solid var(--gold);outline:1px solid rgba(176,132,52,.18);outline-offset:5px;background:#fffdf8;box-shadow:0 14px 26px -16px rgba(70,45,15,.45);cursor:zoom-in;overflow:hidden;transition:border-color .3s,outline-color .3s}
 .pframe:hover{border-color:rgba(176,132,52,.9);outline-color:rgba(176,132,52,.4)}
 .pview{position:absolute;inset:0;overflow:hidden}
 .pview iframe{position:absolute;left:0;top:0;width:640px;height:480px;border:0;transform-origin:0 0;transform:scale(var(--s,.3));pointer-events:none;background:#fff}
 .pframe::after{content:'';position:absolute;inset:0;pointer-events:none;box-shadow:inset 0 0 18px rgba(80,55,20,.12)}
 .pframe.empty{cursor:default;background:transparent;border-color:rgba(176,132,52,.25);box-shadow:none;outline-color:rgba(176,132,52,.08);display:flex;align-items:center;justify-content:center;flex-direction:column;gap:6px}
-.pframe.empty img{width:46%;max-width:110px;opacity:.55;filter:saturate(.7)}
+.pframe.empty img{width:42%;max-width:90px;opacity:.5;filter:saturate(.7)}
 .pframe.empty span{font-style:italic;font-size:13px;color:var(--mute)}
 .pframe.empty::after{display:none}
 .pframe.fresh{animation:fresh 1.4s 2}
@@ -4469,6 +4478,8 @@ MORE.push(
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
+const DISH='img/passle/';
+const dishImg=(id,cls)=>'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="">';
 const KEY='passle.v2';
 const PLATE_NAMES=['Menu card','Dish label','The pantry','Menu board','Kitchen helpers','Split the kitchen','Order slip','Safe orders','Table service','Recipe book','The cellar',"Roux's Bistro"];
 const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
@@ -4625,7 +4636,7 @@ function renderLesson(id,k,n,back){
   const r=RULES[id];
   $('dtitle').textContent=back?'Lesson · Rule '+r.n:'Lesson '+(k+1)+' of '+n;$('pips').innerHTML='';
   const box=$('dbox');
-  box.innerHTML='<div class="lhead"><div><div class="dk">Rule '+r.n+' · '+esc(r.cat)+'</div><h2 class="lt">'+esc(r.title)+'</h2></div><img id="lroux" src="'+ROUX+'idle.png" alt=""></div><p class="why">'+esc(r.why)+'</p>'
+  box.innerHTML='<div class="lhead"><div><div class="dk">Rule '+r.n+' · '+esc(r.cat)+'</div><h2 class="lt">'+esc(r.title)+'</h2></div>'+(back?'':dishImg(T().id,'ldish'))+'<img id="lroux" src="'+ROUX+'idle.png" alt=""></div><p class="why">'+esc(r.why)+'</p>'
    +'<div class="sec"><small>Anatomy</small><div class="parts">'+r.parts.map(([a,b])=>'<code>'+esc(a)+'</code><span>'+esc(b)+'</span>').join('')+'</div></div>'
    +'<div class="sec"><small>Pattern</small><div class="syn">'+r.syn+'</div></div>'
    +'<div class="sec warn"><small>Watch out</small><ul>'+r.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>'
@@ -4656,7 +4667,7 @@ function renderSchool(){
 }
 function practiceDone(){
   $('dtitle').textContent='Practice complete';sideRule(null);
-  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div><img src="'+ROUX+'cheer.png" alt=""></div><p class="hint0">Practice mixes drills from every rule you have learned. Run it whenever you have five minutes.</p><div class="drow"><button class="pri" id="again">New round</button></div></div>';
+  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div>'+(PR.ft===PR.list.length?dishImg('badge','ldish'):'')+'<img src="'+ROUX+'cheer.png" alt=""></div><p class="hint0">Practice mixes drills from every rule you have learned. Run it whenever you have five minutes.</p><div class="drow"><button class="pri" id="again">New round</button></div></div>';
   $('again').onclick=()=>{PR=null;sfx.click();renderSchool()};sfx.rule();
 }
 function sideRule(id){
@@ -4704,7 +4715,7 @@ function schoolComplete(){
   const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
   if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();comms('New rules in the Rulebook and the Codex.');render();return}
   $('dtitle').textContent='School complete';
-  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Session report</div><h2>Ready for the pass</h2></div><img src="'+ROUX+'cheer.png" alt=""></div><ul>'+tg.rules.map(r=>'<li>Rule '+RULES[r].n+': '+esc(RULES[r].title)+'</li>').join('')+'</ul><div class="win">Next up: <b>'+esc(tg.name)+'</b>. You only need what you just practised.</div><div class="drow"><button id="redo">Redo drills</button><button class="pri" id="goT">Start the plate</button></div></div>';
+  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Session report</div><h2>Ready for the pass</h2></div>'+dishImg(tg.id,'ldish big')+'<img src="'+ROUX+'cheer.png" alt=""></div><ul>'+tg.rules.map(r=>'<li>Rule '+RULES[r].n+': '+esc(RULES[r].title)+'</li>').join('')+'</ul><div class="win">Next up: <b>'+esc(tg.name)+'</b>. You only need what you just practised.</div><div class="drow"><button id="redo">Redo drills</button><button class="pri" id="goT">Start the plate</button></div></div>';
   $('redo').onclick=()=>{S.drill=0;save();sfx.click();renderSchool()};
   $('goT').onclick=()=>{sfx.click();go('target')};
   $('stitle').textContent="Today's plate";$('plabel').textContent=tg.name;const sd=$('sside');sd.innerHTML='<div class="res" style="flex:1"></div>';const res=sd.firstChild;resultInto(res,null);solOut(tg).then(r=>{if(res.isConnected)resultInto(res,r)});
@@ -4788,7 +4799,7 @@ function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
   if(curStep===-1){
     $('hstep').textContent='all steps done';
-    lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt=""><div class="win"><b>'+(S.mode==='master'?'Mastered.':'Plate matched.')+'</b> '+esc(tg.name)+(S.mode==='master'?' built from a blank file, by heart.':' is ready for the menu board.')+(S.mode==='learn'&&!S.mastered[tg.id]?' Next challenge: switch to Mastery and build it from nothing.':'')+'</div></div><div class="hint0">Take it home in the top bar downloads this as a real project folder you can run with <code>php -S localhost:8000 -t public</code>.</div>';
+    lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt="">'+(S.mode==='master'?dishImg('badge','hmedal'):'')+'<div class="win"><b>'+(S.mode==='master'?'Mastered.':'Plate matched.')+'</b> '+esc(tg.name)+(S.mode==='master'?' built from a blank file, by heart.':' is ready for the menu board.')+(S.mode==='learn'&&!S.mastered[tg.id]?' Next challenge: switch to Mastery and build it from nothing.':'')+'</div></div><div class="hint0">Take it home in the top bar downloads this as a real project folder you can run with <code>php -S localhost:8000 -t public</code>.</div>';
     const b=document.createElement('button');b.className='pri';b.textContent='Send to the kitchen';b.onclick=()=>{freshPlate=tg.id;sfx.serve();comms(tg.name+' is on the menu board.');go('kitchen')};foot.appendChild(b);return;
   }
   $('hstep').textContent=curStep>=0?'step '+(curStep+1):'';
@@ -4847,18 +4858,20 @@ function renderKitchen(){
     const tg=TARGETS[i]&&!isMaster(TARGETS[i])?TARGETS[i]:null;
     const ms=tg?TARGETS.find(x=>x.master===i&&S.built[x.id]):null;
     const show=ms||tg;const b=show?S.built[show.id]:null;if(b)served++;
-    const el=document.createElement('div');el.className='plate';
+    const el=document.createElement('div');el.className='plate'+(b?'':' waiting');
+    const sc=document.createElement('div');sc.className='scene';
+    const art=document.createElement('div');art.className='art';art.innerHTML=show?dishImg(ms?ms.id:show.id):'';
     const fr=document.createElement('div');
     if(b){
       fr.className='pframe'+(freshPlate===show.id?' fresh':'');fr.title='Open your plate';
       const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=name;f.tabIndex=-1;f.srcdoc=b.out;pv.appendChild(f);fr.appendChild(pv);
       fr.onclick=()=>{sfx.blip();openViewer('Plate '+ROM[i]+' · '+(ms?ms.name:name),b.out)};
     }else{
-      fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(tg&&unlocked(i)?'awaiting your plate':'not on the menu yet')+'</span>';
+      fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(tg&&unlocked(i)?'awaiting your plate':'not yet')+'</span>';
     }
     const mst=tg&&S.mastered[tg.id];
-    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst?'':' off')+'">by heart</span>';
-    el.appendChild(fr);el.appendChild(cap);box.appendChild(el);
+    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst?'':' off')+'">'+dishImg('badge','medal')+'by heart</span>';
+    sc.appendChild(art);sc.appendChild(fr);el.appendChild(sc);el.appendChild(cap);box.appendChild(el);
   });
   $('kcnt').textContent=served+' of '+PLATE_NAMES.length+' plated';
   const k=$('kroux');if(freshPlate){pose(k,'serve',3200)}else k.src=ROUX+(served?'happy':'idle')+'.png';
