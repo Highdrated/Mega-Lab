@@ -5464,6 +5464,7 @@ function rushAnswer(v){
 function rushFinish(timeUp){
   RUSH.done=true;clearInterval(RUSH.timer);RUSH.timeUp=timeUp;RUSH.used=Math.min(Date.now(),RUSH.deadline)-RUSH.start;
   while(RUSH.answers.length<RUSH.list.length){const d=RUSH.list[RUSH.answers.length];RUSH.answers.push({d,v:null,ok:false,skipped:true})}
+  RUSH.answers.forEach(a=>markRule(a.d.r,a.ok));
   const ok=RUSH.answers.filter(a=>a.ok).length,pct=Math.round(ok/RUSH.list.length*100);
   S.rushes=(S.rushes||[]).concat([{at:new Date().toISOString().slice(0,16).replace('T',' '),pct,n:RUSH.list.length}]).slice(-20);save();
   if(pct>=70)sfx.target();else sfx.rule();
@@ -5475,8 +5476,9 @@ function rushSide(){
     sd.innerHTML='<div class="rail">'+RUSH.list.map((d,i)=>'<span class="'+(i<RUSH.i?'done':(i===RUSH.i?'now':''))+'">'+(i+1)+'</span>').join('')+'</div><p class="hint0 rnote">No hints and no answers until the end, like the real thing. Unanswered tickets count as wrong when the clock runs out.</p>';
     return;
   }
+  $('stitle').textContent='Service history';
   const h=(S.rushes||[]).slice().reverse();
-  sd.innerHTML='<div class="rhist"><small>Past services</small>'+(h.length?h.map(r=>'<div class="rrow"><span>'+esc(r.at)+'</span><span class="rbar"><i style="width:'+r.pct+'%"></i></span><b class="'+(r.pct>=70?'pass':'')+'">'+r.pct+'%</b></div>').join(''):'<p class="hint0">No services yet.</p>')+'</div>';
+  sd.innerHTML='<div class="rhist"><small>Past services</small>'+(h.length?h.map(r=>'<div class="rrow"><span>'+esc(r.at)+'</span><span class="rbar"><i style="width:'+r.pct+'%"></i></span><b class="'+(r.pct>=70?'pass':'')+'">'+r.pct+'%</b></div>').join(''):'<p class="hint0">No services yet. Run a Rush when you want to know where you stand.</p>')+'</div>';
 }
 function renderRush(){
   const box=$('dbox');$('pips').innerHTML='';
@@ -5678,8 +5680,14 @@ function practiceList(){
   const pool=[];TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))}));
   MORE.forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))});
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-  return pool.slice(0,10);
+  const miss=S.miss||{},weak=pool.filter(d=>(miss[d.r]||0)>0).sort((a,b)=>(miss[b.r]||0)-(miss[a.r]||0));
+  const seen=new Set(),out=[];
+  for(const d of weak){if(out.length>=6)break;if(!seen.has(d.q)){seen.add(d.q);out.push(Object.assign({},d,{weak:1}))}}
+  for(const d of pool){if(out.length>=10)break;if(!seen.has(d.q)){seen.add(d.q);out.push(d)}}
+  for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
+  return out;
 }
+function markRule(r,ok){S.miss=S.miss||{};const n=(S.miss[r]||0)+(ok?-1:1);if(n>0)S.miss[r]=Math.min(n,5);else delete S.miss[r];save()}
 const lessonsDone=t=>(S.les||0)>=TARGETS[t].rules.length||S.drill>0;
 function exampleBlock(code,title,id){
   const e=document.createElement('div');e.className='exb';
@@ -5723,8 +5731,8 @@ function renderSchool(){
 }
 function practiceDone(){
   $('dtitle').textContent='Practice complete';sideRule(null);
-  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div>'+(PR.ft===PR.list.length?dishImg('badge','ldish'):'')+'<img src="'+ROUX+'cheer.png" alt=""></div><p class="hint0">Practice mixes drills from every rule you have learned. Run it whenever you have five minutes.</p><div class="drow"><button class="pri" id="again">New round</button></div></div>';
-  $('again').onclick=()=>{PR=null;sfx.click();renderSchool()};sfx.rule();
+  const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div>'+(PR.ft===PR.list.length?dishImg('badge','ldish'):'')+'<img src="'+ROUX+'cheer.png" alt=""></div><p class="hint0">Practice mixes drills from every rule you have learned, and leans on the rules you missed in drills or in a Rush until you get them right.</p>'+(Object.keys(S.miss||{}).length?'<div class="sec warn"><small>Still on the weak list</small><ul>'+Object.keys(S.miss).filter(r=>RULES[r]).map(r=>'<li>Rule '+RULES[r].n+': '+esc(RULES[r].title)+'</li>').join('')+'</ul></div>':'<div class="win">Nothing on the weak list. Roux approves.</div>')+'<div class="drow"><button class="pri" id="again">New round</button></div></div>';
+  $('again').onclick=()=>{PR=null;sfx.click();renderSchool()};sfx.rule();if(!RUSH||RUSH.done)rushSide();
 }
 function sideRule(id){
   const sd=$('sside');sd.innerHTML='';
@@ -5737,7 +5745,7 @@ function renderDrill(d,i,n){
   $('dtitle').textContent=(S.stage==='practice'?'Practice ':'Drill ')+(i+1)+' of '+n;
   const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug'}[d.k];
   const R=RULES[d.r];
-  box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dbody"><div class="dk">'+(d.rv?'Review · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div><div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div></div><img class="droux" id="droux" src="'+ROUX+'idle.png" alt=""></div><div class="sec warn"><small>Watch out</small><ul>'+R.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>';
+  box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dbody"><div class="dk">'+(d.rv?'Review · ':'')+(d.weak?'Weak spot · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div><div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div></div><img class="droux" id="droux" src="'+ROUX+'idle.png" alt=""></div><div class="sec warn"><small>Watch out</small><ul>'+R.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>';
   $('lessbtn').onclick=()=>{sfx.blip();renderLesson(d.r,0,1,true)};
   sideRule(d.r);
   const din=$('din');
@@ -5751,22 +5759,22 @@ function renderDrill(d,i,n){
     $('dcheck').onclick=()=>checkDrill(d);setTimeout(()=>inp.focus(),30);
   }
 }
-function pick(d,j,b){if(dState.locked)return;if(j===d.a){b.classList.add('good');passDrill()}else{b.classList.add('bad');failDrill(d)}}
+function pick(d,j,b){if(dState.locked)return;if(j===d.a){b.classList.add('good');passDrill(d)}else{b.classList.add('bad');failDrill(d)}}
 function checkDrill(d){
   const v=$('dval').value.trim(),fb=$('fb');
   if(!v){fb.className='fb err';fb.textContent='Type an answer first.';sfx.bad();return}
   const ok=d.k==='gap'?d.a.includes(v):d.test.test(v.replace(/\s+/g,' '));
-  ok?passDrill():failDrill(d);
+  ok?passDrill(d):failDrill(d);
 }
-function passDrill(){
-  if(dState.locked)return;dState.locked=true;
+function passDrill(d){
+  if(dState.locked)return;dState.locked=true;if(d&&dState.tries===0)markRule(d.r,true);
   if(dState.tries===0)S.ft++;
   const fb=$('fb');fb.className='fb ok';fb.textContent=['Oui, chef.','Clean plate.','Spot on.','Service!'][Math.floor(Math.random()*4)];
   pose($('droux'),'happy',900);
   if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
   sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool()},800);
 }
-function failDrill(d){dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);pose($('droux'),'stern',1400);sfx.bad()}
+function failDrill(d){if(dState.tries===0)markRule(d.r,false);dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);pose($('droux'),'stern',1400);sfx.bad()}
 function schoolComplete(){
   const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
   if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();comms('New rules in the Rulebook and the Codex.');render();return}
