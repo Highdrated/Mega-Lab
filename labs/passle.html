@@ -194,12 +194,14 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .board h2{margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:.02em}
 .board p{margin:2px 0 0;color:var(--mute);font-size:14px;font-style:italic}
 .board .cnt{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass)}
-.plates{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(0,1fr);gap:22px 28px;padding:14px 18px 30px;min-height:0;overflow:auto}
+.plates{padding:14px 18px 30px;min-height:0;overflow:auto}
+.pgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:clamp(220px,calc((100vh - 230px) / 3),300px);gap:22px 28px}
 .plate{display:flex;flex-direction:column;gap:10px;min-height:0}
 .scene{flex:1;min-height:120px;display:grid;grid-template-columns:minmax(0,.8fr) minmax(0,1.2fr);gap:14px;align-items:center;position:relative}
 .scene .art{position:relative;height:100%;min-height:0;display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
 .scene .art::after{content:'';position:absolute;left:14%;right:14%;bottom:0;height:9px;border-radius:50%;background:radial-gradient(closest-side,rgba(90,60,25,.22),transparent)}
 .scene .art img{max-width:100%;max-height:100%;object-fit:contain;filter:drop-shadow(0 6px 8px rgba(80,55,20,.18));position:relative;z-index:1}
+.scene .art.noart::after{display:none}
 .plate.waiting .art img{filter:grayscale(.75) sepia(.25) opacity(.42)}
 .pframe{position:relative;width:100%;aspect-ratio:4/3;max-height:100%;justify-self:center;border:1px solid var(--gold);outline:1px solid rgba(176,132,52,.18);outline-offset:5px;background:#fffdf8;box-shadow:0 14px 26px -16px rgba(70,45,15,.45);cursor:zoom-in;overflow:hidden;transition:border-color .3s,outline-color .3s}
 .pframe:hover{border-color:rgba(176,132,52,.9);outline-color:rgba(176,132,52,.4)}
@@ -212,6 +214,9 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .pframe.empty::after{display:none}
 .pframe.fresh{animation:fresh 1.4s 2}
 @keyframes fresh{50%{border-color:var(--brass);outline-color:rgba(176,132,52,.6)}}
+.kdiv{text-align:center;margin:30px 0 18px;font-family:var(--mono);font-size:10.5px;letter-spacing:.34em;text-transform:uppercase;color:var(--brass);height:auto!important;align-self:center;padding:10px 0 4px}
+.kdiv i{display:inline-block;width:60px;height:1px;background:var(--gold);vertical-align:middle;margin:0 14px}
+.kdiv em{display:block;margin-top:6px;font-family:var(--disp);font-style:italic;font-size:14px;letter-spacing:.02em;text-transform:none;color:var(--mute)}
 .pcap{font-family:var(--mono);font-size:9.5px;letter-spacing:.3em;text-transform:uppercase;color:var(--mute);white-space:nowrap;text-align:center}
 .pcap i{display:inline-block;width:16px;height:1px;background:var(--gold);vertical-align:middle;margin:0 8px}
 .pcap em{display:block;margin-top:5px;font-family:var(--disp);font-style:italic;font-size:14px;letter-spacing:.02em;text-transform:none;color:var(--ink2)}
@@ -265,7 +270,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
   .meter .bar{width:40px}
   .seg button{padding:0 7px}
 }
-@media (max-width:1150px){#v-target{grid-template-columns:270px minmax(0,1fr) minmax(0,1fr)}.plates{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:220px}#v-rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media (max-width:1150px){#v-target{grid-template-columns:270px minmax(0,1fr) minmax(0,1fr)}.pgrid{grid-template-columns:repeat(3,minmax(0,1fr));grid-auto-rows:220px}#v-rules{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:900px){
   body{overflow:auto;grid-template-rows:auto auto}
   #bar{grid-template-columns:1fr 1fr;padding:8px 12px;gap:8px}
@@ -273,7 +278,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
   main{height:auto}.view.on{height:auto}
   #v-school,#v-target,#v-rules{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(340px,auto)}
   #v-target .left,#v-target .edp{grid-row:auto;grid-column:auto}
-  .plates{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:200px}
+  .pgrid{grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:200px}
   .exb .eb{grid-template-columns:1fr}
 }
 @media (max-width:1250px) and (min-width:901px){#eng{display:none}}
@@ -4475,14 +4480,936 @@ MORE.push(
  {k:'pick',r:'pz6',q:'`round(2.5)` and `round(-2.5)` give…',o:['2 and -2','3 and -3','3 and -2','2 and -3'],a:1,h:'Halves round away from zero.'}
 );
 
+const SPSOL={
+"api": {
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$dishes = [\n    1 => ['id' => 1, 'name' => 'Onion soup', 'price' => 7.5],\n    2 => ['id' => 2, 'name' => 'Coq au vin', 'price' => 21.5],\n    3 => ['id' => 3, 'name' => 'Tarte tatin', 'price' => 9.0],\n];\n\nfunction respond(int $status, array $data): void\n{\n    http_response_code($status);\n    header('Content-Type: application/json; charset=utf-8');\n    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);\n}\n\n$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';\n$method = $_SERVER['REQUEST_METHOD'];\n\nif ($path !== '/api/dishes') {\n    respond(404, ['error' => 'Not found']);\n\n    return;\n}\n\nif ($method === 'GET' && !isset($_GET['id'])) {\n    respond(200, ['dishes' => array_values($dishes)]);\n\n    return;\n}\n\nif ($method === 'GET') {\n    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);\n    if ($id === false || !isset($dishes[$id])) {\n        respond(404, ['error' => 'No such dish']);\n\n        return;\n    }\n\n    respond(200, $dishes[$id]);\n\n    return;\n}\n\nif ($method === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $price = filter_var($_POST['price'] ?? '', FILTER_VALIDATE_FLOAT);\n    $errors = [];\n\n    if ($name === '') {\n        $errors[] = 'name is required';\n    }\n    if ($price === false || $price <= 0) {\n        $errors[] = 'price must be a positive number';\n    }\n    if ($errors !== []) {\n        respond(400, ['errors' => $errors]);\n\n        return;\n    }\n\n    respond(201, ['id' => max(array_keys($dishes)) + 1, 'name' => $name, 'price' => $price]);\n\n    return;\n}\n\nheader('Allow: GET, POST');\nrespond(405, ['error' => 'Method not allowed']);\n"
+},
+"brigade": {
+"src/Patissier.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Patissier extends Cook\n{\n    use ClocksIn;\n\n    public function station(): string\n    {\n        return 'pastry';\n    }\n\n    public function introduce(): string\n    {\n        return parent::introduce() . ' ✦';\n    }\n}\n",
+"src/Saucier.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Saucier extends Cook\n{\n    use ClocksIn;\n\n    public function station(): string\n    {\n        return 'sauce';\n    }\n}\n",
+"src/ClocksIn.php": "<?php\n\ndeclare(strict_types=1);\n\ntrait ClocksIn\n{\n    private array $shifts = [];\n\n    public function clockIn(string $day): void\n    {\n        $this->shifts[] = $day;\n    }\n\n    public function shiftCount(): int\n    {\n        return count($this->shifts);\n    }\n}\n",
+"src/Cook.php": "<?php\n\ndeclare(strict_types=1);\n\nabstract class Cook\n{\n    private static int $hired = 0;\n\n    public function __construct(protected readonly string $name)\n    {\n        self::$hired++;\n    }\n\n    abstract public function station(): string;\n\n    public function introduce(): string\n    {\n        return $this->name . ' · ' . $this->station();\n    }\n\n    public static function hired(): int\n    {\n        return self::$hired;\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Cook.php';\nrequire_once __DIR__ . '/../src/ClocksIn.php';\nrequire_once __DIR__ . '/../src/Saucier.php';\nrequire_once __DIR__ . '/../src/Patissier.php';\n\n$saucier = new Saucier('Amélie');\n$patissier = new Patissier('Jules');\n$brigade = [$saucier, $patissier];\n\n$saucier->clockIn('Monday');\n$saucier->clockIn('Tuesday');\n$patissier->clockIn('Monday');\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Brigade</title>\n</head>\n<body>\n    <h1>Brigade</h1>\n    <ul class=\"brigade\">\n        <?php foreach ($brigade as $cook): ?>\n            <li><?= htmlspecialchars($cook->introduce()) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Hired: <?= Cook::hired() ?></p>\n    <p>Shifts: <?= $saucier->shiftCount() ?> and <?= $patissier->shiftCount() ?></p>\n</body>\n</html>\n"
+},
+"prep-list": {
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$prep = [\n    ['task' => 'Chop onions', 'minutes' => 15, 'station' => 'veg', 'done' => true],\n    ['task' => 'Make stock', 'minutes' => 90, 'station' => 'sauce', 'done' => false],\n    ['task' => 'Peel apples', 'minutes' => 20, 'station' => 'pastry', 'done' => false],\n    ['task' => 'Blanch beans', 'minutes' => 10, 'station' => 'veg', 'done' => false],\n];\n\nfunction forStation(string $station): Closure\n{\n    return function (array $task) use ($station): bool {\n        return $task['station'] === $station;\n    };\n}\n\n$open = array_filter($prep, fn (array $task): bool => !$task['done']);\n$lines = array_map(fn (array $task): string => $task['task'] . ' (' . $task['minutes'] . ' min)', $open);\n$minutes = array_reduce($open, fn (int $sum, array $task): int => $sum + $task['minutes'], 0);\n\n$stations = array_unique(array_column($prep, 'station'));\nsort($stations);\n\n$veg = array_column(array_filter($prep, forStation('veg')), 'task');\n$longest = array_reduce($prep, fn (?array $best, array $task): array => $best === null || $task['minutes'] > $best['minutes'] ? $task : $best);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Prep list</title>\n</head>\n<body>\n    <h1>Prep list</h1>\n    <ul class=\"todo\">\n        <?php foreach ($lines as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Open work: <?= $minutes ?> min</p>\n    <p>Stations: <?= htmlspecialchars(implode(', ', $stations)) ?></p>\n    <p>Veg station: <?= htmlspecialchars(implode(', ', $veg)) ?></p>\n    <p>Longest: <?= htmlspecialchars($longest['task']) ?></p>\n</body>\n</html>\n"
+},
+"reservations": {
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$tz = new DateTimeZone('Europe/Brussels');\n$bookings = [\n    ['name' => 'Lucas', 'at' => '2026-10-21 20:15', 'guests' => 4],\n    ['name' => 'Mia', 'at' => '2026-10-21 19:30', 'guests' => 2],\n    ['name' => 'Noor', 'at' => '2026-10-22 12:00', 'guests' => 3],\n];\n\n$now = new DateTimeImmutable('2026-10-21 18:00', $tz);\n$tomorrow = $now->modify('+1 day');\n$today = [];\n$tomorrowCount = 0;\n\nforeach ($bookings as $booking) {\n    $at = DateTimeImmutable::createFromFormat('Y-m-d H:i', $booking['at'], $tz);\n    if ($at->format('Y-m-d') === $now->format('Y-m-d')) {\n        $today[] = ['at' => $at, 'name' => $booking['name'], 'guests' => $booking['guests']];\n    } elseif ($at->format('Y-m-d') === $tomorrow->format('Y-m-d')) {\n        $tomorrowCount++;\n    }\n}\n\nusort($today, fn (array $a, array $b): int => $a['at'] <=> $b['at']);\n\n$wait = $now->diff($today[0]['at']);\n$lastOrders = $now->setTime(23, 0)->modify('-45 minutes');\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Reservation book</title>\n</head>\n<body>\n    <h1>Reservation book</h1>\n    <p class=\"today\"><?= $now->format('l j F Y') ?></p>\n    <ul class=\"bookings\">\n        <?php foreach ($today as $booking): ?>\n            <li><?= $booking['at']->format('H:i') ?> · <?= htmlspecialchars($booking['name']) ?> · <?= $booking['guests'] ?> guests</li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Tomorrow: <?= $tomorrowCount ?> booking<?= $tomorrowCount === 1 ? '' : 's' ?></p>\n    <p>Next table in <?= $wait->h ?> h <?= $wait->i ?> min</p>\n    <p>Last orders: <?= $lastOrders->format('H:i') ?></p>\n    <p class=\"now\">Now: <?= $now->format('H:i') ?></p>\n</body>\n</html>\n"
+},
+"scanner": {
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$labels = [\n    'Coq au vin (contains: celery, gluten)',\n    'Ratatouille',\n    'Tarte tatin (contains: GLUTEN, egg, milk)',\n    'Soupe au pistou (contains: celery)',\n];\n$codes = ['COQ-021', 'tart_9', 'RAT-014', 'PIS-7'];\n$phone = '050/12.34.56';\n\n$scan = [];\n$glutenCount = 0;\nforeach ($labels as $label) {\n    if (preg_match('/^(.+?) \\(contains: (.+)\\)$/', $label, $m) === 1) {\n        $allergens = preg_split('/,\\s*/', strtolower($m[2]));\n        $scan[] = $m[1] . ': ' . implode(', ', $allergens);\n    } else {\n        $scan[] = $label . ': none';\n    }\n\n    if (preg_match('/\\bgluten\\b/i', $label) === 1) {\n        $glutenCount++;\n    }\n}\n\n$valid = [];\nforeach ($codes as $code) {\n    if (preg_match('/^[A-Z]{3}-\\d{3}$/', $code) === 1) {\n        $valid[] = $code;\n    }\n}\n\n$digits = preg_replace('/\\D/', '', $phone);\n\n$q = trim($_GET['q'] ?? '');\n$found = [];\nforeach ($labels as $label) {\n    if ($q !== '' && preg_match('/' . preg_quote($q, '/') . '/i', $label) === 1) {\n        $found[] = $label;\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Allergen scanner</title>\n</head>\n<body>\n    <h1>Allergen scanner</h1>\n    <ul class=\"scan\">\n        <?php foreach ($scan as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Gluten in <?= $glutenCount ?> dishes</p>\n    <p>Valid codes: <?= htmlspecialchars(implode(', ', $valid)) ?></p>\n    <p>Phone digits: <?= htmlspecialchars($digits) ?></p>\n    <form method=\"get\" action=\"/\">\n        <label for=\"q\">Search</label>\n        <input id=\"q\" name=\"q\" value=\"<?= htmlspecialchars($q) ?>\">\n        <button type=\"submit\">Scan</button>\n    </form>\n    <p class=\"found\"><?= count($found) ?> match<?= count($found) === 1 ? '' : 'es' ?> for <?= htmlspecialchars($q) ?></p>\n</body>\n</html>\n"
+},
+"stocktake": {
+"src/stock.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction readStock(string $file): Generator\n{\n    if (!is_file($file)) {\n        throw new RuntimeException('No stock file at ' . basename($file));\n    }\n\n    $handle = fopen($file, 'r');\n    try {\n        $header = fgetcsv($handle, null, ',', '\"', '');\n        while (($row = fgetcsv($handle, null, ',', '\"', '')) !== false) {\n            yield array_combine($header, $row);\n        }\n    } finally {\n        fclose($handle);\n    }\n}\n\nfunction lowStock(iterable $items): Generator\n{\n    foreach ($items as $item) {\n        $short = (int) $item['minimum'] - (int) $item['grams'];\n        if ($short > 0) {\n            yield $item['item'] => $short;\n        }\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/stock.php';\n\n$file = __DIR__ . '/../data/stock.csv';\n$checked = 0;\n$value = 0.0;\n\nforeach (readStock($file) as $item) {\n    $checked++;\n    $value += (int) $item['grams'] / 1000 * (float) $item['price_per_kg'];\n}\n\n$reorder = iterator_to_array(lowStock(readStock($file)));\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Night stock-take</title>\n</head>\n<body>\n    <h1>Night stock-take</h1>\n    <p>Checked <?= $checked ?> items</p>\n    <p>Stock value: €<?= number_format($value, 2) ?></p>\n    <ul class=\"reorder\">\n        <?php foreach ($reorder as $name => $short): ?>\n            <li><?= htmlspecialchars($name) ?>: <?= $short ?> g short</li>\n        <?php endforeach; ?>\n    </ul>\n</body>\n</html>\n",
+"data/stock.csv": "item,grams,minimum,price_per_kg\nbutter,375,500,12.40\nflour,2000,1000,1.20\nsaffron,1,2,9500.00\nthyme,30,20,48.00\nonions,3500,2000,1.80\ncream,250,1000,6.40\n"
+}
+};
+
+const pickFiles=(o,keys)=>{const r={};keys.forEach(k=>{if(o[k]==null)throw new Error('missing '+k);r[k]=o[k]});return r};
+const jp=r=>{try{return JSON.parse(String(r&&r.out||'').trim())}catch(e){return null}};
+const logicOf=c=>raw(c).split('?>')[0];
+const fnsTyped=s=>{const fs=s.match(/\bfn\s*\(([^)]*)\)\s*(:\s*\??\w+)?\s*=>/g)||[];return fs.length>0&&fs.every(f=>/\)\s*:\s*\??\w+\s*=>/.test(f)&&f.replace(/^fn\s*\(/,'').replace(/\)\s*:[\s\S]*$/,'').split(',').every(p=>/^\s*\??\w+\s+\$\w+\s*$/.test(p)))};
+const S_RES=`$tz = new DateTimeZone('Europe/Brussels');
+$bookings = [
+    ['name' => 'Lucas', 'at' => '2026-10-21 20:15', 'guests' => 4],
+    ['name' => 'Mia', 'at' => '2026-10-21 19:30', 'guests' => 2],
+    ['name' => 'Noor', 'at' => '2026-10-22 12:00', 'guests' => 3],
+];
+`;
+const S_SCAN=`$labels = [
+    'Coq au vin (contains: celery, gluten)',
+    'Ratatouille',
+    'Tarte tatin (contains: GLUTEN, egg, milk)',
+    'Soupe au pistou (contains: celery)',
+];
+$codes = ['COQ-021', 'tart_9', 'RAT-014', 'PIS-7'];
+$phone = '050/12.34.56';
+`;
+const S_PREP=`$prep = [
+    ['task' => 'Chop onions', 'minutes' => 15, 'station' => 'veg', 'done' => true],
+    ['task' => 'Make stock', 'minutes' => 90, 'station' => 'sauce', 'done' => false],
+    ['task' => 'Peel apples', 'minutes' => 20, 'station' => 'pastry', 'done' => false],
+    ['task' => 'Blanch beans', 'minutes' => 10, 'station' => 'veg', 'done' => false],
+];
+`;
+const S_API=`$dishes = [
+    1 => ['id' => 1, 'name' => 'Onion soup', 'price' => 7.5],
+    2 => ['id' => 2, 'name' => 'Coq au vin', 'price' => 21.5],
+    3 => ['id' => 3, 'name' => 'Tarte tatin', 'price' => 9.0],
+];
+`;
+const F7={cook:'src/Cook.php',clocks:'src/ClocksIn.php',sauce:'src/Saucier.php',pat:'src/Patissier.php',stock:'src/stock.php',csv:'data/stock.csv'};
+
+Object.assign(RULES,{
+ pz51:{n:'51',title:'Dates: DateTimeImmutable and format',cat:'Dates',
+  syn:"new <span class=\"k\">DateTimeImmutable</span>('2026-10-21 18:00', $tz) · $d-&gt;<span class=\"k\">format</span>(<span class=\"v\">'l j F Y'</span>) · DateTimeImmutable::<span class=\"k\">createFromFormat</span>('Y-m-d H:i', $s, $tz)",
+  note:'A DateTimeImmutable is a moment in time with a timezone. format() turns it into text using letters: Y year, m month, d day, H:i hours and minutes, l weekday, F month name. createFromFormat reads a string in a format you name.',
+  why:'Dates as strings are a trap: "21/10" and "10/21" look alike, and comparing them as text goes wrong. PHP has objects for moments in time. new DateTimeImmutable(\'2026-10-21 18:00\', $tz) builds one; always give the timezone, because the server\'s default may be UTC while your bistro is in Brussels. format() turns it back into text with single letters: Y-m-d for 2026-10-21, H:i for 18:00, l for Wednesday, j for the day without a zero, F for October. When the input has a fixed shape, DateTimeImmutable::createFromFormat(\'Y-m-d H:i\', $text, $tz) reads it exactly and returns false if it does not fit.',
+  parts:[["new DateTimeImmutable($s, $tz)",'a moment, with timezone'],["new DateTimeZone('Europe/Brussels')",'the bistro\'s clock'],["format('Y-m-d')",'2026-10-21'],["format('l j F Y')",'Wednesday 21 October 2026'],["createFromFormat('Y-m-d H:i', …)",'read a known shape']],
+  mistakes:['Leaving out the timezone: the server default is often UTC, two hours off in Brussels.',"Mixing up m (month) and i (minutes): 'H:m' prints the month.",'Comparing date strings like "9/10" and "10/10" as text.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$tz = new DateTimeZone('Europe/Brussels');
+$opening = new DateTimeImmutable('2026-10-21 18:00', $tz);
+
+echo $opening->format('l j F Y') . PHP_EOL;
+echo $opening->format('H:i') . PHP_EOL;
+echo $opening->format('Y-m-d');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$tz = new DateTimeZone('Europe/Brussels');
+$read = DateTimeImmutable::createFromFormat('d/m/Y H:i', '24/12/2026 19:00', $tz);
+$bad = DateTimeImmutable::createFromFormat('d/m/Y H:i', 'Christmas', $tz);
+
+echo $read->format('D d M, H:i') . PHP_EOL;
+var_dump($bad);`},
+ pz52:{n:'52',title:'Moving through time: modify, diff, compare',cat:'Dates',
+  syn:"$d-&gt;<span class=\"k\">modify</span>('+1 day') · $a-&gt;<span class=\"k\">diff</span>($b)-&gt;h · $a <span class=\"v\">&lt;=&gt;</span> $b · $d-&gt;<span class=\"k\">setTime</span>(23, 0)",
+  note:'modify, add, sub and setTime return a new DateTimeImmutable; the original never changes. diff gives a DateInterval with h, i, days. Date objects compare with < > and <=>, so usort can order them.',
+  why:'Immutable means every change gives you a new object and leaves the old one alone: $tomorrow = $now->modify(\'+1 day\') keeps $now at today. That prevents the classic bug where a plain DateTime, passed around, quietly moves for everyone. modify understands phrases like +1 day, -45 minutes or next monday; setTime(23, 0) jumps to a time on the same day. $a->diff($b) returns a DateInterval: ->h hours, ->i minutes, ->days total days. Date objects compare directly with <, > and <=>, which is exactly what usort needs.',
+  parts:[["modify('+1 day')",'a new moment'],['setTime(23, 0)','same day, other time'],['$a->diff($b)','a DateInterval'],['->h · ->i · ->days','parts of the interval'],['$a <=> $b','compare moments']],
+  mistakes:['Using DateTime and modify(): the original object changes under your feet.',"Expecting $now->modify(...) on its own line to change $now: store the result.",'Reading ->i as total minutes: it is only the minutes part, after the hours.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$tz = new DateTimeZone('Europe/Brussels');
+$now = new DateTimeImmutable('2026-10-21 18:00', $tz);
+$tomorrow = $now->modify('+1 day');
+
+echo $now->format('D') . ' → ' . $tomorrow->format('D') . PHP_EOL;
+echo $now->setTime(23, 0)->modify('-45 minutes')->format('H:i');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$tz = new DateTimeZone('Europe/Brussels');
+$a = new DateTimeImmutable('2026-10-21 18:00', $tz);
+$b = new DateTimeImmutable('2026-10-21 20:15', $tz);
+$wait = $a->diff($b);
+
+echo $wait->h . ' h ' . $wait->i . ' min' . PHP_EOL;
+var_dump($a < $b, $a <=> $b);`},
+ pz53:{n:'53',title:'Regular expressions: preg_match',cat:'Strings',
+  syn:"<span class=\"k\">preg_match</span>(<span class=\"v\">'/^(.+?) \\(contains: (.+)\\)$/'</span>, $label, $m) === 1 · $m[1] · <span class=\"v\">/i</span> · <span class=\"v\">\\b \\d {3}</span>",
+  note:'A regex is a pattern between slashes. preg_match returns 1 when it matches, 0 when not, and fills $m with the captured groups ( ). ^ and $ anchor the start and end, \\d is a digit, {3} means three times, i after the slash ignores case.',
+  why:'String functions find fixed text. A regular expression finds a shape: three capital letters, a dash, three digits. preg_match($pattern, $text, $m) answers 1 or 0 and, when it matches, puts the whole match in $m[0] and each group in round brackets in $m[1], $m[2]. Anchors matter: ^ is the start of the text, $ the end. Without them, \'/\\d{3}/\' also matches the middle of "ABCD-12345". \\b is a word boundary, so \'/\\bgluten\\b/\' does not fire on "glutenfree". A flag after the closing slash changes the rules: i ignores case. Compare the result with === 1: preg_match returns false when the pattern itself is broken.',
+  parts:[["'/…/'",'the pattern between slashes'],['( )','a group, captured into $m'],['^ … $','start and end of the text'],['\\d{3} · [A-Z]','three digits · one capital'],['/i','ignore case'],['=== 1','matched']],
+  mistakes:['Forgetting ^ and $: the pattern matches somewhere inside a longer text.','Treating the result as a bool: false (broken pattern) and 0 (no match) are different.',"Double quotes around a pattern: \"\\d\" can be eaten by PHP's own escaping. Use single quotes."],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$code = 'COQ-021';
+
+var_dump(preg_match('/^[A-Z]{3}-\\d{3}$/', $code));
+var_dump(preg_match('/^[A-Z]{3}-\\d{3}$/', 'COQ-0212'));
+
+preg_match('/^([A-Z]{3})-(\\d+)$/', $code, $m);
+print_r($m);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+foreach (['Gluten-free bread', 'Contains GLUTEN', 'glutenfree'] as $label) {
+    echo $label . ': ' . preg_match('/\\bgluten\\b/i', $label) . PHP_EOL;
+}`},
+ pz54:{n:'54',title:'Replace, split and escape: preg_replace, preg_split, preg_quote',cat:'Strings',
+  syn:"<span class=\"k\">preg_replace</span>('/\\D/', '', $phone) · <span class=\"k\">preg_split</span>('/,\\s*/', $list) · '/' . <span class=\"k\">preg_quote</span>($q, '/') . '/i'",
+  note:'preg_replace swaps every match, preg_split cuts a string wherever the pattern matches, preg_match_all finds all matches. User text inside a pattern always goes through preg_quote, which escapes . ( * and friends.',
+  why:'Once you can describe a shape, you can clean it up. preg_replace(\'/\\D/\', \'\', $phone) removes every non-digit, so "050/12.34.56" becomes "050123456". preg_split(\'/,\\s*/\', $text) cuts on a comma followed by any spaces, which explode cannot do. Search boxes are the trap: if a guest types "(" and you put it straight into a pattern, the pattern breaks and PHP warns. preg_quote($q, \'/\') escapes every character that means something in a regex, including your delimiter, so the guest\'s text is matched literally. Same lesson as SQL: outside text is data, never part of the pattern itself.',
+  parts:[["preg_replace('/\\D/', '', $s)",'remove non-digits'],["preg_split('/,\\s*/', $s)",'cut on comma + spaces'],['preg_match_all(…, $m)','every match'],['preg_quote($q, \'/\')','user text, made literal']],
+  mistakes:['Putting user input in a pattern without preg_quote.','Forgetting the delimiter argument of preg_quote: a / in the text still breaks the pattern.','Using preg_replace for a fixed string: str_replace is simpler and faster.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+echo preg_replace('/\\D/', '', '050/12.34.56') . PHP_EOL;
+print_r(preg_split('/,\\s*/', 'gluten,egg,   milk'));
+echo preg_match_all('/\\d+/', 'Table 7, 2 guests, 19:30');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$q = 'tart (pear)';
+$pattern = '/' . preg_quote($q, '/') . '/i';
+
+echo $pattern . PHP_EOL;
+var_dump(preg_match($pattern, 'Tart (pear) with cream'));`},
+ pz55:{n:'55',title:'Closures and use',cat:'Functions',
+  syn:"$isVeg = <span class=\"k\">function</span> (array $t) <span class=\"k\">use</span> ($station): bool { … }; · <span class=\"k\">fn</span> (array $t): bool =&gt; …",
+  note:'A closure is a function stored in a variable or passed as an argument. A long closure sees outside variables only when you list them in use ( ). An arrow function fn captures them automatically, but holds one expression.',
+  why:'Functions can be values. $double = function (int $n): int { return $n * 2; }; stores one, and $double(4) calls it. Like any function, a closure has its own scope: to use $station from outside, list it after use. Arrow functions, fn (array $t): bool => $t[\'done\'], are the short form for one expression; they capture outside variables by value automatically. A function can also return a closure: forStation(\'veg\') builds a ready-made filter for one station. Type the parameters and return values of closures exactly like named functions.',
+  parts:[['function (…) use ($x): bool { }','closure with captured $x'],['fn (…): bool => …','arrow function, one expression'],['$f($arg)','call a closure'],[': Closure','return type of a function that returns one']],
+  mistakes:['Using an outside variable in a function () without use: Undefined variable.','Expecting changes to a captured variable to leak out: use copies the value.','Writing several statements in an arrow function.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$station = 'veg';
+$isVeg = function (array $task) use ($station): bool {
+    return $task['station'] === $station;
+};
+
+var_dump($isVeg(['station' => 'veg']), $isVeg(['station' => 'sauce']));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function taxedBy(float $rate): Closure
+{
+    return fn (float $net): float => round($net * (1 + $rate), 2);
+}
+
+$food = taxedBy(0.06);
+$wine = taxedBy(0.21);
+
+echo $food(10.0) . ' / ' . $wine(10.0);`},
+ pz56:{n:'56',title:'array_map, array_filter, array_reduce',cat:'Arrays',
+  syn:'<span class="k">array_filter</span>($list, $test) · <span class="k">array_map</span>($change, $list) · <span class="k">array_reduce</span>($list, $combine, <span class="v">0</span>) · <span class="k">array_column</span>($rows, \'task\')',
+  note:'array_filter keeps the items your function says true to (and keeps their keys). array_map transforms every item. array_reduce folds a list into one value, starting from the initial value you give. Note the argument order: map takes the function first.',
+  why:'Many loops do one of three jobs: keep some items, change every item, or boil a list down to one value. PHP has a function for each, and naming the job makes code easier to read than a loop with an if inside. array_filter($items, fn) keeps the items where fn returns true; it keeps the original keys, so wrap it in array_values when you need 0, 1, 2 again. array_map(fn, $items) returns a new list with fn applied to each; the function comes first, a famous inconsistency. array_reduce($items, fn ($carry, $item), $start) carries a running result through the list. array_column($rows, \'task\') plucks one field from every row.',
+  parts:[['array_filter($a, $fn)','keep where true, keys kept'],['array_map($fn, $a)','change each, function first'],['array_reduce($a, $fn, 0)','fold to one value'],["array_column($rows, 'task')",'one field from each row'],['array_values($a)','renumber from 0']],
+  mistakes:['Swapping the argument order of array_map and array_filter.','Forgetting the start value of array_reduce: the first carry is null.','Expecting array_filter to renumber keys.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$minutes = [15, 90, 20, 10];
+
+$long = array_filter($minutes, fn (int $m): bool => $m > 15);
+$labels = array_map(fn (int $m): string => $m . ' min', $long);
+$total = array_reduce($minutes, fn (int $sum, int $m): int => $sum + $m, 0);
+
+print_r($labels);
+echo $total;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$rows = [['task' => 'Chop', 'station' => 'veg'], ['task' => 'Stock', 'station' => 'sauce'], ['task' => 'Peel', 'station' => 'veg']];
+
+print_r(array_column($rows, 'task'));
+print_r(array_values(array_unique(array_column($rows, 'station'))));`},
+ pz57:{n:'57',title:'JSON responses',cat:'Web',
+  syn:"<span class=\"k\">header</span>('Content-Type: application/json; charset=utf-8'); · echo <span class=\"k\">json_encode</span>($data, <span class=\"v\">JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR</span>);",
+  note:'An API answers with data instead of a page. Set the Content-Type header to application/json, set the status code, then echo json_encode of an array. Nothing else may be printed: one stray space or warning breaks the JSON.',
+  why:'Apps, scripts and JavaScript on other pages talk to servers through APIs: the request is the same, but the answer is data. The header Content-Type: application/json tells the client what it is getting, and also stops a browser from treating the text as HTML. json_encode turns an array into JSON; JSON_UNESCAPED_UNICODE keeps é readable, JSON_THROW_ON_ERROR turns encoding problems into exceptions. Because the client parses the whole body, the body must be only that JSON: no HTML around it, no echo for debugging, no warning. A small respond() function that sets status, header and body in one place keeps every answer consistent.',
+  parts:[["header('Content-Type: application/json')",'say it is JSON'],['http_response_code($status)','say how it went'],['echo json_encode($data, …)','the body'],['respond(int, array): void','one exit for every answer']],
+  mistakes:['HTML or a debug echo before the JSON: the client cannot parse it.','Encoding a string that is already JSON again: you get quotes inside quotes.','Forgetting the status code: every error looks like a 200 success.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$dish = ['name' => 'Crème brûlée', 'price' => 8.5, 'veg' => true];
+
+echo json_encode($dish) . PHP_EOL;
+echo json_encode($dish, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function respond(int $status, array $data): void
+{
+    http_response_code($status);
+    echo json_encode($data, JSON_THROW_ON_ERROR);
+}
+
+respond(404, ['error' => 'No such dish']);
+echo PHP_EOL . 'status ' . http_response_code();`},
+ pz58:{n:'58',title:'API methods and status codes',cat:'Web',
+  syn:'GET <span class="v">200</span> · POST created <span class="v">201</span> · bad input <span class="v">400</span> · missing <span class="v">404</span> · wrong method <span class="v">405</span> + <span class="k">Allow</span>',
+  note:'The method says what the client wants: GET reads, POST creates. The status says how it went: 200 OK, 201 Created, 400 Bad Request with the reasons, 404 Not Found, 405 Method Not Allowed with an Allow header listing what is.',
+  why:'An API is read by programs, and programs look at the status code first. Use them precisely. A successful GET answers 200 with the data. A POST that creates something answers 201 Created with the new item, including its id. When input fails validation, answer 400 with a list of what was wrong, so the client can show it. An id that does not exist gets 404, the same as a path that does not exist. A method you do not support, like PUT here, gets 405 plus an Allow header naming the methods you do accept. Validate exactly as strictly as in a form: an API is just another door.',
+  parts:[['200 OK','here is what you asked'],['201 Created','new item, with its id'],['400 Bad Request','{"errors": […]}'],['404 Not Found','no such path or id'],["405 + header('Allow: GET, POST')",'wrong method']],
+  mistakes:['Answering 200 with {"error": …}: programs think it worked.','Trusting an API client more than a form: validate everything.','Returning 404 for bad input: that is 400.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$price = filter_var('-1', FILTER_VALIDATE_FLOAT);
+$errors = [];
+
+if ($price === false || $price <= 0) {
+    $errors[] = 'price must be a positive number';
+}
+
+http_response_code($errors === [] ? 201 : 400);
+echo json_encode(['errors' => $errors]) . PHP_EOL . http_response_code();`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+foreach (['GET', 'POST', 'PUT'] as $method) {
+    echo $method . ' → ' . (in_array($method, ['GET', 'POST'], true) ? 'allowed' : '405, Allow: GET, POST') . PHP_EOL;
+}`},
+ pz59:{n:'59',title:'Abstract classes and inheritance',cat:'Objects',
+  syn:'<span class="k">abstract class</span> Cook · <span class="k">abstract public function</span> station(): string; · final class Saucier <span class="k">extends</span> Cook · <span class="k">parent::</span>introduce()',
+  note:'An abstract class is a half-finished blueprint: it cannot be built with new, and its abstract methods must be written by every child. extends inherits everything else. protected members are visible to children but not outside. parent:: calls the version you replaced.',
+  why:'Every cook in a brigade introduces themselves the same way, but each works a different station. An abstract class holds the shared part once: the constructor, the name, introduce(). It declares abstract public function station(): string; without a body, which forces every child class to provide one; PHP refuses to load a child that forgets. new Cook() is impossible: only concrete cooks exist. A child can also replace a method and still reuse the parent\'s version with parent::introduce(). protected sits between public and private: children may use it, the outside world may not.',
+  parts:[['abstract class Cook','cannot be created with new'],['abstract public function station(): string;','children must write it'],['extends Cook','inherit the rest'],['protected','children yes, outside no'],['parent::introduce()','the replaced version']],
+  mistakes:['Trying new Cook(): Error, cannot instantiate abstract class.','A child with a different return type than the abstract method: fatal error.','Making everything protected "just in case": prefer private until a child needs it.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+abstract class Plate
+{
+    abstract public function dish(): string;
+
+    public function serve(): string
+    {
+        return 'Serving ' . $this->dish();
+    }
+}
+
+final class SoupPlate extends Plate
+{
+    public function dish(): string
+    {
+        return 'soup';
+    }
+}
+
+echo (new SoupPlate())->serve();`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+abstract class Base
+{
+}
+
+try {
+    new Base();
+} catch (Error $e) {
+    echo $e->getMessage();
+}`},
+ pz60:{n:'60',title:'Traits and static members',cat:'Objects',
+  syn:'<span class="k">trait</span> ClocksIn { … } · class Saucier { <span class="k">use</span> ClocksIn; } · private <span class="k">static</span> int $hired · <span class="k">self::</span>$hired++ · Cook::<span class="k">hired()</span>',
+  note:'A trait is a bundle of methods and properties pasted into any class that uses it, without inheritance. static members belong to the class itself, shared by all objects: reach them with self:: inside and ClassName:: outside.',
+  why:'A class can extend only one parent. When unrelated classes need the same small ability, like clocking in shifts, a trait provides it: use ClocksIn; inside the class copies the trait\'s methods and properties in as if you had typed them there. Static members are different: they belong to the class, not to one object. A private static int $hired counter, increased with self::$hired++ in the constructor, counts every cook ever hired across all objects; a public static function hired() exposes it as Cook::hired(). Use static sparingly: shared state is hard to test.',
+  parts:[['trait ClocksIn { }','reusable methods'],['use ClocksIn;','paste it into a class'],['private static int $hired = 0','one value for the whole class'],['self::$hired++','inside the class'],['Cook::hired()','from outside']],
+  mistakes:['$this->hired for a static property: use self::$hired.','Using a trait to share state between objects: that is static, or better, a separate object.','Expecting instanceof to work with traits: use class_uses() instead.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+trait Greets
+{
+    public function greet(): string
+    {
+        return 'Bonjour from ' . static::class;
+    }
+}
+
+final class Waiter
+{
+    use Greets;
+}
+
+echo (new Waiter())->greet() . PHP_EOL;
+print_r(class_uses(new Waiter()));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Ticket
+{
+    private static int $printed = 0;
+
+    public function __construct()
+    {
+        self::$printed++;
+    }
+
+    public static function printed(): int
+    {
+        return self::$printed;
+    }
+}
+
+new Ticket();
+new Ticket();
+echo Ticket::printed();`},
+ pz61:{n:'61',title:'Generators: yield',cat:'Functions',
+  syn:'function readStock(string $file): <span class="k">Generator</span> { … <span class="k">yield</span> $row; } · yield <span class="v">$key =&gt; $value</span>; · <span class="k">iterator_to_array</span>(…)',
+  note:'A function with yield returns a Generator: a list that produces one item at a time, only when the foreach asks for it. Memory stays small, however long the list. yield $key => $value sets the key too. iterator_to_array collects everything into an array.',
+  why:'Loading a whole stock file into an array works for six lines and fails for six million. A generator is a function that hands out values one by one: each yield pauses the function and gives one item to the foreach; the next loop round resumes it right after the yield. Nothing runs until someone iterates, so a generator that reads a file opens it only when the loop starts. Generators chain: lowStock(readStock($file)) filters while reading, still one row at a time. yield $name => $short sets the key as well, and iterator_to_array turns the result into a normal array when you need one.',
+  parts:[[': Generator','the return type'],['yield $item;','hand out one item, pause'],['yield $k => $v;','with a key'],['lowStock(readStock($f))','a pipeline'],['iterator_to_array($gen)','collect into an array']],
+  mistakes:['Expecting code before the first yield to run when you call the function: it runs on the first iteration.','Looping over the same generator twice: it is used up. Call the function again.','Returning an array from a function typed : Generator.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function countdown(int $from): Generator
+{
+    for ($i = $from; $i > 0; $i--) {
+        yield $i;
+    }
+}
+
+foreach (countdown(3) as $n) {
+    echo $n . ' ';
+}
+echo 'Service!';`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function short(array $stock): Generator
+{
+    foreach ($stock as $item => $grams) {
+        if ($grams < 100) {
+            yield $item => 100 - $grams;
+        }
+    }
+}
+
+print_r(iterator_to_array(short(['salt' => 900, 'saffron' => 1, 'thyme' => 30])));`},
+ pz62:{n:'62',title:'Reading files: fopen, fgetcsv and finally',cat:'Files',
+  syn:"$h = <span class=\"k\">fopen</span>($file, 'r'); · <span class=\"k\">fgetcsv</span>($h, null, ',', '\"', <span class=\"v\">''</span>) · try { … } <span class=\"k\">finally</span> { <span class=\"k\">fclose</span>($h); }",
+  note:'fopen opens a file and returns a handle; fgetcsv reads the next line as an array of fields, or false at the end. Pass the escape argument explicitly as \'\'. Close the handle in finally so it is closed even when something throws.',
+  why:'file_get_contents reads everything at once; for line-by-line work you open a handle. fopen($file, \'r\') opens for reading. fgetcsv($handle, null, \',\', \'"\', \'\') reads one line and splits it on commas, respecting quotes: the last argument turns off PHP\'s old backslash escape, and passing it explicitly is required to stay warning-free from PHP 8.4. The first line usually holds the column names; array_combine($header, $row) turns each row into a keyed array. A handle is a resource that must be closed: fclose in a finally block runs whether the loop finishes or an exception escapes. Check is_file first, because fopen on a missing file emits a warning before returning false.',
+  parts:[["fopen($file, 'r')",'a handle for reading'],["fgetcsv($h, null, ',', '\"', '')",'one line → fields'],['!== false','end of file'],['array_combine($header, $row)','keyed by column'],['finally { fclose($h); }','always close']],
+  mistakes:['Relying on the default escape argument: deprecated in PHP 8.4.','Calling fopen without checking the file exists: a warning lands in your output.','Forgetting fclose when an exception leaves the loop early.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$h = fopen('php://memory', 'r+');
+fwrite($h, "item,grams\\nbutter,375\\nflour,2000\\n");
+rewind($h);
+
+try {
+    $header = fgetcsv($h, null, ',', '"', '');
+    while (($row = fgetcsv($h, null, ',', '"', '')) !== false) {
+        print_r(array_combine($header, $row));
+    }
+} finally {
+    fclose($h);
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$file = __DIR__ . '/../data/nothing.csv';
+
+if (!is_file($file)) {
+    echo 'No file, no warning: checked first.';
+}`}
+});
+
+TARGETS.push(
+{id:'reservations',special:true,name:'Reservation book',rules:['pz51','pz52'],
+ ingredients:{[IDX]:S_RES},
+ files:{[IDX]:head(S_RES)+`?>
+`+page('Reservation book',`    <h1>Reservation book</h1>
+`)},
+ solution:pickFiles(SPSOL.reservations,[IDX]),
+ steps:[
+  {t:"Make `$now`: `new DateTimeImmutable('2026-10-21 18:00', $tz)`",c:c=>/\$now\s*=\s*new\s+DateTimeImmutable\(\s*'2026-10-21 18:00'\s*,\s*\$tz\s*\)/.test(src(c)),help:['Pin "now" to a fixed moment so the page is the same every time you check it.','A new DateTimeImmutable with the date text and the $tz timezone.',`$opening = new DateTimeImmutable('2026-12-24 19:00', $tz);`,`$now = new DateTimeImmutable('2026-10-21 18:00', $tz);`]},
+  {t:"`<p class=\"today\">Wednesday 21 October 2026</p>` with `->format('l j F Y')`",c:c=>ptxt(c,'p.today')==='Wednesday 21 October 2026'&&/->format\(\s*'l j F Y'\s*\)/.test(src(c)),help:['l is the weekday, j the day, F the month name, Y the year.',"`<?= $now->format('l j F Y') ?>` inside the paragraph.",`<p><?= $opening->format('D d M') ?></p>`,`<p class="today"><?= $now->format('l j F Y') ?></p>`]},
+  {t:"Read every booking with `DateTimeImmutable::createFromFormat('Y-m-d H:i', …, $tz)`",c:c=>/DateTimeImmutable::createFromFormat\(\s*'Y-m-d H:i'\s*,\s*\$\w+\['at'\]\s*,\s*\$tz\s*\)/.test(src(c)),help:['The at field always has the same shape. Name it.',"Inside a foreach over $bookings: `$at = DateTimeImmutable::createFromFormat('Y-m-d H:i', $booking['at'], $tz);`",`$when = DateTimeImmutable::createFromFormat('d/m/Y', $row['date'], $tz);`,`foreach ($bookings as $booking) {
+    $at = DateTimeImmutable::createFromFormat('Y-m-d H:i', $booking['at'], $tz);
+}`]},
+  {t:"Keep only today's bookings: compare `->format('Y-m-d')` with `===`",c:c=>rows(c,'ul.bookings li').length===2&&/->format\(\s*'Y-m-d'\s*\)\s*===\s*\$\w+->format\(\s*'Y-m-d'\s*\)/.test(src(c)),help:['Same day means the same Y-m-d text.',"`if ($at->format('Y-m-d') === $now->format('Y-m-d')) { $today[] = [...]; }`",`if ($at->format('Y-m-d') === $day->format('Y-m-d')) {
+    $list[] = $row;
+}`,`if ($at->format('Y-m-d') === $now->format('Y-m-d')) {
+    $today[] = ['at' => $at, 'name' => $booking['name'], 'guests' => $booking['guests']];
+}`]},
+  {t:'A `<ul class="bookings">`: `19:30 · Mia · 2 guests` per booking',c:c=>rows(c,'ul.bookings li').slice().sort().join('|')==='19:30 · Mia · 2 guests|20:15 · Lucas · 4 guests'&&/->format\(\s*'H:i'\s*\)/.test(src(c)),help:["The time comes from the object, not the original string.","`<?= $booking['at']->format('H:i') ?> · <?= htmlspecialchars($booking['name']) ?> · <?= $booking['guests'] ?> guests`",`<li><?= $row['at']->format('H:i') ?> · <?= htmlspecialchars($row['name']) ?></li>`,`<ul class="bookings">
+    <?php foreach ($today as $booking): ?>
+        <li><?= $booking['at']->format('H:i') ?> · <?= htmlspecialchars($booking['name']) ?> · <?= $booking['guests'] ?> guests</li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'Earliest first: `usort` comparing the date objects with `<=>`',c:c=>rows(c,'ul.bookings li').join('|')==='19:30 · Mia · 2 guests|20:15 · Lucas · 4 guests'&&/usort\(\s*\$today/.test(src(c))&&/\['at'\]\s*<=>\s*\$\w+\['at'\]/.test(src(c)),help:['Lucas booked first but eats later. Date objects compare directly.',"`usort($today, fn (array $a, array $b): int => $a['at'] <=> $b['at']);`",`usort($rows, fn (array $a, array $b): int => $a['when'] <=> $b['when']);`,`usort($today, fn (array $a, array $b): int => $a['at'] <=> $b['at']);`]},
+  {t:"`Tomorrow: 1 booking` using `$now->modify('+1 day')`",c:c=>hasP(c,'Tomorrow: 1 booking')&&/->modify\(\s*'\+1 day'\s*\)/.test(src(c)),help:['Make a second moment, one day later, and count bookings on that day.',"`$tomorrow = $now->modify('+1 day');` and an `elseif` that counts.",`$nextWeek = $now->modify('+7 days');`,`$tomorrow = $now->modify('+1 day');
+…
+} elseif ($at->format('Y-m-d') === $tomorrow->format('Y-m-d')) {
+    $tomorrowCount++;
+}
+…
+<p>Tomorrow: <?= $tomorrowCount ?> booking<?= $tomorrowCount === 1 ? '' : 's' ?></p>`]},
+  {t:'`Next table in 1 h 30 min` with `->diff()`',c:c=>hasP(c,'Next table in 1 h 30 min')&&/\$now->diff\(/.test(src(c)),help:['diff gives a DateInterval. Its h and i properties are hours and minutes.',"`$wait = $now->diff($today[0]['at']);` then `$wait->h` and `$wait->i`.",`$gap = $start->diff($end);
+echo $gap->h . ' h';`,`$wait = $now->diff($today[0]['at']);
+…
+<p>Next table in <?= $wait->h ?> h <?= $wait->i ?> min</p>`]},
+  {t:"`Last orders: 22:15`: closing at 23:00 minus 45 minutes",c:c=>hasP(c,'Last orders: 22:15')&&/->setTime\(\s*23\s*,\s*0\s*\)/.test(src(c)),help:['Jump to 23:00 on the same day, then go back 45 minutes.',"`$now->setTime(23, 0)->modify('-45 minutes')`",`$close = $now->setTime(22, 30);`,`$lastOrders = $now->setTime(23, 0)->modify('-45 minutes');
+…
+<p>Last orders: <?= $lastOrders->format('H:i') ?></p>`]},
+  {t:'`<p class="now">Now: 18:00</p>` at the end: immutable, nothing moved `$now`',c:c=>ptxt(c,'p.now')==='Now: 18:00'&&!/new\s+DateTime\s*\(/.test(src(c)),help:['After all those modify calls, $now must still be 18:00.','Use DateTimeImmutable everywhere; a plain DateTime would have moved.',`<p>Opening: <?= $opening->format('H:i') ?></p>`,`<p class="now">Now: <?= $now->format('H:i') ?></p>`]},
+  cleanStep(c=>rows(c,'ul.bookings li').length===2&&escaped(c,["['name']"]))
+ ],
+ drills:[
+  {k:'pick',r:'pz51',q:"Which format letter gives the full weekday, like `Wednesday`?",o:['D','l','w','N'],a:1,h:'Lowercase L.'},
+  {k:'gap',r:'pz51',q:'Read a date in a known shape',pre:'DateTimeImmutable::',post:"('d/m/Y', $text, $tz)",a:['createFromFormat'],h:'create, from, format.'},
+  {k:'pick',r:'pz51',q:"`'H:m'` as a time format prints…",o:['hours and minutes','hours and the month','an error','hours and seconds'],a:1,h:'m is month, i is minutes.'},
+  {k:'type',r:'pz52',q:"Make `$later`: two hours after `$now`",ph:'$later = …;',test:/^\$later = \$now->modify\((['"])\+2 hours\1\);$/,ans:"$later = $now->modify('+2 hours');",h:"`$later = $now->modify('+2 hours');`"},
+  {k:'fix',r:'pz52',q:'This object moves when someone calls modify. Make it immutable',bug:"$now = new DateTime('2026-10-21 18:00', $tz);",test:/^\$now = new DateTimeImmutable\((['"])2026-10-21 18:00\1, \$tz\);$/,ans:"$now = new DateTimeImmutable('2026-10-21 18:00', $tz);",h:'DateTimeImmutable.'},
+  {k:'pick',r:'pz52',q:'`$a->diff($b)` returns…',o:['an int of seconds','a DateInterval','a string','a DateTimeImmutable'],a:1,h:'With h, i, days…'}
+ ]},
+
+{id:'scanner',special:true,name:'Allergen scanner',rules:['pz53','pz54'],
+ request:{method:'GET',get:{q:'tart'}},
+ probes:{paren:{method:'GET',get:{q:'(contains'}},evil:{method:'GET',get:{q:'<script>alert(1)<\/script>'}},visit:{method:'GET'}},
+ ingredients:{[IDX]:S_SCAN},
+ files:{[IDX]:head(S_SCAN)+`?>
+`+page('Allergen scanner',`    <h1>Allergen scanner</h1>
+`)},
+ solution:pickFiles(SPSOL.scanner,[IDX]),
+ steps:[
+  {t:'Capture name and allergens with `preg_match` and two groups: `Coq au vin: celery, gluten`',c:c=>(rows(c,'ul.scan li')[0]||'')==='Coq au vin: celery, gluten'&&/preg_match\([^;]*,\s*\$\w+\s*,\s*\$m\s*\)/.test(src(c)),help:['A label looks like: name (contains: list). Two round-bracket groups catch the two parts.',"`preg_match('/^(.+?) \\(contains: (.+)\\)$/', $label, $m) === 1` then use `$m[1]` and `$m[2]`.",`preg_match('/^(\\w+)-(\\d+)$/', 'COQ-21', $m);
+echo $m[1] . ' / ' . $m[2];`,`foreach ($labels as $label) {
+    if (preg_match('/^(.+?) \\(contains: (.+)\\)$/', $label, $m) === 1) {
+        $scan[] = $m[1] . ': ' . $m[2];
+    }
+}`]},
+  {t:'Split the list with `preg_split` and lowercase it: `Tarte tatin: gluten, egg, milk`',c:c=>(rows(c,'ul.scan li')[2]||'')==='Tarte tatin: gluten, egg, milk'&&/preg_split\(/.test(src(c)),help:['GLUTEN shouts. Lowercase first, then cut on a comma plus any spaces.',"`$allergens = preg_split('/,\\s*/', strtolower($m[2]));` then implode with `, `.",`preg_split('/;\\s*/', 'a; b;c')`,`$allergens = preg_split('/,\\s*/', strtolower($m[2]));
+$scan[] = $m[1] . ': ' . implode(', ', $allergens);`]},
+  {t:'Labels without a list read `Ratatouille: none`',c:c=>(rows(c,'ul.scan li')[1]||'')==='Ratatouille: none'&&rows(c,'ul.scan li').length===4,help:['preg_match returns 0 when the label has no brackets.',"An `else` that adds `$label . ': none'`.",`} else {
+    $out[] = $code . ': unknown';
+}`,`} else {
+    $scan[] = $label . ': none';
+}`]},
+  {t:'`Gluten in 2 dishes`: a word match that ignores case',c:c=>hasP(c,'Gluten in 2 dishes')&&/preg_match\(\s*'\/[^']*gluten[^']*\/i'/.test(src(c))&&/\\b/.test(src(c)),help:['GLUTEN and gluten both count. \\b makes sure it is the whole word.',"`preg_match('/\\bgluten\\b/i', $label) === 1` adds one to a counter.",`if (preg_match('/\\begg\\b/i', $label) === 1) {
+    $eggCount++;
+}`,`if (preg_match('/\\bgluten\\b/i', $label) === 1) {
+    $glutenCount++;
+}`]},
+  {t:'`Valid codes: COQ-021, RAT-014`: anchored, three capitals, a dash, three digits',c:c=>hasP(c,'Valid codes: COQ-021, RAT-014')&&/'\/\^[^']*\$\/'/.test(src(c)),help:["PIS-7 has too few digits; tart_9 is the wrong shape. Anchor both ends.","`preg_match('/^[A-Z]{3}-\\d{3}$/', $code) === 1`",`preg_match('/^\\d{4}$/', $pin)`,`$valid = [];
+foreach ($codes as $code) {
+    if (preg_match('/^[A-Z]{3}-\\d{3}$/', $code) === 1) {
+        $valid[] = $code;
+    }
+}`]},
+  {t:'`Phone digits: 050123456` with `preg_replace`',c:c=>hasP(c,'Phone digits: 050123456')&&/preg_replace\(/.test(src(c)),help:['Remove everything that is not a digit.',"`preg_replace('/\\D/', '', $phone)`",`preg_replace('/\\s+/', ' ', $text)`,`$digits = preg_replace('/\\D/', '', $phone);
+…
+<p>Phone digits: <?= htmlspecialchars($digits) ?></p>`]},
+  {t:'A GET search form with a labelled, sticky, escaped `q`',c:c=>!!c.doc.querySelector('form[method="get"] input#q[name="q"]')&&!!c.doc.querySelector('label[for="q"]')&&(c.doc.querySelector('#q')||{getAttribute:()=>''}).getAttribute('value')==='tart',help:['Searching reads, so it is GET. Print the term back into value.',"`<input id=\"q\" name=\"q\" value=\"<?= htmlspecialchars($q) ?>\">`",`<form method="get" action="/">
+    <label for="term">Find</label>
+    <input id="term" name="term" value="<?= htmlspecialchars($term) ?>">
+</form>`,`<form method="get" action="/">
+    <label for="q">Search</label>
+    <input id="q" name="q" value="<?= htmlspecialchars($q) ?>">
+    <button type="submit">Scan</button>
+</form>`]},
+  {t:'`<p class="found">1 match for tart</p>`, case-insensitive',c:c=>ptxt(c,'p.found')==='1 match for tart',help:["Read `$_GET['q']`, trim it, and match each label against it with /i.","`$q = trim($_GET['q'] ?? '');` then a loop that collects labels where the search matches.",`<p><?= count($hits) ?> hit<?= count($hits) === 1 ? '' : 's' ?></p>`,`<p class="found"><?= count($found) ?> match<?= count($found) === 1 ? '' : 'es' ?> for <?= htmlspecialchars($q) ?></p>`]},
+  {t:'Searching for `(contains` finds 3 labels, without breaking: `preg_quote` the term',c:c=>/preg_quote\(\s*\$q\s*,\s*'\/'\s*\)/.test(src(c))&&ptxt(c.p.paren,'p.found')==='3 matches for (contains'&&!c.p.paren.bad,help:['Passle searches for (contains. Put into a pattern as it is, the ( opens a group that never closes and PHP warns.',"`'/' . preg_quote($q, '/') . '/i'` as the pattern.",`$pattern = '/' . preg_quote($term, '/') . '/i';`,`if ($q !== '' && preg_match('/' . preg_quote($q, '/') . '/i', $label) === 1) {
+    $found[] = $label;
+}`]},
+  {t:'A hostile search term is shown as text, never run',c:c=>!/<script>alert/.test(c.p.evil.out)&&c.p.evil.out.includes('&lt;script&gt;'),help:['The term is printed twice: in value and in the found line.','htmlspecialchars in both places.',`<?= htmlspecialchars($term) ?>`,'Escape $q in the input value and in p.found.']},
+  cleanStep(c=>allClean(c)&&escaped(c,['$line','implode','$digits','$q']))
+ ],
+ drills:[
+  {k:'pick',r:'pz53',q:"`preg_match('/\\d{3}/', 'ABCD-12345')` returns…",o:['0','1','false','3'],a:1,h:'Without anchors it matches inside.'},
+  {k:'gap',r:'pz53',q:'Ignore upper and lower case',pre:"preg_match('/gluten/",post:"', $label)",a:['i'],h:'One flag letter.'},
+  {k:'pick',r:'pz53',q:'After `preg_match(\'/^(\\w+)-(\\d+)$/\', \'COQ-21\', $m)`, `$m[2]` is…',o:["'COQ'","'21'","'COQ-21'","'-'"],a:1,h:'Second group.'},
+  {k:'type',r:'pz54',q:'Remove every non-digit from `$phone` into `$digits`',ph:'$digits = …;',test:/^\$digits = preg_replace\((['"])\/\\D\/\1, (['"])\2, \$phone\);$/,ans:"$digits = preg_replace('/\\D/', '', $phone);",h:"`$digits = preg_replace('/\\D/', '', $phone);`"},
+  {k:'fix',r:'pz54',q:'A guest typing `(` breaks this. Fix the pattern',bug:"preg_match('/' . $q . '/i', $label)",test:/^preg_match\((['"])\/\1 \. preg_quote\(\$q, (['"])\/\2\) \. (['"])\/i\3, \$label\)$/,ans:"preg_match('/' . preg_quote($q, '/') . '/i', $label)",h:"Wrap $q in preg_quote($q, '/')."},
+  {k:'pick',r:'pz54',q:'Which splits `a, b,c` on a comma with optional spaces?',o:["explode(', ', $s)","preg_split('/,\\s*/', $s)","str_split($s)","preg_match_all(',', $s)"],a:1,h:'\\s* means any amount of whitespace.'}
+ ]},
+
+{id:'prep-list',special:true,name:'Prep list',rules:['pz55','pz56'],
+ ingredients:{[IDX]:S_PREP},
+ files:{[IDX]:head(S_PREP)+`?>
+`+page('Prep list',`    <h1>Prep list</h1>
+`)},
+ solution:pickFiles(SPSOL['prep-list'],[IDX]),
+ steps:[
+  {t:'Keep the open tasks with `array_filter` and an arrow function',c:c=>/array_filter\(\s*\$prep\s*,\s*fn\s*\(/.test(src(c))&&rows(c,'ul.todo li').length===3&&!rows(c,'ul.todo li').some(l=>/Chop/.test(l)),help:['Chop onions is done. Keep the rest.',"`$open = array_filter($prep, fn (array $task): bool => !$task['done']);`",`$cold = array_filter($dishes, fn (array $d): bool => !$d['hot']);`,`$open = array_filter($prep, fn (array $task): bool => !$task['done']);`]},
+  {t:'Turn them into lines with `array_map`: `Make stock (90 min)`',c:c=>rows(c,'ul.todo li').join('|')==='Make stock (90 min)|Peel apples (20 min)|Blanch beans (10 min)'&&/array_map\(\s*fn/.test(src(c)),help:['The function comes first in array_map, the list second.',"`$lines = array_map(fn (array $task): string => $task['task'] . ' (' . $task['minutes'] . ' min)', $open);`",`$names = array_map(fn (array $d): string => strtoupper($d['name']), $dishes);`,`$lines = array_map(fn (array $task): string => $task['task'] . ' (' . $task['minutes'] . ' min)', $open);
+…
+<ul class="todo">
+    <?php foreach ($lines as $line): ?>
+        <li><?= htmlspecialchars($line) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`Open work: 120 min` with `array_reduce`, starting from `0`',c:c=>hasP(c,'Open work: 120 min')&&/array_reduce\(\s*\$open\s*,[\s\S]*?,\s*0\s*\)/.test(src(c)),help:['Carry a running sum through the list.',"`array_reduce($open, fn (int $sum, array $task): int => $sum + $task['minutes'], 0)`",`$total = array_reduce($items, fn (int $sum, array $i): int => $sum + $i['qty'], 0);`,`$minutes = array_reduce($open, fn (int $sum, array $task): int => $sum + $task['minutes'], 0);
+…
+<p>Open work: <?= $minutes ?> min</p>`]},
+  {t:'`Stations: pastry, sauce, veg` with `array_column`, `array_unique` and `sort`',c:c=>hasP(c,'Stations: pastry, sauce, veg')&&/array_unique\(\s*array_column\(/.test(src(c)),help:['Pluck the station from every task, drop doubles, sort.',"`$stations = array_unique(array_column($prep, 'station')); sort($stations);`",`$courses = array_unique(array_column($menu, 'course'));`,`$stations = array_unique(array_column($prep, 'station'));
+sort($stations);`]},
+  {t:'`forStation(string $station): Closure` returns `function (array $task) use ($station): bool`',c:c=>/function\s+forStation\s*\(\s*string\s+\$station\s*\)\s*:\s*Closure/.test(src(c))&&/function\s*\(\s*array\s+\$\w+\s*\)\s*use\s*\(\s*\$station\s*\)\s*:\s*bool/.test(src(c)),help:['A function that builds a filter for one station.','Return a closure; it needs $station from outside, so list it in use.',`function above(int $limit): Closure
+{
+    return function (int $n) use ($limit): bool {
+        return $n > $limit;
+    };
+}`,`function forStation(string $station): Closure
+{
+    return function (array $task) use ($station): bool {
+        return $task['station'] === $station;
+    };
+}`]},
+  {t:"`Veg station: Chop onions, Blanch beans` using `forStation('veg')`",c:c=>hasP(c,'Veg station: Chop onions, Blanch beans')&&/forStation\(\s*'veg'\s*\)/.test(src(c)),help:['Pass the closure that forStation built straight to array_filter.',"`array_column(array_filter($prep, forStation('veg')), 'task')`",`$cheap = array_filter($menu, above(10));`,`$veg = array_column(array_filter($prep, forStation('veg')), 'task');
+…
+<p>Veg station: <?= htmlspecialchars(implode(', ', $veg)) ?></p>`]},
+  {t:'`Longest: Make stock`, found with `array_reduce`',c:c=>hasP(c,'Longest: Make stock')&&(src(c).match(/array_reduce\(/g)||[]).length>=2,help:['Reduce can carry the best row so far instead of a sum. It starts as null.',"`array_reduce($prep, fn (?array $best, array $task): array => $best === null || $task['minutes'] > $best['minutes'] ? $task : $best)`",`$cheapest = array_reduce($menu, fn (?array $low, array $d): array => $low === null || $d['price'] < $low['price'] ? $d : $low);`,`$longest = array_reduce($prep, fn (?array $best, array $task): array => $best === null || $task['minutes'] > $best['minutes'] ? $task : $best);
+…
+<p>Longest: <?= htmlspecialchars($longest['task']) ?></p>`]},
+  {t:'No `foreach` in the PHP block at the top: the array functions do the work',c:c=>/array_map/.test(logicOf(c))&&!/\bforeach\b/.test(logicOf(c)),help:['Loops are fine in the template, not in the logic of this plate.','Replace any foreach in the top block with array_filter, array_map or array_reduce.','$out = array_map(…, $list);','Move every loop in the top block to an array function.']},
+  {t:'Every arrow function has typed parameters and a return type',c:c=>fnsTyped(src(c)),help:['fn is a function too: type it.','`fn (array $task): bool => …`',`fn (int $n): int => $n * 2`,'Add a type before every parameter and `: type` before every =>.']},
+  cleanStep(c=>rows(c,'ul.todo li').length===3&&escaped(c,['$line','implode','$longest']))
+ ],
+ drills:[
+  {k:'pick',r:'pz55',q:'A closure uses `$station` from outside without `use`. Result?',o:['It works','Warning: Undefined variable','It is null silently','Fatal error'],a:1,h:'Closures have their own scope.'},
+  {k:'gap',r:'pz55',q:'Capture `$limit`',pre:'function (int $n) ',post:' ($limit): bool { return $n > $limit; }',a:['use'],h:'Three letters.'},
+  {k:'type',r:'pz55',q:'An arrow function taking `int $n`, returning `$n * 2` as int',ph:'fn …',test:/^fn ?\(int \$n\): int => \$n \* 2$/,ans:'fn (int $n): int => $n * 2',h:'`fn (int $n): int => $n * 2`'},
+  {k:'pick',r:'pz56',q:'Which argument order is right?',o:['array_map($list, $fn)','array_map($fn, $list)','array_filter($fn, $list)','array_reduce($fn, $list)'],a:1,h:'map: function first.'},
+  {k:'pick',r:'pz56',q:'`array_filter([1, 0, 2])` without a callback keeps…',o:['[1, 0, 2]','[0 => 1, 2 => 2]','[1, 2] renumbered','[]'],a:1,h:'Falsy values go, keys stay.'},
+  {k:'fix',r:'pz56',q:'The first carry is null and the int type fails. Add the start value',bug:'array_reduce($minutes, fn (int $sum, int $m): int => $sum + $m)',test:/^array_reduce\(\$minutes, fn \(int \$sum, int \$m\): int => \$sum \+ \$m, 0\)$/,ans:'array_reduce($minutes, fn (int $sum, int $m): int => $sum + $m, 0)',h:'Add `, 0` as the last argument.'}
+ ]},
+
+{id:'api',special:true,noPage:true,name:'Kitchen API',rules:['pz57','pz58'],serve:'php -S localhost:8000 -t public public/index.php',
+ request:{method:'GET',path:'/api/dishes'},
+ probes:{one:{method:'GET',path:'/api/dishes',get:{id:'2'}},missing:{method:'GET',path:'/api/dishes',get:{id:'9'}},word:{method:'GET',path:'/api/dishes',get:{id:'abc'}},created:{method:'POST',path:'/api/dishes',post:{name:'Crème brûlée',price:'8.5'}},invalid:{method:'POST',path:'/api/dishes',post:{name:'',price:'-1'}},put:{method:'PUT',path:'/api/dishes'},wines:{method:'GET',path:'/api/wines'}},
+ ingredients:{[IDX]:S_API},
+ files:{[IDX]:head(S_API)},
+ solution:pickFiles(SPSOL.api,[IDX]),
+ steps:[
+  {t:'`respond(int $status, array $data): void` sets the status with `http_response_code`',c:c=>/function\s+respond\s*\(\s*int\s+\$status\s*,\s*array\s+\$data\s*\)\s*:\s*void/.test(src(c))&&/http_response_code\(\s*\$status\s*\)/.test(src(c)),help:['One exit for every answer: status, header, body.','Declare respond and set the status as its first line.',`function reply(int $code, array $body): void
+{
+    http_response_code($code);
+}`,`function respond(int $status, array $data): void
+{
+    http_response_code($status);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+}`]},
+  {t:"It sends `header('Content-Type: application/json; charset=utf-8')`",c:c=>/header\(\s*'Content-Type: application\/json/.test(src(c)),help:['Tell the client the body is JSON.','A header line inside respond, before the echo.',"header('Content-Type: text/plain; charset=utf-8');","header('Content-Type: application/json; charset=utf-8');"]},
+  {t:'It echoes `json_encode` with `JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR`',c:c=>/json_encode\([^;]*JSON_UNESCAPED_UNICODE/.test(src(c))&&/json_encode\([^;]*JSON_THROW_ON_ERROR/.test(src(c)),help:['Flags combine with |.',"`echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);`",`echo json_encode($x, JSON_THROW_ON_ERROR);`,`echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);`]},
+  {t:'`GET /api/dishes` answers 200 with `{"dishes": [ … three dishes … ]}`',c:c=>c.status===200&&(jp(c)||{}).dishes&&jp(c).dishes.length===3&&jp(c).dishes[0].name==='Onion soup',help:['Read the path with parse_url and the method from $_SERVER.',"No id in the query: `respond(200, ['dishes' => array_values($dishes)]); return;`",`if ($method === 'GET' && !isset($_GET['id'])) {
+    respond(200, ['wines' => array_values($wines)]);
+
+    return;
+}`,`$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';
+$method = $_SERVER['REQUEST_METHOD'];
+…
+if ($method === 'GET' && !isset($_GET['id'])) {
+    respond(200, ['dishes' => array_values($dishes)]);
+
+    return;
+}`]},
+  {t:'`GET /api/dishes?id=2` answers 200 with that one dish',c:c=>c.p.one.status===200&&(jp(c.p.one)||{}).name==='Coq au vin',help:['Validate the id with filter_var, then look it up.',"`$id = filter_var($_GET['id'], FILTER_VALIDATE_INT);` then `respond(200, $dishes[$id]);`",`$id = filter_var($_GET['id'], FILTER_VALIDATE_INT);
+respond(200, $wines[$id]);`,`if ($method === 'GET') {
+    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);
+    …
+    respond(200, $dishes[$id]);
+
+    return;
+}`]},
+  {t:'Unknown ids (`9`, `abc`) answer 404 with `{"error": …}`',c:c=>c.p.missing.status===404&&c.p.word.status===404&&!!(jp(c.p.missing)||{}).error&&!c.p.missing.bad&&!c.p.word.bad,help:['filter_var gives false for abc; 9 is a number but not in the list.',"`if ($id === false || !isset($dishes[$id])) { respond(404, ['error' => 'No such dish']); return; }`",`if ($id === false || !isset($wines[$id])) {
+    respond(404, ['error' => 'No such wine']);
+
+    return;
+}`,`if ($id === false || !isset($dishes[$id])) {
+    respond(404, ['error' => 'No such dish']);
+
+    return;
+}`]},
+  {t:'`POST` with a valid name and price answers 201 with the new dish and id `4`',c:c=>c.p.created.status===201&&(jp(c.p.created)||{}).id===4&&(jp(c.p.created)||{}).name==='Crème brûlée'&&c.p.created.out.includes('Crème'),help:['Created is 201, and the answer includes the new id.',"Validate, then `respond(201, ['id' => max(array_keys($dishes)) + 1, 'name' => $name, 'price' => $price]);`",`respond(201, ['id' => 7, 'name' => $name]);`,`if ($method === 'POST') {
+    $name = trim($_POST['name'] ?? '');
+    $price = filter_var($_POST['price'] ?? '', FILTER_VALIDATE_FLOAT);
+    …
+    respond(201, ['id' => max(array_keys($dishes)) + 1, 'name' => $name, 'price' => $price]);
+
+    return;
+}`]},
+  {t:'Invalid input answers 400 with `{"errors": [ … ]}` listing both problems',c:c=>c.p.invalid.status===400&&Array.isArray((jp(c.p.invalid)||{}).errors)&&jp(c.p.invalid).errors.length===2,help:['Empty name and -1 as price: two messages.','Collect messages in $errors; if any, `respond(400, [\'errors\' => $errors]); return;`.',`if ($errors !== []) {
+    respond(400, ['errors' => $errors]);
+
+    return;
+}`,`$errors = [];
+if ($name === '') {
+    $errors[] = 'name is required';
+}
+if ($price === false || $price <= 0) {
+    $errors[] = 'price must be a positive number';
+}
+if ($errors !== []) {
+    respond(400, ['errors' => $errors]);
+
+    return;
+}`]},
+  {t:"`PUT` answers 405 and sends `header('Allow: GET, POST')`",c:c=>c.p.put.status===405&&/header\(\s*'Allow: GET, POST'\s*\)/.test(src(c)),help:['Anything that is not GET or POST ends up at the bottom of the file.',"`header('Allow: GET, POST'); respond(405, ['error' => 'Method not allowed']);`","header('Allow: GET');",`header('Allow: GET, POST');
+respond(405, ['error' => 'Method not allowed']);`]},
+  {t:'Other paths answer 404: `/api/wines` is not served',c:c=>c.p.wines.status===404&&!!(jp(c.p.wines)||{}).error,help:['Check the path before anything else.',"`if ($path !== '/api/dishes') { respond(404, ['error' => 'Not found']); return; }`",`if ($path !== '/api/wines') {
+    respond(404, ['error' => 'Not found']);
+
+    return;
+}`,`if ($path !== '/api/dishes') {
+    respond(404, ['error' => 'Not found']);
+
+    return;
+}`]},
+  {t:'Every answer is pure JSON: no HTML, no stray output, no warnings',c:c=>allClean(c)&&[c,...Object.values(c.p)].every(r=>jp(r)!==null)&&!/<\w/.test(c.out)&&pure(c),help:['Each of the eight requests must parse as JSON.','No closing ?>, no echo outside respond, no HTML.','echo json_encode($data, JSON_THROW_ON_ERROR);','Remove everything printed outside respond().']}
+ ],
+ drills:[
+  {k:'pick',r:'pz57',q:'Which header says the body is JSON?',o:['Accept: application/json','Content-Type: application/json','X-JSON: true','Allow: JSON'],a:1,h:'The type of the content.'},
+  {k:'gap',r:'pz57',q:'Keep é readable in the JSON',pre:'json_encode($data, ',post:' | JSON_THROW_ON_ERROR)',a:['JSON_UNESCAPED_UNICODE'],h:'Unicode, unescaped.'},
+  {k:'pick',r:'pz57',q:'A debug `echo \'here\';` runs before the JSON. The client…',o:['ignores it','cannot parse the body','shows a warning','gets a 500'],a:1,h:'The body must be only JSON.'},
+  {k:'pick',r:'pz58',q:'A POST created a new dish. Which status?',o:['200','201','204','302'],a:1,h:'Created.'},
+  {k:'type',r:'pz58',q:'Answer "Bad Request"',ph:'http_response_code(…);',test:/^http_response_code\(400\);$/,ans:'http_response_code(400);',h:'`http_response_code(400);`'},
+  {k:'fix',r:'pz58',q:'An error that pretends to be a success. Fix the status',bug:"respond(200, ['error' => 'No such dish']);",test:/^respond\(404, \[(['"])error\1 => (['"])No such dish\2\]\);$/,ans:"respond(404, ['error' => 'No such dish']);",h:'Not found is 404.'}
+ ]},
+
+{id:'brigade',special:true,name:'Brigade',rules:['pz59','pz60'],
+ probes:{outside:{over:{[IDX]:PHPHEAD+`
+`+RQ(F7.cook,F7.clocks,F7.sauce,F7.pat)+`
+$s = new Saucier('X');
+try {
+    new Cook('Y');
+    echo 'open';
+} catch (Error $e) {
+    echo 'abstract';
+}
+try {
+    echo $s->name;
+} catch (Error $e) {
+    echo ' protected';
+}
+echo ' ' . Cook::hired() . ' ' . $s->station() . ' ' . (in_array('ClocksIn', class_uses($s), true) ? 'trait' : 'none');
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Brigade',`    <h1>Brigade</h1>
+`),[F7.cook]:PHPHEAD,[F7.clocks]:PHPHEAD,[F7.sauce]:PHPHEAD,[F7.pat]:PHPHEAD},
+ solution:pickFiles(SPSOL.brigade,[IDX,F7.cook,F7.clocks,F7.sauce,F7.pat]),
+ steps:[
+  {t:'`src/Cook.php`: `abstract class Cook` with a promoted `protected readonly string $name`',c:c=>/abstract\s+class\s+Cook/.test(src(c,F7.cook))&&/protected\s+readonly\s+string\s+\$name/.test(src(c,F7.cook)),help:['Every cook has a name; children may read it, outsiders may not.','`abstract class Cook` with a constructor promoting `protected readonly string $name`.',`abstract class Plate
+{
+    public function __construct(protected readonly string $dish)
+    {
+    }
+}`,`abstract class Cook
+{
+    public function __construct(protected readonly string $name)
+    {
+    }
+}`]},
+  {t:'It declares `abstract public function station(): string;`',c:c=>/abstract\s+public\s+function\s+station\s*\(\s*\)\s*:\s*string\s*;/.test(src(c,F7.cook)),help:['No body: each kind of cook fills it in.','One line ending in a semicolon.',`abstract public function dish(): string;`,`abstract public function station(): string;`]},
+  {t:'`introduce(): string` returns `name · station` using `$this->station()`',c:c=>/function\s+introduce\s*\(\s*\)\s*:\s*string/.test(src(c,F7.cook))&&/\$this->station\(\)/.test(src(c,F7.cook)),help:['The parent calls a method only the children define.',"`return $this->name . ' · ' . $this->station();`",`return 'Serving ' . $this->dish();`,`public function introduce(): string
+{
+    return $this->name . ' · ' . $this->station();
+}`]},
+  {t:'Count hires: `private static int $hired = 0`, `self::$hired++` in the constructor, `public static function hired(): int`',c:c=>/private\s+static\s+int\s+\$hired\s*=\s*0/.test(src(c,F7.cook))&&/self::\$hired\+\+/.test(src(c,F7.cook))&&/public\s+static\s+function\s+hired\s*\(\s*\)\s*:\s*int/.test(src(c,F7.cook)),help:['One counter for the whole class, not one per cook.','Static property, increase it with self:: in the constructor, read it in a static method.',`private static int $printed = 0;
+
+public function __construct()
+{
+    self::$printed++;
+}`,`private static int $hired = 0;
+
+public function __construct(protected readonly string $name)
+{
+    self::$hired++;
+}
+
+public static function hired(): int
+{
+    return self::$hired;
+}`]},
+  {t:'`src/ClocksIn.php`: `trait ClocksIn` with `clockIn(string $day): void` and `shiftCount(): int`',c:c=>/trait\s+ClocksIn/.test(src(c,F7.clocks))&&/function\s+clockIn\s*\(\s*string\s+\$\w+\s*\)\s*:\s*void/.test(src(c,F7.clocks))&&/function\s+shiftCount\s*\(\s*\)\s*:\s*int/.test(src(c,F7.clocks)),help:['A small ability any class can pick up.','A private array of shifts, one method to add, one to count.',`trait Greets
+{
+    public function greet(): string
+    {
+        return 'Bonjour';
+    }
+}`,`trait ClocksIn
+{
+    private array $shifts = [];
+
+    public function clockIn(string $day): void
+    {
+        $this->shifts[] = $day;
+    }
+
+    public function shiftCount(): int
+    {
+        return count($this->shifts);
+    }
+}`]},
+  {t:"`final class Saucier extends Cook`, `use ClocksIn;`, station `'sauce'`",c:c=>/final\s+class\s+Saucier\s+extends\s+Cook/.test(src(c,F7.sauce))&&/use\s+ClocksIn\s*;/.test(src(c,F7.sauce))&&/return\s+'sauce'/.test(src(c,F7.sauce)),help:['Inherit from Cook, pick up the trait, fill in the station.','extends, use, and one method.',`final class Waiter extends Staff
+{
+    use Greets;
+}`,`final class Saucier extends Cook
+{
+    use ClocksIn;
+
+    public function station(): string
+    {
+        return 'sauce';
+    }
+}`]},
+  {t:"`Patissier`: station `'pastry'`, and `introduce()` adds ` ✦` to `parent::introduce()`",c:c=>/final\s+class\s+Patissier\s+extends\s+Cook/.test(src(c,F7.pat))&&/parent::introduce\(\)/.test(src(c,F7.pat))&&/use\s+ClocksIn\s*;/.test(src(c,F7.pat)),help:['Replace introduce, but reuse the parent\'s version.',"`return parent::introduce() . ' ✦';`",`public function serve(): string
+{
+    return parent::serve() . '!';
+}`,`final class Patissier extends Cook
+{
+    use ClocksIn;
+
+    public function station(): string
+    {
+        return 'pastry';
+    }
+
+    public function introduce(): string
+    {
+        return parent::introduce() . ' ✦';
+    }
+}`]},
+  {t:'index.php: a `<ul class="brigade">` with `Amélie · sauce` and `Jules · pastry ✦`',c:c=>rows(c,'ul.brigade li').join('|')==='Amélie · sauce|Jules · pastry ✦',help:['Require Cook and the trait before the children. Build both cooks.',"`$saucier = new Saucier('Amélie'); $patissier = new Patissier('Jules');` then list `->introduce()`.",`$team = [new Waiter('Mia')];`,`require_once __DIR__ . '/../src/Cook.php';
+require_once __DIR__ . '/../src/ClocksIn.php';
+require_once __DIR__ . '/../src/Saucier.php';
+require_once __DIR__ . '/../src/Patissier.php';
+
+$saucier = new Saucier('Amélie');
+$patissier = new Patissier('Jules');
+$brigade = [$saucier, $patissier];`]},
+  {t:'`Hired: 2` from `Cook::hired()`, and `Shifts: 2 and 1`',c:c=>hasP(c,'Hired: 2')&&hasP(c,'Shifts: 2 and 1')&&/Cook::hired\(\)/.test(src(c)),help:['Amélie clocks in Monday and Tuesday, Jules on Monday.','Call clockIn three times, then print the counts.',`$waiter->clockIn('Friday');`,`$saucier->clockIn('Monday');
+$saucier->clockIn('Tuesday');
+$patissier->clockIn('Monday');
+…
+<p>Hired: <?= Cook::hired() ?></p>
+<p>Shifts: <?= $saucier->shiftCount() ?> and <?= $patissier->shiftCount() ?></p>`]},
+  {t:'From outside: `new Cook()` is refused, `$name` is protected, the trait is in place',c:c=>pout(c,'outside')==='abstract protected 1 sauce trait',help:['Passle loads your files and pokes at them.','abstract on the class, protected on $name, use ClocksIn in Saucier.','abstract class Cook','Check the abstract, protected and use keywords.']},
+  cleanStep(c=>[F7.cook,F7.clocks,F7.sauce,F7.pat].every(p=>pure(c,p))&&rows(c,'ul.brigade li').length===2&&escaped(c,['introduce']))
+ ],
+ drills:[
+  {k:'pick',r:'pz59',q:'`new Cook()` when Cook is abstract:',o:['works','Error: cannot instantiate abstract class','returns null','a warning'],a:1,h:'Only concrete children can be built.'},
+  {k:'gap',r:'pz59',q:"Reuse the parent's version",pre:'return ',post:"::introduce() . ' ✦';",a:['parent'],h:'The class you extend.'},
+  {k:'pick',r:'pz59',q:'A `protected` property can be read by…',o:['anyone','the class and its children','only the class','only the file'],a:1,h:'Family only.'},
+  {k:'type',r:'pz60',q:'Pull the trait `ClocksIn` into a class',ph:'use …;',test:/^use ClocksIn;$/,ans:'use ClocksIn;',h:'`use ClocksIn;` inside the class body.'},
+  {k:'fix',r:'pz60',q:'This reads a static property the wrong way. Fix it',bug:'$this->hired++;',test:/^self::\$hired\+\+;$/,ans:'self::$hired++;',h:'self:: and keep the $.'},
+  {k:'pick',r:'pz60',q:'How many classes can a class extend, and how many traits can it use?',o:['one and one','one and many','many and one','many and many'],a:1,h:'Single inheritance, multiple traits.'}
+ ]},
+
+{id:'stocktake',special:true,name:'Night stock-take',rules:['pz61','pz62'],
+ probes:{missing:{over:{[IDX]:PHPHEAD+`
+require_once __DIR__ . '/../src/stock.php';
+
+try {
+    foreach (readStock(__DIR__ . '/../data/missing.csv') as $row) {
+        echo 'read';
+    }
+} catch (RuntimeException $e) {
+    echo 'refused';
+}
+$gen = readStock(__DIR__ . '/../data/stock.csv');
+echo ' ' . ($gen instanceof Generator ? 'generator' : 'array');
+echo ' ' . count(iterator_to_array(lowStock([['item' => 'salt', 'grams' => '5', 'minimum' => '10'], ['item' => 'oil', 'grams' => '50', 'minimum' => '10']])));
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Night stock-take',`    <h1>Night stock-take</h1>
+`),[F7.stock]:PHPHEAD,[F7.csv]:SPSOL.stocktake[F7.csv]},
+ solution:pickFiles(SPSOL.stocktake,[IDX,F7.stock,F7.csv]),
+ steps:[
+  {t:'`src/stock.php`: `readStock(string $file): Generator` opens the file with `fopen($file, \'r\')`',c:c=>/function\s+readStock\s*\(\s*string\s+\$file\s*\)\s*:\s*Generator/.test(src(c,F7.stock))&&/fopen\(\s*\$file\s*,\s*'r'\s*\)/.test(src(c,F7.stock)),help:['Open the CSV in data/ for reading.','Declare the function with return type Generator; get a handle with fopen.',`function lines(string $file): Generator
+{
+    $handle = fopen($file, 'r');
+}`,`function readStock(string $file): Generator
+{
+    $handle = fopen($file, 'r');
+}`]},
+  {t:"Read lines with `fgetcsv($handle, null, ',', '\"', '')`: the escape argument written out",c:c=>(src(c,F7.stock).match(/fgetcsv\(\s*\$\w+\s*,\s*null\s*,\s*','\s*,\s*'"'\s*,\s*''\s*\)/g)||[]).length>=2,help:['PHP 8.4 warns when you rely on the default escape. Pass all five arguments.',"First line: `$header = fgetcsv($handle, null, ',', '\"', '');` then the same call in a while.",`$row = fgetcsv($h, null, ';', '"', '');`,`$header = fgetcsv($handle, null, ',', '"', '');
+while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
+}`]},
+  {t:'`yield array_combine($header, $row);` for every line',c:c=>/yield\s+array_combine\(\s*\$header\s*,\s*\$row\s*\)/.test(src(c,F7.stock)),help:['Each row becomes a keyed array: item, grams, minimum, price_per_kg.','Inside the while loop.',`yield array_combine($columns, $line);`,`while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
+    yield array_combine($header, $row);
+}`]},
+  {t:'Close the handle in `finally`',c:c=>/finally\s*\{\s*fclose\(\s*\$handle\s*\)\s*;\s*\}/.test(src(c,F7.stock)),help:['Wrap the reading in try, close in finally.','`try { … } finally { fclose($handle); }`',`try {
+    …
+} finally {
+    fclose($h);
+}`,`try {
+    $header = fgetcsv($handle, null, ',', '"', '');
+    while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
+        yield array_combine($header, $row);
+    }
+} finally {
+    fclose($handle);
+}`]},
+  {t:'index.php: `Checked 6 items`, counted with a `foreach` over `readStock($file)`',c:c=>hasP(c,'Checked 6 items')&&/foreach\s*\(\s*readStock\(/.test(src(c)),help:['The generator works like an array in a foreach.',"`foreach (readStock($file) as $item) { $checked++; … }`",`foreach (lines($file) as $line) {
+    $count++;
+}`,`require_once __DIR__ . '/../src/stock.php';
+
+$file = __DIR__ . '/../data/stock.csv';
+$checked = 0;
+$value = 0.0;
+
+foreach (readStock($file) as $item) {
+    $checked++;
+}`]},
+  {t:'`Stock value: €25.89`: grams ÷ 1000 × price per kg, summed in the same loop',c:c=>hasP(c,'Stock value: €25.89'),help:['CSV fields are strings. Cast before doing maths.',"`$value += (int) $item['grams'] / 1000 * (float) $item['price_per_kg'];`",`$total += (int) $row['qty'] * (float) $row['price'];`,`$value += (int) $item['grams'] / 1000 * (float) $item['price_per_kg'];
+…
+<p>Stock value: €<?= number_format($value, 2) ?></p>`]},
+  {t:'`lowStock(iterable $items): Generator` yields `item => grams short`',c:c=>/function\s+lowStock\s*\(\s*iterable\s+\$items\s*\)\s*:\s*Generator/.test(src(c,F7.stock))&&/yield\s+\$\w+\['item'\]\s*=>/.test(src(c,F7.stock)),help:['A second generator that filters the first.',"Loop over $items; when minimum minus grams is above 0, `yield $item['item'] => $short;`",`function expensive(iterable $rows): Generator
+{
+    foreach ($rows as $row) {
+        if ((float) $row['price'] > 10) {
+            yield $row['name'] => $row['price'];
+        }
+    }
+}`,`function lowStock(iterable $items): Generator
+{
+    foreach ($items as $item) {
+        $short = (int) $item['minimum'] - (int) $item['grams'];
+        if ($short > 0) {
+            yield $item['item'] => $short;
+        }
+    }
+}`]},
+  {t:'Chain them and collect with `iterator_to_array(lowStock(readStock($file)))`',c:c=>/iterator_to_array\(\s*lowStock\(\s*readStock\(/.test(src(c)),help:['A generator is used up after one loop, so call readStock again here.','`$reorder = iterator_to_array(lowStock(readStock($file)));`',`$list = iterator_to_array(expensive(lines($file)));`,`$reorder = iterator_to_array(lowStock(readStock($file)));`]},
+  {t:'A `<ul class="reorder">`: `butter: 125 g short`, `saffron: 1 g short`, `cream: 750 g short`',c:c=>rows(c,'ul.reorder li').join('|')==='butter: 125 g short|saffron: 1 g short|cream: 750 g short',help:['Loop with key and value: the key is the item name.',"`foreach ($reorder as $name => $short):`",`<?php foreach ($list as $name => $price): ?>
+    <li><?= htmlspecialchars($name) ?>: €<?= $price ?></li>
+<?php endforeach; ?>`,`<ul class="reorder">
+    <?php foreach ($reorder as $name => $short): ?>
+        <li><?= htmlspecialchars($name) ?>: <?= $short ?> g short</li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'A missing file throws a `RuntimeException` instead of a warning, and both functions are real generators',c:c=>pout(c,'missing')==='refused generator 1'&&!c.p.missing.bad,help:['fopen on a missing file warns before it fails. Check first.',"`if (!is_file($file)) { throw new RuntimeException('No stock file at ' . basename($file)); }` at the top of readStock.",`if (!is_file($path)) {
+    throw new RuntimeException('Missing ' . $path);
+}`,`if (!is_file($file)) {
+    throw new RuntimeException('No stock file at ' . basename($file));
+}`]},
+  cleanStep(c=>pure(c,F7.stock)&&rows(c,'ul.reorder li').length===3&&escaped(c,['$name']))
+ ],
+ drills:[
+  {k:'pick',r:'pz61',q:'When does the code inside a generator function start running?',o:['When you call the function','On the first iteration','When it returns','Never'],a:1,h:'Lazy until someone asks.'},
+  {k:'gap',r:'pz61',q:'Hand out one value with a key',pre:'',post:" $name => $short;",a:['yield'],h:'The generator keyword.'},
+  {k:'pick',r:'pz61',q:'You loop over the same generator object twice. The second loop…',o:['repeats the items','throws or sees nothing: it is used up','is faster','sorts them'],a:1,h:'Call the function again for a fresh one.'},
+  {k:'type',r:'pz62',q:'Open `$file` for reading into `$handle`',ph:'$handle = …;',test:/^\$handle = fopen\(\$file, (['"])r\1\);$/,ans:"$handle = fopen($file, 'r');",h:"`$handle = fopen($file, 'r');`"},
+  {k:'fix',r:'pz62',q:'This relies on the default escape (deprecated in PHP 8.4). Write it out',bug:'$row = fgetcsv($handle);',test:/^\$row = fgetcsv\(\$handle, null, ',', '"', ''\);$/,ans:"$row = fgetcsv($handle, null, ',', '\"', '');",h:"Five arguments: handle, null, ',', '\"', ''."},
+  {k:'pick',r:'pz62',q:'Where does `fclose` belong if the loop may throw?',o:['after the loop','in catch','in finally','nowhere, PHP closes it'],a:2,h:'Runs either way.'}
+ ]}
+);
+
+MORE.push(
+ {k:'pick',r:'pz51',q:"`(new DateTimeImmutable('2026-10-21'))->format('N')` gives the weekday as…",o:["'Wed'",'3',"'Wednesday'",'21'],a:1,h:'N: 1 for Monday to 7 for Sunday.'},
+ {k:'pick',r:'pz52',q:'`$now->modify(\'+1 day\');` on its own line, with DateTimeImmutable. `$now` afterwards is…',o:['one day later','unchanged','null','an error'],a:1,h:'The new object was thrown away.'},
+ {k:'pick',r:'pz53',q:"`preg_match('/(/', 'x')` returns…",o:['0','1','false, with a warning','null'],a:2,h:'A broken pattern is not "no match".'},
+ {k:'pick',r:'pz56',q:'`array_map(null, [1, 2], [\'a\', \'b\'])` returns…',o:["[[1, 'a'], [2, 'b']]",'[1, 2]','an error',"['a', 'b']"],a:0,h:'null as the callback zips the arrays.'},
+ {k:'pick',r:'pz58',q:'The client sent PUT and you only support GET and POST. Status?',o:['400','404','405','501'],a:2,h:'Method Not Allowed.'},
+ {k:'pick',r:'pz60',q:'Inside a class, `static::class` vs `self::class` differ when…',o:['never','called from a child class','the class is final','in a trait only'],a:1,h:'static means the class actually used at runtime.'},
+ {k:'pick',r:'pz61',q:'What does `function f(): Generator { return; yield; }` return when called?',o:['null','a Generator object','an empty array','an error'],a:1,h:'Any yield in the body makes it a generator.'}
+);
+
+TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
 const DISH='img/passle/';
-const dishImg=(id,cls)=>'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="">';
+const ART_IDS=new Set(['menu-card','dish-label','pantry','menu-board','kitchen-helpers','split-kitchen','order-slip','safe-orders','table-service','recipe-book','cellar','bistro','menu-card-master','labels-master','pantry-master','board-master','router-master','login-master','tests-master','badge','reservations','prep-list']);
+const dishImg=(id,cls)=>!ART_IDS.has(id)?'':'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="" onerror="this.style.display=\'none\'">';
 const KEY='passle.v2';
-const PLATE_NAMES=['Menu card','Dish label','The pantry','Menu board','Kitchen helpers','Split the kitchen','Order slip','Safe orders','Table service','Recipe book','The cellar',"Roux's Bistro"];
-const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
@@ -4511,8 +5438,17 @@ const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 const clone=o=>JSON.parse(JSON.stringify(o));
 const T=()=>TARGETS[S.t];
 const isMaster=tg=>tg.master!=null;
-const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[TARGETS[m].id]&&!isMaster(TARGETS[m+1]))m++;return m};
-const unlocked=i=>i<=maxT()||(isMaster(TARGETS[i])&&!!S.done[TARGETS[TARGETS[i].master].id]);
+const isSpecial=tg=>!!tg.special;
+const BASE=()=>TARGETS.filter(t=>!isMaster(t));
+const plateNo=tg=>BASE().indexOf(tg);
+const plateLabel=tg=>isMaster(tg)?'Master plate':(isSpecial(tg)?"Chef's special ":'Plate ')+ROM[plateNo(tg)];
+const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[TARGETS[m].id]&&!isMaster(TARGETS[m+1])&&!isSpecial(TARGETS[m+1]))m++;return m};
+function unlocked(i){
+  const tg=TARGETS[i];
+  if(isMaster(tg))return !!S.done[TARGETS[tg.master].id];
+  if(isSpecial(tg)){const sp=TARGETS.filter(isSpecial),k=sp.indexOf(tg);return k===0?!!S.done.bistro:!!S.done[sp[k-1].id]}
+  return i<=maxT();
+}
 const schoolDone=t=>TARGETS[t].rules.every(r=>S.learned.includes(r));
 let commsT;function comms(m){$('cmsg').textContent=m;$('comms').classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>$('comms').classList.remove('flash'),1800)}
 
@@ -4532,6 +5468,7 @@ function shim(req){
    +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n';
   if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\n';
   s+='chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
+  s+='echo "\\x1ePASSLE-STATUS:" . (int) (http_response_code() ?: 200) . "\\x1e";\n';
   if(req.session)s+='if (session_status() === PHP_SESSION_ACTIVE) {\n    session_write_close();\n}\necho "\\x1ePASSLE-SID:" . session_id() . "\\x1e";\n';
   return s;
 }
@@ -4583,9 +5520,10 @@ const Engine={st:'off',php:null,mod:null,q:Promise.resolve(),written:[],out:'',e
 function mkResult(out,err){
   out=String(out||'');err=String(err||'');let sid=null;
   out=out.replace(/\x1ePASSLE-SID:([^\x1e]*)\x1e/g,(m,s)=>{sid=s;return ''});
+  let status=null;out=out.replace(/\x1ePASSLE-STATUS:(\d+)\x1e/g,(m,s)=>{status=+s;return ''});
   const lines=(out+'\n'+err).split('\n').map(l=>l.replace(/^PHP /,'').trim()).filter(l=>BAD_RE.test(l));
   const bad=lines.length>0;
-  return {out,err,bad,sid,errs:[...new Set(lines)],doc:new DOMParser().parseFromString(out,'text/html')};
+  return {out,err,bad,sid,status,errs:[...new Set(lines)],doc:new DOMParser().parseFromString(out,'text/html')};
 }
 function engBadge(){const b=$('eng');b.className=Engine.st==='ready'?'ready':(Engine.st==='fail'?'fail':'');b.textContent={off:'stove cold',warm:'lighting stove',ready:'stove hot',fail:'no stove'}[Engine.st];if(Engine.st==='fail')comms('PHP engine did not load. Open Passle over http(s) with an internet connection.')}
 
@@ -4600,7 +5538,7 @@ function render(){
   document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
   const sel=$('tsel');sel.innerHTML='';
-  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':'Plate '+ROM[i]+' · ')+tg.name+(S.mastered[tg.id]?'  ★':'');o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
+  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':(isSpecial(tg)?'Special ':'Plate ')+ROM[plateNo(tg)]+' · ')+tg.name+(S.mastered[tg.id]?'  ★':'');o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
   document.querySelectorAll('#modeseg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='kitchen')renderKitchen();else renderRules();
@@ -4730,7 +5668,7 @@ const stepsFor=tg=>S.mode==='master'?masterSteps(tg).concat(tg.steps.filter(s=>!
 async function check(tg,files){
   const r=await Engine.run(files,tg.request);
   const p={};for(const k of Object.keys(tg.probes||{})){const sp=tg.probes[k];p[k]=await Engine.run(sp&&sp.over?Object.assign({},files,sp.over):files,sp&&sp.over?(sp.req||{}):sp)}
-  const c={files,out:r.out,err:r.err,bad:r.bad,doc:r.doc,all:r.all,p};
+  const c={files,out:r.out,err:r.err,bad:r.bad,doc:r.doc,all:r.all,status:r.status,p};
   const st=stepsFor(tg);
   return {r,c,st,res:st.map(s=>{try{return !!s.c(c)}catch(e){return false}})};
 }
@@ -4740,7 +5678,7 @@ function reqText(tg){
 let curSteps=[],file=IDX,lastPass=null,lv=0,curStep=-2,runSeq=0,runT,lastRes=null;
 function renderTarget(){
   const tg=T();$('tree').classList.remove('on');
-  $('tname').textContent=tg.name;$('tcount').textContent=isMaster(tg)?'Master plate':'Plate '+ROM[S.t]+' / '+PLATE_NAMES.length;
+  $('tname').textContent=tg.name;$('tcount').textContent=isMaster(tg)?'Master plate':(isSpecial(tg)?'Special ':'Plate ')+ROM[plateNo(tg)]+' / '+ROM[BASE().length-1];
   const fs=curFiles();
   const ed=$('ed');if(ed.dataset.t!==modeKey(tg)){ed.dataset.t=modeKey(tg);lastPass=null;curStep=-2;lv=0;file=S.file[tg.id]&&fs[S.file[tg.id]]!=null?S.file[tg.id]:(fs[IDX]!=null?IDX:Object.keys(fs)[0])}
   const rl=reqList(tg.request);$('req').textContent=(rl.length>1?rl.length+' requests':(rl[0].method||'GET')+' '+(rl[0].path||'/'))+(rl.some(q=>q.session)?' · cookie':'');$('reqbox').classList.remove('on');
@@ -4854,29 +5792,31 @@ window.addEventListener('resize',()=>{if(S.stage==='kitchen')fitPlates()});
 function openViewer(name,out){$('vname').textContent=name;$('vframe').srcdoc=out;$('vraw').textContent=out;$('viewer').classList.add('on')}
 function renderKitchen(){
   const box=$('plates');box.innerHTML='';let served=0;
-  PLATE_NAMES.forEach((name,i)=>{
-    const tg=TARGETS[i]&&!isMaster(TARGETS[i])?TARGETS[i]:null;
-    const ms=tg?TARGETS.find(x=>x.master===i&&S.built[x.id]):null;
+  const newGrid=()=>{const g=document.createElement('div');g.className='pgrid';box.appendChild(g);return g};let grid=newGrid();
+  BASE().forEach((tg,i)=>{
+    const name=tg.name,ti=TARGETS.indexOf(tg);
+    if(isSpecial(tg)&&!isSpecial(BASE()[i-1]||{})){const dv=document.createElement('div');dv.className='kdiv';dv.innerHTML='<i></i>Chef\'s specials<i></i><em>Unlocked after Roux\'s Bistro. The parts of the exam the bistro does not cover.</em>';box.appendChild(dv);grid=newGrid()}
+    const ms=TARGETS.find(x=>x.master===ti&&S.built[x.id]);
     const show=ms||tg;const b=show?S.built[show.id]:null;if(b)served++;
     const el=document.createElement('div');el.className='plate'+(b?'':' waiting');
     const sc=document.createElement('div');sc.className='scene';
-    const art=document.createElement('div');art.className='art';art.innerHTML=show?dishImg(ms?ms.id:show.id):'';
+    const art=document.createElement('div');art.innerHTML=show?dishImg(ms?ms.id:show.id):'';art.className='art'+(art.innerHTML?'':' noart');
     const fr=document.createElement('div');
     if(b){
       fr.className='pframe'+(freshPlate===show.id?' fresh':'');fr.title='Open your plate';
       const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=name;f.tabIndex=-1;f.srcdoc=b.out;pv.appendChild(f);fr.appendChild(pv);
-      fr.onclick=()=>{sfx.blip();openViewer('Plate '+ROM[i]+' · '+(ms?ms.name:name),b.out)};
+      fr.onclick=()=>{sfx.blip();openViewer(plateLabel(tg)+' · '+(ms?ms.name:name),b.out)};
     }else{
-      fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(tg&&unlocked(i)?'awaiting your plate':'not yet')+'</span>';
+      fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(unlocked(ti)?'awaiting your plate':'not yet')+'</span>';
     }
     const mst=tg&&S.mastered[tg.id];
-    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>Plate '+ROM[i]+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst?'':' off')+'">'+dishImg('badge','medal')+'by heart</span>';
-    sc.appendChild(art);sc.appendChild(fr);el.appendChild(sc);el.appendChild(cap);box.appendChild(el);
+    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>'+plateLabel(tg).replace("Chef's special","Special")+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst?'':' off')+'">'+dishImg('badge','medal')+'by heart</span>';
+    sc.appendChild(art);sc.appendChild(fr);el.appendChild(sc);el.appendChild(cap);grid.appendChild(el);
   });
-  $('kcnt').textContent=served+' of '+PLATE_NAMES.length+' plated';
+  $('kcnt').textContent=served+' of '+BASE().length+' plated';
   const k=$('kroux');if(freshPlate){pose(k,'serve',3200)}else k.src=ROUX+(served?'happy':'idle')+'.png';
   freshPlate=null;fitPlates();
-  const nx=TARGETS.findIndex(t=>!isMaster(t)&&!S.done[t.id]);
+  const nx=TARGETS.findIndex((t,j)=>!isMaster(t)&&!S.done[t.id]&&unlocked(j));
   if(nx!==-1&&nx!==S.t&&S.done[T().id]&&!isMaster(T())&&unlocked(nx)){S.t=nx;S.drill=0;S.les=0;save();comms('Next plate unlocked: '+TARGETS[nx].name+'. School first.');setTimeout(render,0)}
 }
 function renderRules(){
@@ -4887,7 +5827,7 @@ function renderRules(){
     el.innerHTML='<div class="ph"><b>Rule '+r.n+'</b><span class="sp">'+esc(r.cat)+'</span></div>';
     const body=document.createElement('div');
     if(ok){body.className='rbody';body.innerHTML='<h3>'+esc(r.title)+'</h3><div class="syn">'+r.syn+'</div><p>'+esc(r.note)+'</p><pre>'+hlPHP(r.ex)+'</pre>'}
-    else{const rt=TARGETS[r.t];body.className='lockmsg';body.textContent='Locked · learn it in School for '+(rt&&isMaster(rt)?'the master plate '+rt.name:'Plate '+ROM[r.t])}
+    else{const rt=TARGETS[r.t];body.className='lockmsg';body.textContent='Locked · learn it in School for '+(rt&&isMaster(rt)?'the master plate '+rt.name:(rt?plateLabel(rt):'a later plate'))}
     el.appendChild(body);
     const cx=document.createElement('div');cx.className='cx';cx.innerHTML='<span>Codex · Passle rulebook</span><a href="codex.html">Open Codex</a>';el.appendChild(cx);
     v.appendChild(el);
