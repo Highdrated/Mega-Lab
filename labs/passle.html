@@ -220,6 +220,14 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .board img{width:72px;height:72px;object-fit:contain}
 .board h2{margin:0;font-family:var(--disp);font-weight:600;font-size:26px;letter-spacing:.02em}
 .board p{margin:2px 0 0;color:var(--mute);font-size:14px;font-style:italic}
+.flow{display:flex;align-items:stretch;gap:10px;flex-wrap:wrap}
+.flow .fs{flex:1;min-width:140px;border:1px solid var(--gold);outline:1px solid rgba(176,132,52,.15);outline-offset:3px;background:#fffdf8;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.flow .fs b{font-family:var(--disp);font-size:18px;font-weight:600}
+.flow .fs span{font-size:13.5px;color:var(--mute);font-style:italic}
+.flow>i{align-self:center;font-style:normal;color:var(--brass);font-size:18px}
+.flow.sub .fs{background:var(--panel2)}
+.flow.sub .fs b{font-size:15px;font-family:var(--mono);letter-spacing:.06em;text-transform:uppercase;font-weight:600}
+.welcome .sec ul{font-size:14.5px}
 .kside{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
 .kbtn{display:flex;gap:6px}
 .kbtn button{height:28px;padding:0 10px;font-size:9.5px}
@@ -362,7 +370,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
       <div class="efoot"><span id="scan">Waiting for the stove.</span><span class="sp">Tab indents · runs as you type</span></div></div>
   </section>
   <section class="view" id="v-kitchen">
-    <div class="board"><img id="kroux" src="img/roux/idle.png" alt=""><div><h2>Roux's Bistro</h2><p>Every plate you match is served here. Click one to see it full size.</p></div><div class="kside"><span class="cnt" id="kcnt"></span><div class="kbtn"><button id="bsave" title="Download your Passle progress as a file">Save progress</button><button id="bload" title="Load a progress file from another device">Load progress</button><input type="file" id="bfile" accept="application/json,.json" hidden></div></div></div>
+    <div class="board"><img id="kroux" src="img/roux/idle.png" alt=""><div><h2>Roux's Bistro</h2><p>Every plate you match is served here. Click one to see it full size.</p></div><div class="kside"><span class="cnt" id="kcnt"></span><div class="kbtn"><button id="bguide" title="Show how Passle works">How it works</button><button id="bsave" title="Download your Passle progress as a file">Save progress</button><button id="bload" title="Load a progress file from another device">Load progress</button><input type="file" id="bfile" accept="application/json,.json" hidden></div></div></div>
     <div class="plates" id="plates"></div>
   </section>
   <section class="view" id="v-rules"></section>
@@ -5701,6 +5709,7 @@ const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
 let S=Object.assign({t:0,stage:'school',drill:0,les:0,mode:'learn',code:{},file:{},done:{},mastered:{},built:{},learned:[],flag:[],sfx:true,keys:false,vol:70,ft:0},load()||{});
 if(!S.mastered)S.mastered={};
+if(S.welcomed==null)S.welcomed=S.learned.length>0;
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
 
 let AC;
@@ -5891,10 +5900,23 @@ function renderSchool(){
   if(prac&&!PR)PR={list:practiceList(),i:0,ft:0};
   const tg=T(),list=prac?PR.list:drillsFor(S.t),idx=prac?PR.i:S.drill;
   if(prac&&!list.length){$('dtitle').textContent='Practice';$('pips').innerHTML='';$('sside').innerHTML='';$('dbox').innerHTML='<div class="donecard"><div class="lhead"><div><h2>Nothing to practise yet</h2><p class="hint0">Finish your first School and its rules unlock here.</p></div><img src="'+ROUX+'rest.png" alt=""></div></div>';return}
+  if(!prac&&!S.welcomed){renderWelcome();return}
   if(!prac&&!lessonsDone(S.t)){const k=S.les||0;renderLesson(tg.rules[k],k,tg.rules.length);return}
   const p=$('pips');p.innerHTML='';list.forEach((d,i)=>{const s=document.createElement('span');if(i<idx)s.className='ok';else if(i===idx)s.className='now';if(d.rv)s.classList.add('rv');p.appendChild(s)});
   if(idx>=list.length){prac?practiceDone():schoolComplete(list);return}
   renderDrill(list[idx],idx,list.length);
+}
+function renderWelcome(){
+  $('dtitle').textContent='Welcome to the pass';$('pips').innerHTML='';
+  const box=$('dbox');
+  box.innerHTML='<div class="donecard welcome"><div class="lhead"><div><div class="dk">Passle · PHP kitchen</div><h2>Bonsoir. I run the pass.</h2></div><img src="'+ROUX+'serve.png" alt=""></div>'
+   +'<p class="why">You learn PHP by cooking real plates: small web pages and apps that grow from a menu card into a full bistro with a database, a login and an API. Every plate follows the same loop.</p>'
+   +'<div class="flow"><div class="fs"><b>School</b><span>lesson + 6 drills</span></div><i>→</i><div class="fs"><b>Target</b><span>rebuild the plate, checked live</span></div><i>→</i><div class="fs"><b>Kitchen</b><span>it joins the menu board</span></div></div>'
+   +'<div class="flow sub"><div class="fs"><b>Learning</b><span>skeleton laid out</span></div><i>→</i><div class="fs"><b>Mastery</b><span>blank files, by heart</span></div><i>→</i><div class="fs"><b>Bug hunt</b><span>3 planted bugs to fix</span></div></div>'
+   +'<div class="sec"><small>Along the way</small><ul><li><b>Practice</b>: 10 quick drills, leaning on what you missed.</li><li><b>Rush</b>: a timed mock service with a score per topic.</li><li><b>Rulebook</b> and the <b>Codex</b>: every rule you learn, to reread.</li><li><b>Take it home</b>: download the plate as a real project and run it with <code>php -S localhost:8000 -t public</code>.</li></ul></div>'
+   +'<div class="drow"><button class="pri" id="wgo">Start lesson 1</button></div></div>';
+  $('wgo').onclick=()=>{S.welcomed=true;save();sfx.blip();renderSchool()};
+  const sd=$('sside');$('stitle').textContent='Your first plate';$('plabel').textContent=T().name;sd.innerHTML='<div class="res" style="flex:1"></div>';const res=sd.firstChild;resultInto(res,null);solOut(T()).then(r=>{if(res.isConnected)resultInto(res,r)});
 }
 function practiceDone(){
   $('dtitle').textContent='Practice complete';sideRule(null);
@@ -6167,6 +6189,7 @@ $('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.key
 $('vol').oninput=e=>{S.vol=+e.target.value;save()};
 $('vol').onchange=()=>sfx.ok();
 $('home').onclick=takeHome;
+$('bguide').onclick=()=>{S.welcomed=false;S.stage='school';save();sfx.click();render()};
 $('bsave').onclick=()=>{const blob=new Blob([JSON.stringify({lab:'passle',v:2,exported:new Date().toISOString(),state:S},null,1)],{type:'application/json'});dl(URL.createObjectURL(blob),'passle-progress-'+new Date().toISOString().slice(0,10)+'.json');sfx.blip();comms('Progress saved. Load it on your other device from the Kitchen.')};
 $('bload').onclick=()=>$('bfile').click();
 $('bfile').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(txt=>{let d;try{d=JSON.parse(txt)}catch(x){d=null}
