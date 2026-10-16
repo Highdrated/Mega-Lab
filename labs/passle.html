@@ -65,6 +65,8 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .errbox.on{display:block}
 .pick{display:flex;align-items:center;gap:8px}
 .seg.mode button{height:30px;padding:0 11px;font-size:10px}
+.seg.mode button:disabled{opacity:.4}
+.bugs{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.5;color:var(--ink2)}
 .seg.mode button.on{background:var(--ink);color:#fbf3e3}
 .pcap .mst.off{visibility:hidden}
 .pcap .mst .medal{height:15px;width:auto;vertical-align:-3px;margin-right:6px}
@@ -164,6 +166,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 #v-target .left{grid-row:1/3}
 #v-target .edp{grid-column:2/4}
 .steps{list-style:none;margin:0;padding:4px 0;flex:0 1 auto;overflow:auto;min-height:120px}
+.steps.compact{max-height:34%}
 .steps li{display:flex;gap:10px;align-items:flex-start;padding:6px 14px;font-size:13.5px;line-height:1.45;border-left:3px solid transparent}
 .steps .n{flex:none;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:10.5px;font-weight:600;background:var(--panel2);border:1px solid var(--line);color:var(--mute)}
 .steps li.ok{color:var(--ink2)}
@@ -323,7 +326,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
     <button class="stg" data-v="practice">Practice</button><i>·</i>
     <button class="stg" data-v="rush">Rush</button>
   </nav>
-  <div class="pick"><select id="tsel" aria-label="Choose plate"></select><span class="seg mode" id="modeseg" title="Learning lays out the skeleton for you. Mastery starts from a blank file."><button data-mode="learn">Learning</button><button data-mode="master">Mastery</button></span></div>
+  <div class="pick"><select id="tsel" aria-label="Choose plate"></select><span class="seg mode" id="modeseg" title="Learning lays out the skeleton for you. Mastery starts from a blank file. Bug hunt hides three bugs in a plate you finished."><button data-mode="learn">Learning</button><button data-mode="master">Mastery</button><button data-mode="hunt">Bug hunt</button></span></div>
   <div id="comms"><img id="rmini" src="img/roux/idle.png" alt=""><span id="eng">stove cold</span><span id="cmsg">Roux is tying on the apron.</span></div>
   <div class="snd">
     <button id="notes" title="Notes for Claude: jot a bug or idea, hand it over next session (Ctrl+Shift+Y)">Notes</button>
@@ -4456,6 +4459,8 @@ MORE.push(
 );
 
 MORE.push(
+ {k:'pick',r:'pz1',q:"Is `<?php $x = 1 ?>` (no semicolon before `?>`) valid PHP?",o:['No, Parse error','Yes, the closing tag ends the statement','Only in PHP 7','Only with short tags'],a:1,h:'The closing tag implies a semicolon. Still: always write it.'},
+ {k:'pick',r:'pz33',q:'`SELECT COUNT(bottles) FROM wines` returns…',o:['the total number of bottles','the number of rows where bottles is not NULL','the highest bottle count','an error'],a:1,h:'COUNT counts rows, SUM adds values.'},
  {k:'pick',r:'pz1',q:"What does `echo 'Total: ' . 2 + 3;` print in PHP 8?",o:['Total: 23','Total: 5','5','an error'],a:1,h:'+ binds tighter than . since PHP 8.'},
  {k:'pick',r:'pz1',q:"`echo 'a', 'b';` prints…",o:['a b','ab','a,b','an error'],a:1,h:'echo takes several arguments and prints them back to back.'},
  {k:'pick',r:'pz2',q:'`var_dump(0.1 + 0.2 === 0.3);`',o:['bool(true)','bool(false)','float(0.3)','an error'],a:1,h:'Floats are binary approximations.'},
@@ -5430,6 +5435,167 @@ MORE.push(
 
 TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
 
+const BUGS={
+ 'menu-card':[
+  {d:"The price was a string: `'18.5'` in quotes. var_dump said string(4), not float(18.5).",r:[[`$price = 18.5;`,`$price = '18.5';`]]},
+  {d:'The dish name went into the h2 raw. Every string printed into HTML goes through htmlspecialchars.',r:[[`<h2><?= htmlspecialchars($dish) ?></h2>`,`<h2><?= $dish ?></h2>`]]},
+  {d:'A missing semicolon after `$portions = 12`. PHP reports the parse error on the next line, because that is where it noticed. (Right before ?> a semicolon is optional, which is why the last line is a sneaky place to look.)',r:[[`$portions = 12;`,`$portions = 12`]]}
+ ],
+ 'dish-label':[
+  {d:'`$clean` was a copy of `$name`, spaces and all. trim returns the cleaned string; you have to store it.',r:[[`$clean = trim($name);`,`$clean = $name;`]]},
+  {d:'number_format without the decimals argument rounds to a whole number: €22 instead of €21.50.',r:[[`number_format($price, 2)`,`number_format($price)`]]},
+  {d:'Single quotes do not fill in variables: the page printed {$table} literally.',r:[[`$serve = "Serve at table {$table}";`,`$serve = 'Serve at table {$table}';`]]}
+ ],
+ 'pantry':[
+  {d:'sort sorts in place and returns true. `$shelf = sort($shelf)` replaced the list with true.',r:[[`sort($shelf);`,`$shelf = sort($shelf);`]]},
+  {d:'Lists count from 0. `$shelf[1]` is the second jar.',r:[[`htmlspecialchars($shelf[0])`,`htmlspecialchars($shelf[1])`]]},
+  {d:"A typo in a key: `'buter'` does not exist, so PHP warned and the butter never went down.",r:[[`$stock['butter'] -= 125;`,`$stock['buter'] -= 125;`]]}
+ ],
+ 'menu-board':[
+  {d:'`=` inside an if assigns instead of comparing, so every dish became vegetarian.',r:[[`if ($dish['veg']) {`,`if ($dish['veg'] = true) {`]]},
+  {d:'The comparison pointed the wrong way: < kept the cheapest dish, not the most expensive.',r:[[`if ($dish['price'] > $top['price']) {`,`if ($dish['price'] < $top['price']) {`]]},
+  {d:'The loop in the template was never closed: endforeach was missing, so PHP hit the end of the file.',r:[[`        <?php endforeach; ?>
+    </ul>`,`    </ul>`]]}
+ ],
+ 'kitchen-helpers':[
+  {d:'withVat calculated the result but never returned it. With a float return type, that is a TypeError.',r:[[`    return round($net * (1 + $rate), 2);`,`    round($net * (1 + $rate), 2);`]]},
+  {d:'0.6 is 60%. The named argument also went missing, so the call no longer said what the number meant.',r:[[`withVat($menu[0]['price'], rate: 0.06)`,`withVat($menu[0]['price'], 0.6)`]]},
+  {d:'The default limit was 1.5 instead of 15.0, so nothing counted as cheap.',r:[[`float $limit = 15.0): bool`,`float $limit = 1.5): bool`]]}
+ ],
+ 'split-kitchen':[
+  {d:"A path without __DIR__ is read from the folder the server was started in, not from this file. That is the classic works-on-my-machine bug.",r:[[`require_once __DIR__ . '/../src/menu.php';`,`require_once 'src/menu.php';`]]},
+  {d:'The template printed dish names raw. Templates escape too.',r:[[`<?= htmlspecialchars($dish['name']) ?>`,`<?= $dish['name'] ?>`,TPL_MENU]]},
+  {d:"A price stored as the string '21.5'. With strict_types, price(float) refused it with a TypeError.",r:[[`['name' => 'Coq au vin', 'price' => 21.5]`,`['name' => 'Coq au vin', 'price' => '21.5']`,SRC_MENU]]}
+ ],
+ 'order-slip':[
+  {d:"A typo in the field name: `'nmae'` is never sent, so the name was always empty.",r:[[`trim($_POST['name'] ?? '')`,`trim($_POST['nmae'] ?? '')`]]},
+  {d:"The method is 'POST' in capitals. With ===, 'post' never matches.",r:[[`=== 'POST') {`,`=== 'post') {`]]},
+  {d:'$ordered had no starting value, so a plain visit warned: Undefined variable.',r:[[`$ordered = false;
+`,``]]}
+ ],
+ 'safe-orders':[
+  {d:'in_array without true compares loosely. Strict is the house rule.',r:[[`in_array($dish, $dishes, true)`,`in_array($dish, $dishes)`]]},
+  {d:'`!$portions` treats a valid 0 as a failure. filter_var results are checked with === false.',r:[[`if ($portions === false) {`,`if (!$portions) {`]]},
+  {d:'The sticky name field printed the raw value: a quote in a name could break out of the attribute.',r:[[`value="<?= htmlspecialchars($name) ?>"`,`value="<?= $name ?>"`]]}
+ ],
+ 'table-service':[
+  {d:'`=` instead of `??=` emptied the cart on every request.',r:[[`$_SESSION['cart'] ??= [];`,`$_SESSION['cart'] = [];`]]},
+  {d:'session_start was missing, so $_SESSION did not exist and nothing was remembered.',r:[[`session_start();
+
+$prices`,`$prices`]]},
+  {d:'Any posted dish went into the cart, including a Lobster that is not on the menu.',r:[[`if (array_key_exists($dish, $prices)) {`,`if ($dish !== '') {`]]}
+ ],
+ 'recipe-book':[
+  {d:'json_decode without true returns objects, and an object cannot be read like an array.',r:[[`json_decode(file_get_contents($file), true, flags: JSON_THROW_ON_ERROR)`,`json_decode(file_get_contents($file), flags: JSON_THROW_ON_ERROR)`]]},
+  {d:'Saving without LOCK_EX lets two requests write the file at the same time.',r:[[`JSON_THROW_ON_ERROR), LOCK_EX);`,`JSON_THROW_ON_ERROR));`]]},
+  {d:'$a and $b were swapped in the compare function, so the slowest recipe came first.',r:[[`fn (array $a, array $b): int => $a['minutes'] <=> $b['minutes']`,`fn (array $a, array $b): int => $b['minutes'] <=> $a['minutes']`]]}
+ ],
+ 'cellar':[
+  {d:'The id from the request was glued into the SQL. That is SQL injection: always prepare and execute.',r:[[`$remove = $pdo->prepare('DELETE FROM wines WHERE id = :id');
+        $remove->execute(['id' => $id]);`,`$pdo->exec('DELETE FROM wines WHERE id = ' . $_POST['id']);`]]},
+  {d:"FETCH_NUM returns rows as lists, so $wine['name'] did not exist.",r:[[`PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,`,`PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_NUM,`,SRC_DB]]},
+  {d:'COUNT(bottles) counts rows; SUM(bottles) adds the bottles up.',r:[[`SUM(bottles) AS bottles`,`COUNT(bottles) AS bottles`]]}
+ ],
+ 'bistro':[
+  {d:"Without the % signs, LIKE :q only matched names exactly equal to the search, so an empty search found nothing.",r:[[`$find->execute(['q' => '%' . $q . '%']);`,`$find->execute(['q' => $q]);`,SRC_REC]]},
+  {d:'The redirect was sent, but the script carried on and printed the whole page too. Stop after header().',r:[[`header('Location: /', true, 303);
+
+        return;`,`header('Location: /', true, 303);`]]},
+  {d:'The flash message was never removed, so it showed on every page after.',r:[[`unset($_SESSION['flash']);
+`,``]]}
+ ],
+ 'menu-card-master':[
+  {d:'Without readonly, anyone could change the price after the dish was made.',r:[[`public readonly float $price,`,`public float $price,`,'src/Dish.php']]},
+  {d:'Inside a method, properties need $this->. $portions on its own is an undefined local variable.',r:[[`return $this->portions > 0;`,`return $portions > 0;`,'src/Dish.php']]},
+  {d:'withPortions tried to change a readonly property instead of returning a new object.',r:[[`return new self($this->name, $this->price, $portions, $this->vegetarian);`,`$this->portions = $portions;
+
+        return $this;`,'src/Dish.php']]}
+ ],
+ 'labels-master':[
+  {d:'Wine had a label() method but never said implements Labelled, so it did not keep the promise as far as PHP knew.',r:[[`final class Wine implements Labelled`,`final class Wine`,'src/Wine.php']]},
+  {d:"The case value was 'eggs', so Allergen::from('egg') threw a ValueError.",r:[[`case Egg = 'egg';`,`case Egg = 'eggs';`,'src/Allergen.php']]},
+  {d:'The price was printed raw: €21.5 instead of €21.50.',r:[[`' · €' . number_format($this->price, 2);`,`' · €' . $this->price;`,'src/Dish.php']]}
+ ],
+ 'pantry-master':[
+  {d:'public $jars let outside code replace the whole shelf. Keep the list private.',r:[[`private array $jars = [];`,`public array $jars = [];`,'src/Pantry/Shelf.php']]},
+  {d:'The autoloader required files without checking they exist: one unknown class name became a fatal error.',r:[[`    if (is_file($path)) {
+        require $path;
+    }`,`    require $path;`,'src/autoload.php']]},
+  {d:'The use line for Stock was missing, so PHP looked for a class called Stock in the global namespace.',r:[[`use Bistro\\Pantry\\Stock;
+`,``]]}
+ ],
+ 'board-master':[
+  {d:'`< 0` let zero grams through. The guard is `<= 0`.',r:[[`if ($grams <= 0) {`,`if ($grams < 0) {`,'src/Pantry.php']]},
+  {d:'Nobody caught OutOfStock any more, so the first short order ended the script with an Uncaught exception.',r:[[`    } catch (OutOfStock $e) {
+        $log[] = 'Short: ' . $e->getMessage();
+`,``]]},
+  {d:'Without parent::__construct the exception had no message.',r:[[`        parent::__construct(sprintf('Not enough %s: %d g short', $item, $missing));
+`,``,'src/OutOfStock.php']]}
+ ],
+ 'router-master':[
+  {d:'Matching on the whole REQUEST_URI broke as soon as a ?query was added. parse_url keeps only the path.',r:[[`$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';`,`$path = $_SERVER['REQUEST_URI'];`]]},
+  {d:'The status code was never set, so the not-found page answered 200 OK.',r:[[`http_response_code($status);
+`,``]]},
+  {d:'The not-found page printed the path raw, and a path is typed by the visitor.',r:[[`<?= htmlspecialchars($path) ?>`,`<?= $path ?>`,'templates/not-found.php']]}
+ ],
+ 'login-master':[
+  {d:'No new session id at login: a planted or stolen id would stay valid. That is session fixation.',r:[[`    session_regenerate_id(true);
+    $_SESSION['user'] = $user;`,`    $_SESSION['user'] = $user;`,'src/auth.php']]},
+  {d:'validCsrf always said yes, so any website could post forms in a logged-in guest\'s name.',r:[[`return hash_equals($_SESSION['csrf'] ?? '', $token);`,`return true;`,'src/auth.php']]},
+  {d:'The password was never checked: any password for a known name logged in.',r:[[`if ($hash === null || !password_verify($password, $hash)) {`,`if ($hash === null) {`,'src/auth.php']]}
+ ],
+ 'tests-master':[
+  {d:'`!=` compares loosely: expectSame(\'1\', 1) would pass. Tests compare strictly.',r:[[`if ($expected !== $actual) {`,`if ($expected != $actual) {`,'tests/expect.php']]},
+  {d:'The boundary test checked 15.5 instead of exactly 15.0, so the < versus <= bug could hide.',r:[[`expectSame(false, isCheap(15.0));`,`expectSame(false, isCheap(15.5));`,'tests/kitchen_test.php']]},
+  {d:'`<=` made a dish at exactly the limit count as cheap. Your boundary test turned red: that is what it is for.',r:[[`return $price < $limit;`,`return $price <= $limit;`,'src/kitchen.php']]}
+ ],
+ 'reservations':[
+  {d:'A mutable DateTime: every modify() moved $now itself, so tomorrow, last orders and now all drifted.',r:[[`$now = new DateTimeImmutable('2026-10-21 18:00', $tz);`,`$now = new DateTime('2026-10-21 18:00', $tz);`]]},
+  {d:"'H:m' reads minutes as a month, so the booking times could not be read.",r:[[`createFromFormat('Y-m-d H:i'`,`createFromFormat('Y-m-d H:m'`]]},
+  {d:"'H:m' printed the month instead of the minutes.",r:[[`<?= $booking['at']->format('H:i') ?>`,`<?= $booking['at']->format('H:m') ?>`]]}
+ ],
+ 'scanner':[
+  {d:'The search term went into the pattern unescaped: a ( from a guest broke the regex.',r:[[`preg_match('/' . preg_quote($q, '/') . '/i', $label)`,`preg_match('/' . $q . '/i', $label)`]]},
+  {d:'Without the i flag, GLUTEN in capitals was not counted.',r:[[`preg_match('/\\bgluten\\b/i', $label)`,`preg_match('/\\bgluten\\b/', $label)`]]},
+  {d:'\\d+ accepts any number of digits, so PIS-7 slipped through. The code needs exactly three: \\d{3}.',r:[[`'/^[A-Z]{3}-\\d{3}$/'`,`'/^[A-Z]{3}-\\d+$/'`]]}
+ ],
+ 'prep-list':[
+  {d:'The closure used $station without use ($station), so inside it the variable did not exist.',r:[[`return function (array $task) use ($station): bool {`,`return function (array $task): bool {`]]},
+  {d:'array_reduce without a start value hands null to the first call, and an int parameter refuses null.',r:[[`$sum + $task['minutes'], 0);`,`$sum + $task['minutes']);`]]},
+  {d:'The filter kept the finished tasks instead of the open ones.',r:[[`fn (array $task): bool => !$task['done']`,`fn (array $task): bool => $task['done']`]]}
+ ],
+ 'api':[
+  {d:'A created item answers 201, not 200.',r:[[`respond(201, [`,`respond(200, [`]]},
+  {d:'A 405 must say what is allowed: the Allow header was missing.',r:[[`header('Allow: GET, POST');
+`,``]]},
+  {d:'Text before the JSON made every answer unparseable for the client.',r:[[`    echo json_encode($data,`,`    echo 'Response: ' . json_encode($data,`]]}
+ ],
+ 'brigade':[
+  {d:'A static counter is reached with self::, not $this->. $this->hired made a new, undeclared property on each cook.',r:[[`self::$hired++;`,`$this->hired++;`,'src/Cook.php']]},
+  {d:"Patissier rebuilt the line by hand and lost the station; parent::introduce() reuses the parent's version.",r:[[`return parent::introduce() . ' ✦';`,`return $this->name . ' ✦';`,'src/Patissier.php']]},
+  {d:'Saucier forgot use ClocksIn, so it had no clockIn() method.',r:[[`    use ClocksIn;
+
+    public function station(): string
+    {
+        return 'sauce';`,`    public function station(): string
+    {
+        return 'sauce';`,'src/Saucier.php']]}
+ ],
+ 'stocktake':[
+  {d:'return instead of yield: readStock stopped being a generator and returned one row, which is not a Generator.',r:[[`yield array_combine($header, $row);`,`return array_combine($header, $row);`,'src/stock.php']]},
+  {d:'The subtraction was the wrong way round: items with plenty in stock showed up as short.',r:[[`$short = (int) $item['minimum'] - (int) $item['grams'];`,`$short = (int) $item['grams'] - (int) $item['minimum'];`,'src/stock.php']]},
+  {d:'One generator was looped twice. After the first foreach it is used up: call readStock again for a fresh one.',r:[[`foreach (readStock($file) as $item) {`,`$items = readStock($file);
+
+foreach ($items as $item) {`],[`iterator_to_array(lowStock(readStock($file)))`,`iterator_to_array(lowStock($items))`]]}
+ ]
+};
+TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
+function applyBugs(files,bugs){
+  const f=JSON.parse(JSON.stringify(files));
+  bugs.forEach(b=>b.r.forEach(([from,to,file])=>{const p=file||IDX;if(f[p]==null||f[p].split(from).length!==2)throw new Error('bug anchor not found once: '+p+' :: '+from.slice(0,50));f[p]=f[p].replace(from,()=>to)}));
+  return f;
+}
+
 let RUSH=null;
 const fmtClock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function rushPool(){
@@ -5658,8 +5824,9 @@ function render(){
   document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
   const sel=$('tsel');sel.innerHTML='';
-  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':(isSpecial(tg)?'Special ':'Plate ')+ROM[plateNo(tg)]+' · ')+tg.name+(S.mastered[tg.id]?'  ★':'');o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
-  document.querySelectorAll('#modeseg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+  TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(isMaster(tg)?'Master · ':(isSpecial(tg)?'Special ':'Plate ')+ROM[plateNo(tg)]+' · ')+tg.name+(S.mastered[tg.id]?'  ★':'')+((S.hunted||{})[tg.id]?'  ✓':'');o.disabled=!unlocked(i);sel.appendChild(o)});sel.value=S.t;
+  if(S.mode==='hunt'&&!(T().bugs&&S.done[T().id])){S.mode='learn';save()}
+  document.querySelectorAll('#modeseg button').forEach(b=>{b.classList.toggle('on',b.dataset.mode===S.mode);if(b.dataset.mode==='hunt'){const ok=!!(T().bugs&&S.done[T().id]);b.disabled=!ok;b.title=ok?'Your finished plate, with three bugs planted. Find and fix them.':'Serve this plate first: Bug hunt gives you your own finished plate back, with three bugs planted.'}});
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='rush')renderRush();else if(S.stage==='target')renderTarget();else if(S.stage==='kitchen')renderKitchen();else renderRules();
 }
@@ -5787,10 +5954,10 @@ function schoolComplete(){
 
 const SOL={};
 function solOut(tg){if(!SOL[tg.id])SOL[tg.id]=Engine.run(tg.solution,tg.request).catch(()=>{delete SOL[tg.id];return {fail:1,out:'',err:'',doc:null}});return SOL[tg.id]}
-const modeKey=tg=>(S.mode==='master'?'m:':'')+tg.id;
-function starter(tg){const f=clone(tg.files);if(S.mode!=='master')return f;Object.keys(f).forEach(p=>{if(/\.php$/.test(p))f[p]=(tg.ingredients&&tg.ingredients[p])||''});return f}
+const modeKey=tg=>({master:'m:',hunt:'b:'}[S.mode]||'')+tg.id;
+function starter(tg){if(S.mode==='hunt'&&tg.bugs)return applyBugs(tg.solution,tg.bugs);const f=clone(tg.files);if(S.mode!=='master')return f;Object.keys(f).forEach(p=>{if(/\.php$/.test(p))f[p]=(tg.ingredients&&tg.ingredients[p])||''});return f}
 const curFiles=()=>{const tg=T(),k=modeKey(tg);if(!S.code[k])S.code[k]=starter(tg);return S.code[k]};
-const stepsFor=tg=>S.mode==='master'?masterSteps(tg).concat(tg.steps.filter(s=>!s.learnOnly)):tg.steps;
+const stepsFor=tg=>S.mode==='master'||S.mode==='hunt'?masterSteps(tg).concat(tg.steps.filter(s=>!s.learnOnly)):tg.steps;
 async function check(tg,files){
   const r=await Engine.run(files,tg.request);
   const p={};for(const k of Object.keys(tg.probes||{})){const sp=tg.probes[k];p[k]=await Engine.run(sp&&sp.over?Object.assign({},files,sp.over):files,sp&&sp.over?(sp.req||{}):sp)}
@@ -5846,7 +6013,7 @@ function evaluate(k,files){
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
   const now=res.indexOf(false);
-  const ol=$('steps');ol.innerHTML='';
+  const ol=$('steps');ol.innerHTML='';ol.classList.toggle('compact',now===-1);
   steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
   const hb=habits(files);
   const sc=$('scan');
@@ -5855,7 +6022,8 @@ function evaluate(k,files){
   else{sc.className=now===-1?'ok':'';sc.textContent=now===-1?'Plate matches the target.':'Served without errors. '+n+' of '+res.length+' steps done.'}
   curSteps=steps;if(now!==curStep){curStep=now;lv=0;renderHelp()}
   if(now===-1){
-    const first=S.mode==='master'?!S.mastered[tg.id]:!S.done[tg.id];S.done[tg.id]=true;if(S.mode==='master')S.mastered[tg.id]=true;S.built[tg.id]={out:r.out,files,mode:S.mode};save();
+    S.hunted=S.hunted||{};
+    const first=S.mode==='master'?!S.mastered[tg.id]:(S.mode==='hunt'?!S.hunted[tg.id]:!S.done[tg.id]);S.done[tg.id]=true;if(S.mode==='master')S.mastered[tg.id]=true;if(S.mode==='hunt')S.hunted[tg.id]=true;if(S.mode!=='hunt')S.built[tg.id]={out:r.out,files,mode:S.mode};save();
     if(first){sfx.target();pose($('hroux'),'cheer',2600);pose($('rmini'),'cheer',2600);comms(tg.name+' matches. Send it to the kitchen.');render()}
   }
 }
@@ -5863,13 +6031,17 @@ function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
   if(curStep===-1){
     $('hstep').textContent='all steps done';
+    if(S.mode==='hunt'){
+      lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt=""><div class="win"><b>All bugs fixed.</b> '+esc(tg.name)+' is back to working order.</div></div><div class="sec"><small>What was wrong</small><ol class="bugs">'+tg.bugs.map(b=>'<li>'+fmt(b.d)+'</li>').join('')+'</ol></div>';
+      const bb=document.createElement('button');bb.className='pri';bb.textContent='Back to the kitchen';bb.onclick=()=>{sfx.serve();go('kitchen')};foot.appendChild(bb);return;
+    }
     lad.innerHTML='<div class="idle"><img id="hroux" data-base="cheer" src="'+ROUX+'cheer.png" alt="">'+(S.mode==='master'?dishImg('badge','hmedal'):'')+'<div class="win"><b>'+(S.mode==='master'?'Mastered.':'Plate matched.')+'</b> '+esc(tg.name)+(S.mode==='master'?' built from a blank file, by heart.':' is ready for the menu board.')+(S.mode==='learn'&&!S.mastered[tg.id]?' Next challenge: switch to Mastery and build it from nothing.':'')+'</div></div><div class="hint0">Take it home in the top bar downloads this as a real project folder you can run with <code>php -S localhost:8000 -t public</code>.</div>';
     const b=document.createElement('button');b.className='pri';b.textContent='Send to the kitchen';b.onclick=()=>{freshPlate=tg.id;sfx.serve();comms(tg.name+' is on the menu board.');go('kitchen')};foot.appendChild(b);return;
   }
   $('hstep').textContent=curStep>=0?'step '+(curStep+1):'';
   const st=curStep>=0?curSteps[curStep]:null,names=['Nudge','Point','Example','Answer'];
   const base=lv>0?'call':'idle';
-  lad.innerHTML='<div class="idle"><img id="hroux" data-base="'+base+'" src="'+ROUX+base+'.png" alt=""><div class="hint0">'+(lv===0?'Try it yourself first. Stuck? Roux helps in four steps, from a small nudge to the full answer.':'Roux is on it. One more click shows a bigger hint.')+'</div></div>';
+  lad.innerHTML='<div class="idle"><img id="hroux" data-base="'+base+'" src="'+ROUX+base+'.png" alt=""><div class="hint0">'+(lv===0?(S.mode==='hunt'?'Three bugs are hiding in this code. Read the red error box and the failing step: they point at the line. Roux can still nudge you.':'Try it yourself first. Stuck? Roux helps in four steps, from a small nudge to the full answer.'):'Roux is on it. One more click shows a bigger hint.')+'</div></div>';
   if(st)for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&!/`/.test(st.help[i]);div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
   if(lv===4){const nt=document.createElement('div');nt.className='hint0';nt.textContent='Noted: this comes back as a review drill in a later School.';lad.appendChild(nt)}
   const b=document.createElement('button');b.id='stuck';b.textContent=lv===0?"I'm stuck":(lv<4?'Still stuck':'Answer shown');b.disabled=lv>=4||!st;
@@ -5936,7 +6108,7 @@ function renderKitchen(){
       fr.className='pframe empty';fr.innerHTML='<img src="'+ROUX+'rest.png" alt=""><span>'+(unlocked(ti)?'awaiting your plate':'not yet')+'</span>';
     }
     const mst=tg&&S.mastered[tg.id];
-    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>'+plateLabel(tg).replace("Chef's special","Special")+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst?'':' off')+'">'+dishImg('badge','medal')+'by heart</span>';
+    const cap=document.createElement('div');cap.className='pcap';cap.innerHTML='<i></i>'+plateLabel(tg).replace("Chef's special","Special")+(ms?' <span class="ms">✦</span>':'')+'<i></i><em>'+esc(ms?ms.name:name)+'</em>'+'<span class="mst'+(mst||(S.hunted||{})[tg.id]?'':' off')+'">'+(mst?dishImg('badge','medal')+'by heart':'')+(mst&&(S.hunted||{})[tg.id]?' · ':'')+((S.hunted||{})[tg.id]?'debugged':'')+(mst||(S.hunted||{})[tg.id]?'':'—')+'</span>';
     sc.appendChild(art);sc.appendChild(fr);el.appendChild(sc);el.appendChild(cap);grid.appendChild(el);
   });
   $('kcnt').textContent=served+' of '+BASE().length+' plated';
@@ -6002,7 +6174,7 @@ $('bfile').onchange=e=>{const f=e.target.files[0];if(!f)return;f.text().then(txt
   const mine=Object.keys(S.done).length,theirs=Object.keys(d.state.done||{}).length;
   if(theirs<mine&&!confirm('This file has '+theirs+' plates done, this device has '+mine+'. Replace this device\'s progress anyway?'))return;
   S=Object.assign({},S,d.state,{sfx:S.sfx,keys:S.keys,vol:S.vol});save();$('ed').dataset.t='';sfx.target();comms('Progress loaded: '+theirs+' plates, '+S.learned.length+' rules.');render()}).finally(()=>{e.target.value=''})};
-document.querySelectorAll('#modeseg button').forEach(b=>b.onclick=()=>{if(S.mode===b.dataset.mode)return;S.mode=b.dataset.mode;save();sfx.blip();$('ed').dataset.t='';comms(S.mode==='master'?'Mastery: blank files. You write everything, the skeleton too.':'Learning: the skeleton is laid out for you.');render()});
+document.querySelectorAll('#modeseg button').forEach(b=>b.onclick=()=>{if(S.mode===b.dataset.mode)return;S.mode=b.dataset.mode;save();sfx.blip();$('ed').dataset.t='';comms({master:'Mastery: blank files. You write everything, the skeleton too.',hunt:'Bug hunt: your finished plate, with three bugs planted.',learn:'Learning: the skeleton is laid out for you.'}[S.mode]);render()});
 $('req').onclick=()=>{const b=$('reqbox');b.innerHTML='<b>What the browser sends</b>\n'+esc(reqText(T()))+'\n\n<em>Every check starts with an empty data/ folder and a fresh session.\nErrors are shown, like a local dev server.</em>';b.classList.toggle('on');sfx.click()};
 $('slider').oninput=e=>{$('ovl').style.opacity=e.target.value/100};
 $('vclose').onclick=()=>{sfx.click();$('viewer').classList.remove('on')};
