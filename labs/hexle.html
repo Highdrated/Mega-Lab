@@ -186,7 +186,7 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 .tree em{color:var(--mute);font-style:normal}
 #ed{background:transparent;color:transparent;caret-color:var(--ink);resize:none;outline:0}
 #ed::selection{background:var(--sel);color:transparent}
-.h-p{color:var(--mute)}.h-t{color:var(--acc3);font-weight:500}.h-a{color:var(--amb)}.h-s{color:var(--vio)}.h-sel{color:var(--amb);font-weight:500}.h-pr{color:var(--acc3)}.h-v{color:var(--vio)}
+.h-p{color:var(--mute)}.h-c{color:var(--mute);font-style:italic}.h-t{color:var(--acc3);font-weight:500}.h-a{color:var(--amb)}.h-s{color:var(--vio)}.h-sel{color:var(--amb);font-weight:500}.h-pr{color:var(--acc3)}.h-v{color:var(--vio)}
 .efoot{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--ink2);flex:none}
 .efoot .sp{margin-left:auto;color:var(--mute)}
 #scan.bad{color:var(--cor)}#scan.ok{color:var(--acc3)}
@@ -1299,9 +1299,192 @@ MORE.push(
  {k:'gap',r:'r52',q:'Grow within limits',pre:'h1 { font-size: ',post:'(2rem, 5vw, 3.5rem); }',a:['clamp'],h:'Like a clamp holds wood.'}
 );
 
+Object.assign(RULES,{
+ r53:{n:'53',title:'Scripts: script.js, defer, console.log',syn:'&lt;script src="<span class="v">script.js</span>" <span class="k">defer</span>&gt;&lt;/script&gt; · console.log(<span class="v">"hi"</span>);',note:'JavaScript lives in its own file, loaded from the head with defer so it runs after the page is built. console.log writes a message to the console, your window into the script.',ex:'<p>In a spell target, this message shows up in the console bar under the editor.</p>\n<script>\n  console.log("Hello from the script");\n<\/script>',cat:'JavaScript',t:25},
+ r54:{n:'54',title:'Finding elements: querySelector, textContent',syn:'const el = document.<span class="k">querySelector</span>(<span class="v">".status"</span>); el.<span class="k">textContent</span> = "…";',note:'document.querySelector takes a CSS selector and returns the first element that matches. textContent reads or replaces the words inside it.',ex:'<p class="status">The lantern is out.</p>\n<script>\n  const status = document.querySelector(".status");\n  status.textContent = "The lantern is lit.";\n<\/script>',cat:'JavaScript',t:25},
+ r55:{n:'55',title:'Events: addEventListener',syn:'button.<span class="k">addEventListener</span>(<span class="v">"click"</span>, () => { … });',note:'An event listener waits for something to happen, like a click, and then runs the function you gave it. () => { } is a short way to write that function.',ex:'<button id="b">Click me</button>\n<p id="out">Waiting…</p>\n<script>\n  const b = document.querySelector("#b");\n  b.addEventListener("click", () => {\n    document.querySelector("#out").textContent = "Clicked!";\n  });\n<\/script>',cat:'JavaScript',t:26},
+ r56:{n:'56',title:'Classes from JS: classList',syn:'el.<span class="k">classList</span>.toggle(<span class="v">"night"</span>); · .add · .remove · .contains',note:'JavaScript changes the look by switching classes, and CSS describes what the class looks like. toggle adds the class if it is missing and removes it if it is there.',ex:'<style>.night { background-color: #1f3327; color: #f2e9d6; }</style>\n<button id="t">Toggle night</button>\n<p id="p">The hut</p>\n<script>\n  document.querySelector("#t").addEventListener("click", () => {\n    document.querySelector("#p").classList.toggle("night");\n  });\n<\/script>',cat:'JavaScript',t:26},
+ r57:{n:'57',title:'let, const and template literals',syn:'<span class="k">let</span> count = 0; · <span class="k">const</span> add = …; · `Basket: <span class="v">${count}</span> items`',note:'const is a name that always points to the same thing. let can be changed later. A template literal uses backticks and ${ } to drop a value into text.',ex:'<p id="o"></p>\n<script>\n  let count = 2;\n  count = count + 1;\n  document.querySelector("#o").textContent = `Basket: ${count} items`;\n<\/script>',cat:'JavaScript',t:27},
+ r58:{n:'58',title:'Decisions: if and else',syn:'<span class="k">if</span> (count &lt; 5) { … } <span class="k">else</span> { … }',note:'if runs a block only when its condition is true. else runs when it is not. Conditions compare things with <, >, <=, >= and ===.',ex:'<p id="o"></p>\n<script>\n  const count = 6;\n  if (count < 5) {\n    document.querySelector("#o").textContent = "Room left";\n  } else {\n    document.querySelector("#o").textContent = "Basket full";\n  }\n<\/script>',cat:'JavaScript',t:27},
+ r59:{n:'59',title:'Arrays and forEach',syn:'const books = [<span class="v">"A"</span>, <span class="v">"B"</span>]; books.<span class="k">forEach</span>((title) => { … });',note:'An array is a list of values in square brackets. forEach runs a function once for every item, handing you the item each time.',ex:'<ul id="l"></ul>\n<script>\n  const herbs = ["Sage", "Mint", "Thyme"];\n  herbs.forEach((herb) => {\n    const li = document.createElement("li");\n    li.textContent = herb;\n    document.querySelector("#l").append(li);\n  });\n<\/script>',cat:'JavaScript',t:28},
+ r60:{n:'60',title:'Functions that build elements',syn:'<span class="k">function</span> makeBook(<span class="v">title</span>) { … <span class="k">return</span> li; }',note:'A function is a named recipe. Parameters are its ingredients, return hands back the result. createElement makes a new element, append puts it on the page.',ex:'<ul id="l"></ul>\n<script>\n  function makeItem(text) {\n    const li = document.createElement("li");\n    li.textContent = text;\n    return li;\n  }\n  document.querySelector("#l").append(makeItem("Made by a function"));\n<\/script>',cat:'JavaScript',t:28},
+ r61:{n:'61',title:'Forms in JS: submit and preventDefault',syn:'form.addEventListener(<span class="v">"submit"</span>, (event) => { event.<span class="k">preventDefault</span>(); … });',note:'Listen for submit on the form, not click on the button. preventDefault stops the browser from reloading the page, so your script can handle the answer. input.value holds what was typed.',ex:'<form id="f"><input id="n" value="Kaatje"><button>Send</button></form>\n<p id="o"></p>\n<script>\n  document.querySelector("#f").addEventListener("submit", (event) => {\n    event.preventDefault();\n    document.querySelector("#o").textContent = document.querySelector("#n").value;\n  });\n<\/script>',cat:'JavaScript',t:29},
+ r62:{n:'62',title:'Checking input: trim and ===',syn:'const name = input.value.<span class="k">trim</span>(); if (name <span class="k">===</span> "") { … }',note:'trim removes spaces at the start and end, so "   " becomes "". === compares strictly: same value and same type. Always use === in JavaScript.',ex:'<p id="o"></p>\n<script>\n  const name = "   ".trim();\n  document.querySelector("#o").textContent = name === "" ? "Empty after trim" : name;\n<\/script>',cat:'JavaScript',t:29},
+ r63:{n:'63',title:'Remember things: localStorage',syn:'localStorage.<span class="k">setItem</span>(<span class="v">"stars"</span>, text); · localStorage.<span class="k">getItem</span>(<span class="v">"stars"</span>)',note:'localStorage keeps small pieces of text in the browser, even after a reload. setItem saves under a key, getItem reads it back, or gives null if nothing is there.',ex:'<p id="o"></p>\n<script>\n  localStorage.setItem("hexle-demo", "Remembered!");\n  document.querySelector("#o").textContent = localStorage.getItem("hexle-demo");\n<\/script>',cat:'JavaScript',t:30},
+ r64:{n:'64',title:'Storing lists: JSON.stringify and parse',syn:'JSON.<span class="k">stringify</span>(list) · JSON.<span class="k">parse</span>(text) <span class="k">||</span> []',note:'localStorage only stores text. JSON.stringify turns an array into text, JSON.parse turns it back. || [] gives an empty list when nothing was saved yet.',ex:'<p id="o"></p>\n<script>\n  const text = JSON.stringify(["Comet", "Owl"]);\n  const back = JSON.parse(text);\n  document.querySelector("#o").textContent = back.length + " notes: " + text;\n<\/script>',cat:'JavaScript',t:30}
+});
+Object.assign(NEWLESSONS,{
+ r53:{why:'HTML is the structure, CSS the look, JavaScript the behaviour. Like CSS, it belongs in its own file: script.js, loaded with a script tag in the head. The defer attribute matters: without it the browser runs the script the moment it meets the tag, before the body exists, so your script finds nothing. With defer it waits until the whole page is built. console.log("…") prints to the console, which in Hexle sits in the bar under the editor. Real developers log constantly to see what their code is doing.',parts:[['<script src="script.js" defer>','load the file, run it after the page'],['<\/script>','always closed, even when empty'],['console.log("…")','print to the console'],['script.js','behaviour lives here']],mistakes:['Forgetting defer: the script runs before the page exists and finds null.','Writing <script src="script.js" /> without a closing tag.','Hunting for bugs without looking at the console first.'],ex2:'<script>\n  console.log("one");\n  console.log("two", 3);\n<\/script>\n<p>Two log lines in the console.</p>'},
+ r54:{why:'To change a page, first get hold of the element. document is the whole page; document.querySelector(".status") searches it with a CSS selector, the same selectors you already know, and returns the first match. Store it in a const so you can use it again. Then textContent reads the words inside, or replaces them when you assign a new string. If the selector finds nothing, you get null, and the console will complain that it cannot set textContent of null.',parts:[['document','the whole page'],['querySelector(".status")','first element matching the selector'],['const status = …','keep it under a name'],['status.textContent = "…"','replace its words']],mistakes:['Forgetting the dot or # in the selector: querySelector("status") looks for a <status> tag.','Running the script without defer, so the element does not exist yet.','Using innerHTML for plain text. textContent is safer.'],ex2:'<h2>Old title</h2>\n<script>\n  document.querySelector("h2").textContent = "New title";\n<\/script>'},
+ r55:{why:'Most JavaScript waits for the visitor. addEventListener("click", function) tells an element: when you are clicked, run this function. The function is often written as an arrow function, () => { … }, right inside the call. Everything between its braces runs on every click, not when the page loads. Other events work the same way: "input" when someone types, "submit" when a form is sent, "keydown" for keys.',parts:[['el.addEventListener','start listening'],['"click"','which event'],['() => { … }','what to do, each time'],['runs later','not at page load']],mistakes:['Writing onclick in the HTML instead of keeping behaviour in script.js.','Calling the function instead of passing it: addEventListener("click", go()) runs go immediately.','Listening on the wrong element, so clicks never arrive.'],ex2:'<button id="k">Knock</button>\n<script>\n  document.querySelector("#k").addEventListener("click", () => {\n    console.log("Knock knock");\n  });\n<\/script>'},
+ r56:{why:'JavaScript could set styles directly, but the clean way is to switch classes. CSS describes what .night looks like; JavaScript only decides when the class is on. classList.add puts a class on, remove takes it off, toggle flips it, and contains asks whether it is there right now. Your look stays in the stylesheet and your behaviour in the script, each in its own file.',parts:[['classList.toggle("night")','flip it on or off'],['.add / .remove','force on / off'],['.contains("night")','is it on? true or false'],['CSS .night { }','describes the look']],mistakes:['A dot inside the call: toggle(".night") adds a class called .night.','Setting el.style.background in JS instead of using a class.','Toggling a class that has no CSS rule, so nothing visible happens.'],ex2:'<style>.big { font-size: 2rem; }</style>\n<p id="p">Watch me</p>\n<script>\n  document.querySelector("#p").classList.add("big");\n<\/script>'},
+ r57:{why:'Variables are names for values. const means the name always points to the same value; use it by default. let means you will change it later, like a counter. Never use var, an old leftover. Text in JavaScript is a string, in quotes. When you want to put a value inside text, use a template literal: backticks instead of quotes, and ${ } around the value: `Basket: ${count} items`.',parts:[['const','never reassigned (default)'],['let','will change, like a counter'],['count = count + 1','update it'],['`…${count}…`','value inside text']],mistakes:['const for a counter: reassigning it throws an error.','Normal quotes with ${count}: you get the literal text ${count}.','let used everywhere. Prefer const unless it really changes.'],ex2:'<p id="o"></p>\n<script>\n  const name = "Roux";\n  let lives = 9;\n  lives = lives - 1;\n  document.querySelector("#o").textContent = `${name} has ${lives} lives left`;\n<\/script>'},
+ r58:{why:'Programs make decisions. if (condition) { … } runs its block only when the condition is true. Add else { … } for what happens otherwise. Conditions compare: < less than, > more than, <= at most, >= at least, === exactly equal. Because the basket check sits inside the click handler, the decision is made again on every click.',parts:[['if (count < 5)','a condition in round brackets'],['{ … }','runs when true'],['else { … }','runs when false'],['=== , <, >=','comparisons']],mistakes:['A single = in a condition: that assigns instead of compares.','A semicolon right after if (…); which ends the if immediately.','Forgetting the braces, so only one line belongs to the if.'],ex2:'<p id="o"></p>\n<script>\n  const hour = 23;\n  if (hour >= 22) {\n    document.querySelector("#o").textContent = "The market is closed";\n  } else {\n    document.querySelector("#o").textContent = "Come in";\n  }\n<\/script>'},
+ r59:{why:'An array is a list: ["Sage", "Mint", "Thyme"]. Items are separated by commas, counted from 0, and books.length tells how many there are. forEach walks through the list and calls your function once per item, giving you that item as a parameter. Combined with createElement, the page is built from data: change the array, and the page follows.',parts:[['[ "a", "b" ]','an array of strings'],['books.length','how many items'],['books.forEach((title) => { … })','once per item'],['books.push("c")','add to the end']],mistakes:['Forgetting a comma between items.','Using the array name inside forEach instead of the item parameter.','Building the list by hand in HTML when the data lives in JS.'],ex2:'<p id="o"></p>\n<script>\n  const herbs = ["Sage", "Mint"];\n  herbs.push("Thyme");\n  document.querySelector("#o").textContent = herbs.length + " herbs";\n<\/script>'},
+ r60:{why:'A function packs a few lines under one name so you can reuse them. function makeBook(title) { … } has one parameter, title, which takes whatever value you pass in. Inside, document.createElement("li") makes a brand-new element that is not on the page yet; set its textContent, then return it. Whoever called the function decides where it goes, for example shelf.append(makeBook("Moon Maths")).',parts:[['function makeBook(title)','name and parameter'],['document.createElement("li")','a new element, off-page'],['return li','hand back the result'],['shelf.append(…)','put it on the page']],mistakes:['Forgetting return: the caller gets undefined.','Creating the element but never appending it.','A function that uses outside variables instead of its parameter.'],ex2:'<ul id="u"></ul>\n<script>\n  function tag(text) {\n    const li = document.createElement("li");\n    li.textContent = text;\n    return li;\n  }\n  document.querySelector("#u").append(tag("One"), tag("Two"));\n<\/script>'},
+ r61:{why:'A form sends itself when you press Enter or the submit button, and by default the browser then loads a new page. To handle it in JavaScript, listen for "submit" on the form itself, not "click" on the button, so Enter works too. The listener receives an event object; event.preventDefault() cancels the page load. Then read what was typed with input.value.',parts:[['form.addEventListener("submit", …)','catch the send'],['(event) =>','the event object'],['event.preventDefault()','no page reload'],['input.value','what was typed']],mistakes:['Listening for click on the button: Enter is then ignored.','Forgetting preventDefault: the page reloads and your message vanishes.','Reading .value once at page load instead of inside the listener.'],ex2:'<form id="f"><input id="i" value="Moonwort"><button>Add</button></form>\n<p id="o"></p>\n<script>\n  document.querySelector("#f").addEventListener("submit", (event) => {\n    event.preventDefault();\n    document.querySelector("#o").textContent = "Added " + document.querySelector("#i").value;\n  });\n<\/script>'},
+ r62:{why:'Never trust what people type. They add spaces, leave fields empty, make typos. trim() removes spaces at both ends, so a field with only spaces becomes an empty string "". Then check with ===, the strict comparison: it only says true when the value and the type are the same. == tries to convert types and gives strange answers like 0 == "" being true. Always use ===.',parts:[['value.trim()','strip outer spaces'],['name === ""','strictly empty?'],['!==','strictly not equal'],['== (avoid)','loose, surprising']],mistakes:['Checking value without trim: "   " looks filled in.','Using == instead of ===.','Only validating in HTML: JavaScript should check too.'],ex2:'<p id="o"></p>\n<script>\n  console.log(0 == "");\n  console.log(0 === "");\n  document.querySelector("#o").textContent = "In a spell target the console bar shows: true, then false";\n<\/script>'},
+ r63:{why:'Everything in a script disappears when the page reloads. localStorage keeps small pieces of text in the browser, per website, until the visitor clears them. localStorage.setItem("stars", "Comet") saves text under a key; localStorage.getItem("stars") reads it back, and returns null when nothing was saved. It only stores strings, which is why lists need JSON.',parts:[['setItem(key, text)','save'],['getItem(key)','read, or null'],['removeItem(key)','delete'],['per browser','not shared between devices']],mistakes:['Storing an array directly: it turns into "a,b" and loses its shape.','Forgetting that getItem can return null.','Keeping secrets in localStorage. Anyone at that browser can read it.'],ex2:'<p id="o"></p>\n<script>\n  const visits = Number(localStorage.getItem("hexle-visits")) + 1;\n  localStorage.setItem("hexle-visits", visits);\n  document.querySelector("#o").textContent = "Visit number " + visits;\n<\/script>'},
+ r64:{why:'JSON is a text format for data. JSON.stringify(["Comet", "Owl"]) turns an array into the text ["Comet","Owl"], which localStorage can store. JSON.parse turns that text back into a real array. When nothing is saved yet, getItem returns null and JSON.parse(null) gives null too, so write JSON.parse(…) || [] to fall back to an empty list.',parts:[['JSON.stringify(list)','array → text'],['JSON.parse(text)','text → array'],['|| []','fallback: empty list'],['push, then save','update and store again']],mistakes:['Parsing something that is not JSON, which throws an error.','Forgetting to save again after push.','Saving the list but never showing it on page load.'],ex2:'<p id="o"></p>\n<script>\n  const saved = JSON.parse(localStorage.getItem("hexle-nothing")) || [];\n  document.querySelector("#o").textContent = "Saved items: " + saved.length;\n<\/script>'}
+});
+const SCRIPTTAG='  <script src="script.js" defer><\/script>\n';
+const skelJ=(title,body)=>skel(title,body).replace('</head>',SCRIPTTAG+'</head>');
+const QS=(name,sel)=>new RegExp('const\\s+'+name+'\\s*=\\s*document\\.querySelector\\(\\s*[\'"`]'+sel.replace(/[.#]/g,'\\$&')+'[\'"`]\\s*\\)');
+const logs=w=>(w.__hx&&w.__hx.logs)||[];
+const errs=w=>(w.__hx&&w.__hx.errs)||[];
+const submit=(w,f)=>{const ev=new w.Event('submit',{cancelable:true,bubbles:true});f.dispatchEvent(ev);return ev};
+TARGETS.push(
+{id:'s-gate',name:'Spell I · the gate lantern',after:5,plot:10,spell:true,rules:['r53','r54'],
+ starter:skel('Town Gate',shell('Town Gate','    <img src="img/gate.png" alt="An ivy-covered stone gate with a lantern">\n    <p class="status">The lantern is out.</p>\n')),css:MHEAD,js:'',
+ solution:skelJ('Town Gate',shell('Town Gate','    <img src="img/gate.png" alt="An ivy-covered stone gate with a lantern">\n    <p class="status">The lantern is out.</p>\n')),solCss:MHEAD,
+ solJs:'console.log("Spell cast: lantern");\n\nconst status = document.querySelector(".status");\nstatus.textContent = "The lantern is lit.";\n\nconst title = document.querySelector("h1");\ntitle.textContent = "The Gate Is Open";\n',
+ steps:[
+  {t:'In the head of `index.html`: `<script src="script.js" defer><\/script>`',c:(d,w,code,raw)=>!!q(raw,'head script[src="script.js"][defer]'),help:['The behaviour file has to be loaded, like styles.css.','A script tag with src and defer, under the stylesheet link. It always needs its closing tag.','<script src="app.js" defer><\/script>','<script src="script.js" defer><\/script>']},
+  {t:'In the `script.js` tab: `console.log("Spell cast: lantern");` and watch the console bar',c:(d,w)=>logs(w).some(l=>/spell cast/i.test(l)),help:['Your first spell is a message to yourself. The console bar is under the editor.','console.log with the text in quotes, ending with a semicolon.','console.log("Hello");','console.log("Spell cast: lantern");']},
+  {t:'Grab the paragraph: `const status = document.querySelector(".status");`',c:(d,w,code,raw,css,js)=>QS('status','.status').test(js||''),help:['Find the element with a CSS selector, keep it under a name.','const, a name, =, then document.querySelector with the selector in quotes.','const box = document.querySelector(".box");','const status = document.querySelector(".status");']},
+  {t:'Change its words: `status.textContent = "The lantern is lit.";`',c:(d)=>tx(q(d,'.status')).includes('lantern is lit'),help:['textContent holds the words inside an element. Give it new ones.','status, a dot, textContent, =, the new text in quotes.','box.textContent = "New words";','status.textContent = "The lantern is lit.";']},
+  {t:'Second spell: grab the `h1` and make it say `The Gate Is Open`',c:(d,w,code,raw,css,js)=>tx(q(d,'h1')).includes('gate is open')&&/querySelector\(\s*['"`]h1['"`]\s*\)/.test(js||''),help:['Same two moves: find it, change it. A tag selector works too.','A const for the h1, then set its textContent.','const t = document.querySelector("h2");\nt.textContent = "Hello";','const title = document.querySelector("h1");\ntitle.textContent = "The Gate Is Open";']},
+  {t:'A clean console: no errors',c:(d,w,code,raw,css,js)=>!!(js||'').trim()&&errs(w).length===0,help:['Red text in the console bar means something broke. Read it: it names the line.','Check spelling: querySelector, textContent, quotes and semicolons.','Common one: "Cannot set properties of null" means the selector found nothing.','No changes needed if everything above passed.']}
+ ],
+ drills:[
+  {k:'pick',r:'r53',q:'Why add defer to the script tag?',o:['To load it faster','So it runs after the page is built','To hide errors','It is required for console.log'],a:1,h:'Without it, the body does not exist yet.'},
+  {k:'type',r:'r53',q:'Load app.js from the head, deferred',ph:'<script …><\/script>',test:/^<script src="app\.js" defer><\/script>$/i,ans:'<script src="app.js" defer><\/script>',h:'src first, then defer, then the closing tag.'},
+  {k:'type',r:'r53',q:'Print Hello to the console',ph:'console.log(…);',test:/^console\.log\(\s*(["'`])hello\1\s*\);?$/i,ans:'console.log("Hello");',h:'console.log("Hello");'},
+  {k:'pick',r:'r54',q:'What does querySelector return when nothing matches?',o:['An empty string','null','false','The whole page'],a:1,h:'Nothing at all: null.'},
+  {k:'type',r:'r54',q:'Grab the element with id title into a const called title',ph:'const title = …;',test:/^const\s+title\s*=\s*document\.querySelector\(\s*(["'`])#title\1\s*\);?$/i,ans:'const title = document.querySelector("#title");',h:'An id selector starts with #.'},
+  {k:'fix',r:'r54',q:'Fix the bug: this looks for a <status> tag',bug:'const s = document.querySelector("status");',test:/^const\s+s\s*=\s*document\.querySelector\(\s*(["'`])\.status\1\s*\);?$/i,ans:'const s = document.querySelector(".status");',h:'A class selector needs its dot.'}
+ ],
+ review:[{k:'pick',r:'r7',rv:1,q:'Review: where should a whole site\'s CSS live?',o:['Inline on every tag','A separate styles.css file','In the alt text','In script.js'],a:1,h:'One file, linked from every page. JS gets the same treatment.'}]},
+
+{id:'s-hut',name:'Spell II · night at the hut',after:25,plot:0,spell:true,rules:['r55','r56'],
+ starter:skelJ("The Witch's Hut",shell("The Witch's Hut",'    <img src="img/hut.png" alt="The witch hut">\n    <p>Knock twice. Mind the cat.</p>\n')),css:MHEAD+'\n.night {\n  background-color: #1f3327;\n  color: #f2e9d6;\n}\n',js:'',
+ solution:skelJ("The Witch's Hut",shell("The Witch's Hut",'    <img src="img/hut.png" alt="The witch hut">\n    <button id="night" type="button">Light the windows</button>\n    <p>Knock twice. Mind the cat.</p>\n')),solCss:MHEAD+'\n.night {\n  background-color: #1f3327;\n  color: #f2e9d6;\n}\n',
+ solJs:'const button = document.querySelector("#night");\nconst page = document.querySelector("main");\n\nbutton.addEventListener("click", () => {\n  page.classList.toggle("night");\n  console.log("Night toggled");\n});\n',
+ steps:[
+  {t:'In `index.html`, under the picture: `<button id="night" type="button">Light the windows</button>`',c:(d,w,code,raw)=>{const b=q(raw,'main button#night');return !!b&&before(q(raw,'main img'),b)},help:['Something to click. type="button" means it is not a form submit button.','A button with an id and type, under the img.','<button id="go" type="button">Go</button>','<button id="night" type="button">Light the windows</button>']},
+  {t:'In `script.js`: grab it, `const button = document.querySelector("#night");`',c:(d,w,code,raw,css,js)=>QS('button','#night').test(js||''),help:['An id selector, like in CSS.','const button = … with "#night".','const box = document.querySelector("#box");','const button = document.querySelector("#night");']},
+  {t:'Grab `main` too: `const page = document.querySelector("main");`',c:(d,w,code,raw,css,js)=>QS('page','main').test(js||''),help:['The night class goes on the whole content area.','A tag selector this time.','const header = document.querySelector("header");','const page = document.querySelector("main");']},
+  {t:'Listen for clicks: `button.addEventListener("click", () => { … });`',pre:true,c:(d,w,code,raw,css,js)=>/button\.addEventListener\(\s*['"`]click['"`]\s*,/.test(js||''),help:['The code inside the braces runs on every click, not at page load.','addEventListener with "click" and an arrow function.','box.addEventListener("click", () => {\n\n});','button.addEventListener("click", () => {\n\n});']},
+  {t:'Inside the listener: `page.classList.toggle("night");` and try the button',c:(d)=>{const b=q(d,'#night'),m=q(d,'main');if(!b||!m)return false;const a=m.classList.contains('night');b.click();const c1=m.classList.contains('night');b.click();const c2=m.classList.contains('night');return c1!==a&&c2===a},help:['The look already lives in styles.css as .night. JS only flips the switch.','classList.toggle with the class name, no dot.','box.classList.toggle("open");','  page.classList.toggle("night");']},
+  {t:'Also inside: `console.log("Night toggled");`, so every click shows in the console',c:(d,w)=>{const b=q(d,'#night');if(!b)return false;const n=logs(w).length;b.click();const m=logs(w).length;b.click();return m>n},help:['A log inside the listener runs on each click.','console.log on its own line inside the braces.','  console.log("Clicked");','  console.log("Night toggled");']}
+ ],
+ drills:[
+  {k:'pick',r:'r55',q:'When does code inside an event listener run?',o:['At page load','Every time the event happens','Once, after 1 second','Never'],a:1,h:'It waits.'},
+  {k:'type',r:'r55',q:'Listen for clicks on btn with an empty arrow function',ph:'btn.addEventListener(…);',test:/^btn\.addEventListener\(\s*(["'`])click\1\s*,\s*\(\s*\)\s*=>\s*\{\s*\}\s*\);?$/i,ans:'btn.addEventListener("click", () => {});',h:'btn.addEventListener("click", () => {});'},
+  {k:'fix',r:'r55',q:'Fix the bug: go runs immediately instead of on click',bug:'btn.addEventListener("click", go());',test:/^btn\.addEventListener\(\s*(["'`])click\1\s*,\s*go\s*\);?$/i,ans:'btn.addEventListener("click", go);',h:'Pass the function, do not call it: no brackets.'},
+  {k:'pick',r:'r56',q:'What does classList.toggle("night") do when night is already on?',o:['Adds it again','Removes it','Throws an error','Nothing'],a:1,h:'Toggle flips.'},
+  {k:'type',r:'r56',q:'Add the class open to box',ph:'box.classList…',test:/^box\.classList\.add\(\s*(["'`])open\1\s*\);?$/i,ans:'box.classList.add("open");',h:'box.classList.add("open");'},
+  {k:'fix',r:'r56',q:'Fix the bug: no dot inside classList calls',bug:'page.classList.toggle(".night");',test:/^page\.classList\.toggle\(\s*(["'`])night\1\s*\);?$/i,ans:'page.classList.toggle("night");',h:'The dot belongs to CSS selectors, not class names.'}
+ ],
+ review:[{k:'type',r:'r54',rv:1,q:'Review: grab main into a const called page',ph:'const page = …;',test:/^const\s+page\s*=\s*document\.querySelector\(\s*(["'`])main\1\s*\);?$/i,ans:'const page = document.querySelector("main");',h:'A tag selector.'}]},
+
+{id:'s-market',name:'Spell III · the market basket',after:26,plot:4,spell:true,rules:['r57','r58'],
+ starter:skelJ('Moonlight Market',shell('Moonlight Market','    <img src="img/market.png" alt="The moonlight market stalls">\n    <p id="basket">Basket: 0 items</p>\n    <button id="add" type="button">Add mushrooms</button>\n')),css:MHEAD,js:'',
+ solution:skelJ('Moonlight Market',shell('Moonlight Market','    <img src="img/market.png" alt="The moonlight market stalls">\n    <p id="basket">Basket: 0 items</p>\n    <button id="add" type="button">Add mushrooms</button>\n')),solCss:MHEAD,
+ solJs:'const basket = document.querySelector("#basket");\nconst add = document.querySelector("#add");\nlet count = 0;\n\nadd.addEventListener("click", () => {\n  count = count + 1;\n  if (count < 5) {\n    basket.textContent = `Basket: ${count} items`;\n  } else {\n    basket.textContent = "Basket full";\n    add.disabled = true;\n  }\n});\n',
+ steps:[
+  {t:'Grab both: `#basket` into `const basket`, `#add` into `const add`',c:(d,w,code,raw,css,js)=>QS('basket','#basket').test(js||'')&&QS('add','#add').test(js||''),help:['Two elements, two consts.','One querySelector line per element.','const a = document.querySelector("#a");\nconst b = document.querySelector("#b");','const basket = document.querySelector("#basket");\nconst add = document.querySelector("#add");']},
+  {t:'A counter that will change: `let count = 0;`',c:(d,w,code,raw,css,js)=>/let\s+count\s*=\s*0\s*;?/.test(js||''),help:['It goes up with every click, so not const.','let, a name, = 0.','let lives = 9;','let count = 0;']},
+  {t:'Listen for clicks on `add`',pre:true,c:(d,w,code,raw,css,js)=>/add\.addEventListener\(\s*['"`]click['"`]\s*,/.test(js||''),help:['Spell II taught this.','add.addEventListener with "click" and an arrow function.','button.addEventListener("click", () => {\n\n});','add.addEventListener("click", () => {\n\n});']},
+  {t:'Each click: `count = count + 1;` and show it with a template literal, so one click shows `Basket: 1 items`',pre:true,c:(d,w,code,raw,css,js)=>{const a=q(d,'#add'),b=q(d,'#basket');if(!a||!b)return false;a.click();return /basket:\s*1\b/.test(tx(b))&&/`[^`]*\$\{\s*count\s*\}[^`]*`/.test(js||'')},help:['Backticks, and ${count} where the number goes.','Inside the listener: update count, then set basket.textContent.','lives = lives - 1;\nlabel.textContent = `Lives: ${lives}`;','  count = count + 1;\n  basket.textContent = `Basket: ${count} items`;']},
+  {t:'At 5 the basket is full: show `Basket full` and set `add.disabled = true;`',pre:true,c:(d)=>{const a=q(d,'#add'),b=q(d,'#basket');if(!a||!b)return false;let n=0;while(!a.disabled&&n<12){a.click();n++}return a.disabled&&/basket full/.test(tx(b))&&n>=3&&n<=6},help:['A decision on every click: under 5, or not?','if (count < 5) { show the count } else { show full and disable }.','if (lives > 0) {\n  label.textContent = `Lives: ${lives}`;\n} else {\n  label.textContent = "Game over";\n}','  if (count < 5) {\n    basket.textContent = `Basket: ${count} items`;\n  } else {\n    basket.textContent = "Basket full";\n    add.disabled = true;\n  }']},
+  {t:'Written as `if … else` (not two separate ifs)',c:(d,w,code,raw,css,js)=>/if\s*\([^)]*\)\s*\{[\s\S]*?\}\s*else\s*\{/.test(js||''),help:['else runs exactly when the if does not.','Put else right after the closing brace of the if.','if (a) {\n} else {\n}','} else {']}
+ ],
+ drills:[
+  {k:'pick',r:'r57',q:'A counter that goes up on every click should be…',o:['const','let','var','a string'],a:1,h:'It changes.'},
+  {k:'type',r:'r57',q:'A template literal that says Lives: and then the value of lives',ph:'`…`',test:/^`lives:\s*\$\{\s*lives\s*\}`;?$/i,ans:'`Lives: ${lives}`',h:'Backticks around the text, ${lives} where the value goes.'},
+  {k:'fix',r:'r57',q:'Fix the bug: the text shows ${count} literally',bug:'basket.textContent = "Basket: ${count} items";',test:/^basket\.textContent\s*=\s*`basket:\s*\$\{\s*count\s*\}\s*items`;?$/i,ans:'basket.textContent = `Basket: ${count} items`;',h:'Template literals need backticks, not quotes.'},
+  {k:'pick',r:'r58',q:'Which compares "is at least 5"?',o:['count > 5','count >= 5','count = 5','count => 5'],a:1,h:'Greater than or equal.'},
+  {k:'type',r:'r58',q:'An if that checks whether count is less than 5, with empty braces',ph:'if (…) {}',test:/^if\s*\(\s*count\s*<\s*5\s*\)\s*\{\s*\}$/i,ans:'if (count < 5) {}',h:'if (count < 5) {}'},
+  {k:'fix',r:'r58',q:'Fix the bug: this assigns instead of compares',bug:'if (count = 5) {}',test:/^if\s*\(\s*count\s*===\s*5\s*\)\s*\{\s*\}$/i,ans:'if (count === 5) {}',h:'Comparison is ===.'}
+ ],
+ review:[{k:'type',r:'r55',rv:1,q:'Review: listen for clicks on add with an empty arrow function',ph:'add.addEventListener(…);',test:/^add\.addEventListener\(\s*(["'`])click\1\s*,\s*\(\s*\)\s*=>\s*\{\s*\}\s*\);?$/i,ans:'add.addEventListener("click", () => {});',h:'add.addEventListener("click", () => {});'}]},
+
+{id:'s-library',name:'Spell IV · the enchanted shelf',after:27,plot:3,spell:true,rules:['r59','r60'],
+ starter:skelJ('The Spellbook Library',shell('The Spellbook Library','    <img src="img/library.png" alt="The spellbook library">\n    <h2>Catalogue</h2>\n    <ul id="shelf"></ul>\n')),css:MHEAD,js:'',
+ solution:skelJ('The Spellbook Library',shell('The Spellbook Library','    <img src="img/library.png" alt="The spellbook library">\n    <h2>Catalogue</h2>\n    <ul id="shelf"></ul>\n')),solCss:MHEAD,
+ solJs:'const books = ["Herbs of the Night", "Moon Maths", "Polite Hexes", "Cats and Their Keys", "Owl Post for Beginners"];\nconst shelf = document.querySelector("#shelf");\n\nfunction makeBook(title) {\n  const li = document.createElement("li");\n  li.textContent = title;\n  return li;\n}\n\nbooks.forEach((title) => {\n  shelf.append(makeBook(title));\n});\n',
+ steps:[
+  {t:'An array of four book titles: `const books = ["…", "…", "…", "…"];`',c:(d,w,code,raw,css,js)=>{const m=(js||'').match(/const\s+books\s*=\s*\[([\s\S]*?)\]/);return !!m&&(m[1].match(/(["'`])(?:(?!\1).)+\1/g)||[]).length>=4},help:['The shelf is built from data. Make up four titles, or use: Herbs of the Night, Moon Maths, Polite Hexes, Cats and Their Keys.','Square brackets, strings in quotes, commas between them.','const herbs = ["Sage", "Mint", "Thyme"];','const books = ["Herbs of the Night", "Moon Maths", "Polite Hexes", "Cats and Their Keys"];']},
+  {t:'Grab the empty list: `const shelf = document.querySelector("#shelf");`',c:(d,w,code,raw,css,js)=>QS('shelf','#shelf').test(js||''),help:['The ul with id shelf is waiting in index.html.','An id selector.','const list = document.querySelector("#list");','const shelf = document.querySelector("#shelf");']},
+  {t:'A function `makeBook(title)` that creates an `li`, puts the title in it, and returns it',pre:true,c:(d,w,code,raw,css,js)=>/function\s+makeBook\s*\(\s*title\s*\)\s*\{[\s\S]*document\.createElement\(\s*['"`]li['"`]\s*\)[\s\S]*\.textContent\s*=\s*title[\s\S]*return\s+\w+/.test(js||''),help:['A recipe: title in, finished list item out.','function, name, (title), then createElement, textContent and return inside the braces.','function makeTag(text) {\n  const span = document.createElement("span");\n  span.textContent = text;\n  return span;\n}','function makeBook(title) {\n  const li = document.createElement("li");\n  li.textContent = title;\n  return li;\n}']},
+  {t:'Fill the shelf: `books.forEach((title) => { shelf.append(makeBook(title)); });`',pre:true,c:(d,w,code,raw,css,js)=>/books\.forEach\(/.test(js||'')&&d.querySelectorAll('#shelf li').length>=4,help:['Once per book: make it, then append it.','forEach with an arrow function that has one parameter.','herbs.forEach((herb) => {\n  list.append(makeTag(herb));\n});','books.forEach((title) => {\n  shelf.append(makeBook(title));\n});']},
+  {t:'The shelf matches the data: every title in the array is on the page',c:(d,w,code,raw,css,js)=>{const m=(js||'').match(/const\s+books\s*=\s*\[([\s\S]*?)\]/);if(!m)return false;const t=(m[1].match(/(["'`])(?:(?!\1).)+\1/g)||[]).map(x=>x.slice(1,-1).toLowerCase());const li=[...d.querySelectorAll('#shelf li')].map(tx);return t.length>=4&&t.length===li.length&&t.every((x,i)=>li[i]===x.trim())},help:['If a title is missing or doubled, check the forEach.','Each title appears once, in order.','Count the li items against the array.','No change needed if the step above passed with all titles.']},
+  {t:'Change the data: add a fifth book to the array and watch the shelf follow',c:(d,w,code,raw,css,js)=>{const m=(js||'').match(/const\s+books\s*=\s*\[([\s\S]*?)\]/);return !!m&&(m[1].match(/(["'`])(?:(?!\1).)+\1/g)||[]).length>=5&&d.querySelectorAll('#shelf li').length>=5},help:['This is the point of building from data: you never touch the HTML.','One more string inside the brackets, after a comma.','["A", "B", "C", "D", "E"]','const books = ["Herbs of the Night", "Moon Maths", "Polite Hexes", "Cats and Their Keys", "Owl Post for Beginners"];']}
+ ],
+ drills:[
+  {k:'pick',r:'r59',q:'What is books.length for ["A", "B", "C"]?',o:['2','3','"C"','undefined'],a:1,h:'It counts the items.'},
+  {k:'type',r:'r59',q:'An array called herbs with Sage and Mint',ph:'const herbs = …;',test:/^const\s+herbs\s*=\s*\[\s*(["'`])sage\1\s*,\s*(["'`])mint\2\s*\];?$/i,ans:'const herbs = ["Sage", "Mint"];',h:'const herbs = ["Sage", "Mint"];'},
+  {k:'fix',r:'r59',q:'Fix the bug: items need commas',bug:'const herbs = ["Sage" "Mint"];',test:/^const\s+herbs\s*=\s*\[\s*(["'`])sage\1\s*,\s*(["'`])mint\2\s*\];?$/i,ans:'const herbs = ["Sage", "Mint"];',h:'A comma between items.'},
+  {k:'pick',r:'r60',q:'A function without return gives back…',o:['null','undefined','0','the last line'],a:1,h:'Nothing was returned.'},
+  {k:'type',r:'r60',q:'Make a new li element into a const called li',ph:'const li = …;',test:/^const\s+li\s*=\s*document\.createElement\(\s*(["'`])li\1\s*\);?$/i,ans:'const li = document.createElement("li");',h:'document.createElement("li")'},
+  {k:'fix',r:'r60',q:'Fix the bug: the element is made but never shown',bug:'shelf.makeBook("Moon Maths");',test:/^shelf\.append\(\s*makeBook\(\s*(["'`])moon maths\1\s*\)\s*\);?$/i,ans:'shelf.append(makeBook("Moon Maths"));',h:'append puts it on the page.'}
+ ],
+ review:[{k:'type',r:'r57',rv:1,q:'Review: a counter that starts at 0',ph:'let count = …;',test:/^let\s+count\s*=\s*0;?$/i,ans:'let count = 0;',h:'let, because it changes.'}]},
+
+{id:'s-shop',name:'Spell V · the potion order',after:28,plot:2,spell:true,rules:['r61','r62'],
+ starter:skelJ('The Bubbling Cauldron',shell('The Bubbling Cauldron','    <img src="img/shop.png" alt="The potion shop">\n    <form id="order">\n      <label for="name">Your name</label>\n      <input type="text" id="name" name="name">\n      <button type="submit">Order</button>\n    </form>\n    <p id="message"></p>\n')),css:MHEAD,js:'',
+ solution:skelJ('The Bubbling Cauldron',shell('The Bubbling Cauldron','    <img src="img/shop.png" alt="The potion shop">\n    <form id="order">\n      <label for="name">Your name</label>\n      <input type="text" id="name" name="name">\n      <button type="submit">Order</button>\n    </form>\n    <p id="message"></p>\n')),solCss:MHEAD,
+ solJs:'const form = document.querySelector("#order");\nconst nameInput = document.querySelector("#name");\nconst message = document.querySelector("#message");\n\nform.addEventListener("submit", (event) => {\n  event.preventDefault();\n  const name = nameInput.value.trim();\n  if (name === "") {\n    message.textContent = "Please tell us your name.";\n  } else {\n    message.textContent = `Thank you, ${name}! Your potion is brewing.`;\n  }\n});\n',
+ steps:[
+  {t:'Grab three things: `#order` as `form`, `#name` as `nameInput`, `#message` as `message`',c:(d,w,code,raw,css,js)=>QS('form','#order').test(js||'')&&QS('nameInput','#name').test(js||'')&&QS('message','#message').test(js||''),help:['The form, the field and the place for the answer.','Three querySelector lines.','const a = document.querySelector("#a");','const form = document.querySelector("#order");\nconst nameInput = document.querySelector("#name");\nconst message = document.querySelector("#message");']},
+  {t:'Listen for `submit` on the form, take the `event`, and call `event.preventDefault();`',pre:true,c:(d,w)=>{const f=q(d,'#order');if(!f)return false;return submit(w,f).defaultPrevented},help:['submit catches the button and the Enter key. preventDefault stops the page from reloading.','form.addEventListener("submit", (event) => { … }) with preventDefault first inside.','form.addEventListener("submit", (event) => {\n  event.preventDefault();\n});','form.addEventListener("submit", (event) => {\n  event.preventDefault();\n});']},
+  {t:'Inside: read the typed name with `.value.trim()` into `const name`',c:(d,w,code,raw,css,js)=>/const\s+name\s*=\s*nameInput\.value\.trim\(\)/.test(js||''),help:['trim removes spaces around it.','const name = nameInput.value.trim();','const city = cityInput.value.trim();','  const name = nameInput.value.trim();']},
+  {t:'Empty name: show `Please tell us your name.`',pre:true,c:(d,w)=>{const f=q(d,'#order'),i=q(d,'#name'),m=q(d,'#message');if(!f||!i||!m)return false;i.value='   ';submit(w,f);const ok=/please tell us your name/.test(tx(m));i.value='';return ok},help:['Spaces only should count as empty, which is why you trimmed.','if (name === "") { … }.','if (city === "") {\n  message.textContent = "Where do you live?";\n}','  if (name === "") {\n    message.textContent = "Please tell us your name.";\n  }']},
+  {t:'Otherwise: `Thank you, Kaatje! Your potion is brewing.` with the real name',pre:true,c:(d,w)=>{const f=q(d,'#order'),i=q(d,'#name'),m=q(d,'#message');if(!f||!i||!m)return false;i.value='  Roux ';submit(w,f);const ok=/thank you, roux!/.test(tx(m));i.value='';return ok},help:['else, and a template literal with ${name}.','} else { message.textContent = `Thank you, ${name}! …`; }','} else {\n  message.textContent = `Welcome, ${city}!`;\n}','  } else {\n    message.textContent = `Thank you, ${name}! Your potion is brewing.`;\n  }']},
+  {t:'Strict comparison only: `===`, never `==`',c:(d,w,code,raw,css,js)=>/===/.test(js||'')&&!/[^=!]==[^=]/.test(js||''),help:['== converts types and surprises you.','Use three equals signs.','if (a === b) {}','if (name === "") {']}
+ ],
+ drills:[
+  {k:'pick',r:'r61',q:'Why listen for submit instead of click on the button?',o:['It is faster','Enter in a field also sends the form','Buttons cannot be clicked','It hides errors'],a:1,h:'Keyboard users press Enter.'},
+  {k:'type',r:'r61',q:'Stop the form from reloading the page (the event is called event)',ph:'event…;',test:/^event\.preventDefault\(\);?$/i,ans:'event.preventDefault();',h:'event.preventDefault();'},
+  {k:'pick',r:'r61',q:'Where is what the visitor typed?',o:['input.text','input.value','input.content','input.typed'],a:1,h:'value.'},
+  {k:'pick',r:'r62',q:'What is "  Roux ".trim()?',o:['"Roux"','"  Roux"','"Roux "','"roux"'],a:0,h:'Both ends cleaned.'},
+  {k:'type',r:'r62',q:'An if that checks whether name is strictly empty, with empty braces',ph:'if (…) {}',test:/^if\s*\(\s*name\s*===\s*(["'`])\1\s*\)\s*\{\s*\}$/i,ans:'if (name === "") {}',h:'if (name === "") {}'},
+  {k:'fix',r:'r62',q:'Fix the bug: use strict comparison',bug:'if (name == "") {}',test:/^if\s*\(\s*name\s*===\s*(["'`])\1\s*\)\s*\{\s*\}$/i,ans:'if (name === "") {}',h:'Three equals signs.'}
+ ],
+ review:[{k:'pick',r:'r33',rv:1,q:'Review: how is a label linked to its input?',o:['label for = input id','label name = input name','They sit next to each other','label id = input for'],a:0,h:'for points at an id.'}]},
+
+{id:'s-observatory',name:'Spell VI · the star log',after:29,plot:8,spell:true,rules:['r63','r64'],
+ starter:skelJ('Observatory',shell('Observatory','    <img src="img/observatory.png" alt="A stone tower with a brass telescope">\n    <form id="log">\n      <label for="note">Tonight</label>\n      <input type="text" id="note" name="note">\n      <button type="submit">Save</button>\n    </form>\n    <ul id="notes"></ul>\n')),css:MHEAD,js:'',
+ solution:skelJ('Observatory',shell('Observatory','    <img src="img/observatory.png" alt="A stone tower with a brass telescope">\n    <form id="log">\n      <label for="note">Tonight</label>\n      <input type="text" id="note" name="note">\n      <button type="submit">Save</button>\n    </form>\n    <ul id="notes"></ul>\n')),solCss:MHEAD,
+ solJs:'const form = document.querySelector("#log");\nconst note = document.querySelector("#note");\nconst list = document.querySelector("#notes");\nconst saved = JSON.parse(localStorage.getItem("stars")) || [];\n\nfunction show() {\n  list.textContent = "";\n  saved.forEach((text) => {\n    const li = document.createElement("li");\n    li.textContent = text;\n    list.append(li);\n  });\n}\n\nform.addEventListener("submit", (event) => {\n  event.preventDefault();\n  saved.push(note.value.trim());\n  localStorage.setItem("stars", JSON.stringify(saved));\n  note.value = "";\n  show();\n});\n\nshow();\n',
+ steps:[
+  {t:'Grab `#log` as `form`, `#note` as `note`, `#notes` as `list`',c:(d,w,code,raw,css,js)=>QS('form','#log').test(js||'')&&QS('note','#note').test(js||'')&&QS('list','#notes').test(js||''),help:['Form, field, list.','Three querySelector lines.','const a = document.querySelector("#a");','const form = document.querySelector("#log");\nconst note = document.querySelector("#note");\nconst list = document.querySelector("#notes");']},
+  {t:'Load what was saved before: `const saved = JSON.parse(localStorage.getItem("stars")) || [];`',c:(d,w,code,raw,css,js)=>/const\s+saved\s*=\s*JSON\.parse\(\s*localStorage\.getItem\(\s*['"`]stars['"`]\s*\)\s*\)\s*\|\|\s*\[\s*\]/.test(js||''),help:['getItem reads text, JSON.parse turns it into a list, || [] covers the first visit.','All three in one line.','const items = JSON.parse(localStorage.getItem("items")) || [];','const saved = JSON.parse(localStorage.getItem("stars")) || [];']},
+  {t:'A function `show()` that empties the list and adds one `li` per saved note; call `show();` once at the end',pre:true,c:(d,w,code,raw,css,js)=>{if(!/function\s+show\s*\(\s*\)/.test(js||'')||!/^\s*show\(\)\s*;?\s*$/m.test(js||''))return false;let n=0;try{n=(JSON.parse(w.localStorage.getItem('stars'))||[]).length}catch(e){}return d.querySelectorAll('#notes li').length===n},help:['Spell IV built a list from an array. Same idea, with the saved notes.','list.textContent = "" first, then saved.forEach creating li elements.','function show() {\n  list.textContent = "";\n  saved.forEach((text) => {\n    const li = document.createElement("li");\n    li.textContent = text;\n    list.append(li);\n  });\n}','function show() {\n  list.textContent = "";\n  saved.forEach((text) => {\n    const li = document.createElement("li");\n    li.textContent = text;\n    list.append(li);\n  });\n}\n\nshow();']},
+  {t:'On submit: `preventDefault`, `saved.push(…)` the trimmed note, save with `localStorage.setItem("stars", JSON.stringify(saved))`, then `show();`',pre:true,c:(d,w)=>{const f=q(d,'#log'),i=q(d,'#note');if(!f||!i)return false;const ls=w.localStorage,old=ls.getItem('stars');i.value=' Comet over the valley ';const ev=submit(w,f);let ok=false;try{const arr=JSON.parse(ls.getItem('stars'))||[];ok=ev.defaultPrevented&&arr[arr.length-1]==='Comet over the valley'&&[...d.querySelectorAll('#notes li')].some(l=>tx(l)==='comet over the valley')}catch(e){}if(old===null)ls.removeItem('stars');else ls.setItem('stars',old);return ok},help:['Update the array, store it as text, redraw.','Inside the submit listener, in that order.','form.addEventListener("submit", (event) => {\n  event.preventDefault();\n  items.push(input.value.trim());\n  localStorage.setItem("items", JSON.stringify(items));\n  show();\n});','form.addEventListener("submit", (event) => {\n  event.preventDefault();\n  saved.push(note.value.trim());\n  localStorage.setItem("stars", JSON.stringify(saved));\n  show();\n});']},
+  {t:'Clear the field after saving: `note.value = "";`',c:(d,w)=>{const f=q(d,'#log'),i=q(d,'#note');if(!f||!i)return false;const ls=w.localStorage,old=ls.getItem('stars');i.value='Owl on the dome';submit(w,f);const ok=i.value==='';if(old===null)ls.removeItem('stars');else ls.setItem('stars',old);return ok},help:['Ready for the next note.','Set the value to an empty string, inside the listener, before show().','input.value = "";','  note.value = "";']},
+  {t:'Try it in the preview: save a note, then edit any file so the page reloads. It stays!',c:(d,w,code,raw,css,js)=>!!(js||'').trim()&&errs(w).length===0&&/localStorage\.setItem/.test(js||''),help:['localStorage survives reloads. Your notes live in this browser now.','Save something in the preview, then type a space anywhere.','Clean console, setItem in place.','Nothing to change if everything above passed.']}
+ ],
+ drills:[
+  {k:'pick',r:'r63',q:'What does localStorage.getItem return when nothing is saved?',o:['""','null','[]','0'],a:1,h:'Nothing: null.'},
+  {k:'type',r:'r63',q:'Save the text Comet under the key stars',ph:'localStorage…;',test:/^localStorage\.setItem\(\s*(["'`])stars\1\s*,\s*(["'`])comet\2\s*\);?$/i,ans:'localStorage.setItem("stars", "Comet");',h:'localStorage.setItem("stars", "Comet");'},
+  {k:'pick',r:'r63',q:'Is localStorage shared between your laptop and your tablet?',o:['Yes','No, it lives in one browser','Only on Wi-Fi','Only for HTML files'],a:1,h:'Per browser, per device.'},
+  {k:'pick',r:'r64',q:'Which turns an array into text?',o:['JSON.parse','JSON.stringify','String.array','toText()'],a:1,h:'stringify = make a string.'},
+  {k:'type',r:'r64',q:'Read the stars list, or an empty list if nothing is saved',ph:'JSON.parse(…) || []',test:/^JSON\.parse\(\s*localStorage\.getItem\(\s*(["'`])stars\1\s*\)\s*\)\s*\|\|\s*\[\s*\];?$/i,ans:'JSON.parse(localStorage.getItem("stars")) || []',h:'JSON.parse(localStorage.getItem("stars")) || []'},
+  {k:'fix',r:'r64',q:'Fix the bug: the array is stored as "a,b" and loses its shape',bug:'localStorage.setItem("stars", saved);',test:/^localStorage\.setItem\(\s*(["'`])stars\1\s*,\s*JSON\.stringify\(\s*saved\s*\)\s*\);?$/i,ans:'localStorage.setItem("stars", JSON.stringify(saved));',h:'Wrap it in JSON.stringify.'}
+ ],
+ review:[{k:'type',r:'r61',rv:1,q:'Review: stop the form from reloading the page',ph:'event…;',test:/^event\.preventDefault\(\);?$/i,ans:'event.preventDefault();',h:'event.preventDefault();'}]}
+);
+TARGETS.forEach((t,i)=>{if(t.spell)PLOTS[t.plot].sp=i});
+MORE.push(
+ {k:'pick',r:'r53',q:'Which file holds a page\'s behaviour?',o:['index.html','styles.css','script.js','img/'],a:2,h:'Structure, look, behaviour.'},
+ {k:'gap',r:'r54',q:'Replace the words',pre:'title.',post:' = "Hello";',a:['textcontent'],h:'text + Content.'},
+ {k:'gap',r:'r55',q:'Start listening',pre:'btn.',post:'("click", () => {});',a:['addeventlistener'],h:'add, Event, Listener.'},
+ {k:'gap',r:'r56',q:'Is the class on?',pre:'page.classList.',post:'("night")',a:['contains'],h:'Does it contain it?'},
+ {k:'pick',r:'r57',q:'Which keyword should you never use in new code?',o:['const','let','var','function'],a:2,h:'The old one.'},
+ {k:'gap',r:'r58',q:'Otherwise…',pre:'if (count < 5) { … } ',post:' { … }',a:['else'],h:'Four letters.'},
+ {k:'gap',r:'r59',q:'Once per item',pre:'books.',post:'((title) => { … });',a:['foreach'],h:'for + Each.'},
+ {k:'gap',r:'r60',q:'Hand back the result',pre:'function makeBook(title) { const li = document.createElement("li"); li.textContent = title; ',post:' li; }',a:['return'],h:'Six letters.'},
+ {k:'gap',r:'r61',q:'Catch the form being sent',pre:'form.addEventListener("',post:'", (event) => {});',a:['submit'],h:'What a form does.'},
+ {k:'gap',r:'r62',q:'Strip the spaces',pre:'const name = input.value.',post:'();',a:['trim'],h:'Four letters.'},
+ {k:'gap',r:'r63',q:'Read it back',pre:'localStorage.',post:'("stars")',a:['getitem'],h:'get + Item.'},
+ {k:'gap',r:'r64',q:'Text back into a list',pre:'JSON.',post:'(text)',a:['parse'],h:'Five letters.'}
+);
+
 const KEY='hexle.v1';
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
-let S=Object.assign({theme:'grove',t:0,stage:'school',drill:0,code:{},css:{},builtCss:{},done:{},built:{},learned:[],flag:[],sfx:true,vol:70,keys:false,ft:0},load()||{});
+let S=Object.assign({theme:'grove',t:0,stage:'school',drill:0,code:{},css:{},js:{},builtCss:{},builtJs:{},done:{},built:{},learned:[],flag:[],sfx:true,vol:70,keys:false,ft:0},load()||{});
 let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},150)}
 if((S.v||1)<2){for(let t=0;t<6;t++){if(S.code[t]!=null&&!/<html[\s>]/i.test(S.code[t]))S.code[t]=page(S.code[t],'',t>0)}S.v=2;save()}
 
@@ -1324,7 +1507,9 @@ const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 const linked=code=>/<link[^>]*href=["']styles\.css["']/i.test(code);
-const wrap=(code,css)=>{code=String(code).replace(IMG_RE,(m,k)=>art(IMGS[k]));const base='<style>'+(S.theme==='grove'?BASE_GROVE:BASE_ORB)+'</style>';if(/<html[\s>]/i.test(code)){if(css!=null)code=code.replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i,()=>'<style>'+String(css).replace(/<\/style/gi,'')+'</style>');return /<head[^>]*>/i.test(code)?code.replace(/<head[^>]*>/i,m=>m+base):code.replace(/<html[^>]*>/i,m=>m+base)}return '<!doctype html><html><head><meta charset="utf-8">'+base+(css!=null&&linked(code)?'<style>'+String(css).replace(/<\/style/gi,'')+'</style>':'')+'</head><body>'+code+'</body></html>'};
+let BLOBS=[];function jsUrl(js){const u=URL.createObjectURL(new Blob([String(js)],{type:'text/javascript'}));BLOBS.push(u);if(BLOBS.length>80)URL.revokeObjectURL(BLOBS.shift());return u}
+const HXCATCH='<script>window.__hx={errs:[],logs:[]};addEventListener("error",function(e){__hx.errs.push({m:e.message,l:e.lineno,f:String(e.filename||"")})});(function(){var l=console.log;console.log=function(){__hx.logs.push([].map.call(arguments,function(x){return typeof x==="object"?JSON.stringify(x):String(x)}).join(" "));l.apply(console,arguments)}})();<\/script>';
+const wrap=(code,css,js)=>{code=String(code).replace(IMG_RE,(m,k)=>art(IMGS[k]));const base='<style>'+(S.theme==='grove'?BASE_GROVE:BASE_ORB)+'</style>';if(/<html[\s>]/i.test(code)){if(css!=null)code=code.replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i,()=>'<style>'+String(css).replace(/<\/style/gi,'')+'</style>');if(js!=null)code=code.replace(/<script\b([^>]*?)\bsrc=["']script\.js["']([^>]*)>\s*<\/script>/i,(m,a,b)=>'<script'+a+'src="'+jsUrl(js)+'"'+b+'></'+'script>');const pre=base+(/<script/i.test(code)?HXCATCH:'');return /<head[^>]*>/i.test(code)?code.replace(/<head[^>]*>/i,m=>m+pre):code.replace(/<html[^>]*>/i,m=>m+pre)}return '<!doctype html><html><head><meta charset="utf-8">'+base+(css!=null&&linked(code)?'<style>'+String(css).replace(/<\/style/gi,'')+'</style>':'')+'</head><body>'+code+'</body></html>'};
 let commsT;function comms(m){const c=$('comms');$('cmsg').textContent=m;c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
 const T=()=>TARGETS[S.t];
 const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[m])m++;return m};
@@ -1340,7 +1525,7 @@ function go(v){S.stage=v;save();render()}
 function render(){
   const vw=S.stage==='practice'?'school':S.stage;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
-  const sel=$('tsel');sel.innerHTML='';TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master]);sel.appendChild(o)});sel.value=S.t;
+  const sel=$('tsel');sel.innerHTML='';TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);sel.appendChild(o)});sel.value=S.t;
   document.body.dataset.theme=S.theme;$('theme').textContent=S.theme==='grove'?'Grove':'Orbital';$('junie').src=art('drone');
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else renderRules();
@@ -1482,30 +1667,39 @@ let lastPass=null,lv=0,curStep=-1,runT;
 function renderTarget(){
   const tg=T();$('tree').classList.remove('on');
   $('tname').textContent=tg.name;$('tcount').textContent='Target '+(S.t+1)+' / '+TARGETS.length;
-  $('tframe').srcdoc=wrap(tg.solution,tg.solCss);$('ovl').srcdoc=wrap(tg.solution,tg.solCss);
+  $('tframe').srcdoc=wrap(tg.solution,tg.solCss,tg.solJs);$('ovl').srcdoc=wrap(tg.solution,tg.solCss,tg.solJs);
   if(S.code[S.t]==null)S.code[S.t]=tg.starter;
   if(tg.css!=null&&S.css[S.t]==null)S.css[S.t]=tg.css;
+  if(tg.js!=null&&S.js[S.t]==null)S.js[S.t]=tg.js;
   const ed=$('ed');if(ed.dataset.t!==String(S.t)){file='html';ed.dataset.t=S.t;lastPass=null;curStep=-2;lv=0}
-  if(tg.css==null)file='html';
-  ed.value=file==='css'?S.css[S.t]:S.code[S.t];
+  if((file==='css'&&tg.css==null)||(file==='js'&&tg.js==null))file='html';
+  ed.value=fileVal(file);
   renderTabs();paint();run();
 }
 let file='html';
+function fileVal(k){return k==='css'?S.css[S.t]:k==='js'?S.js[S.t]:S.code[S.t]}
 function renderTabs(){
   const tg=T(),tb=$('tabs');tb.innerHTML='';
-  $('fname').style.display=tg.css!=null?'none':'';
-  if(tg.css==null)return;
-  [['html','index.html'],['css','styles.css']].forEach(([k,n])=>{const b=document.createElement('button');b.className='tab'+(file===k?' on':'');b.textContent=n;b.onclick=()=>{if(file===k)return;file=k;sfx.click();$('ed').value=k==='css'?S.css[S.t]:S.code[S.t];renderTabs();paint()};tb.appendChild(b)});
+  const list=[['html','index.html']];if(tg.css!=null)list.push(['css','styles.css']);if(tg.js!=null)list.push(['js','script.js']);
+  $('fname').style.display=list.length>1?'none':'';
+  if(list.length<2)return;
+  list.forEach(([k,n])=>{const b=document.createElement('button');b.className='tab'+(file===k?' on':'');b.textContent=n;b.onclick=()=>{if(file===k)return;file=k;sfx.click();$('ed').value=fileVal(k);renderTabs();paint()};tb.appendChild(b)});
 }
 function run(){
-  const v=$('ed').value;if(file==='css')S.css[S.t]=v;else S.code[S.t]=v;save();
-  const code=S.code[S.t],css=T().css!=null?S.css[S.t]:null;
-  const f=$('bframe');f.onload=()=>evaluate(code,css);f.srcdoc=wrap(code,css);
+  const v=$('ed').value;if(file==='css')S.css[S.t]=v;else if(file==='js')S.js[S.t]=v;else S.code[S.t]=v;save();
+  const code=S.code[S.t],css=T().css!=null?S.css[S.t]:null,js=T().js!=null?S.js[S.t]:null;
+  const f=$('bframe');f.onload=()=>evaluate(code,css,js);f.srcdoc=wrap(code,css,js);
 }
-function evaluate(code,css){
+function evaluate(code,css,js){
   const tg=T(),f=$('bframe'),d=f.contentDocument,w=f.contentWindow;if(!d)return;
   const raw=new DOMParser().parseFromString(code,'text/html');
-  const res=tg.steps.map(s=>{try{return !!s.c(d,w,code,raw,css)}catch(e){return false}});
+  const res=tg.steps.map(s=>{try{return !!s.c(d,w,code,raw,css,js)}catch(e){return false}});
+  if(tg.js!=null){const hx=w.__hx||{errs:[],logs:[]},sc=$('scan');
+    if(hx.errs.length){const e=hx.errs[0];sc.className='bad';sc.textContent='Console › '+(e.f.startsWith('blob:')?'script.js':'index.html')+' line '+e.l+': '+e.m}
+    else if(js!=null&&js.trim()&&!/<script[^>]*src=["']script\.js["']/i.test(code)){sc.className='bad';sc.textContent='Console › index.html does not load script.js yet'}
+    else if(hx.logs.length){sc.className='ok';sc.textContent='Console › '+hx.logs.slice(-3).join('  ·  ')}
+    else{sc.className='';sc.textContent='Console › quiet'}
+    f.onload=null;f.srcdoc=wrap(code,css,js)}
   if(lastPass&&res.some((r,i)=>r&&!lastPass[i]))sfx.ok();
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
@@ -1514,8 +1708,8 @@ function evaluate(code,css){
   const ol=$('steps');ol.innerHTML='';
   tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
   if(now!==curStep){curStep=now;lv=0;renderHelp()}
-  if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;save();sfx.target();comms('Target matched. Build approved for the village.');render()}
-  else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;save()}
+  if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save();sfx.target();comms('Target matched. Build approved for the village.');render()}
+  else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save()}
 }
 function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
@@ -1527,7 +1721,7 @@ function renderHelp(){
   $('hstep').textContent='step '+(curStep+1);
   const st=tg.steps[curStep],names=['Nudge','Point','Example','Answer'];
   if(lv===0)lad.innerHTML='<div class="idle"><img src="'+art('witch')+'" alt=""><div class="hint0">Try it yourself first. Stuck? Help comes in four levels, from a small nudge to the full answer.</div></div>';
-  for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&!/`/.test(st.help[i]);div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
+  for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&(st.pre||!/`/.test(st.help[i]));div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
   if(lv===4){const nt=document.createElement('div');nt.className='hint0';nt.textContent='Flagged: this comes back as a review drill in a later School.';lad.appendChild(nt)}
   const b=document.createElement('button');b.id='stuck';
   b.textContent=lv===0?"I'm stuck":(lv<4?'Still stuck':'Answer shown');b.disabled=lv>=4;
@@ -1543,6 +1737,7 @@ function scan(code){
 }
 function checkNow(){
   const code=S.code[S.t]||'',css=S.css[S.t],s=$('scan');const issues=scan(code);
+  if(T().js!=null){const js=S.js[S.t]||'';try{new Function(js)}catch(e){issues.unshift('script.js: '+e.message)}}
   if(T().css!=null&&css!=null){if(count(css,/\{/g)!==count(css,/\}/g))issues.push('styles.css: braces { } do not match');if(T().css!=null&&!linked(code))issues.push('index.html does not link styles.css yet')}
   if(lastPass&&lastPass.every(Boolean)){s.className='ok';s.textContent='Scanner: everything matches.';sfx.ok();return}
   sfx.bad();
@@ -1567,8 +1762,9 @@ function highlight(src){
   }
   return out+'\n ';
 }
+function hlJs(src){return src.replace(/(\/\/[^\n]*)|('(?:\\.|[^'\\\n])*'|"(?:\\.|[^"\\\n])*"|`(?:\\.|[^`\\])*`)|\b(const|let|var|function|return|if|else|for|of|in|new|true|false|null|undefined|while|break|document|console|window)\b|\b(\d+(?:\.\d+)?)\b|([\s\S])/g,(m,c,str,k,n)=>c?'<span class="h-c">'+esc(c)+'</span>':str?'<span class="h-s">'+esc(str)+'</span>':k?'<span class="h-t">'+k+'</span>':n?'<span class="h-v">'+n+'</span>':esc(m))}
 function paint(){
-  const ed=$('ed'),v=ed.value;$('hl').innerHTML=file==='css'?hlCss(v)+'\n ':highlight(v);
+  const ed=$('ed'),v=ed.value;$('hl').innerHTML=file==='css'?hlCss(v)+'\n ':file==='js'?hlJs(v)+'\n ':highlight(v);
   const n=v.split('\n').length;$('gut').textContent=Array.from({length:n},(_,i)=>i+1).join('\n')+'\n ';
   syncScroll();
 }
@@ -1577,28 +1773,28 @@ function syncScroll(){const ed=$('ed');$('hl').scrollTop=ed.scrollTop;$('hl').sc
 let freshPlot=null;
 function fitPlaques(){requestAnimationFrame(()=>document.querySelectorAll('.plot .pview').forEach(p=>p.style.setProperty('--s',p.clientWidth/800)))}
 window.addEventListener('resize',()=>{if(S.stage==='village')fitPlaques()});
-function openViewer(name,code,css){let v=$('viewer');if(!v){v=document.createElement('div');v.id='viewer';v.className='viewer';v.innerHTML='<div class="vbox"><div class="ph"><b id="vname"></b><span class="sp"><button id="vclose">Close · Esc</button></span></div><iframe id="vframe" title="Your build"></iframe></div>';document.body.appendChild(v);v.onclick=e=>{if(e.target===v)v.classList.remove('on')};$('vclose').onclick=()=>{sfx.click();v.classList.remove('on')};document.addEventListener('keydown',e=>{if(e.key==='Escape')v.classList.remove('on')})}
-  $('vname').textContent=name+' · your build';$('vframe').srcdoc=wrap(code,css);v.classList.add('on')}
+function openViewer(name,code,css,js){let v=$('viewer');if(!v){v=document.createElement('div');v.id='viewer';v.className='viewer';v.innerHTML='<div class="vbox"><div class="ph"><b id="vname"></b><span class="sp"><button id="vclose">Close · Esc</button></span></div><iframe id="vframe" title="Your build"></iframe></div>';document.body.appendChild(v);v.onclick=e=>{if(e.target===v)v.classList.remove('on')};$('vclose').onclick=()=>{sfx.click();v.classList.remove('on')};document.addEventListener('keydown',e=>{if(e.key==='Escape')v.classList.remove('on')})}
+  $('vname').textContent=name+' · your build';$('vframe').srcdoc=wrap(code,css,js);v.classList.add('on')}
 function renderVillage(){
   const v=$('v-village');v.innerHTML='';const uc=userFrameCss();v.classList.toggle('custom',!!uc);let us=$('userframe');if(!us){us=document.createElement('style');us.id='userframe';document.head.appendChild(us)}us.textContent=uc;
   PLOTS.forEach((p,i)=>{
-    const mb=p.m!=null&&S.built[p.m]!=null,bt=mb?p.m:p.t;const built=bt!=null&&S.built[bt]!=null,next=p.t!=null&&!built;
+    const sb=p.sp!=null&&S.built[p.sp]!=null,mb=!sb&&p.m!=null&&S.built[p.m]!=null,bt=sb?p.sp:(mb?p.m:p.t);const built=bt!=null&&S.built[bt]!=null,next=p.t!=null&&!built;
     const el=document.createElement('div');el.className='panel plot'+(freshPlot===i?' fresh':'');
-    const st=built?(mb?'<span class="st b">MASTER</span>':'<span class="st b">BUILT</span>'):(next?'<span class="st n">TARGET '+(p.t+1)+'</span>':'<span class="st s">V2</span>');
+    const st=built?(sb?'<span class="st b">ENCHANTED</span>':mb?'<span class="st b">MASTER</span>':'<span class="st b">BUILT</span>'):(next?'<span class="st n">TARGET '+(p.t+1)+'</span>':'<span class="st s">V2</span>');
     el.innerHTML='<div class="ph"><b>Plot '+String(i+1).padStart(2,'0')+' · '+esc(p.name)+'</b><span class="sp">'+st+'</span></div>';
     const sc=document.createElement('div');sc.className='scene';
     const a=document.createElement('div');a.className='art'+(built?'':' dim');a.style.backgroundImage='url('+art(p.art)+')';
     const g=document.createElement('div');g.className='ground';sc.appendChild(g);sc.appendChild(a);
     const pl=document.createElement('div');
-    if(built){pl.className='plaque';pl.title='Open your build';const fr=document.createElement('div');fr.className='pframe';const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=p.name;f.tabIndex=-1;f.srcdoc=wrap(S.built[bt],S.builtCss[bt]);pv.appendChild(f);fr.appendChild(pv);pl.appendChild(fr);pl.onclick=()=>{sfx.blip();openViewer(p.name+(mb?' · master':''),S.built[bt],S.builtCss[bt])}}
+    if(built){pl.className='plaque';pl.title='Open your build';const fr=document.createElement('div');fr.className='pframe';const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=p.name;f.tabIndex=-1;f.srcdoc=wrap(S.built[bt],S.builtCss[bt],S.builtJs[bt]);pv.appendChild(f);fr.appendChild(pv);pl.appendChild(fr);pl.onclick=()=>{sfx.blip();openViewer(p.name+(sb?' · enchanted':mb?' · master':''),S.built[bt],S.builtCss[bt],S.builtJs[bt])}}
     else{pl.className='plaque empty';pl.textContent=next?'Awaiting target '+(p.t+1):'Arrives in a later version'}
-    const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];const cp=document.createElement('div');cp.className='pcap';cp.innerHTML='<i></i>Plate '+(ROM[i]||i+1)+(mb?' <b style="color:#c9a227;font-weight:400">✦</b>':'')+'<i></i>';pl.appendChild(cp);
+    const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];const cp=document.createElement('div');cp.className='pcap';cp.innerHTML='<i></i>Plate '+(ROM[i]||i+1)+(sb?' <b style="color:#c9a227;font-weight:400">☾</b>':mb?' <b style="color:#c9a227;font-weight:400">✦</b>':'')+'<i></i>';pl.appendChild(cp);
     sc.appendChild(pl);el.appendChild(sc);
     v.appendChild(el);
   });
   freshPlot=null;fitPlaques();
   const nx=TARGETS.findIndex((t,i)=>!S.done[i]);
-  if(nx!==-1&&nx!==S.t&&S.done[S.t]&&T().master==null){S.t=nx;S.drill=0;S.les=0;save();comms('Next target unlocked: '+TARGETS[nx].name+'. School first.');setTimeout(render,0)}
+  if(nx!==-1&&nx!==S.t&&S.done[S.t]&&T().master==null&&T().after==null){S.t=nx;S.drill=0;S.les=0;save();comms('Next target unlocked: '+TARGETS[nx].name+'. School first.');setTimeout(render,0)}
 }
 
 function renderRules(){
@@ -1627,7 +1823,8 @@ function imgsIn(code){return [...new Set((String(code).match(IMG_RE)||[]).map(m=
 function treeHtml(){
   const tg=T(),imgs=imgsIn(tg.solution),here='  <em>← you are here</em>';
   let t='<b>witch-village/</b>\n'+(tg.css!=null||imgs.length?'├─ ':'└─ ')+'index.html'+(file==='html'?here:'')+'\n';
-  if(tg.css!=null)t+=(imgs.length?'├─ ':'└─ ')+'styles.css'+(file==='css'?here:'')+'\n';
+  if(tg.css!=null)t+=(imgs.length||tg.js!=null?'├─ ':'└─ ')+'styles.css'+(file==='css'?here:'')+'\n';
+  if(tg.js!=null)t+=(imgs.length?'├─ ':'└─ ')+'script.js'+(file==='js'?here:'')+'\n';
   if(imgs.length){t+='└─ <b>img/</b>\n';imgs.forEach((n,i)=>t+='   '+(i===imgs.length-1?'└─ ':'├─ ')+n+'\n');t+='\n<em>From index.html the path is: </em>img/'+imgs[0]}
   return t}
 
@@ -1640,6 +1837,7 @@ function takeHome(){
   const page=/<html[\s>]/i.test(code)?code:'<!DOCTYPE html>\n<html lang="en">\n<head>\n  <meta charset="UTF-8">\n  <meta name="viewport" content="width=device-width, initial-scale=1">\n  <title>'+T().name+'</title>\n'+head+'</head>\n<body>\n  '+body.replace(/\n/g,'\n  ')+'\n</body>\n</html>\n';
   const enc=new TextEncoder(),files=[{name:'witch-village/index.html',data:enc.encode(page)}];
   if(T().css!=null)files.push({name:'witch-village/styles.css',data:enc.encode(S.css[S.t]!=null?S.css[S.t]:T().css)});
+  if(T().js!=null)files.push({name:'witch-village/script.js',data:enc.encode(S.js[S.t]!=null?S.js[S.t]:T().js)});
   imgsIn(page).forEach(n=>{const k=n.replace('.png','');if(IMGS[k])files.push({name:'witch-village/img/'+n,data:dataBytes(art(IMGS[k]))})});
   dl(URL.createObjectURL(makeZip(files)),'hexle-'+T().id+'.zip');
   sfx.blip();comms('Downloaded a zip. Unzip it and open the witch-village folder in VS Code.');
@@ -1663,7 +1861,7 @@ ed.addEventListener('keydown',e=>{
   if(e.key==='Enter'){const s=ed.selectionStart,ls=ed.value.lastIndexOf('\n',s-1)+1,ind=(ed.value.slice(ls,s).match(/^[ \t]*/)||[''])[0];e.preventDefault();ed.setRangeText('\n'+ind,s,ed.selectionEnd,'end');ed.dispatchEvent(new Event('input'))}
 });
 $('check').onclick=checkNow;
-let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';if(file==='css')ed.value=T().css;else ed.value=T().starter;paint();run();comms('This file was reset to the starter code.')};
+let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';if(file==='css')ed.value=T().css;else if(file==='js')ed.value=T().js;else ed.value=T().starter;paint();run();comms('This file was reset to the starter code.')};
 render();
 const NOTES_KEY='megalab-claude-notes',NOTES_LAB='Hexle';
 const NOTE_KINDS=[['bug','Bug','Something behaves wrongly or breaks'],['real','Not real HTML/CSS','Hexle accepts or shows something a real browser would not'],['learn','Learning gap','Something explained badly, or not at all'],['idea','Idea','A feature, target or drill you want'],['question','Question','Something to ask Claude next session']];
