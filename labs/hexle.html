@@ -217,6 +217,12 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 .plot .plaque.empty{transform:translateY(-50%)}.plot .plaque.empty:hover{transform:translateY(-50%)}
 .viewer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(6,10,8,.72);backdrop-filter:blur(3px)}
 .viewer.on{display:flex}
+.viewer .bbox{width:min(640px,92vw);display:flex;flex-direction:column;gap:12px;padding:0 0 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.viewer .bbox p{margin:0 16px;font-size:13px;color:var(--ink2);line-height:1.5}
+.viewer .bbox textarea{margin:0 16px;height:120px;resize:vertical;font-family:var(--mono);font-size:11px;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:8px;word-break:break-all}
+.viewer .bbox .drow{margin:0 16px;display:flex;gap:8px;flex-wrap:wrap}
+.hunt{border:1px solid var(--amb);background:color-mix(in srgb,var(--amb) 12%,transparent);padding:10px 12px;margin-bottom:10px;font-size:13px;line-height:1.5}
+.hunt b{font-family:var(--hud);letter-spacing:.12em;text-transform:uppercase;font-size:11px;color:var(--amb)}
 .viewer .vbox{width:min(1000px,92vw);height:min(680px,86vh);display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 30px 80px rgba(0,0,0,.6)}
 .viewer iframe{flex:1;border:0;background:#f2e9d6}
 .plot .art.dim{filter:grayscale(.9) brightness(.42) drop-shadow(0 8px 10px rgba(0,0,0,.4))}
@@ -296,7 +302,7 @@ body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spaci
     <button id="mute" title="Click to cycle: sound, sound with typing clicks, muted">Sound</button>
     <input id="vol" type="range" min="0" max="100" step="1" aria-label="Volume">
   </div>
-  <button class="home" id="home" title="Download this target as a real HTML file for VS Code">Take it home</button>
+  <button id="backup" title="Save or restore your progress">Backup</button><button class="home" id="home" title="Download this target as a real HTML file for VS Code">Take it home</button>
 </header>
 <main>
   <section class="view" id="v-school">
@@ -1896,6 +1902,8 @@ function evaluate(code,css,js){
   const now=res.indexOf(false);
   const ol=$('steps');ol.innerHTML='';
   tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
+  if(S.hunt&&S.hunt.t===S.t&&S.hunt.fresh){S.hunt.fresh=false;if(now===-1){if(S.hunt.tries<6){setTimeout(()=>startHunt(S.hunt.tries+1),0);return}S.code[S.t]=S.hunt.code;S.hunt=null;comms('These bugs did not break anything. Try another bug hunt.')}save()}
+  if(S.hunt&&S.hunt.t===S.t&&now===-1&&!S.hunt.fresh){endHunt(true);curStep=-2}
   if(now!==curStep){curStep=now;lv=0;renderHelp()}
   if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save();sfx.target();comms('Target matched. Build approved for the village.');render()}
   else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save()}
@@ -1904,7 +1912,8 @@ function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
   if(curStep===-1){
     $('hstep').textContent='all steps done';
-    lad.innerHTML='<div class="win"><b>TARGET MATCHED</b><br>'+esc(tg.name)+' is ready to be added to your village.</div><div class="hint0">Tip: press Take it home in the top bar to download this as a real HTML file and open it in VS Code.</div>';
+    lad.innerHTML='<div class="win"><b>TARGET MATCHED</b><br>'+esc(tg.name)+' is ready to be added to your village.</div><div class="hint0">Want to train your eye? Bug hunt plants three bugs in your finished code. Find them like a real debugger: read the steps, the scanner and the console.</div>';
+    const h=document.createElement('button');h.textContent='Bug hunt';h.onclick=()=>startHunt(0);foot.appendChild(h);
     const b=document.createElement('button');b.className='pri';b.textContent='Add to village';b.onclick=()=>{freshPlot=tg.plot;sfx.build();comms(tg.name+' built in the village.');go('village')};foot.appendChild(b);return;
   }
   $('hstep').textContent='step '+(curStep+1);
@@ -1912,6 +1921,7 @@ function renderHelp(){
   if(lv===0)lad.innerHTML='<div class="idle"><img src="'+art('witch')+'" alt=""><div class="hint0">Try it yourself first. Stuck? Help comes in four levels, from a small nudge to the full answer.</div></div>';
   for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&(st.pre||!/`/.test(st.help[i]));div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
   if(lv===4){const nt=document.createElement('div');nt.className='hint0';nt.textContent='Flagged: this comes back as a review drill in a later School.';lad.appendChild(nt)}
+  if(S.hunt&&S.hunt.t===S.t){const hb=document.createElement('div');hb.className='hunt';hb.innerHTML='<b>Bug hunt</b><br>'+S.hunt.n+' bugs hide in: '+esc(huntFiles()||'your files')+'. Every step was green before. Press Ctrl+Enter for the scanner.';lad.prepend(hb);const g=document.createElement('button');g.textContent='Give up';g.onclick=()=>endHunt(false);foot.appendChild(g)}
   const b=document.createElement('button');b.id='stuck';
   b.textContent=lv===0?"I'm stuck":(lv<4?'Still stuck':'Answer shown');b.disabled=lv>=4;
   b.onclick=()=>{if(lv>=4)return;lv++;sfx.hint();if(lv===4&&!S.flag.includes(S.t)){S.flag.push(S.t);save()}renderHelp()};
@@ -2019,6 +2029,62 @@ function treeHtml(){
   if(imgs.length){t+='└─ <b>img/</b>\n';imgs.forEach((n,i)=>t+='   '+(i===imgs.length-1?'└─ ':'├─ ')+n+'\n');t+='\n<em>From index.html the path is: </em>img/'+imgs[0]}
   return t}
 
+const BUGS=[
+ {f:'code',re:/src="img\//g,to:()=>'src="images/'},
+ {f:'code',re:/<\/(h1|h2|h3|p|li|figcaption|button|caption|label)>/g,to:()=>''},
+ {f:'code',re:/class="([a-z][\w-]*)/g,to:(m,a)=>'class="'+a.slice(0,-1)},
+ {f:'code',re:/id="([a-z][\w-]*)"/g,to:(m,a)=>'id="'+a+'s"'},
+ {f:'code',re:/href="([\w.\/-]+)"/g,to:(m,a)=>'href="'+a.replace(/\.html$/,'.htm').replace(/\.css$/,'.cs')+'"'},
+ {f:'css',re:/([a-z-]+):(\s*[^;{}\n]+;)/g,to:(m,a,b)=>a+b},
+ {f:'css',re:/#([0-9a-f]{6})\b/gi,to:(m,a)=>'#'+a.slice(0,5)+(a[5]==='0'?'1':'0')},
+ {f:'css',re:/(\d+)px/g,to:(m,a)=>a},
+ {f:'css',re:/\.([a-z][\w-]*)(\s*\{)/g,to:(m,a,b)=>a+b},
+ {f:'css',re:/var\(--([a-z]+)\)/g,to:(m,a)=>'var(-'+a+')'},
+ {f:'js',re:/querySelector(All)?\((["'`])([#.]?)([\w-]+)/g,to:(m,a,q,p,n)=>'querySelector'+(a||'')+'('+q+p+n.slice(0,-1)},
+ {f:'js',re:/\.textContent\b/g,to:()=>'.textContnt'},
+ {f:'js',re:/addEventListener\((["'`])(\w+)/g,to:(m,q,e)=>'addEventListener('+q+e.slice(0,-1)},
+ {f:'js',re:/===/g,to:()=>'='},
+ {f:'js',re:/\);\n/g,to:()=>';\n'}
+];
+function plantBugs(){
+  const t=S.t,src={code:S.code[t]||'',css:S.css[t],js:S.js[t]};
+  const cand=[];BUGS.forEach((b,bi)=>{const v=src[b.f];if(v==null)return;const ms=[...v.matchAll(b.re)];ms.forEach(m=>cand.push({bi,f:b.f,i:m.index,len:m[0].length,m}))});
+  for(let i=cand.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[cand[i],cand[j]]=[cand[j],cand[i]]}
+  const pick=[],used=new Set();for(const c of cand){if(pick.length>=3)break;if(used.has(c.bi))continue;if(pick.some(p=>p.f===c.f&&Math.abs(p.i-c.i)<40))continue;pick.push(c);used.add(c.bi)}
+  if(!pick.length)return false;
+  const out={code:src.code,css:src.css,js:src.js};
+  ['code','css','js'].forEach(f=>{const ps=pick.filter(p=>p.f===f).sort((a,b)=>b.i-a.i);ps.forEach(p=>{const v=out[f];const rep=BUGS[p.bi].to(...p.m);out[f]=v.slice(0,p.i)+rep+v.slice(p.i+p.len)})});
+  S.code[t]=out.code;if(out.css!=null)S.css[t]=out.css;if(out.js!=null)S.js[t]=out.js;
+  return pick.length;
+}
+function startHunt(tries){
+  const t=S.t;if(!S.hunt||S.hunt.t!==t)S.hunt={t,code:S.code[t],css:S.css[t],js:S.js[t],tries:0};
+  else{S.code[t]=S.hunt.code;S.css[t]=S.hunt.css;S.js[t]=S.hunt.js}
+  S.hunt.tries=(tries||0);const n=plantBugs();
+  if(!n){S.hunt=null;comms('Nothing to hide bugs in here.');return}
+  S.hunt.n=n;S.hunt.fresh=true;save();sfx.hint();$('ed').dataset.t='';file='html';render();comms('Bug hunt: '+n+' bugs planted in your files. Fix them until every step is green.');
+}
+function endHunt(win){
+  const h=S.hunt;if(!h)return;
+  if(win){S.hunts=(S.hunts||0)+1;S.hunt=null;save();sfx.target();comms('All bugs squashed. Bug hunts won: '+S.hunts+'.')}
+  else{S.code[h.t]=h.code;if(h.css!=null)S.css[h.t]=h.css;if(h.js!=null)S.js[h.t]=h.js;S.hunt=null;save();sfx.click();$('ed').dataset.t='';render();comms('Bug hunt ended. Your working code is back.')}
+}
+function huntFiles(){const h=S.hunt;if(!h)return '';const f=[];if(S.code[h.t]!==h.code)f.push('index.html');if(h.css!=null&&S.css[h.t]!==h.css)f.push('styles.css');if(h.js!=null&&S.js[h.t]!==h.js)f.push('script.js');return f.join(', ')}
+function b64e(o){return btoa(unescape(encodeURIComponent(JSON.stringify(o))))}
+function b64d(t){return JSON.parse(decodeURIComponent(escape(atob(String(t).trim()))))}
+function openBackup(){
+  let v=$('bview');if(!v){v=document.createElement('div');v.id='bview';v.className='viewer';
+   v.innerHTML='<div class="bbox"><div class="ph"><b>Backup your progress</b><span class="sp"><button id="bclose">Close · Esc</button></span></div><p>Your progress lives in this browser only. Copy this code (or download it) to keep it safe, or to move to your tablet: paste it there and press Restore.</p><textarea id="btext" spellcheck="false" aria-label="Backup code"></textarea><div class="drow"><button id="bcopy">Copy code</button><button id="bdl">Download .txt</button><span style="flex:1"></span><button id="bload" class="pri">Restore from pasted code</button></div><p id="bmsg"></p></div>';
+   document.body.appendChild(v);
+   v.onclick=e=>{if(e.target===v)v.classList.remove('on')};$('bclose').onclick=()=>{sfx.click();v.classList.remove('on')};
+   document.addEventListener('keydown',e=>{if(e.key==='Escape')v.classList.remove('on')});
+   $('bcopy').onclick=()=>{const t=$('btext');t.select();try{navigator.clipboard.writeText(t.value)}catch(e){document.execCommand('copy')}$('bmsg').textContent='Copied. Keep it somewhere safe.';sfx.ok()};
+   $('bdl').onclick=()=>{dl(URL.createObjectURL(new Blob([$('btext').value],{type:'text/plain'})),'hexle-backup-'+new Date().toISOString().slice(0,10)+'.txt');sfx.blip()};
+   $('bload').onclick=()=>{try{const o=b64d($('btext').value);if(!o||typeof o!=='object'||!o.learned)throw new Error('not a Hexle backup');S=Object.assign({theme:'grove',t:0,stage:'school',drill:0,code:{},css:{},js:{},builtCss:{},builtJs:{},done:{},built:{},learned:[],flag:[],sfx:true,vol:70,keys:false,ft:0},o);save();$('ed').dataset.t='';render();$('bmsg').textContent='Restored: '+Object.keys(S.done).filter(k=>S.done[k]).length+' targets done, '+S.learned.length+' rules learned.';sfx.target()}catch(e){$('bmsg').textContent='That is not a Hexle backup code. Copy the whole code and try again.';sfx.bad()}};
+  }
+  $('btext').value=b64e(S);$('bmsg').textContent='';v.classList.add('on');
+}
+
 function takeHome(){
   const code=S.code[S.t]!=null?S.code[S.t]:T().starter;
   const style=(code.match(/<style>[\s\S]*?<\/style>/i)||[''])[0];
@@ -2042,6 +2108,7 @@ $('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.key
 $('vol').oninput=e=>{S.vol=+e.target.value;save()};
 $('vol').onchange=()=>sfx.ok();
 $('home').onclick=takeHome;
+$('backup').onclick=()=>{sfx.click();openBackup()};
 $('slider').oninput=e=>{$('ovl').style.opacity=e.target.value/100};
 const ed=$('ed');
 ed.addEventListener('input',()=>{paint();sfx.key();$('scan').className='';$('scan').textContent='Scanner idle.';clearTimeout(runT);runT=setTimeout(run,280)});
