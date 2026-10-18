@@ -191,6 +191,7 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 .efoot .sp{margin-left:auto;color:var(--mute)}
 #scan.bad{color:var(--cor)}#scan.ok{color:var(--acc3)}
 #v-village{grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(3,minmax(0,1fr))}
+.plot .ph b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}.plot .ph .sp{flex:none;overflow:visible}
 .plot .st{font-size:10px;padding:3px 7px;border-radius:var(--r);letter-spacing:.12em}
 .st.b{background:var(--acc2);color:var(--acc3)}.st.n{background:var(--amb2);color:var(--amb)}.st.s{background:var(--panel2);color:var(--mute)}
 .ghost{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;color:var(--mute);font-size:13px;background:repeating-linear-gradient(45deg,transparent 0 10px,rgba(15,143,168,.04) 10px 20px)}
@@ -1525,7 +1526,7 @@ function go(v){S.stage=v;save();render()}
 function render(){
   const vw=S.stage==='practice'?'school':S.stage;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
-  const sel=$('tsel');sel.innerHTML='';TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);sel.appendChild(o)});sel.value=S.t;
+  const sel=$('tsel');sel.innerHTML='';let og=null,ogn='';TARGETS.forEach((tg,i)=>{const gn=tg.spell?'Spells · JavaScript':tg.master!=null?'Master editions':'Village plates';if(gn!==ogn){og=document.createElement('optgroup');og.label=gn;sel.appendChild(og);ogn=gn}const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);og.appendChild(o)});sel.value=S.t;
   document.body.dataset.theme=S.theme;$('theme').textContent=S.theme==='grove'?'Grove':'Orbital';$('junie').src=art('drone');
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else renderRules();
@@ -1543,7 +1544,10 @@ function practiceList(){
   const pool=[];TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))}));
   MORE.forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))});
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-  return pool.slice(0,10);
+  const miss=S.miss||{},weak=pool.filter(d=>(miss[d.r]||0)>0).sort((a,b)=>(miss[b.r]||0)-(miss[a.r]||0)).slice(0,5);
+  const rest=pool.filter(d=>!weak.includes(d));const out=weak.concat(rest).slice(0,10);
+  for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
+  return out;
 }
 const LESSONS={
  r1:{why:'HTML is made of elements. Most elements have an opening tag, some content, and a closing tag. The browser uses the pair to know where something starts and stops: forget the closing tag and the rest of the page can get swallowed into the element.',parts:[['<p>','opening tag: starts the paragraph'],['Knock twice.','content: what shows on the page'],['</p>','closing tag: the slash ends it']],mistakes:['Forgetting the slash: <p>Hi<p> opens a second paragraph instead of closing the first.','Mixing names: <h1>Title</h2> does not close the h1.','Leaving the closing tag off at the end of the page.'],ex2:'<p>First paragraph.</p>\n<p>Second paragraph, on its own line.</p>'},
@@ -1602,14 +1606,14 @@ function renderSchool(){
 function practiceDone(){
   $('dtitle').textContent='Practice complete';
   const box=$('dbox');box.innerHTML='';const c=document.createElement('div');c.className='donecard';
-  c.innerHTML='<div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">Practice mixes drills from every rule you have learned. Run it whenever you have five minutes.</div>';
+  c.innerHTML='<div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">Practice mixes drills from every rule you have learned, and leans on the ones you missed before. Run it whenever you have five minutes.</div>'+(()=>{const m=Object.entries(S.miss||{}).filter(x=>x[1]>0&&RULES[x[0]]).sort((a,b)=>b[1]-a[1]).slice(0,4);return m.length?'<div class="hint0">Still shaky: '+m.map(x=>'Rule '+RULES[x[0]].n+' · '+esc(RULES[x[0]].title)).join(', ')+'</div>':''})();
   const row=document.createElement('div');row.className='drow';
   const again=document.createElement('button');again.className='pri';again.textContent='New round';again.onclick=()=>{PR=null;sfx.click();renderSchool()};
   row.appendChild(again);c.appendChild(row);box.appendChild(c);sfx.rule();
 }
 function setPrev(html,label){sideFrame(label);$('dprev').srcdoc=wrap(html)}
 function renderDrill(d,i,n,list){
-  dState={tries:0};
+  dState={tries:0,d:d};
   $('dtitle').textContent='Drill '+(i+1)+' of '+n;
   const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug'}[d.k];
   const R=RULES[d.r],L=LESSONS[d.r];
@@ -1645,12 +1649,12 @@ function checkDrill(d){
 }
 function passDrill(){
   if(dState.locked)return;dState.locked=true;
-  if(dState.tries===0)S.ft++;
+  if(dState.tries===0){S.ft++;if(S.stage==='practice'&&dState.d&&S.miss&&S.miss[dState.d.r])S.miss[dState.d.r]--}
   const fb=$('fb');fb.className='fb ok';fb.textContent=['Locked in.','Correct. Nice.','Clean. Next one.','Spot on.'][Math.floor(Math.random()*4)];
   if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
   sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool()},650);
 }
-function failDrill(d){dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);sfx.bad()}
+function failDrill(d){dState.tries++;if(dState.tries===1){S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save()}const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);sfx.bad()}
 function schoolComplete(list){
   const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
   if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();setTimeout(sfx.blip,500);comms('New rules added to the Rulebook and the Codex.');render();return}
@@ -1729,7 +1733,7 @@ function renderHelp(){
   foot.appendChild(b);
 }
 function scan(code){
-  const out=[];['html','head','body','title','header','main','footer','nav','figure','figcaption','table','tr','th','td','h1','h2','p','div','style','span','ul','ol','li','a'].forEach(t=>{const o=count(code,new RegExp('<'+t+'[\\s>]','gi')),c=count(code,new RegExp('</'+t+'>','gi'));if(o!==c)out.push('<'+t+'> opened '+o+'×, closed '+c+'×')});
+  const out=[];['html','head','body','title','header','main','footer','nav','aside','article','section','figure','figcaption','form','label','select','option','button','table','caption','thead','tbody','tfoot','tr','th','td','time','h1','h2','h3','p','div','style','script','span','ul','ol','li','a'].forEach(t=>{const o=count(code,new RegExp('<'+t+'[\\s>]','gi')),c=count(code,new RegExp('</'+t+'>','gi'));if(o!==c)out.push('<'+t+'> opened '+o+'×, closed '+c+'×')});
   const st=(code.match(/<style>([\s\S]*?)<\/style>/i)||[])[1];
   if(st){if(count(st,/\{/g)!==count(st,/\}/g))out.push('CSS braces { } do not match');if(/[a-z-]+\s+[a-z0-9#]+\s*;/i.test(st)&&!/:\s*[^;]+;/.test(st))out.push('CSS property without a colon')}
   if(count(code,/"/g)%2)out.push('a quote " is not closed');
