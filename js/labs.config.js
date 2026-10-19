@@ -30,6 +30,16 @@ const LABS_CONFIG = [
     glyph: '<path d="M2.5 5l3 3-3 3"/><path d="M7.5 11.5h6"/>'
   },
     {
+    id: "dockle",
+    name: "Dockle",
+    tag: "Code",
+    sub: "python · cargo",
+    path: "labs/dockle.html",
+    ring: "ring-outer",
+    angle: 300,
+    glyph: '<path d="M2 5.5l6-3 6 3v5l-6 3-6-3z"/><path d="M2 5.5l6 3 6-3M8 8.5v5"/>'
+  },
+  {
     id: "git-lab",
     name: "Git Lab",
     tag: "Practice",

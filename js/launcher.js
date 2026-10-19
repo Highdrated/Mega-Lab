@@ -526,6 +526,13 @@ function todayItems() {
     if (n) add("hexle", n + (n === 1 ? " skill to review" : " skills to review"), "review", "review", 8);
   }
 
+  const dk = lsParse("dockle.v1");
+  if (dk && dk.srs) {
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    const n = Object.values(dk.srs).filter((x) => x && x.due <= day).length;
+    if (n) add("dockle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 8);
+  }
+
   const md = lsParse("modle-profile");
   if (!(md && md.daily && md.daily.date === dayKey(0, true))) add("modle", "Daily challenge", "daily", "/practice/daily", 6);
   const mix = lsParse("junle_mix");
@@ -546,6 +553,10 @@ function todayItems() {
 
   const gl = lsParse("gitlab.v1");
   if (gl && gl.missions && gl.missionIdx < gl.missions && !gl.detective) add("git-lab", "Mission " + (gl.missionIdx + 1) + " of " + gl.missions, "next", "", 2);
+  if (dk && dk.done) {
+    const DOCKLE_N = 8, n = Object.keys(dk.done).length;
+    if (n < DOCKLE_N) add("dockle", "Contract " + (n + 1) + " of " + DOCKLE_N + " waiting", "next", "target", 2);
+  } else add("dockle", "Your first cargo contract", "next", "school", 2);
   if (hx && typeof hx.t === "number" && !(hx.done && hx.done[hx.t])) add("hexle", "Target " + (hx.t + 1) + " waiting", "next", "", 2);
 
   return out.sort((a, b) => b.weight - a.weight).slice(0, 6);
