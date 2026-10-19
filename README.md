@@ -6,10 +6,14 @@ needed — but hosting it on GitHub Pages makes it installable on any device.
 ## Folder layout
 
     index.html            the launcher
-    css/launcher.css      styling (Void + Orbital themes)
-    js/labs.config.js     THE ROOM LIST — edit this to add a lab
-    js/launcher.js        launcher logic
-    labs/<lab-name>/      one folder per lab, each with its own index.html
+    css/launcher.css      launcher styling (Void + Orbital themes)
+    js/labs.config.js     THE ROOM LIST: edit this to add a lab
+    js/launcher.js        launcher logic, Today tab
+    labs/<lab>.html       single-file labs (Pyle, Passle, Hexle, Poshle, ...)
+    labs/<lab>/           folder labs (junos-lab, modle)
+    labs/img/             images per lab (passle, roux, hexle)
+    labs/data/            JSON files Hexle fetches in its lessons
+    archive/              retired pages (Style, old Passle prototypes)
     sw.js                 service worker (offline support)
     manifest.webmanifest  PWA manifest (install as an app)
     icons/                launcher icons
