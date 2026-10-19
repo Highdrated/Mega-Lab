@@ -4555,6 +4555,12 @@ const SPSOL={
 "api": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$dishes = [\n    1 => ['id' => 1, 'name' => 'Onion soup', 'price' => 7.5],\n    2 => ['id' => 2, 'name' => 'Coq au vin', 'price' => 21.5],\n    3 => ['id' => 3, 'name' => 'Tarte tatin', 'price' => 9.0],\n];\n\nfunction respond(int $status, array $data): void\n{\n    http_response_code($status);\n    header('Content-Type: application/json; charset=utf-8');\n    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);\n}\n\n$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';\n$method = $_SERVER['REQUEST_METHOD'];\n\nif ($path !== '/api/dishes') {\n    respond(404, ['error' => 'Not found']);\n\n    return;\n}\n\nif ($method === 'GET' && !isset($_GET['id'])) {\n    respond(200, ['dishes' => array_values($dishes)]);\n\n    return;\n}\n\nif ($method === 'GET') {\n    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);\n    if ($id === false || !isset($dishes[$id])) {\n        respond(404, ['error' => 'No such dish']);\n\n        return;\n    }\n\n    respond(200, $dishes[$id]);\n\n    return;\n}\n\nif ($method === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $price = filter_var($_POST['price'] ?? '', FILTER_VALIDATE_FLOAT);\n    $errors = [];\n\n    if ($name === '') {\n        $errors[] = 'name is required';\n    }\n    if ($price === false || $price <= 0) {\n        $errors[] = 'price must be a positive number';\n    }\n    if ($errors !== []) {\n        respond(400, ['errors' => $errors]);\n\n        return;\n    }\n\n    respond(201, ['id' => max(array_keys($dishes)) + 1, 'name' => $name, 'price' => $price]);\n\n    return;\n}\n\nheader('Allow: GET, POST');\nrespond(405, ['error' => 'Method not allowed']);\n"
 },
+"bartab": {
+"src/bar.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction totals(PDO $pdo): array\n{\n    return $pdo->query('SELECT table_no, SUM(price) FROM orders GROUP BY table_no')->fetchAll(PDO::FETCH_KEY_PAIR);\n}\n\nfunction byCourse(PDO $pdo, int $table): array\n{\n    $stmt = $pdo->prepare('SELECT course, item FROM orders WHERE table_no = :t ORDER BY id');\n    $stmt->execute(['t' => $table]);\n\n    return $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);\n}\n\nfunction lines(PDO $pdo, int $table): array\n{\n    $stmt = $pdo->prepare('SELECT id, item, price FROM orders WHERE table_no = :t ORDER BY id');\n    $stmt->execute(['t' => $table]);\n\n    return $stmt->fetchAll(PDO::FETCH_CLASS, Line::class);\n}\n\nfunction moveTab(PDO $pdo, int $from, int $to): void\n{\n    $pdo->beginTransaction();\n\n    try {\n        $pdo->prepare('UPDATE orders SET table_no = :to WHERE table_no = :from')->execute(['to' => $to, 'from' => $from]);\n\n        $claim = $pdo->prepare('UPDATE tables SET guest = (SELECT guest FROM tables WHERE no = :from) WHERE no = :to AND guest IS NULL');\n        $claim->execute(['from' => $from, 'to' => $to]);\n\n        if ($claim->rowCount() !== 1) {\n            throw new RuntimeException('Table ' . $to . ' is not free.');\n        }\n\n        $pdo->prepare('UPDATE tables SET guest = NULL WHERE no = :from')->execute(['from' => $from]);\n        $pdo->commit();\n    } catch (Throwable $e) {\n        $pdo->rollBack();\n        throw $e;\n    }\n}\n",
+"src/db.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction db(): PDO\n{\n    $pdo = new PDO('sqlite:' . __DIR__ . '/../data/bar.sqlite', null, null, [\n        PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,\n        PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,\n    ]);\n    prepareBar($pdo);\n\n    return $pdo;\n}\n\nfunction prepareBar(PDO $pdo): void\n{\n    $pdo->exec('CREATE TABLE IF NOT EXISTS tables (no INTEGER PRIMARY KEY, guest TEXT)');\n    $pdo->exec('CREATE TABLE IF NOT EXISTS orders (id INTEGER PRIMARY KEY, table_no INTEGER NOT NULL, item TEXT NOT NULL, course TEXT NOT NULL, price REAL NOT NULL)');\n\n    if ((int) $pdo->query('SELECT COUNT(*) FROM tables')->fetchColumn() === 0) {\n        $pdo->exec(\"INSERT INTO tables (no, guest) VALUES (4, 'Madame Odile'), (7, 'The Laurents'), (9, NULL)\");\n        $pdo->exec(\"INSERT INTO orders (table_no, item, course, price) VALUES\n            (4, 'Kir royal', 'drinks', 9.0),\n            (4, 'Onion soup', 'starters', 8.5),\n            (4, 'Coq au vin', 'mains', 21.5),\n            (7, 'Sancerre', 'drinks', 36.0),\n            (7, 'Sole meunière', 'mains', 27.0)\");\n    }\n}\n",
+"src/Line.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Line\n{\n    public int $id;\n    public string $item;\n    public float $price;\n\n    public function label(): string\n    {\n        return sprintf('%s · €%.2f', $this->item, $this->price);\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/db.php';\nrequire_once __DIR__ . '/../src/Line.php';\nrequire_once __DIR__ . '/../src/bar.php';\n\n$pdo = db();\n$flash = null;\n\nif ($_SERVER['REQUEST_METHOD'] === 'POST') {\n    $from = filter_var($_POST['from'] ?? null, FILTER_VALIDATE_INT);\n    $to = filter_var($_POST['to'] ?? null, FILTER_VALIDATE_INT);\n\n    if ($from === false || $to === false) {\n        $flash = 'Choose two tables.';\n    } else {\n        try {\n            moveTab($pdo, $from, $to);\n            $flash = 'Moved table ' . $from . ' to table ' . $to . '.';\n        } catch (RuntimeException $e) {\n            $flash = $e->getMessage();\n        }\n    }\n}\n\n$tables = $pdo->query('SELECT no, guest FROM tables ORDER BY no')->fetchAll();\n$totals = totals($pdo);\n$courses = byCourse($pdo, 4);\n$sevenLines = lines($pdo, 7);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Bar tab</title>\n</head>\n<body>\n    <h1>Bar tab</h1>\n    <?php if ($flash !== null): ?>\n        <p class=\"flash\"><?= htmlspecialchars($flash) ?></p>\n    <?php endif; ?>\n    <ul class=\"tables\">\n        <?php foreach ($tables as $table): ?>\n            <?php if ($table['guest'] === null): ?>\n                <li>Table <?= $table['no'] ?> · free</li>\n            <?php else: ?>\n                <li>Table <?= $table['no'] ?> · <?= htmlspecialchars($table['guest']) ?> · €<?= number_format((float) ($totals[$table['no']] ?? 0), 2) ?></li>\n            <?php endif; ?>\n        <?php endforeach; ?>\n    </ul>\n    <ul class=\"courses\">\n        <?php foreach ($courses as $course => $items): ?>\n            <li><?= htmlspecialchars($course) ?>: <?= htmlspecialchars(implode(', ', $items)) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <ul class=\"lines\">\n        <?php foreach ($sevenLines as $line): ?>\n            <li><?= htmlspecialchars($line->label()) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <form method=\"post\">\n        <label for=\"from\">From table</label>\n        <input id=\"from\" name=\"from\">\n        <label for=\"to\">To table</label>\n        <input id=\"to\" name=\"to\">\n        <button>Move the tab</button>\n    </form>\n</body>\n</html>\n"
+},
 "brigade": {
 "src/Patissier.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Patissier extends Cook\n{\n    use ClocksIn;\n\n    public function station(): string\n    {\n        return 'pastry';\n    }\n\n    public function introduce(): string\n    {\n        return parent::introduce() . ' ✦';\n    }\n}\n",
 "src/Saucier.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Saucier extends Cook\n{\n    use ClocksIn;\n\n    public function station(): string\n    {\n        return 'sauce';\n    }\n}\n",
@@ -4578,6 +4584,12 @@ const SPSOL={
 "src/hours.php": "<?php\n\ndeclare(strict_types=1);\n\nconst HOME = 'Europe/Brussels';\nconst OPEN_DAYS = [2, 3, 4, 5, 6];\n\nfunction local(DateTimeImmutable $moment, string $zone = HOME): DateTimeImmutable\n{\n    return $moment->setTimezone(new DateTimeZone($zone));\n}\n\nfunction isOpen(DateTimeImmutable $moment): bool\n{\n    $here = local($moment);\n    $time = $here->format('H:i');\n\n    return in_array((int) $here->format('N'), OPEN_DAYS, true) && $time >= '18:00' && $time < '23:00';\n}\n\nfunction week(DateTimeImmutable $moment): array\n{\n    $start = local($moment)->setTime(0, 0);\n    $days = [];\n\n    foreach (new DatePeriod($start, new DateInterval('P1D'), 6) as $day) {\n        $open = in_array((int) $day->format('N'), OPEN_DAYS, true);\n        $days[] = $day->format('D j M') . ': ' . ($open ? '18:00–23:00' : 'closed');\n    }\n\n    return $days;\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/hours.php';\n\ntry {\n    $now = new DateTimeImmutable($_GET['at'] ?? '2026-10-24T17:30:00Z');\n} catch (Exception) {\n    $now = new DateTimeImmutable('2026-10-24T17:30:00Z');\n}\n\n$guests = ['New York' => 'America/New_York', 'Tokyo' => 'Asia/Tokyo'];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Opening hours</title>\n</head>\n<body>\n    <h1>Opening hours</h1>\n    <p class=\"now\">Brussels: <?= local($now)->format('D j M H:i') ?></p>\n    <p class=\"status\"><?= isOpen($now) ? 'Open now' : 'Closed now' ?></p>\n    <ul class=\"guests\">\n        <?php foreach ($guests as $city => $zone): ?>\n            <li><?= htmlspecialchars($city) ?>: <?= local($now, $zone)->format('D H:i') ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <ul class=\"week\">\n        <?php foreach (week($now) as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"utc\">Stored as UTC: <?= local($now, 'UTC')->format(DATE_ATOM) ?></p>\n</body>\n</html>\n"
 },
+"kitchenrules": {
+"src/Prep.php": "<?php\n\ndeclare(strict_types=1);\n\n#[Attribute(Attribute::TARGET_CLASS)]\nfinal class Prep\n{\n    public function __construct(\n        public int $minutes,\n        public Station $station,\n    ) {\n    }\n}\n",
+"src/dishes.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Garnish\n{\n    public function __construct(public string $name)\n    {\n    }\n}\n\n#[Prep(minutes: 40, station: Station::Sauce)]\nfinal class CoqAuVin\n{\n    public const NAME = 'Coq au vin';\n    public ?Garnish $garnish = null;\n}\n\n#[Prep(minutes: 15, station: Station::Grill)]\nfinal class SteakFrites\n{\n    public const NAME = 'Steak frites';\n    public ?Garnish $garnish;\n\n    public function __construct()\n    {\n        $this->garnish = new Garnish('watercress');\n    }\n}\n\n#[Prep(minutes: 30, station: Station::Pastry)]\nfinal class TarteTatin\n{\n    public const NAME = 'Tarte Tatin';\n    public ?Garnish $garnish = null;\n}\n\nfunction prepOf(string $class): Prep\n{\n    $attributes = (new ReflectionClass($class))->getAttributes(Prep::class);\n\n    return $attributes[0]->newInstance();\n}\n",
+"src/Station.php": "<?php\n\ndeclare(strict_types=1);\n\ninterface HasLabel\n{\n    public function label(): string;\n}\n\nenum Station: string implements HasLabel\n{\n    case Grill = 'grill';\n    case Sauce = 'sauce';\n    case Pastry = 'pastry';\n\n    public const DEFAULT = self::Grill;\n\n    public function label(): string\n    {\n        return match ($this) {\n            self::Grill => 'Grill',\n            self::Sauce => 'Sauce',\n            self::Pastry => 'Pastry',\n        };\n    }\n\n    public static function fromInput(string $value): self\n    {\n        return self::tryFrom($value) ?? self::DEFAULT;\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Station.php';\nrequire_once __DIR__ . '/../src/Prep.php';\nrequire_once __DIR__ . '/../src/dishes.php';\n\n$station = Station::fromInput((string) ($_GET['station'] ?? 'sauce'));\n$menu = [CoqAuVin::class, SteakFrites::class, TarteTatin::class];\n$preps = array_map(prepOf(...), $menu);\n$longest = max(array_map(fn (Prep $p): int => $p->minutes, $preps));\n\n$tonight = [new CoqAuVin(), new SteakFrites()];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen rules</title>\n</head>\n<body>\n    <h1>Kitchen rules</h1>\n    <p class=\"station\">Station: <?= htmlspecialchars($station->label()) ?> (<?= htmlspecialchars($station->value) ?>)</p>\n    <p class=\"cases\">Stations: <?= htmlspecialchars(implode(', ', array_map(fn (Station $s): string => $s->label(), Station::cases()))) ?></p>\n    <ul class=\"prep\">\n        <?php foreach ($menu as $i => $class): ?>\n            <li><?= htmlspecialchars($class::NAME) ?> · <?= htmlspecialchars($preps[$i]->station->value) ?> station · <?= $preps[$i]->minutes ?> min</li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"longest\">Longest prep: <?= $longest ?> min</p>\n    <ul class=\"garnish\">\n        <?php foreach ($tonight as $dish): ?>\n            <li><?= htmlspecialchars($dish::NAME) ?>: <?= htmlspecialchars($dish->garnish?->name ?? 'no garnish') ?></li>\n        <?php endforeach; ?>\n    </ul>\n</body>\n</html>\n"
+},
 "ledger": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction total(float ...$amounts): float\n{\n    return round(array_sum($amounts), 2);\n}\n\nfunction restock(array &$stock, string $item, int $grams): void\n{\n    $stock[$item] = ($stock[$item] ?? 0) + $grams;\n}\n\nfunction code(string|int $id): string\n{\n    return is_int($id) ? sprintf('#%04d', $id) : strtoupper($id);\n}\n\nfunction discount(float $amount, ?float $percent = null): float\n{\n    return $percent === null ? $amount : round($amount * (1 - $percent / 100), 2);\n}\n\nfunction nextTicket(): int\n{\n    static $count = 0;\n\n    return ++$count;\n}\n\n$prices = [7.5, 21.5, 9.0];\n$bill = total(...$prices);\n$withTip = total(2.5, ...$prices);\n\n$stock = ['butter' => 375, 'flour' => 2000];\nrestock($stock, 'butter', 500);\nrestock($stock, 'salt', 900);\n\n$kilos = $stock;\nforeach ($kilos as &$grams) {\n    $grams = round($grams / 1000, 1);\n}\nunset($grams);\n\n$tickets = [nextTicket(), nextTicket(), nextTicket()];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen ledger</title>\n</head>\n<body>\n    <h1>Kitchen ledger</h1>\n    <p>Bill: €<?= number_format($bill, 2) ?></p>\n    <p>With tip: €<?= number_format($withTip, 2) ?></p>\n    <p>Butter: <?= $stock['butter'] ?> g · Salt: <?= $stock['salt'] ?> g</p>\n    <p>Kilos: <?= htmlspecialchars(implode(', ', $kilos)) ?></p>\n    <p>Codes: <?= htmlspecialchars(code(42)) ?>, <?= htmlspecialchars(code('coq')) ?></p>\n    <p>After 10%: €<?= number_format(discount($bill, 10.0), 2) ?> · No discount: €<?= number_format(discount($bill), 2) ?></p>\n    <p>Tickets: <?= implode(', ', $tickets) ?></p>\n</body>\n</html>\n"
 },
@@ -4590,6 +4602,10 @@ const SPSOL={
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/errors.php';\n\n$log = __DIR__ . '/../data/errors.log';\ninstallErrorHandler();\n\n$bills = ['4' => 64.0, '7' => 38.0];\n$guests = ['4' => 2, '7' => 0];\n$table = $_GET['table'] ?? null;\n$share = null;\n\ntry {\n    if ($table !== null) {\n        $share = intdiv((int) ($bills[$table] * 100), $guests[$table]) / 100;\n    }\n} catch (Throwable $e) {\n    logIncident($e, $log);\n    http_response_code(500);\n    require __DIR__ . '/../templates/sorry.php';\n\n    return;\n}\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Night shift log</title>\n</head>\n<body>\n    <h1>Night shift log</h1>\n    <?php if ($share !== null): ?>\n        <p class=\"share\">Table <?= htmlspecialchars($table) ?>: €<?= number_format($share, 2) ?> each</p>\n    <?php endif; ?>\n    <p class=\"incidents\">Incidents tonight: <?= incidents($log) ?></p>\n</body>\n</html>\n",
 "templates/sorry.php": "<?php declare(strict_types=1); ?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen hiccup</title>\n</head>\n<body>\n    <h1>Kitchen hiccup</h1>\n    <p class=\"sorry\">Something went wrong on our side. Roux has been told.</p>\n</body>\n</html>\n",
 "data/errors.log": "ErrorException: Undefined array key 9 in index.php:17\nDivisionByZeroError: Division by zero in index.php:17\n"
+},
+"pairing": {
+"src/wines.php": "<?php\n\ndeclare(strict_types=1);\n\nconst WINES = [\n    ['id' => 'w1', 'name' => 'Sancerre', 'colour' => 'white', 'price' => 36.0, 'pairs' => ['fish', 'cheese']],\n    ['id' => 'w2', 'name' => 'Morgon', 'colour' => 'red', 'price' => 29.0, 'pairs' => ['beef', 'cheese']],\n    ['id' => 'w3', 'name' => 'Bandol rosé', 'colour' => 'rosé', 'price' => 32.0, 'pairs' => ['fish', 'vegetables']],\n    ['id' => 'w4', 'name' => 'Saint-Émilion', 'colour' => 'red', 'price' => 48.0, 'pairs' => ['beef', 'game']],\n    ['id' => 'w5', 'name' => 'Crémant', 'colour' => 'white', 'price' => 24.0, 'pairs' => ['starters']],\n];\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/wines.php';\n\n$names = array_column(WINES, 'name', 'id');\n$prices = array_combine(array_column(WINES, 'name'), array_column(WINES, 'price'));\n$lookup = array_flip($names);\n\n['name' => $houseName, 'price' => $housePrice] = WINES[4];\n\n$pairs = array_unique(array_merge(...array_column(WINES, 'pairs')));\nsort($pairs);\n\n$tonight = ['fish', 'beef', 'dessert', 'cheese', 'game'];\n$noWine = array_diff($tonight, $pairs);\n$both = array_values(array_intersect($tonight, $pairs));\n\n$cellar = ['Sancerre' => 12, 'Morgon' => 0, 'Crémant' => 30, 'Bandol rosé' => 6];\n$wanted = ['Sancerre', 'Crémant', 'Chablis'];\n$available = array_intersect_key($cellar, array_flip($wanted));\n\n$shelves = array_combine(range('A', 'C'), array_chunk(array_values($names), 2));\n$topTwo = array_slice($prices, 0, 2);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Wine pairing</title>\n</head>\n<body>\n    <h1>Wine pairing</h1>\n    <p class=\"names\"><?= htmlspecialchars(implode(', ', array_map(fn (string $id, string $name): string => $id . ' ' . $name, array_keys($names), $names))) ?></p>\n    <p class=\"lookup\">Morgon is <?= htmlspecialchars($lookup['Morgon']) ?> · Chablis on the list? <?= isset($lookup['Chablis']) ? 'yes' : 'no' ?></p>\n    <p class=\"house\">House wine: <?= htmlspecialchars($houseName) ?> at €<?= number_format($housePrice, 2) ?></p>\n    <p class=\"pairs\">Pairs with: <?= htmlspecialchars(implode(', ', $pairs)) ?></p>\n    <p class=\"nowine\">No wine for: <?= htmlspecialchars(implode(', ', $noWine)) ?></p>\n    <p class=\"both\">Paired tonight: <?= htmlspecialchars(implode(', ', $both)) ?></p>\n    <p class=\"available\">In the cellar: <?= htmlspecialchars(implode(', ', array_map(fn (string $wine, int $bottles): string => $wine . ' ' . $bottles, array_keys($available), $available))) ?></p>\n    <ul class=\"shelves\">\n        <?php foreach ($shelves as $shelf => $row): ?>\n            <li>Shelf <?= $shelf ?>: <?= htmlspecialchars(implode(' · ', $row)) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"top\">First two: <?= htmlspecialchars(implode(', ', array_keys($topTwo))) ?></p>\n</body>\n</html>\n"
 },
 "prep-list": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$prep = [\n    ['task' => 'Chop onions', 'minutes' => 15, 'station' => 'veg', 'done' => true],\n    ['task' => 'Make stock', 'minutes' => 90, 'station' => 'sauce', 'done' => false],\n    ['task' => 'Peel apples', 'minutes' => 20, 'station' => 'pastry', 'done' => false],\n    ['task' => 'Blanch beans', 'minutes' => 10, 'station' => 'veg', 'done' => false],\n];\n\nfunction forStation(string $station): Closure\n{\n    return function (array $task) use ($station): bool {\n        return $task['station'] === $station;\n    };\n}\n\n$open = array_filter($prep, fn (array $task): bool => !$task['done']);\n$lines = array_map(fn (array $task): string => $task['task'] . ' (' . $task['minutes'] . ' min)', $open);\n$minutes = array_reduce($open, fn (int $sum, array $task): int => $sum + $task['minutes'], 0);\n\n$stations = array_unique(array_column($prep, 'station'));\nsort($stations);\n\n$veg = array_column(array_filter($prep, forStation('veg')), 'task');\n$longest = array_reduce($prep, fn (?array $best, array $task): array => $best === null || $task['minutes'] > $best['minutes'] ? $task : $best);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Prep list</title>\n</head>\n<body>\n    <h1>Prep list</h1>\n    <ul class=\"todo\">\n        <?php foreach ($lines as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Open work: <?= $minutes ?> min</p>\n    <p>Stations: <?= htmlspecialchars(implode(', ', $stations)) ?></p>\n    <p>Veg station: <?= htmlspecialchars(implode(', ', $veg)) ?></p>\n    <p>Longest: <?= htmlspecialchars($longest['task']) ?></p>\n</body>\n</html>\n"
@@ -4621,6 +4637,10 @@ const SPSOL={
 "src/Pass.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Pass implements IteratorAggregate, Countable, ArrayAccess, JsonSerializable\n{\n    private array $tickets = [];\n\n    public function getIterator(): Iterator\n    {\n        return new ArrayIterator($this->tickets);\n    }\n\n    public function count(): int\n    {\n        return count($this->tickets);\n    }\n\n    public function offsetExists(mixed $offset): bool\n    {\n        return isset($this->tickets[$offset]);\n    }\n\n    public function offsetGet(mixed $offset): Ticket\n    {\n        if (!isset($this->tickets[$offset])) {\n            throw new OutOfBoundsException('No ticket ' . $offset);\n        }\n\n        return $this->tickets[$offset];\n    }\n\n    public function offsetSet(mixed $offset, mixed $value): void\n    {\n        if (!$value instanceof Ticket) {\n            throw new InvalidArgumentException('Only tickets go on the pass');\n        }\n\n        if ($offset === null) {\n            $this->tickets[] = $value;\n        } else {\n            $this->tickets[$offset] = $value;\n        }\n    }\n\n    public function offsetUnset(mixed $offset): void\n    {\n        unset($this->tickets[$offset]);\n    }\n\n    public function jsonSerialize(): array\n    {\n        return array_values(array_map(\n            fn (Ticket $t): array => ['table' => $t->table, 'dish' => $t->dish],\n            $this->tickets,\n        ));\n    }\n}\n",
 "src/Ticket.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Ticket\n{\n    public function __construct(\n        public readonly int $table,\n        public readonly string $dish,\n        public readonly int $minutes,\n    ) {\n    }\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Ticket.php';\nrequire_once __DIR__ . '/../src/Pass.php';\n\n$pass = new Pass();\n$pass[] = new Ticket(4, 'Coq au vin', 25);\n$pass[] = new Ticket(7, 'Sole meunière', 15);\n$pass[] = new Ticket(2, 'Tarte Tatin', 10);\n\n$before = count($pass);\n$first = $pass[0]->table;\n$hasFive = isset($pass[5]);\n\nunset($pass[1]);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>The pass</title>\n</head>\n<body>\n    <h1>The pass</h1>\n    <p class=\"count\"><?= $before ?> tickets on the pass</p>\n    <p class=\"first\">First ticket: table <?= $first ?></p>\n    <p class=\"has\">Ticket 5? <?= $hasFive ? 'yes' : 'no' ?></p>\n    <ul class=\"pass\">\n        <?php foreach ($pass as $ticket): ?>\n            <li>Table <?= $ticket->table ?> · <?= htmlspecialchars($ticket->dish) ?> · <?= $ticket->minutes ?> min</li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"after\">After serving table 7: <?= count($pass) ?> tickets</p>\n    <pre class=\"json\"><?= htmlspecialchars(json_encode($pass, JSON_UNESCAPED_UNICODE)) ?></pre>\n</body>\n</html>\n"
+},
+"translations": {
+"src/text.php": "<?php\n\ndeclare(strict_types=1);\n\nconst ACCENTS = ['à' => 'a', 'â' => 'a', 'ç' => 'c', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'û' => 'u', 'ù' => 'u', 'œ' => 'oe'];\n\nfunction shorten(string $text, int $max): string\n{\n    if (mb_strlen($text) <= $max) {\n        return $text;\n    }\n\n    return mb_substr($text, 0, $max) . '…';\n}\n\nfunction slug(string $text): string\n{\n    $plain = strtr(mb_strtolower($text), ACCENTS);\n\n    return trim(preg_replace('/[^a-z0-9]+/', '-', $plain), '-');\n}\n\nfunction searchLink(string $dish, string $note): string\n{\n    return '/menu?' . http_build_query(['dish' => slug($dish), 'lang' => 'fr', 'note' => $note]);\n}\n\nfunction pathLink(string $dish): string\n{\n    return '/plats/' . rawurlencode($dish);\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/text.php';\n\n$dishes = ['Crème brûlée', \"Soupe à l'oignon\", 'Pâté en croûte maison'];\n$special = (string) ($_GET['special'] ?? 'Île flottante');\n$names = array_map(slug(...), $dishes);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Menu translations</title>\n</head>\n<body>\n    <h1>Menu translations</h1>\n    <ul class=\"sizes\">\n        <?php foreach ($dishes as $dish): ?>\n            <li><?= htmlspecialchars($dish) ?>: <?= mb_strlen($dish) ?> letters, <?= strlen($dish) ?> bytes</li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"upper\">mb: <?= htmlspecialchars(mb_strtoupper($dishes[0])) ?> · plain: <?= htmlspecialchars(strtoupper($dishes[0])) ?></p>\n    <p class=\"short\"><?= htmlspecialchars(shorten($dishes[2], 10)) ?></p>\n    <p class=\"slugs\"><?= htmlspecialchars(implode(', ', $names)) ?></p>\n    <p><a class=\"search\" href=\"<?= htmlspecialchars(searchLink($dishes[0], 'sans gluten & sel')) ?>\">Search the menu</a></p>\n    <p><a class=\"path\" href=\"<?= htmlspecialchars(pathLink($dishes[0])) ?>\">Open the dish</a></p>\n    <p class=\"special\" data-special=\"<?= htmlspecialchars($special) ?>\">Tonight: <?= htmlspecialchars($special) ?></p>\n    <script>\n        const special = <?= json_encode($special, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;\n    <\/script>\n</body>\n</html>\n"
 },
 "winecellar": {
 "src/cellar.php": "<?php\n\ndeclare(strict_types=1);\n\nconst COLOURS = ['red', 'white', 'rosé'];\n\nfunction loadCellar(string $file): SimpleXMLElement\n{\n    libxml_use_internal_errors(true);\n    $xml = simplexml_load_file($file);\n    libxml_clear_errors();\n\n    if ($xml === false) {\n        throw new RuntimeException('The cellar list could not be read.');\n    }\n\n    return $xml;\n}\n\nfunction byColour(SimpleXMLElement $cellar, ?string $colour): array\n{\n    if ($colour === null || !in_array($colour, COLOURS, true)) {\n        return $cellar->xpath('/cellar/wine');\n    }\n\n    return $cellar->xpath('/cellar/wine[@colour=\"' . $colour . '\"]');\n}\n\nfunction exportList(array $wines): string\n{\n    $list = new SimpleXMLElement('<?xml version=\"1.0\" encoding=\"UTF-8\"?><winelist/>');\n\n    foreach ($wines as $wine) {\n        $item = $list->addChild('wine', htmlspecialchars((string) $wine->name));\n        $item->addAttribute('year', (string) $wine->year);\n    }\n\n    return $list->asXML();\n}\n",
@@ -7718,6 +7738,681 @@ MORE.push(
 
 TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
 
+const F12={db:'src/db.php',line:'src/Line.php',bar:'src/bar.php',text:'src/text.php',wines:'src/wines.php',station:'src/Station.php',prep:'src/Prep.php',dishes:'src/dishes.php'};
+const EVIL_SPECIAL='<\/script><script>alert(1)<\/script>';
+
+Object.assign(RULES,{
+ pz87:{n:'87',title:'Transactions: all or nothing',cat:'Databases',
+  syn:'$pdo-&gt;<span class="k">beginTransaction</span>(); try { … $pdo-&gt;<span class="k">commit</span>(); } catch (Throwable $e) { $pdo-&gt;<span class="k">rollBack</span>(); throw $e; }',
+  note:'A transaction groups several queries: either all of them are saved (commit) or none of them are (rollBack). Use one whenever a change needs more than one query, like moving a tab from one table to another.',
+  why:'Moving a tab takes several queries: move the orders, give the new table its guest, free the old table. If the second query fails after the first one ran, the database is left half-changed: the orders are at the new table but the guest is not. A transaction fixes that. beginTransaction() starts it; nothing becomes permanent until commit(). If anything throws in between, rollBack() undoes every query since the start, as if none of them happened. The pattern is always the same: begin, try the queries, commit at the end of the try, roll back in the catch and rethrow so the caller still learns what went wrong. rowCount() tells you how many rows an UPDATE changed, which is a handy way to notice that a condition (guest IS NULL) did not match.',
+  parts:[['beginTransaction()','start: nothing is final yet'],['commit()','save everything'],['rollBack()','undo everything since begin'],['throw $e after rollBack','the caller still hears about it'],['$stmt->rowCount()','rows changed by the last query']],
+  mistakes:['Forgetting rollBack in the catch: the half-done changes stay visible on this connection.','Committing in finally: you also commit after an error.','Expecting a transaction to undo things outside the database, like a file you wrote.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$pdo->exec('CREATE TABLE stock (item TEXT, qty INTEGER)');
+$pdo->exec("INSERT INTO stock VALUES ('butter', 5)");
+
+$pdo->beginTransaction();
+try {
+    $pdo->exec("UPDATE stock SET qty = qty - 3 WHERE item = 'butter'");
+    throw new RuntimeException('The delivery van broke down');
+} catch (RuntimeException $e) {
+    $pdo->rollBack();
+    echo 'Rolled back: ' . $e->getMessage() . PHP_EOL;
+}
+
+echo 'Butter: ' . $pdo->query("SELECT qty FROM stock WHERE item = 'butter'")->fetchColumn();`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+$pdo->exec('CREATE TABLE t (no INTEGER, guest TEXT)');
+$pdo->exec("INSERT INTO t VALUES (4, 'Odile'), (9, NULL)");
+
+$claim = $pdo->prepare('UPDATE t SET guest = :g WHERE no = :no AND guest IS NULL');
+$claim->execute(['g' => 'Laurent', 'no' => 4]);
+echo 'Table 4 claimed rows: ' . $claim->rowCount() . PHP_EOL;
+$claim->execute(['g' => 'Laurent', 'no' => 9]);
+echo 'Table 9 claimed rows: ' . $claim->rowCount();`},
+ pz88:{n:'88',title:'Fetch modes',cat:'Databases',
+  syn:'fetchAll(PDO::<span class="k">FETCH_KEY_PAIR</span>) · fetchAll(PDO::<span class="k">FETCH_GROUP</span> | PDO::FETCH_COLUMN) · fetchAll(PDO::<span class="k">FETCH_CLASS</span>, Line::class) · fetchColumn()',
+  note:'Fetch modes shape what you get back. FETCH_ASSOC: rows as keyed arrays. FETCH_KEY_PAIR: two columns become key => value. FETCH_GROUP: rows grouped by the first column. FETCH_COLUMN: just one column. FETCH_CLASS: each row becomes an object of your class.',
+  why:'You can always fetch plain rows and reshape them in PHP, but PDO can do the shaping for you. SELECT table_no, SUM(price) with FETCH_KEY_PAIR gives [4 => 39.0, 7 => 63.0]: perfect for a lookup. FETCH_GROUP uses the first column as the key and collects the rest under it; combined with FETCH_COLUMN (| joins the flags) you get [\'drinks\' => [\'Kir royal\'], \'mains\' => [\'Coq au vin\']]. FETCH_CLASS fills the properties of a new object of your class for each row, so rows arrive with methods attached, like $line->label(). The properties are set before the constructor runs, and the column names must match the property names. fetchColumn() returns just the first value of the next row, ideal for COUNT(*).',
+  parts:[['FETCH_ASSOC','[\'item\' => …, \'price\' => …]'],['FETCH_KEY_PAIR','[col1 => col2, …]'],['FETCH_GROUP | FETCH_COLUMN','[col1 => [col2, col2]]'],['FETCH_CLASS, Line::class','one Line object per row'],['fetchColumn()','one value']],
+  mistakes:['FETCH_KEY_PAIR with three columns: it needs exactly two.','FETCH_CLASS with column names that do not match the properties.','Forgetting | to combine FETCH_GROUP with FETCH_COLUMN.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$pdo = new PDO('sqlite::memory:');
+$pdo->exec('CREATE TABLE o (course TEXT, item TEXT, price REAL)');
+$pdo->exec("INSERT INTO o VALUES ('drinks', 'Kir', 9), ('mains', 'Stew', 19), ('mains', 'Sole', 27)");
+
+print_r($pdo->query('SELECT item, price FROM o')->fetchAll(PDO::FETCH_KEY_PAIR));
+print_r($pdo->query('SELECT course, item FROM o')->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Dish
+{
+    public string $item;
+    public float $price;
+}
+
+$pdo = new PDO('sqlite::memory:');
+$pdo->exec('CREATE TABLE o (item TEXT, price REAL)');
+$pdo->exec("INSERT INTO o VALUES ('Tarte Tatin', 9.5)");
+
+$dish = $pdo->query('SELECT item, price FROM o')->fetchAll(PDO::FETCH_CLASS, Dish::class)[0];
+echo $dish::class . ': ' . $dish->item . ' €' . $dish->price;`},
+ pz89:{n:'89',title:'Multibyte strings',cat:'Strings',
+  syn:'<span class="k">mb_strlen</span>($s) · <span class="k">mb_substr</span>($s, 0, 10) · mb_strtoupper($s) · mb_strtolower($s) · <span class="k">strtr</span>($s, $map)',
+  note:'UTF-8 stores é, û and € in 2 or 3 bytes. strlen, substr and strtoupper count and cut bytes; the mb_ versions work with characters. Use mb_ functions for any text a person wrote. strtr with an array replaces several substrings at once.',
+  why:'Computers store text as bytes. Plain letters take one byte in UTF-8, but é takes two and € three. The classic string functions are byte functions: strlen(\'Crème brûlée\') is 15, not 12, substr can cut a character in half and leave a broken symbol, and strtoupper only changes a–z, so you get CRèME. The mbstring functions are character-aware: mb_strlen, mb_substr, mb_strtoupper, mb_strtolower, mb_str_split. Whenever the text could contain accents, names or emoji, reach for mb_. strtr($text, [\'é\' => \'e\', \'œ\' => \'oe\']) replaces many pieces in one pass, longest match first, which is handy for building URL slugs.',
+  parts:[['strlen · mb_strlen','bytes · characters'],['substr · mb_substr','may cut a character · safe'],['strtoupper · mb_strtoupper','a–z only · every alphabet'],["strtr($s, ['é' => 'e'])",'many replacements at once'],["preg_replace('/[^a-z0-9]+/', '-', $s)",'everything else → dash']],
+  mistakes:['substr on a name with accents: "Pâté" can become "P\\xC3".','Counting letters with strlen for a length limit.','Expecting ucfirst to capitalise "élise".'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$dish = 'Crème brûlée';
+
+echo strlen($dish) . ' bytes, ' . mb_strlen($dish) . ' characters' . PHP_EOL;
+echo strtoupper($dish) . ' / ' . mb_strtoupper($dish) . PHP_EOL;
+echo mb_substr($dish, 0, 5) . '…';`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$map = ['é' => 'e', 'è' => 'e', 'û' => 'u', 'œ' => 'oe'];
+$name = mb_strtolower("Bœuf bourguignon à l'ancienne");
+
+echo trim(preg_replace('/[^a-z0-9]+/', '-', strtr($name, $map + ['à' => 'a'])), '-');`},
+ pz90:{n:'90',title:'Encoding for each context',cat:'Security',
+  syn:"<span class=\"k\">http_build_query</span>([...]) · <span class=\"k\">rawurlencode</span>($part) · urlencode($v) · htmlspecialchars($url) · json_encode($v, <span class=\"v\">JSON_HEX_TAG</span> | JSON_HEX_AMP | …)",
+  note:'Every place a value goes has its own escaping. Query strings: http_build_query or urlencode (space → +). Path segments: rawurlencode (space → %20). HTML text and attributes: htmlspecialchars, also around a finished URL. Inside a <script>: json_encode with the JSON_HEX_* flags.',
+  why:'htmlspecialchars protects HTML, but a value can land in other languages inside your page. In a URL query, & and = have meaning, so "sans gluten & sel" must become sans+gluten+%26+sel: http_build_query builds the whole query from an array and gets it right. In a path, use rawurlencode, which follows RFC 3986 and writes a space as %20 (urlencode writes + , which only means space in a query). After building the URL, it goes into an href attribute, so htmlspecialchars it as well: the & turns into &amp;, which the browser reads back as &. Inside <script>, HTML escaping is wrong and JavaScript strings need their own rules: json_encode produces a valid JS value, and JSON_HEX_TAG turns < and > into \\u003C and \\u003E so a value containing <\/script> cannot close your script block. Keep the default slash escaping too: JSON_UNESCAPED_SLASHES lets <\/script> through.',
+  parts:[['http_build_query($arr)','a=1&b=two+words'],['urlencode($v)','space → + (query)'],['rawurlencode($v)','space → %20 (path)'],['htmlspecialchars($url)','then into the attribute'],['json_encode($v, JSON_HEX_TAG | …)','into <script>']],
+  mistakes:['Gluing a query together with . and forgetting to encode &.','htmlspecialchars inside a <script> block: it does not make JavaScript safe.','JSON_UNESCAPED_SLASHES on values that end up inside <script>.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+echo http_build_query(['dish' => 'crème brûlée', 'note' => 'gluten & salt']) . PHP_EOL;
+echo urlencode('two words') . ' · ' . rawurlencode('two words') . PHP_EOL;
+echo htmlspecialchars('/menu?a=1&b=2');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$value = '<\/script><b>"hi"</b>';
+
+echo json_encode($value) . PHP_EOL;
+echo json_encode($value, JSON_UNESCAPED_SLASHES) . '  ← dangerous in <script>' . PHP_EOL;
+echo json_encode($value, JSON_HEX_TAG | JSON_HEX_QUOT);`},
+ pz91:{n:'91',title:'Reshaping arrays: column, combine, flip',cat:'Arrays',
+  syn:"<span class=\"k\">array_column</span>($rows, 'name', 'id') · <span class=\"k\">array_combine</span>($keys, $values) · <span class=\"k\">array_flip</span>($a) · range('A', 'C') · ['name' =&gt; $n] = $row",
+  note:'array_column pulls one field out of a list of rows, optionally keyed by another field. array_combine zips a list of keys with a list of values. array_flip swaps keys and values, turning a list into a fast isset() lookup. range builds sequences. Destructuring with keys unpacks named fields.',
+  why:'Data usually arrives as a list of rows, and you often need it in another shape. array_column($wines, \'name\') gives just the names; add a third argument, \'id\', and the names are keyed by id. array_combine($names, $prices) builds name => price from two equal-length lists (different lengths throw a ValueError). array_flip turns [\'w1\' => \'Sancerre\'] into [\'Sancerre\' => \'w1\']; a flipped list makes isset($lookup[\'Morgon\']) an instant check instead of a search with in_array. range(1, 5), range(\'A\', \'C\') and range(0, 10, 5) build sequences. [\'name\' => $n, \'price\' => $p] = $row unpacks by key, in any order.',
+  parts:[["array_column($rows, 'name')",'one field'],["array_column($rows, 'name', 'id')",'… keyed by id'],['array_combine($keys, $values)','zip into key => value'],['array_flip($a)','values become keys'],["range('A', 'C')",'A, B, C'],["['name' => $n] = $row",'unpack by key']],
+  mistakes:['array_combine with lists of different length: ValueError.','array_flip on values that repeat: later ones overwrite earlier ones.','Forgetting array_column keeps order, not keys, unless you give the third argument.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$rows = [
+    ['id' => 'd1', 'name' => 'Soup', 'price' => 8.5],
+    ['id' => 'd2', 'name' => 'Stew', 'price' => 19.0],
+];
+
+print_r(array_column($rows, 'name', 'id'));
+print_r(array_combine(array_column($rows, 'name'), array_column($rows, 'price')));
+
+['name' => $first, 'price' => $cost] = $rows[0];
+echo $first . ' ' . $cost . ' · ' . implode('', range('A', 'E'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$allowed = array_flip(['red', 'white', 'rosé']);
+
+var_dump(isset($allowed['red']), isset($allowed['blue']));`},
+ pz92:{n:'92',title:'Set operations, chunks and slices',cat:'Arrays',
+  syn:'<span class="k">array_unique</span> · <span class="k">array_diff</span>($a, $b) · <span class="k">array_intersect</span>($a, $b) · array_intersect_key($a, $b) · <span class="k">array_chunk</span>($a, 2) · array_slice($a, 0, 2)',
+  note:'array_unique removes repeats (keeping keys). array_diff keeps what is in the first array but not the others; array_intersect keeps what is in both. The _key versions compare keys instead. array_chunk splits into pieces of n; array_slice cuts out a part without changing the original.',
+  why:'Treat arrays as sets. array_merge(...array_column($wines, \'pairs\')) puts every pairing in one list; array_unique drops the repeats. array_diff($tonight, $pairs) answers "what is on tonight\'s menu that no wine pairs with?" The order matters: the result is always taken from the first array. array_intersect returns what both share. Their _key twins compare keys, so array_intersect_key($cellar, array_flip($wanted)) keeps only the cellar entries you asked for. All of these keep the original keys, which can leave gaps: wrap them in array_values when you need a clean list. array_chunk($names, 2) groups items in twos, handy for rows on a shelf or a grid. array_slice($a, 0, 2) takes the first two without changing $a; array_splice does change it.',
+  parts:[['array_unique($a)','no repeats'],['array_diff($a, $b)','in $a, not in $b'],['array_intersect($a, $b)','in both'],['array_intersect_key($a, array_flip($keys))','only these keys'],['array_chunk($a, 2)','groups of two'],['array_slice($a, 0, 2)','a copy of a part']],
+  mistakes:['Swapping the arguments of array_diff: you get the opposite question.','Forgetting the gaps in keys after array_unique or array_diff.','array_splice when you meant array_slice: it changes your array.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$menu = ['soup', 'stew', 'tart', 'cheese'];
+$cooked = ['stew', 'tart'];
+
+print_r(array_diff($menu, $cooked));
+print_r(array_values(array_intersect($menu, $cooked)));
+print_r(array_chunk($menu, 3));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$stock = ['salt' => 3, 'thyme' => 0, 'saffron' => 1];
+$need = ['salt', 'saffron', 'truffle'];
+
+print_r(array_intersect_key($stock, array_flip($need)));
+echo implode(', ', array_slice(array_keys($stock), 0, 2));`},
+ pz93:{n:'93',title:'Enums with methods, interfaces and tryFrom',cat:'Objects',
+  syn:'enum Station: string <span class="k">implements</span> HasLabel { case Grill = \'grill\'; <span class="k">const</span> DEFAULT = self::Grill; public function label(): string … } · Station::<span class="k">tryFrom</span>($v) · Station::<span class="k">cases</span>()',
+  note:'Enums can have methods, constants and interfaces. from() turns a backed value into a case and throws ValueError if it does not exist; tryFrom() returns null instead. cases() lists every case. ->value is the backing value, ->name the case name.',
+  why:'An enum is a closed list of values with behaviour attached. Inside a method, $this is the current case, so match ($this) can give each one its own label. Enums may implement interfaces, which lets them stand in wherever a HasLabel is expected, and hold constants such as a DEFAULT case. Input from users is a string, so you have to turn it into a case: Station::from(\'bbq\') throws a ValueError, Station::tryFrom(\'bbq\') returns null, and ?? self::DEFAULT gives a safe fallback. Station::cases() returns every case in order, handy for building a menu or a select box. Enums cannot have properties or be instantiated with new, and cases compare with ===.',
+  parts:[['Station::from($v)','case or ValueError'],['Station::tryFrom($v) ?? self::DEFAULT','case or fallback'],['Station::cases()','all cases'],['$case->value · $case->name',"'grill' · 'Grill'"],['match ($this)','per-case behaviour'],['match without a matching arm','UnhandledMatchError']],
+  mistakes:['from() on user input: an unknown value is a fatal ValueError.','A match on an enum that misses a case: UnhandledMatchError at runtime.','Trying to add properties to an enum.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+enum Course: string
+{
+    case Starter = 'starter';
+    case Main = 'main';
+
+    public function plural(): string
+    {
+        return match ($this) {
+            self::Starter => 'Starters',
+            self::Main => 'Mains',
+        };
+    }
+}
+
+echo Course::from('main')->plural() . PHP_EOL;
+var_dump(Course::tryFrom('dessert'));
+echo implode(', ', array_map(fn (Course $c): string => $c->name, Course::cases()));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+try {
+    echo match (5) {
+        1 => 'one',
+        2 => 'two',
+    };
+} catch (UnhandledMatchError $e) {
+    echo $e::class . ': ' . $e->getMessage();
+}`},
+ pz94:{n:'94',title:'Attributes, reflection and the nullsafe operator',cat:'Objects',
+  syn:'<span class="k">#[Attribute(Attribute::TARGET_CLASS)]</span> final class Prep · <span class="k">#[Prep(minutes: 40, station: Station::Sauce)]</span> · (new <span class="k">ReflectionClass</span>($c))-&gt;getAttributes(Prep::class)[0]-&gt;newInstance() · $dish-&gt;garnish<span class="k">?-&gt;</span>name',
+  note:'Attributes are labels with data you attach to classes, methods or properties: #[Prep(minutes: 40)]. They do nothing by themselves; code reads them with Reflection. ?-> is the nullsafe operator: if the left side is null, the whole chain is null instead of an error.',
+  why:'Sometimes information belongs next to the code it describes: how long a dish takes, which station cooks it, which route a controller answers. Attributes put it there. Declare an attribute by marking a normal class with #[Attribute], optionally limited to targets like Attribute::TARGET_CLASS. Use it with #[Prep(minutes: 40, station: Station::Sauce)]: named arguments go to the constructor. Reflection is PHP looking at its own code: new ReflectionClass(CoqAuVin::class) describes the class, getAttributes(Prep::class) finds the labels, and newInstance() builds the Prep object from them. Frameworks use exactly this for routes and validation. The nullsafe operator ?-> helps with optional objects: $dish->garnish?->name returns null when there is no garnish, and ?? \'no garnish\' supplies a default.',
+  parts:[['#[Attribute(Attribute::TARGET_CLASS)]','declare an attribute'],['#[Prep(minutes: 40)]','attach it'],['new ReflectionClass($class)','look at a class'],['->getAttributes(Prep::class)[0]->newInstance()','read it'],['$a?->b?->c ?? $default','null-safe chain']],
+  mistakes:['Expecting an attribute to run code on its own.','An attribute on a target it does not allow: newInstance() throws an Error.','Using ?-> to write: $a?->b = 1 is not allowed.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+#[Attribute]
+final class Spicy
+{
+    public function __construct(public int $level)
+    {
+    }
+}
+
+#[Spicy(level: 3)]
+final class Harissa
+{
+}
+
+$spicy = (new ReflectionClass(Harissa::class))->getAttributes(Spicy::class)[0]->newInstance();
+echo 'Harissa heat: ' . $spicy->level;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Plate
+{
+    public ?Plate $next = null;
+
+    public function __construct(public string $name)
+    {
+    }
+}
+
+$a = new Plate('soup');
+$a->next = new Plate('stew');
+
+echo ($a->next?->name ?? 'nothing') . ' · ' . ($a->next?->next?->name ?? 'nothing after that');`}
+});
+
+TARGETS.push(
+{id:'bartab',special:true,name:'Bar tab',rules:['pz87','pz88'],
+ probes:{move:{method:'POST',post:{from:'7',to:'9'}},refuse:{method:'POST',post:{from:'7',to:'4'}},junk:{method:'POST',post:{from:'x',to:'9'}}},
+ files:{[IDX]:PHPHEAD+`
+require_once __DIR__ . '/../src/db.php';
+
+$pdo = db();
+?>
+`+page('Bar tab',`    <h1>Bar tab</h1>
+`),[F12.db]:SPSOL.bartab[F12.db],[F12.line]:PHPHEAD,[F12.bar]:PHPHEAD},
+ ingredients:{[F12.db]:SPSOL.bartab[F12.db]},
+ solution:pickFiles(SPSOL.bartab,[IDX,F12.db,F12.line,F12.bar]),
+ steps:[
+  {t:'A `<ul class="tables">`: `Table 4 · Madame Odile · €…`, and a free table shows `Table 9 · free`',c:c=>rows(c,'ul.tables li')[2]==='Table 9 · free'&&/^Table 4 · Madame Odile · €/.test(rows(c,'ul.tables li')[0]||''),help:['src/db.php is ready: tables(no, guest) and orders(table_no, item, course, price).',"`$pdo->query('SELECT no, guest FROM tables ORDER BY no')->fetchAll()` and an if for `guest === null`.",`<?php if ($row['guest'] === null): ?>
+    <li>free</li>
+<?php else: ?>
+    <li><?= htmlspecialchars($row['guest']) ?></li>
+<?php endif; ?>`,`$tables = $pdo->query('SELECT no, guest FROM tables ORDER BY no')->fetchAll();
+…
+<ul class="tables">
+    <?php foreach ($tables as $table): ?>
+        <?php if ($table['guest'] === null): ?>
+            <li>Table <?= $table['no'] ?> · free</li>
+        <?php else: ?>
+            <li>Table <?= $table['no'] ?> · <?= htmlspecialchars($table['guest']) ?> · €<?= number_format((float) ($totals[$table['no']] ?? 0), 2) ?></li>
+        <?php endif; ?>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`src/bar.php`: `totals(PDO $pdo): array` with `FETCH_KEY_PAIR`: `€39.00` and `€63.00`',c:c=>rows(c,'ul.tables li').slice(0,2).join('|')==='Table 4 · Madame Odile · €39.00|Table 7 · The Laurents · €63.00'&&/FETCH_KEY_PAIR/.test(src(c,F12.bar)),help:['Two columns, table and sum, become table => sum.',"`SELECT table_no, SUM(price) FROM orders GROUP BY table_no` and `fetchAll(PDO::FETCH_KEY_PAIR)`.",`$prices = $pdo->query('SELECT item, price FROM menu')->fetchAll(PDO::FETCH_KEY_PAIR);`,`function totals(PDO $pdo): array
+{
+    return $pdo->query('SELECT table_no, SUM(price) FROM orders GROUP BY table_no')->fetchAll(PDO::FETCH_KEY_PAIR);
+}`]},
+  {t:'`byCourse(PDO $pdo, int $table): array` with `FETCH_GROUP | FETCH_COLUMN`: table 4 as `drinks: Kir royal`, `starters: …`, `mains: …`',c:c=>rows(c,'ul.courses li').join('|')==='drinks: Kir royal|starters: Onion soup|mains: Coq au vin'&&/FETCH_GROUP\s*\|\s*PDO::FETCH_COLUMN/.test(src(c,F12.bar)),help:['The first column becomes the group, the second the items in it.','A prepared statement for the table, then `fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN)`.',`$stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);`,`function byCourse(PDO $pdo, int $table): array
+{
+    $stmt = $pdo->prepare('SELECT course, item FROM orders WHERE table_no = :t ORDER BY id');
+    $stmt->execute(['t' => $table]);
+
+    return $stmt->fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN);
+}`]},
+  {t:'`src/Line.php` and `lines(PDO $pdo, int $table): array` with `FETCH_CLASS`: table 7 as `Sancerre · €36.00`, `Sole meunière · €27.00`',c:c=>rows(c,'ul.lines li').join('|')==='Sancerre · €36.00|Sole meunière · €27.00'&&/FETCH_CLASS\s*,\s*Line::class/.test(src(c,F12.bar))&&/function\s+label\s*\(\s*\)\s*:\s*string/.test(src(c,F12.line)),help:['Each row becomes a Line object; the property names match the columns.',"Properties `public int $id; public string $item; public float $price;` and a `label()` method.",`final class Row
+{
+    public string $item;
+}
+$rows = $stmt->fetchAll(PDO::FETCH_CLASS, Row::class);`,`final class Line
+{
+    public int $id;
+    public string $item;
+    public float $price;
+
+    public function label(): string
+    {
+        return sprintf('%s · €%.2f', $this->item, $this->price);
+    }
+}
+…
+function lines(PDO $pdo, int $table): array
+{
+    $stmt = $pdo->prepare('SELECT id, item, price FROM orders WHERE table_no = :t ORDER BY id');
+    $stmt->execute(['t' => $table]);
+
+    return $stmt->fetchAll(PDO::FETCH_CLASS, Line::class);
+}`]},
+  {t:'A POST form with `from` and `to`; `moveTab(PDO $pdo, int $from, int $to): void` moves table 7 to 9: `Moved table 7 to table 9.`',c:c=>ptxt(c.p.move,'p.flash')==='Moved table 7 to table 9.'&&rows(c.p.move,'ul.tables li').join('|')==='Table 4 · Madame Odile · €39.00|Table 7 · free|Table 9 · The Laurents · €63.00',help:['Three queries: move the orders, give table 9 the guest, free table 7.','Validate both numbers with filter_var, call moveTab, show a flash message.',`$pdo->prepare('UPDATE orders SET table_no = :to WHERE table_no = :from')->execute(['to' => $to, 'from' => $from]);`,`function moveTab(PDO $pdo, int $from, int $to): void
+{
+    $pdo->prepare('UPDATE orders SET table_no = :to WHERE table_no = :from')->execute(['to' => $to, 'from' => $from]);
+
+    $claim = $pdo->prepare('UPDATE tables SET guest = (SELECT guest FROM tables WHERE no = :from) WHERE no = :to AND guest IS NULL');
+    $claim->execute(['from' => $from, 'to' => $to]);
+
+    $pdo->prepare('UPDATE tables SET guest = NULL WHERE no = :from')->execute(['from' => $from]);
+}
+…
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $from = filter_var($_POST['from'] ?? null, FILTER_VALIDATE_INT);
+    $to = filter_var($_POST['to'] ?? null, FILTER_VALIDATE_INT);
+    …
+    moveTab($pdo, $from, $to);
+    $flash = 'Moved table ' . $from . ' to table ' . $to . '.';
+}`]},
+  {t:'Bad numbers: `Choose two tables.`',c:c=>ptxt(c.p.junk,'p.flash')==='Choose two tables.'&&!c.p.junk.bad,help:['filter_var returns false for "x".','Check both before calling moveTab.',`if ($a === false || $b === false) {
+    $flash = 'Numbers please.';
+}`,`if ($from === false || $to === false) {
+    $flash = 'Choose two tables.';
+} else {
+    …
+}`]},
+  {t:'Table 4 is taken: `Table 4 is not free.` and nothing moved, thanks to a transaction with `rollBack`',c:c=>ptxt(c.p.refuse,'p.flash')==='Table 4 is not free.'&&rows(c.p.refuse,'ul.tables li').slice(0,2).join('|')==='Table 4 · Madame Odile · €39.00|Table 7 · The Laurents · €63.00'&&/beginTransaction\(\s*\)/.test(src(c,F12.bar))&&/rollBack\(\s*\)/.test(src(c,F12.bar))&&/commit\(\s*\)/.test(src(c,F12.bar)),help:['The orders already moved before you noticed table 4 is taken. Only a transaction can undo that.',"After the claim: `if ($claim->rowCount() !== 1) { throw new RuntimeException('Table ' . $to . ' is not free.'); }`, all inside begin / commit, rollBack in the catch.",`$pdo->beginTransaction();
+try {
+    …
+    $pdo->commit();
+} catch (Throwable $e) {
+    $pdo->rollBack();
+    throw $e;
+}`,`function moveTab(PDO $pdo, int $from, int $to): void
+{
+    $pdo->beginTransaction();
+
+    try {
+        $pdo->prepare('UPDATE orders SET table_no = :to WHERE table_no = :from')->execute(['to' => $to, 'from' => $from]);
+
+        $claim = $pdo->prepare('UPDATE tables SET guest = (SELECT guest FROM tables WHERE no = :from) WHERE no = :to AND guest IS NULL');
+        $claim->execute(['from' => $from, 'to' => $to]);
+
+        if ($claim->rowCount() !== 1) {
+            throw new RuntimeException('Table ' . $to . ' is not free.');
+        }
+
+        $pdo->prepare('UPDATE tables SET guest = NULL WHERE no = :from')->execute(['from' => $from]);
+        $pdo->commit();
+    } catch (Throwable $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+…
+try {
+    moveTab($pdo, $from, $to);
+    $flash = 'Moved table ' . $from . ' to table ' . $to . '.';
+} catch (RuntimeException $e) {
+    $flash = $e->getMessage();
+}`]},
+  cleanStep(c=>pure(c,F12.bar)&&pure(c,F12.line)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz87',q:'An exception after two of three queries inside a transaction, then `rollBack()`. How many changes stay?',o:['two','none','one','all three'],a:1,h:'All or nothing.'},
+  {k:'gap',r:'pz87',q:'Make the changes permanent',pre:'$pdo->',post:'();',a:['commit'],h:'The opposite of rollBack.'},
+  {k:'pick',r:'pz87',q:'What does `$stmt->rowCount()` tell you after an UPDATE?',o:['Rows in the table','Rows changed by that UPDATE','Columns','The new id'],a:1,h:'Changed rows.'},
+  {k:'pick',r:'pz88',q:'`SELECT item, price` with `FETCH_KEY_PAIR` gives…',o:["[['item' => …, 'price' => …]]","['Soup' => 8.5, …]","[8.5, …]",'objects'],a:1,h:'First column key, second value.'},
+  {k:'type',r:'pz88',q:'Fetch every row of `$stmt` as a `Dish` object into `$dishes`',ph:'$dishes = …;',test:/^\$dishes = \$stmt->fetchAll\(PDO::FETCH_CLASS, Dish::class\);$/,ans:'$dishes = $stmt->fetchAll(PDO::FETCH_CLASS, Dish::class);',h:'`$dishes = $stmt->fetchAll(PDO::FETCH_CLASS, Dish::class);`'},
+  {k:'pick',r:'pz88',q:'Which call returns just `5` for `SELECT COUNT(*) FROM wines`?',o:['fetch()','fetchAll()','fetchColumn()','rowCount()'],a:2,h:'One column, one value.'}
+ ]},
+
+{id:'translations',special:true,name:'Menu translations',rules:['pz89','pz90'],
+ probes:{evil:{method:'GET',get:{special:EVIL_SPECIAL}}},
+ files:{[IDX]:PHPHEAD+`
+$dishes = ['Crème brûlée', "Soupe à l'oignon", 'Pâté en croûte maison'];
+?>
+`+page('Menu translations',`    <h1>Menu translations</h1>
+`),[F12.text]:PHPHEAD},
+ ingredients:{[IDX]:`$dishes = ['Crème brûlée', "Soupe à l'oignon", 'Pâté en croûte maison'];
+`},
+ solution:pickFiles(SPSOL.translations,[IDX,F12.text]),
+ steps:[
+  {t:'`<ul class="sizes">`: letters and bytes, `Crème brûlée: 12 letters, 15 bytes`',c:c=>rows(c,'ul.sizes li').join('|')==="Crème brûlée: 12 letters, 15 bytes|Soupe à l'oignon: 16 letters, 17 bytes|Pâté en croûte maison: 21 letters, 24 bytes"&&/mb_strlen\(/.test(src(c)),help:['strlen counts bytes, mb_strlen counts characters.','Both, side by side, per dish.',`<?= mb_strlen($name) ?> / <?= strlen($name) ?>`,`<ul class="sizes">
+    <?php foreach ($dishes as $dish): ?>
+        <li><?= htmlspecialchars($dish) ?>: <?= mb_strlen($dish) ?> letters, <?= strlen($dish) ?> bytes</li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:'`mb: CRÈME BRÛLÉE · plain: CRèME BRûLéE`',c:c=>ptxt(c,'p.upper')==='mb: CRÈME BRÛLÉE · plain: CRèME BRûLéE',help:['strtoupper only changes a–z.','mb_strtoupper next to strtoupper.',`<?= htmlspecialchars(mb_strtoupper($s)) ?>`,`<p class="upper">mb: <?= htmlspecialchars(mb_strtoupper($dishes[0])) ?> · plain: <?= htmlspecialchars(strtoupper($dishes[0])) ?></p>`]},
+  {t:'`src/text.php`: `shorten(string $text, int $max): string` with `mb_substr`: `Pâté en cr…`',c:c=>ptxt(c,'p.short')==='Pâté en cr…'&&/function\s+shorten\s*\(\s*string\s+\$text\s*,\s*int\s+\$max\s*\)\s*:\s*string/.test(src(c,F12.text))&&/mb_substr\(/.test(src(c,F12.text)),help:['Cut at 10 characters, not 10 bytes, and add an ellipsis.','`return mb_substr($text, 0, $max) . \'…\';` when it is too long.',`function cut(string $s, int $n): string
+{
+    return mb_strlen($s) > $n ? mb_substr($s, 0, $n) . '…' : $s;
+}`,`function shorten(string $text, int $max): string
+{
+    if (mb_strlen($text) <= $max) {
+        return $text;
+    }
+
+    return mb_substr($text, 0, $max) . '…';
+}`]},
+  {t:"`slug(string $text): string` with `strtr` and an accent map: `creme-brulee, soupe-a-l-oignon, pate-en-croute-maison`",c:c=>ptxt(c,'p.slugs')==='creme-brulee, soupe-a-l-oignon, pate-en-croute-maison'&&/strtr\(/.test(src(c,F12.text)),help:['Lowercase, swap accented letters, everything else becomes a dash.',"A const map `['é' => 'e', …]`, then `preg_replace('/[^a-z0-9]+/', '-', …)` and trim the dashes.",`$plain = strtr(mb_strtolower($s), ['é' => 'e']);
+$slug = trim(preg_replace('/[^a-z0-9]+/', '-', $plain), '-');`,`const ACCENTS = ['à' => 'a', 'â' => 'a', 'ç' => 'c', 'é' => 'e', 'è' => 'e', 'ê' => 'e', 'î' => 'i', 'ï' => 'i', 'ô' => 'o', 'û' => 'u', 'ù' => 'u', 'œ' => 'oe'];
+
+function slug(string $text): string
+{
+    $plain = strtr(mb_strtolower($text), ACCENTS);
+
+    return trim(preg_replace('/[^a-z0-9]+/', '-', $plain), '-');
+}
+…
+$names = array_map(slug(...), $dishes);`]},
+  {t:"A search link built with `http_build_query`: `/menu?dish=creme-brulee&lang=fr&note=sans+gluten+%26+sel`",c:c=>{const a=c.doc&&c.doc.querySelector('a.search');return !!a&&a.getAttribute('href')==='/menu?dish=creme-brulee&lang=fr&note=sans+gluten+%26+sel'&&/http_build_query\(/.test(src(c,F12.text))&&/href="&lt;|&amp;lang/.test(c.out)},help:['The & in the note must not split the query. Then the URL goes into an attribute: htmlspecialchars it too.',"`'/menu?' . http_build_query(['dish' => slug($dish), 'lang' => 'fr', 'note' => $note])`",`$url = '/find?' . http_build_query(['q' => 'fish & chips']);
+echo '<a href="' . htmlspecialchars($url) . '">';`,`function searchLink(string $dish, string $note): string
+{
+    return '/menu?' . http_build_query(['dish' => slug($dish), 'lang' => 'fr', 'note' => $note]);
+}
+…
+<p><a class="search" href="<?= htmlspecialchars(searchLink($dishes[0], 'sans gluten & sel')) ?>">Search the menu</a></p>`]},
+  {t:'A path link with `rawurlencode`: `/plats/Cr%C3%A8me%20br%C3%BBl%C3%A9e`',c:c=>{const a=c.doc&&c.doc.querySelector('a.path');return !!a&&a.getAttribute('href')==='/plats/Cr%C3%A8me%20br%C3%BBl%C3%A9e'&&/rawurlencode\(/.test(src(c,F12.text))},help:['In a path a space is %20, not +.','`return \'/plats/\' . rawurlencode($dish);`',`echo '/files/' . rawurlencode('my menu.pdf');`,`function pathLink(string $dish): string
+{
+    return '/plats/' . rawurlencode($dish);
+}
+…
+<p><a class="path" href="<?= htmlspecialchars(pathLink($dishes[0])) ?>">Open the dish</a></p>`]},
+  {t:"Tonight's special from `?special=` (default `Île flottante`) in text and a `data-special` attribute, escaped",c:c=>ptxt(c,'p.special')==='Tonight: Île flottante'&&c.p.evil.doc&&c.p.evil.doc.querySelector('p.special')&&c.p.evil.doc.querySelector('p.special').getAttribute('data-special')===EVIL_SPECIAL&&ptxt(c.p.evil,'p.special')==='Tonight: '+EVIL_SPECIAL,help:['Passle sends a special that tries to close your script tag.','htmlspecialchars in the attribute and in the text.',`<p data-x="<?= htmlspecialchars($x) ?>"><?= htmlspecialchars($x) ?></p>`,`$special = (string) ($_GET['special'] ?? 'Île flottante');
+…
+<p class="special" data-special="<?= htmlspecialchars($special) ?>">Tonight: <?= htmlspecialchars($special) ?></p>`]},
+  {t:'The special inside `<script>` with `json_encode` and `JSON_HEX_TAG`: the page keeps exactly one script',c:c=>{const d=c.p.evil.doc;return !!d&&d.querySelectorAll('script').length===1&&/JSON_HEX_TAG/.test(src(c))&&/const special = "\\u003C\\\/script\\u003E/.test(c.p.evil.out||'')},help:['HTML escaping does not protect JavaScript. json_encode makes a JS string; JSON_HEX_TAG hides < and >.',"`const special = <?= json_encode($special, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;`",`<script>
+    const name = <?= json_encode($name, JSON_HEX_TAG | JSON_HEX_QUOT) ?>;
+<\/script>`,`<script>
+    const special = <?= json_encode($special, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE) ?>;
+<\/script>`]},
+  cleanStep(c=>pure(c,F12.text)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz89',q:"`strlen('é')` in UTF-8",o:['1','2','3','0'],a:1,h:'Bytes.'},
+  {k:'pick',r:'pz89',q:"`strtoupper('été')`",o:["'ÉTÉ'","'éTé'","'ETE'","an error"],a:1,h:'Only a–z change.'},
+  {k:'type',r:'pz89',q:'The first 4 characters of `$name` into `$short`',ph:'$short = …;',test:/^\$short = mb_substr\(\$name, 0, 4\);$/,ans:'$short = mb_substr($name, 0, 4);',h:'`$short = mb_substr($name, 0, 4);`'},
+  {k:'pick',r:'pz90',q:"`urlencode('a b')` vs `rawurlencode('a b')`",o:["'a+b' · 'a%20b'","'a%20b' · 'a+b'","both 'a+b'","both 'a%20b'"],a:0,h:'raw follows RFC 3986.'},
+  {k:'pick',r:'pz90',q:'A value goes inside `<script>`. Which is right?',o:['htmlspecialchars','json_encode with JSON_HEX_TAG','addslashes','strip_tags'],a:1,h:'JavaScript needs a JS-safe value.'},
+  {k:'pick',r:'pz90',q:"`http_build_query(['q' => 'fish & chips'])`",o:['q=fish & chips','q=fish+%26+chips','q=fish%20&%20chips','q="fish & chips"'],a:1,h:'& and spaces are encoded.'}
+ ]},
+
+{id:'pairing',special:true,name:'Wine pairing',rules:['pz91','pz92'],
+ files:{[IDX]:PHPHEAD+`
+require_once __DIR__ . '/../src/wines.php';
+
+$tonight = ['fish', 'beef', 'dessert', 'cheese', 'game'];
+$cellar = ['Sancerre' => 12, 'Morgon' => 0, 'Crémant' => 30, 'Bandol rosé' => 6];
+$wanted = ['Sancerre', 'Crémant', 'Chablis'];
+?>
+`+page('Wine pairing',`    <h1>Wine pairing</h1>
+`),[F12.wines]:SPSOL.pairing[F12.wines]},
+ ingredients:{[F12.wines]:SPSOL.pairing[F12.wines],[IDX]:`$tonight = ['fish', 'beef', 'dessert', 'cheese', 'game'];
+$cellar = ['Sancerre' => 12, 'Morgon' => 0, 'Crémant' => 30, 'Bandol rosé' => 6];
+$wanted = ['Sancerre', 'Crémant', 'Chablis'];
+`},
+ solution:pickFiles(SPSOL.pairing,[IDX,F12.wines]),
+ steps:[
+  {t:"`array_column(WINES, 'name', 'id')`: `w1 Sancerre, w2 Morgon, w3 Bandol rosé, w4 Saint-Émilion, w5 Crémant`",c:c=>ptxt(c,'p.names')==='w1 Sancerre, w2 Morgon, w3 Bandol rosé, w4 Saint-Émilion, w5 Crémant'&&/array_column\(\s*WINES\s*,\s*'name'\s*,\s*'id'\s*\)/.test(src(c)),help:['WINES is a list of rows in src/wines.php. Pull out the names, keyed by id.','Then print "id name" pairs with array_map over keys and values.',`$byId = array_column($rows, 'name', 'id');`,`$names = array_column(WINES, 'name', 'id');
+…
+<p class="names"><?= htmlspecialchars(implode(', ', array_map(fn (string $id, string $name): string => $id . ' ' . $name, array_keys($names), $names))) ?></p>`]},
+  {t:'`array_flip` for a lookup: `Morgon is w2 · Chablis on the list? no`',c:c=>ptxt(c,'p.lookup')==='Morgon is w2 · Chablis on the list? no'&&/array_flip\(\s*\$names\s*\)/.test(src(c)),help:['Flip name ↔ id, then isset is an instant check.','`$lookup = array_flip($names);`',`$byName = array_flip($byId);
+var_dump(isset($byName['Soup']));`,`$lookup = array_flip($names);
+…
+<p class="lookup">Morgon is <?= htmlspecialchars($lookup['Morgon']) ?> · Chablis on the list? <?= isset($lookup['Chablis']) ? 'yes' : 'no' ?></p>`]},
+  {t:"Destructure with keys: `House wine: Crémant at €24.00` from `WINES[4]`",c:c=>ptxt(c,'p.house')==='House wine: Crémant at €24.00'&&/\[\s*'name'\s*=>\s*\$\w+\s*,\s*'price'\s*=>\s*\$\w+\s*\]\s*=\s*WINES\[4\]/.test(src(c)),help:['Unpack two named fields in one line.',"`['name' => $houseName, 'price' => $housePrice] = WINES[4];`",`['name' => $n, 'price' => $p] = $row;`,`['name' => $houseName, 'price' => $housePrice] = WINES[4];
+…
+<p class="house">House wine: <?= htmlspecialchars($houseName) ?> at €<?= number_format($housePrice, 2) ?></p>`]},
+  {t:'`array_unique` over every pairing, sorted: `Pairs with: beef, cheese, fish, game, starters, vegetables`',c:c=>ptxt(c,'p.pairs')==='Pairs with: beef, cheese, fish, game, starters, vegetables'&&/array_unique\(/.test(src(c)),help:['Merge all the pairs lists into one, drop the repeats, sort.',"`array_unique(array_merge(...array_column(WINES, 'pairs')))` then `sort`.",`$all = array_unique(array_merge(...$lists));`,`$pairs = array_unique(array_merge(...array_column(WINES, 'pairs')));
+sort($pairs);`]},
+  {t:"`array_diff` and `array_intersect`: `No wine for: dessert` and `Paired tonight: fish, beef, cheese, game`",c:c=>ptxt(c,'p.nowine')==='No wine for: dessert'&&ptxt(c,'p.both')==='Paired tonight: fish, beef, cheese, game'&&/array_diff\(\s*\$tonight\s*,\s*\$pairs\s*\)/.test(src(c)),help:["The first array decides: what is on tonight's menu but not in the pairs?",'`array_diff($tonight, $pairs)` and `array_values(array_intersect($tonight, $pairs))`.',`$missing = array_diff($menu, $cooked);`,`$noWine = array_diff($tonight, $pairs);
+$both = array_values(array_intersect($tonight, $pairs));`]},
+  {t:"`array_intersect_key` with a flipped list: `In the cellar: Sancerre 12, Crémant 30`",c:c=>ptxt(c,'p.available')==='In the cellar: Sancerre 12, Crémant 30'&&/array_intersect_key\(\s*\$cellar\s*,\s*array_flip\(\s*\$wanted\s*\)\s*\)/.test(src(c)),help:['Compare keys: flip the wanted names into keys first.','`array_intersect_key($cellar, array_flip($wanted))`',`$only = array_intersect_key($stock, array_flip(['salt']));`,`$available = array_intersect_key($cellar, array_flip($wanted));`]},
+  {t:"`range('A', 'C')` and `array_chunk(…, 2)`: `Shelf A: Sancerre · Morgon` … `Shelf C: Crémant`",c:c=>rows(c,'ul.shelves li').join('|')==='Shelf A: Sancerre · Morgon|Shelf B: Bandol rosé · Saint-Émilion|Shelf C: Crémant'&&/array_chunk\(/.test(src(c))&&/range\(\s*'A'\s*,\s*'C'\s*\)/.test(src(c)),help:['Two bottles per shelf, shelves named A, B, C.',"`array_combine(range('A', 'C'), array_chunk(array_values($names), 2))`",`$rows = array_chunk($items, 3);`,`$shelves = array_combine(range('A', 'C'), array_chunk(array_values($names), 2));
+…
+<ul class="shelves">
+    <?php foreach ($shelves as $shelf => $row): ?>
+        <li>Shelf <?= $shelf ?>: <?= htmlspecialchars(implode(' · ', $row)) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:"`array_combine` and `array_slice`: `First two: Sancerre, Morgon`",c:c=>ptxt(c,'p.top')==='First two: Sancerre, Morgon'&&/array_combine\(\s*array_column/.test(src(c))&&/array_slice\(/.test(src(c)),help:['Zip names with prices, then take the first two.',"`array_combine(array_column(WINES, 'name'), array_column(WINES, 'price'))`, then `array_slice($prices, 0, 2)`.",`$priced = array_combine($names, $prices);`,`$prices = array_combine(array_column(WINES, 'name'), array_column(WINES, 'price'));
+…
+$topTwo = array_slice($prices, 0, 2);
+…
+<p class="top">First two: <?= htmlspecialchars(implode(', ', array_keys($topTwo))) ?></p>`]},
+  cleanStep(c=>ptxt(c,'p.top')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz91',q:"`array_flip(['a' => 1, 'b' => 1])`",o:["[1 => 'a']","[1 => 'b']","[1 => ['a','b']]",'an error'],a:1,h:'The later value wins.'},
+  {k:'pick',r:'pz91',q:'`array_combine([1, 2], [3])`',o:['[1 => 3]','[1 => 3, 2 => null]','ValueError','[3]'],a:2,h:'The lengths must match.'},
+  {k:'type',r:'pz91',q:"All `price` values from `$rows`, keyed by `id`, into `$prices`",ph:'$prices = …;',test:/^\$prices = array_column\(\$rows, (['"])price\1, (['"])id\2\);$/,ans:"$prices = array_column($rows, 'price', 'id');",h:"`$prices = array_column($rows, 'price', 'id');`"},
+  {k:'pick',r:'pz92',q:"`array_diff(['a', 'b', 'c'], ['b'])` keeps keys…",o:['0, 1','0, 2','1, 2','none'],a:1,h:'Keys survive; there is a gap.'},
+  {k:'pick',r:'pz92',q:'Which one changes the original array?',o:['array_slice','array_splice','array_chunk','array_diff'],a:1,h:'Splice cuts in place.'},
+  {k:'pick',r:'pz92',q:'`count(array_chunk(range(1, 7), 3))`',o:['2','3','7','21'],a:1,h:'3 + 3 + 1.'}
+ ]},
+
+{id:'kitchenrules',special:true,name:'Kitchen rules',rules:['pz93','pz94'],
+ probes:{pastry:{method:'GET',get:{station:'pastry'}},bbq:{method:'GET',get:{station:'bbq'}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Kitchen rules',`    <h1>Kitchen rules</h1>
+`),[F12.station]:PHPHEAD,[F12.prep]:PHPHEAD,[F12.dishes]:PHPHEAD},
+ solution:pickFiles(SPSOL.kitchenrules,[IDX,F12.station,F12.prep,F12.dishes]),
+ steps:[
+  {t:"`src/Station.php`: `enum Station: string implements HasLabel` with `Grill`, `Sauce`, `Pastry`",c:c=>/interface\s+HasLabel/.test(src(c,F12.station))&&/enum\s+Station\s*:\s*string\s+implements\s+HasLabel/.test(src(c,F12.station))&&/case\s+Grill\s*=\s*'grill'/.test(src(c,F12.station))&&/case\s+Pastry\s*=\s*'pastry'/.test(src(c,F12.station)),help:['An interface with one method, label(), and a backed enum that promises it.','Three cases backed by lowercase strings.',`interface Named
+{
+    public function name(): string;
+}
+
+enum Size: string implements Named
+{
+    case Small = 's';
+    …
+}`,`interface HasLabel
+{
+    public function label(): string;
+}
+
+enum Station: string implements HasLabel
+{
+    case Grill = 'grill';
+    case Sauce = 'sauce';
+    case Pastry = 'pastry';
+}`]},
+  {t:'`label()` with `match ($this)` and `Station::cases()`: `Stations: Grill, Sauce, Pastry`',c:c=>ptxt(c,'p.cases')==='Stations: Grill, Sauce, Pastry'&&/match\s*\(\s*\$this\s*\)/.test(src(c,F12.station))&&/Station::cases\(\s*\)/.test(src(c)),help:['Each case gets its own label. cases() lists them all.','`return match ($this) { self::Grill => \'Grill\', … };`',`public function label(): string
+{
+    return match ($this) {
+        self::Small => 'Small',
+    };
+}`,`public function label(): string
+{
+    return match ($this) {
+        self::Grill => 'Grill',
+        self::Sauce => 'Sauce',
+        self::Pastry => 'Pastry',
+    };
+}
+…
+<p class="cases">Stations: <?= htmlspecialchars(implode(', ', array_map(fn (Station $s): string => $s->label(), Station::cases()))) ?></p>`]},
+  {t:"`fromInput(string $value): self` with `tryFrom` and a `DEFAULT` constant: `?station=pastry` → `Station: Pastry (pastry)`, `bbq` → Grill",c:c=>ptxt(c,'p.station')==='Station: Sauce (sauce)'&&ptxt(c.p.pastry,'p.station')==='Station: Pastry (pastry)'&&ptxt(c.p.bbq,'p.station')==='Station: Grill (grill)'&&/tryFrom\(/.test(src(c,F12.station))&&/const\s+DEFAULT\s*=\s*self::Grill/.test(src(c,F12.station)),help:['from("bbq") would throw. tryFrom gives null, ?? gives the default.',"`return self::tryFrom($value) ?? self::DEFAULT;` and `?station=` defaults to `sauce`.",`public const DEFAULT = self::Small;
+
+public static function fromInput(string $v): self
+{
+    return self::tryFrom($v) ?? self::DEFAULT;
+}`,`public const DEFAULT = self::Grill;
+
+public static function fromInput(string $value): self
+{
+    return self::tryFrom($value) ?? self::DEFAULT;
+}
+…
+$station = Station::fromInput((string) ($_GET['station'] ?? 'sauce'));
+…
+<p class="station">Station: <?= htmlspecialchars($station->label()) ?> (<?= htmlspecialchars($station->value) ?>)</p>`]},
+  {t:"`src/Prep.php`: an attribute class `#[Attribute(Attribute::TARGET_CLASS)] final class Prep(int $minutes, Station $station)`",c:c=>/#\[Attribute\(\s*Attribute::TARGET_CLASS\s*\)\]\s*final\s+class\s+Prep/.test(src(c,F12.prep))&&/int\s+\$minutes/.test(src(c,F12.prep))&&/Station\s+\$station/.test(src(c,F12.prep)),help:['An attribute is a normal class marked with #[Attribute].','Promoted public properties for minutes and station.',`#[Attribute(Attribute::TARGET_CLASS)]
+final class Spicy
+{
+    public function __construct(public int $level)
+    {
+    }
+}`,`#[Attribute(Attribute::TARGET_CLASS)]
+final class Prep
+{
+    public function __construct(
+        public int $minutes,
+        public Station $station,
+    ) {
+    }
+}`]},
+  {t:'`src/dishes.php`: `CoqAuVin`, `SteakFrites`, `TarteTatin`, each with a `NAME` constant and a `#[Prep(…)]` label',c:c=>{const s=src(c,F12.dishes);return /#\[Prep\(\s*minutes:\s*40\s*,\s*station:\s*Station::Sauce\s*\)\]\s*final\s+class\s+CoqAuVin/.test(s)&&/#\[Prep\([^)]*\)\]\s*final\s+class\s+SteakFrites/.test(s)&&/#\[Prep\([^)]*\)\]\s*final\s+class\s+TarteTatin/.test(s)&&/const\s+NAME\s*=\s*'Coq au vin'/.test(s)},help:['Coq au vin: 40 min at the sauce station. Steak frites: 15 at the grill. Tarte Tatin: 30 at pastry.','Named arguments inside the attribute.',`#[Spicy(level: 3)]
+final class Harissa
+{
+    public const NAME = 'Harissa';
+}`,`#[Prep(minutes: 40, station: Station::Sauce)]
+final class CoqAuVin
+{
+    public const NAME = 'Coq au vin';
+    public ?Garnish $garnish = null;
+}
+
+#[Prep(minutes: 15, station: Station::Grill)]
+final class SteakFrites
+{
+    public const NAME = 'Steak frites';
+    …
+}
+
+#[Prep(minutes: 30, station: Station::Pastry)]
+final class TarteTatin
+{
+    public const NAME = 'Tarte Tatin';
+    public ?Garnish $garnish = null;
+}`]},
+  {t:'`prepOf(string $class): Prep` reads the attribute with `ReflectionClass`: `Coq au vin · sauce station · 40 min` …',c:c=>rows(c,'ul.prep li').join('|')==='Coq au vin · sauce station · 40 min|Steak frites · grill station · 15 min|Tarte Tatin · pastry station · 30 min'&&/new\s+ReflectionClass\(/.test(src(c,F12.dishes))&&/->newInstance\(\s*\)/.test(src(c,F12.dishes)),help:['Reflection reads the label; newInstance builds the Prep object.',"`(new ReflectionClass($class))->getAttributes(Prep::class)[0]->newInstance()`",`$attr = (new ReflectionClass(Harissa::class))->getAttributes(Spicy::class)[0]->newInstance();`,`function prepOf(string $class): Prep
+{
+    $attributes = (new ReflectionClass($class))->getAttributes(Prep::class);
+
+    return $attributes[0]->newInstance();
+}
+…
+$menu = [CoqAuVin::class, SteakFrites::class, TarteTatin::class];
+$preps = array_map(prepOf(...), $menu);`]},
+  {t:'`Longest prep: 40 min`',c:c=>ptxt(c,'p.longest')==='Longest prep: 40 min',help:['max over the minutes.','array_map to minutes, then max.',`$longest = max(array_map(fn (Spicy $s): int => $s->level, $all));`,`$longest = max(array_map(fn (Prep $p): int => $p->minutes, $preps));`]},
+  {t:"The nullsafe operator: `$dish->garnish?->name ?? 'no garnish'` gives `Coq au vin: no garnish`, `Steak frites: watercress`",c:c=>rows(c,'ul.garnish li').join('|')==='Coq au vin: no garnish|Steak frites: watercress'&&/->garnish\?->name/.test(src(c)),help:['Coq au vin has no garnish: ->name on null would warn.','A Garnish class; SteakFrites sets one in its constructor; ?-> in the page.',`echo $plate->sauce?->name ?? 'plain';`,`final class Garnish
+{
+    public function __construct(public string $name)
+    {
+    }
+}
+…
+$tonight = [new CoqAuVin(), new SteakFrites()];
+…
+<li><?= htmlspecialchars($dish::NAME) ?>: <?= htmlspecialchars($dish->garnish?->name ?? 'no garnish') ?></li>`]},
+  cleanStep(c=>pure(c,F12.station)&&pure(c,F12.prep)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz93',q:"`Station::from('bbq')` when no case has that value",o:['null','the first case','ValueError','a warning'],a:2,h:'from is strict.'},
+  {k:'type',r:'pz93',q:'Turn `$v` into a Station case or `null`, into `$s`',ph:'$s = …;',test:/^\$s = Station::tryFrom\(\$v\);$/,ans:'$s = Station::tryFrom($v);',h:'`$s = Station::tryFrom($v);`'},
+  {k:'pick',r:'pz93',q:'A `match` with no arm for the value and no `default`…',o:['returns null','throws UnhandledMatchError','returns false','picks the first arm'],a:1,h:'match is exhaustive.'},
+  {k:'pick',r:'pz94',q:'What does an attribute do on its own?',o:['Runs when the class loads','Nothing until code reads it with Reflection','Validates the class','Adds a property'],a:1,h:'A label, not code.'},
+  {k:'pick',r:'pz94',q:"`$a?->b` when `$a` is null",o:['Warning','null','Error','false'],a:1,h:'The chain stops quietly.'},
+  {k:'gap',r:'pz94',q:'Declare an attribute class',pre:'#[',post:']\nfinal class Prep',a:['Attribute'],h:'Mark it.'}
+ ]}
+);
+
+Object.assign(BUGS,{
+ 'bartab':[
+  {d:'The catch rethrew without rollBack, so the half-done move stayed visible: table 4 suddenly had the Laurents\' orders on its bill.',r:[[`        $pdo->rollBack();
+        throw $e;`,`        throw $e;`,F12.bar]]},
+  {d:'Without AND guest IS NULL, moving to an occupied table quietly replaced the guest sitting there.',r:[[`WHERE no = :to AND guest IS NULL');`,`WHERE no = :to');`,F12.bar]]},
+  {d:'FETCH_GROUP alone keeps every column as a row array, so implode got arrays. FETCH_GROUP | FETCH_COLUMN gives plain lists of items.',r:[[`fetchAll(PDO::FETCH_GROUP | PDO::FETCH_COLUMN)`,`fetchAll(PDO::FETCH_GROUP)`,F12.bar]]}
+ ],
+ 'translations':[
+  {d:'substr cuts bytes: "Pâté en cr" is 10 characters but 12 bytes, so the cut landed elsewhere. mb_substr counts characters.',r:[[`return mb_substr($text, 0, $max) . '…';`,`return substr($text, 0, $max) . '…';`,F12.text]]},
+  {d:'urlencode writes a space as +, which only means space in a query string. Paths need rawurlencode: %20.',r:[[`rawurlencode($dish)`,`urlencode($dish)`,F12.text]]},
+  {d:'JSON_UNESCAPED_SLASHES let <\/script> through untouched, so a special could close your script block and open its own. Keep the JSON_HEX_* flags.',r:[[`json_encode($special, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE)`,`json_encode($special, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE)`]]}
+ ],
+ 'pairing':[
+  {d:"Without the third argument 'id', array_column numbered the names 0, 1, 2… and the ids were lost.",r:[[`$names = array_column(WINES, 'name', 'id');`,`$names = array_column(WINES, 'name');`]]},
+  {d:'array_diff answers "in the first, not in the second". Swapped, it listed wine pairings missing from the menu instead.',r:[[`array_diff($tonight, $pairs)`,`array_diff($pairs, $tonight)`]]},
+  {d:'array_intersect_key compares keys. $wanted is a list (keys 0, 1, 2), so it has to be flipped first.',r:[[`array_intersect_key($cellar, array_flip($wanted))`,`array_intersect_key($cellar, $wanted)`]]}
+ ],
+ 'kitchenrules':[
+  {d:'Station::from throws a ValueError for "bbq". tryFrom returns null so the default can take over.',r:[[`return self::tryFrom($value) ?? self::DEFAULT;`,`return self::from($value);`,F12.station]]},
+  {d:'->name on a null garnish warns. ?-> stops the chain and returns null.',r:[[`$dish->garnish?->name`,`$dish->garnish->name`]]},
+  {d:'The attribute only allowed methods, so reading it from a class threw an Error. TARGET_CLASS fixes it.',r:[[`#[Attribute(Attribute::TARGET_CLASS)]`,`#[Attribute(Attribute::TARGET_METHOD)]`,F12.prep]]}
+ ]
+});
+TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
+
+MORE.push(
+ {k:'pick',r:'pz89',q:"`mb_str_split('été')`",o:["['é', 't', 'é']",'6 bytes','an error',"['ét', 'é']"],a:0,h:'Characters, not bytes.'},
+ {k:'pick',r:'pz90',q:'Which function turns `&lt;b&gt;` back into `<b>`?',o:['htmlspecialchars','htmlspecialchars_decode','strip_tags','urldecode'],a:1,h:'The reverse.'},
+ {k:'pick',r:'pz90',q:'`strip_tags()` is…',o:['a safe replacement for htmlspecialchars','not enough on its own: attributes and broken tags slip through','the best XSS filter','only for XML'],a:1,h:'Escape on output instead.'},
+ {k:'pick',r:'pz92',q:"`array_unique([1, '1', 2])`",o:['[1, 2] (keys 0 and 2)',"[1, '1', 2]",'[2]','an error'],a:0,h:'Compared as strings by default.'},
+ {k:'pick',r:'pz93',q:'Can an enum have a constructor or properties?',o:['Yes, both','No, but it can have methods and constants','Only properties','Only if backed'],a:1,h:'Cases are fixed values.'},
+ {k:'pick',r:'pz87',q:'`PDO::ERRMODE_EXCEPTION` means…',o:['errors are silent','failed queries throw PDOException','queries are logged','transactions are automatic'],a:1,h:'Exceptions you can catch.'}
+);
+
+TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
+
 let RUSH=null;
 const fmtClock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function rushPool(){
@@ -7840,7 +8535,11 @@ const STORY={
  'roomservice':{w:'The guest in room 3',tb:'upstairs',o:'The little hotel above the bistro orders by phone, with endless extras. One order object has to take them all.',th:'Rare, béarnaise, no bread. Exactly as I said it.'},
  'allergens':{w:'Monsieur Petit',tb:5,o:'Monsieur Petit is back, with a friend who avoids gluten and eggs. Flip switches, not pages of notes.',th:'My card fits in one number. How elegant.'},
  'freezer':{w:'Commis Théo',tb:'the walk-in',o:'Leftover stock goes into the freezer for next week. Store each batch so it comes back exactly as it went in.',th:'Six portions of cassoulet, rescued. Roux is proud of me.'},
- 'hours':{w:'Maître d\' Colette',tb:'the front desk',o:'Guests ring from New York and Tokyo asking if Roux\'s is open. Answer on their clock and on ours.',th:'"Yes madame, we open at noon your time." Nobody got lost.'}
+ 'hours':{w:'Maître d\' Colette',tb:'the front desk',o:'Guests ring from New York and Tokyo asking if Roux\'s is open. Answer on their clock and on ours.',th:'"Yes madame, we open at noon your time." Nobody got lost.'},
+ 'bartab':{w:'The Laurents',tb:7,o:'The Laurents want to move to the window table, bill and all. Either everything moves, or nothing does.',th:'We moved, and so did every single glass on our bill.'},
+ 'translations':{w:'A tour group from Tokyo',tb:'the long table',o:'The menu has accents everywhere, the links break and the website cuts dish names in half. Make the words survive.',th:'"Crème brûlée" arrived on our phones with all its accents.'},
+ 'pairing':{w:'Sommelier Armand',tb:'the cellar',o:'Armand wants a pairing card: which wine for which dish, what is missing, and what is actually in the cellar.',th:'No wine for dessert? I will fix that by Friday.'},
+ 'kitchenrules':{w:'Chef Roux',tb:'the office',o:'Roux pins the house rules to every recipe: which station, how many minutes. Read them straight from the code.',th:'Mrrp. Every dish knows its station.'}
 };
 const PHASES=[
  ['17:00','Mise en place','Knives sharpened, stock on the stove. The dining room is still empty.'],
@@ -7896,7 +8595,7 @@ const DISH='img/passle/';
 const ART_IDS=new Set(['menu-card','dish-label','pantry','menu-board','kitchen-helpers','split-kitchen','order-slip','safe-orders','table-service','recipe-book','cellar','bistro','menu-card-master','labels-master','pantry-master','board-master','router-master','login-master','tests-master','badge','scanner','api','brigade','stocktake','loyalty','ledger','cards','nightlog','reservations','prep-list']);
 const dishImg=(id,cls)=>!ART_IDS.has(id)?'':'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="" onerror="this.style.display=\'none\'">';
 const KEY='passle.v2';
-const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
