@@ -1,13 +1,10 @@
-/* Workshop service worker.
-   Precaches the launcher; caches labs the first time they're opened.
-   Network-first so updates from GitHub land when online; cache when offline. */
-const CACHE = "workshop-v10";
+const CACHE = "workshop-v11";
 const PRECACHE = [
   "./",
   "./index.html",
-  "./css/launcher.css?v=9",
-  "./js/labs.config.js?v=9",
-  "./js/launcher.js?v=9",
+  "./css/launcher.css?v=10",
+  "./js/labs.config.js?v=10",
+  "./js/launcher.js?v=10",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
@@ -34,6 +31,6 @@ self.addEventListener("fetch", (e) => {
         caches.open(CACHE).then((c) => c.put(e.request, copy));
         return res;
       })
-      .catch(() => caches.match(e.request).then((hit) => hit || caches.match("./index.html")))
+      .catch(() => caches.match(e.request).then((hit) => hit || (e.request.mode === "navigate" ? caches.match("./index.html") : Response.error())))
   );
 });

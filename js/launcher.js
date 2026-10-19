@@ -38,7 +38,7 @@ function bearing(lab) { return String(Math.round((lab.angle + 90) % 360)).padSta
 
 const chipsEl = $("sectorChips");
 let activeSector = lsGet("workshop-sector") || "all";
-if (activeSector !== "all" && !sectors.some((s) => s.key === activeSector)) activeSector = "all";
+if (activeSector !== "all" && activeSector !== "today" && !sectors.some((s) => s.key === activeSector)) activeSector = "all";
 for (const s of [{ key: "all", name: "All", labs }, ...sectors]) {
   const chip = document.createElement("button");
   chip.className = "chip";
@@ -235,7 +235,7 @@ function setLit(id, on) {
   if (!lab) return;
   if (on && litId && litId !== id) setLit(litId, false);
   document.querySelector(`.marker[data-id="${id}"]`)?.classList.toggle("lit", on);
-  document.querySelector(`.room[data-id="${id}"]`)?.classList.toggle("lit", on);
+  document.querySelectorAll(`.room[data-id="${id}"]`).forEach((r) => r.classList.toggle("lit", on));
   document.querySelector(`.ring.${lab.ring}`)?.classList.toggle("lit", on);
   document.querySelector(`.ring-label[data-ring="${lab.ring}"]`)?.classList.toggle("lit", on);
   const course = $("course");
@@ -300,6 +300,7 @@ function activate(id) {
 
 function showMap() {
   launchTimers.forEach(clearTimeout);
+  renderToday();
   stage.classList.remove("show");
   opened.classList.remove("show");
   starfield.resume();
@@ -316,18 +317,23 @@ function closeTab(id) {
   else renderTabs();
 }
 
-function launch(lab) {
+function launch(lab, hash) {
   if (!lab) return;
   for (const r of document.querySelectorAll(".room, .marker")) r.classList.toggle("was-last", r.dataset.id === lab.id);
   lsSet("workshop-last", lab.id);
   const docked = lsJson("workshop-docked"); docked[lab.id] = Date.now(); lsSet("workshop-docked", JSON.stringify(docked));
 
-  if (openTabs.some((t) => t.id === lab.id)) { activate(lab.id); return; }
+  const already = openTabs.find((t) => t.id === lab.id);
+  if (already) {
+    if (hash) { try { already.frame.contentWindow.location.hash = hash; } catch (e) { already.frame.src = lab.path + "#" + hash; } }
+    activate(lab.id);
+    return;
+  }
   if (openTabs.length >= MAX_TABS) { toast(`max ${MAX_TABS} labs open — close a tab first`); if (activeTab) activate(activeTab); return; }
 
   const frame = document.createElement("iframe");
   frame.title = lab.name;
-  frame.src = lab.path;
+  frame.src = lab.path + (hash ? "#" + hash : "");
   framesEl.appendChild(frame);
   openTabs.push({ id: lab.id, lab, frame });
 
@@ -388,27 +394,30 @@ $("backToTabs").addEventListener("click", () => { if (activeTab) activate(active
 const search = $("search");
 function applyFilter() {
   const q = search.value.trim().toLowerCase();
+  if (q && activeSector === "today") activeSector = "all";
+  const isToday = activeSector === "today";
+  todayGroup.hidden = !isToday;
   let shown = 0;
   for (const chip of chipsEl.querySelectorAll(".chip")) chip.classList.toggle("on", chip.dataset.sector === activeSector);
   for (const lab of labs) {
     const inSector = activeSector === "all" || lab.sector.toLowerCase() === activeSector;
-    const hit = inSector && (!q || lab.name.toLowerCase().includes(q) || lab.sector.toLowerCase().includes(q) || (lab.sub || "").toLowerCase().includes(q) || lab.id.includes(q));
-    const row = document.querySelector(`.room[data-id="${CSS.escape(lab.id)}"]`);
+    const hit = !isToday && inSector && (!q || lab.name.toLowerCase().includes(q) || lab.sector.toLowerCase().includes(q) || (lab.sub || "").toLowerCase().includes(q) || lab.id.includes(q));
+    const row = document.querySelector(`.sector-group .room[data-id="${CSS.escape(lab.id)}"]`);
     row.hidden = !hit;
-    document.querySelector(`.marker[data-id="${CSS.escape(lab.id)}"]`).style.opacity = hit ? "" : "0.18";
+    const lit = isToday ? todayList.some((t) => t.lab === lab.id) : hit;
+    document.querySelector(`.marker[data-id="${CSS.escape(lab.id)}"]`).style.opacity = lit ? "" : "0.18";
     if (hit) shown++;
   }
   for (const group of document.querySelectorAll(".sector-group")) {
     group.hidden = !group.querySelector(".room:not([hidden])");
   }
-  emptyEl.hidden = shown > 0;
+  emptyEl.hidden = isToday || shown > 0;
 }
 search.addEventListener("input", applyFilter);
-applyFilter();
 $("addRoom").addEventListener("click", () => toast("edit js/labs.config.js to add a room"));
 search.addEventListener("keydown", (e) => {
   if (e.key === "Enter") {
-    const first = document.querySelector(".room:not([hidden])");
+    const first = activeSector === "today" ? todayGroup.querySelector(".room") : document.querySelector(".sector-group .room:not([hidden])");
     if (first) launch(labs.find((l) => l.id === first.dataset.id));
   } else if (e.key === "Escape") {
     search.value = ""; applyFilter(); search.blur();
@@ -476,6 +485,113 @@ function tick() {
 tick();
 setInterval(tick, 1000);
 
+
+function dayKey(off, pad) {
+  const d = new Date(Date.now() + (off || 0) * 864e5);
+  const m = d.getMonth() + 1, day = d.getDate();
+  return d.getFullYear() + "-" + (pad ? String(m).padStart(2, "0") : m) + "-" + (pad ? String(day).padStart(2, "0") : day);
+}
+function lsParse(key) { try { return JSON.parse(lsGet(key)); } catch (e) { return null; } }
+const WEEK = 7 * 864e5;
+const POSHLE_CASES = ["alladds", "vanished", "graphlogin", "stuckmail", "skus", "leaverlic", "forward", "room"];
+const GIT_CASES = ["detached", "secret", "rejected", "ignored", "markers"];
+
+function todayItems() {
+  const out = [];
+  const add = (lab, text, kind, hash, weight) => { if (labs.some((l) => l.id === lab)) out.push({ lab, text, kind, hash, weight }); };
+
+  const jr = lsParse("junle_review");
+  if (jr && jr.items) {
+    const n = Object.values(jr.items).filter((x) => x && x.due <= Date.now()).length;
+    if (n) add("junle", n + (n === 1 ? " review due" : " reviews due"), "review", "review", 10);
+  }
+  const py = lsParse("pyle-save-v1");
+  if (py) {
+    const n = (py.missed || []).filter((m) => (m[3] || dayKey(0, true)) <= dayKey(0, true)).length;
+    if (n) add("pyle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 10);
+  }
+  const ps = lsParse("poshle.v1");
+  if (ps && ps.steps) {
+    const n = Object.entries(ps.steps).filter(([k, r]) => r && r.miss > 0 && !/^(gym|start):/.test(k) && (r.clean || 0) < r.miss).length;
+    if (n) add("poshle", Math.min(n, 10) + (n === 1 ? " weak spot" : " weak spots"), "review", "weak", 9);
+  }
+
+  const hx = lsParse("hexle.v1");
+  if (hx && hx.srs) {
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    const n = Object.values(hx.srs).filter((x) => x && x.due <= day).length;
+    if (n) add("hexle", n + (n === 1 ? " skill to review" : " skills to review"), "review", "review", 8);
+  }
+
+  const md = lsParse("modle-profile");
+  if (!(md && md.daily && md.daily.date === dayKey(0, true))) add("modle", "Daily challenge", "daily", "/practice/daily", 6);
+  const mix = lsParse("junle_mix");
+  if (mix && mix.last !== dayKey(0, false)) add("junle", "Daily mix" + (mix.streak ? " · streak " + mix.streak : ""), "daily", "mix", 6);
+  if (py && py.kata && py.kata.last !== dayKey(0, true)) add("pyle", "Daily kata" + (py.kata.streak ? " · streak " + py.kata.streak : ""), "daily", "kata", 5);
+
+  const pc = (ps && ps.cases) || {}, gc = lsParse("gitlab.cases") || {};
+  const lastSolve = Math.max(0, ...Object.values(pc).map((r) => (r && r.at) || 0), ...Object.values(gc).map((r) => (r && r.at) || 0));
+  if (Date.now() - lastSolve > WEEK) {
+    const pOpen = POSHLE_CASES.filter((id) => !(pc[id] && pc[id].solved));
+    const gOpen = GIT_CASES.filter((id) => !(gc[id] && gc[id].solved));
+    const lastP = Math.max(0, ...Object.values(pc).map((r) => (r && r.at) || 0));
+    const lastG = Math.max(0, ...Object.values(gc).map((r) => (r && r.at) || 0));
+    const pickGit = gOpen.length && (!pOpen.length || lastG <= lastP);
+    if (pickGit) add("git-lab", "Detective case of the week", "weekly", "case:" + gOpen[0], 4);
+    else if (pOpen.length) add("poshle", "Detective case of the week", "weekly", "case:" + pOpen[0], 4);
+    else add("poshle", "Re-solve a Detective case", "weekly", "case:" + POSHLE_CASES[Math.floor(Date.now() / WEEK) % POSHLE_CASES.length], 3);
+  }
+
+  const gl = lsParse("gitlab.v1");
+  if (gl && gl.missions && gl.missionIdx < gl.missions && !gl.detective) add("git-lab", "Mission " + (gl.missionIdx + 1) + " of " + gl.missions, "next", "", 2);
+  if (hx && typeof hx.t === "number" && !(hx.done && hx.done[hx.t])) add("hexle", "Target " + (hx.t + 1) + " waiting", "next", "", 2);
+
+  return out.sort((a, b) => b.weight - a.weight).slice(0, 6);
+}
+
+const KIND_LABEL = { review: "due", daily: "daily", weekly: "weekly", next: "next" };
+const todayGroup = document.createElement("section");
+todayGroup.className = "today-group";
+todayGroup.hidden = true;
+roomsEl.prepend(todayGroup);
+const todayChip = document.createElement("button");
+todayChip.className = "chip today-chip";
+todayChip.dataset.sector = "today";
+chipsEl.prepend(todayChip);
+todayChip.addEventListener("click", () => { activeSector = "today"; lsSet("workshop-sector", "today"); search.value = ""; applyFilter(); });
+let todayList = [];
+function renderToday() {
+  todayList = todayItems();
+  todayChip.innerHTML = `Today<span>${todayList.length}</span>`;
+  todayGroup.innerHTML = "";
+  if (!todayList.length) { todayGroup.innerHTML = '<p class="today-empty">nothing due · pick any room</p>'; }
+  todayList.forEach((it, i) => {
+    const lab = labs.find((l) => l.id === it.lab);
+    const b = document.createElement("button");
+    b.className = "room today-room k-" + it.kind;
+    b.dataset.id = lab.id;
+    b.style.setProperty("--i", i);
+    b.innerHTML = `<svg class="glyph" viewBox="0 0 16 16">${lab.glyph || ""}</svg>
+      <span class="body"><span class="name">${esc(it.text)}</span><span class="tag">${esc(lab.name)}</span></span>
+      <span class="kind">${KIND_LABEL[it.kind]}</span>`;
+    b.addEventListener("mouseenter", () => setLit(lab.id, true));
+    b.addEventListener("mouseleave", () => setLit(lab.id, false));
+    b.addEventListener("focus", () => setLit(lab.id, true));
+    b.addEventListener("blur", () => setLit(lab.id, false));
+    b.addEventListener("click", () => launch(lab, it.hash));
+    todayGroup.appendChild(b);
+  });
+  if (activeSector === "today") applyFilter();
+}
+let todayTimer = null;
+window.addEventListener("storage", () => { clearTimeout(todayTimer); todayTimer = setTimeout(renderToday, 300); });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) renderToday(); });
+renderToday();
+if (lsGet("workshop-today-seen") !== dayKey(0, true)) {
+  lsSet("workshop-today-seen", dayKey(0, true));
+  if (todayList.length) { activeSector = "today"; lsSet("workshop-sector", "today"); }
+}
+applyFilter();
 
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register("sw.js").catch(() => {});

@@ -1739,7 +1739,7 @@ const DATA = [
   ]
  }
 ];
-const LAB_LINKS = {};
+const LAB_LINKS = {"connect": {"label": "Poshle", "href": "poshle.html"}, "pipeline": {"label": "Poshle", "href": "poshle.html"}, "entra": {"label": "Poshle", "href": "poshle.html"}, "tap": {"label": "Poshle", "href": "poshle.html"}, "exchange": {"label": "Poshle", "href": "poshle.html"}, "script": {"label": "Poshle", "href": "poshle.html"}, "sharepoint": {"label": "Poshle", "href": "poshle.html"}, "incident": {"label": "Poshle", "href": "poshle.html"}, "ircmd": {"label": "Poshle", "href": "poshle.html"}};
 const AUG = {
  "connect::Open and close a session": {
   "concept": "Microsoft 365 is not one system you talk to, it is several services behind one login. Microsoft Graph answers questions about identity: users, sign-in names, groups, licences. Exchange Online answers questions about mail: mailboxes, addresses, permissions, mail flow. Each has its own module and its own Connect command, and a session only lets you use the commands of the door you opened. That is why the rename needed both: Update-MgUser changed the sign-in name in Entra, and Set-Mailbox changed the email address in Exchange. Scopes are a second layer. Even as Global Admin, a Graph session only has the permissions you asked for when you connected, which keeps a read-only report from accidentally being able to change anything.",
@@ -1758,7 +1758,8 @@ const AUG = {
     "q": "Get-MgContext shows Scopes: User.Read.All. Can you block an account?",
     "a": "No. Blocking uses Update-MgUser, which needs User.ReadWrite.All. Reconnect with that scope."
    }
-  ]
+  ],
+  "lab": "connect"
  },
  "pipeline::Filter and pick": {
   "concept": "The pipe does not pass text, it passes objects: complete little records with properties like DisplayName and AccountEnabled. That is what makes PowerShell different from a normal terminal. Where-Object looks at each object and decides whether it continues, Select-Object decides which properties to keep, and the next command receives real objects it can act on. The key habit is filter left: filter as early as possible, ideally at Microsoft with -Filter, because every object you don't download is time saved. Use Where-Object for checks Graph cannot do, like a regex.",
@@ -1777,7 +1778,8 @@ const AUG = {
     "q": "What does $_ mean?",
     "a": "The current object flowing through the pipeline."
    }
-  ]
+  ],
+  "lab": "users"
  },
  "entra::Change users": {
   "concept": "A user has two names that look the same but live in different places. The UserPrincipalName (UPN) is the sign-in name, stored in Entra ID. The primary SMTP address is the email address, stored in Exchange. Usually they match, and they should, but changing one never changes the other. Teams builds its chat address (SIP) from the UPN, which is why Adelheid's card showed the old chat address for a while after the rename.",
@@ -1792,13 +1794,15 @@ const AUG = {
     "q": "After a rename, Teams still shows the old chat address. Broken?",
     "a": "No. Teams syncs from the UPN and can take up to 24 hours."
    }
-  ]
+  ],
+  "lab": "rename"
  },
  "exchange::Addresses and aliases": {
   "traps": [
    "Using SMTP: (capitals) in @{Add=...} when you meant an alias. Capitals makes it the new primary.",
    "Removing an old alias right after a rename. Keep it so mail to the old address still arrives."
-  ]
+  ],
+  "lab": "primary"
  },
  "script::Safety and error handling": {
   "concept": "A script that changes 22 accounts should behave like a careful person: try one first, keep going when one fails, and write down what happened. That is three tools. Select-Object -First 1 for the test run. try / catch with -ErrorAction Stop so one failing user does not stop the other 21. A [pscustomobject] log exported to CSV so tomorrow you can read exactly who is OK and who needs a fix. Your rename log showed Aiko failing and the other 11 succeeding, which is this pattern working exactly as intended.",
@@ -1813,7 +1817,8 @@ const AUG = {
     "q": "Why add -ErrorAction Stop inside a try block?",
     "a": "Without it, many cmdlet errors are non-terminating: they print red text and continue, so catch never runs."
    }
-  ]
+  ],
+  "lab": "secrename"
  },
  "formulas::Name and address formulas": {
   "quiz": [
@@ -1871,7 +1876,8 @@ const AUG = {
     "q": "The TAP column is cut off in the table. What do you add to the command?",
     "a": "| Select-Object TemporaryAccessPass"
    }
-  ]
+  ],
+  "lab": "tap"
  },
  "incident::The playbook": {
   "concept": "During an incident the instinct is to start digging to find out what happened. Resist it. Every minute you investigate while the attacker still has a valid token, they keep reading and sending. So the order is fixed: contain first, then investigate. Investigation has its own order too: first the sign-ins (how did they get in), then the audit log (what did they do inside), then the message trace (what left), then inbox rules and app consents (what did they leave behind to come back). Scope turns that evidence into a list of mails and recipients, which is what clients and the authority need to hear about. Harden closes the door so it cannot happen the same way again.",
@@ -1891,7 +1897,8 @@ const AUG = {
     "q": "Which log proves that a mail was actually sent?",
     "a": "The message trace. The audit log shows activity inside the mailbox and can lag by hours."
    }
-  ]
+  ],
+  "lab": "contain"
  },
  "incident::How the attack works": {
   "concept": "Normal MFA protects the moment of signing in. AiTM phishing skips that moment. The fake page passes everything to the real Microsoft login, so the user really does complete MFA. Microsoft hands back a session token, and the proxy keeps a copy. From then on the attacker replays that token, and Microsoft sees a session where MFA is already done, which is why the sign-in log says 'MFA requirement satisfied by claim in the token'. Two defences break this. Token protection makes a token useless on another device, but only for native apps. Phishing-resistant MFA like passkeys stops it earlier, because a passkey checks the website's real domain and will not sign in on a fake one.",
@@ -1916,13 +1923,15 @@ const AUG = {
    "Filtering MailItemsAccessed on ClientIP. The IP is in ClientIPAddress.",
    "Comparing UTC audit times with Belgian clock times without converting.",
    "Concluding 'nothing was read' because the audit log is still empty. It can lag by hours."
-  ]
+  ],
+  "lab": "investigate"
  },
  "ircmd::Audit log": {
   "traps": [
    "Stopping at 5000 results without paging. The rest is silently missing.",
    "Reusing a SessionId from a previous, different search. Use a fresh guid per search."
-  ]
+  ],
+  "lab": "investigate"
  },
  "connect::Why Graph and Exchange fight": {
   "concept": "Signing in to Microsoft 365 is done by a library called MSAL (Microsoft.Identity.Client). The Graph module and the Exchange module each carry their own copy, and the copies are not always the same version. One PowerShell window can only have one version of a library loaded, so the first module that loads wins and the second module has to live with that version. When Exchange wins, Graph calls a method its own version has and the Exchange version does not, and Connect-MgGraph dies with 'Method not found ... WithLogging'. The trap is that you do not have to connect to Exchange for this to happen: PowerShell loads a module the moment you run any of its commands, even one that fails with 'call Connect-ExchangeOnline first'. The fix is order, not reinstalling: a fresh window, Graph first, Exchange second.",
@@ -1941,7 +1950,8 @@ const AUG = {
     "q": "What is the quickest fix for 'Method not found ... WithLogging'?",
     "a": "Close the window, open a new one, run Connect-MgGraph first and Connect-ExchangeOnline second."
    }
-  ]
+  ],
+  "lab": "case:graphlogin"
  },
  "sharepoint::Org-wide teams": {
   "concept": "An org-wide team is a team whose member list follows the whole tenant: every active account is in it, automatically. Behind every team sits a Microsoft 365 group, and if that group is also your all@ mailing list, the team's sync decides who gets all@ mail. That explains three things that look like magic. New accounts appear in all@ within minutes, added by Microsoft Teams Services. A blocked account can disappear from it, usually at night, removed by the Teams and Channels Service. And after the account is unblocked it is not reliably added back, so someone silently stops getting company mail. You cannot always see it on the group: ResourceProvisioningOptions can be empty on older teams. The audit log shows it every time.",
@@ -1960,7 +1970,8 @@ const AUG = {
     "q": "An account was blocked during an incident and is unblocked now. What do you check?",
     "a": "all@ and the other group memberships, by hand. The org-wide sync may have removed it and does not reliably re-add it."
    }
-  ]
+  ],
+  "lab": "case:vanished"
  },
  "entra::Licence names (SKUs)": {
   "concept": "PowerShell never shows the product name you see in the admin center. It shows the SkuPartNumber, a code that was picked years ago and never renamed. In 2020 Office 365 Business Essentials became Microsoft 365 Business Basic and Office 365 Business Premium became Business Standard, but the codes kept the old words. That is how a licence called PREMIUM ends up being Standard. When a code is unclear, look at what is inside: the ServicePlans list. Desktop apps (OFFICESUBSCRIPTION) separate Basic from Standard, and Intune plus Entra ID P1 separate Standard from Premium.",
@@ -1979,7 +1990,62 @@ const AUG = {
     "q": "How do you tell Basic from Standard in PowerShell?",
     "a": "Standard has the OFFICESUBSCRIPTION service plan (desktop apps). Basic does not."
    }
-  ]
+  ],
+  "lab": "case:skus"
+ },
+ "connect::Find your way around": {
+  "lab": "connect"
+ },
+ "pipeline::Sort, count, group": {
+  "lab": "investigate"
+ },
+ "pipeline::Output and export": {
+  "lab": "export"
+ },
+ "entra::Look up users": {
+  "lab": "users"
+ },
+ "entra::Groups": {
+  "lab": "case:alladds"
+ },
+ "entra::Licenses": {
+  "lab": "case:leaverlic"
+ },
+ "tap::TAP commands": {
+  "lab": "tap"
+ },
+ "exchange::Find mailboxes": {
+  "lab": "rename"
+ },
+ "exchange::Permissions and shared mailboxes": {
+  "lab": "shared"
+ },
+ "exchange::Mail flow and rooms": {
+  "lab": "case:room"
+ },
+ "script::Variables and objects": {
+  "lab": "secrename"
+ },
+ "script::Compare, test and splat": {
+  "lab": "newusers"
+ },
+ "incident::Roles, offboarding and legal": {
+  "lab": "offboard"
+ },
+ "ircmd::Connect": {
+  "lab": "contain"
+ },
+ "ircmd::Identity & sign-ins (Graph)": {
+  "lab": "investigate"
+ },
+ "ircmd::Mail flow": {
+  "lab": "case:forward"
+ },
+ "ircmd::Mailbox settings": {
+  "lab": "contain"
+ },
+ "ircmd::Export & data handling": {
+  "lab": "export"
  }
 };
 const RECIPES = [
@@ -2834,8 +2900,8 @@ function buildSection(vol, g, gi, total){
   const foot = el("div", "sec-foot");
   if (g.lab && LAB_LINKS[vol.id]) {
     const a = document.createElement("a");
-    a.href = LAB_LINKS[vol.id].href;
-    a.textContent = "Drill this in " + LAB_LINKS[vol.id].label;
+    a.href = LAB_LINKS[vol.id].href + (typeof g.lab === "string" ? "#" + g.lab : "");
+    a.textContent = (typeof g.lab === "string" && g.lab.indexOf("case:") === 0 ? "Solve the case in " : "Drill this in ") + LAB_LINKS[vol.id].label;
     foot.appendChild(a);
   }
   const printBtn = el("button", null, "Print this section");

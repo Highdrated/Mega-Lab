@@ -1,19 +1,3 @@
-// LABS_CONFIG — the rooms shown in the launcher.
-//
-// To add a lab:
-//   1. Drop its folder into /labs/  (it needs its own index.html)
-//   2. Add one entry below
-//
-// Fields:
-//   id     unique, no spaces (used for "last opened" memory)
-//   name   shown in the list
-//   tag    sector the room is grouped under (Network, Code, Reference, Practice)
-//   sub    short hint under the name (language / topic)
-//   path   relative path to the lab's index.html
-//   ring   which orbit the marker sits on: ring-inner | ring-mid | ring-outer
-//   angle  degrees around the orbit, 0 = right, -90 = top, 90 = bottom
-//   glyph  small 16x16 SVG icon (optional)
-
 const LABS_CONFIG = [
   {
     id: "junos-lab",
@@ -59,21 +43,11 @@ const LABS_CONFIG = [
     id: "spelle",
     name: "Java",
     tag: "Code",
-    sub: "javascript",
+    sub: "javascript · dungeons",
     path: "labs/spelle.html",
     ring: "ring-outer",
     angle: 180,
     glyph: '<path d="M3 13L11 5"/><path d="M12 1.5v3M10.5 3h3M13.5 7.5v2M12.5 8.5h2M6.5 2v2M5.5 3h2"/>'
-  },
-    {
-    id: "style",
-    name: "Style",
-    tag: "Code",
-    sub: "html / css",
-    path: "labs/style.html",
-    ring: "ring-outer",
-    angle: 300,
-    glyph: '<path d="M6 2.5c-2 0-2 1-2 2.5s-1 2.5-2 3c1 .5 2 1.5 2 3s0 2.5 2 2.5M10 2.5c2 0 2 1 2 2.5s1 2.5 2 3c-1 .5-2 1.5-2 3s0 2.5-2 2.5"/>'
   },
     {
     id: "codex",
@@ -129,7 +103,7 @@ const LABS_CONFIG = [
     id: "hexle",
     name: "Hexle",
     tag: "Code",
-    sub: "html + css",
+    sub: "html · css · js",
     path: "labs/hexle.html",
     ring: "ring-outer",
     angle: 40,

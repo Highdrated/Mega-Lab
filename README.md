@@ -39,9 +39,32 @@ After that it opens full-screen like a native app and works offline.
 
 ## Add a lab
 
-1. Copy the lab's folder into `labs/`
-2. Add an entry in `js/labs.config.js` (there's a commented example)
+1. Copy the lab's file or folder into `labs/`
+2. Add an entry in `js/labs.config.js`:
+
+| Field | Meaning |
+|---|---|
+| `id` | unique, no spaces (used for "last opened") |
+| `name` | shown in the list |
+| `tag` | sector: Network, Code, Practice or Reference |
+| `sub` | short hint under the name |
+| `path` | path to the lab's HTML file |
+| `ring` | orbit: `ring-inner`, `ring-mid` or `ring-outer` |
+| `angle` | degrees around the orbit, 0 = right, -90 = top |
+| `glyph` | small 16×16 SVG icon (optional) |
+
 3. Push to GitHub
+
+## Today tab
+
+The launcher's **Today** tab reads each lab's saved progress and lists what is due:
+reviews (Junle, Pyle, Hexle, Poshle weak spots), dailies (Modle, Junle mix, Pyle kata),
+a weekly Detective case (Poshle or Git Lab), and where you left off. Each row opens
+the lab at the right spot through a link like `poshle.html#case:room`.
+
+Deep links: Poshle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#case:<id>` /
+`#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
+Pyle `#review` / `#kata`, Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
 ## Progress and sync
 

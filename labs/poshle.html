@@ -617,10 +617,117 @@ const CASES = [
   {t:"ESSENTIALS = Basic, O365_BUSINESS_PREMIUM = Standard, SPB = Premium.", ok:true, why:"No desktop apps = Basic. Desktop apps = Standard. Desktop apps plus Intune and Entra P1 = Premium."},
   {t:"SPB is SharePoint Plan B. The other two are mail-only plans.", why:"All three include Exchange, SharePoint and Teams. SPB has the most of everything."}
  ],
- lesson:"The codes are older than the product names. 'Office 365 Business Essentials' and 'Office 365 Business Premium' were renamed to Microsoft 365 Business Basic and Business Standard in 2020, but the SkuPartNumbers kept the old words. SPB stands for SMB Business Premium, today's Microsoft 365 Business Premium. FLOW_FREE is the free Power Automate licence a user can sign up for on their own. When a code is unclear, read its ServicePlans."}
+ lesson:"The codes are older than the product names. 'Office 365 Business Essentials' and 'Office 365 Business Premium' were renamed to Microsoft 365 Business Basic and Business Standard in 2020, but the SkuPartNumbers kept the old words. SPB stands for SMB Business Premium, today's Microsoft 365 Business Premium. FLOW_FREE is the free Power Automate licence a user can sign up for on their own. When a code is unclear, read its ServicePlans."},
+{id:"leaverlic", name:"Still paying for a leaver", sub:"Shared mailbox, licence still on",
+ problem:"<b>user@contoso.com</b> left last month. You blocked the account and converted the mailbox to shared so the manager can read it. Finance says the licence count didn't go down. Why are you still paying?",
+ clues:[
+  {id:"shared", t:"The mailbox is a SharedMailbox now. The conversion worked."},
+  {id:"blocked", t:"The account is blocked: AccountEnabled is False."},
+  {id:"licence", t:"The account still has O365_BUSINESS_PREMIUM (Business Standard) assigned."},
+  {id:"size", t:"The mailbox holds 12 GB, under the 50 GB a shared mailbox gets without a licence."},
+  {id:"nohold", t:"No archive and no litigation hold, so nothing else needs a licence either."},
+  {id:"count", t:"38 of 40 Business Standard licences are in use, this one included."}
+ ],
+ map:[
+  {cmd:["Get-Mailbox user@contoso.com | Select-Object RecipientTypeDetails", "Get-Mailbox -Identity user@contoso.com | Select-Object RecipientTypeDetails", "Get-EXOMailbox user@contoso.com | Select-Object RecipientTypeDetails", "Get-EXOMailbox -Identity user@contoso.com | Select-Object RecipientTypeDetails"], out:"\nRecipientTypeDetails\n--------------------\nSharedMailbox\n", clue:"shared"},
+  {cmd:["Get-Mailbox user@contoso.com", "Get-Mailbox -Identity user@contoso.com"], out:"\nName      Alias Database           ProhibitSendQuota    ExternalDirectoryObjectId\n----      ----- --------           -----------------    -------------------------\nLena Maes lena  EURPR02DG115-db034 49.5 GB (53,150,...) 6f1c2e8a-0b4d-4f7e-9c2a-1d3e5f7a9b0c\n"},
+  {cmd:["Get-MgUser -UserId user@contoso.com -Property AccountEnabled | Select-Object AccountEnabled", "Get-MgUser -UserId user@contoso.com -Property DisplayName,AccountEnabled | Select-Object DisplayName, AccountEnabled"], out:"\nAccountEnabled\n--------------\n         False\n", clue:"blocked"},
+  {cmd:["(Get-MgUser -UserId user@contoso.com -Property AccountEnabled).AccountEnabled"], out:"False\n", clue:"blocked"},
+  {cmd:["Get-MgUserLicenseDetail -UserId user@contoso.com", "Get-MgUserLicenseDetail -UserId user@contoso.com | Select-Object SkuPartNumber", "Get-MgUserLicenseDetail -UserId user@contoso.com | Select-Object SkuPartNumber, SkuId"], out:"\nSkuPartNumber         SkuId\n-------------         -----\nO365_BUSINESS_PREMIUM f245ecc8-75af-4f8e-b61f-27d8114de5f3\n", clue:"licence"},
+  {cmd:["Get-MailboxStatistics user@contoso.com | Select-Object TotalItemSize", "Get-MailboxStatistics -Identity user@contoso.com | Select-Object TotalItemSize", "Get-MailboxStatistics user@contoso.com | Select-Object DisplayName, TotalItemSize, ItemCount", "Get-MailboxStatistics -Identity user@contoso.com | Select-Object DisplayName, TotalItemSize, ItemCount", "Get-MailboxStatistics user@contoso.com", "Get-MailboxStatistics -Identity user@contoso.com"], out:"\nDisplayName TotalItemSize                       ItemCount\n----------- -------------                       ---------\nLena Maes   12.31 GB (13,217,559,040 bytes)         48112\n", clue:"size"},
+  {cmd:["Get-Mailbox user@contoso.com | Select-Object ArchiveStatus, LitigationHoldEnabled", "Get-Mailbox -Identity user@contoso.com | Select-Object ArchiveStatus, LitigationHoldEnabled", "Get-Mailbox user@contoso.com | Format-List ArchiveStatus, LitigationHoldEnabled", "Get-Mailbox -Identity user@contoso.com | Format-List ArchiveStatus, LitigationHoldEnabled", "Get-Mailbox user@contoso.com | Select-Object RecipientTypeDetails, ArchiveStatus, LitigationHoldEnabled"], out:"\nArchiveStatus LitigationHoldEnabled\n------------- ---------------------\nNone                          False\n", clue:"nohold"},
+  {cmd:["Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits", 'Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits, @{n="Total";e={$_.PrepaidUnits.Enabled}}'], out:"\nSkuPartNumber            ConsumedUnits Total\n-------------            ------------- -----\nO365_BUSINESS_ESSENTIALS             6    10\nO365_BUSINESS_PREMIUM               38    40\nSPB                                 12    12\nFLOW_FREE                            9 10000\n", clue:"count"},
+  {cmd:["Set-MgUserLicense -UserId user@contoso.com -AddLicenses @() -RemoveLicenses @(\"f245ecc8-75af-4f8e-b61f-27d8114de5f3\")", "Set-MgUserLicense -UserId user@contoso.com -AddLicenses @() -RemoveLicenses @('f245ecc8-75af-4f8e-b61f-27d8114de5f3')"], out:"\nDisplayName Id                                   Mail             UserPrincipalName\n----------- --                                   ----             -----------------\nLena Maes   6f1c2e8a-0b4d-4f7e-9c2a-1d3e5f7a9b0c user@contoso.com user@contoso.com\n"}
+ ],
+ hints:[
+  {cmd:"Get-Mailbox user@contoso.com | Select-Object RecipientTypeDetails", clue:"shared"},
+  {cmd:"Get-MgUser -UserId user@contoso.com -Property AccountEnabled | Select-Object AccountEnabled", clue:"blocked"},
+  {cmd:"Get-MgUserLicenseDetail -UserId user@contoso.com | Select-Object SkuPartNumber", clue:"licence"},
+  {cmd:"Get-MailboxStatistics user@contoso.com | Select-Object DisplayName, TotalItemSize, ItemCount", clue:"size"},
+  {cmd:"Get-Mailbox user@contoso.com | Select-Object ArchiveStatus, LitigationHoldEnabled", clue:"nohold"},
+  {cmd:"Get-MgSubscribedSku | Select-Object SkuPartNumber, ConsumedUnits", clue:"count"}
+ ],
+ options:[
+  {t:"Converting to shared frees the licence after 30 days.", why:"There is no timer. The licence stays assigned until someone removes it."},
+  {t:"Blocked accounts are always billed, licence or not.", why:"Billing counts assigned licences. Sign-in status doesn't matter."},
+  {t:"Converting to shared doesn't remove the licence. Remove it with Set-MgUserLicense: a shared mailbox under 50 GB without archive or hold needs none.", ok:true, why:"The licence is still on the account, and the mailbox is small with no archive or hold."},
+  {t:"Shared mailboxes always need a licence.", why:"Only when they are over 50 GB, have an archive, or are on litigation hold."}
+ ],
+ lesson:"Licences sit on the user object, and nothing in offboarding removes them for you: not blocking, not converting the mailbox. A shared mailbox works without a licence up to 50 GB, as long as it has no archive and no litigation hold. So the last offboarding step is Set-MgUserLicense -UserId user@contoso.com -AddLicenses @() -RemoveLicenses @($skuId). Order matters: convert first, then remove the licence, or the mailbox starts its countdown to deletion."},
+{id:"forward", name:"Who reads the CEO's mail?", sub:"Mails leak, forwarding is off",
+ problem:"Replies to mails from <b>ceo@contoso.com</b> sometimes come from a stranger at <b>example.net</b>, quoting mails only the CEO had. Mailbox forwarding is off, and the CEO says she set nothing up. Find the leak.",
+ clues:[
+  {id:"nofwd", t:"Mailbox forwarding is empty: no ForwardingSmtpAddress, no ForwardingAddress."},
+  {id:"rule", t:"An inbox rule named '..' forwards every mail to collect@example.net."},
+  {id:"created", t:"The rule was created on 2 October at 03:14 UTC, in the middle of the night."},
+  {id:"ip", t:"It was created from 203.0.113.10, not from the office or her home."},
+  {id:"signin", t:"The CEO's account signed in from 203.0.113.10 that same night. Someone else was in her mailbox."}
+ ],
+ map:[
+  {cmd:["Get-Mailbox ceo@contoso.com | Format-List ForwardingSmtpAddress, ForwardingAddress, DeliverToMailboxAndForward", "Get-Mailbox -Identity ceo@contoso.com | Format-List ForwardingSmtpAddress, ForwardingAddress, DeliverToMailboxAndForward", "Get-Mailbox ceo@contoso.com | Format-List ForwardingSmtpAddress, ForwardingAddress", "Get-Mailbox -Identity ceo@contoso.com | Format-List ForwardingSmtpAddress, ForwardingAddress", "Get-Mailbox -Identity ceo@contoso.com | Format-List ForwardingSmtpAddress, DeliverToMailboxAndForward", "Get-Mailbox ceo@contoso.com | Format-List ForwardingSmtpAddress, DeliverToMailboxAndForward"], out:"\nForwardingSmtpAddress      :\nForwardingAddress          :\nDeliverToMailboxAndForward : False\n", clue:"nofwd"},
+  {cmd:["Get-InboxRule -Mailbox ceo@contoso.com"], out:"\nName        Enabled Priority RuleIdentity\n----        ------- -------- ------------\nNewsletters True    1        10842117036531040257\n..          True    2        10842117036531040258\n"},
+  {cmd:["Get-InboxRule -Mailbox ceo@contoso.com | Select-Object Name, Enabled, ForwardTo", "Get-InboxRule -Mailbox ceo@contoso.com | Select-Object Name, Enabled, ForwardTo, RedirectTo", "Get-InboxRule -Mailbox ceo@contoso.com | Select-Object Name, ForwardTo", "Get-InboxRule -Mailbox ceo@contoso.com | Format-List Name, Enabled, ForwardTo", "Get-InboxRule -Mailbox ceo@contoso.com | Format-List Name, Description"], out:"\nName        Enabled ForwardTo\n----        ------- ---------\nNewsletters True\n..          True    {\"collect@example.net\" [SMTP:collect@example.net]}\n", clue:"rule"},
+  {cmd:['Get-InboxRule -Mailbox ceo@contoso.com -Identity ".." | Format-List', "Get-InboxRule -Mailbox ceo@contoso.com -Identity '..' | Format-List"], out:"\nName                : ..\nEnabled             : True\nForwardTo           : {\"collect@example.net\" [SMTP:collect@example.net]}\nMarkAsRead          : True\nStopProcessingRules : True\nDescription         : If the message:\n                        Includes these words in the message header or body: '@'\n                      Take the following actions:\n                        Forward the message to 'collect@example.net'\n                        Mark the message as read\n", clue:"rule"},
+  {cmd:["Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds ceo@contoso.com -Operations New-InboxRule", "Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -Operations New-InboxRule -UserIds ceo@contoso.com"], out:"\nCreationDate        UserIds         Operations   ResultIndex ResultCount\n------------        -------         ----------   ----------- -----------\n02/10/2026 03:14:09 ceo@contoso.com New-InboxRule           1           1\n", clue:"created"},
+  {cmd:["$r = Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds ceo@contoso.com -Operations New-InboxRule", "$r = Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -Operations New-InboxRule -UserIds ceo@contoso.com"], out:"", clue:"created"},
+  {cmd:["($r[0].AuditData | ConvertFrom-Json).ClientIP", "($r.AuditData | ConvertFrom-Json).ClientIP"], out:"203.0.113.10:51234\n", clue:"ip", needs:"$r"},
+  {cmd:["$r[0].AuditData | ConvertFrom-Json | Select-Object CreationTime, ClientIP, Operation"], out:"\nCreationTime        ClientIP           Operation\n------------        --------           ---------\n2026-10-02T03:14:09 203.0.113.10:51234 New-InboxRule\n", clue:["created", "ip"], needs:"$r"},
+  {cmd:["$s = Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'ceo@contoso.com'\" -All"], out:""},
+  {cmd:["$s | Group-Object IpAddress | Select-Object Name, Count"], out:"\nName          Count\n----          -----\n198.51.100.7     44\n203.0.113.10      3\n", needs:"$s"},
+  {cmd:['$s | Where-Object IpAddress -eq "203.0.113.10" | Select-Object CreatedDateTime, AppDisplayName', '$s | Where-Object { $_.IpAddress -eq "203.0.113.10" } | Select-Object CreatedDateTime, AppDisplayName'], out:"\nCreatedDateTime     AppDisplayName\n---------------     --------------\n02/10/2026 03:11:52 OfficeHome\n02/10/2026 03:12:30 Office 365 Exchange Online\n02/10/2026 03:14:05 Office 365 Exchange Online\n", clue:"signin", needs:"$s"},
+  {cmd:['Remove-InboxRule -Mailbox ceo@contoso.com -Identity ".." -Confirm:$false', "Remove-InboxRule -Mailbox ceo@contoso.com -Identity '..' -Confirm:$false"], out:""}
+ ],
+ hints:[
+  {cmd:"Get-Mailbox ceo@contoso.com | Format-List ForwardingSmtpAddress, ForwardingAddress, DeliverToMailboxAndForward", clue:"nofwd"},
+  {cmd:"Get-InboxRule -Mailbox ceo@contoso.com | Select-Object Name, Enabled, ForwardTo", clue:"rule"},
+  {cmd:"Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds ceo@contoso.com -Operations New-InboxRule", clue:"created"},
+  {cmd:"$r = Search-UnifiedAuditLog -StartDate 2026-10-01 -EndDate 2026-10-03 -UserIds ceo@contoso.com -Operations New-InboxRule", clue:"ip", sets:"$r"},
+  {cmd:"($r[0].AuditData | ConvertFrom-Json).ClientIP", clue:"ip"},
+  {cmd:"$s = Get-MgAuditLogSignIn -Filter \"userPrincipalName eq 'ceo@contoso.com'\" -All", clue:"signin", sets:"$s"},
+  {cmd:'$s | Where-Object IpAddress -eq "203.0.113.10" | Select-Object CreatedDateTime, AppDisplayName', clue:"signin"}
+ ],
+ options:[
+  {t:"The CEO set up forwarding herself and forgot about it.", why:"The rule was made at 03:14 from 203.0.113.10, an address she never uses, right after a sign-in from that address."},
+  {t:"Mailbox forwarding is switched on.", why:"ForwardingSmtpAddress and ForwardingAddress are both empty."},
+  {t:"Someone else on the mail threads forwards them on.", why:"The forwarding rule sits in the CEO's own mailbox."},
+  {t:"An attacker got into the mailbox and hid an inbox rule that forwards everything. Contain the account, remove the rule, and check other mailboxes for the same trick.", ok:true, why:"The '..' rule was created from 203.0.113.10 minutes after that IP signed in as the CEO."}
+ ],
+ lesson:"Forwarding can live in three places: on the mailbox (ForwardingSmtpAddress), in an inbox rule, or in a transport rule. Attackers like inbox rules with names like '.' or '..' that mark mail as read, because nobody looks there. The audit log records who created a rule and from which IP (New-InboxRule, ClientIP). When that IP matches sign-ins the user never made, it is a compromise: contain first (block, revoke sessions, reset the password), then remove the rule and check every mailbox for rules that forward outside. Poshle scenario: Compromise."},
+{id:"room", name:"The meeting room says maybe", sub:"Bookings stay tentative",
+ problem:"People book <b>room.atlas@contoso.com</b> in Outlook, but the room never confirms. Every booking stays 'tentative', and last week two teams turned up at the same time. What is wrong with the room?",
+ clues:[
+  {id:"isroom", t:"It is a RoomMailbox, so it should answer bookings by itself."},
+  {id:"auto", t:"AutomateProcessing is AutoUpdate: the room marks meetings tentative but never accepts or declines."},
+  {id:"conflicts", t:"AllowConflicts is False, but only an accepting room enforces that."},
+  {id:"policy", t:"AllBookInPolicy is True: everyone may book it. Permissions are fine."}
+ ],
+ map:[
+  {cmd:["Get-Mailbox room.atlas@contoso.com | Select-Object RecipientTypeDetails", "Get-Mailbox -Identity room.atlas@contoso.com | Select-Object RecipientTypeDetails", "Get-EXOMailbox room.atlas@contoso.com | Select-Object RecipientTypeDetails", "Get-EXOMailbox -Identity room.atlas@contoso.com | Select-Object RecipientTypeDetails"], out:"\nRecipientTypeDetails\n--------------------\nRoomMailbox\n", clue:"isroom"},
+  {cmd:["Get-CalendarProcessing room.atlas@contoso.com | Format-List", "Get-CalendarProcessing -Identity room.atlas@contoso.com | Format-List"], out:"\nAutomateProcessing         : AutoUpdate\nAllowConflicts             : False\nBookingWindowInDays        : 180\nMaximumDurationInMinutes   : 1440\nAllBookInPolicy            : True\nAllRequestInPolicy         : False\nBookInPolicy               : {}\nAddOrganizerToSubject      : True\nDeleteComments             : True\nIdentity                   : Atlas\n", clue:["auto", "conflicts", "policy"]},
+  {cmd:["Get-CalendarProcessing room.atlas@contoso.com", "Get-CalendarProcessing -Identity room.atlas@contoso.com"], out:"\nIdentity AutomateProcessing\n-------- ------------------\nAtlas    AutoUpdate\n", clue:"auto"},
+  {cmd:["Get-CalendarProcessing room.atlas@contoso.com | Select-Object AutomateProcessing", "Get-CalendarProcessing -Identity room.atlas@contoso.com | Select-Object AutomateProcessing"], out:"\nAutomateProcessing\n------------------\nAutoUpdate\n", clue:"auto"},
+  {cmd:["Get-CalendarProcessing room.atlas@contoso.com | Select-Object AllowConflicts", "Get-CalendarProcessing -Identity room.atlas@contoso.com | Select-Object AllowConflicts"], out:"\nAllowConflicts\n--------------\n         False\n", clue:"conflicts"},
+  {cmd:["Get-CalendarProcessing room.atlas@contoso.com | Select-Object AllBookInPolicy, BookInPolicy", "Get-CalendarProcessing -Identity room.atlas@contoso.com | Select-Object AllBookInPolicy, BookInPolicy", "Get-CalendarProcessing room.atlas@contoso.com | Select-Object AllBookInPolicy", "Get-CalendarProcessing -Identity room.atlas@contoso.com | Select-Object AllBookInPolicy"], out:"\nAllBookInPolicy BookInPolicy\n--------------- ------------\n           True {}\n", clue:"policy"},
+  {cmd:["Get-CalendarProcessing room.atlas@contoso.com | Select-Object AutomateProcessing, AllowConflicts, AllBookInPolicy", "Get-CalendarProcessing -Identity room.atlas@contoso.com | Select-Object AutomateProcessing, AllowConflicts, AllBookInPolicy"], out:"\nAutomateProcessing AllowConflicts AllBookInPolicy\n------------------ -------------- ---------------\nAutoUpdate                  False            True\n", clue:["auto", "conflicts", "policy"]},
+  {cmd:["Get-MailboxFolderPermission room.atlas@contoso.com:\\Calendar", "Get-MailboxFolderPermission -Identity room.atlas@contoso.com:\\Calendar"], out:"\nFolderName User      AccessRights       SharingPermissionFlags\n---------- ----      ------------       ----------------------\nCalendar   Default   {LimitedDetails}\nCalendar   Anonymous {None}\n"},
+  {cmd:["Set-CalendarProcessing room.atlas@contoso.com -AutomateProcessing AutoAccept", "Set-CalendarProcessing -Identity room.atlas@contoso.com -AutomateProcessing AutoAccept"], out:""}
+ ],
+ hints:[
+  {cmd:"Get-Mailbox room.atlas@contoso.com | Select-Object RecipientTypeDetails", clue:"isroom"},
+  {cmd:"Get-CalendarProcessing room.atlas@contoso.com | Select-Object AutomateProcessing", clue:"auto"},
+  {cmd:"Get-CalendarProcessing room.atlas@contoso.com | Select-Object AllowConflicts", clue:"conflicts"},
+  {cmd:"Get-CalendarProcessing room.atlas@contoso.com | Select-Object AllBookInPolicy, BookInPolicy", clue:"policy"}
+ ],
+ options:[
+  {t:"People don't have permission to book the room.", why:"AllBookInPolicy is True, so everyone may book it."},
+  {t:"It is an ordinary user mailbox, not a room.", why:"RecipientTypeDetails says RoomMailbox."},
+  {t:"The room's AutomateProcessing is AutoUpdate, so it never accepts or declines. Set it to AutoAccept.", ok:true, why:"AutoUpdate only marks meetings tentative and leaves the decision to a delegate who doesn't exist here."},
+  {t:"Outlook caches the room's free/busy and needs a restart.", why:"The room itself never sends an accept. That is a server setting, not a cache."}
+ ],
+ lesson:"A room mailbox answers invitations through the Calendar Attendant, and AutomateProcessing decides how far it goes. AutoUpdate only puts the meeting in the room's calendar as tentative and leaves accepting to a delegate. AutoAccept lets the room accept or decline on its own, and only then does AllowConflicts False actually block double bookings. Fix: Set-CalendarProcessing room.atlas@contoso.com -AutomateProcessing AutoAccept."}
 ];
 
-const EXTRA_CMDS = ["Get-Date","Get-History","Clear-Host","Get-Help","Get-Member","Get-Command","Where-Object","Select-Object","Sort-Object","Group-Object","Measure-Object","ForEach-Object","Format-Table","Format-List","Export-Csv","Import-Csv","Set-Clipboard","Get-Clipboard","Out-File","Test-Path","Get-ChildItem","Set-Location","Get-Location","Start-Sleep","Write-Host","Write-Output","Get-InstalledModule","Install-Module","Update-Module","Import-Module","Disconnect-MgGraph","Disconnect-ExchangeOnline","Get-MgUser","Update-MgUser","New-MgUser","Remove-MgUser","Get-MgGroup","Get-MgGroupMember","New-MgGroupMember","Get-MgSubscribedSku","Set-MgUserLicense","Get-MgUserMemberOf","Get-MgUserAuthenticationMethod","Get-EXOMailbox","Get-Mailbox","Set-Mailbox","Get-MailboxStatistics","Get-MessageTraceV2","Search-UnifiedAuditLog","Connect-IPPSSession","Add-RoleGroupMember","Get-RoleGroupMember","Get-InboxRule","Remove-InboxRule","Get-MailboxAutoReplyConfiguration","Set-MailboxAutoReplyConfiguration","Get-MgServicePrincipal","Get-MgUserOauth2PermissionGrant","Get-MgAuditLogDirectoryAudit","Get-MgAuditLogSignIn","Export-Excel","Import-Excel","ConvertFrom-Json","ConvertTo-Json","Find-MgGraphCommand","Get-MgContext","Get-Team","Add-TeamUser","Connect-MicrosoftTeams","Get-DistributionGroupMember","Add-DistributionGroupMember","Get-MailboxPermission","Remove-MailboxPermission","Add-MailboxPermission","Add-RecipientPermission","Get-EXORecipient","New-TimeSpan","Get-Random","Revoke-MgUserSignInSession","Get-MgUserLicenseDetail","Set-CalendarProcessing","Connect-PnPOnline","Get-PnPList","Add-eDiscoveryCaseAdmin","Clear-History","Get-Process","Get-Content","Set-Content","Copy-Item","Move-Item","Remove-Item","New-Item","Invoke-RestMethod","Out-GridView","Tee-Object","Compare-Object","Get-Variable","Get-Alias","Get-PSReadLineKeyHandler","Set-PSReadLineOption","ConvertTo-NamePart","Get-UnifiedGroup","Get-UnifiedGroupLinks","Add-UnifiedGroupLinks","Remove-UnifiedGroupLinks","Get-MgGroupOwner","Get-Module","Get-Error","New-Mailbox","Get-Recipient"];
+const EXTRA_CMDS = ["Get-Date","Get-History","Clear-Host","Get-Help","Get-Member","Get-Command","Where-Object","Select-Object","Sort-Object","Group-Object","Measure-Object","ForEach-Object","Format-Table","Format-List","Export-Csv","Import-Csv","Set-Clipboard","Get-Clipboard","Out-File","Test-Path","Get-ChildItem","Set-Location","Get-Location","Start-Sleep","Write-Host","Write-Output","Get-InstalledModule","Install-Module","Update-Module","Import-Module","Disconnect-MgGraph","Disconnect-ExchangeOnline","Get-MgUser","Update-MgUser","New-MgUser","Remove-MgUser","Get-MgGroup","Get-MgGroupMember","New-MgGroupMember","Get-MgSubscribedSku","Set-MgUserLicense","Get-MgUserMemberOf","Get-MgUserAuthenticationMethod","Get-EXOMailbox","Get-Mailbox","Set-Mailbox","Get-MailboxStatistics","Get-MessageTraceV2","Search-UnifiedAuditLog","Connect-IPPSSession","Add-RoleGroupMember","Get-RoleGroupMember","Get-InboxRule","Remove-InboxRule","Get-MailboxAutoReplyConfiguration","Set-MailboxAutoReplyConfiguration","Get-MgServicePrincipal","Get-MgUserOauth2PermissionGrant","Get-MgAuditLogDirectoryAudit","Get-MgAuditLogSignIn","Export-Excel","Import-Excel","ConvertFrom-Json","ConvertTo-Json","Find-MgGraphCommand","Get-MgContext","Get-Team","Add-TeamUser","Connect-MicrosoftTeams","Get-DistributionGroupMember","Add-DistributionGroupMember","Get-MailboxPermission","Remove-MailboxPermission","Add-MailboxPermission","Add-RecipientPermission","Get-EXORecipient","New-TimeSpan","Get-Random","Revoke-MgUserSignInSession","Get-MgUserLicenseDetail","Set-CalendarProcessing","Connect-PnPOnline","Get-PnPList","Add-eDiscoveryCaseAdmin","Clear-History","Get-Process","Get-Content","Set-Content","Copy-Item","Move-Item","Remove-Item","New-Item","Invoke-RestMethod","Out-GridView","Tee-Object","Compare-Object","Get-Variable","Get-Alias","Get-PSReadLineKeyHandler","Set-PSReadLineOption","ConvertTo-NamePart","Get-UnifiedGroup","Get-UnifiedGroupLinks","Add-UnifiedGroupLinks","Remove-UnifiedGroupLinks","Get-MgGroupOwner","Get-Module","Get-Error","New-Mailbox","Get-Recipient","Get-CalendarProcessing","Get-MailboxFolderPermission"];
 const ALIASES = ["open","clear","cls","exit","history","h","sort","ls","cd","pwd","cat","echo","man","help","caffeinate","code","dir","select","where","foreach","%","?","gm","ft","fl","r"];
 const MANUAL_PARAMS = {
  "select-object":["Property","ExcludeProperty","ExpandProperty","First","Last","Skip","Unique","Index"],
@@ -725,6 +832,7 @@ const PARAMS = {};
   SCEN.forEach(s => s.steps.forEach(st => {
     (st.cmd.match(/\b[A-Z][a-z]+-[A-Z][A-Za-z0-9]+/g) || []).forEach(add);
   }));
+  CASES.forEach(c => c.map.forEach(e => [].concat(e.cmd).forEach(x => (x.match(/\b[A-Z][a-z]+-[A-Z][A-Za-z0-9]+/g) || []).forEach(add))));
   Object.keys(MANUAL_PARAMS).forEach(k => PARAMS[k] = MANUAL_PARAMS[k].slice());
   const all = [];
   SCEN.forEach(s => s.steps.forEach(st => all.push(st.cmd)));
@@ -1088,6 +1196,7 @@ function casePick(i){
     r.solved++;
     r.last = k.cmds;
     r.best = r.best ? Math.min(r.best, k.cmds) : k.cmds;
+    r.at = Date.now();
     save(KEY_STORE, store);
     coach('<span class="ok">✓ case closed</span> in ' + k.cmds + (k.cmds === 1 ? " command" : " commands") + (k.hints ? ", " + k.hints + (k.hints === 1 ? " hint" : " hints") : "") + ".");
     renderRail();
@@ -1690,6 +1799,7 @@ function openScenario(id){
     S.idx = 0;
   }
   store.scen = S.scen.id === "weak" ? store.scen : S.scen.id;
+  try { window.history.replaceState(null, "", "#" + S.scen.id); } catch(e){}
   save(KEY_STORE, store);
   print('<span class="dim">── ' + esc(S.scen.name) + " ──</span>");
   newStep();
@@ -1715,7 +1825,10 @@ document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on
 printText("PowerShell 7.5.3");
 print('<span class="dim">Poshle — every key behaves like pwsh on your Mac. Click the terminal and start typing.</span>');
 print("");
-openScenario(store.scen && (SCEN.some(s => s.id === store.scen) || store.scen === "free" || CASES.some(c => "case:" + c.id === store.scen)) ? store.scen : "start");
+function validScen(id){ return !!id && (SCEN.some(s => s.id === id) || id === "free" || id === "weak" || CASES.some(c => "case:" + c.id === id)); }
+function hashScen(){ try { return decodeURIComponent(location.hash.slice(1)); } catch(e){ return ""; } }
+window.addEventListener("hashchange", () => { const h = hashScen(); if (validScen(h) && (!S.scen || S.scen.id !== h)) openScenario(h); });
+openScenario(validScen(hashScen()) ? hashScen() : validScen(store.scen) ? store.scen : "start");
 </script>
 </body>
 </html>
