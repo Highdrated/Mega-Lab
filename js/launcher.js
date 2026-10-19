@@ -495,6 +495,7 @@ function lsParse(key) { try { return JSON.parse(lsGet(key)); } catch (e) { retur
 const WEEK = 7 * 864e5;
 const POSHLE_CASES = ["alladds", "vanished", "graphlogin", "stuckmail", "skus", "leaverlic", "forward", "room"];
 const GIT_CASES = ["detached", "secret", "rejected", "ignored", "markers"];
+const SHELLE_CASES = ["port", "disk", "exec", "sshkey", "restart"];
 
 function todayItems() {
   const out = [];
@@ -511,9 +512,11 @@ function todayItems() {
     if (n) add("pyle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 10);
   }
   const ps = lsParse("poshle.v1");
-  if (ps && ps.steps) {
-    const n = Object.entries(ps.steps).filter(([k, r]) => r && r.miss > 0 && !/^(gym|start):/.test(k) && (r.clean || 0) < r.miss).length;
-    if (n) add("poshle", Math.min(n, 10) + (n === 1 ? " weak spot" : " weak spots"), "review", "weak", 9);
+  const sh = lsParse("shelle.v1");
+  for (const [lab, st] of [["poshle", ps], ["shelle", sh]]) {
+    if (!st || !st.steps) continue;
+    const n = Object.entries(st.steps).filter(([k, r]) => r && r.miss > 0 && !/^(gym|start):/.test(k) && (r.clean || 0) < r.miss).length;
+    if (n) add(lab, Math.min(n, 10) + (n === 1 ? " weak spot" : " weak spots"), "review", "weak", 9);
   }
 
   const hx = lsParse("hexle.v1");
@@ -529,17 +532,16 @@ function todayItems() {
   if (mix && mix.last !== dayKey(0, false)) add("junle", "Daily mix" + (mix.streak ? " · streak " + mix.streak : ""), "daily", "mix", 6);
   if (py && py.kata && py.kata.last !== dayKey(0, true)) add("pyle", "Daily kata" + (py.kata.streak ? " · streak " + py.kata.streak : ""), "daily", "kata", 5);
 
-  const pc = (ps && ps.cases) || {}, gc = lsParse("gitlab.cases") || {};
-  const lastSolve = Math.max(0, ...Object.values(pc).map((r) => (r && r.at) || 0), ...Object.values(gc).map((r) => (r && r.at) || 0));
-  if (Date.now() - lastSolve > WEEK) {
-    const pOpen = POSHLE_CASES.filter((id) => !(pc[id] && pc[id].solved));
-    const gOpen = GIT_CASES.filter((id) => !(gc[id] && gc[id].solved));
-    const lastP = Math.max(0, ...Object.values(pc).map((r) => (r && r.at) || 0));
-    const lastG = Math.max(0, ...Object.values(gc).map((r) => (r && r.at) || 0));
-    const pickGit = gOpen.length && (!pOpen.length || lastG <= lastP);
-    if (pickGit) add("git-lab", "Detective case of the week", "weekly", "case:" + gOpen[0], 4);
-    else if (pOpen.length) add("poshle", "Detective case of the week", "weekly", "case:" + pOpen[0], 4);
-    else add("poshle", "Re-solve a Detective case", "weekly", "case:" + POSHLE_CASES[Math.floor(Date.now() / WEEK) % POSHLE_CASES.length], 3);
+  const DET = [
+    { lab: "poshle", ids: POSHLE_CASES, rec: (ps && ps.cases) || {} },
+    { lab: "git-lab", ids: GIT_CASES, rec: lsParse("gitlab.cases") || {} },
+    { lab: "shelle", ids: SHELLE_CASES, rec: (sh && sh.cases) || {} },
+  ].filter((d) => labs.some((l) => l.id === d.lab));
+  const lastAt = (rec) => Math.max(0, ...Object.values(rec).map((r) => (r && r.at) || 0));
+  if (Date.now() - Math.max(0, ...DET.map((d) => lastAt(d.rec))) > WEEK) {
+    const open = DET.map((d) => ({ ...d, open: d.ids.filter((id) => !(d.rec[id] && d.rec[id].solved)), last: lastAt(d.rec) })).filter((d) => d.open.length).sort((a, b) => a.last - b.last);
+    if (open.length) add(open[0].lab, "Detective case of the week", "weekly", "case:" + open[0].open[0], 4);
+    else { const d = DET[Math.floor(Date.now() / WEEK) % DET.length]; add(d.lab, "Re-solve a Detective case", "weekly", "case:" + d.ids[Math.floor(Date.now() / WEEK) % d.ids.length], 3); }
   }
 
   const gl = lsParse("gitlab.v1");

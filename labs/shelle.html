@@ -1,0 +1,1592 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="day">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#e7ebef">
+<title>Shelle — zsh &amp; Docker muscle memory</title>
+<style>
+:root{
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", Consolas, monospace;
+  --r: 4px;
+  --rail: 256px;
+  --keys: 316px;
+  --top: 56px;
+}
+html[data-theme="day"]{
+  --bg:#e7ebef; --panel:#f8f9fb; --sunk:#eef1f4; --ink:#151e27; --strong:#0a1118;
+  --muted:#5d6b79; --faint:#8a97a3; --line:#d4dae0; --hair:#e2e7ec;
+  --accent:#0f8a6a; --accent-soft:#d7efe7; --good:#1a7f4b; --good-soft:#d9efe3; --warn:#b5532a;
+}
+html[data-theme="night"]{
+  --bg:#0e1419; --panel:#151c22; --sunk:#111920; --ink:#d9e2e8; --strong:#f1f6f9;
+  --muted:#8a9dab; --faint:#65788a; --line:#242f38; --hair:#1d262e;
+  --accent:#3fcf9f; --accent-soft:#113328; --good:#4cc38a; --good-soft:#12301f; --warn:#e98a5c;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.45;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+.top{height:var(--top);display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:9px;flex:none}
+.brand b{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--strong);letter-spacing:-.01em}
+.brand span{font-size:12px;color:var(--faint)}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none}
+.seg button{padding:6px 12px;font-size:12.5px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.stats{display:flex;gap:18px;margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.stats div{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.stats b{font-size:15px;color:var(--strong);font-weight:600}
+.tbtn{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r);color:var(--muted);flex:none}
+.tbtn:hover{background:var(--sunk);color:var(--ink)}
+
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr) var(--keys);height:calc(100vh - var(--top))}
+.rail{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:14px 0 24px}
+.rail h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:0 16px 8px}
+.rail hr{border:none;border-top:1px solid var(--line);margin:12px 16px}
+.sc{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;width:100%;text-align:left;padding:8px 16px;border-left:3px solid transparent}
+.sc:hover{background:var(--sunk)}
+.sc.on{background:var(--sunk);border-left-color:var(--accent)}
+.sc i{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:600;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r);color:var(--muted);background:var(--panel)}
+.sc.on i{border-color:var(--accent);color:var(--accent)}
+.sc.full i{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.sc b{display:flex;justify-content:space-between;gap:8px;font-size:13.5px;font-weight:600;color:var(--strong)}
+.sc b em{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:500;color:var(--faint)}
+.sc.full b em{color:var(--good)}
+.sc small{display:block;font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc > span{min-width:0}
+.bar{height:3px;background:var(--hair);border-radius:2px;margin-top:5px;overflow:hidden}
+.bar span{display:block;height:100%;background:var(--accent)}
+.sc.full .bar span{background:var(--good)}
+
+.stage{display:flex;flex-direction:column;gap:14px;padding:16px;min-width:0;min-height:0}
+.brief{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:14px 16px;flex:none}
+.bhead{display:flex;align-items:center;gap:12px}
+.bhead h2{font-size:15px;font-weight:650;color:var(--strong)}
+.bhead .count{font-family:var(--mono);font-size:12px;color:var(--faint)}
+.bhead .acts{margin-left:auto;display:flex;gap:6px}
+.chip{font-size:12px;padding:5px 10px;border:1px solid var(--line);border-radius:var(--r);color:var(--muted);background:var(--panel)}
+.chip:hover{border-color:var(--accent);color:var(--accent)}
+.chip.prime{background:var(--accent);border-color:var(--accent);color:#fff}
+.task{margin-top:8px;font-size:14.5px;color:var(--ink);max-width:88ch}
+.task kbd,.kbd{font-family:var(--mono);font-size:11.5px;padding:1px 6px;border:1px solid var(--line);border-bottom-width:2px;border-radius:4px;background:var(--sunk);color:var(--strong);white-space:nowrap}
+.target{margin-top:10px;font-family:var(--mono);font-size:13px;padding:8px 10px;background:var(--sunk);border:1px solid var(--hair);border-radius:var(--r);color:var(--strong);white-space:pre-wrap;overflow-wrap:anywhere}
+.target.multi{white-space:pre;overflow-wrap:normal;overflow-x:auto}
+.target.hidden{color:var(--faint);font-style:italic;font-family:var(--sans)}
+.dots{display:flex;gap:5px;margin-top:12px;flex-wrap:wrap}
+.dots span{width:18px;height:6px;border-radius:2px;background:var(--hair)}
+.dots span.done{background:var(--faint)}
+.dots span.clean{background:var(--good)}
+.dots span.cur{background:var(--accent)}
+
+.term{flex:1;min-height:0;display:flex;flex-direction:column;background:#1e1e1e;border-radius:8px;border:1px solid #000;box-shadow:0 8px 30px rgba(0,0,0,.18);overflow:hidden;position:relative}
+.tbar{height:30px;flex:none;display:flex;align-items:center;padding:0 12px;background:linear-gradient(#3a3a3a,#2e2e2e);border-bottom:1px solid #111;position:relative}
+.tbar .lights{display:flex;gap:8px}
+.tbar .lights span{width:12px;height:12px;border-radius:50%}
+.tbar .lights span:nth-child(1){background:#ff5f57}
+.tbar .lights span:nth-child(2){background:#febc2e}
+.tbar .lights span:nth-child(3){background:#28c840}
+.tbar .ttl{position:absolute;left:0;right:0;text-align:center;font-size:12px;color:#a8a8a8;pointer-events:none}
+.screen{flex:1;min-height:0;overflow-y:auto;padding:8px 10px 14px;font-family:var(--mono);font-size:13.5px;line-height:1.45;color:#d4d4d4;white-space:pre-wrap;overflow-wrap:anywhere;cursor:text}
+.screen::-webkit-scrollbar{width:10px}
+.screen::-webkit-scrollbar-thumb{background:#444;border-radius:5px}
+.ln{min-height:1.45em}
+.p{color:#d4d4d4}
+.cp{color:#7a7a7a}
+.k-cmd{color:#e5e510}
+.k-str{color:#29b8db}
+.k-var{color:#23d18b}
+.k-par{color:#8a8a8a}
+.k-op{color:#8a8a8a}
+.k-num{color:#ffffff}
+.k-type{color:#b0b0b0}
+.k-com{color:#3c9b3c}
+.ghost{color:#6b6b6b}
+.cur{background:#d4d4d4;color:#1e1e1e}
+.blur .cur{background:transparent;color:inherit;outline:1px solid #9a9a9a;outline-offset:-1px}
+.err{color:#f14c4c}
+.coach{color:#c586c0}
+.coach b{color:#e0a8dc;font-weight:600}
+.ok{color:#23d18b}
+.dim{color:#8a8a8a}
+.srch{color:#d4d4d4}
+.srch.fail{color:#f14c4c}
+.hl{background:#5a4b00}
+#ta{position:absolute;left:-9999px;top:0;width:10px;height:10px;opacity:0}
+
+.keys{background:var(--panel);border-left:1px solid var(--line);overflow-y:auto;padding:14px 14px 24px}
+.keys h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin:14px 0 6px}
+.keys h4:first-child{margin-top:0}
+.kr{display:grid;grid-template-columns:78px 1fr 24px;gap:8px;align-items:center;min-height:30px;padding:3px 6px;border-radius:var(--r);font-size:12.5px;color:var(--muted);transition:background .25s}
+.kr .ks{display:flex;gap:3px}
+.kr .also{display:block;font-size:11px;color:var(--faint)}
+.kr .n{font-family:var(--mono);font-size:11px;color:var(--faint);text-align:right}
+.kr.flash{background:var(--accent-soft);color:var(--strong)}
+.kr.used .n{color:var(--accent)}
+.tip{margin-top:16px;font-size:12px;color:var(--muted);padding:10px;border:1px dashed var(--line);border-radius:var(--r)}
+.tip b{color:var(--strong)}
+
+.brief.case{max-height:56vh;overflow-y:auto}
+.cl-h{margin-top:12px;font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.clues{margin-top:6px;display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:6px}
+.clue{display:grid;grid-template-columns:16px minmax(0,1fr);gap:8px;align-items:start;padding:7px 10px;border:1px solid var(--hair);border-radius:var(--r);background:var(--sunk);font-size:12.5px;line-height:1.4;color:var(--faint)}
+.clue i{font-style:normal;font-family:var(--mono);font-size:11.5px;font-weight:700;line-height:1.5}
+.clue.got{background:var(--good-soft);border-color:var(--good);color:var(--ink)}
+.clue.got i{color:var(--good)}
+.cnote{margin-top:10px;font-size:12.5px;color:var(--muted);max-width:88ch}
+.opts{display:grid;gap:6px;margin-top:6px}
+.opt{text-align:left;padding:8px 12px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);font-size:13.5px;line-height:1.4}
+.opt:hover:not([disabled]){border-color:var(--accent);color:var(--accent)}
+.opt[disabled]{cursor:default}
+.opt.no{border-color:var(--warn);color:var(--warn)}
+.opt.yes{border-color:var(--good);background:var(--good-soft);color:var(--strong)}
+.verdict{margin-top:10px;padding:10px 12px;border-left:3px solid var(--good);background:var(--sunk);border-radius:0 var(--r) var(--r) 0;font-size:13.5px;max-width:88ch}
+.verdict.bad{border-left-color:var(--warn)}
+.verdict b{color:var(--strong)}
+.verdict .lesson{margin-top:8px;color:var(--ink)}
+.sc.solved i{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.sc.solved small{color:var(--good)}
+
+@media (max-width:1180px){
+  .shell{grid-template-columns:var(--rail) minmax(0,1fr)}
+  .keys{display:none}
+  .keys.open{display:block;position:fixed;right:0;top:var(--top);bottom:0;width:var(--keys);z-index:30;box-shadow:-8px 0 30px rgba(0,0,0,.15)}
+  #keysBtn{display:grid}
+}
+@media (min-width:1181px){ #keysBtn{display:none} }
+@media (max-width:760px){
+  .shell{grid-template-columns:1fr}
+  .rail{display:none}
+  .rail.open{display:block;position:fixed;left:0;top:var(--top);bottom:0;width:var(--rail);z-index:30;box-shadow:8px 0 30px rgba(0,0,0,.15)}
+  .top{gap:10px}
+  .bhead{flex-wrap:wrap;row-gap:6px}
+  .bhead h2{flex-basis:100%}
+  .stats{display:none}
+  #keysBtn{margin-left:auto}
+  .brand span{display:none}
+  .stage{padding:10px}
+  #railBtn{display:grid}
+}
+@media (min-width:761px){ #railBtn{display:none} }
+</style>
+</head>
+<body>
+<header class="top">
+  <button class="tbtn" id="railBtn" aria-label="Scenarios"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
+  <div class="brand"><b>Shelle</b><span>zsh &amp; Docker muscle memory</span></div>
+  <div class="seg" id="modeSeg">
+    <button data-mode="ghost">Ghost</button>
+    <button data-mode="recall">Recall</button>
+  </div>
+  <div class="stats">
+    <div><b id="stWpm">–</b>last wpm</div>
+    <div><b id="stAvg">–</b>avg wpm</div>
+    <div><b id="stClean">0/0</b>clean</div>
+    <div><b id="stStreak">0</b>streak</div>
+  </div>
+  <button class="tbtn" id="keysBtn" aria-label="Shortcuts"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="2.5" y="6" width="19" height="12" rx="2"/><path d="M6 10h1M10 10h1M14 10h1M18 10h0M7 14h10"/></svg></button>
+  <button class="tbtn" id="themeBtn" aria-label="Switch theme"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="12" r="4.5"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2M5 5l1.5 1.5M17.5 17.5L19 19M19 5l-1.5 1.5M6.5 17.5L5 19"/></svg></button>
+</header>
+
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main class="stage">
+    <section class="brief" id="brief"></section>
+    <section class="term" id="term">
+      <div class="tbar"><div class="lights"><span></span><span></span><span></span></div><div class="ttl">zsh — kaatje@mbp — 120×32</div></div>
+      <div class="screen" id="screen"><div id="scroll"></div><div class="ln" id="live"></div></div>
+      <textarea id="ta" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"></textarea>
+    </section>
+  </main>
+  <aside class="keys" id="keys"></aside>
+</div>
+
+<script>
+const PROMPT = "kaatje@mbp ~ % ";
+const CONT = "> ";
+
+const LS_LA = "total 32\ndrwxr-xr-x   8 kaatje  staff   256 Oct 19 18:40 .\ndrwxr-xr-x   5 kaatje  staff   160 Oct 12 09:02 ..\n-rw-r--r--   1 kaatje  staff    94 Oct 12 09:02 .env\ndrwxr-xr-x  12 kaatje  staff   384 Oct 19 18:40 .git\n-rw-r--r--   1 kaatje  staff   612 Oct 18 21:15 README.md\n-rw-r--r--   1 kaatje  staff   418 Oct 18 21:15 deploy.sh\n-rw-r--r--   1 kaatje  staff   803 Oct 17 14:22 docker-compose.yml\ndrwxr-xr-x   4 kaatje  staff   128 Oct 19 18:40 logs\ndrwxr-xr-x   6 kaatje  staff   192 Oct 19 18:31 src\n";
+const DOCKER_PS = "CONTAINER ID   IMAGE          COMMAND                  CREATED       STATUS       PORTS                  NAMES\n3f9c2a7d1e04   nginx:1.27     \"/docker-entrypoint.…\"   2 hours ago   Up 2 hours   0.0.0.0:8080->80/tcp   web\n";
+const PING = "PING 203.0.113.20 (203.0.113.20): 56 data bytes\n64 bytes from 203.0.113.20: icmp_seq=0 ttl=57 time=11.842 ms\n64 bytes from 203.0.113.20: icmp_seq=1 ttl=57 time=12.107 ms\n64 bytes from 203.0.113.20: icmp_seq=2 ttl=57 time=11.630 ms\n64 bytes from 203.0.113.20: icmp_seq=3 ttl=57 time=11.981 ms\n\n--- 203.0.113.20 ping statistics ---\n4 packets transmitted, 4 packets received, 0.0% packet loss\nround-trip min/avg/max/stddev = 11.630/11.890/12.107/0.176 ms\n";
+
+const SCEN = [
+{id:"start", name:"Start here", sub:"How Shelle works", steps:[
+ {task:"Every step gives you a job. Type the command and press <kbd>Enter</kbd>, exactly like in Terminal on your Mac. Start by asking where you are: <b>pwd</b> means print working directory.", cmd:"pwd", out:"/Users/kaatje\n"},
+ {task:"Press <kbd>↑</kbd> to bring the last command back, then <kbd>Enter</kbd>. History is saved between visits, like in zsh.", cmd:"pwd", use:["hist"], out:"/Users/kaatje\n"},
+ {task:"Type <b>whi</b> and press <kbd>Tab</kbd>: zsh completes the command name. Then add a space and <b>docker</b>. <b>which</b> tells you where a program lives.", cmd:"which docker", use:["tab"], out:"/usr/local/bin/docker\n"},
+ {task:"In <b>Ghost</b> mode the rest of the command shows in grey. In <b>Recall</b> mode (top bar) only the job is shown and you type from memory. Clear the screen with <kbd>Ctrl</kbd><kbd>L</kbd>, then run <b>whoami</b>.", cmd:"whoami", use:["C-l"], out:"kaatje\n"}
+]},
+{id:"nav", name:"Find your way", sub:"pwd, ls, cd, cat, head", steps:[
+ {task:"Go to your Projects folder. <b>~</b> is short for your home folder.", cmd:"cd ~/Projects"},
+ {task:"List what is there, one name per line.", cmd:"ls", out:"station-site\nlunch-tool\nnotes.txt\n"},
+ {task:"Step into station-site.", cmd:"cd station-site"},
+ {task:"List everything, including hidden files (the ones starting with a dot), in the long format. <b>-l</b> long, <b>-a</b> all.", cmd:"ls -la", out:LS_LA},
+ {task:"Read the README in one go.", cmd:"cat README.md", out:"# Station site\n\nStatic site plus a small PHP API.\n\nRun locally:  docker compose up -d\nLogs:         docker compose logs -f app\nDeploy:       ./deploy.sh\n"},
+ {task:"Show only the first 5 lines of the app log.", cmd:"head -n 5 logs/app.log", out:"2026-10-19 18:02:11 INFO  boot ok\n2026-10-19 18:02:12 INFO  db connected\n2026-10-19 18:10:47 WARN  slow query 812ms\n2026-10-19 18:14:03 ERROR upstream timeout\n2026-10-19 18:14:09 INFO  retry ok\n"},
+ {task:"And the last 3 lines, where the newest entries are.", cmd:"tail -n 3 logs/app.log", out:"2026-10-19 18:39:58 INFO  request /api/menu 200\n2026-10-19 18:40:02 ERROR upstream timeout\n2026-10-19 18:40:05 INFO  request /api/menu 200\n"},
+ {task:"Go back up one folder. <b>..</b> means the parent folder.", cmd:"cd .."}
+]},
+{id:"files", name:"Files & permissions", sub:"mkdir, cp, mv, chmod", steps:[
+ {task:"Make a backup folder with a subfolder for this month in one go. <b>-p</b> creates the parents too and doesn't complain if they exist.", cmd:"mkdir -p backups/2026-10"},
+ {task:"Copy the whole src folder into it. <b>-r</b> means recursive: the folder and everything inside.", cmd:"cp -r src backups/2026-10/"},
+ {task:"Rename notes.txt to notes-old.txt. <b>mv</b> moves, and moving to a new name in the same folder is a rename.", cmd:"mv notes.txt notes-old.txt"},
+ {task:"Look at the permissions of deploy.sh.", cmd:"ls -l deploy.sh", out:"-rw-r--r--  1 kaatje  staff  418 Oct 18 21:15 deploy.sh\n"},
+ {task:"Make it executable. <b>+x</b> adds the execute permission.", cmd:"chmod +x deploy.sh"},
+ {task:"Check again: the x's are there now (rwx for you, r-x for the rest).", cmd:"ls -l deploy.sh", out:"-rwxr-xr-x  1 kaatje  staff  418 Oct 18 21:15 deploy.sh\n"},
+ {task:"Lock the .env file down to you only: 600 = read and write for the owner, nothing for anyone else.", cmd:"chmod 600 .env"},
+ {task:"Delete the old notes. <b>rm</b> has no bin: it is gone straight away.", cmd:"rm notes-old.txt"}
+]},
+{id:"search", name:"Search & pipes", sub:"grep, find, sort, wc", steps:[
+ {task:"Find every TODO in the src folder, with file name and line number. <b>-r</b> recursive, <b>-n</b> line numbers.", cmd:"grep -rn \"TODO\" src", out:"src/api/menu.php:14:// TODO cache this\nsrc/api/order.php:41:// TODO validate quantity\nsrc/js/app.js:7:// TODO remove debug log\n"},
+ {task:"How many lines in the log mention error, upper or lower case? Pipe <b>|</b> the matches into <b>wc -l</b>, which counts lines.", cmd:"grep -i \"error\" logs/app.log | wc -l", out:"      17\n"},
+ {task:"Find log files older than 7 days. Always look before you delete.", cmd:"find logs -name \"*.log\" -mtime +7", out:"logs/app-2026-10-01.log\nlogs/app-2026-10-04.log\nlogs/app-2026-10-08.log\n"},
+ {task:"Same search, now delete them. <b>-delete</b> removes what the search found, without a prompt.", cmd:"find logs -name \"*.log\" -mtime +7 -delete"},
+ {task:"Which URLs are requested most? Take field 5 (space separated), count duplicates, sort biggest first, show the top 3.", cmd:"cut -d \" \" -f 5 logs/app.log | sort | uniq -c | sort -rn | head -n 3", out:" 412 /api/menu\n  96 /api/order\n  31 /health\n"},
+ {task:"Find which files are taking the most space here, human-readable, biggest last.", cmd:"du -sh * | sort -h", out:"4.0K\tREADME.md\n4.0K\tdeploy.sh\n4.0K\tdocker-compose.yml\n1.8M\tsrc\n 46M\tlogs\n"},
+ {task:"How full is the disk?", cmd:"df -h /", out:"Filesystem     Size   Used  Avail Capacity  Mounted on\n/dev/disk3s1  460Gi  312Gi  130Gi    71%    /\n"}
+]},
+{id:"procs", name:"Processes & ports", sub:"ps, lsof, kill", steps:[
+ {task:"Start a quick PHP dev server in the background. The <b>&amp;</b> at the end hands the terminal back to you.", cmd:"php -S localhost:8000 -t public &", out:"[1] 4312\n"},
+ {task:"List running jobs started from this terminal.", cmd:"jobs", out:"[1]  + running    php -S localhost:8000 -t public\n"},
+ {task:"Find every process with php in its name. The grep line itself also shows up, that's normal.", cmd:"ps aux | grep php", out:"kaatje  4312   0.0  0.1 34120312   9284 s003  S     6:41PM   0:00.04 php -S localhost:8000 -t public\nkaatje  4340   0.0  0.0 34122148    828 s003  S+    6:41PM   0:00.00 grep php\n"},
+ {task:"Which process is listening on port 8000?", cmd:"lsof -i :8000", out:"COMMAND  PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nphp     4312 kaatje    4u  IPv4 0x8f3c2b1e7d0a4c11      0t0  TCP localhost:irdmi (LISTEN)\n"},
+ {task:"Stop it politely. <b>kill</b> sends the stop signal to the PID.", cmd:"kill 4312", out:"[1]  + terminated  php -S localhost:8000 -t public\n"},
+ {task:"Check nothing is on 8000 any more. No output means free.", cmd:"lsof -i :8000"}
+]},
+{id:"remote", name:"SSH & copying", sub:"ssh-keygen, ssh, scp, rsync", steps:[
+ {task:"Make a modern SSH key pair. <b>-t ed25519</b> is the key type, <b>-C</b> a label so you know whose key it is.", cmd:"ssh-keygen -t ed25519 -C \"user@contoso.com\"", out:"Generating public/private ed25519 key pair.\nYour identification has been saved in /Users/kaatje/.ssh/id_ed25519\nYour public key has been saved in /Users/kaatje/.ssh/id_ed25519.pub\nThe key fingerprint is:\nSHA256:q2Kx7fD9Ln4tR1vZ0cW8eYb3mPj6sHa5uGi2oNk7XyE user@contoso.com\n"},
+ {task:"Put your public key on the server, so it lets you in without a password.", cmd:"ssh-copy-id admin@203.0.113.20", out:"/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed\nadmin@203.0.113.20's password:\n\nNumber of key(s) added:        1\n\nNow try logging into the machine, with:   \"ssh 'admin@203.0.113.20'\"\n"},
+ {task:"Copy the backup archive to the server's /tmp folder. <b>scp</b> is cp over SSH: <b>user@host:path</b> is the remote side.", cmd:"scp backup.tar.gz admin@203.0.113.20:/tmp/", out:"backup.tar.gz                              100%   18MB  21.4MB/s   00:00\n"},
+ {task:"Preview a sync of the site folder to the server: <b>-a</b> keep everything, <b>-v</b> show files, <b>-z</b> compress, <b>--dry-run</b> change nothing.", cmd:"rsync -avz --dry-run src/ admin@203.0.113.20:/var/www/station/", out:"sending incremental file list\napi/menu.php\napi/order.php\njs/app.js\n\nsent 412 bytes  received 38 bytes  900.00 bytes/sec\ntotal size is 1,843,210  speedup is 4,096.02 (DRY RUN)\n"},
+ {task:"Run one command on the server without opening a session: how long has it been up?", cmd:"ssh admin@203.0.113.20 \"uptime\"", out:" 18:44:02 up 23 days,  4:11,  0 users,  load average: 0.08, 0.05, 0.01\n"}
+]},
+{id:"net", name:"Network checks", sub:"ping, curl, dig, nc", steps:[
+ {task:"Is the server reachable? Send exactly 4 pings with <b>-c 4</b> (without it, ping runs until Ctrl+C).", cmd:"ping -c 4 203.0.113.20", out:PING},
+ {task:"Ask the website for its headers only. <b>-I</b> shows the response status without downloading the page.", cmd:"curl -I https://contoso.com", out:"HTTP/2 200\ncontent-type: text/html; charset=utf-8\nserver: nginx\nstrict-transport-security: max-age=31536000\ncache-control: max-age=600\n"},
+ {task:"Call the health API quietly (<b>-s</b> hides the progress bar).", cmd:"curl -s https://contoso.com/api/health", out:"{\"status\":\"ok\",\"db\":\"up\",\"version\":\"1.8.2\"}\n"},
+ {task:"Which IP does the name point to? <b>+short</b> gives just the answer.", cmd:"dig contoso.com +short", out:"203.0.113.20\n"},
+ {task:"Is port 443 open on the server? <b>nc -zv</b> tests a TCP port without sending data.", cmd:"nc -zv 203.0.113.20 443", out:"Connection to 203.0.113.20 port 443 [tcp/https] succeeded!\n"},
+ {task:"Which network interfaces have an IPv4 address? Filter the long output with grep.", cmd:"ifconfig | grep \"inet \"", out:"\tinet 127.0.0.1 netmask 0xff000000\n\tinet 192.168.1.42 netmask 0xffffff00 broadcast 192.168.1.255\n"}
+]},
+{id:"docker", name:"Docker basics", sub:"images, run, logs, exec", steps:[
+ {task:"Which containers are running?", cmd:"docker ps", out:"CONTAINER ID   IMAGE     COMMAND   CREATED   STATUS    PORTS     NAMES\n"},
+ {task:"Download a specific nginx version. Always pin a version tag instead of latest.", cmd:"docker pull nginx:1.27", out:"1.27: Pulling from library/nginx\nDigest: sha256:5f0b9d1e7c3a8b2f4e6d9a1c0b7e3f5a2d8c4b6e9f1a3c5e7b9d2f4a6c8e0b1d\nStatus: Downloaded newer image for nginx:1.27\ndocker.io/library/nginx:1.27\n"},
+ {task:"Run it in the background (<b>-d</b>), name it web, and publish port 8080 on your Mac to port 80 in the container. Long line: end with <b>\\</b> and press <kbd>Enter</kbd> to continue on the next line.", cmd:"docker run -d --name web \\\n  -p 8080:80 nginx:1.27", use:["cont"], out:"3f9c2a7d1e04b8a6c5d2e9f1a7b3c0d4e8f2a6b1c9d3e7f0a5b8c2d6e4f1a9b3\n"},
+ {task:"Check it's up, and see the port mapping.", cmd:"docker ps", out:DOCKER_PS},
+ {task:"Read the last 5 log lines of the web container.", cmd:"docker logs --tail 5 web", out:"/docker-entrypoint.sh: Configuration complete; ready for start up\n2026/10/19 16:45:10 [notice] 1#1: nginx/1.27.2\n2026/10/19 16:45:10 [notice] 1#1: start worker processes\n192.168.65.1 - - [19/Oct/2026:16:45:31 +0000] \"GET / HTTP/1.1\" 200 615 \"-\" \"curl/8.7.1\" \"-\"\n192.168.65.1 - - [19/Oct/2026:16:45:40 +0000] \"GET /favicon.ico HTTP/1.1\" 404 153 \"-\" \"Mozilla/5.0\" \"-\"\n"},
+ {task:"Run one command inside the running container: which nginx version is it?", cmd:"docker exec web nginx -v", out:"nginx version: nginx/1.27.2\n"},
+ {task:"Stop the container.", cmd:"docker stop web", out:"web\n"},
+ {task:"Remove it. A stopped container still exists until you rm it.", cmd:"docker rm web", out:"web\n"}
+]},
+{id:"compose", name:"Docker Compose", sub:"up, ps, logs, down, prune", steps:[
+ {task:"Start every service in docker-compose.yml in the background.", cmd:"docker compose up -d", out:"[+] Running 3/3\n ✔ Network station-site_default  Created\n ✔ Container station-site-db-1   Started\n ✔ Container station-site-app-1  Started\n"},
+ {task:"Show the services and their state.", cmd:"docker compose ps", out:"NAME                 IMAGE           SERVICE   STATUS          PORTS\nstation-site-app-1   station-app     app       Up 12 seconds   0.0.0.0:8080->80/tcp\nstation-site-db-1    mariadb:11.4    db        Up 13 seconds   3306/tcp\n"},
+ {task:"Last 20 log lines of the app service only.", cmd:"docker compose logs --tail 20 app", out:"app-1  | [19-Oct-2026 16:47:02] NOTICE: fpm is running, pid 1\napp-1  | [19-Oct-2026 16:47:02] NOTICE: ready to handle connections\napp-1  | 172.18.0.1 -  19/Oct/2026:16:47:15 +0000 \"GET /index.php\" 200\n"},
+ {task:"Restart only the app after a config change.", cmd:"docker compose restart app", out:"[+] Restarting 1/1\n ✔ Container station-site-app-1  Started\n"},
+ {task:"How much space do images, containers and volumes use?", cmd:"docker system df", out:"TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          14        3         6.12GB    4.87GB (79%)\nContainers      3         2         2.4MB     0B (0%)\nLocal Volumes   4         2         1.03GB    412MB (39%)\nBuild Cache     61        0         2.31GB    2.31GB\n"},
+ {task:"Remove only dangling images (the untagged leftovers). <b>-f</b> skips the yes/no question.", cmd:"docker image prune -f", out:"Deleted Images:\ndeleted: sha256:9c1e4f7a2b8d3c6e0f5a1b9d7c2e4f8a6b3d1c5e9f7a2b4c8d6e0f1a3b5c7d9e\n\nTotal reclaimed space: 1.42GB\n"},
+ {task:"Stop and remove the services and their network. Volumes (your database data) stay unless you add -v.", cmd:"docker compose down", out:"[+] Running 3/3\n ✔ Container station-site-app-1  Removed\n ✔ Container station-site-db-1   Removed\n ✔ Network station-site_default  Removed\n"}
+]},
+{id:"gym", name:"Shortcut gym", sub:"Editing without the mouse", gym:true, steps:[
+ {task:"The d is missing. <kbd>Ctrl</kbd><kbd>A</kbd> jumps to the start of the line. Type d and press <kbd>Enter</kbd>.", pre:"ocker ps", cmd:"docker ps", use:["C-a"], out:DOCKER_PS},
+ {task:"Wrong container. <kbd>Ctrl</kbd><kbd>E</kbd> to the end, <kbd>Ctrl</kbd><kbd>W</kbd> cuts the word before the cursor, then type web.", pre:"docker logs --tail 5 db", at:0, cmd:"docker logs --tail 5 web", use:["C-e","C-w"], out:"2026/10/19 16:45:10 [notice] 1#1: start worker processes\n"},
+ {task:"<kbd>↑</kbd> brings back the last command. <kbd>Ctrl</kbd><kbd>W</kbd> the name away and type app.", cmd:"docker logs --tail 5 app", use:["hist","C-w"], out:"[19-Oct-2026 16:47:02] NOTICE: ready to handle connections\n"},
+ {task:"Type <b>docker restart </b> and press <kbd>⌥</kbd><kbd>.</kbd> to drop in the last word of the previous command.", cmd:"docker restart app", use:["M-."], out:"app\n"},
+ {task:"In zsh <kbd>Ctrl</kbd><kbd>U</kbd> wipes the whole line. Do that, then type pwd.", pre:"rm -rf ~/Projects/station-site", at:10, cmd:"pwd", use:["C-u"], out:"/Users/kaatje\n"},
+ {task:"Change 8080 into 9090: <kbd>⌥</kbd><kbd>B</kbd> jumps back one word, <kbd>⌥</kbd><kbd>D</kbd> cuts the word after the cursor, then type 9090.", pre:"lsof -i :8080", cmd:"lsof -i :9090", use:["M-b","M-d"]},
+ {task:"Two letters are swapped and the cursor sits on the r. <kbd>Ctrl</kbd><kbd>T</kbd> swaps the letter before the cursor with the one under it.", pre:"gerp -rn TODO src", at:2, cmd:"grep -rn TODO src", use:["C-t"], out:"src/api/menu.php:14:// TODO cache this\n"},
+ {task:"<kbd>⌥</kbd><kbd>F</kbd> jumps forward word by word, and the dash splits ssh-keygen into two words. Press it twice to land after keygen, cut the rest with <kbd>Ctrl</kbd><kbd>K</kbd>, then type a space and <b>-t ed25519</b>.", pre:"ssh-keygen -t rsa", at:0, cmd:"ssh-keygen -t ed25519", use:["M-f","C-k"]},
+ {task:"Wipe the line with <kbd>Ctrl</kbd><kbd>U</kbd>, then undo with <kbd>Ctrl</kbd><kbd>_</kbd> (Ctrl+Shift+-) and run it.", pre:"docker compose ps", cmd:"docker compose ps", use:["C-u","undo"], out:"NAME                 IMAGE           SERVICE   STATUS\nstation-site-app-1   station-app     app       Up 2 minutes\n"},
+ {task:"Run this once so it lands in your history.", cmd:"ssh admin@203.0.113.20 \"uptime\"", out:" 18:52:40 up 23 days,  4:19,  0 users,  load average: 0.04, 0.06, 0.01\n"},
+ {task:"Run something else in between.", cmd:"date", out:()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");return d.toDateString().slice(0,10)+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())+" CEST "+d.getFullYear()+"\n"}},
+ {task:"Find it again: <kbd>Ctrl</kbd><kbd>R</kbd>, type <b>upt</b>, press <kbd>Enter</kbd>.", cmd:"ssh admin@203.0.113.20 \"uptime\"", use:["C-r"], out:" 18:53:02 up 23 days,  4:20,  0 users,  load average: 0.03, 0.05, 0.01\n"},
+ {task:"Split a long command: type <b>docker run -d --name web \\</b> and press <kbd>Enter</kbd>. zsh waits with <b>&gt;</b>. Type the rest and press <kbd>Enter</kbd>.", cmd:"docker run -d --name web \\\n  -p 8080:80 nginx:1.27", use:["cont"], out:"8b1e5d3c9f2a7e4b6d0c1a8f3e5b7d9c2a4f6e8b0d1c3a5e7f9b2d4c6a8e0f1b\n"},
+ {task:"Start typing anything, cancel the line with <kbd>Ctrl</kbd><kbd>C</kbd>, then run whoami.", cmd:"whoami", use:["C-c"], out:"kaatje\n"}
+]}
+];
+
+const CASES = [
+{id:"port", name:"Port is already allocated", sub:"docker run refuses 8080",
+ problem:"You want to try the new site container: <b>docker run -d -p 8080:80 station-app</b>. Docker answers <b>Bind for 0.0.0.0:8080 failed: port is already allocated</b>. You don't remember starting anything. What is holding the port?",
+ clues:[
+  {id:"error", t:"docker run fails: port 8080 is already allocated."},
+  {id:"nodocker", t:"No running container publishes 8080. It isn't Docker itself."},
+  {id:"lsof", t:"lsof says PID 4312, a php process, is listening on 8080."},
+  {id:"which", t:"PID 4312 is php -S localhost:8080 -t public, a dev server started from the Passle project three days ago."}
+ ],
+ map:[
+  {cmd:["docker run -d -p 8080:80 station-app", "docker run -d --name web -p 8080:80 station-app"], out:"docker: Error response from daemon: driver failed programming external connectivity on endpoint quirky_hopper: Bind for 0.0.0.0:8080 failed: port is already allocated.\n", err:true, clue:"error"},
+  {cmd:["docker ps", "docker ps -a"], out:"CONTAINER ID   IMAGE          COMMAND                  CREATED      STATUS      PORTS                    NAMES\n7a2d9c4e1b03   mariadb:11.4   \"docker-entrypoint.s…\"   3 days ago   Up 3 days   0.0.0.0:3306->3306/tcp   db\n", clue:"nodocker"},
+  {cmd:["lsof -i :8080", "sudo lsof -i :8080", "lsof -i tcp:8080", "lsof -nP -i :8080"], out:"COMMAND  PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nphp     4312 kaatje    4u  IPv4 0x8f3c2b1e7d0a4c11      0t0  TCP localhost:http-alt (LISTEN)\n", clue:"lsof"},
+  {cmd:["ps -p 4312 -o pid,lstart,command", "ps -p 4312 -o command", "ps -p 4312", "ps aux | grep 4312", "ps aux | grep php"], out:"  PID STARTED                      COMMAND\n 4312 Thu Oct 16 20:11:37 2026     php -S localhost:8080 -t public\n", clue:"which"},
+  {cmd:["lsof -p 4312 | grep cwd", "lsof -a -p 4312 -d cwd"], out:"php     4312 kaatje  cwd    DIR   1,16      192 9123847 /Users/kaatje/Projects/passle-kitchen\n", clue:"which"},
+  {cmd:["kill 4312"], out:"", note:"stopped. docker run on 8080 works now."},
+  {cmd:["docker run -d -p 8081:80 station-app"], out:"c5e1f3a7b9d2e4f6a8c0b2d4e6f8a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5\n", note:"another port works too, but the old dev server is still running in the background."}
+ ],
+ hints:[
+  {cmd:"docker run -d -p 8080:80 station-app", clue:"error"},
+  {cmd:"docker ps", clue:"nodocker"},
+  {cmd:"lsof -i :8080", clue:"lsof"},
+  {cmd:"ps -p 4312 -o pid,lstart,command", clue:"which"}
+ ],
+ options:[
+  {t:"Docker Desktop is broken. Restart it.", why:"No container uses 8080, and lsof shows a php process owns the port. Restarting Docker changes nothing."},
+  {t:"An old php -S dev server is still listening on 8080. Stop it with kill 4312, or publish the container on another port.", ok:true, why:"lsof names PID 4312, and ps shows it is php -S localhost:8080 started days ago."},
+  {t:"The mariadb container uses 8080 too.", why:"docker ps shows it publishes 3306, not 8080."},
+  {t:"Port 8080 is reserved by macOS.", why:"macOS reserves nothing on 8080. A normal process owns it."}
+ ],
+ lesson:"Only one program can listen on a port at a time. When something says 'address already in use' or 'port is already allocated', ask the system who owns the port: lsof -i :8080 gives the PID, ps -p <pid> -o command tells you what it is. Dev servers started with php -S, python -m http.server or npm run dev keep running in a forgotten terminal tab or in the background (&). Stop them with kill <pid>, or Ctrl+C in their tab."},
+{id:"disk", name:"No space left on device", sub:"The build dies halfway",
+ problem:"On the home server, <b>docker compose build</b> stops with <b>no space left on device</b>. Last month the disk was half empty. What filled it, and what is safe to clean?",
+ clues:[
+  {id:"full", t:"df -h shows the root disk at 100%, 0 bytes free."},
+  {id:"docker", t:"/var/lib/docker holds 38G, by far the biggest folder."},
+  {id:"logs", t:"Red herring: /var/log is only 1.2G. Logs are not the problem."},
+  {id:"images", t:"docker system df: 31GB of images, 27GB reclaimable, plus 6GB of build cache."},
+  {id:"dangling", t:"docker images shows dozens of <none> images: old builds that lost their tag."}
+ ],
+ map:[
+  {cmd:["docker compose build", "docker compose up -d --build"], out:" => ERROR [app 4/7] RUN composer install --no-dev\n------\nfailed to solve: failed to copy files: write /var/lib/docker/overlay2/ 9b2f.../vendor/autoload.php: no space left on device\n", err:true},
+  {cmd:["df -h", "df -h /"], out:"Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda2        57G   57G     0 100% /\ntmpfs           1.9G     0  1.9G   0% /dev/shm\n/dev/sda1       511M  6.1M  505M   2% /boot/efi\n", clue:"full"},
+  {cmd:["sudo du -sh /var/lib/docker", "du -sh /var/lib/docker"], out:"38G\t/var/lib/docker\n", clue:"docker"},
+  {cmd:["sudo du -sh /var/*", "sudo du -sh /var/* | sort -h", "du -sh /var/* | sort -h"], out:"4.0K\t/var/mail\n8.0K\t/var/tmp\n120M\t/var/cache\n1.2G\t/var/log\n38G\t/var/lib\n", clue:["docker", "logs"]},
+  {cmd:["sudo du -sh /var/log", "du -sh /var/log"], out:"1.2G\t/var/log\n", clue:"logs"},
+  {cmd:["docker system df"], out:"TYPE            TOTAL     ACTIVE    SIZE      RECLAIMABLE\nImages          47        3         31.4GB    27.1GB (86%)\nContainers      3         3         12MB      0B (0%)\nLocal Volumes   5         2         1.8GB     640MB (35%)\nBuild Cache     212       0         6.03GB    6.03GB\n", clue:"images"},
+  {cmd:["docker images", "docker image ls"], out:"REPOSITORY    TAG       IMAGE ID       CREATED        SIZE\nstation-app   latest    4c1e9a7f2b3d   2 days ago     684MB\n<none>        <none>    8d2f6b1c9e4a   3 days ago     684MB\n<none>        <none>    1a7c3e5f9b2d   4 days ago     683MB\n<none>        <none>    6e9b2d4f1a8c   6 days ago     681MB\n<none>        <none>    3f5a7c9e1b2d   8 days ago     679MB\nmariadb       11.4      b2d4f6a8c0e1   3 weeks ago    406MB\n... 41 more\n", clue:"dangling"},
+  {cmd:["docker images -f dangling=true", "docker images --filter dangling=true"], out:"REPOSITORY   TAG       IMAGE ID       CREATED       SIZE\n<none>       <none>    8d2f6b1c9e4a   3 days ago    684MB\n<none>       <none>    1a7c3e5f9b2d   4 days ago    683MB\n<none>       <none>    6e9b2d4f1a8c   6 days ago    681MB\n... 37 more\n", clue:"dangling"},
+  {cmd:["docker image prune -f"], out:"Total reclaimed space: 26.8GB\n", note:"that freed the space. The build cache (6GB) can go too with docker builder prune -f."},
+  {cmd:["docker builder prune -f"], out:"Total:\t6.03GB\n"},
+  {cmd:["docker system prune -a --volumes"], out:"WARNING! This will remove:\n  - all stopped containers\n  - all networks not used by at least one container\n  - all anonymous volumes not used by at least one container\n  - all images without at least one container associated to them\n  - all build cache\n\nAre you sure you want to continue? [y/N] ", note:"careful: this also deletes unused volumes, which can hold database data. Answer N here and prune images first.", warn:true}
+ ],
+ hints:[
+  {cmd:"df -h", clue:"full"},
+  {cmd:"sudo du -sh /var/* | sort -h", clue:"docker"},
+  {cmd:"sudo du -sh /var/log", clue:"logs"},
+  {cmd:"docker system df", clue:"images"},
+  {cmd:"docker images", clue:"dangling"}
+ ],
+ options:[
+  {t:"The logs grew too big. Empty /var/log.", why:"/var/log is only 1.2G of the 57G disk."},
+  {t:"Every rebuild left an old untagged image behind. Remove the dangling images and the build cache; leave volumes alone.", ok:true, why:"docker system df shows 27GB of reclaimable images and 6GB of build cache, and docker images lists dozens of <none> images."},
+  {t:"The database volume is full. Delete the volumes.", why:"Volumes are only 1.8GB, and deleting them deletes your data."},
+  {t:"The disk is failing and shows the wrong size.", why:"df and du agree: Docker's folder really holds 38G."}
+ ],
+ lesson:"Each docker build makes a new image. When the tag moves to the new one, the old image stays on disk as <none>:<none>, a dangling image. Over weeks of rebuilds they fill the disk. Find the space with df -h (which disk) and du -sh (which folder), then ask Docker itself with docker system df. Safe cleanup: docker image prune -f and docker builder prune -f. Be careful with docker system prune -a --volumes: unused volumes can be a stopped database's data."},
+{id:"exec", name:"Permission denied on my own script", sub:"./deploy.sh refuses",
+ problem:"You cloned the station-site repo on a new Mac and ran <b>./deploy.sh</b>. zsh says <b>permission denied</b>. You own the file. Even sudo doesn't work. Why?",
+ clues:[
+  {id:"denied", t:"./deploy.sh gives: zsh: permission denied: ./deploy.sh."},
+  {id:"sudo", t:"sudo ./deploy.sh gives: command not found. So it isn't about being admin."},
+  {id:"owner", t:"ls -l shows you own the file (kaatje staff)."},
+  {id:"nox", t:"The permissions are -rw-r--r--: read and write, but no x anywhere. The file is not executable."},
+  {id:"git", t:"git ls-files -s shows mode 100644: the repo stores it as a plain file, so every clone gets it without x."}
+ ],
+ map:[
+  {cmd:["./deploy.sh"], out:"zsh: permission denied: ./deploy.sh\n", err:true, clue:"denied", needs:"!chmod"},
+  {cmd:["./deploy.sh"], out:"→ building assets\n→ syncing to 203.0.113.20\nsending incremental file list\nsent 1,204 bytes  received 64 bytes\n→ done\n", needs:"chmod"},
+  {cmd:["sudo ./deploy.sh"], out:"Password:\nsudo: ./deploy.sh: command not found\n", err:true, clue:"sudo"},
+  {cmd:["ls -l deploy.sh", "ls -la deploy.sh", "ls -l"], out:"-rw-r--r--  1 kaatje  staff  418 Oct 19 18:20 deploy.sh\n", clue:["owner", "nox"], needs:"!chmod"},
+  {cmd:["ls -l deploy.sh", "ls -la deploy.sh"], out:"-rwxr-xr-x  1 kaatje  staff  418 Oct 19 18:20 deploy.sh\n", needs:"chmod"},
+  {cmd:["whoami"], out:"kaatje\n", clue:"owner"},
+  {cmd:["head -n 3 deploy.sh", "cat deploy.sh"], out:"#!/bin/zsh\nset -e\necho \"→ building assets\"\n"},
+  {cmd:["git ls-files -s deploy.sh", "git ls-files --stage deploy.sh"], out:"100644 6f2a9c1e4b7d3f8a0c5e2b9d1f4a7c3e6b8d0f2a 0\tdeploy.sh\n", clue:"git"},
+  {cmd:["chmod +x deploy.sh", "chmod 755 deploy.sh", "chmod u+x deploy.sh"], out:"", sets:"chmod", note:"x added on this Mac. To fix it for every clone: git update-index --chmod=+x deploy.sh and commit."},
+  {cmd:["zsh deploy.sh", "sh deploy.sh", "bash deploy.sh"], out:"→ building assets\n→ syncing to 203.0.113.20\n→ done\n", note:"that works because zsh reads the file itself; it doesn't need the x bit. ./deploy.sh still won't."},
+  {cmd:["git update-index --chmod=+x deploy.sh"], out:""}
+ ],
+ hints:[
+  {cmd:"./deploy.sh", clue:"denied"},
+  {cmd:"sudo ./deploy.sh", clue:"sudo"},
+  {cmd:"ls -l deploy.sh", clue:"nox"},
+  {cmd:"git ls-files -s deploy.sh", clue:"git"}
+ ],
+ options:[
+  {t:"You're not an admin on the new Mac.", why:"sudo runs as root and still fails, so it isn't about rights to the file."},
+  {t:"The file has no execute bit. chmod +x deploy.sh fixes it here; git update-index --chmod=+x fixes it for every clone.", ok:true, why:"ls -l shows -rw-r--r-- and git stores the file as 100644."},
+  {t:"macOS blocks scripts downloaded from the internet.", why:"Gatekeeper warns about apps, it doesn't print 'permission denied' for a shell script from git."},
+  {t:"The first line (#!/bin/zsh) is wrong.", why:"A wrong shebang gives 'bad interpreter' or 'no such file', not 'permission denied'."}
+ ],
+ lesson:"To run a file as ./name, it needs the execute permission (the x in ls -l). Three groups get permissions: owner, group, everyone else, each with r (read), w (write), x (execute). chmod +x adds x for everyone, chmod 755 sets rwxr-xr-x, chmod 600 sets rw------- (for secrets). Git remembers only one thing about permissions: executable or not (100755 vs 100644), so set it in git once and every clone gets it."},
+{id:"sshkey", name:"SSH key refused", sub:"Permission denied (publickey)",
+ problem:"Yesterday <b>ssh admin@203.0.113.20</b> worked with your key. Today, after copying your <b>.ssh</b> folder to the new Mac, the server says <b>Permission denied (publickey)</b>. The key is the same. Why does the server refuse it?",
+ clues:[
+  {id:"denied", t:"ssh fails with Permission denied (publickey)."},
+  {id:"verbose", t:"ssh -v shows a loud warning: UNPROTECTED PRIVATE KEY FILE, permissions 0644 are too open."},
+  {id:"ignored", t:"Because of that, ssh says 'This private key will be ignored' and has no key left to offer."},
+  {id:"perms", t:"ls -l ~/.ssh shows id_ed25519 as -rw-r--r--: everyone on the Mac could read your private key."}
+ ],
+ map:[
+  {cmd:["ssh admin@203.0.113.20"], out:"admin@203.0.113.20: Permission denied (publickey).\n", err:true, clue:"denied", needs:"!fixed"},
+  {cmd:["ssh admin@203.0.113.20"], out:"Welcome to Ubuntu 24.04.1 LTS\nLast login: Sun Oct 18 21:40:12 2026 from 198.51.100.7\nadmin@station:~$ ", note:"you're in. Type exit to leave a real session.", needs:"fixed"},
+  {cmd:["ssh -v admin@203.0.113.20", "ssh -vv admin@203.0.113.20"], out:"OpenSSH_9.8p1, LibreSSL 3.3.6\ndebug1: Connecting to 203.0.113.20 port 22.\ndebug1: Connection established.\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\n@         WARNING: UNPROTECTED PRIVATE KEY FILE!          @\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@\nPermissions 0644 for '/Users/kaatje/.ssh/id_ed25519' are too open.\nIt is required that your private key files are NOT accessible by others.\nThis private key will be ignored.\ndebug1: Authentications that can continue: publickey\ndebug1: No more authentication methods to try.\nadmin@203.0.113.20: Permission denied (publickey).\n", clue:["verbose", "ignored"], needs:"!fixed"},
+  {cmd:["ls -l ~/.ssh", "ls -la ~/.ssh"], out:"total 32\n-rw-r--r--  1 kaatje  staff   419 Oct 19 08:12 config\n-rw-r--r--  1 kaatje  staff   411 Oct 19 08:12 id_ed25519\n-rw-r--r--  1 kaatje  staff    99 Oct 19 08:12 id_ed25519.pub\n-rw-r--r--  1 kaatje  staff  1834 Oct 19 08:12 known_hosts\n", clue:"perms", needs:"!fixed"},
+  {cmd:["ls -l ~/.ssh", "ls -la ~/.ssh"], out:"total 32\n-rw-r--r--  1 kaatje  staff   419 Oct 19 08:12 config\n-rw-------  1 kaatje  staff   411 Oct 19 08:12 id_ed25519\n-rw-r--r--  1 kaatje  staff    99 Oct 19 08:12 id_ed25519.pub\n-rw-r--r--  1 kaatje  staff  1834 Oct 19 08:12 known_hosts\n", needs:"fixed"},
+  {cmd:["cat ~/.ssh/config"], out:"Host station\n  HostName 203.0.113.20\n  User admin\n  IdentityFile ~/.ssh/id_ed25519\n"},
+  {cmd:["cat ~/.ssh/id_ed25519.pub"], out:"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8xq2Kx7fD9Ln4tR1vZ0cW8eYb3mPj6sHa5uGi2oNk7 user@contoso.com\n"},
+  {cmd:["chmod 600 ~/.ssh/id_ed25519", "chmod 400 ~/.ssh/id_ed25519", "chmod go-rwx ~/.ssh/id_ed25519"], out:"", sets:"fixed", note:"only you can read the private key now. Try ssh again."},
+  {cmd:["chmod 700 ~/.ssh"], out:""}
+ ],
+ hints:[
+  {cmd:"ssh admin@203.0.113.20", clue:"denied"},
+  {cmd:"ssh -v admin@203.0.113.20", clue:"verbose"},
+  {cmd:"ls -l ~/.ssh", clue:"perms"}
+ ],
+ options:[
+  {t:"The server removed your public key overnight.", why:"The client never even offers the key: ssh -v shows it was ignored on your own Mac."},
+  {t:"Copying the folder made the private key readable by everyone, so ssh refuses to use it. chmod 600 ~/.ssh/id_ed25519.", ok:true, why:"ssh -v says permissions 0644 are too open and the key will be ignored."},
+  {t:"The key type ed25519 isn't supported by the server.", why:"The same key worked yesterday from the old Mac."},
+  {t:"The server's IP changed.", why:"The connection is established fine; only authentication fails."}
+ ],
+ lesson:"SSH protects you from yourself: if a private key file can be read by anyone but you, ssh ignores it and the server never sees a key, so you get 'Permission denied (publickey)'. Copying files with Finder, a USB stick or a zip often resets permissions to 644. The fix is chmod 600 on private keys (and chmod 700 on ~/.ssh). Whenever ssh fails, run ssh -v: the reason is almost always in the first 20 lines."},
+{id:"restart", name:"Container keeps restarting", sub:"Restarting (1) 5 seconds ago",
+ problem:"After <b>docker compose up -d</b> the database starts fine, but <b>station-site-app-1</b> never stays up. It works when you run the same app directly on your Mac. Find out why it can't reach the database inside Docker.",
+ clues:[
+  {id:"restarting", t:"docker compose ps: app is 'Restarting (1)', db is 'Up'."},
+  {id:"refused", t:"The app logs say: connect ECONNREFUSED 127.0.0.1:3306."},
+  {id:"localhost", t:"The compose file sets DB_HOST=localhost for the app."},
+  {id:"service", t:"The database service is called db. Inside the app container, localhost is the app container itself."}
+ ],
+ map:[
+  {cmd:["docker compose ps", "docker ps", "docker ps -a"], out:"NAME                 IMAGE          SERVICE   STATUS                         PORTS\nstation-site-app-1   station-app    app       Restarting (1) 5 seconds ago\nstation-site-db-1    mariadb:11.4   db        Up 2 minutes                   3306/tcp\n", clue:"restarting", needs:"!fixed"},
+  {cmd:["docker compose ps", "docker ps"], out:"NAME                 IMAGE          SERVICE   STATUS         PORTS\nstation-site-app-1   station-app    app       Up 8 seconds   0.0.0.0:8080->80/tcp\nstation-site-db-1    mariadb:11.4   db        Up 3 minutes   3306/tcp\n", needs:"fixed"},
+  {cmd:["docker compose logs app", "docker compose logs --tail 20 app", "docker logs station-site-app-1", "docker logs --tail 20 station-site-app-1", "docker compose logs --tail 50 app"], out:"app-1  | Starting station API on :80\napp-1  | Error: connect ECONNREFUSED 127.0.0.1:3306\napp-1  |     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1607:16)\napp-1  | exited with code 1\napp-1  | Starting station API on :80\napp-1  | Error: connect ECONNREFUSED 127.0.0.1:3306\n", clue:"refused"},
+  {cmd:["docker compose logs db", "docker compose logs --tail 20 db"], out:"db-1  | 2026-10-19 16:58:02 0 [Note] mariadbd: ready for connections.\ndb-1  | Version: '11.4.3-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  mariadb.org binary distribution\n"},
+  {cmd:["cat docker-compose.yml", "docker compose config"], out:"services:\n  app:\n    build: .\n    ports:\n      - \"8080:80\"\n    environment:\n      DB_HOST: localhost\n      DB_PORT: 3306\n    depends_on:\n      - db\n    restart: unless-stopped\n  db:\n    image: mariadb:11.4\n    environment:\n      MARIADB_ROOT_PASSWORD: example\n    volumes:\n      - dbdata:/var/lib/mysql\nvolumes:\n  dbdata:\n", clue:["localhost", "service"], needs:"!fixed"},
+  {cmd:["grep -n DB_HOST docker-compose.yml", "grep DB_HOST docker-compose.yml"], out:"7:      DB_HOST: localhost\n", clue:"localhost", needs:"!fixed"},
+  {cmd:["docker compose exec db mariadb -uroot -pexample -e \"select 1\""], out:"1\n1\n", note:"the database itself answers fine."},
+  {cmd:["sed -i '' 's/DB_HOST: localhost/DB_HOST: db/' docker-compose.yml"], out:"", sets:"edited", note:"changed. Now apply it with docker compose up -d."},
+  {cmd:["docker compose up -d"], out:"[+] Running 2/2\n ✔ Container station-site-db-1   Running\n ✔ Container station-site-app-1  Started\n", sets:"fixed", needs:"edited"},
+  {cmd:["docker compose up -d"], out:"[+] Running 2/2\n ✔ Container station-site-db-1   Running\n ✔ Container station-site-app-1  Started\n", note:"nothing changed in the config, so the app will crash again."}
+ ],
+ hints:[
+  {cmd:"docker compose ps", clue:"restarting"},
+  {cmd:"docker compose logs --tail 20 app", clue:"refused"},
+  {cmd:"cat docker-compose.yml", clue:"service"}
+ ],
+ options:[
+  {t:"The database isn't ready yet. Add a longer sleep.", why:"The db logs say 'ready for connections' long before the app's latest restart."},
+  {t:"Inside a container, localhost means that container itself. Point DB_HOST at the service name db.", ok:true, why:"The app connects to 127.0.0.1:3306, but the database runs in another container reachable as db on the compose network."},
+  {t:"Port 3306 isn't published, so containers can't reach it.", why:"Publishing (ports:) is for your Mac. Containers on the same compose network reach each other on every port."},
+  {t:"MariaDB 11.4 is incompatible with the app.", why:"The connection is refused before any version check happens."}
+ ],
+ lesson:"Every container has its own localhost. On your Mac, app and database share one machine, so localhost works; in Compose they are separate machines on a private network, and each service is reachable by its service name (db, app). That is also why ports: is only needed for things you want to open from your Mac. When a container keeps restarting, read docker compose logs <service>: the crash reason is almost always in the last lines."}
+];
+
+const EXTRA_CMDS = ["ls","cd","pwd","cat","less","head","tail","grep","find","chmod","chown","sudo","ssh","scp","rsync","ssh-keygen","ssh-copy-id","curl","wget","ping","dig","nslookup","nc","traceroute","ifconfig","netstat","lsof","ps","kill","killall","top","htop","jobs","fg","bg","df","du","tar","zip","unzip","gzip","echo","printf","export","source","env","printenv","which","whoami","uname","uptime","date","cal","history","man","open","code","nano","vim","mkdir","rmdir","rm","cp","mv","touch","ln","sort","uniq","wc","cut","awk","sed","xargs","tee","diff","stat","file","brew","docker","git","php","python3","node","npm","pip3","jq","clear","exit","mariadb","mysql","sh","zsh","bash","systemctl","journalctl","crontab","alias","type","basename","dirname","realpath","seq","yes","sleep","watch"];
+const ALIASES = ["ll","la","l","cls"];
+const SUBS = {
+ docker:["ps","run","exec","logs","images","image","pull","push","build","stop","start","restart","rm","rmi","inspect","network","volume","system","compose","builder","stats","cp","tag","login","version","info"],
+ git:["status","add","commit","push","pull","fetch","log","diff","branch","switch","checkout","merge","rebase","reflog","show","restore","reset","stash","clone","init","remote","tag","ls-files","update-index","rm"],
+ brew:["install","uninstall","upgrade","update","list","search","info","services","doctor"],
+ systemctl:["status","start","stop","restart","enable","disable","reload"]
+};
+const SUBS2 = {
+ "docker compose":["up","down","ps","logs","restart","build","pull","exec","config","stop","start"],
+ "docker image":["ls","prune","rm","inspect","pull"],
+ "docker system":["df","prune","info"],
+ "docker volume":["ls","create","rm","inspect","prune"],
+ "docker network":["ls","create","rm","inspect","connect"],
+ "docker builder":["prune","ls"]
+};
+const MANUAL_PARAMS = {
+ "ls":["-l","-a","-la","-lh","-R","-t","-S","-1"],
+ "grep":["-r","-n","-i","-v","-c","-l","-E","-w","-rn","--include"],
+ "find":["-name","-iname","-type","-mtime","-size","-delete","-exec","-maxdepth"],
+ "chmod":["+x","-R","600","644","700","755"],
+ "curl":["-I","-s","-o","-L","-X","-H","-d","-v","--fail"],
+ "ssh":["-v","-i","-p","-L","-J"],
+ "rsync":["-a","-v","-z","-avz","--dry-run","--delete","--exclude","-n"],
+ "tail":["-n","-f","-F"],
+ "head":["-n","-c"],
+ "du":["-s","-h","-sh","-d"],
+ "df":["-h"],
+ "ps":["aux","-p","-o","-ef"],
+ "lsof":["-i","-p","-n","-P","-a","-d"],
+ "docker":["--version"],
+ "docker run":["-d","--name","-p","-v","-e","--rm","-it","--restart","--network","--env-file"],
+ "docker ps":["-a","-q","--filter","--format"],
+ "docker logs":["--tail","-f","--since","-t"],
+ "docker exec":["-it","-u","-w"],
+ "docker images":["-a","-q","-f","--filter"],
+ "docker compose up":["-d","--build","--force-recreate","--remove-orphans"],
+ "docker compose down":["-v","--remove-orphans","--rmi"],
+ "docker compose logs":["--tail","-f","--since","-t"],
+ "docker image prune":["-f","-a","--filter"],
+ "docker system prune":["-f","-a","--volumes"],
+ "ssh-keygen":["-t","-C","-f","-l","-R"],
+ "ping":["-c","-i","-W"],
+ "dig":["+short","+trace","MX","TXT","AAAA"],
+ "nc":["-z","-v","-zv","-w"],
+ "mkdir":["-p","-v"],
+ "cp":["-r","-v","-i","-p"],
+ "rm":["-r","-f","-i","-rf"],
+ "tar":["-czf","-xzf","-tzf","-C"],
+ "sort":["-n","-r","-h","-u","-k","-rn"],
+ "uniq":["-c","-d","-u"],
+ "cut":["-d","-f","-c"],
+ "wc":["-l","-w","-c"]
+};
+const FS = {"~/":["Desktop/","Documents/","Downloads/","Projects/",".ssh/",".zshrc"],"~/Projects/":["station-site/","lunch-tool/","notes.txt"],"~/.ssh/":["config","id_ed25519","id_ed25519.pub","known_hosts"],"./":["README.md","deploy.sh","docker-compose.yml","logs/","src/",".env"],"logs/":["app.log","app-2026-10-01.log","app-2026-10-04.log","app-2026-10-08.log"],"src/":["api/","js/","index.php"],"/var/":["lib/","log/","cache/","tmp/"]};
+const AUTO_VARS = ["$HOME","$PATH","$USER","$SHELL","$PWD","$?","$EDITOR"];
+const KEYWORDS = ["if","then","else","elif","fi","for","in","do","done","while","until","case","esac","function","time","!","{","}","&&","||"];
+const WD = ";:,.[]{}()/\\|^&*-=+'\"–—―";
+
+const KEYMAP = [
+ {g:"Move", rows:[
+  {ids:["C-a","home"], k:[["Ctrl","A"],["Home"]], t:"Start of line"},
+  {ids:["C-e","end"], k:[["Ctrl","E"],["End"]], t:"End of line"},
+  {ids:["C-b","left"], k:[["Ctrl","B"],["←"]], t:"One character left"},
+  {ids:["C-f","right"], k:[["Ctrl","F"],["→"]], t:"Right · at end: take grey"},
+  {ids:["M-b"], k:[["⌥","B"]], t:"One word left"},
+  {ids:["M-f"], k:[["⌥","F"]], t:"One word right"}
+ ]},
+ {g:"Cut & delete", rows:[
+  {ids:["C-u"], k:[["Ctrl","U"]], t:"Cut the whole line (zsh)"},
+  {ids:["C-k"], k:[["Ctrl","K"]], t:"Cut to end of line"},
+  {ids:["C-w"], k:[["Ctrl","W"]], t:"Cut word before cursor"},
+  {ids:["M-bs"], k:[["⌥","⌫"]], t:"Cut part-word before"},
+  {ids:["M-d"], k:[["⌥","D"]], t:"Cut word after cursor"},
+  {ids:["C-d","del"], k:[["Ctrl","D"]], t:"Delete char · empty: exit"},
+  {ids:["C-h","bs"], k:[["⌫"],["Ctrl","H"]], t:"Delete char before"},
+  {ids:["C-t"], k:[["Ctrl","T"]], t:"Swap two characters"}
+ ]},
+ {g:"Paste & undo", rows:[
+  {ids:["C-y"], k:[["Ctrl","Y"]], t:"Paste last cut"},
+  {ids:["M-y"], k:[["⌥","Y"]], t:"Older cuts (after Ctrl+Y)"},
+  {ids:["undo"], k:[["Ctrl","_"]], t:"Undo (Ctrl+Shift+-)"},
+  {ids:["M-."], k:[["⌥","."]], t:"Last arg of previous line"}
+ ]},
+ {g:"History", rows:[
+  {ids:["hist"], k:[["↑"],["Ctrl","P"]], t:"Previous command"},
+  {ids:["hist-next"], k:[["↓"],["Ctrl","N"]], t:"Next command"},
+  {ids:["C-r"], k:[["Ctrl","R"]], t:"Search history backwards"},
+  {ids:["C-s"], k:[["Ctrl","S"]], t:"Search forward, in a search"},
+  {ids:["C-g"], k:[["Ctrl","G"]], t:"Cancel the search"}
+ ]},
+ {g:"Complete", rows:[
+  {ids:["tab"], k:[["Tab"]], t:"Complete · twice: list options"},
+  {ids:["list"], k:[["⌥","="]], t:"List all options"}
+ ]},
+ {g:"Control", rows:[
+  {ids:["enter"], k:[["Enter"]], t:"Run · unfinished line: >>"},
+  {ids:["cont"], k:[["Shift","Enter"]], t:"New line without running"},
+  {ids:["C-c"], k:[["Ctrl","C"]], t:"Cancel the line"},
+  {ids:["C-l"], k:[["Ctrl","L"]], t:"Clear the screen"},
+  {ids:["cmd-k"], k:[["⌘","K"]], t:"Clear (Terminal.app)"},
+  {ids:["esc"], k:[["Esc"]], t:"Then a key = ⌥ + that key"}
+ ]}
+];
+const USE_LABEL = {"C-a":"Ctrl+A","C-e":"Ctrl+E","C-w":"Ctrl+W","C-u":"Ctrl+U","C-k":"Ctrl+K","C-y":"Ctrl+Y","C-t":"Ctrl+T","C-r":"Ctrl+R","C-l":"Ctrl+L","C-c":"Ctrl+C","M-b":"⌥B","M-f":"⌥F","M-d":"⌥D","M-.":"⌥.","undo":"Ctrl+_","hist":"↑","tab":"Tab","cont":"Enter after a \\ at the end of the line (>)"};
+
+
+const COMMON = [];
+const KNOWN = new Map();
+const PARAMS = {};
+function cmdKey(words){
+  const w = words.map(x => x.toLowerCase());
+  for (const n of [3, 2, 1]){ const k = w.slice(0, n).join(" "); if (w.length >= n && (PARAMS[k] || MANUAL_PARAMS[k] || n === 1)) return k; }
+  return w[0];
+}
+(function buildDict(){
+  EXTRA_CMDS.forEach(n => KNOWN.set(n.toLowerCase(), n));
+  Object.keys(MANUAL_PARAMS).forEach(k => PARAMS[k] = MANUAL_PARAMS[k].slice());
+  const all = [];
+  SCEN.forEach(sc => sc.steps.forEach(st => all.push(st.cmd)));
+  CASES.forEach(c => c.map.forEach(e => [].concat(e.cmd).forEach(x => all.push(x))));
+  all.forEach(cmd => {
+    splitSegments(cmd).forEach(seg => {
+      const bare = seg.replace(/"[^"]*"|'[^']*'/g, '""').trim().replace(/^sudo\s+/, "");
+      const words = bare.split(/\s+/).filter(Boolean);
+      if (!words.length || !KNOWN.has(words[0].toLowerCase())) return;
+      const head = [words[0]];
+      if (SUBS[words[0]] && words[1] && SUBS[words[0]].includes(words[1])) { head.push(words[1]); const k2 = words[0] + " " + words[1]; if (SUBS2[k2] && words[2] && SUBS2[k2].includes(words[2])) head.push(words[2]); }
+      const key = head.join(" ").toLowerCase();
+      if (!PARAMS[key]) PARAMS[key] = [];
+      (bare.match(/(?:^|\s)(--?[A-Za-z][\w-]*)/g) || []).forEach(p => { const f = p.trim(); if (!PARAMS[key].includes(f)) PARAMS[key].push(f); });
+    });
+  });
+})();
+
+function splitSegments(s){
+  const out = []; let cur = ""; let q = null; let depth = 0;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (q){ cur += c; if (c === q) q = null; continue; }
+    if (c === "'" || c === '"'){ q = c; cur += c; continue; }
+    if (c === "{" || c === "(") depth++;
+    if (c === "}" || c === ")") depth--;
+    if ((c === "|" || c === ";" || c === "&") && depth <= 0){ if ((c === "|" || c === "&") && s[i+1] === c) i++; out.push(cur); cur = ""; continue; }
+    cur += c;
+  }
+  out.push(cur);
+  return out;
+}
+
+const KEY_STORE = "shelle.v1";
+const KEY_HIST = "shelle.hist";
+const KEY_THEME = "shelle.theme";
+function load(k, f){ try { const r = localStorage.getItem(k); return r === null ? f : JSON.parse(r); } catch(e){ return f; } }
+function save(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+
+const store = load(KEY_STORE, {steps:{}, mode:"ghost", scen:"start"});
+if (!store.steps) store.steps = {};
+let hist = load(KEY_HIST, []);
+if (!Array.isArray(hist)) hist = [];
+
+const $ = id => document.getElementById(id);
+const screenEl = $("screen"), scrollEl = $("scroll"), liveEl = $("live"), ta = $("ta");
+
+const S = {
+  scen: null, idx: 0, list: null, case: null,
+  buf: "", cur: 0,
+  undo: [], kill: [], killIdx: 0,
+  hIdx: hist.length, pending: "",
+  last: "", yank: null, lastArg: null,
+  search: null, meta: false,
+  used: new Set(), assisted: false, pasted: false, revealed: false, misses: 0,
+  t0: 0, focused: false, vars: new Set(),
+  session: {lines: 0, clean: 0, done: 0, wpmSum: 0, wpmN: 0, streak: 0}
+};
+
+function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+function classify(s){
+  const cls = new Array(s.length).fill("");
+  let i = 0, cmdPos = true, prev = "";
+  const set = (a, b, c) => { for (let k = a; k < b; k++) cls[k] = c; };
+  while (i < s.length){
+    const c = s[i];
+    if (c === "\n" || c === " " || c === "\t"){ if (c === "\n") cmdPos = true; i++; continue; }
+    if (c === "#"){ let j = s.indexOf("\n", i); if (j < 0) j = s.length; set(i, j, "k-com"); i = j; continue; }
+    if (c === "'" || c === '"'){
+      let j = i + 1;
+      while (j < s.length && s[j] !== c){ if (c === '"' && s[j] === "`") j++; j++; }
+      j = Math.min(j + 1, s.length);
+      set(i, j, "k-str"); i = j; cmdPos = false; prev = "str"; continue;
+    }
+    if (c === "$"){
+      const m = s.slice(i).match(/^\$(\{[^}]*\}?|[\w:?^$]+)?/);
+      const j = i + Math.max(1, m[0].length);
+      set(i, j, "k-var"); i = j; cmdPos = false; prev = "var"; continue;
+    }
+    if (c === "-" && /[A-Za-z0-9-]/.test(s[i+1] || "") && (i === 0 || /[\s(]/.test(s[i-1]))){
+      const m = s.slice(i).match(/^--?[A-Za-z0-9][\w-]*=?/) || ["-"];
+      set(i, i + m[0].length, "k-par"); i += m[0].length; prev = "par"; continue;
+    }
+    if (/[0-9]/.test(c) && (i === 0 || !/[\w.@-]/.test(s[i-1]))){
+      const m = s.slice(i).match(/^\d[\d.]*(?:[kKmMgGtT][bB])?/);
+      const after = s[i + m[0].length] || "";
+      if (!/[A-Za-z@_]/.test(after)){ set(i, i + m[0].length, "k-num"); i += m[0].length; cmdPos = false; continue; }
+    }
+    if (c === "["){
+      const m = s.slice(i).match(/^\[[\w.]+\]/);
+      if (m){ set(i, i + m[0].length, "k-type"); i += m[0].length; continue; }
+    }
+    if (/[\w~./%?]/.test(c)){
+      const m = s.slice(i).match(/^[\w~./@%?:-]+/);
+      const w = m[0];
+      if (prev !== "dot" && cmdPos && (KNOWN.has(w.toLowerCase()) || ALIASES.indexOf(w.toLowerCase()) >= 0 || /^\.\//.test(w))) set(i, i + w.length, "k-cmd");
+      i += w.length; cmdPos = false; prev = "word"; continue;
+    }
+    if (c === "|" || c === ";" || c === "{" || c === "(" || c === "&" || c === ">" || c === "<"){ cmdPos = c !== ">" && c !== "<"; cls[i] = "k-op"; i++; prev = "op"; continue; }
+    if (c === "@" && (s[i+1] === "{" || s[i+1] === "(")){ i++; continue; }
+    if (c === ","){ cls[i] = "k-op"; i++; continue; }
+    i++;
+  }
+  return cls;
+}
+
+function renderLine(text, opt){
+  opt = opt || {};
+  const cls = classify(text);
+  let html = '<span class="p">' + esc(PROMPT) + "</span>";
+  let run = "", runCls = null;
+  const flush = () => { if (run) html += runCls ? '<span class="' + runCls + '">' + esc(run) + "</span>" : esc(run); run = ""; };
+  for (let i = 0; i <= text.length; i++){
+    if (opt.cursor !== undefined && i === opt.cursor && !(i === text.length && opt.ghost)){
+      flush();
+      const ch = i < text.length && text[i] !== "\n" ? text[i] : " ";
+      html += '<span class="cur ' + (cls[i] || "") + '">' + esc(ch) + "</span>";
+      if (i < text.length && text[i] === "\n"){ html += '\n<span class="cp">' + CONT + "</span>"; }
+      runCls = null;
+      continue;
+    }
+    if (i === text.length) break;
+    const ch = text[i];
+    if (ch === "\n"){ flush(); html += '\n<span class="cp">' + CONT + "</span>"; runCls = null; continue; }
+    let c = cls[i] || null;
+    if (opt.hl && i >= opt.hl[0] && i < opt.hl[1]) c = (c ? c + " " : "") + "hl";
+    if (c !== runCls){ flush(); runCls = c; }
+    run += ch;
+  }
+  flush();
+  if (opt.ghost){
+    const g = opt.ghost;
+    if (opt.cursor === text.length){
+      html += '<span class="cur">' + esc(g[0]) + '</span><span class="ghost">' + esc(g.slice(1)) + "</span>";
+    } else {
+      html += '<span class="ghost">' + esc(g) + "</span>";
+    }
+  }
+  return html;
+}
+
+function suggestion(){
+  if (S.search || S.cur !== S.buf.length || !S.buf) return "";
+  const st = curStep();
+  if (store.mode === "ghost" && st && !st.pre){
+    if (st.cmd.toLowerCase().startsWith(S.buf.toLowerCase()) && st.cmd.length > S.buf.length) return st.cmd.slice(S.buf.length).split("\n")[0];
+    return "";
+  }
+  if (store.mode === "ghost" && st && st.pre) return "";
+  for (let i = hist.length - 1; i >= 0; i--){
+    const h = hist[i];
+    if (h.length > S.buf.length && h.toLowerCase().startsWith(S.buf.toLowerCase()) && h.indexOf("\n") < 0) return h.slice(S.buf.length);
+  }
+  return "";
+}
+
+function render(){
+  const g = suggestion();
+  let html = renderLine(S.buf, {cursor: S.cur, ghost: g || null, hl: S.search && S.search.hit ? S.search.hit : null});
+  if (S.search){
+    html += '\n<span class="srch' + (S.search.fail ? " fail" : "") + '">' + (S.search.fail ? "failing " : "") + (S.search.dir < 0 ? "bck" : "fwd") + "-i-search: " + esc(S.search.q) + "_</span>";
+  }
+  liveEl.innerHTML = html;
+  screenEl.classList.toggle("blur", !S.focused);
+  screenEl.scrollTop = screenEl.scrollHeight;
+}
+
+function print(html, cls){
+  const d = document.createElement("div");
+  d.className = "ln" + (cls ? " " + cls : "");
+  d.innerHTML = html;
+  scrollEl.appendChild(d);
+  while (scrollEl.childNodes.length > 500) scrollEl.removeChild(scrollEl.firstChild);
+}
+function printText(t, cls){ print(esc(t.replace(/\n$/, "")), cls); }
+function coach(html){ print('<span class="coach">shelle › ' + html + "</span>"); }
+function freeze(){ print(renderLine(S.buf, {})); }
+function clearScreen(){ scrollEl.innerHTML = ""; }
+
+function flashKey(id){
+  S.used.add(id);
+  const row = document.querySelector('.kr[data-ids~="' + CSS.escape(id) + '"]');
+  if (!row) return;
+  const n = row.querySelector(".n");
+  n.textContent = String((parseInt(n.textContent, 10) || 0) + 1);
+  row.classList.add("used", "flash");
+  clearTimeout(row._t);
+  row._t = setTimeout(() => row.classList.remove("flash"), 450);
+}
+
+function snap(){ return {buf: S.buf, cur: S.cur}; }
+function pushUndo(kind){
+  if (kind === "ins" && S.last === "ins") return;
+  const top = S.undo[S.undo.length - 1];
+  if (top && top.buf === S.buf && top.cur === S.cur) return;
+  S.undo.push(snap());
+  if (S.undo.length > 200) S.undo.shift();
+}
+function setBuf(b, c){ S.buf = b; S.cur = Math.max(0, Math.min(c, b.length)); }
+function startClock(){ if (!S.t0) S.t0 = performance.now(); }
+
+function insert(text){
+  if (!text) return;
+  startClock();
+  if (S.search){ S.search.q += text; doSearch(false); render(); return; }
+  pushUndo("ins");
+  setBuf(S.buf.slice(0, S.cur) + text + S.buf.slice(S.cur), S.cur + text.length);
+  S.last = "ins";
+  render();
+}
+
+function isW(c){ return c !== undefined && !/\s/.test(c) && WD.indexOf(c) < 0; }
+function backWord(){ let i = S.cur; while (i > 0 && !isW(S.buf[i-1])) i--; while (i > 0 && isW(S.buf[i-1])) i--; return i; }
+function fwdWord(){ let i = S.cur; const n = S.buf.length; while (i < n && !isW(S.buf[i])) i++; while (i < n && isW(S.buf[i])) i++; return i; }
+function lineStart(){ const i = S.buf.lastIndexOf("\n", S.cur - 1); return i + 1; }
+function lineEnd(){ const i = S.buf.indexOf("\n", S.cur); return i < 0 ? S.buf.length : i; }
+
+function killRange(a, b, backward){
+  if (a === b) return;
+  pushUndo("kill");
+  const text = S.buf.slice(a, b);
+  if (S.last === "kill" && S.kill.length){ S.kill[0] = backward ? text + S.kill[0] : S.kill[0] + text; }
+  else { S.kill.unshift(text); if (S.kill.length > 30) S.kill.pop(); }
+  setBuf(S.buf.slice(0, a) + S.buf.slice(b), a);
+}
+
+function tokenize(line){
+  const out = []; let cur = ""; let q = null;
+  for (const c of line){
+    if (q){ cur += c; if (c === q) q = null; continue; }
+    if (c === "'" || c === '"'){ q = c; cur += c; continue; }
+    if (/\s/.test(c)){ if (cur){ out.push(cur); cur = ""; } continue; }
+    cur += c;
+  }
+  if (cur) out.push(cur);
+  return out;
+}
+
+function acceptSuggestion(word){
+  const g = suggestion();
+  if (!g) return false;
+  let add = g;
+  if (word){ const m = g.match(/^\s*[^\s]+/); add = m ? m[0] : g; }
+  pushUndo("acc");
+  setBuf(S.buf + add, S.buf.length + add.length);
+  S.assisted = true;
+  return true;
+}
+
+function histMove(dir){
+  if (S.buf.indexOf("\n") >= 0){
+    const ls = lineStart();
+    if (dir < 0 && ls > 0){ const col = S.cur - ls; const pe = ls - 1; const ps = S.buf.lastIndexOf("\n", pe - 1) + 1; S.cur = Math.min(ps + col, pe); return; }
+    const le = lineEnd();
+    if (dir > 0 && le < S.buf.length){ const col = S.cur - ls; const ns = le + 1; let ne = S.buf.indexOf("\n", ns); if (ne < 0) ne = S.buf.length; S.cur = Math.min(ns + col, ne); return; }
+  }
+  if (dir < 0){
+    if (S.hIdx <= 0) return;
+    if (S.hIdx === hist.length) S.pending = S.buf;
+    S.hIdx--; setBuf(hist[S.hIdx], hist[S.hIdx].length);
+  } else {
+    if (S.hIdx >= hist.length) return;
+    S.hIdx++;
+    const b = S.hIdx === hist.length ? S.pending : hist[S.hIdx];
+    setBuf(b, b.length);
+  }
+}
+
+function startSearch(dir){
+  if (!S.search){ S.search = {dir, q: "", idx: hist.length, fail: false, hit: null, save: snap()}; }
+  else { S.search.dir = dir; doSearch(true); }
+}
+function doSearch(next){
+  const s = S.search;
+  if (!s.q){ s.fail = false; s.hit = null; return; }
+  const q = s.q.toLowerCase();
+  let i = next ? s.idx + s.dir : (s.idx >= hist.length ? hist.length - 1 : s.idx);
+  if (!next && s.dir > 0) i = Math.max(0, s.idx);
+  for (; i >= 0 && i < hist.length; i += s.dir){
+    const p = hist[i].toLowerCase().indexOf(q);
+    if (p >= 0){ s.idx = i; s.fail = false; setBuf(hist[i], p); s.hit = [p, p + q.length]; return; }
+  }
+  s.fail = true;
+}
+function endSearch(keep){
+  if (!S.search) return;
+  if (!keep) setBuf(S.search.save.buf, S.search.save.cur);
+  S.hIdx = S.search.fail || !S.search.q ? hist.length : S.search.idx;
+  S.search = null;
+}
+
+function curStep(){ return S.list ? S.list[S.idx] || null : null; }
+
+function cnorm(s){ return norm(s).replace(/'/g, '"'); }
+function caseRec(id){ if (!store.cases) store.cases = {}; if (!store.cases[id]) store.cases[id] = {solved: 0, best: 0, last: 0}; return store.cases[id]; }
+function newCase(c){ return {c, found: new Set(), facts: new Set(), vars: new Set(), cmds: 0, hints: 0, solving: false, tried: new Set(), closed: false}; }
+
+function caseHit(t){
+  const n = cnorm(t), f = S.case.facts;
+  const ok = e => [].concat(e.needs || []).every(x => x[0] === "!" ? !f.has(x.slice(1)) : f.has(x));
+  return S.case.c.map.find(e => [].concat(e.cmd).some(x => cnorm(x) === n) && ok(e)) || null;
+}
+
+function caseFind(ids){
+  const k = S.case;
+  [].concat(ids || []).forEach(id => {
+    if (k.found.has(id)) return;
+    const cl = k.c.clues.find(x => x.id === id);
+    if (!cl) return;
+    k.found.add(id);
+    coach('<span class="ok">new clue</span> ' + esc(cl.t));
+  });
+}
+
+function caseRun(t, m){
+  const k = S.case;
+  const hit = caseHit(t);
+  if (!hit && builtin(t)) return;
+  k.cmds++;
+  if (hit){
+    const out = typeof hit.out === "function" ? hit.out() : hit.out;
+    if (out){ if (hit.err) print('<span class="err">' + esc(out.replace(/\n$/, "")) + "</span>"); else printText(out); }
+    if (hit.note) coach((hit.warn ? '<span class="err">careful</span> ' : "") + esc(hit.note));
+    [].concat(hit.sets || []).forEach(x => k.facts.add(x));
+    caseFind(hit.clue);
+  } else {
+    const bad = unknownCommand(t);
+    if (bad) notRecognized(bad);
+    else {
+      if (m){ k.vars.add("$" + m[1]); S.vars.add("$" + m[1]); }
+      print('<span class="dim">(no results)</span>');
+    }
+  }
+  renderBrief();
+}
+
+function caseHint(){
+  const k = S.case;
+  const h = k.c.hints.find(x => x.clue ? !k.found.has(x.clue) : !k.facts.has(x.fact));
+  if (!h){ coach("you have every clue you need. Press <b>Solve</b>."); return; }
+  k.hints++;
+  coach("try: <b>" + esc(h.cmd) + "</b>");
+}
+
+function casePick(i){
+  const k = S.case, o = k.c.options[i];
+  if (k.closed || k.tried.has(i)) return;
+  k.tried.add(i);
+  if (o.ok){
+    k.closed = true;
+    const r = caseRec(k.c.id);
+    r.solved++;
+    r.last = k.cmds;
+    r.best = r.best ? Math.min(r.best, k.cmds) : k.cmds;
+    r.at = Date.now();
+    save(KEY_STORE, store);
+    coach('<span class="ok">✓ case closed</span> in ' + k.cmds + (k.cmds === 1 ? " command" : " commands") + (k.hints ? ", " + k.hints + (k.hints === 1 ? " hint" : " hints") : "") + ".");
+    renderRail();
+  }
+  renderBrief();
+  const v = document.querySelector("#brief .verdict");
+  if (v) v.scrollIntoView({block: "nearest"});
+}
+
+function renderCaseBrief(el){
+  const k = S.case, c = k.c, r = caseRec(c.id);
+  let h = '<div class="bhead"><h2>' + esc(c.name) + '</h2><span class="count">' + k.cmds + (k.cmds === 1 ? " command" : " commands") + " · " + k.found.size + "/" + c.clues.length + " clues" + (r.best ? " · best " + r.best : "") + '</span><div class="acts">';
+  if (!k.closed) h += '<button class="chip" id="bHint">Hint</button>';
+  h += '<button class="chip" id="bRestart">Restart</button>';
+  if (!k.closed && !k.solving) h += '<button class="chip prime" id="bSolve">Solve</button>';
+  h += "</div></div>";
+  h += '<p class="task">' + c.problem + "</p>";
+  h += '<div class="cl-h">Clues</div><div class="clues">';
+  c.clues.forEach(cl => {
+    const got = k.found.has(cl.id);
+    h += '<div class="clue' + (got ? " got" : "") + '"><i>' + (got ? "✓" : "?") + "</i><span>" + (got ? esc(cl.t) : "not found yet") + "</span></div>";
+  });
+  h += "</div>";
+  if (k.solving || k.closed){
+    h += '<div class="cl-h">Your diagnosis</div><div class="opts">';
+    c.options.forEach((o, i) => {
+      const t = k.tried.has(i);
+      const cls = t ? (o.ok ? " yes" : " no") : "";
+      h += '<button class="opt' + cls + '" data-i="' + i + '"' + (t || k.closed ? " disabled" : "") + ">" + esc(o.t) + "</button>";
+    });
+    h += "</div>";
+    const last = [...k.tried].pop();
+    if (last !== undefined){
+      const o = c.options[last];
+      h += '<div class="verdict' + (o.ok ? "" : " bad") + '"><b>' + (o.ok ? "Correct." : "Not this one.") + "</b> " + esc(o.why) + (o.ok ? '<p class="lesson">' + esc(c.lesson) + "</p>" : "") + "</div>";
+    }
+  } else {
+    h += '<p class="cnote">Type your own commands in the terminal. Scripted commands answer like the real tenant, other known cmdlets say (no results), unknown names give the real error. Press <b>Solve</b> when you know.</p>';
+  }
+  el.innerHTML = h;
+  const bind = (id, fn) => { const b = $(id); if (b) b.addEventListener("click", () => { fn(); ta.focus({preventScroll: true}); }); };
+  bind("bHint", () => { caseHint(); render(); });
+  bind("bSolve", () => { k.solving = true; renderBrief(); });
+  bind("bRestart", () => { S.case = newCase(c); coach("case reopened: " + esc(c.name) + "."); renderBrief(); render(); });
+  el.querySelectorAll(".opt").forEach(b => b.addEventListener("click", () => { casePick(parseInt(b.dataset.i, 10)); ta.focus({preventScroll: true}); }));
+}
+
+
+function completionCtx(){
+  let s = S.cur;
+  while (s > 0 && !/[\s|;(&]/.test(S.buf[s-1])) s--;
+  return {start: s, tok: S.buf.slice(s, S.cur)};
+}
+function wordsBefore(pos){
+  const segs = splitSegments(S.buf.slice(0, pos));
+  return segs[segs.length - 1].replace(/"[^"]*"|'[^']*'/g, '""').trim().replace(/^sudo\s+/, "").split(/\s+/).filter(Boolean);
+}
+function commandBefore(pos){
+  const segs = splitSegments(S.buf.slice(0, pos));
+  const seg = segs[segs.length - 1].trim().replace(/^\$[\w:]+\s*=\s*/, "").replace(/^\(/, "");
+  const m = seg.match(/^([A-Za-z]+-[A-Za-z0-9]+)/);
+  return m ? m[1].toLowerCase() : null;
+}
+function candidates(tok, start){
+  const lo = tok.toLowerCase();
+  const before = wordsBefore(start);
+  if (tok.startsWith("-")){
+    const list = PARAMS[cmdKey(before)] || PARAMS[(before[0] || "").toLowerCase()] || [];
+    return [...new Set(list)].filter(p => p.toLowerCase().startsWith(lo));
+  }
+  if (tok.startsWith("$")) return AUTO_VARS.filter(v => v.toLowerCase().startsWith(lo)).sort();
+  if (!before.length){
+    if (!tok) return [];
+    return [...KNOWN.values()].concat(ALIASES).filter(n => n.toLowerCase().startsWith(lo)).sort();
+  }
+  const first = before[0].toLowerCase();
+  if (before.length === 1 && SUBS[first]) return SUBS[first].filter(x => x.startsWith(lo));
+  const k2 = before.slice(0, 2).join(" ").toLowerCase();
+  if (before.length === 2 && SUBS2[k2]) return SUBS2[k2].filter(x => x.startsWith(lo));
+  const slash = tok.lastIndexOf("/");
+  const dir = slash >= 0 ? tok.slice(0, slash + 1) : "";
+  const rest = tok.slice(slash + 1).toLowerCase();
+  const list = FS[dir || "./"] || [];
+  return list.filter(f => f.toLowerCase().startsWith(rest)).map(f => dir + f);
+}
+function commonPrefix(list){
+  let p = list[0];
+  for (const x of list){ let i = 0; while (i < p.length && i < x.length && p[i].toLowerCase() === x[i].toLowerCase()) i++; p = p.slice(0, i); }
+  return p;
+}
+function complete(listNow){
+  const {start, tok} = completionCtx();
+  const c = candidates(tok, start);
+  if (!c.length) return;
+  if (!listNow && c.length === 1){
+    pushUndo("tab");
+    setBuf(S.buf.slice(0, start) + c[0] + S.buf.slice(S.cur), start + c[0].length);
+    return;
+  }
+  const p = commonPrefix(c);
+  if (!listNow && p.length > tok.length){
+    pushUndo("tab");
+    setBuf(S.buf.slice(0, start) + p + S.buf.slice(S.cur), start + p.length);
+    return;
+  }
+  if (listNow || S.last === "tab"){
+    freeze();
+    const w = Math.max(...c.map(x => x.length)) + 2;
+    const cols = Math.max(1, Math.floor(110 / w));
+    let out = "";
+    c.slice(0, 60).forEach((x, i) => { out += x.padEnd(w); if ((i + 1) % cols === 0) out += "\n"; });
+    if (c.length > 60) out += "\n… " + (c.length - 60) + " more";
+    printText(out.replace(/\s+$/, ""));
+  }
+}
+
+function yankLastArg(){
+  const chain = S.last === "lastarg" && S.lastArg;
+  const k = chain ? S.lastArg.k + 1 : 0;
+  const line = hist[hist.length - 1 - k];
+  if (line === undefined) return;
+  const toks = tokenize(line);
+  const arg = toks.length ? toks[toks.length - 1] : "";
+  if (chain){
+    setBuf(S.buf.slice(0, S.lastArg.at) + arg + S.buf.slice(S.lastArg.at + S.lastArg.len), S.lastArg.at + arg.length);
+  } else {
+    pushUndo("lastarg");
+    setBuf(S.buf.slice(0, S.cur) + arg + S.buf.slice(S.cur), S.cur + arg.length);
+  }
+  S.lastArg = {k, at: S.cur - arg.length, len: arg.length};
+}
+
+function incomplete(s){
+  let q = null, d = 0;
+  for (let i = 0; i < s.length; i++){
+    const c = s[i];
+    if (q){ if (c === "\\" && q === '"'){ i++; continue; } if (c === q) q = null; continue; }
+    if (c === "#"){ const j = s.indexOf("\n", i); if (j < 0) break; i = j; continue; }
+    if (c === "'" || c === '"'){ q = c; continue; }
+    if (c === "{" || c === "(" || c === "[") d++;
+    if (c === "}" || c === ")" || c === "]") d--;
+  }
+  if (q || d > 0) return true;
+  const t = s.replace(/[ \t]+$/, "");
+  return /\|$/.test(t) || /\\$/.test(t) || /&&$/.test(t);
+}
+
+function norm(s){
+  return s.replace(/\s+/g, " ").trim().replace(/\s*([|;,(){}=])\s*/g, "$1").replace(/;$/, "").toLowerCase();
+}
+function firstDiff(a, b){
+  const x = a.replace(/\s+/g, " ").trim(), y = b.replace(/\s+/g, " ").trim();
+  let i = 0; while (i < x.length && i < y.length && x[i].toLowerCase() === y[i].toLowerCase()) i++;
+  return {i, typed: x, want: y};
+}
+
+function unknownCommand(line){
+  for (const raw of splitSegments(line)){
+    let seg = raw.trim().replace(/^[A-Za-z_]\w*=\S*\s+/, "").replace(/^sudo\s+/, "");
+    while (seg.startsWith("(")) seg = seg.slice(1).trim();
+    if (!seg) continue;
+    if (/^[$'"@\[0-9.!~\/-]/.test(seg)) continue;
+    const w = seg.match(/^[^\s(){}]+/);
+    if (!w) continue;
+    const word = w[0];
+    if (KEYWORDS.indexOf(word.toLowerCase()) >= 0) continue;
+    if (KNOWN.has(word.toLowerCase())) continue;
+    if (ALIASES.indexOf(word.toLowerCase()) >= 0) continue;
+    return word;
+  }
+  return null;
+}
+function notRecognized(word){
+  print('<span class="err">' + esc("zsh: command not found: " + word) + "</span>");
+}
+
+function historyOut(){
+  const rows = hist.slice(-12);
+  const base = hist.length - rows.length + 1;
+  let out = "";
+  rows.forEach((h, i) => { out += String(base + i).padStart(5) + "  " + h.replace(/\n/g, " ") + "\n"; });
+  return out;
+}
+
+function builtin(t){
+  const lo = t.toLowerCase();
+  if (lo === "clear" || lo === "cls"){ clearScreen(); return true; }
+  if (lo === "exit"){ coach("in a real terminal this closes the tab. Here you stay."); return true; }
+  if (lo === "history"){ printText(historyOut()); return true; }
+  if (lo === "history -c" || lo === "history -p"){ hist = []; save(KEY_HIST, hist); S.hIdx = 0; return true; }
+  return false;
+}
+
+function keyOf(scId, st, i){ return st.rk || scId + ":" + i; }
+function stepKey(){ return keyOf(S.scen.id, S.list[S.idx], S.idx); }
+function rec(key){ if (!store.steps[key]) store.steps[key] = {done: 0, clean: 0, miss: 0, best: 0}; return store.steps[key]; }
+
+function addHist(line){
+  if (!line.trim()) return;
+  if (hist[hist.length - 1] !== line) hist.push(line);
+  if (hist.length > 400) hist = hist.slice(-400);
+  save(KEY_HIST, hist);
+}
+
+function run(line){
+  const t = line.trim();
+  addHist(line);
+  S.hIdx = hist.length;
+  const m = t.match(/^\$([\w]+)\s*=/);
+  if (!t) return;
+  if (S.case){ caseRun(t, m); return; }
+  if (builtin(t)) return;
+  const st = curStep();
+  if (st){
+    const wanted = [st.cmd].concat(st.alt || []);
+    if (wanted.some(w => norm(w) === norm(t))){
+      const missing = (st.use || []).filter(id => !S.used.has(id));
+      if (missing.length){
+        coach("right line — now do it with <b>" + missing.map(id => USE_LABEL[id] || id).join("</b>, <b>") + "</b>. That's the muscle you're training.");
+        S.misses++;
+        rec(stepKey()).miss++;
+        resetStep();
+        return;
+      }
+      if (m) S.vars.add("$" + m[1]);
+      const out = typeof st.out === "function" ? st.out() : st.out;
+      if (out) printText(out);
+      finishStep();
+      return;
+    }
+    const bad = unknownCommand(t);
+    if (bad) notRecognized(bad);
+    else {
+      const d = firstDiff(t, st.cmd);
+      const pad = " ".repeat(PROMPT.length + d.i);
+      if (store.mode === "ghost" || S.revealed){
+        coach("not quite. First difference at column " + (d.i + 1) + ":");
+        print('<span class="dim">' + esc(PROMPT) + "</span>" + esc(d.typed) + "\n" + '<span class="coach">' + pad + "^</span>\n" + '<span class="coach">' + " ".repeat(PROMPT.length - 10) + "expected: </span><span class=\"ok\">" + esc(d.want) + "</span>");
+      } else {
+        coach("not quite. Correct up to column " + d.i + ": <b>" + esc(d.want.slice(0, d.i)) + "</b>…");
+      }
+    }
+    S.misses++;
+    rec(stepKey()).miss++;
+    save(KEY_STORE, store);
+    renderRail();
+    return;
+  }
+  const bad = unknownCommand(t);
+  if (bad){ notRecognized(bad); return; }
+  if (m) S.vars.add("$" + m[1]);
+  for (const sc of SCEN) for (const s2 of sc.steps){
+    if (norm(s2.cmd) === norm(t)){ const out = typeof s2.out === "function" ? s2.out() : s2.out; if (out) printText(out); return; }
+  }
+}
+
+function wpmNow(len){
+  if (!S.t0) return 0;
+  const min = (performance.now() - S.t0) / 60000;
+  return min > 0 ? Math.round((len / 5) / min) : 0;
+}
+
+let lastLen = 0;
+function finishStep(){
+  const key = stepKey();
+  const r = rec(key);
+  const clean = S.misses === 0 && !S.assisted && !S.pasted && !S.revealed;
+  r.done++;
+  if (clean) r.clean++;
+  const w = wpmNow(lastLen);
+  if (clean && w > r.best) r.best = w;
+  const ss = S.session;
+  ss.done++;
+  if (clean){ ss.clean++; ss.streak++; } else ss.streak = 0;
+  if (w > 0 && w < 300){ ss.wpmSum += w; ss.wpmN++; $("stWpm").textContent = w; }
+  save(KEY_STORE, store);
+  if (!clean){
+    const why = [];
+    if (S.misses) why.push(S.misses + (S.misses === 1 ? " miss" : " misses"));
+    if (S.assisted) why.push("grey suggestion accepted");
+    if (S.pasted) why.push("pasted");
+    if (S.revealed) why.push("answer shown");
+    coach('<span class="ok">✓</span> done, not clean (' + why.join(", ") + ")");
+  }
+  S.idx++;
+  if (S.idx >= S.list.length){
+    const n = S.list.length;
+    const c = S.list.filter((st, i) => { const k = keyOf(S.scen.id, st, i); return store.steps[k] && store.steps[k].clean; }).length;
+    coach('<span class="ok">✓ ' + esc(S.scen.name) + " complete.</span> " + c + "/" + n + " steps have a clean run. Press <b>Enter</b> on an empty line or pick the next scenario.");
+  }
+  stats();
+  newStep();
+  renderRail();
+}
+
+function resetStep(){
+  S.used = new Set(); S.assisted = false; S.pasted = false; S.t0 = 0;
+  const st = curStep();
+  if (st && st.pre){ setBuf(st.pre, st.at === undefined ? st.pre.length : st.at); }
+}
+
+function newStep(){
+  S.used = new Set(); S.misses = 0; S.assisted = false; S.pasted = false; S.revealed = false; S.t0 = 0;
+  S.undo = []; S.last = "";
+  const st = curStep();
+  if (st && st.pre) setBuf(st.pre, st.at === undefined ? st.pre.length : st.at);
+  else setBuf("", 0);
+  renderBrief();
+  render();
+}
+
+function stats(){
+  const s = S.session;
+  $("stAvg").textContent = s.wpmN ? Math.round(s.wpmSum / s.wpmN) : "–";
+  $("stClean").textContent = s.clean + "/" + s.done;
+  $("stStreak").textContent = s.streak;
+}
+
+function acceptLine(shift){
+  if (S.search){ endSearch(true); }
+  if (shift || incomplete(S.buf)){
+    flashKey("cont");
+    pushUndo("nl");
+    setBuf(S.buf.slice(0, S.cur) + "\n" + S.buf.slice(S.cur), S.cur + 1);
+    S.last = "nl";
+    render();
+    return;
+  }
+  flashKey("enter");
+  const line = S.buf;
+  lastLen = line.length;
+  freeze();
+  setBuf("", 0);
+  S.undo = [];
+  S.last = "";
+  if (!line.trim()){
+    if (S.list && S.idx >= S.list.length) nextScenario();
+    render();
+    return;
+  }
+  run(line);
+  S.t0 = 0;
+  render();
+}
+
+function cancelLine(){
+  if (S.search) endSearch(true);
+  print(renderLine(S.buf, {}) + '<span class="dim">^C</span>');
+  setBuf("", 0); S.undo = []; S.hIdx = hist.length; S.t0 = 0;
+  const st = curStep();
+  if (st && st.pre) setBuf(st.pre, st.at === undefined ? st.pre.length : st.at);
+}
+
+function act(id){
+  const prevLast = S.last;
+  let keepLast = false;
+  switch (id){
+    case "C-a": case "home": { const ls = lineStart(); S.cur = S.cur === ls ? 0 : ls; break; }
+    case "C-e": case "end": {
+      if (S.cur === S.buf.length && acceptSuggestion(false)) break;
+      const le = lineEnd(); S.cur = S.cur === le ? S.buf.length : le; break;
+    }
+    case "C-b": case "left": if (S.cur > 0) S.cur--; break;
+    case "C-f": case "right": if (S.cur < S.buf.length) S.cur++; else acceptSuggestion(false); break;
+    case "M-b": S.cur = backWord(); break;
+    case "M-f": if (S.cur === S.buf.length) acceptSuggestion(true); else S.cur = fwdWord(); break;
+    case "bs": case "C-h":
+      if (S.search){ S.search.q = S.search.q.slice(0, -1); S.search.idx = hist.length; doSearch(false); break; }
+      if (S.cur > 0){ pushUndo("del"); setBuf(S.buf.slice(0, S.cur - 1) + S.buf.slice(S.cur), S.cur - 1); } break;
+    case "del": if (S.cur < S.buf.length){ pushUndo("del"); setBuf(S.buf.slice(0, S.cur) + S.buf.slice(S.cur + 1), S.cur); } break;
+    case "C-d":
+      if (!S.buf){ coach("Ctrl+D on an empty line closes the shell in a real terminal."); break; }
+      if (S.cur < S.buf.length){ pushUndo("del"); setBuf(S.buf.slice(0, S.cur) + S.buf.slice(S.cur + 1), S.cur); } break;
+    case "C-u": killRange(lineStart(), lineEnd(), true); keepLast = "kill"; break;
+    case "C-k": killRange(S.cur, lineEnd(), false); keepLast = "kill"; break;
+    case "C-w": { let i = S.cur; while (i > 0 && /\s/.test(S.buf[i-1])) i--; while (i > 0 && !/\s/.test(S.buf[i-1])) i--; killRange(i, S.cur, true); keepLast = "kill"; break; }
+    case "M-bs": killRange(backWord(), S.cur, true); keepLast = "kill"; break;
+    case "M-d": killRange(S.cur, fwdWord(), false); keepLast = "kill"; break;
+    case "C-y": {
+      if (!S.kill.length) break;
+      pushUndo("yank");
+      const t = S.kill[0];
+      S.yank = {at: S.cur, len: t.length, i: 0};
+      setBuf(S.buf.slice(0, S.cur) + t + S.buf.slice(S.cur), S.cur + t.length);
+      keepLast = "yank"; break;
+    }
+    case "M-y": {
+      if (prevLast !== "yank" || !S.yank || S.kill.length < 2) break;
+      const i = (S.yank.i + 1) % S.kill.length;
+      const t = S.kill[i];
+      setBuf(S.buf.slice(0, S.yank.at) + t + S.buf.slice(S.yank.at + S.yank.len), S.yank.at + t.length);
+      S.yank = {at: S.yank.at, len: t.length, i};
+      keepLast = "yank"; break;
+    }
+    case "C-t": {
+      if (S.buf.length < 2 || S.cur === 0) break;
+      pushUndo("swap");
+      let p = S.cur === S.buf.length ? S.cur - 1 : S.cur;
+      const a = S.buf.split("");
+      [a[p-1], a[p]] = [a[p], a[p-1]];
+      setBuf(a.join(""), Math.min(p + 1, a.length));
+      break;
+    }
+    case "undo": { const u = S.undo.pop(); if (u) setBuf(u.buf, u.cur); break; }
+    case "M-.": yankLastArg(); keepLast = "lastarg"; break;
+    case "hist": if (S.search) endSearch(true); histMove(-1); break;
+    case "hist-next": if (S.search) endSearch(true); histMove(1); break;
+    case "C-r": startSearch(-1); break;
+    case "C-s": if (S.search) startSearch(1); break;
+    case "C-g": if (S.search) endSearch(false); break;
+    case "tab": complete(false); keepLast = "tab"; break;
+    case "list": complete(true); break;
+    case "C-l": clearScreen(); break;
+    case "cmd-k": clearScreen(); break;
+    case "C-c": cancelLine(); break;
+  }
+  S.last = keepLast || id;
+  render();
+}
+
+function bindingFor(e, meta){
+  const c = e.code, k = e.key;
+  if (e.ctrlKey && !e.altKey && !e.metaKey){
+    if (e.shiftKey && (c === "Minus" || k === "_")) return "undo";
+    if (c === "Space") return "list";
+    const map = {KeyA:"C-a",KeyE:"C-e",KeyB:"C-b",KeyF:"C-f",KeyU:"C-u",KeyK:"C-k",KeyW:"C-w",KeyY:"C-y",KeyT:"C-t",KeyD:"C-d",KeyH:"C-h",KeyP:"hist",KeyN:"hist-next",KeyR:"C-r",KeyS:"C-s",KeyG:"C-g",KeyL:"C-l",KeyC:"C-c"};
+    if (map[c]) return map[c];
+    if (c === "ArrowLeft") return "M-b";
+    if (c === "ArrowRight") return "M-f";
+    return "ctrl-other";
+  }
+  if ((e.altKey || meta) && !e.ctrlKey && !e.metaKey){
+    const map = {KeyB:"M-b",KeyF:"M-f",KeyD:"M-d",KeyY:"M-y",Period:"M-.",Backspace:"M-bs",Equal:"list",ArrowLeft:"M-b",ArrowRight:"M-f"};
+    if (map[c]) return map[c];
+    if (meta) return "meta-other";
+    return null;
+  }
+  if (e.metaKey) return null;
+  switch (k){
+    case "Enter": return e.shiftKey ? "S-enter" : "enter";
+    case "Backspace": return "bs";
+    case "Delete": return "del";
+    case "ArrowLeft": return "left";
+    case "ArrowRight": return "right";
+    case "ArrowUp": return "hist";
+    case "ArrowDown": return "hist-next";
+    case "Home": return "home";
+    case "End": return "end";
+    case "Tab": return "tab";
+    case "Escape": return "esc";
+  }
+  return null;
+}
+
+ta.addEventListener("keydown", e => {
+  if (e.isComposing) return;
+  if (e.metaKey && !e.ctrlKey && !e.altKey){
+    if (e.code === "KeyK"){ e.preventDefault(); flashKey("cmd-k"); act("cmd-k"); }
+    return;
+  }
+  const meta = S.meta;
+  const b = bindingFor(e, meta);
+  if (!b) { S.meta = false; return; }
+  e.preventDefault();
+  S.meta = false;
+  startClock();
+  if (b === "ctrl-other" || b === "meta-other") return;
+  if (b === "esc"){
+    if (S.search){ endSearch(true); render(); return; }
+    S.meta = true; flashKey("esc"); return;
+  }
+  if (b === "enter" || b === "S-enter"){ acceptLine(b === "S-enter"); return; }
+  if (S.search && !["bs","C-h","C-r","C-s","C-g"].includes(b)) endSearch(true);
+  flashKey(b);
+  act(b);
+});
+ta.addEventListener("input", e => {
+  if (e.isComposing) return;
+  const v = ta.value; ta.value = "";
+  if (!v) return;
+  if (e.inputType === "insertFromPaste"){ S.pasted = true; insert(v.replace(/\r\n?/g, "\n")); return; }
+  insert(v);
+});
+ta.addEventListener("compositionend", () => { const v = ta.value; ta.value = ""; if (v) insert(v); });
+ta.addEventListener("focus", () => { S.focused = true; render(); });
+ta.addEventListener("blur", () => { S.focused = false; render(); });
+screenEl.addEventListener("mouseup", () => { const sel = window.getSelection(); if (!sel || sel.isCollapsed) ta.focus({preventScroll: true}); });
+
+function renderKeys(){
+  const el = $("keys");
+  let h = "";
+  KEYMAP.forEach(g => {
+    h += "<h4>" + g.g + "</h4>";
+    g.rows.forEach(r => {
+      const ks = r.k[0].map(x => '<span class="kbd">' + esc(x) + "</span>").join("");
+      const also = r.k.slice(1).map(c => c.join("+")).join(", ");
+      h += '<div class="kr" data-ids="' + r.ids.join(" ") + '"><div class="ks">' + ks + "</div><div>" + esc(r.t) + (also ? '<span class="also">also ' + esc(also) + "</span>" : "") + '</div><div class="n"></div></div>';
+    });
+  });
+  h += '<div class="tip"><b>Same keys in your real terminal.</b> zsh on a Mac uses Emacs key bindings by default, which is what Shelle copies. For the ⌥ shortcuts, turn on <b>Use Option as Meta key</b> in Terminal → Settings → Profiles → Keyboard (iTerm2: Profiles → Keys → Left Option = Esc+). Without it, press <span class="kbd">Esc</span> and then the letter.</div>';
+  el.innerHTML = h;
+}
+
+function scenProgress(sc){
+  let d = 0, c = 0;
+  sc.steps.forEach((st, i) => { const r = store.steps[keyOf(sc.id, st, i)]; if (r && r.done) d++; if (r && r.clean) c++; });
+  return {d, c, n: sc.steps.length};
+}
+
+function weakList(){
+  const out = [];
+  SCEN.forEach(sc => { if (sc.gym || sc.id === "start") return; sc.steps.forEach((st, i) => { const r = store.steps[sc.id + ":" + i]; if (r && r.miss > 0) out.push({st, sc, i, score: r.miss / (r.clean + 1)}); }); });
+  out.sort((a, b) => b.score - a.score);
+  return out.slice(0, 10).map(o => Object.assign({}, o.st, {rk: o.sc.id + ":" + o.i, from: o.sc.name}));
+}
+
+function renderRail(){
+  const el = $("rail");
+  let h = "<h4>Scenarios</h4>";
+  SCEN.forEach((sc, i) => {
+    const p = scenProgress(sc);
+    const on = S.scen && S.scen.id === sc.id;
+    const full = p.c === p.n;
+    h += '<button class="sc' + (on ? " on" : "") + (full ? " full" : "") + '" data-id="' + sc.id + '"><i>' + (sc.gym ? "⌘" : i === 0 ? "?" : String(i).padStart(2, "0")) + "</i><span><b>" + esc(sc.name) + "<em>" + p.c + "/" + p.n + "</em></b><small>" + esc(sc.sub) + '</small><div class="bar"><span style="width:' + Math.round(p.d / p.n * 100) + '%"></span></div></span></button>';
+  });
+  const weak = weakList();
+  h += "<hr><h4>Practice</h4>";
+  h += '<button class="sc' + (S.scen && S.scen.id === "weak" ? " on" : "") + '" data-id="weak"><i>!</i><span><b>Review weak spots</b><small>' + (weak.length ? weak.length + " steps you missed before" : "nothing missed yet") + "</small></span></button>";
+  h += '<button class="sc' + (S.scen && S.scen.id === "free" ? " on" : "") + '" data-id="free"><i>&gt;_</i><span><b>Free terminal</b><small>no task, just type</small></span></button>';
+  const nSolved = CASES.filter(c => caseRec(c.id).solved).length;
+  h += "<hr><h4>Detective · " + nSolved + "/" + CASES.length + " solved</h4>";
+  CASES.forEach((c, i) => {
+    const r = caseRec(c.id);
+    const on = S.scen && S.scen.id === "case:" + c.id;
+    h += '<button class="sc' + (on ? " on" : "") + (r.solved ? " solved" : "") + '" data-id="case:' + c.id + '"><i>D' + (i + 1) + "</i><span><b>" + esc(c.name) + "</b><small>" + (r.solved ? "solved · best " + r.best + (r.best === 1 ? " command" : " commands") : esc(c.sub)) + "</small></span></button>";
+  });
+  el.innerHTML = h;
+  el.querySelectorAll(".sc").forEach(b => b.addEventListener("click", () => { openScenario(b.dataset.id); el.classList.remove("open"); }));
+}
+
+function renderBrief(){
+  const el = $("brief");
+  const sc = S.scen;
+  el.classList.toggle("case", !!S.case);
+  if (S.case){ renderCaseBrief(el); return; }
+  if (!S.list){
+    el.innerHTML = '<div class="bhead"><h2>Free terminal</h2><span class="count">no task</span></div><p class="task">Type anything. Commands from the scenarios answer with their simulated output, unknown commands give the real zsh error. Every shortcut works.</p>';
+    return;
+  }
+  const st = curStep();
+  const n = S.list.length;
+  let h = '<div class="bhead"><h2>' + esc(sc.name) + '</h2><span class="count">' + (st ? "step " + (S.idx + 1) + " of " + n : "complete") + (st && st.from ? " · " + esc(st.from) : "") + '</span><div class="acts">';
+  if (st){
+    if (store.mode === "recall" && !S.revealed) h += '<button class="chip" id="bReveal">Show answer</button>';
+    h += '<button class="chip" id="bSkip">Skip</button>';
+  }
+  h += '<button class="chip" id="bRestart">Restart</button>';
+  if (!st){ const nx = nextScenarioId(); if (nx) h += '<button class="chip prime" id="bNext">Next scenario</button>'; }
+  h += "</div></div>";
+  if (st){
+    h += '<p class="task">' + st.task + "</p>";
+    if (store.mode === "ghost" || S.revealed || sc.gym) h += '<div class="target' + (st.cmd.indexOf("\n") >= 0 ? " multi" : "") + '">' + esc(st.cmd) + "</div>";
+    else h += '<div class="target hidden">Recall mode: type it from memory. Tab completion still helps.</div>';
+  } else {
+    const p = sc.id === "weak" ? null : scenProgress(sc);
+    h += '<p class="task">Scenario done' + (p ? " — " + p.c + " of " + p.n + " steps have a clean run" : "") + ". Repeat it in <b>Recall</b> mode to make it stick, or move on.</p>";
+  }
+  h += '<div class="dots">';
+  S.list.forEach((s2, i) => {
+    const r = store.steps[keyOf(sc.id, s2, i)];
+    let c = "";
+    if (i === S.idx) c = "cur"; else if (r && r.clean) c = "clean"; else if (r && r.done) c = "done";
+    h += '<span class="' + c + '"></span>';
+  });
+  h += "</div>";
+  el.innerHTML = h;
+  const bind = (id, fn) => { const b = $(id); if (b) b.addEventListener("click", () => { fn(); ta.focus({preventScroll: true}); }); };
+  bind("bReveal", () => { S.revealed = true; renderBrief(); render(); });
+  bind("bSkip", () => { coach("skipped."); S.idx++; newStep(); renderRail(); });
+  bind("bRestart", () => { S.idx = 0; coach("restarted " + esc(sc.name) + "."); newStep(); renderRail(); });
+  bind("bNext", () => nextScenario());
+}
+
+function nextScenarioId(){
+  if (!S.scen) return null;
+  const i = SCEN.findIndex(s => s.id === S.scen.id);
+  return i >= 0 && i < SCEN.length - 1 ? SCEN[i + 1].id : null;
+}
+function nextScenario(){ const id = nextScenarioId(); if (id) openScenario(id); }
+
+function openScenario(id){
+  if (S.search) endSearch(false);
+  S.case = null;
+  const cs = id.indexOf("case:") === 0 ? CASES.find(c => "case:" + c.id === id) : null;
+  if (cs){ S.scen = {id, name: "Case: " + cs.name}; S.list = null; S.idx = 0; S.case = newCase(cs); }
+  else if (id === "free" || id.indexOf("case:") === 0){ S.scen = {id: "free", name: "Free terminal"}; S.list = null; S.idx = 0; }
+  else if (id === "weak"){
+    const list = weakList();
+    S.scen = {id: "weak", name: "Review weak spots"};
+    S.list = list.length ? list : null;
+    S.idx = 0;
+    if (!list.length) S.scen = {id: "free", name: "Free terminal"};
+  } else {
+    S.scen = SCEN.find(s => s.id === id) || SCEN[0];
+    S.list = S.scen.steps;
+    S.idx = 0;
+  }
+  store.scen = S.scen.id === "weak" ? store.scen : S.scen.id;
+  try { window.history.replaceState(null, "", "#" + S.scen.id); } catch(e){}
+  save(KEY_STORE, store);
+  print('<span class="dim">── ' + esc(S.scen.name) + " ──</span>");
+  newStep();
+  renderRail();
+  ta.focus({preventScroll: true});
+}
+
+function setMode(m){
+  store.mode = m; save(KEY_STORE, store);
+  document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === m));
+  renderBrief(); render();
+}
+document.querySelectorAll("#modeSeg button").forEach(b => b.addEventListener("click", () => { setMode(b.dataset.mode); ta.focus({preventScroll: true}); }));
+
+function setTheme(t){ document.documentElement.dataset.theme = t; save(KEY_THEME, t); }
+$("themeBtn").addEventListener("click", () => setTheme(document.documentElement.dataset.theme === "day" ? "night" : "day"));
+$("keysBtn").addEventListener("click", () => $("keys").classList.toggle("open"));
+$("railBtn").addEventListener("click", () => $("rail").classList.toggle("open"));
+
+setTheme(load(KEY_THEME, "day"));
+renderKeys();
+document.querySelectorAll("#modeSeg button").forEach(b => b.classList.toggle("on", b.dataset.mode === store.mode));
+const LL = new Date(Date.now() - 3 * 3600e3); printText("Last login: " + LL.toDateString().slice(0, 10) + " " + LL.toTimeString().slice(0, 8) + " on ttys003");
+print('<span class="dim">Shelle — every key behaves like zsh on your Mac. Click the terminal and start typing.</span>');
+print("");
+function validScen(id){ return !!id && (SCEN.some(s => s.id === id) || id === "free" || id === "weak" || CASES.some(c => "case:" + c.id === id)); }
+function hashScen(){ try { return decodeURIComponent(location.hash.slice(1)); } catch(e){ return ""; } }
+window.addEventListener("hashchange", () => { const h = hashScen(); if (validScen(h) && (!S.scen || S.scen.id !== h)) openScenario(h); });
+openScenario(validScen(hashScen()) ? hashScen() : validScen(store.scen) ? store.scen : "start");
+</script>
+</body>
+</html>

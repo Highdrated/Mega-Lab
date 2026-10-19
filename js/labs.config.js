@@ -100,6 +100,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M4 6.5l2.5 1.8L4 10.1M8 10.5h4"/>'
   },
   {
+    id: "shelle",
+    name: "Shelle",
+    tag: "Practice",
+    sub: "zsh · docker",
+    path: "labs/shelle.html",
+    ring: "ring-mid",
+    angle: 250,
+    glyph: '<path d="M2.5 4l3.5 3-3.5 3"/><path d="M7.5 11.5h6"/>'
+  },
+  {
     id: "hexle",
     name: "Hexle",
     tag: "Code",
