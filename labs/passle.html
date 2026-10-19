@@ -4548,6 +4548,10 @@ MORE.push(
 );
 
 const SPSOL={
+"allergens": {
+"src/allergens.php": "<?php\n\ndeclare(strict_types=1);\n\nconst GLUTEN = 1 << 0;\nconst DAIRY = 1 << 1;\nconst NUTS = 1 << 2;\nconst EGG = 1 << 3;\nconst FISH = 1 << 4;\n\nconst ALLERGENS = ['gluten' => GLUTEN, 'dairy' => DAIRY, 'nuts' => NUTS, 'egg' => EGG, 'fish' => FISH];\n\nfunction has(int $mask, int $flag): bool\n{\n    return ($mask & $flag) === $flag;\n}\n\nfunction names(int $mask): array\n{\n    $names = [];\n    foreach (ALLERGENS as $name => $flag) {\n        if (has($mask, $flag)) {\n            $names[] = $name;\n        }\n    }\n\n    return $names;\n}\n\nfunction maskFrom(string $list): int\n{\n    $mask = 0;\n    foreach (explode(',', $list) as $name) {\n        $mask |= ALLERGENS[trim($name)] ?? 0;\n    }\n\n    return $mask;\n}\n\nfunction safeFor(int $dish, int $guest): bool\n{\n    return ($dish & $guest) === 0;\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/allergens.php';\n\n$dishes = [\n    'Coq au vin' => 0,\n    'Quiche lorraine' => GLUTEN | DAIRY | EGG,\n    'Sole meunière' => FISH | DAIRY | GLUTEN,\n    'Tarte Tatin' => GLUTEN | DAIRY | EGG,\n    'Pralines' => NUTS,\n];\n\n$guest = maskFrom((string) ($_GET['avoid'] ?? 'dairy,nuts'));\n$safe = array_keys(array_filter($dishes, fn (int $mask): bool => safeFor($mask, $guest)));\n\n$quiche = $dishes['Quiche lorraine'];\n$avoidList = implode(', ', names($guest));\n$bits = sprintf('%05b', $guest);\n\n$card = <<<CARD\n    ALLERGY CARD\n    Avoid: {$avoidList}\n    Mask: {$bits}\n    CARD;\n\n$rule = <<<'RULE'\n    safe when ($dish & $guest) === 0\n    RULE;\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Allergen switches</title>\n</head>\n<body>\n    <h1>Allergen switches</h1>\n    <ul class=\"dishes\">\n        <?php foreach ($dishes as $dish => $mask): ?>\n            <li><?= htmlspecialchars($dish) ?>: <?= htmlspecialchars(implode(', ', names($mask)) ?: 'none') ?> (<?= $mask ?>)</li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"safe\">Safe: <?= htmlspecialchars(implode(', ', $safe) ?: 'nothing tonight') ?></p>\n    <p class=\"flip\">Quiche without dairy: <?= $quiche & ~DAIRY ?> · with nuts toggled on: <?= $quiche ^ NUTS ?></p>\n    <pre class=\"card\"><?= htmlspecialchars($card) ?></pre>\n    <pre class=\"rule\"><?= htmlspecialchars($rule) ?></pre>\n</body>\n</html>\n"
+},
 "api": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$dishes = [\n    1 => ['id' => 1, 'name' => 'Onion soup', 'price' => 7.5],\n    2 => ['id' => 2, 'name' => 'Coq au vin', 'price' => 21.5],\n    3 => ['id' => 3, 'name' => 'Tarte tatin', 'price' => 9.0],\n];\n\nfunction respond(int $status, array $data): void\n{\n    http_response_code($status);\n    header('Content-Type: application/json; charset=utf-8');\n    echo json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);\n}\n\n$path = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH) ?: '/';\n$method = $_SERVER['REQUEST_METHOD'];\n\nif ($path !== '/api/dishes') {\n    respond(404, ['error' => 'Not found']);\n\n    return;\n}\n\nif ($method === 'GET' && !isset($_GET['id'])) {\n    respond(200, ['dishes' => array_values($dishes)]);\n\n    return;\n}\n\nif ($method === 'GET') {\n    $id = filter_var($_GET['id'], FILTER_VALIDATE_INT);\n    if ($id === false || !isset($dishes[$id])) {\n        respond(404, ['error' => 'No such dish']);\n\n        return;\n    }\n\n    respond(200, $dishes[$id]);\n\n    return;\n}\n\nif ($method === 'POST') {\n    $name = trim($_POST['name'] ?? '');\n    $price = filter_var($_POST['price'] ?? '', FILTER_VALIDATE_FLOAT);\n    $errors = [];\n\n    if ($name === '') {\n        $errors[] = 'name is required';\n    }\n    if ($price === false || $price <= 0) {\n        $errors[] = 'price must be a positive number';\n    }\n    if ($errors !== []) {\n        respond(400, ['errors' => $errors]);\n\n        return;\n    }\n\n    respond(201, ['id' => max(array_keys($dishes)) + 1, 'name' => $name, 'price' => $price]);\n\n    return;\n}\n\nheader('Allow: GET, POST');\nrespond(405, ['error' => 'Method not allowed']);\n"
 },
@@ -4564,6 +4568,15 @@ const SPSOL={
 "src/Card.php": "<?php\n\ndeclare(strict_types=1);\n\nabstract class Card implements Stringable\n{\n    final public function __construct(protected readonly string $name)\n    {\n    }\n\n    public static function make(string $name): static\n    {\n        return new static($name);\n    }\n\n    abstract public function kind(): string;\n\n    public function __toString(): string\n    {\n        return $this->kind() . ': ' . $this->name;\n    }\n}\n",
 "src/Recipe.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Recipe\n{\n    public const MAX_SERVES = 8;\n\n    public function __construct(\n        public string $name,\n        public ArrayObject $steps,\n    ) {\n    }\n\n    public function __clone(): void\n    {\n        $this->steps = clone $this->steps;\n    }\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Card.php';\nrequire_once __DIR__ . '/../src/DishCard.php';\nrequire_once __DIR__ . '/../src/WineCard.php';\nrequire_once __DIR__ . '/../src/Recipe.php';\n\n$cards = [DishCard::make('Coq au vin'), WineCard::make('Sancerre')];\n\n$original = new Recipe('Ratatouille', new ArrayObject(['Dice the vegetables', 'Simmer slowly']));\n$variation = clone $original;\n$variation->name = 'Ratatouille with eggs';\n$variation->steps[] = 'Crack two eggs on top';\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Recipe cards</title>\n</head>\n<body>\n    <h1>Recipe cards</h1>\n    <ul class=\"cards\">\n        <?php foreach ($cards as $card): ?>\n            <li><?= htmlspecialchars((string) $card) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>First card is a <?= htmlspecialchars($cards[0]::class) ?></p>\n    <p>Original steps: <?= count($original->steps) ?> · Variation steps: <?= count($variation->steps) ?></p>\n    <p>Serves up to <?= Recipe::MAX_SERVES ?></p>\n</body>\n</html>\n"
+},
+"freezer": {
+"src/freezer.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction freeze(Batch $batch, string $file): void\n{\n    file_put_contents($file, serialize($batch) . \"\\n\", FILE_APPEND | LOCK_EX);\n}\n\nfunction thaw(string $file): array\n{\n    if (!is_file($file)) {\n        return [];\n    }\n\n    $batches = [];\n    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {\n        $item = unserialize($line, ['allowed_classes' => [Batch::class]]);\n        if ($item instanceof Batch) {\n            $batches[] = $item;\n        }\n    }\n\n    return $batches;\n}\n\nfunction labelSheet(array $batches): string\n{\n    $stream = fopen('php://memory', 'w+');\n    fputcsv($stream, ['dish', 'portions', 'frozen'], ',', '\"', '');\n    foreach ($batches as $batch) {\n        fputcsv($stream, [$batch->dish, $batch->portions, $batch->frozen], ',', '\"', '');\n    }\n    rewind($stream);\n    $csv = stream_get_contents($stream);\n    fclose($stream);\n\n    return $csv;\n}\n",
+"src/Batch.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Batch\n{\n    public function __construct(\n        public string $dish,\n        public int $portions,\n        public string $frozen,\n    ) {\n    }\n\n    public function __serialize(): array\n    {\n        return ['d' => $this->dish, 'p' => $this->portions, 'f' => $this->frozen];\n    }\n\n    public function __unserialize(array $data): void\n    {\n        $this->dish = $data['d'];\n        $this->portions = $data['p'];\n        $this->frozen = $data['f'];\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Batch.php';\nrequire_once __DIR__ . '/../src/freezer.php';\n\n$file = __DIR__ . '/../data/freezer.txt';\n\nif (!is_file($file)) {\n    freeze(new Batch('Cassoulet', 6, '2026-10-12'), $file);\n    freeze(new Batch('Onion soup', 4, '2026-10-15'), $file);\n}\n\n$batches = thaw($file);\n$portions = array_sum(array_map(fn (Batch $b): int => $b->portions, $batches));\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>The freezer</title>\n</head>\n<body>\n    <h1>The freezer</h1>\n    <ul class=\"batches\">\n        <?php foreach ($batches as $batch): ?>\n            <li><?= htmlspecialchars($batch->dish) ?> · <?= $batch->portions ?> portions · frozen <?= htmlspecialchars($batch->frozen) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"total\"><?= $portions ?> portions in the freezer</p>\n    <pre class=\"csv\"><?= htmlspecialchars(labelSheet($batches)) ?></pre>\n</body>\n</html>\n"
+},
+"hours": {
+"src/hours.php": "<?php\n\ndeclare(strict_types=1);\n\nconst HOME = 'Europe/Brussels';\nconst OPEN_DAYS = [2, 3, 4, 5, 6];\n\nfunction local(DateTimeImmutable $moment, string $zone = HOME): DateTimeImmutable\n{\n    return $moment->setTimezone(new DateTimeZone($zone));\n}\n\nfunction isOpen(DateTimeImmutable $moment): bool\n{\n    $here = local($moment);\n    $time = $here->format('H:i');\n\n    return in_array((int) $here->format('N'), OPEN_DAYS, true) && $time >= '18:00' && $time < '23:00';\n}\n\nfunction week(DateTimeImmutable $moment): array\n{\n    $start = local($moment)->setTime(0, 0);\n    $days = [];\n\n    foreach (new DatePeriod($start, new DateInterval('P1D'), 6) as $day) {\n        $open = in_array((int) $day->format('N'), OPEN_DAYS, true);\n        $days[] = $day->format('D j M') . ': ' . ($open ? '18:00–23:00' : 'closed');\n    }\n\n    return $days;\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/hours.php';\n\ntry {\n    $now = new DateTimeImmutable($_GET['at'] ?? '2026-10-24T17:30:00Z');\n} catch (Exception) {\n    $now = new DateTimeImmutable('2026-10-24T17:30:00Z');\n}\n\n$guests = ['New York' => 'America/New_York', 'Tokyo' => 'Asia/Tokyo'];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Opening hours</title>\n</head>\n<body>\n    <h1>Opening hours</h1>\n    <p class=\"now\">Brussels: <?= local($now)->format('D j M H:i') ?></p>\n    <p class=\"status\"><?= isOpen($now) ? 'Open now' : 'Closed now' ?></p>\n    <ul class=\"guests\">\n        <?php foreach ($guests as $city => $zone): ?>\n            <li><?= htmlspecialchars($city) ?>: <?= local($now, $zone)->format('D H:i') ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <ul class=\"week\">\n        <?php foreach (week($now) as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"utc\">Stored as UTC: <?= local($now, 'UTC')->format(DATE_ATOM) ?></p>\n</body>\n</html>\n"
 },
 "ledger": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction total(float ...$amounts): float\n{\n    return round(array_sum($amounts), 2);\n}\n\nfunction restock(array &$stock, string $item, int $grams): void\n{\n    $stock[$item] = ($stock[$item] ?? 0) + $grams;\n}\n\nfunction code(string|int $id): string\n{\n    return is_int($id) ? sprintf('#%04d', $id) : strtoupper($id);\n}\n\nfunction discount(float $amount, ?float $percent = null): float\n{\n    return $percent === null ? $amount : round($amount * (1 - $percent / 100), 2);\n}\n\nfunction nextTicket(): int\n{\n    static $count = 0;\n\n    return ++$count;\n}\n\n$prices = [7.5, 21.5, 9.0];\n$bill = total(...$prices);\n$withTip = total(2.5, ...$prices);\n\n$stock = ['butter' => 375, 'flour' => 2000];\nrestock($stock, 'butter', 500);\nrestock($stock, 'salt', 900);\n\n$kilos = $stock;\nforeach ($kilos as &$grams) {\n    $grams = round($grams / 1000, 1);\n}\nunset($grams);\n\n$tickets = [nextTicket(), nextTicket(), nextTicket()];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen ledger</title>\n</head>\n<body>\n    <h1>Kitchen ledger</h1>\n    <p>Bill: €<?= number_format($bill, 2) ?></p>\n    <p>With tip: €<?= number_format($withTip, 2) ?></p>\n    <p>Butter: <?= $stock['butter'] ?> g · Salt: <?= $stock['salt'] ?> g</p>\n    <p>Kilos: <?= htmlspecialchars(implode(', ', $kilos)) ?></p>\n    <p>Codes: <?= htmlspecialchars(code(42)) ?>, <?= htmlspecialchars(code('coq')) ?></p>\n    <p>After 10%: €<?= number_format(discount($bill, 10.0), 2) ?> · No discount: €<?= number_format(discount($bill), 2) ?></p>\n    <p>Tickets: <?= implode(', ', $tickets) ?></p>\n</body>\n</html>\n"
@@ -4587,6 +4600,10 @@ const SPSOL={
 },
 "reservations": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$tz = new DateTimeZone('Europe/Brussels');\n$bookings = [\n    ['name' => 'Lucas', 'at' => '2026-10-21 20:15', 'guests' => 4],\n    ['name' => 'Mia', 'at' => '2026-10-21 19:30', 'guests' => 2],\n    ['name' => 'Noor', 'at' => '2026-10-22 12:00', 'guests' => 3],\n];\n\n$now = new DateTimeImmutable('2026-10-21 18:00', $tz);\n$tomorrow = $now->modify('+1 day');\n$today = [];\n$tomorrowCount = 0;\n\nforeach ($bookings as $booking) {\n    $at = DateTimeImmutable::createFromFormat('Y-m-d H:i', $booking['at'], $tz);\n    if ($at->format('Y-m-d') === $now->format('Y-m-d')) {\n        $today[] = ['at' => $at, 'name' => $booking['name'], 'guests' => $booking['guests']];\n    } elseif ($at->format('Y-m-d') === $tomorrow->format('Y-m-d')) {\n        $tomorrowCount++;\n    }\n}\n\nusort($today, fn (array $a, array $b): int => $a['at'] <=> $b['at']);\n\n$wait = $now->diff($today[0]['at']);\n$lastOrders = $now->setTime(23, 0)->modify('-45 minutes');\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Reservation book</title>\n</head>\n<body>\n    <h1>Reservation book</h1>\n    <p class=\"today\"><?= $now->format('l j F Y') ?></p>\n    <ul class=\"bookings\">\n        <?php foreach ($today as $booking): ?>\n            <li><?= $booking['at']->format('H:i') ?> · <?= htmlspecialchars($booking['name']) ?> · <?= $booking['guests'] ?> guests</li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Tomorrow: <?= $tomorrowCount ?> booking<?= $tomorrowCount === 1 ? '' : 's' ?></p>\n    <p>Next table in <?= $wait->h ?> h <?= $wait->i ?> min</p>\n    <p>Last orders: <?= $lastOrders->format('H:i') ?></p>\n    <p class=\"now\">Now: <?= $now->format('H:i') ?></p>\n</body>\n</html>\n"
+},
+"roomservice": {
+"src/Order.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Order\n{\n    private array $extras = [];\n\n    public function __construct(public readonly string $dish)\n    {\n    }\n\n    public function __get(string $name): mixed\n    {\n        if (!array_key_exists($name, $this->extras)) {\n            throw new OutOfRangeException('No extra ' . $name);\n        }\n\n        return $this->extras[$name];\n    }\n\n    public function __set(string $name, mixed $value): void\n    {\n        $this->extras[$name] = $value;\n    }\n\n    public function __isset(string $name): bool\n    {\n        return isset($this->extras[$name]);\n    }\n\n    public function __unset(string $name): void\n    {\n        unset($this->extras[$name]);\n    }\n\n    public function __call(string $method, array $args): static\n    {\n        if (!str_starts_with($method, 'with')) {\n            throw new BadMethodCallException('No method ' . $method);\n        }\n\n        $this->extras[lcfirst(substr($method, 4))] = $args[0] ?? true;\n\n        return $this;\n    }\n\n    public static function __callStatic(string $method, array $args): static\n    {\n        return new static(ucfirst($method));\n    }\n\n    public function __invoke(): string\n    {\n        $parts = [$this->dish];\n        foreach ($this->extras as $name => $value) {\n            $parts[] = $name . ': ' . ($value === true ? 'yes' : $value);\n        }\n\n        return implode(' · ', $parts);\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Order.php';\n\n$order = new Order('Steak frites');\n$order->cooking = 'rare';\n$order->withSauce('béarnaise')->withSalad()->withBread();\nunset($order->bread);\n\n$soup = Order::soup();\n$tags = array_map(mb_strtoupper(...), [$order->cooking, $order->sauce]);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Room service</title>\n</head>\n<body>\n    <h1>Room service</h1>\n    <p class=\"summary\"><?= htmlspecialchars($order()) ?></p>\n    <p class=\"cooking\">Cooking: <?= htmlspecialchars($order->cooking) ?></p>\n    <p class=\"has\">Bread? <?= isset($order->bread) ? 'yes' : 'no' ?> · Wine? <?= isset($order->wine) ? 'yes' : 'no' ?></p>\n    <p class=\"soup\">Quick order: <?= htmlspecialchars($soup()) ?></p>\n    <p class=\"tags\">Tags: <?= htmlspecialchars(implode(', ', $tags)) ?></p>\n</body>\n</html>\n"
 },
 "scanner": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$labels = [\n    'Coq au vin (contains: celery, gluten)',\n    'Ratatouille',\n    'Tarte tatin (contains: GLUTEN, egg, milk)',\n    'Soupe au pistou (contains: celery)',\n];\n$codes = ['COQ-021', 'tart_9', 'RAT-014', 'PIS-7'];\n$phone = '050/12.34.56';\n\n$scan = [];\n$glutenCount = 0;\nforeach ($labels as $label) {\n    if (preg_match('/^(.+?) \\(contains: (.+)\\)$/', $label, $m) === 1) {\n        $allergens = preg_split('/,\\s*/', strtolower($m[2]));\n        $scan[] = $m[1] . ': ' . implode(', ', $allergens);\n    } else {\n        $scan[] = $label . ': none';\n    }\n\n    if (preg_match('/\\bgluten\\b/i', $label) === 1) {\n        $glutenCount++;\n    }\n}\n\n$valid = [];\nforeach ($codes as $code) {\n    if (preg_match('/^[A-Z]{3}-\\d{3}$/', $code) === 1) {\n        $valid[] = $code;\n    }\n}\n\n$digits = preg_replace('/\\D/', '', $phone);\n\n$q = trim($_GET['q'] ?? '');\n$found = [];\nforeach ($labels as $label) {\n    if ($q !== '' && preg_match('/' . preg_quote($q, '/') . '/i', $label) === 1) {\n        $found[] = $label;\n    }\n}\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Allergen scanner</title>\n</head>\n<body>\n    <h1>Allergen scanner</h1>\n    <ul class=\"scan\">\n        <?php foreach ($scan as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Gluten in <?= $glutenCount ?> dishes</p>\n    <p>Valid codes: <?= htmlspecialchars(implode(', ', $valid)) ?></p>\n    <p>Phone digits: <?= htmlspecialchars($digits) ?></p>\n    <form method=\"get\" action=\"/\">\n        <label for=\"q\">Search</label>\n        <input id=\"q\" name=\"q\" value=\"<?= htmlspecialchars($q) ?>\">\n        <button type=\"submit\">Scan</button>\n    </form>\n    <p class=\"found\"><?= count($found) ?> match<?= count($found) === 1 ? '' : 'es' ?> for <?= htmlspecialchars($q) ?></p>\n</body>\n</html>\n"
@@ -6995,6 +7012,712 @@ MORE.push(
 
 TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
 
+const F11={order:'src/Order.php',alg:'src/allergens.php',batch:'src/Batch.php',frz:'src/freezer.php',hours:'src/hours.php',fdata:'data/freezer.txt'};
+const SOUP_LINE='O:5:"Batch":3:{s:1:"d";s:4:"Soup";s:1:"p";i:2;s:1:"f";s:10:"2026-10-01";}';
+
+Object.assign(RULES,{
+ pz79:{n:'79',title:'Magic properties: __get, __set, __isset, __unset',cat:'Objects',
+  syn:'public function <span class="k">__get</span>(string $name): mixed · <span class="k">__set</span>(string $name, mixed $value): void · <span class="k">__isset</span> · <span class="k">__unset</span>',
+  note:'When code reads or writes a property that does not exist (or is not visible), PHP calls __get or __set instead. isset() and unset() on such a property call __isset and __unset. Use them for flexible extras stored in a private array.',
+  why:'Normally a property must be declared. Magic methods let a class react to properties it never declared: $order->cooking = \'rare\' calls __set(\'cooking\', \'rare\'), reading $order->cooking calls __get(\'cooking\'). Store them in a private array and you have a tidy bag of extras that still lives inside the object. isset($order->wine) calls __isset, which should return false for missing extras, and unset($order->bread) calls __unset. They only run for inaccessible properties: a real public property is read directly. Use them sparingly: magic properties have no types and editors cannot autocomplete them. Since PHP 8.2 writing an undeclared property without __set is deprecated, which is exactly why __set exists.',
+  parts:[['$o->x = 1','__set(\'x\', 1)'],['$o->x','__get(\'x\')'],['isset($o->x)','__isset(\'x\')'],['unset($o->x)','__unset(\'x\')'],['private array $extras','where the values really live']],
+  mistakes:['Forgetting __isset: isset() is always false, even for extras you set.','Returning null for unknown names: typos go unnoticed. Throw instead.','Expecting __get to run for a declared public property.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+final class Notes
+{
+    private array $data = [];
+
+    public function __set(string $name, mixed $value): void
+    {
+        $this->data[$name] = $value;
+    }
+
+    public function __get(string $name): mixed
+    {
+        return $this->data[$name] ?? 'nothing';
+    }
+
+    public function __isset(string $name): bool
+    {
+        return isset($this->data[$name]);
+    }
+}
+
+$n = new Notes();
+$n->table = 7;
+echo $n->table . ' / ' . $n->wine . PHP_EOL;
+var_dump(isset($n->table), isset($n->wine));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Bag
+{
+    private array $items = ['bread' => true];
+
+    public function __isset(string $name): bool
+    {
+        return isset($this->items[$name]);
+    }
+
+    public function __unset(string $name): void
+    {
+        unset($this->items[$name]);
+    }
+}
+
+$bag = new Bag();
+var_dump(isset($bag->bread));
+unset($bag->bread);
+var_dump(isset($bag->bread));`},
+ pz80:{n:'80',title:'__call, __callStatic, __invoke and first-class callables',cat:'Objects',
+  syn:'public function <span class="k">__call</span>(string $method, array $args) · public static function <span class="k">__callStatic</span>(…) · public function <span class="k">__invoke</span>() · <span class="k">strtoupper(...)</span>',
+  note:'__call runs when an unknown method is called on an object, __callStatic for an unknown static method. __invoke makes the object itself callable: $order(). name(...) turns any function or method into a Closure: first-class callable syntax.',
+  why:'__call(string $method, array $args) catches calls to methods that do not exist, so $order->withSauce(\'béarnaise\') can be handled by one method that reads the name. Return $this and calls chain: a fluent interface. Throw BadMethodCallException for names you do not support, or every typo silently works. __callStatic does the same for Order::soup(). __invoke turns the object into something you can call like a function, $order(), and makes is_callable($order) true, so it can be passed to array_map. Since PHP 8.1, strtoupper(...) with three literal dots creates a Closure from any function or method, including $this->format(...) and Order::make(...): cleaner than the old string \'strtoupper\'.',
+  parts:[['$o->withSauce($x)','__call(\'withSauce\', [$x])'],['Order::soup()','__callStatic(\'soup\', [])'],['$o()','__invoke()'],['return $this','chain calls'],['mb_strtoupper(...)','a Closure for array_map']],
+  mistakes:['__call without a fallback exception: typos do nothing and no one notices.','Writing strtoupper(…) with real arguments when you meant the callable.','Declaring __callStatic as non-static: it must be public static.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+final class Bell
+{
+    public function __call(string $method, array $args): string
+    {
+        return 'You called ' . $method . ' with ' . count($args) . ' argument(s)';
+    }
+
+    public function __invoke(string $who): string
+    {
+        return 'Ding for ' . $who;
+    }
+}
+
+$bell = new Bell();
+echo $bell->ringTwice('loud') . PHP_EOL;
+echo $bell('table 4') . PHP_EOL;
+var_dump(is_callable($bell));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$shout = strtoupper(...);
+$trim = trim(...);
+
+echo implode(', ', array_map($shout, array_map($trim, [' soup ', ' stew'])));`},
+ pz81:{n:'81',title:'Bitwise operators and flags',cat:'Running PHP',
+  syn:'const DAIRY = <span class="k">1 &lt;&lt; 1</span>; · $mask <span class="k">|</span>= DAIRY · ($mask <span class="k">&amp;</span> DAIRY) === DAIRY · $mask <span class="k">&amp; ~</span>DAIRY · $mask <span class="k">^</span> NUTS',
+  note:'Each flag is one bit: 1, 2, 4, 8, 16 (1 << n). | sets bits, & tests them, & ~ clears one, ^ flips one, << and >> shift. One integer can carry many yes/no switches, which is how PHP\'s own flags like JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE work.',
+  why:'An int is a row of bits, and each bit can be a switch. Give each allergen its own power of two (GLUTEN = 1, DAIRY = 2, NUTS = 4, EGG = 8, FISH = 16, or written 1 << 0, 1 << 1 …) and a whole dish fits in one number: GLUTEN | DAIRY | EGG is 11. & keeps only bits set in both, so ($dish & DAIRY) === DAIRY asks "does it contain dairy?", and ($dish & $guest) === 0 means "nothing this guest avoids". & ~DAIRY clears the dairy bit, ^ NUTS toggles nuts, and sprintf(\'%05b\', $mask) shows the switches. You already used this: json_encode($x, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE) and FILE_APPEND | LOCK_EX are flags combined with |. Do not confuse & and | with && and ||: those are logical and give true or false.',
+  parts:[['1 << 3','8: the fourth switch'],['$a | $b','set both'],['($m & $f) === $f','is the flag set?'],['$m & ~$f','clear a flag'],['$m ^ $f','toggle a flag'],["sprintf('%05b', $m)",'see the bits']],
+  mistakes:['Using + to combine flags: adding the same flag twice breaks the mask.','Writing if ($m & $f == $f): == binds tighter than &. Use brackets.','Mixing up & (bits) and && (true/false).'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+const READ = 1;
+const WRITE = 2;
+const DELETE = 4;
+
+$chef = READ | WRITE | DELETE;
+$commis = READ;
+
+var_dump(($commis & WRITE) === WRITE, ($chef & DELETE) === DELETE);
+echo sprintf('%03b', $chef) . ' ' . ($chef & ~DELETE) . ' ' . (READ ^ WRITE);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+echo 6 & 3, ' ', 6 | 3, ' ', 6 ^ 3, ' ', ~6, ' ', 1 << 4, ' ', 32 >> 2, PHP_EOL;
+echo 0b101 . ' ' . 0x1F . ' ' . 0o17;`},
+ pz82:{n:'82',title:'Heredoc and nowdoc',cat:'Strings',
+  syn:'$card = <span class="k">&lt;&lt;&lt;CARD</span> … {$name} … <span class="k">CARD</span>; · $raw = <span class="k">&lt;&lt;&lt;\'RAW\'</span> … $not_a_variable … <span class="k">RAW</span>;',
+  note:'Heredoc (<<<NAME) is a multi-line double-quoted string: variables and {$expressions} are filled in. Nowdoc (<<<\'NAME\', with quotes) is the single-quoted version: nothing is replaced. Since PHP 7.3 the closing marker may be indented, and that indentation is removed from every line.',
+  why:'Long text with line breaks is awkward with quotes and \\n. Heredoc starts with <<< and a name of your choice, and ends with the same name. Inside, it behaves like double quotes: $name and {$guest[\'name\']} are replaced, \\n works. Nowdoc puts the name in single quotes, <<<\'RAW\', and behaves like single quotes: perfect for showing code samples with $ signs in them. The closing marker can be indented to match your code; PHP then strips that much indentation from each line, so the text comes out flush left. Anything after the closing marker on its line, like ; or ), continues the statement as normal.',
+  parts:[['<<<CARD … CARD;','heredoc: like "…"'],["<<<'RAW' … RAW;","nowdoc: like '…'"],['{$a[\'x\']} {$obj->name}','complex values in braces'],['indented closing marker','indentation is removed']],
+  mistakes:['A closing marker indented less than the text lines: Parse error.','Expecting $x to be replaced inside a nowdoc.','Using the marker word inside the text on its own line.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$guest = ['name' => 'Odile', 'table' => 4];
+
+echo <<<SLIP
+    Table {$guest['table']}
+    Guest: {$guest['name']}
+    Total: €38.00
+    SLIP;`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+echo <<<'CODE'
+    $price = 9.5;
+    echo "{$price}";
+    CODE;`},
+ pz83:{n:'83',title:'serialize and unserialize',cat:'Data',
+  syn:"<span class=\"k\">serialize</span>($batch) · <span class=\"k\">unserialize</span>($text, ['<span class=\"v\">allowed_classes</span>' =&gt; [Batch::class]]) · public function <span class=\"k\">__serialize</span>(): array · <span class=\"k\">__unserialize</span>(array $data): void",
+  note:'serialize turns any PHP value, objects included, into a string; unserialize turns it back. Never unserialize text from users: it can create objects of any class. Limit it with allowed_classes. __serialize and __unserialize choose what gets stored.',
+  why:'json_encode handles plain data; serialize handles PHP itself: objects come back as objects of the right class. The format is readable: a:2:{…} is an array of 2, s:4:"Soup" a 4-byte string, i:2 an int, O:5:"Batch" an object. That power is the danger. unserialize on text an attacker controls can build objects of classes you never meant to create, and their magic methods run (object injection). So pass [\'allowed_classes\' => [Batch::class]]: anything else becomes a harmless __PHP_Incomplete_Class, or use false to allow no objects at all. For data from outside, prefer json_decode. __serialize() returns the array to store, __unserialize(array $data) rebuilds the object from it, so you choose short keys and leave out what should not be saved. var_export prints a value as valid PHP code.',
+  parts:[['serialize($v)','value → string'],['unserialize($s, [\'allowed_classes\' => [...]])','string → value, safely'],['__serialize(): array','what to store'],['__unserialize(array $d): void','rebuild from it'],['json_encode for outside data','no objects, no surprises']],
+  mistakes:['unserialize($_COOKIE[...]) or anything a user can change.','Changing a class after storing it: old data no longer matches.','Expecting serialize output to be readable by other languages.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$s = serialize(['dish' => 'Soup', 'hot' => true, 'price' => 8.5]);
+echo $s . PHP_EOL;
+print_r(unserialize($s));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Secret
+{
+}
+
+$text = serialize(new Secret());
+$safe = unserialize($text, ['allowed_classes' => false]);
+
+echo get_class($safe);`},
+ pz84:{n:'84',title:'File modes, locks and streams',cat:'Files',
+  syn:"file_put_contents($f, $line, <span class=\"k\">FILE_APPEND | LOCK_EX</span>) · fopen($f, <span class=\"v\">'r' 'w' 'a' 'x' 'c'</span> + '+') · fopen(<span class=\"v\">'php://memory'</span>, 'w+') · <span class=\"k\">stream_get_contents</span>($h)",
+  note:'fopen modes: r reads, w empties then writes, a appends, x creates only if missing, c writes without emptying; + adds the other direction. FILE_APPEND appends, LOCK_EX stops two requests writing at once. php://memory and php://temp are files that live in memory.',
+  why:'Picking the wrong file mode is a classic way to lose data: \'w\' empties the file the moment it opens. \'a\' always writes at the end, \'x\' refuses if the file already exists (safe for creating), \'r+\' reads and writes without emptying. file_put_contents is the one-liner: add FILE_APPEND to add instead of replace, and LOCK_EX so two guests saving at the same moment do not mix their lines. PHP talks to everything through streams, and many have URL-like names: php://memory and php://temp are scratch files in memory (temp moves to disk when big), php://stdin and php://stdout are the console, php://input is the raw request body. A memory stream lets functions that only write to files, like fputcsv, build a string: write, rewind, stream_get_contents.',
+  parts:[["'r' · 'w' · 'a' · 'x' · 'c'",'read · empty+write · append · create new · write'],["'r+' 'w+' 'a+'",'both directions'],['FILE_APPEND | LOCK_EX','add, one writer at a time'],["fopen('php://memory', 'w+')",'a file in RAM'],['rewind($h); stream_get_contents($h)','read it all back']],
+  mistakes:["fopen($log, 'w') for a log: every request wipes it.",'Forgetting rewind: stream_get_contents returns an empty string.','Two requests appending without LOCK_EX: lines interleave.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$h = fopen('php://memory', 'w+');
+fputcsv($h, ['dish', 'portions'], ',', '"', '');
+fputcsv($h, ['Onion soup', 4], ',', '"', '');
+rewind($h);
+
+echo stream_get_contents($h);
+fclose($h);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$file = __DIR__ . '/../data/demo.txt';
+file_put_contents($file, "first\\n");
+file_put_contents($file, "second\\n", FILE_APPEND | LOCK_EX);
+file_put_contents($file, "third\\n", FILE_APPEND | LOCK_EX);
+
+echo file_get_contents($file);`},
+ pz85:{n:'85',title:'Time zones',cat:'Dates',
+  syn:"new <span class=\"k\">DateTimeZone</span>('Europe/Brussels') · $moment-&gt;<span class=\"k\">setTimezone</span>($zone) · format(<span class=\"v\">DATE_ATOM</span>) · 'P e T'",
+  note:'A DateTimeImmutable is one moment plus a time zone. setTimezone shows the same moment on another clock. Store and compare in UTC, show in the guest\'s zone. Named zones like Europe/Brussels know summer time; fixed offsets like +02:00 do not.',
+  why:'"19:30" means nothing without a place. A DateTimeImmutable holds an exact moment and a zone to display it in. ->setTimezone(new DateTimeZone(\'America/New_York\')) does not change the moment, only the clock you read it on: 19:30 in Brussels is 13:30 in New York and 02:30 the next day in Tokyo. Always use named zones (Europe/Brussels) rather than offsets (+02:00): the name knows that Belgium moves from +02:00 to +01:00 on the last Sunday of October. The safe habit: store times in UTC (a Z or +00:00 at the end), convert to local time only when you show them. format(\'P\') prints the offset, \'e\' the zone name, \'T\' the abbreviation, and DATE_ATOM gives the standard 2026-10-24T17:30:00+00:00 form.',
+  parts:[["new DateTimeZone('Asia/Tokyo')",'a named zone'],['->setTimezone($z)','same moment, other clock'],["'…Z' · 'UTC'",'store like this'],["format('P e T')",'+02:00 Europe/Brussels CEST'],['DATE_ATOM','2026-10-24T17:30:00+00:00']],
+  mistakes:['Storing local times without a zone: summer time makes them ambiguous.','Using +02:00 for Brussels all year.','Comparing format() strings from different zones.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$service = new DateTimeImmutable('2026-10-24 19:30', new DateTimeZone('Europe/Brussels'));
+
+foreach (['UTC', 'America/New_York', 'Asia/Tokyo'] as $zone) {
+    echo str_pad($zone, 18) . $service->setTimezone(new DateTimeZone($zone))->format('D H:i T') . PHP_EOL;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$zone = new DateTimeZone('Europe/Brussels');
+$saturday = new DateTimeImmutable('2026-10-24 12:00', $zone);
+$monday = new DateTimeImmutable('2026-10-26 12:00', $zone);
+
+echo $saturday->format('P T') . ' → ' . $monday->format('P T') . ': summer time ended on Sunday';`},
+ pz86:{n:'86',title:'DatePeriod and DateInterval',cat:'Dates',
+  syn:"new <span class=\"k\">DateInterval</span>('P1D') · new <span class=\"k\">DatePeriod</span>($start, $interval, 6) · foreach ($period as $day) · ->setTime(0, 0)",
+  note:'DateInterval describes a length: P1D one day, PT2H two hours, P1M one month (P = period, T before time parts). DatePeriod repeats an interval from a start date; foreach gives each date. A number as the third argument counts repeats after the start, so 6 gives 7 dates.',
+  why:'To list the next seven days you could add one day in a loop, but DatePeriod says it directly: new DatePeriod($start, new DateInterval(\'P1D\'), 6) and foreach over it. The interval code reads left to right: P, then years Y, months M, days D, then T and hours H, minutes M, seconds S. So P1M is a month and PT1M a minute: the T matters. The third argument is either an end date (exclusive) or a number of recurrences, and recurrences are counted after the start: 6 yields 7 dates. DatePeriod::EXCLUDE_START_DATE skips the first one. Start from midnight with ->setTime(0, 0) so every date lands on a clean day, and format(\'N\') gives the weekday as 1 (Monday) to 7 (Sunday).',
+  parts:[["'P1D' · 'PT2H' · 'P1M' · 'PT1M'",'day · 2 hours · month · minute'],['new DatePeriod($s, $i, 6)','start + 6 repeats = 7 dates'],['new DatePeriod($s, $i, $end)','until before $end'],["format('N')",'1 = Monday … 7 = Sunday'],['->setTime(0, 0)','start at midnight']],
+  mistakes:["P1M when you meant one minute: PT1M.",'Expecting 6 recurrences to give 6 dates.','Comparing weekday names as text instead of N numbers.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$start = new DateTimeImmutable('2026-10-26');
+foreach (new DatePeriod($start, new DateInterval('P1D'), 3) as $day) {
+    echo $day->format('D j M') . PHP_EOL;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$open = new DateTimeImmutable('2026-10-24 18:00');
+$close = $open->add(new DateInterval('PT5H'));
+$gap = $open->diff($close);
+
+echo $close->format('H:i') . ' · open for ' . $gap->h . ' hours · ' . $gap->format('%H:%I');`}
+});
+
+TARGETS.push(
+{id:'roomservice',special:true,name:'Room service',rules:['pz79','pz80'],
+ probes:{outside:{over:{[IDX]:PHPHEAD+`
+`+RQ(F11.order)+`
+$o = new Order('x');
+try {
+    $o->nothing;
+} catch (OutOfRangeException $e) {
+    echo $e->getMessage();
+}
+try {
+    $o->grill();
+} catch (BadMethodCallException $e) {
+    echo ' ' . $e->getMessage();
+}
+echo ' ' . (is_callable($o) ? 'callable' : 'plain');
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Room service',`    <h1>Room service</h1>
+`),[F11.order]:PHPHEAD},
+ solution:pickFiles(SPSOL.roomservice,[IDX,F11.order]),
+ steps:[
+  {t:"`src/Order.php`: `final class Order` with a readonly `$dish` and a `private array $extras = []`",c:c=>/final\s+class\s+Order/.test(src(c,F11.order))&&/readonly\s+string\s+\$dish/.test(src(c,F11.order))&&/private\s+array\s+\$extras\s*=\s*\[\s*\]/.test(src(c,F11.order)),help:['The dish is fixed; the extras are a bag that grows.','A promoted readonly constructor property and a private array.',`final class Ticket
+{
+    private array $notes = [];
+
+    public function __construct(public readonly string $dish)
+    {
+    }
+}`,`final class Order
+{
+    private array $extras = [];
+
+    public function __construct(public readonly string $dish)
+    {
+    }
+}`]},
+  {t:"`__set` and `__get`: `$order->cooking = 'rare'` then `Cooking: rare`",c:c=>ptxt(c,'p.cooking')==='Cooking: rare'&&/function\s+__set\s*\(\s*string\s+\$name\s*,\s*mixed\s+\$value\s*\)\s*:\s*void/.test(src(c,F11.order))&&/function\s+__get\s*\(\s*string\s+\$name\s*\)\s*:\s*mixed/.test(src(c,F11.order)),help:['cooking is not declared: PHP calls your __set and __get.','Store in $this->extras[$name]; read it back.',`public function __set(string $name, mixed $value): void
+{
+    $this->notes[$name] = $value;
+}`,`public function __get(string $name): mixed
+{
+    return $this->extras[$name];
+}
+
+public function __set(string $name, mixed $value): void
+{
+    $this->extras[$name] = $value;
+}
+…
+$order = new Order('Steak frites');
+$order->cooking = 'rare';
+…
+<p class="cooking">Cooking: <?= htmlspecialchars($order->cooking) ?></p>`]},
+  {t:'`__call`: `withSauce(\'béarnaise\')`, `withSalad()` and `withBread()` store extras and chain, returning `$this`',c:c=>/function\s+__call\s*\(\s*string\s+\$method\s*,\s*array\s+\$args\s*\)\s*:\s*static/.test(src(c,F11.order))&&/->withSauce\([^)]*\)\s*->withSalad\(\s*\)/.test(src(c))&&/return\s+\$this/.test(src(c,F11.order)),help:['withSauce does not exist: __call gets the name "withSauce" and the arguments.',"Strip `with`, lowercase the first letter: `lcfirst(substr($method, 4))`. No argument means true.",`public function __call(string $method, array $args): static
+{
+    $this->notes[$method] = $args[0] ?? true;
+
+    return $this;
+}`,`public function __call(string $method, array $args): static
+{
+    $this->extras[lcfirst(substr($method, 4))] = $args[0] ?? true;
+
+    return $this;
+}
+…
+$order->withSauce('béarnaise')->withSalad()->withBread();`]},
+  {t:'`__isset` and `__unset`: `unset($order->bread)` gives `Bread? no · Wine? no`',c:c=>ptxt(c,'p.has')==='Bread? no · Wine? no'&&/function\s+__isset\s*\(/.test(src(c,F11.order))&&/function\s+__unset\s*\(/.test(src(c,F11.order))&&/unset\(\s*\$order->bread\s*\)/.test(src(c)),help:['isset() and unset() on a magic property call __isset and __unset.','`return isset($this->extras[$name]);` and `unset($this->extras[$name]);`',`public function __isset(string $name): bool
+{
+    return isset($this->notes[$name]);
+}`,`public function __isset(string $name): bool
+{
+    return isset($this->extras[$name]);
+}
+
+public function __unset(string $name): void
+{
+    unset($this->extras[$name]);
+}`]},
+  {t:'`__invoke`: `$order()` prints `Steak frites · cooking: rare · sauce: béarnaise · salad: yes`',c:c=>ptxt(c,'p.summary')==='Steak frites · cooking: rare · sauce: béarnaise · salad: yes'&&/function\s+__invoke\s*\(\s*\)\s*:\s*string/.test(src(c,F11.order))&&/\$order\(\s*\)/.test(src(c)),help:['Calling the object itself runs __invoke.','Start with the dish, add "name: value" per extra, true becomes yes, join with " · ".',`public function __invoke(): string
+{
+    return implode(', ', $this->notes);
+}`,`public function __invoke(): string
+{
+    $parts = [$this->dish];
+    foreach ($this->extras as $name => $value) {
+        $parts[] = $name . ': ' . ($value === true ? 'yes' : $value);
+    }
+
+    return implode(' · ', $parts);
+}`]},
+  {t:'`__callStatic`: `Order::soup()` builds an order: `Quick order: Soup`',c:c=>ptxt(c,'p.soup')==='Quick order: Soup'&&/public\s+static\s+function\s+__callStatic\s*\(/.test(src(c,F11.order))&&/Order::soup\(\s*\)/.test(src(c)),help:['A static method that does not exist calls __callStatic.','`return new static(ucfirst($method));`',`public static function __callStatic(string $method, array $args): static
+{
+    return new static($method);
+}`,`public static function __callStatic(string $method, array $args): static
+{
+    return new static(ucfirst($method));
+}
+…
+$soup = Order::soup();
+…
+<p class="soup">Quick order: <?= htmlspecialchars($soup()) ?></p>`]},
+  {t:'First-class callable: `array_map(mb_strtoupper(...), …)` gives `Tags: RARE, BÉARNAISE`',c:c=>ptxt(c,'p.tags')==='Tags: RARE, BÉARNAISE'&&/mb_strtoupper\(\s*\.\.\.\s*\)/.test(src(c)),help:['strtoupper only knows ASCII: the É needs mb_strtoupper. (...) turns it into a Closure.','`array_map(mb_strtoupper(...), [$order->cooking, $order->sauce])`',`$loud = array_map(strtoupper(...), ['a', 'b']);`,`$tags = array_map(mb_strtoupper(...), [$order->cooking, $order->sauce]);
+…
+<p class="tags">Tags: <?= htmlspecialchars(implode(', ', $tags)) ?></p>`]},
+  {t:'No silent typos: unknown extras throw `OutOfRangeException`, unknown methods `BadMethodCallException`',c:c=>pout(c,'outside')==='No extra nothing No method grill callable',help:['Passle reads $o->nothing and calls $o->grill().',"In __get: `if (!array_key_exists($name, $this->extras)) { throw new OutOfRangeException('No extra ' . $name); }`. In __call: only names that start with `with`.",`if (!str_starts_with($method, 'with')) {
+    throw new BadMethodCallException('No method ' . $method);
+}`,`public function __get(string $name): mixed
+{
+    if (!array_key_exists($name, $this->extras)) {
+        throw new OutOfRangeException('No extra ' . $name);
+    }
+
+    return $this->extras[$name];
+}
+
+public function __call(string $method, array $args): static
+{
+    if (!str_starts_with($method, 'with')) {
+        throw new BadMethodCallException('No method ' . $method);
+    }
+    …
+}`]},
+  cleanStep(c=>pure(c,F11.order)&&ptxt(c,'p.summary')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz79',q:'`isset($order->wine)` on a magic property calls…',o:['__get','__isset','__call','offsetExists'],a:1,h:'isset → __isset.'},
+  {k:'gap',r:'pz79',q:'Runs when you write an undeclared property',pre:'public function ',post:'(string $name, mixed $value): void',a:['__set'],h:'Set.'},
+  {k:'pick',r:'pz79',q:'Does `__get` run when you read a declared public property?',o:['Yes, always','No, only for missing or inaccessible properties','Only in strict mode','Only for readonly ones'],a:1,h:'Magic is the fallback.'},
+  {k:'pick',r:'pz80',q:'Which method makes `$order()` work?',o:['__call','__callStatic','__invoke','__toString'],a:2,h:'Invoke the object.'},
+  {k:'type',r:'pz80',q:'A Closure for `trim` into `$t`, with first-class callable syntax',ph:'$t = …;',test:/^\$t = trim\(\.\.\.\);$/,ans:'$t = trim(...);',h:'`$t = trim(...);`'},
+  {k:'pick',r:'pz80',q:'`Order::soup()` when `soup` is not defined, but `__callStatic` is…',o:['Fatal error','calls __callStatic(\'soup\', [])','calls __call','returns null'],a:1,h:'Static → __callStatic.'}
+ ]},
+
+{id:'allergens',special:true,name:'Allergen switches',rules:['pz81','pz82'],
+ probes:{ge:{method:'GET',get:{avoid:'gluten,egg'}},fish:{method:'GET',get:{avoid:'fish,<b>'}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Allergen switches',`    <h1>Allergen switches</h1>
+`),[F11.alg]:PHPHEAD},
+ solution:pickFiles(SPSOL.allergens,[IDX,F11.alg]),
+ steps:[
+  {t:'`src/allergens.php`: five flags, one bit each: `GLUTEN = 1 << 0` … `FISH = 1 << 4`',c:c=>{const s=src(c,F11.alg);return /const\s+GLUTEN\s*=\s*(1\s*<<\s*0|1)\s*;/.test(s)&&/const\s+DAIRY\s*=\s*(1\s*<<\s*1|2)\s*;/.test(s)&&/const\s+NUTS\s*=\s*(1\s*<<\s*2|4)\s*;/.test(s)&&/const\s+EGG\s*=\s*(1\s*<<\s*3|8)\s*;/.test(s)&&/const\s+FISH\s*=\s*(1\s*<<\s*4|16)\s*;/.test(s)},help:['Powers of two: 1, 2, 4, 8, 16. Each one is its own switch.','`const DAIRY = 1 << 1;` reads "the second switch".',`const READ = 1 << 0;
+const WRITE = 1 << 1;`,`const GLUTEN = 1 << 0;
+const DAIRY = 1 << 1;
+const NUTS = 1 << 2;
+const EGG = 1 << 3;
+const FISH = 1 << 4;
+
+const ALLERGENS = ['gluten' => GLUTEN, 'dairy' => DAIRY, 'nuts' => NUTS, 'egg' => EGG, 'fish' => FISH];`]},
+  {t:'`has(int $mask, int $flag): bool` and `names(int $mask): array`: `Quiche lorraine: gluten, dairy, egg (11)`',c:c=>rows(c,'ul.dishes li').join('|')==='Coq au vin: none (0)|Quiche lorraine: gluten, dairy, egg (11)|Sole meunière: gluten, dairy, fish (19)|Tarte Tatin: gluten, dairy, egg (11)|Pralines: nuts (4)'&&/\(\s*\$mask\s*&\s*\$flag\s*\)\s*===\s*\$flag/.test(src(c,F11.alg)),help:['Combine a dish with |, test a flag with &.',"`return ($mask & $flag) === $flag;` and loop ALLERGENS for names.",`$m = READ | WRITE;
+var_dump(($m & WRITE) === WRITE);`,`function has(int $mask, int $flag): bool
+{
+    return ($mask & $flag) === $flag;
+}
+
+function names(int $mask): array
+{
+    $names = [];
+    foreach (ALLERGENS as $name => $flag) {
+        if (has($mask, $flag)) {
+            $names[] = $name;
+        }
+    }
+
+    return $names;
+}
+…
+$dishes = [
+    'Coq au vin' => 0,
+    'Quiche lorraine' => GLUTEN | DAIRY | EGG,
+    'Sole meunière' => FISH | DAIRY | GLUTEN,
+    'Tarte Tatin' => GLUTEN | DAIRY | EGG,
+    'Pralines' => NUTS,
+];`]},
+  {t:"`maskFrom(string $list): int` builds the guest's mask with `|=`; the default guest avoids `dairy,nuts`",c:c=>/function\s+maskFrom\s*\(\s*string\s+\$list\s*\)\s*:\s*int/.test(src(c,F11.alg))&&/\|=/.test(src(c,F11.alg))&&preTxt(c,'pre.card').includes('Avoid: dairy, nuts'),help:['Each name in the list switches one bit on.',"`$mask |= ALLERGENS[trim($name)] ?? 0;` ignores unknown names.",`$mask = 0;
+$mask |= WRITE;`,`function maskFrom(string $list): int
+{
+    $mask = 0;
+    foreach (explode(',', $list) as $name) {
+        $mask |= ALLERGENS[trim($name)] ?? 0;
+    }
+
+    return $mask;
+}
+…
+$guest = maskFrom((string) ($_GET['avoid'] ?? 'dairy,nuts'));`]},
+  {t:'`safeFor(int $dish, int $guest): bool` with `($dish & $guest) === 0`: `Safe: Coq au vin`',c:c=>ptxt(c,'p.safe')==='Safe: Coq au vin'&&ptxt(c.p.ge,'p.safe')==='Safe: Coq au vin, Pralines'&&/\(\s*\$dish\s*&\s*\$guest\s*\)\s*===\s*0/.test(src(c,F11.alg)),help:['No shared bits means nothing the guest avoids.','array_filter the dishes with safeFor, keep the keys.',`$ok = array_filter($items, fn (int $m): bool => ($m & $banned) === 0);`,`function safeFor(int $dish, int $guest): bool
+{
+    return ($dish & $guest) === 0;
+}
+…
+$safe = array_keys(array_filter($dishes, fn (int $mask): bool => safeFor($mask, $guest)));
+…
+<p class="safe">Safe: <?= htmlspecialchars(implode(', ', $safe) ?: 'nothing tonight') ?></p>`]},
+  {t:'Unknown names are ignored: `?avoid=fish,<b>` → `Safe: Coq au vin, Quiche lorraine, Tarte Tatin, Pralines`',c:c=>ptxt(c.p.fish,'p.safe')==='Safe: Coq au vin, Quiche lorraine, Tarte Tatin, Pralines'&&!c.p.fish.bad,help:['Only names in the ALLERGENS list count.','`?? 0` after the lookup.','$bit = $map[$name] ?? 0;','Use `ALLERGENS[trim($name)] ?? 0`.']},
+  {t:'Clear and toggle: `Quiche without dairy: 9 · with nuts toggled on: 15`',c:c=>ptxt(c,'p.flip')==='Quiche without dairy: 9 · with nuts toggled on: 15'&&/&\s*~\s*DAIRY/.test(src(c))&&/\^\s*NUTS/.test(src(c)),help:['& ~ clears a bit, ^ flips one.',"`$quiche & ~DAIRY` and `$quiche ^ NUTS`.",`$m & ~WRITE
+$m ^ DELETE`,`$quiche = $dishes['Quiche lorraine'];
+…
+<p class="flip">Quiche without dairy: <?= $quiche & ~DAIRY ?> · with nuts toggled on: <?= $quiche ^ NUTS ?></p>`]},
+  {t:"A heredoc allergy card in `<pre class=\"card\">` with `Mask: 00110` from `sprintf('%05b', …)`",c:c=>preTxt(c,'pre.card')==='ALLERGY CARD\nAvoid: dairy, nuts\nMask: 00110'&&preTxt(c.p.ge,'pre.card')==='ALLERGY CARD\nAvoid: gluten, egg\nMask: 01001'&&/<<<\s*[A-Z_]+\s*\n/.test(src(c)),help:['Heredoc fills in {$variables}; an indented closing marker trims the indentation.',"`$bits = sprintf('%05b', $guest);` then `$card = <<<CARD … CARD;`.",`$slip = <<<SLIP
+    Table {$table}
+    SLIP;`,`$avoidList = implode(', ', names($guest));
+$bits = sprintf('%05b', $guest);
+
+$card = <<<CARD
+    ALLERGY CARD
+    Avoid: {$avoidList}
+    Mask: {$bits}
+    CARD;
+…
+<pre class="card"><?= htmlspecialchars($card) ?></pre>`]},
+  {t:"A nowdoc in `<pre class=\"rule\">` shows the rule as text: `safe when ($dish & $guest) === 0`",c:c=>preTxt(c,'pre.rule')==='safe when ($dish & $guest) === 0'&&/<<<\s*'[A-Z_]+'/.test(src(c)),help:['$dish must stay as text, not be filled in: nowdoc.',"`<<<'RULE'` with quotes.",`$code = <<<'CODE'
+    echo $x;
+    CODE;`,`$rule = <<<'RULE'
+    safe when ($dish & $guest) === 0
+    RULE;
+…
+<pre class="rule"><?= htmlspecialchars($rule) ?></pre>`]},
+  cleanStep(c=>pure(c,F11.alg)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz81',q:'`6 & 3` is…',o:['9','2','7','5'],a:1,h:'110 & 011 = 010.'},
+  {k:'pick',r:'pz81',q:'`6 | 3` is…',o:['9','2','7','5'],a:2,h:'110 | 011 = 111.'},
+  {k:'type',r:'pz81',q:'Turn the `DAIRY` flag off in `$mask`',ph:'$mask = …;',test:/^\$mask = \$mask & ~DAIRY;$|^\$mask &= ~DAIRY;$/,ans:'$mask &= ~DAIRY;',h:'`$mask &= ~DAIRY;`'},
+  {k:'pick',r:'pz81',q:'`1 << 4`',o:['5','8','16','14'],a:2,h:'Shift one left four times.'},
+  {k:'pick',r:'pz82',q:"In `<<<'TXT'` … `TXT;`, is `$name` replaced?",o:['Yes','No: that is a nowdoc','Only in braces','Only with strict_types'],a:1,h:'Quotes around the marker: nowdoc.'},
+  {k:'pick',r:'pz82',q:'The closing marker is indented 4 spaces. The text lines…',o:['keep their spaces','lose those 4 spaces','are a Parse error','get a tab'],a:1,h:'PHP 7.3+ strips the indentation.'}
+ ]},
+
+{id:'freezer',special:true,name:'The freezer',rules:['pz83','pz84'],
+ probes:{twice:[{method:'GET'},{method:'GET'}],intruder:{over:{[F11.fdata]:'O:8:"stdClass":1:{s:4:"evil";b:1;}\n'+SOUP_LINE+'\n'},req:{}},outside:{over:{[IDX]:PHPHEAD+`
+`+RQ(F11.batch)+`
+$b = new Batch('Soup', 2, '2026-10-01');
+echo serialize($b);
+$c = unserialize(serialize($b), ['allowed_classes' => [Batch::class]]);
+echo ' ' . $c->dish . ' ' . $c->portions;
+`}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('The freezer',`    <h1>The freezer</h1>
+`),[F11.batch]:PHPHEAD,[F11.frz]:PHPHEAD},
+ solution:pickFiles(SPSOL.freezer,[IDX,F11.batch,F11.frz]),
+ steps:[
+  {t:'`src/Batch.php`: `final class Batch` with `string $dish`, `int $portions`, `string $frozen`',c:c=>/final\s+class\s+Batch/.test(src(c,F11.batch))&&/string\s+\$dish/.test(src(c,F11.batch))&&/int\s+\$portions/.test(src(c,F11.batch))&&/string\s+\$frozen/.test(src(c,F11.batch)),help:['One container in the freezer: what, how much, since when.','Constructor promotion with three public properties (not readonly: unserialize fills them).',`final class Jar
+{
+    public function __construct(
+        public string $name,
+        public int $grams,
+    ) {
+    }
+}`,`final class Batch
+{
+    public function __construct(
+        public string $dish,
+        public int $portions,
+        public string $frozen,
+    ) {
+    }
+}`]},
+  {t:"`__serialize()` stores short keys `d`, `p`, `f`; `__unserialize(array $data)` reads them back",c:c=>pout(c,'outside')===SOUP_LINE+' Soup 2',help:['You choose what goes into the stored string.',"`return ['d' => $this->dish, 'p' => $this->portions, 'f' => $this->frozen];`",`public function __serialize(): array
+{
+    return ['n' => $this->name];
+}
+
+public function __unserialize(array $data): void
+{
+    $this->name = $data['n'];
+}`,`public function __serialize(): array
+{
+    return ['d' => $this->dish, 'p' => $this->portions, 'f' => $this->frozen];
+}
+
+public function __unserialize(array $data): void
+{
+    $this->dish = $data['d'];
+    $this->portions = $data['p'];
+    $this->frozen = $data['f'];
+}`]},
+  {t:'`src/freezer.php`: `freeze(Batch $batch, string $file): void` appends one serialized line with `FILE_APPEND | LOCK_EX`',c:c=>/function\s+freeze\s*\(\s*Batch\s+\$batch\s*,\s*string\s+\$file\s*\)\s*:\s*void/.test(src(c,F11.frz))&&/FILE_APPEND\s*\|\s*LOCK_EX|LOCK_EX\s*\|\s*FILE_APPEND/.test(src(c,F11.frz))&&/serialize\(\s*\$batch\s*\)/.test(src(c,F11.frz)),help:['One batch per line. Add to the end, never overwrite, one writer at a time.','`file_put_contents($file, serialize($batch) . "\\n", FILE_APPEND | LOCK_EX);`',`file_put_contents($log, $line . "\\n", FILE_APPEND | LOCK_EX);`,`function freeze(Batch $batch, string $file): void
+{
+    file_put_contents($file, serialize($batch) . "\\n", FILE_APPEND | LOCK_EX);
+}`]},
+  {t:'`thaw(string $file): array` reads the lines back: `Cassoulet · 6 portions · frozen 2026-10-12`, `Onion soup · 4 portions · …`',c:c=>rows(c,'ul.batches li').join('|')==='Cassoulet · 6 portions · frozen 2026-10-12|Onion soup · 4 portions · frozen 2026-10-15'&&rows(c.p.twice,'ul.batches li').length===2,help:['If the file is new, freeze two batches first. Passle loads the page twice: still two batches.','`file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES)` and unserialize each line.',`foreach (file($f, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+    $items[] = unserialize($line);
+}`,`$file = __DIR__ . '/../data/freezer.txt';
+
+if (!is_file($file)) {
+    freeze(new Batch('Cassoulet', 6, '2026-10-12'), $file);
+    freeze(new Batch('Onion soup', 4, '2026-10-15'), $file);
+}
+
+$batches = thaw($file);`]},
+  {t:"Only batches thaw: `unserialize($line, ['allowed_classes' => [Batch::class]])` plus `instanceof Batch`",c:c=>/allowed_classes['"]\s*=>\s*\[\s*Batch::class\s*\]/.test(src(c,F11.frz))&&rows(c.p.intruder,'ul.batches li').join('|')==='Soup · 2 portions · frozen 2026-10-01'&&!c.p.intruder.bad,help:['Passle slips a foreign object into the freezer file.','Allow only Batch, then keep only real Batch objects.',`$item = unserialize($line, ['allowed_classes' => [Jar::class]]);
+if ($item instanceof Jar) {
+    $jars[] = $item;
+}`,`function thaw(string $file): array
+{
+    if (!is_file($file)) {
+        return [];
+    }
+
+    $batches = [];
+    foreach (file($file, FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) as $line) {
+        $item = unserialize($line, ['allowed_classes' => [Batch::class]]);
+        if ($item instanceof Batch) {
+            $batches[] = $item;
+        }
+    }
+
+    return $batches;
+}`]},
+  {t:'`10 portions in the freezer`',c:c=>ptxt(c,'p.total')==='10 portions in the freezer'&&ptxt(c.p.intruder,'p.total')==='2 portions in the freezer',help:['Add up the portions of the batches you thawed.','array_map to portions, then array_sum.',`$sum = array_sum(array_map(fn (Jar $j): int => $j->grams, $jars));`,`$portions = array_sum(array_map(fn (Batch $b): int => $b->portions, $batches));`]},
+  {t:"`labelSheet(array $batches): string` writes CSV into `php://memory` and reads it back for `<pre class=\"csv\">`",c:c=>preTxt(c,'pre.csv')==='dish,portions,frozen\nCassoulet,6,2026-10-12\n"Onion soup",4,2026-10-15\n'&&/php:\/\/(memory|temp)/.test(src(c,F11.frz))&&/rewind\(/.test(src(c,F11.frz)),help:['fputcsv only writes to a stream. A memory stream turns that into a string.',"`fopen('php://memory', 'w+')`, fputcsv the header and rows, `rewind`, `stream_get_contents`.",`$h = fopen('php://memory', 'w+');
+fputcsv($h, ['a', 'b'], ',', '"', '');
+rewind($h);
+$csv = stream_get_contents($h);`,`function labelSheet(array $batches): string
+{
+    $stream = fopen('php://memory', 'w+');
+    fputcsv($stream, ['dish', 'portions', 'frozen'], ',', '"', '');
+    foreach ($batches as $batch) {
+        fputcsv($stream, [$batch->dish, $batch->portions, $batch->frozen], ',', '"', '');
+    }
+    rewind($stream);
+    $csv = stream_get_contents($stream);
+    fclose($stream);
+
+    return $csv;
+}`]},
+  cleanStep(c=>pure(c,F11.frz)&&pure(c,F11.batch)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz83',q:'Why never `unserialize()` a cookie or form value?',o:['It is slow','It can create objects of any class and run their magic methods','It loses types','It only works on arrays'],a:1,h:'Object injection.'},
+  {k:'gap',r:'pz83',q:'Allow no objects at all',pre:"unserialize($s, ['allowed_classes' => ",post:'])',a:['false'],h:'A boolean.'},
+  {k:'pick',r:'pz83',q:"`serialize('Soup')`",o:['"Soup"','s:4:"Soup";','string(4) "Soup"','S:Soup'],a:1,h:'Type, length, value.'},
+  {k:'pick',r:'pz84',q:"Which `fopen` mode empties the file as it opens?",o:["'a'","'r+'","'w'","'x'"],a:2,h:'Write from scratch.'},
+  {k:'pick',r:'pz84',q:"`fopen($f, 'x')` when the file already exists…",o:['empties it','appends','fails','reads it'],a:2,h:'x = exclusive create.'},
+  {k:'type',r:'pz84',q:'Append `$line` to `$file`, locked',ph:'file_put_contents(…);',test:/^file_put_contents\(\$file, \$line, (FILE_APPEND \| LOCK_EX|LOCK_EX \| FILE_APPEND)\);$/,ans:'file_put_contents($file, $line, FILE_APPEND | LOCK_EX);',h:'Two flags joined with |.'}
+ ]},
+
+{id:'hours',special:true,name:'Opening hours',rules:['pz85','pz86'],
+ probes:{late:{method:'GET',get:{at:'2026-10-24T20:30:00Z'}},monday:{method:'GET',get:{at:'2026-10-26T18:00:00Z'}},closing:{method:'GET',get:{at:'2026-10-24T21:00:00Z'}},junk:{method:'GET',get:{at:'nonsense'}}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Opening hours',`    <h1>Opening hours</h1>
+`),[F11.hours]:PHPHEAD},
+ solution:pickFiles(SPSOL.hours,[IDX,F11.hours]),
+ steps:[
+  {t:"index.php: read the moment from `?at=` (default `2026-10-24T17:30:00Z`) into a `DateTimeImmutable`",c:c=>/new\s+DateTimeImmutable\(\s*\$_GET\['at'\]\s*\?\?\s*'2026-10-24T17:30:00Z'\s*\)/.test(src(c)),help:['The Z means UTC: the moment is stored without a local clock.',"`$now = new DateTimeImmutable($_GET['at'] ?? '2026-10-24T17:30:00Z');`",`$when = new DateTimeImmutable($_GET['when'] ?? '2026-01-01T12:00:00Z');`,`$now = new DateTimeImmutable($_GET['at'] ?? '2026-10-24T17:30:00Z');`]},
+  {t:"`src/hours.php`: `local(DateTimeImmutable $moment, string $zone = HOME)` with `setTimezone`; `Brussels: Sat 24 Oct 19:30`",c:c=>ptxt(c,'p.now')==='Brussels: Sat 24 Oct 19:30'&&/const\s+HOME\s*=\s*'Europe\/Brussels'/.test(src(c,F11.hours))&&/->setTimezone\(\s*new\s+DateTimeZone\(/.test(src(c,F11.hours)),help:['Same moment, read on the Brussels clock: 17:30 UTC is 19:30 in summer time.',"`return $moment->setTimezone(new DateTimeZone($zone));` and `format('D j M H:i')`.",`$there = $now->setTimezone(new DateTimeZone('Asia/Tokyo'));`,`const HOME = 'Europe/Brussels';
+
+function local(DateTimeImmutable $moment, string $zone = HOME): DateTimeImmutable
+{
+    return $moment->setTimezone(new DateTimeZone($zone));
+}
+…
+<p class="now">Brussels: <?= local($now)->format('D j M H:i') ?></p>`]},
+  {t:'Guests abroad: `New York: Sat 13:30`, `Tokyo: Sun 02:30`',c:c=>rows(c,'ul.guests li').join('|')==='New York: Sat 13:30|Tokyo: Sun 02:30',help:['Named zones: America/New_York and Asia/Tokyo.',"A keyed array city → zone, and `local($now, $zone)->format('D H:i')`.",`foreach (['Paris' => 'Europe/Paris'] as $city => $zone) {
+    echo $city . ': ' . $now->setTimezone(new DateTimeZone($zone))->format('H:i');
+}`,`$guests = ['New York' => 'America/New_York', 'Tokyo' => 'Asia/Tokyo'];
+…
+<ul class="guests">
+    <?php foreach ($guests as $city => $zone): ?>
+        <li><?= htmlspecialchars($city) ?>: <?= local($now, $zone)->format('D H:i') ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:"`isOpen(DateTimeImmutable $moment): bool`: Tuesday to Saturday, 18:00 until 23:00 Brussels time",c:c=>ptxt(c,'p.status')==='Open now'&&ptxt(c.p.late,'p.status')==='Open now'&&ptxt(c.p.closing,'p.status')==='Closed now'&&ptxt(c.p.monday,'p.status')==='Closed now',help:["format('N') gives 1 for Monday to 7 for Sunday. 'H:i' strings compare correctly.","`in_array((int) $here->format('N'), OPEN_DAYS, true) && $time >= '18:00' && $time < '23:00'`",`$day = (int) $now->format('N');
+$isWeekend = $day >= 6;`,`const OPEN_DAYS = [2, 3, 4, 5, 6];
+
+function isOpen(DateTimeImmutable $moment): bool
+{
+    $here = local($moment);
+    $time = $here->format('H:i');
+
+    return in_array((int) $here->format('N'), OPEN_DAYS, true) && $time >= '18:00' && $time < '23:00';
+}`]},
+  {t:'Summer time ends: Monday 18:00 UTC is `Brussels: Mon 26 Oct 19:00`, not 20:00',c:c=>ptxt(c.p.monday,'p.now')==='Brussels: Mon 26 Oct 19:00',help:['Belgium is +02:00 on Saturday and +01:00 on Monday. A named zone knows; a fixed offset does not.','Use Europe/Brussels, never +02:00.','new DateTimeZone(\'Europe/Brussels\')','Check that HOME is a zone name, not an offset.']},
+  {t:"`week(DateTimeImmutable $moment): array` with `DatePeriod` and `P1D`: seven days from today, open or closed",c:c=>rows(c,'ul.week li').join('|')==='Sat 24 Oct: 18:00–23:00|Sun 25 Oct: closed|Mon 26 Oct: closed|Tue 27 Oct: 18:00–23:00|Wed 28 Oct: 18:00–23:00|Thu 29 Oct: 18:00–23:00|Fri 30 Oct: 18:00–23:00'&&rows(c.p.monday,'ul.week li').length===7&&/new\s+DatePeriod\(/.test(src(c,F11.hours))&&/'P1D'/.test(src(c,F11.hours)),help:['Six recurrences after the start make seven dates. Start at local midnight.',"`foreach (new DatePeriod($start, new DateInterval('P1D'), 6) as $day)` and `format('D j M')`.",`foreach (new DatePeriod($from, new DateInterval('P1D'), 2) as $d) {
+    echo $d->format('D') . ' ';
+}`,`function week(DateTimeImmutable $moment): array
+{
+    $start = local($moment)->setTime(0, 0);
+    $days = [];
+
+    foreach (new DatePeriod($start, new DateInterval('P1D'), 6) as $day) {
+        $open = in_array((int) $day->format('N'), OPEN_DAYS, true);
+        $days[] = $day->format('D j M') . ': ' . ($open ? '18:00–23:00' : 'closed');
+    }
+
+    return $days;
+}`]},
+  {t:'`Stored as UTC: 2026-10-24T17:30:00+00:00` with `DATE_ATOM`',c:c=>ptxt(c,'p.utc')==='Stored as UTC: 2026-10-24T17:30:00+00:00'&&/DATE_ATOM|DateTimeInterface::ATOM|DateTime::ATOM/.test(src(c)),help:['Store in UTC, in the standard format.',"`local($now, 'UTC')->format(DATE_ATOM)`",`echo $now->setTimezone(new DateTimeZone('UTC'))->format(DATE_ATOM);`,`<p class="utc">Stored as UTC: <?= local($now, 'UTC')->format(DATE_ATOM) ?></p>`]},
+  {t:'A nonsense `?at=` falls back to the default instead of crashing',c:c=>ptxt(c.p.junk,'p.now')==='Brussels: Sat 24 Oct 19:30'&&!c.p.junk.bad,help:['new DateTimeImmutable("nonsense") throws an Exception.','try / catch (Exception) and use the default moment.',`try {
+    $d = new DateTimeImmutable($input);
+} catch (Exception) {
+    $d = new DateTimeImmutable('today');
+}`,`try {
+    $now = new DateTimeImmutable($_GET['at'] ?? '2026-10-24T17:30:00Z');
+} catch (Exception) {
+    $now = new DateTimeImmutable('2026-10-24T17:30:00Z');
+}`]},
+  cleanStep(c=>pure(c,F11.hours)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz85',q:'`setTimezone()` on a DateTimeImmutable…',o:['changes the moment','returns the same moment on another clock','converts to UTC always','modifies the object'],a:1,h:'Same instant, other zone.'},
+  {k:'pick',r:'pz85',q:'Why `Europe/Brussels` instead of `+02:00`?',o:['Shorter','The name knows when summer time starts and ends','Offsets are deprecated','It is faster'],a:1,h:'DST.'},
+  {k:'type',r:'pz85',q:'`$now` shown on the Tokyo clock, into `$tokyo`',ph:'$tokyo = …;',test:/^\$tokyo = \$now->setTimezone\(new DateTimeZone\((['"])Asia\/Tokyo\1\)\);$/,ans:"$tokyo = $now->setTimezone(new DateTimeZone('Asia/Tokyo'));",h:"`$tokyo = $now->setTimezone(new DateTimeZone('Asia/Tokyo'));`"},
+  {k:'pick',r:'pz86',q:"`new DateInterval('PT1M')` is…",o:['one month','one minute','one Monday','invalid'],a:1,h:'T before time parts.'},
+  {k:'pick',r:'pz86',q:'`new DatePeriod($start, $oneDay, 3)` gives how many dates?',o:['3','4','2','depends on the month'],a:1,h:'Start plus 3 recurrences.'},
+  {k:'pick',r:'pz86',q:"`format('N')` for a Sunday",o:['0','1','7','Sun'],a:2,h:'ISO weekday: Monday 1 … Sunday 7.'}
+ ]}
+);
+
+Object.assign(BUGS,{
+ 'roomservice':[
+  {d:'__isset was missing, so isset() said no even for extras that were set: the bread check could never be trusted.',r:[[`    public function __isset(string $name): bool
+    {
+        return isset($this->extras[$name]);
+    }
+
+`,``,F11.order]]},
+  {d:'__call returned nothing instead of $this, so the chain broke after the first with… call.',r:[[`        $this->extras[lcfirst(substr($method, 4))] = $args[0] ?? true;
+
+        return $this;`,`        $this->extras[lcfirst(substr($method, 4))] = $args[0] ?? true;
+
+        return new static($this->dish);`,F11.order]]},
+  {d:'strtoupper only knows ASCII letters: the É in béarnaise stayed small. mb_strtoupper handles every alphabet.',r:[[`array_map(mb_strtoupper(...),`,`array_map(strtoupper(...),`]]}
+ ],
+ 'allergens':[
+  {d:'| combines flags; + adds numbers. Adding the same flag twice (gluten,gluten) turned 1 + 1 into the dairy bit.',r:[[`$mask |= ALLERGENS[trim($name)] ?? 0;`,`$mask += ALLERGENS[trim($name)] ?? 0;`,F11.alg]]},
+  {d:'== binds tighter than &, so ($dish & $guest == 0) tested the wrong thing. Brackets around the & keep it safe.',r:[[`return ($dish & $guest) === 0;`,`return $dish & $guest === 0 ? true : false;`,F11.alg]]},
+  {d:'%5b pads with spaces, %05b with zeros: the mask must show every switch.',r:[[`sprintf('%05b', $guest)`,`sprintf('%5b', $guest)`]]}
+ ],
+ 'freezer':[
+  {d:'Without FILE_APPEND each freeze replaced the file, so only the last batch survived.',r:[[`serialize($batch) . "\\n", FILE_APPEND | LOCK_EX);`,`serialize($batch) . "\\n", LOCK_EX);`,F11.frz]]},
+  {d:'unserialize without allowed_classes accepts any class from the file: object injection if anyone can write to it.',r:[[`$item = unserialize($line, ['allowed_classes' => [Batch::class]]);`,`$item = unserialize($line);`,F11.frz]]},
+  {d:'Without rewind the stream pointer sat at the end, so stream_get_contents read nothing.',r:[[`    rewind($stream);
+`,``,F11.frz]]}
+ ],
+ 'hours':[
+  {d:"A fixed +02:00 offset ignores the end of summer time: Monday showed 20:00 instead of 19:00.",r:[[`const HOME = 'Europe/Brussels';`,`const HOME = '+02:00';`,F11.hours]]},
+  {d:'5 recurrences give 6 dates, not 7: the week came up a day short.',r:[[`new DateInterval('P1D'), 6)`,`new DateInterval('P1D'), 5)`,F11.hours]]},
+  {d:"<= '23:00' kept the kitchen open at 23:00 sharp. Closing time means < '23:00'.",r:[[`$time < '23:00'`,`$time <= '23:00'`,F11.hours]]}
+ ]
+});
+TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
+
+MORE.push(
+ {k:'pick',r:'pz81',q:'`~6` is…',o:['6','-6','-7','0'],a:2,h:'~x is -x - 1.'},
+ {k:'pick',r:'pz81',q:'`0b101 + 0x0A` is…',o:['15','111','1010','an error'],a:0,h:'5 + 10.'},
+ {k:'pick',r:'pz82',q:"`0o17` and `017` are both…",o:['17','15 (octal)','an error','0'],a:1,h:'Octal: 1×8 + 7.'},
+ {k:'pick',r:'pz79',q:'PHP 8.2+: writing an undeclared property on a class without `__set`…',o:['works silently','is deprecated (warning)','is a fatal error','creates a static property'],a:1,h:'Dynamic properties are deprecated.'},
+ {k:'pick',r:'pz83',q:'What does `var_export($x)` print?',o:['JSON','The value as valid PHP code','A serialized string','A debug dump with types'],a:1,h:'You could paste it back into a file.'},
+ {k:'pick',r:'pz84',q:'Which stream holds the raw request body?',o:['php://stdin','php://input','php://memory','php://output'],a:1,h:'For JSON APIs.'}
+);
+
+TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
+
 let RUSH=null;
 const fmtClock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function rushPool(){
@@ -7113,7 +7836,11 @@ const STORY={
  'winecellar':{w:'Sommelier Armand',tb:'the cellar',o:'A supplier sent the wine list as XML. Read it, filter by colour, and send back a list of your own.',th:'The Saint-Émilion has never been so easy to find.'},
  'thepass':{w:'Chef Roux',tb:'the pass',o:'Tickets on the pass should behave like a list: count them, loop them, take one off when it is served.',th:'Mrrp. Not one ticket lost tonight.'},
  'printer':{w:'Maître d\' Colette',tb:'the front desk',o:'The receipt printer is 30 characters wide and very fussy. Line up every column.',th:'The receipts look like they came from a real bistro.'},
- 'tasting':{w:'Monsieur Bastien',tb:2,o:'Guests mistype dish names and argue about favourites. Help them find dishes and rank the votes.',th:'"Ratatouile"? It knew what I meant.'}
+ 'tasting':{w:'Monsieur Bastien',tb:2,o:'Guests mistype dish names and argue about favourites. Help them find dishes and rank the votes.',th:'"Ratatouile"? It knew what I meant.'},
+ 'roomservice':{w:'The guest in room 3',tb:'upstairs',o:'The little hotel above the bistro orders by phone, with endless extras. One order object has to take them all.',th:'Rare, béarnaise, no bread. Exactly as I said it.'},
+ 'allergens':{w:'Monsieur Petit',tb:5,o:'Monsieur Petit is back, with a friend who avoids gluten and eggs. Flip switches, not pages of notes.',th:'My card fits in one number. How elegant.'},
+ 'freezer':{w:'Commis Théo',tb:'the walk-in',o:'Leftover stock goes into the freezer for next week. Store each batch so it comes back exactly as it went in.',th:'Six portions of cassoulet, rescued. Roux is proud of me.'},
+ 'hours':{w:'Maître d\' Colette',tb:'the front desk',o:'Guests ring from New York and Tokyo asking if Roux\'s is open. Answer on their clock and on ours.',th:'"Yes madame, we open at noon your time." Nobody got lost.'}
 };
 const PHASES=[
  ['17:00','Mise en place','Knives sharpened, stock on the stove. The dining room is still empty.'],
@@ -7169,7 +7896,7 @@ const DISH='img/passle/';
 const ART_IDS=new Set(['menu-card','dish-label','pantry','menu-board','kitchen-helpers','split-kitchen','order-slip','safe-orders','table-service','recipe-book','cellar','bistro','menu-card-master','labels-master','pantry-master','board-master','router-master','login-master','tests-master','badge','scanner','api','brigade','stocktake','loyalty','ledger','cards','nightlog','reservations','prep-list']);
 const dishImg=(id,cls)=>!ART_IDS.has(id)?'':'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="" onerror="this.style.display=\'none\'">';
 const KEY='passle.v2';
-const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
