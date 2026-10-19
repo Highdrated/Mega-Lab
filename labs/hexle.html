@@ -240,6 +240,30 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 .idle{display:flex;gap:12px;align-items:flex-start}
 .idle img{width:84px;height:84px;flex:none}
 #v-rules{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(250px,1fr);overflow-y:auto}
+.dash{grid-column:1/-1;min-height:250px}
+.dash .dbody{flex:1;display:grid;grid-template-columns:250px 1fr;grid-template-rows:1fr auto;gap:0;min-height:0}
+.dash .dstats{grid-row:1/3;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-right:1px solid var(--line)}
+.dash .dstats div{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--mute)}
+.dash .dstats b{font-family:var(--hud);font-size:20px;color:var(--ink);min-width:44px}
+.dash .dstats button{margin-top:auto;white-space:normal;line-height:1.3;padding:8px 10px}
+.dash .dmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 18px;padding:14px 16px;align-content:start;overflow:auto}
+.dash .dcat small{display:block;font-family:var(--hud);letter-spacing:.14em;text-transform:uppercase;font-size:10px;color:var(--mute);margin-bottom:5px}
+.dash .hmr{display:flex;flex-wrap:wrap;gap:4px}
+.sq{display:inline-block;width:16px;height:16px;border-radius:2px;cursor:pointer;border:1px solid transparent}
+.sq.m-strong{background:#7f9f55}.sq.m-learning{background:#c9a227}.sq.m-shaky{background:#a8573f}.sq.m-new{border-color:var(--mute)}.sq.m-locked{background:var(--line);opacity:.6}
+.dash .dleg{display:flex;flex-wrap:wrap;gap:16px;padding:8px 16px;border-top:1px solid var(--line);font-size:11px;color:var(--mute)}
+.dash .dleg span{display:flex;align-items:center;gap:6px}.dash .dleg .sq{cursor:default;width:12px;height:12px}
+.mchip{font-size:9px;letter-spacing:.14em;text-transform:uppercase;padding:2px 6px;border-radius:2px;margin-right:6px;border:1px solid currentColor}
+.mchip.m-strong{color:#7f9f55}.mchip.m-learning{color:#c9a227}.mchip.m-shaky{color:#c06a50}.mchip.m-new{color:var(--mute)}
+.rb.flash{animation:fresh 1.2s 2}
+.boxes{display:flex;flex-wrap:wrap;gap:10px}.boxes span{display:flex;flex-direction:column;align-items:center;min-width:56px;font-size:11px;color:var(--mute)}.boxes b{font-family:var(--hud);font-size:18px;color:var(--ink)}
+.rvw{margin-top:10px;border:1px solid var(--line);padding:10px 12px;font-size:12.5px;line-height:1.45;color:var(--ink2)}
+.rvw.ok{border-color:#7f9f55}
+.rvw small{display:block;font-family:var(--hud);letter-spacing:.14em;text-transform:uppercase;font-size:10px;color:var(--mute);margin-bottom:6px}
+.rvw ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.rvw .sev{display:inline-block;font-size:9px;letter-spacing:.12em;text-transform:uppercase;padding:1px 5px;margin-right:6px;border:1px solid currentColor;border-radius:2px}
+.rvw .sev.fix{color:#c06a50}.rvw .sev.tip{color:#c9a227}
+.rvw .loc{font-family:var(--mono);font-size:11px;color:var(--mute);margin-right:6px}
 .rb .rcard p{display:none}
 .rb .rex{margin-top:8px}
 .tabs{display:flex;gap:4px}
@@ -302,8 +326,8 @@ body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spaci
     <button class="stg" data-v="target"><span class="ck">✓</span>Target</button><i>›</i>
     <button class="stg" data-v="village">Village</button><i>·</i>
     <button class="stg" data-v="grimoire">Grimoire</button><i>·</i>
-    <button class="stg" data-v="rules">Rulebook</button><i>·</i>
-    <button class="stg" data-v="practice">Practice</button><i>·</i>
+    <button class="stg" data-v="rules">Skills</button><i>·</i>
+    <button class="stg" data-v="practice">Review</button><i>·</i>
     <button class="stg" data-v="trial">Trial</button>
   </nav>
   <select id="tsel" aria-label="Choose target"></select>
@@ -1964,6 +1988,7 @@ function render(){
   const vw=(S.stage==='practice'||S.stage==='trial')?'school':S.stage;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
   const sel=$('tsel');sel.innerHTML='';let og=null,ogn='';TARGETS.forEach((tg,i)=>{const gn=tg.project?'Grimoire projects':tg.spell?'Spells · JavaScript':tg.master!=null?'Master editions':'Village plates';if(gn!==ogn){og=document.createElement('optgroup');og.label=gn;sel.appendChild(og);ogn=gn}const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);og.appendChild(o)});sel.value=S.t;
+  updDue();
   document.body.dataset.theme=S.theme;$('theme').textContent=S.theme==='grove'?'Grove':'Orbital';$('junie').src=art('drone');
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else if(S.stage==='grimoire')renderGrimoire();else renderRules();
@@ -1978,6 +2003,15 @@ function ruleCard(id){
 let dState={};
 let PR=null;
 function practiceList(){
+  const due=dueList().sort((a,b)=>S.srs[dkey(a)].due-S.srs[dkey(b)].due).slice(0,20);
+  const fresh=allDrills().filter(d=>S.learned.includes(d.r)&&!(S.srs||{})[dkey(d)]);
+  for(let i=fresh.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fresh[i],fresh[j]]=[fresh[j],fresh[i]]}
+  const nNew=Math.min(fresh.length,Math.max(0,10-due.length),due.length?5:10);
+  if(due.length||nNew){PR_MODE='review';const l=due.concat(fresh.slice(0,nNew)).map(d=>Object.assign({},d,{rv:0}));for(let i=l.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[l[i],l[j]]=[l[j],l[i]]}return l}
+  PR_MODE='free';return freePractice();
+}
+let PR_MODE='review';
+function freePractice(){
   const pool=[];TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))}));
   MORE.forEach(d=>{if(S.learned.includes(d.r))pool.push(Object.assign({},d,{rv:0}))});
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
@@ -2041,6 +2075,14 @@ function renderSchool(){
   renderDrill(list[idx],idx,list.length,list);
 }
 function practiceDone(){
+  if(PR_MODE==='review'){const t=dayNo(),s=Object.values(S.srs||{}),tom=s.filter(x=>x.due===t+1).length,wk=s.filter(x=>x.due>t&&x.due<=t+7).length,left=dueList().length;
+    $('dtitle').textContent='Daily review complete';const box=$('dbox');box.innerHTML='';const c=document.createElement('div');c.className='donecard';
+    const bx=[0,0,0,0,0,0,0];s.forEach(x=>bx[x.b]++);const names=['again','1 day','3 days','1 week','2 weeks','1 month','2 months'];
+    c.innerHTML='<div class="dk">Daily review</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">'+(left?left+' more due today. ':'All caught up for today. ')+'Tomorrow: '+tom+' due. This week: '+wk+'. Streak: '+streak()+' day'+(streak()===1?'':'s')+'.</div><div class="sec"><small>Your drills by next interval</small><div class="boxes">'+bx.map((n,i)=>'<span><b>'+n+'</b>'+names[i]+'</span>').join('')+'</div></div><div class="hint0">Right on the first try moves a drill to a longer interval. A miss sends it back to the start.</div>';
+    const row=document.createElement('div');row.className='drow';
+    const sk=document.createElement('button');sk.textContent='Skill map';sk.onclick=()=>{sfx.click();go('rules')};row.appendChild(sk);
+    const again=document.createElement('button');again.className='pri';again.textContent=left?'Next round · '+left:'Free practice';again.onclick=()=>{PR=null;sfx.click();renderSchool()};row.appendChild(again);
+    c.appendChild(row);box.appendChild(c);sfx.rule();return}
   $('dtitle').textContent='Practice complete';
   const box=$('dbox');box.innerHTML='';const c=document.createElement('div');c.className='donecard';
   c.innerHTML='<div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">Practice mixes drills from every rule you have learned, and leans on the ones you missed before. Run it whenever you have five minutes.</div>'+(()=>{const m=Object.entries(S.miss||{}).filter(x=>x[1]>0&&RULES[x[0]]).sort((a,b)=>b[1]-a[1]).slice(0,4);return m.length?'<div class="hint0">Still shaky: '+m.map(x=>'Rule '+RULES[x[0]].n+' · '+esc(RULES[x[0]].title)).join(', ')+'</div>':''})();
@@ -2087,12 +2129,13 @@ function checkDrill(d){
 }
 function passDrill(){
   if(dState.locked)return;dState.locked=true;
+  if(dState.tries===0&&dState.d)srsMark(dState.d,true);
   if(dState.tries===0){S.ft++;if(S.stage==='practice'&&dState.d&&S.miss&&S.miss[dState.d.r])S.miss[dState.d.r]--}
   const fb=$('fb');fb.className='fb ok';fb.textContent=['Locked in.','Correct. Nice.','Clean. Next one.','Spot on.'][Math.floor(Math.random()*4)];
   if(S.stage==='practice'||S.stage==='trial'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
   sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool()},650);
 }
-function failDrill(d){if(dState.locked)return;dState.tries++;if(S.stage==='trial'&&PR&&PR.trial){dState.locked=true;PR.wrong.push(d.r);if(S.miss){}S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save();const fb=$('fb');fb.className='fb err';fb.innerHTML='Wrong. '+fmt(d.h);sfx.bad();PR.i++;setTimeout(()=>{if(S.stage==='trial')renderSchool()},1600);return}if(dState.tries===1){S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save()}const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);sfx.bad()}
+function failDrill(d){if(dState.locked)return;dState.tries++;if(dState.tries===1)srsMark(d,false);if(S.stage==='trial'&&PR&&PR.trial){dState.locked=true;PR.wrong.push(d.r);if(S.miss){}S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save();const fb=$('fb');fb.className='fb err';fb.innerHTML='Wrong. '+fmt(d.h);sfx.bad();PR.i++;setTimeout(()=>{if(S.stage==='trial')renderSchool()},1600);return}if(dState.tries===1){S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save()}const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);sfx.bad()}
 function schoolComplete(list){
   const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
   if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();setTimeout(sfx.blip,500);comms('New rules added to the Rulebook and the Codex.');render();return}
@@ -2142,7 +2185,7 @@ async function evaluate(code,css,js){
     else if(hx.logs.length){sc.className='ok';sc.textContent='Console › '+hx.logs.slice(-3).join('  ·  ')}
     else{sc.className='';sc.textContent='Console › quiet'}
     f.onload=null;f.srcdoc=wrap(code,css,js)}
-  if(lastPass&&res.some((r,i)=>r&&!lastPass[i]))sfx.ok();
+  if(lastPass&&res.some((r,i)=>r&&!lastPass[i])){sfx.ok();markDay()}
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
@@ -2152,6 +2195,7 @@ async function evaluate(code,css,js){
   if(S.hunt&&S.hunt.t===S.t&&S.hunt.fresh){S.hunt.fresh=false;if(now===-1){if(S.hunt.tries<6){setTimeout(()=>startHunt(S.hunt.tries+1),0);return}S.code[S.t]=S.hunt.code;S.hunt=null;comms('These bugs did not break anything. Try another bug hunt.')}save()}
   if(S.hunt&&S.hunt.t===S.t&&now===-1&&!S.hunt.fresh){endHunt(true);curStep=-2}
   if(now!==curStep){curStep=now;lv=0;renderHelp()}
+  if(now===-1)renderReview(code,css,js);
   if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save();sfx.target();comms('Target matched. Build approved for the village.');render()}
   else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save()}
 }
@@ -2159,7 +2203,7 @@ function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
   if(curStep===-1){
     $('hstep').textContent='all steps done';
-    lad.innerHTML='<div class="win"><b>TARGET MATCHED</b><br>'+esc(tg.name)+' is ready to be added to your village.</div><div class="hint0">Want to train your eye? Bug hunt plants three bugs in your finished code. Find them like a real debugger: read the steps, the scanner and the console.</div>';
+    lad.innerHTML='<div class="win"><b>TARGET MATCHED</b><br>'+esc(tg.name)+' is ready to be added to your village.</div><div id="review"></div><div class="hint0">Want to train your eye? Bug hunt plants three bugs in your finished code. Find them like a real debugger: read the steps, the scanner and the console.</div>';
     const h=document.createElement('button');h.textContent='Bug hunt';h.onclick=()=>startHunt(0);foot.appendChild(h);
     const b=document.createElement('button');b.className='pri';b.textContent=tg.project?'Add to grimoire':'Add to village';b.onclick=()=>{freshPlot=tg.plot;sfx.build();comms(tg.name+(tg.project?' bound into your grimoire.':' built in the village.'));go(tg.project?'grimoire':'village')};foot.appendChild(b);return;
   }
@@ -2286,12 +2330,82 @@ function renderGrimoire(){
   fitPlaques();
 }
 
+const BOX=[0,1,3,7,14,30,60];
+const dayNo=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/86400000);
+function dkey(d){let h=0;const x=d.r+'|'+d.q;for(let i=0;i<x.length;i++)h=(h*31+x.charCodeAt(i))|0;return d.r+':'+(h>>>0).toString(36)}
+let ALLD=null;
+function allDrills(){if(ALLD)return ALLD;const out=[],seen=new Set();TARGETS.forEach(t=>t.drills.concat(t.review||[]).forEach(d=>out.push(d)));MORE.forEach(d=>out.push(d));ALLD=out.filter(d=>{const k=dkey(d);if(seen.has(k))return false;seen.add(k);return true});return ALLD}
+function srsMark(d,ok){if(!d||!d.r)return;S.srs=S.srs||{};const k=dkey(d),it=S.srs[k]||{b:0,due:0,r:0,w:0},t=dayNo();
+  if(ok){it.b=Math.min(it.b+1,BOX.length-1);it.r++}else{it.b=0;it.w++}it.due=t+BOX[it.b];it.last=t;S.srs[k]=it;markDay();updDue()}
+function updDue(){const n=dueList().length,b=document.querySelector('.stg[data-v="practice"]');if(b)b.textContent='Review'+(n?' · '+n:'')}
+function markDay(){const t=dayNo();S.days=S.days||{};S.days[t]=(S.days[t]||0)+1}
+function dueList(){const t=dayNo(),s=S.srs||{};return allDrills().filter(d=>S.learned.includes(d.r)&&s[dkey(d)]&&s[dkey(d)].due<=t)}
+function streak(){const t=dayNo(),D=S.days||{};let n=0,k=D[t]?t:t-1;while(D[k]){n++;k--}return n}
+function weekSecs(){const t=dayNo(),X=S.secs||{};let a=0;for(let i=0;i<7;i++)a+=X[t-i]||0;return a}
+function mastery(r){if(!S.learned.includes(r))return 'locked';const ds=allDrills().filter(d=>d.r===r).map(d=>(S.srs||{})[dkey(d)]).filter(Boolean);if(!ds.length)return 'new';if(ds.some(x=>x.b===0&&x.w>0))return 'shaky';const avg=ds.reduce((a,x)=>a+x.b,0)/ds.length;return avg>=3?'strong':'learning'}
+function hm(secs){const h=Math.floor(secs/3600),m=Math.floor(secs%3600/60);return (h?h+'h ':'')+m+'m'}
+let lastAct=Date.now();['keydown','click'].forEach(e=>document.addEventListener(e,()=>{lastAct=Date.now()},true));
+setInterval(()=>{if(document.visibilityState==='visible'&&Date.now()-lastAct<90000){const t=dayNo();S.secs=S.secs||{};S.secs[t]=(S.secs[t]||0)+30;save()}},30000);
+
+function lineOf(src,idx){return String(src).slice(0,idx).split('\n').length}
+function reviewCode(code,css,js){
+  const out=[],add=(sev,file,line,msg)=>out.push({sev,file,line,msg}),L=n=>S.learned.includes(n),tg=TARGETS[S.t]||{},adv=!!(tg.master||tg.spell||tg.project);code=String(code||'');
+  const raw=new DOMParser().parseFromString(code,'text/html');
+  for(const m of code.matchAll(/<img\b(?![^>]*\balt=)[^>]*>/gi))add('fix','index.html',lineOf(code,m.index),'Image without alt text. Describe it, or write alt="" if it is only decoration.');
+  if(adv)for(const m of code.matchAll(/\sstyle="[^"]*"/gi))add('fix','index.html',lineOf(code,m.index),'Inline style. Give the element a class and move the look to styles.css.');
+  const hm1=code.match(/<html(?![^>]*\blang=)[^>]*>/i);if(hm1)add('fix','index.html',lineOf(code,hm1.index),'<html> has no lang attribute: add lang="en".');
+  if(adv&&/<head[\s>]/i.test(code)&&!/<meta[^>]*name=["']viewport["']/i.test(code)){const i=code.search(/<\/head>/i);add('tip','index.html',i<0?1:lineOf(code,i),'Add <meta name="viewport" content="width=device-width, initial-scale=1"> to the head, so phones show the page at the right size.')}
+  const h1s=[...code.matchAll(/<h1[\s>]/gi)];if(h1s.length>1)add('fix','index.html',lineOf(code,h1s[1].index),'More than one h1. Keep one main title; use h2 for sections.');
+  let prev=0;const hs=[...code.matchAll(/<h([1-6])[\s>]/gi)];hs.forEach(m=>{const l=+m[1];if(prev&&l>prev+1)add('tip','index.html',lineOf(code,m.index),'Heading jumps from h'+prev+' to h'+l+'. Do not skip levels.');prev=l});
+  raw.querySelectorAll('input,select,textarea').forEach(f=>{const t=(f.getAttribute('type')||'').toLowerCase();if(['hidden','submit','button','reset'].includes(t))return;const id=f.id;const ok=f.closest('label')||(id&&raw.querySelector('label[for="'+id+'"]'))||f.getAttribute('aria-label');if(!ok){const i=id?code.indexOf('id="'+id+'"'):code.search(new RegExp('<'+f.tagName,'i'));add('fix','index.html',lineOf(code,Math.max(0,i)),'Field '+(id?'#'+id:'<'+f.tagName.toLowerCase()+'>')+' has no label.')}});
+  raw.querySelectorAll('button:not([type])').forEach(b=>{if(b.closest('form'))return;const i=code.indexOf('>'+b.textContent.trim()+'<');add('tip','index.html',lineOf(code,Math.max(0,i)),'Button "'+b.textContent.trim().slice(0,24)+'" has no type. Outside a form, write type="button".')});
+  const ids={};raw.querySelectorAll('[id]').forEach(e=>{ids[e.id]=(ids[e.id]||0)+1});Object.keys(ids).forEach(k=>{if(ids[k]>1){const all=[...code.matchAll(new RegExp('id="'+k.replace(/[^\w-]/g,'')+'"','g'))];add('fix','index.html',all[1]?lineOf(code,all[1].index):1,'The id "'+k+'" is used '+ids[k]+' times. An id must be unique.')}});
+  const b0=code.search(/<body[^>]*>/i),b1=code.search(/<\/body>/i);if(b0>=0&&b1>b0){const inner=code.slice(b0,b1).split('\n').slice(1);const flat=inner.filter(l=>/^<(?!\/?body)[a-z]/i.test(l));if(flat.length)add('tip','index.html',lineOf(code,b0)+1+inner.findIndex(l=>/^<(?!\/?body)[a-z]/i.test(l)),'Indent what sits inside <body>: 2 spaces per level makes the nesting visible.')}
+  if(css!=null){css=String(css);
+    const hex={};for(const m of css.matchAll(/#[0-9a-f]{6}\b/gi)){const k=m[0].toLowerCase();if(/^\s*--/.test(css.slice(css.lastIndexOf('\n',m.index)+1,m.index)))continue;(hex[k]=hex[k]||[]).push(m.index)}
+    if(L('r30'))Object.keys(hex).forEach(k=>{if(hex[k].length>=3)add('tip','styles.css',lineOf(css,hex[k][0]),k+' is written '+hex[k].length+' times. Store it once in :root as a variable.')});
+    for(const m of css.matchAll(/!important/gi))add('fix','styles.css',lineOf(css,m.index),'!important. Fix the selector instead of forcing it.');
+    if(L('r51')){const m=css.match(/font-size\s*:\s*\d+px/i);if(m)add('tip','styles.css',lineOf(css,m.index),'font-size in px. rem follows the visitor\'s own text size.')}
+    const sels={};for(const m of css.matchAll(/(^|\})\s*([^{}@]+?)\s*\{/g)){const k=m[2].trim().replace(/\s+/g,' ');if(!k||/^(from|to|\d+%)$/.test(k))continue;(sels[k]=sels[k]||[]).push(m.index+m[1].length)}
+    Object.keys(sels).forEach(k=>{if(sels[k].length>1)add('tip','styles.css',lineOf(css,sels[k][1]),'"'+k+'" has two rules. Merge them into one.')});
+    for(const m of css.matchAll(/([^{}\s][^{}]*?)\{\s*\}/g))add('tip','styles.css',lineOf(css,m.index),'Empty rule "'+m[1].trim()+'". Remove it.');
+  }
+  if(js!=null&&String(js).trim()){js=String(js);
+    for(const m of js.matchAll(/\bvar\s+/g))add('fix','script.js',lineOf(js,m.index),'var is outdated. Use const, or let if it changes.');
+    for(const m of js.matchAll(/[^=!<>]([!=]=)[^=]/g))add('fix','script.js',lineOf(js,m.index),m[1]+' compares loosely. Use '+m[1]+'= (strict).');
+    for(const m of js.matchAll(/\.innerHTML\s*=/g))add('tip','script.js',lineOf(js,m.index),'innerHTML. For plain text, textContent is safer.');
+    for(const m of js.matchAll(/\blet\s+(\w+)\s*=/g)){const n=m[1],rest=js.slice(m.index+m[0].length);if(!new RegExp('\\b'+n+'\\s*(=[^=]|\\+\\+|--|\\+=|-=)|(\\+\\+|--)'+n+'\\b').test(rest))add('tip','script.js',lineOf(js,m.index),n+' never changes. Use const.')}
+    const logs=[...js.matchAll(/console\.log\(/g)];if(logs.length>=3)add('tip','script.js',lineOf(js,logs[0].index),logs.length+' console.log lines. Remove debug logs when the spell works.');
+  }
+  return out.sort((a,b)=>(a.sev===b.sev?0:a.sev==='fix'?-1:1));
+}
+function renderReview(code,css,js){
+  const el=$('review');if(!el)return;const list=reviewCode(code,css,js);S.rev=S.rev||{};S.rev[S.t]=list.length;
+  if(!list.length){el.innerHTML='<div class="rvw ok"><small>Code review</small>Clean. A senior developer would approve this.</div>';return}
+  el.innerHTML='<div class="rvw"><small>Code review · '+list.length+' note'+(list.length>1?'s':'')+'</small><ul>'+list.slice(0,8).map(x=>'<li><span class="sev '+x.sev+'">'+(x.sev==='fix'?'Fix':'Tip')+'</span><span class="loc">'+x.file+':'+x.line+'</span>'+esc(x.msg)+'</li>').join('')+'</ul>'+(list.length>8?'<div class="hint0">…and '+(list.length-8)+' more.</div>':'')+'</div>';const lad=el.closest('.ladder');if(lad)lad.scrollTop=Math.max(0,el.offsetTop-lad.offsetTop-60);
+}
+function dashPanel(){
+  const el=document.createElement('div');el.className='panel dash';
+  const ms=Object.keys(RULES).map(id=>[id,mastery(id)]),cnt={strong:0,learning:0,shaky:0,new:0,locked:0};ms.forEach(x=>cnt[x[1]]++);
+  const due=dueList().length,t=dayNo(),today=(S.days||{})[t]||0;
+  const cats=[];Object.keys(RULES).sort((a,b)=>+RULES[a].n-+RULES[b].n).forEach(id=>{const c=RULES[id].cat;let g=cats.find(x=>x.c===c);if(!g){g={c,ids:[]};cats.push(g)}g.ids.push(id)});
+  const M=Object.fromEntries(ms);
+  el.innerHTML='<div class="ph"><b>Skill map</b><span class="sp">'+Object.keys(RULES).length+' rules</span></div><div class="dbody"><div class="dstats">'
+   +'<div><b>'+due+'</b><span>due today</span></div><div><b>'+streak()+'</b><span>day streak</span></div><div><b>'+hm(weekSecs())+'</b><span>this week</span></div><div><b>'+today+'</b><span>answers today</span></div>'
+   +'<button class="pri" id="dstart">'+(due?'Start daily review · '+due:'Practise anyway')+'</button></div>'
+   +'<div class="dmap">'+cats.map(g=>'<div class="dcat"><small>'+esc(g.c)+'</small><div class="hmr">'+g.ids.map(id=>'<span class="sq m-'+M[id]+'" data-id="'+id+'" title="Rule '+RULES[id].n+' · '+esc(RULES[id].title)+' · '+M[id]+'"></span>').join('')+'</div></div>').join('')+'</div>'
+   +'<div class="dleg">'+[['strong','Strong'],['learning','Learning'],['shaky','Shaky'],['new','New'],['locked','Locked']].map(([k,l])=>'<span><i class="sq m-'+k+'"></i>'+l+' '+cnt[k]+'</span>').join('')+'</div></div>';
+  el.querySelector('#dstart').onclick=()=>{PR=null;sfx.click();go('practice')};
+  el.querySelectorAll('.dmap .sq').forEach(q=>q.onclick=()=>{const c=$('rb-'+q.dataset.id);if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}});
+  return el;
+}
+
 function renderRules(){
-  const v=$('v-rules');v.innerHTML='';
+  const v=$('v-rules');v.innerHTML='';v.appendChild(dashPanel());
   Object.keys(RULES).sort((a,b)=>+RULES[a].n-+RULES[b].n).forEach(id=>{
     const r=RULES[id],ok=S.learned.includes(id);
-    const el=document.createElement('div');el.className='panel rb'+(ok?'':' locked');
-    el.innerHTML='<div class="ph"><b>Rule '+r.n+'</b><span class="sp">'+esc(r.cat)+'</span></div>';
+    const el=document.createElement('div');el.className='panel rb'+(ok?'':' locked');el.id='rb-'+id;const mk=mastery(id);
+    el.innerHTML='<div class="ph"><b>Rule '+r.n+'</b><span class="sp">'+(ok?'<span class="mchip m-'+mk+'">'+mk+'</span> ':'')+esc(r.cat)+'</span></div>';
     if(ok)el.appendChild(ruleCard(id));else{const m=document.createElement('div');m.className='lockmsg';m.textContent='Locked · learn it in School for target '+(r.t+1);el.appendChild(m)}
     const cx=document.createElement('div');cx.className='cx';cx.innerHTML='<span>Codex · Hexle rulebook · '+esc(r.cat)+'</span><a href="codex.html">Open Codex</a>';el.appendChild(cx);
     v.appendChild(el);
@@ -2421,7 +2535,7 @@ const nWhen=ts=>String(ts).slice(0,16).replace('T',' ');
 function noteContext(){
   const b=[];
   try{
-    const st={school:'School',target:'Target',village:'Village',grimoire:'Grimoire',rules:'Rulebook',practice:'Practice',trial:'Trial'}[S.stage]||S.stage;
+    const st={school:'School',target:'Target',village:'Village',grimoire:'Grimoire',rules:'Skills',practice:'Review',trial:'Trial'}[S.stage]||S.stage;
     b.push('stage: '+st);
     b.push('target '+(S.t+1)+': '+T().name);
     if(S.stage==='school'||S.stage==='practice')b.push('drill '+(S.drill+1));
