@@ -240,11 +240,25 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 .idle{display:flex;gap:12px;align-items:flex-start}
 .idle img{width:84px;height:84px;flex:none}
 #v-rules{grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(250px,1fr);overflow-y:auto}
+.dcode{margin:0 0 12px;padding:12px 14px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:13px;line-height:1.55;color:var(--ink);white-space:pre;overflow:auto;max-height:260px}
+.parsons{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px}
+.parsons:focus{outline:none}
+.parsons .pcol{display:flex;flex-direction:column;gap:6px;min-width:0}
+.parsons small{font-family:var(--hud);letter-spacing:.14em;text-transform:uppercase;font-size:10px;color:var(--mute)}
+.parsons ol,.parsons ul{margin:0;padding:8px;list-style:none;display:flex;flex-direction:column;gap:4px;min-height:120px;border:1px solid var(--line);border-radius:var(--r);background:var(--field)}
+.parsons ol{counter-reset:pl}
+.parsons ol li{counter-increment:pl;display:flex;align-items:center;gap:6px}
+.parsons ol li:not(.pempty)::before{content:counter(pl);font-family:var(--mono);font-size:10px;color:var(--mute);width:16px;text-align:right;flex:none}
+.parsons li button{flex:1;width:100%;height:auto;min-height:28px;padding:4px 8px;text-align:left;white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4;font-family:var(--mono);font-size:12.5px;font-weight:400;letter-spacing:0;text-transform:none;background:var(--panel2);color:var(--ink)}
+.parsons li.bad button{border-color:var(--cor);background:var(--cor2)}
+.parsons .pempty{font-size:12px;color:var(--mute);padding:6px}
+.memoh{color:var(--mute);font-style:italic}
 .dash{grid-column:1/-1;min-height:250px}
 .dash .dbody{flex:1;display:grid;grid-template-columns:250px 1fr;grid-template-rows:1fr auto;gap:0;min-height:0}
 .dash .dstats{grid-row:1/3;display:flex;flex-direction:column;gap:10px;padding:14px 16px;border-right:1px solid var(--line)}
 .dash .dstats div{display:flex;align-items:baseline;gap:8px;font-size:12px;color:var(--mute)}
 .dash .dstats b{font-family:var(--hud);font-size:20px;color:var(--ink);min-width:44px}
+.dash .dstats button+button{margin-top:6px}
 .dash .dstats button{margin-top:auto;white-space:normal;line-height:1.3;padding:8px 10px}
 .dash .dmap{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px 18px;padding:14px 16px;align-content:start;overflow:auto}
 .dash .dcat small{display:block;font-family:var(--hud);letter-spacing:.14em;text-transform:uppercase;font-size:10px;color:var(--mute);margin-bottom:5px}
@@ -1981,6 +1995,67 @@ MORE.push(
  {k:'gap',r:'r87',q:'Is the box ticked?',pre:'favsOnly.',post:'',a:['checked'],h:'Seven letters.'},
  {k:'gap',r:'r88',q:'Either is enough',pre:'inTitle ',post:' inText',a:['||'],h:'Two pipes.'}
 );
+MORE.push(
+ {k:'out',r:'r1',lang:'html',q:'What does the visitor see?',code:'<p>Knock <b>twice</b>, then wait.</p>',o:['Knock twice, then wait. with "twice" in bold','Knock <b>twice</b>, then wait.','Only the word twice, in bold','Nothing: the b tag breaks the paragraph'],a:0,h:'Tags are instructions, not text. The b pair makes the word between it bold and the tags themselves never show.'},
+ {k:'out',r:'r8',lang:'html',q:'What colour is the text?',code:'<style>\n  p { color: teal; }\n</style>\n<p style="color: purple;">Hello</p>',o:['Purple','Teal','Black','Teal and purple mixed'],a:0,h:'An inline style attribute beats a style block. That is exactly why inline styles cause trouble later.'},
+ {k:'out',r:'r4',lang:'html',q:'Two rules, same selector. What colour is the heading?',code:'<style>\n  h1 { color: crimson; }\n  h1 { color: navy; }\n</style>\n<h1>Spells</h1>',o:['Navy','Crimson','Black','Purple, from mixing both'],a:0,h:'When two rules are equally strong, the one written last wins. That is the cascade.'},
+ {k:'out',r:'r6',lang:'html',q:'What border does the box get?',code:'<style>\n  .box { border: 2px teal; padding: 10px; }\n</style>\n<div class="box">Potion</div>',o:['No border at all','A 2px solid teal border','A 2px dashed teal border','A black 2px border'],a:0,h:'The border style (solid, dashed, dotted) is not optional. Without it, nothing is drawn.'},
+ {k:'out',r:'r12',lang:'html',q:'Where is the gold colour painted?',code:'<style>\n  .tag { background: gold; padding: 20px; margin: 20px; }\n</style>\n<div class="tag">Sale</div>',o:['Behind the text and the 20px padding, not the margin','Only behind the letters','Behind the text, padding and margin','Nowhere: div has no background'],a:0,h:'Padding is inside the box, so the background fills it. Margin is outside and stays transparent.'},
+ {k:'out',r:'r19',lang:'html',q:'Which rule wins?',code:'<style>\n  #title { color: crimson; }\n  .big { color: navy; }\n</style>\n<h1 id="title" class="big">Shop</h1>',o:['Crimson: an id is stronger than a class','Navy: it is written last','Black: they cancel out','Navy: classes always win'],a:0,h:'Specificity beats order. An id selector outranks a class, wherever it sits.'},
+ {k:'out',r:'r9',lang:'html',q:'How does this list look?',code:'<ol>\n  <li>Sage</li>\n  <li>Mint</li>\n</ol>',o:['1. Sage  2. Mint','• Sage  • Mint','Sage Mint on one line','A. Sage  B. Mint'],a:0,h:'ol is the ordered list, so it numbers. ul gives bullets.'},
+ {k:'out',r:'r35',lang:'html',q:'Which herbs turn gold?',code:'<style>\n  li:first-child { color: goldenrod; }\n</style>\n<ul>\n  <li>Sage</li>\n  <li>Mint</li>\n  <li>Thyme</li>\n</ul>',o:['Only Sage','All three','Only Thyme','None: li needs a class'],a:0,h:':first-child picks the element that is the first child of its parent.'},
+ {k:'out',r:'r36',lang:'html',q:'What text appears in the heading?',code:'<style>\n  h2::before { content: "✦ "; }\n</style>\n<h2>Herbs</h2>',o:['✦ Herbs','Herbs ✦','Herbs','::before Herbs'],a:0,h:'::before inserts its content at the start of the element, inside it.'},
+ {k:'out',r:'r24',lang:'html',q:'How are the three boxes placed?',code:'<style>\n  .row { display: flex; gap: 8px; }\n</style>\n<div class="row">\n  <div>A</div>\n  <div>B</div>\n  <div>C</div>\n</div>',o:['Side by side in one row','Stacked under each other','In a 2 by 2 grid','On top of each other'],a:0,h:'display: flex on the parent lines its children up in a row by default.'},
+ {k:'out',r:'r51',q:'The page uses the browser default of 16px. How big is the text?',code:'.title { font-size: 2rem; }',o:['32px','2px','16px','20px'],a:0,h:'1rem is the root font size. 2rem is twice 16px.'},
+ {k:'out',r:'r38',q:'On a 1400px wide laptop, what is the background?',code:'body { background: ivory; }\n@media (max-width: 600px) {\n  body { background: black; }\n}',o:['Ivory','Black','Ivory at the top, black below','White'],a:0,h:'The media query only applies when the screen is 600px or narrower.'},
+ {k:'out',r:'r55',js:true,q:'When does go() run?',code:"function go() { console.log('go'); }\nbtn.addEventListener('click', go());",o:['Once, right away, and never on click','On every click','Only on the first click','Never'],a:0,h:'go() with brackets calls the function now. Pass go without brackets so the browser can call it later.'},
+ {k:'out',r:'r57',js:true,q:'What does the console show?',code:"const name = 'Mira';\nconsole.log(`Hello ${name}!`);",o:['Hello Mira!','Hello ${name}!','Hello name!','An error: name is const'],a:0,h:'Backticks make a template literal: ${...} is replaced by the value.'},
+ {k:'out',r:'r70',js:true,q:'What does the console show?',code:"const a = '2';\nconsole.log(a + 2);",o:['22','4','NaN','An error'],a:0,h:'A string plus a number glues them together. Use Number(a) first to add.'},
+ {k:'out',r:'r58',js:true,q:'What does the console show?',code:"const coins = 3;\nif (coins >= 5) {\n  console.log('Buy');\n} else {\n  console.log('Save');\n}",o:['Save','Buy','Buy then Save','Nothing'],a:0,h:'3 >= 5 is false, so only the else block runs.'},
+ {k:'out',r:'r59',js:true,q:'What does the console show?',code:"['sage', 'mint'].forEach((herb, i) => {\n  console.log(i + ': ' + herb);\n});",o:['0: sage, then 1: mint','1: sage, then 2: mint','sage, then mint','0: mint, then 1: sage'],a:0,h:'forEach passes the item and its index, and indexes start at 0.'},
+ {k:'out',r:'r62',js:true,q:'What does the console show?',code:"console.log(' Moon '.trim() === 'moon');",o:['false','true','Moon','An error'],a:0,h:'trim removes the spaces, but Moon and moon differ in case. === is exact.'},
+ {k:'out',r:'r66',js:true,q:'What does the console show?',code:"console.log('Moonwort'.toLowerCase().includes('moon'));",o:['true','false','moonwort','4'],a:0,h:'Lowercase first, then includes finds moon inside moonwort.'},
+ {k:'out',r:'r69',js:true,q:'What does the console show?',code:"const cat = { name: 'Ash', age: 3 };\nconsole.log(cat.name + ' is ' + cat.age);",o:['Ash is 3','name is age','cat is 3','undefined is undefined'],a:0,h:'Dot notation reads a named value out of the object.'},
+ {k:'out',r:'r70',js:true,q:'What does the console show?',code:"const total = 4;\nconsole.log(total.toFixed(2));",o:['4.00','4','4.2','0.04'],a:0,h:'toFixed(2) always shows exactly two decimals, as a string.'},
+ {k:'out',r:'r71',js:true,q:'What does the console show?',code:"const cheap = [12, 5, 8, 20].filter(n => n < 10);\nconsole.log(cheap);",o:['[5, 8]','[12, 20]','[true, false]','2'],a:0,h:'filter keeps the items where the test is true, in their original order.'},
+ {k:'out',r:'r71',js:true,q:'What does the console show?',code:"console.log(['mint', 'basil', 'sage'].sort());",o:["['basil', 'mint', 'sage']","['mint', 'basil', 'sage']","['sage', 'mint', 'basil']","['basil', 'sage', 'mint']"],a:0,h:'sort() without a compare function sorts as text, A to Z.'},
+ {k:'out',r:'r72',q:'What does btn.dataset.herb give?',code:'<button data-herb="sage" type="button">Add</button>',o:["'sage'","'data-herb'","'Add'",'undefined'],a:0,h:'Every data-* attribute shows up on dataset, without the data- part.'},
+ {k:'out',r:'r77',js:true,q:'Which numbers can this give?',code:'Math.floor(Math.random() * 3)',o:['0, 1 or 2','1, 2 or 3','0, 1, 2 or 3','Any number between 0 and 3'],a:0,h:'random() is from 0 up to (not including) 1. Times 3 and floored: 0, 1 or 2.'},
+ {k:'out',r:'r78',js:true,q:'In what order does the console show the letters?',code:"console.log('A');\nsetTimeout(() => console.log('B'), 0);\nconsole.log('C');",o:['A, C, B','A, B, C','B, A, C','C, B, A'],a:0,h:'setTimeout always waits for the current code to finish, even with 0 ms.'},
+ {k:'out',r:'r82',js:true,q:'What does the console show?',code:"const nums = [2, 4, 7];\nconsole.log(nums.every(n => n % 2 === 0), nums.some(n => n > 5));",o:['false true','true true','false false','true false'],a:0,h:'every needs all to pass (7 is odd). some needs just one (7 > 5).'},
+ {k:'out',r:'r86',js:true,q:'What does the console show?',code:'for (let i = 1; i <= 3; i++) {\n  console.log(i);\n}',o:['1, 2, 3','0, 1, 2','1, 2','0, 1, 2, 3'],a:0,h:'Start at 1, keep going while i <= 3, add one each round.'},
+ {k:'out',r:'r88',js:true,q:'What does the console show?',code:'const open = true;\nconst coins = 0;\nconsole.log(open && coins > 0, open || coins > 0);',o:['false true','true true','false false','true false'],a:0,h:'&& needs both sides true. || needs just one.'},
+ {k:'out',r:'r64',js:true,q:'What does the console show?',code:"const s = JSON.stringify({ herb: 'sage', qty: 2 });\nconsole.log(typeof s);",o:['string','object','json','array'],a:0,h:'stringify turns the object into text. JSON.parse turns it back.'},
+ {k:'out',r:'r85',js:true,q:'What does the console show?',code:'console.log(new Date(2026, 1, 0).getDate());',o:['31','28','1','0'],a:0,h:'Month 1 is February (months start at 0). Day 0 of February is the last day of January: 31.'},
+ {k:'out',r:'r56',js:true,q:'After this code, is the class on?',code:"el.classList.toggle('on');\nel.classList.toggle('on');",o:['No: the second toggle removes it','Yes: toggle only adds','Yes, twice','An error'],a:0,h:'toggle adds the class when it is missing and removes it when it is there.'},
+ {k:'out',r:'r76',q:'fetch gets a 404 Not Found. What is res.ok?',code:"const res = await fetch('data/missing.json');",o:['false, and fetch does not throw','true','fetch throws an error straight away','undefined'],a:0,h:'fetch only throws when the network fails. A 404 is still a response, so check res.ok yourself.'}
+);
+MORE.push(
+ {k:'order',r:'r14',lang:'html',q:'Build the page skeleton',lines:['<!DOCTYPE html>','<html lang="en">','<head>','  <title>Hut</title>','</head>','<body>','  <h1>Hut</h1>','</body>','</html>'],h:'DOCTYPE first, then html wraps head (info) and body (what you see).'},
+ {k:'order',r:'r4',lang:'html',q:'Write a style block that colours h1 teal',lines:['<style>','  h1 {','    color: teal;','  }','</style>','<h1>Teal title</h1>'],h:'Selector, then { property: value; } inside the style pair.'},
+ {k:'order',r:'r9',lang:'html',q:'A bullet list: Sage first, then Mint',lines:['<ul>','  <li>Sage</li>','  <li>Mint</li>','</ul>'],h:'ul wraps the li items.'},
+ {k:'order',r:'r17',lang:'html',q:'A table: a header row, then one row for Sage',lines:['<table>','  <tr>','    <th>Herb</th>','    <th>Price</th>','  </tr>','  <tr>','    <td>Sage</td>','    <td>2</td>','  </tr>','</table>'],h:'table holds tr rows, rows hold th or td cells.'},
+ {k:'order',r:'r15',lang:'html',q:'Lay out the body',lines:['<body>','  <header>Hexle</header>','  <main>Today\'s potions</main>','  <footer>Open at dusk</footer>','</body>'],h:'Top to bottom: header, main, footer.'},
+ {k:'order',r:'r33',lang:'html',q:'A form with a labelled name field and a send button',lines:['<form>','  <label for="name">Name</label>','  <input id="name" type="text">','  <button type="submit">Send</button>','</form>'],h:'Label before its input, the button last, all inside form.'},
+ {k:'order',r:'r20',lang:'html',q:'A picture with a caption',lines:['<figure>','  <img src="img/hut.png" alt="A small hut">','  <figcaption>The hut</figcaption>','</figure>'],h:'figure wraps the image and its figcaption.'},
+ {k:'order',r:'r23',lang:'html',q:'A menu: Home first, then Shop',lines:['<nav>','  <ul>','    <li><a href="index.html">Home</a></li>','    <li><a href="shop.html">Shop</a></li>','  </ul>','</nav>'],h:'nav wraps a list of links.'},
+ {k:'order',r:'r53',lang:'html',q:'Load script.js the modern way',lines:['<head>','  <meta charset="UTF-8">','  <title>Spells</title>','  <script src="script.js" defer><\/script>','</head>'],h:'charset first in head, then title, then the script with defer.'},
+ {k:'order',r:'r38',q:'Stack the row on small screens',lines:['@media (max-width: 600px) {','  .row {','    flex-direction: column;','  }','}'],h:'The media query wraps a normal rule.'},
+ {k:'order',r:'r40',q:'Make the candle glow forever',lines:['@keyframes glow {','  from { opacity: 0.4; }','  to { opacity: 1; }','}','.candle {','  animation: glow 2s infinite alternate;','}'],h:'Define the keyframes first, then use their name in animation.'},
+ {k:'order',r:'r30',q:'Store gold once and use it',lines:[':root {','  --gold: #c9a227;','}','h1 {','  color: var(--gold);','}'],h:'Declare in :root, read with var().'},
+ {k:'order',r:'r55',js:true,q:'When the button is clicked, change its text',lines:["const btn = document.querySelector('#brew');","btn.addEventListener('click', () => {","  btn.textContent = 'Brewing…';","});"],h:'Find the element, then listen, then act inside the arrow function.'},
+ {k:'order',r:'r58',js:true,q:'Tell the visitor if they can afford it',lines:['if (coins >= 5) {',"  msg.textContent = 'You can buy it';",'} else {',"  msg.textContent = 'Not enough coins';",'}'],h:'if (test) { ... } else { ... }'},
+ {k:'order',r:'r59',js:true,q:'Turn the array into list items',lines:["const herbs = ['sage', 'mint'];",'herbs.forEach(herb => {',"  const li = document.createElement('li');",'  li.textContent = herb;','  list.append(li);','});'],h:'Create, fill, then append, once for every herb.'},
+ {k:'order',r:'r61',js:true,q:'Handle the form without reloading the page',lines:["form.addEventListener('submit', e => {",'  e.preventDefault();','  const name = input.value.trim();',"  if (name === '') return;",'  msg.textContent = `Welcome, ${name}`;','});'],h:'Stop the reload first, then read, check and answer.'},
+ {k:'order',r:'r64',js:true,q:'Load the saved list, add sage, save it again',lines:["const saved = localStorage.getItem('herbs');",'const herbs = saved ? JSON.parse(saved) : [];',"herbs.push('sage');","localStorage.setItem('herbs', JSON.stringify(herbs));"],h:'Read, parse, change, stringify and save.'},
+ {k:'order',r:'r76',js:true,q:'Load the potions safely',lines:['async function load() {','  try {',"    const res = await fetch('data/potions.json');",'    if (!res.ok) throw new Error(res.status);','    const potions = await res.json();','    render(potions);','  } catch (err) {',"    msg.textContent = 'Could not load potions';",'  }','}'],h:'try holds the risky steps in order: fetch, check ok, read json, use it.'},
+ {k:'order',r:'r67',js:true,q:'Count down from 10 and stop at 0',lines:['let left = 10;','const id = setInterval(() => {','  left--;','  out.textContent = left;','  if (left === 0) clearInterval(id);','}, 1000);'],h:'Keep the id so you can clear it. Count, show, then check.'},
+ {k:'order',r:'r79',js:true,q:'A counter with state and render (draw once at the very end)',lines:['const state = { count: 0 };','function render() {','  out.textContent = state.count;','}',"btn.addEventListener('click', () => {",'  state.count++;','  render();','});','render();'],h:'Change the state, then render. Never change the page directly.'},
+ {k:'order',r:'r71',js:true,q:'Cheap potions, cheapest first (filter, then sort)',lines:['const cheap = potions','  .filter(p => p.price < 10)','  .sort((a, b) => a.price - b.price);','cheap.forEach(p => console.log(p.name));'],h:'Chain: filter keeps, sort orders, then use the result.'},
+ {k:'order',r:'r73',js:true,q:'One listener on the list removes any clicked item',lines:["list.addEventListener('click', e => {","  const btn = e.target.closest('button');",'  if (!btn) return;','  btn.parentElement.remove();','});'],h:'Find the button from e.target, bail out if there is none, then act.'},
+ {k:'order',r:'r86',js:true,q:'Add Day 1 to Day 3 to the list',lines:['for (let i = 1; i <= 3; i++) {',"  const li = document.createElement('li');","  li.textContent = 'Day ' + i;",'  list.append(li);','}'],h:'Start, test, step in the for line. Create, fill, append inside.'},
+ {k:'order',r:'r81',js:true,q:'Open the dialog, then wire the close button',lines:["const dlg = document.querySelector('dialog');","openBtn.addEventListener('click', () => dlg.showModal());","closeBtn.addEventListener('click', () => dlg.close());"],h:'Find the dialog first. showModal opens it, close closes it.'}
+);
 
 const KEY='hexle.v1';
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
@@ -2040,7 +2115,9 @@ function ruleCard(id){
 
 let dState={};
 let PR=null;
+let READ=false;
 function practiceList(){
+  if(READ){READ=false;PR_MODE='read';const l=allDrills().filter(d=>(d.k==='out'||d.k==='order')&&S.learned.includes(d.r)).map(d=>Object.assign({},d,{rv:0}));for(let i=l.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[l[i],l[j]]=[l[j],l[i]]}if(l.length)return l.slice(0,10)}
   const due=dueList().sort((a,b)=>S.srs[dkey(a)].due-S.srs[dkey(b)].due).slice(0,20);
   const fresh=allDrills().filter(d=>S.learned.includes(d.r)&&!(S.srs||{})[dkey(d)]);
   for(let i=fresh.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[fresh[i],fresh[j]]=[fresh[j],fresh[i]]}
@@ -2121,9 +2198,9 @@ function practiceDone(){
     const sk=document.createElement('button');sk.textContent='Skill map';sk.onclick=()=>{sfx.click();go('rules')};row.appendChild(sk);
     const again=document.createElement('button');again.className='pri';again.textContent=left?'Next round · '+left:'Free practice';again.onclick=()=>{PR=null;sfx.click();renderSchool()};row.appendChild(again);
     c.appendChild(row);box.appendChild(c);sfx.rule();return}
-  $('dtitle').textContent='Practice complete';
+  $('dtitle').textContent=PR_MODE==='read'?'Code reading complete':'Practice complete';
   const box=$('dbox');box.innerHTML='';const c=document.createElement('div');c.className='donecard';
-  c.innerHTML='<div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">Practice mixes drills from every rule you have learned, and leans on the ones you missed before. Run it whenever you have five minutes.</div>'+(()=>{const m=Object.entries(S.miss||{}).filter(x=>x[1]>0&&RULES[x[0]]).sort((a,b)=>b[1]-a[1]).slice(0,4);return m.length?'<div class="hint0">Still shaky: '+m.map(x=>'Rule '+RULES[x[0]].n+' · '+esc(RULES[x[0]].title)).join(', ')+'</div>':''})();
+  c.innerHTML='<div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2><div class="hint0">'+(PR_MODE==='read'?'Reading code is half the job: you read far more code than you write. Predict first, then check.':'Practice mixes drills from every rule you have learned, and leans on the ones you missed before. Run it whenever you have five minutes.')+'</div>'+(()=>{const m=Object.entries(S.miss||{}).filter(x=>x[1]>0&&RULES[x[0]]).sort((a,b)=>b[1]-a[1]).slice(0,4);return m.length?'<div class="hint0">Still shaky: '+m.map(x=>'Rule '+RULES[x[0]].n+' · '+esc(RULES[x[0]].title)).join(', ')+'</div>':''})();
   const row=document.createElement('div');row.className='drow';
   const again=document.createElement('button');again.className='pri';again.textContent='New round';again.onclick=()=>{PR=null;sfx.click();renderSchool()};
   row.appendChild(again);c.appendChild(row);box.appendChild(c);sfx.rule();
@@ -2132,7 +2209,7 @@ function setPrev(html,label){sideFrame(label);$('dprev').srcdoc=wrap(html)}
 function renderDrill(d,i,n,list){
   dState={tries:0,d:d};
   $('dtitle').textContent=(S.stage==='trial'&&PR&&PR.trial)?'Witch\'s Trial · question '+(i+1)+' of '+n:'Drill '+(i+1)+' of '+n;
-  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug'}[d.k];
+  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',out:'Predict the output',order:'Put the lines in order'}[d.k];
   const R=RULES[d.r],L=LESSONS[d.r];
   box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><span class="syn">'+R.syn+'</span><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dk">'+(d.rv?'Review · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div><div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div><div class="sec warn"><small>Watch out</small><ul>'+L.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div></div>';
   $('lessbtn').onclick=()=>{sfx.blip();renderLesson(d.r,0,1,true)};
@@ -2140,6 +2217,29 @@ function renderDrill(d,i,n,list){
   if(d.k==='pick'){
     din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>pick(d,j,b);din.appendChild(b)});
     $('dcheck').parentNode.style.display='none';setPrev(RULES[d.r].ex,'rule example');
+  }else if(d.k==='out'){
+    const ord=d.o.map((_,j)=>j);for(let k=ord.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[ord[k],ord[j]]=[ord[j],ord[k]]}
+    din.className='outq';din.innerHTML='<pre class="dcode">'+esc(d.code)+'</pre><div class="opts"></div>';
+    const ob=din.querySelector('.opts');ord.forEach(j=>{const b=document.createElement('button');b.textContent=d.o[j];b.onclick=()=>pick(d,j,b);ob.appendChild(b)});
+    $('dcheck').parentNode.style.display='none';
+    setPrev('<p style="font:15px Georgia,serif;color:#8a8170;margin:24px">Read the code and decide first. The real result appears here after you answer.</p>','hidden until you answer');
+  }else if(d.k==='order'){
+    const pool=d.lines.map((t,i)=>({t,i}));do{for(let k=pool.length-1;k>0;k--){const j=Math.floor(Math.random()*(k+1));[pool[k],pool[j]]=[pool[j],pool[k]]}}while(pool.length>2&&pool.every((p,k)=>p.t===d.lines[k]));
+    dState.ans=[];dState.pool=pool;
+    din.className='parsons';din.innerHTML='<div class="pcol"><small>Your code</small><ol id="pans"></ol></div><div class="pcol"><small>Lines · click to add</small><ul id="ppool"></ul></div>';
+    const draw=()=>{
+      const A=$('pans'),Pl=$('ppool');A.innerHTML='';Pl.innerHTML='';
+      dState.ans.forEach((x,k)=>{const li=document.createElement('li');const b=document.createElement('button');b.textContent=x.t;b.title='Click to send back';b.onclick=()=>{if(dState.locked)return;sfx.key();dState.pool.push(dState.ans.splice(k,1)[0]);draw()};li.appendChild(b);A.appendChild(li)});
+      if(!dState.ans.length)A.innerHTML='<li class="pempty">Click the lines on the right, in order.</li>';
+      dState.pool.forEach((x,k)=>{const li=document.createElement('li');const b=document.createElement('button');b.textContent=x.t;b.onclick=()=>{if(dState.locked)return;sfx.key();dState.ans.push(dState.pool.splice(k,1)[0]);draw()};li.appendChild(b);Pl.appendChild(li)});
+      if(!dState.pool.length)Pl.innerHTML='<li class="pempty">All lines used. Check · Enter</li>';
+      $('fb').textContent='';$('fb').className='fb';
+      if(d.lang==='html')setPrev(dState.ans.map(x=>x.t).join('\n'),'your code');
+    };
+    dState.redraw=draw;draw();
+    if(d.lang!=='html')setPrev(RULES[d.r].ex,'rule example');
+    $('dcheck').onclick=()=>checkDrill(d);
+    din.tabIndex=-1;din.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();checkDrill(d)}});setTimeout(()=>din.focus(),30);
   }else if(d.k==='gap'){
     din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="dval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>';
   }else{
@@ -2160,6 +2260,10 @@ function pick(d,j,b){
 }
 function checkDrill(d){
   if(dState.locked)return;
+  if(d.k==='order'){const fb=$('fb');if(dState.pool.length){fb.className='fb err';fb.textContent='Use every line first.';sfx.bad();return}
+    const got=dState.ans.map(x=>x.t),bad=got.findIndex((t,k)=>t!==d.lines[k]);
+    if(bad<0){passDrill();return}
+    const li=$('pans').children[bad];if(li)li.classList.add('bad');failDrill(d);fb.innerHTML+=' The first wrong line is number '+(bad+1)+'.';return}
   const v=$('dval').value.trim(),fb=$('fb');
   if(!v){fb.className='fb err';fb.textContent='Type an answer first.';sfx.bad();return}
   const ok=d.k==='gap'?d.a.includes(v.toLowerCase()):d.test.test(v.replace(/\s+/g,' '));
@@ -2170,8 +2274,9 @@ function passDrill(){
   if(dState.tries===0&&dState.d)srsMark(dState.d,true);
   if(dState.tries===0){S.ft++;if(S.stage==='practice'&&dState.d&&S.miss&&S.miss[dState.d.r])S.miss[dState.d.r]--}
   const fb=$('fb');fb.className='fb ok';fb.textContent=['Locked in.','Correct. Nice.','Clean. Next one.','Spot on.'][Math.floor(Math.random()*4)];
+  const dd=dState.d,slow=dd&&dd.k==='out';if(slow){fb.innerHTML+=' '+fmt(dd.h);if(dd.lang==='html')setPrev(dd.code,'what really happens')}
   if(S.stage==='practice'||S.stage==='trial'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
-  sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool()},650);
+  sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool()},slow?2600:650);
 }
 function failDrill(d){if(dState.locked)return;dState.tries++;if(dState.tries===1)srsMark(d,false);if(S.stage==='trial'&&PR&&PR.trial){dState.locked=true;PR.wrong.push(d.r);if(S.miss){}S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save();const fb=$('fb');fb.className='fb err';fb.innerHTML='Wrong. '+fmt(d.h);sfx.bad();PR.i++;setTimeout(()=>{if(S.stage==='trial')renderSchool()},1600);return}if(dState.tries===1){S.miss=S.miss||{};S.miss[d.r]=(S.miss[d.r]||0)+1;save()}const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);sfx.bad()}
 function schoolComplete(list){
@@ -2229,7 +2334,9 @@ async function evaluate(code,css,js){
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
   const now=res.indexOf(false);
   const ol=$('steps');ol.innerHTML='';
-  tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
+  const hide=S.memo&&S.memo.t===S.t&&!S.memo.peek;
+  tg.steps.forEach((s,i)=>{const li=document.createElement('li');li.className=res[i]?'ok':(i===now&&!hide?'now':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+(hide?'<span class="memoh">Check '+(i+1)+(res[i]?' · passing':' · hidden')+'</span>':fmt(s.t))+'</span>';ol.appendChild(li)});
+  if(S.memo&&S.memo.t===S.t&&now===-1){endMemo(true);curStep=-2}
   if(S.hunt&&S.hunt.t===S.t&&S.hunt.fresh){S.hunt.fresh=false;if(now===-1){if(S.hunt.tries<6){setTimeout(()=>startHunt(S.hunt.tries+1),0);return}S.code[S.t]=S.hunt.code;S.hunt=null;comms('These bugs did not break anything. Try another bug hunt.')}save()}
   if(S.hunt&&S.hunt.t===S.t&&now===-1&&!S.hunt.fresh){endHunt(true);curStep=-2}
   if(now!==curStep){curStep=now;lv=0;renderHelp()}
@@ -2239,10 +2346,16 @@ async function evaluate(code,css,js){
 }
 function renderHelp(){
   const tg=T(),lad=$('ladder'),foot=$('hfoot');lad.innerHTML='';foot.innerHTML='';
+  if(S.memo&&S.memo.t===S.t&&curStep!==-1){
+    $('hstep').textContent='from memory';const n=(lastPass||[]).filter(Boolean).length;
+    lad.innerHTML='<div class="hunt"><b>Rebuild from memory</b><br>Empty files, only the picture. Build it the way you would at work: skeleton first, then content, then style.</div><div class="hint0">Files in this folder: '+memoFiles(tg).map(f=>'<code>'+esc(f)+'</code>').join(' ')+'</div><div class="hint0">The checklist stays hidden. Green ticks still appear as checks pass'+(S.memo.peek?'. You peeked: the steps are visible now.':'. Peeking shows the steps but is noted.')+'</div>';
+    if(!S.memo.peek){const p=document.createElement('button');p.textContent='Peek at steps';p.onclick=()=>{S.memo.peek=true;save();sfx.hint();lastPass=null;curStep=-2;run()};foot.appendChild(p)}
+    const g=document.createElement('button');g.textContent='Give up';g.onclick=()=>endMemo(false);foot.appendChild(g);return}
   if(curStep===-1){
     $('hstep').textContent='all steps done';
-    lad.innerHTML='<div class="win"><b>TARGET MATCHED</b><br>'+esc(tg.name)+' is ready to be added to your village.</div><div id="review"></div><div class="hint0">Want to train your eye? Bug hunt plants three bugs in your finished code. Find them like a real debugger: read the steps, the scanner and the console.</div>';
+    lad.innerHTML='<div class="win"><b>TARGET MATCHED</b><br>'+esc(tg.name)+' is ready to be added to your village.</div><div id="review"></div><div class="hint0">Train further: <b>Bug hunt</b> plants three bugs to find like a real debugger. <b>From memory</b> empties the files and hides the checklist, so you rebuild it from the picture alone.</div>';
     const h=document.createElement('button');h.textContent='Bug hunt';h.onclick=()=>startHunt(0);foot.appendChild(h);
+    const mm=document.createElement('button');mm.textContent='From memory';mm.title='Empty files, only the picture: rebuild this target without the checklist';mm.onclick=()=>startMemo(S.t);foot.appendChild(mm);
     const b=document.createElement('button');b.className='pri';b.textContent=tg.project?'Add to grimoire':'Add to village';b.onclick=()=>{freshPlot=tg.plot;sfx.build();comms(tg.name+(tg.project?' bound into your grimoire.':' built in the village.'));go(tg.project?'grimoire':'village')};foot.appendChild(b);return;
   }
   $('hstep').textContent='step '+(curStep+1);
@@ -2430,13 +2543,22 @@ function dashPanel(){
   const M=Object.fromEntries(ms);
   el.innerHTML='<div class="ph"><b>Skill map</b><span class="sp">'+Object.keys(RULES).length+' rules</span></div><div class="dbody"><div class="dstats">'
    +'<div><b>'+due+'</b><span>due today</span></div><div><b>'+streak()+'</b><span>day streak</span></div><div><b>'+hm(weekSecs())+'</b><span>this week</span></div><div><b>'+today+'</b><span>answers today</span></div>'
-   +'<button class="pri" id="dstart">'+(due?'Start daily review · '+due:'Practise anyway')+'</button></div>'
+   +'<button class="pri" id="dstart">'+(due?'Start daily review · '+due:'Practise anyway')+'</button><button id="dread">Code reading · 10</button>'+(()=>{const m=memoNext();return m==null?'':'<button id="dmemo" title="Rebuild this target from the picture alone">From memory: '+esc(TARGETS[m].name.replace(/^.*?·\s*/,''))+'</button>'})()+'</div>'
    +'<div class="dmap">'+cats.map(g=>'<div class="dcat"><small>'+esc(g.c)+'</small><div class="hmr">'+g.ids.map(id=>'<span class="sq m-'+M[id]+'" data-id="'+id+'" title="Rule '+RULES[id].n+' · '+esc(RULES[id].title)+' · '+M[id]+'"></span>').join('')+'</div></div>').join('')+'</div>'
    +'<div class="dleg">'+[['strong','Strong'],['learning','Learning'],['shaky','Shaky'],['new','New'],['locked','Locked']].map(([k,l])=>'<span><i class="sq m-'+k+'"></i>'+l+' '+cnt[k]+'</span>').join('')+'</div></div>';
   el.querySelector('#dstart').onclick=()=>{PR=null;sfx.click();go('practice')};
+  el.querySelector('#dread').onclick=()=>{PR=null;READ=true;sfx.click();go('practice')};
+  const dm=el.querySelector('#dmemo');if(dm)dm.onclick=()=>startMemo(memoNext());
   el.querySelectorAll('.dmap .sq').forEach(q=>q.onclick=()=>{const c=$('rb-'+q.dataset.id);if(c){c.scrollIntoView({behavior:'smooth',block:'center'});c.classList.remove('flash');void c.offsetWidth;c.classList.add('flash')}});
   return el;
 }
+
+function memoFiles(tg){const f=new Set();const all=(tg.solution||'')+'\n'+(tg.solJs||'');for(const m of all.matchAll(/(?:src|href)="([^"#:]+\.(?:png|jpg|jpeg|webp|svg|gif))"/g))f.add(m[1]);for(const m of all.matchAll(/fetch\(\s*['"`]([^'"`]+)['"`]/g))f.add(m[1]);if(tg.css!=null)f.add('styles.css');if(tg.js!=null)f.add('script.js');return [...f]}
+function startMemo(t){const tg=TARGETS[t];if(S.hunt)endHunt(false);S.t=t;S.memo={t,code:S.code[t],css:S.css[t],js:S.js[t],peek:false,start:Date.now()};S.code[t]='';if(tg.css!=null)S.css[t]='';if(tg.js!=null)S.js[t]='';$('ed').dataset.t='';file='html';sfx.hint();comms('Rebuild from memory: empty files, only the picture. Start with the doctype.');go('target')}
+function endMemo(win){const m=S.memo;if(!m)return;
+  if(win){const mins=Math.max(1,Math.round((Date.now()-m.start)/60000));S.memos=S.memos||{};S.memos[m.t]={d:dayNo(),peek:m.peek,mins};S.memo=null;markDay();save();sfx.target();comms('Rebuilt from memory in '+mins+' min'+(m.peek?', with a peek.':'. No peeking. That one is yours now.'))}
+  else{S.code[m.t]=m.code;if(m.css!=null)S.css[m.t]=m.css;if(m.js!=null)S.js[m.t]=m.js;S.memo=null;save();sfx.click();$('ed').dataset.t='';render();comms('Rebuild stopped. Your saved build is back.')}}
+function memoNext(){const t=dayNo(),M=S.memos||{};const done=TARGETS.map((tg,i)=>i).filter(i=>S.done[i]&&!(M[i]&&t-M[i].d<14));return done.length?done[0]:null}
 
 function renderRules(){
   const v=$('v-rules');v.innerHTML='';v.appendChild(dashPanel());
