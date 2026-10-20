@@ -665,7 +665,7 @@ groups:[
 {t:"Syntax and variables", e:[
  {c:"$name = 'Kaatje';", d:"Every variable starts with a dollar sign", n:"Case sensitive for variables, not for function names. Statements end with a semicolon, always."},
  {c:"$total = $a + $b;", d:"Types are decided at runtime", n:"PHP converts between strings and numbers freely. gettype() tells you what something became, and declare(strict_types=1) at the top of a file stops silent conversions in function calls."},
- {c:"define('SITE', 'DCU'); / const SITE = 'DCU';", d:"Constants", n:"No dollar sign when you use them. const is evaluated at compile time, define at runtime."},
+ {c:"define('SITE', 'Contoso'); / const SITE = 'Contoso';", d:"Constants", n:"No dollar sign when you use them. const is evaluated at compile time, define at runtime."},
  {c:"=== vs ==", d:"Identical versus equal", n:"== converts types before comparing, which is a long-running source of security bugs. Use === and !== by default."},
  {c:"$x ?? 'default'", d:"Null coalescing", n:"Gives the fallback when the left side is null or not set, without a notice. $a ?: $b is the older version that also fires on empty strings and zero."}
 ]},
@@ -734,6 +734,143 @@ groups:[
  {c:"composer require vendor/package", d:"Install a dependency", n:"composer.json declares them, composer.lock pins exact versions. Add require 'vendor/autoload.php'; once and every class loads on demand."}
 ]}
 ]});
+DATA.push({
+id:"git", sigil:"GT", name:"Git", sub:"Version control", color:"#b0473f",
+blurb:"Saving, sharing and undoing work. The commands behind every repository, from the first commit to a push that was rejected.",
+groups:[
+{t:"Setting up", e:[
+ {c:"git config --global user.name \"Contoso Admin\"", d:"Set the name stamped on your commits", n:"Done once per computer. --global writes to ~/.gitconfig, so every repository uses it. Leave out --global inside a repository to override it there only.", x:"git config --global user.name \"Contoso Admin\"\ngit config --global user.email user@contoso.com\ngit config --global init.defaultBranch main"},
+ {c:"git init", d:"Turn the current folder into a repository", n:"Creates a hidden .git folder that holds the whole history. Delete .git and the folder is just a folder again, with no history."},
+ {c:"git clone https://github.com/contoso/site.git", d:"Copy a remote repository to your computer", n:"Downloads every commit, checks out the default branch and sets up a remote called origin that points back to the URL."},
+ {c:"git status", d:"Show what changed and what is staged", n:"The command to run when you are unsure. It names the branch, lists staged changes in green and unstaged ones in red, and usually prints the next command you need."},
+ {c:"git remote -v", d:"List the remotes and their URLs", n:"origin is only a name, the default one clone gives you. Two lines per remote: one for fetch, one for push."}
+]},
+{t:"Staging and committing", e:[
+ {c:"git add index.html", d:"Stage a file for the next commit", n:"Staging copies the file as it is right now into the index. Edit it again after git add and the new edit is not staged until you add it again."},
+ {c:"git add -p", d:"Stage part of a file, one chunk at a time", n:"Git shows each changed hunk and asks y or n. Lets you split one messy editing session into commits that each do one thing."},
+ {c:"git restore --staged index.html", d:"Unstage a file, keep the edits", n:"Takes the file out of the index. Your changes stay in the working folder, nothing is lost."},
+ {c:"git commit -m \"Add contact form\"", d:"Record the staged changes as a commit", n:"Write the message as a command: Add, Fix, Remove. Someone reading git log --oneline should know what each commit did without opening it."},
+ {c:"git commit --amend", d:"Change the last commit", n:"Adds whatever is staged to the previous commit and lets you edit its message. It makes a new commit with a new hash, so only amend commits you have not pushed yet."},
+ {c:"git diff", d:"Show unstaged changes", n:"Lines starting with + were added, - were removed. git diff --staged shows what is already in the index, which is exactly what the next commit will contain.", x:"git diff\ngit diff --staged\ngit diff main..feature"}
+]},
+{t:"Reading history", e:[
+ {c:"git log --oneline --graph --all", d:"Show history as a compact branch drawing", n:"One line per commit: short hash and message. --graph draws the branch lines, --all includes every branch, not only the one you are on."},
+ {c:"git show 3f2a91c", d:"Show one commit and its diff", n:"A short hash of 7 characters is enough. git show HEAD shows the latest commit, HEAD~1 the one before it."},
+ {c:"git log -p -- style.css", d:"Every change ever made to one file", n:"The -- separates options from file names. Add -S \"text\" instead of -p to find the commit that added or removed a piece of text."},
+ {c:"git blame style.css", d:"Who last changed each line, and in which commit", n:"Useful to find the commit behind a line, then git show that commit to read why it changed."},
+ {c:"git reflog", d:"Everywhere HEAD has been, including lost commits", n:"Your safety net. After a bad reset or a deleted branch the old commits are still listed here for about 90 days. Copy the hash and branch from it."}
+]},
+{t:"Branches", e:[
+ {c:"git switch -c feature/contact", d:"Create a branch and move onto it", n:"A branch is a movable label pointing at a commit. Creating one is instant and copies nothing."},
+ {c:"git switch main", d:"Move to another branch", n:"Git changes your files to match that branch. Uncommitted changes come along if they do not clash; if they do, commit or stash first."},
+ {c:"git branch -vv", d:"List branches with their upstream and last commit", n:"Shows [origin/main: ahead 2, behind 1] when your branch and the remote have drifted apart."},
+ {c:"git merge feature/contact", d:"Bring another branch into the current one", n:"If main has not moved, Git just slides the label forward (fast-forward). If both moved, it makes a merge commit with two parents."},
+ {c:"git branch -d feature/contact", d:"Delete a branch that is merged", n:"-d refuses if the work is not merged anywhere. -D forces it, and the commits are then only reachable through git reflog."}
+]},
+{t:"Merge conflicts", e:[
+ {c:"<<<<<<< HEAD ... ======= ... >>>>>>> feature", d:"The conflict markers Git writes into a file", n:"Above ======= is your branch, below it the incoming branch. Edit the file to the final version you want and delete all three marker lines.", x:"<<<<<<< HEAD\n<h1>Welcome</h1>\n=======\n<h1>Welcome to Contoso</h1>\n>>>>>>> feature"},
+ {c:"git status", d:"See which files are still in conflict", n:"During a merge they are listed under Unmerged paths. A file stays there until you git add it."},
+ {c:"git add index.html", d:"Mark a conflict as resolved", n:"There is no separate resolve command. Staging the fixed file is how you tell Git it is done. Then git commit finishes the merge."},
+ {c:"git merge --abort", d:"Cancel the merge and go back", n:"Restores the state from before you typed git merge. The calm way out when the conflict is bigger than expected."},
+ {c:"grep -rn \"<<<<<<<\" .", d:"Find markers you forgot to remove", n:"A committed marker breaks the page: the site shows the arrows as text. Run this before committing a merge."}
+]},
+{t:"Remotes: push and pull", e:[
+ {c:"git push -u origin main", d:"Upload commits and remember the upstream", n:"-u links your local main to origin/main, so later a plain git push and git pull know where to go."},
+ {c:"git fetch", d:"Download new commits without changing your files", n:"Updates origin/main, the remote-tracking branch, and leaves your main alone. Safe to run any time."},
+ {c:"git pull", d:"Fetch, then merge origin into your branch", n:"Two steps in one. If you and someone else both committed, this creates a merge commit."},
+ {c:"git pull --rebase", d:"Fetch, then replay your commits on top", n:"Keeps history in one straight line instead of adding a merge commit. Do this when a push is rejected because the remote moved on."},
+ {c:"git remote add origin https://github.com/contoso/site.git", d:"Connect a local repository to a remote", n:"For a project you started with git init. Then git push -u origin main for the first upload."}
+]},
+{t:"Undoing things", e:[
+ {c:"git restore index.html", d:"Throw away unstaged edits in a file", n:"Puts the file back to the last staged or committed version. There is no undo for this one, the edits are gone."},
+ {c:"git revert 3f2a91c", d:"Make a new commit that undoes an old one", n:"The safe undo for anything already pushed. History stays intact and everyone else can simply pull."},
+ {c:"git reset --soft HEAD~1", d:"Undo the last commit, keep the changes staged", n:"Moves the branch back one commit. Your work is still there, ready to be committed again. Only for commits you have not pushed."},
+ {c:"git reset --hard HEAD~1", d:"Delete the last commit and its changes", n:"Moves the branch back and overwrites your files. Uncommitted work is lost for good. Check git status first."},
+ {c:"git stash", d:"Put uncommitted changes aside", n:"Cleans your working folder so you can switch branches or pull. git stash pop brings the changes back. git stash list shows what is waiting."},
+ {c:"git switch -c rescue", d:"Save commits made in detached HEAD", n:"Detached HEAD means you checked out a commit, not a branch. New commits there belong to no branch and get lost when you switch away. Creating a branch on the spot keeps them."}
+]},
+{t:"Ignoring files and secrets", e:[
+ {c:".gitignore", d:"A file listing paths Git should not track", n:"One pattern per line: .env, node_modules/, *.log. It only affects untracked files. A file Git already tracks stays tracked.", x:".env\nnode_modules/\n*.log\n.DS_Store"},
+ {c:"git rm --cached .env", d:"Stop tracking a file but keep it on disk", n:"The fix when .gitignore seems ignored: the file was committed before the rule existed. Commit after this and Git leaves it alone."},
+ {c:"git check-ignore -v build/app.js", d:"Ask which rule ignores a file", n:"Prints the .gitignore file, line number and pattern responsible. No output means the file is not ignored."},
+ {c:"git ls-files", d:"List every file Git is tracking", n:"If a secret file shows up here, it is in the repository and in every push."},
+ {c:"Rotate the secret", d:"What to do when a password reached GitHub", n:"Deleting the file in a new commit does not help: it is still in history and anyone who cloned has it. Change the password or key first, then clean up the repository."}
+]}
+]});
+
+DATA.push({
+id:"shell", sigil:"SH", name:"Shell", sub:"zsh and Docker", color:"#4c5f78",
+blurb:"The terminal on a Mac or a Linux server: moving around, files, pipes, processes, SSH, network checks, and running containers.",
+groups:[
+{t:"Find your way", e:[
+ {c:"pwd", d:"Print the folder you are in", n:"Print working directory. The first command to run when a path does not work."},
+ {c:"ls -la", d:"List everything, with details", n:"-l gives permissions, owner, size and date. -a includes hidden files that start with a dot, such as .env and .git."},
+ {c:"cd ~/Projects/site", d:"Change folder", n:"~ is your home folder. cd .. goes up one level, cd - jumps back to the previous folder, cd alone goes home."},
+ {c:"open .", d:"Open the current folder in Finder", n:"macOS only. open file.html opens a file in its default app."},
+ {c:"Tab", d:"Complete a name", n:"Type the first letters of a file or folder and press Tab. Press it twice to see the options. Fewer typos, fewer wrong paths."}
+]},
+{t:"Files and permissions", e:[
+ {c:"mkdir -p logs/2026/10", d:"Create a folder and any missing parents", n:"Without -p, mkdir fails if logs or logs/2026 do not exist yet."},
+ {c:"cp -r site site-backup", d:"Copy a folder", n:"-r copies everything inside. mv renames or moves, and needs no -r."},
+ {c:"rm -r old-build", d:"Delete a folder", n:"There is no Trash in the terminal. Run ls on the same path first to check what you are about to remove."},
+ {c:"-rwxr-xr-- 1 user staff", d:"Reading permissions", n:"First character: - file, d folder. Then three groups of rwx: owner, group, everyone else. r read, w write, x execute."},
+ {c:"chmod +x deploy.sh", d:"Make a script executable", n:"The fix for permission denied when you run ./deploy.sh. sudo will not help: the file is missing x, not you missing rights."},
+ {c:"chmod 600 ~/.ssh/id_ed25519", d:"Only the owner may read and write", n:"Numbers: 4 read, 2 write, 1 execute, added per group. 600 is owner rw, nobody else anything. 755 is owner rwx, others rx."}
+]},
+{t:"Search and pipes", e:[
+ {c:"grep -rn \"TODO\" src", d:"Find text in every file under a folder", n:"-r recursive, -n line numbers, -i ignore case. Output is file:line:text."},
+ {c:"find . -name \"*.log\" -size +100M", d:"Find files by name, size or age", n:"-mtime -1 finds files changed in the last day. Quote the pattern so the shell does not expand the * itself."},
+ {c:"ps aux | grep php", d:"A pipe: one command's output into the next", n:"| sends the left side's output to the right side's input. Chains of small tools are how most shell work gets done."},
+ {c:"tail -f app.log", d:"Follow a log file as it grows", n:"Ctrl+C stops following. head -n 20 shows the first 20 lines, tail -n 20 the last 20."},
+ {c:"du -sh * | sort -h", d:"Which folders are biggest", n:"du -sh gives one human-readable size per item. sort -h understands K, M and G, so the biggest ends up last."},
+ {c:"echo \"done\" >> deploy.log", d:"Write output to a file", n:"> replaces the file, >> appends to it. 2> redirects error messages only."}
+]},
+{t:"Processes and ports", e:[
+ {c:"lsof -i :8080", d:"Which process is using a port", n:"Shows the command and PID listening on 8080. The first stop for port is already in use."},
+ {c:"kill 4312", d:"Ask a process to stop", n:"Sends a polite stop signal. If it ignores you, kill -9 4312 forces it, without letting it clean up."},
+ {c:"lsof -p 4312 | grep cwd", d:"Which folder a process was started from", n:"cwd is its working directory. Tells you which project a forgotten dev server belongs to."},
+ {c:"Ctrl+C", d:"Stop the command running in this terminal", n:"For anything in the foreground: a dev server, a ping, a tail -f."},
+ {c:"top -o cpu", d:"Live view of the busiest processes", n:"q quits. On Linux servers htop is friendlier if installed."}
+]},
+{t:"SSH and copying", e:[
+ {c:"ssh admin@203.0.113.10", d:"Open a shell on another machine", n:"user@host. Add -p 2222 for a non-standard port. exit closes the session."},
+ {c:"ssh-keygen -t ed25519 -C \"user@contoso.com\"", d:"Create a key pair", n:"Writes a private key (id_ed25519, never share) and a public key (.pub, safe to hand out). The -C text is only a label."},
+ {c:"ssh-copy-id admin@203.0.113.10", d:"Install your public key on a server", n:"Appends it to ~/.ssh/authorized_keys on the server, so you log in with the key instead of a password."},
+ {c:"ssh -v admin@203.0.113.10", d:"Verbose: show why a login fails", n:"Lists each key tried and the server's answers. Look for warnings such as UNPROTECTED PRIVATE KEY FILE."},
+ {c:"scp backup.tar.gz admin@203.0.113.10:/srv/", d:"Copy a file to a server", n:"Same syntax as cp, with host: in front of the remote path. Swap the two arguments to copy from the server."},
+ {c:"~/.ssh/config", d:"Short names for servers", n:"Then ssh web works instead of the full user, address and key.", x:"Host web\n  HostName 203.0.113.10\n  User admin\n  IdentityFile ~/.ssh/id_ed25519"}
+]},
+{t:"Network checks", e:[
+ {c:"ping -c 4 203.0.113.10", d:"Is the host reachable at all", n:"-c 4 sends four packets and stops. No reply does not always mean down: many firewalls drop ping."},
+ {c:"nc -vz 203.0.113.10 443", d:"Is a specific port open", n:"Tests one TCP port without sending data. succeeded means something is listening and the path is open."},
+ {c:"curl -I https://contoso.com", d:"Fetch only the response headers", n:"Shows the status code, redirects and server. -L follows redirects, -v shows the TLS handshake."},
+ {c:"dig contoso.com +short", d:"Look up DNS", n:"Prints just the address. dig contoso.com MX for mail servers. If the name does not resolve, nothing else will work either."},
+ {c:"traceroute 203.0.113.10", d:"Show each hop on the way", n:"Where the stars start is roughly where traffic stops."}
+]},
+{t:"Docker basics", e:[
+ {c:"docker run -d -p 8080:80 --name web nginx", d:"Start a container in the background", n:"-d detached, -p host:container publishes a port, --name gives it a handle you can use instead of an ID."},
+ {c:"docker ps -a", d:"List containers, including stopped ones", n:"Without -a only running ones. The STATUS column shows Exited (1) when a container crashed."},
+ {c:"docker logs -f web", d:"Follow a container's output", n:"The first place to look when a container exits immediately. --tail 50 shows only the last lines."},
+ {c:"docker exec -it web sh", d:"Open a shell inside a running container", n:"-it gives an interactive terminal. Use bash if the image has it. exit leaves without stopping the container."},
+ {c:"docker system df", d:"How much space Docker uses", n:"Images, containers, volumes and build cache, with what is reclaimable."},
+ {c:"docker image prune", d:"Remove dangling images", n:"Removes the <none> images left by old builds. docker system prune also removes stopped containers and unused networks. Volumes are only removed with --volumes."}
+]},
+{t:"Docker Compose", e:[
+ {c:"docker compose up -d", d:"Start every service in docker-compose.yml", n:"Builds or pulls what is missing, creates a network for the services, runs them in the background."},
+ {c:"docker compose ps", d:"Status of the services in this project", n:"Run it in the folder with the compose file. Restarting in the status means it keeps crashing."},
+ {c:"docker compose logs -f app", d:"Follow one service's logs", n:"Leave out the service name to see all of them interleaved."},
+ {c:"docker compose down", d:"Stop and remove the containers and network", n:"Named volumes survive, so database data stays. down -v removes volumes too, and the data with them."},
+ {c:"restart: unless-stopped", d:"Bring a service back after a crash or reboot", n:"A compose file setting, not a command. A crash loop with this set means the container starts, fails, and starts again.", x:"services:\n  app:\n    image: nginx\n    ports:\n      - \"8080:80\"\n    restart: unless-stopped"}
+]},
+{t:"Shortcuts", e:[
+ {c:"Ctrl+R", d:"Search your command history", n:"Type part of an old command, press Ctrl+R again for older matches, Enter to run it."},
+ {c:"Up arrow", d:"Previous command", n:"Press it again to go further back. Edit the line before pressing Enter."},
+ {c:"Ctrl+A / Ctrl+E", d:"Jump to the start or end of the line", n:"Faster than holding the arrow keys on a long command."},
+ {c:"Ctrl+U", d:"Clear the line before the cursor", n:"For when a command went wrong halfway and you want to start over."},
+ {c:"sudo !!", d:"Run the last command again with sudo", n:"!! means the previous command. Read it first: it runs the whole previous line as root."}
+]}
+]});
+
 DATA.push({
 id:"hexle", sigil:"HX", name:"Hexle rulebook", sub:"Rules from Hexle School", color:"#0e8a76",
 blurb:"Every rule you learn in Hexle School lands here, sorted by category. Locked entries open up as you learn them.",
@@ -1000,11 +1137,231 @@ const LAB_LINKS = {
   web: { label: "Hexle", href: "hexle.html" },
   js: { label: "Spelle", href: "spelle.html" },
   php: { label: "Passle", href: "passle.html" },
+  git: { label: "Git Lab", href: "git-lab.html" },
+  shell: { label: "Shelle", href: "shelle.html" },
   hexle: { label: "Hexle", href: "hexle.html" },
   passle: { label: "Passle", href: "passle.html" }
 };
 
 const AUG = {
+
+"git::Setting up": {
+  concept: "A repository is a folder plus a hidden .git folder. Your files are the working tree: what you see and edit. Inside .git sits the full history, every commit ever made, stored as snapshots. Cloning copies that whole history, not just the latest files, which is why you can read the log and switch branches with no network. A remote is just a named URL that Git can push to and fetch from.",
+  figure: "  your folder\n  ├─ index.html     working tree (what you edit)\n  └─ .git/          history, branches, config\n        └─ remote origin -> https://github.com/contoso/site.git",
+  traps: [
+    "Running git init inside a folder that is already part of a repository, which creates a repository inside a repository.",
+    "Committing with the wrong name or email because git config was never set on a new laptop.",
+    "Cloning into a folder that already has files with the same names."
+  ],
+  lab: "guided"
+},
+
+"git::Staging and committing": {
+  concept: "Git has three places a change can be. The working tree is what you are editing. The staging area, also called the index, is the next commit being assembled. The repository holds the commits already made. git add copies a change from the first to the second, git commit seals the second into the third. The middle step exists so one commit can hold exactly one idea, even when you edited five things at once.",
+  figure: "  working tree  --git add-->  staging area  --git commit-->  repository\n       ^                          |\n       └── git restore --staged ──┘",
+  traps: [
+    "Editing a file after git add and committing, expecting the newest edit to be in the commit. It is not until you add again.",
+    "git add . on a folder with a .env or a 2 GB video in it. Check git status before every commit.",
+    "Amending a commit that was already pushed, then fighting a rejected push."
+  ],
+  quiz: [
+    { q: "You staged style.css, then changed it again. What will git commit record?", a: "The version you staged. The later edit stays unstaged until you run git add style.css again." },
+    { q: "Which command shows exactly what the next commit will contain?", a: "git diff --staged. Plain git diff shows only what is not staged yet." }
+  ],
+  lab: "guided"
+},
+
+"git::Reading history": {
+  traps: [
+    "Reading git log without --all and concluding a branch's commits are gone.",
+    "Panicking after git reset --hard. The commits are still in git reflog for weeks.",
+    "Using blame to find someone to blame. Use it to find the commit, then read why."
+  ],
+  quiz: [
+    { q: "You reset a branch and lost three commits. Where do you find them?", a: "git reflog. It lists every position HEAD has had, with the hash you can create a branch on." }
+  ],
+  lab: "guided"
+},
+
+"git::Branches": {
+  concept: "A branch is not a copy of your files. It is a small label that points at one commit, and it moves forward each time you commit on it. HEAD is a second label that says which branch you are on. Switching branches moves HEAD and rewrites your working files to match. A merge either slides a label forward, when nothing else changed, or creates a commit with two parents to join two lines of work.",
+  figure: "        A ── B ── C          main\n                   \\\n                    D ── E   feature  <- HEAD\n\n  git switch main ; git merge feature\n        A ── B ── C ──────── M   main\n                   \\        /\n                    D ── E",
+  traps: [
+    "Working on main by accident. Run git switch -c before the first edit, not after the third commit.",
+    "Deleting a branch with -D before checking it was merged.",
+    "Switching branches with uncommitted changes and carrying them onto the wrong branch."
+  ],
+  quiz: [
+    { q: "main has not moved since you created feature. What does git merge feature do on main?", a: "A fast-forward: the main label simply moves to feature's latest commit. No merge commit is made." }
+  ],
+  lab: "guided"
+},
+
+"git::Merge conflicts": {
+  concept: "A conflict happens when both branches changed the same lines. Git cannot guess which version is right, so it stops halfway through the merge and writes both versions into the file between markers. Nothing is broken. The merge is simply waiting for you: edit the file to the result you want, stage it, commit.",
+  figure: "  git merge  ->  CONFLICT  ->  edit file, remove markers  ->  git add  ->  git commit\n                    |\n                    └── git merge --abort  (back to before)",
+  traps: [
+    "Committing a file that still contains <<<<<<< lines, so the live site shows the markers.",
+    "Keeping both versions side by side because deleting one felt risky.",
+    "Looking for a resolve command. git add is how you mark a file resolved."
+  ],
+  quiz: [
+    { q: "You fixed the conflicting file. What two commands finish the merge?", a: "git add on the file, then git commit." }
+  ],
+  lab: "case:markers"
+},
+
+"git::Remotes: push and pull": {
+  concept: "Your repository and GitHub are two separate copies that only talk when you tell them to. origin/main is your computer's memory of where main was on GitHub the last time you fetched. A push is refused when GitHub has commits you do not have yet, because accepting yours would throw theirs away. The fix is never force: fetch their work first, put yours on top, then push.",
+  figure: "  GitHub main:   A ── B ── X\n  your main:     A ── B ── Y        push rejected\n\n  git pull --rebase\n  your main:     A ── B ── X ── Y'  push accepted",
+  traps: [
+    "Using git push --force to get past a rejection, deleting a colleague's commits.",
+    "Thinking git fetch changed your files. It only updates origin/main.",
+    "Pulling with uncommitted changes in the same files and getting stuck. Commit or stash first."
+  ],
+  quiz: [
+    { q: "git push says rejected, fetch first. What do you run?", a: "git pull --rebase, fix any conflict, then git push again." }
+  ],
+  lab: "case:rejected"
+},
+
+"git::Undoing things": {
+  concept: "Pick the undo by asking one question: has this been pushed? If not, you may rewrite history with reset or amend, because nobody else has the old commits. If it has, use revert, which adds a new commit that cancels the old one, so everyone's history still lines up. reset --hard and restore are the only commands here that throw work away for good.",
+  figure: "  Pushed already?\n     ├─ yes ─> git revert <hash>\n     └─ no  ─> keep the changes?\n                 ├─ yes ─> git reset --soft HEAD~1\n                 └─ no  ─> git reset --hard HEAD~1",
+  traps: [
+    "git reset --hard with uncommitted work you wanted to keep.",
+    "Resetting a pushed commit, then needing --force to push.",
+    "Committing in detached HEAD and switching away, so the commits belong to no branch."
+  ],
+  quiz: [
+    { q: "A bad commit is already on GitHub and others have pulled it. How do you undo it?", a: "git revert with its hash, then push. Never reset a commit others already have." },
+    { q: "git status says HEAD detached at 3f2a91c and you made two commits. How do you keep them?", a: "git switch -c rescue, which puts a branch on them right where you are." }
+  ],
+  lab: "case:detached"
+},
+
+"git::Ignoring files and secrets": {
+  traps: [
+    "Adding .env to .gitignore after it was committed and expecting Git to forget it. Use git rm --cached.",
+    "Deleting a pushed secret in a new commit and calling it fixed. It is still in history. Rotate it.",
+    "A .gitignore pattern with a typo or wrong folder. git check-ignore -v shows which rule applies."
+  ],
+  quiz: [
+    { q: ".env is in .gitignore but still shows as modified. Why?", a: "It was committed before the rule was added. Tracked files ignore .gitignore. Run git rm --cached .env and commit." },
+    { q: "An API key was pushed to a public repository an hour ago. What comes first?", a: "Revoke or rotate the key. Cleaning history comes after, because the old key may already have been copied." }
+  ],
+  lab: "case:ignored"
+},
+
+"shell::Find your way": {
+  concept: "The shell always has a current folder, and every relative path is read from there. Most 'no such file' errors are not missing files but a wrong current folder. pwd tells you where you are, ls what is here, cd moves you. ~ is home, . is here, .. is one level up.",
+  figure: "  /Users/user              ~\n  └─ Projects\n      └─ site              cd ~/Projects/site\n          ├─ index.html    ls\n          └─ .env          ls -a",
+  traps: [
+    "Running a command in the wrong folder because the prompt was not checked.",
+    "Forgetting -a and concluding .env or .git does not exist.",
+    "Spaces in folder names without quotes: cd My Folder looks for a folder called My."
+  ],
+  lab: "nav"
+},
+
+"shell::Files and permissions": {
+  concept: "Every file has an owner, a group, and three sets of rights: owner, group, everyone. Each set is read, write and execute. A script needs x to run as ./script.sh. SSH insists that private keys are readable by the owner only. Most permission errors are fixed with chmod, not with sudo.",
+  figure: "  -rwxr-xr--\n   |  |  |\n   |  |  └─ others: r--  read\n   |  └──── group:  r-x  read, run\n   └─────── owner:  rwx  read, write, run\n\n  r=4  w=2  x=1    rwx=7  r-x=5  r--=4  ->  754",
+  traps: [
+    "Reaching for sudo on a permission denied that is really a missing x.",
+    "chmod 777 to make an error go away, giving everyone write access.",
+    "rm -r on a path built from a variable that turned out empty."
+  ],
+  quiz: [
+    { q: "./deploy.sh says permission denied and you own the file. What is the fix?", a: "chmod +x deploy.sh. The file has no execute bit; ownership is fine." },
+    { q: "What does chmod 600 give?", a: "Owner read and write, nobody else anything. The required mode for an SSH private key." }
+  ],
+  lab: "case:exec"
+},
+
+"shell::Search and pipes": {
+  concept: "Shell tools each do one small job and talk through text. A pipe passes one tool's output into the next, so a question like 'which folder is biggest' becomes du, then sort, then tail. Redirection sends output to a file instead of the screen.",
+  figure: "  du -sh *  ──|──>  sort -h  ──|──>  tail -n 3\n  sizes            biggest last       top three",
+  traps: [
+    "Using > when you meant >>, wiping the log you wanted to add to.",
+    "Unquoted wildcards in find, so the shell expands them before find sees them.",
+    "grep matching itself in ps aux | grep output and mistaking it for the process."
+  ],
+  lab: "search"
+},
+
+"shell::Processes and ports": {
+  concept: "Every running program is a process with a number, its PID. Only one process can listen on a port at a time, so 'port is already allocated' means something else holds it. Find it with lsof, decide whether it matters, then stop it by PID.",
+  figure: "  port in use?\n     └─ lsof -i :8080      -> PID 4312\n         └─ lsof -p 4312   -> which project\n             └─ kill 4312  -> port free",
+  traps: [
+    "kill -9 as the first try, so the process cannot save or clean up.",
+    "Killing a process without checking what it is, such as a database another project uses.",
+    "Blaming Docker for a port that a forgotten dev server holds."
+  ],
+  quiz: [
+    { q: "docker run says port 8080 is already allocated. First command?", a: "lsof -i :8080, to see which process holds the port." }
+  ],
+  lab: "case:port"
+},
+
+"shell::SSH and copying": {
+  concept: "Key login uses a pair. The private key stays on your laptop and proves who you are; the public key goes on the server in authorized_keys. The server checks that you hold the private half without it ever being sent. If the private key file is readable by others, SSH refuses to use it at all.",
+  figure: "  laptop                           server 203.0.113.10\n  ~/.ssh/id_ed25519   (private)    ~/.ssh/authorized_keys\n  ~/.ssh/id_ed25519.pub ──copy──>  (public key appended)",
+  traps: [
+    "Pasting the private key into a server, a chat or a ticket instead of the .pub file.",
+    "Private key with mode 644, so SSH silently skips it and falls back to a password.",
+    "Mixing up the scp argument order and overwriting the local copy."
+  ],
+  quiz: [
+    { q: "ssh -v shows UNPROTECTED PRIVATE KEY FILE. The fix?", a: "chmod 600 on the private key." }
+  ],
+  lab: "case:sshkey"
+},
+
+"shell::Network checks": {
+  concept: "Check from the bottom up and stop at the first failure. Does the name resolve? Does the host answer? Is the port open? Does the service reply correctly? Each command answers one of those, so the failing step tells you where to look.",
+  figure: "  dig      name -> address?\n  ping     host answers?\n  nc -vz   port open?\n  curl -I  service replies?",
+  traps: [
+    "Concluding a server is down because ping fails, when ICMP is simply blocked.",
+    "Testing from the wrong network, such as your laptop instead of the server.",
+    "Reading only the curl body and missing a 301 or 403 in the headers."
+  ],
+  lab: "net"
+},
+
+"shell::Docker basics": {
+  concept: "An image is a read-only template. A container is one running copy of it, with its own small writable layer on top. Stop a container and its changes stay; remove it and they are gone, unless they were in a volume. Ports inside a container are private until you publish them with -p host:container.",
+  figure: "  image nginx  ──docker run──>  container web\n                                 port 80 inside\n                       -p 8080:80\n  laptop:8080  ────────────────>  web:80",
+  traps: [
+    "Swapping the -p numbers: it is host first, container second.",
+    "Storing data inside a container without a volume, then losing it on docker rm.",
+    "A full disk from old images and build cache. Check docker system df."
+  ],
+  quiz: [
+    { q: "The disk is full and /var/lib/docker is the biggest folder. Which command shows why?", a: "docker system df, then clean up with docker image prune or docker system prune." }
+  ],
+  lab: "case:disk"
+},
+
+"shell::Docker Compose": {
+  traps: [
+    "docker compose down -v when you only meant to restart, deleting the database volume.",
+    "Running compose commands outside the project folder, so it finds no compose file.",
+    "Restart loops hidden by restart: unless-stopped. Read compose logs, the reason is in the last lines."
+  ],
+  quiz: [
+    { q: "compose ps shows Restarting (1). Where is the cause?", a: "docker compose logs on that service. Exit code 1 means the app itself crashed on start." }
+  ],
+  lab: "case:restart"
+},
+
+"shell::Shortcuts": {
+  traps: [
+    "Retyping long commands instead of Ctrl+R.",
+    "sudo !! without reading what the previous line was."
+  ],
+  lab: "gym"
+},
 
 "junos::Modes and navigation": {
   traps: [
@@ -1533,6 +1890,35 @@ const AUG = {
 };
 
 const RECIPES = [
+{ vol:"git", t:"Start a project and put it on GitHub", why:"From an empty folder to a pushed first commit, with nothing secret in it.", steps:[
+ { c:"git init", n:"Make the folder a repository." },
+ { c:"printf \".env\\nnode_modules/\\n\" > .gitignore", n:"Write the ignore list before the first add, so secrets never get tracked." },
+ { c:"git add .", n:"Stage everything that is not ignored." },
+ { c:"git status", n:"Read the list. No .env, no huge files. This is the step people skip." },
+ { c:"git commit -m \"First commit\"", n:"Seal it." },
+ { c:"git remote add origin https://github.com/contoso/site.git", n:"Point at the empty repository you created on GitHub." },
+ { c:"git push -u origin main", n:"Upload, and link main to origin/main for later pushes." }
+]},
+{ vol:"git", t:"A push was rejected", why:"Someone else pushed first. Get their work, put yours on top, push again, and never force.", steps:[
+ { c:"git status", n:"Commit or stash anything uncommitted first." },
+ { c:"git pull --rebase", n:"Fetch their commits and replay yours after them." },
+ { c:"git status", n:"If it says conflict, fix the files, git add them, then git rebase --continue." },
+ { c:"git log --oneline --graph -5", n:"Their commit, then yours, in one straight line." },
+ { c:"git push", n:"Accepted now, because yours builds on theirs." }
+]},
+{ vol:"shell", t:"Free a port that is in use", why:"Find the process before you kill anything.", steps:[
+ { c:"lsof -i :8080", n:"Which command and PID hold the port." },
+ { c:"lsof -p 4312 | grep cwd", n:"Which project it was started from, so you know what you are stopping." },
+ { c:"kill 4312", n:"Ask it to stop. Use kill -9 only if it ignores this." },
+ { c:"lsof -i :8080", n:"No output means the port is free." }
+]},
+{ vol:"shell", t:"A container keeps crashing", why:"The reason is almost always in the last lines of its log.", steps:[
+ { c:"docker compose ps", n:"Restarting or Exited, and the exit code." },
+ { c:"docker compose logs --tail 50 app", n:"Read the last lines before the exit. Missing variables and wrong paths show up here." },
+ { c:"docker compose config", n:"Prints the compose file with variables filled in, so you see what the container really gets." },
+ { c:"docker compose up -d app", n:"Start it again after the fix." },
+ { c:"docker compose logs -f app", n:"Watch it start. Ctrl+C stops watching, not the container." }
+]},
 { vol:"junos", t:"Bring up a new access port, end to end", why:"The commonest change on an access switch, done in the order that keeps you safe.", steps:[
  { c:"configure", n:"Enter configuration mode. Nothing you type now affects traffic." },
  { c:"set interfaces ge-0/0/12 description SRV-BACKUP-01", n:"Label it first, while you still know what the cable is." },
@@ -1615,6 +2001,23 @@ const RECIPES = [
 ];
 
 const GLOSSARY = [
+{ vol:"git", c:"Working tree", d:"The files you see and edit", n:"Everything in the folder except .git. Changes here are invisible to history until added and committed." },
+{ vol:"git", c:"Staging area", d:"The next commit being assembled", n:"Also called the index. git add puts changes here, git commit records them." },
+{ vol:"git", c:"HEAD", d:"Where you are right now", n:"Usually points at a branch, which points at a commit. HEAD~1 is the commit before." },
+{ vol:"git", c:"Detached HEAD", d:"On a commit, not on a branch", n:"New commits made here belong to no branch. git switch -c keeps them." },
+{ vol:"git", c:"Fast-forward", d:"A merge that only moves a label", n:"Happens when the target branch has no commits of its own since the split. No merge commit is made." },
+{ vol:"git", c:"origin", d:"The default name for the remote you cloned from", n:"Just a name for a URL. origin/main is your last known copy of main on that remote." },
+{ vol:"git", c:"Upstream", d:"The remote branch your branch tracks", n:"Set with push -u. Lets plain git push and git pull work without arguments." },
+{ vol:"git", c:"Commit hash", d:"A commit's unique ID", n:"40 hex characters, the first 7 are usually enough. Changes if anything about the commit changes, which is why amend makes a new one." },
+{ vol:"git", c:"Rebase", d:"Replaying commits on a new base", n:"Gives straight history. Creates new commits, so do it only on work not yet shared, or through pull --rebase." },
+{ vol:"shell", c:"PID", d:"Process ID", n:"The number the system gives each running program. kill and lsof -p take it." },
+{ vol:"shell", c:"Port", d:"A numbered door on a machine", n:"One listener per port. 22 SSH, 80 HTTP, 443 HTTPS, 8080 a common dev port." },
+{ vol:"shell", c:"stdout and stderr", d:"Normal output and error output", n:"Two separate streams. > redirects stdout, 2> redirects stderr, 2>&1 sends both to the same place." },
+{ vol:"shell", c:"Exit code", d:"How a command reports success", n:"0 is success, anything else is failure. echo $? shows the last one. Docker shows it as Exited (1)." },
+{ vol:"shell", c:"PATH", d:"Where the shell looks for commands", n:"A list of folders. command not found means the program is in none of them, or not installed." },
+{ vol:"shell", c:"sudo", d:"Run one command as administrator", n:"Fixes rights problems, not missing execute bits or wrong paths." },
+{ vol:"shell", c:"Image and container", d:"Template and running copy", n:"One image can run as many containers. Removing a container leaves the image." },
+{ vol:"shell", c:"Volume", d:"Storage that outlives a container", n:"Named volumes are managed by Docker; bind mounts map a folder from your machine. Database data belongs in one." },
 { vol:"junos", c:"ELS", d:"Enhanced Layer 2 Software", n:"The newer Junos switching syntax used on EX4300 and later. interface-mode replaces port-mode, and VLANs are referenced by name." },
 { vol:"junos", c:"Candidate configuration", d:"The editable scratch copy", n:"Where your set commands land. It becomes the active configuration only when you commit." },
 { vol:"junos", c:"irb", d:"Integrated routing and bridging interface", n:"A virtual layer 3 interface attached to a VLAN. It holds the gateway IP for everything in that VLAN." },
@@ -1914,8 +2317,9 @@ function buildSection(vol, g, gi, total){
   const foot = el("div", "sec-foot");
   if (g.lab && LAB_LINKS[vol.id]) {
     const a = document.createElement("a");
-    a.href = LAB_LINKS[vol.id].href;
-    a.textContent = "Drill this in " + LAB_LINKS[vol.id].label;
+    const hash = typeof g.lab === "string" ? g.lab : "";
+    a.href = LAB_LINKS[vol.id].href + (hash ? "#" + hash : "");
+    a.textContent = (hash.indexOf("case:") === 0 ? "Solve the case in " : "Drill this in ") + LAB_LINKS[vol.id].label;
     foot.appendChild(a);
   }
   const printBtn = el("button", null, "Print this section");

@@ -583,7 +583,7 @@
 #flight{--fb:#04060a;--fpan:#060b11;--fpan2:#03080d;--fline:#1a2633;--fline2:#1f3444;--ftrack:#1d2a36;--ftext:#e6ecf1;--fdim:#5b6673;--fmuted:#8b96a3;--facc:#4fd2e8;--facc2:#9ae8f5;--faccd:#1b6a7c;--fonacc:#031016;--fgate:#c9a6ff;--fgate2:#8b7aa8;--fglow:#0d2130;--fah1:#34414f;--fah2:#101820;--fstar:#e6f1ff}
 #flight{position:fixed;inset:0;z-index:5000;overflow:auto;background:var(--fb);color:var(--ftext);font-family:"Segoe UI",system-ui,-apple-system,sans-serif}
 #flight[hidden]{display:none}
-#flight .fp-wrap{box-sizing:border-box;max-width:1280px;height:100%;min-height:680px;margin:0 auto;padding:32px 40px;display:grid;grid-template-rows:44px 220px minmax(0,1fr) 76px;row-gap:24px}
+#flight .fp-wrap{box-sizing:border-box;max-width:1280px;height:100%;min-height:680px;margin:0 auto;padding:32px 40px;display:grid;grid-template-columns:minmax(0,1fr);grid-template-rows:44px 220px minmax(0,1fr) 76px;row-gap:24px}
 #flight .fp-mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
 #flight .fp-box{border:1px solid var(--fline);background:var(--fpan);box-sizing:border-box}
 #flight .fp-head{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;padding:0 24px;background:var(--fpan);font-size:11px;letter-spacing:2px;color:var(--fdim)}
@@ -627,9 +627,10 @@
 #flight .fp-bar{height:4px;background:var(--ftrack)}
 #flight .fp-bar i{display:block;height:4px;background:var(--facc)}
 #flight .fp-total{margin-top:auto;display:flex;justify-content:space-between;padding-top:16px;border-top:1px solid var(--fline)}
-#flight .fp-dock{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));column-gap:24px}
-#flight .fp-dock button{display:flex;align-items:center;gap:16px;padding:0 24px;color:var(--ftext);cursor:pointer;text-align:left;font-family:inherit}
-#flight .fp-dock button:hover{border-color:var(--facc)}
+#flight .fp-dock{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));column-gap:24px}
+#flight .fp-dock button,#flight .fp-dock a{display:flex;align-items:center;gap:16px;padding:0 24px;color:var(--ftext);cursor:pointer;text-align:left;font-family:inherit;text-decoration:none;min-width:0}
+#flight .fp-dock button:hover,#flight .fp-dock a:hover{border-color:var(--facc)}
+#flight .fp-dock .t{min-width:0}
 #flight .fp-dock svg{flex:none}
 #flight .fp-dock .t{display:flex;flex-direction:column;gap:4px}
 #flight .fp-dock .t b{font-size:15px;font-weight:500}
@@ -641,12 +642,21 @@
 @media (max-width:900px){
 #flight .fp-wrap{height:auto;padding:24px 16px;grid-template-rows:auto 220px auto auto}
 #flight .fp-head{padding:12px 16px;grid-template-columns:1fr;row-gap:8px}
+#flight .fp-head .r{flex-wrap:wrap;row-gap:8px;column-gap:16px}
 #flight .fp-head .l .fp-hide,#flight .fp-head .fp-sep{display:none}
 #flight .fp-mid{grid-template-columns:1fr;row-gap:16px}
 #flight .fp-next,#flight .fp-brief,#flight .fp-scan{grid-column:auto}
 #flight .fp-dock{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
-#flight .fp-dock button{padding:16px}
+#flight .fp-dock button,#flight .fp-dock a{padding:16px}
+#flight .fp-dock a{grid-column:1/-1}
 #flight .fp-labels{font-size:8px;letter-spacing:.5px}
+}
+@media (max-width:600px){
+#flight .fp-labels{font-size:10px;letter-spacing:1px}
+#flight .fp-labels span{visibility:hidden}
+#flight .fp-labels span.now{visibility:visible;overflow:visible;white-space:nowrap;align-items:center}
+#flight .fp-labels span.now:first-child{align-items:flex-start}
+#flight .fp-labels span.now:last-child{align-items:flex-end}
 }
 </style>
 </head>
@@ -688,6 +698,7 @@
       <button class="fp-box" data-fp="kata"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--facc)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2l3 7h7l-5.5 4.5L18 21l-6-4-6 4 1.5-7.5L2 9h7z"/></svg><span class="t"><b>Daily sortie</b><small class="fp-mono" id="fpKata">kata</small></span></button>
       <button class="fp-box" data-fp="bugs"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fgate)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8"/><path d="M12 2v4M12 18v4M2 12h4M18 12h4"/><circle cx="12" cy="12" r="2"/></svg><span class="t"><b>Bug hunt</b><small class="fp-mono dim" id="fpBugs">targets</small></span></button>
       <button class="fp-box" data-fp="__console"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--fmuted)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg><span class="t"><b>All systems</b><small class="fp-mono dim">full console · every mode</small></span></button>
+      <a class="fp-box" href="dockle.html" title="Dockle: Python practice with ships to earn"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--facc)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 15h18l-3 4H6z"/><path d="M6 15V9l6-4 6 4v6"/><path d="M12 5V2"/></svg><span class="t"><b>Dockle hangar</b><small class="fp-mono" id="fpDock">contracts</small></span></a>
     </nav>
   </div>
 </div>
@@ -4520,8 +4531,8 @@ const SCENARIOS = [
       "An onboarding script emailed three people twice. The source list has duplicates and inconsistent casing.",
       "TASK: print the unique addresses, lowercased, sorted alphabetically, one per line."
     ],
-    "given": "emails = [\"A@dcu.be\", \"b@dcu.be\", \"a@dcu.be\", \"B@DCU.BE\"]",
-    "expect": ["a@dcu.be", "b@dcu.be"],
+    "given": "emails = [\"A@contoso.com\", \"b@contoso.com\", \"a@contoso.com\", \"B@CONTOSO.COM\"]",
+    "expect": ["a@contoso.com", "b@contoso.com"],
     "g2": "emails = [\"Solo@x.be\"]",
     "e2": ["solo@x.be"],
     "hints": [
@@ -9975,6 +9986,7 @@ function fpRender() {
   const ki = kataInfo();
   $("fpKata").textContent = kataDoneToday() ? "kata · done today" : "kata · " + ki.type + " " + ki.n;
   $("fpBugs").textContent = score.bugs + "/" + BUGS.length + " cleared";
+  try { const dk = JSON.parse(localStorage.getItem("dockle.v1") || "{}"); $("fpDock").textContent = Object.keys(dk.docked || {}).length + "/8 ships docked"; } catch (e) {}
   $("fpClock").textContent = new Date().toTimeString().slice(0, 5);
   fpDrawRoute();
 }
