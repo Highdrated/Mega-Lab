@@ -516,6 +516,42 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
   .exb .eb{grid-template-columns:1fr}
 }
 @media (max-width:1250px) and (min-width:901px){#eng{display:none}}
+.conf{display:flex;align-items:center;gap:6px;flex-wrap:wrap;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.conf span{margin-right:4px}
+.conf button{font:inherit;letter-spacing:.1em;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:transparent;color:var(--ink2);cursor:pointer}
+.conf button.on{background:var(--ink);color:var(--paper,#fbf8f1);border-color:var(--ink)}
+.conf button[data-c="1"].on{background:var(--chili);border-color:var(--chili)}
+.opts.multi button.chosen{outline:2px solid var(--brass);background:#f6e9cf}
+.opts.multi button code{font-size:.95em}
+.opts.multi button.bad{outline:2px solid var(--chili);background:#f7dcd3}
+.opts.multi button.good{outline:2px solid var(--herb);background:#e3ecd6}
+.explain{display:flex;flex-direction:column;gap:10px}
+.explain textarea{width:100%;font:16px/1.5 var(--serif,Georgia,serif);padding:10px 12px;border:1px solid var(--line);border-radius:6px;background:#fffdf8;color:var(--ink);resize:vertical}
+.xm{padding:12px 14px;border-left:3px solid var(--herb);background:var(--panel);border-radius:6px}
+.xm small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--herb)}
+.xm p{margin:6px 0 0;font-size:15px;line-height:1.55}
+.dlg{position:fixed;inset:0;z-index:60;display:none;align-items:center;justify-content:center;padding:16px;background:rgba(43,33,25,.38);backdrop-filter:blur(2px)}
+.dlg.on{display:flex;animation:fadein .25s ease}
+.dbox2{width:min(620px,100%);max-height:calc(100vh - 32px);overflow:auto;background:var(--panel2,#fbf8f1);border:1px solid var(--line);border-radius:10px;padding:22px 24px;box-shadow:0 20px 60px rgba(43,33,25,.25);display:flex;flex-direction:column;gap:12px}
+.dbox2 .lhead{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.dbox2 .lhead img{width:96px}
+.dbox2 h2{font-family:var(--disp);margin:2px 0 0;font-size:28px}
+.dbox2 .drow{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+@keyframes fadein{from{opacity:0}to{opacity:1}}
+.till>.habrow{grid-column:1/-1}
+.habrow{display:grid;grid-template-columns:minmax(220px,1fr) minmax(0,3fr);gap:10px;margin-top:10px}
+.recap{padding:12px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel)}
+.recap>small,.botbtn{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.rcgrid{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin-top:8px}
+.rcgrid div{display:flex;flex-direction:column;gap:2px}
+.rcgrid b{font-family:var(--disp);font-size:24px;line-height:1}
+.rcgrid b i{font-size:13px;color:var(--mute);font-style:normal}
+.rcgrid span{font-size:12.5px;color:var(--mute);font-style:italic}
+.rcweak{margin:8px 0 0;font-size:13.5px;color:var(--ink2)}
+.up.freeze{border-color:var(--plum,#7a4d6a)}
+.botbtn{align-self:flex-start;margin-top:8px;padding:7px 12px;border:1px dashed var(--brass);border-radius:6px;background:transparent;cursor:pointer}
+.botbtn:hover{background:#f6e9cf}
+@media (max-width:900px){.habrow{grid-template-columns:1fr}.rcgrid{grid-template-columns:repeat(3,minmax(0,1fr))}}
 #bar button,.seg button,.brand small{white-space:nowrap}
 @media (max-width:900px){
   #bar{grid-template-columns:minmax(0,1fr) auto;row-gap:8px}
@@ -11225,6 +11261,62 @@ TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
 
 TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
 
+const MULTI=[
+ {r:'pz2',q:'Which two values are `float`?',o:['`4.5`','`12`','`1e3`','`"3.0"`'],a:[0,2],h:'A decimal point or an exponent makes a float. Quotes make a string.'},
+ {r:'pz3',q:'Which two calls make `$name` safe to print inside HTML?',o:['`htmlspecialchars($name)`','`strip_tags($name)` only after printing','`htmlentities($name)`','`addslashes($name)`'],a:[0,2],h:'Both turn < > & and quotes into entities. addslashes is for something else.'},
+ {r:'pz4',q:'Which two lines print `Soup for 2`?',o:['`echo "Soup for $n";`','`echo \'Soup for $n\';`','`echo \'Soup for \' . $n;`','`echo "Soup for " + $n;`'],a:[0,2],h:'Double quotes interpolate, the dot joins. Single quotes print $n literally, + is maths.'},
+ {r:'pz7',q:'Which two add `\'tart\'` to the end of `$menu`?',o:['`$menu[] = \'tart\';`','`array_unshift($menu, \'tart\');`','`array_push($menu, \'tart\');`','`$menu[0] = \'tart\';`'],a:[0,2],h:'[] and array_push append. unshift adds to the front.'},
+ {r:'pz9',q:'Which two return a new array and leave the original alone?',o:['`array_map(...)`','`sort($a)`','`array_filter(...)`','`shuffle($a)`'],a:[0,2],h:'sort and shuffle change the array in place and return a bool.'},
+ {r:'pz11',q:'Which two values are falsy?',o:['`"0"`','`"false"`','`[]`','`" "`'],a:[0,2],h:'"0" and empty arrays are false. Any other non-empty string is true.'},
+ {r:'pz12',q:'What is true about `match`? Choose two.',o:['It compares with `===`','It falls through like switch','It throws when no arm matches','It needs `break`'],a:[0,2],h:'Strict comparison, no fall-through, UnhandledMatchError without default.'},
+ {r:'pz13',q:'With `declare(strict_types=1)`, which two calls to `f(int $n)` are allowed?',o:['`f(5)`','`f("5")`','`f(5.0)`','`f(-5)`'],a:[0,3],h:'Only real ints. Strings and floats are a TypeError.'},
+ {r:'pz15',q:'How can a function use `$tax` from outside? Choose two.',o:['Pass it as an argument','It just sees it','`global $tax;` inside the function','Declare it `static` outside'],a:[0,2],h:'Functions have their own scope. Passing it in is the clean way.'},
+ {r:'pz16',q:'Which two stop the script with a fatal error when the file is missing?',o:['`require`','`include`','`require_once`','`include_once`'],a:[0,2],h:'require* is fatal, include* only warns.'},
+ {r:'pz20',q:'Which two read `$_GET[\'q\']` without a warning when it is missing?',o:['`$_GET[\'q\'] ?? \'\'`','`$_GET[\'q\']`','`isset($_GET[\'q\']) ? $_GET[\'q\'] : \'\'`','`(string) $_GET[\'q\']`'],a:[0,2],h:'?? and isset both check first.'},
+ {r:'pz21',q:'Which two belong in a POST request rather than GET?',o:['Placing an order','A search','Deleting a dish','Paging through a menu'],a:[0,2],h:'POST changes data. GET only reads.'},
+ {r:'pz22',q:'`filter_var($x, FILTER_VALIDATE_INT)` returns `false` for which two?',o:['`"12"`','`"12.5"`','`"abc"`','`"-3"`'],a:[1,2],h:'Whole numbers, with an optional sign, pass.'},
+ {r:'pz25',q:'Which two are true about sessions?',o:['Data lives on the server','Data lives in the cookie','`session_start()` comes before any output','The session id can safely go in the URL'],a:[0,2],h:'Only the id travels in the cookie, and headers go before output.'},
+ {r:'pz31',q:'Which two PDO options are the safe defaults?',o:['`PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION`','`PDO::ATTR_EMULATE_PREPARES => true` for safety','`PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC`','`PDO::ATTR_PERSISTENT => true` always'],a:[0,2],h:'Exceptions on errors and associative rows.'},
+ {r:'pz32',q:'Which two queries are safe from SQL injection?',o:['`$pdo->prepare(\'SELECT * FROM dish WHERE id = ?\')`','`$pdo->query("SELECT * FROM dish WHERE id = $id")`','`$pdo->prepare(\'SELECT * FROM dish WHERE id = :id\')`','`$pdo->query(\'SELECT * FROM dish WHERE id = \' . $id)`'],a:[0,2],h:'Placeholders, ? or :name, keep data out of the SQL.'},
+ {r:'pz37',q:'Which two keywords limit who can see a property?',o:['`private`','`static`','`protected`','`final`'],a:[0,2],h:'public, protected, private are visibility.'},
+ {r:'pz38',q:'What is true about a `readonly` property? Choose two.',o:['It can be set once, from inside the class','It can be changed with a setter','It must have a type','It can have a default value'],a:[0,2],h:'Typed, set once in scope, no default.'},
+ {r:'pz39',q:'What can an interface contain? Choose two.',o:['Method signatures','Private methods','Constants','Method bodies'],a:[0,2],h:'Signatures and constants only.'},
+ {r:'pz40',q:'Which two are valid on a backed enum `Size: string`?',o:['`Size::from(\'s\')`','`new Size()`','`Size::cases()`','`Size::S = \'x\'`'],a:[0,2],h:'Enums cannot be constructed or changed.'},
+ {r:'pz43',q:'Which two blocks run when the `try` succeeds?',o:['`try`','`catch`','`finally`','none of the others'],a:[0,2],h:'catch only runs on an exception, finally always.'},
+ {r:'pz47',q:'Which two are right for passwords?',o:['`password_hash($pw, PASSWORD_DEFAULT)`','`md5($pw)`','`password_verify($pw, $hash)`','`$hash === password_hash($pw, PASSWORD_DEFAULT)`'],a:[0,2],h:'Hashes are salted: compare with password_verify, never ===.'},
+ {r:'pz48',q:'Which two protect a login?',o:['`session_regenerate_id(true)` after login','Putting the password in the session','A CSRF token checked with `hash_equals`','A longer session cookie lifetime'],a:[0,2],h:'Fresh id, checked token.'},
+ {r:'pz51',q:'For a `DateTimeImmutable` of 21 October 2026, which two are true?',o:['`modify()` returns a new object','`modify()` changes the object','`format(\'Y-m-d\')` gives 2026-10-21','`format(\'d/m/y\')` gives 21/10/2026'],a:[0,2],h:'Immutable means a new object. y is a two-digit year.'},
+ {r:'pz53',q:'`preg_match(\'/^\\d{3}$/\', $s)` returns 1 for which two?',o:['`"123"`','`"1234"`','`"007"`','`"12a"`'],a:[0,2],h:'Exactly three digits.'},
+ {r:'pz55',q:'Which two closures can change `$count` outside them?',o:['`function () use (&$count) { $count++; }`','`function () use ($count) { $count++; }`','`fn() => $count++`','`function () { global $count; $count++; }`'],a:[0,3],h:'By reference or via global. use ($x) and fn() copy the value.'},
+ {r:'pz56',q:'Which two keep the keys of the original array?',o:['`array_filter($a, $fn)`','`array_values($a)`','`array_map($fn, $a)` with one array','`sort($a)`'],a:[0,2],h:'filter and single-array map keep keys.'},
+ {r:'pz57',q:'Which two make `json_encode` failures visible?',o:['`JSON_THROW_ON_ERROR`','`JSON_PRETTY_PRINT`','`json_last_error()`','`JSON_UNESCAPED_SLASHES`'],a:[0,2],h:'Throw, or check the last error.'},
+ {r:'pz59',q:'What is true about an abstract class? Choose two.',o:['You cannot `new` it','All methods must be abstract','It can have a constructor','A child can skip its abstract methods'],a:[0,2],h:'It can have normal methods and a constructor; non-abstract children implement every abstract method.'},
+ {r:'pz60',q:'Which two are true about traits?',o:['`use` copies their methods into the class','A class can extend a trait','A class can use several traits','A trait can be instantiated'],a:[0,2],h:'Traits are pasted in; you cannot extend or new them.'},
+ {r:'pz61',q:'Which two are true about generators?',o:['Values are made one at a time','They can be rewound after finishing','`yield $k => $v` gives keys','They return an array'],a:[0,2],h:'Lazy, keyed, and one pass only.'},
+ {r:'pz63',q:'Which two cookie options stop JavaScript and other sites from misusing it?',o:['`httponly`','`expires`','`samesite`','`path`'],a:[0,2],h:'httponly hides it from JS, samesite from other sites.'},
+ {r:'pz64',q:'Which two are right for checking a signed value?',o:['`hash_hmac(\'sha256\', $value, $key)`','`md5($value . $key)` compared with ==','`hash_equals($expected, $given)`','`$expected == $given`'],a:[0,2],h:'HMAC, compared in constant time.'},
+ {r:'pz65',q:'Which two calls pass the items of `$a` as separate arguments?',o:['`f(...$a)`','`f($a)`','`call_user_func_array(\'f\', $a)`','`f(&$a)`'],a:[0,2],h:'Spread, or call_user_func_array.'},
+ {r:'pz68',q:'In a parent method, which two refer to the class it was called on?',o:['`static::class`','`self::class`','`get_called_class()`','`__CLASS__`'],a:[0,2],h:'Late static binding. self and __CLASS__ are where the code is written.'},
+ {r:'pz76',q:'Which two end output buffering?',o:['`ob_get_clean()`','`ob_start()`','`ob_end_flush()`','`ob_get_contents()`'],a:[0,2],h:'get_contents reads but keeps the buffer.'},
+ {r:'pz77',q:'Which two sorts keep the key => value pairs together?',o:['`asort`','`sort`','`ksort`','`rsort`'],a:[0,2],h:'a… and k… sorts keep keys.'},
+ {r:'pz78',q:'Which two are `true`?',o:['`"abc" == "ABC"` is false','`strcmp("a", "b") > 0`','`strcasecmp("abc", "ABC") === 0`','`"10" === 10`'],a:[0,2],h:'== is case-sensitive for strings; strcasecmp ignores case.'},
+ {r:'pz81',q:'With `const READ = 1, WRITE = 2`, which two test whether `$p` has WRITE?',o:['`($p & WRITE) === WRITE`','`$p | WRITE`','`($p & WRITE) !== 0`','`$p ^ WRITE`'],a:[0,2],h:'& masks the bit.'},
+ {r:'pz82',q:'Which two are true?',o:['Heredoc interpolates variables','Nowdoc interpolates variables','Nowdoc uses `<<<\'EOT\'`','Heredoc needs single quotes'],a:[0,2],h:'Heredoc is like double quotes, nowdoc like single quotes.'},
+ {r:'pz84',q:'Which two `fopen` modes never wipe an existing file?',o:['`\'a\'`','`\'w\'`','`\'r\'`','`\'w+\'`'],a:[0,2],h:'w truncates.'},
+ {r:'pz85',q:'Which two are true about `$d->setTimezone(new DateTimeZone(\'UTC\'))` on a `DateTimeImmutable`?',o:['The moment in time stays the same','The clock time stays the same','`getTimestamp()` is unchanged','The original `$d` changes too'],a:[0,2],h:'Same instant, new wall clock, and immutable returns a new object.'},
+ {r:'pz87',q:'Which two belong to a PDO transaction?',o:['`beginTransaction()`','`lock()`','`rollBack()`','`flush()`'],a:[0,2],h:'begin, commit, rollBack.'},
+ {r:'pz89',q:'For `"Crème"` (UTF-8), which two return 5?',o:['`mb_strlen($s)`','`strlen($s)`','`count(mb_str_split($s))`','`str_word_count($s)`'],a:[0,2],h:'è is two bytes, so strlen says 6.'},
+ {r:'pz92',q:'Which two keep only values that are in both arrays?',o:['`array_intersect($a, $b)`','`array_diff($a, $b)`','`array_uintersect($a, $b, fn ($x, $y) => $x <=> $y)`','`array_merge($a, $b)`'],a:[0,2],h:'intersect keeps the common part.'},
+ {r:'pz97',q:'After `preg_match(\'/(?<h>\\d+):(?<m>\\d+)/\', \'19:30\', $m)`, which two hold 19?',o:['`$m[\'h\']`','`$m[0]`','`$m[1]`','`$m[\'m\']`'],a:[0,2],h:'Named groups are also numbered.'},
+ {r:'pz99',q:'Which two headers let the browser skip downloading an unchanged page?',o:['`ETag`','`Content-Type`','`Last-Modified`','`Content-Length`'],a:[0,2],h:'Validators for If-None-Match and If-Modified-Since.'},
+ {r:'pz101',q:'Which two are callables?',o:['`\'strtoupper\'`','`\'not_a_function\'`','`[Chef::class, \'make\']` with a static make()','`Chef::make` without quotes'],a:[0,2],h:'A function name string, or [class, method].'},
+ {r:'pz103',q:'Which two compare PHP versions correctly?',o:['`version_compare(PHP_VERSION, \'8.1.0\', \'>=\')`','`PHP_VERSION >= \'8.1\'`','`PHP_VERSION_ID >= 80100`','`(float) PHP_VERSION >= 8.1`'],a:[0,2],h:'String and float comparisons break at 8.10.'},
+ {r:'pz106',q:'With `FILTER_NULL_ON_FAILURE`, which two values give `false` for `FILTER_VALIDATE_BOOLEAN`?',o:['`"off"`','`"maybe"`','`"no"`','`"yes"`'],a:[0,2],h:'off and no are a valid no. maybe is null.'}
+];
+
+MULTI.forEach(d=>{d.k='multi';MORE.push(d)});
+MORE.push(...[{"k": "pick", "r": "pz13", "q": "What happens when this runs?", "code": "function add(int $a, int $b): int { return $a + $b; }\necho add('2', 3);", "o": ["It prints 5", "Warning: A non-numeric value encountered", "TypeError: add(): Argument #1 ($a) must be of type int, string given", "TypeError: add(): Argument #2 ($b) must be of type int, string given"], "a": 2, "err": 1}, {"k": "pick", "r": "pz13", "q": "What happens when this runs?", "code": "function half(int $n): int { return $n / 2; }\necho half(5);", "o": ["It prints 2", "It prints 2.5", "TypeError: half(): Return value must be of type int, float returned", "TypeError: half(): Argument #1 ($n) must be of type int, float given"], "a": 2, "err": 1}, {"k": "pick", "r": "pz14", "q": "What happens when this runs?", "code": "function plate(string $dish, int $n = 1) { return \"$n x $dish\"; }\necho plate(n: 2);", "o": ["ArgumentCountError: plate(): Argument #1 ($dish) not passed", "It prints 2 x", "TypeError: plate(): Argument #1 ($dish) must be of type string, null given", "Error: Unknown named parameter $n"], "a": 0, "err": 1}, {"k": "pick", "r": "pz14", "q": "What happens when this runs?", "code": "function plate(string $dish) { return $dish; }\necho plate(dish: 'soup', side: 'bread');", "o": ["It prints soup", "ArgumentCountError: Too many arguments to function plate()", "Warning: Unused argument side", "Error: Unknown named parameter $side"], "a": 3, "err": 1}, {"k": "pick", "r": "pz12", "q": "What happens when this runs?", "code": "$guests = 3;\necho match ($guests) { 1 => 'table for one', 2 => 'table for two' };", "o": ["It prints nothing", "UnhandledMatchError: Unhandled match case 3", "It prints table for two", "Warning: Undefined array key 3"], "a": 1, "err": 1}, {"k": "pick", "r": "pz38", "q": "What happens when this runs?", "code": "final class Dish { public function __construct(public readonly string $name) {} }\n$d = new Dish('Soup');\n$d->name = 'Stew';", "o": ["Error: Cannot modify readonly property Dish::$name", "Nothing: the name is now Stew", "Warning: Cannot modify readonly property", "Error: Cannot modify protected property Dish::$name"], "a": 0, "err": 1}, {"k": "pick", "r": "pz59", "q": "What happens when this runs?", "code": "abstract class Cook { abstract public function cook(): string; }\n$c = new Cook();", "o": ["It creates an empty Cook", "Error: Cannot instantiate abstract class Cook", "Error: Call to abstract method Cook::cook()", "Warning: Cook is abstract"], "a": 1, "err": 1}, {"k": "pick", "r": "pz40", "q": "What happens when this runs?", "code": "enum Size: string { case S = 's'; case M = 'm'; }\necho Size::from('xl')->name;", "o": ["ValueError: \"xl\" is not a valid backing value for enum Size", "It prints nothing", "It prints null", "TypeError: Size::from(): Argument #1 must be a valid case"], "a": 0, "err": 1}, {"k": "pick", "r": "pz93", "q": "What happens when this runs?", "code": "enum Size: string { case S = 's'; }\nvar_dump(Size::tryFrom('xl'));", "o": ["ValueError: \"xl\" is not a valid backing value for enum Size", "bool(false)", "It prints NULL", "enum(Size::S)"], "a": 2, "err": 1}, {"k": "pick", "r": "pz40", "q": "What happens when this runs?", "code": "enum Size { case S; }\n$s = new Size();", "o": ["It creates Size::S", "ValueError: Size has no default case", "Warning: Enums cannot be constructed", "Error: Cannot instantiate enum Size"], "a": 3, "err": 1}, {"k": "pick", "r": "pz43", "q": "What happens when this runs?", "code": "echo intdiv(10, 0);", "o": ["It prints INF", "DivisionByZeroError: Division by zero", "It prints 0", "Warning: Division by zero"], "a": 1, "err": 1}, {"k": "pick", "r": "pz43", "q": "What happens when this runs?", "code": "echo 10 % 0;", "o": ["It prints 0", "It prints NAN", "Warning: Modulo by zero", "DivisionByZeroError: Modulo by zero"], "a": 3, "err": 1}, {"k": "pick", "r": "pz43", "q": "What happens when this runs?", "code": "try { throw new RuntimeException('oven'); } catch (LogicException $e) { echo 'caught'; }", "o": ["RuntimeException: oven", "It prints caught", "It prints nothing", "Warning: Uncaught exception"], "a": 0, "err": 1}, {"k": "pick", "r": "pz57", "q": "What happens when this runs?", "code": "json_decode('{bad json', flags: JSON_THROW_ON_ERROR);", "o": ["It returns null", "JsonException: Syntax error", "Warning: Syntax error", "ValueError: Invalid JSON"], "a": 1, "err": 1}, {"k": "pick", "r": "pz37", "q": "What happens when this runs?", "code": "final class Pot { private int $heat = 3; }\necho (new Pot())->heat;", "o": ["Error: Cannot access private property Pot::$heat", "It prints 3", "Warning: Undefined property: Pot::$heat", "It prints nothing"], "a": 0, "err": 1}, {"k": "pick", "r": "pz37", "q": "What happens when this runs?", "code": "final class Pot { }\n(new Pot())->boil();", "o": ["It prints nothing", "Error: Call to undefined method Pot::boil()", "Warning: Undefined method Pot::boil()", "TypeError: boil is not callable"], "a": 1, "err": 1}, {"k": "pick", "r": "pz60", "q": "What happens when this runs?", "code": "final class Pot { public function boil(): string { return 'hot'; } }\necho Pot::boil();", "o": ["It prints hot", "Warning: Non-static method called statically", "Error: Class Pot has no static boil", "Error: Non-static method Pot::boil() cannot be called statically"], "a": 3, "err": 1}, {"k": "pick", "r": "pz104", "q": "What happens when this runs?", "code": "echo OVEN_TEMP;", "o": ["It prints OVEN_TEMP", "Warning: Use of undefined constant OVEN_TEMP", "Error: Undefined constant \"OVEN_TEMP\"", "It prints nothing"], "a": 2, "err": 1}, {"k": "pick", "r": "pz15", "q": "What happens when this runs?", "code": "function f(): int { return 'ten'; }\necho f();", "o": ["It prints ten", "TypeError: f(): Return value must be of type int, string returned", "It prints 0", "TypeError: f(): Argument #1 must be of type int, string given"], "a": 1, "err": 1}, {"k": "pick", "r": "pz66", "q": "What happens when this runs?", "code": "function f(): void { return 1; }", "o": ["It returns 1 and ignores void", "Warning: void function returned a value", "TypeError: f(): Return value must be of type void, int returned", "Fatal error: A void function must not return a value"], "a": 3, "err": 1}, {"k": "pick", "r": "pz91", "q": "What happens when this runs?", "code": "print_r(array_combine(['a', 'b'], [1]));", "o": ["Array ( [a] => 1 [b] => )", "ValueError: array_combine(): Argument #1 ($keys) and argument #2 ($values) must have the same number of elements", "Array ( [a] => 1 )", "Warning: array_combine(): Both parameters should have an equal number of elements"], "a": 1, "err": 1}, {"k": "pick", "r": "pz5", "q": "What happens when this runs?", "code": "echo str_repeat('-', -1);", "o": ["ValueError: str_repeat(): Argument #2 ($times) must be greater than or equal to 0", "It prints nothing", "It prints -", "Warning: str_repeat(): Second argument has to be greater than or equal to 0"], "a": 0, "err": 1}, {"k": "pick", "r": "pz39", "q": "What happens when this runs?", "code": "interface Cook { public function cook(): string; }\nfinal class Chef implements Cook { }", "o": ["It works: the method is optional", "Fatal error: Class Chef contains 1 abstract method and must therefore be declared abstract or implement the remaining methods (Cook::cook)", "Error: Chef must implement cook()", "Warning: Chef does not implement Cook::cook()"], "a": 1, "err": 1}, {"k": "pick", "r": "pz73", "q": "What happens when this runs?", "code": "final class Menu implements Countable { }", "o": ["It works: count() returns 0", "Warning: Countable::count() missing", "Error: Menu must implement count()", "Fatal error: Class Menu contains 1 abstract method and must therefore be declared abstract or implement the remaining methods (Countable::count)"], "a": 3, "err": 1}, {"k": "pick", "r": "pz94", "q": "What happens when this runs?", "code": "$order = null;\necho $order->table;", "o": ["It prints nothing", "Warning: Attempt to read property \"table\" on null", "Error: Call to a member function table() on null", "It prints null"], "a": 1, "err": 1}, {"k": "pick", "r": "pz94", "q": "What happens when this runs?", "code": "$order = null;\nvar_dump($order?->table);", "o": ["Warning: Attempt to read property \"table\" on null", "It prints NULL", "Error: Attempt to read property \"table\" on null", "bool(false)"], "a": 1, "err": 1}, {"k": "pick", "r": "pz55", "q": "What happens when this runs?", "code": "$n = 1;\n$f = fn() => $n++;\n$f();\necho $n;", "o": ["It prints 1", "It prints 2", "Error: Cannot modify $n inside an arrow function", "Warning: Undefined variable $n"], "a": 0, "err": 1}, {"k": "pick", "r": "pz67", "q": "What happens when this runs?", "code": "final class Dish { }\necho new Dish();", "o": ["Error: Object of class Dish could not be converted to string", "It prints Dish", "It prints Object", "Warning: Object to string conversion"], "a": 0, "err": 1}, {"k": "pick", "r": "pz2", "q": "What happens when this runs?", "code": "declare(strict_types=1);\necho strlen(12345);", "o": ["It prints 5", "TypeError: strlen(): Argument #1 ($string) must be of type string, int given", "Warning: strlen() expects a string", "It prints 12345"], "a": 1, "err": 1}, {"k": "pick", "r": "pz9", "q": "What happens when this runs?", "code": "$menu = ['soup'];\necho $menu[3];", "o": ["It prints nothing, silently", "Warning: Undefined array key 3", "Error: Undefined offset 3", "It prints null"], "a": 1, "err": 1}, {"k": "pick", "r": "pz8", "q": "What happens when this runs?", "code": "$dish = ['name' => 'Soup'];\necho $dish['price'] ?? 'on request';", "o": ["Warning: Undefined array key \"price\"", "It prints on request", "It prints nothing", "Error: Undefined index price"], "a": 1, "err": 1}, {"k": "pick", "r": "pz61", "q": "What happens when this runs?", "code": "function g() { yield 1; }\n$gen = g();\nforeach ($gen as $v) echo $v;\nforeach ($gen as $v) echo $v;", "o": ["It prints 11", "Exception: Cannot traverse an already closed generator", "It prints 1 and the second loop is empty", "Warning: Generator already closed"], "a": 1, "err": 1}]);
+
 let RUSH=null;
 const fmtClock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function rushPool(){
@@ -11234,6 +11326,7 @@ function rushPool(){
 }
 function rushCorrect(d,v){
   if(d.k==='pick')return v===d.a;
+  if(d.k==='multi')return Array.isArray(v)&&v.length===2&&d.a.every(i=>v.includes(i));
   v=String(v==null?'':v).trim();if(!v)return false;
   return d.k==='gap'?d.a.includes(v):d.test.test(v.replace(/\s+/g,' '));
 }
@@ -11289,13 +11382,14 @@ function renderRush(){
     const d=RUSH.list[RUSH.i],R=RULES[d.r];
     $('dtitle').textContent='Ticket '+(RUSH.i+1)+' of '+RUSH.list.length;
     $('pips').innerHTML='<span class="rclock" id="rclock">'+fmtClock(RUSH.deadline-Date.now())+'</span>';
-    const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug'}[d.k];
+    const kind=d.err?'Read the error':{pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',multi:'Choose two'}[d.k];
     box.innerHTML='<div class="rticket"><div class="dbody"><div class="dk">'+kind+' · '+esc(R.cat)+'</div><div class="dq">'+fmt(d.q)+'</div>'+(d.code?'<pre class="dcode">'+hlPHP('<?php\n'+d.code).replace(/^<span class="h-k">&lt;\?php<\/span>\n/,'')+'</pre>':'')+'<div id="din"></div><div class="drow" style="margin-top:6px"><button id="rskip">Skip</button><button class="pri" id="rnext">Next ticket · Enter</button></div></div><img class="droux" src="'+ROUX+(RUSH.deadline-Date.now()<120000?'stern':'idle2')+'.png" alt=""></div>';
     const din=$('din');let chosen=null;
-    if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>{chosen=j;din.querySelectorAll('button').forEach(x=>x.classList.toggle('chosen',x===b));sfx.click()};din.appendChild(b)})}
+    if(d.k==='multi'){chosen=[];din.className='opts multi';d.o.forEach((o,j)=>{const b=document.createElement('button');b.innerHTML=fmt(o);b.onclick=()=>{const k=chosen.indexOf(j);if(k>=0)chosen.splice(k,1);else{if(chosen.length>=2)chosen.shift();chosen.push(j)}din.querySelectorAll('button').forEach((x,i)=>x.classList.toggle('chosen',chosen.includes(i)));sfx.click()};din.appendChild(b)})}
+    else if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>{chosen=j;din.querySelectorAll('button').forEach(x=>x.classList.toggle('chosen',x===b));sfx.click()};din.appendChild(b)})}
     else if(d.k==='gap'){din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="rval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>'}
     else{din.innerHTML='<input id="rval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'')+'">';if(d.k==='fix')$('rval').value=d.bug}
-    const val=()=>d.k==='pick'?chosen:$('rval').value;
+    const val=()=>d.k==='pick'||d.k==='multi'?chosen:$('rval').value;
     $('rnext').onclick=()=>rushAnswer(val());$('rskip').onclick=()=>rushAnswer(null);
     const inp=$('rval');if(inp){inp.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();rushAnswer(val())}});inp.addEventListener('input',()=>sfx.key());setTimeout(()=>inp.focus(),30)}
     rushSide();return;
@@ -11420,7 +11514,7 @@ function streak(){
   return v.pts>=5?(d.last===today()?alive:alive+1):alive;
 }
 function earn(n,why){
-  const v=svcState();const before=v.pts;v.pts+=n;if(before<5&&v.pts>=5)setTimeout(()=>questEvent('streak',streak()),50);
+  const v=svcState();const before=v.pts;v.pts+=n;if(typeof logPts==='function')logPts(n);if(before<5&&v.pts>=5)setTimeout(()=>questEvent('streak',streak()),50);
   if(before<5&&v.pts>=5)comms('Today counts: '+streak()+(streak()===1?' day':' days')+' in a row at the stove.');
   if(!v.goal&&v.pts>=GOAL){v.goal=true;setTimeout(()=>pay(25+5*streak(),'daily'),1200);setTimeout(()=>toast('Service complete','Today\'s goal of '+GOAL+' points is cooked. '+streak()+'-day streak. Anything more is a bonus.','cheer'),400);sfx.rule()}
   save();renderSvc();
@@ -11505,7 +11599,7 @@ function comboMult(){return 1+Math.min(.5+.5*lvlOf('theo'),(S.combo||0)*.1)}
 function bistroLevel(){const e=tillState().earned;let i=0;LEVELS.forEach(([t],k)=>{if(e>=t)i=k});return i}
 function pay(amount,why,anchor){
   amount=Math.max(0,Math.round(amount));if(!amount)return 0;
-  const before=bistroLevel();tillState();S.cash+=amount;S.earned+=amount;
+  const before=bistroLevel();tillState();S.cash+=amount;S.earned+=amount;if(typeof logCash==='function')logCash(amount);
   if(PR&&S.stage==='practice')PR.cash=(PR.cash||0)+amount;
   save();renderCash(true);floatCoin('+'+fmtE(amount),anchor);
   beep(1568,.05,'triangle',.03);beep(2093,.09,'triangle',.03,.06);
@@ -11559,12 +11653,12 @@ function shopHtml(){
   const pct=nx?Math.min(100,(S.earned-cur[0])/(nx[0]-cur[0])*100):100;
   let h='<div class="till"><div class="tl"><small>Your place</small><h3>'+cur[1]+'</h3><div class="lvbar"><i style="width:'+pct.toFixed(1)+'%"></i></div><p>'+(nx?fmtE(nx[0]-S.earned)+' more takings to become a <b>'+nx[1]+'</b>':'The finest table in town.')+'</p><p class="intill">In the till: <b>'+fmtE(S.cash)+'</b></p><p class="mult">Cash per answer ×'+cashMult().toFixed(2)+' · lifetime '+fmtE(S.earned)+'</p></div><div class="ups">';
   UPGRADES.forEach(u=>{const l=lvlOf(u.id),max=l>=u.max,c=upCost(u);h+='<div class="up'+(max?' max':'')+'"><b>'+u.name+'</b><span class="pips">'+Array.from({length:u.max},(_,i)=>'<i class="'+(i<l?'on':'')+'"></i>').join('')+'</span><small>'+(l?u.fx(l):'Not hired yet')+'</small><button data-kind="up" data-id="'+u.id+'"'+(max||S.cash<c?' disabled':'')+'>'+(max?'Maxed':'Buy · '+fmtE(c))+'</button><em>'+(max?'':'Next: '+u.next)+'</em></div>'});
-  h+='</div>'+ordersHtml()+'<div class="decor"><small>Dining room · +5% cash each · everything you buy appears here</small>'+roomSvg(S.decor)+DECOR.map(dc=>{const own=S.decor.includes(dc.id);return '<button class="dc'+(own?' own':'')+'" data-kind="dc" data-id="'+dc.id+'"'+(own||S.cash<dc.cost?' disabled':'')+'>'+dc.name+'<span>'+(own?'✓ in place':fmtE(dc.cost))+'</span></button>'}).join('')+'</div></div>';
+  h+='</div><div class="habrow">'+freezeHtml()+recapHtml(weekStats(weekKey())||{days:0,ft:0,cards:0,cash:0,combo:0,weak:null},'This week so far')+'</div>'+ordersHtml()+'<div class="decor"><small>Dining room · +5% cash each · everything you buy appears here</small>'+roomSvg(S.decor)+DECOR.map(dc=>{const own=S.decor.includes(dc.id);return '<button class="dc'+(own?' own':'')+'" data-kind="dc" data-id="'+dc.id+'"'+(own||S.cash<dc.cost?' disabled':'')+'>'+dc.name+'<span>'+(own?'✓ in place':fmtE(dc.cost))+'</span></button>'}).join('')+'</div></div>';
   return h;
 }
 function mountShop(box){
   const w=document.createElement('div');w.innerHTML=shopHtml();const el=w.firstChild;box.prepend(el);box.insertAdjacentHTML('beforeend',medalsHtml());
-  el.querySelectorAll('button[data-kind]').forEach(b=>b.onclick=()=>buy(b.dataset.kind,b.dataset.id));
+  el.querySelectorAll('button[data-kind]').forEach(b=>b.onclick=()=>buy(b.dataset.kind,b.dataset.id));const bf=el.querySelector('#bfreeze');if(bf)bf.onclick=buyFreeze;
 }
 
 const BOX_DAYS=[0,1,2,4,8,16];
@@ -11615,7 +11709,8 @@ const QUESTS=[
  {id:'lessons',t:'Read {n} lessons to the end',n:2,ev:'lesson',cash:30},
  {id:'due',t:'Climb {n} due recipe cards',n:5,ev:'due',cash:45},
  {id:'hunt',t:'Fix a Bug hunt plate',n:1,ev:'hunt',cash:60,need:()=>TARGETS.some(t=>t.bugs&&S.done[t.id])},
- {id:'first',t:'Answer {n} drills right first time',n:12,ev:'first',cash:40}
+ {id:'first',t:'Answer {n} drills right first time',n:12,ev:'first',cash:40},
+ {id:'explain',t:'Explain {n} rules in your own words',n:2,ev:'explain',cash:45}
 ];
 function hashStr(s){let h=2166136261;for(const ch of s){h^=ch.charCodeAt(0);h=Math.imul(h,16777619)}return h>>>0}
 function questsToday(){
@@ -11841,6 +11936,8 @@ const MEDALS=[
  {id:'rush10',s:'rush',n:10,name:'Rush veteran',d:'Finish 10 Rushes',cash:150},
  {id:'grand70',s:'grand',n:70,name:'The critic\'s nod',d:'Score 70% or more in a grand tasting',cash:400},
  {id:'grand90',s:'grand',n:90,name:'Three stars',d:'Score 90% or more in a grand tasting',cash:1000},
+ {id:'honest10',s:'honest',n:10,name:'Honest cook',d:'Flag 10 lucky guesses',cash:60},
+ {id:'explain10',s:'explain',n:10,name:'Born teacher',d:'Explain 10 rules in your own words',cash:80},
  {id:'read20',s:'lesson',n:20,name:'Reader',d:'Read 20 lessons to the end',cash:40},
  {id:'star1',s:'stars3',n:1,name:'By heart',d:'Get a recipe card to ★★★',cash:50},
  {id:'star10',s:'stars3',n:10,name:'Walking rulebook',d:'Ten recipe cards at ★★★',cash:200},
@@ -11885,6 +11982,8 @@ function answerOf(d){
   if(d.k==='type'||d.k==='fix')return d.ans;
   if(d.k==='write')return (d.pre?d.pre+'\n\n':'')+d.sol;
   if(d.k==='order')return d.parts.join(d.sep);
+  if(d.k==='multi')return d.a.map(i=>d.o[i].replace(/`/g,'')).join('\n');
+  if(d.k==='explain')return d.model;
   return '';
 }
 function noteMiss(d){
@@ -11904,6 +12003,131 @@ function notebookHtml(){
   if(!nb.length)return '<div class="nbook"><small>Mistake notebook</small><p class="hint0">Empty. Every question you miss lands here with its answer, and is crossed out once you get it right first time.</p></div>';
   return '<details class="nbook"><summary><small>Mistake notebook</small><b>'+nb.length+' to fix</b><span>Missed questions with the right answer. Get one right first time in Practice or School and it is crossed out.</span></summary><div class="nlist">'+nb.map(n=>'<div class="nitem"><div class="nq"><span class="tagn">RULE '+esc(RULES[n.r].n)+'</span> '+fmt(n.q)+'</div>'+(n.code?'<pre class="dcode">'+hlPHP('<?php\n'+n.code).replace(/^<span class="h-k">&lt;\?php<\/span>\n/,'')+'</pre>':'')+'<div class="na"><small>Answer</small><pre>'+esc(n.ans)+'</pre></div></div>').join('')+'</div></details>';
 }
+
+function confHtml(){
+  if(S.stage!=='practice'&&S.stage!=='school')return '';
+  return '<div class="conf" id="conf"><span>Before you answer</span><button data-c="0" class="on">I know this</button><button data-c="1">Just guessing</button></div>';
+}
+function bindConf(){
+  const c=$('conf');if(!c)return;dState.guess=false;
+  c.querySelectorAll('button').forEach(b=>b.onclick=()=>{dState.guess=b.dataset.c==='1';c.querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b));sfx.click()});
+}
+function guessRule(d){
+  if(!RULES[d.r])return;const c=cardOf(d.r);c.due=today();S.miss=S.miss||{};S.miss[d.r]=Math.max(1,S.miss[d.r]||0);
+  noteMiss(Object.assign({},d,{q:d.q+' (you guessed)'}));questEvent('honest',1);save();
+}
+function checkMulti(d){
+  const fb=$('fb'),s=dState.sel||[];
+  if(s.length<2){fb.className='fb err';fb.textContent='Pick two answers first.';sfx.bad();return}
+  const ok=d.a.every(i=>s.includes(i));
+  if(ok){$('din').querySelectorAll('button').forEach((b,i)=>{if(d.a.includes(i))b.classList.add('good')});passDrill(d)}
+  else{$('din').querySelectorAll('button').forEach((b,i)=>{b.classList.toggle('bad',s.includes(i)&&!d.a.includes(i))});failDrill(d)}
+}
+function explainFor(r){
+  const R=RULES[r];
+  return {k:'explain',r,q:'Explain this rule in your own words. What does it do, and why does it matter?',model:R.note,h:'Compare with the rule note and be honest with yourself.'};
+}
+function renderExplain(d,din){
+  din.className='explain';
+  din.innerHTML='<textarea id="xval" rows="4" placeholder="One or two sentences, as if you were telling Théo on his first day."></textarea><div class="drow"><button class="pri" id="xshow">Compare with Roux</button></div><div id="xmodel"></div>';
+  const ta=$('xval');ta.addEventListener('input',()=>{sfx.key();typingEl($('droux'))});setTimeout(()=>ta.focus(),30);
+  $('xshow').onclick=()=>{
+    if(ta.value.trim().length<12){$('fb').className='fb err';$('fb').textContent='Write at least a sentence first: saying it is what makes it stick.';sfx.bad();return}
+    ta.readOnly=true;$('xshow').parentNode.remove();questEvent('explain',1);
+    $('xmodel').innerHTML='<div class="xm"><small>Roux\'s version</small><p>'+fmt(d.model)+'</p></div><div class="drow"><button id="xmiss">I missed something</button><button class="pri" id="xok">I had the core of it</button></div>';
+    $('xok').onclick=()=>passDrill(d);
+    $('xmiss').onclick=()=>{if(dState.locked)return;markRule(d.r,false);comboHit(false);noteMiss(d);dState.tries=1;dState.locked=false;passDrill(d)};
+  };
+}
+function solveDrill(){
+  if(S.stage==='rush'&&RUSH&&!RUSH.done){const d=RUSH.list[RUSH.i];return {k:d.k,a:d.a,ans:d.ans}}
+  const d=S.stage==='practice'?PR.list[PR.i]:drillsFor(S.t)[S.drill];
+  if(d.k==='multi'){d.a.forEach(i=>$('din').querySelectorAll('button')[i].click());checkMulti(d);return {k:'done'}}
+  if(d.k==='explain'){$('xval').value='This rule is about '+RULES[d.r].title;$('xshow').click();$('xok').click();return {k:'done'}}
+  return {k:d.k,a:d.a,ans:d.ans};
+}
+function rushMultiSolve(){const d=RUSH.list[RUSH.i];d.a.forEach(i=>$('din').querySelectorAll('button')[i].click());$('rnext').click()}
+
+const FREEZE_COST=150,FREEZE_MAX=2;
+function weekKey(ds){const d=ds?new Date(ds+'T12:00'):new Date();const k=(d.getDay()+6)%7;d.setDate(d.getDate()-k);return ymd(d)}
+function logDay(){S.log=S.log||{};const t=today();if(!S.log[t]){S.log[t]={pts:0,ft:0,cash:0,cards:0,combo:0,miss:{},ans:0};const keys=Object.keys(S.log).sort();while(keys.length>28)delete S.log[keys.shift()]}return S.log[t]}
+function logEvent(ev,amt){
+  if(typeof S==='undefined')return;const L=logDay();
+  if(ev==='first')L.ft+=amt;else if(ev==='due')L.cards+=amt;else if(ev==='combo')L.combo=Math.max(L.combo,amt);
+}
+const questEventLog=questEvent;questEvent=function(ev,amt){questEventLog(ev,amt);logEvent(ev,amt)};
+function logMiss(r){if(!RULES[r])return;const L=logDay(),c=RULES[r].cat;L.miss[c]=(L.miss[c]||0)+1}
+function logCash(n){logDay().cash+=n}
+function logPts(n){logDay().pts+=n}
+function weekStats(key){
+  const days=Object.entries(S.log||{}).filter(([d])=>weekKey(d)===key).map(([,v])=>v);
+  if(!days.length)return null;
+  const miss={};days.forEach(v=>Object.entries(v.miss||{}).forEach(([c,n])=>miss[c]=(miss[c]||0)+n));
+  const weak=Object.entries(miss).sort((a,b)=>b[1]-a[1])[0];
+  return {days:days.filter(v=>v.pts>=5).length,ft:days.reduce((t,v)=>t+v.ft,0),cards:days.reduce((t,v)=>t+v.cards,0),cash:days.reduce((t,v)=>t+v.cash,0),combo:Math.max(0,...days.map(v=>v.combo)),pts:days.reduce((t,v)=>t+v.pts,0),weak:weak?weak[0]:null};
+}
+function recapHtml(w,title,sub){
+  return '<div class="recap"><small>'+title+'</small>'+(sub?'<p class="hint0">'+sub+'</p>':'')+'<div class="rcgrid"><div><b>'+w.days+'<i>/7</i></b><span>days at the stove</span></div><div><b>'+w.ft+'</b><span>right first time</span></div><div><b>'+w.cards+'</b><span>recipe cards climbed</span></div><div><b>'+fmtE(w.cash)+'</b><span>earned</span></div><div><b>×'+w.combo+'</b><span>best combo</span></div></div>'+(w.weak?'<p class="rcweak">Most missed: <b>'+esc(w.weak)+'</b>. Practice leans on it automatically.</p>':'')+'</div>';
+}
+function dialog(html,buttons){
+  let d=$('dlg');if(!d){d=document.createElement('div');d.id='dlg';d.className='dlg';document.body.appendChild(d)}
+  d.innerHTML='<div class="dbox2">'+html+'<div class="drow">'+buttons.map((b,i)=>'<button id="dlgb'+i+'"'+(b.pri?' class="pri"':'')+'>'+b.t+'</button>').join('')+'</div></div>';
+  d.classList.add('on');buttons.forEach((b,i)=>$('dlgb'+i).onclick=()=>{d.classList.remove('on');b.fn&&b.fn()});
+}
+function useFreezes(){
+  svcState();const D=S.days;if(!D||!D.last||!D.n)return;
+  const missed=dayDiff(D.last,today())-1;S.freeze=S.freeze||0;
+  if(missed>=1&&missed<=S.freeze){S.freeze-=missed;D.last=addDays(-1);save();setTimeout(()=>toast('Roux covered for you','You missed '+missed+(missed===1?' day':' days')+', so '+(missed===1?'a day off was':missed+' days off were')+' used. Your '+D.n+'-day streak is safe.','serve'),1600)}
+}
+function buyFreeze(){
+  tillState();S.freeze=S.freeze||0;if(S.freeze>=FREEZE_MAX||S.cash<FREEZE_COST){sfx.bad();return}
+  S.cash-=FREEZE_COST;S.freeze++;save();renderCash(true);sfx.serve();toast("Roux's day off","Miss a day and your streak survives. You hold "+S.freeze+' of '+FREEZE_MAX+'.','serve');renderKitchen();
+}
+function freezeHtml(){
+  const n=S.freeze||0,full=n>=FREEZE_MAX;
+  return '<div class="up freeze"><b>Roux\'s day off</b><span class="pips">'+Array.from({length:FREEZE_MAX},(_,i)=>'<i class="'+(i<n?'on':'')+'"></i>').join('')+'</span><small>'+(n?n+' held · a missed day uses one':'Protects your streak for one missed day')+'</small><button id="bfreeze"'+(full||(S.cash||0)<FREEZE_COST?' disabled':'')+'>'+(full?'Both held':'Buy · '+fmtE(FREEZE_COST))+'</button><em>Streak '+streak()+' · best '+Math.max(S.days&&S.days.best||0,streak())+'</em></div>';
+}
+function warmEligible(){return S.welcomed&&S.learned.length>=4&&S.warmDay!==today()&&(dueRules().length+Object.keys(S.miss||{}).length)>=3}
+function warmupList(){
+  const quick=d=>['pick','gap','type','multi'].includes(d.k);
+  const pool=[];TARGETS.forEach(t=>t.drills.forEach(d=>{if(S.learned.includes(d.r)&&quick(d))pool.push(d)}));MORE.forEach(d=>{if(S.learned.includes(d.r)&&quick(d))pool.push(d)});
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  const want=dueRules().concat(Object.keys(S.miss||{})),out=[],used=new Set();
+  for(const r of want){if(out.length>=5)break;if(used.has(r))continue;const d=pool.find(x=>x.r===r);if(d){used.add(r);out.push(Object.assign({},d,{due:1}))}}
+  for(const d of pool){if(out.length>=5)break;if(!out.includes(d))out.push(d)}
+  return out;
+}
+function startWarm(){PR={list:warmupList(),i:0,ft:0,warm:1,t0:Date.now(),back:S.stage==='practice'?'kitchen':S.stage};S.stage='practice';save();sfx.blip();render()}
+function warmDone(){
+  S.warmDay=today();save();const secs=Math.round((Date.now()-PR.t0)/1000);sideRule(null);$('dtitle').textContent='Warm-up done';
+  $('dbox').innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Warm-up · '+Math.floor(secs/60)+':'+String(secs%60).padStart(2,'0')+'</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div><img src="'+ROUX+'cheer.png" alt=""></div><p class="why">The stove is warm. That was the hardest part of the evening: starting.</p><div class="drow"><button id="wmore">Keep practising</button><button class="pri" id="wback">On to '+({school:'School',target:'the plate',kitchen:'the Kitchen',rules:'the Rulebook',rush:'Rush'}[PR.back]||'the Kitchen')+'</button></div></div>';
+  pay(25,'warm');earn(3);questEvent('warm',1);sfx.rule();
+  const back=PR.back;$('wmore').onclick=()=>{PR=null;sfx.click();renderSchool()};$('wback').onclick=()=>{PR=null;go(back)};
+}
+function recapCheck(){
+  const cur=weekKey();if(S.recapWeek===cur)return false;const prevKey=weekKey(addDays(-7));const w=weekStats(prevKey);S.recapWeek=cur;save();
+  if(!w||!w.pts)return false;
+  const bonus=10*w.days;if(bonus)pay(bonus,'recap');
+  dialog('<div class="lhead"><div><div class="dk">A new week · looking back</div><h2>Last week at Roux\'s</h2></div><img src="'+ROUX+'serve.png" alt=""></div>'+recapHtml(w,'Week of '+prevKey,bonus?'Roux slips you '+fmtE(bonus)+' for the '+w.days+' evening'+(w.days===1?'':'s')+' you cooked.':''),[{t:'New week, let\'s go',pri:1,fn:()=>{if(warmEligible())warmPrompt()}}]);
+  return true;
+}
+function warmPrompt(){
+  const n=Math.min(5,dueRules().length+Object.keys(S.miss||{}).length);
+  dialog('<div class="lhead"><div><div class="dk">Bonsoir</div><h2>Warm-up first?</h2></div><img src="'+ROUX+'idle.png" alt=""></div><p class="why">Five quick cards from what is due tonight. About three minutes, €25 when you finish, and the rest of the evening comes easier.</p><p class="hint0">'+n+' cards are waiting for you.</p>',[{t:'Not tonight',fn:()=>{S.warmDay=today();save()}},{t:'Start the warm-up',pri:1,fn:startWarm}]);
+}
+function habitBoot(){
+  if(globalThis.PASSLE_MOCK&&!S.forceHabit)return;
+  useFreezes();if(recapCheck())return;if(warmEligible())warmPrompt();
+}
+function botCards(){
+  const out=[],seen=new Set();
+  const add=(d,src)=>{if(!S.learned.includes(d.r)||!RULES[d.r])return;if(d.k!=='pick'&&d.k!=='multi')return;const key=d.q+'|'+(d.code||'');if(seen.has(key))return;seen.add(key);const R=RULES[d.r];
+    out.push({id:'passle-'+out.length,rule:'Rule '+R.n+' · '+R.title,topic:R.cat,question:d.q.replace(/`/g,''),code:d.code||null,options:d.o.map(o=>String(o).replace(/`/g,'')),answers:(d.k==='multi'?d.a:[d.a]),choose:d.k==='multi'?2:1,hint:(d.h||'').replace(/`/g,''),due:isDue(d.r),stars:starsOf(d.r)})};
+  TARGETS.forEach(t=>t.drills.forEach(d=>add(d)));MORE.forEach(d=>add(d));
+  out.sort((a,b)=>(b.due-a.due)||(a.stars-b.stars));
+  return {source:'Passle',exported:new Date().toISOString(),count:out.length,cards:out};
+}
+function exportBot(){const blob=new Blob([JSON.stringify(botCards(),null,1)],{type:'application/json'});dl(URL.createObjectURL(blob),'passle-cards.json');sfx.blip();comms('Cards saved for your quiz bot: due ones first.')}
 
 MORE.forEach(d=>{if(!d.h&&RULES[d.r])d.h='Trace it one line at a time. Rule '+RULES[d.r].n+': '+RULES[d.r].title+'.'});
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
@@ -12076,10 +12300,11 @@ function practiceList(){
   for(const d of pool){if(out.length>=8)break;if(due.has(d.r)&&!dueSeen.has(d.r)&&!seen.has(d.q)){seen.add(d.q);dueSeen.add(d.r);out.push(Object.assign({},d,{due:1}))}}
   for(const d of pool){if(out.length>=10)break;if(!seen.has(d.q)){seen.add(d.q);out.push(d)}}
   const cand=arrangesFor(S.learned);if(cand.length&&out.length>=10)out[out.length-1]=Object.assign({},cand[Math.floor(Math.random()*cand.length)]);const wc=writesFor(S.learned);if(wc.length&&out.length>=10)out[out.length-2]=Object.assign({},wc[Math.floor(Math.random()*wc.length)]);
+  if(out.length>=10&&S.learned.length>=3){const pool2=S.learned.filter(r=>RULES[r]);const r=(dueRules()[0])||pool2[Math.floor(Math.random()*pool2.length)];out[out.length-3]=explainFor(r)}
   for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
   return out;
 }
-function markRule(r,ok){reviewCard(r,ok);S.miss=S.miss||{};const n=(S.miss[r]||0)+(ok?-1:1);if(n>0)S.miss[r]=Math.min(n,5);else delete S.miss[r];save()}
+function markRule(r,ok){reviewCard(r,ok);if(!ok)logMiss(r);S.miss=S.miss||{};const n=(S.miss[r]||0)+(ok?-1:1);if(n>0)S.miss[r]=Math.min(n,5);else delete S.miss[r];save()}
 const lessonsDone=t=>(S.les||0)>=TARGETS[t].rules.length||S.drill>0;
 function exampleBlock(code,title,id){
   const e=document.createElement('div');e.className='exb';
@@ -12136,6 +12361,7 @@ function renderWelcome(){
   const sd=$('sside');$('stitle').textContent='Your first plate';$('plabel').textContent=T().name;sd.innerHTML='<div class="res" style="flex:1"></div>';const res=sd.firstChild;resultInto(res,null);solOut(T()).then(r=>{if(res.isConnected)resultInto(res,r)});
 }
 function practiceDone(){
+  if(PR&&PR.warm){warmDone();return}
   $('dtitle').textContent='Practice complete';sideRule(null);
   const box=$('dbox');box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Practice report</div><h2>'+PR.ft+' of '+PR.list.length+' on the first try</h2></div>'+(PR.ft===PR.list.length?dishImg('badge','ldish'):'')+'<img src="'+ROUX+'cheer.png" alt=""></div><p class="hint0">Practice mixes drills from every rule you have learned, and leans on the rules you missed in drills or in a Rush until you get them right.</p>'+(Object.keys(S.miss||{}).length?'<div class="sec warn"><small>Still on the weak list</small><ul>'+Object.keys(S.miss).filter(r=>RULES[r]).map(r=>'<li>Rule '+RULES[r].n+': '+esc(RULES[r].title)+'</li>').join('')+'</ul></div>':'<div class="win">Nothing on the weak list. Roux approves.</div>')+'<div class="drow"><button class="pri" id="again">New round</button></div></div>';
   const lh=box.querySelector('.lhead');if(lh)lh.insertAdjacentHTML('afterend',takingsHtml());
@@ -12149,16 +12375,19 @@ function sideRule(id,alt){
 }
 function renderDrill(d,i,n){
   dState={tries:0};
-  $('dtitle').textContent=(S.stage==='practice'?'Practice ':'Drill ')+(i+1)+' of '+n;
-  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',order:'Put it in order',write:'Write it'}[d.k];
+  $('dtitle').textContent=(S.stage==='practice'?(PR&&PR.warm?'Warm-up ':'Practice '):'Drill ')+(i+1)+' of '+n;
+  const box=$('dbox');const kind=d.err?'Read the error':{pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',order:'Put it in order',write:'Write it',multi:'Choose two',explain:'Explain it back'}[d.k];
   const R=RULES[d.r];
   box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dbody"><div class="dk">'+(d.rv?'Review · ':'')+(d.weak?'Weak spot · ':'')+(d.due&&!d.weak?'Due card · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div>'+(d.code?'<pre class="dcode">'+hlPHP('<?php\n'+d.code).replace(/^<span class="h-k">&lt;\?php<\/span>\n/,'')+'</pre>':'')+'<div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div></div><img class="droux" id="droux" src="'+ROUX+'idle.png" alt=""></div><div class="sec warn"><small>Watch out</small><ul>'+R.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>';
   if(S.stage==='practice'&&PR)box.insertAdjacentHTML('afterbegin',guestCard(d));
   $('lessbtn').onclick=()=>{sfx.blip();renderLesson(d.r,0,1,true)};
   sideRule(d.r,d.k==='order');
+  if(['pick','gap','type','fix','multi'].includes(d.k))box.querySelector('.dq').insertAdjacentHTML('beforebegin',confHtml());bindConf();
   const din=$('din');
   if(d.k==='order'){renderArrange(d,din);$('dcheck').onclick=()=>checkOrder(d)}
   else if(d.k==='write'){renderWrite(d,din);$('dcheck').textContent='Run & check · Ctrl+Enter';$('dcheck').onclick=()=>checkWrite(d)}
+  else if(d.k==='explain'){renderExplain(d,din);$('dcheck').parentNode.style.display='none'}
+  else if(d.k==='multi'){din.className='opts multi';dState.sel=[];d.o.forEach((o,j)=>{const b=document.createElement('button');b.innerHTML=fmt(o);b.onclick=()=>{if(dState.locked)return;const k=dState.sel.indexOf(j);if(k>=0)dState.sel.splice(k,1);else{if(dState.sel.length>=2)dState.sel.shift();dState.sel.push(j)}din.querySelectorAll('button').forEach((x,i)=>x.classList.toggle('chosen',dState.sel.includes(i)));sfx.click()};din.appendChild(b)});$('dcheck').onclick=()=>checkMulti(d)}
   else if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>pick(d,j,b);din.appendChild(b)});$('dcheck').parentNode.style.display='none'}
   else if(d.k==='gap'){din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="dval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>'}
   else{din.innerHTML='<input id="dval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'')+'">';if(d.k==='fix')$('dval').value=d.bug}
@@ -12177,14 +12406,14 @@ function checkDrill(d){
   ok?passDrill(d):failDrill(d);
 }
 function passDrill(d){
-  if(dState.locked)return;dState.locked=true;if(d&&dState.tries===0)markRule(d.r,true);
+  if(dState.locked)return;dState.locked=true;const guessed=dState.guess&&dState.tries===0;if(guessed)guessRule(d);else if(d&&dState.tries===0)markRule(d.r,true);
   if(dState.tries===0)S.ft++;
-  const fb=$('fb');fb.className='fb ok';fb.innerHTML=(dState.tries===0?['Oui, chef.','Clean plate.','Spot on.','Service!']:['Got it.','There it is.','Second time lucky.'])[Math.floor(Math.random()*3)]+comboHit(dState.tries===0);earn(dState.tries===0?2:1);payDrill(d,dState.tries===0,fb);if(d&&dState.tries===0)noteHit(d);if(d&&d.k==='order')questEvent('arrange',1);if(d&&d.k==='write')questEvent('write',1);
+  const fb=$('fb');fb.className='fb ok';fb.innerHTML=guessed?'Right, but a guess. Back soon so it sticks.':(dState.tries===0?['Oui, chef.','Clean plate.','Spot on.','Service!']:['Got it.','There it is.','Second time lucky.'])[Math.floor(Math.random()*3)]+comboHit(dState.tries===0);earn(dState.tries===0?2:1);payDrill(d,dState.tries===0&&!guessed,fb);if(d&&dState.tries===0&&!guessed)noteHit(d);if(d&&d.k==='order')questEvent('arrange',1);if(d&&d.k==='write')questEvent('write',1);
   pose($('droux'),'happy',900);
   if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
   sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool()},800);
 }
-function failDrill(d){if(dState.tries===0){markRule(d.r,false);comboHit(false);noteMiss(d)}dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h)+(d.code&&dState.tries>=2?'<span class="reveal">PHP prints: <code>'+esc(d.o[d.a])+'</code></span>':'');pose($('droux'),'stern',1400);sfx.bad()}
+function failDrill(d){if(dState.tries===0){markRule(d.r,false);comboHit(false);noteMiss(d)}dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h)+(d.code&&dState.tries>=2&&d.k==='pick'?'<span class="reveal">'+(d.err?'PHP says':'PHP prints')+': <code>'+esc(d.o[d.a])+'</code></span>':'')+(d.k==='multi'&&dState.tries>=2?'<span class="reveal">The two: '+d.a.map(i=>fmt(d.o[i])).join(' and ')+'</span>':'');pose($('droux'),'stern',1400);sfx.bad()}
 function schoolComplete(){
   const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
   if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();comms('New rules in the Rulebook and the Codex.');render();return}
@@ -12363,7 +12592,7 @@ function renderKitchen(){
 }
 function renderRules(){
   const v=$('v-rules');v.innerHTML='';
-  const hd=document.createElement('div');hd.className='panel boxpanel';hd.innerHTML=boxHeaderHtml()+notebookHtml();v.appendChild(hd);const rv=hd.querySelector('#reviewnow');if(rv)rv.onclick=()=>{sfx.blip();PR=null;go('practice')};
+  const hd=document.createElement('div');hd.className='panel boxpanel';hd.innerHTML=boxHeaderHtml()+notebookHtml();{const bb=document.createElement('button');bb.className='botbtn';bb.textContent='Cards for your quiz bot · JSON';bb.title='Every multiple-choice question from the rules you learned, due cards first, for your Telegram quiz bot';bb.onclick=exportBot;hd.querySelector('.boxhead').appendChild(bb)}v.appendChild(hd);const rv=hd.querySelector('#reviewnow');if(rv)rv.onclick=()=>{sfx.blip();PR=null;go('practice')};
   Object.keys(RULES).sort((a,b)=>+RULES[a].n-+RULES[b].n).forEach(id=>{
     const r=RULES[id],ok=S.learned.includes(id);
     const el=document.createElement('div');el.className='panel rb'+(ok?'':' locked');
@@ -12439,7 +12668,7 @@ $('check').onclick=checkNow;
 let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';curFiles()[file]=starter(T())[file];save();ed.value=curFiles()[file];paint();run();comms(file+' is back to the starter code.')};
 if(S.t>=TARGETS.length)S.t=0;
 render();
-Engine.boot().then(()=>comms('Stove is hot. Bon appétit.')).catch(()=>{});
+Engine.boot().then(()=>{comms('Stove is hot. Bon appétit.');setTimeout(habitBoot,400)}).catch(()=>setTimeout(habitBoot,400));
 
 const NOTES_KEY='megalab-claude-notes',NOTES_LAB='Passle';
 const NOTE_KINDS=[['bug','Bug','Something behaves wrongly or breaks'],['real','Not real PHP','Passle accepts or shows something a real server would not'],['learn','Learning gap','Something explained badly, or not at all'],['idea','Idea','A feature, target or drill you want'],['question','Question','Something to ask Claude next session']];
