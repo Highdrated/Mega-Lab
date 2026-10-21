@@ -473,6 +473,22 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .grand span{display:block;font-size:14px;color:var(--ink2);max-width:52ch}
 .grand button{border:1px solid var(--brass);background:var(--ink);color:#f7efe0;padding:9px 14px;border-radius:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 .roomsvg{background:linear-gradient(#f6efe1 84.5%,#e9dcc3 84.5%);width:100%;height:auto;max-height:220px;border:1px solid var(--line);border-radius:6px;display:block}
+.nbook{margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.nbook summary{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;cursor:pointer;list-style:none}
+.nbook summary::-webkit-details-marker{display:none}
+.nbook small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--chili)}
+.nbook summary b{font-family:var(--disp);font-size:20px}
+.nbook summary span{font-size:13px;color:var(--mute);font-style:italic}
+.nbook summary::after{content:"open ▾";margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--brass);letter-spacing:.1em}
+.nbook[open] summary::after{content:"close ▴"}
+.nlist{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:12px}
+.nitem{display:flex;flex-direction:column;gap:8px;padding:10px 12px;border:1px solid var(--line);border-left:3px solid var(--chili);border-radius:6px;background:var(--panel)}
+.nq{font-size:14.5px}
+.nitem .dcode{font-size:12px}
+.na small{color:var(--herb)}
+.na pre{margin:3px 0 0;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;color:var(--ink)}
+.reveal{display:block;margin-top:6px;color:var(--ink2)}
+@media (max-width:1150px){.nlist{grid-template-columns:1fr}}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -10716,7 +10732,7 @@ function rushAnswer(v){
 function rushFinish(timeUp){
   RUSH.done=true;clearInterval(RUSH.timer);RUSH.timeUp=timeUp;RUSH.used=Math.min(Date.now(),RUSH.deadline)-RUSH.start;
   while(RUSH.answers.length<RUSH.list.length){const d=RUSH.list[RUSH.answers.length];RUSH.answers.push({d,v:null,ok:false,skipped:true})}
-  RUSH.answers.forEach(a=>markRule(a.d.r,a.ok));
+  RUSH.answers.forEach(a=>{markRule(a.d.r,a.ok);if(!a.ok)noteMiss(a.d)});
   const ok=RUSH.answers.filter(a=>a.ok).length,pct=Math.round(ok/RUSH.list.length*100);
   S.rushes=(S.rushes||[]).concat([{at:new Date().toISOString().slice(0,16).replace('T',' '),pct,n:RUSH.list.length,g:RUSH.grand?1:0}]).slice(-20);save();
   if(pct>=70)sfx.target();else sfx.rule();earn(3);questEvent('rush',1);pay(ok*4*(RUSH.grand?2:1)*cashMult()*(1+.25*lvlOf('somm')),'rush');if(RUSH.grand)questEvent('grand',pct);
@@ -11336,6 +11352,32 @@ function roomSvg(own){
   return s;
 }
 
+function answerOf(d){
+  if(d.k==='pick')return d.o[d.a];
+  if(d.k==='gap')return (d.pre||'')+d.a[0]+(d.post||'');
+  if(d.k==='type'||d.k==='fix')return d.ans;
+  if(d.k==='write')return (d.pre?d.pre+'\n\n':'')+d.sol;
+  if(d.k==='order')return d.parts.join(d.sep);
+  return '';
+}
+function noteMiss(d){
+  if(!d||!RULES[d.r])return;S.notebook=S.notebook||[];
+  const key=d.q+'|'+(d.code||'');
+  S.notebook=S.notebook.filter(n=>n.key!==key);
+  S.notebook.unshift({key,r:d.r,q:d.q,code:d.code||'',ans:answerOf(d),at:today()});
+  S.notebook=S.notebook.slice(0,60);save();
+}
+function noteHit(d){
+  if(!d||!S.notebook)return;const key=d.q+'|'+(d.code||'');const n=S.notebook.length;
+  S.notebook=S.notebook.filter(x=>x.key!==key);
+  if(S.notebook.length<n){save();setTimeout(()=>rouxSayAt('droux','Crossed out of your notebook.'),300)}
+}
+function notebookHtml(){
+  const nb=S.notebook||[];
+  if(!nb.length)return '<div class="nbook"><small>Mistake notebook</small><p class="hint0">Empty. Every question you miss lands here with its answer, and is crossed out once you get it right first time.</p></div>';
+  return '<details class="nbook"><summary><small>Mistake notebook</small><b>'+nb.length+' to fix</b><span>Missed questions with the right answer. Get one right first time in Practice or School and it is crossed out.</span></summary><div class="nlist">'+nb.map(n=>'<div class="nitem"><div class="nq"><span class="tagn">RULE '+esc(RULES[n.r].n)+'</span> '+fmt(n.q)+'</div>'+(n.code?'<pre class="dcode">'+hlPHP('<?php\n'+n.code).replace(/^<span class="h-k">&lt;\?php<\/span>\n/,'')+'</pre>':'')+'<div class="na"><small>Answer</small><pre>'+esc(n.ans)+'</pre></div></div>').join('')+'</div></details>';
+}
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
@@ -11609,12 +11651,12 @@ function checkDrill(d){
 function passDrill(d){
   if(dState.locked)return;dState.locked=true;if(d&&dState.tries===0)markRule(d.r,true);
   if(dState.tries===0)S.ft++;
-  const fb=$('fb');fb.className='fb ok';fb.innerHTML=(dState.tries===0?['Oui, chef.','Clean plate.','Spot on.','Service!']:['Got it.','There it is.','Second time lucky.'])[Math.floor(Math.random()*3)]+comboHit(dState.tries===0);earn(dState.tries===0?2:1);payDrill(d,dState.tries===0,fb);if(d&&d.k==='order')questEvent('arrange',1);if(d&&d.k==='write')questEvent('write',1);
+  const fb=$('fb');fb.className='fb ok';fb.innerHTML=(dState.tries===0?['Oui, chef.','Clean plate.','Spot on.','Service!']:['Got it.','There it is.','Second time lucky.'])[Math.floor(Math.random()*3)]+comboHit(dState.tries===0);earn(dState.tries===0?2:1);payDrill(d,dState.tries===0,fb);if(d&&dState.tries===0)noteHit(d);if(d&&d.k==='order')questEvent('arrange',1);if(d&&d.k==='write')questEvent('write',1);
   pose($('droux'),'happy',900);
   if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
   sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool()},800);
 }
-function failDrill(d){if(dState.tries===0){markRule(d.r,false);comboHit(false)}dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h);pose($('droux'),'stern',1400);sfx.bad()}
+function failDrill(d){if(dState.tries===0){markRule(d.r,false);comboHit(false);noteMiss(d)}dState.tries++;const fb=$('fb');fb.className='fb err';fb.innerHTML='Not quite. '+fmt(d.h)+(d.code&&dState.tries>=2?'<span class="reveal">PHP prints: <code>'+esc(d.o[d.a])+'</code></span>':'');pose($('droux'),'stern',1400);sfx.bad()}
 function schoolComplete(){
   const tg=T();const fresh=tg.rules.filter(r=>!S.learned.includes(r));
   if(fresh.length){S.learned=S.learned.concat(fresh);save();sfx.rule();comms('New rules in the Rulebook and the Codex.');render();return}
@@ -11793,7 +11835,7 @@ function renderKitchen(){
 }
 function renderRules(){
   const v=$('v-rules');v.innerHTML='';
-  const hd=document.createElement('div');hd.className='panel boxpanel';hd.innerHTML=boxHeaderHtml();v.appendChild(hd);const rv=hd.querySelector('#reviewnow');if(rv)rv.onclick=()=>{sfx.blip();PR=null;go('practice')};
+  const hd=document.createElement('div');hd.className='panel boxpanel';hd.innerHTML=boxHeaderHtml()+notebookHtml();v.appendChild(hd);const rv=hd.querySelector('#reviewnow');if(rv)rv.onclick=()=>{sfx.blip();PR=null;go('practice')};
   Object.keys(RULES).sort((a,b)=>+RULES[a].n-+RULES[b].n).forEach(id=>{
     const r=RULES[id],ok=S.learned.includes(id);
     const el=document.createElement('div');el.className='panel rb'+(ok?'':' locked');
