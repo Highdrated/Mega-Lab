@@ -270,7 +270,7 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .rbody{padding:12px 14px;display:flex;flex-direction:column;gap:10px;flex:1;min-height:0}
 .rbody h3{margin:0;font-family:var(--disp);font-weight:600;font-size:19px}
 .rbody p{margin:0;color:var(--ink2);font-size:14px;line-height:1.55}
-.rbody pre{margin:0;font-family:var(--mono);font-size:11.5px;line-height:1.55;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 10px;white-space:pre-wrap;overflow:auto;max-height:180px}
+.rbody pre{margin:0;font-family:var(--mono);font-size:11.5px;line-height:1.55;background:var(--field);border:1px solid var(--line);border-radius:4px;padding:8px 10px;white-space:pre-wrap;overflow:auto;max-height:220px;flex:none}
 .cx{display:flex;align-items:center;justify-content:space-between;padding:0 14px;height:38px;border-top:1px solid var(--line);font-size:12.5px;color:var(--mute);flex:none}
 .cx a{color:var(--brass);font-family:var(--mono);font-weight:600;letter-spacing:.08em;text-transform:uppercase;font-size:10.5px;text-decoration:none}
 
@@ -399,7 +399,8 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .stg.hasdue{position:relative}
 .stg.hasdue::after{content:attr(data-due);position:absolute;top:-4px;right:-6px;min-width:16px;height:16px;padding:0 4px;border-radius:999px;background:var(--ember);color:#fff8ee;font-size:9.5px;line-height:16px;text-align:center;letter-spacing:0}
 .boxpanel{grid-column:1/-1;padding:16px 20px}
-#v-rules{grid-template-rows:auto}
+#v-rules{grid-template-rows:auto;grid-auto-rows:auto}
+#v-rules>.panel{overflow:visible;min-height:auto}.rb .rbody{flex:1 0 auto}.rb .lockmsg{min-height:140px}
 .boxhead{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
 .boxhead>div:first-child{flex:1 1 380px}
 .boxhead small,.orders>small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
@@ -454,6 +455,17 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .medal small{font-family:var(--mono);font-size:9.5px;color:var(--mute)}
 .medal.own .disc{border:2px solid var(--brass);background:radial-gradient(circle at 35% 30%,#f7e2ad,var(--brass2) 55%,var(--brass));color:#fffaf0;font-size:18px;box-shadow:0 4px 10px -6px rgba(120,80,20,.6)}
 .medal.own b{color:var(--ink)}
+.ready{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.rtop{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+.rtop small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.rtop b{font-family:var(--disp);font-size:26px;color:var(--ink)}
+.rtop span{font-size:13px;color:var(--mute);font-style:italic}
+.rgrid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 22px}
+.rrow{display:grid;grid-template-columns:110px minmax(0,1fr) 38px;gap:8px;align-items:center;font-size:13px;color:var(--ink2)}
+.rbar2{height:7px;border-radius:999px;background:var(--line);overflow:hidden}
+.rbar2 i{display:block;height:100%;background:linear-gradient(90deg,var(--brass2),var(--herb))}
+.rrow em{font-style:normal;font-family:var(--mono);font-size:10.5px;color:var(--mute);text-align:right}
+@media (max-width:1150px){.rgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -8911,9 +8923,19 @@ function boxSummary(){
   const s=[0,0,0,0];learned.forEach(r=>s[starsOf(r)]++);
   return {total:ids.length,learned:learned.length,stars:s,due:dueRules().length};
 }
+function readiness(){
+  const cats={};Object.keys(RULES).forEach(id=>{const c=RULES[id].cat;(cats[c]=cats[c]||[]).push(id)});
+  const rows=Object.entries(cats).map(([c,ids])=>({c,n:ids.length,p:ids.reduce((t,id)=>t+starsOf(id),0)/(ids.length*3)}));
+  const all=Object.keys(RULES),tot=all.reduce((t,id)=>t+starsOf(id),0)/(all.length*3);
+  return {rows:rows.sort((a,b)=>b.n-a.n),tot};
+}
+function readinessHtml(){
+  const R=readiness();
+  return '<div class="ready"><div class="rtop"><small>Kitchen readiness</small><b>'+Math.round(R.tot*100)+'%</b><span>the share of all stars you hold. ★★★ on every card is 100%: every rule by heart.</span></div><div class="rgrid">'+R.rows.map(r=>'<div class="rrow"><span>'+esc(r.c)+'</span><div class="rbar2"><i style="width:'+(r.p*100).toFixed(0)+'%"></i></div><em>'+Math.round(r.p*100)+'%</em></div>').join('')+'</div></div>';
+}
 function boxHeaderHtml(){
   const b=boxSummary();
-  return '<div class="boxhead"><div><small>Recipe box</small><h3>'+b.learned+' of '+b.total+' recipes collected</h3><p>Every rule is a card. Answer it right when it is due and it climbs: ★ learned · ★★ solid · ★★★ by heart. Miss it and it drops back. Reviews come back after 1, 2, 4, 8 and 16 days, just before you would forget.</p></div><div class="bstats"><div><b>'+b.due+'</b><small>due today</small></div><div><b>'+b.stars[1]+'</b><small>★</small></div><div><b>'+b.stars[2]+'</b><small>★★</small></div><div><b>'+b.stars[3]+'</b><small>★★★</small></div><button class="pri" id="reviewnow"'+(b.due?'':' disabled')+'>'+(b.due?'Review '+Math.min(b.due,10)+' due cards':'Nothing due · come back tomorrow')+'</button></div></div>';
+  return '<div class="boxhead"><div><small>Recipe box</small><h3>'+b.learned+' of '+b.total+' recipes collected</h3><p>Every rule is a card. Answer it right when it is due and it climbs: ★ learned · ★★ solid · ★★★ by heart. Miss it and it drops back. Reviews come back after 1, 2, 4, 8 and 16 days, just before you would forget.</p></div><div class="bstats"><div><b>'+b.due+'</b><small>due today</small></div><div><b>'+b.stars[1]+'</b><small>★</small></div><div><b>'+b.stars[2]+'</b><small>★★</small></div><div><b>'+b.stars[3]+'</b><small>★★★</small></div><button class="pri" id="reviewnow"'+(b.due?'':' disabled')+'>'+(b.due?'Review '+Math.min(b.due,10)+' due cards':'Nothing due · come back tomorrow')+'</button></div></div>'+readinessHtml();
 }
 const QUESTS=[
  {id:'guests',t:'Serve {n} guests in Practice',n:8,ev:'guest',cash:40},
@@ -9615,7 +9637,7 @@ function renderRules(){
     const el=document.createElement('div');el.className='panel rb'+(ok?'':' locked');
     el.innerHTML='<div class="ph"><b>Rule '+r.n+'</b><span class="sp">'+(ok?starsHtml(id)+(isDue(id)?'<span class="duetag">due</span>':''):'')+esc(r.cat)+'</span></div>';
     const body=document.createElement('div');
-    if(ok){body.className='rbody';body.innerHTML='<h3>'+esc(r.title)+'</h3><div class="syn">'+r.syn+'</div><p>'+esc(r.note)+'</p><pre>'+hlPHP(r.ex)+'</pre>'}
+    if(ok){body.className='rbody';body.innerHTML='<h3>'+esc(r.title)+'</h3><div class="syn">'+r.syn+'</div><p>'+codeify(r.note)+'</p><pre>'+hlPHP(r.ex.replace(ARR_HEAD,''))+'</pre>'}
     else{const rt=TARGETS[r.t];body.className='lockmsg';body.textContent='Locked · learn it in School for '+(rt&&isMaster(rt)?'the master plate '+rt.name:(rt?plateLabel(rt):'a later plate'))}
     el.appendChild(body);
     const cx=document.createElement('div');cx.className='cx';cx.innerHTML='<span>Codex · Passle rulebook</span><a href="codex.html">Open Codex</a>';el.appendChild(cx);
