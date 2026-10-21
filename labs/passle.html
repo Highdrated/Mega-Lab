@@ -4739,9 +4739,17 @@ const SPSOL={
 "src/Batch.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Batch\n{\n    public function __construct(\n        public string $dish,\n        public int $portions,\n        public string $frozen,\n    ) {\n    }\n\n    public function __serialize(): array\n    {\n        return ['d' => $this->dish, 'p' => $this->portions, 'f' => $this->frozen];\n    }\n\n    public function __unserialize(array $data): void\n    {\n        $this->dish = $data['d'];\n        $this->portions = $data['p'];\n        $this->frozen = $data['f'];\n    }\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Batch.php';\nrequire_once __DIR__ . '/../src/freezer.php';\n\n$file = __DIR__ . '/../data/freezer.txt';\n\nif (!is_file($file)) {\n    freeze(new Batch('Cassoulet', 6, '2026-10-12'), $file);\n    freeze(new Batch('Onion soup', 4, '2026-10-15'), $file);\n}\n\n$batches = thaw($file);\n$portions = array_sum(array_map(fn (Batch $b): int => $b->portions, $batches));\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>The freezer</title>\n</head>\n<body>\n    <h1>The freezer</h1>\n    <ul class=\"batches\">\n        <?php foreach ($batches as $batch): ?>\n            <li><?= htmlspecialchars($batch->dish) ?> · <?= $batch->portions ?> portions · frozen <?= htmlspecialchars($batch->frozen) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"total\"><?= $portions ?> portions in the freezer</p>\n    <pre class=\"csv\"><?= htmlspecialchars(labelSheet($batches)) ?></pre>\n</body>\n</html>\n"
 },
+"healthform": {
+"src/form.php": "<?php\n\ndeclare(strict_types=1);\n\nconst RULES = [\n    'fridge' => ['filter' => FILTER_VALIDATE_FLOAT, 'flags' => FILTER_NULL_ON_FAILURE, 'options' => ['min_range' => 0, 'max_range' => 5]],\n    'staff' => ['filter' => FILTER_VALIDATE_INT, 'flags' => FILTER_NULL_ON_FAILURE, 'options' => ['min_range' => 1, 'max_range' => 20]],\n    'gloves' => ['filter' => FILTER_VALIDATE_BOOLEAN, 'flags' => FILTER_NULL_ON_FAILURE],\n    'batch' => ['filter' => FILTER_VALIDATE_REGEXP, 'flags' => FILTER_NULL_ON_FAILURE, 'options' => ['regexp' => '/^B-\\d{4}$/']],\n    'inspector' => ['filter' => FILTER_VALIDATE_EMAIL, 'flags' => FILTER_NULL_ON_FAILURE],\n];\n\nfunction check(array $input): array\n{\n    return filter_var_array($input, RULES, true);\n}\n\nfunction problems(array $clean): array\n{\n    $out = [];\n    foreach ($clean as $field => $value) {\n        if ($value === null) {\n            $out[] = $field;\n        }\n    }\n\n    return $out;\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/form.php';\n\n$input = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];\n$clean = $input ? check($input) : null;\n$bad = $clean ? problems($clean) : [];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Health form</title>\n</head>\n<body>\n    <h1>Health form</h1>\n    <?php if ($clean !== null && $bad === []): ?>\n        <p class=\"ok\">Passed: fridge <?= number_format($clean['fridge'], 1) ?>°, <?= $clean['staff'] ?> staff, gloves <?= $clean['gloves'] ? 'on' : 'off' ?>, batch <?= htmlspecialchars($clean['batch']) ?></p>\n    <?php elseif ($clean !== null): ?>\n        <p class=\"bad\">Check again: <?= htmlspecialchars(implode(', ', $bad)) ?></p>\n    <?php endif; ?>\n    <form method=\"post\">\n        <label for=\"fridge\">Fridge °C</label>\n        <input id=\"fridge\" name=\"fridge\">\n        <label for=\"staff\">Staff on duty</label>\n        <input id=\"staff\" name=\"staff\">\n        <label for=\"gloves\">Gloves worn</label>\n        <input id=\"gloves\" name=\"gloves\">\n        <label for=\"batch\">Batch code</label>\n        <input id=\"batch\" name=\"batch\">\n        <label for=\"inspector\">Inspector email</label>\n        <input id=\"inspector\" name=\"inspector\">\n        <button>Submit</button>\n    </form>\n</body>\n</html>\n"
+},
 "hours": {
 "src/hours.php": "<?php\n\ndeclare(strict_types=1);\n\nconst HOME = 'Europe/Brussels';\nconst OPEN_DAYS = [2, 3, 4, 5, 6];\n\nfunction local(DateTimeImmutable $moment, string $zone = HOME): DateTimeImmutable\n{\n    return $moment->setTimezone(new DateTimeZone($zone));\n}\n\nfunction isOpen(DateTimeImmutable $moment): bool\n{\n    $here = local($moment);\n    $time = $here->format('H:i');\n\n    return in_array((int) $here->format('N'), OPEN_DAYS, true) && $time >= '18:00' && $time < '23:00';\n}\n\nfunction week(DateTimeImmutable $moment): array\n{\n    $start = local($moment)->setTime(0, 0);\n    $days = [];\n\n    foreach (new DatePeriod($start, new DateInterval('P1D'), 6) as $day) {\n        $open = in_array((int) $day->format('N'), OPEN_DAYS, true);\n        $days[] = $day->format('D j M') . ': ' . ($open ? '18:00–23:00' : 'closed');\n    }\n\n    return $days;\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/hours.php';\n\ntry {\n    $now = new DateTimeImmutable($_GET['at'] ?? '2026-10-24T17:30:00Z');\n} catch (Exception) {\n    $now = new DateTimeImmutable('2026-10-24T17:30:00Z');\n}\n\n$guests = ['New York' => 'America/New_York', 'Tokyo' => 'Asia/Tokyo'];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Opening hours</title>\n</head>\n<body>\n    <h1>Opening hours</h1>\n    <p class=\"now\">Brussels: <?= local($now)->format('D j M H:i') ?></p>\n    <p class=\"status\"><?= isOpen($now) ? 'Open now' : 'Closed now' ?></p>\n    <ul class=\"guests\">\n        <?php foreach ($guests as $city => $zone): ?>\n            <li><?= htmlspecialchars($city) ?>: <?= local($now, $zone)->format('D H:i') ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <ul class=\"week\">\n        <?php foreach (week($now) as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"utc\">Stored as UTC: <?= local($now, 'UTC')->format(DATE_ATOM) ?></p>\n</body>\n</html>\n"
+},
+"inspection": {
+"src/Inspector.php": "<?php\n\ndeclare(strict_types=1);\n\nconst KITCHEN = 'Roux';\n\nfinal class Inspector\n{\n    public const GRADE = 'A';\n\n    public function signature(): string\n    {\n        return __CLASS__ . ' · ' . __METHOD__ . ' · ' . __FUNCTION__;\n    }\n}\n\nfunction where(): string\n{\n    return basename(__FILE__) . ':' . __LINE__;\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Inspector.php';\n\nini_set('precision', '4');\n$precision = ini_get('precision');\n$pi = (string) M_PI;\nini_restore('precision');\n\ndefine('OVEN_' . 'TEMP', 180);\n\n$checks = [\n    'json' => extension_loaded('json'),\n    'mbstring' => extension_loaded('mbstring'),\n    'imaginary' => extension_loaded('imaginary'),\n];\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen inspection</title>\n</head>\n<body>\n    <h1>Kitchen inspection</h1>\n    <p class=\"version\">PHP 8.1 or newer: <?= version_compare(PHP_VERSION, '8.1.0', '>=') ? 'yes' : 'no' ?></p>\n    <p class=\"precision\">precision <?= htmlspecialchars($precision) ?> gives π = <?= htmlspecialchars($pi) ?></p>\n    <ul class=\"ext\">\n        <?php foreach ($checks as $ext => $loaded): ?>\n            <li><?= htmlspecialchars($ext) ?>: <?= $loaded ? 'loaded' : 'missing' ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"consts\">Kitchen <?= KITCHEN ?> · grade <?= Inspector::GRADE ?> · oven <?= constant('OVEN_TEMP') ?>° · defined? <?= defined('OVEN_TEMP') ? 'yes' : 'no' ?></p>\n    <p class=\"magic\"><?= htmlspecialchars((new Inspector())->signature()) ?></p>\n    <p class=\"where\"><?= htmlspecialchars(where()) ?> · <?= htmlspecialchars(Inspector::class) ?></p>\n</body>\n</html>\n"
 },
 "kitchenrules": {
 "src/Prep.php": "<?php\n\ndeclare(strict_types=1);\n\n#[Attribute(Attribute::TARGET_CLASS)]\nfinal class Prep\n{\n    public function __construct(\n        public int $minutes,\n        public Station $station,\n    ) {\n    }\n}\n",
@@ -10432,6 +10440,247 @@ MORE.push(...[
 }
 ]);
 
+const F14={insp:'src/Inspector.php',form:'src/form.php'};
+const FORM_OK={fridge:'3.5',staff:'4',gloves:'yes',batch:'B-0421',inspector:'chef@roux.be'};
+
+Object.assign(RULES,{
+ pz103:{n:'103',title:'Configuration and extensions',cat:'Running PHP',
+  syn:"<span class=\"k\">ini_get</span>('precision') · <span class=\"k\">ini_set</span>('precision', '4') · ini_restore(…) · <span class=\"k\">extension_loaded</span>('mbstring') · <span class=\"k\">version_compare</span>(PHP_VERSION, '8.1.0', '>=')",
+  note:'PHP\'s behaviour is set in php.ini. ini_get reads a setting, ini_set changes it for this request only (if the setting allows it), ini_restore puts it back. extension_loaded tells you whether an extension such as mbstring or pdo_sqlite is available. version_compare compares version strings properly.',
+  why:'The same code can behave differently on two servers because their php.ini differs: display_errors, memory_limit, upload_max_filesize, date.timezone, precision. ini_get(\'name\') returns the current value as a string (or false if the setting does not exist). ini_set changes it for the current request and returns the old value; some settings, like upload_max_filesize, can only be set in php.ini or the server config. ini_restore resets one to its php.ini value. Extensions add functions and classes: mb_* comes from mbstring, PDO drivers from pdo_sqlite or pdo_mysql. extension_loaded checks before you rely on one, and function_exists checks a single function. Never compare versions as strings: \'8.10\' < \'8.9\' as text. version_compare(PHP_VERSION, \'8.1.0\', \'>=\') understands version numbers, and PHP_VERSION_ID gives an integer like 80300.',
+  parts:[["ini_get('name')",'current value, as a string'],["ini_set('name', 'value')",'this request only'],["ini_restore('name')",'back to php.ini'],["extension_loaded('mbstring')",'is it there?'],["version_compare($a, $b, '>=')",'proper version maths'],['PHP_VERSION · PHP_VERSION_ID','"8.3.6" · 80306']],
+  mistakes:['Comparing version strings with < or ==.','Expecting ini_set to change settings that only php.ini controls.','Calling mb_ functions without checking the extension on an unknown server.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$old = ini_set('precision', '5');
+echo M_PI . ' (was ' . $old . ')' . PHP_EOL;
+ini_restore('precision');
+echo M_PI . PHP_EOL;
+
+var_dump(version_compare('8.10.0', '8.9.0', '>'), '8.10.0' > '8.9.0');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+foreach (['json', 'mbstring', 'pdo_sqlite', 'not_a_real_one'] as $ext) {
+    echo str_pad($ext, 16) . (extension_loaded($ext) ? 'loaded' : 'missing') . PHP_EOL;
+}`},
+ pz104:{n:'104',title:'Constants and magic constants',cat:'Running PHP',
+  syn:"<span class=\"k\">const</span> KITCHEN = 'Roux'; · <span class=\"k\">define</span>('OVEN_' . 'TEMP', 180) · <span class=\"k\">defined</span>('OVEN_TEMP') · <span class=\"k\">constant</span>('OVEN_TEMP') · __LINE__ __FILE__ __DIR__ __FUNCTION__ __CLASS__ __METHOD__",
+  note:'const declares a constant at compile time, at the top level or in a class; define() creates one at runtime and can build the name. defined() checks, constant() reads one by name. Magic constants change with where they are written: __LINE__, __FILE__, __DIR__, __FUNCTION__, __CLASS__, __METHOD__, __NAMESPACE__.',
+  why:'A constant never changes once set and has no $. const KITCHEN = \'Roux\' is resolved when the file is compiled, so it cannot sit inside an if or use a computed name. define() runs like a function call, so define(\'OVEN_\' . \'TEMP\', 180) works, inside conditions too. Class constants (public const GRADE = \'A\') are read with Inspector::GRADE. defined(\'OVEN_TEMP\') asks whether a constant exists, and constant(\'OVEN_TEMP\') reads one whose name is in a string. Magic constants are filled in by PHP depending on their position: __LINE__ is the line number, __FILE__ and __DIR__ the file and its folder, __FUNCTION__ the function name, __CLASS__ the class, __METHOD__ Class::method. Error messages and logs use exactly these.',
+  parts:[["const KITCHEN = 'Roux';",'compile time, top level or class'],["define('NAME', value)",'runtime, computed names'],["defined('NAME') · constant('NAME')",'check · read by name'],['__LINE__ · __FILE__ · __DIR__','where am I?'],['__FUNCTION__ · __CLASS__ · __METHOD__','who am I?']],
+  mistakes:['const inside an if: syntax error. Use define there.','Reading an undefined constant: Error in PHP 8.','Expecting __FILE__ to be the file that was requested: it is the file the code is written in.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+const COURSES = 3;
+define('MAX_' . 'GUESTS', 40);
+
+echo COURSES . ' / ' . MAX_GUESTS . ' / ' . constant('MAX_GUESTS') . PHP_EOL;
+var_dump(defined('MAX_GUESTS'), defined('NOPE'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Oven
+{
+    public function heat(): string
+    {
+        return __CLASS__ . ' | ' . __METHOD__ . ' | ' . __FUNCTION__ . ' | line ' . __LINE__;
+    }
+}
+
+echo (new Oven())->heat();`},
+ pz105:{n:'105',title:'filter_var_array with options and flags',cat:'Security',
+  syn:"<span class=\"k\">filter_var_array</span>($input, ['staff' =&gt; ['filter' =&gt; FILTER_VALIDATE_INT, 'options' =&gt; ['<span class=\"v\">min_range</span>' =&gt; 1, 'max_range' =&gt; 20]], …], true)",
+  note:'filter_var_array checks a whole form in one call with one rule per field. options add limits (min_range, max_range, regexp), flags change behaviour. The third argument, add_empty, is true by default: fields that were not sent appear as null, so nothing slips through. Never pass false for a required form.',
+  why:'Validating a form field by field gets long and easy to get wrong. filter_var_array takes the input array and a map of rules: for every field a filter, plus optional options and flags. FILTER_VALIDATE_INT and FILTER_VALIDATE_FLOAT accept min_range and max_range, so a fridge at 7 °C fails just like "abc" does. FILTER_VALIDATE_REGEXP takes a regexp option for codes like B-0421. FILTER_VALIDATE_EMAIL checks an address. The result has the same keys, holding the cleaned value with its proper type, or the failure value. With the last argument at its default true, fields that were not sent at all appear as null instead of disappearing; writing true explicitly documents that you rely on it.',
+  parts:[["['filter' => FILTER_VALIDATE_INT]",'one rule per field'],["'options' => ['min_range' => 1, 'max_range' => 20]",'limits'],["'options' => ['regexp' => '/^B-\\d{4}$/']",'a pattern'],['filter_var_array($in, $rules, true)','missing fields become null (the default)'],['typed result','"4" becomes int 4']],
+  mistakes:['Checking only the type and not the range.','Passing false as the third argument: missing fields vanish instead of failing.','Trusting $_POST after a check you did on a copy.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$rules = [
+    'age' => ['filter' => FILTER_VALIDATE_INT, 'options' => ['min_range' => 18]],
+    'code' => ['filter' => FILTER_VALIDATE_REGEXP, 'options' => ['regexp' => '/^[A-Z]{3}$/']],
+];
+
+var_dump(filter_var_array(['age' => '21', 'code' => 'COQ'], $rules, true));
+var_dump(filter_var_array(['age' => '12'], $rules, true));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+var_dump(filter_var('4.5', FILTER_VALIDATE_FLOAT, ['options' => ['max_range' => 5]]));
+var_dump(filter_var('7', FILTER_VALIDATE_FLOAT, ['options' => ['max_range' => 5]]));`},
+ pz106:{n:'106',title:'false, null and FILTER_NULL_ON_FAILURE',cat:'Security',
+  syn:"['filter' =&gt; FILTER_VALIDATE_BOOLEAN, 'flags' =&gt; <span class=\"k\">FILTER_NULL_ON_FAILURE</span>] · if ($value <span class=\"k\">=== null</span>) { /* invalid */ }",
+  note:'Normally a filter returns false when a value is invalid. That is a problem for booleans, where false is a perfectly valid answer. FILTER_NULL_ON_FAILURE makes failures return null instead, so false means "no" and null means "invalid".',
+  why:'FILTER_VALIDATE_BOOLEAN understands yes/no, on/off, true/false and 1/0. "off" is a valid answer that means false, and "maybe" is invalid, which by default is also false. You cannot tell them apart. Add the flag FILTER_NULL_ON_FAILURE and invalid input becomes null while "off" stays false. Using that flag on every field makes the check uniform: a field is broken exactly when its value is null, and missing fields (with add_empty true) are null too. This is the same false-versus-null care you need with strpos returning 0, or with fetch() returning false at the end of rows.',
+  parts:[["'on' 'yes' '1' 'true'",'true'],["'off' 'no' '0' 'false' ''",'false'],["'maybe'",'invalid'],['FILTER_NULL_ON_FAILURE','invalid → null'],['=== null','the one test for "broken"']],
+  mistakes:['Treating false as an error for a yes/no field.','Using == null, which also matches false and 0.','Forgetting the flag must sit in \'flags\', not in \'options\'.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+foreach (['yes', 'off', 'maybe'] as $v) {
+    echo $v . ': ';
+    var_dump(filter_var($v, FILTER_VALIDATE_BOOLEAN), filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE));
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$clean = ['gloves' => false, 'batch' => null, 'staff' => 4];
+$broken = array_keys(array_filter($clean, fn (mixed $v): bool => $v === null));
+
+echo 'Broken: ' . implode(', ', $broken);`}
+});
+
+TARGETS.push(
+{id:'inspection',special:true,name:'Kitchen inspection',rules:['pz103','pz104'],
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Kitchen inspection',`    <h1>Kitchen inspection</h1>
+`),[F14.insp]:PHPHEAD},
+ solution:pickFiles(SPSOL.inspection,[IDX,F14.insp]),
+ steps:[
+  {t:"`PHP 8.1 or newer: yes` with `version_compare(PHP_VERSION, '8.1.0', '>=')`",c:c=>ptxt(c,'p.version')==='PHP 8.1 or newer: yes'&&/version_compare\(\s*PHP_VERSION/.test(src(c)),help:['Versions are not plain strings: let PHP compare them.',"`version_compare(PHP_VERSION, '8.1.0', '>=')`",`if (version_compare(PHP_VERSION, '8.2.0', '<')) {
+    echo 'too old';
+}`,`<p class="version">PHP 8.1 or newer: <?= version_compare(PHP_VERSION, '8.1.0', '>=') ? 'yes' : 'no' ?></p>`]},
+  {t:"`ini_set('precision', '4')`, read it back with `ini_get`, then `ini_restore`: `precision 4 gives π = 3.142`",c:c=>ptxt(c,'p.precision')==='precision 4 gives π = 3.142'&&/ini_get\(\s*'precision'\s*\)/.test(src(c))&&/ini_restore\(\s*'precision'\s*\)/.test(src(c)),help:['Change a setting for this request, use it, put it back.',"Cast `M_PI` to a string while precision is 4, then `ini_restore('precision')`.",`ini_set('precision', '3');
+$short = (string) M_PI;
+ini_restore('precision');`,`ini_set('precision', '4');
+$precision = ini_get('precision');
+$pi = (string) M_PI;
+ini_restore('precision');
+…
+<p class="precision">precision <?= htmlspecialchars($precision) ?> gives π = <?= htmlspecialchars($pi) ?></p>`]},
+  {t:'`extension_loaded`: a `<ul class="ext">` with `json: loaded`, `mbstring: loaded`, `imaginary: missing`',c:c=>rows(c,'ul.ext li').join('|')==='json: loaded|mbstring: loaded|imaginary: missing'&&/extension_loaded\(/.test(src(c)),help:['Ask PHP which extensions this server has.',"A keyed array of `extension_loaded('json')` and friends.",`var_dump(extension_loaded('gd'));`,`$checks = [
+    'json' => extension_loaded('json'),
+    'mbstring' => extension_loaded('mbstring'),
+    'imaginary' => extension_loaded('imaginary'),
+];`]},
+  {t:"`src/Inspector.php`: top-level `const KITCHEN = 'Roux';` and `final class Inspector` with `public const GRADE = 'A';`",c:c=>/^const\s+KITCHEN\s*=\s*'Roux';/m.test(src(c,F14.insp))&&/public\s+const\s+GRADE\s*=\s*'A'/.test(src(c,F14.insp)),help:['Two kinds of constant: global and class.','`const` at the top level, `public const` in the class.',`const SHOP = 'x';
+
+final class Shop
+{
+    public const OPEN = true;
+}`,`const KITCHEN = 'Roux';
+
+final class Inspector
+{
+    public const GRADE = 'A';
+}`]},
+  {t:"`define('OVEN_' . 'TEMP', 180)`, then `constant('OVEN_TEMP')` and `defined('OVEN_TEMP')`: `Kitchen Roux · grade A · oven 180° · defined? yes`",c:c=>ptxt(c,'p.consts')==='Kitchen Roux · grade A · oven 180° · defined? yes'&&/define\(\s*'OVEN_'\s*\.\s*'TEMP'/.test(src(c))&&/constant\(\s*'OVEN_TEMP'\s*\)/.test(src(c)),help:['define can build the name at runtime, const cannot.',"`define('OVEN_' . 'TEMP', 180);`",`define('MAX_' . 'SEATS', 40);
+echo constant('MAX_SEATS');`,`define('OVEN_' . 'TEMP', 180);
+…
+<p class="consts">Kitchen <?= KITCHEN ?> · grade <?= Inspector::GRADE ?> · oven <?= constant('OVEN_TEMP') ?>° · defined? <?= defined('OVEN_TEMP') ? 'yes' : 'no' ?></p>`]},
+  {t:"`signature(): string` with `__CLASS__`, `__METHOD__`, `__FUNCTION__`: `Inspector · Inspector::signature · signature`",c:c=>ptxt(c,'p.magic')==='Inspector · Inspector::signature · signature',help:['Magic constants describe where they are written.',"`return __CLASS__ . ' · ' . __METHOD__ . ' · ' . __FUNCTION__;`",`echo __METHOD__;`,`public function signature(): string
+{
+    return __CLASS__ . ' · ' . __METHOD__ . ' · ' . __FUNCTION__;
+}`]},
+  {t:"`where(): string` returns `basename(__FILE__) . ':' . __LINE__`, plus `Inspector::class`: `Inspector.php:… · Inspector`",c:c=>/^Inspector\.php:\d+ · Inspector$/.test(ptxt(c,'p.where'))&&/__LINE__/.test(src(c,F14.insp)),help:['__FILE__ is the file the code is written in: src/Inspector.php, not index.php.',"`return basename(__FILE__) . ':' . __LINE__;`",`echo basename(__FILE__);`,`function where(): string
+{
+    return basename(__FILE__) . ':' . __LINE__;
+}
+…
+<p class="where"><?= htmlspecialchars(where()) ?> · <?= htmlspecialchars(Inspector::class) ?></p>`]},
+  cleanStep(c=>pure(c,F14.insp)&&ptxt(c,'p.where')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz103',q:"`ini_set('precision', '4')` changes the setting…",o:['in php.ini forever','for this request only','for every user','after a restart'],a:1,h:'Runtime only.'},
+  {k:'pick',r:'pz103',q:"`'8.10.0' > '8.9.0'` as strings is…",o:['true','false'],a:1,h:"Character by character: '1' < '9'."},
+  {k:'type',r:'pz103',q:'Is the mbstring extension available? Store the bool in `$mb`',ph:'$mb = …;',test:/^\$mb = extension_loaded\((['"])mbstring\1\);$/,ans:"$mb = extension_loaded('mbstring');",h:"`$mb = extension_loaded('mbstring');`"},
+  {k:'pick',r:'pz104',q:'Which can create a constant with a computed name?',o:['const','define()','static','readonly'],a:1,h:'Runtime.'},
+  {k:'pick',r:'pz104',q:'Inside method `heat()` of class `Oven`, `__METHOD__` is…',o:['heat','Oven','Oven::heat','Oven->heat'],a:2,h:'Class::method.'},
+  {k:'gap',r:'pz104',q:'Read the constant whose name is in `$name`',pre:'$v = ',post:'($name);',a:['constant'],h:'constant().'}
+ ]},
+
+{id:'healthform',special:true,name:'Health form',rules:['pz105','pz106'],
+ request:{method:'POST',post:FORM_OK},
+ probes:{bad:{method:'POST',post:{fridge:'7',staff:'0',gloves:'maybe',batch:'b-12',inspector:'nope'}},off:{method:'POST',post:{fridge:'0',staff:'1',gloves:'off',batch:'B-0001',inspector:'a@b.co'}},partial:{method:'POST',post:{fridge:'2'}},blank:{method:'GET'}},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Health form',`    <h1>Health form</h1>
+`),[F14.form]:PHPHEAD},
+ solution:pickFiles(SPSOL.healthform,[IDX,F14.form]),
+ steps:[
+  {t:'A POST form with inputs `fridge`, `staff`, `gloves`, `batch`, `inspector`; a plain visit shows no verdict',c:c=>{const d=c.p.blank.doc;return !!d&&['fridge','staff','gloves','batch','inspector'].every(n=>d.querySelector('form[method="post"] input[name="'+n+'"]'))&&!d.querySelector('p.ok,p.bad')},help:['Five labelled inputs, one button.','`<form method="post">` with `name` attributes.',`<label for="staff">Staff</label>
+<input id="staff" name="staff">`,`<form method="post">
+    <label for="fridge">Fridge °C</label>
+    <input id="fridge" name="fridge">
+    …
+    <button>Submit</button>
+</form>`]},
+  {t:"`src/form.php`: a `RULES` constant for `filter_var_array`, with `min_range`/`max_range` on fridge (0–5) and staff (1–20)",c:c=>/const\s+RULES\s*=/.test(src(c,F14.form))&&/'min_range'\s*=>\s*0/.test(src(c,F14.form))&&/'max_range'\s*=>\s*5/.test(src(c,F14.form))&&/'max_range'\s*=>\s*20/.test(src(c,F14.form)),help:['One rule per field: filter, options, flags.',"`'fridge' => ['filter' => FILTER_VALIDATE_FLOAT, 'options' => ['min_range' => 0, 'max_range' => 5]]`",`const CHECKS = [
+    'age' => ['filter' => FILTER_VALIDATE_INT, 'options' => ['min_range' => 18]],
+];`,`const RULES = [
+    'fridge' => ['filter' => FILTER_VALIDATE_FLOAT, 'flags' => FILTER_NULL_ON_FAILURE, 'options' => ['min_range' => 0, 'max_range' => 5]],
+    'staff' => ['filter' => FILTER_VALIDATE_INT, 'flags' => FILTER_NULL_ON_FAILURE, 'options' => ['min_range' => 1, 'max_range' => 20]],
+    …
+];`]},
+  {t:"Gloves with `FILTER_VALIDATE_BOOLEAN`, batch with `FILTER_VALIDATE_REGEXP` (`/^B-\\d{4}$/`), inspector with `FILTER_VALIDATE_EMAIL`",c:c=>/FILTER_VALIDATE_BOOLEAN/.test(src(c,F14.form))&&/FILTER_VALIDATE_REGEXP/.test(src(c,F14.form))&&/'regexp'\s*=>\s*'\/\^B-\\d\{4\}\$\/'/.test(src(c,F14.form))&&/FILTER_VALIDATE_EMAIL/.test(src(c,F14.form)),help:['Three more fields, three more filters.',"`'batch' => ['filter' => FILTER_VALIDATE_REGEXP, 'options' => ['regexp' => '/^B-\\\\d{4}$/']]`",`'code' => ['filter' => FILTER_VALIDATE_REGEXP, 'options' => ['regexp' => '/^[A-Z]{3}$/']],`,`'gloves' => ['filter' => FILTER_VALIDATE_BOOLEAN, 'flags' => FILTER_NULL_ON_FAILURE],
+'batch' => ['filter' => FILTER_VALIDATE_REGEXP, 'flags' => FILTER_NULL_ON_FAILURE, 'options' => ['regexp' => '/^B-\\\\d{4}$/']],
+'inspector' => ['filter' => FILTER_VALIDATE_EMAIL, 'flags' => FILTER_NULL_ON_FAILURE],`]},
+  {t:"`check(array $input): array` with `filter_var_array($input, RULES, true)`; a good form shows `Passed: fridge 3.5°, 4 staff, gloves on, batch B-0421`",c:c=>ptxt(c,'p.ok')==='Passed: fridge 3.5°, 4 staff, gloves on, batch B-0421'&&/filter_var_array\(\s*\$input\s*,\s*RULES\s*,\s*true\s*\)/.test(src(c,F14.form)),help:['One call checks the whole form and returns typed values.','`return filter_var_array($input, RULES, true);`',`$clean = filter_var_array($_POST, $rules, true);`,`function check(array $input): array
+{
+    return filter_var_array($input, RULES, true);
+}
+…
+$input = $_SERVER['REQUEST_METHOD'] === 'POST' ? $_POST : [];
+$clean = $input ? check($input) : null;`]},
+  {t:"`problems(array $clean): array` lists the fields that are `null`: a bad form shows `Check again: fridge, staff, gloves, batch, inspector`",c:c=>ptxt(c.p.bad,'p.bad')==='Check again: fridge, staff, gloves, batch, inspector'&&/function\s+problems\s*\(/.test(src(c,F14.form)),help:['Out-of-range numbers, "maybe", a lowercase batch and a broken email all fail.','Loop the clean array, collect the keys whose value is null.',`foreach ($clean as $k => $v) {
+    if ($v === null) {
+        $bad[] = $k;
+    }
+}`,`function problems(array $clean): array
+{
+    $out = [];
+    foreach ($clean as $field => $value) {
+        if ($value === null) {
+            $out[] = $field;
+        }
+    }
+
+    return $out;
+}`]},
+  {t:'`FILTER_NULL_ON_FAILURE` everywhere: gloves `off` is a valid answer (false), not a failure',c:c=>ptxt(c.p.off,'p.ok')==='Passed: fridge 0.0°, 1 staff, gloves off, batch B-0001'&&(src(c,F14.form).match(/FILTER_NULL_ON_FAILURE/g)||[]).length>=5,help:['Without the flag, "off" and "maybe" both return false and you cannot tell them apart.',"`'flags' => FILTER_NULL_ON_FAILURE` on every rule; problems() tests `=== null`.","'gloves' => ['filter' => FILTER_VALIDATE_BOOLEAN, 'flags' => FILTER_NULL_ON_FAILURE],",'Add the flag to all five rules.']},
+  {t:'Missing fields count as problems too: only `fridge` sent → `Check again: staff, gloves, batch, inspector`',c:c=>ptxt(c.p.partial,'p.bad')==='Check again: staff, gloves, batch, inspector',help:['add_empty, the third argument, is true by default: missing keys come back as null.','Keep `filter_var_array($input, RULES, true)` and test `=== null`.','filter_var_array($in, $rules, true)','Never pass false here.']},
+  cleanStep(c=>pure(c,F14.form)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz105',q:'What does the third argument of `filter_var_array` (add_empty, default `true`) do?',o:['Throws on failure','Adds missing fields as null','Trims every value','Makes it strict'],a:1,h:'add_empty.'},
+  {k:'gap',r:'pz105',q:'Reject staff counts above 20',pre:"'options' => ['",post:"' => 20]",a:['max_range'],h:'min_range / max_range.'},
+  {k:'pick',r:'pz105',q:"`filter_var('7', FILTER_VALIDATE_INT, ['options' => ['max_range' => 5]])`",o:['7','5','false','null'],a:2,h:'Out of range fails.'},
+  {k:'pick',r:'pz106',q:"`filter_var('off', FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)`",o:['true','false','null','"off"'],a:1,h:'"off" is a valid no.'},
+  {k:'pick',r:'pz106',q:"`filter_var('maybe', FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE)`",o:['true','false','null','"maybe"'],a:2,h:'Invalid becomes null.'},
+  {k:'pick',r:'pz106',q:'Why `=== null` and not `== null` to find broken fields?',o:['Speed','== null also matches false and 0','=== null is required by filter','No difference'],a:1,h:'Loose comparison.'}
+ ]}
+);
+
+Object.assign(BUGS,{
+ 'inspection':[
+  {d:'ini_restore was missing, so precision 4 stayed on for the rest of the request.',r:[[`ini_restore('precision');
+`,``]]},
+  {d:'__FUNCTION__ was swapped for __METHOD__, which includes the class name.',r:[[`' · ' . __FUNCTION__;`,`' · ' . __METHOD__;`,F14.insp]]},
+  {d:'version_compare was replaced by a plain string comparison, which happens to work today but breaks at 8.10.',r:[[`version_compare(PHP_VERSION, '8.1.0', '>=')`,`PHP_VERSION >= '8.1.0' && strlen(PHP_VERSION) < 3`]]}
+ ],
+ 'healthform':[
+  {d:'add_empty was set to false, so fields that were not sent simply vanished and a half-empty form passed.',r:[[`filter_var_array($input, RULES, true)`,`filter_var_array($input, RULES, false)`,F14.form]]},
+  {d:'The gloves rule lost FILTER_NULL_ON_FAILURE: "maybe" turned into false and passed as "gloves off".',r:[[`'gloves' => ['filter' => FILTER_VALIDATE_BOOLEAN, 'flags' => FILTER_NULL_ON_FAILURE],`,`'gloves' => ['filter' => FILTER_VALIDATE_BOOLEAN],`,F14.form]]},
+  {d:'The fridge had no max_range, so 7 °C passed the health check.',r:[[`'options' => ['min_range' => 0, 'max_range' => 5]`,`'options' => ['min_range' => 0]`,F14.form]]}
+ ]
+});
+TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
+
+TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
+
 let RUSH=null;
 const fmtClock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function rushPool(){
@@ -10562,7 +10811,9 @@ const STORY={
  'queue':{w:'Commis Théo',tb:'the pass',o:'Tickets pile up, plates stack up and a critic just walked in. Every line needs its own order: first come, last stacked, most important.',th:'The critic was served first and nobody noticed. Perfect.'},
  'parser':{w:'Grand-mère Hélène',tb:1,o:'Her recipes are written as one long line each. Pull out the dish, the quantities and the units, and turn big grams into kilos.',th:'1.2 kg of chicken. That is exactly how my mother wrote it.'},
  'cache':{w:'The delivery app',tb:'the courier door',o:'The app asks for the menu every few seconds. Answer in JSON when asked, and say "nothing changed" when nothing did.',th:'Fewer requests, faster menu. The couriers love you.'},
- 'recipetree':{w:'Chef Roux',tb:'the office',o:'Roux keeps recipes inside recipes: a braise with a stock inside. Walk the whole tree, however deep it goes.',th:'Mrrp. Even the stock inside the braise got its line.'}
+ 'recipetree':{w:'Chef Roux',tb:'the office',o:'Roux keeps recipes inside recipes: a braise with a stock inside. Walk the whole tree, however deep it goes.',th:'Mrrp. Even the stock inside the braise got its line.'},
+ 'inspection':{w:'The food inspector',tb:'the back office',o:'An inspector checks the kitchen\'s setup: which PHP, which extensions, which settings, and who signed the report.',th:'Grade A. The cleanest configuration on the street.'},
+ 'healthform':{w:'The food inspector',tb:'the back office',o:'The daily health form: fridge temperature, staff count, gloves, batch code and the inspector\'s email, all checked in one go.',th:'Fridge at 3.5 degrees, gloves on. Exemplary.'}
 };
 const PHASES=[
  ['17:00','Mise en place','Knives sharpened, stock on the stove. The dining room is still empty.'],
@@ -10987,6 +11238,12 @@ Object.assign(WRITES,{
  pz101:{q:"Print `implode(',', array_map(…))` of `['a', 'b']` using the string callable `'strtoupper'`.",sol:"echo implode(',', array_map('strtoupper', ['a', 'b']));",need:/'strtoupper'/},
  pz102:{q:'Write a recursive `sumAll(array $a): int` that adds every number at any depth, and print `sumAll([1, [2, [3]]])`.',sol:"function sumAll(array $a): int\n{\n    $t = 0;\n    foreach ($a as $v) {\n        $t += is_array($v) ? sumAll($v) : $v;\n    }\n\n    return $t;\n}\n\necho sumAll([1, [2, [3]]]);",need:/sumAll\(\s*\$v\s*\)/}
 });
+Object.assign(WRITES,{
+ pz103:{q:"Print `yes` if this PHP is 8.0.0 or newer according to `version_compare`, otherwise `no`.",sol:"echo version_compare(PHP_VERSION, '8.0.0', '>=') ? 'yes' : 'no';",need:/version_compare\(/},
+ pz104:{q:"Create the constant `MAX_SEATS` with `define` using the name `'MAX_' . 'SEATS'` and value 40, then print it with `constant()`.",sol:"define('MAX_' . 'SEATS', 40);\necho constant('MAX_SEATS');",need:/constant\(/},
+ pz105:{q:"Validate `$in` with `filter_var_array`: `age` must be an int of at least 18. `var_dump` the result.",pre:"$in = ['age' => '21'];",sol:"var_dump(filter_var_array($in, ['age' => ['filter' => FILTER_VALIDATE_INT, 'options' => ['min_range' => 18]]]));",need:/filter_var_array\(/},
+ pz106:{q:"`var_dump` the yes/no value of `$v` with `FILTER_VALIDATE_BOOLEAN`, invalid input becoming null.",pre:"$v = 'off';",sol:"var_dump(filter_var($v, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE));",need:/FILTER_NULL_ON_FAILURE/}
+});
 const WEXP={};
 function writeFor(id){const w=WRITES[id];return w?{k:'write',r:id,q:w.q,pre:w.pre||'',sol:w.sol,need:w.need,h:'Compare your output with the target line by line. Spaces and line breaks count.'}:null}
 const writesFor=rules=>rules.map(writeFor).filter(Boolean);
@@ -11068,7 +11325,7 @@ const DISH='img/passle/';
 const ART_IDS=new Set(['menu-card','dish-label','pantry','menu-board','kitchen-helpers','split-kitchen','order-slip','safe-orders','table-service','recipe-book','cellar','bistro','menu-card-master','labels-master','pantry-master','board-master','router-master','login-master','tests-master','badge','scanner','api','brigade','stocktake','loyalty','ledger','cards','nightlog','winecellar','thepass','printer','tasting','roomservice','allergens','freezer','hours','bartab','translations','pairing','kitchenrules','reservations','prep-list']);
 const dishImg=(id,cls)=>!ART_IDS.has(id)?'':'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="" onerror="this.style.display=\'none\'">';
 const KEY='passle.v2';
-const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
