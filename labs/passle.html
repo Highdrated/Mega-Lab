@@ -434,6 +434,15 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .tile:hover{border-color:var(--brass)}
 .tile.used{opacity:.3;pointer-events:none}
 .tile.placed{background:var(--field)}
+.wr{display:flex;flex-direction:column;gap:10px}
+.wed{border:1px solid var(--line2);border-radius:6px;overflow:hidden;background:var(--field)}
+.whead{font-family:var(--mono);font-size:12px;color:var(--mute);padding:6px 12px;border-bottom:1px dashed var(--line);background:var(--panel2)}
+#wcode{display:block;width:100%;border:0;outline:none;resize:vertical;padding:10px 12px;font-family:var(--mono);font-size:13.5px;line-height:1.55;background:transparent;color:var(--ink);tab-size:4}
+.wres{padding:8px 12px;border:1px solid var(--line);border-radius:6px;background:var(--panel)}
+.wres small,.whelp small{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.wres pre{margin:4px 0 0;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;max-height:140px;overflow:auto}
+.wres.bad{border-color:var(--chili);background:var(--chili2)}
+.whelp{display:flex;gap:10px;align-items:center}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -8971,6 +8980,124 @@ function checkOrder(d){
 }
 function orderSolve(){const d=dState.d;d.ans.forEach(i=>document.querySelector('#apool [data-i="'+i+'"]').click());$('dcheck').click()}
 
+const PDO_MEM="$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);\n";
+const WRITES={
+ pz1:{q:'Print the heading `<h1>Menu</h1>` with echo.',sol:"echo '<h1>Menu</h1>';",need:/echo/},
+ pz2:{q:'Show the type and value of both variables with one `var_dump` call.',pre:"$price = 4.5;\n$left = 12;",sol:"var_dump($price, $left);",need:/var_dump\(/},
+ pz3:{q:'Print `$name` safely, so the tags show as text.',pre:"$name = '<b>Odile</b>';",sol:"echo htmlspecialchars($name);",need:/htmlspecialchars\(/},
+ pz4:{q:'Print `Table 4: soup` with one double-quoted string that has both variables inside.',pre:"$dish = 'soup';\n$table = 4;",sol:'echo "Table {$table}: {$dish}";',need:/"[^"]*\$\w+[^"]*"/},
+ pz5:{q:'Print the dish trimmed and in Title Case: `Coq Au Vin`.',pre:"$raw = '  coq au vin ';",sol:"echo ucwords(trim($raw));",need:/trim\(/},
+ pz6:{q:'Print the weight as `1,250.50`.',pre:"$grams = 1250.5;",sol:"echo number_format($grams, 2);",need:/number_format\(/},
+ pz7:{q:'Add `tart` to the end of the list, then print how many dishes there are.',pre:"$menu = ['soup', 'stew'];",sol:"$menu[] = 'tart';\necho count($menu);",need:/\$menu\[\]\s*=/},
+ pz8:{q:'Add `stew` at 19.5 to the price list, then print the price of stew.',pre:"$prices = ['soup' => 8.5];",sol:"$prices['stew'] = 19.5;\necho $prices['stew'];",need:/\['stew'\]\s*=/},
+ pz9:{q:'Print `soup, stew, tart` with one function call.',pre:"$menu = ['soup', 'stew', 'tart'];",sol:"echo implode(', ', $menu);",need:/implode\(/},
+ pz10:{q:'Print every dish as `soup: 8.5`, one per line (end each line with `PHP_EOL`).',pre:"$menu = ['soup' => 8.5, 'stew' => 19.5];",sol:"foreach ($menu as $dish => $price) {\n    echo $dish . ': ' . $price . PHP_EOL;\n}",need:/foreach\s*\(/},
+ pz11:{q:'Print `sold out` for 0 portions, `last one` for 1, otherwise `available`.',pre:"$portions = 1;",sol:"if ($portions === 0) {\n    echo 'sold out';\n} elseif ($portions === 1) {\n    echo 'last one';\n} else {\n    echo 'available';\n}",need:/elseif/},
+ pz12:{q:'With `match`, print `Mains` for main, `Starters` for starter and `Other` for anything else.',pre:"$course = 'main';",sol:"echo match ($course) {\n    'main' => 'Mains',\n    'starter' => 'Starters',\n    default => 'Other',\n};",need:/match\s*\(/},
+ pz13:{q:'Write `vat(float $price): float` that adds 21%, then print `vat(10.0)`.',sol:"function vat(float $price): float\n{\n    return $price * 1.21;\n}\n\necho vat(10.0);",need:/function\s+vat\s*\(\s*float/},
+ pz14:{q:"Write `label(string $dish, string $size = 'regular'): string` returning `dish (size)`, then print it for soup with the named argument `size: 'large'`.",sol:"function label(string $dish, string $size = 'regular'): string\n{\n    return $dish . ' (' . $size . ')';\n}\n\necho label('soup', size: 'large');",need:/size:\s*'large'/},
+ pz15:{q:'Write `withTax(float $p, float $tax): float` and print `withTax(100.0, $tax)`.',pre:"$tax = 0.21;",sol:"function withTax(float $p, float $tax): float\n{\n    return $p * (1 + $tax);\n}\n\necho withTax(100.0, $tax);",need:/function\s+withTax/},
+ pz20:{q:"Print `$_GET['table']`, or 1 when it is missing.",pre:"$_GET = ['dish' => 'soup'];",sol:"echo $_GET['table'] ?? 1;",need:/\?\?/},
+ pz21:{q:'Print `saving` for a POST request, otherwise `reading`.',pre:"$_SERVER['REQUEST_METHOD'] = 'POST';",sol:"echo $_SERVER['REQUEST_METHOD'] === 'POST' ? 'saving' : 'reading';",need:/===\s*'POST'/},
+ pz22:{q:'Validate `$input` as an int and `var_dump` the result.',pre:"$input = '12';",sol:"var_dump(filter_var($input, FILTER_VALIDATE_INT));",need:/FILTER_VALIDATE_INT/},
+ pz23:{q:'Print `ok` if `$size` is in the allowlist (strict check), otherwise `rejected`.',pre:"$size = 'huge';\n$allowed = ['small', 'large'];",sol:"echo in_array($size, $allowed, true) ? 'ok' : 'rejected';",need:/in_array\([^)]*,\s*true\s*\)/},
+ pz24:{q:'Turn `$qty` into an int and print it kept between 1 and 10.',pre:"$qty = '-3';",sol:"echo max(1, min(10, (int) $qty));",need:/\(int\)/},
+ pz26:{q:'Add one stew to the cart with `??=` and `++`, then `print_r` the cart.',pre:"$cart = ['soup' => 1];",sol:"$cart['stew'] ??= 0;\n$cart['stew']++;\nprint_r($cart);",need:/\?\?=/},
+ pz28:{q:'Decode the JSON into an array and print the dish.',pre:"$json = '{\"dish\":\"soup\",\"price\":8.5}';",sol:"$data = json_decode($json, true);\necho $data['dish'];",need:/json_decode\([^)]*true/},
+ pz29:{q:'Print the order as pretty JSON, with the accent kept as é.',pre:"$order = ['dish' => 'crème', 'qty' => 2];",sol:"echo json_encode($order, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);",need:/JSON_UNESCAPED_UNICODE/},
+ pz30:{q:'Sort by price with `usort` and `<=>`, then print the name of the cheapest dish.',pre:"$dishes = [['n' => 'stew', 'p' => 19], ['n' => 'soup', 'p' => 8]];",sol:"usort($dishes, fn (array $a, array $b): int => $a['p'] <=> $b['p']);\necho $dishes[0]['n'];",need:/<=>/},
+ pz31:{q:"Connect to `sqlite::memory:` with exceptions switched on, then print the driver name.",sol:"$pdo = new PDO('sqlite::memory:', null, null, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);\necho $pdo->getAttribute(PDO::ATTR_DRIVER_NAME);",need:/ERRMODE_EXCEPTION/},
+ pz32:{q:'Insert `$name` with a prepared statement, then print how many rows the table has.',pre:PDO_MEM+"$pdo->exec('CREATE TABLE d (name TEXT)');\n$name = \"Chef's soup\";",sol:"$stmt = $pdo->prepare('INSERT INTO d (name) VALUES (:name)');\n$stmt->execute(['name' => $name]);\necho $pdo->query('SELECT COUNT(*) FROM d')->fetchColumn();",need:/prepare\(/},
+ pz33:{q:'Fetch all rows as associative arrays and print the names joined with `, `.',pre:PDO_MEM+"$pdo->exec(\"CREATE TABLE d (name TEXT); INSERT INTO d VALUES ('soup'), ('stew');\");",sol:"$rows = $pdo->query('SELECT name FROM d')->fetchAll(PDO::FETCH_ASSOC);\necho implode(', ', array_column($rows, 'name'));",need:/fetchAll\(/},
+ pz35:{q:'Count the dishes whose name contains `$q`, with a bound LIKE parameter.',pre:PDO_MEM+"$pdo->exec(\"CREATE TABLE d (name TEXT); INSERT INTO d VALUES ('soup'), ('stew'), ('tart');\");\n$q = 't';",sol:"$stmt = $pdo->prepare('SELECT COUNT(*) FROM d WHERE name LIKE :q');\n$stmt->execute(['q' => '%' . $q . '%']);\necho $stmt->fetchColumn();",need:/LIKE\s+:\w+/},
+ pz37:{q:'Write a class `Dish` with a public string `$name`, make one named soup and print its name.',sol:"final class Dish\n{\n    public string $name = '';\n}\n\n$d = new Dish();\n$d->name = 'soup';\necho $d->name;",need:/class\s+Dish/},
+ pz38:{q:"Write `final class Dish` with a promoted readonly `string $name`, then print `(new Dish('stew'))->name`.",sol:"final class Dish\n{\n    public function __construct(public readonly string $name)\n    {\n    }\n}\n\necho (new Dish('stew'))->name;",need:/readonly\s+string/},
+ pz39:{q:'Write interface `Priced` with `price(): float`, class `Soup` that implements it with 8.5, and print the price.',sol:"interface Priced\n{\n    public function price(): float;\n}\n\nfinal class Soup implements Priced\n{\n    public function price(): float\n    {\n        return 8.5;\n    }\n}\n\necho (new Soup())->price();",need:/implements\s+Priced/},
+ pz40:{q:"Write the backed enum `Course: string` with `Starter = 'starter'` and `Main = 'main'`, then print `Course::from('main')->name`.",sol:"enum Course: string\n{\n    case Starter = 'starter';\n    case Main = 'main';\n}\n\necho Course::from('main')->name;",need:/enum\s+Course\s*:\s*string/},
+ pz41:{q:"Put everything in namespace `Kitchen`, write `greet(): string` returning bonjour, and print `greet() . ' ' . __NAMESPACE__`.",sol:"namespace Kitchen;\n\nfunction greet(): string\n{\n    return 'bonjour';\n}\n\necho greet() . ' ' . __NAMESPACE__;",need:/^\s*namespace\s+Kitchen\s*;/m},
+ pz42:{q:"Register an autoloader that prints `loading ` plus the class name and a newline, then `var_dump(class_exists('Tart'))`.",sol:"spl_autoload_register(function (string $class): void {\n    echo 'loading ' . $class . PHP_EOL;\n});\n\nvar_dump(class_exists('Tart'));",need:/spl_autoload_register\(/},
+ pz43:{q:"Throw a `RuntimeException('Oven cold')` in a try, print its message in the catch, and print ` · done` in finally.",sol:"try {\n    throw new RuntimeException('Oven cold');\n} catch (RuntimeException $e) {\n    echo $e->getMessage();\n} finally {\n    echo ' · done';\n}",need:/finally/},
+ pz44:{q:"Write `class SoldOut extends Exception`, throw `new SoldOut('stew')` and catch it to print `Sold out: stew`.",sol:"final class SoldOut extends Exception\n{\n}\n\ntry {\n    throw new SoldOut('stew');\n} catch (SoldOut $e) {\n    echo 'Sold out: ' . $e->getMessage();\n}",need:/extends\s+\\?Exception/},
+ pz45:{q:'Route with `match` on `$path`: `/` gives Home, `/menu` gives Menu, anything else 404. Print the result.',pre:"$path = '/menu';",sol:"echo match ($path) {\n    '/' => 'Home',\n    '/menu' => 'Menu',\n    default => '404',\n};",need:/match\s*\(\s*\$path/},
+ pz46:{q:'Set the response code to 404, then print `http_response_code()`.',sol:"http_response_code(404);\necho http_response_code();",need:/http_response_code\(\s*404\s*\)/},
+ pz47:{q:"Hash `roux` with `password_hash`, then print `yes` if `password_verify` accepts `roux`, else `no`.",sol:"$hash = password_hash('roux', PASSWORD_DEFAULT);\necho password_verify('roux', $hash) ? 'yes' : 'no';",need:/password_hash\(/},
+ pz48:{q:'Make a CSRF token with `bin2hex(random_bytes(16))` and print its length.',sol:"$token = bin2hex(random_bytes(16));\necho strlen($token);",need:/random_bytes\(/},
+ pz49:{q:"Check that `strtoupper('a')` gives `A`: print `pass` or `fail`.",sol:"echo strtoupper('a') === 'A' ? 'pass' : 'fail';",need:/strtoupper\(/},
+ pz50:{q:'Write `check(bool $ok, string $name): void` that prints `✓ name` or `✗ name`, then check that `intdiv(7, 2) === 3` with the name intdiv.',sol:"function check(bool $ok, string $name): void\n{\n    echo ($ok ? '✓ ' : '✗ ') . $name;\n}\n\ncheck(intdiv(7, 2) === 3, 'intdiv');",need:/function\s+check\s*\(/},
+ pz51:{q:"Create `DateTimeImmutable('2026-10-24 19:30')` and print it as `Sat 24 Oct, 19:30`.",sol:"$d = new DateTimeImmutable('2026-10-24 19:30');\necho $d->format('D j M, H:i');",need:/DateTimeImmutable/},
+ pz52:{q:'Print the date 3 days after `$open` as Y-m-d.',pre:"$open = new DateTimeImmutable('2026-10-24 18:00');",sol:"echo $open->modify('+3 days')->format('Y-m-d');",need:/->modify\(|->add\(/},
+ pz53:{q:'Print 1 if `$code` is three capitals, a dash and three digits, else 0.',pre:"$code = 'COQ-021';",sol:"echo preg_match('/^[A-Z]{3}-\\d{3}$/', $code);",need:/preg_match\(/},
+ pz54:{q:'Remove every non-digit from the phone number and print it.',pre:"$phone = '0471 23 45 67';",sol:"echo preg_replace('/\\D/', '', $phone);",need:/preg_replace\(/},
+ pz55:{q:'Make a closure `$withVat` that uses `$rate`, then print `$withVat(10.0)`.',pre:"$rate = 1.21;",sol:"$withVat = function (float $p) use ($rate): float {\n    return $p * $rate;\n};\n\necho $withVat(10.0);",need:/use\s*\(\s*\$rate\s*\)/},
+ pz56:{q:'Print the sum of the prices above 9, using `array_filter`.',pre:"$prices = [8.5, 19.5, 9.5];",sol:"echo array_sum(array_filter($prices, fn (float $p): bool => $p > 9));",need:/array_filter\(/},
+ pz57:{q:'Print the menu as JSON.',pre:"$menu = ['soup', 'stew'];",sol:"echo json_encode($menu);",need:/json_encode\(/},
+ pz58:{q:'With `match`, map the method to a status: GET 200, POST 201, anything else 405. Print it.',pre:"$method = 'DELETE';",sol:"echo match ($method) {\n    'GET' => 200,\n    'POST' => 201,\n    default => 405,\n};",need:/match\s*\(\s*\$method/},
+ pz59:{q:"Write `abstract class Cook` with `abstract public function station(): string`, a final class `Saucier` returning sauce, and print the station.",sol:"abstract class Cook\n{\n    abstract public function station(): string;\n}\n\nfinal class Saucier extends Cook\n{\n    public function station(): string\n    {\n        return 'sauce';\n    }\n}\n\necho (new Saucier())->station();",need:/abstract\s+class\s+Cook/},
+ pz60:{q:'Write trait `Counts` with `private static int $n = 0` and `public static function add(): int` returning `++self::$n`. Use it in class `Tickets` and print `Tickets::add()` twice.',sol:"trait Counts\n{\n    private static int $n = 0;\n\n    public static function add(): int\n    {\n        return ++self::$n;\n    }\n}\n\nfinal class Tickets\n{\n    use Counts;\n}\n\necho Tickets::add();\necho Tickets::add();",need:/trait\s+Counts/},
+ pz61:{q:'Write a generator `courses()` that yields starter, main and dessert, and print each one followed by a space.',sol:"function courses(): Generator\n{\n    yield 'starter';\n    yield 'main';\n    yield 'dessert';\n}\n\nforeach (courses() as $c) {\n    echo $c . ' ';\n}",need:/yield/},
+ pz62:{q:"Read every row with `fgetcsv` and print the dish names joined by ` & `.",pre:"$h = fopen('php://memory', 'w+');\nfwrite($h, \"soup,8.5\\nstew,19\\n\");\nrewind($h);",sol:"$names = [];\nwhile (($row = fgetcsv($h, null, ',', '\"', '')) !== false) {\n    $names[] = $row[0];\n}\necho implode(' & ', $names);",need:/fgetcsv\(/},
+ pz63:{q:"Read the `seen` cookie as an int (default 0), add 1 and print it.",pre:"$_COOKIE = ['seen' => '4'];",sol:"echo (int) ($_COOKIE['seen'] ?? 0) + 1;",need:/\$_COOKIE\['seen'\]/},
+ pz64:{q:'Sign the value `3` with `hash_hmac` sha256 and `$key`, and print the first 8 characters.',pre:"$key = 'secret';",sol:"echo substr(hash_hmac('sha256', '3', $key), 0, 8);",need:/hash_hmac\(/},
+ pz65:{q:'Write `total(float ...$a): float` returning the sum, then print `total(1.5, ...[2.5, 3.0])`.',sol:"function total(float ...$a): float\n{\n    return array_sum($a);\n}\n\necho total(1.5, ...[2.5, 3.0]);",need:/\.\.\.\$a/},
+ pz66:{q:"Write `add(array &$s, string $k): void` that adds 1 to `$s[$k]`, call it twice for salt and print the salt count.",pre:"$stock = ['salt' => 1];",sol:"function add(array &$s, string $k): void\n{\n    $s[$k]++;\n}\n\nadd($stock, 'salt');\nadd($stock, 'salt');\necho $stock['salt'];",need:/array\s+&\$s/},
+ pz67:{q:'Write class `Ticket` whose `__toString()` returns `Table 7`, then `echo new Ticket()`.',sol:"final class Ticket\n{\n    public function __toString(): string\n    {\n        return 'Table 7';\n    }\n}\n\necho new Ticket();",need:/__toString/},
+ pz68:{q:'Write class `Base` with `public static function make(): static` returning `new static()`, an empty class `Child extends Base`, and print `get_class(Child::make())`.',sol:"class Base\n{\n    public static function make(): static\n    {\n        return new static();\n    }\n}\n\nfinal class Child extends Base\n{\n}\n\necho get_class(Child::make());",need:/new\s+static/},
+ pz69:{q:"Install an error handler that throws `ErrorException`, then read the missing key `$stock['saffron']` in a try and print `caught` in the catch.",pre:"$stock = [];",sol:"set_error_handler(function (int $severity, string $message, string $file, int $line): bool {\n    throw new ErrorException($message, 0, $severity, $file, $line);\n});\n\ntry {\n    echo $stock['saffron'];\n} catch (ErrorException) {\n    echo 'caught';\n}",need:/set_error_handler\(/},
+ pz70:{q:"Append `oven cold` plus a newline to `$log` with `error_log` type 3, then print the file.",pre:"$log = __DIR__ . '/../data/write.log';\nif (is_file($log)) {\n    unlink($log);\n}",sol:"error_log(\"oven cold\\n\", 3, $log);\necho file_get_contents($log);",need:/error_log\([^)]*,\s*3\s*,/},
+ pz71:{q:'Print `Soup €8.50` from the XML: the dish text and its price attribute.',pre:"$xml = simplexml_load_string('<menu><dish price=\"8.5\">Soup</dish></menu>');",sol:"echo $xml->dish . ' €' . number_format((float) $xml->dish['price'], 2);",need:/\['price'\]/},
+ pz72:{q:'Find the dishes with `c=\"dessert\"` using xpath and print the first one.',pre:"$xml = simplexml_load_string('<menu><dish c=\"main\">Stew</dish><dish c=\"dessert\">Tart</dish></menu>');",sol:"echo $xml->xpath('//dish[@c=\"dessert\"]')[0];",need:/->xpath\(/},
+ pz73:{q:'Write `final class Shelf implements Countable` around a private array of jars, and print `count(new Shelf([\'salt\', \'thyme\']))`.',sol:"final class Shelf implements Countable\n{\n    public function __construct(private array $jars)\n    {\n    }\n\n    public function count(): int\n    {\n        return count($this->jars);\n    }\n}\n\necho count(new Shelf(['salt', 'thyme']));",need:/implements\s+Countable/},
+ pz74:{q:'Print the list as a clean JSON list (no gaps in the keys).',pre:"$a = [1, 2, 3];\nunset($a[1]);",sol:"echo json_encode(array_values($a));",need:/array_values\(/},
+ pz75:{q:'Print `$n` zero-padded to 6 digits with printf.',pre:"$n = 42;",sol:"printf('%06d', $n);",need:/printf\(/},
+ pz76:{q:'Capture the output of `print_r([1])` with output buffering and print its length.',sol:"ob_start();\nprint_r([1]);\n$text = ob_get_clean();\necho strlen($text);",need:/ob_get_clean\(/},
+ pz77:{q:'Sort the tables in natural order and print them joined by `, `.',pre:"$t = ['table10', 'table2', 'table1'];",sol:"sort($t, SORT_NATURAL);\necho implode(', ', $t);",need:/SORT_NATURAL|natsort\(/},
+ pz78:{q:'Print the number of edits between `$typed` and `ratatouille`.',pre:"$typed = 'ratatouile';",sol:"echo levenshtein($typed, 'ratatouille');",need:/levenshtein\(/},
+ pz79:{q:"Write class `Bag` that keeps extras in a private array with `__set` and `__get`, set `$b->sauce = 'béarnaise'` and print it.",sol:"final class Bag\n{\n    private array $extras = [];\n\n    public function __set(string $name, mixed $value): void\n    {\n        $this->extras[$name] = $value;\n    }\n\n    public function __get(string $name): mixed\n    {\n        return $this->extras[$name];\n    }\n}\n\n$b = new Bag();\n$b->sauce = 'béarnaise';\necho $b->sauce;",need:/__get/},
+ pz80:{q:'Trim every name with `array_map` and the first-class callable `trim(...)`, and print them joined by `,`.',pre:"$names = [' soup ', ' stew'];",sol:"echo implode(',', array_map(trim(...), $names));",need:/trim\(\s*\.\.\.\s*\)/},
+ pz81:{q:'With `$m = DAIRY | NUTS`, print 1 or 0 for whether NUTS is set, a space, then `$m` with DAIRY cleared.',pre:"const DAIRY = 2;\nconst NUTS = 4;",sol:"$m = DAIRY | NUTS;\necho (($m & NUTS) === NUTS ? 1 : 0) . ' ' . ($m & ~DAIRY);",need:/&\s*~/},
+ pz82:{q:'Print a heredoc with two lines: `Table 4` and `Guest: Odile` (use `$guest`).',pre:"$guest = 'Odile';",sol:"echo <<<SLIP\n    Table 4\n    Guest: {$guest}\n    SLIP;",need:/<<<\s*[A-Z_]+\s*\n/},
+ pz83:{q:"Print `serialize(['a' => 1])`.",sol:"echo serialize(['a' => 1]);",need:/serialize\(/},
+ pz84:{q:'Write `hello` into a `php://memory` stream, rewind it and print everything in it.',sol:"$h = fopen('php://memory', 'w+');\nfwrite($h, 'hello');\nrewind($h);\necho stream_get_contents($h);",need:/php:\/\/memory/},
+ pz85:{q:"Print `$t` on the Tokyo clock as `D H:i`.",pre:"$t = new DateTimeImmutable('2026-10-24 17:30', new DateTimeZone('UTC'));",sol:"echo $t->setTimezone(new DateTimeZone('Asia/Tokyo'))->format('D H:i');",need:/setTimezone\(/},
+ pz86:{q:"Print the weekday (`D`) of each date from 2026-10-26, one day apart, with 3 recurrences, followed by a space.",sol:"foreach (new DatePeriod(new DateTimeImmutable('2026-10-26'), new DateInterval('P1D'), 3) as $d) {\n    echo $d->format('D') . ' ';\n}",need:/new\s+DatePeriod\(/},
+ pz87:{q:'Start a transaction, set qty to 0, roll back, and print the qty.',pre:PDO_MEM+"$pdo->exec('CREATE TABLE stock (qty INTEGER); INSERT INTO stock VALUES (5);');",sol:"$pdo->beginTransaction();\n$pdo->exec('UPDATE stock SET qty = 0');\n$pdo->rollBack();\necho $pdo->query('SELECT qty FROM stock')->fetchColumn();",need:/rollBack\(/},
+ pz88:{q:'Fetch item => price with `FETCH_KEY_PAIR` and print the price of stew.',pre:PDO_MEM+"$pdo->exec(\"CREATE TABLE m (item TEXT, price REAL); INSERT INTO m VALUES ('soup', 8.5), ('stew', 19.5);\");",sol:"$prices = $pdo->query('SELECT item, price FROM m')->fetchAll(PDO::FETCH_KEY_PAIR);\necho $prices['stew'];",need:/FETCH_KEY_PAIR/},
+ pz89:{q:'Print the length of `$d` in characters, a space, then in bytes.',pre:"$d = 'Crème brûlée';",sol:"echo mb_strlen($d) . ' ' . strlen($d);",need:/mb_strlen\(/},
+ pz90:{q:"Build a query string with `http_build_query` for dish `crème brûlée` and note `a & b`, and print it.",sol:"echo http_build_query(['dish' => 'crème brûlée', 'note' => 'a & b']);",need:/http_build_query\(/},
+ pz91:{q:'Make an id => name array with `array_column` and `print_r` it.',pre:"$rows = [['id' => 'd1', 'n' => 'Soup'], ['id' => 'd2', 'n' => 'Stew']];",sol:"print_r(array_column($rows, 'n', 'id'));",need:/array_column\([^)]*'id'\s*\)/},
+ pz92:{q:'Print the dishes that are not cooked yet, joined by `, `.',pre:"$menu = ['soup', 'stew', 'tart'];\n$cooked = ['stew'];",sol:"echo implode(', ', array_diff($menu, $cooked));",need:/array_diff\(/},
+ pz93:{q:"Write `enum Size: string` with `S = 's'` and `L = 'l'`, then print `(Size::tryFrom('xl') ?? Size::S)->name`.",sol:"enum Size: string\n{\n    case S = 's';\n    case L = 'l';\n}\n\necho (Size::tryFrom('xl') ?? Size::S)->name;",need:/tryFrom\(/},
+ pz94:{q:"Print the plate's name with the nullsafe operator, or `nothing` when there is no plate.",pre:"$plate = null;",sol:"echo $plate?->name ?? 'nothing';",need:/\?->/}
+};
+const WEXP={};
+function writeFor(id){const w=WRITES[id];return w?{k:'write',r:id,q:w.q,pre:w.pre||'',sol:w.sol,need:w.need,h:'Compare your output with the target line by line. Spaces and line breaks count.'}:null}
+const writesFor=rules=>rules.map(writeFor).filter(Boolean);
+function writeExpected(d){return WEXP[d.r]||(WEXP[d.r]=runSnippet(ARR_HEAD+(d.pre?d.pre+'\n\n':'')+d.sol+'\n'))}
+function renderWrite(d,din){
+  dState.d=d;din.className='wr';
+  din.innerHTML='<div class="aexp"><small>It should print</small><pre id="wexp">…</pre></div><div class="wed"><div class="whead">&lt;?php declare(strict_types=1);</div><textarea id="wcode" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Your code"></textarea></div><div class="wres" id="wres" hidden><small>Your output</small><pre id="wout"></pre></div><div class="whelp" id="whelp"></div>';
+  const ta=$('wcode');ta.value=(d.pre?d.pre+'\n\n':'');ta.rows=Math.max(6,ta.value.split('\n').length+4);
+  setTimeout(()=>{ta.focus();ta.setSelectionRange(ta.value.length,ta.value.length)},40);
+  writeExpected(d).then(r=>{const e=$('wexp');if(e)e.textContent=r&&!r.fail?r.out.trim()||'(nothing)':'(the stove is cold)'});
+  ta.addEventListener('input',()=>{sfx.key();typingEl($('droux'));ta.rows=Math.max(6,ta.value.split('\n').length+2)});
+  ta.addEventListener('keydown',e=>{if(e.key==='Tab'){e.preventDefault();ta.setRangeText('    ',ta.selectionStart,ta.selectionEnd,'end')}else if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();checkWrite(d)}});
+}
+function checkWrite(d){
+  const fb=$('fb'),code=$('wcode').value;
+  if(!code.replace(d.pre,'').trim()){fb.className='fb err';fb.textContent='Write your code under the given lines first.';sfx.bad();return}
+  fb.className='fb';fb.textContent='Cooking…';
+  Promise.all([runSnippet(ARR_HEAD+code+'\n'),writeExpected(d)]).then(([mine,exp])=>{
+    if(mine.fail||exp.fail){fb.className='fb err';fb.textContent='The stove is cold: open Passle online to run code.';return}
+    $('wres').hidden=false;$('wout').textContent=(mine.errs&&mine.errs.length?mine.errs.join('\n')+'\n':'')+(mine.out.trim()||'(nothing)');$('wres').classList.toggle('bad',!!mine.bad);
+    const same=!mine.bad&&mine.out.trim()===exp.out.trim(),used=d.need.test(stripC(code));
+    if(same&&used){passDrill(d);return}
+    failDrill(d);
+    fb.innerHTML=same?'Right output! Now do it the way the task asks: use the tool it names.':(mine.bad?'Not quite. PHP complained: read the first line of the message.':'Not quite. It runs, but prints something else. '+fmt(d.h));
+    if(dState.tries>=2&&!$('wsol')){const b=document.createElement('button');b.id='wsol';b.textContent='Show a solution';b.onclick=()=>{$('wcode').value=(d.pre?d.pre+'\n\n':'')+d.sol;$('whelp').innerHTML='<small>One way to write it. Read it, then press Check.</small>';sfx.hint()};$('whelp').appendChild(b)}
+  });
+}
+function writeSolve(){const d=dState.d;$('wcode').value=(d.pre?d.pre+'\n\n':'')+d.sol;$('dcheck').click()}
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
@@ -9099,7 +9226,7 @@ function mkResult(out,err){
 function engBadge(){const b=$('eng');b.className=Engine.st==='ready'?'ready':(Engine.st==='fail'?'fail':'');b.textContent={off:'stove cold',warm:'lighting stove',ready:'stove hot',fail:'no stove'}[Engine.st];if(Engine.st==='fail')comms('PHP engine did not load. Open Passle over http(s) with an internet connection.')}
 
 function drillsFor(t){
-  const tg=TARGETS[t];let list=tg.drills.concat(arrangesFor(tg.rules)).concat(tg.review||[]);
+  const tg=TARGETS[t];let list=tg.drills.concat(arrangesFor(tg.rules)).concat(writesFor(tg.rules)).concat(tg.review||[]);
   S.flag.filter(id=>{const i=TARGETS.findIndex(x=>x.id===id);return i>=0&&i<t}).forEach(id=>{const d=TARGETS.find(x=>x.id===id).drills.find(x=>x.k==='type'||x.k==='fix');if(d)list=list.concat([Object.assign({},d,{rv:1,q:'Review: '+d.q})])});
   return list;
 }
@@ -9139,7 +9266,7 @@ function practiceList(){
   const due=new Set(dueRules()),dueSeen=new Set();
   for(const d of pool){if(out.length>=8)break;if(due.has(d.r)&&!dueSeen.has(d.r)&&!seen.has(d.q)){seen.add(d.q);dueSeen.add(d.r);out.push(Object.assign({},d,{due:1}))}}
   for(const d of pool){if(out.length>=10)break;if(!seen.has(d.q)){seen.add(d.q);out.push(d)}}
-  const cand=arrangesFor(S.learned);if(cand.length&&out.length>=10)out[out.length-1]=Object.assign({},cand[Math.floor(Math.random()*cand.length)]);
+  const cand=arrangesFor(S.learned);if(cand.length&&out.length>=10)out[out.length-1]=Object.assign({},cand[Math.floor(Math.random()*cand.length)]);const wc=writesFor(S.learned);if(wc.length&&out.length>=10)out[out.length-2]=Object.assign({},wc[Math.floor(Math.random()*wc.length)]);
   for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
   return out;
 }
@@ -9214,7 +9341,7 @@ function sideRule(id,alt){
 function renderDrill(d,i,n){
   dState={tries:0};
   $('dtitle').textContent=(S.stage==='practice'?'Practice ':'Drill ')+(i+1)+' of '+n;
-  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',order:'Put it in order'}[d.k];
+  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',order:'Put it in order',write:'Write it'}[d.k];
   const R=RULES[d.r];
   box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dbody"><div class="dk">'+(d.rv?'Review · ':'')+(d.weak?'Weak spot · ':'')+(d.due&&!d.weak?'Due card · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div><div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div></div><img class="droux" id="droux" src="'+ROUX+'idle.png" alt=""></div><div class="sec warn"><small>Watch out</small><ul>'+R.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>';
   if(S.stage==='practice'&&PR)box.insertAdjacentHTML('afterbegin',guestCard(d));
@@ -9222,6 +9349,7 @@ function renderDrill(d,i,n){
   sideRule(d.r,d.k==='order');
   const din=$('din');
   if(d.k==='order'){renderArrange(d,din);$('dcheck').onclick=()=>checkOrder(d)}
+  else if(d.k==='write'){renderWrite(d,din);$('dcheck').textContent='Run & check · Ctrl+Enter';$('dcheck').onclick=()=>checkWrite(d)}
   else if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>pick(d,j,b);din.appendChild(b)});$('dcheck').parentNode.style.display='none'}
   else if(d.k==='gap'){din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="dval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>'}
   else{din.innerHTML='<input id="dval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'')+'">';if(d.k==='fix')$('dval').value=d.bug}
