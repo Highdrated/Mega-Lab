@@ -472,6 +472,7 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .grand b{display:block;font-family:var(--disp);font-size:19px}
 .grand span{display:block;font-size:14px;color:var(--ink2);max-width:52ch}
 .grand button{border:1px solid var(--brass);background:var(--ink);color:#f7efe0;padding:9px 14px;border-radius:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.roomsvg{background:linear-gradient(#f6efe1 84.5%,#e9dcc3 84.5%);width:100%;height:auto;max-height:220px;border:1px solid var(--line);border-radius:6px;display:block}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -11015,7 +11016,7 @@ function shopHtml(){
   const pct=nx?Math.min(100,(S.earned-cur[0])/(nx[0]-cur[0])*100):100;
   let h='<div class="till"><div class="tl"><small>Your place</small><h3>'+cur[1]+'</h3><div class="lvbar"><i style="width:'+pct.toFixed(1)+'%"></i></div><p>'+(nx?fmtE(nx[0]-S.earned)+' more takings to become a <b>'+nx[1]+'</b>':'The finest table in town.')+'</p><p class="intill">In the till: <b>'+fmtE(S.cash)+'</b></p><p class="mult">Cash per answer ×'+cashMult().toFixed(2)+' · lifetime '+fmtE(S.earned)+'</p></div><div class="ups">';
   UPGRADES.forEach(u=>{const l=lvlOf(u.id),max=l>=u.max,c=upCost(u);h+='<div class="up'+(max?' max':'')+'"><b>'+u.name+'</b><span class="pips">'+Array.from({length:u.max},(_,i)=>'<i class="'+(i<l?'on':'')+'"></i>').join('')+'</span><small>'+(l?u.fx(l):'Not hired yet')+'</small><button data-kind="up" data-id="'+u.id+'"'+(max||S.cash<c?' disabled':'')+'>'+(max?'Maxed':'Buy · '+fmtE(c))+'</button><em>'+(max?'':'Next: '+u.next)+'</em></div>'});
-  h+='</div>'+ordersHtml()+'<div class="decor"><small>Dining room · +5% cash each</small>'+DECOR.map(dc=>{const own=S.decor.includes(dc.id);return '<button class="dc'+(own?' own':'')+'" data-kind="dc" data-id="'+dc.id+'"'+(own||S.cash<dc.cost?' disabled':'')+'>'+dc.name+'<span>'+(own?'✓ in place':fmtE(dc.cost))+'</span></button>'}).join('')+'</div></div>';
+  h+='</div>'+ordersHtml()+'<div class="decor"><small>Dining room · +5% cash each · everything you buy appears here</small>'+roomSvg(S.decor)+DECOR.map(dc=>{const own=S.decor.includes(dc.id);return '<button class="dc'+(own?' own':'')+'" data-kind="dc" data-id="'+dc.id+'"'+(own||S.cash<dc.cost?' disabled':'')+'>'+dc.name+'<span>'+(own?'✓ in place':fmtE(dc.cost))+'</span></button>'}).join('')+'</div></div>';
   return h;
 }
 function mountShop(box){
@@ -11316,6 +11317,23 @@ questEvent=function(ev,amt){questEventBase(ev,amt);medalEvent(ev,amt)};
 function medalsHtml(){
   const st=statsOf(),got=S.medals.length;
   return '<div class="medals"><div class="mh"><small>Medals</small><b>'+got+' of '+MEDALS.length+'</b></div><div class="mgrid">'+MEDALS.map(m=>{const own=S.medals.includes(m.id),p=Math.min(m.n,Math.floor(st[m.s]||0));return '<div class="medal'+(own?' own':'')+'" title="'+esc(m.d)+' · '+fmtE(m.cash)+'"><span class="disc">'+(own?'✦':Math.round(p/m.n*100)+'%')+'</span><b>'+esc(m.name)+'</b><small>'+(own?'earned':p.toLocaleString('en-US')+' / '+m.n.toLocaleString('en-US'))+'</small></div>'}).join('')+'</div></div>';
+}
+
+function roomSvg(own){
+  const has=id=>own.includes(id);
+  const ink='#5a4a3a',line='#c9b896',wall='#f6efe1',floor='#e9dcc3',wood='#a8794a',brass='#c9a45e',herb='#6f8f4e',cloth='#fffdf6';
+  const table=(x)=>'<g transform="translate('+x+',0)"><rect x="-34" y="150" width="68" height="6" rx="2" fill="'+wood+'"/>'+(has('linen')?'<path d="M-40 148 h80 v14 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -8 0z" fill="'+cloth+'" stroke="'+line+'"/>':'')+'<line x1="-26" y1="156" x2="-26" y2="186" stroke="'+wood+'" stroke-width="4"/><line x1="26" y1="156" x2="26" y2="186" stroke="'+wood+'" stroke-width="4"/><path d="M-58 186 v-34 h12 v20 h-12" fill="none" stroke="'+wood+'" stroke-width="3"/><path d="M58 186 v-34 h-12 v20 h12" fill="none" stroke="'+wood+'" stroke-width="3"/><circle cx="-10" cy="146" r="5" fill="#fff" stroke="'+line+'"/><circle cx="12" cy="146" r="5" fill="#fff" stroke="'+line+'"/><path d="M0 132 v12" stroke="'+brass+'" stroke-width="2"/><ellipse cx="0" cy="130" rx="3" ry="5" fill="#f3c66b"/></g>';
+  let s='<svg class="roomsvg" viewBox="-250 0 1400 220" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your dining room"><rect x="-250" width="1400" height="220" fill="'+wall+'"/><rect x="-250" y="186" width="1400" height="34" fill="'+floor+'"/><line x1="-250" y1="186" x2="1150" y2="186" stroke="'+line+'"/><path d="M-250 120 H1150" stroke="'+line+'" stroke-dasharray="2 6"/>';
+  s+='<g><rect x="560" y="40" width="130" height="100" rx="4" fill="'+(has('terrace')?'#dfe9d2':'#e7eef0')+'" stroke="'+line+'" stroke-width="2"/><line x1="625" y1="40" x2="625" y2="140" stroke="'+line+'" stroke-width="2"/><line x1="560" y1="90" x2="690" y2="90" stroke="'+line+'" stroke-width="2"/>';
+  if(has('terrace'))s+='<path d="M548 40 h154 l-10 -16 h-134z" fill="#b5561d" opacity=".85"/><path d="M548 40 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0" fill="#f3e7cf" stroke="#b5561d"/><circle cx="580" cy="128" r="10" fill="'+herb+'"/><circle cx="670" cy="126" r="12" fill="'+herb+'"/><circle cx="600" cy="120" r="6" fill="#e0a64a"/>';
+  s+='</g>';
+  if(has('chandelier'))s+='<g><line x1="300" y1="0" x2="300" y2="30" stroke="'+brass+'" stroke-width="2"/><path d="M262 40 q38 22 76 0" fill="none" stroke="'+brass+'" stroke-width="3"/><circle cx="300" cy="36" r="6" fill="'+brass+'"/>'+[262,281,300,319,338].map(x=>'<line x1="'+x+'" y1="'+(x===300?44:40)+'" x2="'+x+'" y2="28" stroke="'+brass+'" stroke-width="2"/><ellipse cx="'+x+'" cy="24" rx="3" ry="5" fill="#f3c66b"/>').join('')+'<circle cx="300" cy="40" r="60" fill="#f3c66b" opacity=".12"/></g>';
+  if(has('piano'))s+='<g transform="translate(60,0)"><path d="M0 186 v-60 q0 -24 30 -24 h70 v84" fill="#2b2119"/><rect x="0" y="126" width="100" height="10" fill="#f6efe1"/>'+Array.from({length:9},(_,i)=>'<rect x="'+(6+i*10)+'" y="126" width="4" height="6" fill="#2b2119"/>').join('')+'<line x1="10" y1="186" x2="10" y2="140" stroke="#2b2119" stroke-width="4"/><line x1="92" y1="186" x2="92" y2="140" stroke="#2b2119" stroke-width="4"/><rect x="34" y="160" width="34" height="8" rx="2" fill="'+wood+'"/></g>';
+  if(has('cellarbar'))s+='<g transform="translate(730,0)"><rect x="0" y="60" width="140" height="126" fill="'+wood+'" opacity=".9"/>'+[80,110,140].map(y=>'<line x1="0" y1="'+y+'" x2="140" y2="'+y+'" stroke="#7a5532" stroke-width="3"/>'+Array.from({length:7},(_,i)=>'<rect x="'+(8+i*19)+'" y="'+(y-22)+'" width="8" height="20" rx="3" fill="'+['#6b1f2a','#3f5b2a','#6b1f2a','#c9a45e','#3f5b2a','#6b1f2a','#e8d9a8'][i]+'"/>').join('')).join('')+'<rect x="-10" y="150" width="160" height="10" fill="#7a5532"/></g>';
+  if(has('star'))s+='<g transform="translate(470,0)"><path d="M0 186 v-110 a40 40 0 0 1 80 0 v110" fill="#efe3c9" stroke="'+line+'" stroke-width="3"/><text x="40" y="70" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="20" fill="'+brass+'">II</text><path d="M30 186 v-40 h20 v40" fill="'+wood+'" opacity=".4"/></g>';
+  s+=table(240)+table(395);
+  s+='</svg>';
+  return s;
 }
 
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
