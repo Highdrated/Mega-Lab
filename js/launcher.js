@@ -537,6 +537,15 @@ function todayItems() {
   if (!(md && md.daily && md.daily.date === dayKey(0, true))) add("modle", "Daily challenge", "daily", "/practice/daily", 6);
   const mix = lsParse("junle_mix");
   if (mix && mix.last !== dayKey(0, false)) add("junle", "Daily mix" + (mix.streak ? " · streak " + mix.streak : ""), "daily", "mix", 6);
+  if (dk && dk.learned && dk.learned.length) {
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    const d = dk.disp;
+    if (!d || d.day !== day || !d.ids || !d.ids.length) add("dockle", "New dispatch orders", "daily", "port", 5);
+    else {
+      const open = d.ids.filter((k) => !(d.claimed || []).includes(k)).length;
+      if (open) add("dockle", open + (open === 1 ? " dispatch order open" : " dispatch orders open"), "daily", "port", 5);
+    }
+  }
   if (py && py.kata && py.kata.last !== dayKey(0, true)) add("pyle", "Daily kata" + (py.kata.streak ? " · streak " + py.kata.streak : ""), "daily", "kata", 5);
 
   const DET = [

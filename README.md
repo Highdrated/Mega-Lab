@@ -62,13 +62,13 @@ After that it opens full-screen like a native app and works offline.
 ## Today tab
 
 The launcher's **Today** tab reads each lab's saved progress and lists what is due:
-reviews (Junle, Pyle, Hexle, Dockle, Poshle and Shelle weak spots), dailies (Modle, Junle mix, Pyle kata),
+reviews (Junle, Pyle, Hexle, Dockle, Poshle and Shelle weak spots), dailies (Modle, Junle mix, Pyle kata, Dockle dispatch),
 a weekly Detective case (Poshle, Git Lab or Shelle), and where you left off. Each row opens
 the lab at the right spot through a link like `poshle.html#case:room`.
 
 Deep links: Poshle and Shelle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#case:<id>` /
 `#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
-Pyle `#review` / `#kata`, Dockle `#school` / `#target` / `#hangar` / `#logbook` / `#review`, Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
+Pyle `#review` / `#kata`, Dockle `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
 ## Progress and sync
 
