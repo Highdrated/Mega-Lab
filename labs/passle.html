@@ -321,7 +321,7 @@ div.why p.lead{font-size:17.5px;color:var(--ink)}
 .why code,.bite code{font-size:.84em;padding:1px 5px;border-radius:3px;background:var(--panel2);border:1px solid var(--line);color:var(--ink);white-space:nowrap}
 .combo{display:inline-block;margin-left:8px;padding:1px 7px;border-radius:999px;background:var(--ember);color:#fff8ee;font-family:var(--mono);font-size:11px;font-style:normal;letter-spacing:.06em;animation:pop .35s}
 @keyframes pop{0%{transform:scale(.5)}70%{transform:scale(1.15)}100%{transform:scale(1)}}
-.dmain{position:relative}
+.dmain{position:relative;flex:1 0 auto}
 .say2{position:absolute;right:96px;top:4px;max-width:220px;padding:7px 11px;background:var(--ink);color:#f7efe0;font-size:13px;font-style:italic;line-height:1.35;border-radius:10px 10px 2px 10px;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;pointer-events:none;z-index:4}
 .say2.on{opacity:1;transform:none}
 .knext{border:1px solid var(--brass2);background:var(--brass);color:#fffaf0;border-radius:4px;padding:7px 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer;max-width:360px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -421,6 +421,19 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .ord.done{border-left-color:var(--herb);background:var(--herb2)}
 .ord.done .obar i{background:var(--herb)}
 @media (max-width:1150px){.olist{grid-template-columns:1fr}}
+.arr{display:flex;flex-direction:column;gap:10px}
+.aexp{padding:8px 12px;border:1px dashed var(--line2);border-radius:6px;background:var(--field)}
+.aexp small,.alab{font-family:var(--mono);font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.aexp pre{margin:4px 0 0;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;max-height:120px;overflow:auto;color:var(--ink)}
+.aout{display:flex;flex-direction:column;gap:6px;min-height:56px;padding:8px;border:1px solid var(--brass2);border-radius:6px;background:var(--brass3)}
+.aph{font-style:italic;color:var(--mute);font-size:13.5px;padding:8px}
+.apool{display:flex;flex-direction:column;gap:6px}
+.tile{display:flex;gap:8px;align-items:flex-start;text-align:left;padding:8px 10px;border:1px solid var(--line2);border-radius:5px;background:var(--panel);cursor:pointer;text-transform:none;letter-spacing:0;height:auto}
+.tile pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.45;white-space:pre-wrap;color:var(--ink)}
+.tile i{font-style:normal;font-family:var(--mono);font-size:10px;color:#fffaf0;background:var(--brass);border-radius:999px;min-width:18px;height:18px;line-height:18px;text-align:center;flex:none;margin-top:1px}
+.tile:hover{border-color:var(--brass)}
+.tile.used{opacity:.3;pointer-events:none}
+.tile.placed{background:var(--field)}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -8915,6 +8928,49 @@ function ordersHtml(){
   return '<div class="orders" id="orders"><small>Today\'s orders · new ones every day'+(Q.bonus?' · all done ✓':' · finish all three for +€75')+'</small><div class="olist">'+Q.items.map(it=>{const q=qDef(it.id);if(!q)return '';const p=Math.min(q.n,Math.round(it.prog));return '<div class="ord'+(it.done?' done':'')+'"><b>'+esc(qText(q))+'</b><div class="obar"><i style="width:'+(p/q.n*100).toFixed(0)+'%"></i></div><span>'+(it.done?'✓ paid':p+' / '+q.n)+'</span><em>'+fmtE(q.cash)+'</em></div>'}).join('')+'</div></div>';
 }
 
+const ARR_HEAD="<?php\n\ndeclare(strict_types=1);\n\n";
+const ARR={};
+function seeded(seed){let h=hashStr(seed);return()=>{h=Math.imul(h^(h>>>15),2246822507)>>>0;h=Math.imul(h^(h>>>13),3266489909)>>>0;return (h>>>0)/4294967296}}
+function arrangeFor(id){
+  if(id in ARR)return ARR[id];
+  const r=RULES[id];ARR[id]=null;if(!r||!r.ex.startsWith(ARR_HEAD))return null;
+  const body=r.ex.slice(ARR_HEAD.length).replace(/\s+$/,'');
+  let parts=body.split(/\n[ \t]*\n/),sep='\n\n';
+  if(parts.length<3){parts=body.split('\n').filter(l=>l.trim());sep='\n'}
+  if(parts.length<3||parts.length>7)return null;
+  if((ARR_HEAD+parts.join(sep)).replace(/\s+/g,'')!==r.ex.replace(/\s+/g,''))return null;
+  const rnd=seeded('arr:'+id);let order;
+  for(let k=0;k<20;k++){order=parts.map((_,i)=>i);for(let i=order.length-1;i>0;i--){const j=Math.floor(rnd()*(i+1));[order[i],order[j]]=[order[j],order[i]]}if(order.some((v,i)=>v!==i))break}
+  if(order.every((v,i)=>v===i))return null;
+  return ARR[id]={k:'order',r:id,q:'Put the pieces of this example in an order that runs',parts,sep,shuffle:order,ans:parts.map((_,i)=>i),h:'Values must exist before they are used, and output comes after the work. Compare with the output it should print.'};
+}
+const arrangesFor=rules=>rules.map(arrangeFor).filter(Boolean);
+const EXPECT={};
+function expectedOut(id){return EXPECT[id]||(EXPECT[id]=runSnippet(RULES[id].ex))}
+function arrCode(d,ord){return ARR_HEAD+ord.map(i=>d.parts[i]).join(d.sep)+'\n'}
+function renderArrange(d,din){
+  dState.ord=[];dState.d=d;din.className='arr';
+  din.innerHTML='<div class="aexp"><small>It should print</small><pre id="aexp">…</pre></div><small class="alab">Tap the pieces in order</small><div class="aout" id="aout"><span class="aph">Your order appears here</span></div><div class="apool" id="apool">'+d.shuffle.map(i=>'<button class="tile" data-i="'+i+'"><pre>'+hlPHP(d.parts[i])+'</pre></button>').join('')+'</div>';
+  expectedOut(d.r).then(r=>{const e=$('aexp');if(e)e.textContent=r&&!r.fail?r.out.trim()||'(nothing)':'(the stove is cold)'});
+  const pool=$('apool'),out=$('aout');
+  const draw=()=>{out.innerHTML=dState.ord.length?'':'<span class="aph">Your order appears here</span>';dState.ord.forEach((i,k)=>{const b=document.createElement('button');b.className='tile placed';b.dataset.i=i;b.innerHTML='<i>'+(k+1)+'</i><pre>'+hlPHP(d.parts[i])+'</pre>';b.onclick=()=>{if(dState.locked)return;dState.ord.splice(k,1);pool.querySelector('[data-i="'+i+'"]').classList.remove('used');sfx.click();draw()};out.appendChild(b)});$('fb').textContent='';$('fb').className='fb'};
+  pool.querySelectorAll('.tile').forEach(b=>b.onclick=()=>{if(dState.locked||b.classList.contains('used'))return;b.classList.add('used');dState.ord.push(+b.dataset.i);sfx.key();typingEl($('droux'));draw()});
+}
+function checkOrder(d){
+  const fb=$('fb');
+  if(dState.ord.length<d.parts.length){fb.className='fb err';fb.textContent='Place every piece first: '+dState.ord.length+' of '+d.parts.length+'.';sfx.bad();return}
+  if(dState.ord.every((v,i)=>v===i)){passDrill(d);return}
+  fb.className='fb';fb.textContent='Cooking your order…';
+  Promise.all([runSnippet(arrCode(d,dState.ord)),expectedOut(d.r)]).then(([mine,exp])=>{
+    if(mine.fail||exp.fail){fb.className='fb err';fb.textContent='The stove is cold, so only the original order counts right now.';failDrill(d);return}
+    if(!mine.bad&&mine.out.trim()===exp.out.trim()){passDrill(d);return}
+    failDrill(d);
+    const first=(mine.errs&&mine.errs[0])||'';
+    fb.innerHTML='Not quite. '+(mine.bad?'PHP says: <code>'+esc(first.slice(0,140))+'</code>':'It runs, but prints something else.')+' '+fmt(d.h);
+  });
+}
+function orderSolve(){const d=dState.d;d.ans.forEach(i=>document.querySelector('#apool [data-i="'+i+'"]').click());$('dcheck').click()}
+
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
 const ROUX='img/roux/';
@@ -9043,7 +9099,7 @@ function mkResult(out,err){
 function engBadge(){const b=$('eng');b.className=Engine.st==='ready'?'ready':(Engine.st==='fail'?'fail':'');b.textContent={off:'stove cold',warm:'lighting stove',ready:'stove hot',fail:'no stove'}[Engine.st];if(Engine.st==='fail')comms('PHP engine did not load. Open Passle over http(s) with an internet connection.')}
 
 function drillsFor(t){
-  const tg=TARGETS[t];let list=tg.drills.concat(tg.review||[]);
+  const tg=TARGETS[t];let list=tg.drills.concat(arrangesFor(tg.rules)).concat(tg.review||[]);
   S.flag.filter(id=>{const i=TARGETS.findIndex(x=>x.id===id);return i>=0&&i<t}).forEach(id=>{const d=TARGETS.find(x=>x.id===id).drills.find(x=>x.k==='type'||x.k==='fix');if(d)list=list.concat([Object.assign({},d,{rv:1,q:'Review: '+d.q})])});
   return list;
 }
@@ -9083,6 +9139,7 @@ function practiceList(){
   const due=new Set(dueRules()),dueSeen=new Set();
   for(const d of pool){if(out.length>=8)break;if(due.has(d.r)&&!dueSeen.has(d.r)&&!seen.has(d.q)){seen.add(d.q);dueSeen.add(d.r);out.push(Object.assign({},d,{due:1}))}}
   for(const d of pool){if(out.length>=10)break;if(!seen.has(d.q)){seen.add(d.q);out.push(d)}}
+  const cand=arrangesFor(S.learned);if(cand.length&&out.length>=10)out[out.length-1]=Object.assign({},cand[Math.floor(Math.random()*cand.length)]);
   for(let i=out.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[out[i],out[j]]=[out[j],out[i]]}
   return out;
 }
@@ -9148,23 +9205,24 @@ function practiceDone(){
   const lh=box.querySelector('.lhead');if(lh)lh.insertAdjacentHTML('afterend',takingsHtml());
   $('again').onclick=()=>{PR=null;sfx.click();renderSchool()};sfx.rule();earn(3);if(!RUSH||RUSH.done)rushSide();
 }
-function sideRule(id){
+function sideRule(id,alt){
   const sd=$('sside');sd.innerHTML='';
   if(!id){$('stitle').textContent='Examples';$('plabel').textContent='';return}
   const r=RULES[id];$('stitle').textContent='Rule '+r.n;$('plabel').textContent=r.title;
-  sd.appendChild(exampleBlock(r.ex,'Rule example'));
+  sd.appendChild(alt?exampleBlock(r.ex2,'Another example · the drill uses example 1'):exampleBlock(r.ex,'Rule example'));
 }
 function renderDrill(d,i,n){
   dState={tries:0};
   $('dtitle').textContent=(S.stage==='practice'?'Practice ':'Drill ')+(i+1)+' of '+n;
-  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug'}[d.k];
+  const box=$('dbox');const kind={pick:'Choose',gap:'Fill the gap',type:'Type it',fix:'Spot the bug',order:'Put it in order'}[d.k];
   const R=RULES[d.r];
   box.innerHTML='<div class="rstrip"><span class="tagn">RULE '+R.n+'</span><b>'+esc(R.title)+'</b><button id="lessbtn">Lesson</button></div><div class="dmain"><div class="dbody"><div class="dk">'+(d.rv?'Review · ':'')+(d.weak?'Weak spot · ':'')+(d.due&&!d.weak?'Due card · ':'')+kind+'</div><div class="dq">'+fmt(d.q)+'</div><div id="din"></div><div class="fb" id="fb"></div><div class="drow" style="margin-top:0"><button class="pri" id="dcheck">Check · Enter</button></div></div><img class="droux" id="droux" src="'+ROUX+'idle.png" alt=""></div><div class="sec warn"><small>Watch out</small><ul>'+R.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>';
   if(S.stage==='practice'&&PR)box.insertAdjacentHTML('afterbegin',guestCard(d));
   $('lessbtn').onclick=()=>{sfx.blip();renderLesson(d.r,0,1,true)};
-  sideRule(d.r);
+  sideRule(d.r,d.k==='order');
   const din=$('din');
-  if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>pick(d,j,b);din.appendChild(b)});$('dcheck').parentNode.style.display='none'}
+  if(d.k==='order'){renderArrange(d,din);$('dcheck').onclick=()=>checkOrder(d)}
+  else if(d.k==='pick'){din.className='opts';d.o.forEach((o,j)=>{const b=document.createElement('button');b.textContent=o;b.onclick=()=>pick(d,j,b);din.appendChild(b)});$('dcheck').parentNode.style.display='none'}
   else if(d.k==='gap'){din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="dval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>'}
   else{din.innerHTML='<input id="dval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'')+'">';if(d.k==='fix')$('dval').value=d.bug}
   const inp=$('dval');
