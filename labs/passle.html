@@ -443,6 +443,17 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .wres pre{margin:4px 0 0;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;max-height:140px;overflow:auto}
 .wres.bad{border-color:var(--chili);background:var(--chili2)}
 .whelp{display:flex;gap:10px;align-items:center}
+.medals{margin:30px 0 10px;padding:14px 18px;background:rgba(255,253,248,.6);border:1px solid var(--line);border-radius:8px}
+.mh{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:10px}
+.mh small{font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
+.mh b{font-family:var(--mono);font-size:11px;color:var(--mute);font-weight:500}
+.mgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px}
+.medal{display:flex;flex-direction:column;align-items:center;gap:3px;text-align:center;padding:8px 6px;border-radius:6px}
+.medal .disc{display:grid;place-items:center;width:44px;height:44px;border-radius:50%;border:2px dashed var(--line2);font-family:var(--mono);font-size:10px;color:var(--mute);background:var(--panel)}
+.medal b{font-family:var(--disp);font-weight:500;font-size:13px;line-height:1.2;color:var(--ink2)}
+.medal small{font-family:var(--mono);font-size:9.5px;color:var(--mute)}
+.medal.own .disc{border:2px solid var(--brass);background:radial-gradient(circle at 35% 30%,#f7e2ad,var(--brass2) 55%,var(--brass));color:#fffaf0;font-size:18px;box-shadow:0 4px 10px -6px rgba(120,80,20,.6)}
+.medal.own b{color:var(--ink)}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -8727,7 +8738,7 @@ function streak(){
   return v.pts>=5?(d.last===today()?alive:alive+1):alive;
 }
 function earn(n,why){
-  const v=svcState();const before=v.pts;v.pts+=n;
+  const v=svcState();const before=v.pts;v.pts+=n;if(before<5&&v.pts>=5)setTimeout(()=>questEvent('streak',streak()),50);
   if(before<5&&v.pts>=5)comms('Today counts: '+streak()+(streak()===1?' day':' days')+' in a row at the stove.');
   if(!v.goal&&v.pts>=GOAL){v.goal=true;setTimeout(()=>pay(25+5*streak(),'daily'),1200);setTimeout(()=>toast('Service complete','Today\'s goal of '+GOAL+' points is cooked. '+streak()+'-day streak. Anything more is a bonus.','cheer'),400);sfx.rule()}
   save();renderSvc();
@@ -8870,7 +8881,7 @@ function shopHtml(){
   return h;
 }
 function mountShop(box){
-  const w=document.createElement('div');w.innerHTML=shopHtml();const el=w.firstChild;box.prepend(el);
+  const w=document.createElement('div');w.innerHTML=shopHtml();const el=w.firstChild;box.prepend(el);box.insertAdjacentHTML('beforeend',medalsHtml());
   el.querySelectorAll('button[data-kind]').forEach(b=>b.onclick=()=>buy(b.dataset.kind,b.dataset.id));
 }
 
@@ -8889,7 +8900,7 @@ function reviewCard(r,ok){
     if(due){
       const before=starsOf(r);c.box=Math.min(5,c.box+1);c.due=addDays(BOX_DAYS[c.box]);questEvent('due',1);
       if(c.box>=2)pay(c.box*3,'card');
-      const after=starsOf(r);if(after>before)setTimeout(()=>toast((after===3?'By heart · ':'Recipe card '+'★'.repeat(after)+' · ')+'Rule '+RULES[r].n,RULES[r].title+(after===3?'. Back in 16 days to keep it.':'. Next review in '+BOX_DAYS[c.box]+' day'+(BOX_DAYS[c.box]===1?'':'s')+'.'),after===3?'cheer':'happy'),300);
+      const after=starsOf(r);if(after===3)questEvent('stars3',S.learned.filter(x=>starsOf(x)===3).length);if(after>before)setTimeout(()=>toast((after===3?'By heart · ':'Recipe card '+'★'.repeat(after)+' · ')+'Rule '+RULES[r].n,RULES[r].title+(after===3?'. Back in 16 days to keep it.':'. Next review in '+BOX_DAYS[c.box]+' day'+(BOX_DAYS[c.box]===1?'':'s')+'.'),after===3?'cheer':'happy'),300);
     }
   }else{c.bad++;c.box=Math.max(0,c.box-2);c.due=today()}
   save();
@@ -9097,6 +9108,49 @@ function checkWrite(d){
   });
 }
 function writeSolve(){const d=dState.d;$('wcode').value=(d.pre?d.pre+'\n\n':'')+d.sol;$('dcheck').click()}
+
+const STAT_MAX=new Set(['combo','streak','stars3']);
+const MEDALS=[
+ {id:'plate1',s:'plate',n:1,name:'First plate',d:'Serve your first plate',cash:20},
+ {id:'plate10',s:'plate',n:10,name:'Line cook',d:'Serve 10 plates',cash:100},
+ {id:'plate30',s:'plate',n:30,name:'The whole menu',d:'Serve 30 plates',cash:500},
+ {id:'first50',s:'first',n:50,name:'Steady hands',d:'50 drills right first time',cash:30},
+ {id:'first250',s:'first',n:250,name:'Sharp knife',d:'250 drills right first time',cash:100},
+ {id:'first1000',s:'first',n:1000,name:'Muscle memory',d:'1,000 drills right first time',cash:300},
+ {id:'guest25',s:'guest',n:25,name:'Front of house',d:'Serve 25 guests',cash:40},
+ {id:'guest100',s:'guest',n:100,name:'Full dining room',d:'Serve 100 guests',cash:120},
+ {id:'guest500',s:'guest',n:500,name:'Local legend',d:'Serve 500 guests',cash:400},
+ {id:'tip100',s:'tip',n:100,name:'Tip jar',d:'Earn €100 in tips',cash:30},
+ {id:'tip1000',s:'tip',n:1000,name:'Golden tip jar',d:'Earn €1,000 in tips',cash:150},
+ {id:'combo10',s:'combo',n:10,name:'On a roll',d:'Reach a ×10 combo',cash:50},
+ {id:'combo20',s:'combo',n:20,name:'Unstoppable',d:'Reach a ×20 combo',cash:150},
+ {id:'arr10',s:'arrange',n:10,name:'Mise en place',d:'Solve 10 Arrange drills',cash:40},
+ {id:'arr50',s:'arrange',n:50,name:'Everything in its place',d:'Solve 50 Arrange drills',cash:150},
+ {id:'wr10',s:'write',n:10,name:'From scratch',d:'Solve 10 Write drills',cash:50},
+ {id:'wr50',s:'write',n:50,name:'Recipe author',d:'Solve 50 Write drills',cash:200},
+ {id:'hunt5',s:'hunt',n:5,name:'Bug hunter',d:'Fix 5 Bug hunt plates',cash:100},
+ {id:'rush1',s:'rush',n:1,name:'First rush',d:'Finish a Rush',cash:20},
+ {id:'rush10',s:'rush',n:10,name:'Rush veteran',d:'Finish 10 Rushes',cash:150},
+ {id:'read20',s:'lesson',n:20,name:'Reader',d:'Read 20 lessons to the end',cash:40},
+ {id:'star1',s:'stars3',n:1,name:'By heart',d:'Get a recipe card to ★★★',cash:50},
+ {id:'star10',s:'stars3',n:10,name:'Walking rulebook',d:'Ten recipe cards at ★★★',cash:200},
+ {id:'day3',s:'streak',n:3,name:'Regular',d:'A 3-day streak',cash:30},
+ {id:'day7',s:'streak',n:7,name:'Every evening',d:'A 7-day streak',cash:100},
+ {id:'day30',s:'streak',n:30,name:'Part of the furniture',d:'A 30-day streak',cash:500}
+];
+function statsOf(){S.stats=S.stats||{};S.medals=S.medals||[];return S.stats}
+function medalEvent(ev,amt){
+  if(typeof S==='undefined'||!MEDALS.some(m=>m.s===ev))return;
+  const st=statsOf();st[ev]=STAT_MAX.has(ev)?Math.max(st[ev]||0,amt):(st[ev]||0)+amt;
+  MEDALS.forEach(m=>{if(m.s===ev&&!S.medals.includes(m.id)&&st[ev]>=m.n){S.medals.push(m.id);setTimeout(()=>{toast('Medal · '+m.name,m.d+'. +'+fmtE(m.cash),'cheer');pay(m.cash,'medal');sfx.rule()},1400)}});
+  save();
+}
+const questEventBase=questEvent;
+questEvent=function(ev,amt){questEventBase(ev,amt);medalEvent(ev,amt)};
+function medalsHtml(){
+  const st=statsOf(),got=S.medals.length;
+  return '<div class="medals"><div class="mh"><small>Medals</small><b>'+got+' of '+MEDALS.length+'</b></div><div class="mgrid">'+MEDALS.map(m=>{const own=S.medals.includes(m.id),p=Math.min(m.n,Math.floor(st[m.s]||0));return '<div class="medal'+(own?' own':'')+'" title="'+esc(m.d)+' · '+fmtE(m.cash)+'"><span class="disc">'+(own?'✦':Math.round(p/m.n*100)+'%')+'</span><b>'+esc(m.name)+'</b><small>'+(own?'earned':p.toLocaleString('en-US')+' / '+m.n.toLocaleString('en-US'))+'</small></div>'}).join('')+'</div></div>';
+}
 
 const PHPWASM='https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const SQLITE='https://cdn.jsdelivr.net/npm/php-wasm-sqlite';
@@ -9370,7 +9424,7 @@ function checkDrill(d){
 function passDrill(d){
   if(dState.locked)return;dState.locked=true;if(d&&dState.tries===0)markRule(d.r,true);
   if(dState.tries===0)S.ft++;
-  const fb=$('fb');fb.className='fb ok';fb.innerHTML=(dState.tries===0?['Oui, chef.','Clean plate.','Spot on.','Service!']:['Got it.','There it is.','Second time lucky.'])[Math.floor(Math.random()*3)]+comboHit(dState.tries===0);earn(dState.tries===0?2:1);payDrill(d,dState.tries===0,fb);
+  const fb=$('fb');fb.className='fb ok';fb.innerHTML=(dState.tries===0?['Oui, chef.','Clean plate.','Spot on.','Service!']:['Got it.','There it is.','Second time lucky.'])[Math.floor(Math.random()*3)]+comboHit(dState.tries===0);earn(dState.tries===0?2:1);payDrill(d,dState.tries===0,fb);if(d&&d.k==='order')questEvent('arrange',1);if(d&&d.k==='write')questEvent('write',1);
   pose($('droux'),'happy',900);
   if(S.stage==='practice'){if(dState.tries===0)PR.ft++;PR.i++}else S.drill++;
   sfx.ok();save();setTimeout(()=>{if(S.stage==='school'||S.stage==='practice')renderSchool()},800);
@@ -9459,7 +9513,7 @@ function evaluate(k,files){
   if(now===-1){
     S.hunted=S.hunted||{};
     const first=S.mode==='master'?!S.mastered[tg.id]:(S.mode==='hunt'?!S.hunted[tg.id]:!S.done[tg.id]);S.done[tg.id]=true;if(S.mode==='master')S.mastered[tg.id]=true;if(S.mode==='hunt')S.hunted[tg.id]=true;if(S.mode!=='hunt')S.built[tg.id]={out:r.out,files,mode:S.mode};save();
-    if(first){earn(5);if(S.mode==='hunt')questEvent('hunt',1);pay((40+8*Math.max(0,plateNo(tg)))*cashMult()*(1+.25*lvlOf('somm')),'plate',$('meter'));rouxSay(pickLine('done'));sfx.target();pose($('hroux'),'cheer',2600);pose($('rmini'),'cheer',2600);comms(tg.name+' matches. Send it to the kitchen.');render()}
+    if(first){earn(5);if(S.mode==='hunt')questEvent('hunt',1);else questEvent('plate',1);pay((40+8*Math.max(0,plateNo(tg)))*cashMult()*(1+.25*lvlOf('somm')),'plate',$('meter'));rouxSay(pickLine('done'));sfx.target();pose($('hroux'),'cheer',2600);pose($('rmini'),'cheer',2600);comms(tg.name+' matches. Send it to the kitchen.');render()}
   }
 }
 function renderHelp(){
