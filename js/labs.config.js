@@ -100,6 +100,16 @@ const LABS_CONFIG = [
     glyph: '<path d="M3 11a5 5 0 0 1 10 0"/><path d="M2 11h12"/><path d="M8 6V5"/>'
   },
   {
+    id: "seqle",
+    name: "Seqle",
+    tag: "Code",
+    sub: "sql · bistro",
+    path: "labs/seqle.html",
+    ring: "ring-outer",
+    angle: 350,
+    glyph: '<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M2.5 6.5h11M2.5 9.75h11M6.5 3v10"/>'
+  },
+  {
     id: "poshle",
     name: "Poshle",
     tag: "Practice",

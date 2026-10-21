@@ -1,0 +1,1194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#140f0d">
+<title>Seqle · SQL bistro</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=JetBrains+Mono:wght@400;500;700&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--r:3px;--gap:12px;--hud:"Barlow Condensed","Arial Narrow",sans-serif;--sans:"Barlow",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+body[data-theme=bistro]{--bg:#110d0c;--grid:rgba(230,180,140,.05);--panel:#1a1412;--panel2:#211915;--field:#140f0d;--line:#33271f;--line2:#47372c;--ink:#f1e6dc;--ink2:#c3b2a4;--mute:#8a786a;--acc:#e8935a;--acc2:rgba(232,147,90,.16);--cyan:#7cc6b4;--cyan2:rgba(124,198,180,.14);--ok:#8bc77a;--ok2:rgba(139,199,122,.14);--bad:#ef6b5b;--bad2:rgba(239,107,91,.14);--ticket:#f4ead6;--ticket-ink:#2b2117;--sel:rgba(124,198,180,.28);--on:#140f0d}
+body[data-theme=daylight]{--bg:#f3ede6;--grid:rgba(90,60,40,.06);--panel:#fffcf8;--panel2:#f7f1ea;--field:#ffffff;--line:#e3d8cc;--line2:#cdbfb1;--ink:#2a1f18;--ink2:#5a4a3e;--mute:#8d7d70;--acc:#b8642a;--acc2:rgba(184,100,42,.12);--cyan:#2e7f70;--cyan2:rgba(46,127,112,.1);--ok:#3d8a3a;--ok2:rgba(61,138,58,.1);--bad:#c43d2e;--bad2:rgba(196,61,46,.09);--ticket:#fff8ea;--ticket-ink:#2b2117;--sel:rgba(46,127,112,.2);--on:#ffffff}
+body[data-theme=neon]{--bg:#0a0710;--grid:rgba(255,80,200,.04);--panel:#120d1a;--panel2:#181122;--field:#0d0914;--line:#2a1f38;--line2:#3a2b4c;--ink:#f3eaff;--ink2:#b9a9cc;--mute:#7a6a8e;--acc:#ff4fb8;--acc2:rgba(255,79,184,.14);--cyan:#3ee6d6;--cyan2:rgba(62,230,214,.12);--ok:#6dff9e;--ok2:rgba(109,255,158,.12);--bad:#ff6b6b;--bad2:rgba(255,107,107,.12);--ticket:#f7eefe;--ticket-ink:#1d1428;--sel:rgba(62,230,214,.25);--on:#0a0710}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--sans);color:var(--ink);background:radial-gradient(circle,var(--grid) 1px,transparent 1px) 0 0/22px 22px,var(--bg);display:grid;grid-template-rows:56px minmax(0,1fr);grid-template-columns:minmax(0,1fr);overflow:hidden;font-size:14.5px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--field);color:var(--ink2);border-radius:var(--r);height:34px;padding:0 14px;font-family:var(--hud);font-weight:600;font-size:13px;letter-spacing:.12em;text-transform:uppercase;white-space:nowrap;transition:border-color .15s,color .15s,background .15s}
+button:hover:not(:disabled){border-color:var(--acc);color:var(--ink)}
+button:disabled{opacity:.45;cursor:default}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--on)}
+button.pri:hover:not(:disabled){filter:brightness(1.08);color:var(--on)}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+code,.mono{font-family:var(--mono)}
+#bar{display:flex;align-items:center;gap:12px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line);min-width:0;position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.brand svg{width:26px;height:26px}
+.brand b{font-family:var(--hud);font-weight:700;font-size:21px;letter-spacing:.2em;color:var(--ink)}
+.brand small{display:block;font-family:var(--hud);font-size:10.5px;letter-spacing:.2em;color:var(--mute);margin-top:-3px}
+.stages{display:flex;align-items:center;gap:2px;flex:none}
+.stages i{color:var(--mute);font-style:normal;font-size:12px;padding:0 2px}
+.stg{border-color:transparent;background:transparent;padding:0 10px;color:var(--ink2)}
+.stg.on,.stg.on:hover:not(:disabled){background:var(--acc);border-color:var(--acc);color:var(--on)}
+.stg .ck{color:var(--ok);margin-right:5px;display:none}
+.stg.done .ck{display:inline}
+.stg.on .ck{color:var(--on)}
+#tsel{height:34px;max-width:240px;min-width:170px;flex:0 1 240px;border:1px solid var(--line);border-radius:var(--r);background:var(--field);color:var(--ink);font-family:var(--hud);font-weight:600;font-size:13px;letter-spacing:.06em;padding:0 8px}
+#comms{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:8px;height:34px;padding:0 10px 0 4px;border:1px solid var(--line);border-radius:var(--r);background:var(--field);font-family:var(--mono);font-size:12px;color:var(--ink2);overflow:hidden}
+#comms svg{width:26px;height:26px;flex:none}
+#cmsg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#comms.flash{border-color:var(--cyan);color:var(--ink)}
+.tools{display:flex;gap:6px;flex:none}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none}
+.seg button{border:0;border-radius:0;height:26px;padding:0 9px;font-size:11.5px;background:transparent}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--cyan2);color:var(--cyan)}
+main{min-height:0;min-width:0;padding:var(--gap)}
+.view{display:none;height:100%;gap:var(--gap);min-height:0;min-width:0}
+.view.on{display:grid}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;position:relative}
+.ph{display:flex;align-items:center;gap:10px;height:42px;flex:none;padding:0 14px;border-bottom:1px solid var(--line);font-family:var(--hud);font-weight:600;font-size:13.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink2)}
+.ph::before{content:"";width:3px;height:14px;background:var(--acc);flex:none}
+.ph b{font-weight:700;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .sp{margin-left:auto;color:var(--mute);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph button{height:28px;padding:0 10px;font-size:12px}
+.scroll{flex:1;min-height:0;overflow:auto}
+#v-school,#v-review,#v-rush{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.drill{display:flex;flex-direction:column;gap:14px;padding:18px 20px}
+.dk{font-family:var(--hud);font-weight:700;font-size:12.5px;letter-spacing:.18em;color:var(--acc);text-transform:uppercase}
+.lt{margin:0;font-family:var(--hud);font-weight:700;font-size:30px;letter-spacing:.02em;line-height:1.1}
+.why{margin:0;font-size:16px;line-height:1.7;color:var(--ink2);max-width:70ch}
+.syn{font-family:var(--mono);font-size:14px;background:var(--field);border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:var(--r);padding:10px 12px;white-space:pre;overflow-x:auto}
+.syn .k{color:var(--cyan);font-weight:700}.syn .v{color:var(--acc)}
+.sec{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:12px 14px}
+.sec>small{display:block;font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.18em;color:var(--cyan);text-transform:uppercase;margin-bottom:8px}
+.sec.warn{border-left:3px solid var(--acc)}
+.sec.warn>small{color:var(--acc)}
+.sec ul{margin:0;padding-left:18px;color:var(--ink2);line-height:1.7}
+.parts{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;align-items:baseline;font-size:14.5px;color:var(--ink2)}
+.parts code{font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:1px 7px;justify-self:start}
+.code{font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;white-space:pre;overflow-x:auto;margin:0}
+.runrow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.play{width:100%;min-height:96px;resize:vertical;font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:10px 12px;outline:0;tab-size:4}
+.play:focus,.ans:focus{border-color:var(--cyan)}
+.rstrip{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:var(--r);background:var(--panel2);padding:8px 12px}
+.rstrip .tagn{font-family:var(--hud);font-weight:700;font-size:11.5px;letter-spacing:.16em;color:var(--acc);background:var(--acc2);padding:3px 7px;border-radius:var(--r)}
+.rstrip b{font-size:15px}
+.rstrip .syn{padding:3px 8px;border-left-width:1px;font-size:13px}
+.rstrip button{margin-left:auto;height:28px;padding:0 10px;font-size:12px}
+.dq{font-size:20px;font-weight:600;line-height:1.4;white-space:pre-line}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts button{height:auto;min-height:56px;padding:10px 14px;text-align:left;text-transform:none;letter-spacing:0;font-family:var(--mono);font-weight:400;font-size:14px;color:var(--ink);background:var(--panel2);white-space:pre-wrap}
+.opts button.good{border-color:var(--ok);background:var(--ok2)}
+.opts button.bad{border-color:var(--bad);background:var(--bad2)}
+.ans{width:100%;font-family:var(--mono);font-size:15px;line-height:1.6;background:var(--field);color:var(--ink);border:1px solid var(--line2);border-radius:var(--r);padding:10px 12px;outline:0;tab-size:4}
+textarea.ans{min-height:110px;resize:vertical}
+.fb{min-height:22px;font-size:14.5px;line-height:1.5}
+.fb.err{color:var(--bad)}.fb.ok{color:var(--ok)}
+.drow{display:flex;gap:10px;margin-top:4px}
+.drow .pri{flex:1}
+.pips{display:flex;gap:5px;flex-wrap:wrap}
+.pips span{width:18px;height:6px;border-radius:3px;background:var(--line)}
+.pips span.ok{background:var(--ok)}.pips span.now{background:var(--acc)}.pips span.les{background:var(--cyan2);outline:1px solid var(--cyan);outline-offset:-1px}.pips span.les.ok{background:var(--cyan);outline:0}
+.console{flex:1;min-height:0;overflow:auto;margin:0;padding:14px 16px;font-family:var(--mono);font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;background:var(--field)}
+.console .cmd{color:var(--mute)}
+.console .er{color:var(--bad)}
+.console .why{font-family:var(--sans);font-size:14px;color:var(--ink2);display:block;margin-top:6px}
+.cfoot{display:flex;align-items:center;gap:10px;height:40px;flex:none;padding:0 14px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--mute)}
+.cfoot .sp{margin-left:auto}
+.donecard{display:flex;flex-direction:column;gap:16px;padding:22px 24px}
+.donecard h2{margin:0;font-family:var(--hud);font-size:28px;letter-spacing:.04em}
+#v-target{grid-template-columns:330px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1.1fr)}
+#v-target .left{grid-row:1/3}
+#v-target .edp{grid-column:2/4}
+.contract{margin:12px 12px 0;padding:12px 14px;border:1px solid var(--line);border-left:3px solid var(--acc);border-radius:var(--r);background:var(--panel2);flex:none}
+.contract .who{display:flex;justify-content:space-between;gap:12px;font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.16em;color:var(--acc);text-transform:uppercase}
+.contract p{margin:6px 0 0;font-size:14px;line-height:1.55;color:var(--ink2)}
+.steps{list-style:none;margin:0;padding:8px 0;flex:1;min-height:0;overflow:auto}
+.steps li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:8px 14px;font-size:14px;line-height:1.5;border-left:3px solid transparent;color:var(--ink2)}
+.steps .n{width:24px;height:24px;border-radius:var(--r);display:grid;place-items:center;font-family:var(--hud);font-weight:700;font-size:12.5px;background:var(--panel2);border:1px solid var(--line);color:var(--mute)}
+.steps li.ok .n{background:var(--ok);border-color:var(--ok);color:var(--on)}
+.steps li.ok{color:var(--mute)}
+.steps li.now{background:var(--panel2);border-left-color:var(--acc);color:var(--ink)}
+.steps li.now .n{border-color:var(--acc);color:var(--acc)}
+.steps code{font-size:12.5px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:0 5px;color:var(--ink)}
+.help{border-top:1px solid var(--line);flex:none;display:flex;flex-direction:column;max-height:44%}
+.ladder{padding:10px 12px;overflow:auto;display:flex;flex-direction:column;gap:8px;min-height:0}
+.idle{display:grid;grid-template-columns:64px 1fr;gap:12px;align-items:center;color:var(--ink2);font-size:13.5px;line-height:1.5}
+.idle svg{width:54px;height:54px}
+.rung{border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:var(--r);background:var(--panel2);padding:8px 10px;font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.rung small{display:block;font-family:var(--hud);font-weight:700;font-size:11.5px;letter-spacing:.16em;color:var(--cyan);text-transform:uppercase;margin-bottom:3px}
+.rung pre{margin:4px 0 0;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;color:var(--ink)}
+.rung.ans{border-left-color:var(--acc)}.rung.ans small{color:var(--acc)}
+.hfoot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.hfoot button{flex:1}
+.ticket{flex:1;min-height:0;overflow:auto;margin:12px;padding:14px 16px 18px;background:var(--ticket);color:var(--ticket-ink);border-radius:var(--r);box-shadow:0 2px 0 rgba(0,0,0,.25);font-family:var(--mono);font-size:14px;line-height:1.7;white-space:pre;position:relative;background-image:linear-gradient(transparent 0,transparent 23.8px,rgba(42,36,24,.07) 23.8px);background-size:100% 23.8px}
+.ticket .hd{display:block;font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.2em;color:#8a6a2a;border-bottom:1px dashed rgba(42,36,24,.3);margin-bottom:8px;padding-bottom:4px;white-space:normal}
+.outl{flex:1;min-height:0;overflow:auto;margin:12px;padding:14px 16px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:14px;line-height:1.7}
+.outl>div{white-space:pre;min-height:1.7em;padding-left:10px;border-left:3px solid transparent}
+.outl .m{border-left-color:var(--ok)}
+.outl .x{border-left-color:var(--bad);background:var(--bad2)}
+.outl .gh{color:var(--mute);border-left-color:var(--line2);font-style:italic}
+.outl .ex{border-left-color:var(--acc);background:var(--acc2)}
+.outl .er{white-space:pre-wrap;color:var(--bad);border-left-color:var(--bad)}
+.outl .hint{white-space:pre-wrap;font-family:var(--sans);color:var(--ink2);border-left-color:var(--cyan)}
+.meter{display:flex;align-items:center;gap:8px}
+.meter .bar{width:90px;height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.ed{flex:1;min-height:0;display:grid;grid-template-columns:48px minmax(0,1fr);background:var(--field);font-family:var(--mono);font-size:14.5px;line-height:23px}
+.gut{margin:0;padding:12px 10px 12px 0;text-align:right;color:var(--mute);background:var(--panel2);border-right:1px solid var(--line);overflow:hidden;user-select:none;white-space:pre}
+.codewrap{position:relative;min-height:0;overflow:hidden}
+.codewrap pre,.codewrap textarea{position:absolute;inset:0;margin:0;padding:12px 14px;font:inherit;line-height:inherit;white-space:pre;overflow:auto;tab-size:4;border:0}
+.codewrap pre{pointer-events:none;color:var(--ink)}
+#ed{background:transparent;color:transparent;caret-color:var(--ink);resize:none;outline:0}
+#ed::selection{background:var(--sel);color:transparent}
+.h-k{color:var(--cyan);font-weight:600}.h-s{color:var(--acc)}.h-n{color:#b392f0}.h-c{color:var(--mute);font-style:italic}.h-b{color:var(--ok)}.h-f{color:var(--ink);font-weight:600}
+body[data-theme=daylight] .h-n{color:#7a3fc4}
+.efoot{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--ink2);flex:none;min-width:0}
+.efoot #scan{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.efoot .sp{margin-left:auto;color:var(--mute);white-space:nowrap}
+#scan.ok{color:var(--ok)}#scan.er{color:var(--bad)}
+.dockmsg{position:absolute;inset:auto 12px 12px 12px;padding:12px 14px;border:1px solid var(--ok);background:var(--panel);border-radius:var(--r);display:none;flex-wrap:wrap;align-items:center;gap:10px 12px;box-shadow:0 10px 30px rgba(0,0,0,.35);z-index:3}
+.dockmsg.on{display:flex}
+.dockmsg b{font-family:var(--hud);font-size:18px;letter-spacing:.08em;color:var(--ok)}
+.dockmsg span{color:var(--ink2);font-size:13.5px;flex:1 1 220px;min-width:0}
+.dockmsg .dbtns{display:flex;gap:8px;margin-left:auto}
+.stg.ready::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok);margin-left:6px;display:inline-block;vertical-align:middle}
+.stg.bump{animation:bump .5s}
+@keyframes bump{40%{box-shadow:0 0 0 3px var(--acc2)}}
+.contract .pay{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 14px}
+.contract .pay b{color:var(--ink);font-weight:500}
+.contract .pay .got{color:var(--ok)}
+#v-till{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.pcol{display:flex;flex-direction:column;gap:var(--gap);min-height:0;min-width:0}
+.pcol>.panel{flex:none}
+.pcol>.panel.grow{flex:1 1 auto}
+.pbody{padding:16px;display:flex;flex-direction:column;gap:14px;overflow:auto;min-height:0}
+.rank{display:grid;grid-template-columns:52px minmax(0,1fr);gap:6px 14px;align-items:center}
+.rank .ri{grid-row:span 3;width:52px;height:52px;border:1px solid var(--line2);border-radius:var(--r);display:grid;place-items:center;font-family:var(--hud);font-weight:700;font-size:22px;color:var(--acc);letter-spacing:.06em}
+.rank h3{margin:0;font-family:var(--hud);font-size:24px;letter-spacing:.04em;line-height:1}
+.rank small{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.gauge{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.gauge i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kv div{display:flex;flex-direction:column;gap:2px;font-family:var(--hud);font-size:12px;letter-spacing:.16em;color:var(--mute);text-transform:uppercase;min-width:0}
+.kv b{font-size:22px;letter-spacing:.04em;color:var(--ink);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.order,.upg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding-top:14px;border-top:1px solid var(--line)}
+.order:first-child,.upg:first-child{padding-top:0;border-top:0}
+.order b,.order small,.order .gauge{grid-column:1}
+.order b{font-weight:500;font-size:14.5px;color:var(--ink)}
+.order small,.upg small{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.order button,.upg button{grid-column:2;grid-row:1/span 3;align-self:center}
+.order.claimed b{color:var(--mute);text-decoration:line-through}
+.order.full .gauge i{background:var(--ok)}
+.upg h4{margin:0;font-family:var(--hud);font-size:16px;letter-spacing:.06em;color:var(--ink)}
+.upg p{margin:0;font-size:13.5px;line-height:1.5;color:var(--ink2)}
+.lv{display:flex;gap:4px}
+.lv i{width:16px;height:5px;border-radius:2px;background:var(--line)}
+.lv i.on{background:var(--acc)}
+.paytab{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;margin:0;padding:14px 0 0;border-top:1px solid var(--line);font-size:14px;color:var(--ink2)}
+.paytab dt{margin:0}.paytab dd{margin:0;font-family:var(--mono);font-size:13px;color:var(--ink);text-align:right}
+.pnote{margin:0;font-size:13.5px;line-height:1.55;color:var(--mute)}
+.client{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 14px;align-items:center;padding:12px 14px;border-bottom:1px solid var(--line);background:var(--panel2);flex:none}
+.client .who{font-family:var(--hud);font-weight:700;font-size:13px;letter-spacing:.14em;color:var(--acc);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client .secs{font-family:var(--mono);font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.client[hidden]{display:none}
+.client .gauge{grid-column:1/-1;height:8px}
+.client .gauge i{transition:width .2s linear}
+.client .gauge.mid i{background:var(--acc)}.client .gauge.hi i{background:var(--ok)}.client .gauge.lo i{background:var(--bad)}
+.client .msg{grid-column:1/-1;font-size:14px;line-height:1.5;color:var(--ink2);min-height:0}
+.client .msg:empty{display:none}
+.client .msg.ok{color:var(--ok)}.client .msg.err{color:var(--bad)}
+.client .msg pre{margin:8px 0 0;padding:8px 10px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:13px;white-space:pre-wrap;color:var(--ink)}
+.client .msg .drow{margin-top:10px}
+
+.rt{border-collapse:collapse;font-family:var(--mono);font-size:13px;line-height:1.5;width:max-content;min-width:100%}
+.rt th{text-align:left;font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding:6px 12px;border-bottom:1px solid var(--line2);white-space:nowrap}
+.rt th.x{color:var(--bad)}
+.rt td{padding:5px 12px;border-bottom:1px solid var(--line);white-space:nowrap;color:var(--ink)}
+.rt td.num{text-align:right;font-variant-numeric:tabular-nums}
+.rt td.nul{color:var(--mute);font-style:italic}
+.rt tr.m td:first-child{box-shadow:inset 3px 0 var(--ok)}
+.rt tr.x td{background:var(--bad2)}.rt tr.x td:first-child{box-shadow:inset 3px 0 var(--bad)}
+.rt tr.ex td{background:var(--acc2)}.rt tr.ex td:first-child{box-shadow:inset 3px 0 var(--acc)}
+.rt tr.gh td{color:var(--mute);font-style:italic}
+.rtw{overflow:auto;max-width:100%}
+.ticket .rt th{color:#8a6a2a;border-bottom-color:rgba(43,33,23,.3)}
+.ticket .rt td{color:var(--ticket-ink);border-bottom:1px dashed rgba(43,33,23,.18)}
+.ticket{white-space:normal}
+.tfoot{margin-top:10px;font-family:var(--hud);font-weight:700;font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:#8a6a2a}
+.console .cmd{display:block;margin-bottom:6px}
+.console .er{display:block}
+.console .note{color:var(--ink2);font-family:var(--sans)}
+.console .rt{min-width:0}
+.outl .rtw{padding:0;border:0}
+.schema{position:absolute;left:0;right:0;top:42px;bottom:40px;z-index:4;background:var(--panel);overflow:auto;padding:12px;display:none;gap:10px;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));align-content:start;border-top:1px solid var(--line)}
+.schema.on{display:grid}
+.tcard{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:10px 12px;min-width:0}
+.tcard b{font-family:var(--mono);font-size:14px;color:var(--acc)}
+.tcard small{display:block;font-size:12.5px;color:var(--mute);margin:2px 0 6px}
+.tcard code{display:inline-block;font-size:12px;margin:2px 4px 2px 0;padding:1px 6px;border:1px solid var(--line);border-radius:var(--r);background:var(--field);color:var(--ink2)}
+.schemarow{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:var(--gap)}
+#tables.on{border-color:var(--cyan);color:var(--cyan)}
+.rcard .rout{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;overflow:auto;color:var(--mute);min-width:0}
+.rcard .rout .rt{font-size:12px;min-width:0}
+.rcard .rout .rt td,.rcard .rout .rt th{padding:3px 8px}
+.bay .art svg.sil,.vart svg.sil{filter:grayscale(1);opacity:.32}
+.vres{grid-column:2;overflow:auto;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:8px;max-height:60vh}
+.vres .gh{color:var(--mute);padding:8px}
+.drow{flex-wrap:wrap}
+.rcard .rex{grid-template-columns:minmax(0,1fr)}
+button.deeper{height:30px;border:1px solid var(--line);background:transparent;padding:0 12px}
+.bays{grid-template-columns:repeat(3,minmax(0,1fr))}
+.drow button{min-width:0;white-space:normal;height:auto;min-height:34px;padding-top:6px;padding-bottom:6px}
+#v-dining{grid-template-rows:auto minmax(0,1fr)}
+.hstats{display:flex;align-items:center;gap:28px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);flex-wrap:wrap}
+.hstats div{display:flex;flex-direction:column;font-family:var(--hud);font-size:12px;letter-spacing:.16em;color:var(--mute);text-transform:uppercase}
+.hstats b{font-size:24px;letter-spacing:.04em;color:var(--ink);font-weight:700}
+.hstats .sp{margin-left:auto;flex-direction:row;gap:8px}
+.bays{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(200px,1fr);gap:var(--gap);min-height:0;overflow:auto}
+.bay{position:relative;border:1px solid var(--line);border-radius:var(--r);background:linear-gradient(var(--panel2),var(--panel));display:flex;flex-direction:column;overflow:hidden;text-align:left;padding:0;height:auto;font-family:var(--sans);text-transform:none;letter-spacing:0;color:var(--ink)}
+.bay .bn{display:flex;justify-content:space-between;padding:10px 12px 0;font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase}
+.bay .bn em{font-style:normal;color:var(--acc)}
+.bay .art{flex:1;min-height:90px;display:grid;place-items:center;padding:6px 10px;background:repeating-linear-gradient(135deg,transparent 0 18px,var(--grid) 18px 20px)}
+.bay .art svg{width:100%;max-width:240px;height:auto;max-height:100%}
+.bay .art img{display:block;width:100%;max-width:300px;max-height:150px;object-fit:contain;filter:drop-shadow(0 8px 10px rgba(0,0,0,.45))}
+.bay .art img.sil,.vart img.sil{filter:brightness(0) opacity(.3)}
+body[data-theme=daylight] .bay .art img.sil{filter:brightness(0) opacity(.16)}
+body[data-theme=daylight] .bay .art img{filter:drop-shadow(0 6px 8px rgba(30,40,50,.25))}
+.vart img{width:min(560px,80vw);height:auto;filter:drop-shadow(0 10px 14px rgba(0,0,0,.45))}
+.idle img{width:64px;height:auto;display:block}
+.bay .meta{padding:8px 12px 12px;border-top:1px solid var(--line)}
+.bay .meta b{display:block;font-family:var(--hud);font-size:20px;letter-spacing:.06em}
+.bay .meta small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--mute);margin-top:2px}
+.bay.locked{opacity:.6}
+.bay.locked .art svg{opacity:.35}
+.bay.locked .art img.sil{opacity:.7}
+.bay.docked{border-color:var(--line2)}
+.bay.docked:hover{border-color:var(--acc)}
+.bay.fresh{animation:dockin 1.4s ease-out}
+@keyframes dockin{0%{box-shadow:0 0 0 0 var(--acc)}40%{box-shadow:0 0 0 6px var(--acc2)}100%{box-shadow:0 0 0 0 transparent}}
+.bay .stripe{height:4px;background:repeating-linear-gradient(90deg,var(--acc) 0 12px,transparent 12px 24px);opacity:.7}
+#v-cookbook{grid-template-rows:auto auto minmax(0,1fr)}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--gap);overflow:auto;min-height:0;align-content:start}
+.rcard{border:1px solid var(--line);border-left:3px solid var(--cyan);border-radius:var(--r);background:var(--panel);display:flex;flex-direction:column;gap:8px;padding:12px 14px}
+.rcard.locked{border-left-color:var(--line2);opacity:.55}
+.rcard .rh{display:flex;align-items:center;gap:8px}
+.rcard .rh .cat{margin-left:auto;font-family:var(--hud);font-size:11.5px;letter-spacing:.16em;color:var(--mute);text-transform:uppercase}
+.rcard h3{margin:0;font-size:16px}
+.rcard p{margin:0;font-size:13.5px;line-height:1.55;color:var(--ink2)}
+.rcard .tagn{font-family:var(--hud);font-weight:700;font-size:11.5px;letter-spacing:.16em;color:var(--cyan);background:var(--cyan2);padding:3px 7px;border-radius:var(--r)}
+.rcard .rex{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.rcard .rex pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;white-space:pre-wrap;word-break:break-word}
+.lhead{display:flex;align-items:center;gap:14px;padding:12px 16px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);flex-wrap:wrap}
+.lhead h2{margin:0;font-family:var(--hud);font-size:22px;letter-spacing:.08em}
+.lhead span{color:var(--mute);font-size:13.5px}
+.lhead .deeper{margin-left:auto;font-family:var(--hud);font-weight:600;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);text-decoration:none}
+.lhead .deeper:hover{color:var(--acc)}
+.viewer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(5,8,11,.72);backdrop-filter:blur(3px);padding:16px}
+.viewer.on{display:flex}
+.vbox{width:min(980px,96vw);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.vbody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:12px;min-height:0;overflow:auto}
+.vbody pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:12px;white-space:pre;overflow:auto;max-height:60vh}
+.vart{grid-column:1/3;display:grid;place-items:center;padding:6px;background:repeating-linear-gradient(135deg,transparent 0 18px,var(--grid) 18px 20px);border:1px solid var(--line);border-radius:var(--r)}
+.vart svg{width:min(420px,80vw);height:auto}
+.vfoot{display:flex;gap:8px;justify-content:flex-end;padding:0 12px 12px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--acc);color:var(--ink);padding:9px 16px;border-radius:var(--r);font-family:var(--hud);font-weight:600;letter-spacing:.1em;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;text-transform:uppercase}
+#toast.on{opacity:1}
+@media (max-width:1500px){.brand small{display:none}#tsel{flex-basis:180px}}
+@media (max-width:1240px){.stg{padding:0 7px}#bar{gap:8px;padding:0 10px}#comms{display:none}}
+@media (max-width:1180px){.brand b{display:none}}
+@media (max-width:1100px) and (min-width:901px){.stg{padding:0 6px;letter-spacing:.05em}.stages i{padding:0}#tsel{min-width:110px;flex:0 1 150px}.tools button{padding:0 9px;letter-spacing:.05em}}
+@media (max-width:1100px){#v-target{grid-template-columns:280px minmax(0,1fr) minmax(0,1fr)}.bays{grid-template-columns:repeat(3,minmax(0,1fr))}#home{display:none}}
+@media (max-width:640px){.edp .seg{display:none}}
+@media (max-width:980px) and (min-width:901px){#tsel{min-width:110px}.stg{padding:0 5px}}
+@media (max-width:900px){
+  body{overflow:auto;grid-template-rows:auto auto}
+  #bar{flex-wrap:wrap;padding:8px 12px;row-gap:8px}
+  .stages{order:3;flex:1 1 100%;flex-wrap:wrap;row-gap:4px}
+  #tsel{order:2;flex:1 1 160px;max-width:none}
+  .tools{order:2}
+  main{height:auto}
+  .view.on{height:auto}
+  #v-till{grid-template-columns:minmax(0,1fr)}#v-till>.panel:last-child{grid-column:auto}
+  #v-school,#v-review,#v-rush,#v-target{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-rows:minmax(300px,auto)}
+  #v-target .left,#v-target .edp{grid-row:auto;grid-column:auto}
+  #v-target .edp{min-height:420px}
+  .help{max-height:none}
+  .opts{grid-template-columns:1fr}
+  .vbody{grid-template-columns:minmax(0,1fr)}
+  .vart{grid-column:auto}
+  .vres{grid-column:auto}
+  .lt{font-size:25px}
+}
+@media (max-width:1100px){.schemarow{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:560px){.schemarow{grid-template-columns:minmax(0,1fr)}.bays{grid-template-columns:minmax(0,1fr)}.lgrid{grid-template-columns:minmax(0,1fr)}.rcard .rex{grid-template-columns:minmax(0,1fr)}.parts{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body data-theme="bistro">
+<header id="bar">
+  <div class="brand"><svg viewBox="0 0 32 32" fill="none" stroke-width="2"><path d="M4 23h24" stroke="var(--acc)" stroke-linecap="round"/><path d="M7 23a9 9 0 0 1 18 0" stroke="var(--cyan)"/><circle cx="16" cy="11.5" r="1.8" stroke="var(--cyan)"/></svg><div><b>SEQLE</b><small>VOL VIII · SQL BISTRO</small></div></div>
+  <nav class="stages">
+    <button class="stg" data-v="school"><span class="ck">✓</span>School</button><i>›</i>
+    <button class="stg" data-v="target"><span class="ck">✓</span>Order</button><i>›</i>
+    <button class="stg" data-v="dining">Dining</button><i>·</i>
+    <button class="stg" data-v="till">Till</button><i>·</i>
+    <button class="stg" data-v="cookbook">Cookbook</button><i>·</i>
+    <button class="stg" data-v="review">Review</button>
+  </nav>
+  <select id="tsel" aria-label="Choose order"></select>
+  <div id="comms"><span id="dotmini"></span><span id="cmsg">Bix is lighting the stoves.</span></div>
+  <div class="tools">
+    <button id="theme" title="Switch theme">Bistro</button>
+    <button id="mute" title="Sound on or off">Sound</button>
+  </div>
+</header>
+<main>
+  <section class="view" id="v-school">
+    <div class="panel"><div class="ph"><b id="dtitle">Lesson</b><span class="sp pips" id="pips"></span></div><div class="scroll"><div class="drill" id="dbox"></div></div></div>
+    <div class="panel"><div class="ph"><b>Console</b><span class="sp">sqlite</span></div><div class="console" id="sout"></div><div class="cfoot"><span id="sstat">Run an example to see its result here.</span></div></div>
+  </section>
+  <section class="view" id="v-target">
+    <div class="panel left">
+      <div class="ph"><b id="tname">Order</b><span class="sp" id="tcount"></span></div>
+      <div class="contract" id="contract"></div>
+      <ol class="steps" id="steps"></ol>
+      <div class="help">
+        <div class="ph"><b>Help</b><span class="sp" id="hstep"></span></div>
+        <div class="ladder" id="ladder"></div>
+        <div class="hfoot"><button id="stuck">I'm stuck</button></div>
+      </div>
+    </div>
+    <div class="panel"><div class="ph"><b>Ticket</b><span class="sp">match this</span></div><div class="ticket" id="ticket"></div></div>
+    <div class="panel"><div class="ph"><b>Your result</b><span class="sp meter" id="meter"><span class="bar"><i></i></span><b>0%</b></span></div><div class="outl" id="outl"></div><div class="dockmsg" id="dockmsg"><b>SERVED</b><span id="dockline"></span><span class="dbtns"><button id="tohangar">Dining room</button><button class="pri" id="nextc">Next order</button></span></div></div>
+    <div class="panel edp"><div class="ph"><b id="fname">query.sql</b><span class="sp"><span class="seg" id="modeseg" title="Learning gives you a head start. Mastery starts from an empty file."><button data-mode="learn">Learning</button><button data-mode="master">Mastery</button></span><button id="tables" title="Show the tables and their columns">Tables</button><button id="home" title="Download your query with the bistro tables as a .sql file">Take it home</button><button id="reset">Reset</button><button class="pri" id="run">Run · Ctrl+Enter</button></span></div>
+      <div class="ed"><pre class="gut" id="gut">1</pre><div class="codewrap"><pre id="hl" aria-hidden="true"></pre><textarea id="ed" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="SQL editor"></textarea></div></div>
+      <div class="schema" id="tpanel"></div>
+      <div class="efoot"><span id="scan">Opening the kitchen database…</span><span class="sp">runs as you type</span></div></div>
+  </section>
+  <section class="view" id="v-dining">
+    <div class="hstats" id="hstats"></div>
+    <div class="bays" id="bays"></div>
+  </section>
+  <section class="view" id="v-till">
+    <div class="pcol">
+      <div class="panel"><div class="ph"><b>Rank</b><span class="sp" id="plife"></span></div><div class="pbody" id="prank"></div></div>
+      <div class="panel grow"><div class="ph"><b>Specials</b><span class="sp" id="pday"></span></div><div class="pbody" id="pdisp"></div></div>
+    </div>
+    <div class="panel"><div class="ph"><b>Dinner rush</b><span class="sp" id="prsub"></span></div><div class="pbody" id="prush"></div></div>
+    <div class="panel"><div class="ph"><b>Refits</b><span class="sp" id="pwallet"></span></div><div class="pbody" id="pyard"></div></div>
+  </section>
+  <section class="view" id="v-rush">
+    <div class="panel"><div class="ph"><b id="jtitle">Dinner rush</b><span class="sp pips" id="jpips"></span></div><div class="client" id="jclient" hidden></div><div class="scroll"><div class="drill" id="jbox"></div></div></div>
+    <div class="panel"><div class="ph"><b>Console</b><span class="sp">sqlite</span></div><div class="console" id="jout"></div><div class="cfoot"><span id="jstat">Your answers run here.</span></div></div>
+  </section>
+  <section class="view" id="v-cookbook">
+    <div class="lhead"><h2>Cookbook</h2><span id="lcount"></span><button class="deeper" id="seedget" title="The five bistro tables as a .sql file for sqlite3 on your own computer">Download the tables</button></div>
+    <div class="schemarow" id="schema"></div>
+    <div class="lgrid" id="lgrid"></div>
+  </section>
+  <section class="view" id="v-review">
+    <div class="panel"><div class="ph"><b id="rtitle">Review</b><span class="sp pips" id="rpips"></span></div><div class="scroll"><div class="drill" id="rbox"></div></div></div>
+    <div class="panel"><div class="ph"><b>Console</b><span class="sp">sqlite</span></div><div class="console" id="rout"></div><div class="cfoot"><span id="rstat">Your answers run here.</span></div></div>
+  </section>
+</main>
+<div class="viewer" id="viewer"><div class="vbox"><div class="ph"><b id="vname">Station</b><span class="sp"><button id="vclose">Close</button></span></div><div class="vbody" id="vbody"></div><div class="vfoot"><button id="vrebuild">Cook this order again</button></div></div></div>
+<div id="toast" role="status"></div>
+<script>
+const SEED=`CREATE TABLE menu (id INTEGER PRIMARY KEY, name TEXT NOT NULL, course TEXT, price REAL, veg INTEGER, spicy INTEGER);
+INSERT INTO menu VALUES (1,'Nebula Soup','starter',9.5,1,0),(2,'Comet Dumplings','starter',11.0,0,1),(3,'Hydro Salad','starter',8.0,1,0),(4,'Ring Bread','starter',4.5,1,0),(5,'Orbit Burger','main',18.0,0,0),(6,'Moonroot Risotto','main',21.5,1,0),(7,'Solar Curry','main',19.0,1,1),(8,'Void Steak','main',34.0,0,0),(9,'Algae Noodles','main',16.5,1,1),(10,'Crater Pie','dessert',8.5,1,0),(11,'Stardust Sorbet','dessert',7.0,1,0),(12,'Eclipse Cake','dessert',12.0,1,0),(13,'Ice Moon Float','drink',6.0,1,0),(14,'Red Giant Tea','drink',4.0,1,0),(15,'Ion Cola','drink',3.5,1,0);
+CREATE TABLE guests (id INTEGER PRIMARY KEY, name TEXT, deck INTEGER, vip INTEGER);
+INSERT INTO guests VALUES (1,'Ava Lund',3,1),(2,'Teo Marsh',5,0),(3,'Noor Halabi',2,0),(4,'Bram Keller',3,0),(5,'Mei Tanaka',7,1),(6,'Luca Ferro',5,0),(7,'Ines Duval',2,1),(8,'Oskar Vale',4,0);
+CREATE TABLE orders (id INTEGER PRIMARY KEY, guest_id INTEGER, menu_id INTEGER, qty INTEGER, day TEXT);
+INSERT INTO orders VALUES (1,1,1,1,'Fri'),(2,1,8,1,'Fri'),(3,1,12,1,'Fri'),(4,2,5,2,'Fri'),(5,2,15,2,'Fri'),(6,3,3,1,'Fri'),(7,3,6,1,'Fri'),(8,4,2,2,'Sat'),(9,4,7,1,'Sat'),(10,4,13,1,'Sat'),(11,5,1,1,'Sat'),(12,5,8,2,'Sat'),(13,5,11,2,'Sat'),(14,6,9,1,'Sat'),(15,6,5,1,'Sat'),(16,7,6,1,'Sun'),(17,7,10,1,'Sun'),(18,7,13,1,'Sun'),(19,3,12,2,'Sun'),(20,2,9,1,'Sun');
+CREATE TABLE bills (id INTEGER PRIMARY KEY, table_no INTEGER, covers INTEGER, total REAL, tip REAL, day TEXT);
+INSERT INTO bills VALUES (1,1,2,64.5,6.0,'Fri'),(2,4,4,118.0,12.0,'Fri'),(3,2,2,49.0,3.5,'Fri'),(4,6,6,201.5,20.0,'Fri'),(5,1,3,87.0,8.0,'Sat'),(6,3,2,55.5,0.0,'Sat'),(7,4,5,143.0,15.0,'Sat'),(8,6,4,132.5,10.0,'Sat'),(9,2,2,41.0,4.0,'Sat'),(10,1,2,58.0,5.5,'Sun'),(11,5,3,96.5,9.0,'Sun'),(12,4,2,47.5,2.5,'Sun'),(13,6,5,166.0,16.5,'Sun');
+CREATE TABLE stock (item TEXT PRIMARY KEY, qty INTEGER, unit TEXT, min_qty INTEGER);
+INSERT INTO stock VALUES ('moonroot',4,'kg',5),('algae',12,'kg',6),('rice',20,'kg',8),('cream',3,'l',4),('chili',2,'kg',1),('flour',15,'kg',10),('cola syrup',1,'l',2);`;
+const TABLES=[
+ {t:'menu',d:'Every dish on the card',c:['id','name','course','price','veg','spicy']},
+ {t:'guests',d:'Regulars and their deck',c:['id','name','deck','vip']},
+ {t:'orders',d:'One row per dish ordered',c:['id','guest_id','menu_id','qty','day']},
+ {t:'bills',d:'One row per paid table',c:['id','table_no','covers','total','tip','day']},
+ {t:'stock',d:'What is in the larder',c:['item','qty','unit','min_qty']}];
+const RULES={
+ s1:{n:'01',title:'SELECT * FROM shows a whole table',syn:'<span class="k">SELECT</span> * <span class="k">FROM</span> menu;',note:'SELECT asks the database for rows. The star means every column, FROM names the table. The semicolon ends the statement.',ex:'SELECT * FROM guests;',cat:'Reading',t:0},
+ s2:{n:'02',title:'Pick columns by name',syn:'<span class="k">SELECT</span> name, price <span class="k">FROM</span> menu;',note:'List the columns you want, separated by commas. They come back in the order you list them.',ex:'SELECT name, deck FROM guests;',cat:'Reading',t:0},
+ s3:{n:'03',title:'WHERE keeps the rows that match',syn:'<span class="k">SELECT</span> name <span class="k">FROM</span> menu <span class="k">WHERE</span> price &lt; <span class="v">10</span>;',note:'WHERE comes after FROM and tests every row. Only rows where the test is true come back. Compare numbers with = < > <= >=.',ex:'SELECT name, price FROM menu WHERE price < 10;',cat:'Filtering',t:1},
+ s4:{n:'04',title:'Text goes in single quotes',syn:'<span class="k">WHERE</span> course = <span class="v">\'main\'</span>',note:'Text values sit in single quotes and must match exactly, capitals included. <> means not equal.',ex:"SELECT name, course FROM menu WHERE course = 'dessert';",cat:'Filtering',t:1},
+ s5:{n:'05',title:'ORDER BY sorts the rows',syn:'<span class="k">ORDER BY</span> price <span class="k">DESC</span>',note:'ORDER BY sorts on one or more columns. Ascending is the default, DESC flips it. Without ORDER BY the row order is not guaranteed.',ex:'SELECT name, price FROM menu ORDER BY price DESC;',cat:'Sorting',t:2},
+ s6:{n:'06',title:'LIMIT keeps the first rows',syn:'<span class="k">ORDER BY</span> price <span class="k">LIMIT</span> <span class="v">3</span>',note:'LIMIT goes at the very end and cuts the result to that many rows. Sort first, so you keep the right ones.',ex:'SELECT name, price FROM menu ORDER BY price LIMIT 3;',cat:'Sorting',t:2},
+ s7:{n:'07',title:'AND, OR and brackets',syn:'<span class="k">WHERE</span> (a <span class="k">OR</span> b) <span class="k">AND</span> c',note:'AND needs both tests true, OR needs one. AND is worked out before OR, so put brackets around the OR part when you mix them.',ex:"SELECT name, course, price FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 7;",cat:'Filtering',t:2},
+ s8:{n:'08',title:'Calculate and name it with AS',syn:'<span class="k">SELECT</span> price * <span class="v">2</span> <span class="k">AS</span> double_portion',note:'You can calculate with + - * / right in the SELECT. AS gives the result column a name. The table itself does not change.',ex:'SELECT name, price, price * 2 AS double_portion FROM menu;',cat:'Calculating',t:3},
+ s9:{n:'09',title:'ROUND tidies decimals',syn:'<span class="k">ROUND</span>(price * <span class="v">1.12</span>, <span class="v">2</span>)',note:'ROUND takes a value and a number of decimals. Use it whenever a calculation leaves a long tail of digits.',ex:'SELECT name, ROUND(price / 3, 2) AS per_person FROM menu;',cat:'Calculating',t:3},
+ s10:{n:'10',title:'COUNT counts rows',syn:'<span class="k">SELECT COUNT</span>(*) <span class="k">FROM</span> bills;',note:'COUNT(*) folds all rows into one number. Combine it with WHERE to count only some of them.',ex:"SELECT COUNT(*) AS bills FROM bills WHERE day = 'Fri';",cat:'Summing up',t:4},
+ s11:{n:'11',title:'SUM, AVG, MIN and MAX',syn:'<span class="k">SUM</span>(total), <span class="k">AVG</span>(tip), <span class="k">MIN</span>(price), <span class="k">MAX</span>(price)',note:'These aggregate functions turn a whole column into one value: the total, the average, the smallest, the largest.',ex:'SELECT SUM(total) AS takings, ROUND(AVG(tip), 2) AS avg_tip, MAX(total) AS biggest FROM bills;',cat:'Summing up',t:4},
+ s12:{n:'12',title:'GROUP BY makes one row per group',syn:'<span class="k">SELECT</span> day, <span class="k">SUM</span>(total) <span class="k">FROM</span> bills <span class="k">GROUP BY</span> day;',note:'GROUP BY splits the rows into groups with the same value, then the aggregate runs once per group. Every plain column in SELECT should be in GROUP BY.',ex:'SELECT day, COUNT(*) AS bills, SUM(total) AS takings FROM bills GROUP BY day;',cat:'Grouping',t:5},
+ s13:{n:'13',title:'HAVING filters the groups',syn:'<span class="k">GROUP BY</span> day <span class="k">HAVING SUM</span>(total) &gt; <span class="v">400</span>',note:'WHERE filters rows before grouping. HAVING filters groups after grouping, so it can test COUNT, SUM and friends.',ex:'SELECT course, COUNT(*) AS dishes FROM menu GROUP BY course HAVING COUNT(*) > 3;',cat:'Grouping',t:5},
+ s14:{n:'14',title:'JOIN combines tables',syn:'<span class="k">FROM</span> orders <span class="k">JOIN</span> menu <span class="k">ON</span> menu.id = orders.menu_id',note:'An order row only holds menu_id. JOIN brings in the menu row whose id matches, so you can show the dish name next to the order.',ex:'SELECT orders.id, menu.name, orders.qty FROM orders JOIN menu ON menu.id = orders.menu_id;',cat:'Joining',t:6},
+ s15:{n:'15',title:'Short names for tables',syn:'<span class="k">FROM</span> orders o <span class="k">JOIN</span> menu m <span class="k">ON</span> m.id = o.menu_id',note:'Give a table a short alias right after its name and use it everywhere: m.name, o.qty. When two tables share a column name, the alias says which one you mean.',ex:"SELECT g.name AS guest, m.name AS dish FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Fri';",cat:'Joining',t:6},
+ s16:{n:'16',title:'LEFT JOIN keeps every row on the left',syn:'<span class="k">FROM</span> menu m <span class="k">LEFT JOIN</span> orders o <span class="k">ON</span> o.menu_id = m.id',note:'A plain JOIN drops rows without a match. LEFT JOIN keeps every row of the first table and fills the missing side with NULL. Test for it with IS NULL, never = NULL.',ex:'SELECT g.name, o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;',cat:'Joining',t:7},
+ s17:{n:'17',title:'LIKE and IN',syn:'name <span class="k">LIKE</span> <span class="v">\'%Moon%\'</span>   deck <span class="k">IN</span> (<span class="v">2</span>, <span class="v">3</span>)',note:'LIKE matches a pattern: % stands for any run of characters. IN tests against a list, shorter than a chain of ORs.',ex:"SELECT name FROM menu WHERE name LIKE '%Moon%';",cat:'Filtering',t:7},
+ s18:{n:'18',title:'DISTINCT and BETWEEN',syn:'<span class="k">SELECT DISTINCT</span> day   price <span class="k">BETWEEN</span> <span class="v">8</span> <span class="k">AND</span> <span class="v">12</span>',note:'DISTINCT removes duplicate rows from the result. BETWEEN tests a range and includes both ends.',ex:'SELECT DISTINCT day FROM orders;',cat:'Filtering',t:7},
+ s19:{n:'19',title:'INSERT INTO adds a row',syn:'<span class="k">INSERT INTO</span> stock (item, qty) <span class="k">VALUES</span> (<span class="v">\'basil\'</span>, <span class="v">3</span>);',note:'INSERT adds a new row. Name the columns, then give the values in the same order. Text in quotes, numbers without.',ex:"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('basil', 3, 'kg', 1);\nSELECT * FROM stock;",cat:'Changing data',t:8},
+ s20:{n:'20',title:'UPDATE and DELETE need a WHERE',syn:'<span class="k">UPDATE</span> stock <span class="k">SET</span> qty = qty + <span class="v">10</span> <span class="k">WHERE</span> item = <span class="v">\'rice\'</span>;',note:'UPDATE changes values, DELETE removes rows. Without WHERE they hit every row in the table, so write the WHERE first.',ex:"UPDATE stock SET qty = qty + 10 WHERE item = 'rice';\nDELETE FROM stock WHERE item = 'chili';\nSELECT * FROM stock;",cat:'Changing data',t:8}
+};
+const LESSONS={
+ s1:{why:'A database keeps data in tables: rows and columns, like a spreadsheet that never gets messy. You talk to it in SQL. The first sentence everyone learns is SELECT * FROM table: show me everything in this table. It changes nothing, so you can run it as often as you like.',parts:[['SELECT','I want to read rows'],['*','every column'],['FROM menu','from the table called menu'],[';','end of the statement']],mistakes:['Spelling FROM as FORM: SQL stops with a syntax error.','Forgetting FROM: SELECT * menu does not say where to look.','Expecting SELECT to change the table. It only reads.'],ex2:'SELECT * FROM menu;'},
+ s2:{why:'Most screens need only a few columns. Name them instead of using the star, with commas in between. The result comes back with the columns in the order you wrote them, which is how you shape a report.',parts:[['SELECT','read rows'],['name, price','only these columns, in this order'],['FROM menu','from this table']],mistakes:['Leaving out a comma: SELECT name price reads price as a new label for name.','A comma after the last column: SELECT name, FROM menu is a syntax error.','Misspelling a column: no such column: prise.'],ex2:'SELECT price, name FROM menu;'},
+ s3:{why:'WHERE is the filter. The database walks through every row, tests it, and keeps only the rows where the test is true. Numbers are written without quotes and compared with = < > <= >=.',parts:[['FROM menu','the table'],['WHERE','start of the filter'],['price < 10','the test each row must pass']],mistakes:['Putting WHERE before FROM. The order is SELECT, FROM, WHERE.','Writing IF or WHEN instead of WHERE.','Quotes around numbers work in SQLite but hide mistakes. Keep numbers plain.'],ex2:'SELECT name, deck FROM guests WHERE deck >= 4;'},
+ s4:{why:'Text values need single quotes, so SQL knows where the text starts and ends. The match is exact: \'Main\' and \'main\' are different. For not equal, write <>.',parts:[['course','the column'],['=','must equal'],["'main'",'the text, in single quotes']],mistakes:['No quotes: course = main looks for a column called main.','Double quotes: they are meant for names in SQL, not for text.','A capital letter where the data has none: \'Main\' finds nothing.'],ex2:"SELECT name, course FROM menu WHERE course <> 'main';"},
+ s5:{why:'Rows come back in whatever order the database finds convenient. If the order matters, say so with ORDER BY. Add DESC for biggest first. You can sort on several columns: ORDER BY course, price.',parts:[['ORDER BY','sort the result'],['price','on this column'],['DESC','biggest first; leave it out for smallest first']],mistakes:['Writing SORT BY. The keyword is ORDER BY.','Forgetting DESC and getting the cheapest first.','Putting ORDER BY before WHERE. It comes after.'],ex2:'SELECT name, course, price FROM menu ORDER BY course, price DESC;'},
+ s6:{why:'LIMIT cuts the result down to the first few rows. Together with ORDER BY it answers top-three questions: the three priciest dishes, the five biggest bills.',parts:[['ORDER BY price DESC','sort first'],['LIMIT 3','then keep the first three']],mistakes:['LIMIT before ORDER BY: it must be the last part of the query.','LIMIT without ORDER BY: you get three rows, but not necessarily the right three.'],ex2:'SELECT name, price FROM menu ORDER BY price DESC LIMIT 3;'},
+ s7:{why:'Combine tests with AND and OR. AND is stricter: both must be true. OR is looser: one is enough. SQL works out AND before OR, just like times before plus, so brackets decide what belongs together.',parts:[['(course = \'dessert\' OR course = \'drink\')','one of these two'],['AND','and also'],['price < 7','this must be true']],mistakes:['Mixing AND and OR without brackets and getting extra rows.','Writing course = \'dessert\' OR \'drink\': each side of OR needs a full test.'],ex2:"SELECT name, price FROM menu WHERE veg = 1 AND (course = 'main' OR course = 'starter');"},
+ s8:{why:'SELECT can calculate. price * 1.12 works out a new value for every row. AS gives that result column a readable name. Nothing is saved: the table keeps its original prices.',parts:[['price * 2','a calculation per row'],['AS','name the result'],['double_portion','the column name you choose, no spaces']],mistakes:['Expecting the table to change. Calculations only appear in the result.','Spaces in the alias: AS double portion fails. Use an underscore.','AS with nothing after it.'],ex2:'SELECT name, price, price - 1 AS happy_hour FROM menu;'},
+ s9:{why:'Calculations with decimals leave long tails, like 24.080000000000002. ROUND(value, 2) keeps two decimals. ROUND(value) with no second number rounds to a whole number.',parts:[['ROUND(','start the function'],['price * 1.12','the value to round'],[', 2)','how many decimals']],mistakes:['A semicolon or dot instead of the comma between the two arguments.','Rounding the wrong thing: ROUND(price) * 1.12 still has a tail.'],ex2:'SELECT name, ROUND(price * 1.12, 2) AS with_levy FROM menu;'},
+ s10:{why:'Questions like how many bills on Friday need one number, not a list. COUNT(*) counts the rows that survive the WHERE and returns a single row with a single value.',parts:[['COUNT(*)','how many rows'],['AS bills','name the number'],["WHERE day = 'Fri'",'count only these']],mistakes:['COUNT() with empty brackets: use COUNT(*).','Expecting one row per bill. COUNT folds them into one.'],ex2:'SELECT COUNT(*) AS vips FROM guests WHERE vip = 1;'},
+ s11:{why:'SUM adds a column up, AVG gives the average, MIN and MAX the extremes. Like COUNT they fold many rows into one. You can put several in one SELECT.',parts:[['SUM(total)','add up every total'],['AVG(tip)','the average tip'],['MIN(price) / MAX(price)','smallest and largest']],mistakes:['Putting the rounding inside: AVG(tip, 2) is not a thing. Wrap it: ROUND(AVG(tip), 2).','MEAN or AVERAGE: SQL calls it AVG.'],ex2:'SELECT MIN(price) AS cheapest, MAX(price) AS priciest, ROUND(AVG(price), 2) AS average FROM menu;'},
+ s12:{why:'GROUP BY answers per questions: takings per day, dishes per course. Rows with the same value land in one group, and every aggregate runs once per group. The result has one row per group.',parts:[['SELECT day,','the group label'],['SUM(total)','calculated per group'],['GROUP BY day','one group per day']],mistakes:['Leaving out GROUP BY: SUM folds everything into a single row.','A plain column in SELECT that is not in GROUP BY gives an arbitrary value.'],ex2:'SELECT course, COUNT(*) AS dishes, ROUND(AVG(price), 2) AS avg_price FROM menu GROUP BY course;'},
+ s13:{why:'WHERE runs before the groups exist, so it cannot test a SUM. HAVING runs after grouping and filters whole groups. Think: WHERE picks rows, HAVING picks groups.',parts:[['GROUP BY day','make the groups'],['HAVING','filter the groups'],['SUM(total) > 400','the test per group']],mistakes:['COUNT or SUM in WHERE: misuse of aggregate.','HAVING before GROUP BY. The order is WHERE, GROUP BY, HAVING, ORDER BY.'],ex2:'SELECT guest_id, COUNT(*) AS dishes FROM orders GROUP BY guest_id HAVING COUNT(*) >= 3;'},
+ s14:{why:'Databases avoid repeating data. An order stores menu_id 8 instead of the words Void Steak. JOIN looks up the matching row in the other table, so one query can show both. ON says which columns must match.',parts:[['FROM orders','start from the orders'],['JOIN menu','bring in the menu'],['ON menu.id = orders.menu_id','match each order to its dish']],mistakes:['Matching the wrong columns: menu.id = orders.id pairs unrelated rows.','Leaving out ON: every order is paired with every dish.'],ex2:'SELECT guests.name, orders.day FROM orders JOIN guests ON guests.id = orders.guest_id;'},
+ s15:{why:'With two or three tables, writing orders.menu_id everywhere gets long. A short alias after the table name fixes that. Aliases are also how you tell the database which id you mean when several tables have one.',parts:[['orders o','o now means orders'],['menu m','m now means menu'],['m.name AS dish','column from m, renamed']],mistakes:['Using the full name after giving an alias: once orders is o, write o.','A bare id when two tables have one: ambiguous column name.'],ex2:'SELECT g.name, m.name, o.qty FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id;'},
+ s16:{why:'Sometimes the missing rows are the answer: guests who never ordered, dishes nobody chose. LEFT JOIN keeps every row of the first table even without a match, and fills the other columns with NULL. WHERE o.id IS NULL then keeps only the rows that had no match.',parts:[['FROM menu m','keep every dish'],['LEFT JOIN orders o','attach orders when they exist'],['WHERE o.id IS NULL','keep the dishes with none']],mistakes:['= NULL instead of IS NULL. NULL is never equal to anything, not even NULL.','Swapping the tables: FROM orders LEFT JOIN menu keeps every order, not every dish.'],ex2:'SELECT m.name FROM menu m LEFT JOIN orders o ON o.menu_id = m.id WHERE o.id IS NULL;'},
+ s17:{why:'LIKE matches patterns in text. % means any number of characters, so \'%Cake\' ends in Cake and \'Moon%\' starts with Moon. In SQLite LIKE ignores capitals. IN checks a value against a list.',parts:[["LIKE '%Moon%'",'Moon anywhere'],["LIKE 'Moon%'",'starts with Moon'],['IN (2, 3, 7)','equal to one of these']],mistakes:['Forgetting the %: LIKE \'Moon\' only matches exactly Moon.','Using = with a %: = treats % as a normal character.'],ex2:"SELECT name, course FROM menu WHERE course IN ('starter', 'dessert') AND name LIKE '%a%';"},
+ s18:{why:'DISTINCT removes repeats from the result: three order days instead of twenty rows. BETWEEN a AND b is a range test that includes both ends, shorter than >= a AND <= b.',parts:[['SELECT DISTINCT day','each day once'],['BETWEEN 8 AND 12','8, 12 and everything in between']],mistakes:['DISTINCT in the wrong place: it comes right after SELECT.','Expecting BETWEEN to exclude the ends. It includes them.'],ex2:'SELECT DISTINCT course FROM menu WHERE price BETWEEN 5 AND 10;'},
+ s19:{why:'INSERT INTO adds a row. Name the columns, then the values in the same order. In Seqle every run starts from a fresh larder, so experiment freely. A real database keeps what you insert.',parts:[['INSERT INTO stock','add to this table'],['(item, qty, unit, min_qty)','these columns'],["VALUES ('basil', 3, 'kg', 1)",'these values, same order']],mistakes:['Text without quotes: VALUES (basil, ...) looks for a column called basil.','A different number of columns and values.','Adding a row twice when the key must be unique: UNIQUE constraint failed.'],ex2:"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('mint', 2, 'kg', 1);\nSELECT * FROM stock ORDER BY item;"},
+ s20:{why:'UPDATE changes values in rows that already exist, DELETE removes rows. Both take a WHERE, and both hit every row without one. Professionals write the WHERE first, or run it as a SELECT to see which rows will change.',parts:[['UPDATE stock','change this table'],['SET qty = qty + 10','the new value, can use the old one'],["WHERE item = 'rice'",'only these rows']],mistakes:['Forgetting WHERE: every row changes.','DELETE * FROM: DELETE never takes a column list.','Checking the change without a SELECT afterwards.'],ex2:"UPDATE stock SET qty = 0 WHERE item = 'flour';\nSELECT * FROM stock;"}
+};
+const DRILLS=[
+ {k:'pick',r:'s1',q:'Which query shows every column of the guests table?',o:['SELECT guests;','SELECT * FROM guests;','SHOW guests;','SELECT ALL guests;'],a:1,h:'SELECT, then * for every column, then FROM and the table.'},
+ {k:'type',r:'s1',q:'Show the whole stock table',ph:'SELECT …',ans:'SELECT * FROM stock;',test:/select\s+\*\s+from\s+stock/i,h:'Star for every column, FROM stock.'},
+ {k:'predict',r:'s1',q:'The menu table has 6 columns. How many columns does this return?',code:'SELECT * FROM menu;',pa:'cols',a:'6',h:'The star means every column.'},
+ {k:'fix',r:'s1',q:'Fix the query so it shows the whole guests table',bug:'SELECT * FORM guests;',ans:'SELECT * FROM guests;',h:'Check the spelling of FROM.'},
+ {k:'pick',r:'s2',q:'Which query shows only the name and deck of each guest?',o:['SELECT name deck FROM guests;','SELECT name, deck FROM guests;','SELECT (name, deck) guests;','SELECT guests.name.deck;'],a:1,h:'Columns are separated by commas.'},
+ {k:'type',r:'s2',q:'Show the item and qty columns of stock',ph:'SELECT …',ans:'SELECT item, qty FROM stock;',h:'Two column names with a comma, then FROM stock.'},
+ {k:'predict',r:'s2',q:'How many columns does this return?',code:'SELECT name, course, price FROM menu;',pa:'cols',a:'3',h:'Count the names between SELECT and FROM.'},
+ {k:'fix',r:'s2',q:'Fix the missing comma: show name and price',bug:'SELECT name price FROM menu;',ans:'SELECT name, price FROM menu;',h:'Without the comma, SQL reads price as a new label for name.'},
+ {k:'pick',r:'s3',q:'Which query shows dishes that cost more than 20?',o:['SELECT name FROM menu IF price > 20;','SELECT name FROM menu WHERE price > 20;','SELECT name WHERE price > 20 FROM menu;','SELECT name FROM menu WHEN price > 20;'],a:1,h:'WHERE comes after FROM.'},
+ {k:'type',r:'s3',q:'Show name and price of the dishes cheaper than 8',ph:'SELECT … WHERE …',ans:'SELECT name, price FROM menu WHERE price < 8;',test:/where\s+price\s*<\s*8\b/i,h:'WHERE price < 8 at the end.'},
+ {k:'predict',r:'s3',q:'Only the Void Steak costs more than 30. How many rows does this return?',code:'SELECT name FROM menu WHERE price > 30;',pa:'rows',a:'1',h:'One dish passes the test.'},
+ {k:'fix',r:'s3',q:'Fix: show the guests on deck 5',bug:'SELECT name FROM guests deck = 5;',ans:'SELECT name FROM guests WHERE deck = 5;',h:'The filter needs its keyword.'},
+ {k:'pick',r:'s4',q:'Which line finds every dessert?',o:['WHERE course = dessert',"WHERE course = 'dessert'",'WHERE course = "dessert"',"WHERE 'course' = 'dessert'"],a:1,h:'Text values in single quotes. The column name stays bare.'},
+ {k:'type',r:'s4',q:'Show the names of every drink',ph:"SELECT … WHERE course = '…'",ans:"SELECT name FROM menu WHERE course = 'drink';",h:"course = 'drink', in single quotes."},
+ {k:'type',r:'s4',q:'Show name and course of every dish that is not a main, using <>',ph:'SELECT … WHERE course <> …',ans:"SELECT name, course FROM menu WHERE course <> 'main';",test:/<>|!=/,h:"course <> 'main'"},
+ {k:'predict',r:'s4',q:"The data says main in lower case. How many rows does this return?",code:"SELECT * FROM menu WHERE course = 'Main';",pa:'rows',a:'0',h:"'Main' with a capital does not equal 'main'."},
+ {k:'fix',r:'s4',q:'Fix: show the guest called Mei Tanaka',bug:'SELECT * FROM guests WHERE name = Mei Tanaka;',ans:"SELECT * FROM guests WHERE name = 'Mei Tanaka';",h:'The name is text, so it needs quotes.'},
+ {k:'pick',r:'s5',q:'Which puts the most expensive dish first?',o:['ORDER BY price','ORDER BY price DESC','SORT BY price DOWN','ORDER price DESC'],a:1,h:'DESC means descending: biggest first.'},
+ {k:'type',r:'s5',q:'Show the guest names in alphabetical order',ph:'SELECT … ORDER BY …',ans:'SELECT name FROM guests ORDER BY name;',test:/order\s+by\s+name/i,h:'ORDER BY name. Ascending is the default.'},
+ {k:'predict',r:'s5',q:'Desserts: Crater Pie 8.5, Stardust Sorbet 7, Eclipse Cake 12. Which name comes first?',code:"SELECT name FROM menu WHERE course = 'dessert' ORDER BY price DESC;",pa:'value',a:'Eclipse Cake',h:'DESC: the highest price first.'},
+ {k:'fix',r:'s5',q:'Fix: the cheapest dish should come first',bug:'SELECT name, price FROM menu ORDER BY price DESC;',ans:'SELECT name, price FROM menu ORDER BY price;',h:'Ascending is the default. DESC flips it.'},
+ {k:'pick',r:'s6',q:'Where does LIMIT go?',o:['Right after SELECT','At the very end','Before FROM','Inside WHERE'],a:1,h:'LIMIT is always the last part.'},
+ {k:'type',r:'s6',q:'Show name and price of the 3 most expensive dishes',ph:'SELECT … ORDER BY … LIMIT …',ans:'SELECT name, price FROM menu ORDER BY price DESC LIMIT 3;',h:'Sort by price DESC, then LIMIT 3.'},
+ {k:'predict',r:'s6',q:'The menu has 15 dishes. How many rows does this return?',code:'SELECT * FROM menu LIMIT 5;',pa:'rows',a:'5',h:'LIMIT 5 keeps five.'},
+ {k:'fix',r:'s6',q:'Fix: the 2 cheapest dishes',bug:'SELECT name, price FROM menu LIMIT 2 ORDER BY price;',ans:'SELECT name, price FROM menu ORDER BY price LIMIT 2;',h:'Sort first, then cut.'},
+ {k:'pick',r:'s7',q:'Vegetarian and spicy: which WHERE?',o:['WHERE veg = 1, spicy = 1','WHERE veg = 1 AND spicy = 1','WHERE veg = 1 OR spicy = 1','WHERE veg = 1 + spicy = 1'],a:1,h:'Both must be true: AND.'},
+ {k:'type',r:'s7',q:'Show name and course of the starters and the desserts, using OR',ph:"SELECT … WHERE … OR …",ans:"SELECT name, course FROM menu WHERE course = 'starter' OR course = 'dessert';",test:/\bor\b/i,h:'Each side of OR is a full test.'},
+ {k:'type',r:'s7',q:'Vegetarian mains under 20: name and price',ph:'SELECT … WHERE … AND … AND …',ans:"SELECT name, price FROM menu WHERE veg = 1 AND course = 'main' AND price < 20;",h:"veg = 1 AND course = 'main' AND price < 20"},
+ {k:'predict',r:'s7',q:'AND runs before OR. There are 3 desserts, and 2 drinks under 5. How many rows?',code:"SELECT name FROM menu WHERE course = 'dessert' OR course = 'drink' AND price < 5;",pa:'rows',a:'5',h:'Every dessert, plus the cheap drinks.'},
+ {k:'fix',r:'s7',q:'Fix with brackets: desserts or drinks, but only the ones under 8',bug:"SELECT name FROM menu WHERE course = 'dessert' OR course = 'drink' AND price < 8;",ans:"SELECT name FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 8;",h:'Brackets around the OR part.'},
+ {k:'pick',r:'s8',q:'What does AS do in SELECT price * 2 AS double FROM menu?',o:['Multiplies twice','Names the result column','Saves a new column in the table','Sorts by double'],a:1,h:'AS is a label.'},
+ {k:'type',r:'s8',q:'Show name, and price times 2 as double_portion',ph:'SELECT name, … AS …',ans:'SELECT name, price * 2 AS double_portion FROM menu;',test:/as\s+double_portion/i,h:'price * 2 AS double_portion'},
+ {k:'predict',r:'s8',q:'What is the column called?',code:'SELECT price - 1 AS discounted FROM menu;',pa:'colname',a:'discounted',h:'The name after AS.'},
+ {k:'fix',r:'s8',q:'Fix: double each quantity and call the column total',bug:'SELECT qty * 2 AS FROM orders;',ans:'SELECT qty * 2 AS total FROM orders;',h:'AS needs a name after it.'},
+ {k:'pick',r:'s9',q:'ROUND(7.456, 1) gives',o:['7','7.4','7.5','7.46'],a:2,h:'One decimal: 7.456 rounds to 7.5.'},
+ {k:'type',r:'s9',q:'Show name, and price divided by 3 rounded to 2 decimals as per_person',ph:'SELECT name, ROUND(…) AS per_person …',ans:'SELECT name, ROUND(price / 3, 2) AS per_person FROM menu;',h:'ROUND(price / 3, 2) AS per_person'},
+ {k:'predict',r:'s9',q:'21.5 times 1.12 is 24.08 with a long tail. What comes back?',code:'SELECT ROUND(21.5 * 1.12, 2);',pa:'value',a:'24.08',h:'Two decimals.'},
+ {k:'fix',r:'s9',q:'Fix: round the levy price to 1 decimal',bug:'SELECT name, ROUND(price * 1.12; 1) AS levy FROM menu;',ans:'SELECT name, ROUND(price * 1.12, 1) AS levy FROM menu;',h:'Arguments are separated by commas.'},
+ {k:'pick',r:'s10',q:'COUNT(*) returns',o:['every row','one number: how many rows','the first row','the number of columns'],a:1,h:'COUNT folds the rows into one number.'},
+ {k:'type',r:'s10',q:'How many guests are VIPs? Name the column vips',ph:'SELECT COUNT(*) AS …',ans:'SELECT COUNT(*) AS vips FROM guests WHERE vip = 1;',h:'COUNT(*) AS vips with WHERE vip = 1.'},
+ {k:'predict',r:'s10',q:'How many rows does this return?',code:'SELECT COUNT(*) FROM orders;',pa:'rows',a:'1',h:'COUNT gives one row with one number.'},
+ {k:'fix',r:'s10',q:'Fix: count the bills from Friday',bug:"SELECT COUNT() FROM bills WHERE day = 'Fri';",ans:"SELECT COUNT(*) FROM bills WHERE day = 'Fri';",h:'COUNT needs the star.'},
+ {k:'pick',r:'s11',q:'Which gives the average tip?',o:['SUM(tip)','AVG(tip)','MEAN(tip)','COUNT(tip)'],a:1,h:'SQL calls it AVG.'},
+ {k:'type',r:'s11',q:'Total takings of all bills, as takings',ph:'SELECT SUM(…) AS takings …',ans:'SELECT SUM(total) AS takings FROM bills;',h:'SUM(total) AS takings'},
+ {k:'type',r:'s11',q:'The lowest and highest price on the menu in one row, as cheapest and priciest',ph:'SELECT MIN(…) AS …, MAX(…) AS …',ans:'SELECT MIN(price) AS cheapest, MAX(price) AS priciest FROM menu;',h:'MIN and MAX, each with AS.'},
+ {k:'predict',r:'s11',q:'Guest 1 ordered three dishes, one portion each. What comes back?',code:'SELECT SUM(qty) FROM orders WHERE guest_id = 1;',pa:'value',a:'3',h:'1 + 1 + 1'},
+ {k:'fix',r:'s11',q:'Fix: the average bill, rounded to 2 decimals',bug:'SELECT ROUND(AVG(total, 2)) FROM bills;',ans:'SELECT ROUND(AVG(total), 2) FROM bills;',h:'The 2 belongs to ROUND, not to AVG.'},
+ {k:'pick',r:'s12',q:'SELECT course, COUNT(*) FROM menu GROUP BY course returns',o:['one row per dish','one row per course','one row in total','an error'],a:1,h:'One group per course.'},
+ {k:'type',r:'s12',q:'Number of dishes per course: course and dishes',ph:'SELECT course, COUNT(*) AS dishes … GROUP BY …',ans:'SELECT course, COUNT(*) AS dishes FROM menu GROUP BY course;',h:'GROUP BY course'},
+ {k:'type',r:'s12',q:'Takings per day: day and takings',ph:'SELECT day, SUM(total) AS takings …',ans:'SELECT day, SUM(total) AS takings FROM bills GROUP BY day;',h:'GROUP BY day'},
+ {k:'predict',r:'s12',q:'The bills cover 3 days. How many rows?',code:'SELECT day, COUNT(*) FROM bills GROUP BY day;',pa:'rows',a:'3',h:'One row per day.'},
+ {k:'fix',r:'s12',q:'Fix: covers per table',bug:'SELECT table_no, SUM(covers) FROM bills;',ans:'SELECT table_no, SUM(covers) FROM bills GROUP BY table_no;',h:'Without GROUP BY, SUM folds everything into one row.'},
+ {k:'pick',r:'s13',q:'Keep only the courses with more than 3 dishes:',o:['WHERE COUNT(*) > 3','HAVING COUNT(*) > 3','LIMIT 3','ORDER BY 3'],a:1,h:'Testing a group needs HAVING.'},
+ {k:'type',r:'s13',q:'Days with takings above 400: day and takings',ph:'… GROUP BY day HAVING …',ans:'SELECT day, SUM(total) AS takings FROM bills GROUP BY day HAVING SUM(total) > 400;',h:'HAVING SUM(total) > 400'},
+ {k:'predict',r:'s13',q:'Starters 4, mains 5, desserts 3, drinks 3. How many rows?',code:'SELECT course FROM menu GROUP BY course HAVING COUNT(*) >= 4;',pa:'rows',a:'2',h:'Only groups with 4 or more survive.'},
+ {k:'fix',r:'s13',q:'Fix: keep only the guests with more than 2 order lines',bug:'SELECT guest_id, COUNT(*) FROM orders WHERE COUNT(*) > 2 GROUP BY guest_id;',ans:'SELECT guest_id, COUNT(*) FROM orders GROUP BY guest_id HAVING COUNT(*) > 2;',h:'Group tests go in HAVING, after GROUP BY.'},
+ {k:'pick',r:'s14',q:'What does ON say in a JOIN?',o:['Which rows to sort','How rows of the two tables match','Which columns to show','Which table is bigger'],a:1,h:'ON is the matching rule.'},
+ {k:'type',r:'s14',q:'Each order line with its dish name: the order id and the dish name',ph:'SELECT orders.id, menu.name FROM orders JOIN menu ON …',ans:'SELECT orders.id, menu.name FROM orders JOIN menu ON menu.id = orders.menu_id;',h:'ON menu.id = orders.menu_id'},
+ {k:'type',r:'s14',q:'The guest name and the day of every order line',ph:'SELECT guests.name, orders.day FROM orders JOIN guests ON …',ans:'SELECT guests.name, orders.day FROM orders JOIN guests ON guests.id = orders.guest_id;',h:'ON guests.id = orders.guest_id'},
+ {k:'predict',r:'s14',q:'The orders table has 20 rows and every one has a dish. How many rows?',code:'SELECT * FROM orders JOIN menu ON menu.id = orders.menu_id;',pa:'rows',a:'20',h:'Each order finds exactly one dish.'},
+ {k:'fix',r:'s14',q:'Fix the join so each order gets its own dish',bug:'SELECT orders.id, menu.name FROM orders JOIN menu ON menu.id = orders.id;',ans:'SELECT orders.id, menu.name FROM orders JOIN menu ON menu.id = orders.menu_id;',h:'The order points at its dish with menu_id.'},
+ {k:'pick',r:'s15',q:'In FROM orders o JOIN menu m, what is m?',o:['A new table','A short name for menu in this query','A column','A filter'],a:1,h:'An alias only lives inside this query.'},
+ {k:'type',r:'s15',q:'With aliases o and m: dish name and qty of every order on Friday',ph:'SELECT m.name, o.qty FROM orders o JOIN menu m ON …',ans:"SELECT m.name, o.qty FROM orders o JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Fri';",test:/\borders\s+(as\s+)?o\b/i,h:"WHERE o.day = 'Fri'"},
+ {k:'predict',r:'s15',q:'What is the column called?',code:'SELECT g.name AS guest FROM guests g WHERE g.vip = 1;',pa:'colname',a:'guest',h:'The name after AS.'},
+ {k:'fix',r:'s15',q:'Fix the ambiguous column: show order id and guest name',bug:'SELECT id, name FROM orders o JOIN guests g ON g.id = o.guest_id;',ans:'SELECT o.id, g.name FROM orders o JOIN guests g ON g.id = o.guest_id;',h:'Both tables have an id. Say which one with o.'},
+ {k:'pick',r:'s16',q:'LEFT JOIN keeps',o:['only the matching rows','every row of the left table, matched or not','every row of the right table','no rows'],a:1,h:'Left means the first table.'},
+ {k:'type',r:'s16',q:'Every guest with the ids of their orders, also guests with none: name and order id',ph:'SELECT g.name, o.id FROM guests g LEFT JOIN …',ans:'SELECT g.name, o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id;',h:'LEFT JOIN orders o ON o.guest_id = g.id'},
+ {k:'type',r:'s16',q:'The guests who never ordered: name only',ph:'… LEFT JOIN … WHERE o.id IS NULL',ans:'SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;',h:'WHERE o.id IS NULL'},
+ {k:'predict',r:'s16',q:'Oskar never ordered. What is o.id on his row?',code:"SELECT o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Oskar Vale';",pa:'value',a:'NULL',h:'No match means NULL.'},
+ {k:'fix',r:'s16',q:'Fix: = NULL never matches anything',bug:'SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id = NULL;',ans:'SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;',h:'Use IS NULL.'},
+ {k:'pick',r:'s17',q:"Which dish matches LIKE 'Moon%'?",o:['Moonroot Risotto','Ice Moon Float','both','neither'],a:0,h:"'Moon%' means starts with Moon."},
+ {k:'type',r:'s17',q:'The dishes with Moon anywhere in the name',ph:"SELECT name FROM menu WHERE name LIKE '…'",ans:"SELECT name FROM menu WHERE name LIKE '%Moon%';",test:/like/i,h:"'%Moon%'"},
+ {k:'type',r:'s17',q:'Guests on deck 2, 3 or 7, using IN: name and deck',ph:'SELECT name, deck FROM guests WHERE deck IN (…)',ans:'SELECT name, deck FROM guests WHERE deck IN (2, 3, 7);',test:/\bin\s*\(/i,h:'deck IN (2, 3, 7)'},
+ {k:'predict',r:'s17',q:'4 starters and 3 desserts. What comes back?',code:"SELECT COUNT(*) FROM menu WHERE course IN ('starter', 'dessert');",pa:'value',a:'7',h:'4 + 3'},
+ {k:'fix',r:'s17',q:'Fix: the names that end in Cake',bug:"SELECT name FROM menu WHERE name LIKE 'Cake%';",ans:"SELECT name FROM menu WHERE name LIKE '%Cake';",h:'The % goes where the unknown part is.'},
+ {k:'pick',r:'s18',q:'SELECT DISTINCT course FROM menu returns',o:['15 rows','4 rows, one per course','1 row','an error'],a:1,h:'Each course once.'},
+ {k:'type',r:'s18',q:'Every day that has orders, each day once',ph:'SELECT DISTINCT …',ans:'SELECT DISTINCT day FROM orders;',test:/distinct/i,h:'SELECT DISTINCT day FROM orders;'},
+ {k:'type',r:'s18',q:'Dishes priced from 8 to 12, both included: name and price',ph:'… WHERE price BETWEEN … AND …',ans:'SELECT name, price FROM menu WHERE price BETWEEN 8 AND 12;',test:/between/i,h:'BETWEEN 8 AND 12'},
+ {k:'predict',r:'s18',q:'7 of the 8 guests ordered something. What comes back?',code:'SELECT COUNT(DISTINCT guest_id) FROM orders;',pa:'value',a:'7',h:'Each guest counted once.'},
+ {k:'fix',r:'s18',q:'Fix: each deck once',bug:'SELECT deck DISTINCT FROM guests;',ans:'SELECT DISTINCT deck FROM guests;',h:'DISTINCT comes right after SELECT.'},
+ {k:'pick',r:'s19',q:'Which adds a row?',o:["ADD stock ('salt', 5, 'kg', 2);","INSERT INTO stock VALUES ('salt', 5, 'kg', 2);","UPDATE stock ADD ('salt');","SELECT INTO stock 'salt';"],a:1,h:'INSERT INTO … VALUES (…)'},
+ {k:'type',r:'s19',q:'Add basil: 3 kg, minimum 1. Then show the whole stock',ph:"INSERT INTO stock … ;\nSELECT * FROM stock;",ans:"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('basil', 3, 'kg', 1);\nSELECT * FROM stock;",multi:true,h:'Two statements, each ending with a semicolon.'},
+ {k:'predict',r:'s19',q:'Stock had 7 items. What comes back?',code:"INSERT INTO stock VALUES ('salt', 5, 'kg', 2);\nSELECT COUNT(*) FROM stock;",pa:'value',a:'8',h:'One more row.'},
+ {k:'fix',r:'s19',q:'Fix: the text needs quotes',bug:"INSERT INTO stock VALUES (mint, 2, 'kg', 1);\nSELECT * FROM stock;",ans:"INSERT INTO stock VALUES ('mint', 2, 'kg', 1);\nSELECT * FROM stock;",h:"'mint' in single quotes."},
+ {k:'pick',r:'s20',q:'What does UPDATE stock SET qty = 0; do?',o:['Nothing','Sets qty to 0 on every row','Asks which row','Deletes the table'],a:1,h:'No WHERE means every row.'},
+ {k:'type',r:'s20',q:'Cream arrived: set its qty to 9, then show item and qty of the cream',ph:"UPDATE stock SET … WHERE … ;\nSELECT …",ans:"UPDATE stock SET qty = 9 WHERE item = 'cream';\nSELECT item, qty FROM stock WHERE item = 'cream';",multi:true,h:"WHERE item = 'cream' in both statements."},
+ {k:'type',r:'s20',q:'Remove chili from the stock, then count the items left as items',ph:"DELETE FROM stock WHERE … ;\nSELECT COUNT(*) AS items …",ans:"DELETE FROM stock WHERE item = 'chili';\nSELECT COUNT(*) AS items FROM stock;",multi:true,h:"DELETE FROM stock WHERE item = 'chili';"},
+ {k:'predict',r:'s20',q:'Rice had 20. What comes back?',code:"UPDATE stock SET qty = qty + 1;\nSELECT qty FROM stock WHERE item = 'rice';",pa:'value',a:'21',h:'Every row went up by one, rice too.'},
+ {k:'fix',r:'s20',q:'Fix: only the moonroot should go up by 5',bug:'UPDATE stock SET qty = qty + 5;\nSELECT item, qty FROM stock;',ans:"UPDATE stock SET qty = qty + 5 WHERE item = 'moonroot';\nSELECT item, qty FROM stock;",h:"Add WHERE item = 'moonroot'."}
+];
+const TARGETS=[
+{id:'board',name:'Menu screen',client:'Chef Ottilie Brand',time:'16:30',
+ order:'The menu screen above the bar went blank an hour before service. Get it back: every dish with its course and price, in the order the kitchen keeps them.',
+ reward:{name:'Menu screen',kind:'screen',line:'The menu glows above the bar again.'},
+ rules:['s1','s2'],
+ starter:'SELECT * FROM menu;\n',
+ solution:'SELECT name, course, price FROM menu;\n',
+ watch:{all:(q,r)=>!!r&&r.cols.length===6&&r.rows.length===15},
+ steps:[
+  {t:'Run `SELECT * FROM menu;` and look at the whole table',c:(q,r,x)=>!!x.all,help:['The query is already in the editor. Run it.','Press Run, or Ctrl+Enter.','SELECT * FROM guests;','SELECT * FROM menu;']},
+  {t:'Show only three columns: `name`, `course` and `price`',c:(q,r)=>cols(r)==='name,course,price',help:['Swap the star for the columns the screen needs.','Separate the names with commas, in the order of the screen.','SELECT name, deck FROM guests;','SELECT name, course, price FROM menu;']},
+  {t:'All 15 dishes, no filter',c:(q,r)=>nrow(r)===15&&cols(r)==='name,course,price',help:['Count the rows on the ticket.','No WHERE: the screen shows the whole card.','SELECT name FROM menu;','SELECT name, course, price FROM menu;']}
+ ]},
+{id:'mains',name:'Mains card',client:'Sous-chef Ravi Anand',time:'16:50',
+ order:'Tonight the mains get their own card on every table: the name and price of each main course, nothing else. Try a number filter first, so you know how WHERE feels.',
+ reward:{name:'Table cards',kind:'card',line:'Every table has a mains card.'},
+ rules:['s3','s4'],
+ starter:'SELECT * FROM menu;\n',
+ solution:"SELECT name, price\nFROM menu\nWHERE course = 'main';\n",
+ watch:{cheap:(q,r)=>/where\s+price\s*<\s*10\b/i.test(q)&&nrow(r)===8},
+ steps:[
+  {t:'Warm-up: the dishes cheaper than 10, with `WHERE price < 10`',c:(q,r,x)=>!!x.cheap,help:['WHERE goes after FROM menu.','Numbers need no quotes: price < 10.','SELECT name FROM guests WHERE deck > 3;','SELECT name, price FROM menu WHERE price < 10;']},
+  {t:"Now filter on text: only the rows where `course` is `'main'`",c:(q,r)=>/course\s*=\s*'main'/i.test(q)&&nrow(r)===5,help:['Text values need single quotes.','Replace the number test with a test on course.',"SELECT name FROM menu WHERE course = 'dessert';","SELECT * FROM menu WHERE course = 'main';"]},
+  {t:'Two columns: `name` and `price`',c:(q,r)=>cols(r)==='name,price',help:['Swap the star for two column names.','name first, then price.',"SELECT name, course FROM menu WHERE course = 'drink';","SELECT name, price FROM menu WHERE course = 'main';"]}
+ ]},
+{id:'trolley',name:'Dessert trolley',client:'Pastry chef Juno Sato',time:'19:10',
+ order:'The trolley carries desserts and drinks. Put the four cheapest of them that cost under 9 on the trolley card: name, course and price, cheapest first.',
+ reward:{name:'Dessert trolley',kind:'trolley',line:'The trolley rolls out with its card.'},
+ rules:['s5','s6','s7'],
+ starter:'SELECT name, course, price FROM menu;\n',
+ solution:"SELECT name, course, price\nFROM menu\nWHERE (course = 'dessert' OR course = 'drink') AND price < 9\nORDER BY price\nLIMIT 4;\n",
+ steps:[
+  {t:"Only desserts and drinks: `course = 'dessert' OR course = 'drink'`",c:(q,r)=>nrow(r)>0&&col(r,'course').every(v=>v==='dessert'||v==='drink')&&/\bor\b|\bin\s*\(/i.test(q),help:['Two tests joined with OR.',"Each side is a full test: course = 'dessert' OR course = 'drink'.","SELECT name FROM menu WHERE course = 'starter' OR course = 'main';","SELECT name, course, price FROM menu WHERE course = 'dessert' OR course = 'drink';"]},
+  {t:'Under 9: add `AND price < 9`, with brackets around the OR part',c:(q,r)=>/price\s*<\s*9\b/i.test(q)&&nrow(r)>0&&col(r,'price').every(v=>v<9)&&col(r,'course').every(v=>v==='dessert'||v==='drink'),help:['AND is worked out before OR.','Without brackets the expensive desserts sneak back in.',"WHERE (course = 'starter' OR course = 'main') AND price < 20","SELECT name, course, price FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 9;"]},
+  {t:'Cheapest first: `ORDER BY price`',c:(q,r)=>/order\s+by\s+price\b(?!\s+desc)/i.test(q),help:['ORDER BY goes after WHERE.','Ascending is the default, so no DESC.','SELECT name FROM menu ORDER BY name;',"SELECT name, course, price FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 9 ORDER BY price;"]},
+  {t:'Only the first four: `LIMIT 4`',c:(q,r)=>/limit\s+4\b/i.test(q)&&nrow(r)===4,help:['LIMIT is the very last part.','LIMIT 4 after ORDER BY price.','SELECT name FROM menu ORDER BY price LIMIT 2;',"SELECT name, course, price FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 9 ORDER BY price LIMIT 4;"]}
+ ]},
+{id:'tags',name:'Price tags',client:'Manager Sol Petrov',time:'11:00',
+ order:'The station adds a 12% levy on every main from Monday. New price tags please: name, price, and the price with the levy as with_levy, rounded to 2 decimals.',
+ reward:{name:'Price tags',kind:'tag',line:'New tags hang on the pass.'},
+ rules:['s8','s9'],
+ starter:"SELECT name, price FROM menu WHERE course = 'main';\n",
+ solution:"SELECT name, price, ROUND(price * 1.12, 2) AS with_levy\nFROM menu\nWHERE course = 'main';\n",
+ steps:[
+  {t:'Add a third column that calculates `price * 1.12`',c:q=>/price\s*\*\s*1\.12\b|1\.12\s*\*\s*price/i.test(q),help:['SELECT can calculate per row.','Add , price * 1.12 after price.','SELECT name, price * 2 FROM menu;',"SELECT name, price, price * 1.12 FROM menu WHERE course = 'main';"]},
+  {t:'Name it `with_levy` with AS',c:(q,r)=>cols(r).split(',').includes('with_levy'),help:['AS gives a result column a name.','Put AS with_levy right after the calculation.','SELECT price * 2 AS double_portion FROM menu;',"SELECT name, price, price * 1.12 AS with_levy FROM menu WHERE course = 'main';"]},
+  {t:'Round it to 2 decimals with `ROUND(…, 2)`',c:q=>/round\s*\(\s*(price\s*\*\s*1\.12|1\.12\s*\*\s*price)\s*,\s*2\s*\)/i.test(q),help:['Some values have a long tail of digits.','Wrap the calculation: ROUND(price * 1.12, 2).','SELECT ROUND(price / 3, 2) AS per_person FROM menu;',"SELECT name, price, ROUND(price * 1.12, 2) AS with_levy FROM menu WHERE course = 'main';"]},
+  {t:'Exactly three columns: `name`, `price`, `with_levy`',c:(q,r)=>cols(r)==='name,price,with_levy',help:['Compare your header row with the ticket.','name, then price, then the levy column.','SELECT a, b, c FROM t;',"SELECT name, price, ROUND(price * 1.12, 2) AS with_levy FROM menu WHERE course = 'main';"]}
+ ]},
+{id:'closing',name:'Till tape',client:'Owner Mara Quist',time:'23:40',
+ order:"Saturday is done. One row for the owner's log: how many bills, the total takings, and the average tip rounded to 2 decimals. Columns bills, takings, avg_tip.",
+ reward:{name:'Till tape',kind:'till',line:'The till prints its first clean tape.'},
+ rules:['s10','s11'],
+ starter:"SELECT * FROM bills WHERE day = 'Sat';\n",
+ solution:"SELECT COUNT(*) AS bills, SUM(total) AS takings, ROUND(AVG(tip), 2) AS avg_tip\nFROM bills\nWHERE day = 'Sat';\n",
+ steps:[
+  {t:'Count the bills: `COUNT(*) AS bills`',c:q=>/count\s*\(\s*\*\s*\)\s+as\s+bills\b/i.test(q),help:['Swap the star after SELECT for COUNT(*).','COUNT(*) AS bills','SELECT COUNT(*) AS vips FROM guests WHERE vip = 1;',"SELECT COUNT(*) AS bills FROM bills WHERE day = 'Sat';"]},
+  {t:'Add the takings: `SUM(total) AS takings`',c:q=>/sum\s*\(\s*total\s*\)\s+as\s+takings\b/i.test(q),help:['A comma, then the next aggregate.','SUM adds up the total column.','SELECT SUM(qty) AS portions FROM orders;',"SELECT COUNT(*) AS bills, SUM(total) AS takings FROM bills WHERE day = 'Sat';"]},
+  {t:'Add the average tip, rounded: `ROUND(AVG(tip), 2) AS avg_tip`',c:q=>/round\s*\(\s*avg\s*\(\s*tip\s*\)\s*,\s*2\s*\)\s+as\s+avg_tip\b/i.test(q),help:['AVG gives the average, ROUND tidies it.','AVG goes inside ROUND.','SELECT ROUND(AVG(price), 2) AS avg_price FROM menu;',"SELECT COUNT(*) AS bills, SUM(total) AS takings, ROUND(AVG(tip), 2) AS avg_tip FROM bills WHERE day = 'Sat';"]},
+  {t:'One row, Saturday only',c:(q,r)=>nrow(r)===1&&/day\s*=\s*'sat'/i.test(q),help:['Aggregates fold the rows into one.',"Keep WHERE day = 'Sat'.","SELECT COUNT(*) FROM bills WHERE day = 'Fri';","SELECT COUNT(*) AS bills, SUM(total) AS takings, ROUND(AVG(tip), 2) AS avg_tip FROM bills WHERE day = 'Sat';"]}
+ ]},
+{id:'floor',name:'Floor plan',client:'Head waiter Elio Varga',time:'10:15',
+ order:'Which tables need an extra server? Per table, over the whole weekend: total covers and takings. Only the tables with at least 7 covers, busiest first.',
+ reward:{name:'Floor plan',kind:'floor',line:'The floor plan shows who serves where.'},
+ rules:['s12','s13'],
+ starter:'SELECT table_no, covers, total FROM bills;\n',
+ solution:'SELECT table_no, SUM(covers) AS covers, SUM(total) AS takings\nFROM bills\nGROUP BY table_no\nHAVING SUM(covers) >= 7\nORDER BY covers DESC;\n',
+ steps:[
+  {t:'One row per table: `GROUP BY table_no`',c:(q,r)=>/group\s+by\s+table_no\b/i.test(q)&&nrow(r)>0&&new Set(col(r,'table_no')).size===nrow(r),help:['GROUP BY goes after FROM bills.','Every table number should appear once.','SELECT day, COUNT(*) FROM bills GROUP BY day;','SELECT table_no, SUM(covers) FROM bills GROUP BY table_no;']},
+  {t:'Columns `table_no`, `covers` and `takings`, with SUM',c:(q,r)=>cols(r)==='table_no,covers,takings'&&/sum\s*\(\s*covers\s*\)/i.test(q)&&/sum\s*\(\s*total\s*\)/i.test(q),help:['Each number column becomes a SUM.','SUM(covers) AS covers, SUM(total) AS takings','SELECT course, COUNT(*) AS dishes FROM menu GROUP BY course;','SELECT table_no, SUM(covers) AS covers, SUM(total) AS takings FROM bills GROUP BY table_no;']},
+  {t:'Only tables with at least 7 covers: `HAVING SUM(covers) >= 7`',c:(q,r)=>/having\b/i.test(q)&&nrow(r)===3,help:['Testing a group needs HAVING, after GROUP BY.','HAVING SUM(covers) >= 7','SELECT day FROM bills GROUP BY day HAVING SUM(total) > 400;','SELECT table_no, SUM(covers) AS covers, SUM(total) AS takings FROM bills GROUP BY table_no HAVING SUM(covers) >= 7;']},
+  {t:'Busiest first: `ORDER BY covers DESC`',c:q=>/order\s+by\s+(sum\s*\(\s*covers\s*\)|covers)\s+desc\b/i.test(q),help:['ORDER BY comes after HAVING.','DESC for the biggest first.','SELECT name, price FROM menu ORDER BY price DESC;','SELECT table_no, SUM(covers) AS covers, SUM(total) AS takings FROM bills GROUP BY table_no HAVING SUM(covers) >= 7 ORDER BY covers DESC;']}
+ ]},
+{id:'tickets',name:'Ticket rail',client:'Line cook Pia Novak',time:'12:05',
+ order:'Sunday lunch prep: the ticket rail needs every Sunday order with the guest name, the dish and the quantity. Columns guest, dish, qty, sorted by guest and then dish.',
+ reward:{name:'Ticket rail',kind:'rail',line:'Tickets clip onto the rail by the pass.'},
+ rules:['s14','s15'],
+ starter:"SELECT * FROM orders WHERE day = 'Sun';\n",
+ solution:"SELECT g.name AS guest, m.name AS dish, o.qty\nFROM orders o\nJOIN guests g ON g.id = o.guest_id\nJOIN menu m ON m.id = o.menu_id\nWHERE o.day = 'Sun'\nORDER BY guest, dish;\n",
+ steps:[
+  {t:'Join `menu` on its id matching `menu_id`',c:q=>/join\s+menu\b[\s\S]*?\bon\b[\s\S]*?menu_id/i.test(q),help:['An order only knows the menu_id.','JOIN menu m ON m.id = o.menu_id','SELECT * FROM orders o JOIN menu m ON m.id = o.menu_id;',"SELECT * FROM orders o JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Sun';"]},
+  {t:'Join `guests` on its id matching `guest_id`',c:q=>/join\s+guests\b[\s\S]*?\bon\b[\s\S]*?guest_id/i.test(q),help:['A second JOIN works the same way.','JOIN guests g ON g.id = o.guest_id','SELECT * FROM orders o JOIN guests g ON g.id = o.guest_id;',"SELECT * FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Sun';"]},
+  {t:'Columns `guest`, `dish` and `qty`',c:(q,r)=>cols(r)==='guest,dish,qty',help:['Both tables have a name column: rename them.','g.name AS guest, m.name AS dish, o.qty','SELECT m.name AS dish FROM menu m;',"SELECT g.name AS guest, m.name AS dish, o.qty FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Sun';"]},
+  {t:'Sunday only, sorted by guest and then dish',c:(q,r)=>nrow(r)===5&&/order\s+by\s+(guest|g\.name)\s*,\s*(dish|m\.name)\b/i.test(q),help:['Two sort columns, separated by a comma.','ORDER BY guest, dish','SELECT name, course FROM menu ORDER BY course, name;',"SELECT g.name AS guest, m.name AS dish, o.qty FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Sun' ORDER BY guest, dish;"]}
+ ]},
+{id:'unsold',name:'Cut list',client:'Chef Ottilie Brand',time:'09:30',
+ order:'The menu is too long. Which dishes did nobody order all weekend? Name and course. Two warm-ups first, so the new keywords feel familiar.',
+ reward:{name:'Short menu',kind:'knife',line:'The card is shorter and sharper.'},
+ rules:['s16','s17','s18'],
+ starter:'SELECT * FROM menu;\n',
+ solution:'SELECT m.name, m.course\nFROM menu m\nLEFT JOIN orders o ON o.menu_id = m.id\nWHERE o.id IS NULL;\n',
+ watch:{days:(q,r)=>/select\s+distinct\s+day\s+from\s+orders/i.test(q)&&nrow(r)===3,moon:(q,r)=>/like\s+'%moon%'/i.test(q)&&nrow(r)===2},
+ steps:[
+  {t:'Warm-up: each order day once, with `SELECT DISTINCT day FROM orders`',c:(q,r,x)=>!!x.days,help:['DISTINCT removes repeats.','It comes right after SELECT.','SELECT DISTINCT course FROM menu;','SELECT DISTINCT day FROM orders;']},
+  {t:"Warm-up: the dishes with Moon in the name, with `LIKE '%Moon%'`",c:(q,r,x)=>!!x.moon,help:['% means any run of characters.',"'%Moon%' finds Moon anywhere.","SELECT name FROM menu WHERE name LIKE '%Cake';","SELECT name FROM menu WHERE name LIKE '%Moon%';"]},
+  {t:'Start from menu and `LEFT JOIN orders` on the dish id',c:q=>/from\s+menu\b[\s\S]*?left\s+join\s+orders\b[\s\S]*?\bon\b[\s\S]*?menu_id/i.test(q),help:['Every dish must stay, ordered or not.','FROM menu m LEFT JOIN orders o ON o.menu_id = m.id','SELECT g.name, o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id;','SELECT m.name, o.id FROM menu m LEFT JOIN orders o ON o.menu_id = m.id;']},
+  {t:'Keep the dishes without an order: `WHERE o.id IS NULL`',c:(q,r)=>/is\s+null/i.test(q)&&nrow(r)===2,help:['No match fills the order columns with NULL.','IS NULL, never = NULL.','SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;','SELECT m.name FROM menu m LEFT JOIN orders o ON o.menu_id = m.id WHERE o.id IS NULL;']},
+  {t:'Two columns: `name` and `course`',c:(q,r)=>cols(r)==='name,course',help:['Take both from the menu side.','m.name, m.course','SELECT m.name, m.price FROM menu m;','SELECT m.name, m.course FROM menu m LEFT JOIN orders o ON o.menu_id = m.id WHERE o.id IS NULL;']}
+ ]},
+{id:'larder',name:'Larder',client:'Quartermaster Dax Holm',time:'08:00',
+ order:'A delivery docked. Add saffron (50 g, minimum 20), add 10 kg to the moonroot, and strike cola syrup off the list: the supplier stopped making it. Then show item, qty and unit for everything, sorted by item.',
+ reward:{name:'Full larder',kind:'crate',line:'The larder is stocked and labelled.'},
+ rules:['s19','s20'],
+ starter:'SELECT * FROM stock;\n',
+ solution:"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('saffron', 50, 'g', 20);\nUPDATE stock SET qty = qty + 10 WHERE item = 'moonroot';\nDELETE FROM stock WHERE item = 'cola syrup';\nSELECT item, qty, unit FROM stock ORDER BY item;\n",
+ steps:[
+  {t:'Add saffron: 50, g, minimum 20, with `INSERT INTO stock`',c:(q,r)=>{const o=rowBy(r,'item','saffron');return/insert\s+into\s+stock/i.test(q)&&!!o&&o.qty==50&&o.unit==='g'},help:['INSERT goes before the SELECT. End it with a semicolon.','Columns item, qty, unit, min_qty and four values.',"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('basil', 3, 'kg', 1);","INSERT INTO stock (item, qty, unit, min_qty) VALUES ('saffron', 50, 'g', 20);\nSELECT * FROM stock;"]},
+  {t:'Add 10 to the moonroot only, with `UPDATE … WHERE`',c:(q,r)=>{const m=rowBy(r,'item','moonroot'),k=rowBy(r,'item','rice');return/update\s+stock/i.test(q)&&!!m&&m.qty==14&&!!k&&k.qty==20},help:['SET can use the old value: qty = qty + 10.','Without WHERE every item gets 10 more. Check the rice.',"UPDATE stock SET qty = qty + 5 WHERE item = 'rice';","UPDATE stock SET qty = qty + 10 WHERE item = 'moonroot';"]},
+  {t:'Remove the cola syrup with `DELETE FROM … WHERE`',c:(q,r)=>/delete\s+from\s+stock\s+where/i.test(q)&&nrow(r)>0&&!rowBy(r,'item','cola syrup'),help:['DELETE removes whole rows.','The item name has a space: keep it inside the quotes.',"DELETE FROM stock WHERE item = 'chili';","DELETE FROM stock WHERE item = 'cola syrup';"]},
+  {t:'Finish with `item`, `qty` and `unit`, sorted by item',c:(q,r)=>cols(r)==='item,qty,unit'&&/order\s+by\s+item\b/i.test(q),help:['The last SELECT decides what you see.','SELECT item, qty, unit FROM stock ORDER BY item;','SELECT name, price FROM menu ORDER BY name;',"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('saffron', 50, 'g', 20);\nUPDATE stock SET qty = qty + 10 WHERE item = 'moonroot';\nDELETE FROM stock WHERE item = 'cola syrup';\nSELECT item, qty, unit FROM stock ORDER BY item;"]}
+ ]}
+];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const md=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+const KEY='seqle.v1';
+const BOX=[0,1,3,7,14,30];
+const dayNo=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/86400000);
+function loadS(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}}
+let S=Object.assign({theme:'bistro',stage:'school',t:0,les:{},code:{},done:{},learned:[],srs:{},mode:'learn',sfx:true,help:{},x:{},stepsOk:{},docked:{}},loadS());
+['les','code','done','srs','help','x','stepsOk','docked','upg','mastered','mstart','rush'].forEach(k=>{if(!S[k]||typeof S[k]!=='object'||Array.isArray(S[k]))S[k]={}});
+if(!Array.isArray(S.learned))S.learned=[];
+S.cr=+S.cr||0;S.life=+S.life||0;S.rush=Object.assign({best:0,shifts:0,jobs:0},S.rush);
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},120)}
+const T=()=>TARGETS[S.t];
+const dkey=d=>d.r+':'+DRILLS.indexOf(d);
+
+const SQLJS=['1.10.3','1.8.0'].map(v=>'https://cdn.jsdelivr.net/npm/sql.js@'+v+'/dist/');
+function loadScript(src){return new Promise((res,rej)=>{const s=document.createElement('script');s.src=src;s.onload=res;s.onerror=()=>{s.remove();rej(new Error('load'))};document.head.appendChild(s)})}
+const DB={SQL:null,ready:false,failed:false,
+ async boot(){
+  engineState('boot');
+  for(const base of SQLJS){
+   try{if(typeof window.initSqlJs!=='function')await loadScript(base+'sql-wasm.js');this.SQL=await window.initSqlJs({locateFile:f=>base+f});const t=new this.SQL.Database();t.exec(SEED);t.close();this.ready=true;break}catch(e){this.SQL=null}
+  }
+  if(!this.ready){this.failed=true;engineState('fail');return}
+  engineState('ready');
+ },
+ run(sql){
+  if(!this.ready)return{offline:true};
+  let db;try{db=new this.SQL.Database();db.exec(SEED)}catch(e){return{err:'The kitchen database would not open: '+e.message}}
+  let last=null,n=0;
+  try{
+   if(typeof db.iterateStatements==='function'){for(const st of db.iterateStatements(sql)){n++;try{const cols=st.getColumnNames(),rows=[];while(st.step())rows.push(st.get());if(cols.length)last={cols,rows}}finally{st.free()}}}
+   else{const r=db.exec(sql);n=r.length;if(r.length){const x=r[r.length-1];last={cols:x.columns,rows:x.values}}}
+   return{res:last,n,changes:db.getRowsModified()}
+  }catch(e){return{err:String(e&&e.message||e),n}}
+  finally{try{db.close()}catch(_){}}
+ }
+};
+function engineState(s){
+ const sc=$('scan');
+ if(s==='boot'){sc.className='';sc.textContent='Opening the kitchen database…'}
+ if(s==='ready'){sc.className='';sc.textContent='SQL ready.';EXP={};shownT=-1;render()}
+ if(s==='fail'){sc.className='er';sc.textContent='No SQL engine: open Seqle over http(s) with an internet connection.';comms('I cannot reach the SQL engine. Check the internet connection.','worry')}
+}
+const FRIENDLY=[
+ [/syntax error/i,'SQL could not read the query near that word. Check keyword spelling, commas between columns, and the order: SELECT, FROM, WHERE, GROUP BY, HAVING, ORDER BY, LIMIT.'],
+ [/no such table/i,'There is no table with that name. The tables are menu, guests, orders, bills and stock.'],
+ [/no such column/i,'That column does not exist here. Check the spelling, and put text values in single quotes.'],
+ [/ambiguous column/i,'Two tables have a column with this name. Put the table or its alias in front: o.id, m.name.'],
+ [/incomplete input/i,'The query stops halfway. Look for a bracket or a quote that never closes.'],
+ [/unrecognized token/i,'There is a character SQL does not understand. Often a quote that never closes.'],
+ [/wrong number of arguments/i,'This function got the wrong number of values: COUNT(*), AVG(column), ROUND(value, 2).'],
+ [/misuse of aggregate/i,'COUNT, SUM and AVG cannot go in WHERE. Test groups with HAVING after GROUP BY.'],
+ [/UNIQUE constraint/i,'That row already exists, and this column must be unique.'],
+ [/NOT NULL constraint/i,'A required column was left empty.'],
+ [/columns but \d+ values|values for \d+ columns/i,'The number of values does not match the number of columns.']
+];
+function parseErr(err,q){
+ const t=String(err||'').trim();if(!t)return null;
+ const msg=t.replace(/^Error:\s*/,'');
+ let line=null;const m=msg.match(/near "([^"]+)"/);
+ if(m&&q){const i=String(q).toLowerCase().indexOf(m[1].toLowerCase());if(i>=0)line=String(q).slice(0,i).split('\n').length}
+ const f=FRIENDLY.find(x=>x[0].test(msg));
+ return{line,msg,kind:/syntax/i.test(msg)?'Syntax error':'Error',why:f?f[1]:''};
+}
+function stripSql(c){const s=String(c||'').replace(/\r/g,'');let o='',i=0,q=null;
+ while(i<s.length){const ch=s[i];
+  if(q){o+=ch;if(ch===q){if(s[i+1]===q){o+=q;i+=2;continue}q=null}i++;continue}
+  if(ch==="'"||ch==='"'){q=ch;o+=ch;i++;continue}
+  if(ch==='-'&&s[i+1]==='-'){while(i<s.length&&s[i]!=='\n')i++;continue}
+  if(ch==='/'&&s[i+1]==='*'){const j=s.indexOf('*/',i+2);i=j<0?s.length:j+2;continue}
+  o+=ch;i++}
+ return o}
+const normV=v=>v===null||v===undefined?'NULL':typeof v==='number'?String(Math.round(v*1e6)/1e6):String(v);
+const isOrdered=sql=>/\border\s+by\b/i.test(stripSql(sql));
+function sameRes(a,b,ordered){
+ if(!a||!b||a.cols.length!==b.cols.length)return false;
+ if(!b.cols.every((c,i)=>!/^\w+$/.test(c)||c.toLowerCase()===String(a.cols[i]).toLowerCase()))return false;
+ const k=r=>r.rows.map(x=>x.map(normV).join('␟')),x=k(a),y=k(b);
+ if(x.length!==y.length)return false;if(!ordered){x.sort();y.sort()}return x.every((v,i)=>v===y[i])}
+const cols=r=>r?r.cols.map(c=>String(c).toLowerCase()).join(','):'';
+const nrow=r=>r?r.rows.length:-1;
+function col(r,name){if(!r)return[];const i=r.cols.map(c=>String(c).toLowerCase()).indexOf(name);return i<0?[]:r.rows.map(x=>x[i])}
+function rowBy(r,key,val){if(!r)return null;const cs=r.cols.map(c=>String(c).toLowerCase()),i=cs.indexOf(key);if(i<0)return null;const row=r.rows.find(x=>x[i]===val);if(!row)return null;const o={};cs.forEach((c,j)=>o[c]=row[j]);return o}
+const normCode=s=>stripSql(s).toLowerCase().replace(/\s+/g,' ').replace(/\s*([=,()<>;*+\/-])\s*/g,'$1').replace(/;+\s*$/,'').trim();
+function tableHtml(r,marks,hd){
+ if(!r)return'';
+ let h='<table class="rt"><thead><tr>'+r.cols.map((c,i)=>'<th'+(hd&&hd[i]?' class="x"':'')+'>'+esc(c)+'</th>').join('')+'</tr></thead><tbody>';
+ r.rows.forEach((row,i)=>{h+='<tr'+(marks&&marks[i]?' class="'+marks[i]+'"':'')+'>'+row.map(v=>v===null?'<td class="nul">NULL</td>':'<td'+(typeof v==='number'?' class="num"':'')+'>'+esc(normV(v))+'</td>').join('')+'</tr>'});
+ if(!r.rows.length)h+='<tr class="gh"><td colspan="'+Math.max(1,r.cols.length)+'">no rows</td></tr>';
+ return h+'</tbody></table>'}
+
+const SQLK=new Set('select from where and or not in like between is null order by group having limit offset as join left inner outer cross on distinct insert into values update set delete create table asc desc case when then else end all union exists'.split(' '));
+const SQLF=new Set('count sum avg min max round lower upper length coalesce abs substr ifnull total'.split(' '));
+function hlSql(code){
+ let out='',i=0;const s=String(code);
+ while(i<s.length){const c=s[i];
+  if(c==='-'&&s[i+1]==='-'){let j=s.indexOf('\n',i);if(j<0)j=s.length;out+='<span class="h-c">'+esc(s.slice(i,j))+'</span>';i=j;continue}
+  if(c==="'"){let j=i+1;while(j<s.length){if(s[j]==="'"){if(s[j+1]==="'"){j+=2;continue}j++;break}if(s[j]==='\n')break;j++}out+='<span class="h-s">'+esc(s.slice(i,j))+'</span>';i=j;continue}
+  if(/[0-9]/.test(c)&&!/\w/.test(s[i-1]||'')){const m=s.slice(i).match(/^\d[\d.]*/);out+='<span class="h-n">'+esc(m[0])+'</span>';i+=m[0].length;continue}
+  if(/[A-Za-z_]/.test(c)){const w=s.slice(i).match(/^[A-Za-z_]\w*/)[0],lw=w.toLowerCase(),nx=s.slice(i+w.length).match(/^\s*\(/);
+   out+=SQLK.has(lw)?'<span class="h-k">'+w+'</span>':SQLF.has(lw)&&nx?'<span class="h-b">'+w+'</span>':esc(w);i+=w.length;continue}
+  if(c==='*'){out+='<span class="h-f">*</span>';i++;continue}
+  out+=esc(c);i++}
+ return out}
+
+const sfx=(()=>{let ctx=null;const ac=()=>{if(!ctx){try{ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}return ctx};
+ const tone=(f,d,type,v,delay)=>{if(!S.sfx)return;const c=ac();if(!c)return;const t=c.currentTime+(delay||0),o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(v||.04,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02)};
+ return{click:()=>tone(520,.05,'square',.015),ok:()=>{tone(660,.09,'sine',.05);tone(990,.12,'sine',.04,.08)},bad:()=>tone(180,.18,'sawtooth',.03),step:()=>tone(880,.08,'triangle',.04),dock:()=>{[523,659,784,1046].forEach((f,i)=>tone(f,.25,'triangle',.05,i*.09))}}})();
+
+function bixSvg(mood){const mouth=mood==='happy'?'M27 40 q5 4 10 0':mood==='worry'?'M27 41 h10':'M28 40 q4 2 8 0';
+ return'<svg viewBox="0 0 64 64" fill="none"><ellipse cx="32" cy="59" rx="13" ry="2.5" fill="rgba(0,0,0,.25)"/><path d="M26 47 v7 M38 47 v7" stroke="var(--acc)" stroke-width="3" stroke-linecap="round"/><path d="M32 20 v-7" stroke="var(--acc)" stroke-width="2.5"/><circle cx="32" cy="11" r="3.2" fill="var(--acc)"/><rect x="15" y="20" width="34" height="28" rx="13" fill="var(--panel2)" stroke="var(--acc)" stroke-width="2.5"/><rect x="21" y="26" width="22" height="18" rx="8" fill="var(--field)"/><circle cx="27.5" cy="33" r="2.4" fill="var(--cyan)"/><circle cx="36.5" cy="33" r="2.4" fill="var(--cyan)"/><path d="'+mouth+'" stroke="var(--cyan)" stroke-width="2" stroke-linecap="round"/><path d="M49 31 l7 -6" stroke="var(--acc)" stroke-width="2.5" stroke-linecap="round"/><path d="M50 24 h12" stroke="var(--ink2)" stroke-width="3" stroke-linecap="round"/></svg>'}
+const ART={
+ screen:'<rect x="48" y="16" width="144" height="100" rx="8" fill="var(--panel2)" stroke="var(--acc)" stroke-width="3"/><rect x="64" y="32" width="58" height="8" rx="2" fill="var(--acc)"/><g fill="var(--ink2)"><rect x="64" y="52" width="72" height="5" rx="2"/><rect x="64" y="66" width="58" height="5" rx="2"/><rect x="64" y="80" width="80" height="5" rx="2"/><rect x="64" y="94" width="50" height="5" rx="2"/></g><g fill="var(--cyan)"><rect x="158" y="52" width="18" height="5" rx="2"/><rect x="158" y="66" width="18" height="5" rx="2"/><rect x="158" y="80" width="18" height="5" rx="2"/><rect x="158" y="94" width="18" height="5" rx="2"/></g><path d="M104 116 l-8 22 M136 116 l8 22" stroke="var(--line2)" stroke-width="4" stroke-linecap="round"/>',
+ card:'<path d="M28 130 h184" stroke="var(--line2)" stroke-width="4" stroke-linecap="round"/><path d="M78 128 L100 26 h40 L162 128 Z" fill="var(--ticket)" stroke="var(--acc)" stroke-width="3" stroke-linejoin="round"/><g fill="var(--ticket-ink)" opacity=".75"><rect x="106" y="44" width="28" height="6" rx="2"/><rect x="100" y="64" width="40" height="4" rx="2"/><rect x="98" y="78" width="44" height="4" rx="2"/><rect x="96" y="92" width="48" height="4" rx="2"/><rect x="94" y="106" width="52" height="4" rx="2"/></g><rect x="182" y="96" width="12" height="32" rx="3" fill="var(--ticket)" stroke="var(--line2)" stroke-width="2"/><path d="M188 96 q-6 -9 0 -18 q6 9 0 18" fill="var(--acc)"/>',
+ trolley:'<rect x="56" y="70" width="128" height="8" rx="3" fill="var(--acc)"/><rect x="56" y="108" width="128" height="8" rx="3" fill="var(--acc)"/><path d="M64 78 V116 M176 78 V116" stroke="var(--line2)" stroke-width="5"/><path d="M184 72 q22 -2 24 -24" stroke="var(--line2)" stroke-width="5" fill="none" stroke-linecap="round"/><circle cx="74" cy="128" r="9" fill="var(--panel2)" stroke="var(--ink2)" stroke-width="4"/><circle cx="166" cy="128" r="9" fill="var(--panel2)" stroke="var(--ink2)" stroke-width="4"/><path d="M82 70 v-24 h46 v24 z" fill="var(--ticket)"/><path d="M82 48 h46" stroke="var(--bad)" stroke-width="6"/><circle cx="105" cy="38" r="5" fill="var(--bad)"/><path d="M144 70 l-6 -30 h28 l-6 30 z" fill="var(--cyan2)" stroke="var(--cyan)" stroke-width="3" stroke-linejoin="round"/><rect x="94" y="86" width="14" height="22" rx="3" fill="var(--cyan)"/><rect x="128" y="92" width="26" height="16" rx="3" fill="var(--ticket)"/>',
+ tag:'<path d="M18 26 Q120 62 222 26" stroke="var(--line2)" stroke-width="3" fill="none"/><g transform="translate(46 48) rotate(8)"><path d="M0 0 h44 l14 18 l-14 18 h-44 z" fill="var(--ticket)" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/><circle cx="44" cy="18" r="3.5" fill="var(--panel)"/><rect x="8" y="10" width="26" height="5" rx="2" fill="var(--ticket-ink)" opacity=".7"/><rect x="8" y="21" width="18" height="5" rx="2" fill="var(--acc)"/></g><g transform="translate(96 58)"><path d="M0 0 h44 l14 18 l-14 18 h-44 z" fill="var(--ticket)" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/><circle cx="44" cy="18" r="3.5" fill="var(--panel)"/><rect x="8" y="10" width="26" height="5" rx="2" fill="var(--ticket-ink)" opacity=".7"/><rect x="8" y="21" width="18" height="5" rx="2" fill="var(--acc)"/></g><g transform="translate(150 52) rotate(-8)"><path d="M0 0 h44 l14 18 l-14 18 h-44 z" fill="var(--ticket)" stroke="var(--acc)" stroke-width="2.5" stroke-linejoin="round"/><circle cx="44" cy="18" r="3.5" fill="var(--panel)"/><rect x="8" y="10" width="26" height="5" rx="2" fill="var(--ticket-ink)" opacity=".7"/><rect x="8" y="21" width="18" height="5" rx="2" fill="var(--acc)"/></g>',
+ till:'<path d="M96 64 V18 h44 V64" fill="var(--ticket)" stroke="var(--line2)" stroke-width="2"/><g fill="var(--ticket-ink)" opacity=".6"><rect x="104" y="26" width="28" height="4" rx="2"/><rect x="104" y="36" width="20" height="4" rx="2"/><rect x="104" y="46" width="28" height="4" rx="2"/></g><rect x="50" y="62" width="140" height="62" rx="8" fill="var(--panel2)" stroke="var(--acc)" stroke-width="3"/><rect x="64" y="74" width="62" height="22" rx="3" fill="var(--field)" stroke="var(--cyan)" stroke-width="2"/><rect x="72" y="82" width="34" height="6" rx="2" fill="var(--cyan)"/><g fill="var(--ink2)"><rect x="138" y="74" width="12" height="9" rx="2"/><rect x="156" y="74" width="12" height="9" rx="2"/><rect x="138" y="89" width="12" height="9" rx="2"/><rect x="156" y="89" width="12" height="9" rx="2"/><rect x="138" y="104" width="30" height="9" rx="2"/></g><rect x="38" y="124" width="164" height="10" rx="3" fill="var(--line2)"/>',
+ floor:'<rect x="28" y="16" width="184" height="118" rx="6" fill="none" stroke="var(--line2)" stroke-width="3" stroke-dasharray="7 6"/><g stroke="var(--ink2)" stroke-width="2" fill="var(--panel2)"><circle cx="66" cy="38" r="5"/><circle cx="94" cy="38" r="5"/><circle cx="66" cy="74" r="5"/><circle cx="94" cy="74" r="5"/><circle cx="146" cy="38" r="5"/><circle cx="174" cy="38" r="5"/><circle cx="146" cy="74" r="5"/><circle cx="174" cy="74" r="5"/><circle cx="66" cy="94" r="5"/><circle cx="94" cy="94" r="5"/><circle cx="66" cy="128" r="5"/><circle cx="94" cy="128" r="5"/><circle cx="146" cy="94" r="5"/><circle cx="174" cy="94" r="5"/><circle cx="146" cy="128" r="5"/><circle cx="174" cy="128" r="5"/></g><circle cx="80" cy="56" r="14" fill="var(--acc)"/><circle cx="160" cy="56" r="14" fill="var(--panel2)" stroke="var(--acc)" stroke-width="3"/><circle cx="80" cy="111" r="14" fill="var(--panel2)" stroke="var(--acc)" stroke-width="3"/><circle cx="160" cy="111" r="14" fill="var(--acc)"/>',
+ rail:'<rect x="22" y="26" width="196" height="9" rx="3" fill="var(--line2)"/><g fill="var(--ticket)" stroke="var(--line2)" stroke-width="2"><path d="M40 35 h42 v78 l-7 -5 l-7 5 l-7 -5 l-7 5 l-7 -5 l-7 5 z"/><path d="M100 35 h42 v90 l-7 -5 l-7 5 l-7 -5 l-7 5 l-7 -5 l-7 5 z"/><path d="M160 35 h42 v70 l-7 -5 l-7 5 l-7 -5 l-7 5 l-7 -5 l-7 5 z"/></g><g fill="var(--ticket-ink)" opacity=".7"><rect x="47" y="46" width="28" height="5" rx="2"/><rect x="47" y="58" width="20" height="4" rx="2"/><rect x="47" y="68" width="24" height="4" rx="2"/><rect x="107" y="46" width="28" height="5" rx="2"/><rect x="107" y="58" width="22" height="4" rx="2"/><rect x="107" y="68" width="18" height="4" rx="2"/><rect x="107" y="78" width="24" height="4" rx="2"/><rect x="167" y="46" width="28" height="5" rx="2"/><rect x="167" y="58" width="16" height="4" rx="2"/></g><g fill="var(--acc)"><rect x="47" y="90" width="12" height="5" rx="2"/><rect x="107" y="100" width="12" height="5" rx="2"/><rect x="167" y="80" width="12" height="5" rx="2"/></g>',
+ knife:'<rect x="36" y="22" width="80" height="108" rx="4" fill="var(--ticket)" stroke="var(--acc)" stroke-width="3"/><rect x="50" y="34" width="40" height="6" rx="2" fill="var(--acc)"/><g fill="var(--ticket-ink)" opacity=".7"><rect x="50" y="52" width="52" height="4" rx="2"/><rect x="50" y="66" width="44" height="4" rx="2"/><rect x="50" y="80" width="52" height="4" rx="2"/><rect x="50" y="94" width="38" height="4" rx="2"/><rect x="50" y="108" width="48" height="4" rx="2"/></g><path d="M46 68 h56 M46 96 h48" stroke="var(--bad)" stroke-width="3" stroke-linecap="round"/><path d="M140 118 L200 34 q10 -4 12 6 L156 124 z" fill="var(--ink2)" stroke="var(--line2)" stroke-width="2" stroke-linejoin="round"/><path d="M146 122 l-20 18" stroke="var(--acc)" stroke-width="11" stroke-linecap="round"/>',
+ crate:'<rect x="50" y="70" width="140" height="62" rx="4" fill="var(--panel2)" stroke="var(--acc)" stroke-width="3"/><path d="M50 91 h140 M50 112 h140" stroke="var(--acc)" stroke-width="2" opacity=".6"/><g stroke="var(--cyan)" stroke-width="2.5" fill="var(--cyan2)"><rect x="66" y="36" width="28" height="34" rx="5"/><rect x="106" y="30" width="28" height="40" rx="5"/><rect x="146" y="40" width="28" height="30" rx="5"/></g><g fill="var(--acc)"><rect x="66" y="30" width="28" height="8" rx="2"/><rect x="106" y="24" width="28" height="8" rx="2"/><rect x="146" y="34" width="28" height="8" rx="2"/></g><g fill="var(--ticket)"><rect x="72" y="48" width="16" height="10" rx="2"/><rect x="112" y="44" width="16" height="10" rx="2"/><rect x="152" y="50" width="16" height="10" rx="2"/></g>'
+};
+function rewardSvg(t,ghost){return'<svg viewBox="0 0 240 150" fill="none"'+(ghost?' class="sil"':'')+' role="img" aria-label="'+esc(ghost?'Not yet restored':t.reward.name)+'">'+ART[t.reward.kind]+'</svg>'}
+
+let commsT;function comms(m,mood){$('cmsg').textContent=m;$('dotmini').innerHTML=bixSvg(mood);const c=$('comms');c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1800)}
+const maxT=()=>{let i=0;while(i<TARGETS.length-1&&S.done[TARGETS[i].id])i++;return i};
+const seqFor=t=>{const out=[];TARGETS[t].rules.forEach(r=>{out.push({les:r});DRILLS.forEach(d=>{if(d.r===r)out.push({drill:d})})});return out};
+const schoolDone=t=>!!(S.les[TARGETS[t].id]>=seqFor(t).length);
+function learn(r){if(!S.learned.includes(r)){S.learned.push(r);save()}}
+function srsMark(d,ok){const k=dkey(d),it=S.srs[k]||{b:0,due:0,r:0,w:0},t=dayNo();if(ok){it.b=Math.min(it.b+1,BOX.length-1);it.r++}else{it.b=0;it.w++}it.due=t+BOX[it.b];it.last=t;S.srs[k]=it;save();updDue()}
+function dueList(){const t=dayNo();return DRILLS.filter(d=>S.learned.includes(d.r)&&S.srs[dkey(d)]&&S.srs[dkey(d)].due<=t)}
+function updDue(){const n=dueList().length,b=document.querySelector('.stg[data-v="review"]');if(b)b.textContent='Review'+(n?' · '+n:'')}
+
+const RANKS=[['Pot washer',0],['Runner',300],['Server',800],['Section lead',1600],['Head waiter',3000],['Manager',5000],['Owner',8000]];
+const ROMAN=['I','II','III','IV','V','VI','VII'];
+const UPG=[
+ {k:'oven',name:'Second oven',max:3,cost:[150,350,700],d:'Rush tables wait 10 seconds longer per level.'},
+ {k:'jar',name:'Tip jar',max:2,cost:[250,600],d:'Rush tips go up 25% per level.'},
+ {k:'tables',name:'Extra tables',max:1,cost:[400],d:'A dinner rush brings 8 tables instead of 5.'},
+ {k:'runner',name:'Robot runner',max:1,cost:[450],d:'Once per rush, a table about to leave gets half their patience back.'},
+ {k:'supplier',name:'Supplier contract',max:1,cost:[500],d:'A fourth special on the board every day.'},
+ {k:'neon',name:'Neon sign',max:1,cost:[300],d:'Unlocks a third theme: Neon.'}];
+const ORDERS={
+ review:{n:5,t:'Clear 5 review drills',pay:60},
+ clean:{n:6,t:'Get 6 drills right first time',pay:50},
+ predict:{n:3,t:'Predict 3 results right first time',pay:50},
+ fix:{n:2,t:'Fix 2 broken queries right first time',pay:50,need:()=>DRILLS.some(d=>d.k==='fix'&&S.learned.includes(d.r))},
+ rush:{n:4,t:'Serve 4 rush tables on time',pay:70},
+ shift:{n:1,t:'Finish a dinner rush',pay:60},
+ dock:{n:1,t:'Serve a new order',pay:60,need:()=>TARGETS.some(t=>!S.done[t.id])},
+ master:{n:1,t:'Earn a Mastery bonus',pay:90,need:()=>TARGETS.slice(0,maxT()+1).some(t=>!S.mastered[t.id])}};
+const MOODS=['party of 2','party of 4','a birthday','two regulars','a date','party of 6','a crew on leave','a food critic'];
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const upLv=k=>S.upg[k]||0;
+const payFor=i=>100+40*i;
+const rankOf=l=>{let r=0;RANKS.forEach((x,i)=>{if(l>=x[1])r=i});return r};
+const THEMES=()=>['bistro','daylight'].concat(upLv('neon')?['neon']:[]);
+const TNAME={bistro:'Bistro',daylight:'Daylight',neon:'Neon'};
+const TCOL={bistro:'#140f0d',daylight:'#f3ede6',neon:'#0a0710'};
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function ensureDisp(){
+ const d=dayNo(),want=upLv('supplier')?4:3;
+ if(!S.disp||S.disp.day!==d)S.disp={day:d,ids:[],prog:{},claimed:[],bonus:false};
+ const D=S.disp;
+ if(D.ids.length<want&&S.learned.length){
+  const r=rng(d*7919+29),pool=Object.keys(ORDERS).filter(k=>!D.ids.includes(k)&&(!ORDERS[k].need||ORDERS[k].need()));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  D.ids=D.ids.concat(pool.slice(0,want-D.ids.length));
+ }
+ return D;
+}
+function readyClaims(){const D=ensureDisp();return D.ids.filter(k=>!D.claimed.includes(k)&&(D.prog[k]||0)>=ORDERS[k].n).length}
+function tick(ev,n){const D=ensureDisp();if(!D.ids.includes(ev)||D.claimed.includes(ev))return;const o=ORDERS[ev],was=D.prog[ev]||0;if(was>=o.n)return;D.prog[ev]=Math.min(o.n,was+(n||1));if(D.prog[ev]>=o.n){sfx.step();toast('Special ready to claim: '+o.t)}save();updTill()}
+function updTill(){const b=document.querySelector('.stg[data-v="till"]');if(!b)return;b.textContent='Till · '+fmt(S.cr);b.classList.toggle('ready',readyClaims()>0);if(S.stage==='till')renderTill()}
+function earn(n){
+ n=Math.round(n);if(n<=0)return;const before=rankOf(S.life);S.cr+=n;S.life+=n;save();
+ const b=document.querySelector('.stg[data-v="till"]');updTill();if(b){b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump')}
+ const after=rankOf(S.life);if(after>before){sfx.dock();toast('Promoted: '+RANKS[after][0]);comms('Promoted to '+RANKS[after][0]+'. The regulars know your name now.','happy')}
+}
+function credit(d,ok,src){earn(src==='review'?(ok?10:3):(ok?5:2));if(src==='review')tick('review');if(ok){tick('clean');if(d.k==='predict')tick('predict');if(d.k==='fix')tick('fix')}}
+function buy(k){const u=UPG.find(x=>x.k===k),lv=upLv(k);if(lv>=u.max)return;const c=u.cost[lv];if(S.cr<c){sfx.bad();toast('Not enough credits yet');return}S.cr-=c;S.upg[k]=lv+1;sfx.dock();comms(u.name+(u.max>1?' level '+(lv+1):'')+' installed.','happy');if(k==='neon')S.theme='neon';save();render()}
+function claim(k){const D=ensureDisp();if(D.claimed.includes(k)||(D.prog[k]||0)<ORDERS[k].n)return;D.claimed.push(k);sfx.ok();earn(ORDERS[k].pay);if(!D.bonus&&D.ids.every(x=>D.claimed.includes(x))){D.bonus=true;earn(50);toast('Full board: +50 CR');comms('Every special served today. Bonus paid.','happy')}save();render()}
+function renderTill(){
+ const r=rankOf(S.life),nx=RANKS[r+1],base=RANKS[r][1],pct=nx?Math.round(100*(S.life-base)/(nx[1]-base)):100;
+ $('plife').textContent='lifetime '+fmt(S.life)+' CR';
+ $('prank').innerHTML='<div class="rank"><span class="ri">'+ROMAN[r]+'</span><h3>'+RANKS[r][0]+'</h3><small>'+(nx?fmt(nx[1]-S.life)+' CR to '+nx[0]:'Top rank. Bistro Perigee is yours.')+'</small><div class="gauge"><i style="width:'+pct+'%"></i></div></div><div class="kv"><div>Wallet<b>'+fmt(S.cr)+' CR</b></div><div>Orders served<b>'+TARGETS.filter(t=>S.done[t.id]).length+' / '+TARGETS.length+'</b></div></div>';
+ const D=ensureDisp();
+ $('pday').textContent=D.ids.length?D.claimed.length+' / '+D.ids.length+' served':'';
+ $('pdisp').innerHTML=!D.ids.length?'<p class="pnote">Finish your first lesson in School and the specials board opens. New specials every day.</p>':D.ids.map(k=>{const o=ORDERS[k],v=D.prog[k]||0,c=D.claimed.includes(k),full=v>=o.n;
+  return'<div class="order'+(c?' claimed':'')+(full?' full':'')+'"><b>'+esc(o.t)+'</b><small>'+(c?'served · '+o.pay+' CR paid':v+' / '+o.n+' · pays '+o.pay+' CR')+'</small><div class="gauge"><i style="width:'+Math.round(100*v/o.n)+'%"></i></div>'+(c?'':'<button data-claim="'+k+'"'+(full?' class="pri"':' disabled')+'>Claim</button>')+'</div>'}).join('')+(D.ids.length?'<p class="pnote">'+(D.bonus?(D.ids.every(x=>D.claimed.includes(x))?'Full board bonus paid. New specials tomorrow.':'Full board bonus already paid today.'):'Serve every special today for a 50 CR bonus.')+'</p>':'');
+ document.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claim(b.dataset.claim));
+ const c=rushCfg(),can=S.learned.length>0;
+ $('prsub').textContent=S.rush.shifts?S.rush.shifts+(S.rush.shifts===1?' rush':' rushes')+' · '+S.rush.jobs+' on time':'';
+ $('prush').innerHTML='<p class="why">Tables order quick SQL jobs from the rules you have learned. Answer before their patience runs out. Faster answers earn bigger tips, a clean first answer adds 5 CR, and every table served on time in a row grows your combo.</p><div class="kv"><div>Patience<b>'+c.pat+' s</b></div><div>Tips<b>× '+c.tip.toFixed(2)+'</b></div><div>Tables per rush<b>'+c.jobs+'</b></div><div>Best rush<b>'+fmt(S.rush.best)+' CR</b></div></div>'+(can?'':'<p class="pnote">Learn your first rule in School to open the dinner rush.</p>')+'<div class="drow"><button class="pri" id="pshift"'+(can?'':' disabled')+'>Start a dinner rush</button></div><dl class="paytab"><dt>Every table served on time</dt><dd>12 CR</dd><dt>Right first time</dt><dd>+5 CR</dd><dt>Tip, more when you are fast</dt><dd>up to '+Math.round(20*c.tip)+' CR</dd><dt>Combo, per table in a row</dt><dd>+2 CR, max +10</dd><dt>Write, fix and predict jobs</dt><dd>+15 s patience</dd><dt>A table runs out of patience</dt><dd>0 CR, combo resets</dd></dl><p class="pnote">Tables order the rules you are weakest at more often. Every job also counts for Review.</p>';
+ $('pshift').onclick=startShift;
+ $('pwallet').textContent=fmt(S.cr)+' CR';
+ $('pyard').innerHTML=UPG.map(u=>{const lv=upLv(u.k),maxed=lv>=u.max,cost=u.cost[lv];
+  return'<div class="upg"><h4>'+esc(u.name)+'</h4><p>'+esc(u.d)+'</p><div class="lv">'+Array.from({length:u.max},(_,i)=>'<i class="'+(i<lv?'on':'')+'"></i>').join('')+'</div>'+(maxed?'<button disabled>Installed</button>':'<button data-buy="'+u.k+'"'+(S.cr>=cost?' class="pri"':'')+'>'+fmt(cost)+' CR</button>')+'</div>'}).join('');
+ document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buy(b.dataset.buy));
+}
+function rushCfg(){return{jobs:upLv('tables')?8:5,pat:40+10*upLv('oven'),tip:1+.25*upLv('jar'),spare:upLv('runner')?1:0}}
+let RJ=null,rushTick=null;
+function startShift(){
+ const pool=DRILLS.filter(d=>S.learned.includes(d.r));if(!pool.length){toast('Learn a rule in School first');return}
+ const c=rushCfg(),w=d=>{const it=S.srs[dkey(d)];return it?Math.max(1,6-it.b):6},list=[];
+ for(let i=0;i<c.jobs;i++){const cand=pool.length>1?pool.filter(d=>d!==list[i-1]):pool,tot=cand.reduce((a,d)=>a+w(d),0);let x=Math.random()*tot,pick=cand[0];for(const d of cand){x-=w(d);if(x<=0){pick=d;break}}list.push(pick)}
+ RJ={list,i:0,earned:0,ontime:0,combo:0,spare:c.spare,cfg:c,done:false,o:Math.floor(Math.random()*8),dl:{},lost:{},paid:{}};sfx.click();go('rush');
+}
+function patFor(d){return(RJ.cfg.pat+(d.k==='pick'?0:15))*1000}
+function renderRush(){
+ clearInterval(rushTick);
+ const box=$('jbox'),con=$('jout'),stat=$('jstat'),cl=$('jclient');
+ if(!RJ){$('jtitle').textContent='Dinner rush';$('jpips').innerHTML='';cl.innerHTML='';cl.hidden=true;box.innerHTML='<div class="donecard"><div class="dk">Dinner rush</div><h2>No rush running</h2><p class="why">Start a rush from the Till. Each table orders one quick job and waits only so long.</p><div class="drow"><button id="jport">Till</button><button class="pri" id="jgo">Start a dinner rush</button></div></div>';$('jport').onclick=()=>go('till');$('jgo').onclick=startShift;return}
+ $('jpips').innerHTML=RJ.list.map((x,k)=>'<span class="'+(k<RJ.i?(RJ.lost[k]?'les':'ok'):k===RJ.i?'now':'')+'"></span>').join('');
+ if(RJ.i>=RJ.list.length){
+  cl.hidden=true;
+  if(!RJ.done){RJ.done=true;S.rush.shifts++;S.rush.jobs+=RJ.ontime;const best=RJ.earned>S.rush.best;if(best)S.rush.best=RJ.earned;save();tick('shift');if(best&&S.rush.shifts>1)toast('New best rush: '+fmt(RJ.earned)+' CR')}
+  $('jtitle').textContent='Rush over';
+  box.innerHTML='<div class="donecard"><div class="dk">Rush report</div><h2>'+fmt(RJ.earned)+' CR earned</h2><p class="why">'+RJ.ontime+' of '+RJ.list.length+' tables served on time. '+(RJ.ontime===RJ.list.length?'A clean rush. Every table left happy.':'Missed jobs come back in Review sooner, so they will be quicker next time.')+'</p><div class="drow"><button id="jport">Till</button><button class="pri" id="jgo">Another rush</button></div></div>';
+  $('jport').onclick=()=>go('till');$('jgo').onclick=startShift;return}
+ const job=RJ.i,d=RJ.list[job],tbl=(RJ.o+job*3)%9+1,who='Table '+tbl+' · '+MOODS[(RJ.o+job)%MOODS.length],tot=patFor(d);
+ if(!RJ.dl[job])RJ.dl[job]=Date.now()+tot;
+ $('jtitle').textContent='Table '+(job+1)+' of '+RJ.list.length;
+ cl.hidden=false;
+ cl.innerHTML='<span class="who">'+esc(who)+'</span><span class="secs" id="jsec"></span><div class="gauge hi" id="jgauge"><i></i></div><div class="msg" id="jmsg">'+(RJ.combo>1?'Combo '+RJ.combo+'. Keep it going.':'')+'</div>';
+ const next=()=>{if(RJ.i!==job)return;srsMark(d,!RJ.lost[job]&&!!RJ.paid[job]&&RJ.paid[job].clean);RJ.i++;renderRush()};
+ drillUI(box,con,stat,d,()=>next(),firstOk=>{
+  if(RJ.i!==job||RJ.lost[job]||RJ.paid[job])return;
+  clearInterval(rushTick);
+  const left=Math.max(0,RJ.dl[job]-Date.now()),frac=left/tot,combo=RJ.combo,base=12,clean=firstOk?5:0,tip=Math.round(20*frac*RJ.cfg.tip),cb=2*Math.min(combo,5),pay=base+clean+tip+cb;
+  RJ.paid[job]={clean:firstOk};RJ.combo++;RJ.ontime++;RJ.earned+=pay;earn(pay);tick('rush');if(firstOk){tick('clean');if(d.k==='predict')tick('predict');if(d.k==='fix')tick('fix')}
+  const m=$('jmsg');if(m){m.className='msg ok';m.textContent='Paid '+pay+' CR: '+base+' base'+(clean?' + '+clean+' clean':'')+(tip?' + '+tip+' tip':'')+(cb?' + '+cb+' combo':'')+'.'}
+ });
+ const g=$('jgauge'),sec=$('jsec');
+ const draw=()=>{if(RJ.i!==job||RJ.paid[job]||RJ.lost[job]){clearInterval(rushTick);return}
+  let left=RJ.dl[job]-Date.now();
+  if(left<=0&&RJ.spare>0){RJ.spare--;RJ.dl[job]=Date.now()+tot/2;left=tot/2;comms('The robot runner brought bread. Half their patience back.','worry');const m=$('jmsg');if(m){m.className='msg';m.textContent='Robot runner sent: half their patience back.'}}
+  if(left<=0){lost();return}
+  const f=left/tot;g.querySelector('i').style.width=Math.round(100*f)+'%';g.className='gauge '+(f>.5?'hi':f>.25?'mid':'lo');sec.textContent=Math.ceil(left/1000)+' s'};
+ const lost=()=>{clearInterval(rushTick);RJ.lost[job]=true;RJ.combo=0;sfx.bad();g.querySelector('i').style.width='0%';g.className='gauge lo';sec.textContent='0 s';
+  box.querySelectorAll('button,input,textarea').forEach(e=>{if(e.id!=='showles')e.disabled=true});
+  const ans=d.k==='pick'?d.o[d.a]:d.k==='predict'?d.a:d.ans;
+  const m=$('jmsg');m.className='msg err';m.innerHTML='The table left without paying. The answer was:<pre>'+esc(ans)+'</pre><div class="drow"><button class="pri" id="jnext">'+(job+1<RJ.list.length?'Next table':'End the rush')+'</button></div>';
+  $('jnext').onclick=next;$('jnext').focus()};
+ draw();rushTick=setInterval(draw,200);
+}
+
+function go(v){if(v!==S.stage)sfx.click();if(v!=='rush')clearInterval(rushTick);S.stage=v;save();render()}
+function render(){
+ if(!THEMES().includes(S.theme))S.theme='bistro';
+ document.body.dataset.theme=S.theme;$('theme').textContent=TNAME[S.theme];
+ document.querySelector('meta[name=theme-color]').setAttribute('content',TCOL[S.theme]);
+ $('mute').textContent=S.sfx?'Sound':'Muted';
+ document.querySelectorAll('#modeseg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+ document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+S.stage));
+ document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage||(S.stage==='rush'&&b.dataset.v==='till'));if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
+ const sel=$('tsel');sel.innerHTML='';const mx=maxT();
+ TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Order '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>mx&&!S.done[tg.id];sel.appendChild(o)});sel.value=S.t;
+ updDue();updTill();
+ if(S.stage!=='rush')clearInterval(rushTick);
+ if(S.stage==='school')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='dining')renderDining();else if(S.stage==='cookbook')renderCookbook();else if(S.stage==='till')renderTill();else if(S.stage==='rush')renderRush();else renderReview();
+}
+
+function lessonHtml(r,compact){
+ const R=RULES[r],L=LESSONS[r];
+ return'<div class="dk">Rule '+R.n+' · '+esc(R.cat)+'</div><h2 class="lt">'+esc(R.title)+'</h2>'+
+  '<div class="syn">'+R.syn+'</div><p class="why">'+esc(L.why)+'</p>'+
+  '<div class="sec"><small>Anatomy</small><div class="parts">'+L.parts.map(p=>'<code>'+esc(p[0])+'</code><span>'+esc(p[1])+'</span>').join('')+'</div></div>'+
+  '<div class="sec"><small>Example</small><pre class="code">'+hlSql(R.ex)+'</pre><div class="runrow"><button class="runex" data-code="'+esc(R.ex)+'">Run example</button></div></div>'+
+  '<div class="sec warn"><small>Watch out</small><ul>'+L.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>'+
+  (compact?'':'<div class="sec"><small>Play: change something and run it</small><textarea class="play" id="play" spellcheck="false">'+esc(L.ex2)+'</textarea><div class="runrow"><button id="playrun">Run · Ctrl+Enter</button></div></div>');
+}
+function runTo(conEl,statEl,code,label){
+ const first=stripSql(code).trim().split('\n')[0]||'';
+ let h='<div class="cmd">sqlite&gt; '+esc(label||(first.length>60?first.slice(0,58)+'…':first))+'</div>';
+ const r=DB.run(code);
+ if(r.offline){conEl.innerHTML=h+'<div class="er">The SQL engine is not available. Open Seqle over http(s) with an internet connection.</div>';statEl.textContent='No engine';return r}
+ const e=parseErr(r.err,code);
+ if(e){conEl.innerHTML=h+'<div class="er">'+(e.line?'Line '+e.line+': ':'')+esc(e.msg)+'</div>'+(e.why?'<div class="why">'+esc(e.why)+'</div>':'');statEl.textContent=e.kind;return r}
+ if(!r.res){conEl.innerHTML=h+'<div class="note">'+(r.n?r.n+' statement'+(r.n===1?'':'s')+' ran. Nothing to show: end with a SELECT to see a table.':'Write a query and run it.')+'</div>';statEl.textContent=r.n?'Done':'Empty';return r}
+ conEl.innerHTML=h+'<div class="rtw">'+tableHtml(r.res)+'</div>';
+ statEl.textContent=r.res.rows.length+' row'+(r.res.rows.length===1?'':'s')+' · '+r.res.cols.length+' column'+(r.res.cols.length===1?'':'s');
+ return r;
+}
+function bindRunEx(scope,con,stat){
+ scope.querySelectorAll('.runex').forEach(b=>b.onclick=()=>{sfx.click();runTo(con,stat,b.dataset.code)});
+ const p=scope.querySelector('#play'),pr=scope.querySelector('#playrun');
+ if(p&&pr){pr.onclick=()=>{sfx.click();runTo(con,stat,p.value,'play.sql')};edKeys(p,()=>pr.click())}
+}
+function edKeys(ta,onRun){
+ ta.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();onRun();return}
+  if(e.key==='Tab'){e.preventDefault();const s=ta.selectionStart,en=ta.selectionEnd;
+   if(e.shiftKey){const ls=ta.value.lastIndexOf('\n',s-1)+1;if(ta.value.slice(ls,ls+2)==='  '){ta.setRangeText('',ls,ls+2,'end');ta.selectionStart=ta.selectionEnd=Math.max(ls,s-2)}}
+   else ta.setRangeText('  ',s,en,'end');
+   ta.dispatchEvent(new Event('input'));return}
+  if(e.key==='Enter'&&!e.shiftKey){const s=ta.selectionStart,ls=ta.value.lastIndexOf('\n',s-1)+1,cur=ta.value.slice(ls,s),ind=(cur.match(/^[ \t]*/)||[''])[0];if(ind){e.preventDefault();ta.setRangeText('\n'+ind,s,ta.selectionEnd,'end');ta.dispatchEvent(new Event('input'))}}
+ });
+}
+
+let curDrill=null;
+function renderSchool(){
+ const seq=seqFor(S.t),id=T().id;let i=S.les[id]||0;
+ $('pips').innerHTML=seq.map((x,k)=>'<span class="'+(x.les?'les ':'')+(k<i?'ok':k===i?'now':'')+'"></span>').join('');
+ const box=$('dbox'),con=$('sout'),stat=$('sstat');
+ if(i>=seq.length){
+  $('dtitle').textContent='School · '+T().name;
+  box.innerHTML='<div class="donecard"><div class="dk">School done</div><h2>Ready for the order</h2><p class="why">You covered '+T().rules.map(r=>RULES[r].title.toLowerCase()).join(', ')+'. Now use it for real: '+esc(T().client)+' is waiting for the '+esc(T().name.toLowerCase())+'.</p><div class="drow"><button id="again">Do the drills again</button><button class="pri" id="tocontract">Open the order</button></div></div>';
+  $('again').onclick=()=>{S.les[id]=0;save();render()};$('tocontract').onclick=()=>go('target');
+  return;
+ }
+ const it=seq[i];
+ if(it.les){
+  $('dtitle').textContent='Lesson · '+RULES[it.les].title;
+  box.innerHTML=lessonHtml(it.les)+'<div class="drow"><button class="pri" id="lnext">Got it · drills next</button></div>';
+  bindRunEx(box,con,stat);
+  $('lnext').onclick=()=>{learn(it.les);S.les[id]=i+1;save();sfx.step();render()};
+  if(!con.textContent&&DB.ready)runTo(con,stat,RULES[it.les].ex);
+  return;
+ }
+ const d=it.drill,same=seq.filter(x=>x.drill&&x.drill.r===d.r),n=same.findIndex(x=>x.drill===d)+1;
+ $('dtitle').textContent='Drill '+n+' of '+same.length+' · rule '+RULES[d.r].n;
+ drillUI(box,con,stat,d,ok=>{srsMark(d,ok);credit(d,ok,'school');S.les[id]=i+1;save();render()});
+}
+
+const KIND={pick:'Pick one',type:'Write the query',predict:'Predict the result',fix:'Fix the query'};
+const PA={rows:'How many rows?',cols:'How many columns?',colname:'Column name',value:'Value'};
+function drillUI(box,con,stat,d,done,onRight){
+ ['dbox','rbox','jbox'].forEach(k=>{const b=$(k);if(b&&b!==box)b.innerHTML=''});
+ curDrill=d;let tries=0,firstOk=true;
+ const multi=d.k==='fix'||d.multi||String(d.ans||'').includes('\n');
+ let h='<div class="rstrip"><span class="tagn">RULE '+RULES[d.r].n+'</span><b>'+esc(RULES[d.r].title)+'</b><button id="showles">Lesson</button></div><div id="lesbox" hidden></div>';
+ h+='<div class="dk">'+KIND[d.k]+'</div><div class="dq">'+md(d.q)+'</div>';
+ if(d.code)h+='<pre class="code">'+hlSql(d.code)+'</pre>';
+ if(d.k==='pick')h+='<div class="opts">'+d.o.map((o,k)=>'<button data-k="'+k+'">'+esc(o)+'</button>').join('')+'</div>';
+ else if(multi)h+='<textarea class="ans" id="ans" spellcheck="false" placeholder="'+esc(d.ph||'')+'">'+(d.k==='fix'?esc(d.bug):'')+'</textarea>';
+ else h+='<input class="ans" id="ans" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="'+esc(d.k==='predict'?PA[d.pa]:d.ph||'')+'">';
+ h+='<div class="fb" id="fb"></div><div class="drow"><button id="reveal" hidden>Show answer</button>'+(d.k==='pick'?'':'<button class="pri" id="chk">Check · '+(multi?'Ctrl+Enter':'Enter')+'</button>')+'<button class="pri" id="nxt" hidden>Next</button></div>';
+ box.innerHTML=h;
+ $('showles').onclick=()=>{const lb=$('lesbox');lb.hidden=!lb.hidden;if(!lb.hidden){lb.innerHTML='<div class="sec">'+lessonHtml(d.r,true)+'</div>';bindRunEx(lb,con,stat)}};
+ con.innerHTML='';stat.textContent=d.k==='pick'?'Pick an answer.':'Your query runs here when you check it.';
+ const fb=$('fb'),nxt=$('nxt');
+ const finish=()=>{nxt.hidden=false;const c=$('chk');if(c)c.hidden=true;$('reveal').hidden=true;nxt.focus();nxt.onclick=()=>done(firstOk)};
+ const wrong=msg=>{tries++;firstOk=false;sfx.bad();fb.className='fb err';fb.innerHTML=md(msg||'Not yet.')+(d.h?' '+md(d.h):'');if(tries>=2)$('reveal').hidden=false};
+ const right=()=>{sfx.ok();fb.className='fb ok';fb.textContent=firstOk?'Correct.':'Correct now. This one comes back in Review soon.';if(onRight)onRight(firstOk);finish()};
+ $('reveal').onclick=()=>{firstOk=false;const a=$('ans');if(a)a.value=d.k==='predict'?d.a:d.ans;fb.className='fb';fb.innerHTML='The answer is filled in. Read it, then check it.';$('reveal').hidden=true};
+ if(d.k==='pick'){
+  box.querySelectorAll('.opts button').forEach(b=>b.onclick=()=>{if(!nxt.hidden)return;const k=+b.dataset.k;if(k===d.a){b.classList.add('good');right()}else{b.classList.add('bad');b.disabled=true;wrong('Not that one.')}});
+  return;
+ }
+ const a=$('ans');a.focus();
+ const check=()=>{
+  if(!nxt.hidden)return;const v=a.value;if(!v.trim()){fb.className='fb err';fb.textContent='Type an answer first.';return}
+  if(d.k==='predict'){runTo(con,stat,d.code);if(v.trim().toLowerCase()===String(d.a).toLowerCase())right();else wrong('That is not what the database returns.');return}
+  const r=runTo(con,stat,v,'answer.sql');
+  if(r.offline){if(normCode(v)===normCode(d.ans))right();else wrong();return}
+  if(r.err){wrong('The database stopped with an error.');return}
+  if(d.test&&!d.test.test(stripSql(v))){wrong('Close, but write it the way the question asks.');return}
+  const want=DB.run(d.ans);
+  if(sameRes(r.res,want.res,isOrdered(d.ans)))right();else wrong(r.res?'The result does not match yet.':'Nothing came back. End with a SELECT.');
+ };
+ $('chk').onclick=check;
+ if(multi)edKeys(a,check);else a.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();check()}});
+}
+
+let runT=null,lastRun={},EXP={};
+function expFor(t){if(!EXP[t.id]&&DB.ready){const r=DB.run(t.solution);EXP[t.id]=r.res||{cols:[],rows:[]}}return EXP[t.id]}
+function edCode(){return $('ed').value}
+function paint(){
+ const ed=$('ed'),v=ed.value;$('hl').innerHTML=hlSql(v)+'\n ';
+ $('gut').textContent=Array.from({length:v.split('\n').length},(_,i)=>i+1).join('\n')+'\n ';
+ syncScroll();
+}
+function syncScroll(){const ed=$('ed');$('hl').scrollTop=ed.scrollTop;$('hl').scrollLeft=ed.scrollLeft;$('gut').scrollTop=ed.scrollTop}
+function starterFor(t){return S.mode==='master'?'':TARGETS[t].starter}
+let shownT=-1;
+function renderTarget(){
+ const t=T(),id=t.id,pay=payFor(S.t),mb=Math.round(pay*.6);
+ $('tname').textContent=t.name;$('tcount').textContent='Order '+(S.t+1)+' / '+TARGETS.length;
+ $('contract').innerHTML='<div class="who"><span>'+esc(t.client)+'</span><span>'+esc(t.time)+'</span></div><p>'+esc(t.order)+'</p><div class="pay" title="Mastery bonus: switch to Mastery, press Reset and write it from an empty file"><span'+(S.done[id]?' class="got"':'')+'>Pays <b>'+pay+' CR</b>'+(S.done[id]?' ✓':'')+'</span><span'+(S.mastered[id]?' class="got"':'')+'>Mastery bonus <b>'+mb+' CR</b>'+(S.mastered[id]?' ✓':' · empty file')+'</span></div>';
+ const ex=expFor(t);
+ $('ticket').innerHTML='<span class="hd">TICKET · '+esc(t.name.toUpperCase())+' · '+esc(t.time)+'</span>'+(ex?tableHtml(ex)+'<div class="tfoot">'+ex.rows.length+' rows · '+(isOrdered(t.solution)?'order matters':'any order')+'</div>':'<div class="tfoot">Waiting for the kitchen database…</div>');
+ $('fname').textContent=id+'.sql';
+ if(shownT!==S.t){shownT=S.t;if(S.code[id]==null)S.mstart[id]=S.mode==='master';$('ed').value=S.code[id]!=null?S.code[id]:starterFor(S.t);paint();$('dockmsg').classList.remove('on');lastRun={};drawOut();drawSteps();if(DB.ready)runNow()}
+ else{drawOut();drawSteps()}
+}
+function stepState(){const t=T(),x=S.x[t.id]||{},q=stripSql(edCode()),r=lastRun.err?null:lastRun.res||null;return t.steps.map(s=>{try{return!!s.c(q,r,x)}catch(e){return false}})}
+function drawSteps(){
+ const t=T(),st=stepState(),now=st.indexOf(false);
+ $('steps').innerHTML=t.steps.map((s,i)=>'<li class="'+(st[i]?'ok':i===now?'now':'')+'"><span class="n">'+(st[i]?'✓':i+1)+'</span><span>'+md(s.t)+'</span></li>').join('');
+ const prev=S.stepsOk[t.id]||0,cnt=st.filter(Boolean).length;
+ if(cnt>prev&&lastRun.ran){sfx.step();S.stepsOk[t.id]=cnt;save()}
+ drawHelp(now);
+ return st;
+}
+function drawHelp(now){
+ const t=T(),lad=$('ladder');
+ if(now<0){$('hstep').textContent='all steps';lad.innerHTML='<div class="idle">'+bixSvg('happy')+'<span>Every step is done. Check that your result matches the ticket exactly.</span></div>';$('stuck').disabled=true;return}
+ const s=t.steps[now],key=t.id+':'+now,lv=S.help[key]||0;
+ $('hstep').textContent='step '+(now+1);
+ const names=['Nudge','Hint','Similar example','Answer'];
+ if(!lv)lad.innerHTML='<div class="idle">'+bixSvg()+'<span>Try it yourself first. Stuck? I help in four levels, from a small nudge to the full answer.</span></div>';
+ else lad.innerHTML=s.help.slice(0,lv).map((x,k)=>'<div class="rung'+(k===3?' ans':'')+'"><small>'+(k+1)+' · '+names[k]+'</small>'+(k>=2?'<pre>'+esc(x)+'</pre>':md(x))+'</div>').join('');
+ lad.scrollTop=lad.scrollHeight;
+ const b=$('stuck');b.disabled=lv>=4;b.textContent=lv?lv>=4?'That is the answer':'Still stuck':'I\'m stuck';
+}
+function drawOut(){
+ const t=T(),ex=expFor(t),r=lastRun,el=$('outl');
+ if(!r.ran){el.innerHTML='<div class="gh">Run your query to see the result here.</div>';setMeter(0);return}
+ if(r.offline){el.innerHTML='<div class="er">The SQL engine is not available. Open Seqle over http(s) with an internet connection.</div>';setMeter(0);return}
+ const e=parseErr(r.err,edCode());
+ if(e){el.innerHTML='<div class="er">'+(e.line?'Line '+e.line+': ':'')+esc(e.msg)+'</div>'+(e.why?'<div class="hint">'+esc(e.why)+'</div>':'');setMeter(0);return}
+ if(!r.res){el.innerHTML='<div class="gh">'+(r.n?'Your statements ran, but nothing was selected. End with a SELECT to see the table.':'Nothing to run yet.')+'</div>';setMeter(0);return}
+ const res=r.res,ord=isOrdered(t.solution),k=x=>x.map(normV).join('␟'),want=ex.rows.map(k),marks=[];let match=0;
+ const colOk=res.cols.length===ex.cols.length&&ex.cols.every((c,i)=>c.toLowerCase()===String(res.cols[i]).toLowerCase());
+ const hd=res.cols.map((c,i)=>!ex.cols[i]||ex.cols[i].toLowerCase()!==String(c).toLowerCase());
+ if(ord)res.rows.forEach((row,i)=>{const ok=colOk&&i<want.length&&k(row)===want[i];if(ok)match++;marks.push(ok?'m':i<want.length?'x':'ex')});
+ else{const left=want.slice();res.rows.forEach(row=>{const j=colOk?left.indexOf(k(row)):-1;if(j>=0){left.splice(j,1);match++;marks.push('m')}else marks.push('x')})}
+ el.innerHTML='<div class="rtw">'+tableHtml(res,marks,hd)+'</div>'+(colOk?'':'<div class="hint">The column headers differ from the ticket. Check names and order.</div>');
+ setMeter(want.length?Math.round(100*match/Math.max(want.length,res.rows.length)):0);
+}
+function setMeter(p){$('meter').querySelector('i').style.width=p+'%';$('meter').querySelector('b').textContent=p+'%'}
+function runNow(){
+ if(S.stage!=='target')return;
+ const code=edCode(),t=T(),sc=$('scan');
+ if(!DB.ready){if(DB.failed){sc.className='er';sc.textContent='No SQL engine: open Seqle over http(s) with an internet connection.'}return}
+ const r=DB.run(code);
+ lastRun=Object.assign({ran:true},r);
+ if(t.watch&&!r.err&&r.res){const x=S.x[t.id]=S.x[t.id]||{},q=stripSql(code);Object.keys(t.watch).forEach(k=>{try{if(t.watch[k](q,r.res))x[k]=1}catch(e){}});save()}
+ drawOut();const st=drawSteps();
+ const e=parseErr(r.err,code);
+ if(e){sc.className='er';sc.textContent=(e.line?'Line '+e.line+': ':'')+e.msg;comms(e.why||e.msg,'worry');return}
+ const all=st.every(Boolean)&&sameRes(r.res,expFor(t),isOrdered(t.solution));
+ sc.className=all?'ok':'';sc.textContent=all?'Ticket matches. Served.':(r.res?r.res.rows.length+' rows · ':'')+st.filter(Boolean).length+' of '+st.length+' steps done';
+ if(all)docked();
+}
+function docked(){
+ const t=T(),first=!S.done[t.id];
+ S.done[t.id]=true;S.docked[t.id]=S.docked[t.id]||Date.now();t.rules.forEach(learn);save();
+ const pay=payFor(S.t);let paid=0;
+ if(first){paid+=pay;tick('dock')}
+ if(S.mode==='master'&&S.mstart[t.id]&&!S.mastered[t.id]){S.mastered[t.id]=Date.now();paid+=Math.round(pay*.6);tick('master');if(!first)sfx.dock()}
+ if(paid){earn(paid);renderTarget()}
+ $('dockline').textContent=t.reward.line+(paid?' Paid '+paid+' CR.':'');
+ $('dockmsg').classList.add('on');$('nextc').hidden=S.t>=TARGETS.length-1;
+ if(first){sfx.dock();comms(t.client+' is happy. '+t.reward.name+' restored.','happy');render()}
+}
+function scheduleRun(){clearTimeout(runT);runT=setTimeout(runNow,550)}
+
+function renderDining(){
+ const done=TARGETS.filter(t=>S.done[t.id]).length;
+ $('hstats').innerHTML='<div>Restored<b>'+done+' / '+TARGETS.length+'</b></div><div>Wallet<b>'+fmt(S.cr)+' CR</b></div><div>Rules learned<b>'+S.learned.length+' / '+Object.keys(RULES).length+'</b></div><div>Due for review<b>'+dueList().length+'</b></div><div class="sp"><button id="hgo" class="pri">'+(done>=TARGETS.length?'Review':'Next order')+'</button></div>';
+ $('hgo').onclick=()=>{if(done>=TARGETS.length){go('review');return}S.t=maxT();save();go(schoolDone(S.t)?'target':'school')};
+ const fresh=Object.keys(S.docked).filter(k=>Date.now()-S.docked[k]<4000);
+ $('bays').innerHTML=TARGETS.map((t,i)=>{const d=!!S.done[t.id],open=i<=maxT();
+  return'<button class="bay '+(d?'docked':open?'open':'locked')+(fresh.includes(t.id)?' fresh':'')+'" data-i="'+i+'"><div class="stripe"></div><div class="bn"><span>Station '+String(i+1).padStart(2,'0')+'</span><em>'+(d?'restored':open?'next up':'locked')+'</em></div><div class="art">'+rewardSvg(t,!d)+'</div><div class="meta"><b>'+(d?esc(t.reward.name):'· · ·')+'</b><small>Order '+(i+1)+' · '+esc(t.name)+' · '+esc(t.client)+'</small></div></button>'}).join('');
+ document.querySelectorAll('.bay').forEach(b=>b.onclick=()=>{const i=+b.dataset.i,t=TARGETS[i];sfx.click();if(S.done[t.id])openViewer(i);else if(i<=maxT()){S.t=i;save();go(schoolDone(i)?'target':'school')}else toast('Serve the orders before this one first')});
+}
+function openViewer(i){
+ const t=TARGETS[i],code=S.code[t.id]!=null?S.code[t.id]:t.solution,r=DB.run(code);
+ $('vname').textContent=t.reward.name+' · '+t.name+' · '+t.client;
+ $('vbody').innerHTML='<div class="vart">'+rewardSvg(t)+'</div><pre>'+hlSql(code)+'</pre><div class="vres">'+(r.res?tableHtml(r.res):'<div class="gh">'+(r.offline?'No SQL engine.':'No rows.')+'</div>')+'</div>';
+ $('viewer').classList.add('on');
+ $('vrebuild').onclick=()=>{$('viewer').classList.remove('on');S.t=i;save();go('target')};
+}
+
+function renderCookbook(){
+ const keys=Object.keys(RULES);
+ $('lcount').textContent=S.learned.length+' of '+keys.length+' rules learned · run any example';
+ $('schema').innerHTML=TABLES.map(x=>'<div class="tcard"><b>'+x.t+'</b><small>'+esc(x.d)+'</small>'+x.c.map(c=>'<code>'+c+'</code>').join('')+'</div>').join('');
+ $('lgrid').innerHTML=keys.map(r=>{const R=RULES[r],lk=!S.learned.includes(r);
+  return'<div class="rcard'+(lk?' locked':'')+'"><div class="rh"><span class="tagn">RULE '+R.n+'</span><h3>'+esc(R.title)+'</h3><span class="cat">'+esc(R.cat)+'</span></div>'+
+  (lk?'<p>Learned in order '+(R.t+1)+': '+esc(TARGETS[R.t].name)+'.</p>':'<div class="syn">'+R.syn+'</div><p>'+esc(R.note)+'</p><div class="rex"><pre>'+hlSql(R.ex)+'</pre><div class="rout" data-r="'+r+'">Run to see the result</div></div><div><button class="lrun" data-r="'+r+'">Run</button></div>')+'</div>'}).join('');
+ document.querySelectorAll('.lrun').forEach(b=>b.onclick=()=>{sfx.click();const r=b.dataset.r,el=document.querySelector('.rout[data-r="'+r+'"]');const x=DB.run(RULES[r].ex),e=parseErr(x.err,RULES[r].ex);el.innerHTML=x.offline?'No SQL engine available.':e?esc(e.msg):x.res?tableHtml(x.res):'Done.'});
+}
+
+let RQ=null;
+function renderReview(){
+ const box=$('rbox'),con=$('rout'),stat=$('rstat');
+ if(!RQ||RQ.done){
+  const due=dueList().sort((a,b)=>S.srs[dkey(a)].due-S.srs[dkey(b)].due).slice(0,20);
+  if(!due.length){
+   $('rtitle').textContent='Review';$('rpips').innerHTML='';
+   box.innerHTML='<div class="donecard"><div class="dk">Review</div><h2>'+(S.learned.length?'All caught up':'Nothing to review yet')+'</h2><p class="why">'+(S.learned.length?'Drills come back here on a schedule: tomorrow, then after 3, 7, 14 and 30 days. Miss one and it starts over.':'Finish a lesson in School and its drills start coming back here.')+'</p>'+(S.learned.length?'<div class="drow"><button class="pri" id="extra">Practice 5 random drills</button></div>':'')+'</div>';
+   const x=$('extra');if(x)x.onclick=()=>{const pool=DRILLS.filter(d=>S.learned.includes(d.r)).sort(()=>Math.random()-.5).slice(0,5);RQ={list:pool,i:0,ok:0,done:false};renderReview()};
+   return}
+  RQ={list:due,i:0,ok:0,done:false};
+ }
+ $('rpips').innerHTML=RQ.list.map((x,k)=>'<span class="'+(k<RQ.i?'ok':k===RQ.i?'now':'')+'"></span>').join('');
+ if(RQ.i>=RQ.list.length){
+  RQ.done=true;$('rtitle').textContent='Review done';
+  box.innerHTML='<div class="donecard"><div class="dk">Review</div><h2>'+RQ.ok+' of '+RQ.list.length+' right first time</h2><p class="why">The ones you missed come back tomorrow. The rest wait longer each time you get them right.</p><div class="drow"><button class="pri" id="rback">Back to the dining room</button></div></div>';
+  $('rback').onclick=()=>go('dining');updDue();return}
+ const d=RQ.list[RQ.i];$('rtitle').textContent='Review · '+(RQ.i+1)+' of '+RQ.list.length;
+ drillUI(box,con,stat,d,ok=>{srsMark(d,ok);credit(d,ok,'review');if(ok)RQ.ok++;RQ.i++;renderReview()});
+}
+
+$('ed').addEventListener('input',()=>{paint();S.code[T().id]=$('ed').value;save();$('dockmsg').classList.remove('on');scheduleRun()});
+$('ed').addEventListener('scroll',syncScroll);
+edKeys($('ed'),()=>{clearTimeout(runT);runNow()});
+$('run').onclick=()=>{sfx.click();clearTimeout(runT);runNow();$('ed').focus()};
+$('tables').onclick=()=>{const p=$('tpanel');p.classList.toggle('on');$('tables').classList.toggle('on',p.classList.contains('on'))};
+$('tpanel').innerHTML=TABLES.map(x=>'<div class="tcard"><b>'+x.t+'</b><small>'+esc(x.d)+'</small>'+x.c.map(c=>'<code>'+c+'</code>').join('')+'</div>').join('');
+let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';S.mstart[T().id]=S.mode==='master';$('ed').value=starterFor(S.t);S.code[T().id]=$('ed').value;save();paint();runNow()};
+$('stuck').onclick=()=>{const st=stepState(),now=st.indexOf(false);if(now<0)return;const key=T().id+':'+now;S.help[key]=Math.min(4,(S.help[key]||0)+1);save();sfx.click();drawHelp(now)};
+$('nextc').onclick=()=>{if(S.t<TARGETS.length-1){S.t++;save();go(schoolDone(S.t)?'target':'school')}};
+$('tohangar').onclick=()=>go('dining');
+$('tsel').onchange=e=>{S.t=+e.target.value;save();go(schoolDone(S.t)?S.stage:'school')};
+document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{if(b.dataset.v==='review')RQ=null;go(b.dataset.v)});
+$('theme').onclick=()=>{const th=THEMES();S.theme=th[(th.indexOf(S.theme)+1)%th.length];save();render()};
+$('mute').onclick=()=>{S.sfx=!S.sfx;save();render()};
+document.querySelectorAll('#modeseg button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.mode;save();render();toast(S.mode==='master'?'Mastery: Reset starts from an empty file':'Learning: Reset gives you the starter')});
+$('home').onclick=()=>{const t=T(),code=S.code[t.id]!=null?S.code[t.id]:starterFor(S.t),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([SEED+'\n\n'+code],{type:'application/sql'}));a.download=t.id+'.sql';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);comms('Saved '+t.id+'.sql with the bistro tables inside. Run it at home with: sqlite3 < '+t.id+'.sql')};
+$('seedget').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([SEED+'\n'],{type:'application/sql'}));a.download='bistro.sql';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);comms('Saved bistro.sql. Open it at home with: sqlite3 bistro.db < bistro.sql, then sqlite3 bistro.db')};
+$('vclose').onclick=()=>$('viewer').classList.remove('on');
+$('viewer').addEventListener('click',e=>{if(e.target.id==='viewer')$('viewer').classList.remove('on')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){$('viewer').classList.remove('on');$('tpanel').classList.remove('on');$('tables').classList.remove('on')}});
+function applyHash(){const h=decodeURIComponent(location.hash.slice(1));if(!h)return;const m=h.match(/^target:(\w+)$/);if(m){const i=TARGETS.findIndex(t=>t.id===m[1]);if(i>=0&&i<=maxT()){S.t=i;go('target')}}else if(['school','target','dining','till','cookbook','review'].includes(h)){if(h==='review')RQ=null;go(h)}try{window.history.replaceState(null,'',location.pathname)}catch(e){}}
+window.addEventListener('hashchange',applyHash);
+window.addEventListener('pagehide',()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}});
+if(!['school','target','dining','till','cookbook','review','rush'].includes(S.stage))S.stage='school';
+if(S.t>maxT()&&!S.done[TARGETS[S.t].id])S.t=maxT();
+comms(S.learned.length?'Welcome back. The kitchen is open.':'Evening, chef. I am Bix. Orders come in, you write the SQL, the bistro comes back to life.');
+render();
+applyHash();
+DB.boot();
+</script>
+</body>
+</html>

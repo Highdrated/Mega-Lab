@@ -533,6 +533,13 @@ function todayItems() {
     if (n) add("dockle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 8);
   }
 
+  const sq = lsParse("seqle.v1");
+  if (sq && sq.srs) {
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    const n = Object.values(sq.srs).filter((x) => x && x.due <= day).length;
+    if (n) add("seqle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 8);
+  }
+
   const md = lsParse("modle-profile");
   if (!(md && md.daily && md.daily.date === dayKey(0, true))) add("modle", "Daily challenge", "daily", "/practice/daily", 6);
   const mix = lsParse("junle_mix");
@@ -544,6 +551,15 @@ function todayItems() {
     else {
       const open = d.ids.filter((k) => !(d.claimed || []).includes(k)).length;
       if (open) add("dockle", open + (open === 1 ? " dispatch order open" : " dispatch orders open"), "daily", "port", 5);
+    }
+  }
+  if (sq && sq.learned && sq.learned.length) {
+    const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
+    const d = sq.disp;
+    if (!d || d.day !== day || !d.ids || !d.ids.length) add("seqle", "New specials on the board", "daily", "till", 5);
+    else {
+      const open = d.ids.filter((k) => !(d.claimed || []).includes(k)).length;
+      if (open) add("seqle", open + (open === 1 ? " special open" : " specials open"), "daily", "till", 5);
     }
   }
   if (py && py.kata && py.kata.last !== dayKey(0, true)) add("pyle", "Daily kata" + (py.kata.streak ? " · streak " + py.kata.streak : ""), "daily", "kata", 5);
@@ -566,6 +582,10 @@ function todayItems() {
     const DOCKLE_N = 8, n = Object.keys(dk.done).length;
     if (n < DOCKLE_N) add("dockle", "Contract " + (n + 1) + " of " + DOCKLE_N + " waiting", "next", "target", 2);
   } else add("dockle", "Your first cargo contract", "next", "school", 2);
+  if (sq && sq.done) {
+    const SEQLE_N = 9, n = Object.keys(sq.done).length;
+    if (n < SEQLE_N) add("seqle", "Order " + (n + 1) + " of " + SEQLE_N + " waiting", "next", "target", 2);
+  } else add("seqle", "Your first SQL order", "next", "school", 2);
   if (hx && typeof hx.t === "number" && !(hx.done && hx.done[hx.t])) add("hexle", "Target " + (hx.t + 1) + " waiting", "next", "", 2);
 
   return out.sort((a, b) => b.weight - a.weight).slice(0, 6);
