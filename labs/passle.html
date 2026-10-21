@@ -4717,6 +4717,10 @@ const SPSOL={
 "src/Cook.php": "<?php\n\ndeclare(strict_types=1);\n\nabstract class Cook\n{\n    private static int $hired = 0;\n\n    public function __construct(protected readonly string $name)\n    {\n        self::$hired++;\n    }\n\n    abstract public function station(): string;\n\n    public function introduce(): string\n    {\n        return $this->name . ' · ' . $this->station();\n    }\n\n    public static function hired(): int\n    {\n        return self::$hired;\n    }\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Cook.php';\nrequire_once __DIR__ . '/../src/ClocksIn.php';\nrequire_once __DIR__ . '/../src/Saucier.php';\nrequire_once __DIR__ . '/../src/Patissier.php';\n\n$saucier = new Saucier('Amélie');\n$patissier = new Patissier('Jules');\n$brigade = [$saucier, $patissier];\n\n$saucier->clockIn('Monday');\n$saucier->clockIn('Tuesday');\n$patissier->clockIn('Monday');\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Brigade</title>\n</head>\n<body>\n    <h1>Brigade</h1>\n    <ul class=\"brigade\">\n        <?php foreach ($brigade as $cook): ?>\n            <li><?= htmlspecialchars($cook->introduce()) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Hired: <?= Cook::hired() ?></p>\n    <p>Shifts: <?= $saucier->shiftCount() ?> and <?= $patissier->shiftCount() ?></p>\n</body>\n</html>\n"
 },
+"cache": {
+"src/http.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction etagFor(string $body): string\n{\n    return '\"' . md5($body) . '\"';\n}\n\nfunction notModified(string $etag, ?string $ifNoneMatch): bool\n{\n    return $ifNoneMatch !== null && $ifNoneMatch === $etag;\n}\n\nfunction wantsJson(string $accept): bool\n{\n    return str_contains($accept, 'application/json');\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/http.php';\n\n$menu = ['soup' => 8.5, 'stew' => 19.5];\n$json = json_encode($menu);\n$etag = etagFor($json);\n\nheader('Cache-Control: public, max-age=60');\nheader('ETag: ' . $etag);\nheader('Vary: Accept');\n\nif (notModified($etag, $_SERVER['HTTP_IF_NONE_MATCH'] ?? null)) {\n    http_response_code(304);\n\n    return;\n}\n\nif (wantsJson($_SERVER['HTTP_ACCEPT'] ?? 'text/html')) {\n    header('Content-Type: application/json');\n    echo $json;\n\n    return;\n}\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen cache</title>\n</head>\n<body>\n    <h1>Kitchen cache</h1>\n    <ul class=\"menu\">\n        <?php foreach ($menu as $dish => $price): ?>\n            <li><?= htmlspecialchars($dish) ?> · €<?= number_format($price, 2) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"version\">Menu version <?= htmlspecialchars($etag) ?></p>\n</body>\n</html>\n"
+},
 "cards": {
 "src/DishCard.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class DishCard extends Card\n{\n    public function kind(): string\n    {\n        return 'Dish';\n    }\n}\n",
 "src/WineCard.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class WineCard extends Card\n{\n    public function kind(): string\n    {\n        return 'Wine';\n    }\n}\n",
@@ -4756,12 +4760,25 @@ const SPSOL={
 "src/wines.php": "<?php\n\ndeclare(strict_types=1);\n\nconst WINES = [\n    ['id' => 'w1', 'name' => 'Sancerre', 'colour' => 'white', 'price' => 36.0, 'pairs' => ['fish', 'cheese']],\n    ['id' => 'w2', 'name' => 'Morgon', 'colour' => 'red', 'price' => 29.0, 'pairs' => ['beef', 'cheese']],\n    ['id' => 'w3', 'name' => 'Bandol rosé', 'colour' => 'rosé', 'price' => 32.0, 'pairs' => ['fish', 'vegetables']],\n    ['id' => 'w4', 'name' => 'Saint-Émilion', 'colour' => 'red', 'price' => 48.0, 'pairs' => ['beef', 'game']],\n    ['id' => 'w5', 'name' => 'Crémant', 'colour' => 'white', 'price' => 24.0, 'pairs' => ['starters']],\n];\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/wines.php';\n\n$names = array_column(WINES, 'name', 'id');\n$prices = array_combine(array_column(WINES, 'name'), array_column(WINES, 'price'));\n$lookup = array_flip($names);\n\n['name' => $houseName, 'price' => $housePrice] = WINES[4];\n\n$pairs = array_unique(array_merge(...array_column(WINES, 'pairs')));\nsort($pairs);\n\n$tonight = ['fish', 'beef', 'dessert', 'cheese', 'game'];\n$noWine = array_diff($tonight, $pairs);\n$both = array_values(array_intersect($tonight, $pairs));\n\n$cellar = ['Sancerre' => 12, 'Morgon' => 0, 'Crémant' => 30, 'Bandol rosé' => 6];\n$wanted = ['Sancerre', 'Crémant', 'Chablis'];\n$available = array_intersect_key($cellar, array_flip($wanted));\n\n$shelves = array_combine(range('A', 'C'), array_chunk(array_values($names), 2));\n$topTwo = array_slice($prices, 0, 2);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Wine pairing</title>\n</head>\n<body>\n    <h1>Wine pairing</h1>\n    <p class=\"names\"><?= htmlspecialchars(implode(', ', array_map(fn (string $id, string $name): string => $id . ' ' . $name, array_keys($names), $names))) ?></p>\n    <p class=\"lookup\">Morgon is <?= htmlspecialchars($lookup['Morgon']) ?> · Chablis on the list? <?= isset($lookup['Chablis']) ? 'yes' : 'no' ?></p>\n    <p class=\"house\">House wine: <?= htmlspecialchars($houseName) ?> at €<?= number_format($housePrice, 2) ?></p>\n    <p class=\"pairs\">Pairs with: <?= htmlspecialchars(implode(', ', $pairs)) ?></p>\n    <p class=\"nowine\">No wine for: <?= htmlspecialchars(implode(', ', $noWine)) ?></p>\n    <p class=\"both\">Paired tonight: <?= htmlspecialchars(implode(', ', $both)) ?></p>\n    <p class=\"available\">In the cellar: <?= htmlspecialchars(implode(', ', array_map(fn (string $wine, int $bottles): string => $wine . ' ' . $bottles, array_keys($available), $available))) ?></p>\n    <ul class=\"shelves\">\n        <?php foreach ($shelves as $shelf => $row): ?>\n            <li>Shelf <?= $shelf ?>: <?= htmlspecialchars(implode(' · ', $row)) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"top\">First two: <?= htmlspecialchars(implode(', ', array_keys($topTwo))) ?></p>\n</body>\n</html>\n"
 },
+"parser": {
+"src/parse.php": "<?php\n\ndeclare(strict_types=1);\n\nconst INGREDIENT = '/(?<qty>\\d+)\\s*(?<unit>g|ml|tbsp)\\s+(?<item>[a-z ]+?)(?=,|$)/';\n\nfunction dishName(string $recipe): string\n{\n    return preg_match('/^(?<dish>[^:]+):/', $recipe, $m) === 1 ? trim($m['dish']) : 'Unknown';\n}\n\nfunction ingredients(string $recipe): array\n{\n    preg_match_all(INGREDIENT, $recipe, $matches, PREG_SET_ORDER);\n\n    return array_map(fn (array $m): array => ['qty' => (int) $m['qty'], 'unit' => $m['unit'], 'item' => $m['item']], $matches);\n}\n\nfunction toKilos(string $text): string\n{\n    return preg_replace_callback('/\\b(\\d+)\\s*g\\b/', function (array $m): string {\n        $grams = (int) $m[1];\n\n        return $grams >= 1000 ? ($grams / 1000) . ' kg' : $grams . ' g';\n    }, $text);\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/parse.php';\n\n$recipe = 'Coq au vin: 1200 g chicken, 750 ml red wine, 200 g bacon, 2 tbsp flour';\n$items = ingredients($recipe);\n$label = 'CRÈME brûlée';\n$notes = \"salt\\nPEPPER\\nthyme\";\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Recipe parser</title>\n</head>\n<body>\n    <h1>Recipe parser</h1>\n    <p class=\"dish\">Dish: <?= htmlspecialchars(dishName($recipe)) ?></p>\n    <p class=\"count\"><?= count($items) ?> ingredients</p>\n    <ul class=\"items\">\n        <?php foreach ($items as $i): ?>\n            <li><?= htmlspecialchars($i['item']) ?>: <?= $i['qty'] ?> <?= htmlspecialchars($i['unit']) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p class=\"kilos\"><?= htmlspecialchars(toKilos($recipe)) ?></p>\n    <p class=\"unicode\">Starts with crème? <?= preg_match('/^crème/iu', $label) === 1 ? 'yes' : 'no' ?> · without u: <?= preg_match('/^crème/i', $label) === 1 ? 'yes' : 'no' ?></p>\n    <p class=\"lines\">Lines starting with a capital: <?= preg_match_all('/^[A-Z]/m', $notes) ?></p>\n</body>\n</html>\n"
+},
 "prep-list": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$prep = [\n    ['task' => 'Chop onions', 'minutes' => 15, 'station' => 'veg', 'done' => true],\n    ['task' => 'Make stock', 'minutes' => 90, 'station' => 'sauce', 'done' => false],\n    ['task' => 'Peel apples', 'minutes' => 20, 'station' => 'pastry', 'done' => false],\n    ['task' => 'Blanch beans', 'minutes' => 10, 'station' => 'veg', 'done' => false],\n];\n\nfunction forStation(string $station): Closure\n{\n    return function (array $task) use ($station): bool {\n        return $task['station'] === $station;\n    };\n}\n\n$open = array_filter($prep, fn (array $task): bool => !$task['done']);\n$lines = array_map(fn (array $task): string => $task['task'] . ' (' . $task['minutes'] . ' min)', $open);\n$minutes = array_reduce($open, fn (int $sum, array $task): int => $sum + $task['minutes'], 0);\n\n$stations = array_unique(array_column($prep, 'station'));\nsort($stations);\n\n$veg = array_column(array_filter($prep, forStation('veg')), 'task');\n$longest = array_reduce($prep, fn (?array $best, array $task): array => $best === null || $task['minutes'] > $best['minutes'] ? $task : $best);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Prep list</title>\n</head>\n<body>\n    <h1>Prep list</h1>\n    <ul class=\"todo\">\n        <?php foreach ($lines as $line): ?>\n            <li><?= htmlspecialchars($line) ?></li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Open work: <?= $minutes ?> min</p>\n    <p>Stations: <?= htmlspecialchars(implode(', ', $stations)) ?></p>\n    <p>Veg station: <?= htmlspecialchars(implode(', ', $veg)) ?></p>\n    <p>Longest: <?= htmlspecialchars($longest['task']) ?></p>\n</body>\n</html>\n"
 },
 "printer": {
 "src/receipt.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction receipt(int $table, int $order, array $lines, string $note): string\n{\n    ob_start();\n\n    echo str_pad(\"ROUX'S BISTRO\", 30, '*', STR_PAD_BOTH), \"\\n\";\n    printf(\"Table %d · order %06d\\n\", $table, $order);\n\n    $total = 0.0;\n    foreach ($lines as [$item, $qty, $price]) {\n        printf(\"%-14s %2d x %6.2f\\n\", $item, $qty, $price);\n        $total += $qty * $price;\n    }\n\n    echo str_repeat('-', 30), \"\\n\";\n    printf(\"%-20s %9.2f\\n\", 'TOTAL', $total);\n    echo wordwrap($note, 30, \"\\n\", true), \"\\n\";\n\n    return ob_get_clean();\n}\n",
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/receipt.php';\n\n$lines = [\n    ['Onion soup', 2, 8.5],\n    ['Coq au vin', 2, 21.5],\n    ['Tarte Tatin', 1, 9.0],\n];\n\n$receipt = receipt(4, 42, $lines, 'Thank you for dining with us tonight. Roux says goodnight.');\n$widest = max(array_map('mb_strlen', explode(\"\\n\", $receipt)));\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Kitchen printer</title>\n</head>\n<body>\n    <h1>Kitchen printer</h1>\n    <pre class=\"receipt\"><?= htmlspecialchars($receipt) ?></pre>\n    <p class=\"widest\">Widest line: <?= $widest ?> characters</p>\n</body>\n</html>\n"
+},
+"queue": {
+"src/Table.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Table\n{\n    public function __construct(public readonly int $no)\n    {\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/Table.php';\n\n$queue = new SplQueue();\nforeach (['Table 4: soup', 'Table 7: sole', 'Table 2: tart'] as $ticket) {\n    $queue->enqueue($ticket);\n}\n$cooking = $queue->dequeue();\n\n$plates = new SplStack();\nforeach (['plate 1', 'plate 2', 'plate 3'] as $plate) {\n    $plates->push($plate);\n}\n$washing = $plates->pop();\n$pile = [];\nforeach ($plates as $plate) {\n    $pile[] = $plate;\n}\n\n$vip = new SplPriorityQueue();\n$vip->insert('Madame Odile', 1);\n$vip->insert('The critic', 10);\n$vip->insert('The Laurents', 5);\n$order = [];\nwhile (!$vip->isEmpty()) {\n    $order[] = $vip->extract();\n}\n\n$four = new Table(4);\n$seven = new Table(7);\n$seats = new SplObjectStorage();\n$seats[$four] = 'Madame Odile';\n$seats[$seven] = 'The Laurents';\n$seats->detach($seven);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Order queue</title>\n</head>\n<body>\n    <h1>Order queue</h1>\n    <p class=\"cooking\">Cooking now: <?= htmlspecialchars($cooking) ?></p>\n    <p class=\"waiting\">Still waiting: <?= count($queue) ?> · next is <?= htmlspecialchars($queue->bottom()) ?></p>\n    <p class=\"washing\">Washing: <?= htmlspecialchars($washing) ?></p>\n    <p class=\"pile\">Left on the pile: <?= htmlspecialchars(implode(', ', $pile)) ?></p>\n    <ol class=\"vip\">\n        <?php foreach ($order as $guest): ?>\n            <li><?= htmlspecialchars($guest) ?></li>\n        <?php endforeach; ?>\n    </ol>\n    <p class=\"seats\">Seated: <?= count($seats) ?> · table 4 is <?= htmlspecialchars($seats[$four]) ?> · table 7 taken? <?= $seats->contains($seven) ? 'yes' : 'no' ?></p>\n</body>\n</html>\n"
+},
+"recipetree": {
+"src/tree.php": "<?php\n\ndeclare(strict_types=1);\n\nfunction leaves(array $tree): int\n{\n    $count = 0;\n    foreach ($tree as $key => $value) {\n        $count += is_array($value) ? leaves($value) : 1;\n    }\n\n    return $count;\n}\n\nfunction walk(array $tree, int $depth = 0): Generator\n{\n    foreach ($tree as $key => $value) {\n        if (is_array($value)) {\n            yield str_repeat('  ', $depth) . $key;\n            yield from walk($value, $depth + 1);\n        } else {\n            yield str_repeat('  ', $depth) . $value;\n        }\n    }\n}\n\nfunction applyAll(array $items, callable $fn): array\n{\n    return array_map($fn, $items);\n}\n",
+"src/Pantry.php": "<?php\n\ndeclare(strict_types=1);\n\nfinal class Pantry\n{\n    private string $secret = 'a pinch of nutmeg';\n\n    public function label(string $item): string\n    {\n        return '[' . $item . ']';\n    }\n}\n",
+"public/index.php": "<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/tree.php';\nrequire_once __DIR__ . '/../src/Pantry.php';\n\n$recipe = [\n    'Marinade' => ['red wine', 'garlic'],\n    'Braise' => ['chicken', 'Stock' => ['bones', 'water'], 'bacon'],\n];\n\n$lines = iterator_to_array(walk($recipe), false);\n$pantry = new Pantry();\n\n$upper = applyAll(['salt', 'thyme'], 'strtoupper');\n$labels = applyAll(['salt', 'thyme'], [$pantry, 'label']);\n$double = applyAll([2, 5], static fn (int $n): int => $n * 2);\n$secret = (fn (): string => $this->secret)->call($pantry);\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Recipe tree</title>\n</head>\n<body>\n    <h1>Recipe tree</h1>\n    <pre class=\"tree\"><?= htmlspecialchars(implode(\"\\n\", $lines)) ?></pre>\n    <p class=\"leaves\"><?= leaves($recipe) ?> ingredients</p>\n    <p class=\"calls\"><?= htmlspecialchars(implode(' ', $upper)) ?> · <?= htmlspecialchars(implode(' ', $labels)) ?> · <?= implode(' ', $double) ?></p>\n    <p class=\"secret\">The pantry's secret: <?= htmlspecialchars($secret) ?></p>\n</body>\n</html>\n"
 },
 "reservations": {
 "public/index.php": "<?php\n\ndeclare(strict_types=1);\n\n$tz = new DateTimeZone('Europe/Brussels');\n$bookings = [\n    ['name' => 'Lucas', 'at' => '2026-10-21 20:15', 'guests' => 4],\n    ['name' => 'Mia', 'at' => '2026-10-21 19:30', 'guests' => 2],\n    ['name' => 'Noor', 'at' => '2026-10-22 12:00', 'guests' => 3],\n];\n\n$now = new DateTimeImmutable('2026-10-21 18:00', $tz);\n$tomorrow = $now->modify('+1 day');\n$today = [];\n$tomorrowCount = 0;\n\nforeach ($bookings as $booking) {\n    $at = DateTimeImmutable::createFromFormat('Y-m-d H:i', $booking['at'], $tz);\n    if ($at->format('Y-m-d') === $now->format('Y-m-d')) {\n        $today[] = ['at' => $at, 'name' => $booking['name'], 'guests' => $booking['guests']];\n    } elseif ($at->format('Y-m-d') === $tomorrow->format('Y-m-d')) {\n        $tomorrowCount++;\n    }\n}\n\nusort($today, fn (array $a, array $b): int => $a['at'] <=> $b['at']);\n\n$wait = $now->diff($today[0]['at']);\n$lastOrders = $now->setTime(23, 0)->modify('-45 minutes');\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Reservation book</title>\n</head>\n<body>\n    <h1>Reservation book</h1>\n    <p class=\"today\"><?= $now->format('l j F Y') ?></p>\n    <ul class=\"bookings\">\n        <?php foreach ($today as $booking): ?>\n            <li><?= $booking['at']->format('H:i') ?> · <?= htmlspecialchars($booking['name']) ?> · <?= $booking['guests'] ?> guests</li>\n        <?php endforeach; ?>\n    </ul>\n    <p>Tomorrow: <?= $tomorrowCount ?> booking<?= $tomorrowCount === 1 ? '' : 's' ?></p>\n    <p>Next table in <?= $wait->h ?> h <?= $wait->i ?> min</p>\n    <p>Last orders: <?= $lastOrders->format('H:i') ?></p>\n    <p class=\"now\">Now: <?= $now->format('H:i') ?></p>\n</body>\n</html>\n"
@@ -8562,6 +8579,573 @@ MORE.push(
 
 TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
 
+const F13={table:'src/Table.php',parse:'src/parse.php',http:'src/http.php',tree:'src/tree.php',pantry:'src/Pantry.php'};
+const ETAG='"b33dbc4e758c39f9c68f219f44ff0e79"';
+
+Object.assign(RULES,{
+ pz95:{n:'95',title:'Queues and stacks: SplQueue and SplStack',cat:'Arrays',
+  syn:'$q = new <span class="k">SplQueue</span>(); $q-&gt;enqueue($t); $q-&gt;dequeue() · $s = new <span class="k">SplStack</span>(); $s-&gt;push($p); $s-&gt;pop()',
+  note:'A queue is first in, first out: the first ticket in is the first one cooked. A stack is last in, first out: the last plate on the pile is the first one washed. SPL gives both as classes that also count and loop.',
+  why:'Arrays can play both roles with array_shift and array_pop, but the intent gets lost. SplQueue says "first in, first out": enqueue adds at the back, dequeue takes from the front, bottom() peeks at the next one without taking it. SplStack says "last in, first out": push adds on top, pop takes the top, top() peeks. Both implement Countable and Iterator, so count() and foreach work; a stack loops from the top down, a queue from front to back. Taking from an empty one throws a RuntimeException, so check isEmpty() first when you are not sure. They live in the Standard PHP Library, SPL, which is always available.',
+  parts:[['enqueue · dequeue · bottom()','queue: in at the back, out at the front'],['push · pop · top()','stack: in and out at the top'],['count($q) · foreach','both count and loop'],['isEmpty()','check before taking'],['RuntimeException','taking from an empty one']],
+  mistakes:['Expecting foreach over a stack to start at the bottom: it starts at the top.','dequeue on an empty queue: RuntimeException.','Using array_shift on large arrays in a loop: it renumbers every time.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$q = new SplQueue();
+$q->enqueue('first');
+$q->enqueue('second');
+echo $q->dequeue() . ' then ' . $q->bottom() . PHP_EOL;
+
+$s = new SplStack();
+$s->push('bottom plate');
+$s->push('top plate');
+echo $s->pop() . ' · left: ' . count($s);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$s = new SplStack();
+foreach (['a', 'b', 'c'] as $x) {
+    $s->push($x);
+}
+
+foreach ($s as $item) {
+    echo $item . ' ';
+}`},
+ pz96:{n:'96',title:'SplPriorityQueue and SplObjectStorage',cat:'Arrays',
+  syn:'$vip = new <span class="k">SplPriorityQueue</span>(); $vip-&gt;insert($guest, 10); $vip-&gt;extract() · $seats = new <span class="k">SplObjectStorage</span>(); $seats[$table] = $guest',
+  note:'SplPriorityQueue hands out the item with the highest priority first, whatever order you inserted them in. SplObjectStorage is a map whose keys are objects: give each table object a guest, detach it, check contains.',
+  why:'Some guests jump the line. SplPriorityQueue::insert($value, $priority) stores each value with a number, and extract() always returns the one with the highest number, so the critic at 10 comes before the Laurents at 5. Loop with while (!$q->isEmpty()). Equal priorities come out in no guaranteed order. Normal arrays only accept strings and ints as keys, so you cannot write $seats[$table] with an object. SplObjectStorage can: it uses the object itself as the key, works with [] syntax, count(), contains() and detach(), and keeps the object alive while it is stored. It is the tool for "extra data about objects I do not own".',
+  parts:[['insert($value, $priority)','higher comes out first'],['extract() · top()','take · peek'],['new SplObjectStorage()','objects as keys'],['$s[$obj] = $data','attach with data'],['contains($obj) · detach($obj)','check · remove']],
+  mistakes:['Expecting equal priorities to keep insertion order.','Using an object as a normal array key: TypeError "Illegal offset type".','Looping a priority queue with foreach and expecting it to stay full: extraction empties it.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$q = new SplPriorityQueue();
+$q->insert('soup', 1);
+$q->insert('VIP steak', 9);
+$q->insert('salad', 3);
+
+while (!$q->isEmpty()) {
+    echo $q->extract() . PHP_EOL;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$a = new stdClass();
+$b = new stdClass();
+
+$notes = new SplObjectStorage();
+$notes[$a] = 'window seat';
+$notes[$b] = 'birthday';
+$notes->detach($b);
+
+echo count($notes) . ' · ' . $notes[$a] . ' · ' . ($notes->contains($b) ? 'yes' : 'no');`},
+ pz97:{n:'97',title:'preg_match_all and named groups',cat:'Strings',
+  syn:"<span class=\"k\">preg_match_all</span>('/(?&lt;qty&gt;\\d+)\\s*(?&lt;unit&gt;g|ml)/', $text, $m, <span class=\"v\">PREG_SET_ORDER</span>) · $m[0]['qty']",
+  note:'preg_match finds the first match, preg_match_all finds every one and returns how many. (?<name>…) names a group, so you read $m[\'qty\'] instead of $m[1]. PREG_SET_ORDER gives one array per match; the default groups the results per pattern part.',
+  why:'A recipe line hides structured data: quantities, units, ingredients. preg_match_all walks the whole string and collects every match into the array you pass by reference, returning the count. Numbered groups like $m[1] break as soon as you add a bracket, so name them: (?<qty>\\d+) puts the number under $m[\'qty\']. The flag decides the shape. The default, PREG_PATTERN_ORDER, gives $m[\'qty\'] as a list of all quantities. PREG_SET_ORDER gives $m[0], $m[1] … one per ingredient, each with its own qty, unit and item, which is usually what you want to loop over. A lookahead such as (?=,|$) checks what comes next without eating it.',
+  parts:[['preg_match_all($re, $s, $m)','all matches, returns the count'],['(?<qty>\\d+)','a named group'],['PREG_SET_ORDER','one array per match'],['PREG_PATTERN_ORDER (default)','one list per group'],['(?=,|$)','lookahead: followed by, not taken']],
+  mistakes:['Using preg_match when you need every match.','Reading $m[1] after adding a group in front: the numbers shift.','Forgetting $m is filled by reference: the return value is only the count.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$line = '200 g butter, 3 eggs, 50 ml cream';
+$n = preg_match_all('/(?<qty>\\d+)\\s*(?<unit>g|ml)?\\s*(?<item>[a-z]+)/', $line, $m, PREG_SET_ORDER);
+
+echo $n . ' matches' . PHP_EOL;
+foreach ($m as $hit) {
+    echo $hit['item'] . ': ' . $hit['qty'] . ' ' . ($hit['unit'] ?: 'pcs') . PHP_EOL;
+}`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+preg_match_all('/\\d+/', 'tables 4, 7 and 12', $m);
+
+print_r($m);`},
+ pz98:{n:'98',title:'preg_replace_callback and modifiers',cat:'Strings',
+  syn:"<span class=\"k\">preg_replace_callback</span>('/(\\d+)\\s*g\\b/', fn (array $m): string =&gt; …, $text) · '/^crème/<span class=\"v\">iu</span>' · '/^[A-Z]/<span class=\"v\">m</span>'",
+  note:'preg_replace_callback lets a function decide each replacement, so you can do arithmetic on what you found. Modifiers after the closing slash change the rules: i ignores case, u treats the text as UTF-8, m makes ^ and $ match at every line.',
+  why:'preg_replace can only paste in fixed text and group references. When the replacement depends on the value, like turning 1200 g into 1.2 kg but leaving 200 g alone, pass a callback: it receives the match array for each hit and returns the replacement string. Modifiers go after the last delimiter. i makes the pattern case-insensitive. u switches the engine to UTF-8 characters; without it, É is two unrelated bytes, so /crème/i does not match CRÈME. m (multiline) makes ^ and $ match at the start and end of every line, so preg_match_all(\'/^[A-Z]/m\', …) counts lines that start with a capital. x lets you spread a long pattern over lines with spaces.',
+  parts:[['preg_replace_callback($re, $fn, $s)','compute each replacement'],['/…/i','ignore case'],['/…/u','UTF-8 characters'],['/…/m','^ and $ at every line'],['\\b','a word boundary']],
+  mistakes:['Doing maths inside preg_replace\'s replacement string: it is just text.','Forgetting u with accented text: case-insensitive matching silently fails.','Expecting ^ to match after a newline without m.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+echo preg_replace_callback('/(\\d+) min/', fn (array $m): string => ($m[1] * 60) . ' s', 'Rest 2 min, then 5 min more') . PHP_EOL;
+var_dump(preg_match('/^éclair/iu', 'ÉCLAIR au café'), preg_match('/^éclair/i', 'ÉCLAIR au café'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$notes = "Salt\\npepper\\nThyme";
+
+echo preg_match_all('/^[A-Z]/m', $notes) . ' lines start with a capital' . PHP_EOL;
+echo preg_match_all('/^[A-Z]/', $notes) . ' without m';`},
+ pz99:{n:'99',title:'Headers, caching and 304',cat:'Web',
+  syn:"<span class=\"k\">header</span>('Cache-Control: public, max-age=60'); header('ETag: ' . $etag); if ($_SERVER['HTTP_IF_NONE_MATCH'] === $etag) { <span class=\"k\">http_response_code</span>(<span class=\"v\">304</span>); return; }",
+  note:'header() sends an HTTP header, and must run before any output. An ETag is a fingerprint of the content; the browser sends it back as If-None-Match. If nothing changed, answer 304 Not Modified with no body, and the browser reuses its copy.',
+  why:'Every request headers travel before the page itself, which is why header() (like setcookie and session_start) must come before the first byte of output. Caching saves both sides work. Cache-Control: public, max-age=60 says "anyone may keep this for 60 seconds". An ETag is a quoted fingerprint of the response, for example the md5 of the body. The browser stores it and next time sends If-None-Match with that value; PHP sees it as $_SERVER[\'HTTP_IF_NONE_MATCH\']. Request headers always arrive in $_SERVER as HTTP_ plus the name in capitals with dashes turned into underscores. If the fingerprints match, set 304 and send nothing: the page is not built twice and nothing crosses the network.',
+  parts:[["header('Name: value')",'before any output'],["Cache-Control: public, max-age=60",'may be kept 60 s'],['ETag: "…"','quoted fingerprint'],["$_SERVER['HTTP_IF_NONE_MATCH']",'what the browser has'],['http_response_code(304); return;','nothing changed, no body']],
+  mistakes:['Calling header() after HTML: "headers already sent".','Sending a body with a 304.','An ETag without the quotes: browsers may not send it back.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$body = json_encode(['soup' => 8.5]);
+$etag = '"' . md5($body) . '"';
+$fromBrowser = $etag;
+
+echo 'ETag ' . $etag . PHP_EOL;
+echo $fromBrowser === $etag ? 'Answer 304, send nothing' : 'Send the body';`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$server = ['HTTP_IF_NONE_MATCH' => '"abc"', 'HTTP_ACCEPT_LANGUAGE' => 'nl-BE'];
+
+foreach ($server as $key => $value) {
+    echo $key . ' came from the header ' . ucwords(strtolower(str_replace('_', '-', substr($key, 5))), '-') . PHP_EOL;
+}`},
+ pz100:{n:'100',title:'Content negotiation',cat:'Web',
+  syn:"$accept = $_SERVER['<span class=\"v\">HTTP_ACCEPT</span>'] ?? 'text/html'; if (str_contains($accept, 'application/json')) { header('Content-Type: application/json'); echo $json; } · header('<span class=\"k\">Vary</span>: Accept')",
+  note:'One URL can answer in several formats. The client says what it wants in the Accept header; you pick the format and set Content-Type to match. Vary: Accept tells caches that the answer depends on that header.',
+  why:'The menu page and the menu API can be the same address. A browser sends Accept: text/html, a script sends Accept: application/json. Read it from $_SERVER[\'HTTP_ACCEPT\'], with a default for clients that send nothing, pick the format, and label the body with the matching Content-Type so the client knows how to read it. Real Accept headers can list several types with q= weights; for a small kitchen a str_contains check is enough. Because two clients can now get different bodies from one URL, add Vary: Accept, otherwise a cache could hand the JSON to a browser.',
+  parts:[["$_SERVER['HTTP_ACCEPT'] ?? 'text/html'",'what the client wants'],["header('Content-Type: application/json')",'what you send'],["header('Vary: Accept')",'caches keep one copy per Accept'],['str_contains($accept, …)','simple matching'],['q=0.9','weights in real headers']],
+  mistakes:['Sending JSON with Content-Type text/html.','Forgetting Vary when the body depends on a request header.','No default when Accept is missing.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function pick(string $accept): string
+{
+    return str_contains($accept, 'application/json') ? 'json' : 'html';
+}
+
+echo pick('application/json') . ' · ' . pick('text/html,application/xhtml+xml') . ' · ' . pick('*/*');`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+$accept = 'text/html;q=0.8, application/json';
+$types = array_map(fn (string $t): string => trim(explode(';', $t)[0]), explode(',', $accept));
+
+print_r($types);`},
+ pz101:{n:'101',title:'Callables',cat:'Functions',
+  syn:"function applyAll(array $items, <span class=\"k\">callable</span> $fn): array · 'strtoupper' · [$pantry, 'label'] · <span class=\"k\">static fn</span> (int $n): int =&gt; $n * 2 · $closure-&gt;<span class=\"k\">call</span>($object)",
+  note:'A callable is anything PHP can call: a function name as a string, [$object, \'method\'], [Class::class, \'staticMethod\'], a closure, or an object with __invoke. The callable type accepts all of them. ->call($obj) runs a closure as if it were inside that object.',
+  why:'array_map, usort and your own helpers take "something to call". The callable type hint accepts every form: \'strtoupper\' (a function by name), [$pantry, \'label\'] (a method on an object), \'Pantry::make\' or [Pantry::class, \'make\'] (a static method), a closure, an arrow function, or an invokable object. is_callable() checks one at runtime. A static fn is a closure that does not capture $this, a little lighter and safer inside classes. Closures can also be moved into an object: $closure->call($pantry) runs it with $this set to $pantry, private properties included, and Closure::bind() returns a bound copy. Handy in tests, dangerous in normal code: it walks past private.',
+  parts:[["'strtoupper'",'function by name'],["[$obj, 'method']",'method on an object'],["[Pantry::class, 'make']",'static method'],['static fn (…) => …','closure without $this'],['$fn->call($obj)','run with $this = $obj']],
+  mistakes:['Typing a callable parameter as string or array: the other forms are refused.','Using $this inside a static fn: Error.','Using ->call to read private data in production code.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function shout(string $s): string
+{
+    return strtoupper($s) . '!';
+}
+
+foreach (['shout', 'ucfirst', fn (string $s): string => strrev($s)] as $fn) {
+    echo $fn('soup') . ' ';
+}
+var_dump(is_callable('shout'), is_callable('nope'));`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+final class Safe
+{
+    private int $code = 1234;
+}
+
+$peek = fn (): int => $this->code;
+echo $peek->call(new Safe());`},
+ pz102:{n:'102',title:'Recursion and yield from',cat:'Functions',
+  syn:'function leaves(array $tree): int { … is_array($v) ? <span class="k">leaves</span>($v) : 1 … } · <span class="k">yield from</span> walk($v, $depth + 1) · iterator_to_array($gen, <span class="v">false</span>)',
+  note:'A recursive function calls itself for a smaller piece of the problem, with a base case that stops. yield from hands every value of an inner generator through the outer one. When collecting with iterator_to_array, pass false or keys from the inner generators overwrite each other.',
+  why:'Recipes nest: a braise contains a stock, which contains bones and water. A loop handles one level; recursion handles any depth. leaves() counts a plain item as 1 and, for a nested array, calls itself and adds the result. Every recursive function needs a base case, here "not an array", or it calls itself until the stack overflows. Generators recurse just as well: walk() yields the current line and then yield from walk($child, $depth + 1) passes along everything the inner generator produces, as if it were yielded here. One trap: each generator numbers its own keys from 0, so iterator_to_array($gen) with keys preserved overwrites earlier lines. iterator_to_array($gen, false) renumbers and keeps them all.',
+  parts:[['f(smaller part)','recursion'],['if (!is_array($v)) …','the base case'],['yield from inner()','pass every value through'],['iterator_to_array($g, false)','collect without key clashes'],['str_repeat(\'  \', $depth)','indent by depth']],
+  mistakes:['No base case: "Maximum function nesting level" or a stack overflow.','iterator_to_array($gen) after yield from: lines silently disappear.','Rebuilding arrays on every level when a generator could stream them.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+function depth(array $a): int
+{
+    $max = 0;
+    foreach ($a as $v) {
+        if (is_array($v)) {
+            $max = max($max, depth($v));
+        }
+    }
+
+    return $max + 1;
+}
+
+echo depth(['a', ['b', ['c']]]);`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function inner(): Generator
+{
+    yield 'b';
+    yield 'c';
+}
+
+function outer(): Generator
+{
+    yield 'a';
+    yield from inner();
+}
+
+echo implode(',', iterator_to_array(outer())) . ' vs ' . implode(',', iterator_to_array(outer(), false));`}
+});
+
+TARGETS.push(
+{id:'queue',special:true,name:'Order queue',rules:['pz95','pz96'],
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Order queue',`    <h1>Order queue</h1>
+`),[F13.table]:PHPHEAD},
+ solution:pickFiles(SPSOL.queue,[IDX,F13.table]),
+ steps:[
+  {t:"An `SplQueue` of three tickets; `dequeue()` the first: `Cooking now: Table 4: soup`",c:c=>ptxt(c,'p.cooking')==='Cooking now: Table 4: soup'&&/new\s+SplQueue\(/.test(src(c))&&/->dequeue\(\s*\)/.test(src(c)),help:['Tickets: Table 4: soup, Table 7: sole, Table 2: tart. First in, first out.','`$queue->enqueue($ticket);` in a loop, then `$cooking = $queue->dequeue();`.',`$q = new SplQueue();
+$q->enqueue('a');
+$first = $q->dequeue();`,`$queue = new SplQueue();
+foreach (['Table 4: soup', 'Table 7: sole', 'Table 2: tart'] as $ticket) {
+    $queue->enqueue($ticket);
+}
+$cooking = $queue->dequeue();
+…
+<p class="cooking">Cooking now: <?= htmlspecialchars($cooking) ?></p>`]},
+  {t:'`Still waiting: 2 · next is Table 7: sole` with `count()` and `bottom()`',c:c=>ptxt(c,'p.waiting')==='Still waiting: 2 · next is Table 7: sole'&&/->bottom\(\s*\)/.test(src(c)),help:['Peek at the front without taking it.','`count($queue)` and `$queue->bottom()`.','$next = $q->bottom();',`<p class="waiting">Still waiting: <?= count($queue) ?> · next is <?= htmlspecialchars($queue->bottom()) ?></p>`]},
+  {t:'An `SplStack` of plates 1–3; `pop()` gives `Washing: plate 3`',c:c=>ptxt(c,'p.washing')==='Washing: plate 3'&&/new\s+SplStack\(/.test(src(c))&&/->pop\(\s*\)/.test(src(c)),help:['Last plate on the pile is washed first.','`$plates->push($plate);` then `$washing = $plates->pop();`.',`$s = new SplStack();
+$s->push('x');
+$top = $s->pop();`,`$plates = new SplStack();
+foreach (['plate 1', 'plate 2', 'plate 3'] as $plate) {
+    $plates->push($plate);
+}
+$washing = $plates->pop();`]},
+  {t:'`foreach` over the stack: `Left on the pile: plate 2, plate 1`',c:c=>ptxt(c,'p.pile')==='Left on the pile: plate 2, plate 1',help:['A stack loops from the top down.','Collect into an array, implode.',`foreach ($s as $item) {
+    $all[] = $item;
+}`,`$pile = [];
+foreach ($plates as $plate) {
+    $pile[] = $plate;
+}
+…
+<p class="pile">Left on the pile: <?= htmlspecialchars(implode(', ', $pile)) ?></p>`]},
+  {t:'`SplPriorityQueue`: the critic (10), the Laurents (5), Madame Odile (1), in an `<ol class="vip">`',c:c=>rows(c,'ol.vip li').join('|')==='The critic|The Laurents|Madame Odile'&&/new\s+SplPriorityQueue\(/.test(src(c))&&/->extract\(\s*\)/.test(src(c)),help:['Insert Odile first on purpose: priority beats order.','`$vip->insert(\'The critic\', 10);` and `while (!$vip->isEmpty()) { $order[] = $vip->extract(); }`.',`$q = new SplPriorityQueue();
+$q->insert('x', 3);
+while (!$q->isEmpty()) {
+    echo $q->extract();
+}`,`$vip = new SplPriorityQueue();
+$vip->insert('Madame Odile', 1);
+$vip->insert('The critic', 10);
+$vip->insert('The Laurents', 5);
+$order = [];
+while (!$vip->isEmpty()) {
+    $order[] = $vip->extract();
+}`]},
+  {t:"`src/Table.php`: `final class Table` with a promoted readonly `int $no`",c:c=>/final\s+class\s+Table/.test(src(c,F13.table))&&/readonly\s+int\s+\$no/.test(src(c,F13.table)),help:['A table is an object: it will be a key in the next step.','Constructor promotion, readonly.',`final class Seat
+{
+    public function __construct(public readonly int $no)
+    {
+    }
+}`,`final class Table
+{
+    public function __construct(public readonly int $no)
+    {
+    }
+}`]},
+  {t:"An `SplObjectStorage` of seats: `Seated: 1 · table 4 is Madame Odile · table 7 taken? no`",c:c=>ptxt(c,'p.seats')==='Seated: 1 · table 4 is Madame Odile · table 7 taken? no'&&/new\s+SplObjectStorage\(/.test(src(c))&&/->detach\(/.test(src(c))&&/readonly\s+int\s+\$no/.test(src(c,F13.table)),help:['Tables are objects, so a normal array cannot use them as keys.','`$seats[$four] = \'Madame Odile\';`, `$seats->detach($seven);`, `$seats->contains($seven)`.',`$s = new SplObjectStorage();
+$s[$obj] = 'note';
+$s->detach($obj);`,`$four = new Table(4);
+$seven = new Table(7);
+$seats = new SplObjectStorage();
+$seats[$four] = 'Madame Odile';
+$seats[$seven] = 'The Laurents';
+$seats->detach($seven);
+…
+<p class="seats">Seated: <?= count($seats) ?> · table 4 is <?= htmlspecialchars($seats[$four]) ?> · table 7 taken? <?= $seats->contains($seven) ? 'yes' : 'no' ?></p>`]},
+  cleanStep(c=>pure(c,F13.table)&&ptxt(c,'p.seats')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz95',q:'A queue hands things out…',o:['last in, first out','first in, first out','by priority','randomly'],a:1,h:'Like a line at the bakery.'},
+  {k:'gap',r:'pz95',q:'Take the top plate off the stack',pre:'$plate = $plates->',post:'();',a:['pop'],h:'push / pop.'},
+  {k:'pick',r:'pz95',q:'`foreach` over an SplStack with a, b, c pushed in that order prints…',o:['a b c','c b a','b c a','nothing'],a:1,h:'From the top down.'},
+  {k:'pick',r:'pz96',q:'`insert(\'soup\', 1)`, `insert(\'steak\', 9)`: `extract()` returns…',o:['soup','steak','both','null'],a:1,h:'Highest priority first.'},
+  {k:'pick',r:'pz96',q:'Why SplObjectStorage instead of an array?',o:['It is faster for strings','It accepts objects as keys','It sorts itself','It is immutable'],a:1,h:'Array keys are only int or string.'},
+  {k:'type',r:'pz96',q:'Is `$t` in `$seats`? Store the bool in `$taken`',ph:'$taken = …;',test:/^\$taken = \$seats->contains\(\$t\);$/,ans:'$taken = $seats->contains($t);',h:'`$taken = $seats->contains($t);`'}
+ ]},
+
+{id:'parser',special:true,name:'Recipe parser',rules:['pz97','pz98'],
+ files:{[IDX]:PHPHEAD+`
+$recipe = 'Coq au vin: 1200 g chicken, 750 ml red wine, 200 g bacon, 2 tbsp flour';
+$label = 'CRÈME brûlée';
+$notes = "salt\\nPEPPER\\nthyme";
+?>
+`+page('Recipe parser',`    <h1>Recipe parser</h1>
+`),[F13.parse]:PHPHEAD},
+ ingredients:{[IDX]:`$recipe = 'Coq au vin: 1200 g chicken, 750 ml red wine, 200 g bacon, 2 tbsp flour';
+$label = 'CRÈME brûlée';
+$notes = "salt\\nPEPPER\\nthyme";
+`},
+ solution:pickFiles(SPSOL.parser,[IDX,F13.parse]),
+ steps:[
+  {t:"`src/parse.php`: `dishName(string $recipe): string` with a named group `(?<dish>…)`: `Dish: Coq au vin`",c:c=>ptxt(c,'p.dish')==='Dish: Coq au vin'&&/\(\?<dish>/.test(src(c,F13.parse)),help:['Everything before the colon is the dish.',"`preg_match('/^(?<dish>[^:]+):/', $recipe, $m)` and `$m['dish']`.",`preg_match('/^(?<name>\\w+)/', $s, $m);
+echo $m['name'];`,`function dishName(string $recipe): string
+{
+    return preg_match('/^(?<dish>[^:]+):/', $recipe, $m) === 1 ? trim($m['dish']) : 'Unknown';
+}`]},
+  {t:"A constant `INGREDIENT` pattern with named groups `qty`, `unit`, `item` and a lookahead `(?=,|$)`",c:c=>/const\s+INGREDIENT\s*=/.test(src(c,F13.parse))&&/\(\?<qty>/.test(src(c,F13.parse))&&/\(\?<unit>/.test(src(c,F13.parse))&&/\(\?<item>/.test(src(c,F13.parse))&&/\(\?=,\|\$\)/.test(src(c,F13.parse)),help:['One pattern, reused by the function: keep it in a constant.',"`const INGREDIENT = '/(?<qty>\\d+)\\s*(?<unit>g|ml|tbsp)\\s+(?<item>[a-z ]+?)(?=,|$)/';`",`const PRICE = '/(?<amount>\\d+(?:\\.\\d+)?)/';`,`const INGREDIENT = '/(?<qty>\\d+)\\s*(?<unit>g|ml|tbsp)\\s+(?<item>[a-z ]+?)(?=,|$)/';`]},
+  {t:"`ingredients(string $recipe): array` with `preg_match_all` and `PREG_SET_ORDER`: `4 ingredients`",c:c=>ptxt(c,'p.count')==='4 ingredients'&&/preg_match_all\(/.test(src(c,F13.parse))&&/PREG_SET_ORDER/.test(src(c,F13.parse)),help:['One match per ingredient: quantity, unit, item.',"Groups `(?<qty>\\d+)`, `(?<unit>g|ml|tbsp)`, `(?<item>[a-z ]+?)` and a lookahead `(?=,|$)`.",`preg_match_all('/(?<n>\\d+)/', $s, $m, PREG_SET_ORDER);
+foreach ($m as $hit) {
+    echo $hit['n'];
+}`,`const INGREDIENT = '/(?<qty>\\d+)\\s*(?<unit>g|ml|tbsp)\\s+(?<item>[a-z ]+?)(?=,|$)/';
+
+function ingredients(string $recipe): array
+{
+    preg_match_all(INGREDIENT, $recipe, $matches, PREG_SET_ORDER);
+
+    return array_map(fn (array $m): array => ['qty' => (int) $m['qty'], 'unit' => $m['unit'], 'item' => $m['item']], $matches);
+}`]},
+  {t:'A `<ul class="items">`: `chicken: 1200 g`, `red wine: 750 ml`, `bacon: 200 g`, `flour: 2 tbsp`',c:c=>rows(c,'ul.items li').join('|')==='chicken: 1200 g|red wine: 750 ml|bacon: 200 g|flour: 2 tbsp',help:['Loop the matches, read the named keys.',"`$i['item']`, `$i['qty']`, `$i['unit']`.",`<li><?= htmlspecialchars($i['item']) ?></li>`,`<ul class="items">
+    <?php foreach ($items as $i): ?>
+        <li><?= htmlspecialchars($i['item']) ?>: <?= $i['qty'] ?> <?= htmlspecialchars($i['unit']) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:"`toKilos(string $text): string` with `preg_replace_callback`: 1200 g becomes `1.2 kg`, 200 g stays",c:c=>ptxt(c,'p.kilos')==='Coq au vin: 1.2 kg chicken, 750 ml red wine, 200 g bacon, 2 tbsp flour'&&/preg_replace_callback\(/.test(src(c,F13.parse)),help:['The replacement needs arithmetic: a callback decides each one.',"Pattern `/\\b(\\d+)\\s*g\\b/`; the callback returns `($grams / 1000) . ' kg'` from 1000 up.",`preg_replace_callback('/(\\d+)/', fn (array $m): string => (string) ($m[1] * 2), $s);`,`function toKilos(string $text): string
+{
+    return preg_replace_callback('/\\b(\\d+)\\s*g\\b/', function (array $m): string {
+        $grams = (int) $m[1];
+
+        return $grams >= 1000 ? ($grams / 1000) . ' kg' : $grams . ' g';
+    }, $text);
+}`]},
+  {t:"Modifiers: `/^crème/iu` matches `CRÈME brûlée`, `/^crème/i` does not: `Starts with crème? yes · without u: no`",c:c=>ptxt(c,'p.unicode')==='Starts with crème? yes · without u: no'&&/'\/\^crème\/iu'/.test(src(c)),help:['Without u, È is two bytes the engine cannot fold to è.',"Two preg_match calls, one with `iu`, one with only `i`.",`preg_match('/^été/iu', 'ÉTÉ')`,`<p class="unicode">Starts with crème? <?= preg_match('/^crème/iu', $label) === 1 ? 'yes' : 'no' ?> · without u: <?= preg_match('/^crème/i', $label) === 1 ? 'yes' : 'no' ?></p>`]},
+  {t:"The `m` modifier: `Lines starting with a capital: 1` in `$notes`",c:c=>ptxt(c,'p.lines')==='Lines starting with a capital: 1'&&/\/\^\[A-Z\]\/m/.test(src(c)),help:['With m, ^ matches at the start of every line.',"`preg_match_all('/^[A-Z]/m', $notes)` returns the count.",`preg_match_all('/^#/m', $text)`,`<p class="lines">Lines starting with a capital: <?= preg_match_all('/^[A-Z]/m', $notes) ?></p>`]},
+  cleanStep(c=>pure(c,F13.parse)&&ptxt(c,'p.count')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz97',q:'`preg_match_all` returns…',o:['the matches','the number of matches','true or false','the first match'],a:1,h:'Matches go into the array by reference.'},
+  {k:'gap',r:'pz97',q:'A named group called qty',pre:"'/(?",post:"\\d+)/'",a:['<qty>'],h:'(?<name>…)'},
+  {k:'pick',r:'pz97',q:'Which flag gives one array per match?',o:['PREG_PATTERN_ORDER','PREG_SET_ORDER','PREG_OFFSET_CAPTURE','PREG_SPLIT_NO_EMPTY'],a:1,h:'One set per match.'},
+  {k:'pick',r:'pz98',q:'You need 1200 g → 1.2 kg. Which function?',o:['preg_replace','preg_replace_callback','str_replace','preg_split'],a:1,h:'Arithmetic needs a function.'},
+  {k:'pick',r:'pz98',q:'Which modifier makes `^` match after every newline?',o:['i','u','m','x'],a:2,h:'Multiline.'},
+  {k:'pick',r:'pz98',q:"`preg_match('/^été/i', 'ÉTÉ')` without `u`…",o:['matches','does not match','throws','warns'],a:1,h:'Bytes, not letters.'}
+ ]},
+
+{id:'cache',special:true,name:'Kitchen cache',rules:['pz99','pz100'],
+ probes:{json:{method:'GET',headers:{Accept:'application/json'}},again:{method:'GET',headers:{'If-None-Match':ETAG}},stale:{method:'GET',headers:{'If-None-Match':'"old"'}}},
+ files:{[IDX]:PHPHEAD+`
+$menu = ['soup' => 8.5, 'stew' => 19.5];
+?>
+`+page('Kitchen cache',`    <h1>Kitchen cache</h1>
+`),[F13.http]:PHPHEAD},
+ ingredients:{[IDX]:`$menu = ['soup' => 8.5, 'stew' => 19.5];
+`},
+ solution:pickFiles(SPSOL.cache,[IDX,F13.http]),
+ steps:[
+  {t:'The HTML menu: `<ul class="menu">` with `soup · €8.50` and `stew · €19.50`',c:c=>rows(c,'ul.menu li').join('|')==='soup · €8.50|stew · €19.50',help:['A normal browser visit gets the page.','Loop $menu.',`<li><?= htmlspecialchars($dish) ?></li>`,`<ul class="menu">
+    <?php foreach ($menu as $dish => $price): ?>
+        <li><?= htmlspecialchars($dish) ?> · €<?= number_format($price, 2) ?></li>
+    <?php endforeach; ?>
+</ul>`]},
+  {t:"`src/http.php`: `etagFor(string $body): string` returns the md5 in quotes: `Menu version \"b33d…\"`",c:c=>ptxt(c,'p.version')==='Menu version '+ETAG&&/function\s+etagFor\s*\(\s*string\s+\$body\s*\)\s*:\s*string/.test(src(c,F13.http)),help:['The fingerprint of the JSON body, wrapped in double quotes.',"`return '\"' . md5($body) . '\"';` with `$json = json_encode($menu);`.",`$tag = '"' . md5($content) . '"';`,`function etagFor(string $body): string
+{
+    return '"' . md5($body) . '"';
+}
+…
+$json = json_encode($menu);
+$etag = etagFor($json);
+…
+<p class="version">Menu version <?= htmlspecialchars($etag) ?></p>`]},
+  {t:"`header('Cache-Control: public, max-age=60')` before any output",c:c=>{const r=raw(c),i=r.indexOf("header('Cache-Control: public, max-age=60')"),j=r.indexOf('?>');return i>0&&j>i},help:['Headers travel before the body: keep them in the PHP block above the HTML.','One header() call with the exact text.',`header('Cache-Control: no-store');`,`header('Cache-Control: public, max-age=60');`]},
+  {t:"`header('ETag: ' . $etag)` and `header('Vary: Accept')`",c:c=>/header\(\s*'ETag: '\s*\.\s*\$etag\s*\)/.test(src(c))&&/header\(\s*'Vary: Accept'\s*\)/.test(src(c)),help:['Headers travel before the body: keep them in the PHP block above the HTML.','Three header() calls.',`header('Cache-Control: public, max-age=60');`,`header('Cache-Control: public, max-age=60');
+header('ETag: ' . $etag);
+header('Vary: Accept');`]},
+  {t:"`notModified(string $etag, ?string $ifNoneMatch): bool`; a matching `If-None-Match` answers `304` with an empty body",c:c=>c.p.again.status===304&&!(c.p.again.out||'').trim()&&/function\s+notModified\s*\(/.test(src(c,F13.http)),help:["Passle sends the ETag back as If-None-Match. PHP reads it as $_SERVER['HTTP_IF_NONE_MATCH'].",'If it matches: `http_response_code(304); return;` before any output.',`if (($_SERVER['HTTP_IF_NONE_MATCH'] ?? null) === $etag) {
+    http_response_code(304);
+
+    return;
+}`,`function notModified(string $etag, ?string $ifNoneMatch): bool
+{
+    return $ifNoneMatch !== null && $ifNoneMatch === $etag;
+}
+…
+if (notModified($etag, $_SERVER['HTTP_IF_NONE_MATCH'] ?? null)) {
+    http_response_code(304);
+
+    return;
+}`]},
+  {t:'An old ETag still gets the full page with status 200',c:c=>c.p.stale.status===200&&rows(c.p.stale,'ul.menu li').length===2,help:['Only an exact match means "nothing changed".','Compare with ===.','$a === $b','Check notModified compares the whole string.']},
+  {t:"`wantsJson(string $accept): bool`: `Accept: application/json` gets the raw JSON `{\"soup\":8.5,\"stew\":19.5}`",c:c=>(c.p.json.out||'').trim()==='{"soup":8.5,"stew":19.5}'&&/function\s+wantsJson\s*\(/.test(src(c,F13.http))&&/header\(\s*'Content-Type: application\/json'\s*\)/.test(src(c)),help:["Passle asks with Accept: application/json, PHP reads $_SERVER['HTTP_ACCEPT'].","`if (wantsJson($_SERVER['HTTP_ACCEPT'] ?? 'text/html')) { header('Content-Type: application/json'); echo $json; return; }`",`if (str_contains($accept, 'application/json')) {
+    echo json_encode($data);
+
+    return;
+}`,`function wantsJson(string $accept): bool
+{
+    return str_contains($accept, 'application/json');
+}
+…
+if (wantsJson($_SERVER['HTTP_ACCEPT'] ?? 'text/html')) {
+    header('Content-Type: application/json');
+    echo $json;
+
+    return;
+}`]},
+  cleanStep(c=>pure(c,F13.http)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz99',q:'The request header `If-None-Match` arrives in PHP as…',o:["$_GET['If-None-Match']","$_SERVER['HTTP_IF_NONE_MATCH']","$_SERVER['IF_NONE_MATCH']","getallheaders() only"],a:1,h:'HTTP_ + capitals + underscores.'},
+  {k:'pick',r:'pz99',q:'What does a 304 response contain?',o:['The full page','No body: use your cached copy','An error page','A redirect'],a:1,h:'Not Modified.'},
+  {k:'pick',r:'pz99',q:'`header()` after `echo` …',o:['works','fails: headers already sent','sends it later','is ignored silently always'],a:1,h:'Headers go first.'},
+  {k:'gap',r:'pz100',q:'Tell caches the answer depends on Accept',pre:"header('",post:": Accept');",a:['Vary'],h:'It varies.'},
+  {k:'type',r:'pz100',q:'Send the JSON content type header',ph:"header('…');",test:/^header\((['"])Content-Type: application\/json\1\);$/,ans:"header('Content-Type: application/json');",h:"`header('Content-Type: application/json');`"},
+  {k:'pick',r:'pz100',q:'A client sends no Accept header. Best move?',o:['Return 406 always','Fall back to a default format','Crash','Send both formats'],a:1,h:'?? with a default.'}
+ ]},
+
+{id:'recipetree',special:true,name:'Recipe tree',rules:['pz101','pz102'],
+ files:{[IDX]:PHPHEAD+`
+$recipe = [
+    'Marinade' => ['red wine', 'garlic'],
+    'Braise' => ['chicken', 'Stock' => ['bones', 'water'], 'bacon'],
+];
+?>
+`+page('Recipe tree',`    <h1>Recipe tree</h1>
+`),[F13.tree]:PHPHEAD,[F13.pantry]:SPSOL.recipetree[F13.pantry]},
+ ingredients:{[IDX]:`$recipe = [
+    'Marinade' => ['red wine', 'garlic'],
+    'Braise' => ['chicken', 'Stock' => ['bones', 'water'], 'bacon'],
+];
+`,[F13.pantry]:SPSOL.recipetree[F13.pantry]},
+ solution:pickFiles(SPSOL.recipetree,[IDX,F13.tree,F13.pantry]),
+ steps:[
+  {t:'`src/tree.php`: recursive `leaves(array $tree): int`: `6 ingredients`',c:c=>ptxt(c,'p.leaves')==='6 ingredients'&&/function\s+leaves\s*\(\s*array\s+\$tree\s*\)\s*:\s*int/.test(src(c,F13.tree))&&/leaves\(\s*\$value\s*\)|leaves\(\s*\$v\s*\)|leaves\(\s*\$\w+\s*\)/.test(src(c,F13.tree).replace(/function\s+leaves/,'')),help:['A plain item counts 1; a nested list counts whatever leaves() says about it.','Loop, `is_array($value) ? leaves($value) : 1`.',`function size(array $a): int
+{
+    $n = 0;
+    foreach ($a as $v) {
+        $n += is_array($v) ? size($v) : 1;
+    }
+
+    return $n;
+}`,`function leaves(array $tree): int
+{
+    $count = 0;
+    foreach ($tree as $key => $value) {
+        $count += is_array($value) ? leaves($value) : 1;
+    }
+
+    return $count;
+}`]},
+  {t:"`walk(array $tree, int $depth = 0): Generator` yields the top-level headings `Marinade` and `Braise`",c:c=>{const l=preTxt(c,'pre.tree').split('\n');return l.includes('Marinade')&&l.includes('Braise')&&/function\s+walk\s*\([^)]*\)\s*:\s*Generator/.test(src(c,F13.tree))},help:['Start with one level: yield each key that holds a list.','A generator function returns Generator.',`function heads(array $a): Generator
+{
+    foreach ($a as $k => $v) {
+        yield $k;
+    }
+}`,`function walk(array $tree, int $depth = 0): Generator
+{
+    foreach ($tree as $key => $value) {
+        if (is_array($value)) {
+            yield str_repeat('  ', $depth) . $key;
+        }
+    }
+}`]},
+  {t:"Nested levels with `yield from`, shown in `<pre class=\"tree\">` with two spaces per level",c:c=>preTxt(c,'pre.tree')==='Marinade\n  red wine\n  garlic\nBraise\n  chicken\n  Stock\n    bones\n    water\n  bacon'&&/yield\s+from\s+walk\(/.test(src(c,F13.tree)),help:['Yield the heading, then hand over every line of the inner walk.',"`yield str_repeat('  ', $depth) . $key;` then `yield from walk($value, $depth + 1);`.",`function lines(array $a): Generator
+{
+    foreach ($a as $v) {
+        is_array($v) ? yield from lines($v) : yield $v;
+    }
+}`,`function walk(array $tree, int $depth = 0): Generator
+{
+    foreach ($tree as $key => $value) {
+        if (is_array($value)) {
+            yield str_repeat('  ', $depth) . $key;
+            yield from walk($value, $depth + 1);
+        } else {
+            yield str_repeat('  ', $depth) . $value;
+        }
+    }
+}`]},
+  {t:'Collect with `iterator_to_array(walk($recipe), false)` so no line is lost',c:c=>/iterator_to_array\(\s*walk\(\s*\$recipe\s*\)\s*,\s*false\s*\)/.test(src(c))&&preTxt(c,'pre.tree').split('\n').length===9,help:['Each inner generator numbers its keys from 0: with keys kept, later lines overwrite earlier ones.','The second argument false renumbers.','iterator_to_array($gen, false)',`$lines = iterator_to_array(walk($recipe), false);
+…
+<pre class="tree"><?= htmlspecialchars(implode("\\n", $lines)) ?></pre>`]},
+  {t:"`applyAll(array $items, callable $fn): array`, first with the string callable `'strtoupper'`: `SALT THYME`",c:c=>ptxt(c,'p.calls').startsWith('SALT THYME')&&/callable\s+\$fn/.test(src(c,F13.tree))&&/'strtoupper'/.test(src(c)),help:['A function name in a string is a callable.',"`applyAll(['salt', 'thyme'], 'strtoupper')`",`array_map('ucfirst', $words)`,`function applyAll(array $items, callable $fn): array
+{
+    return array_map($fn, $items);
+}
+…
+$upper = applyAll(['salt', 'thyme'], 'strtoupper');`]},
+  {t:"Two more callables: `[$pantry, 'label']` and a `static fn`: `SALT THYME · [salt] [thyme] · 4 10`",c:c=>ptxt(c,'p.calls')==='SALT THYME · [salt] [thyme] · 4 10'&&/callable\s+\$fn/.test(src(c,F13.tree))&&/'strtoupper'/.test(src(c))&&/\[\s*\$pantry\s*,\s*'label'\s*\]/.test(src(c))&&/static\s+fn/.test(src(c)),help:['A function name, an [object, method] pair, and a static arrow function.',"`applyAll(['salt', 'thyme'], 'strtoupper')`, `[$pantry, 'label']`, `static fn (int $n): int => $n * 2`.",`function each(array $a, callable $f): array
+{
+    return array_map($f, $a);
+}`,`function applyAll(array $items, callable $fn): array
+{
+    return array_map($fn, $items);
+}
+…
+$pantry = new Pantry();
+$upper = applyAll(['salt', 'thyme'], 'strtoupper');
+$labels = applyAll(['salt', 'thyme'], [$pantry, 'label']);
+$double = applyAll([2, 5], static fn (int $n): int => $n * 2);`]},
+  {t:"`Closure::call`: read Pantry's private `$secret`: `The pantry's secret: a pinch of nutmeg`",c:c=>ptxt(c,'p.secret')==="The pantry's secret: a pinch of nutmeg"&&/->call\(\s*\$pantry\s*\)/.test(src(c)),help:['->call runs a closure with $this set to the object, private included.',"`(fn (): string => $this->secret)->call($pantry)`",`$peek = fn () => $this->code;
+echo $peek->call($safe);`,`$secret = (fn (): string => $this->secret)->call($pantry);
+…
+<p class="secret">The pantry's secret: <?= htmlspecialchars($secret) ?></p>`]},
+  cleanStep(c=>pure(c,F13.tree)&&ptxt(c,'p.leaves')!=='')
+ ],
+ drills:[
+  {k:'pick',r:'pz101',q:'Which is NOT a valid callable?',o:["'strtoupper'","[$obj, 'method']","fn () => 1","'strtoupper()'"],a:3,h:'No brackets in the name.'},
+  {k:'pick',r:'pz101',q:'Inside `static fn () => $this->x`…',o:['$this works','Error: no $this in a static closure','$this is null silently','it binds automatically'],a:1,h:'Static means no $this.'},
+  {k:'type',r:'pz101',q:'Run closure `$f` with `$this` set to `$obj`, result into `$r`',ph:'$r = …;',test:/^\$r = \$f->call\(\$obj\);$/,ans:'$r = $f->call($obj);',h:'`$r = $f->call($obj);`'},
+  {k:'pick',r:'pz102',q:'A recursive function without a base case…',o:['returns null','runs until the stack overflows','is optimised away','runs once'],a:1,h:'It never stops.'},
+  {k:'pick',r:'pz102',q:'`iterator_to_array(outer())` where outer yields a then `yield from inner()` (b, c)…',o:['a,b,c','b,c (keys clash)','a','c'],a:1,h:'Keys 0, then 0 and 1 again.'},
+  {k:'gap',r:'pz102',q:'Pass every value of another generator through',pre:'yield ',post:' walk($child);',a:['from'],h:'yield from.'}
+ ]}
+);
+
+Object.assign(BUGS,{
+ 'queue':[
+  {d:'SplStack is last in, first out. With a queue the plates came off in the wrong order: plate 1 was washed first.',r:[[`$plates = new SplStack();`,`$plates = new SplQueue();`]]},
+  {d:'top() was used instead of bottom(): for an SplQueue that is the last ticket in line, not the next one.',r:[[`$queue->bottom()`,`$queue->top()`]]},
+  {d:'detach() was missing, so table 7 still counted as seated.',r:[[`$seats->detach($seven);
+`,``]]}
+ ],
+ 'parser':[
+  {d:'preg_match stops after the first match: only one ingredient was found. preg_match_all finds them all.',r:[[`preg_match_all(INGREDIENT, $recipe, $matches, PREG_SET_ORDER);`,`preg_match(INGREDIENT, $recipe, $matches);
+    $matches = [$matches];`,F13.parse]]},
+  {d:'Without the u modifier the pattern works on bytes, so É and é never match case-insensitively.',r:[[`preg_match('/^crème/iu', $label)`,`preg_match('/^crème/i', $label)`]]},
+  {d:'Without the lookahead (?=,|$) the lazy item group had nothing to stop at, so every ingredient name shrank to one letter.',r:[[`(?<item>[a-z ]+?)(?=,|$)/'`,`(?<item>[a-z ]+?)/'`,F13.parse]]}
+ ],
+ 'cache':[
+  {d:'The 304 branch did not return, so the full page was sent after the 304 status anyway.',r:[[`    http_response_code(304);
+
+    return;`,`    http_response_code(304);
+`]]},
+  {d:'The ETag lost its quotes. Browsers send back exactly what they got, but the spec requires quotes, and the version on the page no longer matched.',r:[[`return '"' . md5($body) . '"';`,`return md5($body);`,F13.http]]},
+  {d:'The JSON was sent without Content-Type: application/json, so clients would read it as HTML.',r:[[`    header('Content-Type: application/json');
+`,``]]}
+ ],
+ 'recipetree':[
+  {d:'Without false, iterator_to_array kept the keys, and every inner generator restarts at 0: lines overwrote each other.',r:[[`iterator_to_array(walk($recipe), false)`,`iterator_to_array(walk($recipe))`]]},
+  {d:'Recursing without depth + 1 lost the indentation of nested lines.',r:[[`yield from walk($value, $depth + 1);`,`yield from walk($value, $depth);`,F13.tree]]},
+  {d:'The nested arrays were counted as one item each instead of being opened: recursion was missing.',r:[[`$count += is_array($value) ? leaves($value) : 1;`,`$count += 1;`,F13.tree]]}
+ ]
+});
+TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
+
+
+TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
+
 let RUSH=null;
 const fmtClock=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
 function rushPool(){
@@ -8688,7 +9272,11 @@ const STORY={
  'bartab':{w:'The Laurents',tb:7,o:'The Laurents want to move to the window table, bill and all. Either everything moves, or nothing does.',th:'We moved, and so did every single glass on our bill.'},
  'translations':{w:'A tour group from Tokyo',tb:'the long table',o:'The menu has accents everywhere, the links break and the website cuts dish names in half. Make the words survive.',th:'"Crème brûlée" arrived on our phones with all its accents.'},
  'pairing':{w:'Sommelier Armand',tb:'the cellar',o:'Armand wants a pairing card: which wine for which dish, what is missing, and what is actually in the cellar.',th:'No wine for dessert? I will fix that by Friday.'},
- 'kitchenrules':{w:'Chef Roux',tb:'the office',o:'Roux pins the house rules to every recipe: which station, how many minutes. Read them straight from the code.',th:'Mrrp. Every dish knows its station.'}
+ 'kitchenrules':{w:'Chef Roux',tb:'the office',o:'Roux pins the house rules to every recipe: which station, how many minutes. Read them straight from the code.',th:'Mrrp. Every dish knows its station.'},
+ 'queue':{w:'Commis Théo',tb:'the pass',o:'Tickets pile up, plates stack up and a critic just walked in. Every line needs its own order: first come, last stacked, most important.',th:'The critic was served first and nobody noticed. Perfect.'},
+ 'parser':{w:'Grand-mère Hélène',tb:1,o:'Her recipes are written as one long line each. Pull out the dish, the quantities and the units, and turn big grams into kilos.',th:'1.2 kg of chicken. That is exactly how my mother wrote it.'},
+ 'cache':{w:'The delivery app',tb:'the courier door',o:'The app asks for the menu every few seconds. Answer in JSON when asked, and say "nothing changed" when nothing did.',th:'Fewer requests, faster menu. The couriers love you.'},
+ 'recipetree':{w:'Chef Roux',tb:'the office',o:'Roux keeps recipes inside recipes: a braise with a stock inside. Walk the whole tree, however deep it goes.',th:'Mrrp. Even the stock inside the braise got its line.'}
 };
 const PHASES=[
  ['17:00','Mise en place','Knives sharpened, stock on the stove. The dining room is still empty.'],
@@ -9103,6 +9691,16 @@ const WRITES={
  pz93:{q:"Write `enum Size: string` with `S = 's'` and `L = 'l'`, then print `(Size::tryFrom('xl') ?? Size::S)->name`.",sol:"enum Size: string\n{\n    case S = 's';\n    case L = 'l';\n}\n\necho (Size::tryFrom('xl') ?? Size::S)->name;",need:/tryFrom\(/},
  pz94:{q:"Print the plate's name with the nullsafe operator, or `nothing` when there is no plate.",pre:"$plate = null;",sol:"echo $plate?->name ?? 'nothing';",need:/\?->/}
 };
+Object.assign(WRITES,{
+ pz95:{q:'Enqueue `a` and `b` in an SplQueue, then print what `dequeue()` returns.',sol:"$q = new SplQueue();\n$q->enqueue('a');\n$q->enqueue('b');\necho $q->dequeue();",need:/->dequeue\(/},
+ pz96:{q:'Insert soup with priority 1 and steak with priority 9 into an SplPriorityQueue and print the first `extract()`.',sol:"$q = new SplPriorityQueue();\n$q->insert('soup', 1);\n$q->insert('steak', 9);\necho $q->extract();",need:/SplPriorityQueue/},
+ pz97:{q:'Count every number in `$s` with `preg_match_all` and print the count.',pre:"$s = 'tables 4, 7 and 12';",sol:"echo preg_match_all('/\\d+/', $s);",need:/preg_match_all\(/},
+ pz98:{q:'Double every number in `$s` with `preg_replace_callback` and print the result.',pre:"$s = 'rest 2 min, bake 15 min';",sol:"echo preg_replace_callback('/\\d+/', fn (array $m): string => (string) ($m[0] * 2), $s);",need:/preg_replace_callback\(/},
+ pz99:{q:'Make a quoted ETag from the md5 of `$body` and print it.',pre:"$body = 'menu';",sol:"echo '\"' . md5($body) . '\"';",need:/md5\(/},
+ pz100:{q:'Print `json` if `$accept` asks for application/json, otherwise `html`.',pre:"$accept = 'text/html, application/json';",sol:"echo str_contains($accept, 'application/json') ? 'json' : 'html';",need:/str_contains\(/},
+ pz101:{q:"Print `implode(',', array_map(…))` of `['a', 'b']` using the string callable `'strtoupper'`.",sol:"echo implode(',', array_map('strtoupper', ['a', 'b']));",need:/'strtoupper'/},
+ pz102:{q:'Write a recursive `sumAll(array $a): int` that adds every number at any depth, and print `sumAll([1, [2, [3]]])`.',sol:"function sumAll(array $a): int\n{\n    $t = 0;\n    foreach ($a as $v) {\n        $t += is_array($v) ? sumAll($v) : $v;\n    }\n\n    return $t;\n}\n\necho sumAll([1, [2, [3]]]);",need:/sumAll\(\s*\$v\s*\)/}
+});
 const WEXP={};
 function writeFor(id){const w=WRITES[id];return w?{k:'write',r:id,q:w.q,pre:w.pre||'',sol:w.sol,need:w.need,h:'Compare your output with the target line by line. Spaces and line breaks count.'}:null}
 const writesFor=rules=>rules.map(writeFor).filter(Boolean);
@@ -9182,7 +9780,7 @@ const DISH='img/passle/';
 const ART_IDS=new Set(['menu-card','dish-label','pantry','menu-board','kitchen-helpers','split-kitchen','order-slip','safe-orders','table-service','recipe-book','cellar','bistro','menu-card-master','labels-master','pantry-master','board-master','router-master','login-master','tests-master','badge','scanner','api','brigade','stocktake','loyalty','ledger','cards','nightlog','winecellar','thepass','printer','tasting','roomservice','allergens','freezer','hours','bartab','translations','pairing','kitchenrules','reservations','prep-list']);
 const dishImg=(id,cls)=>!ART_IDS.has(id)?'':'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="" onerror="this.style.display=\'none\'">';
 const KEY='passle.v2';
-const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
@@ -9241,6 +9839,7 @@ function shim(req){
    +'$_SERVER[\'REQUEST_METHOD\'] = '+phpStr(m)+';\n$_SERVER[\'REQUEST_URI\'] = '+phpStr((req.path||'/')+qs)+';\n$_SERVER[\'SCRIPT_NAME\'] = \'/index.php\';\n$_SERVER[\'DOCUMENT_ROOT\'] = \'/app/public\';\n'
    +'$_GET = json_decode('+phpStr(JSON.stringify(g))+', true);\n$_POST = json_decode('+phpStr(JSON.stringify(p))+', true);\n$_REQUEST = array_merge($_GET, $_POST);\n';
   if(req.cookies)s+='$_COOKIE = json_decode('+phpStr(JSON.stringify(req.cookies))+', true);\n';
+  if(req.headers)Object.entries(req.headers).forEach(([k,v])=>{s+='$_SERVER['+phpStr('HTTP_'+k.toUpperCase().replace(/-/g,'_'))+'] = '+phpStr(v)+';\n'});
   if(req.session)s+='ini_set(\'session.save_path\', \'/app/.sessions\');\nsession_id('+phpStr(req.session)+');\n$_COOKIE[\'PHPSESSID\'] = '+phpStr(req.session)+';\n';
   s+='chdir(\'/app/public\');\nrequire \'/app/public/index.php\';\n';
   s+='echo "\\x1ePASSLE-STATUS:" . (int) (http_response_code() ?: 200) . "\\x1e";\n';
@@ -9477,7 +10076,7 @@ async function check(tg,files){
   return {r,c,st,res:st.map(s=>{try{return !!s.c(c)}catch(e){return false}})};
 }
 function reqText(tg){
-  return reqList(tg.request).map((q,i)=>{const g=q.get&&Object.keys(q.get).length?'?'+new URLSearchParams(q.get):'';let s=(i+1)+'. '+(q.method||'GET')+' '+(q.path||'/')+g;if(q.post&&Object.keys(q.post).length)s+='\n   body: '+Object.entries(q.post).map(([k,v])=>k+'='+(/^\{\{\w+\}\}$/.test(v)?'(token from the page)':v)).join('&');if(q.session)s+='\n   Cookie: PHPSESSID='+q.session;if(q.cookies)s+='\n   Cookie: '+Object.entries(q.cookies).map(([k,v])=>k+'='+(v.length>24?v.slice(0,14)+'…':v)).join('; ');return s}).join('\n');
+  return reqList(tg.request).map((q,i)=>{const g=q.get&&Object.keys(q.get).length?'?'+new URLSearchParams(q.get):'';let s=(i+1)+'. '+(q.method||'GET')+' '+(q.path||'/')+g;if(q.post&&Object.keys(q.post).length)s+='\n   body: '+Object.entries(q.post).map(([k,v])=>k+'='+(/^\{\{\w+\}\}$/.test(v)?'(token from the page)':v)).join('&');if(q.session)s+='\n   Cookie: PHPSESSID='+q.session;if(q.headers)s+=Object.entries(q.headers).map(([k,v])=>'\n   '+k+': '+v).join('');if(q.cookies)s+='\n   Cookie: '+Object.entries(q.cookies).map(([k,v])=>k+'='+(v.length>24?v.slice(0,14)+'…':v)).join('; ');return s}).join('\n');
 }
 let lastBad=false,curSteps=[],file=IDX,lastPass=null,lv=0,curStep=-2,runSeq=0,runT,lastRes=null;
 function renderTarget(){
