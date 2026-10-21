@@ -468,6 +468,10 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 @media (max-width:1150px){.rgrid{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .opts button{white-space:pre-wrap}
 .dcode{margin:0;padding:12px 14px;font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--field);border:1px solid var(--line);border-left:3px solid var(--brass2);border-radius:6px;white-space:pre-wrap;color:var(--ink)}
+.grand{display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;margin-top:6px;padding:14px 16px;border:1px solid var(--brass2);border-radius:8px;background:linear-gradient(135deg,var(--brass3),var(--field))}
+.grand b{display:block;font-family:var(--disp);font-size:19px}
+.grand span{display:block;font-size:14px;color:var(--ink2);max-width:52ch}
+.grand button{border:1px solid var(--brass);background:var(--ink);color:#f7efe0;padding:9px 14px;border-radius:4px;font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
 @media (max-width:1700px) and (min-width:901px){#eng,#rmini{display:none}#bar{gap:9px;padding:0 12px}.stg{padding:0 7px}#vol{display:none}#cmsg{display:none}#tsel{max-width:210px}}
 @media (max-width:1180px) and (min-width:901px){
   body{grid-template-rows:auto minmax(0,1fr)}
@@ -10446,11 +10450,11 @@ function rushTick(){
   const el=$('rclock');if(el){el.textContent=fmtClock(left);el.classList.toggle('low',left<60000)}
   if(left<=0){rushFinish(true)}
 }
-function rushStart(){
+function rushStart(n,total){n=n||30;
   const pool=rushPool();
   for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
-  const list=pool.slice(0,30);
-  RUSH={list,i:0,answers:[],start:Date.now(),deadline:Date.now()+list.length*60000,done:false};
+  const list=pool.slice(0,n);
+  RUSH={list,i:0,answers:[],start:Date.now(),deadline:Date.now()+(total||list.length*60000),done:false,grand:n>=70};
   clearInterval(RUSH.timer);RUSH.timer=setInterval(rushTick,500);
   sfx.blip();comms('Service! '+list.length+' tickets on the rail.');renderRush();
 }
@@ -10464,8 +10468,8 @@ function rushFinish(timeUp){
   while(RUSH.answers.length<RUSH.list.length){const d=RUSH.list[RUSH.answers.length];RUSH.answers.push({d,v:null,ok:false,skipped:true})}
   RUSH.answers.forEach(a=>markRule(a.d.r,a.ok));
   const ok=RUSH.answers.filter(a=>a.ok).length,pct=Math.round(ok/RUSH.list.length*100);
-  S.rushes=(S.rushes||[]).concat([{at:new Date().toISOString().slice(0,16).replace('T',' '),pct,n:RUSH.list.length}]).slice(-20);save();
-  if(pct>=70)sfx.target();else sfx.rule();earn(3);questEvent('rush',1);pay(ok*4*cashMult()*(1+.25*lvlOf('somm')),'rush');
+  S.rushes=(S.rushes||[]).concat([{at:new Date().toISOString().slice(0,16).replace('T',' '),pct,n:RUSH.list.length,g:RUSH.grand?1:0}]).slice(-20);save();
+  if(pct>=70)sfx.target();else sfx.rule();earn(3);questEvent('rush',1);pay(ok*4*(RUSH.grand?2:1)*cashMult()*(1+.25*lvlOf('somm')),'rush');if(RUSH.grand)questEvent('grand',pct);
   renderRush();
 }
 function rushSide(){
@@ -10485,8 +10489,8 @@ function renderRush(){
     $('dtitle').textContent='Service rush';
     box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">Mock service</div><h2>Service rush</h2></div><img src="'+ROUX+'call.png" alt=""></div>'
      +(n<15?'<p class="why">The rail needs at least 15 tickets. Learn a few more rules in School first: you have '+n+' questions so far.</p>'
-     :'<p class="why">'+n+' tickets drawn from every rule you have learned, one minute each. No hints, no feedback until the end. Then you see your score per topic and every ticket you missed, with the right answer. Aim for 70% or more.</p><div class="drow"><button class="pri" id="rgo">Start service · '+n+' min</button></div>')+'</div>';
-    const g=$('rgo');if(g)g.onclick=rushStart;rushSide();return;
+     :'<p class="why">'+n+' tickets drawn from every rule you have learned, one minute each. No hints, no feedback until the end. Then you see your score per topic and every ticket you missed, with the right answer. Aim for 70% or more.</p><div class="drow"><button class="pri" id="rgo">Start service · '+n+' min</button></div>'+(rushPool().length>=140?'<div class="grand"><div><b>The grand tasting</b><span>The full dress rehearsal: 70 tickets from every topic in 90 minutes, like the real thing. Double pay, and the critic is watching.</span></div><button id="rgrand">Start the grand tasting · 90 min</button></div>':'<p class="hint0">The grand tasting (70 tickets in 90 minutes) unlocks at 140 questions learned: you have '+rushPool().length+'.</p>'))+'</div>';
+    const g=$('rgo');if(g)g.onclick=()=>rushStart();const gg=$('rgrand');if(gg)gg.onclick=()=>rushStart(70,90*60000);rushSide();return;
   }
   if(!RUSH.done){
     const d=RUSH.list[RUSH.i],R=RULES[d.r];
@@ -10511,7 +10515,7 @@ function renderRush(){
   const ansText=d=>d.k==='pick'?d.o[d.a]:(d.k==='gap'?d.a[0]:d.ans);
   const given=a=>a.skipped||a.v==null||a.v===''?'—':(a.d.k==='pick'?a.d.o[a.v]:a.v);
   $('dtitle').textContent='Service report';
-  box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">'+(RUSH.timeUp?'Time is up':'Service complete')+' · '+fmtClock(RUSH.used)+'</div><h2>'+pct+'% · '+ok+' of '+n+' tickets right</h2></div>'+(pct>=70?dishImg('badge','ldish'):'')+'<img src="'+ROUX+(pct>=70?'cheer':'stern')+'.png" alt=""></div>'
+  box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">'+(RUSH.grand?'Grand tasting · ':'')+(RUSH.timeUp?'Time is up':'Service complete')+' · '+fmtClock(RUSH.used)+'</div><h2>'+pct+'% · '+ok+' of '+n+' tickets right</h2></div>'+(pct>=70?dishImg('badge','ldish'):'')+'<img src="'+ROUX+(pct>=70?'cheer':'stern')+'.png" alt=""></div>'
    +'<p class="why">'+(pct>=70?'That is a passing service. '+(weak?'Your weakest station today: <b>'+esc(weak)+'</b>.':'Flawless. Roux is speechless.'):'Not yet a passing service (70%). Start with <b>'+esc(weak||names[0])+'</b>: reread those rules in the Rulebook, then run Practice.')+'</p>'
    +'<div class="sec"><small>By topic</small><div class="cats">'+names.map(c=>{const p=Math.round(cats[c].ok/cats[c].n*100);return '<span>'+esc(c)+'</span><span class="rbar"><i class="'+(p>=70?'pass':'')+'" style="width:'+p+'%"></i></span><b>'+cats[c].ok+'/'+cats[c].n+'</b>'}).join('')+'</div></div>'
    +(missed.length?'<div class="sec warn"><small>Missed tickets · '+missed.length+'</small><ol class="missed">'+missed.map(a=>'<li><div>'+fmt(a.d.q)+'</div><div class="ma"><span>yours: <code>'+esc(given(a))+'</code></span><span>right: <code>'+esc(ansText(a.d))+'</code></span></div><div class="hint0">'+fmt(a.d.h)+'</div></li>').join('')+'</ol></div>':'')
@@ -11012,7 +11016,7 @@ function checkWrite(d){
 }
 function writeSolve(){const d=dState.d;$('wcode').value=(d.pre?d.pre+'\n\n':'')+d.sol;$('dcheck').click()}
 
-const STAT_MAX=new Set(['combo','streak','stars3']);
+const STAT_MAX=new Set(['combo','streak','stars3','grand']);
 const MEDALS=[
  {id:'plate1',s:'plate',n:1,name:'First plate',d:'Serve your first plate',cash:20},
  {id:'plate10',s:'plate',n:10,name:'Line cook',d:'Serve 10 plates',cash:100},
@@ -11034,6 +11038,8 @@ const MEDALS=[
  {id:'hunt5',s:'hunt',n:5,name:'Bug hunter',d:'Fix 5 Bug hunt plates',cash:100},
  {id:'rush1',s:'rush',n:1,name:'First rush',d:'Finish a Rush',cash:20},
  {id:'rush10',s:'rush',n:10,name:'Rush veteran',d:'Finish 10 Rushes',cash:150},
+ {id:'grand70',s:'grand',n:70,name:'The critic\'s nod',d:'Score 70% or more in a grand tasting',cash:400},
+ {id:'grand90',s:'grand',n:90,name:'Three stars',d:'Score 90% or more in a grand tasting',cash:1000},
  {id:'read20',s:'lesson',n:20,name:'Reader',d:'Read 20 lessons to the end',cash:40},
  {id:'star1',s:'stars3',n:1,name:'By heart',d:'Get a recipe card to ★★★',cash:50},
  {id:'star10',s:'stars3',n:10,name:'Walking rulebook',d:'Ten recipe cards at ★★★',cash:200},
