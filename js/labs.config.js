@@ -148,5 +148,15 @@ const LABS_CONFIG = [
     ring: "ring-outer",
     angle: 140,
     glyph: '<path d="M2 11c2-6 4-6 6 0s4 6 6 0"/><circle cx="8" cy="5" r="1.5"/>'
+  },
+  {
+    id: "subnle-pocket",
+    name: "Subnle Pocket",
+    tag: "Network",
+    sub: "ip · subnetting",
+    path: "labs/subnle-pocket.html",
+    ring: "ring-mid",
+    angle: 200,
+    glyph: '<path d="M2 4h12M2 8h12M2 12h12"/><path d="M6 2v12M10 2v12"/>'
   }
 ];

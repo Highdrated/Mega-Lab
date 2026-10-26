@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0e1216">
+<title>Subnle Pocket</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%230e1216'/%3E%3Ctext x='16' y='22' font-family='monospace' font-size='15' font-weight='bold' fill='%234fd1a5' text-anchor='middle'%3E/24%3C/text%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #0e1216;
+  --panel: #151a20;
+  --panel2: #1b2128;
+  --line: #262e37;
+  --text: #d8dee5;
+  --muted: #7d8894;
+  --accent: #4fd1a5;
+  --accent-ink: #062a1f;
+  --good: #4fd1a5;
+  --bad: #f2716b;
+  --warn: #e8b84a;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+:root[data-theme="paper"] {
+  --bg: #f3f1ec;
+  --panel: #ffffff;
+  --panel2: #f8f6f1;
+  --line: #dedad1;
+  --text: #22262b;
+  --muted: #6c7279;
+  --accent: #0f7a5a;
+  --accent-ink: #ffffff;
+  --good: #0f7a5a;
+  --bad: #c2403a;
+  --warn: #a8720e;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  -webkit-tap-highlight-color: transparent;
+  -webkit-font-smoothing: antialiased;
+}
+button { font: inherit; color: inherit; cursor: pointer; }
+.app {
+  max-width: 480px;
+  margin: 0 auto;
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px 16px calc(16px + env(safe-area-inset-bottom));
+}
+.top {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 36px;
+}
+.logo { font-family: var(--mono); font-weight: 700; letter-spacing: .02em; }
+.logo b { color: var(--accent); }
+.top .spacer { flex: 1; }
+.chipbtn {
+  background: none;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 4px 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.rail {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  margin: 8px 0 14px;
+  font-size: 12px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+.rail b { color: var(--text); font-weight: 600; }
+.bar { height: 4px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.screen { display: none; flex: 1; flex-direction: column; }
+.screen.on { display: flex; }
+h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; margin: 18px 0 8px; }
+.modes { display: grid; gap: 8px; }
+.mode {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  text-align: left;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+.mode strong { display: block; font-size: 15px; }
+.mode small { color: var(--muted); font-size: 12px; }
+.mode .go { font-family: var(--mono); color: var(--accent); font-size: 18px; }
+.mode.primary { border-color: var(--accent); }
+.cats { display: flex; flex-wrap: wrap; gap: 6px; }
+.cat {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  color: var(--muted);
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+}
+.cat.on { border-color: var(--accent); color: var(--text); }
+.cat .acc { font-family: var(--mono); font-size: 11px; }
+.cat .acc.lo { color: var(--bad); }
+.cat .acc.mid { color: var(--warn); }
+.cat .acc.hi { color: var(--good); }
+.rowlinks { display: flex; gap: 8px; margin-top: 14px; }
+.rowlinks .chipbtn { flex: 1; padding: 8px; }
+.drillhead {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--mono);
+  font-size: 12px;
+  color: var(--muted);
+}
+.drillhead .quit { border: 0; background: none; color: var(--muted); padding: 4px 0; }
+.drillhead .count { text-align: center; }
+.drillhead .score b { color: var(--text); }
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+}
+.ticket {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--muted);
+  border-bottom: 1px dashed var(--line);
+  padding-bottom: 8px;
+  margin-bottom: 10px;
+}
+.ask { font-size: 14px; color: var(--muted); }
+.big {
+  font-family: var(--mono);
+  font-size: clamp(22px, 7vw, 30px);
+  font-weight: 700;
+  margin: 6px 0 2px;
+  word-break: break-all;
+}
+.big small { font-size: .6em; color: var(--muted); font-weight: 500; }
+.answer {
+  margin-top: 12px;
+  min-height: 52px;
+  display: flex;
+  align-items: center;
+  font-family: var(--mono);
+  font-size: 24px;
+  padding: 0 12px;
+  border-radius: 8px;
+  background: var(--panel2);
+  border: 1px solid var(--line);
+}
+.answer .ph { color: var(--muted); font-size: 14px; }
+.answer.good { border-color: var(--good); }
+.answer.bad { border-color: var(--bad); }
+.caret { display: inline-block; width: 2px; height: 1em; background: var(--accent); margin-left: 2px; animation: blink 1s steps(1) infinite; }
+@keyframes blink { 50% { opacity: 0; } }
+.fb { margin-top: 10px; font-size: 13px; line-height: 1.5; display: none; }
+.fb.on { display: block; }
+.fb .verdict { font-weight: 700; }
+.fb .verdict.good { color: var(--good); }
+.fb .verdict.bad { color: var(--bad); }
+.fb code { font-family: var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+.fb .how { color: var(--muted); margin-top: 4px; }
+.pad {
+  margin-top: auto;
+  padding-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+}
+.key {
+  height: 56px;
+  border-radius: 10px;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  font-family: var(--mono);
+  font-size: 22px;
+  touch-action: manipulation;
+  user-select: none;
+}
+.key:active { background: var(--panel2); transform: scale(.98); }
+.key.fn { font-size: 15px; color: var(--muted); }
+.key.ok { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-size: 16px; font-weight: 700; }
+.pad.yn { grid-template-columns: 1fr 1fr; }
+.pad.yn .key { height: 72px; font-size: 18px; }
+.next {
+  margin-top: auto;
+  height: 56px;
+  border-radius: 10px;
+  border: 0;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 700;
+  font-size: 16px;
+  display: none;
+}
+.next.on { display: block; }
+.timer { color: var(--warn); }
+.result { text-align: center; padding-top: 30px; }
+.result .num { font-family: var(--mono); font-size: 56px; font-weight: 700; }
+.result .lbl { color: var(--muted); font-size: 13px; }
+.result .line { margin-top: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.result .line div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 4px; }
+.result .line b { display: block; font-family: var(--mono); font-size: 20px; }
+.result .line span { font-size: 11px; color: var(--muted); }
+.result .rankup { margin-top: 16px; color: var(--accent); font-weight: 700; min-height: 1.4em; }
+.result .actions { margin-top: 24px; display: grid; gap: 8px; }
+.btn {
+  height: 50px;
+  border-radius: 10px;
+  border: 1px solid var(--line);
+  background: var(--panel);
+  font-weight: 600;
+}
+.btn.main { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.misses { margin-top: 18px; text-align: left; font-size: 13px; }
+.misses div { font-family: var(--mono); padding: 6px 0; border-bottom: 1px solid var(--line); }
+.misses div span { color: var(--good); }
+table.cheat { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; }
+table.cheat th, table.cheat td { padding: 7px 4px; text-align: right; border-bottom: 1px solid var(--line); }
+table.cheat th { color: var(--muted); font-weight: 500; font-size: 11px; text-transform: uppercase; }
+table.cheat td:first-child, table.cheat th:first-child { text-align: left; color: var(--accent); }
+.tips { font-size: 13px; line-height: 1.6; color: var(--muted); margin: 12px 0 0; padding-left: 18px; }
+.tips b { color: var(--text); font-weight: 600; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <span class="logo">subnle<b>/</b>pocket</span>
+    <span class="spacer"></span>
+    <button class="chipbtn" id="themeBtn">theme</button>
+  </div>
+  <div class="rail">
+    <span><b id="rank">Intern</b></span>
+    <div class="bar"><i id="xpbar"></i></div>
+    <span><b id="xp">0</b> xp · ▲<b id="streak">0</b></span>
+  </div>
+
+  <section class="screen on" id="home">
+    <div class="modes">
+      <button class="mode primary" data-mode="pocket"><span><strong>Pocket shift</strong><small>10 tickets · weak spots first</small></span><span class="go">›</span></button>
+      <button class="mode" data-mode="sprint"><span><strong>Sprint · 60s</strong><small>as many as you can · best <b id="bestSprint">0</b></small></span><span class="go">›</span></button>
+      <button class="mode" data-mode="practice"><span><strong>Free practice</strong><small>endless · chosen drills only</small></span><span class="go">›</span></button>
+    </div>
+    <h2>Drills</h2>
+    <div class="cats" id="cats"></div>
+    <div class="rowlinks">
+      <button class="chipbtn" id="cheatBtn">cheat card</button>
+      <button class="chipbtn" id="allBtn">select all</button>
+    </div>
+  </section>
+
+  <section class="screen" id="drill">
+    <div class="drillhead">
+      <button class="quit" id="quitBtn">✕ end</button>
+      <span class="count" id="count"></span>
+      <span class="score">✓ <b id="ok">0</b></span>
+    </div>
+    <div class="card">
+      <div class="ticket"><span id="tkt"></span><span id="tcat"></span></div>
+      <div class="ask" id="ask"></div>
+      <div class="big" id="big"></div>
+      <div class="answer" id="answer"></div>
+      <div class="fb" id="fb"></div>
+    </div>
+    <div class="pad" id="pad"></div>
+    <button class="next" id="nextBtn">Next ticket ›</button>
+  </section>
+
+  <section class="screen" id="result">
+    <div class="result">
+      <div class="lbl" id="resTitle">Shift complete</div>
+      <div class="num" id="resNum">0</div>
+      <div class="lbl" id="resSub">correct</div>
+      <div class="line">
+        <div><b id="resAcc">0%</b><span>accuracy</span></div>
+        <div><b id="resXp">+0</b><span>xp</span></div>
+        <div><b id="resBest">0</b><span>best run</span></div>
+      </div>
+      <div class="rankup" id="rankup"></div>
+      <div class="misses" id="misses"></div>
+      <div class="actions">
+        <button class="btn main" id="againBtn">Again</button>
+        <button class="btn" id="homeBtn">Back to drills</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="cheat">
+    <div class="drillhead"><button class="quit" id="cheatBack">‹ back</button><span class="count">cheat card</span><span></span></div>
+    <div class="card">
+      <table class="cheat">
+        <thead><tr><th>CIDR</th><th>Last octet</th><th>Block</th><th>Hosts</th></tr></thead>
+        <tbody id="cheatBody"></tbody>
+      </table>
+      <ul class="tips">
+        <li><b>Block size</b> = 256 − mask octet. Networks start at multiples of it.</li>
+        <li><b>Broadcast</b> = next network − 1.</li>
+        <li><b>Hosts</b> = 2<sup>host bits</sup> − 2 (network + broadcast are taken).</li>
+        <li>Each step down in prefix <b>doubles</b> the block: /26 = 64, /25 = 128.</li>
+        <li>/16–/23: same tricks, but in the <b>3rd octet</b>.</li>
+      </ul>
+    </div>
+  </section>
+</div>
+
+<script>
+const KEY = "subnle-pocket-v1";
+const RANKS = [
+  [0, "Intern"],
+  [150, "Rack tech"],
+  [400, "Patch lead"],
+  [900, "NOC operator"],
+  [1800, "Network engineer"],
+  [3500, "Senior engineer"],
+  [6000, "Architect"]
+];
+const SITES = ["OOST1", "OOST2", "DCO2", "DCG", "BRU1"];
+const PURPOSES = ["customer cage", "mgmt VLAN", "backup net", "BMC/iLO", "camera net", "VoIP", "transit link", "DMZ"];
+
+const CATS = {
+  bin:   { name: "Binary → decimal", kind: "num" },
+  mask:  { name: "CIDR → mask", kind: "ip" },
+  cidr:  { name: "Mask → CIDR", kind: "num" },
+  hosts: { name: "Usable hosts", kind: "num" },
+  block: { name: "Block size", kind: "num" },
+  fit:   { name: "Prefix for N hosts", kind: "num" },
+  net:   { name: "Network address", kind: "ip" },
+  bc:    { name: "Broadcast", kind: "ip" },
+  first: { name: "First host", kind: "ip" },
+  last:  { name: "Last host", kind: "ip" },
+  same:  { name: "Same subnet?", kind: "yn" }
+};
+
+const defaults = () => ({ xp: 0, bestSprint: 0, bestRun: 0, streak: 0, lastDay: "", theme: "noc", on: Object.keys(CATS), stats: {} });
+let S = defaults();
+try {
+  const raw = localStorage.getItem(KEY);
+  if (raw) S = Object.assign(defaults(), JSON.parse(raw));
+} catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const $ = (id) => document.getElementById(id);
+const rnd = (a, b) => a + Math.floor(Math.random() * (b - a + 1));
+const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+const toInt = (ip) => ip.split(".").reduce((a, o) => ((a << 8) + Number(o)) >>> 0, 0);
+const toIp = (n) => [24, 16, 8, 0].map((s) => (n >>> s) & 255).join(".");
+const maskInt = (p) => (p === 0 ? 0 : (0xffffffff << (32 - p)) >>> 0);
+const netOf = (ip, p) => (ip & maskInt(p)) >>> 0;
+const bcOf = (ip, p) => (netOf(ip, p) | (~maskInt(p) >>> 0)) >>> 0;
+const hostsOf = (p) => Math.pow(2, 32 - p) - 2;
+const bin8 = (n) => n.toString(2).padStart(8, "0");
+
+const randPrefix = () => {
+  const r = Math.random();
+  if (r < 0.7) return rnd(24, 30);
+  if (r < 0.92) return rnd(17, 23);
+  return rnd(9, 15);
+};
+const randIp = () => {
+  const first = pick([10, 172, 192]);
+  const second = first === 10 ? rnd(0, 255) : first === 172 ? rnd(16, 31) : 168;
+  return toInt([first, second, rnd(0, 255), rnd(1, 254)].join("."));
+};
+
+function focusOctet(p) {
+  const idx = p % 8 === 0 ? p / 8 - 1 : Math.floor(p / 8);
+  const bits = p - idx * 8;
+  const mOct = (256 - Math.pow(2, 8 - bits)) & 255;
+  return { idx, mOct, block: 256 - mOct || 256, name: ["1st", "2nd", "3rd", "4th"][idx] };
+}
+
+function explainRange(ip, p) {
+  const f = focusOctet(p);
+  const oct = (ip >>> (24 - f.idx * 8)) & 255;
+  const start = Math.floor(oct / f.block) * f.block;
+  const end = start + f.block - 1;
+  return `/${p} → mask ${f.mOct} in the ${f.name} octet → block <code>256−${f.mOct}=${f.block}</code>. ${oct} sits in <code>${start}–${end}</code>.`;
+}
+
+const GEN = {
+  bin() {
+    const n = Math.random() < 0.5 ? pick([128, 192, 224, 240, 248, 252, 254, 255]) : rnd(1, 255);
+    const b = bin8(n);
+    const parts = b.split("").map((c, i) => (c === "1" ? 128 >> i : 0)).filter(Boolean);
+    return { ask: "Convert this octet to decimal", big: b, ans: String(n), how: `Add the place values of the 1s: <code>${parts.join("+")}=${n}</code>.` };
+  },
+  mask() {
+    const p = randPrefix();
+    const f = focusOctet(p);
+    return { ask: "What's the subnet mask?", big: "/" + p, ans: toIp(maskInt(p)), how: `${p} ones. Full octets = 255, then the ${f.name} octet holds ${p - f.idx * 8} ones = <code>${bin8(f.mOct)}</code> = ${f.mOct}.` };
+  },
+  cidr() {
+    const p = randPrefix();
+    const m = toIp(maskInt(p));
+    const f = focusOctet(p);
+    return { ask: "What's the prefix length? (just the number)", big: m, ans: String(p), how: `${f.idx} × 8 = ${f.idx * 8}, plus ${f.mOct} = <code>${bin8(f.mOct)}</code> → ${p - f.idx * 8} ones. Total <code>/${p}</code>.` };
+  },
+  hosts() {
+    const p = Math.random() < 0.75 ? rnd(22, 30) : rnd(16, 21);
+    return { ask: "How many usable hosts?", big: "/" + p, ans: String(hostsOf(p)), how: `${32 - p} host bits → <code>2^${32 - p} − 2 = ${hostsOf(p)}</code>.` };
+  },
+  block() {
+    const p = rnd(17, 30);
+    const f = focusOctet(p);
+    return { ask: `Block size (in the ${f.name} octet)?`, big: "/" + p + " <small>" + toIp(maskInt(p)) + "</small>", ans: String(f.block), how: `<code>256 − ${f.mOct} = ${f.block}</code>. Subnets go 0, ${f.block}, ${f.block * 2}, …` };
+  },
+  fit() {
+    const n = Math.random() < 0.6 ? rnd(3, 250) : rnd(251, 2000);
+    let p = 30;
+    while (hostsOf(p) < n) p--;
+    return { ask: `Smallest subnet for ${n} devices? (prefix number)`, big: n + " <small>hosts</small>", ans: String(p), how: `/${p + 1} gives ${hostsOf(p + 1)} — too few. <code>/${p}</code> gives ${hostsOf(p)}.` };
+  },
+  net() {
+    const ip = randIp(), p = randPrefix();
+    return { ask: "Network address?", big: toIp(ip) + "/" + p, ans: toIp(netOf(ip, p)), how: explainRange(ip, p) + ` Network = start → <code>${toIp(netOf(ip, p))}</code>.` };
+  },
+  bc() {
+    const ip = randIp(), p = rnd(17, 30);
+    return { ask: "Broadcast address?", big: toIp(ip) + "/" + p, ans: toIp(bcOf(ip, p)), how: explainRange(ip, p) + ` Broadcast = end → <code>${toIp(bcOf(ip, p))}</code>.` };
+  },
+  first() {
+    const ip = randIp(), p = rnd(20, 30);
+    return { ask: "First usable host?", big: toIp(ip) + "/" + p, ans: toIp(netOf(ip, p) + 1), how: explainRange(ip, p) + ` Network + 1 → <code>${toIp(netOf(ip, p) + 1)}</code>.` };
+  },
+  last() {
+    const ip = randIp(), p = rnd(20, 30);
+    return { ask: "Last usable host?", big: toIp(ip) + "/" + p, ans: toIp(bcOf(ip, p) - 1), how: explainRange(ip, p) + ` Broadcast − 1 → <code>${toIp(bcOf(ip, p) - 1)}</code>.` };
+  },
+  same() {
+    const p = rnd(24, 29);
+    const a = randIp();
+    const size = Math.pow(2, 32 - p);
+    const base = netOf(a, p);
+    let b;
+    if (Math.random() < 0.5) b = base + rnd(1, size - 2);
+    else b = (base + size * pick([-1, 1]) + rnd(1, size - 2)) >>> 0;
+    const yes = netOf(a, p) === netOf(b, p);
+    return {
+      ask: `Can these two talk without a router? (/${p})`,
+      big: toIp(a) + "<br>" + toIp(b),
+      ans: yes ? "yes" : "no",
+      how: `Networks: <code>${toIp(netOf(a, p))}</code> and <code>${toIp(netOf(b, p))}</code> → ${yes ? "same subnet" : "different subnets"}.`
+    };
+  }
+};
+
+function accOf(c) {
+  const s = S.stats[c];
+  return s && s.a ? s.c / s.a : null;
+}
+function weightOf(c) {
+  const s = S.stats[c];
+  if (!s || s.a < 3) return 3;
+  return 1 + (1 - s.c / s.a) * 5;
+}
+function pickCat() {
+  const pool = S.on.length ? S.on : Object.keys(CATS);
+  if (G.mode !== "pocket") return pick(pool);
+  const ws = pool.map(weightOf);
+  let r = Math.random() * ws.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < pool.length; i++) { r -= ws[i]; if (r <= 0) return pool[i]; }
+  return pool[pool.length - 1];
+}
+
+function rankOf(xp) {
+  let i = 0;
+  while (i + 1 < RANKS.length && xp >= RANKS[i + 1][0]) i++;
+  return i;
+}
+function paintRail() {
+  const i = rankOf(S.xp);
+  $("rank").textContent = RANKS[i][1];
+  $("xp").textContent = S.xp;
+  $("streak").textContent = S.streak;
+  const lo = RANKS[i][0], hi = RANKS[i + 1] ? RANKS[i + 1][0] : lo + 1;
+  $("xpbar").style.width = RANKS[i + 1] ? ((S.xp - lo) / (hi - lo)) * 100 + "%" : "100%";
+  $("bestSprint").textContent = S.bestSprint;
+}
+
+function paintCats() {
+  $("cats").innerHTML = Object.keys(CATS).map((c) => {
+    const a = accOf(c);
+    const cls = a === null ? "" : a < 0.6 ? "lo" : a < 0.85 ? "mid" : "hi";
+    const txt = a === null ? "new" : Math.round(a * 100) + "%";
+    return `<button class="cat ${S.on.includes(c) ? "on" : ""}" data-c="${c}">${CATS[c].name}<span class="acc ${cls}">${txt}</span></button>`;
+  }).join("");
+}
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === id));
+}
+
+const G = { mode: "", q: null, n: 0, ok: 0, buf: "", done: false, run: 0, bestRun: 0, timer: null, end: 0, misses: [], xp0: 0, rank0: 0 };
+
+function start(mode) {
+  if (!S.on.length) S.on = Object.keys(CATS);
+  Object.assign(G, { mode, n: 0, ok: 0, run: 0, bestRun: 0, misses: [], xp0: S.xp, rank0: rankOf(S.xp) });
+  touchDay();
+  show("drill");
+  clearInterval(G.timer);
+  if (mode === "sprint") {
+    G.end = Date.now() + 60000;
+    G.timer = setInterval(tick, 200);
+  }
+  nextQ();
+}
+function tick() {
+  const left = Math.max(0, Math.ceil((G.end - Date.now()) / 1000));
+  $("count").innerHTML = `<span class="timer">${left}s</span>`;
+  if (left <= 0) finish();
+}
+function touchDay() {
+  const today = new Date().toISOString().slice(0, 10);
+  if (S.lastDay === today) return;
+  const y = new Date(Date.now() - 864e5).toISOString().slice(0, 10);
+  S.streak = S.lastDay === y ? S.streak + 1 : 1;
+  S.lastDay = today;
+  save();
+  paintRail();
+}
+
+function nextQ() {
+  if (G.mode === "pocket" && G.n >= 10) return finish();
+  const cat = pickCat();
+  G.q = Object.assign({ cat }, GEN[cat]());
+  G.buf = "";
+  G.done = false;
+  G.n++;
+  $("tkt").textContent = `${pick(SITES)} · TCK-${rnd(1000, 9999)}`;
+  $("tcat").textContent = pick(PURPOSES);
+  $("ask").textContent = G.q.ask;
+  $("big").innerHTML = G.q.big;
+  $("fb").className = "fb";
+  $("answer").className = "answer";
+  $("nextBtn").classList.remove("on");
+  if (G.mode === "pocket") $("count").textContent = `${G.n} / 10`;
+  if (G.mode === "practice") $("count").textContent = `#${G.n}`;
+  $("ok").textContent = G.ok;
+  buildPad();
+  paintAnswer();
+}
+
+function buildPad() {
+  const pad = $("pad");
+  pad.style.display = "";
+  if (CATS[G.q.cat].kind === "yn") {
+    pad.className = "pad yn";
+    pad.innerHTML = `<button class="key" data-k="no">No · router</button><button class="key ok" data-k="yes">Yes · same</button>`;
+    $("answer").style.display = "none";
+    return;
+  }
+  $("answer").style.display = "";
+  pad.className = "pad";
+  const ip = CATS[G.q.cat].kind === "ip";
+  const keys = ["1", "2", "3", "4", "5", "6", "7", "8", "9", ip ? "." : "", "0", "⌫"];
+  pad.innerHTML = keys.map((k) => k ? `<button class="key ${k === "⌫" ? "fn" : ""}" data-k="${k}">${k}</button>` : `<span></span>`).join("")
+    + `<button class="key ok" data-k="ok" style="grid-column: 1 / -1">Check</button>`;
+}
+
+function paintAnswer() {
+  const el = $("answer");
+  el.innerHTML = G.buf ? G.buf + (G.done ? "" : '<span class="caret"></span>') : '<span class="ph">your answer</span><span class="caret"></span>';
+}
+
+function press(k) {
+  if (G.done) { if (k === "ok") nextQ(); return; }
+  if (k === "yes" || k === "no") { G.buf = k; return check(); }
+  if (k === "ok") return G.buf && check();
+  if (k === "⌫") G.buf = G.buf.slice(0, -1);
+  else if (G.buf.length < 15) G.buf += k;
+  paintAnswer();
+}
+
+function norm(s) {
+  return s.trim().replace(/^\//, "").split(".").map((p) => (p === "" ? p : String(Number(p)))).join(".");
+}
+
+function check() {
+  G.done = true;
+  const good = norm(G.buf) === G.q.ans;
+  const st = S.stats[G.q.cat] || (S.stats[G.q.cat] = { a: 0, c: 0 });
+  st.a++;
+  if (good) {
+    st.c++;
+    G.ok++;
+    G.run++;
+    G.bestRun = Math.max(G.bestRun, G.run);
+    S.xp += 10 + Math.min(G.run, 10);
+  } else {
+    G.run = 0;
+    S.xp += 1;
+    G.misses.push(`${G.q.big.replace(/<[^>]+>/g, " ")} → <span>${G.q.ans}</span>`);
+  }
+  save();
+  paintRail();
+  $("ok").textContent = G.ok;
+  $("answer").className = "answer " + (good ? "good" : "bad");
+  paintAnswer();
+  const shown = G.q.ans === "yes" ? "Yes" : G.q.ans === "no" ? "No" : G.q.ans;
+  $("fb").innerHTML = `<span class="verdict ${good ? "good" : "bad"}">${good ? "✓ Correct" + (G.run > 2 ? ` · ${G.run} in a row` : "") : "✕ It's " + shown}</span><div class="how">${G.q.how}</div>`;
+  $("fb").className = "fb on";
+  if (G.mode === "sprint" && good) return setTimeout(() => { if (G.done && G.mode === "sprint" && $("drill").classList.contains("on")) nextQ(); }, 450);
+  $("pad").style.display = "none";
+  $("nextBtn").classList.add("on");
+}
+
+function finish() {
+  clearInterval(G.timer);
+  const answered = G.done ? G.n : G.n - 1;
+  if (G.mode === "sprint") S.bestSprint = Math.max(S.bestSprint, G.ok);
+  S.bestRun = Math.max(S.bestRun, G.bestRun);
+  save();
+  paintRail();
+  paintCats();
+  $("resTitle").textContent = G.mode === "sprint" ? "Sprint over" : G.mode === "pocket" ? "Shift complete" : "Practice ended";
+  $("resNum").textContent = G.ok;
+  $("resSub").textContent = `correct of ${Math.max(answered, 0)}`;
+  $("resAcc").textContent = answered > 0 ? Math.round((G.ok / answered) * 100) + "%" : "–";
+  $("resXp").textContent = "+" + (S.xp - G.xp0);
+  $("resBest").textContent = G.bestRun;
+  const r = rankOf(S.xp);
+  $("rankup").textContent = r > G.rank0 ? `Promoted → ${RANKS[r][1]}` : G.mode === "sprint" && G.ok && G.ok === S.bestSprint ? "New sprint record" : "";
+  $("misses").innerHTML = G.misses.length ? "<h2>Review</h2>" + G.misses.slice(-6).map((m) => `<div>${m}</div>`).join("") : "";
+  show("result");
+}
+
+function paintCheat() {
+  let rows = "";
+  for (let p = 24; p <= 30; p++) {
+    const f = focusOctet(p);
+    rows += `<tr><td>/${p}</td><td>${f.mOct}</td><td>${f.block}</td><td>${hostsOf(p)}</td></tr>`;
+  }
+  $("cheatBody").innerHTML = rows;
+}
+
+function applyTheme() {
+  document.documentElement.dataset.theme = S.theme === "paper" ? "paper" : "noc";
+}
+
+document.querySelectorAll(".mode").forEach((b) => b.addEventListener("click", () => start(b.dataset.mode)));
+$("cats").addEventListener("click", (e) => {
+  const b = e.target.closest(".cat");
+  if (!b) return;
+  const c = b.dataset.c;
+  S.on = S.on.includes(c) ? S.on.filter((x) => x !== c) : S.on.concat(c);
+  save();
+  paintCats();
+});
+$("allBtn").addEventListener("click", () => { S.on = Object.keys(CATS); save(); paintCats(); });
+$("pad").addEventListener("click", (e) => { const k = e.target.closest(".key"); if (k) press(k.dataset.k); });
+$("nextBtn").addEventListener("click", nextQ);
+$("quitBtn").addEventListener("click", finish);
+$("againBtn").addEventListener("click", () => start(G.mode));
+$("homeBtn").addEventListener("click", () => show("home"));
+$("cheatBtn").addEventListener("click", () => show("cheat"));
+$("cheatBack").addEventListener("click", () => show("home"));
+$("themeBtn").addEventListener("click", () => { S.theme = S.theme === "paper" ? "noc" : "paper"; save(); applyTheme(); });
+document.addEventListener("keydown", (e) => {
+  if (!$("drill").classList.contains("on")) return;
+  if (/^[0-9.]$/.test(e.key)) press(e.key);
+  else if (e.key === "/") return;
+  else if (e.key === "Backspace") press("⌫");
+  else if (e.key === "Enter" && (G.done || CATS[G.q.cat].kind !== "yn")) press("ok");
+  else if (e.key === "y") press("yes");
+  else if (e.key === "n") press("no");
+  else if (e.key === "Escape") finish();
+});
+
+applyTheme();
+paintRail();
+paintCats();
+paintCheat();
+</script>
+</body>
+</html>
