@@ -583,7 +583,7 @@ function todayItems() {
     if (n < DOCKLE_N) add("dockle", "Contract " + (n + 1) + " of " + DOCKLE_N + " waiting", "next", "target", 2);
   } else add("dockle", "Your first cargo contract", "next", "school", 2);
   if (sq && sq.done) {
-    const SEQLE_N = 9, n = Object.keys(sq.done).length;
+    const SEQLE_N = 12, n = Object.keys(sq.done).length;
     if (n < SEQLE_N) add("seqle", "Order " + (n + 1) + " of " + SEQLE_N + " waiting", "next", "target", 2);
   } else add("seqle", "Your first SQL order", "next", "school", 2);
   if (hx && typeof hx.t === "number" && !(hx.done && hx.done[hx.t])) add("hexle", "Target " + (hx.t + 1) + " waiting", "next", "", 2);

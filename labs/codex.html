@@ -872,6 +872,76 @@ groups:[
 ]});
 
 DATA.push({
+id:"sql", sigil:"SQ", name:"SQL", sub:"SQLite queries", color:"#b5603a",
+blurb:"Asking a database questions and changing its data. SQLite dialect, the same one Seqle runs in your browser and the sqlite3 command on your Mac.",
+groups:[
+{t:"Reading a table", e:[
+ {c:"SELECT * FROM menu;", d:"Every column, every row", n:"The star means all columns. Fine for a first look; in real queries name the columns so the result does not change when someone adds a column."},
+ {c:"SELECT name, price FROM menu;", d:"Only the columns you name", n:"Separated by commas, returned in the order you write them. A missing comma turns the second name into a label for the first."},
+ {c:"SELECT DISTINCT course FROM menu;", d:"Each value once", n:"DISTINCT removes duplicate rows from the result. With two columns it removes duplicate pairs."},
+ {c:"SELECT price * 2 AS double_portion FROM menu;", d:"Calculate and name a column", n:"+ - * / work per row. AS names the result column. Nothing in the table changes."},
+ {c:"SELECT name FROM menu LIMIT 5;", d:"Only the first rows", n:"LIMIT goes at the very end. Without ORDER BY you get five rows, not necessarily the five you want."}
+]},
+{t:"Filtering rows", e:[
+ {c:"WHERE price < 10", d:"Keep the rows that pass a test", n:"Comes after FROM. Compare with = <> < > <= >=. Numbers without quotes."},
+ {c:"WHERE course = 'main'", d:"Text in single quotes", n:"The match is exact, capitals included. Double quotes are for names of tables and columns, not for text."},
+ {c:"WHERE (course = 'dessert' OR course = 'drink') AND price < 9", d:"Combine tests", n:"AND is worked out before OR. Brackets around the OR part keep the logic you meant."},
+ {c:"WHERE name LIKE '%Moon%'", d:"Match a pattern", n:"% is any run of characters, _ is exactly one. In SQLite LIKE ignores capitals for plain letters."},
+ {c:"WHERE deck IN (2, 3, 7)", d:"Match one of a list", n:"Shorter than three ORs. NOT IN excludes the list."},
+ {c:"WHERE price BETWEEN 8 AND 12", d:"A range, both ends included", n:"The same as price >= 8 AND price <= 12."},
+ {c:"WHERE o.id IS NULL", d:"Test for a missing value", n:"NULL means unknown, so = NULL is never true. Always IS NULL or IS NOT NULL."}
+]},
+{t:"Sorting", e:[
+ {c:"ORDER BY price", d:"Smallest first", n:"Ascending is the default. Without ORDER BY the database may return rows in any order it likes."},
+ {c:"ORDER BY price DESC", d:"Biggest first", n:"DESC applies only to the column right before it."},
+ {c:"ORDER BY course, price DESC", d:"Sort on several columns", n:"Rows are sorted by course first; within each course by price, highest first."},
+ {c:"ORDER BY price DESC LIMIT 3", d:"Top three", n:"Sort first, then cut. The classic shape of every top-N question."}
+]},
+{t:"Functions", e:[
+ {c:"ROUND(price * 1.12, 2)", d:"Round to 2 decimals", n:"Decimal maths leaves long tails like 24.080000000000002. ROUND with no second number rounds to a whole number."},
+ {c:"UPPER(name) / LOWER(name)", d:"Change capitals", n:"Handy for matching messy input: WHERE LOWER(email) = 'user@contoso.com'."},
+ {c:"LENGTH(name)", d:"Number of characters", n:"Counts characters in text. On a number it counts the digits of its text form."},
+ {c:"name || ' · ' || course", d:"Glue text together", n:"|| is the concatenation operator in SQLite. A NULL anywhere in the chain makes the whole result NULL."},
+ {c:"COALESCE(phone, 'none')", d:"First value that is not NULL", n:"Replaces missing values in the result. COALESCE(SUM(qty), 0) turns an empty sum into 0."},
+ {c:"CASE WHEN price < 10 THEN 'budget' ELSE 'treat' END", d:"Turn values into labels", n:"Tests run top to bottom; the first true WHEN wins. Without ELSE, unmatched rows get NULL."}
+]},
+{t:"Summing up", e:[
+ {c:"SELECT COUNT(*) FROM bills;", d:"How many rows", n:"COUNT(*) counts rows. COUNT(column) counts only rows where that column is not NULL."},
+ {c:"SUM(total), AVG(tip), MIN(price), MAX(price)", d:"One value from a whole column", n:"Aggregates fold many rows into one. Several can share one SELECT."},
+ {c:"SELECT day, SUM(total) FROM bills GROUP BY day;", d:"One row per group", n:"Rows with the same day become one group; the SUM runs per group. Every plain column in SELECT belongs in GROUP BY."},
+ {c:"HAVING SUM(total) > 400", d:"Filter whole groups", n:"WHERE runs before grouping and cannot see SUM. HAVING runs after grouping and can."}
+]},
+{t:"Joining tables", e:[
+ {c:"FROM orders o JOIN menu m ON m.id = o.menu_id", d:"Match rows from two tables", n:"The order stores only menu_id; the join fetches the matching dish. o and m are aliases that keep the query short."},
+ {c:"JOIN guests g ON g.id = o.guest_id", d:"A second join", n:"Chain as many as you need, each with its own ON."},
+ {c:"FROM menu m LEFT JOIN orders o ON o.menu_id = m.id", d:"Keep every row of the first table", n:"Rows without a match stay, with NULL in the columns of the other table."},
+ {c:"WHERE o.id IS NULL", d:"Rows with no match", n:"LEFT JOIN plus IS NULL answers 'which dishes did nobody order' and 'which guests never came back'."},
+ {c:"SELECT o.id, g.name", d:"Say which table a column comes from", n:"When both tables have an id, a bare id is ambiguous and SQLite stops."}
+]},
+{t:"Subqueries", e:[
+ {c:"WHERE price > (SELECT AVG(price) FROM menu)", d:"Compare with a calculated value", n:"The query in brackets runs first and returns one value. Here: every dish above the average price."},
+ {c:"WHERE id IN (SELECT guest_id FROM orders WHERE day = 'Sun')", d:"Match a list built by a query", n:"The inner query returns a column of ids; IN keeps the rows whose id is in it."},
+ {c:"WHERE id NOT IN (SELECT guest_id FROM orders)", d:"The opposite list", n:"Same answer as a LEFT JOIN with IS NULL. Careful: if the inner list contains a NULL, NOT IN returns nothing."}
+]},
+{t:"Changing data", e:[
+ {c:"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('basil', 3, 'kg', 1);", d:"Add a row", n:"Columns, then values in the same order. Several rows at once: VALUES (...), (...), (...)."},
+ {c:"UPDATE stock SET qty = qty + 10 WHERE item = 'rice';", d:"Change existing rows", n:"Without WHERE every row changes. Run the same WHERE as a SELECT first to see which rows you will hit."},
+ {c:"DELETE FROM stock WHERE item = 'chili';", d:"Remove rows", n:"Also hits every row without WHERE. There is no undo unless you are inside a transaction."},
+ {c:"CREATE TABLE winter (name TEXT, course TEXT, price REAL);", d:"Make a new table", n:"A name for each column plus its type: TEXT, INTEGER, REAL. Add PRIMARY KEY to the column that identifies a row."},
+ {c:"SELECT name FROM winter UNION ALL SELECT name FROM menu;", d:"Stack two results", n:"Both sides need the same number of columns. UNION ALL keeps duplicates, UNION removes them."},
+ {c:"BEGIN; ... COMMIT;", d:"Group changes into one transaction", n:"Everything between BEGIN and COMMIT happens together or not at all. ROLLBACK cancels it."}
+]},
+{t:"sqlite3 on your Mac", e:[
+ {c:"sqlite3 bistro.db", d:"Open or create a database file", n:"One file is the whole database. Quit with .quit or Ctrl+D."},
+ {c:".read bistro.sql", d:"Run the statements in a file", n:"Load the tables you downloaded from the Seqle cookbook. From the terminal: sqlite3 bistro.db < bistro.sql."},
+ {c:".tables", d:"List the tables", n:"Commands starting with a dot belong to the sqlite3 program, not to SQL. They take no semicolon."},
+ {c:".schema menu", d:"Show how a table was created", n:"Prints the CREATE TABLE statement, with every column and type."},
+ {c:".headers on", d:"Show column names above results", n:"Pair it with .mode column for aligned output, or .mode box for a drawn table."},
+ {c:".mode csv", d:"Output as CSV", n:"Then .output report.csv and a SELECT writes straight to a file. .output with no name goes back to the screen."}
+]}
+]});
+
+DATA.push({
 id:"hexle", sigil:"HX", name:"Hexle rulebook", sub:"Rules from Hexle School", color:"#0e8a76",
 blurb:"Every rule you learn in Hexle School lands here, sorted by category. Locked entries open up as you learn them.",
 groups:[
@@ -1151,11 +1221,120 @@ const LAB_LINKS = {
   php: { label: "Passle", href: "passle.html" },
   git: { label: "Git Lab", href: "git-lab.html" },
   shell: { label: "Shelle", href: "shelle.html" },
+  sql: { label: "Seqle", href: "seqle.html" },
   hexle: { label: "Hexle", href: "hexle.html" },
   passle: { label: "Passle", href: "passle.html" }
 };
 
 const AUG = {
+
+"sql::Reading a table": {
+  concept: "A database keeps data in tables: every row is one thing, like a dish, and every column is one fact about it, like its price. SQL is the language you use to ask questions. A query never changes data unless it starts with INSERT, UPDATE or DELETE, so reading is always safe. The answer to a SELECT is itself a small table, which is why queries can be combined and nested.",
+  figure: "  menu\n  +----+--------------+---------+-------+\n  | id | name         | course  | price |  <- columns\n  +----+--------------+---------+-------+\n  |  1 | Nebula Soup  | starter |   9.5 |  <- one row\n  |  5 | Orbit Burger | main    |  18.0 |\n  +----+--------------+---------+-------+",
+  traps: [
+    "Writing FORM instead of FROM. SQLite answers with near \"FORM\": syntax error.",
+    "Forgetting a comma between columns: SELECT name price quietly renames name to price.",
+    "Relying on SELECT * in code that other code reads. A new column changes the shape of every result."
+  ],
+  lab: "target:board"
+},
+
+"sql::Filtering rows": {
+  concept: "WHERE walks through the table row by row and keeps only the rows where the test is true. Text needs single quotes and must match exactly. NULL is special: it means unknown, so any comparison with it is unknown too, never true. That is why missing values are found with IS NULL.",
+  traps: [
+    "course = main without quotes: SQLite looks for a column called main.",
+    "Mixing AND and OR without brackets, so extra rows sneak in.",
+    "= NULL, which never matches anything. Use IS NULL."
+  ],
+  quiz: [
+    { q: "WHERE course = 'dessert' OR course = 'drink' AND price < 5. Which rows come back?", a: "Every dessert, plus the drinks under 5. AND binds tighter than OR, so the price test only applies to the drinks." },
+    { q: "Why does WHERE phone = NULL return nothing, even for rows without a phone?", a: "NULL compared with anything is unknown, not true. Use WHERE phone IS NULL." }
+  ],
+  lab: "target:mains"
+},
+
+"sql::Sorting": {
+  traps: [
+    "Expecting a stable order without ORDER BY. The database is free to change it.",
+    "LIMIT before ORDER BY: a syntax error, because LIMIT is always last.",
+    "ORDER BY price DESC, name and expecting names in reverse too. DESC only applies to price."
+  ],
+  lab: "target:trolley"
+},
+
+"sql::Functions": {
+  traps: [
+    "ROUND(price) * 1.12 still has a long tail. Round the final value: ROUND(price * 1.12, 2).",
+    "Using + to join text. In SQLite + is maths, || joins text.",
+    "A CASE without ELSE, leaving NULL in rows nobody thought about."
+  ],
+  quiz: [
+    { q: "What does CASE WHEN price < 10 THEN 'budget' WHEN price < 20 THEN 'classic' END give for a dish of 25?", a: "NULL. No WHEN matched and there is no ELSE." }
+  ],
+  lab: "target:chalk"
+},
+
+"sql::Summing up": {
+  concept: "Aggregates fold many rows into one value. On their own they fold the whole table; with GROUP BY they fold each group separately. SQL runs a query in a fixed order, which explains most aggregate errors: rows are filtered by WHERE before the groups exist, and groups are filtered by HAVING afterwards.",
+  figure: "  FROM -> WHERE -> GROUP BY -> HAVING -> SELECT -> ORDER BY -> LIMIT\n          rows      groups      groups    columns    sort       cut",
+  traps: [
+    "SUM or COUNT in WHERE: misuse of aggregate. Move the test to HAVING.",
+    "A plain column in SELECT that is not in GROUP BY. SQLite allows it and picks a value from the group; other databases refuse.",
+    "COUNT(column) when you meant COUNT(*). The first skips NULLs."
+  ],
+  quiz: [
+    { q: "Takings per day, only the days above 400. Which keyword holds the > 400 test?", a: "HAVING, after GROUP BY day. WHERE cannot see SUM(total)." },
+    { q: "After a LEFT JOIN, why can COUNT(o.id) be 0 when COUNT(*) is 1?", a: "The row exists, but o.id is NULL on it. COUNT(column) skips NULLs; COUNT(*) counts the row." }
+  ],
+  lab: "target:floor"
+},
+
+"sql::Joining tables": {
+  concept: "Good databases store each fact once. An order does not repeat the dish name; it stores menu_id, a pointer to a row in menu. That pointer is a foreign key. A JOIN follows the pointers back, so one result can show the order and the dish side by side. INNER JOIN keeps only rows that found a partner; LEFT JOIN keeps every row of the first table and fills the gaps with NULL.",
+  figure: "  orders                      menu\n  id  guest_id  menu_id  ──ON m.id = o.menu_id──>  id  name\n  4   2         5                                  5   Orbit Burger\n\n  JOIN       only matched rows\n  LEFT JOIN  every row on the left, NULL where nothing matched",
+  traps: [
+    "Matching the wrong columns: ON m.id = o.id pairs unrelated rows without any error.",
+    "Leaving out ON, which pairs every order with every dish.",
+    "Swapping the tables around a LEFT JOIN and keeping the wrong side."
+  ],
+  quiz: [
+    { q: "Which dishes did nobody order? Describe the query shape.", a: "FROM menu m LEFT JOIN orders o ON o.menu_id = m.id WHERE o.id IS NULL." }
+  ],
+  lab: "target:tickets"
+},
+
+"sql::Subqueries": {
+  concept: "A subquery is a query in brackets inside another query. It runs first, and its answer is used like a value or a list. Use it when the comparison value has to be calculated, like the average price, or when the list of ids comes from another table.",
+  traps: [
+    "A subquery that returns several rows where one value is expected, as in price > (SELECT price FROM menu).",
+    "NOT IN with a list that contains NULL: the result is empty.",
+    "Forgetting the brackets around the inner SELECT."
+  ],
+  lab: "target:regulars"
+},
+
+"sql::Changing data": {
+  concept: "INSERT, UPDATE and DELETE change what is stored. UPDATE and DELETE work on every row that passes the WHERE, so the WHERE decides how much damage a typo does. A safe habit: write the WHERE as a SELECT first, check the rows, then turn it into the UPDATE or DELETE. In Seqle every run starts from a fresh database; a real one keeps every change.",
+  figure: "  1. SELECT * FROM stock WHERE item = 'rice';     look\n  2. UPDATE stock SET qty = 30 WHERE item = 'rice';  change\n  3. SELECT * FROM stock WHERE item = 'rice';     check",
+  traps: [
+    "UPDATE or DELETE without WHERE: every row changes.",
+    "Text values without quotes in VALUES.",
+    "A different number of columns and values in INSERT."
+  ],
+  quiz: [
+    { q: "You need to remove one item from stock and are not sure your WHERE is right. What do you run first?", a: "The same WHERE with SELECT * FROM stock, to see exactly which rows will go." }
+  ],
+  lab: "target:larder"
+},
+
+"sql::sqlite3 on your Mac": {
+  traps: [
+    "Putting a semicolon after a dot command, or forgetting it after SQL.",
+    "Opening a database file with a typo in the name: sqlite3 quietly creates a new empty one.",
+    "Forgetting .output with no name, so later results keep going to the file."
+  ],
+  lab: "cookbook"
+},
 
 "git::Setting up": {
   concept: "A repository is a folder plus a hidden .git folder. Your files are the working tree: what you see and edit. Inside .git sits the full history, every commit ever made, stored as snapshots. Cloning copies that whole history, not just the latest files, which is why you can read the log and switch branches with no network. A remote is just a named URL that Git can push to and fetch from.",
@@ -1902,6 +2081,26 @@ const AUG = {
 };
 
 const RECIPES = [
+{ vol:"sql", t:"Find the rows that have no partner", why:"Dishes nobody ordered, guests who never came back: the LEFT JOIN plus IS NULL pattern.", steps:[
+ { c:"SELECT m.name FROM menu m", n:"Start from the table whose rows you want to keep: every dish." },
+ { c:"LEFT JOIN orders o ON o.menu_id = m.id", n:"Attach orders where they exist. Dishes without one get NULL in every order column." },
+ { c:"WHERE o.id IS NULL;", n:"Keep only the rows where nothing was attached. IS NULL, never = NULL." },
+ { c:"SELECT COUNT(*) FROM orders WHERE menu_id = 4;", n:"Spot-check one result: zero orders means the answer is right." }
+]},
+{ vol:"sql", t:"Change data without regret", why:"UPDATE and DELETE hit every row that passes the WHERE. Look first, change second, check third.", steps:[
+ { c:"SELECT * FROM stock WHERE item = 'moonroot';", n:"Run the WHERE on its own. One row is what you expect." },
+ { c:"BEGIN;", n:"Start a transaction, so you can still back out." },
+ { c:"UPDATE stock SET qty = qty + 10 WHERE item = 'moonroot';", n:"The same WHERE, now changing the row." },
+ { c:"SELECT * FROM stock WHERE item = 'moonroot';", n:"Check the new value." },
+ { c:"COMMIT;", n:"Make it permanent. ROLLBACK instead would undo everything since BEGIN." }
+]},
+{ vol:"sql", t:"A per-group report", why:"The shape of most dashboard numbers: one row per day, per table, per customer.", steps:[
+ { c:"SELECT day, COUNT(*) AS bills, SUM(total) AS takings", n:"The group label first, then one aggregate per number you want." },
+ { c:"FROM bills", n:"The table with one row per event." },
+ { c:"GROUP BY day", n:"One result row per day." },
+ { c:"HAVING SUM(total) > 400", n:"Optional: keep only the groups that matter." },
+ { c:"ORDER BY takings DESC;", n:"Busiest first. You can sort on the alias." }
+]},
 { vol:"git", t:"Start a project and put it on GitHub", why:"From an empty folder to a pushed first commit, with nothing secret in it.", steps:[
  { c:"git init", n:"Make the folder a repository." },
  { c:"printf \".env\\nnode_modules/\\n\" > .gitignore", n:"Write the ignore list before the first add, so secrets never get tracked." },
@@ -2013,6 +2212,16 @@ const RECIPES = [
 ];
 
 const GLOSSARY = [
+{ vol:"sql", c:"Table, row, column", d:"How a database stores data", n:"A table holds one kind of thing. Each row is one item, each column one fact about it." },
+{ vol:"sql", c:"Query", d:"A question in SQL", n:"Usually a SELECT. Its answer is a small table of its own." },
+{ vol:"sql", c:"Primary key", d:"The column that identifies a row", n:"Unique and never empty, usually id. Other tables point at it." },
+{ vol:"sql", c:"Foreign key", d:"A column that points at another table", n:"orders.menu_id points at menu.id. JOIN follows these pointers." },
+{ vol:"sql", c:"NULL", d:"Unknown or missing", n:"Not zero, not empty text. Comparisons with NULL are never true; test it with IS NULL." },
+{ vol:"sql", c:"Aggregate", d:"A function over many rows", n:"COUNT, SUM, AVG, MIN, MAX. Returns one value per group." },
+{ vol:"sql", c:"Schema", d:"The design of a database", n:"Which tables exist, their columns, types and keys. .schema shows it in sqlite3." },
+{ vol:"sql", c:"Alias", d:"A short or new name", n:"For a column with AS, for a table right after its name: FROM orders o." },
+{ vol:"sql", c:"Transaction", d:"Changes that succeed or fail together", n:"BEGIN starts one, COMMIT keeps it, ROLLBACK cancels it." },
+{ vol:"sql", c:"Subquery", d:"A query inside a query", n:"In brackets. Runs first and hands back a value or a list." },
 { vol:"git", c:"Working tree", d:"The files you see and edit", n:"Everything in the folder except .git. Changes here are invisible to history until added and committed." },
 { vol:"git", c:"Staging area", d:"The next commit being assembled", n:"Also called the index. git add puts changes here, git commit records them." },
 { vol:"git", c:"HEAD", d:"Where you are right now", n:"Usually points at a branch, which points at a commit. HEAD~1 is the commit before." },
@@ -2331,7 +2540,7 @@ function buildSection(vol, g, gi, total){
     const a = document.createElement("a");
     const hash = typeof g.lab === "string" ? g.lab : "";
     a.href = LAB_LINKS[vol.id].href + (hash ? "#" + hash : "");
-    a.textContent = (hash.indexOf("case:") === 0 ? "Solve the case in " : "Drill this in ") + LAB_LINKS[vol.id].label;
+    a.textContent = (hash.indexOf("case:") === 0 ? "Solve the case in " : hash.indexOf("target:") === 0 ? "Cook this order in " : "Drill this in ") + LAB_LINKS[vol.id].label;
     foot.appendChild(a);
   }
   const printBtn = el("button", null, "Print this section");
@@ -2607,6 +2816,16 @@ pinCountEl.textContent = pins.length;
 setTheme(store(KEY_THEME, "day"));
 state.vol = store(KEY_VOL, "junos");
 render();
+function applyHash(){
+  const h = decodeURIComponent(location.hash.slice(1));
+  if (!h || !(volById(h) || ["recipes", "glossary", "pins"].indexOf(h) !== -1)) return;
+  state.vol = h; state.q = ""; searchEl.value = "";
+  save(KEY_VOL, h);
+  render();
+  window.scrollTo(0, 0);
+}
+window.addEventListener("hashchange", applyHash);
+applyHash();
 </script>
 </body>
 </html>

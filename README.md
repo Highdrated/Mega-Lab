@@ -68,7 +68,7 @@ the lab at the right spot through a link like `poshle.html#case:room`.
 
 Deep links: Poshle and Shelle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#case:<id>` /
 `#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
-Pyle `#review` / `#kata`, Dockle `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
+Pyle `#review` / `#kata`, Dockle `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Codex `#<volume>` (e.g. `#sql`), Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
 ## Progress and sync
 
