@@ -635,6 +635,111 @@ if (lsGet("workshop-today-seen") !== dayKey(0, true)) {
 }
 applyFilter();
 
+const NOTES_KEY = "megalab-claude-notes";
+const NOTE_KINDS = [["bug", "Bug"], ["real", "Not real Junos"], ["idea", "Idea"], ["learn", "Learning gap"], ["question", "Question"]];
+const notesEl = $("notes"), notesListEl = $("notesList"), notesBtn = $("notesBtn");
+let notesFilter = "open";
+function nRead() { const a = lsParse(NOTES_KEY); return Array.isArray(a) ? a : []; }
+function nWrite(a) { lsSet(NOTES_KEY, JSON.stringify(a.slice(-400))); }
+function nKind(k) { const f = NOTE_KINDS.find((x) => x[0] === k); return f ? f[1] : k; }
+function nWhen(ts) { return String(ts || "").slice(0, 16).replace("T", " "); }
+(function fillNoteSelects() {
+  const ls = $("notesLab"), ks = $("notesKind");
+  ["Workshop"].concat(labs.map((l) => l.name)).forEach((n) => { const o = document.createElement("option"); o.value = o.textContent = n; ls.appendChild(o); });
+  NOTE_KINDS.forEach(([v, t]) => { const o = document.createElement("option"); o.value = v; o.textContent = t; ks.appendChild(o); });
+  ls.value = lsGet("workshop-notes-lab") || "Workshop";
+  ls.addEventListener("change", () => lsSet("workshop-notes-lab", ls.value));
+})();
+function notesBadge() {
+  const n = nRead().filter((x) => !x.done).length;
+  notesBtn.textContent = n ? `Notes (${n})` : "Notes";
+  notesBtn.classList.toggle("has", n > 0);
+}
+function renderNotes() {
+  const all = nRead();
+  $("nfOpen").textContent = all.filter((x) => !x.done).length;
+  $("nfDone").textContent = all.filter((x) => x.done).length;
+  notesEl.querySelectorAll(".notes-filter button").forEach((b) => b.classList.toggle("on", b.dataset.f === notesFilter));
+  const shown = all.filter((x) => notesFilter === "all" || (notesFilter === "done" ? x.done : !x.done));
+  notesListEl.innerHTML = "";
+  if (!shown.length) { notesListEl.innerHTML = `<p class="notes-empty">${notesFilter === "done" ? "nothing handled yet" : "no notes · all clear"}</p>`; notesBadge(); return; }
+  const byLab = {};
+  shown.forEach((x) => { (byLab[x.lab || "Unknown lab"] = byLab[x.lab || "Unknown lab"] || []).push(x); });
+  Object.keys(byLab).sort().forEach((lab) => {
+    const h = document.createElement("p");
+    h.className = "notes-lab";
+    h.textContent = `${lab} · ${byLab[lab].length}`;
+    notesListEl.appendChild(h);
+    byLab[lab].sort((a, b) => (String(a.ts) < String(b.ts) ? -1 : 1)).forEach((x) => {
+      const row = document.createElement("div");
+      row.className = "note" + (x.done ? " done" : "");
+      row.innerHTML = `<input type="checkbox" title="Mark handled" ${x.done ? "checked" : ""}>
+        <div><span class="nk">${esc(nKind(x.kind))}</span><span class="nt">${esc(x.text)}</span><span class="nm">${esc([nWhen(x.ts), x.ctx].filter(Boolean).join(" · "))}</span></div>
+        <button class="nd" title="Delete note" aria-label="Delete note">×</button>`;
+      row.querySelector("input").addEventListener("change", (e) => { const a = nRead(), n = a.find((y) => y.id === x.id); if (n) { n.done = e.target.checked; nWrite(a); } renderNotes(); });
+      row.querySelector(".nd").addEventListener("click", () => { nWrite(nRead().filter((y) => y.id !== x.id)); renderNotes(); toast("note deleted"); });
+      notesListEl.appendChild(row);
+    });
+  });
+  notesBadge();
+}
+function notesForClaude() {
+  const arr = nRead().filter((x) => !x.done);
+  if (!arr.length) return "# Notes for Claude\n\nNo open notes.\n";
+  const byLab = {};
+  arr.forEach((x) => { (byLab[x.lab || "unknown lab"] = byLab[x.lab || "unknown lab"] || []).push(x); });
+  const out = ["# Notes for Claude", "", `Written while working in the Mega Lab between sessions. ${arr.length} note${arr.length === 1 ? "" : "s"}, oldest first.`, ""];
+  Object.keys(byLab).sort().forEach((lab) => {
+    out.push("## " + lab, "");
+    byLab[lab].sort((a, b) => (String(a.ts) < String(b.ts) ? -1 : 1)).forEach((x) => {
+      out.push(`- **${nKind(x.kind)}** — ${String(x.text).replace(/\n+/g, " ")}`);
+      const meta = [nWhen(x.ts), x.ctx].filter(Boolean);
+      if (meta.length) out.push(`  - _${meta.join(" · ")}_`);
+    });
+    out.push("");
+  });
+  return out.join("\n");
+}
+function openNotes() { notesEl.hidden = false; requestAnimationFrame(() => notesEl.classList.add("show")); renderNotes(); setTimeout(() => $("notesText").focus(), 260); }
+function closeNotes() { notesEl.classList.remove("show"); setTimeout(() => { if (!notesEl.classList.contains("show")) notesEl.hidden = true; }, 260); }
+notesBtn.addEventListener("click", () => (notesEl.classList.contains("show") ? closeNotes() : openNotes()));
+$("notesClose").addEventListener("click", closeNotes);
+notesEl.querySelectorAll(".notes-filter button").forEach((b) => b.addEventListener("click", () => { notesFilter = b.dataset.f; renderNotes(); }));
+$("notesForm").addEventListener("submit", (e) => {
+  e.preventDefault();
+  const t = $("notesText"), text = t.value.trim();
+  if (!text) { t.focus(); return; }
+  const a = nRead();
+  a.push({ id: "n" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6), ts: new Date().toISOString(), lab: $("notesLab").value, kind: $("notesKind").value, text, ctx: "from the Workshop", done: false });
+  nWrite(a);
+  t.value = "";
+  notesFilter = "open";
+  renderNotes();
+  toast("note saved");
+});
+$("notesText").addEventListener("keydown", (e) => { if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); $("notesForm").requestSubmit(); } });
+$("notesCopy").addEventListener("click", () => {
+  const txt = notesForClaude();
+  const ok = () => toast("copied · paste it to claude");
+  if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(ok, () => fallbackCopy(txt, ok));
+  else fallbackCopy(txt, ok);
+});
+function fallbackCopy(txt, ok) { const ta = document.createElement("textarea"); ta.value = txt; ta.style.position = "fixed"; ta.style.opacity = "0"; document.body.appendChild(ta); ta.select(); try { document.execCommand("copy"); ok(); } catch (e) { toast("copy failed"); } ta.remove(); }
+$("notesClear").addEventListener("click", () => {
+  const a = nRead(), o = a.filter((x) => !x.done), r = a.length - o.length;
+  nWrite(o);
+  renderNotes();
+  toast(r ? `cleared ${r} handled` : "nothing handled to clear");
+});
+document.addEventListener("keydown", (e) => {
+  if (notesEl.classList.contains("show")) { if (e.key === "Escape") { e.stopPropagation(); closeNotes(); } return; }
+  const typing = /^(INPUT|TEXTAREA|SELECT)$/.test((document.activeElement || {}).tagName || "");
+  if (!typing && !stage.classList.contains("show") && !opened.classList.contains("show") && (e.key === "n" || e.key === "N") && !e.ctrlKey && !e.metaKey && !e.altKey) { e.preventDefault(); openNotes(); }
+}, true);
+window.addEventListener("storage", (e) => { if (e.key === NOTES_KEY || e.key === null) { notesBadge(); if (notesEl.classList.contains("show")) renderNotes(); } });
+document.addEventListener("visibilitychange", () => { if (!document.hidden) notesBadge(); });
+notesBadge();
+
 if ("serviceWorker" in navigator && /^https?:$/.test(location.protocol)) {
   navigator.serviceWorker.register("sw.js").catch(() => {});
 }
