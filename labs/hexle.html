@@ -2353,10 +2353,12 @@ function run(){
   const code=S.code[S.t],css=T().css!=null?S.css[S.t]:null,js=T().js!=null?S.js[S.t]:null;
   const f=$('bframe'),tok=++runTok;f.onload=()=>{if(T().js!=null)setTimeout(()=>{if(tok===runTok)evaluate(code,css,js)},350);else evaluate(code,css,js)};f.srcdoc=wrap(code,css,js);
 }
+function hxBorder(css){return String(css).replace(/((?:border|outline)(?:-(?:top|right|bottom|left))?\s*:\s*)([^;}"]+)/gi,(m,k,v)=>{if(/var\(/i.test(v))return m;const imp=/!important/i.test(v);const t=v.replace(/!important/i,'').trim().split(/\s+(?![^(]*\))/).filter(Boolean);const W=/^(\d*\.?\d+(px|em|rem|%)?|thin|medium|thick)$/i,ST=/^(none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset)$/i;const w=t.filter(x=>W.test(x)),st=t.filter(x=>ST.test(x)),c=t.filter(x=>!W.test(x)&&!ST.test(x));return k+[...w,...st,...c].join(' ')+(imp?' !important':'')})}
+function hxNorm(code){return hxBorder(String(code).replace(/<style\b[^>]*>/gi,'<style>').replace(/(\s(?:src|href)\s*=\s*["'])\.\//gi,'$1'))}
 async function evaluate(code,css,js){
   const tg=T(),f=$('bframe'),d=f.contentDocument,w=f.contentWindow;if(!d)return;
-  const tok=runTok,raw=new DOMParser().parseFromString(code,'text/html');
-  const res=[];for(const st of tg.steps){let r=false;try{r=st.c(d,w,code,raw,css,js);if(r&&typeof r.then==='function')r=await Promise.race([r,new Promise(z=>setTimeout(()=>z(false),5000))])}catch(e){r=false}res.push(!!r);if(tok!==runTok||T()!==tg)return}
+  const tok=runTok,ck=hxNorm(code),cc=css==null?css:hxBorder(css),raw=new DOMParser().parseFromString(ck,'text/html');
+  const res=[];for(const st of tg.steps){let r=false;try{r=st.c(d,w,ck,raw,cc,js);if(r&&typeof r.then==='function')r=await Promise.race([r,new Promise(z=>setTimeout(()=>z(false),5000))])}catch(e){r=false}res.push(!!r);if(tok!==runTok||T()!==tg)return}
   if(tg.js!=null){const hx=w.__hx||{errs:[],logs:[]},sc=$('scan');
     if(hx.errs.length){const e=hx.errs[0];sc.className='bad';sc.textContent='Console › '+(e.f.startsWith('blob:')?'script.js':'index.html')+' line '+e.l+': '+e.m}
     else if(js!=null&&js.trim()&&!/<script[^>]*src=["']script\.js["']/i.test(code)){sc.className='bad';sc.textContent='Console › index.html does not load script.js yet'}
@@ -2538,6 +2540,7 @@ function reviewCode(code,css,js){
   const out=[],add=(sev,file,line,msg)=>out.push({sev,file,line,msg}),L=n=>S.learned.includes(n),tg=TARGETS[S.t]||{},adv=!!(tg.master||tg.spell||tg.project);code=String(code||'');
   const raw=new DOMParser().parseFromString(code,'text/html');
   for(const m of code.matchAll(/<img\b(?![^>]*\balt=)[^>]*>/gi))add('fix','index.html',lineOf(code,m.index),'Image without alt text. Describe it, or write alt="" if it is only decoration.');
+  for(const m of code.matchAll(/<img\b[^>]*\balt=["']([^"'\s]{3,})["'][^>]*>/gi))add('tip','index.html',lineOf(code,m.index),'alt="'+m[1]+'" works. A short phrase says even more to a screen reader: what is in the picture?');
   if(adv)for(const m of code.matchAll(/\sstyle="[^"]*"/gi))add('fix','index.html',lineOf(code,m.index),'Inline style. Give the element a class and move the look to styles.css.');
   const hm1=code.match(/<html(?![^>]*\blang=)[^>]*>/i);if(hm1)add('fix','index.html',lineOf(code,hm1.index),'<html> has no lang attribute: add lang="en".');
   if(adv&&/<head[\s>]/i.test(code)&&!/<meta[^>]*name=["']viewport["']/i.test(code)){const i=code.search(/<\/head>/i);add('tip','index.html',i<0?1:lineOf(code,i),'Add <meta name="viewport" content="width=device-width, initial-scale=1"> to the head, so phones show the page at the right size.')}
