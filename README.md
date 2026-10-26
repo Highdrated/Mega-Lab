@@ -9,7 +9,7 @@ needed — but hosting it on GitHub Pages makes it installable on any device.
     css/launcher.css      launcher styling (Void + Orbital themes)
     js/labs.config.js     THE ROOM LIST: edit this to add a lab
     js/launcher.js        launcher logic, Today tab
-    labs/<lab>.html       single-file labs (Pyle, Passle, Hexle, Dockle, Seqle, Poshle, ...)
+    labs/<lab>.html       single-file labs (Pyle, Passle, Hexle, Dockle, Seqle, Poshle, Rebble, ...)
     labs/<lab>/           folder labs (junos-lab, modle)
     labs/img/             images per lab (passle, roux, hexle)
     labs/data/            JSON files Hexle fetches in its lessons

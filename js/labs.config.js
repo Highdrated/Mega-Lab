@@ -158,5 +158,15 @@ const LABS_CONFIG = [
     ring: "ring-mid",
     angle: 200,
     glyph: '<path d="M2 4h12M2 8h12M2 12h12"/><path d="M6 2v12M10 2v12"/>'
+    },
+  {
+    id: "rebble",
+    name: "Rebble",
+    tag: "Practice",
+    sub: "rebuild your projects",
+    path: "labs/rebble.html",
+    ring: "ring-inner",
+    angle: 320,
+    glyph: '<rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6h12M6 6v8"/>'
   }
 ];
