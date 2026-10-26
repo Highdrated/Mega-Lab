@@ -153,7 +153,7 @@ const LABS_CONFIG = [
     id: "subnle-pocket",
     name: "Subnle Pocket",
     tag: "Network",
-    sub: "ip · subnetting",
+    sub: "ip · subnetting · 21 drills",
     path: "labs/subnle-pocket.html",
     ring: "ring-mid",
     angle: 200,
