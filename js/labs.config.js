@@ -138,5 +138,15 @@ const LABS_CONFIG = [
     ring: "ring-outer",
     angle: 40,
     glyph: '<path d="M8 1.5l5.5 3.2v6.6L8 14.5l-5.5-3.2V4.7z"/><path d="M8 5l3 1.7v3.6L8 12l-3-1.7V6.7z"/>'
+  },
+  {
+    id: "webble",
+    name: "Webble",
+    tag: "Code",
+    sub: "motion · css + js",
+    path: "labs/webble.html",
+    ring: "ring-outer",
+    angle: 140,
+    glyph: '<path d="M2 11c2-6 4-6 6 0s4 6 6 0"/><circle cx="8" cy="5" r="1.5"/>'
   }
 ];
