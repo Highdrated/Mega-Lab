@@ -9,7 +9,7 @@ needed — but hosting it on GitHub Pages makes it installable on any device.
     css/launcher.css      launcher styling (Void + Orbital themes)
     js/labs.config.js     THE ROOM LIST: edit this to add a lab
     js/launcher.js        launcher logic, Today tab
-    labs/<lab>.html       single-file labs (Pyle, Passle, Hexle, Dockle, Seqle, Poshle, Rebble, ...)
+    labs/<lab>.html       single-file labs (Pyle, Passle, Hexle, Sleeple, Seqle, Poshle, Rebble, ...)
     labs/<lab>/           folder labs (junos-lab, modle)
     labs/img/             images per lab (passle, roux, hexle)
     labs/data/            JSON files Hexle fetches in its lessons
@@ -62,13 +62,13 @@ After that it opens full-screen like a native app and works offline.
 ## Today tab
 
 The launcher's **Today** tab reads each lab's saved progress and lists what is due:
-reviews (Junle, Pyle, Hexle, Dockle, Seqle, Poshle and Shelle weak spots), dailies (Modle, Junle mix, Pyle kata, Dockle dispatch, Seqle specials),
+reviews (Junle, Pyle, Hexle, Sleeple, Seqle, Poshle and Shelle weak spots), dailies (Modle, Junle mix, Pyle kata, Sleeple telegrams, Seqle specials),
 a weekly Detective case (Poshle, Git Lab or Shelle), and where you left off. Each row opens
 the lab at the right spot through a link like `poshle.html#case:room`.
 
 Deep links: Poshle and Shelle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#case:<id>` /
 `#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
-Pyle `#review` / `#kata`, Dockle `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Codex `#<volume>` (e.g. `#sql`), Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
+Pyle `#review` / `#kata`, Sleeple `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Codex `#<volume>` (e.g. `#sql`), Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
 ## Progress and sync
 

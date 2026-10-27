@@ -526,11 +526,11 @@ function todayItems() {
     if (n) add("hexle", n + (n === 1 ? " skill to review" : " skills to review"), "review", "review", 8);
   }
 
-  const dk = lsParse("dockle.v1");
+  const dk = lsParse("sleeple.v1") || lsParse("dockle.v1");
   if (dk && dk.srs) {
     const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
     const n = Object.values(dk.srs).filter((x) => x && x.due <= day).length;
-    if (n) add("dockle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 8);
+    if (n) add("sleeple", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 8);
   }
 
   const sq = lsParse("seqle.v1");
@@ -547,10 +547,10 @@ function todayItems() {
   if (dk && dk.learned && dk.learned.length) {
     const day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 864e5);
     const d = dk.disp;
-    if (!d || d.day !== day || !d.ids || !d.ids.length) add("dockle", "New dispatch orders", "daily", "port", 5);
+    if (!d || d.day !== day || !d.ids || !d.ids.length) add("sleeple", "New telegrams", "daily", "port", 5);
     else {
       const open = d.ids.filter((k) => !(d.claimed || []).includes(k)).length;
-      if (open) add("dockle", open + (open === 1 ? " dispatch order open" : " dispatch orders open"), "daily", "port", 5);
+      if (open) add("sleeple", open + (open === 1 ? " telegram open" : " telegrams open"), "daily", "port", 5);
     }
   }
   if (sq && sq.learned && sq.learned.length) {
@@ -579,9 +579,9 @@ function todayItems() {
   const gl = lsParse("gitlab.v1");
   if (gl && gl.missions && gl.missionIdx < gl.missions && !gl.detective) add("git-lab", "Mission " + (gl.missionIdx + 1) + " of " + gl.missions, "next", "", 2);
   if (dk && dk.done) {
-    const DOCKLE_N = 8, n = Object.keys(dk.done).length;
-    if (n < DOCKLE_N) add("dockle", "Contract " + (n + 1) + " of " + DOCKLE_N + " waiting", "next", "target", 2);
-  } else add("dockle", "Your first cargo contract", "next", "school", 2);
+    const SLEEPLE_N = 8, n = Object.keys(dk.done).length;
+    if (n < SLEEPLE_N) add("sleeple", "Journey " + (n + 1) + " of " + SLEEPLE_N + " waiting", "next", "target", 2);
+  } else add("sleeple", "Your first night journey", "next", "school", 2);
   if (sq && sq.done) {
     const SEQLE_N = 12, n = Object.keys(sq.done).length;
     if (n < SEQLE_N) add("seqle", "Order " + (n + 1) + " of " + SEQLE_N + " waiting", "next", "target", 2);

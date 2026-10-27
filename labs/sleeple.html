@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#14243e">
+<title>Sleeple · Python night train</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Jost:wght@400;500;600&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{--r:8px;--gap:12px;--serif:"Cormorant Garamond",Georgia,serif;--hud:"Jost",ui-sans-serif,system-ui,sans-serif;--sans:"Jost",ui-sans-serif,system-ui,sans-serif;--mono:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace}
+body[data-theme=night]{--bg:#14243e;--star:rgba(244,239,230,.55);--panel:#182a47;--panel2:#1d3254;--field:#112039;--line:#283d60;--line2:#38507a;--ink:#f4efe6;--ink2:#c5cbd8;--mute:#8590a8;--acc:#e9b872;--acc2:rgba(233,184,114,.14);--cyan:#a9c3e8;--cyan2:rgba(169,195,232,.13);--ok:#93d1a6;--ok2:rgba(147,209,166,.13);--bad:#ec8a76;--bad2:rgba(236,138,118,.13);--ticket:#f3ece0;--ticket-ink:#2a2418;--sel:rgba(169,195,232,.28);--on:#14243e;--glow:rgba(233,184,114,.18)}
+body[data-theme=midnight]{--bg:#0a1220;--star:rgba(244,239,230,.4);--panel:#0e1829;--panel2:#132036;--field:#0a1322;--line:#1c2a42;--line2:#283a57;--ink:#ece6da;--ink2:#a9b1c0;--mute:#6d788d;--acc:#f0dcae;--acc2:rgba(240,220,174,.11);--cyan:#9fb7d9;--cyan2:rgba(159,183,217,.11);--ok:#8fc9a0;--ok2:rgba(143,201,160,.11);--bad:#e88a77;--bad2:rgba(232,138,119,.11);--ticket:#e9e2d4;--ticket-ink:#1d1a14;--sel:rgba(159,183,217,.25);--on:#0a1220;--glow:rgba(240,220,174,.12)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{font-family:var(--sans);color:var(--ink);background:radial-gradient(1px 1px at 23px 41px,var(--star),transparent 60%) 0 0/173px 151px,radial-gradient(1px 1px at 97px 13px,var(--star),transparent 60%) 0 0/229px 197px,radial-gradient(1.5px 1.5px at 61px 88px,var(--star),transparent 60%) 0 0/311px 263px,var(--bg);display:grid;grid-template-rows:60px minmax(0,1fr);grid-template-columns:minmax(0,1fr);overflow:hidden;font-size:15px}
+button{cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink2);border-radius:var(--r);height:34px;padding:0 14px;font-family:var(--hud);font-weight:500;font-size:12.5px;letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;transition:border-color .2s,color .2s,background .2s}
+button:hover:not(:disabled){border-color:var(--acc);color:var(--ink)}
+button:disabled{opacity:.4;cursor:default}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--on)}
+button.pri:hover:not(:disabled){filter:brightness(1.07);color:var(--on)}
+:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+code,.mono{font-family:var(--mono)}
+#bar{display:flex;align-items:center;gap:14px;padding:0 18px;background:color-mix(in srgb,var(--bg) 82%,#000);border-bottom:1px solid var(--line);min-width:0;position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:10px;flex:none}
+.brand svg{width:26px;height:26px}
+.brand b{font-family:var(--serif);font-weight:600;font-size:26px;letter-spacing:.04em;color:var(--ink);line-height:1}
+.brand small{display:block;font-family:var(--hud);font-size:10px;letter-spacing:.24em;color:var(--mute);margin-top:2px;text-transform:uppercase}
+.stages{display:flex;align-items:center;gap:2px;flex:none}
+.stages i{color:var(--line2);font-style:normal;font-size:12px;padding:0 2px}
+.stg{border-color:transparent;padding:0 11px;color:var(--ink2)}
+.stg.on,.stg.on:hover:not(:disabled){border-color:var(--acc);color:var(--acc);background:var(--acc2)}
+.stg .ck{color:var(--ok);margin-right:5px;display:none}
+.stg.done .ck{display:inline}
+#tsel{height:34px;max-width:260px;min-width:170px;flex:0 1 260px;border:1px solid var(--line);border-radius:var(--r);background:var(--field);color:var(--ink);font-family:var(--hud);font-weight:500;font-size:13px;letter-spacing:.04em;padding:0 8px}
+#comms{flex:1 1 auto;min-width:0;display:flex;align-items:center;gap:10px;height:40px;padding:0 12px 0 4px;border:1px solid transparent;border-radius:var(--r);font-family:var(--serif);font-style:italic;font-size:16px;color:var(--ink2);overflow:hidden;transition:border-color .3s,color .3s}
+#dotmini{flex:none;display:grid;place-items:center;width:34px;height:40px}
+#dotmini img{height:38px;width:auto;display:block}
+#cmsg{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#comms.flash{border-color:var(--line2);color:var(--ink)}
+.tools{display:flex;gap:6px;flex:none}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none}
+.seg button{border:0;border-radius:0;height:26px;padding:0 9px;font-size:11px}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--acc2);color:var(--acc)}
+main{min-height:0;min-width:0;padding:var(--gap)}
+.view{display:none;height:100%;gap:var(--gap);min-height:0;min-width:0}
+.view.on{display:grid}
+.panel{background:color-mix(in srgb,var(--panel) 92%,transparent);border:1px solid var(--line);border-radius:12px;display:flex;flex-direction:column;min-height:0;min-width:0;overflow:hidden;position:relative}
+.ph{display:flex;align-items:center;gap:10px;height:44px;flex:none;padding:0 16px;border-bottom:1px solid var(--line);font-family:var(--hud);font-weight:500;font-size:12px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute)}
+.ph::before{content:"";width:6px;height:6px;transform:rotate(45deg);background:var(--acc);flex:none}
+.ph b{font-weight:500;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ph .sp{margin-left:auto;color:var(--mute);white-space:nowrap;display:flex;align-items:center;gap:8px}
+.ph button{height:28px;padding:0 10px;font-size:11.5px}
+.scroll{flex:1;min-height:0;overflow:auto}
+#v-school,#v-review,#v-rush{grid-template-columns:minmax(0,1.25fr) minmax(0,1fr)}
+.drill{display:flex;flex-direction:column;gap:16px;padding:22px 24px}
+.dk{font-family:var(--hud);font-weight:500;font-size:11.5px;letter-spacing:.24em;color:var(--acc);text-transform:uppercase}
+.lt{margin:0;font-family:var(--serif);font-weight:600;font-size:36px;letter-spacing:.01em;line-height:1.05}
+.why{margin:0;font-size:16px;line-height:1.75;color:var(--ink2);max-width:70ch}
+.syn{font-family:var(--mono);font-size:14px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;white-space:pre;overflow-x:auto}
+.syn .k{color:var(--cyan);font-weight:700}.syn .v{color:var(--acc)}
+.sec{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:14px 16px}
+.sec>small{display:block;font-family:var(--hud);font-weight:500;font-size:11px;letter-spacing:.22em;color:var(--cyan);text-transform:uppercase;margin-bottom:8px}
+.sec.warn>small{color:var(--acc)}
+.sec ul{margin:0;padding-left:18px;color:var(--ink2);line-height:1.75}
+.parts{display:grid;grid-template-columns:max-content 1fr;gap:8px 16px;align-items:baseline;font-size:15px;color:var(--ink2)}
+.parts code{font-size:13.5px;color:var(--ink);background:var(--field);border:1px solid var(--line);border-radius:6px;padding:1px 7px;justify-self:start}
+.code{font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;white-space:pre;overflow-x:auto;margin:0}
+.runrow{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+.play{width:100%;min-height:96px;resize:vertical;font-family:var(--mono);font-size:13.5px;line-height:1.6;background:var(--field);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);padding:10px 14px;outline:0;tab-size:4}
+.play:focus,.ans:focus{border-color:var(--acc)}
+.rstrip{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:8px 12px}
+.rstrip .tagn{font-family:var(--hud);font-weight:500;font-size:11px;letter-spacing:.2em;color:var(--acc);background:var(--acc2);padding:3px 8px;border-radius:5px}
+.rstrip b{font-weight:500;font-size:15px}
+.rstrip button{margin-left:auto;height:28px;padding:0 10px;font-size:11.5px}
+.dq{font-size:20px;font-weight:500;line-height:1.45;white-space:pre-line}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.opts button{height:auto;min-height:56px;padding:10px 14px;text-align:left;text-transform:none;letter-spacing:0;font-family:var(--mono);font-weight:400;font-size:14px;color:var(--ink);background:var(--panel2);white-space:pre-wrap}
+.opts button.good{border-color:var(--ok);background:var(--ok2)}
+.opts button.bad{border-color:var(--bad);background:var(--bad2)}
+.ans{width:100%;font-family:var(--mono);font-size:15px;line-height:1.6;background:var(--field);color:var(--ink);border:1px solid var(--line2);border-radius:var(--r);padding:10px 14px;outline:0;tab-size:4}
+textarea.ans{min-height:110px;resize:vertical}
+.fb{min-height:22px;font-size:15px;line-height:1.5}
+.fb.err{color:var(--bad)}.fb.ok{color:var(--ok)}
+.drow{display:flex;gap:10px;margin-top:4px;flex-wrap:wrap}
+.drow .pri{flex:1}
+.pips{display:flex;gap:5px;flex-wrap:wrap}
+.pips span{width:16px;height:5px;border-radius:3px;background:var(--line)}
+.pips span.ok{background:var(--ok)}.pips span.now{background:var(--acc)}.pips span.les{background:var(--cyan2);outline:1px solid var(--cyan);outline-offset:-1px}.pips span.les.ok{background:var(--cyan);outline:0}
+.console{flex:1;min-height:0;overflow:auto;margin:0;padding:14px 18px;font-family:var(--mono);font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;background:var(--field)}
+.console .cmd{color:var(--mute)}
+.console .er{color:var(--bad)}
+.console .why{font-family:var(--sans);font-size:14px;color:var(--ink2);display:block;margin-top:6px}
+.cfoot{display:flex;align-items:center;gap:10px;height:40px;flex:none;padding:0 16px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--mute)}
+.donecard{display:flex;flex-direction:column;gap:16px;padding:26px 28px}
+.donecard h2{margin:0;font-family:var(--serif);font-weight:600;font-size:34px;letter-spacing:.01em;line-height:1.1}
+.donecard .scene{display:block;width:100%;max-width:420px;height:auto;margin:0 auto 4px}
+.donecard .nox{display:block;height:150px;width:auto;margin:0 auto}
+#v-target{grid-template-columns:340px minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr) minmax(0,1.1fr)}
+#v-target .left{grid-row:1/3}
+#v-target .edp{grid-column:2/4}
+.stop{flex:none;margin:10px 12px 0;height:96px;display:flex;align-items:flex-end;justify-content:space-between;gap:10px;overflow:hidden}
+.stop img{order:2;height:96px;width:auto;max-width:62%;object-fit:contain;object-position:right bottom}
+.stop span{order:1;align-self:flex-start;padding-top:4px;font-family:var(--hud);font-size:10.5px;letter-spacing:.24em;color:var(--mute);text-transform:uppercase;min-width:0}
+.stop span b{display:block;font-family:var(--serif);font-size:20px;letter-spacing:.02em;color:var(--ink);text-transform:none;font-weight:600}
+.contract{margin:8px 12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);flex:none}
+.contract .who{display:flex;justify-content:space-between;gap:12px;font-family:var(--hud);font-weight:500;font-size:11.5px;letter-spacing:.2em;color:var(--acc);text-transform:uppercase}
+.contract p{margin:6px 0 0;font-size:14.5px;line-height:1.55;color:var(--ink2)}
+.contract .pay{margin-top:8px;padding-top:8px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12px;color:var(--mute);display:flex;flex-wrap:wrap;gap:4px 14px}
+.contract .pay b{color:var(--ink);font-weight:500}
+.contract .pay .got{color:var(--ok)}
+.steps{list-style:none;margin:0;padding:8px 0;flex:1;min-height:0;overflow:auto}
+.steps li{display:grid;grid-template-columns:24px minmax(0,1fr);gap:10px;align-items:start;padding:8px 16px;font-size:14.5px;line-height:1.5;border-left:2px solid transparent;color:var(--ink2)}
+.steps .n{width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-family:var(--hud);font-weight:500;font-size:12px;border:1px solid var(--line2);color:var(--mute)}
+.steps li.ok .n{background:var(--ok);border-color:var(--ok);color:var(--on)}
+.steps li.ok{color:var(--mute)}
+.steps li.now{background:var(--panel2);border-left-color:var(--acc);color:var(--ink)}
+.steps li.now .n{border-color:var(--acc);color:var(--acc)}
+.steps code{font-size:12.5px;background:var(--field);border:1px solid var(--line);border-radius:5px;padding:0 5px;color:var(--ink)}
+.help{border-top:1px solid var(--line);flex:none;display:flex;flex-direction:column;max-height:44%}
+.ladder{padding:10px 12px;overflow:auto;display:flex;flex-direction:column;gap:8px;min-height:0}
+.idle{display:grid;grid-template-columns:72px 1fr;gap:12px;align-items:center;color:var(--ink2);font-size:14px;line-height:1.5}
+.idle img{width:72px;height:auto;display:block}
+.rung{border:1px solid var(--line);border-radius:var(--r);background:var(--panel2);padding:8px 12px;font-size:14px;line-height:1.5;color:var(--ink2)}
+.rung small{display:block;font-family:var(--hud);font-weight:500;font-size:11px;letter-spacing:.2em;color:var(--cyan);text-transform:uppercase;margin-bottom:3px}
+.rung pre{margin:4px 0 0;font-family:var(--mono);font-size:12.5px;white-space:pre-wrap;color:var(--ink)}
+.rung.ans small{color:var(--acc)}
+.hfoot{display:flex;gap:8px;padding:10px 12px;border-top:1px solid var(--line)}
+.hfoot button{flex:1}
+.ticket{flex:1;min-height:0;overflow:auto;margin:14px;padding:16px 26px 20px;background:var(--ticket);color:var(--ticket-ink);border-radius:6px;font-family:var(--mono);font-size:14px;line-height:1.7;white-space:pre;position:relative;-webkit-mask:radial-gradient(circle 9px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat;mask:radial-gradient(circle 9px at 0 50%,#0000 98%,#000) left/51% 100% no-repeat,radial-gradient(circle 9px at 100% 50%,#0000 98%,#000) right/51% 100% no-repeat}
+.ticket .hd{display:flex;justify-content:space-between;gap:12px;font-family:var(--hud);font-weight:600;font-size:11px;letter-spacing:.24em;color:#8a6a2a;border-bottom:1px dashed rgba(42,36,24,.35);margin-bottom:10px;padding-bottom:6px;white-space:normal}
+.ticket .hd em{font-style:normal;color:#a3402f}
+.outl{flex:1;min-height:0;overflow:auto;margin:14px;padding:14px 16px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:14px;line-height:1.7}
+.outl div{white-space:pre;min-height:1.7em;padding-left:10px;border-left:2px solid transparent}
+.outl .m{border-left-color:var(--ok)}
+.outl .x{border-left-color:var(--bad);background:var(--bad2)}
+.outl .gh{color:var(--mute);border-left-color:var(--line2);font-style:italic}
+.outl .ex{border-left-color:var(--acc);background:var(--acc2)}
+.outl .er{white-space:pre-wrap;color:var(--bad);border-left-color:var(--bad)}
+.outl .hint{white-space:pre-wrap;font-family:var(--sans);color:var(--ink2);border-left-color:var(--cyan)}
+.meter{display:flex;align-items:center;gap:8px}
+.meter .bar{width:90px;height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.meter .bar i{display:block;height:100%;width:0;background:var(--ok);transition:width .3s}
+.ed{flex:1;min-height:0;display:grid;grid-template-columns:48px minmax(0,1fr);background:var(--field);font-family:var(--mono);font-size:14.5px;line-height:23px}
+.gut{margin:0;padding:12px 10px 12px 0;text-align:right;color:var(--mute);background:var(--panel2);border-right:1px solid var(--line);overflow:hidden;user-select:none;white-space:pre}
+.codewrap{position:relative;min-height:0;overflow:hidden}
+.codewrap pre,.codewrap textarea{position:absolute;inset:0;margin:0;padding:12px 14px;font:inherit;line-height:inherit;white-space:pre;overflow:auto;tab-size:4;border:0}
+.codewrap pre{pointer-events:none;color:var(--ink)}
+#ed{background:transparent;color:transparent;caret-color:var(--acc);resize:none;outline:0}
+#ed::selection{background:var(--sel);color:transparent}
+.h-k{color:var(--cyan);font-weight:600}.h-s{color:var(--acc)}.h-n{color:#c9a7f0}.h-c{color:var(--mute);font-style:italic}.h-b{color:var(--ok)}.h-f{color:var(--ink);font-weight:600}
+.efoot{display:flex;align-items:center;gap:10px;padding:0 16px;height:40px;border-top:1px solid var(--line);font-family:var(--mono);font-size:12.5px;color:var(--ink2);flex:none;min-width:0}
+.efoot #scan{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.efoot .sp{margin-left:auto;color:var(--mute);white-space:nowrap}
+#scan.ok{color:var(--ok)}#scan.er{color:var(--bad)}
+.dockmsg{position:absolute;inset:auto 12px 12px 12px;padding:12px 16px;border:1px solid var(--acc);background:var(--panel);border-radius:10px;display:none;flex-wrap:wrap;align-items:center;gap:10px 14px;box-shadow:0 14px 40px rgba(0,0,0,.4);z-index:3}
+.dockmsg.on{display:flex;animation:rise .5s ease-out}
+.dockmsg img{height:40px;width:auto;flex:none}
+.dockmsg b{font-family:var(--serif);font-size:24px;font-weight:600;color:var(--acc)}
+.dockmsg span{color:var(--ink2);font-size:14px;flex:1 1 220px;min-width:0}
+.dockmsg .dbtns{display:flex;gap:8px;margin-left:auto}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}}
+.stg.ready::after{content:"";width:6px;height:6px;border-radius:50%;background:var(--ok);margin-left:6px;display:inline-block;vertical-align:middle}
+.stg.bump{animation:bump .5s}
+@keyframes bump{40%{box-shadow:0 0 0 3px var(--acc2)}}
+#v-port{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) minmax(0,1fr);grid-template-rows:minmax(0,1fr)}
+.pcol{display:flex;flex-direction:column;gap:var(--gap);min-height:0;min-width:0}
+.pcol>.panel{flex:none}
+.pcol>.panel.grow{flex:1 1 auto}
+.pbody{padding:18px;display:flex;flex-direction:column;gap:14px;overflow:auto;min-height:0}
+.rank{display:grid;grid-template-columns:96px minmax(0,1fr);gap:6px 16px;align-items:center}
+.rank .ri{grid-row:span 3;width:96px;display:grid;place-items:center;position:relative}
+.rank .ri img{width:96px;height:auto;display:block}
+.rank .ri span{position:absolute;right:-4px;bottom:0;font-family:var(--serif);font-weight:600;font-size:18px;color:var(--acc);background:var(--panel);border:1px solid var(--line2);border-radius:20px;padding:0 9px}
+.rank h3{margin:0;font-family:var(--serif);font-weight:600;font-size:30px;line-height:1}
+.rank small{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.gauge{height:5px;border-radius:3px;background:var(--line);overflow:hidden}
+.gauge i{display:block;height:100%;background:var(--acc);transition:width .3s}
+.kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.kv div{display:flex;flex-direction:column;gap:2px;font-family:var(--hud);font-size:11px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase;min-width:0}
+.kv b{font-family:var(--serif);font-size:26px;letter-spacing:.01em;color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-transform:none}
+.order,.upg{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 14px;align-items:center;padding-top:14px;border-top:1px solid var(--line)}
+.order:first-child,.upg:first-child{padding-top:0;border-top:0}
+.order b,.order small,.order .gauge{grid-column:1}
+.order b{font-weight:500;font-size:15px;color:var(--ink)}
+.order small,.upg small{font-family:var(--mono);font-size:12px;color:var(--mute)}
+.order button,.upg button{grid-column:2;grid-row:1/span 3;align-self:center}
+.order.claimed b{color:var(--mute);text-decoration:line-through}
+.order.full .gauge i{background:var(--ok)}
+.upg{grid-template-columns:44px minmax(0,1fr) auto}
+.upg>img{grid-row:1/span 3;width:44px;height:44px;object-fit:contain}
+.upg h4,.upg p,.upg .lv{grid-column:2}
+.upg button{grid-column:3}
+.upg h4{margin:0;font-family:var(--serif);font-weight:600;font-size:20px;color:var(--ink)}
+.upg p{margin:0;font-size:14px;line-height:1.5;color:var(--ink2)}
+.lv{display:flex;gap:4px}
+.lv i{width:16px;height:4px;border-radius:2px;background:var(--line)}
+.lv i.on{background:var(--acc)}
+.paytab{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px 16px;margin:0;padding:14px 0 0;border-top:1px solid var(--line);font-size:14.5px;color:var(--ink2)}
+.paytab dt{margin:0}.paytab dd{margin:0;font-family:var(--mono);font-size:13px;color:var(--ink);text-align:right}
+.pnote{margin:0;font-size:14px;line-height:1.55;color:var(--mute)}
+.client{display:grid;grid-template-columns:40px minmax(0,1fr) auto;gap:8px 14px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--line);background:var(--panel2);flex:none}
+.client>img{width:40px;height:40px;object-fit:contain;grid-row:1/span 2}
+.client .who{font-family:var(--hud);font-weight:500;font-size:12px;letter-spacing:.18em;color:var(--acc);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.client .secs{font-family:var(--mono);font-size:12.5px;color:var(--ink2);white-space:nowrap}
+.client[hidden]{display:none}
+.client .gauge{grid-column:2/-1;height:6px}
+.client .gauge i{transition:width .2s linear}
+.client .gauge.mid i{background:var(--acc)}.client .gauge.hi i{background:var(--ok)}.client .gauge.lo i{background:var(--bad)}
+.client .msg{grid-column:1/-1;font-size:14.5px;line-height:1.5;color:var(--ink2);min-height:0}
+.client .msg:empty{display:none}
+.client .msg.ok{color:var(--ok)}.client .msg.err{color:var(--bad)}
+.client .msg pre{margin:8px 0 0;padding:8px 10px;background:var(--field);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:13px;white-space:pre-wrap;color:var(--ink)}
+.client .msg .drow{margin-top:10px}
+#v-hangar{grid-template-rows:auto minmax(0,1fr)}
+.yard{position:relative;height:250px;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:linear-gradient(to bottom,color-mix(in srgb,var(--bg) 70%,#000),var(--bg) 70%)}
+.moon{position:absolute;right:24%;top:30px;width:42px;height:42px;border-radius:50%;box-shadow:-10px 6px 0 0 var(--ticket);transform:rotate(-20deg);opacity:.9}
+.hills{position:absolute;left:0;right:0;bottom:52px;height:70px;background:radial-gradient(120px 60px at 10% 100%,var(--panel2) 98%,transparent),radial-gradient(220px 70px at 38% 100%,var(--panel) 98%,transparent),radial-gradient(180px 60px at 70% 100%,var(--panel2) 98%,transparent),radial-gradient(160px 54px at 94% 100%,var(--panel) 98%,transparent);opacity:.9}
+.viaduct{position:absolute;left:0;right:0;bottom:0;height:56px;background:radial-gradient(circle at 50% 100%,var(--bg) 17px,transparent 18px) 0 14px/56px 42px repeat-x,linear-gradient(var(--line2),var(--line2)) 0 0/100% 3px no-repeat,var(--panel)}
+.rail{position:absolute;left:0;bottom:56px;display:flex;align-items:flex-end;gap:2px;white-space:nowrap;will-change:transform;animation:roll 46s linear infinite}
+.rail img{height:66px;width:auto;display:block;filter:drop-shadow(0 6px 10px rgba(0,0,0,.35))}
+@keyframes roll{from{transform:translateX(105vw)}to{transform:translateX(-100%)}}
+.yard .hstats{position:absolute;left:18px;top:16px;right:18px;display:flex;align-items:flex-start;gap:28px;flex-wrap:wrap}
+.hstats div{display:flex;flex-direction:column;font-family:var(--hud);font-size:11px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase}
+.hstats b{font-family:var(--serif);font-size:28px;letter-spacing:.01em;color:var(--ink);font-weight:600;text-transform:none;line-height:1.1}
+.hstats .sp{margin-left:auto;flex-direction:row;gap:8px}
+.yard .empty{position:absolute;left:0;right:0;bottom:70px;text-align:center;font-family:var(--serif);font-style:italic;font-size:18px;color:var(--mute)}
+.bays{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-auto-rows:minmax(190px,1fr);gap:var(--gap);min-height:0;overflow:auto}
+.bay{position:relative;border:1px solid var(--line);border-radius:12px;background:var(--panel);display:flex;flex-direction:column;overflow:hidden;text-align:left;padding:0;height:auto;font-family:var(--sans);text-transform:none;letter-spacing:0;color:var(--ink)}
+.bay .bn{display:flex;justify-content:space-between;padding:12px 14px 0;font-family:var(--hud);font-weight:500;font-size:11px;letter-spacing:.22em;color:var(--mute);text-transform:uppercase}
+.bay .bn em{font-style:normal;color:var(--acc)}
+.bay .art{flex:1;min-height:80px;display:grid;place-items:end center;padding:10px 14px 0;position:relative}
+.bay .art::after{content:"";position:absolute;left:14px;right:14px;bottom:6px;height:2px;background:var(--line2);border-radius:2px}
+.bay .art img{display:block;width:100%;max-width:300px;max-height:96px;object-fit:contain;position:relative;z-index:1;margin-bottom:8px}
+.bay .art img.sil,.vart img.sil{filter:brightness(0) opacity(.35)}
+.bay .meta{padding:10px 14px 14px}
+.bay .meta b{display:block;font-family:var(--serif);font-size:24px;font-weight:600;line-height:1.1}
+.bay .meta small{display:block;font-family:var(--mono);font-size:11.5px;color:var(--mute);margin-top:3px}
+.bay.locked{opacity:.65}
+.bay.docked:hover,.bay.open:hover{border-color:var(--acc)}
+.bay.docked .art{background:radial-gradient(60% 50% at 50% 85%,var(--glow),transparent)}
+.bay.fresh{animation:dockin 1.4s ease-out}
+@keyframes dockin{0%{box-shadow:0 0 0 0 var(--acc)}40%{box-shadow:0 0 0 6px var(--acc2)}100%{box-shadow:0 0 0 0 transparent}}
+#v-logbook{grid-template-rows:auto minmax(0,1fr)}
+.lgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:var(--gap);overflow:auto;min-height:0;align-content:start}
+.rcard{border:1px solid var(--line);border-radius:12px;background:var(--panel);display:flex;flex-direction:column;gap:8px;padding:14px 16px}
+.rcard.locked{opacity:.5}
+.rcard .rh{display:flex;align-items:center;gap:8px}
+.rcard .rh .cat{margin-left:auto;font-family:var(--hud);font-size:11px;letter-spacing:.2em;color:var(--mute);text-transform:uppercase}
+.rcard h3{margin:0;font-size:16px;font-weight:500}
+.rcard p{margin:0;font-size:14px;line-height:1.55;color:var(--ink2)}
+.rcard .tagn{font-family:var(--hud);font-weight:500;font-size:11px;letter-spacing:.2em;color:var(--cyan);background:var(--cyan2);padding:3px 8px;border-radius:5px}
+.rcard .rex{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+.rcard .rex pre{margin:0;font-family:var(--mono);font-size:12.5px;line-height:1.55;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:8px 10px;white-space:pre-wrap;word-break:break-word}
+.lhead{display:flex;align-items:center;gap:16px;padding:10px 18px;background:var(--panel);border:1px solid var(--line);border-radius:12px;flex-wrap:wrap}
+.lhead img{height:64px;width:auto}
+.lhead h2{margin:0;font-family:var(--serif);font-weight:600;font-size:30px}
+.lhead span{color:var(--mute);font-size:14px}
+.lhead .deeper{margin-left:auto;font-family:var(--hud);font-weight:500;font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan);text-decoration:none}
+.lhead .deeper:hover{color:var(--acc)}
+.viewer{position:fixed;inset:0;z-index:50;display:none;align-items:center;justify-content:center;background:rgba(6,10,18,.72);backdrop-filter:blur(3px);padding:16px}
+.viewer.on{display:flex}
+.vbox{width:min(980px,96vw);max-height:90vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:14px;box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.vbody{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:12px;padding:12px;min-height:0;overflow:auto}
+.vbody pre{margin:0;font-family:var(--mono);font-size:13px;line-height:1.6;background:var(--field);border:1px solid var(--line);border-radius:var(--r);padding:12px;white-space:pre;overflow:auto;max-height:60vh}
+.vart{grid-column:1/3;display:flex;align-items:flex-end;justify-content:center;gap:24px;padding:18px 12px 12px;border:1px solid var(--line);border-radius:var(--r);background:radial-gradient(50% 60% at 50% 100%,var(--glow),transparent)}
+.vart img{width:min(460px,60vw);height:auto}
+.vart img.st{width:min(300px,30vw);opacity:.95}
+.vfoot{display:flex;gap:8px;justify-content:flex-end;padding:0 12px 12px}
+#toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--panel);border:1px solid var(--acc);color:var(--ink);padding:9px 18px;border-radius:30px;font-family:var(--hud);font-weight:500;letter-spacing:.12em;font-size:13px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:60;text-transform:uppercase}
+#toast.on{opacity:1}
+@media (max-width:1500px){.brand small{display:none}#tsel{flex-basis:190px}}
+@media (max-width:1240px){.stg{padding:0 7px}#bar{gap:8px;padding:0 10px}#comms{display:none}}
+@media (max-width:1180px){.brand b{display:none}}
+@media (max-width:1100px) and (min-width:901px){.stg{padding:0 6px;letter-spacing:.06em}.stages i{padding:0}#tsel{min-width:110px;flex:0 1 150px}.tools button{padding:0 9px;letter-spacing:.06em}}
+@media (max-width:1100px){#v-target{grid-template-columns:290px minmax(0,1fr) minmax(0,1fr)}.bays{grid-template-columns:repeat(2,minmax(0,1fr))}#home{display:none}}
+@media (max-width:640px){.edp .seg{display:none}}
+@media (max-width:900px){
+  body{overflow:auto;grid-template-rows:auto auto}
+  #bar{flex-wrap:wrap;padding:8px 12px;row-gap:8px}
+  .stages{order:3;flex:1 1 100%;flex-wrap:wrap;row-gap:4px}
+  #tsel{order:2;flex:1 1 160px;max-width:none}
+  .tools{order:2}
+  main{height:auto}
+  .view.on{height:auto}
+  #v-port{grid-template-columns:minmax(0,1fr)}
+  #v-school,#v-review,#v-rush,#v-target{grid-template-columns:minmax(0,1fr);grid-template-rows:none;grid-auto-rows:minmax(300px,auto)}
+  #v-target .left,#v-target .edp{grid-row:auto;grid-column:auto}
+  #v-target .edp{min-height:420px}
+  .help{max-height:none}
+  .opts{grid-template-columns:1fr}
+  .vbody{grid-template-columns:minmax(0,1fr)}
+  .vart{grid-column:auto}
+  .lt{font-size:30px}
+}
+@media (max-width:560px){.bays{grid-template-columns:minmax(0,1fr)}.lgrid{grid-template-columns:minmax(0,1fr)}.rcard .rex{grid-template-columns:minmax(0,1fr)}.parts{grid-template-columns:minmax(0,1fr)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}.rail{left:50%;transform:translateX(-50%)}}
+</style>
+</head>
+<body data-theme="night">
+<header id="bar">
+  <div class="brand"><svg viewBox="0 0 32 32" fill="none"><path d="M21 5a11 11 0 1 0 6 19A9 9 0 0 1 21 5z" fill="var(--acc)"/><path d="M3 27h26M7 30h18" stroke="var(--line2)" stroke-width="2" stroke-linecap="round"/></svg><div><b>Sleeple</b><small>Vol VII · Python night train</small></div></div>
+  <nav class="stages">
+    <button class="stg" data-v="school"><span class="ck">✓</span>School</button><i>›</i>
+    <button class="stg" data-v="target"><span class="ck">✓</span>Journey</button><i>›</i>
+    <button class="stg" data-v="hangar">Depot</button><i>·</i>
+    <button class="stg" data-v="port">Office</button><i>·</i>
+    <button class="stg" data-v="logbook">Log</button><i>·</i>
+    <button class="stg" data-v="review">Review</button>
+  </nav>
+  <select id="tsel" aria-label="Choose journey"></select>
+  <div id="comms"><span id="dotmini"></span><span id="cmsg">Nox is lighting the lamps.</span></div>
+  <div class="tools">
+    <button id="theme" title="Switch theme">Night</button>
+    <button id="mute" title="Sound on or off">Sound</button>
+  </div>
+</header>
+<main>
+  <section class="view" id="v-school">
+    <div class="panel"><div class="ph"><b id="dtitle">Lesson</b><span class="sp pips" id="pips"></span></div><div class="scroll"><div class="drill" id="dbox"></div></div></div>
+    <div class="panel"><div class="ph"><b>Console</b><span class="sp" id="slabel">python 3.12</span></div><pre class="console" id="sout"></pre><div class="cfoot"><span id="sstat">Run an example to see its output here.</span></div></div>
+  </section>
+  <section class="view" id="v-target">
+    <div class="panel left">
+      <div class="ph"><b id="tname">Journey</b><span class="sp" id="tcount"></span></div>
+      <div class="stop" id="stop"></div>
+      <div class="contract" id="contract"></div>
+      <ol class="steps" id="steps"></ol>
+      <div class="help">
+        <div class="ph"><b>Help</b><span class="sp" id="hstep"></span></div>
+        <div class="ladder" id="ladder"></div>
+        <div class="hfoot"><button id="stuck">I'm stuck</button></div>
+      </div>
+    </div>
+    <div class="panel"><div class="ph"><b>Ticket</b><span class="sp">match this</span></div><div class="ticket" id="ticket"></div></div>
+    <div class="panel"><div class="ph"><b>Your output</b><span class="sp meter" id="meter"><span class="bar"><i></i></span><b>0%</b></span></div><div class="outl" id="outl"></div><div class="dockmsg" id="dockmsg"><span id="dockimg"></span><b>Arrived</b><span id="dockline"></span><span class="dbtns"><button id="tohangar">Depot</button><button class="pri" id="nextc">Next journey</button></span></div></div>
+    <div class="panel edp"><div class="ph"><b id="fname">main.py</b><span class="sp"><span class="seg" id="modeseg" title="Learning gives you a head start. Mastery starts from an empty file."><button data-mode="learn">Learning</button><button data-mode="master">Mastery</button></span><button id="home" title="Download your program as a .py file">Take it home</button><button id="reset">Reset</button><button class="pri" id="run">Run · Ctrl+Enter</button></span></div>
+      <div class="ed"><pre class="gut" id="gut">1</pre><div class="codewrap"><pre id="hl" aria-hidden="true"></pre><textarea id="ed" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Python editor"></textarea></div></div>
+      <div class="efoot"><span id="scan">Engine starting…</span><span class="sp">Tab = 4 spaces · runs as you type</span></div></div>
+  </section>
+  <section class="view" id="v-hangar">
+    <div class="yard" id="yard"><div class="moon"></div><div class="hills"></div><div class="hstats" id="hstats"></div><div class="rail" id="rail"></div><div class="viaduct"></div></div>
+    <div class="bays" id="bays"></div>
+  </section>
+  <section class="view" id="v-port">
+    <div class="pcol">
+      <div class="panel"><div class="ph"><b>Rank</b><span class="sp" id="plife"></span></div><div class="pbody" id="prank"></div></div>
+      <div class="panel grow"><div class="ph"><b>Telegrams</b><span class="sp" id="pday"></span></div><div class="pbody" id="pdisp"></div></div>
+    </div>
+    <div class="panel"><div class="ph"><b>Rush hour</b><span class="sp" id="prsub"></span></div><div class="pbody" id="prush"></div></div>
+    <div class="panel"><div class="ph"><b>Carriage works</b><span class="sp" id="pwallet"></span></div><div class="pbody" id="pyard"></div></div>
+  </section>
+  <section class="view" id="v-rush">
+    <div class="panel"><div class="ph"><b id="jtitle">Rush hour</b><span class="sp pips" id="jpips"></span></div><div class="client" id="jclient"></div><div class="scroll"><div class="drill" id="jbox"></div></div></div>
+    <div class="panel"><div class="ph"><b>Console</b><span class="sp">python 3.12</span></div><pre class="console" id="jout"></pre><div class="cfoot"><span id="jstat">Your answers run here.</span></div></div>
+  </section>
+  <section class="view" id="v-logbook">
+    <div class="lhead"><img src="img/sleeple/nox-timetable.webp" alt=""><h2>Conductor's log</h2><span id="lcount"></span><a class="deeper" href="pyle.html" title="Pyle has the long-form Python academy and workbook">Deeper reading in Pyle →</a></div>
+    <div class="lgrid" id="lgrid"></div>
+  </section>
+  <section class="view" id="v-review">
+    <div class="panel"><div class="ph"><b id="rtitle">Review</b><span class="sp pips" id="rpips"></span></div><div class="scroll"><div class="drill" id="rbox"></div></div></div>
+    <div class="panel"><div class="ph"><b>Console</b><span class="sp">python 3.12</span></div><pre class="console" id="rout"></pre><div class="cfoot"><span id="rstat">Your answers run here.</span></div></div>
+  </section>
+</main>
+<div class="viewer" id="viewer"><div class="vbox"><div class="ph"><b id="vname">Carriage</b><span class="sp"><button id="vclose">Close</button></span></div><div class="vbody" id="vbody"></div><div class="vfoot"><button id="vrebuild">Ride this journey again</button></div></div></div>
+<div id="toast" role="status"></div>
+<script>
+const RULES={
+ d1:{n:'01',title:'print() shows a line',syn:'<span class="k">print</span>(<span class="v">"text"</span>)',note:'print() writes one line in the terminal. Whatever sits between the brackets is shown, and every print starts a new line.',ex:'print("Platform 3 is open")\nprint("Good evening, traveller.")',cat:'Output',t:0},
+ d2:{n:'02',title:'Strings are text in quotes',syn:'<span class="v">"Hello"</span>  or  <span class="v">\'Hello\'</span>',note:'Text in Python is a string. It needs quotes around it, single or double, as long as both ends match. Without quotes Python thinks the word is a name.',ex:'print("THE NIGHT EXPRESS")\nprint(\'Track 9\')',cat:'Output',t:0},
+ d3:{n:'03',title:'Variables are labelled boxes',syn:'<span class="v">train</span> <span class="k">=</span> <span class="v">"Comet"</span>',note:'A variable is a name that points at a value. The = sign stores the value on the right under the name on the left. Use the name later and Python fetches the value.',ex:'train = "Comet"\nprint(train)',cat:'Values',t:1},
+ d4:{n:'04',title:'int and float are numbers',syn:'<span class="v">bags</span> = <span class="k">12</span>    <span class="v">weight</span> = <span class="k">3.5</span>',note:'Whole numbers are int. Numbers with a decimal point are float. Numbers never get quotes: "12" is text, 12 is a number you can calculate with.',ex:'bags = 12\nweight = 3.5\nprint(bags)\nprint(weight)',cat:'Values',t:1},
+ d5:{n:'05',title:'print() takes several values',syn:'<span class="k">print</span>(<span class="v">"Train:"</span>, <span class="v">train</span>)',note:'Separate values with commas and print() shows them on one line with a space between each. Strings and numbers can be mixed freely.',ex:'train = "Comet"\nbags = 12\nprint("Train:", train, "with", bags, "bags")',cat:'Output',t:1},
+ d6:{n:'06',title:'Maths operators',syn:'<span class="k">+  -  *  /</span>   <span class="k">//</span> whole part   <span class="k">%</span> remainder',note:'Python calculates like a calculator. / always gives a float. // divides and drops the decimals. % gives what is left over after dividing.',ex:'print(12 * 3.5)\nprint(12 / 5)\nprint(12 // 5)\nprint(12 % 5)',cat:'Numbers',t:2},
+ d7:{n:'07',title:'f-strings fill in values',syn:'<span class="k">f</span><span class="v">"Total: {</span>total<span class="v">} kg"</span>',note:'Put f before the quotes and you can drop values straight into the text with curly braces. Python fills each {} with the value of what is inside.',ex:'total = 42.0\nprint(f"Total weight: {total} kg")',cat:'Output',t:2},
+ d8:{n:'08',title:'round() tidies decimals',syn:'<span class="k">round</span>(<span class="v">value</span>, <span class="v">2</span>)',note:'Floats can end up with long tails like 176.40000000000003. round(x, 2) keeps two decimals. Without a second number it rounds to a whole number.',ex:'fee = 42.0 * 4.2\nprint(fee)\nprint(round(fee, 2))',cat:'Numbers',t:2},
+ d9:{n:'09',title:'Comparisons give True or False',syn:'<span class="k">&gt;  &lt;  &gt;=  &lt;=  ==  !=</span>',note:'A comparison asks a question and answers with True or False, a type called bool. == asks "is it equal?", a single = would store a value instead.',ex:'weight = 42.0\nprint(weight > 40)\nprint(weight == 40)',cat:'Decisions',t:3},
+ d10:{n:'10',title:'if, elif, else choose a path',syn:'<span class="k">if</span> <span class="v">test</span>:\n    ...\n<span class="k">elif</span> <span class="v">test</span>:\n    ...\n<span class="k">else</span>:\n    ...',note:'Python checks the tests from the top and runs the first block whose test is True, then skips the rest. Each line ends with a colon and the block under it is indented 4 spaces.',ex:'weight = 30\nif weight > 40:\n    print("Heavy")\nelif weight > 20:\n    print("Medium")\nelse:\n    print("Light")',cat:'Decisions',t:3},
+ d11:{n:'11',title:'Indentation is the block',syn:'<span class="k">if</span> fuel &lt; 25:\n<span class="k">····</span>print("inside")\nprint("outside")',note:'Python has no braces: the indentation decides what belongs to the if. Lines indented 4 spaces run only when the test is True. A line back at the left edge always runs.',ex:'fuel = 18\nif fuel < 25:\n    print("Refuel before departure")\nprint("All aboard")',cat:'Decisions',t:3},
+ d12:{n:'12',title:'Lists hold many values',syn:'<span class="v">supplies</span> = [<span class="v">"blankets"</span>, <span class="v">"pillows"</span>]',note:'A list keeps values in order between square brackets. supplies[0] is the first item, supplies[-1] the last. append() adds an item at the end.',ex:'supplies = ["blankets", "pillows"]\nsupplies.append("tea")\nprint(supplies[0])\nprint(supplies[-1])',cat:'Collections',t:4},
+ d13:{n:'13',title:'for walks through a list',syn:'<span class="k">for</span> <span class="v">item</span> <span class="k">in</span> <span class="v">supplies</span>:\n    print(item)',note:'A for loop runs its block once for every item. Each round, the loop variable holds the next item. The name after for is yours to choose.',ex:'for item in ["blankets", "pillows"]:\n    print("-", item)',cat:'Loops',t:4},
+ d14:{n:'14',title:'len() counts',syn:'<span class="k">len</span>(<span class="v">supplies</span>)',note:'len() tells you how many items a list holds, or how many characters a string has.',ex:'supplies = ["blankets", "pillows", "tea"]\nprint(len(supplies))\nprint(len("Vega"))',cat:'Collections',t:4},
+ d15:{n:'15',title:'range() makes a row of numbers',syn:'<span class="k">for</span> hour <span class="k">in range</span>(<span class="v">1</span>, <span class="v">4</span>):',note:'range(1, 4) gives 1, 2, 3: it starts at the first number and stops before the second. range(3) on its own gives 0, 1, 2.',ex:'for hour in range(1, 4):\n    print("Hour", hour)',cat:'Loops',t:5},
+ d16:{n:'16',title:'+= keeps a running total',syn:'<span class="v">total</span> <span class="k">+=</span> <span class="v">leg</span>',note:'total += leg means total = total + leg. Start the total at 0 before the loop, add inside the loop, and read it after.',ex:'total = 0\nfor leg in [12, 8, 15]:\n    total += leg\nprint(total)',cat:'Loops',t:5},
+ d17:{n:'17',title:'Dictionaries look things up',syn:'<span class="v">menu</span> = {<span class="v">"tea"</span>: <span class="k">4</span>}   menu[<span class="v">"tea"</span>]',note:'A dictionary stores pairs: a key and its value. You look a value up by its key in square brackets, and add or change one the same way.',ex:'menu = {"tea": 4, "soup": 9}\nmenu["cake"] = 12\nprint(menu["soup"])',cat:'Collections',t:6},
+ d18:{n:'18',title:'Loop over items(), check with in',syn:'<span class="k">for</span> key, value <span class="k">in</span> menu.<span class="k">items</span>():',note:'items() hands you every key with its value, two at a time. "coffee" in menu asks whether that key exists, and not in asks the opposite.',ex:'menu = {"tea": 4, "soup": 9}\nfor dish, price in menu.items():\n    print(dish, price)\nprint("coffee" in menu)',cat:'Collections',t:6},
+ d19:{n:'19',title:'def makes your own command',syn:'<span class="k">def</span> <span class="v">greet</span>(name):\n    print(...)',note:'def gives a block of code a name. Nothing runs while you define it. Calling greet("Ilsa") runs the block, with name set to "Ilsa".',ex:'def greet(name):\n    print(f"Welcome aboard, {name}.")\n\ngreet("Ilsa")\ngreet("Bo")',cat:'Functions',t:7},
+ d20:{n:'20',title:'return hands a value back',syn:'<span class="k">return</span> <span class="v">bags * rate</span>',note:'return sends a result back to whoever called the function, so you can store it or print it. print only shows something; return gives it back.',ex:'def bag_fee(bags, rate):\n    return bags * rate\n\nfee = bag_fee(12, 3)\nprint(fee)',cat:'Functions',t:7}
+};
+
+const LESSONS={
+ d1:{why:'Every program needs a way to talk back, and in Python that is print(). It is a function: a name followed by round brackets. Whatever you put in the brackets appears in the terminal, and the next print starts on a fresh line. Programs run from top to bottom, so the order of your prints is the order of the lines.',parts:[['print','the function that shows output'],['(  )','brackets hold what to show'],['"Platform 3 is open"','the value: here a piece of text']],mistakes:['Writing Print with a capital P. Python is case-sensitive: only print works.','Forgetting a bracket: print("Hi" stops the whole program.','Expecting two prints to share a line. Each print() starts a new one.'],ex2:'print("Line one")\nprint("Line two")\nprint("Line three")'},
+ d2:{why:'Python needs to know which words are text and which are names. Quotes mark text: everything between them is taken literally, spaces and punctuation included. Single and double quotes do the same job. Pick double quotes when the text itself contains an apostrophe, like "Guard\'s log".',parts:[['"','opening quote: text starts'],['THE NIGHT EXPRESS','the text itself, taken as-is'],['"','closing quote: same kind as the opening one']],mistakes:['Mixing quotes: "Track 9\' never closes.','Leaving quotes off: print(Hello) looks for a variable called Hello.','An apostrophe inside single quotes: \'Guard\'s log\' ends too early.'],ex2:'print("Guard\'s log")\nprint(\'He said "all aboard"\')'},
+ d3:{why:'Programs work with values that change: a train name, a bag count, a price. A variable gives a value a name, so you can use it in many places and change it in one. Read = as "store": train = "Comet" stores the text Comet in a box labelled train. Names use lowercase letters and underscores, never spaces.',parts:[['train','the name you choose'],['=','store: put the value in the box'],['"Comet"','the value going in']],mistakes:['Putting the name in quotes: print("train") prints the word train, not the value.','Using a variable before you created it: NameError.','Spaces in names: bag weight = 3 is an error, use bag_weight.'],ex2:'train = "Comet"\nprint(train)\ntrain = "Orion"\nprint(train)'},
+ d4:{why:'Python keeps two kinds of numbers. int is a whole number, float has a decimal point. You can mix them in sums and Python takes care of it. What you must never do is put a number in quotes if you want to calculate with it: "12" is a string that only looks like a number.',parts:[['12','int: a whole number'],['3.5','float: a decimal point, never a comma'],['"12"','a string, not a number']],mistakes:['Writing 3,5 instead of 3.5. A comma separates two values.','Putting quotes around numbers you want to calculate with.','Expecting 3.0 to print as 3. A float keeps its .0.'],ex2:'bags = 12\nweight = 3.5\nprint(bags * weight)\nprint("12" + "3")'},
+ d5:{why:'Labels make output readable: Train: Comet says more than Comet. print() accepts any number of values separated by commas. It turns each into text and joins them with one space. That is why you do not add your own space at the end of "Train:".',parts:[['"Train:"','first value: a label'],[',','comma: the next value follows'],['train','second value: the variable'],['(space)','print adds one space between values']],mistakes:['Adding a space yourself: "Train: ", train prints two spaces.','Using + to glue text and a number: "Bags: " + 12 is a TypeError.','Forgetting the comma between values.'],ex2:'train = "Comet"\nbags = 12\nprint("Train:", train)\nprint("Bags:", bags, "on board")'},
+ d6:{why:'A program that cannot calculate is just a sign. Python uses * for times and / for divide. / always answers with a float, even 10 / 2 gives 5.0. When you want whole groups, // gives the whole part and % the remainder: 12 bags on trolleys of 5 is 12 // 5 = 2 trolleys and 12 % 5 = 2 bags left over.',parts:[['*','multiply'],['/','divide, always a float'],['//','divide and keep only the whole part'],['%','remainder after dividing']],mistakes:['Writing x for multiply. Python only knows *.','Expecting 12 / 5 to be 2. Use // for whole groups.','Mixing up // and %: one gives groups, the other the leftovers.'],ex2:'bags = 12\nprint(bags // 5, "trolleys")\nprint(bags % 5, "loose")'},
+ d7:{why:'Commas in print() work, but f-strings give you full control over spacing and punctuation. Put an f right before the opening quote and write the sentence exactly as you want it, with {name} wherever a value goes. You can even calculate inside the braces.',parts:[['f','marks the string as an f-string'],['"Total: ','plain text, exactly as written'],['{total}','replaced by the value of total'],[' kg"','more plain text']],mistakes:['Forgetting the f: the braces are printed as-is.','Quotes inside the braces that match the outer quotes.','A space between f and the quote: f "x" is an error.'],ex2:'bags = 12\nprint(f"{bags} bags, {bags * 2} handles")'},
+ d8:{why:'Computers store floats in binary, so some decimals come out with a long tail: 42.0 * 4.2 gives 176.40000000000003. That is not a bug in your code. round(value, 2) tidies it to two decimals for display. Use it at the moment you show the number.',parts:[['round','the function'],['fee','what to round'],['2','how many decimals to keep']],mistakes:['Expecting round(2.5) to give 3. Python rounds halves to the even number: 2.','Forgetting the second number and losing all decimals.','Rounding too early and then calculating with the rounded value.'],ex2:'fee = 42.0 * 4.2\nprint(fee)\nprint(round(fee, 2))\nprint(round(fee))'},
+ d9:{why:'Before a program can decide, it needs a question with a yes or no answer. Comparisons are those questions. The answer is a bool: True or False, always with a capital letter. Watch the double ==: one = stores, two == compares.',parts:[['weight','left side'],['>','the question: greater than?'],['40','right side'],['True','the answer, a bool']],mistakes:['Using = in a test: if weight = 40 is a syntax error.','Writing true instead of True.','Comparing a number to text: 12 == "12" is False.'],ex2:'fuel = 18\nprint(fuel < 25)\nprint(fuel != 18)'},
+ d10:{why:'if lets a program react to its data. Python tries each test from the top and runs only the first block that is True. elif means "else if": checked only when everything above was False. else catches the rest and has no test. The order matters: put the strictest test first.',parts:[['if weight > 40:','first test, ends with a colon'],['elif weight > 20:','checked only if the first was False'],['else:','everything else, no test'],['    print(...)','the block: indented 4 spaces']],mistakes:['Forgetting the colon at the end of if, elif or else.','Putting the wide test first: if weight > 20 also catches 42.','Writing else if. Python spells it elif.'],ex2:'weight = 12\nif weight > 40:\n    print("Heavy")\nelif weight > 20:\n    print("Medium")\nelse:\n    print("Light")'},
+ d11:{why:'Other languages wrap blocks in braces. Python uses indentation, so spacing is part of the meaning. Everything indented under the if belongs to it. The first line back at the left edge is outside the if and always runs. Use 4 spaces per level; the Tab key in Sleeple types them for you.',parts:[['if fuel < 25:','the test'],['    print("Refuel")','inside: runs only when True'],['print("All aboard")','outside: always runs']],mistakes:['Indenting a line by accident: it now only runs when the test is True.','Mixing 2 and 4 spaces: IndentationError.','Forgetting to indent the block: Python expects an indented block.'],ex2:'fuel = 30\nif fuel < 25:\n    print("Refuel before departure")\nprint("All aboard")'},
+ d12:{why:'A sleeper carries many supplies, and a list carries many values. Square brackets make the list, commas separate the items, and the order stays as you wrote it. Counting starts at 0, so supplies[0] is the first item. Negative numbers count from the end: supplies[-1] is always the last.',parts:[['supplies','the name of the list'],['[ ... ]','square brackets make a list'],['supplies[0]','the first item'],['supplies.append(x)','adds x at the end']],mistakes:['Expecting supplies[1] to be the first item. It is the second.','Asking for an index that does not exist: IndexError.','Writing append without brackets: supplies.append "x".'],ex2:'supplies = ["blankets", "pillows"]\nprint(supplies)\nsupplies.append("postcards")\nprint(supplies[-1])'},
+ d13:{why:'Loops do the boring repeats for you. for item in supplies: runs the indented block once per item, and each time item holds the next one. The name item is your choice, pick one that reads well: for berth in berths.',parts:[['for','start a loop'],['item','your name for the current value'],['in supplies','the list to walk through'],[':','colon, then an indented block']],mistakes:['Forgetting the colon at the end.','Not indenting the block, or indenting the line after it by mistake.','Changing the list while looping over it.'],ex2:'for berth in ["A1", "A2", "A3"]:\n    print("Making up", berth)\nprint("Lights out")'},
+ d14:{why:'How many supplies? How long is a name? len() answers both. It works on lists and on strings, and always gives an int you can print or calculate with.',parts:[['len','the function'],['(supplies)','what to count'],['4','the answer: an int']],mistakes:['Writing supplies.len(). It is len(supplies).','Expecting len to count words in a sentence: it counts characters.','Using len(supplies) as the last index. The last index is len(supplies) - 1.'],ex2:'supplies = ["blankets", "pillows", "tea"]\nprint(len(supplies))\nprint(len("SLEEPER"))'},
+ d15:{why:'Sometimes you do not have a list but you want to count: hour 1, 2, 3. range(start, stop) produces those numbers, and the stop number itself is never included. That off-by-one feels odd at first but makes range(0, len(x)) line up exactly with list positions.',parts:[['range(1, 4)','1, 2, 3'],['start','included'],['stop','not included'],['range(3)','0, 1, 2']],mistakes:['Expecting range(1, 4) to reach 4.','Writing range(4) when you meant 1 to 4.','Forgetting it is used with for: for n in range(3):'],ex2:'for n in range(3):\n    print(n)\nfor hour in range(1, 4):\n    print("Hour", hour)'},
+ d16:{why:'To add up a list you need somewhere to keep the running total. Create it before the loop with total = 0. Inside the loop, total += leg adds the current value. After the loop the variable holds the grand total. This pattern, start, add, read, appears in almost every program.',parts:[['total = 0','start empty, before the loop'],['total += leg','add inside the loop'],['print(total)','read after the loop']],mistakes:['Putting total = 0 inside the loop: it resets every round.','Printing inside the loop when you only want the final total.','Writing total =+ leg. The plus comes first: +=.'],ex2:'total = 0\nfor leg in [12, 8, 15, 5]:\n    total += leg\n    print("so far", total)\nprint("travelled", total)'},
+ d17:{why:'Lists find things by position, dictionaries find things by name. Each entry is a key, a colon and a value, all inside curly braces. menu["cake"] gives the price of cake. Assigning to a key that does not exist yet adds it.',parts:[['{ }','curly braces make a dictionary'],['"tea": 4','one pair: key, colon, value'],['menu["tea"]','look up by key'],['menu["coffee"] = 7','add or change a pair']],mistakes:['Looking up a key that does not exist: KeyError.','Using round brackets instead of square ones: menu("tea").','Forgetting the quotes around a text key.'],ex2:'menu = {"tea": 4, "soup": 9}\nmenu["tea"] = 5\nmenu["coffee"] = 7\nprint(menu)'},
+ d18:{why:'To show a whole menu board you need every key with its value. menu.items() gives them in pairs, and for dish, price in ... unpacks each pair into two names at once. To check whether a key exists before you use it, ask "coffee" in menu.',parts:[['menu.items()','all pairs'],['for dish, price in','two names: key and value'],['"coffee" in menu','True if the key exists'],['not in','the opposite']],mistakes:['Looping without items(): for dish in menu gives only the keys.','Only one name in the loop when items() gives two.','Checking a value with in. in looks at keys.'],ex2:'menu = {"tea": 4, "soup": 9}\nfor dish, price in menu.items():\n    print(f"{dish}: {price} fr")\nprint("coffee" not in menu)'},
+ d19:{why:'When you do the same job in several places, give it a name. def creates a function: a name, brackets with parameters, a colon and an indented block. Defining it does nothing yet. Every call runs the block again, each time with new values filled in.',parts:[['def','define a function'],['greet','its name'],['(name)','parameter: filled in at each call'],['greet("Ilsa")','the call: runs the block']],mistakes:['Defining the function but never calling it: nothing happens.','Calling it before the def line: NameError.','Forgetting the brackets in the call: greet does nothing.'],ex2:'def announce(platform):\n    print(f"Platform {platform} is open")\n\nannounce(3)\nannounce(7)'},
+ d20:{why:'Some functions show things, others calculate things. return is how a function hands its answer back. The call itself then becomes that value: you can store it, print it or use it in a sum. The function stops at return.',parts:[['def bag_fee(bags, rate):','two parameters'],['return bags * rate','send the result back'],['fee = bag_fee(12, 3)','the call becomes 36']],mistakes:['Printing inside the function instead of returning: you cannot calculate with the result.','Forgetting return: the call gives None.','Writing code after return and expecting it to run.'],ex2:'def bag_fee(bags, rate):\n    return bags * rate\n\nprint(bag_fee(12, 3))\nprint(bag_fee(12, 3) + 10)'}
+};
+
+const DRILLS=[
+ {k:'pick',r:'d1',q:'Which line shows Hello in the terminal?',o:['print("Hello")','Print("Hello")','print "Hello"','echo("Hello")'],a:0,h:'Lowercase print, then brackets.'},
+ {k:'type',r:'d1',q:'Write a line that shows: Platform 3 is open',ph:'print(…)',out:'Platform 3 is open',ans:'print("Platform 3 is open")',h:'print, brackets, and the text in quotes.'},
+ {k:'predict',r:'d1',q:'What does this print?',code:'print("A")\nprint("B")',a:'A\nB',h:'Each print starts a new line.'},
+ {k:'fix',r:'d1',q:'Fix the bug so it shows Track 9',bug:'Print("Track 9")',out:'Track 9',ans:'print("Track 9")',h:'Python is case-sensitive.'},
+ {k:'pick',r:'d2',q:'Which of these is a valid string?',o:['"Track 9\'','\'Track 9\'','Track 9','"Track 9'],a:1,h:'Both ends need the same kind of quote.'},
+ {k:'fix',r:'d2',q:'Fix the quotes',bug:'print("Good evening, traveller.\')',out:'Good evening, traveller.',ans:'print("Good evening, traveller.")',h:'Open with " and close with ".'},
+ {k:'type',r:'d2',q:'Show the text: Guard\'s log',ph:'print(…)',out:'Guard\'s log',ans:'print("Guard\'s log")',h:'Use double quotes around text that contains an apostrophe.'},
+ {k:'pick',r:'d3',q:'train = "Comet". What does print(train) show?',o:['train','Comet','"Comet"','an error'],a:1,h:'Without quotes, train is a name and Python fetches its value.'},
+ {k:'type',r:'d3',q:'Store the text Orion in a variable called train',ph:'train = …',test:/^train\s*=\s*(["'])Orion\1$/,ans:'train = "Orion"',h:'Name, =, then the text in quotes.'},
+ {k:'predict',r:'d3',q:'What does this print?',code:'train = "Comet"\ntrain = "Vega"\nprint(train)',a:'Vega',h:'The box holds the latest value.'},
+ {k:'fix',r:'d3',q:'Fix the bug so it prints Comet',bug:'train = "Comet"\nprint("train")',out:'Comet',ans:'train = "Comet"\nprint(train)',h:'Quotes make it the word train instead of the variable.'},
+ {k:'pick',r:'d4',q:'Which value is a float?',o:['12','"3.5"','3.5','3,5'],a:2,h:'A float has a decimal point and no quotes.'},
+ {k:'type',r:'d4',q:'Store the whole number 12 in bags',ph:'bags = …',test:/^bags\s*=\s*12$/,ans:'bags = 12',h:'No quotes around numbers.'},
+ {k:'predict',r:'d4',q:'What does this print?',code:'print("12" + "3")',a:'123',h:'Two strings glued together, not a sum.'},
+ {k:'pick',r:'d5',q:'bags = 12. What does print("Bags:", bags) show?',o:['Bags:12','Bags: 12','Bags:, 12','"Bags:" 12'],a:1,h:'print puts one space between the values.'},
+ {k:'type',r:'d5',q:'train = "Comet". Print Train: Comet using the variable',ph:'print(…)',pre:'train = "Comet"',out:'Train: Comet',test:/train\s*\)\s*$/,ans:'print("Train:", train)',h:'A label in quotes, a comma, then the variable.'},
+ {k:'fix',r:'d5',q:'Fix the TypeError: the line should show Bags: 12',bug:'bags = 12\nprint("Bags: " + bags)',out:'Bags: 12',ans:'bags = 12\nprint("Bags:", bags)',h:'Use a comma instead of +.'},
+ {k:'predict',r:'d6',q:'What does this print?',code:'print(12 // 5)\nprint(12 % 5)',a:'2\n2',h:'// is whole groups, % is the leftover.'},
+ {k:'pick',r:'d6',q:'What does 10 / 2 give in Python?',o:['5','5.0','2','an error'],a:1,h:'/ always gives a float.'},
+ {k:'type',r:'d6',q:'Print the result of 12 times 3.5',ph:'print(…)',out:'42.0',ans:'print(12 * 3.5)',h:'Multiply with *.'},
+ {k:'predict',r:'d6',q:'What does this print?',code:'print(17 % 5)',a:'2',h:'17 is 3 fives and 2 left over.'},
+ {k:'type',r:'d7',q:'total = 42.0. Print Total weight: 42.0 kg with an f-string',ph:'print(f"…")',pre:'total = 42.0',out:'Total weight: 42.0 kg',test:/f["']/,ans:'print(f"Total weight: {total} kg")',h:'f before the quote, {total} where the number goes.'},
+ {k:'predict',r:'d7',q:'What does this print?',code:'bags = 12\nprint(f"{bags} bags")\nprint("{bags} bags")',a:'12 bags\n{bags} bags',h:'Only the f-string fills in the braces.'},
+ {k:'fix',r:'d7',q:'Fix it so it shows Platform 3',bug:'platform = 3\nprint("Platform {platform}")',out:'Platform 3',ans:'platform = 3\nprint(f"Platform {platform}")',h:'The braces only work in an f-string.'},
+ {k:'predict',r:'d8',q:'What does this print?',code:'print(round(3.14159, 2))',a:'3.14',h:'Two decimals kept.'},
+ {k:'type',r:'d8',q:'fee = 176.40000000000003. Print it rounded to 2 decimals',ph:'print(…)',pre:'fee = 176.40000000000003',out:'176.4',test:/round\s*\(/,ans:'print(round(fee, 2))',h:'round(fee, 2) inside print().'},
+ {k:'pick',r:'d8',q:'What does round(7.6) give?',o:['7','8','7.6','8.0'],a:1,h:'Without a second number it rounds to a whole number.'},
+ {k:'predict',r:'d9',q:'What does this print?',code:'weight = 42.0\nprint(weight > 40)\nprint(weight == 40)',a:'True\nFalse',h:'42 is bigger than 40 but not equal to it.'},
+ {k:'pick',r:'d9',q:'Which line asks whether fuel equals 25?',o:['fuel = 25','fuel == 25','fuel === 25','fuel =< 25'],a:1,h:'Two equals signs compare.'},
+ {k:'type',r:'d9',q:'Print whether fuel (18) is less than 25',ph:'print(…)',pre:'fuel = 18',out:'True',test:/fuel\s*<\s*25/,ans:'print(fuel < 25)',h:'print(fuel < 25)'},
+ {k:'predict',r:'d10',q:'What does this print?',code:'weight = 30\nif weight > 40:\n    print("Heavy")\nelif weight > 20:\n    print("Medium")\nelse:\n    print("Light")',a:'Medium',h:'30 is not over 40, but it is over 20.'},
+ {k:'pick',r:'d10',q:'What is wrong here?\nif weight > 40\n    print("Heavy")',o:['Nothing','The colon after the test is missing','print must not be indented','if must be If'],a:1,h:'Every if line ends with a colon.'},
+ {k:'fix',r:'d10',q:'Fix the order so 42 shows Heavy',bug:'weight = 42\nif weight > 20:\n    print("Medium")\nelif weight > 40:\n    print("Heavy")',out:'Heavy',ans:'weight = 42\nif weight > 40:\n    print("Heavy")\nelif weight > 20:\n    print("Medium")',h:'Put the strictest test first.'},
+ {k:'predict',r:'d11',q:'What does this print?',code:'fuel = 30\nif fuel < 25:\n    print("Refuel")\nprint("Go")',a:'Go',h:'Only the indented line belongs to the if.'},
+ {k:'predict',r:'d11',q:'What does this print?',code:'fuel = 10\nif fuel < 25:\n    print("Refuel")\nprint("Go")',a:'Refuel\nGo',h:'The test is True now, and the last line always runs.'},
+ {k:'fix',r:'d11',q:'Fix the indentation so Go always shows',bug:'fuel = 30\nif fuel < 25:\n    print("Refuel")\n    print("Go")',out:'Go',ans:'fuel = 30\nif fuel < 25:\n    print("Refuel")\nprint("Go")',h:'Move the last line back to the left edge.'},
+ {k:'predict',r:'d12',q:'What does this print?',code:'supplies = ["blankets", "pillows", "tea"]\nprint(supplies[0])\nprint(supplies[-1])',a:'blankets\ntea',h:'0 is the first, -1 the last.'},
+ {k:'type',r:'d12',q:'Add "postcards" to the end of supplies',ph:'supplies.…',pre:'supplies = ["blankets"]',post:'print(supplies)',out:"['blankets', 'postcards']",test:/append/,ans:'supplies.append("postcards")',h:'supplies.append(...) adds at the end.'},
+ {k:'pick',r:'d12',q:'supplies = ["blankets", "pillows"]. What is supplies[1]?',o:['blankets','pillows','an error','1'],a:1,h:'Counting starts at 0.'},
+ {k:'predict',r:'d13',q:'What does this print?',code:'for item in ["A1", "A2"]:\n    print("-", item)',a:'- A1\n- A2',h:'One print per item, with a space after the dash.'},
+ {k:'fix',r:'d13',q:'Fix the loop',bug:'for berth in ["A1", "A2"]\n    print(berth)',out:'A1\nA2',ans:'for berth in ["A1", "A2"]:\n    print(berth)',h:'The for line ends with a colon.'},
+ {k:'type',r:'d13',q:'Print every item in supplies, one per line',ph:'for … in supplies:',pre:'supplies = ["blankets", "pillows"]',out:'blankets\npillows',test:/for\s+\w+\s+in\s+supplies\s*:/,ans:'for item in supplies:\n    print(item)',multi:1,h:'for item in supplies: then an indented print(item).'},
+ {k:'predict',r:'d14',q:'What does this print?',code:'print(len(["blankets", "pillows", "tea"]))',a:'3',h:'Three items.'},
+ {k:'predict',r:'d14',q:'What does this print?',code:'print(len("Vega"))',a:'4',h:'len counts characters in a string.'},
+ {k:'pick',r:'d14',q:'How do you count the items in supplies?',o:['supplies.len()','len(supplies)','count(supplies)','supplies.size'],a:1,h:'len goes in front, the list in brackets.'},
+ {k:'predict',r:'d15',q:'What does this print?',code:'for n in range(1, 4):\n    print(n)',a:'1\n2\n3',h:'The stop number is not included.'},
+ {k:'pick',r:'d15',q:'Which numbers does range(3) give?',o:['1, 2, 3','0, 1, 2','0, 1, 2, 3','3'],a:1,h:'It starts at 0 and stops before 3.'},
+ {k:'type',r:'d15',q:'Print Hour 1, Hour 2 and Hour 3 with a loop',ph:'for hour in range(…):',out:'Hour 1\nHour 2\nHour 3',test:/range\s*\(/,ans:'for hour in range(1, 4):\n    print("Hour", hour)',multi:1,h:'range(1, 4) and print("Hour", hour).'},
+ {k:'predict',r:'d16',q:'What does this print?',code:'total = 0\nfor leg in [5, 10]:\n    total += leg\nprint(total)',a:'15',h:'0 + 5 + 10.'},
+ {k:'fix',r:'d16',q:'Fix it so the total is 23',bug:'for leg in [12, 8, 3]:\n    total = 0\n    total += leg\nprint(total)',out:'23',ans:'total = 0\nfor leg in [12, 8, 3]:\n    total += leg\nprint(total)',h:'Start the total before the loop.'},
+ {k:'pick',r:'d16',q:'What does total += 5 mean?',o:['total = 5','total = total + 5','total == 5','total = 5 + 5'],a:1,h:'Add to what is already there.'},
+ {k:'predict',r:'d17',q:'What does this print?',code:'menu = {"tea": 4, "soup": 9}\nprint(menu["soup"])',a:'9',h:'Look up by key.'},
+ {k:'type',r:'d17',q:'Set the price of "coffee" to 7 in menu',ph:'menu[…] = …',pre:'menu = {"tea": 4}',post:'print(menu)',out:"{'tea': 4, 'coffee': 7}",test:/menu\s*\[/,ans:'menu["coffee"] = 7',h:'Square brackets with the key, then = and the value.'},
+ {k:'pick',r:'d17',q:'What happens with menu["coffee"] when there is no coffee key?',o:['It gives 0','It gives None','KeyError','It adds coffee'],a:2,h:'Reading a missing key fails.'},
+ {k:'predict',r:'d18',q:'What does this print?',code:'menu = {"tea": 4}\nprint("tea" in menu)\nprint("coffee" in menu)',a:'True\nFalse',h:'in checks the keys.'},
+ {k:'type',r:'d18',q:'Print each dish and its price, like tea 4',ph:'for dish, price in …',pre:'menu = {"tea": 4, "soup": 9}',out:'tea 4\nsoup 9',test:/\.items\s*\(\s*\)/,ans:'for dish, price in menu.items():\n    print(dish, price)',multi:1,h:'for dish, price in menu.items(): then print(dish, price).'},
+ {k:'fix',r:'d18',q:'Fix the loop so both names get a value',bug:'menu = {"tea": 4}\nfor dish, price in menu:\n    print(dish, price)',out:'tea 4',ans:'menu = {"tea": 4}\nfor dish, price in menu.items():\n    print(dish, price)',h:'Pairs come from items().'},
+ {k:'predict',r:'d19',q:'What does this print?',code:'def greet(name):\n    print("Hi", name)\n\ngreet("Bo")\ngreet("Ilsa")',a:'Hi Bo\nHi Ilsa',h:'Two calls, two lines.'},
+ {k:'predict',r:'d19',q:'What does this print?',code:'def greet(name):\n    print("Hi", name)\n\nprint("Done")',a:'Done',h:'Defining a function does not run it.'},
+ {k:'fix',r:'d19',q:'Fix it so it shows Platform 3 is open',bug:'def announce(platform):\n    print(f"Platform {platform} is open")\n\nannounce',out:'Platform 3 is open',ans:'def announce(platform):\n    print(f"Platform {platform} is open")\n\nannounce(3)',h:'A call needs brackets, with the value inside.'},
+ {k:'predict',r:'d20',q:'What does this print?',code:'def double(n):\n    return n * 2\n\nprint(double(4) + 1)',a:'9',h:'double(4) becomes 8.'},
+ {k:'pick',r:'d20',q:'A function without return. What does a call to it give back?',o:['0','None','an error','an empty string'],a:1,h:'No return means None.'},
+ {k:'fix',r:'d20',q:'Fix it so it prints 36',bug:'def bag_fee(bags, rate):\n    bags * rate\n\nprint(bag_fee(12, 3))',out:'36',ans:'def bag_fee(bags, rate):\n    return bags * rate\n\nprint(bag_fee(12, 3))',h:'The result has to be sent back.'}
+];
+
+const TARGETS=[
+{id:'arrivals',name:'Departures board',client:'Stationmaster Oyelaran',time:'21:40',
+ order:'The departures board on platform 3 went dark. Get it lit before the night train boards: four lines, exactly like the old one.',
+ car:{name:'Comet',cls:'Locomotive',reg:'SLP-101',img:'loco',st:'st-halt',stn:'Willowmere Halt'},
+ rules:['d1','d2'],
+ starter:'print("THE NIGHT EXPRESS")\n',
+ solution:'print("THE NIGHT EXPRESS")\nprint("=================")\nprint("Platform 3 is open")\nprint("Good evening, traveller.")\n',
+ out:'THE NIGHT EXPRESS\n=================\nPlatform 3 is open\nGood evening, traveller.',
+ steps:[
+  {t:'Press Run (Ctrl+Enter) and see the first line appear',c:(c,o)=>ln(o,0)==='THE NIGHT EXPRESS',help:['The code is already there. Your job is just to run it.','The Run button sits above the editor. Ctrl+Enter does the same.','A program runs from the top down, one line at a time.','print("THE NIGHT EXPRESS")']},
+  {t:'Second line: a row of 17 `=` signs',c:(c,o)=>ln(o,1)==='='.repeat(17),help:['Every new line on the board is a new print().','Copy the first line and change the text inside the quotes.','print("-----")','print("=================")']},
+  {t:'Third line: `Platform 3 is open`',c:(c,o)=>ln(o,2)==='Platform 3 is open',help:['Same move again: one more print().','The text goes in quotes, exactly as on the board.','print("Track 9")','print("Platform 3 is open")']},
+  {t:'Fourth line: `Good evening, traveller.` with the comma and the full stop',c:(c,o)=>ln(o,3)==='Good evening, traveller.',help:['Punctuation inside the quotes is shown as-is.','Check the comma after evening and the dot at the end.','print("Hello, world.")','print("Good evening, traveller.")']},
+  {t:'Exactly four lines, nothing extra',c:(c,o)=>lines(o).length===4,help:['Compare your output with the ticket line by line.','Remove any print() that shows something the board does not have.','Four prints make four lines.','print("THE NIGHT EXPRESS")\nprint("=================")\nprint("Platform 3 is open")\nprint("Good evening, traveller.")']}
+ ]},
+{id:'tag',name:'Luggage tag',client:'Guard Ilsa Moreau',time:'22:05',
+ order:'The tag printer in the baggage car jammed. I need a tag with the train name, the bag count and the weight per bag, built from variables so I can reuse it tomorrow.',
+ car:{name:'Satchel',cls:'Baggage car',reg:'SLP-214',img:'baggage',st:'st-seaside',stn:'Saltcliff'},
+ rules:['d3','d4','d5'],
+ starter:'train = "Comet"\n',
+ solution:'train = "Comet"\nbags = 12\nweight = 3.5\nprint("Train:", train)\nprint("Bags:", bags)\nprint("Weight per bag:", weight, "kg")\n',
+ out:'Train: Comet\nBags: 12\nWeight per bag: 3.5 kg',
+ steps:[
+  {t:'Store the whole number `12` in `bags`',c:c=>/^bags\s*=\s*12\s*$/m.test(src(c)),help:['A number is stored the same way as text, but without quotes.','Write the name, then =, then the number.','berths = 8','bags = 12']},
+  {t:'Store the float `3.5` in `weight`',c:c=>/^weight\s*=\s*3\.5\s*$/m.test(src(c)),help:['A float has a decimal point.','A dot, not a comma: 3.5.','price = 0.75','weight = 3.5']},
+  {t:'First line: `Train: Comet`, printed from the variable `train`',c:(c,o)=>ln(o,0)==='Train: Comet'&&/print\(\s*["']Train:["']\s*,\s*train\s*\)/.test(src(c)),help:['A label and a variable can share one print().','Put the label in quotes, then a comma, then train without quotes.','print("Name:", name)','print("Train:", train)']},
+  {t:'Second line: `Bags: 12` from `bags`',c:(c,o)=>ln(o,1)==='Bags: 12'&&/print\(\s*["']Bags:["']\s*,\s*bags\s*\)/.test(src(c)),help:['Same pattern as the train line.','The label ends at the colon: print adds the space for you.','print("Berths:", berths)','print("Bags:", bags)']},
+  {t:'Third line: `Weight per bag: 3.5 kg` from `weight`, with the unit at the end',c:(c,o)=>ln(o,2)==='Weight per bag: 3.5 kg'&&/\bweight\b/.test(src(c).split('\n').filter(x=>/print/.test(x)).join('\n')),help:['print() takes as many values as you like.','Three values: the label, the variable, and "kg".','print("Price:", price, "fr")','print("Weight per bag:", weight, "kg")']},
+  {t:'Exactly three lines on the tag',c:(c,o)=>lines(o).length===3,help:['Count the lines on the ticket.','Any test prints you added can go.','Three prints, three lines.','train = "Comet"\nbags = 12\nweight = 3.5\nprint("Train:", train)\nprint("Bags:", bags)\nprint("Weight per bag:", weight, "kg")']}
+ ]},
+{id:'loadsheet',name:'Load sheet',client:'Baggage master Vance',time:'22:30',
+ order:'The mail car wants a load sheet: total weight, how many full trolleys of five, the loose bags, and the fee at 4.2 fr per kilo. No long decimal tails on my sheet.',
+ car:{name:'Courier',cls:'Mail car',reg:'SLP-330',img:'mail',st:'st-city',stn:'Grand Central'},
+ rules:['d6','d7','d8'],
+ starter:'bags = 12\nweight = 3.5\n',
+ solution:'bags = 12\nweight = 3.5\ntotal = bags * weight\nfee = total * 4.2\nprint(f"Bags: {bags}")\nprint(f"Total weight: {total} kg")\nprint(f"Full trolleys: {bags // 5}")\nprint(f"Loose bags: {bags % 5}")\nprint(f"Fee: {round(fee, 2)} fr")\n',
+ out:'Bags: 12\nTotal weight: 42.0 kg\nFull trolleys: 2\nLoose bags: 2\nFee: 176.4 fr',
+ steps:[
+  {t:'Calculate `total` as `bags` times `weight`',c:c=>/^total\s*=\s*(bags\s*\*\s*weight|weight\s*\*\s*bags)\s*$/m.test(src(c)),help:['Python multiplies with *.','total = the two variables with * between them.','area = width * height','total = bags * weight']},
+  {t:'Calculate `fee` as `total` times `4.2`',c:c=>/^fee\s*=\s*(total\s*\*\s*4\.2|4\.2\s*\*\s*total)\s*$/m.test(src(c)),help:['Same idea, with a number this time.','fee = total * 4.2','price = weight * 2.5','fee = total * 4.2']},
+  {t:'First line with an f-string: `Bags: 12`',c:(c,o)=>ln(o,0)==='Bags: 12'&&/print\(\s*f["']/.test(src(c)),help:['An f-string lets you write the whole line and drop values in with braces.','f right before the quote, then {bags} where the number goes.','print(f"Platform: {platform}")','print(f"Bags: {bags}")']},
+  {t:'`Total weight: 42.0 kg`',c:(c,o)=>ln(o,1)==='Total weight: 42.0 kg'&&/\{\s*total\s*\}/.test(src(c)),help:['Use the total you calculated.','Put {total} inside an f-string, with " kg" after it.','print(f"Area: {area} m2")','print(f"Total weight: {total} kg")']},
+  {t:'`Full trolleys: 2`: how many whole groups of 5 fit in the bags',c:(c,o)=>ln(o,2)==='Full trolleys: 2'&&/bags\s*\/\/\s*5/.test(src(c)),help:['You want whole groups only, no decimals.','// divides and keeps the whole part. It works inside the braces too.','print(f"Teams: {players // 5}")','print(f"Full trolleys: {bags // 5}")']},
+  {t:'`Loose bags: 2`: what is left over',c:(c,o)=>ln(o,3)==='Loose bags: 2'&&/bags\s*%\s*5/.test(src(c)),help:['The leftover after dividing has its own operator.','% gives the remainder.','print(f"Left out: {players % 5}")','print(f"Loose bags: {bags % 5}")']},
+  {t:'`Fee: 176.4 fr`, rounded to 2 decimals',c:(c,o)=>ln(o,4)==='Fee: 176.4 fr'&&/round\s*\(\s*fee\s*,\s*2\s*\)/.test(src(c)),help:['Print fee first and look at the tail it has.','round(fee, 2) inside the braces tidies it.','print(f"Price: {round(price, 2)} fr")','print(f"Fee: {round(fee, 2)} fr")']}
+ ]},
+{id:'clearance',name:'Departure check',client:'Signal box',time:'23:05',
+ order:'The signal box wants an automatic departure check. Heavy bags go to the baggage car, medium ones to the overhead rack, light ones under the seat. Low fuel needs a warning, and every departure ends with the final call.',
+ car:{name:'Vista',cls:'Observation car',reg:'SLP-407',img:'observation',st:'st-mountain',stn:'Snowpass'},
+ rules:['d9','d10','d11'],
+ watch:{seenMedium:'Medium bags: overhead rack'},
+ starter:'weight = 42.0\nfuel = 18\n',
+ solution:'weight = 42.0\nfuel = 18\nif weight > 40:\n    print("Heavy bags: baggage car")\nelif weight > 20:\n    print("Medium bags: overhead rack")\nelse:\n    print("Light bags: under the seat")\nif fuel < 25:\n    print("Refuel before departure")\nprint("All aboard")\n',
+ out:'Heavy bags: baggage car\nRefuel before departure\nAll aboard',
+ steps:[
+  {t:'If `weight` is over `40`, print `Heavy bags: baggage car`',c:(c,o)=>/^if\s+weight\s*>\s*40\s*:/m.test(src(c))&&lines(o).includes('Heavy bags: baggage car'),help:['if, a test, a colon, then an indented line.','The test is weight > 40. Indent the print 4 spaces (Tab).','if fuel > 90:\n    print("Tank full")','if weight > 40:\n    print("Heavy bags: baggage car")']},
+  {t:'Add an `elif` for over `20`: `Medium bags: overhead rack`',c:c=>/^elif\s+weight\s*>\s*20\s*:\s*\n\s+print\(\s*["']Medium bags: overhead rack["']\s*\)/m.test(src(c)),help:['elif goes at the same indentation as the if.','elif weight > 20: and an indented print under it.','elif fuel > 50:\n    print("Half full")','elif weight > 20:\n    print("Medium bags: overhead rack")']},
+  {t:'Add an `else`: `Light bags: under the seat`',c:c=>/^else\s*:\s*\n\s+print\(\s*["']Light bags: under the seat["']\s*\)/m.test(src(c)),help:['else has no test, just a colon.','else: then the indented print.','else:\n    print("Low")','else:\n    print("Light bags: under the seat")']},
+  {t:'A separate `if`: when `fuel` is under `25`, print `Refuel before departure`',c:(c,o)=>/^if\s+fuel\s*<\s*25\s*:/m.test(src(c))&&lines(o).includes('Refuel before departure'),help:['This is a new question, so it starts with its own if.','Back at the left edge: if fuel < 25: and an indented print.','if weight < 5:\n    print("Featherweight")','if fuel < 25:\n    print("Refuel before departure")']},
+  {t:'Last line, outside every if: `All aboard`',c:(c,o)=>/^print\(\s*["']All aboard["']\s*\)/m.test(c.replace(/\r/g,''))&&ln(o,lines(o).length-1)==='All aboard',help:['This line must always run, whatever the weight or fuel.','Put it at the left edge, with no spaces in front.','print("Mind the gap")','print("All aboard")']},
+  {t:'Test it: change `weight` to `30` and check the board says Medium, then set it back to `42.0`',c:(c,o,x)=>!!x.seenMedium&&ln(o,0)==='Heavy bags: baggage car',help:['Changing the data is how you test every branch.','Edit the first line to weight = 30, run, look, then change it back.','The board should show Medium bags: overhead rack while weight is 30.','weight = 42.0']}
+ ]},
+{id:'hold',name:'Berth supplies',client:'Steward Bo',time:'23:40',
+ order:'List what is stocked in the sleeper, one item per line. Then add the postcards we just picked up and show the new count and the last thing stocked.',
+ car:{name:'Dormouse',cls:'Sleeper',reg:'SLP-512',img:'sleeper',st:'st-forest',stn:'Pinewood'},
+ rules:['d12','d13','d14'],
+ starter:'supplies = ["blankets", "pillows", "tea", "spare lamps"]\n',
+ solution:'supplies = ["blankets", "pillows", "tea", "spare lamps"]\nprint(f"Stock: {len(supplies)} items")\nfor item in supplies:\n    print("-", item)\nsupplies.append("postcards")\nprint(f"After pickup: {len(supplies)} items")\nprint("Last stocked:", supplies[-1])\n',
+ out:'Stock: 4 items\n- blankets\n- pillows\n- tea\n- spare lamps\nAfter pickup: 5 items\nLast stocked: postcards',
+ steps:[
+  {t:'First line: `Stock: 4 items`, counted with `len()`',c:(c,o)=>ln(o,0)==='Stock: 4 items'&&/len\s*\(\s*supplies\s*\)/.test(src(c)),help:['Do not type the 4 yourself: let Python count.','len(supplies) inside the braces of an f-string.','print(f"Crew: {len(crew)}")','print(f"Stock: {len(supplies)} items")']},
+  {t:'A `for` loop prints every item as `- blankets`, `- pillows` and so on',c:(c,o)=>/^for\s+\w+\s+in\s+supplies\s*:/m.test(src(c))&&lines(o).slice(1,5).join('|')==='- blankets|- pillows|- tea|- spare lamps',help:['One loop, one print inside it.','for item in supplies: then an indented print("-", item).','for name in crew:\n    print("*", name)','for item in supplies:\n    print("-", item)']},
+  {t:'After the loop, `append` `"postcards"` to the list',c:c=>/^supplies\.append\(\s*["']postcards["']\s*\)/m.test(src(c)),help:['append changes the list itself.','At the left edge, after the loop: supplies.append(...).','crew.append("Ilsa")','supplies.append("postcards")']},
+  {t:'`After pickup: 5 items`, counted again',c:(c,o)=>lines(o).includes('After pickup: 5 items')&&(src(c).match(/len\s*\(\s*supplies\s*\)/g)||[]).length>=2,help:['The list is longer now, so len gives a new answer.','The same f-string trick as the first line.','print(f"Crew now: {len(crew)}")','print(f"After pickup: {len(supplies)} items")']},
+  {t:'`Last stocked: postcards`, read from the list with a negative index',c:(c,o)=>lines(o).includes('Last stocked: postcards')&&/supplies\s*\[\s*-1\s*\]/.test(src(c)),help:['-1 always points at the last item.','print("Last stocked:", supplies[-1])','print("Newest:", crew[-1])','print("Last stocked:", supplies[-1])']}
+ ]},
+{id:'fuel',name:'Route log',client:'Driver Sato',time:'00:45',
+ order:'The lounge car asks how far we have come. We ran four legs tonight. I want a running total after every leg, the total at the end, and then a three-hour night watch.',
+ car:{name:'Meridian',cls:'Lounge car',reg:'SLP-623',img:'lounge',st:'st-lake',stn:'Stillwater'},
+ rules:['d15','d16'],
+ starter:'legs = [12, 8, 15, 5]\n',
+ solution:'legs = [12, 8, 15, 5]\ntotal = 0\nfor leg in legs:\n    total += leg\n    print(f"Leg {leg} km, total {total} km")\nprint(f"Distance: {total} km")\nfor hour in range(1, 4):\n    print(f"Hour {hour}: all berths quiet")\n',
+ out:'Leg 12 km, total 12 km\nLeg 8 km, total 20 km\nLeg 15 km, total 35 km\nLeg 5 km, total 40 km\nDistance: 40 km\nHour 1: all berths quiet\nHour 2: all berths quiet\nHour 3: all berths quiet',
+ steps:[
+  {t:'Start a running total: `total = 0`',c:c=>/^total\s*=\s*0\s*$/m.test(src(c)),help:['The total needs a starting value before the loop.','Zero, at the left edge.','count = 0','total = 0']},
+  {t:'Loop over `legs` and add each one with `+=`',c:c=>/^for\s+(\w+)\s+in\s+legs\s*:\s*\n\s+total\s*\+=\s*\1/m.test(src(c)),help:['Inside the loop, add the current leg to the total.','for leg in legs: then total += leg, indented.','for coin in coins:\n    count += coin','for leg in legs:\n    total += leg']},
+  {t:'Inside the loop: `Leg 12 km, total 12 km` for every leg',c:(c,o)=>lines(o).slice(0,4).join('|')==='Leg 12 km, total 12 km|Leg 8 km, total 20 km|Leg 15 km, total 35 km|Leg 5 km, total 40 km',help:['The print sits inside the loop, after the +=.','An f-string with {leg} and {total}.','print(f"Coin {coin}, sum {count}")','    print(f"Leg {leg} km, total {total} km")']},
+  {t:'After the loop: `Distance: 40 km`',c:(c,o)=>ln(o,4)==='Distance: 40 km',help:['This line runs once, so it is not indented.','Back at the left edge, print the final total.','print(f"Sum: {count}")','print(f"Distance: {total} km")']},
+  {t:'With `range()`: `Hour 1: all berths quiet` up to `Hour 3`',c:(c,o)=>/range\s*\(\s*1\s*,\s*4\s*\)/.test(src(c))&&lines(o).slice(5).join('|')==='Hour 1: all berths quiet|Hour 2: all berths quiet|Hour 3: all berths quiet',help:['range counts for you, and stops before its second number.','for hour in range(1, 4): and an indented f-string.','for n in range(1, 6):\n    print(f"Lap {n}")','for hour in range(1, 4):\n    print(f"Hour {hour}: all berths quiet")']}
+ ]},
+{id:'trade',name:'Dining car menu',client:'Chef Magpie',time:'01:30',
+ order:'The dining car needs a menu board. Show the price of cake, add dinner at 30, list every dish with its price, and say so when there is no coffee tonight.',
+ car:{name:'Saffron',cls:'Dining car',reg:'SLP-708',img:'dining',st:'st-vineyard',stn:'Vinehill'},
+ rules:['d17','d18'],
+ starter:'menu = {"tea": 4, "soup": 9, "cake": 12}\n',
+ solution:'menu = {"tea": 4, "soup": 9, "cake": 12}\nprint("Cake costs", menu["cake"])\nmenu["dinner"] = 30\nfor dish, price in menu.items():\n    print(f"{dish}: {price} fr")\nif "coffee" not in menu:\n    print("No coffee tonight")\n',
+ out:'Cake costs 12\ntea: 4 fr\nsoup: 9 fr\ncake: 12 fr\ndinner: 30 fr\nNo coffee tonight',
+ steps:[
+  {t:'`Cake costs 12`, looked up in `menu`',c:(c,o)=>ln(o,0)==='Cake costs 12'&&/menu\s*\[\s*["']cake["']\s*\]/.test(src(c)),help:['Look a value up by its key in square brackets.','print("Cake costs", menu["cake"])','print("Soup costs", menu["soup"])','print("Cake costs", menu["cake"])']},
+  {t:'Add `dinner` at `30`',c:c=>/^menu\s*\[\s*["']dinner["']\s*\]\s*=\s*30\s*$/m.test(src(c)),help:['Assigning to a new key adds it.','menu["dinner"] = 30','menu["coffee"] = 7','menu["dinner"] = 30']},
+  {t:'Loop over `menu.items()`: `tea: 4 fr` and so on, dinner included',c:(c,o)=>/\.items\s*\(\s*\)/.test(src(c))&&lines(o).slice(1,5).join('|')==='tea: 4 fr|soup: 9 fr|cake: 12 fr|dinner: 30 fr',help:['items() gives key and value together.','for dish, price in menu.items(): and an f-string.','for name, age in crew.items():\n    print(f"{name}: {age}")','for dish, price in menu.items():\n    print(f"{dish}: {price} fr")']},
+  {t:'If `"coffee"` is `not in` menu, print `No coffee tonight`',c:(c,o)=>/["']coffee["']\s+not\s+in\s+menu/.test(src(c))&&ln(o,lines(o).length-1)==='No coffee tonight',help:['in and not in check the keys.','if "coffee" not in menu: with an indented print.','if "jam" not in pantry:\n    print("No jam")','if "coffee" not in menu:\n    print("No coffee tonight")']}
+ ]},
+{id:'roster',name:'Guest welcome',client:'Head conductor Kestrel',time:'03:00',
+ order:'New guests board at the border. Write a greeting I can reuse for anyone, and a fee calculator that gives the number back so I can print it in different places.',
+ car:{name:'Aurora',cls:'Grand sleeper',reg:'SLP-815',img:'luxury',st:'st-border',stn:'Border post'},
+ rules:['d19','d20'],
+ starter:'',
+ solution:'def greet(name):\n    print(f"Welcome aboard, {name}.")\n\ndef bag_fee(bags, rate):\n    return bags * rate\n\ngreet("Ilsa")\ngreet("Bo")\nfee = bag_fee(12, 3)\nprint(f"Fee: {fee} fr")\nprint(f"Big group: {bag_fee(40, 3)} fr")\n',
+ out:'Welcome aboard, Ilsa.\nWelcome aboard, Bo.\nFee: 36 fr\nBig group: 120 fr',
+ steps:[
+  {t:'Define `greet(name)` that prints `Welcome aboard, {name}.`',c:c=>/^def\s+greet\s*\(\s*name\s*\)\s*:\s*\n\s+print\(\s*f["']Welcome aboard, \{name\}\.["']\s*\)/m.test(src(c)),help:['def, the name, a parameter in brackets, a colon.','The print inside is indented and uses {name}.','def wave(who):\n    print(f"Bye, {who}.")','def greet(name):\n    print(f"Welcome aboard, {name}.")']},
+  {t:'Call it twice: for `Ilsa` and for `Bo`',c:(c,o)=>lines(o).slice(0,2).join('|')==='Welcome aboard, Ilsa.|Welcome aboard, Bo.'&&/^greet\(/m.test(src(c)),help:['Defining does nothing until you call it.','At the left edge: greet("Ilsa") and greet("Bo").','wave("Sato")','greet("Ilsa")\ngreet("Bo")']},
+  {t:'Define `bag_fee(bags, rate)` that returns `bags * rate`',c:c=>/^def\s+bag_fee\s*\(\s*bags\s*,\s*rate\s*\)\s*:\s*\n\s+return\s+(bags\s*\*\s*rate|rate\s*\*\s*bags)/m.test(src(c)),help:['This one gives an answer back instead of printing.','return bags * rate, indented under the def.','def area(w, h):\n    return w * h','def bag_fee(bags, rate):\n    return bags * rate']},
+  {t:'Store `bag_fee(12, 3)` in `fee` and print `Fee: 36 fr`',c:(c,o)=>/^fee\s*=\s*bag_fee\(\s*12\s*,\s*3\s*\)/m.test(src(c))&&lines(o).includes('Fee: 36 fr'),help:['The call becomes the returned value.','fee = bag_fee(12, 3), then an f-string with {fee}.','size = area(4, 5)\nprint(f"Size: {size}")','fee = bag_fee(12, 3)\nprint(f"Fee: {fee} fr")']},
+  {t:'`Big group: 120 fr`, calling `bag_fee(40, 3)` inside the f-string',c:(c,o)=>/\{\s*bag_fee\(\s*40\s*,\s*3\s*\)\s*\}/.test(src(c))&&ln(o,lines(o).length-1)==='Big group: 120 fr',help:['A call can go straight inside the braces.','{bag_fee(40, 3)} in the f-string.','print(f"Hall: {area(10, 8)}")','print(f"Big group: {bag_fee(40, 3)} fr")']}
+ ]}
+];
+
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const md=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
+const KEY='sleeple.v1';
+const OLDKEY='dockle.v1';
+(function migrate(){try{if(localStorage.getItem(KEY)!=null)return;const raw=localStorage.getItem(OLDKEY);if(!raw)return;const o=JSON.parse(raw)||{};['code','help','stepsOk','x'].forEach(k=>delete o[k]);o.theme=o.theme==='nightshift'?'midnight':'night';o.migrated=Date.now();localStorage.setItem(KEY,JSON.stringify(o));if(localStorage.getItem('workshop-last')==='dockle')localStorage.setItem('workshop-last','sleeple');const dk=JSON.parse(localStorage.getItem('workshop-docked')||'{}');if(dk.dockle){dk.sleeple=dk.dockle;delete dk.dockle;localStorage.setItem('workshop-docked',JSON.stringify(dk))}}catch(e){}})();
+const BOX=[0,1,3,7,14,30];
+const dayNo=()=>Math.floor((Date.now()-new Date().getTimezoneOffset()*60000)/86400000);
+function loadS(){try{return JSON.parse(localStorage.getItem(KEY))||{}}catch(e){return{}}}
+let S=Object.assign({theme:'night',stage:'school',t:0,les:0,code:{},done:{},learned:[],srs:{},mode:'learn',sfx:true,help:{},x:{},stepsOk:{},docked:{}},loadS());
+let saveT;function save(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}},120)}
+['upg','mastered','mstart','rush'].forEach(k=>{if(!S[k]||typeof S[k]!=='object')S[k]={}});
+S.cr=+S.cr||0;S.life=+S.life||0;S.rush=Object.assign({best:0,shifts:0,jobs:0},S.rush);
+const T=()=>TARGETS[S.t];
+const dkey=d=>d.r+':'+DRILLS.indexOf(d);
+
+const PYODIDE_BASE='https://cdn.jsdelivr.net/pyodide/v0.26.4/full/';
+const WORKER_SRC=`let py=null;
+self.onmessage=async e=>{const m=e.data;
+ if(m.type==='boot'){try{importScripts(m.base+'pyodide.js');py=await loadPyodide({indexURL:m.base});postMessage({type:'ready'})}catch(err){postMessage({type:'fail',msg:String(err&&err.message||err)})}return}
+ if(m.type==='run'){let out='',err='';
+  py.setStdout({batched:s=>{out+=s+'\\n'}});py.setStderr({batched:s=>{err+=s+'\\n'}});
+  py.setStdin({stdin:()=>{throw new Error('input() is not used in Sleeple yet')}});
+  const g=py.globals.get('dict')();
+  try{await py.runPythonAsync(m.code,{globals:g})}catch(ex){err+=String(ex&&ex.message||ex)}
+  finally{try{g.destroy()}catch(_){}}
+  postMessage({type:'done',id:m.id,out,err})}};`;
+const PY={w:null,ready:false,failed:false,busy:null,seq:0,waiters:[],
+ boot(){
+  this.ready=false;this.failed=false;
+  try{this.w=new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'text/javascript'})))}catch(e){this.fail('This browser cannot start a worker.');return}
+  this.w.onmessage=e=>{const m=e.data;
+   if(m.type==='ready'){this.ready=true;engineState('ready');this.waiters.splice(0).forEach(f=>f());return}
+   if(m.type==='fail'){this.fail(m.msg);return}
+   if(m.type==='done'&&this.busy&&this.busy.id===m.id){clearTimeout(this.busy.timer);const b=this.busy;this.busy=null;b.resolve({out:m.out,err:m.err})}};
+  this.w.postMessage({type:'boot',base:PYODIDE_BASE});
+  engineState('boot');
+ },
+ fail(msg){this.failed=true;this.ready=false;engineState('fail',msg);this.waiters.splice(0).forEach(f=>f())},
+ whenReady(){return this.ready||this.failed?Promise.resolve():new Promise(r=>this.waiters.push(r))},
+ async run(code,ms){
+  await this.whenReady();
+  if(this.failed)return{out:'',err:'',offline:true};
+  while(this.busy)await this.busy.p.catch(()=>{});
+  const id=++this.seq;let resolve;const p=new Promise(r=>resolve=r);
+  this.busy={id,resolve,p,timer:setTimeout(()=>{if(this.busy&&this.busy.id===id){this.busy=null;this.w.terminate();resolve({out:'',err:'',timeout:true});this.boot()}},ms||4000)};
+  this.w.postMessage({type:'run',id,code});
+  return p;
+ }
+};
+function engineState(s,msg){
+ const sc=$('scan');
+ if(s==='boot'){sc.className='';sc.textContent='Engine starting: loading Python…'}
+ if(s==='ready'){sc.className='';sc.textContent='Python ready.';if(S.stage==='target')runNow()}
+ if(s==='fail'){sc.className='er';sc.textContent='No Python engine: open Sleeple over http(s) with an internet connection.';comms('I cannot reach the Python engine. Check the internet connection.')}
+}
+const FRIENDLY={
+ NameError:'Python does not know that name. Check the spelling, or add quotes if you meant text.',
+ SyntaxError:'Python could not read this line. Check brackets, quotes and the colon at the end of if, for and def.',
+ IndentationError:'The spaces at the start of a line do not match. Blocks under if, for and def are indented 4 spaces.',
+ TypeError:'Two kinds of value do not mix here. Text and numbers join with a comma or an f-string, not with +.',
+ KeyError:'That key is not in the dictionary. Check the spelling and the quotes.',
+ IndexError:'There is no item at that position. The first item is [0], the last is [-1].',
+ ZeroDivisionError:'Dividing by zero is not allowed.',
+ AttributeError:'That value does not have this method. Check the spelling, for example append, not add.',
+ ValueError:'The value has the right type but a wrong content.'
+};
+function parseErr(err){
+ const t=String(err||'').trim();if(!t)return null;
+ const ls=t.split('\n');let line=null;
+ ls.forEach(l=>{const m=l.match(/File "<exec>", line (\d+)/);if(m)line=+m[1]});
+ const last=ls.filter(l=>/^\w+(Error|Exception)\b/.test(l.trim())).pop()||ls[ls.length-1];
+ const kind=(last.match(/^\s*(\w+)/)||[])[1]||'Error';
+ return{line,msg:last.trim(),kind,why:FRIENDLY[kind]||''};
+}
+
+function src(c){return String(c).replace(/\r/g,'').split('\n').map(l=>{let q=null;for(let i=0;i<l.length;i++){const ch=l[i];if(q){if(ch==='\\'){i++;continue}if(ch===q)q=null;continue}if(ch==='"'||ch==="'"){q=ch;continue}if(ch==='#')return l.slice(0,i).replace(/\s+$/,'')}return l.replace(/\s+$/,'')}).join('\n')}
+function lines(o){const t=String(o||'').replace(/\r/g,'').replace(/\n+$/,'');return t?t.split('\n'):[]}
+function ln(o,i){return lines(o)[i]}
+const normOut=s=>lines(s).map(l=>l.replace(/\s+$/,'')).join('\n');
+const normCode=s=>String(s).replace(/\r/g,'').split('\n').map(l=>l.replace(/\s+$/,'')).filter(l=>l.trim()).join('\n').replace(/'/g,'"').replace(/\s*([=,()+*\/%:\[\]{}<>-])\s*/g,'$1');
+
+const PYK=new Set('False None True and as assert async await break class continue def del elif else except finally for from global if import in is lambda nonlocal not or pass raise return try while with yield'.split(' '));
+const PYB=new Set('print len range round int float str list dict input sum min max sorted abs type enumerate zip bool set tuple'.split(' '));
+function hlPy(code){
+ let out='',i=0;const s=String(code);
+ while(i<s.length){
+  const c=s[i];
+  if(c==='#'){let j=s.indexOf('\n',i);if(j<0)j=s.length;out+='<span class="h-c">'+esc(s.slice(i,j))+'</span>';i=j;continue}
+  const fm=s.slice(i).match(/^([fFrRbB]{0,2})("""|'''|"|')/);
+  if(fm&&(fm[1]===''||/[A-Za-z]/.test(fm[1]))&&(fm[1]===''||!/\w/.test(s[i-1]||''))){
+   const q=fm[2];let j=i+fm[0].length;
+   while(j<s.length){if(s[j]==='\\'){j+=2;continue}if(s.startsWith(q,j)){j+=q.length;break}if(q.length===1&&s[j]==='\n')break;j++}
+   out+='<span class="h-s">'+esc(s.slice(i,j))+'</span>';i=j;continue}
+  if(/[0-9]/.test(c)&&!/\w/.test(s[i-1]||'')){const m=s.slice(i).match(/^\d[\d_.]*/);out+='<span class="h-n">'+esc(m[0])+'</span>';i+=m[0].length;continue}
+  if(/[A-Za-z_]/.test(c)){const m=s.slice(i).match(/^[A-Za-z_]\w*/);const w=m[0];
+   const prev=s.slice(0,i).match(/def\s+$/);
+   out+=PYK.has(w)?'<span class="h-k">'+w+'</span>':PYB.has(w)&&s[i+w.length]==='('?'<span class="h-b">'+w+'</span>':prev?'<span class="h-f">'+w+'</span>':esc(w);
+   i+=w.length;continue}
+  out+=esc(c);i++;
+ }
+ return out;
+}
+
+const sfx=(()=>{let ctx=null;const ac=()=>{if(!ctx){try{ctx=new(window.AudioContext||window.webkitAudioContext)()}catch(e){}}return ctx};
+ const tone=(f,d,type,v,delay)=>{if(!S.sfx)return;const c=ac();if(!c)return;const t=c.currentTime+(delay||0),o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);g.gain.setValueAtTime(v||.04,t);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(c.destination);o.start(t);o.stop(t+d+.02)};
+ return{click:()=>tone(520,.05,'square',.015),ok:()=>{tone(660,.09,'sine',.05);tone(990,.12,'sine',.04,.08)},bad:()=>tone(180,.18,'sawtooth',.03),step:()=>tone(880,.08,'triangle',.04),dock:()=>{[523,659,784,1046].forEach((f,i)=>tone(f,.25,'triangle',.05,i*.09))}}})();
+
+const IMG='img/sleeple/';
+const NOX={idle:'nox-idle',happy:'nox-cheer',worry:'nox-think',think:'nox-think',watch:'nox-watch',lantern:'nox-lantern',sleep:'nox-sleep',timetable:'nox-timetable',punch:'nox-punch'};
+function noxArt(mood){return '<img src="'+IMG+(NOX[mood]||NOX.idle)+'.webp" alt="Nox the owl conductor">'}
+function carArt(car,ghost){return '<img src="'+IMG+car.img+'.webp" alt="'+(ghost?'':esc(car.name+', '+car.cls))+'"'+(ghost?' class="sil"':'')+' loading="lazy">'}
+function stArt(car,cls){return '<img'+(cls?' class="'+cls+'"':'')+' src="'+IMG+car.st+'.webp" alt="'+esc(car.stn)+' station" loading="lazy">'}
+const CARGO_IMG=['ticket','suitcase','timetable','letter','tea','letter','timetable','lantern','suitcase','letter'];
+
+let commsT;function comms(m,mood){$('cmsg').textContent=m;$('dotmini').innerHTML=noxArt(mood);const c=$('comms');c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),1800)}
+const maxT=()=>{let i=0;while(i<TARGETS.length-1&&S.done[TARGETS[i].id])i++;return i};
+const seqFor=t=>{const out=[];TARGETS[t].rules.forEach(r=>{out.push({les:r});DRILLS.forEach(d=>{if(d.r===r)out.push({drill:d})})});return out};
+const schoolDone=t=>!!(S.les&&S.les[TARGETS[t].id]>=seqFor(t).length);
+if(typeof S.les!=='object'||S.les===null)S.les={};
+function learn(r){if(!S.learned.includes(r)){S.learned.push(r);save()}}
+function srsMark(d,ok){const k=dkey(d),it=S.srs[k]||{b:0,due:0,r:0,w:0},t=dayNo();if(ok){it.b=Math.min(it.b+1,BOX.length-1);it.r++}else{it.b=0;it.w++}it.due=t+BOX[it.b];it.last=t;S.srs[k]=it;save();updDue()}
+function dueList(){const t=dayNo();return DRILLS.filter(d=>S.learned.includes(d.r)&&S.srs[dkey(d)]&&S.srs[dkey(d)].due<=t)}
+function updDue(){const n=dueList().length,b=document.querySelector('.stg[data-v="review"]');if(b)b.textContent='Review'+(n?' · '+n:'')}
+
+const RANKS=[['Porter',0],['Ticket clerk',300],['Steward',800],['Guard',1600],['Conductor',3000],['Stationmaster',5000],['Line director',8000]];
+const ROMAN=['I','II','III','IV','V','VI','VII'];
+const UPG=[
+ {k:'lift',name:'Platform benches',img:'tea',max:3,cost:[150,350,700],d:'Rush passengers wait 10 seconds longer per level.'},
+ {k:'beacon',name:'Brass bell',img:'punch',max:2,cost:[250,600],d:'Rush tips go up 25% per level.'},
+ {k:'comms',name:'Telegraph line',img:'letter',max:1,cost:[400],d:'Rush hour brings 8 passengers instead of 5.'},
+ {k:'drone',name:'Night porter',img:'lantern',max:1,cost:[450],d:'Once per rush hour, a passenger about to leave gets tea and half their patience back.'},
+ {k:'license',name:'Branch line licence',img:'timetable',max:1,cost:[500],d:'A fourth telegram every day.'},
+ {k:'paint',name:'Midnight livery',img:'watch',max:1,cost:[300],d:'Unlocks a second theme: a deeper, quieter midnight blue.'}];
+const ORDERS={
+ review:{n:5,t:'Clear 5 review drills',pay:60},
+ clean:{n:6,t:'Get 6 drills right first time',pay:50},
+ predict:{n:3,t:'Predict 3 outputs right first time',pay:50,need:()=>DRILLS.some(d=>d.k==='predict'&&S.learned.includes(d.r))},
+ fix:{n:2,t:'Fix 2 bugs right first time',pay:50,need:()=>DRILLS.some(d=>d.k==='fix'&&S.learned.includes(d.r))},
+ rush:{n:4,t:'Serve 4 rush passengers on time',pay:70},
+ shift:{n:1,t:'Finish a rush hour',pay:60},
+ dock:{n:1,t:'Couple a new carriage',pay:60,need:()=>TARGETS.some(t=>!S.done[t.id])},
+ master:{n:1,t:'Earn a Mastery bonus',pay:90,need:()=>TARGETS.slice(0,maxT()+1).some(t=>!S.mastered[t.id])}};
+const CLIENTS=['Platform 2 kiosk','Dining car','Mail car','Berth 14','Station café','Lost property','Ticket hall','Night porter','Border post','Signal box'];
+const CARGO=['tickets','luggage tags','timetables','berth lists','tea orders','mail sacks','seat maps','lamp oil','pillows','postcards'];
+const fmt=n=>Math.round(n).toLocaleString('en-US');
+const upLv=k=>S.upg[k]||0;
+const payFor=i=>100+40*i;
+const rankOf=l=>{let r=0;RANKS.forEach((x,i)=>{if(l>=x[1])r=i});return r};
+const THEMES=()=>['night'].concat(upLv('paint')?['midnight']:[]);
+const TNAME={night:'Night',midnight:'Midnight'};
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function ensureDisp(){
+ const d=dayNo(),want=upLv('license')?4:3;
+ if(!S.disp||S.disp.day!==d)S.disp={day:d,ids:[],prog:{},claimed:[],bonus:false,dk:[]};
+ const D=S.disp;
+ if(D.ids.length<want&&S.learned.length){
+  const r=rng(d*7919+13),pool=Object.keys(ORDERS).filter(k=>!D.ids.includes(k)&&(!ORDERS[k].need||ORDERS[k].need()));
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  D.ids=D.ids.concat(pool.slice(0,want-D.ids.length));
+ }
+ return D;
+}
+function readyClaims(){const D=ensureDisp();return D.ids.filter(k=>!D.claimed.includes(k)&&(D.prog[k]||0)>=ORDERS[k].n).length}
+function tick(ev,n){const D=ensureDisp();if(!D.ids.includes(ev)||D.claimed.includes(ev))return;const o=ORDERS[ev],was=D.prog[ev]||0;if(was>=o.n)return;D.prog[ev]=Math.min(o.n,was+(n||1));if(D.prog[ev]>=o.n){sfx.step();toast('Telegram ready: '+o.t)}save();updPort()}
+function updPort(){const b=document.querySelector('.stg[data-v="port"]');if(!b)return;b.textContent='Office · '+fmt(S.cr)+' fr';b.classList.toggle('ready',readyClaims()>0);if(S.stage==='port')renderPort()}
+function earn(n){
+ n=Math.round(n);if(n<=0)return;const before=rankOf(S.life);S.cr+=n;S.life+=n;save();
+ const b=document.querySelector('.stg[data-v="port"]');updPort();if(b){b.classList.remove('bump');void b.offsetWidth;b.classList.add('bump')}
+ const after=rankOf(S.life);if(after>before){sfx.dock();toast('Promoted: '+RANKS[after][0]);comms('Promoted to '+RANKS[after][0]+'. The whole line knows your name now.','happy')}
+}
+function credit(d,ok,src){earn(src==='review'?(ok?10:3):(ok?5:2));if(src==='review')tick('review');if(ok){tick('clean');if(d.k==='predict')tick('predict');if(d.k==='fix')tick('fix')}}
+function buy(k){const u=UPG.find(x=>x.k===k),lv=upLv(k);if(lv>=u.max)return;const c=u.cost[lv];if(S.cr<c){sfx.bad();toast('Not enough fares yet');return}S.cr-=c;S.upg[k]=lv+1;sfx.dock();comms(u.name+(u.max>1?' level '+(lv+1):'')+' installed.','happy');if(k==='paint'){S.theme='midnight'}save();render()}
+function claim(k){const D=ensureDisp();if(D.claimed.includes(k)||(D.prog[k]||0)<ORDERS[k].n)return;D.claimed.push(k);sfx.ok();earn(ORDERS[k].pay);if(!D.bonus&&D.ids.every(x=>D.claimed.includes(x))){D.bonus=true;earn(50);toast('Full timetable: +50 fr');comms('Every telegram answered today. Bonus paid.','happy')}save();render()}
+function renderPort(){
+ const r=rankOf(S.life),nx=RANKS[r+1],base=RANKS[r][1],pct=nx?Math.round(100*(S.life-base)/(nx[1]-base)):100;
+ $('plife').textContent='lifetime '+fmt(S.life)+' fr';
+ $('prank').innerHTML='<div class="rank"><span class="ri"><img src="'+IMG+'nox-watch.webp" alt=""><span>'+ROMAN[r]+'</span></span><h3>'+RANKS[r][0]+'</h3><small>'+(nx?fmt(nx[1]-S.life)+' fr to '+nx[0]:'Top rank. The line is yours.')+'</small><div class="gauge"><i style="width:'+pct+'%"></i></div></div><div class="kv"><div>Wallet<b>'+fmt(S.cr)+' fr</b></div><div>Carriages<b>'+TARGETS.filter(t=>S.done[t.id]).length+' / '+TARGETS.length+'</b></div></div>';
+ const D=ensureDisp();
+ $('pday').textContent=D.ids.length?D.claimed.length+' / '+D.ids.length+' answered':'';
+ $('pdisp').innerHTML=!D.ids.length?'<p class="pnote">Finish your first lesson in School and the telegrams start arriving. New ones every day.</p>':D.ids.map(k=>{const o=ORDERS[k],v=D.prog[k]||0,c=D.claimed.includes(k),full=v>=o.n;
+  return '<div class="order'+(c?' claimed':'')+(full?' full':'')+'"><b>'+esc(o.t)+'</b><small>'+(c?'answered · '+o.pay+' fr paid':v+' / '+o.n+' · pays '+o.pay+' fr')+'</small><div class="gauge"><i style="width:'+Math.round(100*v/o.n)+'%"></i></div>'+(c?'':'<button data-claim="'+k+'"'+(full?' class="pri"':' disabled')+'>Claim</button>')+'</div>'}).join('')+(D.ids.length?'<p class="pnote">'+(D.bonus?(D.ids.every(x=>D.claimed.includes(x))?'Full timetable bonus paid. New telegrams tomorrow.':'Full timetable bonus already paid today.'):'Answer every telegram today for a 50 fr bonus.')+'</p>':'');
+ document.querySelectorAll('[data-claim]').forEach(b=>b.onclick=()=>claim(b.dataset.claim));
+ const c=rushCfg(),can=S.learned.length>0;
+ $('prsub').textContent=S.rush.shifts?S.rush.shifts+(S.rush.shifts===1?' rush hour':' rush hours')+' · '+S.rush.jobs+' on time':'';
+ $('prush').innerHTML='<p class="why">Passengers bring quick jobs from the rules you have learned. Answer before their patience runs out. Faster answers earn bigger tips, a clean first answer adds 5 fr, and every on-time job in a row grows your combo.</p><div class="kv"><div>Patience<b>'+c.pat+' s</b></div><div>Tips<b>× '+c.tip.toFixed(2)+'</b></div><div>Passengers per rush<b>'+c.jobs+'</b></div><div>Best rush<b>'+fmt(S.rush.best)+' fr</b></div></div>'+(can?'':'<p class="pnote">Learn your first rule in School to open rush hour.</p>')+'<div class="drow"><button class="pri" id="pshift"'+(can?'':' disabled')+'>Start rush hour</button></div><dl class="paytab"><dt>Every passenger served on time</dt><dd>12 fr</dd><dt>Right first time</dt><dd>+5 fr</dd><dt>Tip, more when you are fast</dt><dd>up to '+Math.round(20*c.tip)+' fr</dd><dt>Combo, per job in a row</dt><dd>+2 fr, max +10</dd><dt>Bug fix and predict jobs</dt><dd>+15 s patience</dd><dt>Passenger gives up</dt><dd>0 fr, combo resets</dd></dl><p class="pnote">Jobs pick the rules you are weakest at more often. Every job also counts for Review.</p>';
+ $('pshift').onclick=startShift;
+ $('pwallet').textContent=fmt(S.cr)+' fr';
+ $('pyard').innerHTML=UPG.map(u=>{const lv=upLv(u.k),maxed=lv>=u.max,cost=u.cost[lv];
+  return '<div class="upg"><img src="'+IMG+u.img+'.webp" alt=""><h4>'+esc(u.name)+'</h4><p>'+esc(u.d)+'</p><div class="lv">'+Array.from({length:u.max},(_,i)=>'<i class="'+(i<lv?'on':'')+'"></i>').join('')+'</div>'+(maxed?'<button disabled>Installed</button>':'<button data-buy="'+u.k+'"'+(S.cr>=cost?' class="pri"':'')+'>'+fmt(cost)+' fr</button>')+'</div>'}).join('');
+ document.querySelectorAll('[data-buy]').forEach(b=>b.onclick=()=>buy(b.dataset.buy));
+}
+function rushCfg(){return{jobs:upLv('comms')?8:5,pat:40+10*upLv('lift'),tip:1+.25*upLv('beacon'),spare:upLv('drone')?1:0}}
+let RJ=null,rushTick=null;
+function startShift(){
+ const pool=DRILLS.filter(d=>S.learned.includes(d.r));if(!pool.length){toast('Learn a rule in School first');return}
+ const c=rushCfg(),w=d=>{const it=S.srs[dkey(d)];return it?Math.max(1,6-it.b):6},list=[];
+ for(let i=0;i<c.jobs;i++){const cand=pool.length>1?pool.filter(d=>d!==list[i-1]):pool,tot=cand.reduce((a,d)=>a+w(d),0);let x=Math.random()*tot,pick=cand[0];for(const d of cand){x-=w(d);if(x<=0){pick=d;break}}list.push(pick)}
+ const o=Math.floor(Math.random()*CLIENTS.length);
+ RJ={list,i:0,earned:0,ontime:0,combo:0,spare:c.spare,cfg:c,done:false,o,dl:{},lost:{},paid:{}};sfx.click();go('rush');
+}
+function patFor(d){return(RJ.cfg.pat+((d.k==='predict'||d.k==='fix')?15:0))*1000}
+function renderRush(){
+ clearInterval(rushTick);
+ const box=$('jbox'),con=$('jout'),stat=$('jstat'),cl=$('jclient');
+ if(!RJ){$('jtitle').textContent='Rush hour';$('jpips').innerHTML='';cl.innerHTML='';cl.hidden=true;box.innerHTML='<div class="donecard"><img class="nox" src="'+IMG+'nox-sleep.webp" alt="Nox asleep"><div class="dk">Rush hour</div><h2>The platform is quiet</h2><p class="why">Start rush hour from the Office. Each passenger brings one quick job and waits only so long.</p><div class="drow"><button id="jport">Office</button><button class="pri" id="jgo">Start rush hour</button></div></div>';$('jport').onclick=()=>go('port');$('jgo').onclick=startShift;return}
+ $('jpips').innerHTML=RJ.list.map((x,k)=>'<span class="'+(k<RJ.i?(RJ.lost[k]?'les':'ok'):k===RJ.i?'now':'')+'"></span>').join('');
+ if(RJ.i>=RJ.list.length){
+  cl.hidden=true;
+  if(!RJ.done){RJ.done=true;S.rush.shifts++;S.rush.jobs+=RJ.ontime;const best=RJ.earned>S.rush.best;if(best)S.rush.best=RJ.earned;save();tick('shift');if(best&&S.rush.shifts>1)toast('New best rush hour: '+fmt(RJ.earned)+' fr')}
+  $('jtitle').textContent='Rush hour over';
+  box.innerHTML='<div class="donecard"><img class="nox" src="'+IMG+(RJ.ontime===RJ.list.length?'nox-cheer':'nox-watch')+'.webp" alt=""><div class="dk">Rush report</div><h2>'+fmt(RJ.earned)+' fr earned</h2><p class="why">'+RJ.ontime+' of '+RJ.list.length+' passengers served on time. '+(RJ.ontime===RJ.list.length?'A clean rush. Every passenger left happy.':'Missed jobs come back in Review sooner, so they will be quicker next time.')+'</p><div class="drow"><button id="jport">Office</button><button class="pri" id="jgo">Another rush</button></div></div>';
+  $('jport').onclick=()=>go('port');$('jgo').onclick=startShift;return}
+ const job=RJ.i,d=RJ.list[job],who=CLIENTS[(RJ.o+job)%CLIENTS.length],what=CARGO[(RJ.o+job*3)%CARGO.length],tot=patFor(d);
+ if(!RJ.dl[job])RJ.dl[job]=Date.now()+tot;
+ $('jtitle').textContent='Passenger '+(job+1)+' of '+RJ.list.length;
+ cl.hidden=false;
+ cl.innerHTML='<img src="'+IMG+CARGO_IMG[(RJ.o+job*3)%CARGO.length]+'.webp" alt=""><span class="who">'+esc(who)+' · '+esc(what)+'</span><span class="secs" id="jsec"></span><div class="gauge hi" id="jgauge"><i></i></div><div class="msg" id="jmsg">'+(RJ.combo>1?'Combo '+RJ.combo+'. Keep it going.':'')+'</div>';
+ const next=()=>{if(RJ.i!==job)return;srsMark(d,!RJ.lost[job]&&!!RJ.paid[job]&&RJ.paid[job].clean);RJ.i++;renderRush()};
+ drillUI(box,con,stat,d,()=>next(),firstOk=>{
+  if(RJ.i!==job||RJ.lost[job]||RJ.paid[job])return;
+  clearInterval(rushTick);
+  const left=Math.max(0,RJ.dl[job]-Date.now()),frac=left/tot,combo=RJ.combo,base=12,clean=firstOk?5:0,tip=Math.round(20*frac*RJ.cfg.tip),cb=2*Math.min(combo,5),pay=base+clean+tip+cb;
+  RJ.paid[job]={clean:firstOk};RJ.combo++;RJ.ontime++;RJ.earned+=pay;earn(pay);tick('rush');if(firstOk){tick('clean');if(d.k==='predict')tick('predict');if(d.k==='fix')tick('fix')}
+  const m=$('jmsg');if(m){m.className='msg ok';m.textContent='Paid '+pay+' fr: '+base+' base'+(clean?' + '+clean+' clean':'')+(tip?' + '+tip+' tip':'')+(cb?' + '+cb+' combo':'')+'.'}
+ });
+ const g=$('jgauge'),sec=$('jsec');
+ const draw=()=>{if(RJ.i!==job||RJ.paid[job]||RJ.lost[job]){clearInterval(rushTick);return}
+  let left=RJ.dl[job]-Date.now();
+  if(left<=0&&RJ.spare>0){RJ.spare--;RJ.dl[job]=Date.now()+tot/2;left=tot/2;comms('The night porter brings them tea. Half their patience back.','worry');const m=$('jmsg');if(m){m.className='msg';m.textContent='Night porter: tea served, half their patience back.'}}
+  if(left<=0){lost();return}
+  const f=left/tot;g.querySelector('i').style.width=Math.round(100*f)+'%';g.className='gauge '+(f>.5?'hi':f>.25?'mid':'lo');sec.textContent=Math.ceil(left/1000)+' s'};
+ const lost=()=>{clearInterval(rushTick);RJ.lost[job]=true;RJ.combo=0;sfx.bad();g.querySelector('i').style.width='0%';g.className='gauge lo';sec.textContent='0 s';
+  box.querySelectorAll('button,input,textarea').forEach(e=>{if(e.id!=='showles')e.disabled=true});
+  const ans=d.k==='pick'?d.o[d.a]:d.k==='predict'?d.a:d.ans;
+  const m=$('jmsg');m.className='msg err';m.innerHTML='The passenger gave up and left. The answer was:<pre>'+esc(ans)+'</pre><div class="drow"><button class="pri" id="jnext">'+(job+1<RJ.list.length?'Next passenger':'End rush hour')+'</button></div>';
+  $('jnext').onclick=next;$('jnext').focus()};
+ draw();rushTick=setInterval(draw,200);
+}
+
+function go(v){if(v!==S.stage)sfx.click();if(v!=='rush')clearInterval(rushTick);S.stage=v;save();render()}
+function render(){
+ if(!THEMES().includes(S.theme))S.theme='night';
+ document.body.dataset.theme=S.theme;$('theme').textContent=TNAME[S.theme];
+ document.querySelector('meta[name=theme-color]').setAttribute('content',{night:'#14243e',midnight:'#0a1220'}[S.theme]);
+ $('mute').textContent=S.sfx?'Sound':'Muted';
+ document.querySelectorAll('#modeseg button').forEach(b=>b.classList.toggle('on',b.dataset.mode===S.mode));
+ document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+S.stage));
+ document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage||(S.stage==='rush'&&b.dataset.v==='port'));if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
+ const sel=$('tsel');sel.innerHTML='';const mx=maxT();
+ TARGETS.forEach((tg,i)=>{const o=document.createElement('option');o.value=i;o.textContent='Journey '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>mx&&!S.done[tg.id];sel.appendChild(o)});sel.value=S.t;
+ updDue();updPort();
+ if(S.stage!=='rush')clearInterval(rushTick);
+ if(S.stage==='school')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='hangar')renderHangar();else if(S.stage==='logbook')renderLogbook();else if(S.stage==='port')renderPort();else if(S.stage==='rush')renderRush();else renderReview();
+}
+
+function lessonHtml(r,compact){
+ const R=RULES[r],L=LESSONS[r];
+ return '<div class="dk">Rule '+R.n+' · '+esc(R.cat)+'</div><h2 class="lt">'+esc(R.title)+'</h2>'+
+  '<div class="syn">'+R.syn+'</div><p class="why">'+esc(L.why)+'</p>'+
+  '<div class="sec"><small>Anatomy</small><div class="parts">'+L.parts.map(p=>'<code>'+esc(p[0])+'</code><span>'+esc(p[1])+'</span>').join('')+'</div></div>'+
+  '<div class="sec"><small>Example</small><pre class="code">'+hlPy(R.ex)+'</pre><div class="runrow"><button class="runex" data-code="'+esc(R.ex)+'">Run example</button></div></div>'+
+  '<div class="sec warn"><small>Watch out</small><ul>'+L.mistakes.map(m=>'<li>'+esc(m)+'</li>').join('')+'</ul></div>'+
+  (compact?'':'<div class="sec"><small>Play: change something and run it</small><textarea class="play" id="play" spellcheck="false">'+esc(L.ex2)+'</textarea><div class="runrow"><button id="playrun">Run · Ctrl+Enter</button></div></div>');
+}
+async function runTo(conEl,statEl,code,label){
+ conEl.innerHTML='<span class="cmd">$ python '+esc(label||'example.py')+'</span>\n';statEl.textContent='Running…';
+ const r=await PY.run(code);
+ if(r.offline){conEl.innerHTML+='<span class="er">The Python engine is not available. Open Sleeple over http(s) with an internet connection.</span>';statEl.textContent='No engine';return r}
+ if(r.timeout){conEl.innerHTML+='<span class="er">Stopped after 4 seconds. Is there a loop that never ends?</span>';statEl.textContent='Timed out';return r}
+ conEl.innerHTML+=esc(r.out);
+ const e=parseErr(r.err);
+ if(e){conEl.innerHTML+='<span class="er">'+(e.line?'Line '+e.line+': ':'')+esc(e.msg)+'</span>'+(e.why?'<span class="why">'+esc(e.why)+'</span>':'');statEl.textContent=e.kind}
+ else statEl.textContent=lines(r.out).length+' line'+(lines(r.out).length===1?'':'s')+' of output';
+ return r;
+}
+function bindRunEx(scope,con,stat){
+ scope.querySelectorAll('.runex').forEach(b=>b.onclick=()=>{sfx.click();runTo(con,stat,b.dataset.code)});
+ const p=scope.querySelector('#play'),pr=scope.querySelector('#playrun');
+ if(p&&pr){pr.onclick=()=>{sfx.click();runTo(con,stat,p.value,'play.py')};edKeys(p,()=>pr.click())}
+}
+function edKeys(ta,onRun){
+ ta.addEventListener('keydown',e=>{
+  if((e.ctrlKey||e.metaKey)&&e.key==='Enter'){e.preventDefault();onRun();return}
+  if(e.key==='Tab'){e.preventDefault();const s=ta.selectionStart,en=ta.selectionEnd;
+   if(e.shiftKey){const ls=ta.value.lastIndexOf('\n',s-1)+1;if(ta.value.slice(ls,ls+4)==='    '){ta.setRangeText('',ls,ls+4,'end');ta.selectionStart=ta.selectionEnd=Math.max(ls,s-4)}}
+   else ta.setRangeText('    ',s,en,'end');
+   ta.dispatchEvent(new Event('input'));return}
+  if(e.key==='Enter'&&!e.shiftKey){const s=ta.selectionStart,ls=ta.value.lastIndexOf('\n',s-1)+1,cur=ta.value.slice(ls,s);let ind=(cur.match(/^[ \t]*/)||[''])[0];if(/:\s*$/.test(cur))ind+='    ';e.preventDefault();ta.setRangeText('\n'+ind,s,ta.selectionEnd,'end');ta.dispatchEvent(new Event('input'))}
+ });
+}
+
+let curDrill=null;
+function renderSchool(){
+ const seq=seqFor(S.t),id=T().id;let i=S.les[id]||0;
+ $('pips').innerHTML=seq.map((x,k)=>'<span class="'+(x.les?'les ':'')+(k<i?'ok':k===i?'now':'')+'"></span>').join('');
+ const box=$('dbox'),con=$('sout'),stat=$('sstat');
+ if(i>=seq.length){
+  $('dtitle').textContent='School · '+T().name;
+  box.innerHTML='<div class="donecard">'+stArt(T().car,'scene')+'<div class="dk">School done · next stop '+esc(T().car.stn)+'</div><h2>Ready for the journey</h2><p class="why">You covered '+T().rules.map(r=>RULES[r].title.toLowerCase()).join(', ')+'. Now use it for real: '+esc(T().client)+' is waiting for the '+esc(T().name.toLowerCase())+'.</p><div class="drow"><button id="again">Do the drills again</button><button class="pri" id="tocontract">Board the train</button></div></div>';
+  $('again').onclick=()=>{S.les[id]=0;save();render()};$('tocontract').onclick=()=>go('target');
+  return;
+ }
+ const it=seq[i];
+ if(it.les){
+  $('dtitle').textContent='Lesson · '+RULES[it.les].title;
+  box.innerHTML=lessonHtml(it.les)+'<div class="drow"><button class="pri" id="lnext">Got it · drills next</button></div>';
+  bindRunEx(box,con,stat);
+  $('lnext').onclick=()=>{learn(it.les);S.les[id]=i+1;save();sfx.step();render()};
+  if(!con.textContent)runTo(con,stat,RULES[it.les].ex);
+  return;
+ }
+ const d=it.drill,n=seq.filter(x=>x.drill&&x.drill.r===d.r).findIndex(x=>x.drill===d)+1,of=seq.filter(x=>x.drill&&x.drill.r===d.r).length;
+ $('dtitle').textContent='Drill '+n+' of '+of+' · rule '+RULES[d.r].n;
+ drillUI(box,con,stat,d,ok=>{srsMark(d,ok);credit(d,ok,'school');S.les[id]=i+1;save();render()});
+}
+
+const KIND={pick:'Pick one',type:'Write it',predict:'Predict the output',fix:'Fix the bug'};
+function drillUI(box,con,stat,d,done,onRight){
+ ['dbox','rbox','jbox'].forEach(k=>{const b=$(k);if(b&&b!==box)b.innerHTML=''});
+ curDrill=d;let tries=0,firstOk=true;
+ const multi=d.k==='predict'||d.k==='fix'||d.multi||String(d.ans||'').includes('\n');
+ let h='<div class="rstrip"><span class="tagn">RULE '+RULES[d.r].n+'</span><b>'+esc(RULES[d.r].title)+'</b><button id="showles">Lesson</button></div><div id="lesbox" hidden></div>';
+ h+='<div class="dk">'+KIND[d.k]+'</div><div class="dq">'+md(d.q)+'</div>';
+ if(d.code)h+='<pre class="code">'+hlPy(d.code)+'</pre>';
+ if(d.pre&&d.k==='type')h+='<pre class="code">'+hlPy(d.pre)+'</pre>';
+ if(d.k==='pick')h+='<div class="opts">'+d.o.map((o,k)=>'<button data-k="'+k+'">'+esc(o)+'</button>').join('')+'</div>';
+ else if(multi)h+='<textarea class="ans" id="ans" spellcheck="false" placeholder="'+esc(d.k==='predict'?'Type the output exactly, one line per line':d.ph||'')+'">'+(d.k==='fix'?esc(d.bug):'')+'</textarea>';
+ else h+='<input class="ans" id="ans" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="'+esc(d.ph||'')+'">';
+ h+='<div class="fb" id="fb"></div><div class="drow"><button id="reveal" hidden>Show answer</button>'+(d.k==='pick'?'':'<button class="pri" id="chk">Check · '+(multi?'Ctrl+Enter':'Enter')+'</button>')+'<button class="pri" id="nxt" hidden>Next</button></div>';
+ box.innerHTML=h;
+ $('showles').onclick=()=>{const lb=$('lesbox');lb.hidden=!lb.hidden;if(!lb.hidden){lb.innerHTML='<div class="sec">'+lessonHtml(d.r,true)+'</div>';bindRunEx(lb,con,stat)}};
+ con.innerHTML='';stat.textContent=d.k==='pick'?'Pick an answer.':'Your answer runs here when you check it.';
+ const fb=$('fb'),nxt=$('nxt');
+ const finish=ok=>{nxt.hidden=false;const c=$('chk');if(c)c.hidden=true;$('reveal').hidden=true;nxt.focus();nxt.onclick=()=>done(firstOk)};
+ const wrong=msg=>{tries++;firstOk=false;sfx.bad();fb.className='fb err';fb.innerHTML=md(msg||'Not yet.')+(d.h?' '+md(d.h):'');if(tries>=2)$('reveal').hidden=false};
+ const right=()=>{sfx.ok();fb.className='fb ok';fb.textContent=firstOk?'Correct.':'Correct now. This one comes back in Review soon.';if(onRight)onRight(firstOk);finish(true)};
+ $('reveal').onclick=()=>{firstOk=false;const a=$('ans');if(d.k==='pick'){}else if(a){a.value=d.k==='predict'?d.a:d.ans}fb.className='fb';fb.innerHTML='The answer is filled in. Read it, then check it.';$('reveal').hidden=true};
+ if(d.k==='pick'){
+  box.querySelectorAll('.opts button').forEach(b=>b.onclick=()=>{if(!nxt.hidden)return;const k=+b.dataset.k;if(k===d.a){b.classList.add('good');right()}else{b.classList.add('bad');b.disabled=true;wrong('Not that one.')}});
+  return;
+ }
+ const a=$('ans');a.focus();
+ const check=async()=>{
+  if(!nxt.hidden)return;const v=a.value;if(!v.trim()){fb.className='fb err';fb.textContent='Type an answer first.';return}
+  if(d.k==='predict'){
+   runTo(con,stat,d.code,'predict.py');
+   if(normOut(v)===normOut(d.a))right();else wrong('That is not what Python prints.');return}
+  const code=d.k==='fix'?v:[d.pre,v,d.post].filter(Boolean).join('\n');
+  if(d.test&&d.k==='type'&&!d.test.test(v.trim())){runTo(con,stat,code,'answer.py');wrong('Close, but write it the way the question asks.');return}
+  const want=d.out;
+  if(want!=null){
+   const r=await runTo(con,stat,code,'answer.py');
+   if(r.offline||r.timeout){if(normCode(code)===normCode(d.k==='fix'?d.ans:[d.pre,d.ans,d.post].filter(Boolean).join('\n')))right();else wrong(r.timeout?'Your code never finished.':'');return}
+   if(!parseErr(r.err)&&normOut(r.out)===normOut(want))right();else wrong(parseErr(r.err)?'Python stopped with an error.':'The output does not match yet.');return}
+  if(normCode(v)===normCode(d.ans))right();else wrong();
+ };
+ $('chk').onclick=check;
+ if(multi)edKeys(a,check);else a.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();check()}});
+}
+
+let runT=null,lastRun={out:'',err:''},runGen=0;
+function edCode(){return $('ed').value}
+function paint(){
+ const ed=$('ed'),v=ed.value;$('hl').innerHTML=hlPy(v)+'\n ';
+ $('gut').textContent=Array.from({length:v.split('\n').length},(_,i)=>i+1).join('\n')+'\n ';
+ syncScroll();
+}
+function syncScroll(){const ed=$('ed');$('hl').scrollTop=ed.scrollTop;$('hl').scrollLeft=ed.scrollLeft;$('gut').scrollTop=ed.scrollTop}
+function starterFor(t){return S.mode==='master'?'':TARGETS[t].starter}
+let shownT=-1;
+function renderTarget(){
+ const t=T(),id=t.id;
+ $('tname').textContent=t.name;$('tcount').textContent='Journey '+(S.t+1)+' / '+TARGETS.length;
+ $('stop').innerHTML=stArt(t.car)+'<span>Next stop<b>'+esc(t.car.stn)+'</b></span>';
+ const pay=payFor(S.t),mb=Math.round(pay*.6);
+ $('contract').innerHTML='<div class="who"><span>'+esc(t.client)+'</span><span>'+esc(t.time)+'</span></div><p>'+esc(t.order)+'</p><div class="pay" title="Mastery bonus: switch to Mastery, press Reset and write it from an empty file"><span'+(S.done[id]?' class="got"':'')+'>Pays <b>'+pay+' fr</b>'+(S.done[id]?' ✓':'')+'</span><span'+(S.mastered[id]?' class="got"':'')+'>Mastery bonus <b>'+mb+' fr</b>'+(S.mastered[id]?' ✓':' · empty file')+'</span></div>';
+ $('ticket').innerHTML='<span class="hd"><span>'+esc(t.name.toUpperCase())+'</span><em>'+esc(t.car.reg)+' · '+esc(t.time)+'</em></span>'+esc(t.out);
+ $('fname').textContent=id+'.py';
+ if(shownT!==S.t){shownT=S.t;if(S.code[id]==null)S.mstart[id]=S.mode==='master';$('ed').value=S.code[id]!=null?S.code[id]:starterFor(S.t);paint();$('dockmsg').classList.remove('on');lastRun={out:'',err:''};drawOut();drawSteps();if(PY.ready)runNow()}
+ else{drawOut();drawSteps()}
+}
+function stepState(){const t=T(),x=S.x[t.id]||{},code=edCode();return t.steps.map(s=>{try{return!!s.c(code,lastRun.err?'':lastRun.out,x)}catch(e){return false}})}
+function drawSteps(){
+ const t=T(),st=stepState(),now=st.indexOf(false);
+ $('steps').innerHTML=t.steps.map((s,i)=>'<li class="'+(st[i]?'ok':i===now?'now':'')+'"><span class="n">'+(st[i]?'✓':i+1)+'</span><span>'+md(s.t)+'</span></li>').join('');
+ const prev=S.stepsOk[t.id]||0,cnt=st.filter(Boolean).length;
+ if(cnt>prev&&lastRun.ran){sfx.step();S.stepsOk[t.id]=cnt;save()}
+ drawHelp(now);
+ return st;
+}
+function drawHelp(now){
+ const t=T(),lad=$('ladder');
+ if(now<0){$('hstep').textContent='all steps';lad.innerHTML='<div class="idle">'+noxArt('happy')+'<span>Every step is done. Check that your output matches the ticket exactly.</span></div>';$('stuck').disabled=true;return}
+ const s=t.steps[now],key=t.id+':'+now,lv=S.help[key]||0;
+ $('hstep').textContent='step '+(now+1);
+ const names=['Nudge','Hint','Similar example','Answer'];
+ if(!lv)lad.innerHTML='<div class="idle">'+noxArt('timetable')+'<span>Try it yourself first. Stuck? I help in four levels, from a small nudge to the full answer.</span></div>';
+ else lad.innerHTML=s.help.slice(0,lv).map((x,k)=>'<div class="rung'+(k===3?' ans':'')+'"><small>'+(k+1)+' · '+names[k]+'</small>'+(k>=2?'<pre>'+esc(x)+'</pre>':md(x))+'</div>').join('');
+ lad.scrollTop=lad.scrollHeight;
+ const b=$('stuck');b.disabled=lv>=4;b.textContent=lv?lv>=4?'That is the answer':'Still stuck':'I\'m stuck';
+}
+function drawOut(){
+ const t=T(),want=lines(t.out),r=lastRun,el=$('outl');
+ if(!r.ran){el.innerHTML='<div class="gh">Run your program to see its output here.</div>';setMeter(0);return}
+ if(r.offline){el.innerHTML='<div class="er">The Python engine is not available. Open Sleeple over http(s) with an internet connection.</div>';setMeter(0);return}
+ if(r.timeout){el.innerHTML='<div class="er">Stopped after 4 seconds. Is there a loop that never ends?</div>';setMeter(0);return}
+ const got=lines(r.out),e=parseErr(r.err);let h='',match=0;
+ const n=Math.max(got.length,want.length);
+ for(let i=0;i<n;i++){
+  if(i<got.length){const ok=i<want.length&&got[i]===want[i];if(ok)match++;h+='<div class="'+(ok?'m':i<want.length?'x':'ex')+'">'+(esc(got[i])||' ')+'</div>'}
+  else if(!e)h+='<div class="gh">'+esc(want[i])+'</div>';
+ }
+ if(e)h+='<div class="er">'+(e.line?'Line '+e.line+': ':'')+esc(e.msg)+'</div>'+(e.why?'<div class="hint">'+esc(e.why)+'</div>':'');
+ if(!h)h='<div class="gh">No output yet. Every line on the ticket comes from a print().</div>';
+ el.innerHTML=h;setMeter(want.length?Math.round(100*match/want.length):0);
+}
+function setMeter(p){$('meter').querySelector('i').style.width=p+'%';$('meter').querySelector('b').textContent=p+'%'}
+async function runNow(){
+ if(S.stage!=='target')return;
+ const gen=++runGen,code=edCode(),t=T();
+ $('scan').className='';$('scan').textContent='Running…';
+ const r=await PY.run(code);
+ if(gen!==runGen||S.stage!=='target')return;
+ lastRun=Object.assign({ran:true},r);
+ if(t.watch&&!r.err){const x=S.x[t.id]=S.x[t.id]||{};Object.keys(t.watch).forEach(k=>{if(lines(r.out).includes(t.watch[k]))x[k]=1});save()}
+ drawOut();const st=drawSteps();
+ const e=parseErr(r.err),sc=$('scan');
+ if(r.offline){sc.className='er';sc.textContent='No Python engine: open Sleeple over http(s) with an internet connection.';return}
+ if(r.timeout){sc.className='er';sc.textContent='Timed out after 4 seconds.';return}
+ if(e){sc.className='er';sc.textContent=(e.line?'Line '+e.line+': ':'')+e.msg;comms(e.why||e.msg,'worry');return}
+ const all=st.every(Boolean)&&normOut(r.out)===normOut(t.out);
+ sc.className=all?'ok':'';sc.textContent=all?'Ticket matches. Arrived.':st.filter(Boolean).length+' of '+st.length+' steps done';
+ if(all)docked();
+}
+function docked(){
+ const t=T(),first=!S.done[t.id];
+ S.done[t.id]=true;S.docked[t.id]=S.docked[t.id]||Date.now();t.rules.forEach(learn);save();
+ const pay=payFor(S.t);let paid=0;
+ if(first){paid+=pay;tick('dock')}
+ if(S.mode==='master'&&S.mstart[t.id]&&!S.mastered[t.id]){S.mastered[t.id]=Date.now();paid+=Math.round(pay*.6);tick('master');if(!first)sfx.dock()}
+ if(paid){earn(paid);renderTarget()}
+ $('dockimg').innerHTML=carArt(t.car);$('dockline').textContent=t.car.name+' ('+t.car.cls.toLowerCase()+') is coupled to your train at '+t.car.stn+'.'+(paid?' Paid '+paid+' fr.':'');
+ $('dockmsg').classList.add('on');$('nextc').hidden=S.t>=TARGETS.length-1;
+ if(first){sfx.dock();comms(t.car.name+' joins the train. '+t.client+' is happy.','happy');render()}
+}
+function scheduleRun(){clearTimeout(runT);runT=setTimeout(runNow,650)}
+
+function trainOrder(){const ids=TARGETS.filter(t=>S.done[t.id]);const obs=ids.filter(t=>t.car.img==='observation');return ids.filter(t=>t.car.img!=='observation').concat(obs)}
+function renderHangar(){
+ const done=TARGETS.filter(t=>S.done[t.id]).length;
+ $('hstats').innerHTML='<div>Carriages<b>'+done+' / '+TARGETS.length+'</b></div><div>Fares<b>'+fmt(S.cr)+' fr</b></div><div>Rules learned<b>'+S.learned.length+' / '+Object.keys(RULES).length+'</b></div><div>Due for review<b>'+dueList().length+'</b></div><div class="sp"><button id="hgo" class="pri">'+(done>=TARGETS.length?'Review':'Next journey')+'</button></div>';
+ $('hgo').onclick=()=>{if(done>=TARGETS.length){go('review');return}S.t=maxT();save();go(schoolDone(S.t)?'target':'school')};
+ const tr=trainOrder(),rail=$('rail'),key=tr.map(t=>t.id).join(',');
+ if(rail.dataset.k!==key){rail.dataset.k=key;rail.innerHTML=tr.length?tr.map(t=>carArt(t.car)).join(''):'';const dur=36+tr.length*6;rail.style.animationDuration=dur+'s';rail.style.animationDelay=(-dur*.42)+'s'}
+ let em=$('yard').querySelector('.empty');if(!tr.length){if(!em){em=document.createElement('div');em.className='empty';$('yard').appendChild(em)}em.textContent='The rails are empty. Finish your first journey and the locomotive arrives.'}else if(em)em.remove();
+ const fresh=Object.keys(S.docked).filter(k=>Date.now()-S.docked[k]<4000);
+ $('bays').innerHTML=TARGETS.map((t,i)=>{const d=!!S.done[t.id],open=i<=maxT();
+  return '<button class="bay '+(d?'docked':open?'open':'locked')+(fresh.includes(t.id)?' fresh':'')+'" data-i="'+i+'"><div class="bn"><span>Car '+String(i+1).padStart(2,'0')+'</span><em>'+(d?'coupled':open?'next stop':'locked')+'</em></div><div class="art">'+carArt(t.car,!d)+'</div><div class="meta"><b>'+(d?esc(t.car.name):'· · ·')+'</b><small>'+esc(t.car.cls)+' · '+esc(t.car.stn)+' · '+esc(t.name)+'</small></div></button>'}).join('');
+ document.querySelectorAll('.bay').forEach(b=>b.onclick=()=>{const i=+b.dataset.i,t=TARGETS[i];sfx.click();if(S.done[t.id])openViewer(i);else if(i<=maxT()){S.t=i;save();go(schoolDone(i)?'target':'school')}else toast('Finish the journeys before this one first')});
+}
+async function openViewer(i){
+ const t=TARGETS[i],code=S.code[t.id]||t.solution;
+ $('vname').textContent=t.car.name+' · '+t.car.cls+' · '+t.car.stn;
+ $('vbody').innerHTML='<div class="vart">'+stArt(t.car,'st')+carArt(t.car)+'</div><pre>'+hlPy(code)+'</pre><pre id="vout">'+esc(t.out)+'</pre>';
+ $('viewer').classList.add('on');
+ $('vrebuild').onclick=()=>{$('viewer').classList.remove('on');S.t=i;save();go('target')};
+}
+
+function renderLogbook(){
+ const keys=Object.keys(RULES);
+ $('lcount').textContent=S.learned.length+' of '+keys.length+' rules learned · run any example';
+ $('lgrid').innerHTML=keys.map(r=>{const R=RULES[r],lk=!S.learned.includes(r);
+  return '<div class="rcard'+(lk?' locked':'')+'"><div class="rh"><span class="tagn">RULE '+R.n+'</span><h3>'+esc(R.title)+'</h3><span class="cat">'+esc(R.cat)+'</span></div>'+
+  (lk?'<p>Learned on journey '+(R.t+1)+': '+esc(TARGETS[R.t].name)+'.</p>':'<div class="syn">'+R.syn+'</div><p>'+esc(R.note)+'</p><div class="rex"><pre>'+hlPy(R.ex)+'</pre><pre class="rout" data-r="'+r+'">Run to see the output</pre></div><div><button class="lrun" data-r="'+r+'">Run</button></div>')+'</div>'}).join('');
+ document.querySelectorAll('.lrun').forEach(b=>b.onclick=async()=>{sfx.click();const r=b.dataset.r,el=document.querySelector('.rout[data-r="'+r+'"]');el.textContent='Running…';const x=await PY.run(RULES[r].ex);const e=parseErr(x.err);el.textContent=x.offline?'No Python engine available.':x.timeout?'Timed out.':(x.out+(e?e.msg:'')).replace(/\n$/,'')});
+}
+
+let RQ=null;
+function renderReview(){
+ const box=$('rbox'),con=$('rout'),stat=$('rstat');
+ if(!RQ||RQ.done){
+  const due=dueList().sort((a,b)=>S.srs[dkey(a)].due-S.srs[dkey(b)].due).slice(0,20);
+  if(!due.length){
+   $('rtitle').textContent='Review';$('rpips').innerHTML='';
+   box.innerHTML='<div class="donecard">'+(S.learned.length?'<img class="nox" src="'+IMG+'nox-sleep.webp" alt="Nox asleep">':'')+'<div class="dk">Review</div><h2>'+(S.learned.length?'All caught up':'Nothing to review yet')+'</h2><p class="why">'+(S.learned.length?'Drills come back here on a schedule: tomorrow, then after 3, 7, 14 and 30 days. Miss one and it starts over.':'Finish a lesson in School and its drills start coming back here.')+'</p>'+(S.learned.length?'<div class="drow"><button class="pri" id="extra">Practice 5 random drills</button></div>':'')+'</div>';
+   const x=$('extra');if(x)x.onclick=()=>{const pool=DRILLS.filter(d=>S.learned.includes(d.r)).sort(()=>Math.random()-.5).slice(0,5);RQ={list:pool,i:0,ok:0,done:false};renderReview()};
+   return}
+  RQ={list:due,i:0,ok:0,done:false};
+ }
+ $('rpips').innerHTML=RQ.list.map((x,k)=>'<span class="'+(k<RQ.i?'ok':k===RQ.i?'now':'')+'"></span>').join('');
+ if(RQ.i>=RQ.list.length){
+  RQ.done=true;$('rtitle').textContent='Review done';
+  box.innerHTML='<div class="donecard"><div class="dk">Review</div><h2>'+RQ.ok+' of '+RQ.list.length+' right first time</h2><p class="why">The ones you missed come back tomorrow. The rest wait longer each time you get them right.</p><div class="drow"><button class="pri" id="rback">Back to the depot</button></div></div>';
+  $('rback').onclick=()=>go('hangar');updDue();return}
+ const d=RQ.list[RQ.i];$('rtitle').textContent='Review · '+(RQ.i+1)+' of '+RQ.list.length;
+ drillUI(box,con,stat,d,ok=>{srsMark(d,ok);credit(d,ok,'review');if(ok)RQ.ok++;RQ.i++;renderReview()});
+}
+
+$('ed').addEventListener('input',()=>{paint();S.code[T().id]=$('ed').value;save();$('dockmsg').classList.remove('on');scheduleRun()});
+$('ed').addEventListener('scroll',syncScroll);
+edKeys($('ed'),()=>{clearTimeout(runT);runNow()});
+$('run').onclick=()=>{sfx.click();clearTimeout(runT);runNow();$('ed').focus()};
+let resetArm=false;$('reset').onclick=e=>{if(!resetArm){resetArm=true;e.target.textContent='Sure?';setTimeout(()=>{resetArm=false;e.target.textContent='Reset'},2200);return}resetArm=false;e.target.textContent='Reset';S.mstart[T().id]=S.mode==='master';$('ed').value=starterFor(S.t);S.code[T().id]=$('ed').value;save();paint();runNow()};
+$('stuck').onclick=()=>{const st=stepState(),now=st.indexOf(false);if(now<0)return;const key=T().id+':'+now;S.help[key]=Math.min(4,(S.help[key]||0)+1);save();sfx.click();drawHelp(now)};
+$('nextc').onclick=()=>{if(S.t<TARGETS.length-1){S.t++;save();go(schoolDone(S.t)?'target':'school')}};
+$('tohangar').onclick=()=>go('hangar');
+$('tsel').onchange=e=>{S.t=+e.target.value;save();go(schoolDone(S.t)?S.stage:'school')};
+document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{if(b.dataset.v==='review')RQ=null;go(b.dataset.v)});
+$('theme').onclick=()=>{const th=THEMES();S.theme=th[(th.indexOf(S.theme)+1)%th.length];save();render()};
+$('mute').onclick=()=>{S.sfx=!S.sfx;save();render()};
+document.querySelectorAll('#modeseg button').forEach(b=>b.onclick=()=>{S.mode=b.dataset.mode;save();render();toast(S.mode==='master'?'Mastery: Reset starts from an empty file':'Learning: Reset gives you the starter')});
+$('home').onclick=()=>{const t=T(),code=S.code[t.id]!=null?S.code[t.id]:starterFor(S.t),a=document.createElement('a');a.href=URL.createObjectURL(new Blob([code],{type:'text/x-python'}));a.download=t.id+'.py';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000);comms('Saved '+t.id+'.py. Run it at home with: python3 '+t.id+'.py')};
+$('vclose').onclick=()=>$('viewer').classList.remove('on');
+$('viewer').addEventListener('click',e=>{if(e.target.id==='viewer')$('viewer').classList.remove('on')});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')$('viewer').classList.remove('on')});
+function applyHash(){const h=decodeURIComponent(location.hash.slice(1));if(!h)return;const m=h.match(/^target:(\w+)$/);if(m){const i=TARGETS.findIndex(t=>t.id===m[1]);if(i>=0&&i<=maxT()){S.t=i;go('target')}}else if(['school','target','hangar','port','logbook','review'].includes(h)){if(h==='review')RQ=null;go(h)}try{window.history.replaceState(null,'',location.pathname)}catch(e){}}
+window.addEventListener('hashchange',applyHash);
+window.addEventListener('pagehide',()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}});
+if(S.t>maxT()&&!S.done[TARGETS[S.t].id])S.t=maxT();
+comms(S.learned.length?'Welcome back. The lamps are lit.':'Good evening. I am Nox, your conductor. Journeys come in, you write the Python, carriages join your train.');
+PY.boot();
+render();
+applyHash();
+</script>
+</body>
+</html>

@@ -30,14 +30,14 @@ const LABS_CONFIG = [
     glyph: '<path d="M2.5 5l3 3-3 3"/><path d="M7.5 11.5h6"/>'
   },
     {
-    id: "dockle",
-    name: "Dockle",
+    id: "sleeple",
+    name: "Sleeple",
     tag: "Code",
-    sub: "python · cargo",
-    path: "labs/dockle.html",
+    sub: "python · night train",
+    path: "labs/sleeple.html",
     ring: "ring-outer",
     angle: 300,
-    glyph: '<path d="M2 5.5l6-3 6 3v5l-6 3-6-3z"/><path d="M2 5.5l6 3 6-3M8 8.5v5"/>'
+    glyph: '<rect x="2" y="4" width="12" height="7" rx="1.5"/><path d="M4.5 7h2M9.5 7h2M1 14h14M5 11v1.5M11 11v1.5"/>'
   },
   {
     id: "git-lab",
