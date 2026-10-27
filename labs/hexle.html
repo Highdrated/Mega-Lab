@@ -2575,7 +2575,7 @@ function reviewCode(code,css,js){
   for(const m of code.matchAll(/<img\b(?![^>]*\balt=)[^>]*>/gi))add('fix',H,lineOf(code,m.index),'Image without alt text. Describe it, or write alt="" if it is only decoration.','alt');
   {const tt=[...code.matchAll(/<title[\s>]/gi)];if(tt.length>1)add('fix',H,lineOf(code,tt[1].index),'A second <title>. A page has one title; the browser only uses the first. Delete the extra one.')}
   for(const m of code.matchAll(/<img\b[^>]*\balt=["']([^"'\s]{3,})["'][^>]*>/gi))add('tip',H,lineOf(code,m.index),'alt="'+m[1]+'" works. A short phrase says even more to a screen reader: what is in the picture?','alt');
-  if(adv)for(const m of code.matchAll(/\sstyle="[^"]*"/gi))add('fix',H,lineOf(code,m.index),'Inline style. Give the element a class and move the look to the stylesheet.','inline');
+  if(!(tg.rules||[]).some(r=>r==='r7'||r==='r8'))for(const m of code.matchAll(/\sstyle="[^"]*"/gi))add('fix',H,lineOf(code,m.index),'Inline style. Give the element a class and move the look to the stylesheet.','inline');
   const hm1=code.match(/<html(?![^>]*\blang=)[^>]*>/i);if(hm1)add('fix',H,lineOf(code,hm1.index),'<html> has no lang attribute: add lang="en".','lang');
   if(/<head[\s>]/i.test(code)&&!/<meta[^>]*charset=/i.test(code)){const i=code.search(/<head[\s>]/i);add('fix',H,lineOf(code,i),'No <meta charset="UTF-8"> in the head: letters like é can break.','charset')}
   if(L('r14')&&/<head[\s>]/i.test(code)&&!/<meta[^>]*name=["']viewport["']/i.test(code)){const i=code.search(/<\/head>/i);add('tip',H,i<0?1:lineOf(code,i),'Add <meta name="viewport" content="width=device-width, initial-scale=1"> so phones show the page at the right size.','viewport')}
