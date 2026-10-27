@@ -186,6 +186,9 @@ select{font:inherit;font-weight:600;border:1px solid var(--line);background:var(
 .modal.on{display:grid;animation:fadeIn .25s both}
 @keyframes fadeIn{from{opacity:0}}
 .mbox{width:min(760px,92vw);max-height:84vh;overflow:auto;background:var(--sheet);border-radius:18px;padding:26px;animation:fadeUp .35s var(--ease) both}
+.mbox{position:relative}
+.mx{position:sticky;top:0;float:right;margin:-8px -8px 0 12px;width:38px;height:38px;border-radius:50%;border:1px solid var(--line2);background:var(--sheet);color:var(--ink);font-size:16px;cursor:pointer;z-index:3;box-shadow:0 6px 18px -10px rgba(0,0,0,.4)}
+.mx:hover{background:var(--ink);color:var(--sheet)}
 .mbox h3{font-family:var(--serif);font-weight:400;font-size:32px;margin:0 0 10px}
 .mbox pre{font:12.5px/1.6 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;overflow:auto;margin:6px 0 16px}
 .mbox .fn{font-family:var(--mono);font-size:12px;color:var(--ink3)}
@@ -306,6 +309,31 @@ select{font:inherit;font-weight:600;border:1px solid var(--line);background:var(
 .chdl{display:grid;grid-template-columns:120px 1fr;gap:8px 12px;font-size:13px;margin:0}
 .chdl dt{color:var(--ink3)}.chdl dd{margin:0;line-height:1.5}
 @media (max-width:600px){.chmaster{grid-template-columns:1fr}.chmaster span{display:none}.chdl{grid-template-columns:1fr}}
+.readm{background:var(--sheet);border:1px dashed var(--line2);border-radius:14px;padding:12px 14px;margin:0 0 14px;display:flex;flex-direction:column;gap:10px}
+.readm.done{flex-direction:row;align-items:center;gap:10px;border-style:solid;font-size:12.5px;color:var(--ink2);padding:9px 12px}
+.readm.done div{flex:1}
+.rmq{display:flex;flex-direction:column;gap:6px}
+.rmq>span{font-size:12.5px;font-weight:600}
+.rmq.ok>span::after{content:" ✓";color:var(--ok)}
+.chip.good{background:var(--ok);border-color:var(--ok);color:#fff}
+.chip.bad{opacity:.35;text-decoration:line-through}
+.rmfb{font-size:12.5px;color:var(--ink);line-height:1.5}
+.mynote{width:100%;min-height:74px;resize:vertical;font:13px/1.5 var(--sans,inherit);border:1px solid var(--line);border-radius:12px;padding:10px 12px;background:var(--sheet);color:var(--ink)}
+.mynote:focus{outline:2px solid var(--acc);outline-offset:1px}
+.frwrap{max-width:820px;display:flex;flex-direction:column;gap:14px}
+.frcard{display:flex;gap:14px;align-items:flex-start;background:var(--sheet);border:1px solid var(--line);border-radius:18px;padding:18px 20px}
+.frcard h3{font-family:var(--serif);font-weight:400;font-size:34px;margin:4px 0}
+.frcard .chn{width:42px;height:42px;font-size:22px}
+.frwrap .pat{width:100%;min-height:220px;font:13px/1.6 var(--mono);padding:12px 14px;border:1px solid var(--line2);border-radius:12px;outline:none;background:var(--sheet);color:var(--ink);resize:vertical;tab-size:2}
+.frwrap .pat:focus{border-color:var(--acc)}
+.frwrap .dfb pre{font:12px/1.55 var(--mono);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px;margin:8px 0 0}
+.frdots{display:flex;flex-wrap:wrap;gap:14px;font-size:12px;color:var(--acc);letter-spacing:2px}
+.frdots b{color:var(--ink);margin-right:4px;letter-spacing:0}
+.chnotes{display:flex;flex-direction:column;gap:8px}
+.chnote2{text-align:left;font:inherit;color:inherit;background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:12px 14px;cursor:pointer;display:flex;flex-direction:column;gap:3px}
+.chnote2:hover{border-color:var(--ink)}
+.chnote2 small{font-size:11px;color:var(--ink3)}
+.chnote2 span{font-size:13px;white-space:pre-wrap;line-height:1.5}
 .sechead{display:flex;align-items:baseline;gap:14px;margin:0 0 14px}
 .sechead h2{font-family:var(--serif);font-weight:400;font-size:34px;margin:0}
 .sechead span{font-size:12px;color:var(--ink3)}
@@ -4500,7 +4528,7 @@ const MODE_NOTE = {
 function renderBrief(result){
   const t = tgt(), sl = S.seals[t.id] || {};
   const bug = S.bug ? BUGS.find((x) => x.id === S.bug) : null;
-  let h = bug ? `<div class="eyebrow">Practice gym · Bug hunt ${BUGS.indexOf(bug) + 1} / ${BUGS.length}</div><h1>🐞 ${t.title}</h1><div class="bugbox"><b>Bug report</b>${bug.symptom}</div><p>The code in <code>style.css</code> and <code>main.js</code> is almost right. Find the one thing that breaks it, fix it, and Check. Compare with the target to see how it <i>should</i> move.</p>${S.gym && S.gym.bugs && S.gym.bugs[bug.id] ? '<div class="stamp">🐞 <b>Squashed</b></div>' : ''}<div class="row" style="margin:4px 0 8px"><button class="btn ghost sm" id="bugHint">Bug hint</button><button class="btn ghost sm" id="bugList">All bugs</button></div><div class="hints" id="bugHints"></div>` : `<div class="eyebrow">${chap().project ? `${chap().name} · Stage ${S.ti + 1} of ${chap().targets.length}` : `Chapter ${S.ch} · Target ${S.ti + 1} of ${chap().targets.length}`}</div><h1>${t.title}</h1><p>${t.brief}</p>${newHere(t)}${chap().project ? `<div class="note" style="margin-bottom:8px">📁 One project for all ${chap().targets.length} stages: your files carry over. Add to them, don't start over.</div>` : ''}`;
+  let h = bug ? `<div class="eyebrow">Practice gym · Bug hunt ${BUGS.indexOf(bug) + 1} / ${BUGS.length}</div><h1>🐞 ${t.title}</h1><div class="bugbox"><b>Bug report</b>${bug.symptom}</div><p>The code in <code>style.css</code> and <code>main.js</code> is almost right. Find the one thing that breaks it, fix it, and Check. Compare with the target to see how it <i>should</i> move.</p>${S.gym && S.gym.bugs && S.gym.bugs[bug.id] ? '<div class="stamp">🐞 <b>Squashed</b></div>' : ''}<div class="row" style="margin:4px 0 8px"><button class="btn ghost sm" id="bugHint">Bug hint</button><button class="btn ghost sm" id="bugList">All bugs</button></div><div class="hints" id="bugHints"></div>` : `<div class="eyebrow">${chap().project ? `${chap().name} · Stage ${S.ti + 1} of ${chap().targets.length}` : `Chapter ${S.ch} · Target ${S.ti + 1} of ${chap().targets.length}`}</div><h1>${t.title}</h1><p>${t.brief}</p>${newHere(t)}${readHtml(t)}${chap().project ? `<div class="note" style="margin-bottom:8px">📁 One project for all ${chap().targets.length} stages: your files carry over. Add to them, don't start over.</div>` : ''}`;
   if (!bug) h = pathBar() + h;
   h += `<h4>Spec</h4><dl class="specs">${t.specs.map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('')}</dl>`;
   const chips = t.nokit ? '' : toolChips(t);
@@ -4516,13 +4544,15 @@ function renderBrief(result){
   } else if (sl[S.mode]) h += `<div class="stamp">✦ <b>Sealed</b> ${S.mode}</div>`;
   const nxs = !bug && (sl[S.mode] || (result && result.ok)) ? afterHere() : undefined;
   if (nxs !== undefined) h += nxs ? `<button class="btn acc big nextbig" id="nextBtn">Next step · ${esc(nxs.kind === 'school' ? CH[nxs.ci].name + ' School' : CH[nxs.ci].targets[nxs.ti].title)} →</button>` : `<button class="btn acc big nextbig" id="nextBtn">Path complete ✦ Back home</button>`;
-  h += `<h4>Help</h4><div class="hints" id="hints"></div><div class="row" style="margin-top:8px"><button class="btn ghost sm" id="hintBtn">Hint</button><button class="btn ghost sm" id="solBtn"${failCount >= 2 || sl[S.mode] ? '' : ' disabled title="Unlocks after 2 checks"'}>Solution</button></div>`;
+  h += `<h4>Help</h4><div class="hints" id="hints"></div><div class="row" style="margin-top:8px"><button class="btn ghost sm" id="hintBtn">Hint</button>${chap().nokit ? '' : '<button class="btn ghost sm" id="skelBtn">🦴 Skeleton</button>'}<button class="btn ghost sm" id="solBtn"${failCount >= 2 || sl[S.mode] ? '' : ' disabled title="Unlocks after 2 checks"'}>Solution</button></div>${noteHtml(t)}`;
   $('#brief').innerHTML = h;
   $('#brief').querySelectorAll('.chip').forEach((c) => c.onclick = showToolbox);
   if (bug) { $('#bugHint').onclick = () => { $('#bugHints').innerHTML = `<div class="hint">${bug.hint}</div>`; }; $('#bugList').onclick = () => goGym('bugs'); if (result && result.ok) { const nb = BUGS.find((x) => !(S.gym.bugs || {})[x.id]); const row = $('#brief .checks'); if (nb && row) { const b2 = document.createElement('button'); b2.className = 'btn sm'; b2.style.marginTop = '10px'; b2.textContent = 'Next bug →'; b2.onclick = () => startBug(nb.id); row.after(b2); } } }
   let hi = 0;
   $('#hintBtn').onclick = () => { if (hi >= t.hints.length) return; const d = document.createElement('div'); d.className = 'hint'; d.innerHTML = t.hints[hi++]; $('#hints').appendChild(d); if (hi >= t.hints.length) $('#hintBtn').disabled = true; };
   $('#solBtn').onclick = showSolution;
+  if ($('#skelBtn')) $('#skelBtn').onclick = showSkeleton;
+  bindRead(t); bindNote(t);
   const nb = $('#nextBtn'); if (nb) nb.onclick = () => goStep(afterHere());
   bindPathBar($('#brief'));
 }
@@ -4535,7 +4565,7 @@ function showSolution(){
   h += `<div class="row"><button class="btn" id="mClose">Got it, I'll type it myself</button></div>`;
   modal(h); $('#mClose').onclick = closeModal;
 }
-function modal(h){ $('#mbox').className = 'mbox'; $('#mbox').innerHTML = h; $('#modal').classList.add('on'); }
+function modal(h){ if (typeof closeCheat === 'function') closeCheat(); $('#mbox').className = 'mbox'; $('#mbox').innerHTML = `<button class="mx" id="mX" title="Close (Esc)" aria-label="Close">✕</button>` + h; $('#modal').classList.add('on'); $('#mX').onclick = closeModal; }
 function closeModal(){ $('#modal').classList.remove('on'); }
 $('#modal').addEventListener('click', (e) => { if (e.target.id === 'modal') closeModal(); });
 
@@ -4988,7 +5018,7 @@ function cheatHtml(){
   let h = `<div class="chhead"><div><div class="eyebrow">Reference</div><h2>Cheat sheet</h2></div><button class="btn ghost sm" id="chClose">Close ✕</button></div>
   <div class="chmaster"><div><b>TRIGGER</b><i>when?</i><small>hover · click · load · scroll · mouse</small></div><span>→</span><div><b>CHANGE</b><i>what?</i><small>transform · opacity · a class</small></div><span>→</span><div><b>TIMING</b><i>how?</i><small>duration · easing · delay</small></div></div>
   ${used.length ? `<div class="chnow">🎯 This target uses ${used.map((n) => `<button data-f="${n}">formula ${n}</button>`).join(' + ')}</div>` : ''}
-  <nav class="chnav">${['Formulas', 'More shapes', 'Name decoder', 'Python · PHP · JS', 'CSS quick ref'].map((x, i) => `<button data-j="ch${i}">${x}</button>`).join('')}</nav>
+  <nav class="chnav">${['Formulas', 'More shapes', 'Name decoder', 'Python · PHP · JS', 'CSS quick ref', 'My notes'].map((x, i) => `<button data-j="ch${i}">${x}</button>`).join('')}</nav>
   <h3 id="ch0">The 6 formulas</h3>`;
   CHEAT_F.forEach((f) => {
     h += `<div class="chf${used.includes(f.n) ? ' on' : ''}" id="chf${f.n}"><div class="chft"><span class="chn">${f.n}</span><div><b>${f.name}</b><small>${f.when}</small></div></div><p class="chsay">🗣 “${f.say}”</p><pre class="chcode" title="Click to copy">${hl(f.code, f.lang)}</pre><p class="chnote">${f.note}</p></div>`;
@@ -4997,19 +5027,143 @@ function cheatHtml(){
   h += `<h3 id="ch2">Name decoder</h3><p class="chp">Long names are just words glued together. Split them and they explain themselves.</p><table class="cht"><tbody>${CHEAT_DECODE.map(([a, b, c]) => `<tr><td><code>${a}</code></td><td>${b}</td><td>${c}</td></tr>`).join('')}</tbody></table>`;
   h += `<h3 id="ch3">Python · PHP · JS</h3><p class="chp">Same ideas, different spelling.</p><table class="cht tr"><thead><tr><th></th><th>Python</th><th>PHP</th><th>JavaScript</th></tr></thead><tbody>${CHEAT_TR.map(([a, p, q, j]) => `<tr><td>${a}</td><td><code>${esc(p)}</code></td><td><code>${esc(q)}</code></td><td><code>${esc(j)}</code></td></tr>`).join('')}</tbody></table>`;
   h += `<h3 id="ch4">CSS quick ref</h3><dl class="chdl">${CHEAT_CSS.map(([a, b]) => `<dt>${a}</dt><dd>${esc(b)}</dd>`).join('')}</dl>`;
+  const notes = Object.entries(S.notes || {}).map(([id, txt]) => { const f = findT(id); return f ? {f, id, txt} : null; }).filter(Boolean);
+  h += `<h3 id="ch5">My notes</h3>${notes.length ? `<div class="chnotes">${notes.map(({f, id, txt}) => `<button class="chnote2" data-ci="${f.ci}" data-ti="${f.ti}"><b>${esc(CH[f.ci].targets[f.ti].title)}</b><small>Ch ${f.ci} · ${esc(CH[f.ci].name)}</small><span>${esc(txt)}</span></button>`).join('')}</div>` : `<p class="chp">Empty for now. Every target has a <b>✍️ My note</b> box under Help: write the effect in your own words and it lands here.</p>`}`;
   return h;
 }
 function openCheat(){
+  closeModal();
   const d = $('#cheat');
   d.innerHTML = cheatHtml();
   d.classList.add('on'); $('#cheatBtn').classList.add('on');
   d.querySelector('#chClose').onclick = closeCheat;
   d.querySelectorAll('.chnav button').forEach((b) => b.onclick = () => { const x = d.querySelector('#' + b.dataset.j); if (x) d.scrollTo({top: x.offsetTop - 70, behavior: 'smooth'}); });
+  d.querySelectorAll('.chnote2').forEach((b) => b.onclick = () => { closeCheat(); S.ch = +b.dataset.ci; save(); renderChap(); goTarget(+b.dataset.ti); });
   d.querySelectorAll('.chcode').forEach((p) => p.onclick = () => { try { navigator.clipboard.writeText(p.textContent); toast('Copied'); } catch (x) {} });
   d.querySelectorAll('.chnow button').forEach((b) => b.onclick = () => { const x = d.querySelector('#chf' + b.dataset.f); if (x) d.scrollTo({top: x.offsetTop - 70, behavior: 'smooth'}); });
   d.scrollTop = 0;
 }
 function closeCheat(){ $('#cheat').classList.remove('on'); $('#cheatBtn').classList.remove('on'); }
+const RM_TRIG = ['hover', 'click', 'page load', 'scroll', 'mouse moves'];
+const RM_CHG = ['moves', 'fades', 'grows / shrinks', 'turns', 'reveals / draws', 'changes colour'];
+const RM_EASE = ['ease', 'ease-out', 'ease-in', 'ease-in-out', 'linear', 'overshoot', 'steps'];
+function rmEase(src){
+  const m = src.match(/cubic-bezier\(\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*,\s*([-\d.]+)\s*\)|steps\(|\b(ease-in-out|ease-out|ease-in|linear|ease)\b/);
+  if (!m) return null;
+  if (m[0].startsWith('steps')) return 'steps';
+  if (m[5]) return m[5];
+  const [x1, y1, x2, y2] = [m[1], m[2], m[3], m[4]].map(Number);
+  if (y1 > 1 || y1 < 0 || y2 > 1 || y2 < 0) return 'overshoot';
+  const fast = y1 > x1, soft = y2 > x2;
+  return fast ? 'ease-out' : soft ? 'ease-in-out' : 'ease-in';
+}
+function readKey(t){
+  const a = t.act.a.type;
+  const trig = a === 'hover' ? 'hover' : a === 'click' ? 'click' : a === 'load' ? 'page load' : /scroll/.test(a) ? 'scroll' : 'mouse moves';
+  const ms = new Set();
+  t.tests.filter((x) => x.k === 'motion').forEach((x) => x.track.forEach((tr) => tr.m.forEach((m) => ms.add(m))));
+  const chg = [];
+  if (ms.has('dx') || ms.has('dy')) chg.push('moves');
+  if (ms.has('opacity')) chg.push('fades');
+  if (['scale', 'w', 'h', 'wpct'].some((m) => ms.has(m))) chg.push('grows / shrinks');
+  if (ms.has('rot') || ms.has('rx') || ms.has('ry')) chg.push('turns');
+  if (ms.has('clip') || ms.has('dash')) chg.push('reveals / draws');
+  if (ms.has('bg')) chg.push('changes colour');
+  const css = t.css || '', js = t.js || '';
+  const animated = /transition|animation/.test(css) || /\.animate\(/.test(js);
+  const ease = animated ? (rmEase(css + '\n' + js) || 'ease') : null;
+  const src = css + '\n' + js;
+  const forms = CHEAT_F.filter((f) => f.re.test(src)).map((f) => f.n);
+  return {trig, chg, ease, forms};
+}
+function readHtml(t){
+  if (chap().nokit || S.bug || chap().id === 'c0') return '';
+  const k = readKey(t);
+  if (!k.chg.length) return '';
+  S.read = S.read || {};
+  if (S.read[t.id]) return `<div class="readm done"><span>👁</span><div><b>Read:</b> on <b>${k.trig}</b> → it <b>${k.chg.join(' + ')}</b>${k.ease ? ` → <b>${k.ease}</b>` : ''}${k.forms.length ? ` · formula ${k.forms.join(' + ')}` : ''}</div><button class="plink" id="rmAgain">again</button></div>`;
+  const rows = [['When does it start?', 'trig', RM_TRIG], ['What changes?', 'chg', RM_CHG]];
+  if (k.ease) rows.push(['How does it feel? (easing)', 'ease', RM_EASE]);
+  if (k.forms.length) rows.push(['Which formula?', 'form', CHEAT_F.map((f) => f.n + ' · ' + f.name)]);
+  return `<div class="readm" id="readm"><div class="eyebrow">👁 Read the motion first · replay the target, then answer</div>${rows.map(([q, key, opts]) => `<div class="rmq" data-k="${key}"><span>${q}</span><div class="chips">${opts.map((o) => `<button class="chip">${esc(o)}</button>`).join('')}</div></div>`).join('')}<div class="rmfb" id="rmFb"></div></div>`;
+}
+function bindRead(t){
+  const again = $('#rmAgain'); if (again) again.onclick = () => { delete S.read[t.id]; save(); renderBrief(); };
+  const box = $('#readm'); if (!box) return;
+  const k = readKey(t), done = {};
+  box.querySelectorAll('.rmq').forEach((row) => {
+    const key = row.dataset.k;
+    row.querySelectorAll('.chip').forEach((c) => c.onclick = () => {
+      if (done[key]) return;
+      const v = c.textContent, ok = key === 'trig' ? v === k.trig : key === 'chg' ? k.chg.includes(v) : key === 'ease' ? v === k.ease : k.forms.includes(+v.split(' ')[0]);
+      if (!ok) { c.classList.add('bad'); sound('miss'); return; }
+      done[key] = true; c.classList.add('good'); row.classList.add('ok'); sound('tick');
+      row.querySelectorAll('.chip').forEach((x) => { const xv = x.textContent; if (key === 'chg' && k.chg.includes(xv)) x.classList.add('good'); if (key === 'form' && k.forms.includes(+xv.split(' ')[0])) x.classList.add('good'); });
+      if (Object.keys(done).length === box.querySelectorAll('.rmq').length) {
+        $('#rmFb').innerHTML = `✓ Say it: <i>“On ${k.trig}, it ${k.chg.join(' and ')}${k.ease ? ` with ${k.ease}` : ''}.”</i> Now build it.`;
+        S.read[t.id] = true; save();
+      }
+    });
+  });
+}
+function boneCode(code){
+  return code
+    .replace(/cubic-bezier\([^)]*\)/g, '___')
+    .replace(/steps\(\s*\d+\s*\)/g, 'steps(___)')
+    .replace(/(^|[^\w.-])(-?\d*\.?\d+)(ms|s|px|%|deg|vh|vw|rem|turn)?\b/g, (m, a) => a + '___')
+    .replace(/\b(ease-in-out|ease-out|ease-in|linear|ease)\b/g, '___');
+}
+function showSkeleton(){
+  const t = tgt();
+  let h = `<h3>🦴 Skeleton · ${esc(t.title)}</h3><p class="fn">The shape of the answer. Every <b>___</b> is a value from the Spec. Fill them in yourself.</p>`;
+  if (t.css) h += `<div class="fn">style.css</div><pre>${hl(boneCode(t.css), 'css')}</pre>`;
+  if (t.js) h += `<div class="fn">main.js</div><pre>${hl(boneCode(t.js), 'js')}</pre>`;
+  h += `<div class="row"><button class="btn" id="mClose">Got it, I'll type it</button></div>`;
+  modal(h); $('#mClose').onclick = closeModal;
+}
+function noteHtml(t){
+  if (S.bug) return '';
+  S.notes = S.notes || {};
+  return `<h4>✍️ My note</h4><textarea class="mynote" id="myNote" placeholder="In your own words: on ___, the ___ … (shows up in your cheat sheet)">${esc(S.notes[t.id] || '')}</textarea>`;
+}
+function bindNote(t){
+  const n = $('#myNote'); if (!n) return;
+  n.addEventListener('input', () => { S.notes = S.notes || {}; const v = n.value.trim(); if (v) S.notes[t.id] = n.value; else delete S.notes[t.id]; save(); });
+}
+const FR_TOK = {
+  1: {css:true, any:true, tokens:['transition:', ':hover{', 'transform:']},
+  2: {css:true, any:true, tokens:['@keyframes', ['from{', '0%{'], ['to{', '100%{'], 'animation:']},
+  3: {any:true, tokens:['querySelector(', ["addEventListener('click'"], ['.classList.toggle(', '.classList.add(']]},
+  4: {any:true, tokens:['querySelectorAll(', 'new IntersectionObserver(', '.forEach(', '.isIntersecting', '.classList.add(', '.observe(']},
+  5: {any:true, tokens:["addEventListener('scroll'", 'scrollHeight', 'innerHeight', 'scrollY']},
+  6: {any:true, tokens:["addEventListener('mousemove'", 'clientX', 'clientY', '.style.transform=']}
+};
+function renderFormulaRecall(box){
+  S.gym.fr = S.gym.fr || {};
+  const pick = CHEAT_F.slice().sort((a, b) => (S.gym.fr[a.n] || 0) - (S.gym.fr[b.n] || 0) || Math.random() - .5)[0];
+  const d = Object.assign({show: pick.code}, FR_TOK[pick.n]);
+  const total = Object.values(S.gym.fr).reduce((a, b) => a + b, 0);
+  box.innerHTML = `<div class="home">${gymHead('🧮 Formula recall', `${total} written from memory`)}
+  <div class="frwrap"><div class="frcard"><span class="chn">${pick.n}</span><div><div class="eyebrow">Write formula ${pick.n} from memory · ${d.css ? 'CSS' : 'JavaScript'}</div><h3>${pick.name}</h3><p class="chsay">🗣 “${pick.say}”</p><p class="fn">Used for: ${pick.when}</p></div></div>
+  <textarea class="pat" id="frIn" spellcheck="false" placeholder="type the whole formula, then ⌘↵"></textarea>
+  <div class="dfb" id="frFb"></div>
+  <div class="row"><button class="btn acc" id="frGo">Check ⌘↵</button><button class="btn ghost" id="frPeek">Peek</button><button class="btn ghost" id="frNext">Another formula →</button></div>
+  <div class="frdots">${CHEAT_F.map((f) => `<span title="${f.name}"><b>${f.n}</b>${'●'.repeat(Math.min(5, S.gym.fr[f.n] || 0))}${'○'.repeat(Math.max(0, 5 - (S.gym.fr[f.n] || 0)))}</span>`).join('')}</div></div></div>`;
+  const inp = $('#frIn'); inp.focus();
+  let miss = 0;
+  const go = () => {
+    const r = patCheck(d, inp.value), fb = $('#frFb');
+    if (r.r === 'ok') { S.gym.fr[pick.n] = (S.gym.fr[pick.n] || 0) + 1; save(); fb.className = 'dfb ok'; fb.innerHTML = '✓ Formula complete. Compare with the cheat sheet version:<pre>' + hl(pick.code, pick.lang) + '</pre>'; sound('seal'); return; }
+    miss++; sound('miss');
+    if (r.r === 'case') { fb.className = 'dfb tip'; fb.innerHTML = `💡 Check the capitals of <code>${esc(r.tok)}</code>.`; return; }
+    fb.className = 'dfb no'; fb.innerHTML = miss >= 3 ? 'Stuck? Press <b>Peek</b>, read it once, close it, then type.' : `✗ Missing: <code>${esc(r.tok)}</code>`;
+  };
+  $('#frGo').onclick = go;
+  inp.addEventListener('keydown', (e) => { if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); go(); } if (e.key === 'Tab') { e.preventDefault(); inp.setRangeText('  ', inp.selectionStart, inp.selectionEnd, 'end'); } });
+  $('#frPeek').onclick = () => { modal(`<h3>Peek</h3><p class="fn">Read it, close it, type it from memory.</p><pre>${hl(pick.code, pick.lang)}</pre><div class="row"><button class="btn" id="mClose">Close and type it</button></div>`); $('#mClose').onclick = () => { closeModal(); inp.focus(); }; };
+  $('#frNext').onclick = () => renderFormulaRecall(box);
+  $('#gBack').onclick = () => renderGym('hub');
+}
 function gymHead(title, sub){ return `<div class="gymtop"><button class="btn ghost sm" id="gBack">← Gym</button><div><div class="eyebrow">Practice gym</div><h2>${title}</h2></div><span class="grow"></span><div class="gsub">${sub}</div></div>`; }
 function renderGym(mode){
   const box = $('#gym'), td = gymStat('td'), eye = gymStat('eye'), fixed = Object.keys(S.gym.bugs || {}).length;
@@ -5019,6 +5173,7 @@ function renderGym(mode){
     <div class="sechead"><h2>The pro loop</h2><span>how people who build sites like Marcelo's get good</span></div>
     <div class="loop">${[['Watch','Collect effects you love. Keep a "swipe file" of links and screen recordings.'],['Teardown','Slow it down and name every part: trigger, property, duration, easing, delay.'],['Rebuild','Copy it from scratch, then compare. That is what every Webble target is.'],['Remix','Change ONE value (easing, delay, direction). Predict the result first, then run it.'],['Ship','Put it in a real page that people visit. The Studio Build is that step.']].map(([a, b], i) => `<div class="lstep" style="--i:${i}"><span>${String(i + 1).padStart(2, '0')}</span><b>${a}</b><p>${b}</p></div>`).join('<i class="larr">→</i>')}</div>
     <button class="gymband" id="gReview"><span><b>🔁 Daily review</b>${dueItems().length} card${dueItems().length === 1 ? '' : 's'} due · 🔥 ${S.revLast >= today() - 1 ? S.revStreak || 0 : 0}-day streak · spaced repetition of every drill you've done</span><span class="btn acc">Review now →</span></button>
+    <button class="gymband" id="gFr" style="margin-top:14px"><span><b>🧮 Formula recall</b>Write one of the 6 cheat-sheet formulas from a blank page. The least practised one comes first.</span><span class="btn acc">Start →</span></button>
     <button class="gymband" id="gLab" style="margin-top:14px"><span><b>🧪 Easing lab</b>Drag the curve, race it against linear, copy the CSS. Get a feel for what every cubic-bezier does.</span><span class="btn acc">Open lab →</span></button>
     <div class="sechead" style="margin-top:40px"><h2>Drills</h2><span>short, repeatable, 5 minutes each</span></div>
     <div class="grid8 g4">
@@ -5037,11 +5192,13 @@ function renderGym(mode){
     box.querySelectorAll('.gcard').forEach((b) => b.onclick = () => renderGym(b.dataset.g));
     $('#gReview').onclick = () => renderGym('review');
     $('#gLab').onclick = () => renderGym('lab');
+    $('#gFr').onclick = () => renderGym('formula');
     box.scrollTop = 0;
     return;
   }
   if (mode === 'review') { renderReview(box); box.scrollTop = 0; return; }
   if (mode === 'lab') { renderLab(box); box.scrollTop = 0; return; }
+  if (mode === 'formula') { renderFormulaRecall(box); box.scrollTop = 0; return; }
   if (mode === 'teardown') {
     const pick = shuffle(allTargets())[0], t = pick.t, hits = hitsOf(t);
     const pool = shuffle(TOOLHITS.map(([, n]) => n).filter((n) => !hits.includes(n))).slice(0, Math.max(4, 10 - hits.length));
@@ -5254,7 +5411,7 @@ document.addEventListener('keydown', (e) => {
   if ((e.key === 'c' || e.key === 'C') && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) { $('#cheat').classList.contains('on') ? closeCheat() : openCheat(); }
   if ((e.key === 't' || e.key === 'T') && !e.metaKey && !e.ctrlKey && !e.altKey && !/^(INPUT|TEXTAREA|SELECT)$/.test(document.activeElement.tagName)) cycleTheme();
 });
-$('#toolBtn').onclick = showToolbox;
+$('#toolBtn').onclick = () => $('#modal').classList.contains('on') ? closeModal() : showToolbox();
 $('#cheatBtn').onclick = () => $('#cheat').classList.contains('on') ? closeCheat() : openCheat();
 $('#gymBtn').onclick = () => goGym();
 $('#used').onclick = showToolbox;
@@ -5283,7 +5440,7 @@ function boot(){
   if (S.view === 'work') goTarget(S.ti, true); else if (S.view === 'school') goSchool(); else if (S.view === 'gym') goGym(); else goHome();
   requestAnimationFrame(renderModes);
 }
-window.Webble = {dueItems, reviewPool, today, cycleTheme, applyTheme, check, setMode, goTarget, goSchool, goHome, goGym, renderGym, startBug, bugFiles, BUGS, hitsOf, files, state: () => S, CH, patterns: PATTERNS, hardSolution, expertSolution, openFile, KIT};
+window.Webble = {CHEAT_F, dueItems, reviewPool, today, cycleTheme, applyTheme, check, setMode, goTarget, goSchool, goHome, goGym, renderGym, startBug, bugFiles, BUGS, hitsOf, files, state: () => S, CH, patterns: PATTERNS, hardSolution, expertSolution, openFile, KIT};
 boot();
 </script>
 </body>
