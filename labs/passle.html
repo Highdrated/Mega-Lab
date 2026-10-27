@@ -11319,6 +11319,100 @@ Object.assign(BUGS,{
   {d:'The fridge had no max_range, so 7 °C passed the health check.',r:[[`'options' => ['min_range' => 0, 'max_range' => 5]`,`'options' => ['min_range' => 0]`,F14.form]]}
  ]
 });
+SPSOL.menucache={
+"src/cache.php":"<?php\n\ndeclare(strict_types=1);\n\nconst TTL = 60;\n\nfunction cached(string $file, int $ttl, callable $build): array\n{\n    if (is_file($file) && time() - filemtime($file) < $ttl) {\n        return ['hit' => true, 'body' => (string) file_get_contents($file)];\n    }\n\n    $body = $build();\n    file_put_contents($file, $body, LOCK_EX);\n\n    return ['hit' => false, 'body' => $body];\n}\n",
+"public/index.php":"<?php\n\ndeclare(strict_types=1);\n\nrequire_once __DIR__ . '/../src/cache.php';\n\n$cacheFile = __DIR__ . '/../data/menu.cache';\n$countFile = __DIR__ . '/../data/builds.txt';\n\nif (isset($_GET['refresh']) && is_file($cacheFile)) {\n    unlink($cacheFile);\n}\n\n$result = cached($cacheFile, TTL, function () use ($countFile): string {\n    $builds = is_file($countFile) ? (int) file_get_contents($countFile) : 0;\n    file_put_contents($countFile, (string) ($builds + 1));\n\n    return implode(', ', ['Coq au vin', 'Quiche lorraine', 'Tarte tatin']);\n});\n$builds = is_file($countFile) ? (int) file_get_contents($countFile) : 0;\n?>\n<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <title>Menu board</title>\n</head>\n<body>\n    <h1>Menu board</h1>\n    <p class=\"menu\"><?= htmlspecialchars($result['body']) ?></p>\n    <p class=\"source\"><?= $result['hit'] ? 'from cache' : 'freshly built' ?></p>\n    <p class=\"builds\">Built <?= $builds ?> time<?= $builds === 1 ? '' : 's' ?></p>\n</body>\n</html>\n"
+};
+const F15={cache:'src/cache.php'};
+Object.assign(RULES,{
+ pz107:{n:'107',title:'A cache file with a timer',cat:'Files',
+  syn:"<span class=\"k\">is_file</span>($f) &amp;&amp; time() - <span class=\"k\">filemtime</span>($f) &lt; TTL · file_get_contents · file_put_contents($f, $body, LOCK_EX)",
+  note:'Some answers are slow to build: a database, an outside API, a big calculation. Save the finished answer in a file. Next time, if that file is younger than a time-to-live (TTL), send the file instead of building it again.',
+  why:'A dashboard that ten people keep open, each refreshing every minute, would ask every outside system ten times a minute. With a 60-second cache file the work happens once a minute, whoever asks. filemtime() tells you when the file was last written, time() is now, so time() - filemtime() is its age in seconds. Fresh: read the file. Stale or missing: build, write, answer. A ?refresh=1 parameter that deletes the file first gives people a "really reload" button.',
+  parts:[['filemtime($f)','when it was last written (Unix seconds)'],['time() - filemtime($f)','its age in seconds'],['< TTL','still fresh'],['file_put_contents(…, LOCK_EX)','write it safely'],["isset($_GET['refresh'])",'skip the cache on purpose']],
+  mistakes:['Calling filemtime() on a file that does not exist yet: check is_file() first.','Comparing the other way round: age > TTL means stale, not fresh.','Caching an error page, so the error is served for the next minute too.'],
+  ex:`<?php
+
+declare(strict_types=1);
+
+$file = sys_get_temp_dir() . '/menu.cache';
+file_put_contents($file, 'Coq au vin, Tarte tatin');
+
+$age = time() - filemtime($file);
+echo 'Age: ' . $age . 's' . "\\n";
+echo $age < 60 ? 'fresh: use the cache' : 'stale: build again';`,
+  ex2:`<?php
+
+declare(strict_types=1);
+
+function cached(string $file, int $ttl, callable $build): string
+{
+    if (is_file($file) && time() - filemtime($file) < $ttl) {
+        return file_get_contents($file) . ' (cache)';
+    }
+
+    $body = $build();
+    file_put_contents($file, $body, LOCK_EX);
+
+    return $body . ' (built)';
+}
+
+$file = sys_get_temp_dir() . '/board.cache';
+if (is_file($file)) {
+    unlink($file);
+}
+
+echo cached($file, 60, fn (): string => 'Soup, Stew') . "\\n";
+echo cached($file, 60, fn (): string => 'Soup, Stew') . "\\n";`}
+});
+TARGETS.push(
+{id:'menucache',special:true,name:'Menu board cache',rules:['pz107'],
+ request:[{method:'GET'},{method:'GET'}],
+ probes:{first:{method:'GET'},refresh:[{method:'GET'},{method:'GET',get:{refresh:'1'}}]},
+ files:{[IDX]:PHPHEAD+`
+?>
+`+page('Menu board',`    <h1>Menu board</h1>
+`),[F15.cache]:PHPHEAD},
+ solution:pickFiles(SPSOL.menucache,[IDX,F15.cache]),
+ steps:[
+  {t:"`src/cache.php`: `const TTL = 60;` and `cached(string $file, int $ttl, callable $build): array`",c:c=>/const\s+TTL\s*=\s*60\s*;/.test(src(c,F15.cache))&&/function\s+cached\s*\(\s*string\s+\$file\s*,\s*int\s+\$ttl\s*,\s*callable\s+\$build\s*\)\s*:\s*array/.test(src(c,F15.cache)),help:['One function decides: send the file, or build and save.','It receives the cache path, the time-to-live in seconds, and a function that builds the answer when needed.',`const TTL = 60;
+
+function cached(string $file, int $ttl, callable $build): array
+{
+    …
+}`]},
+  {t:"A first visit builds the board: `<p class=\"menu\">Coq au vin, Quiche lorraine, Tarte tatin</p>`, `<p class=\"source\">freshly built</p>`, `<p class=\"builds\">Built 1 time</p>`",c:c=>{const r=c.p.first;return ptxt(r,'p.menu')==='Coq au vin, Quiche lorraine, Tarte tatin'&&ptxt(r,'p.source')==='freshly built'&&ptxt(r,'p.builds')==='Built 1 time'},help:['No cache file yet: build, write data/menu.cache, answer.','Count every build in data/builds.txt, so you can see the cache working.',`$result = cached($cacheFile, TTL, function () use ($countFile): string {
+    $builds = is_file($countFile) ? (int) file_get_contents($countFile) : 0;
+    file_put_contents($countFile, (string) ($builds + 1));
+
+    return implode(', ', ['Coq au vin', 'Quiche lorraine', 'Tarte tatin']);
+});`]},
+  {t:'A second visit comes from the cache: `from cache`, still `Built 1 time`',c:c=>ptxt(c,'p.source')==='from cache'&&ptxt(c,'p.builds')==='Built 1 time',help:['Passle visits twice. The second visit finds a young data/menu.cache.','Fresh means: the file exists AND its age is below the TTL.',"`if (is_file($file) && time() - filemtime($file) < $ttl) {`"]},
+  {t:'The age check uses `time() - filemtime(…)`',c:c=>/time\(\)\s*-\s*filemtime\(\s*\$\w+\s*\)/.test(src(c,F15.cache)),help:['filemtime() returns when the file was last written, in seconds.','time() minus that is the age.']},
+  {t:'`?refresh=1` deletes the cache file first: `freshly built`, `Built 2 times`',c:c=>{const r=c.p.refresh;return ptxt(r,'p.source')==='freshly built'&&ptxt(r,'p.builds')==='Built 2 times'},help:["`isset($_GET['refresh'])` is true for index.php?refresh=1.",`if (isset($_GET['refresh']) && is_file($cacheFile)) {
+    unlink($cacheFile);
+}`]},
+  {t:'Writes with `LOCK_EX`, so two visitors never write half a file',c:c=>/file_put_contents\([^;]*LOCK_EX/.test(src(c,F15.cache)),help:['Two requests can build at the same second.',"`file_put_contents($file, $body, LOCK_EX);`"]},
+  cleanStep(c=>pure(c,F15.cache)&&allClean(c))
+ ],
+ drills:[
+  {k:'pick',r:'pz107',q:'`filemtime($file)` returns…',o:['the file size','when the file was last written, in seconds','how old the file is','true or false'],a:1,h:'A timestamp, not an age.'},
+  {k:'type',r:'pz107',q:'The age of `$file` in seconds, stored in `$age`',ph:'$age = …;',test:/^\$age = time\(\) - filemtime\(\$file\);$/,ans:'$age = time() - filemtime($file);',h:'Now minus written.'},
+  {k:'pick',r:'pz107',q:'TTL 60, the file is 75 seconds old. The next visit…',o:['reads the file','builds again and rewrites the file','fails','waits 60 seconds'],a:1,h:'Older than the TTL is stale.'},
+  {k:'gap',r:'pz107',q:'Skip the cache when the URL has ?refresh=1',pre:'if (',post:" && is_file($cacheFile)) {",a:["isset($_GET['refresh'])",'isset($_GET["refresh"])'],h:'isset on $_GET.'}
+ ]}
+);
+Object.assign(BUGS,{
+ 'menucache':[
+  {d:'The comparison was flipped: only stale files were served, fresh ones were rebuilt every time.',r:[[`time() - filemtime($file) < $ttl`,`time() - filemtime($file) > $ttl`,F15.cache]]},
+  {d:'is_file() was dropped, so the very first visit asked filemtime() about a file that did not exist yet.',r:[[`if (is_file($file) && time() - filemtime($file) < $ttl) {`,`if (time() - filemtime($file) < $ttl) {`,F15.cache]]},
+  {d:'?refresh=1 no longer deleted the cache file, so the refresh button served the old board.',r:[[`if (isset($_GET['refresh']) && is_file($cacheFile)) {
+    unlink($cacheFile);
+}`,`if (isset($_GET['refresh']) && is_file($cacheFile)) {
+    touch($cacheFile);
+}`]]}
+ ]
+});
 TARGETS.forEach(t=>{if(BUGS[t.id])t.bugs=BUGS[t.id]});
 
 TARGETS.forEach((tg,i)=>tg.rules.forEach(r=>{if(RULES[r]&&RULES[r].t==null)RULES[r].t=i}));
@@ -11524,6 +11618,7 @@ const PHASES=[
  ['23:30','After service','Chairs on the tables. Roux is asleep on the pass.']
 ];
 const RANKS=[[0,'Plongeur'],[1,'Commis'],[4,'Chef de partie'],[10,'Sous-chef'],[18,'Chef de cuisine']];
+STORY.menucache={w:'The front-of-house screen',tb:'the door',o:'The menu board by the door asks the kitchen for the menu every few seconds. Build it once a minute and hand out the saved copy in between.',th:'The board stays fast even on a Saturday night.'};
 const LINES={
  step:['Oui, chef.','That is it. Next.','Clean. Keep going.','Mm. Smells correct.','Roux approves, with one whisker.','Yes! Next ticket.','Good knife work.'],
  done:['Service! Plate it up.','Ring the bell.','Perfect. Send it out.','That one goes on the board.'],
@@ -12301,6 +12396,7 @@ if(practiceListBase)practiceList=function(){
   return out;
 };
 
+WRITES.pz107={q:'Write `fresh(string $file, int $ttl): bool`: true when the file exists and is younger than `$ttl` seconds. Print `fresh` or `stale` for a file you just wrote.',pre:"$file = sys_get_temp_dir() . '/w.cache';\nfile_put_contents($file, 'x');",sol:"function fresh(string $file, int $ttl): bool\n{\n    return is_file($file) && time() - filemtime($file) < $ttl;\n}\n\necho fresh($file, 60) ? 'fresh' : 'stale';",need:/filemtime\(/};
 const SEASONS={
  winter:{name:'Winter',months:[12,1,2],line:'Frost on the window, the stove never goes out.',dishes:['Onion soup gratinée','Boeuf bourguignon','Cassoulet','Pears in mulled wine','Chicory gratin','Chocolate mousse'],decor:{id:'s-winter',name:'Fireplace and garland'}},
  spring:{name:'Spring',months:[3,4,5],line:'Windows open, the first asparagus on the pass.',dishes:['White asparagus, Flemish style','Pea and mint soup','Lamb navarin','Strawberry tart','Radishes with salted butter','Rhubarb crumble'],decor:{id:'s-spring',name:'Window flower boxes'}},
@@ -12371,7 +12467,7 @@ const DISH='img/passle/';
 const ART_IDS=new Set(['menu-card','dish-label','pantry','menu-board','kitchen-helpers','split-kitchen','order-slip','safe-orders','table-service','recipe-book','cellar','bistro','menu-card-master','labels-master','pantry-master','board-master','router-master','login-master','tests-master','badge','scanner','api','brigade','stocktake','loyalty','ledger','cards','nightlog','winecellar','thepass','printer','tasting','roomservice','allergens','freezer','hours','bartab','translations','pairing','kitchenrules','reservations','prep-list']);
 const dishImg=(id,cls)=>!ART_IDS.has(id)?'':'<img class="'+(cls||'dish')+'" src="'+DISH+id+'.webp" alt="" onerror="this.style.display=\'none\'">';
 const KEY='passle.v2';
-const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL'];
+const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII','XIII','XIV','XV','XVI','XVII','XVIII','XIX','XX','XXI','XXII','XXIII','XXIV','XXV','XXVI','XXVII','XXVIII','XXIX','XXX','XXXI','XXXII','XXXIII','XXXIV','XXXV','XXXVI','XXXVII','XXXVIII','XXXIX','XL','XLI','XLII','XLIII','XLIV','XLV'];
 const BAD_RE=/(Fatal error|Parse error|Warning|Notice|Deprecated|Uncaught)\b/;
 
 function load(){try{return JSON.parse(localStorage.getItem(KEY))}catch(e){return null}}
@@ -12989,5 +13085,6 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('storage',e=>{if(e.key===NOTES_KEY){notesBadge();if($('nbk').classList.contains('on'))notesDraw()}});
 notesBadge();
 </script>
+<script src="data/links.js" data-lab="passle"></script>
 </body>
 </html>
