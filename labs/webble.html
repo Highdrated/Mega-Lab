@@ -2331,6 +2331,238 @@ function buildStudio(){
   };
 }
 CH.push(buildStudio());
+CH.push({
+  id:'c15', name:'App glue', sub:'themes · popups · safe text · numbers · SVG maps',
+  teach:`<div class="eyebrow">Chapter 15 · School</div><h2>App glue</h2>
+<p>Motion makes a site feel alive. These six small patterns make it work like an <b>app</b>: dashboards, tools, admin pages. You will meet every one of them again in your own projects (Rebble rebuilds them line by line).</p>
+<div class="flow"><b>script starts</b><i>→</i><b>theme set</b><i>→</i><b>data drawn safely</b><i>→</i><b class="hot">user clicks</b><i>→</i><b class="acc">popup opens / closes</b></div>
+<h3>1 · when may my script start?</h3>
+<div class="cols"><pre>&lt;script src="js/main.js" defer&gt;&lt;/script&gt;
+
+document.addEventListener('DOMContentLoaded', () => {
+  init();
+});</pre><ul><li><code>defer</code> = download now, run after the HTML is read</li><li><code>DOMContentLoaded</code> = an event that fires at that same moment</li><li>with <code>defer</code> you don't strictly need it, but many projects wrap their start-up code in it anyway: it says "start here"</li><li>without either, a script in the head runs before the page exists: <code>querySelector</code> returns <code>null</code></li></ul></div>
+<h3>2 · themes: one attribute switches every colour</h3>
+<div class="cols"><pre>[data-theme="light"] { --bg: #f4f2ee; --text: #1b1b1f; }
+[data-theme="dark"]  { --bg: #16161a; --text: #f2f2f2; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.4s ease;
+}
+
+document.documentElement.setAttribute('data-theme', 'dark');</pre><ul><li><code>document.documentElement</code> = the <code>&lt;html&gt;</code> element</li><li>same token names in both blocks, different values</li><li>a transition on the colours makes the switch fade instead of flash</li><li>save the choice in <code>localStorage</code> and set it again on start</li></ul></div>
+<h3>3 · popups: backdrop click and Escape</h3>
+<div class="flow"><b>click button</b><i>→</i><b class="hot">.overlay.open</b><i>→</i><b>click backdrop / Esc / ✕</b><i>→</i><b class="acc">remove .open</b></div>
+<div class="cols"><pre>overlay.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closePopup();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePopup();
+});</pre><ul><li><code>e.target</code> = what you actually clicked</li><li><code>e.currentTarget</code> = the element that owns the listener (the overlay)</li><li>equal = you clicked the dark backdrop, not the box inside</li><li>hide with <code>opacity: 0</code> + <code>pointer-events: none</code> so it can fade</li></ul></div>
+<h3>4 · user text: textContent, not innerHTML</h3>
+<div class="cols"><pre>li.textContent = site.name;
+li.innerHTML = site.name;</pre><ul><li><code>textContent</code> shows the text exactly as written: <code>&lt;b&gt;</code> stays visible as characters</li><li><code>innerHTML</code> <b>runs</b> it as HTML. Text from users or an API in innerHTML = XSS: someone can inject a script</li><li>when you must build HTML strings, escape the text first (<code>&amp;</code> → <code>&amp;amp;</code>, <code>&lt;</code> → <code>&amp;lt;</code> …)</li></ul></div>
+<h3>5 · numbers people can read</h3>
+<pre>(12450).toLocaleString('en-US')   // "12,450"
+(12450).toLocaleString('nl-BE')   // "12.450"
+(0.734 * 100).toFixed(1) + '%'    // "73.4%"</pre>
+<p>Pass the locale yourself, so every computer shows the same thing.</p>
+<h3>6 · from data to SVG positions: scaling a range</h3>
+<div class="flow"><b>value in its range</b><i>→ (value − min) / (max − min) →</i><b>0 … 1</b><i>→ × width →</i><b class="acc">pixels</b></div>
+<div class="cols"><pre>function toXY(lat, lng) {
+  const x = ((lng - B.minLng) / (B.maxLng - B.minLng)) * W;
+  const y = H - ((lat - B.minLat) / (B.maxLat - B.minLat)) * H;
+  return [Math.round(x), Math.round(y)];
+}</pre><ul><li>works for maps, charts, sliders, gauges: any "this range onto that range"</li><li>SVG's y grows <b>down</b>, latitude grows <b>up</b>: flip with <code>H − …</code></li><li>give the <code>&lt;svg&gt;</code> a <code>viewBox</code> and the browser scales the drawing to any size</li></ul></div>`,
+  drills:[
+    {q:'Which event fires when the HTML is fully read? (event name)', a:['DOMContentLoaded'], hint:'DOM + Content + Loaded.'},
+    {q:'Switch the page to dark: one line that sets <code>data-theme</code> on &lt;html&gt;.', a:[/^document\.documentElement\.setAttribute\(\s*(['"])data-theme\1\s*,\s*(['"])dark\2\s*\);?$/], kind:'js', show:"document.documentElement.setAttribute('data-theme', 'dark')"},
+    {q:'CSS selector for the dark token block.', a:[/^\[data-theme=(['"])dark\1\]$/, /^\[data-theme=dark\]$/], kind:'css', show:'[data-theme="dark"]'},
+    {q:'In the overlay click listener: the comparison that means "clicked the backdrop itself".', a:[/^e\.target\s*===?\s*e\.currentTarget$/], kind:'js', show:'e.target === e.currentTarget'},
+    {q:'Which <code>e.key</code> value is the Esc key?', a:['Escape', "'Escape'", '"Escape"']},
+    {q:'Put a user\'s text into <code>li</code> safely: <code>li.____ = text</code>', a:['textContent']},
+    {q:'Show <code>n = 12450</code> as <code>12,450</code>. Write the expression.', a:[/^n\.toLocaleString\(\s*(['"])en-US\1\s*\)$/, /^n\.toLocaleString\(\)$/], kind:'js', show:"n.toLocaleString('en-US')"},
+    {q:'Range 30 → 44 mapped onto 0 → 400 px. Where does 37 land? (number)', a:['200'], hint:'(37 − 30) / (44 − 30) = 0.5'},
+    {q:'Hide a popup so it can still fade in: opacity 0 plus which property stops it catching clicks? (property: value)', a:[/^pointer-events\s*:\s*none;?$/], kind:'css', show:'pointer-events: none'}
+  ],
+  targets:[
+  {
+    id:'theme', title:'Theme switch', act:{label:'click Dark', a:{type:'click',sel:'.theme-btn[data-theme="dark"]'}},
+    brief:'A tiny status page with Light / Dark buttons. Clicking a button sets <code>data-theme</code> on &lt;html&gt;, and every colour fades to the other token set.',
+    specs:[['tokens','--bg · --card · --text in [data-theme="light"] and [data-theme="dark"]'],['light','#f4f2ee · #ffffff · #1b1b1f'],['dark','#16161a · #24242a · #f2f2f2'],['fade','background-color 0.4s ease on body and .panel'],['js','setTheme(t) → setAttribute on document.documentElement · .active on its button · start light']],
+    bp:[['header.bar','contains ↓'],['  b','text: Status'],['  div.switch','contains ↓'],['    button.theme-btn[data-theme=light]','text: Light'],['    button.theme-btn[data-theme=dark]','text: Dark'],['div.panel','contains ↓'],['  h2','text: All systems normal'],['  p','text: 3 sites online']],
+    html:`<header class="bar">
+  <b>Status</b>
+  <div class="switch">
+    <button class="theme-btn" data-theme="light">Light</button>
+    <button class="theme-btn" data-theme="dark">Dark</button>
+  </div>
+</header>
+<div class="panel">
+  <h2>All systems normal</h2>
+  <p>3 sites online</p>
+</div>`,
+    css:`[data-theme="light"] {
+  --bg: #f4f2ee;
+  --card: #ffffff;
+  --text: #1b1b1f;
+}
+
+[data-theme="dark"] {
+  --bg: #16161a;
+  --card: #24242a;
+  --text: #f2f2f2;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  transition: background-color 0.4s ease, color 0.4s ease;
+}
+
+.panel {
+  padding: 24px;
+  border-radius: 12px;
+  background: var(--card);
+  transition: background-color 0.4s ease;
+}`,
+    js:`const buttons = document.querySelectorAll('.theme-btn');
+
+function setTheme(t) {
+  document.documentElement.setAttribute('data-theme', t);
+  buttons.forEach((b) => b.classList.toggle('active', b.dataset.theme === t));
+}
+
+buttons.forEach((b) => {
+  b.addEventListener('click', () => setTheme(b.dataset.theme));
+});
+
+setTheme('light');`,
+    tests:[
+      {k:'motion',label:'Starts in the light theme',a:{type:'load'},track:[{sel:'.panel',m:['bg']}],dur:300,mode:'endAbs'},
+      {k:'motion',label:'Dark fades in when clicked',a:{type:'click',sel:'.theme-btn[data-theme="dark"]'},track:[{sel:'.panel',m:['bg']}],dur:700},
+      {k:'code',label:'Switches the attribute on &lt;html&gt;',file:'js',re:/document\.documentElement\.setAttribute\(\s*['"]data-theme['"]/,why:'Set it with <code>document.documentElement.setAttribute(\'data-theme\', t)</code>.'},
+      {k:'code',label:'Colours live in two token blocks',file:'css',re:/\[data-theme=["']dark["']\]\s*\{[^}]*--bg/,why:'Add a <code>[data-theme="dark"]</code> block that redefines <code>--bg</code>.'}
+    ],
+    hints:['Both token blocks use the same three names. body and .panel only ever say <code>var(--…)</code>.','The last line of the JS sets the starting theme: <code>setTheme(\'light\');</code>']
+  },
+  {
+    id:'popup', title:'Popup', act:{label:'open, then click the backdrop', a:{type:'click',sel:'.open-btn',then:{type:'click',sel:'.overlay',at:500}}},
+    brief:'A details popup. The button fades the overlay in. Clicking the dark backdrop, the Close button or pressing Esc fades it out. Clicking <i>inside</i> the box does nothing.',
+    specs:[['overlay','fixed · inset 0 · centred grid · rgba(0, 0, 0, 0.4)'],['hidden','opacity 0 · pointer-events none'],['open','.overlay.open → opacity 1 · pointer-events auto'],['fade','opacity 0.3s ease'],['close','backdrop (e.target === e.currentTarget) · .close-btn · Escape']],
+    bp:[['button.btn.open-btn','text: Site details'],['div.overlay','contains ↓'],['  div.box','contains ↓'],['    h3','text: Gotham DC'],['    p','text: 288 of 384 ports in use'],['    button.btn.close-btn','text: Close']],
+    html:`<button class="btn open-btn">Site details</button>
+<div class="overlay">
+  <div class="box">
+    <h3>Gotham DC</h3>
+    <p>288 of 384 ports in use</p>
+    <button class="btn close-btn">Close</button>
+  </div>
+</div>`,
+    css:`.overlay {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.4);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.box {
+  padding: 24px;
+  border-radius: 12px;
+  background: #ffffff;
+}`,
+    js:`const overlay = document.querySelector('.overlay');
+const openBtn = document.querySelector('.open-btn');
+const closeBtn = document.querySelector('.close-btn');
+
+function closePopup() {
+  overlay.classList.remove('open');
+}
+
+openBtn.addEventListener('click', () => overlay.classList.add('open'));
+closeBtn.addEventListener('click', closePopup);
+
+overlay.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closePopup();
+});
+
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closePopup();
+});`,
+    tests:[
+      {k:'motion',label:'Fades in on click',a:{type:'click',sel:'.open-btn'},track:[{sel:'.overlay',m:['opacity']}],dur:500},
+      {k:'motion',label:'A click on the backdrop closes it',a:{type:'click',sel:'.open-btn',then:{type:'click',sel:'.overlay',at:500}},track:[{sel:'.overlay',m:['opacity']}],dur:1100,mode:'endAbs'},
+      {k:'motion',label:'A click inside the box keeps it open',a:{type:'click',sel:'.open-btn',then:{type:'click',sel:'.box',at:500}},track:[{sel:'.overlay',m:['opacity']}],dur:1100,mode:'endAbs'},
+      {k:'code',label:'Esc closes it',file:'js',re:/key\s*===?\s*['"]Escape['"]/,why:'Listen for <code>keydown</code> on <code>document</code> and check <code>e.key === \'Escape\'</code>.'}
+    ],
+    hints:['A click inside the box bubbles up to the overlay too. That is why the check is <code>e.target === e.currentTarget</code>, not just "any click on the overlay".','<code>pointer-events: none</code> while hidden, or the invisible overlay blocks every click on the page.']
+  },
+  {
+    id:'datamap', title:'Data map', act:{label:'static drawing', a:{type:'load'}},
+    brief:'Draw three sites as dots on an SVG map from a data array, and list them underneath with readable port counts. One site name contains HTML: it must show as plain text.',
+    specs:[['svg','svg.map · viewBox 0 0 400 240 · 400 × 240 px'],['bounds','lng 30 → 44 onto x 0 → 400 · lat 20 → 10 onto y 0 → 240'],['dots','circle.dot r 7 at toXY(lat, lng)'],['list','ul.list › li "name: 12,450 ports" · toLocaleString(\'en-US\')'],['safety','names go in with textContent']],
+    bp:[['svg.map','viewBox 0 0 400 240 · dots added by JS'],['ul.list','items added by JS']],
+    html:`<svg class="map" viewBox="0 0 400 240"></svg>
+<ul class="list"></ul>`,
+    css:`.map {
+  display: block;
+  width: 400px;
+  height: 240px;
+  border-radius: 12px;
+  background: #eef1f6;
+}
+
+.dot {
+  fill: #ff4b1f;
+}`,
+    js:`const sites = [
+  { name: 'Gotham', lat: 15, lng: 37, ports: 1288 },
+  { name: 'Metropolis', lat: 18.2, lng: 38.5, ports: 960 },
+  { name: 'Hill Valley <b>HQ</b>', lat: 16.5, lng: 33, ports: 12450 },
+];
+
+const B = { minLng: 30, maxLng: 44, minLat: 10, maxLat: 20 };
+const W = 400;
+const H = 240;
+
+function toXY(lat, lng) {
+  const x = ((lng - B.minLng) / (B.maxLng - B.minLng)) * W;
+  const y = H - ((lat - B.minLat) / (B.maxLat - B.minLat)) * H;
+  return [Math.round(x), Math.round(y)];
+}
+
+const svg = document.querySelector('.map');
+const list = document.querySelector('.list');
+
+sites.forEach((s) => {
+  const [x, y] = toXY(s.lat, s.lng);
+  svg.innerHTML += \`<circle class="dot" cx="\${x}" cy="\${y}" r="7"></circle>\`;
+  const li = document.createElement('li');
+  li.textContent = s.name + ': ' + s.ports.toLocaleString('en-US') + ' ports';
+  list.appendChild(li);
+});`,
+    tests:[
+      {k:'motion',label:'Gotham sits at its spot',a:{type:'load'},track:[{sel:'.dot:nth-child(1)',m:['dx','dy']}],dur:250,mode:'endAbs',abs:4},
+      {k:'motion',label:'Hill Valley sits at its spot',a:{type:'load'},track:[{sel:'.dot:nth-child(3)',m:['dx','dy']}],dur:250,mode:'endAbs',abs:4},
+      {k:'code',label:'Port counts are formatted',file:'js',re:/toLocaleString\(/,why:'Format with <code>s.ports.toLocaleString(\'en-US\')</code>.'},
+      {k:'code',label:'Names go in as text, not HTML',file:'js',re:/\.textContent\s*=/,why:'Use <code>li.textContent = …</code> so "&lt;b&gt;HQ&lt;/b&gt;" stays visible as text.'}
+    ],
+    hints:['<code>toXY(15, 37)</code> should give <code>[200, 120]</code>: halfway across, halfway down.','Numbers are safe to put in an HTML string (the circles). Names are not: use textContent for the list.']
+  }
+  ]
+});
 const SIGPATH = 'M14 112 C 60 20, 104 20, 124 92 S 190 150, 222 82 S 292 18, 346 58';
 CH.push({
   id:'c10', name:'3D & depth', sub:'perspective · flip · tilt · cube', adv:true,
@@ -3974,7 +4206,7 @@ const EASES = [['linear','linear'],['ease','ease'],['ease-in','ease-in'],['ease-
 const DURS = [300, 600, 1000, 1500, 2000];
 const ABS = {h:8,hit:.5,dx:8,dy:8,opacity:.1,scale:.08,rot:12,w:8,wpct:.04,bg:.06,rx:2,ry:2,dash:.05,clip:5};
 const MLABEL = {h:'height',hit:'stacking (on top?)',rx:'tilt (rotateX)',ry:'turn (rotateY)',dash:'line draw (dashoffset)',clip:'clip size',dx:'horizontal position',dy:'vertical position',opacity:'opacity',scale:'size',rot:'rotation',w:'width',wpct:'width',bg:'background colour'};
-const KNOWN = ['getBoundingClientRect','clientX','clientY','createElement','appendChild','setProperty','textContent','innerHTML','currentTime','finished','animate','pause','play','split','scrollWidth','offsetHeight','animationDelay','Math','min','max','querySelector','querySelectorAll','addEventListener','classList','getElementById','IntersectionObserver','isIntersecting','observe','requestAnimationFrame','scrollY','scrollHeight','innerHeight','innerWidth','documentElement','offsetWidth','offsetLeft','offsetTop','forEach','toggle','add','remove','contains','style','transform','setTimeout','console','log','document','window','target','entries','entry','const','let','function','return'];
+const KNOWN = ['dataset','key','DOMContentLoaded','toLocaleString','currentTarget','setAttribute','getBoundingClientRect','clientX','clientY','createElement','appendChild','setProperty','textContent','innerHTML','currentTime','finished','animate','pause','play','split','scrollWidth','offsetHeight','animationDelay','Math','min','max','querySelector','querySelectorAll','addEventListener','classList','getElementById','IntersectionObserver','isIntersecting','observe','requestAnimationFrame','scrollY','scrollHeight','innerHeight','innerWidth','documentElement','offsetWidth','offsetLeft','offsetTop','forEach','toggle','add','remove','contains','style','transform','setTimeout','console','log','document','window','target','entries','entry','const','let','function','return'];
 
 const LS = 'webble.v1';
 let S = load();
@@ -4709,7 +4941,7 @@ function sealCount(m){ return CH.reduce((n, c) => n + c.targets.filter((t) => (S
 const LEVELS = [
   {n:1, name:'Basics', goal:'Make things move: where elements sit, transitions, keyframes and your first JavaScript.', ids:['c0','c1','c2','c3']},
   {n:2, name:'Craft', goal:'Make motion feel good: easing curves, text reveals and small interactions.', ids:['c4','c5','c6']},
-  {n:3, name:'Story', goal:'Tie motion to scrolling and to time. Then build a whole studio site.', ids:['c7','c8','studio']},
+  {n:3, name:'Story', goal:'Tie motion to scrolling and to time, learn the glue every app needs, then build a whole studio site.', ids:['c7','c8','c15','studio']},
   {n:4, name:'Advanced', goal:'3D, SVG, modern CSS, page transitions and polish. Then your own portfolio.', ids:['c10','c11','c12','c13','c14','portfolio']}
 ];
 function levelOf(ci){ const id = CH[ci].id; return LEVELS.find((L) => L.ids.includes(id)) || LEVELS[LEVELS.length - 1]; }
@@ -5458,5 +5690,6 @@ function boot(){
 window.Webble = {CHEAT_F, dueItems, reviewPool, today, cycleTheme, applyTheme, check, setMode, goTarget, goSchool, goHome, goGym, renderGym, startBug, bugFiles, BUGS, hitsOf, files, state: () => S, CH, patterns: PATTERNS, hardSolution, expertSolution, openFile, KIT};
 boot();
 </script>
+<script src="data/links.js" data-lab="webble"></script>
 </body>
 </html>
