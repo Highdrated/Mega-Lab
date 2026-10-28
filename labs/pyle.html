@@ -608,7 +608,12 @@
 #flight .fp-labels b{font-weight:400}
 #flight .fp-mid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));column-gap:24px;min-height:0}
 #flight .fp-card{padding:24px;display:flex;flex-direction:column;gap:16px;min-width:0;min-height:0;overflow:hidden}
-#flight .fp-next{grid-column:span 6;border-color:var(--fline2);background:var(--fpan)}
+#flight .fp-next{grid-column:span 6;border-color:var(--fline2);background:var(--fpan);position:relative}
+#flight .fp-next .fp-text{max-width:calc(100% - 128px)}
+#flight .fp-junie{position:absolute;right:20px;bottom:96px;width:118px;height:auto;pointer-events:none;animation:fpjn 4.5s ease-in-out infinite}
+@keyframes fpjn{50%{transform:translateY(-5px)}}
+@media (prefers-reduced-motion:reduce){#flight .fp-junie{animation:none}}
+@media (max-width:900px){#flight .fp-junie{width:84px}}
 #flight .fp-brief{grid-column:span 3}
 #flight .fp-scan{grid-column:span 3;font-size:10px;letter-spacing:1.5px;color:var(--fdim)}
 #flight .fp-eyebrow{display:flex;justify-content:space-between;font-size:11px;letter-spacing:3px;color:var(--facc)}
@@ -678,6 +683,7 @@
     <div class="fp-mid">
       <section class="fp-box fp-card fp-next">
         <div class="fp-eyebrow fp-mono"><span>NEXT JUMP</span><em id="fpEta">ETA ~8 MIN</em></div>
+        <img class="fp-junie" id="fpJunie" src="img/junie/junie-point.webp" alt="Junie">
         <h1 class="fp-title" id="fpTitle">Loops</h1>
         <p class="fp-text" id="fpIntro"></p>
         <button class="fp-engage" id="fpEngage">ENGAGE <span class="fp-mono">[ENTER] →</span></button>
@@ -8864,9 +8870,11 @@ function drawField() {
     if (t === "S") s += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" font-size="18" fill="var(--blue)">?</text>';
     if (t === "H") s += '<text x="' + cx + '" y="' + cy + '" text-anchor="middle" font-size="13" fill="var(--blue)">⌂</text>';
   }
+  if (f.pc != null && f.c !== f.pc) f.face = f.c < f.pc ? -1 : 1;
+  f.pc = f.c;
+  const jf = f.face === -1 ? ' transform="translate(' + cs + ',0) scale(-1,1)"' : '';
   s += '<g class="drone-g" style="transform: translate(' + (f.c * cs) + "px, " + (f.r * cs) + 'px)">' +
-       '<circle cx="' + (cs / 2) + '" cy="' + (cs / 2) + '" r="12" fill="none" stroke="var(--green)" stroke-width="2"/>' +
-       '<text x="' + (cs / 2) + '" y="' + (cs / 2 + 5) + '" text-anchor="middle" font-size="14" fill="var(--green)">✈</text></g>';
+       '<image href="img/junie/junie-' + (f.battery <= 0 ? 'sleep' : 'swim') + '.webp" x="-3" y="5" width="46" height="31" preserveAspectRatio="xMidYMid meet"' + jf + '/></g>';
   s += "</svg>";
   $("fwrap").innerHTML = s;
   $("fhud").innerHTML = "junie · row <b>" + f.r + "</b> col <b>" + f.c + "</b> · battery <b>" + f.battery + "%</b> · " + esc(MISSIONS[f.mission].name.toLowerCase());
@@ -9957,6 +9965,7 @@ function fpRender() {
     const left = cur.drills.length - d;
     $("fpTitle").innerHTML = esc(fpTitleCase(cur.name)) + ' <small>· drill ' + (d + 1) + "/" + cur.drills.length + "</small>";
     $("fpIntro").textContent = cur.intro || "";
+    $("fpJunie").src = "img/junie/junie-" + (d ? "point" : "read") + ".webp";
     $("fpEta").textContent = "ETA ~" + Math.max(2, Math.round(left * 1.5)) + " MIN";
     $("fpTask").textContent = (drill.teach && drill.teach[0] ? drill.teach[0] + "\n\n" : "") + "TASK · " + (drill.task || "");
     $("fpLeft").textContent = left + " DRILL" + (left === 1 ? "" : "S") + " TO THE NEXT WAYPOINT";
@@ -9971,6 +9980,7 @@ function fpRender() {
     }
   } else {
     $("fpTitle").textContent = "All sectors clear";
+    $("fpJunie").src = "img/junie/junie-cheer.webp";
     $("fpIntro").textContent = "Every module is done. Keep the edge sharp with review, kata and the workbook.";
     $("fpEta").textContent = "";
     $("fpTask").textContent = "Try the workbook or a code review from All systems.";

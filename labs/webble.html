@@ -72,6 +72,16 @@ select{font:inherit;font-weight:600;border:1px solid var(--line);background:var(
 .bp li{font-family:var(--mono);font-size:12px;padding:7px 10px;border:1px solid var(--line);border-radius:8px;background:var(--card)}
 .bp li span{color:var(--ink3);font-family:var(--sans)}
 .note{font-size:12.5px;line-height:1.55;padding:10px 12px;border-radius:10px;background:var(--soft2);color:var(--ink2)}
+.jn{display:flex;align-items:center;gap:12px;margin:12px 0}
+.jn img{width:74px;height:auto;flex:none;animation:jnbob 4.5s ease-in-out infinite}
+.jn p{margin:0;font-size:13px;line-height:1.55;color:var(--ink2);padding:10px 12px;border-radius:12px;background:var(--soft2)}
+@keyframes jnbob{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.jn img,.jnhero{animation:none!important}}
+.hero>div:first-child{position:relative}
+.jnhero{position:absolute;right:2%;top:-6px;width:clamp(110px,11vw,160px);height:auto;pointer-events:none;animation:jnswim 7s ease-in-out infinite}
+@keyframes jnswim{0%,100%{transform:translate(0,0) rotate(-2deg)}50%{transform:translate(-14px,8px) rotate(2deg)}}
+@media (max-width:900px){.jnhero{display:none}}
+
 .note b{color:var(--ink)}
 .hints{display:flex;flex-direction:column;gap:6px}
 .hint{font-size:13px;line-height:1.55;padding:10px 12px;border-left:3px solid var(--acc);background:var(--acc-soft);border-radius:0 8px 8px 0;animation:slideIn .35s var(--ease) both}
@@ -4525,6 +4535,9 @@ const MODE_NOTE = {
   hard:'<b>Hard</b> · You write everything in one <code>index.html</code>: the HTML, a <code>&lt;style&gt;</code> block and a <code>&lt;script&gt;</code>. The studio kit is added for you.',
   expert:'<b>Expert</b> · A real project folder. Link <code>css/kit.css</code>, <code>css/style.css</code> and <code>js/main.js</code> yourself in <code>index.html</code>. Use <code>defer</code>!'
 };
+const JN = 'img/junie/';
+function junie(pose, line, id) { return '<div class="jn"' + (id ? ' id="' + id + '"' : '') + '><img src="' + JN + 'junie-' + pose + '.webp" alt="Junie"><p>' + line + '</p></div>'; }
+function setJn(id, pose, line) { const el = document.getElementById(id); if (el) el.outerHTML = junie(pose, line, id); }
 function renderBrief(result){
   const t = tgt(), sl = S.seals[t.id] || {};
   const bug = S.bug ? BUGS.find((x) => x.id === S.bug) : null;
@@ -4545,6 +4558,8 @@ function renderBrief(result){
   const nxs = !bug && (sl[S.mode] || (result && result.ok)) ? afterHere() : undefined;
   if (nxs !== undefined) h += nxs ? `<button class="btn acc big nextbig" id="nextBtn">Next step · ${esc(nxs.kind === 'school' ? CH[nxs.ci].name + ' School' : CH[nxs.ci].targets[nxs.ti].title)} →</button>` : `<button class="btn acc big nextbig" id="nextBtn">Path complete ✦ Back home</button>`;
   h += `<h4>Help</h4><div class="hints" id="hints"></div><div class="row" style="margin-top:8px"><button class="btn ghost sm" id="hintBtn">Hint</button>${chap().nokit ? '' : '<button class="btn ghost sm" id="skelBtn">🦴 Skeleton</button>'}<button class="btn ghost sm" id="solBtn"${failCount >= 2 || sl[S.mode] ? '' : ' disabled title="Unlocks after 2 checks"'}>Solution</button></div>${noteHtml(t)}`;
+  const jnl = bug ? (result && result.ok ? junie('cheer', 'Squashed! That is exactly how bugs hide in real projects.') : junie('confused', 'Something is off. Play both and spot the moment they stop matching.')) : result && result.ok ? junie('cheer', S.mode === 'normal' ? 'Sealed! Try it in Hard mode later to make it stick.' : 'Sealed. That one is yours now.') : result ? junie('think', 'Play both side by side. Where does yours move differently?') : junie('point', 'Watch the target first, then rebuild the motion in your files.');
+  h = /<\/h1>[\s\S]*?<\/p>/.test(h) ? h.replace(/(<\/h1>[\s\S]*?<\/p>)/, (m) => m + jnl) : jnl + h;
   $('#brief').innerHTML = h;
   $('#brief').querySelectorAll('.chip').forEach((c) => c.onclick = showToolbox);
   if (bug) { $('#bugHint').onclick = () => { $('#bugHints').innerHTML = `<div class="hint">${bug.hint}</div>`; }; $('#bugList').onclick = () => goGym('bugs'); if (result && result.ok) { const nb = BUGS.find((x) => !(S.gym.bugs || {})[x.id]); const row = $('#brief .checks'); if (nb && row) { const b2 = document.createElement('button'); b2.className = 'btn sm'; b2.style.marginTop = '10px'; b2.textContent = 'Next bug →'; b2.onclick = () => startBug(nb.id); row.after(b2); } } }
@@ -4788,7 +4803,7 @@ function goHome(){
   const warm = CH.filter((c) => S.school[c.id]).length, nx = nextStep(), cs = curStep();
   const C = 2 * Math.PI * 54;
   const label = cs ? (cs.i === 0 ? 'Start here · step 1' : `Continue · step ${cs.i + 1}`) : 'Replay in Hard or Expert';
-  let h2 = `<div class="home"><section class="hero"><div><div class="eyebrow">Mega Lab · Volume VI · Motion</div><h1><span class="ln"><span>Make the web</span></span><span class="ln"><span><em>move.</em></span></span></h1><p>Learn the CSS and JavaScript behind cinematic, movement-heavy websites. Every target is a real effect from studio sites: watch it, rebuild it, seal it.</p><div class="row"><button class="btn acc big" id="hGo">${esc(label)} →</button><button class="btn ghost big" id="hTools">🧰 Toolbox</button></div></div>
+  let h2 = `<div class="home"><section class="hero"><div><img class="jnhero" src="img/junie/junie-swim.webp" alt="Junie"><div class="eyebrow">Mega Lab · Volume VI · Motion</div><h1><span class="ln"><span>Make the web</span></span><span class="ln"><span><em>move.</em></span></span></h1><p>Learn the CSS and JavaScript behind cinematic, movement-heavy websites. Every target is a real effect from studio sites: watch it, rebuild it, seal it.</p><div class="row"><button class="btn acc big" id="hGo">${esc(label)} →</button><button class="btn ghost big" id="hTools">🧰 Toolbox</button></div></div>
   <div class="stats"><div class="ring"><svg width="128" height="128" viewBox="0 0 128 128"><circle class="bgc" cx="64" cy="64" r="54"/><circle class="fg" id="ringFg" cx="64" cy="64" r="54" stroke-dasharray="${C}" stroke-dashoffset="${C}"/></svg><div class="lbl"><b>${Math.round(pct * 100)}%</b><small>sealed</small></div></div>
   <div class="statl"><div><span>Normal</span><b>${n} / ${tot}</b></div><div><span>Hard</span><b>${h} / ${tot}</b></div><div><span>Expert</span><b>${x} / ${tot}</b></div><div><span>Warm-ups</span><b>${warm} / ${CH.length}</b></div></div></div></section>
   ${pathHtml()}

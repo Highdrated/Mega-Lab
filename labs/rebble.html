@@ -191,6 +191,12 @@ kbd{font-family:var(--mono);font-size:10px;opacity:.7}
 .inner{max-width:1240px;margin:0 auto;padding:28px 28px 60px}
 .hero{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:22px;align-items:stretch}
 .panel{background:var(--sheet);border:1px solid var(--line);border-radius:16px;padding:22px}
+.jn{display:flex;align-items:center;gap:12px;margin:12px 0}
+.jn img{width:74px;height:auto;flex:none;animation:jnbob 4.5s ease-in-out infinite}
+.jn p{margin:0;font-size:13px;line-height:1.55;color:var(--ink2);padding:10px 12px;border-radius:12px;background:var(--soft2)}
+@keyframes jnbob{50%{transform:translateY(-4px)}}
+@media (prefers-reduced-motion:reduce){.jn img,.jnhero{animation:none!important}}
+
 .panel h2{font-family:var(--serif);font-weight:400;font-size:34px;line-height:1.05;margin:6px 0 10px}
 .panel h3{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);margin:18px 0 8px}
 .panel p{color:var(--ink2);line-height:1.6;margin:0 0 10px}
@@ -363,6 +369,10 @@ const clone = (o) => JSON.parse(JSON.stringify(o));
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const PHPWASM = 'https://cdn.jsdelivr.net/npm/php-wasm/PhpWeb.mjs';
 const LS = 'rebble.v1';
+const JN = 'img/junie/';
+function junie(pose, line, id) { return '<div class="jn"' + (id ? ' id="' + id + '"' : '') + '><img src="' + JN + 'junie-' + pose + '.webp" alt="Junie"><p>' + line + '</p></div>'; }
+function setJn(id, pose, line) { const el = document.getElementById(id); if (el) el.outerHTML = junie(pose, line, id); }
+
 const THEMES = ['drafting', 'blueprint', 'noir', 'bone'];
 const MODES = {
   guided: { name: 'Guided', tip: 'The new code is already in your files with ____ gaps. Fill every gap.' },
@@ -1016,7 +1026,7 @@ async function check() {
     save(); sfx.pass();
     renderPills(); renderBrief();
     if (!was || !(S.commits[S.bp] || []).some((x) => x.n === n)) setTimeout(() => commitModal(n), 600);
-  } else { sfx.bad(); toast(res.filter((r) => !r.ok).length + ' check' + (res.filter((r) => !r.ok).length > 1 ? 's' : '') + ' to fix'); }
+  } else { sfx.bad(); setJn('jnBrief', 'worry', res.filter((r) => !r.ok).length + ' to fix. The small line under each red check says what is missing.'); toast(res.filter((r) => !r.ok).length + ' check' + (res.filter((r) => !r.ok).length > 1 ? 's' : '') + ' to fix'); }
 }
 
 function commitModal(n) {
@@ -1045,7 +1055,7 @@ function renderBrief() {
   const st = ST(), n = curN(), delta = stageDelta(n), p = S.passed[key(n)], hints = S.hint[key(n)] || 0;
   const commit = (S.commits[S.bp] || []).filter((x) => x.n === n).slice(-1)[0];
   const fl = fileOrder(REF(n)).filter((x) => delta[x]);
-  $('#brief').innerHTML = '<div class="eyebrow">Stage ' + n + ' of ' + NST() + ' · ' + esc(st.sub) + '</div><h1>' + esc(st.title) + '</h1><p>' + st.brief + '</p>'
+  $('#brief').innerHTML = '<div class="eyebrow">Stage ' + n + ' of ' + NST() + ' · ' + esc(st.sub) + '</div><h1>' + esc(st.title) + '</h1><p>' + st.brief + '</p>' + (p ? junie('cheer', n < NST() ? 'Stage built! Commit it, then on to the next one.' : 'Every stage built. Your project is whole again.', 'jnBrief') : (LASTCHK[key(n)] || []).some((r) => !r.ok) ? junie('worry', 'A few checks are red. The small line under each one says what is missing.', 'jnBrief') : hints ? junie('think', 'Try one change from the hints, then Check again.', 'jnBrief') : junie('wrench', 'Build to the specs below, then press Check. I will look over every file.', 'jnBrief'))
     + '<div class="seg" id="modes" style="margin:4px 0 8px;display:inline-flex">' + Object.keys(MODES).map((m) => '<button data-m="' + m + '"' + (S.mode === m ? ' class="on"' : '') + '>' + MODES[m].name + '</button>').join('') + '</div>'
     + '<p class="note">' + MODES[S.mode].tip + '</p>'
     + '<h4>Specs</h4><dl class="specs">' + st.specs.map(([k, v]) => '<dt>' + esc(k) + '</dt><dd>' + v + '</dd>').join('') + '</dl>'
@@ -1136,9 +1146,9 @@ function wireDrill(card, d, onOk) {
 
 function renderSchool() {
   const st = ST(), n = curN(), sk = S.school[key(n)] || (S.school[key(n)] = {});
-  $('#school').innerHTML = '<div class="teach">' + st.teach + '</div><div class="drills"><div class="eyebrow">Stage ' + n + ' · warm-up</div><h2 style="font-family:var(--serif);font-weight:400;font-size:32px;margin:4px 0 2px">' + esc(st.title) + '</h2>'
+  $('#school').innerHTML = '<div class="teach">' + st.teach + '</div><div class="drills"><div class="eyebrow">Stage ' + n + ' · warm-up</div><h2 style="font-family:var(--serif);font-weight:400;font-size:32px;margin:4px 0 2px">' + esc(st.title) + '</h2>' + junie('read', 'Read the lesson first, then warm up here. Short drills, one idea each.', 'jnSchool')
     + st.drills.map((d, i) => drillHtml(d, 'dr' + i)).join('') + '<div class="row" style="margin-top:6px"><button class="btn acc" id="goBuild">Go build →</button><span class="note" id="schoolNote" style="margin:0"></span></div></div>';
-  const note = () => { const done = st.drills.filter((_, i) => sk[i]).length; $('#schoolNote').textContent = done === st.drills.length ? 'Warm-up done ✓' : done + ' / ' + st.drills.length + ' warm-ups'; };
+  const note = () => { const done = st.drills.filter((_, i) => sk[i]).length; $('#schoolNote').textContent = done === st.drills.length ? 'Warm-up done ✓' : done + ' / ' + st.drills.length + ' warm-ups'; if (done === st.drills.length) setJn('jnSchool', 'cheer', 'Warm-up done. Your hands know it now, time to build.'); };
   st.drills.forEach((d, i) => {
     const card = $('#dr' + i);
     if (sk[i]) { card.classList.add('ok'); const inp = card.querySelector('[data-in]'); if (inp) { inp.value = d.show || (typeof d.a[0] === 'string' ? d.a[0] : ''); inp.readOnly = true; } card.querySelector('.dfb').className = 'dfb ok'; card.querySelector('.dfb').innerHTML = '✓ ' + (d.why || 'Done'); if (d.k === 'pick') card.querySelectorAll('.opt')[d.a].classList.add('right'); return; }
@@ -1194,7 +1204,7 @@ function renderHome() {
   const st3 = bp.stages.reduce((a, _, i) => a + stars(i + 1), 0);
   const commits = (S.commits[S.bp] || []).slice().reverse();
   const nextN = Math.min(mp + 1, total);
-  $('#home').innerHTML = '<div class="hero"><div class="panel"><div class="eyebrow">Blueprint · ' + esc(bp.sub) + '</div><h2>' + esc(bp.name) + '</h2><p>' + bp.desc + '</p>'
+  $('#home').innerHTML = '<div class="hero"><div class="panel"><div class="eyebrow">Blueprint · ' + esc(bp.sub) + '</div><h2>' + esc(bp.name) + '</h2><p>' + bp.desc + '</p>' + (mp >= total ? junie('cheer', 'All rebuilt. You know this project inside out now.') : mp === 0 ? junie('blueprint', 'Hi, I am Junie. We rebuild this project together, one stage at a time.') : junie('blueprint', 'Welcome back. Stage ' + nextN + ' is unrolled and waiting.'))
     + '<div class="bar"><i style="width:' + Math.round((mp / total) * 100) + '%"></i></div>'
     + '<div class="stats"><div><b>' + mp + '/' + total + '</b>stages built</div><div><b>' + st3 + '</b>stars of ' + total * 3 + '</div><div><b>' + (S.commits[S.bp] || []).length + '</b>commits</div><div><b>' + (S.recall || 0) + '</b>recall rounds</div></div>'
     + '<div class="row"><button class="btn acc" id="contBtn">' + (mp === 0 ? 'Start stage 1 →' : mp >= total ? 'Revisit a stage' : 'Continue: stage ' + nextN + ' →') + '</button>' + (mp ? '<button class="btn ghost" id="runLatest">▶ Run my build</button>' : '') + (missionOpen() ? '<button class="btn ghost" id="toMis">Take it home</button>' : '') + '</div>'
@@ -1215,7 +1225,7 @@ function renderHome() {
 
 function renderMission() {
   const mi = BP().mission, ms = S.mission[S.bp] || (S.mission[S.bp] = { steps: {} });
-  $('#mission').innerHTML = '<div class="panel"><div class="eyebrow">' + esc(mi.sub) + '</div><h2>' + esc(mi.title) + '</h2><p>' + mi.intro + '</p><div class="row"><button class="btn acc" id="mxZip">⬇ Export my folder (.zip)</button><span class="note" style="margin:0">Exports your latest passed stage: stage ' + maxPassed() + '.</span></div></div>'
+  $('#mission').innerHTML = '<div class="panel"><div class="eyebrow">' + esc(mi.sub) + '</div><h2>' + esc(mi.title) + '</h2><p>' + mi.intro + '</p>' + (ms.done ? junie('cheer', 'It runs on your own machine. That is the real thing.') : junie('crate', 'I packed your folder. Now we set it up on your own machine, step by step.')) + '<div class="row"><button class="btn acc" id="mxZip">⬇ Export my folder (.zip)</button><span class="note" style="margin:0">Exports your latest passed stage: stage ' + maxPassed() + '.</span></div></div>'
     + '<div class="panel" style="margin-top:18px">' + mi.steps.map((s, i) => '<div class="step' + (ms.steps[i] ? ' done' : '') + '" id="ms' + i + '"><span class="sn">' + (ms.steps[i] ? '✓' : i + 1) + '</span><div><h3>' + esc(s.title) + '</h3><p>' + s.text + '</p>' + (s.cmds || []).map((c) => '<div class="cmd"><pre>' + esc(c) + '</pre><button data-copy="' + esc(c) + '">copy</button></div>').join('') + (s.paste ? '<p style="margin-top:8px">' + s.paste.ask + '</p><textarea class="paste" data-paste="' + i + '" spellcheck="false" placeholder="paste here"></textarea><div class="row" style="margin-top:6px"><button class="btn sm" data-pcheck="' + i + '">Check paste</button><span class="dfb" data-pfb="' + i + '"></span></div>' : '<div class="row"><button class="btn ghost sm" data-tick="' + i + '">' + (ms.steps[i] ? 'Done ✓' : 'Mark done') + '</button></div>') + '</div></div>').join('') + '</div>';
   $('#mxZip').onclick = exportZip;
   $$('[data-copy]').forEach((b) => (b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copy).then(() => toast('Copied'), () => toast('Copy failed: select it by hand')); }));
