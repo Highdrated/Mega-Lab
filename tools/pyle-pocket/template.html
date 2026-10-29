@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="orbital">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#e8eaee">
+<title>Pyle Pocket</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23141a26'/%3E%3Cpath d='M9 11l5 5-5 5M16 22h8' fill='none' stroke='%23e2b85c' stroke-width='2.4' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root, :root[data-theme="orbital"] {
+  --bg: #e8eaee; --panel: #f7f7f4; --panel2: #eef0f2; --line: #d4d7dd; --text: #19202c; --muted: #5f6775;
+  --accent: #c99a3b; --accent-ink: #19202c; --good: #3d7a52; --bad: #b4473b; --warn: #a87414;
+  --term-bg: #141a26; --term-text: #ece6d2; --term-muted: #8b93a3; --term-accent: #e2b85c;
+  --k-kw: #e2b85c; --k-str: #9fcf9a; --k-num: #e9a17c; --k-fn: #8fc1e8; --k-op: #c9cfdb;
+}
+:root[data-theme="verdant"] {
+  --bg: #0e1712; --panel: #142019; --panel2: #1a281f; --line: #273b2e; --text: #e3e8df; --muted: #8ea091;
+  --accent: #e0a23a; --accent-ink: #1a1206; --good: #86c27f; --bad: #e57a5f; --warn: #e0a23a;
+  --term-bg: #09100c; --term-text: #f0e6cc; --term-muted: #7f907f; --term-accent: #e0a23a;
+  --k-kw: #e0a23a; --k-str: #a6d49d; --k-num: #f0a688; --k-fn: #9cc8d8; --k-op: #c8d0c4;
+}
+:root[data-theme="walnut"] {
+  --bg: #1b1511; --panel: #241c17; --panel2: #2c231d; --line: #3c3028; --text: #eee4d6; --muted: #a8998a;
+  --accent: #c8734a; --accent-ink: #1b1511; --good: #a3b465; --bad: #e47561; --warn: #d9a441;
+  --term-bg: #120e0b; --term-text: #f2e7d5; --term-muted: #8f8072; --term-accent: #d9a441;
+  --k-kw: #d9a441; --k-str: #b8c47a; --k-num: #e8946e; --k-fn: #9fb9c9; --k-op: #d6cbbb;
+}
+:root {
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  --sans: system-ui, -apple-system, "Segoe UI", sans-serif;
+  --serif: "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; min-height: 100%; }
+body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; transition: background .25s, color .25s; }
+button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+.app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); }
+.top { display: flex; align-items: center; gap: 8px; height: 38px; }
+.logo { font-family: var(--serif); font-size: 21px; letter-spacing: .01em; white-space: nowrap; }
+.logo i { font-style: normal; font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .14em; text-transform: uppercase; margin-left: 6px; vertical-align: 3px; }
+.top .spacer { flex: 1; }
+.chipbtn { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 11px; font-size: 12px; color: var(--muted); white-space: nowrap; }
+.rail { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; margin: 6px 0 14px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.rail b { color: var(--text); font-weight: 600; }
+.bar { height: 3px; background: var(--line); border-radius: 2px; overflow: hidden; }
+.bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .3s; }
+.screen { display: none; flex: 1; flex-direction: column; min-width: 0; }
+.screen.on { display: flex; }
+.sect { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
+.welcome { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--muted); margin-bottom: 10px; }
+.welcome b { color: var(--text); }
+.junie { width: 64px; height: 64px; object-fit: contain; }
+.nextup { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; text-align: left; width: 100%; background: var(--term-bg); color: var(--term-text); border: 0; border-radius: 14px; padding: 14px 16px; min-height: 78px; }
+.nextup small { display: block; font-family: var(--mono); font-size: 11px; color: var(--term-muted); letter-spacing: .1em; text-transform: uppercase; }
+.nextup strong { display: block; font-family: var(--serif); font-size: 20px; font-weight: 500; margin-top: 3px; }
+.nextup .go { font-family: var(--mono); color: var(--term-accent); font-size: 12px; letter-spacing: .1em; text-transform: uppercase; }
+.path { display: grid; gap: 6px; }
+.step { display: grid; grid-template-columns: 26px 1fr auto; align-items: center; gap: 10px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 9px 12px; min-height: 52px; }
+.step .n { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+.step strong { display: block; font-family: var(--serif); font-weight: 500; font-size: 16px; }
+.step small { display: block; color: var(--muted); font-size: 12px; font-family: var(--mono); }
+.step .st { font-family: var(--mono); font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: .08em; }
+.step.done .st { color: var(--good); }
+.step.cur { border-color: var(--accent); }
+.step.cur .st { color: var(--accent); }
+.step.locked { opacity: .45; }
+.step.locked .n { color: var(--muted); }
+.quick { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qbtn { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; min-height: 74px; display: flex; flex-direction: column; justify-content: space-between; }
+.qbtn strong { font-family: var(--serif); font-size: 17px; font-weight: 500; }
+.qbtn small { color: var(--muted); font-size: 12px; line-height: 1.35; }
+.qbtn:disabled { opacity: .45; }
+.links { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 14px; }
+.links a, .links button { text-align: center; text-decoration: none; padding: 10px 6px; font-size: 13px; color: var(--text); border-radius: 10px; border: 1px solid var(--line); background: none; }
+.drillhead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; font-family: var(--mono); font-size: 12px; color: var(--muted); min-height: 28px; }
+.drillhead .quit { justify-self: start; border: 0; background: none; color: var(--muted); padding: 4px 0; font-family: var(--mono); font-size: 12px; }
+.drillhead .score { justify-self: end; }
+.drillhead .score b { color: var(--text); }
+.dots { display: flex; gap: 4px; margin: 6px 0 2px; }
+.dots i { flex: 1; height: 3px; border-radius: 2px; background: var(--line); }
+.dots i.good { background: var(--good); }
+.dots i.bad { background: var(--bad); }
+.dots i.on { background: var(--accent); }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 8px; min-width: 0; }
+.ticket { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 11px; color: var(--muted); padding-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
+.ask { font-family: var(--serif); font-size: 18px; line-height: 1.35; margin-bottom: 8px; }
+.code { background: var(--term-bg); color: var(--term-text); border-radius: 10px; padding: 11px 13px; font-family: var(--mono); font-size: 14px; line-height: 1.55; overflow-x: auto; white-space: pre; margin: 8px 0 0; -webkit-overflow-scrolling: touch; }
+.code .kw, .built .kw { color: var(--k-kw); }
+.code .st, .built .st { color: var(--k-str); }
+.code .nu, .built .nu { color: var(--k-num); }
+.code .fn, .built .fn { color: var(--k-fn); }
+.out { margin-top: 6px; border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; font-family: var(--mono); font-size: 14px; white-space: pre; overflow-x: auto; }
+.out::before { content: "output"; display: block; font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 2px; font-family: var(--sans); font-weight: 600; }
+.target { margin-top: 8px; font-size: 12px; color: var(--muted); font-family: var(--mono); }
+.target pre { margin: 4px 0 0; font-size: 14px; color: var(--text); background: var(--panel2); border-radius: 8px; padding: 7px 10px; white-space: pre; overflow-x: auto; }
+.blank { display: inline-block; min-width: 2.4em; border-bottom: 2px solid var(--term-accent); color: var(--term-accent); text-align: center; }
+.choices { display: grid; gap: 8px; margin-top: 12px; }
+.choice { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px; font-family: var(--mono); font-size: 14px; white-space: pre; overflow-x: auto; min-height: 50px; }
+.choice.err { font-style: italic; color: var(--bad); }
+.choice.good { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--panel)); }
+.choice.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--panel)); }
+.choice:disabled { color: inherit; opacity: 1; }
+.chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.chip { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 0 14px; min-height: 46px; font-family: var(--mono); font-size: 15px; min-width: 52px; }
+.chip.used { opacity: .25; }
+.chip.good { border-color: var(--good); }
+.chip.bad { border-color: var(--bad); }
+.slot { min-height: 54px; border: 1px dashed var(--line); border-radius: 11px; padding: 6px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-top: 10px; background: var(--panel2); }
+.slot .ph { color: var(--muted); font-size: 13px; padding: 0 6px; }
+.slot .chip { min-height: 40px; background: var(--term-bg); color: var(--term-text); border-color: var(--term-bg); font-size: 14px; }
+.slot.good { border: 1px solid var(--good); }
+.slot.bad { border: 1px solid var(--bad); }
+.lines { display: grid; gap: 6px; margin-top: 10px; }
+.lrow { display: grid; grid-template-columns: 26px 1fr; align-items: center; gap: 8px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; font-family: var(--mono); font-size: 14px; white-space: pre; overflow-x: auto; min-height: 44px; }
+.lrow .ln { font-size: 11px; color: var(--muted); text-align: right; }
+.lrow.picked { opacity: .3; }
+.lrow.good { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--panel)); }
+.lrow.bad { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 12%, var(--panel)); }
+.built { display: grid; gap: 4px; margin-top: 10px; min-height: 52px; border: 1px dashed var(--line); border-radius: 11px; padding: 6px; background: var(--panel2); }
+.built .ph { color: var(--muted); font-size: 13px; padding: 10px 6px; }
+.built .lrow { background: var(--term-bg); color: var(--term-text); border-color: var(--term-bg); min-height: 38px; padding: 6px 10px; }
+.built .lrow .ln { color: var(--term-muted); }
+.built.good { border: 1px solid var(--good); }
+.built.bad { border: 1px solid var(--bad); }
+.acts { display: grid; grid-template-columns: 1fr 2fr; gap: 8px; margin-top: 12px; }
+.btn { height: 50px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); font-weight: 600; }
+.btn.main { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+.btn:disabled { opacity: .4; }
+.fb { margin-top: 12px; font-size: 14px; line-height: 1.55; display: none; border-top: 1px solid var(--line); padding-top: 10px; }
+.fb.on { display: block; }
+.fb .verdict { font-weight: 700; }
+.fb .verdict.good { color: var(--good); }
+.fb .verdict.bad { color: var(--bad); }
+.fb code, .lesson code { font-family: var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 4px; font-size: .93em; }
+.fb .fix { margin-top: 6px; }
+.fb .fix .code { margin-top: 4px; }
+.fbrow { display: grid; grid-template-columns: 1fr 60px; gap: 8px; align-items: start; }
+.fbrow img { width: 60px; height: 60px; object-fit: contain; }
+.next { margin-top: auto; height: 54px; border-radius: 11px; border: 0; background: var(--accent); color: var(--accent-ink); font-weight: 700; font-size: 16px; display: none; }
+.next.on { display: block; }
+.spacer16 { height: 14px; }
+.lesson { font-size: 15px; line-height: 1.6; }
+.lesson h3 { font-family: var(--serif); font-weight: 500; font-size: 22px; margin: 2px 0 6px; }
+.lesson .kicker { font-family: var(--mono); font-size: 11px; color: var(--accent); letter-spacing: .12em; text-transform: uppercase; }
+.lesson ul { padding-left: 18px; margin: 6px 0; }
+.lesson li { margin: 4px 0; }
+.lhead { display: grid; grid-template-columns: 1fr 56px; gap: 8px; align-items: start; }
+.lhead img { width: 56px; height: 56px; object-fit: contain; }
+.flow { display: flex; flex-direction: column; align-items: stretch; gap: 0; margin: 12px 0 4px; font-family: var(--mono); font-size: 12.5px; }
+.fbox { background: var(--panel2); border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; text-align: center; }
+.farrow { text-align: center; color: var(--accent); line-height: 1; padding: 3px 0; font-size: 14px; }
+.fdec { align-self: center; border: 1.5px solid var(--accent); border-radius: 999px; padding: 6px 16px; text-align: center; background: color-mix(in srgb, var(--accent) 10%, var(--panel)); }
+.fsplit { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 6px; }
+.fsplit > div { display: flex; flex-direction: column; gap: 3px; }
+.fsplit span { font-size: 10px; text-transform: uppercase; letter-spacing: .12em; text-align: center; }
+.fsplit .y span { color: var(--good); }
+.fsplit .n span { color: var(--bad); }
+.floop { border: 1px dashed var(--accent); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; gap: 4px; }
+.floop .lbl { display: flex; justify-content: space-between; font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.trace { width: 100%; border-collapse: collapse; font-family: var(--mono); font-size: 13px; margin: 10px 0 2px; }
+.trace td, .trace th { padding: 6px 5px; border-bottom: 1px solid var(--line); text-align: left; }
+.trace th { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; font-weight: 600; }
+.chk { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.chk .q { font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--accent); font-weight: 600; }
+.wnote { font-size: 13px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+.wnote.good { color: var(--good); }
+.wnote.bad { color: var(--bad); }
+.lessonnav { margin-top: auto; padding-top: 16px; display: grid; grid-template-columns: 1fr 2fr; gap: 8px; }
+.result { text-align: center; padding-top: 10px; }
+.result img { width: 110px; height: 110px; object-fit: contain; }
+.result .num { font-family: var(--serif); font-size: 60px; line-height: 1.1; }
+.result .lbl { color: var(--muted); font-size: 13px; }
+.result .line { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.result .line div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 10px 4px; }
+.result .line b { display: block; font-family: var(--mono); font-size: 19px; }
+.result .line span { font-size: 11px; color: var(--muted); }
+.result .msg { margin-top: 14px; font-weight: 600; min-height: 1.4em; }
+.result .msg.good { color: var(--good); }
+.result .msg.bad { color: var(--warn); }
+.result .actions { margin-top: 18px; display: grid; gap: 8px; }
+.misses { margin-top: 14px; text-align: left; font-size: 13px; }
+.misses .m { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.misses .m .code { font-size: 12px; margin-top: 4px; }
+.misses .m b { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+.notes { display: grid; gap: 6px; }
+.empty { color: var(--muted); font-size: 14px; text-align: center; padding: 30px 10px; line-height: 1.6; }
+.trace td.cur { outline: 2px solid var(--accent); outline-offset: -2px; background: color-mix(in srgb, var(--accent) 12%, var(--panel)); text-align: center; color: var(--accent); font-weight: 700; }
+.trace td.good { color: var(--good); }
+.trace td.bad { color: var(--bad); }
+#tt td:first-child, #tt th:first-child { width: 96px; color: var(--muted); }
+#tt td:not(:first-child), #tt th:not(:first-child) { text-align: center; }
+.tprompt { font-size: 14px; margin-top: 10px; min-height: 1.5em; line-height: 1.5; }
+.tprompt code { font-family: var(--mono); background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
+.tprompt.bad { color: var(--bad); }
+.chip.flash { border-color: var(--bad); background: color-mix(in srgb, var(--bad) 14%, var(--panel)); }
+.chip.ok { border-color: var(--good); background: color-mix(in srgb, var(--good) 14%, var(--panel)); }
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); transform: translateX(-50%) translateY(20px); background: var(--term-bg); color: var(--term-text); padding: 10px 16px; border-radius: 999px; font-size: 13px; opacity: 0; transition: .25s; pointer-events: none; z-index: 9; }
+.toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="top">
+    <span class="logo">Pyle<i>pocket</i></span>
+    <span class="spacer"></span>
+    <button class="chipbtn" id="themeBtn">orbital</button>
+  </div>
+  <div class="rail"><span id="rank">Cadet</span><div class="bar"><i id="xpbar"></i></div><span><b id="xp">0</b> xp · <b id="streak">0</b>d</span></div>
+
+  <section class="screen on" id="home">
+    <div class="welcome" id="welcome"><img class="junie" src="img/junie/junie-wave.webp" alt=""><div>No typing needed. Just tap <b>Continue</b>. Each lesson is a few short cards, then 5 tap questions. Get <b>4 of 5</b> right and the next lesson opens.</div></div>
+    <button class="nextup" id="nextUp"></button>
+    <div class="sect"><span>Quick</span></div>
+    <div class="quick">
+      <button class="qbtn" id="dailyBtn"><strong>Daily 10</strong><small id="dailySub">mistakes first, only what you know</small></button>
+      <button class="qbtn" id="notesBtn"><strong>Notes</strong><small id="notesSub">reread any lesson</small></button>
+    </div>
+    <div class="sect"><span>Your path</span><span id="pathCount"></span></div>
+    <div class="path" id="pathList"></div>
+    <div class="links">
+      <a href="pyle.html">Pyle</a>
+      <a href="sleeple.html">Sleeple</a>
+      <button id="offBtn">Save offline</button>
+      <button id="resetBtn">Reset</button>
+    </div>
+  </section>
+
+  <section class="screen" id="lesson">
+    <div class="drillhead"><button class="quit" id="lessonBack">‹ path</button><span id="lessonPos"></span><span></span></div>
+    <div class="dots" id="lessonDots"></div>
+    <div class="card lesson" id="lessonBody"></div>
+    <div class="lessonnav">
+      <button class="btn" id="lessonPrev">‹ Back</button>
+      <button class="btn main" id="lessonNext">Next ›</button>
+    </div>
+  </section>
+
+  <section class="screen" id="drill">
+    <div class="drillhead">
+      <button class="quit" id="quitBtn">✕ end</button>
+      <span id="count"></span>
+      <span class="score">✓ <b id="ok">0</b></span>
+    </div>
+    <div class="dots" id="drillDots"></div>
+    <div class="card" id="qcard"></div>
+    <div class="spacer16"></div>
+    <button class="next" id="nextBtn">Next ›</button>
+  </section>
+
+  <section class="screen" id="result">
+    <div class="result">
+      <img id="resImg" src="img/junie/junie-cheer.webp" alt="">
+      <div class="num" id="resNum">0</div>
+      <div class="lbl" id="resSub">correct</div>
+      <div class="line">
+        <div><b id="resAcc">0%</b><span>accuracy</span></div>
+        <div><b id="resXp">+0</b><span>xp</span></div>
+        <div><b id="resStreak">0</b><span>day streak</span></div>
+      </div>
+      <div class="msg" id="resMsg"></div>
+      <div class="actions">
+        <button class="btn main" id="againBtn">Again</button>
+        <button class="btn" id="homeBtn">Back to path</button>
+      </div>
+      <div class="misses" id="misses"></div>
+    </div>
+  </section>
+
+  <section class="screen" id="notes">
+    <div class="drillhead"><button class="quit" data-home>‹ path</button><span>notes</span><span></span></div>
+    <div class="notes" id="notesList"></div>
+  </section>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+const DATA = __DATA__;
+const KEY = "pyle-pocket-v1";
+const THEMES = ["orbital", "verdant", "walnut"];
+const RANKS = [[0, "Cadet"], [150, "Coder"], [400, "Builder"], [800, "Engineer"], [1400, "Architect"], [2200, "Pythonista"]];
+const DAY = 864e5;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const today = () => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime(); };
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const ERRS = ["TypeError", "ValueError", "NameError", "IndexError", "KeyError", "ZeroDivisionError", "AttributeError", "SyntaxError"];
+
+let S = { theme: "orbital", xp: 0, learned: {}, passed: {}, best: {}, srs: {}, streak: { day: 0, n: 0 }, welcomed: false };
+try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const KW = new Set("False None True and as break class continue def elif else except finally for from if import in is lambda not or pass return try while with yield".split(" "));
+const BI = new Set("print len range int str float type list dict set tuple sum max min sorted round input abs enumerate zip".split(" "));
+function hl(src) {
+  const re = /(f?"(?:[^"\\]|\\.)*"|f?'(?:[^'\\]|\\.)*')|(___)|(\b\d+(?:\.\d+)?\b)|([A-Za-z_]\w*)|([\s\S])/g;
+  let out = "", m;
+  while ((m = re.exec(src))) {
+    if (m[1]) out += `<span class="st">${esc(m[1])}</span>`;
+    else if (m[2]) out += `<span class="blank" data-blank>___</span>`;
+    else if (m[3]) out += `<span class="nu">${m[3]}</span>`;
+    else if (m[4]) out += KW.has(m[4]) ? `<span class="kw">${m[4]}</span>` : BI.has(m[4]) ? `<span class="fn">${m[4]}</span>` : m[4];
+    else out += esc(m[5]);
+  }
+  return out;
+}
+const codeBlock = (src) => `<div class="code">${hl(src)}</div>`;
+const inline = (s) => esc(s).replace(/`([^`]+)`/g, "<code>$1</code>");
+
+function toast(t) { const el = $("toast"); el.textContent = t; el.classList.add("on"); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove("on"), 1800); }
+function buzz() { try { navigator.vibrate && navigator.vibrate(25); } catch (e) {} }
+
+function setTheme(t) {
+  S.theme = t; document.documentElement.dataset.theme = t; $("themeBtn").textContent = t;
+  const m = document.querySelector('meta[name="theme-color"]'); if (m) m.content = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  save();
+}
+$("themeBtn").onclick = () => setTheme(THEMES[(THEMES.indexOf(S.theme) + 1) % THEMES.length]);
+
+function rankOf(xp) { let r = RANKS[0], nx = null; for (let i = 0; i < RANKS.length; i++) { if (xp >= RANKS[i][0]) { r = RANKS[i]; nx = RANKS[i + 1] || null; } } return { name: r[1], from: r[0], to: nx ? nx[0] : null }; }
+function paintRail() {
+  const r = rankOf(S.xp);
+  $("rank").textContent = r.name; $("xp").textContent = S.xp;
+  $("xpbar").style.width = r.to ? Math.round((S.xp - r.from) / (r.to - r.from) * 100) + "%" : "100%";
+  const t = today();
+  $("streak").textContent = (S.streak.day === t || S.streak.day === t - DAY) ? S.streak.n : 0;
+}
+function bumpStreak() {
+  const t = today();
+  if (S.streak.day === t) return;
+  S.streak.n = S.streak.day === t - DAY ? S.streak.n + 1 : 1;
+  S.streak.day = t;
+}
+function addXp(n) { S.xp += n; save(); paintRail(); }
+
+function show(id) {
+  document.querySelectorAll(".screen").forEach((s) => s.classList.toggle("on", s.id === id));
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll("[data-home]").forEach((b) => (b.onclick = goHome));
+
+const unlocked = (i) => i === 0 || !!S.passed[DATA[i - 1].id];
+function stateOf(i) {
+  const L = DATA[i];
+  if (!unlocked(i)) return "locked";
+  if (S.passed[L.id]) return "done";
+  if (S.learned[L.id]) return "practice";
+  return "learn";
+}
+function currentStep() {
+  for (let i = 0; i < DATA.length; i++) { const s = stateOf(i); if (s === "learn" || s === "practice") return i; }
+  return -1;
+}
+function knownIds() { return DATA.filter((L, i) => S.passed[L.id] || (S.learned[L.id] && unlocked(i))).map((L) => L.id); }
+function dueList() {
+  const t = today(), ids = new Set(knownIds());
+  return Object.entries(S.srs).filter(([k, v]) => ids.has(k.split(":")[0]) && v.due <= t).map(([k]) => k);
+}
+
+function paintPath() {
+  paintRail();
+  $("welcome").style.display = S.welcomed && Object.keys(S.passed).length ? "none" : "";
+  const cur = currentStep();
+  const nu = $("nextUp");
+  if (cur < 0) {
+    nu.innerHTML = `<span><small>path complete</small><strong>All ${DATA.length} lessons done</strong></span><span class="go">daily ›</span>`;
+    nu.onclick = () => startDaily();
+  } else {
+    const L = DATA[cur], st = stateOf(cur);
+    nu.innerHTML = `<span><small>${st === "learn" ? "lesson" : "practice"} ${cur + 1} of ${DATA.length}</small><strong>${esc(L.title)}</strong></span><span class="go">continue ›</span>`;
+    nu.onclick = () => openStep(cur);
+  }
+  const done = DATA.filter((L) => S.passed[L.id]).length;
+  $("pathCount").textContent = `${done}/${DATA.length}`;
+  $("pathList").innerHTML = DATA.map((L, i) => {
+    const st = stateOf(i);
+    const lbl = { locked: "locked", learn: "learn", practice: "practice", done: `${S.best[L.id] || 0}/5` }[st];
+    return `<button class="step ${st}${i === cur ? " cur" : ""}" data-i="${i}" ${st === "locked" ? "disabled" : ""}><span class="n">${String(i + 1).padStart(2, "0")}</span><span><strong>${esc(L.title)}</strong><small>${esc(L.sub)}</small></span><span class="st">${lbl}</span></button>`;
+  }).join("");
+  $("pathList").querySelectorAll(".step").forEach((b) => (b.onclick = () => openStep(+b.dataset.i)));
+  const known = knownIds(), due = dueList();
+  $("dailyBtn").disabled = !known.length;
+  $("dailySub").textContent = known.length ? (due.length ? `${due.length} mistake${due.length > 1 ? "s" : ""} due · only what you know` : "only what you know") : "opens after your first lesson";
+  $("notesSub").textContent = known.length ? `${known.length} lesson${known.length > 1 ? "s" : ""} to reread` : "fills up as you learn";
+}
+function goHome() { paintPath(); show("home"); }
+
+function openStep(i) {
+  const st = stateOf(i);
+  if (st === "locked") return;
+  if (st === "learn") openLesson(i, false);
+  else if (st === "practice") startPractice(i);
+  else chooseDone(i);
+}
+function chooseDone(i) {
+  const L = DATA[i];
+  const nu = $("qcard");
+  show("drill");
+  $("count").textContent = ""; $("ok").textContent = "0"; $("drillDots").innerHTML = ""; $("nextBtn").classList.remove("on");
+  $("quitBtn").onclick = goHome;
+  nu.innerHTML = `<div class="ticket"><span>lesson ${i + 1}</span><span>best ${S.best[L.id] || 0}/5</span></div><div class="ask">${esc(L.title)}</div><div class="acts" style="grid-template-columns:1fr 1fr"><button class="btn" id="rl">Reread</button><button class="btn main" id="rp">Practice 5</button></div>`;
+  $("rl").onclick = () => openLesson(i, true);
+  $("rp").onclick = () => startPractice(i);
+}
+
+let LS = null;
+function openLesson(i, review) {
+  LS = { i, k: 0, review, passed: {} };
+  show("lesson");
+  renderCard();
+}
+function flowHtml(f) {
+  const parts = f.map((n) => {
+    if (typeof n === "string") return `<div class="fbox">${esc(n)}</div>`;
+    if (n.if) return `<div class="fdec">${esc(n.if)}</div><div class="fsplit"><div class="y"><span>yes</span><div class="fbox">${esc(n.yes)}</div></div><div class="n"><span>no</span><div class="fbox">${esc(n.no)}</div></div></div>`;
+    if (n.loop) return `<div class="floop"><div class="lbl"><span>repeat</span><span>no: leave</span></div><div class="fdec">${esc(n.loop)}</div><div class="farrow">↓ yes</div><div class="fbox">${esc(n.body)}</div><div class="farrow">↺ back to the question</div></div>`;
+    return "";
+  });
+  return `<div class="flow">${parts.join('<div class="farrow">↓</div>')}</div>`;
+}
+function traceHtml(t) {
+  return `<table class="trace"><tr>${t.cols.map((c) => `<th>${esc(c)}</th>`).join("")}</tr>${t.rows.map((r) => `<tr>${r.map((c) => `<td>${esc(c)}</td>`).join("")}</tr>`).join("")}</table>`;
+}
+function outLabel(s) { return ERRS.includes(s) ? `${s} (crash)` : s; }
+function renderCard() {
+  const L = DATA[LS.i], c = L.cards[LS.k], n = L.cards.length;
+  $("lessonPos").textContent = `${LS.i + 1} · ${L.title}`;
+  $("lessonDots").innerHTML = L.cards.map((_, j) => `<i class="${j < LS.k ? "good" : j === LS.k ? "on" : ""}"></i>`).join("");
+  const imgs = ["junie-point", "junie-read", "junie-think", "junie-tablet"];
+  let h = `<div class="lhead"><div><div class="kicker">card ${LS.k + 1} of ${n}</div><h3>${esc(c.h)}</h3></div><img src="img/junie/${imgs[LS.k % imgs.length]}.webp" alt=""></div>`;
+  h += `<ul>${c.body.map((b) => `<li>${inline(b)}</li>`).join("")}</ul>`;
+  if (c.code) h += codeBlock(c.code) + `<div class="out">${esc(outLabel(c.out))}</div>`;
+  if (c.flow) h += flowHtml(c.flow);
+  if (c.trace) h += traceHtml(c.trace);
+  const done = LS.passed[LS.k] || LS.review;
+  if (c.check) {
+    const q = c.check;
+    h += `<div class="chk"><div class="q">quick check · what does it print?</div>${codeBlock(q.code)}<div class="choices" id="cc">${q.choices.map((ch, j) => `<button class="choice${ERRS.includes(ch) ? " err" : ""}" data-j="${j}">${esc(outLabel(ch))}</button>`).join("")}</div><div class="wnote" id="cn">${LS.review ? "" : "Answer this to go on."}</div></div>`;
+  }
+  $("lessonBody").innerHTML = h;
+  if (c.check) {
+    const q = c.check;
+    $("cc").querySelectorAll(".choice").forEach((b) => (b.onclick = () => {
+      const j = +b.dataset.j;
+      if (j === q.a) {
+        b.classList.add("good");
+        $("cc").querySelectorAll(".choice").forEach((x) => (x.disabled = true));
+        $("cn").className = "wnote good"; $("cn").textContent = "Yes. " + q.why;
+        LS.passed[LS.k] = true; $("lessonNext").disabled = false;
+      } else {
+        b.classList.add("bad"); buzz();
+        $("cn").className = "wnote bad"; $("cn").textContent = "Not quite. " + q.why + " Try another.";
+      }
+    }));
+  }
+  $("lessonPrev").disabled = LS.k === 0;
+  $("lessonNext").disabled = !!c.check && !done;
+  $("lessonNext").textContent = LS.k === n - 1 ? (LS.review ? "Done" : "Start practice ›") : "Next ›";
+}
+$("lessonPrev").onclick = () => { if (LS.k > 0) { LS.k--; renderCard(); } };
+$("lessonNext").onclick = () => {
+  const L = DATA[LS.i];
+  if (LS.k < L.cards.length - 1) { LS.k++; renderCard(); return; }
+  if (LS.review) { goHome(); return; }
+  if (!S.learned[L.id]) { S.learned[L.id] = true; S.welcomed = true; addXp(20); }
+  startPractice(LS.i);
+};
+$("lessonBack").onclick = goHome;
+
+function pickPractice(L) {
+  const qs = L.qs.map((q, i) => ({ q, k: `${L.id}:${i}` }));
+  const kinds = ["predict", "fill", "build", "order", "bug", "trace"];
+  const byKind = {};
+  shuffle(qs).forEach((x) => (byKind[x.q.t] = byKind[x.q.t] || []).push(x));
+  const pick = [];
+  shuffle(kinds.filter((k) => k !== "predict")).forEach((k) => { if (byKind[k] && byKind[k].length && pick.length < 3) pick.push(byKind[k].shift()); });
+  const rest = shuffle(Object.values(byKind).flat());
+  while (pick.length < 5 && rest.length) pick.push(rest.shift());
+  return shuffle(pick);
+}
+function pickDaily() {
+  const ids = knownIds();
+  const due = shuffle(dueList()).slice(0, 5);
+  const pick = due.map((k) => { const [id, n] = k.split(":"); return { q: DATA.find((L) => L.id === id).qs[+n], k }; });
+  const have = new Set(due);
+  const pool = shuffle(ids.flatMap((id) => DATA.find((L) => L.id === id).qs.map((q, i) => ({ q, k: `${id}:${i}` })))).filter((x) => !have.has(x.k));
+  const fresh = pool.filter((x) => !S.srs[x.k]);
+  while (pick.length < 10 && (fresh.length || pool.length)) {
+    const x = (fresh.length && Math.random() < .7 ? fresh : pool).shift();
+    if (!have.has(x.k)) { have.add(x.k); pick.push(x); }
+    const fi = fresh.indexOf(x); if (fi >= 0) fresh.splice(fi, 1);
+    const pi = pool.indexOf(x); if (pi >= 0) pool.splice(pi, 1);
+  }
+  return shuffle(pick);
+}
+
+let R = null;
+function startPractice(i) {
+  const L = DATA[i];
+  R = { mode: "practice", li: i, items: pickPractice(L), at: 0, ok: 0, res: [], misses: [] };
+  runRound();
+}
+function startDaily() {
+  if (!knownIds().length) return;
+  R = { mode: "daily", items: pickDaily(), at: 0, ok: 0, res: [], misses: [] };
+  runRound();
+}
+$("dailyBtn").onclick = startDaily;
+function runRound() { show("drill"); $("quitBtn").onclick = () => { if (R.at > 0) finish(); else goHome(); }; renderQ(); }
+function lessonTitleOf(k) { return DATA.find((L) => L.id === k.split(":")[0]).title; }
+
+function renderQ() {
+  const it = R.items[R.at], q = it.q, n = R.items.length;
+  $("count").textContent = `${R.at + 1} / ${n}`; $("ok").textContent = R.ok;
+  $("drillDots").innerHTML = R.items.map((_, j) => `<i class="${j < R.at ? (R.res[j] ? "good" : "bad") : j === R.at ? "on" : ""}"></i>`).join("");
+  $("nextBtn").classList.remove("on");
+  const head = `<div class="ticket"><span>${{ predict: "predict", fill: "fill the gap", build: "build it", order: "put in order", bug: "find the bug", trace: "trace the loop" }[q.t]}</span><span>${esc(lessonTitleOf(it.k))}</span></div>`;
+  const box = $("qcard");
+  R.done = false;
+  if (q.t === "predict") {
+    box.innerHTML = head + `<div class="ask">What does it print?</div>${codeBlock(q.code)}<div class="choices" id="ch">${q.choices.map((c, j) => `<button class="choice${ERRS.includes(c) ? " err" : ""}" data-j="${j}">${esc(outLabel(c))}</button>`).join("")}</div><div class="fb" id="fb"></div>`;
+    box.querySelectorAll(".choice").forEach((b) => (b.onclick = () => {
+      if (R.done) return;
+      const j = +b.dataset.j, good = j === q.a;
+      box.querySelectorAll(".choice").forEach((x, xi) => { x.disabled = true; if (xi === q.a) x.classList.add("good"); });
+      if (!good) b.classList.add("bad");
+      answer(good, q.why, good ? "" : `It prints <code>${esc(outLabel(q.choices[q.a])).replace(/\n/g, "<br>")}</code>`);
+    }));
+  } else if (q.t === "fill") {
+    box.innerHTML = head + `<div class="ask">Pick what goes in the gap.</div>${codeBlock(q.code)}<div class="target">should print<pre>${esc(outLabel(q.target))}</pre></div><div class="chips" id="ch">${q.choices.map((c, j) => `<button class="chip" data-j="${j}">${esc(c)}</button>`).join("")}</div><div class="fb" id="fb"></div>`;
+    box.querySelectorAll(".chip").forEach((b) => (b.onclick = () => {
+      if (R.done) return;
+      const j = +b.dataset.j, good = q.ok.includes(j);
+      const bl = box.querySelector("[data-blank]"); if (bl) bl.textContent = q.choices[j];
+      box.querySelectorAll(".chip").forEach((x, xi) => { x.disabled = true; if (q.ok.includes(xi)) x.classList.add("good"); });
+      if (!good) b.classList.add("bad");
+      answer(good, q.why, good ? "" : `The gap is <code>${esc(q.choices[q.ok[0]])}</code>`);
+    }));
+  } else if (q.t === "build") {
+    R.seq = [];
+    box.innerHTML = head + `<div class="ask">${esc(q.ask)}</div>${q.setup ? codeBlock(q.setup) : ""}<div class="target">should print<pre>${esc(q.target)}</pre></div><div class="slot" id="slot"></div><div class="chips" id="tiles"></div><div class="acts"><button class="btn" id="howB">Show me</button><button class="btn main" id="chkB" disabled>Check</button></div><div class="fb" id="fb"></div>`;
+    const paint = () => {
+      $("slot").innerHTML = R.seq.length ? R.seq.map((t, p) => `<button class="chip" data-p="${p}">${esc(q.tiles[t])}</button>`).join("") : `<span class="ph">tap the pieces below to build one line</span>`;
+      $("tiles").innerHTML = q.tiles.map((t, j) => `<button class="chip${R.seq.includes(j) ? " used" : ""}" data-j="${j}" ${R.seq.includes(j) ? "disabled" : ""}>${esc(t)}</button>`).join("");
+      $("slot").querySelectorAll(".chip").forEach((b) => (b.onclick = () => { if (R.done) return; R.seq.splice(+b.dataset.p, 1); paint(); }));
+      $("tiles").querySelectorAll(".chip").forEach((b) => (b.onclick = () => { if (R.done) return; R.seq.push(+b.dataset.j); paint(); }));
+      $("chkB").disabled = !R.seq.length || R.done;
+    };
+    paint();
+    const solText = q.sol.split(",").map((t) => q.tiles[+t]).join(" ");
+    $("chkB").onclick = () => {
+      const good = q.ok.includes(R.seq.join(","));
+      $("slot").classList.add(good ? "good" : "bad");
+      R.done = true; paint();
+      answer(good, q.why, good ? "" : `One right line:${codeBlock(solText)}`);
+    };
+    $("howB").onclick = () => {
+      if (R.done) return;
+      R.seq = q.sol.split(",").map(Number); R.done = true; paint(); $("slot").classList.add("bad");
+      answer(false, q.why, "Here it is. It comes back later for another go.");
+    };
+  } else if (q.t === "order") {
+    R.seq = [];
+    box.innerHTML = head + `<div class="ask">Tap the lines in the right order.</div><div class="target">should print<pre>${esc(q.target)}</pre></div><div class="built" id="built"></div><div class="lines" id="pool"></div><div class="acts"><button class="btn" id="howB">Show me</button><button class="btn main" id="chkB" disabled>Check</button></div><div class="fb" id="fb"></div>`;
+    const paint = () => {
+      $("built").innerHTML = R.seq.length ? R.seq.map((t, p) => `<button class="lrow" data-p="${p}"><span class="ln">${p + 1}</span><span>${hl(q.lines[t])}</span></button>`).join("") : `<span class="ph">tap the first line below</span>`;
+      $("pool").innerHTML = q.lines.map((l, j) => `<button class="lrow${R.seq.includes(j) ? " picked" : ""}" data-j="${j}" ${R.seq.includes(j) ? "disabled" : ""}><span class="ln"></span><span>${hl(l)}</span></button>`).join("");
+      $("built").querySelectorAll(".lrow").forEach((b) => (b.onclick = () => { if (R.done) return; R.seq.splice(+b.dataset.p, 1); paint(); }));
+      $("pool").querySelectorAll(".lrow").forEach((b) => (b.onclick = () => { if (R.done) return; R.seq.push(+b.dataset.j); paint(); }));
+      $("chkB").disabled = R.seq.length !== q.lines.length || R.done;
+    };
+    paint();
+    const solCode = q.sol.split(",").map((t) => q.lines[+t]).join("\n");
+    $("chkB").onclick = () => {
+      const good = q.ok.includes(R.seq.join(","));
+      $("built").classList.add(good ? "good" : "bad");
+      R.done = true; paint();
+      answer(good, q.why, good ? "" : `Right order:${codeBlock(solCode)}`);
+    };
+    $("howB").onclick = () => {
+      if (R.done) return;
+      R.seq = q.sol.split(",").map(Number); R.done = true; paint(); $("built").classList.add("bad");
+      answer(false, q.why, "Here it is. It comes back later for another go.");
+    };
+  } else if (q.t === "trace") {
+    const nc = q.cols.length, total = q.rows.length * nc;
+    R.cell = 0; R.tbad = []; R.lock = false;
+    box.innerHTML = head + `<div class="ask">Follow the loop. Fill the table one value at a time.</div>${codeBlock(q.code)}<table class="trace" id="tt"></table><div class="tprompt" id="tp"></div><div class="chips" id="ch"></div><div class="fb" id="fb"></div>`;
+    const paint = (note) => {
+      let h = `<tr><th>after lap</th>${q.cols.map((c) => `<th>${esc(c)}</th>`).join("")}</tr>`;
+      q.rows.forEach((row, r) => {
+        h += `<tr><td>${r + 1}</td>${row.map((v, c) => {
+          const idx = r * nc + c;
+          const cls = idx < R.cell ? (R.tbad.includes(idx) ? "bad" : "good") : idx === R.cell ? "cur" : "";
+          return `<td class="${cls}">${idx < R.cell ? esc(v) : idx === R.cell ? "?" : ""}</td>`;
+        }).join("")}</tr>`;
+      });
+      $("tt").innerHTML = h;
+      if (R.cell >= total) { $("tp").innerHTML = ""; $("ch").innerHTML = ""; return; }
+      const r = Math.floor(R.cell / nc), c = R.cell % nc;
+      $("tp").className = "tprompt" + (note ? " bad" : "");
+      $("tp").innerHTML = (note ? note + " " : "") + `What is <code>${esc(q.cols[c])}</code> after lap ${r + 1}?`;
+      $("ch").innerHTML = q.opts[R.cell].map((o, j) => `<button class="chip" data-j="${j}">${esc(o)}</button>`).join("");
+      $("ch").querySelectorAll(".chip").forEach((b) => (b.onclick = () => {
+        if (R.done || R.lock) return;
+        const val = q.rows[r][c], pickd = q.opts[R.cell][+b.dataset.j];
+        const step = (msg) => { R.cell++; R.lock = false; paint(msg); if (R.cell >= total) answer(!R.tbad.length, q.why, R.tbad.length ? `${R.tbad.length} value${R.tbad.length > 1 ? "s" : ""} off. The red ones in the table are the right values.` : ""); };
+        if (pickd === val) { b.classList.add("ok"); R.lock = true; setTimeout(() => step(""), 180); }
+        else { b.classList.add("flash"); buzz(); R.tbad.push(R.cell); R.lock = true; setTimeout(() => step(`It was ${esc(val)}.`), 550); }
+      }));
+    };
+    paint("");
+  } else if (q.t === "bug") {
+    box.innerHTML = head + `<div class="ask">One line is broken. Tap it.</div><div class="target">should print<pre>${esc(q.expect)}</pre></div><div class="target">but gives<pre>${esc(outLabel(q.got))}</pre></div><div class="lines" id="pool">${q.lines.map((l, j) => `<button class="lrow" data-j="${j}"><span class="ln">${j + 1}</span><span>${hl(l || " ")}</span></button>`).join("")}</div><div class="fb" id="fb"></div>`;
+    box.querySelectorAll(".lrow").forEach((b) => (b.onclick = () => {
+      if (R.done) return;
+      const j = +b.dataset.j, good = j === q.bad;
+      box.querySelectorAll(".lrow").forEach((x, xi) => { x.disabled = true; if (xi === q.bad) x.classList.add("good"); });
+      if (!good) b.classList.add("bad");
+      answer(good, q.why, `<div class="fix">Line ${q.bad + 1} fixed:${codeBlock(q.fix.trim())}</div>`);
+    }));
+  }
+}
+
+function answer(good, why, extra) {
+  R.done = true;
+  const it = R.items[R.at];
+  R.res[R.at] = good;
+  if (good) { R.ok++; $("ok").textContent = R.ok; } else { buzz(); R.misses.push(it); }
+  const t = today(), s = S.srs[it.k];
+  if (!good) S.srs[it.k] = { box: 0, due: t + DAY, miss: (s ? s.miss : 0) + 1 };
+  else if (s) { const b = Math.min(s.box + 1, 4); s.box = b; s.due = t + [1, 3, 7, 14, 30][b] * DAY; if (b >= 4) delete S.srs[it.k]; }
+  save();
+  const fb = $("fb");
+  fb.innerHTML = `<div class="fbrow"><div><span class="verdict ${good ? "good" : "bad"}">${good ? "Correct." : "Not this time."}</span> ${inline(why)}${extra ? `<div class="fix">${extra}</div>` : ""}</div><img src="img/junie/${good ? "junie-cheer" : "junie-think"}.webp" alt=""></div>`;
+  fb.classList.add("on");
+  $("nextBtn").textContent = R.at === R.items.length - 1 ? "See result ›" : "Next ›";
+  $("nextBtn").classList.add("on");
+  setTimeout(() => fb.scrollIntoView({ behavior: "smooth", block: "nearest" }), 30);
+}
+$("nextBtn").onclick = () => { if (R.at < R.items.length - 1) { R.at++; renderQ(); } else finish(); };
+
+function finish() {
+  const n = R.at + (R.done ? 1 : 0), ok = R.ok;
+  let xp = ok * 10, msg = "", cls = "good";
+  bumpStreak();
+  if (R.mode === "practice") {
+    const L = DATA[R.li];
+    if (n === R.items.length) S.best[L.id] = Math.max(S.best[L.id] || 0, ok);
+    if (ok >= 4 && n === R.items.length) {
+      if (!S.passed[L.id]) { S.passed[L.id] = true; xp += 30; msg = R.li + 1 < DATA.length ? `Passed. Lesson ${R.li + 2} is open.` : "Passed. Path complete."; }
+      else msg = "Passed again.";
+    } else { cls = "bad"; msg = n < R.items.length ? "Ended early. Try a full round." : `${ok} of 5. Need 4 to open the next lesson. Go again.`; }
+  } else msg = R.misses.length ? "Misses come back in a later Daily." : "Clean run.";
+  addXp(xp);
+  save();
+  $("resNum").textContent = ok;
+  $("resSub").textContent = `correct of ${n}`;
+  $("resAcc").textContent = n ? Math.round(ok / n * 100) + "%" : "0%";
+  $("resXp").textContent = "+" + xp;
+  $("resStreak").textContent = S.streak.n;
+  $("resMsg").className = "msg " + cls; $("resMsg").textContent = msg;
+  $("resImg").src = `img/junie/${cls === "good" ? "junie-cheer" : "junie-worry"}.webp`;
+  $("misses").innerHTML = R.misses.length ? `<div class="sect"><span>To look at again</span></div>` + R.misses.map((it) => {
+    const q = it.q;
+    const body = q.t === "predict" ? `${codeBlock(q.code)}<div>prints <code>${esc(outLabel(q.choices[q.a]))}</code></div>` :
+      q.t === "fill" ? `${codeBlock(q.code.replace("___", q.choices[q.ok[0]]))}` :
+      q.t === "build" ? `${q.setup ? codeBlock(q.setup) : ""}${codeBlock(q.sol.split(",").map((t) => q.tiles[+t]).join(" "))}` :
+      q.t === "order" ? codeBlock(q.sol.split(",").map((t) => q.lines[+t]).join("\n")) :
+      q.t === "trace" ? codeBlock(q.code) + traceHtml({ cols: ["after lap"].concat(q.cols), rows: q.rows.map((r, i) => [String(i + 1)].concat(r)) }) :
+      `<div>line ${q.bad + 1} should be</div>${codeBlock(q.fix.trim())}`;
+    return `<div class="m"><b>${esc(lessonTitleOf(it.k))}</b>${body}</div>`;
+  }).join("") : "";
+  const passedNow = R.mode === "practice" && S.passed[DATA[R.li].id] && R.li + 1 < DATA.length && ok >= 4;
+  $("againBtn").textContent = passedNow ? `Next: ${DATA[R.li + 1].title}` : "Again";
+  $("againBtn").onclick = () => {
+    if (passedNow) openStep(R.li + 1);
+    else if (R.mode === "practice") startPractice(R.li);
+    else startDaily();
+  };
+  show("result");
+}
+$("homeBtn").onclick = goHome;
+
+$("notesBtn").onclick = () => {
+  const ids = new Set(knownIds());
+  const list = DATA.map((L, i) => ({ L, i })).filter((x) => ids.has(x.L.id));
+  $("notesList").innerHTML = list.length ? list.map(({ L, i }) => `<button class="step" data-i="${i}"><span class="n">${String(i + 1).padStart(2, "0")}</span><span><strong>${esc(L.title)}</strong><small>${L.cards.map((c) => esc(c.h)).join(" · ")}</small></span><span class="st">read</span></button>`).join("") : `<div class="empty">Notes fill up as you learn.<br>Start lesson 1 from the path.</div>`;
+  $("notesList").querySelectorAll(".step").forEach((b) => (b.onclick = () => openLesson(+b.dataset.i, true)));
+  show("notes");
+};
+$("resetBtn").onclick = () => {
+  if (!confirm("Reset all Pyle Pocket progress on this device?")) return;
+  const t = S.theme, off = S.offlineAt;
+  S = { theme: t, offlineAt: off, xp: 0, learned: {}, passed: {}, best: {}, srs: {}, streak: { day: 0, n: 0 }, welcomed: false };
+  save(); goHome(); toast("Progress reset");
+};
+
+const JUNIE = ["img/junie/junie-wave.webp", "img/junie/junie-point.webp", "img/junie/junie-read.webp", "img/junie/junie-think.webp", "img/junie/junie-tablet.webp", "img/junie/junie-cheer.webp", "img/junie/junie-worry.webp"];
+const SWOK = "serviceWorker" in navigator && /^https?:$/.test(location.protocol);
+if (SWOK) navigator.serviceWorker.register("../sw.js", { scope: "../" }).catch(() => {});
+function paintOff() { $("offBtn").textContent = S.offlineAt ? "Offline ready" : "Save offline"; }
+$("offBtn").onclick = () => {
+  if (!SWOK) { toast("Offline needs the live site"); return; }
+  $("offBtn").textContent = "Saving...";
+  navigator.serviceWorker.ready.then((reg) => {
+    const sw = reg.active || navigator.serviceWorker.controller;
+    if (!sw) { toast("Open once more, then try again"); paintOff(); return; }
+    sw.postMessage({ type: "pack", urls: ["labs/pyle-pocket.html"].concat(JUNIE.map((j) => "labs/" + j)) });
+  });
+};
+if (SWOK) navigator.serviceWorker.addEventListener("message", (e) => {
+  const d = e.data || {};
+  if (d.type === "packed") { S.offlineAt = Date.now(); save(); paintOff(); toast("Saved. Works without signal now"); }
+});
+paintOff();
+setTheme(THEMES.includes(S.theme) ? S.theme : "orbital");
+goHome();
+</script>
+</body>
+</html>
