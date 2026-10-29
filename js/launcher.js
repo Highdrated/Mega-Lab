@@ -209,9 +209,10 @@ const starfield = (() => {
 })();
 
 function setTheme(t) {
-  document.body.className = t === "orbital" ? "theme-orbital" : "";
+  t = t || "void";
+  document.body.className = t === "void" ? "" : "theme-" + t;
   for (const b of document.querySelectorAll("#themeToggle button")) b.classList.toggle("on", b.dataset.theme === t);
-  document.querySelector('meta[name="theme-color"]').setAttribute("content", t === "orbital" ? "#eef1f4" : "#05070B");
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", getComputedStyle(document.body).getPropertyValue("--bg").trim() || "#05070B");
   lsSet("workshop-theme", t);
   lsSet("junoslab-theme", t === "orbital" ? "space" : "terminal");
   starfield.recolor();
@@ -305,6 +306,7 @@ function showMap() {
   opened.classList.remove("show");
   starfield.resume();
   syncOpenState();
+  if (typeof stationFlush === "function") { stObserve(); stRender(); stationFlush(); }
 }
 
 function closeTab(id) {
@@ -435,6 +437,7 @@ function exportProgress() {
   try {
     for (let i = 0; i < localStorage.length; i++) {
       const k = localStorage.key(i);
+      if (k && k.startsWith("station-")) continue;
       data[k] = localStorage.getItem(k);
     }
   } catch (e) { toast("storage unavailable"); return; }
@@ -456,7 +459,8 @@ function importProgress(file) {
       const parsed = JSON.parse(reader.result);
       if (!parsed || parsed.workshop !== 1 || typeof parsed.data !== "object") throw new Error("not a workshop file");
       let n = 0;
-      for (const [k, v] of Object.entries(parsed.data)) { lsSet(k, v); n++; }
+      for (const [k, v] of Object.entries(parsed.data)) { if (k.startsWith("station-")) continue; lsSet(k, v); n++; }
+      if (typeof stScan === "function") { stScan(true); stRender(); }
       toast(`imported ${n} entries`);
       setTheme(lsGet("workshop-theme") || "void");
     } catch (e) { toast("import failed: " + e.message); }
