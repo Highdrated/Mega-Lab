@@ -1,0 +1,1471 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Junle Room</title>
+<style>
+:root {
+  --ink: #d9d3c4;
+  --dim: #8a867c;
+  --faint: #55524b;
+  --amber: #e0a83e;
+  --ok: #86c79b;
+  --bad: #e07a5f;
+  --screen: #0b0d0d;
+  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+body { overflow: hidden; background: #050607; color: var(--ink); font-family: var(--mono); -webkit-font-smoothing: antialiased; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; }
+
+.stage { position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * 1024 / 572)); aspect-ratio: 1024 / 572; transform: translate(-50%, -50%); }
+.cam { position: absolute; inset: 0; transform-origin: 0 0; transition: transform 1s cubic-bezier(.45, 0, .2, 1); }
+.room { position: absolute; inset: 0; background: url(img/junle-room/room.png) center / 100% 100%; }
+.shade { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1s; background: radial-gradient(ellipse 46% 30% at 50% 62%, transparent 60%, rgba(3, 4, 5, .55) 100%); }
+body.v-sit .shade, body.v-focus .shade { opacity: 1; }
+
+.screen { position: absolute; background: var(--screen); overflow: hidden; container-type: size; box-shadow: 0 0 1.4vw rgba(120, 170, 200, .08); cursor: pointer; }
+.screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, .035), transparent 38%); }
+#main  { left: 35.06%; top: 46.50%; width: 30.08%; height: 27.80%; }
+#left  { left: 9.96%;  top: 54.37%; width: 21.58%; height: 22.55%; }
+#right { left: 68.46%; top: 54.55%; width: 21.58%; height: 22.03%; }
+#small { left: 71.88%; top: 81.99%; width: 6.15%;  height: 10.31%; }
+
+.term { position: absolute; inset: 0; padding: 3.4cqh 3.2cqw; display: flex; flex-direction: column; font-size: 2.55cqw; line-height: 1.5; cursor: text; }
+.log { flex: 1; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-all; scrollbar-width: none; display: flex; flex-direction: column; }
+.log::-webkit-scrollbar { display: none; }
+.log::before { content: ""; margin-top: auto; }
+.log .e { color: var(--ink); }
+.inl { display: flex; white-space: pre; }
+.inl .pr { color: var(--ink); }
+#cmd { flex: 1; min-width: 0; background: none; border: 0; outline: 0; color: var(--ink); font: inherit; caret-color: var(--amber); padding: 0; }
+#cmd.hide { color: transparent; }
+.nosig { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; color: var(--faint); font-size: 2.6cqw; letter-spacing: .5cqw; text-align: center; }
+.nosig b { color: var(--dim); font-weight: 400; letter-spacing: .3cqw; font-size: 2.1cqw; }
+.term[hidden], .nosig[hidden] { display: none; }
+
+.side { position: absolute; inset: 0; padding: 4.5cqh 4cqw; font-size: 3.3cqw; line-height: 1.45; display: flex; flex-direction: column; cursor: default; }
+.side h4 { font-weight: 400; font-size: 2.7cqw; letter-spacing: .5cqw; color: var(--dim); display: flex; justify-content: space-between; border-bottom: 1px solid #23211d; padding-bottom: 1.6cqh; margin-bottom: 2.4cqh; }
+.side h4 span:last-child { color: var(--amber); }
+#left svg { width: 100%; flex: 1; min-height: 0; }
+.st-title { color: var(--amber); margin-bottom: 1.4cqh; }
+.st-why { color: var(--ink); opacity: .86; font-size: 3.05cqw; }
+.cmds { margin-top: auto; display: flex; flex-direction: column; gap: 1.4cqh; padding-top: 2cqh; }
+.chip { text-align: left; padding: .9cqh 2cqw; border: 1px solid #2c2925; border-radius: 3px; font-size: 2.8cqw; color: var(--ink); filter: blur(.9cqw); opacity: .7; transition: filter .3s, opacity .3s; cursor: pointer; word-break: break-all; }
+.chip.shown { filter: none; opacity: 1; cursor: default; }
+.dots { display: flex; gap: 1.6cqw; margin-top: 2.2cqh; }
+.dots i { width: 2cqw; height: 2cqw; border-radius: 50%; border: 1px solid var(--faint); }
+.dots i.d { background: var(--ok); border-color: var(--ok); }
+.dots i.c { border-color: var(--amber); }
+.done-msg { color: var(--ok); }
+#small .side { align-items: center; justify-content: center; padding: 0; }
+.big { font-size: 26cqw; color: var(--ink); letter-spacing: 1cqw; }
+.big small { font-size: 14cqw; color: var(--dim); }
+.lbl { font-size: 9cqw; letter-spacing: 1.6cqw; color: var(--dim); margin-top: 3cqh; }
+
+.hot { position: absolute; border-radius: 6px; cursor: pointer; transition: box-shadow .25s, background .25s; }
+.hot:hover { box-shadow: 0 0 0 1px rgba(224, 168, 62, .55), 0 0 2.2vw rgba(224, 168, 62, .18); background: rgba(224, 168, 62, .04); }
+#hot-rack { left: 86.5%; top: 7%; width: 13.3%; height: 88%; }
+#hot-desksw { left: 62.8%; top: 81.4%; width: 11.3%; height: 6.9%; }
+body.v-focus .hot { pointer-events: none; }
+.tip { position: absolute; pointer-events: none; padding: .45vw .8vw; background: rgba(8, 9, 10, .88); border: 1px solid #2f2b25; border-radius: 4px; font-size: max(11px, .72vw); letter-spacing: .06em; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+.tip b { color: var(--amber); font-weight: 400; }
+.tip.on { opacity: 1; }
+#tip-rack { right: 14.5%; top: 30%; }
+#tip-desksw { left: 54%; top: 75%; }
+
+.hint { position: fixed; left: 50%; bottom: 18px; transform: translateX(-50%); font-size: 11px; letter-spacing: .14em; color: rgba(217, 211, 196, .5); text-transform: uppercase; pointer-events: none; transition: opacity .4s; white-space: nowrap; }
+.tools { position: fixed; right: 14px; top: 12px; display: flex; gap: 6px; z-index: 5; }
+.tools button, .tools a { width: 30px; height: 30px; display: grid; place-items: center; border: 1px solid rgba(217, 211, 196, .12); border-radius: 4px; background: rgba(8, 9, 10, .55); color: rgba(217, 211, 196, .65); text-decoration: none; }
+.tools button:hover, .tools a:hover { color: var(--amber); border-color: rgba(224, 168, 62, .4); }
+.tools svg { width: 15px; height: 15px; }
+.toast { position: fixed; left: 50%; top: 18px; transform: translate(-50%, -8px); padding: 9px 16px; background: rgba(8, 9, 10, .92); border: 1px solid #2f2b25; border-radius: 4px; font-size: 12.5px; letter-spacing: .03em; max-width: min(640px, 90vw); text-align: center; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; z-index: 30; }
+.toast.on { opacity: 1; transform: translate(-50%, 0); }
+
+#cu { position: fixed; inset: 0; z-index: 20; overflow: hidden; background: #050607; opacity: 0; pointer-events: none; transition: opacity .45s; touch-action: none; }
+#cu.on { opacity: 1; pointer-events: auto; }
+.cu-bg { position: absolute; background: url(img/junle-room/rack-front.png) center / 100% 100%; filter: brightness(.62) saturate(.9); transition: filter .4s; }
+#cu.rear .cu-bg { transform: scaleX(-1); filter: brightness(.34) saturate(.6) blur(1px); }
+.cu-panel { position: absolute; }
+.cu-panel svg { width: 100%; height: 100%; display: block; overflow: visible; }
+.cu-top { position: absolute; left: 0; right: 0; top: 0; display: flex; align-items: center; justify-content: space-between; padding: 16px 22px; background: linear-gradient(180deg, rgba(5, 6, 7, .85), transparent); font-size: 12px; letter-spacing: .14em; text-transform: uppercase; }
+.cu-top .name b { color: var(--amber); font-weight: 400; }
+.cu-top .name span { color: var(--dim); margin-left: 12px; }
+.seg { display: flex; border: 1px solid rgba(217, 211, 196, .18); border-radius: 4px; overflow: hidden; }
+.seg button { padding: 7px 14px; letter-spacing: .14em; color: var(--dim); }
+.seg button.on { background: rgba(224, 168, 62, .14); color: var(--amber); }
+.cu-close { padding: 7px 14px; border: 1px solid rgba(217, 211, 196, .18); border-radius: 4px; letter-spacing: .14em; }
+.cu-close:hover { color: var(--amber); }
+.cu-status { position: absolute; left: 50%; bottom: 128px; transform: translateX(-50%); width: min(760px, 92vw); text-align: center; font-size: 13px; line-height: 1.55; color: var(--ink); min-height: 40px; text-shadow: 0 1px 6px #000; }
+.cu-status.bad { color: #f0b39f; }
+.cu-status.good { color: #b9e3c5; }
+.tray { position: absolute; left: 50%; bottom: 26px; transform: translateX(-50%); display: flex; gap: 14px; padding: 12px 14px; background: rgba(8, 9, 10, .78); border: 1px solid #2a2722; border-radius: 6px; }
+.cable { display: flex; align-items: center; gap: 10px; padding: 8px 12px 8px 8px; border: 1px solid #2f2b25; border-radius: 4px; font-size: 11.5px; letter-spacing: .05em; color: var(--ink); cursor: grab; user-select: none; touch-action: none; background: rgba(255, 255, 255, .02); }
+.cable:hover { border-color: rgba(224, 168, 62, .45); }
+.cable small { display: block; color: var(--dim); font-size: 10.5px; margin-top: 2px; }
+.cable svg { width: 34px; height: 22px; flex: none; }
+.cable.in { border-color: rgba(134, 199, 155, .5); }
+#wire { position: fixed; inset: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 21; }
+.unplug { position: absolute; right: 22px; bottom: 34px; padding: 7px 12px; border: 1px solid rgba(217, 211, 196, .18); border-radius: 4px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
+.unplug:hover { color: var(--bad); border-color: rgba(224, 122, 95, .4); }
+.unplug[hidden] { display: none; }
+.prt { cursor: crosshair; }
+.prt:hover .jack, .prt.over .jack { stroke: var(--amber); stroke-width: 2; }
+.rearnote { position: absolute; left: 22px; bottom: 34px; font-size: 10.5px; letter-spacing: .12em; text-transform: uppercase; color: var(--faint); }
+#cu:not(.rear) .rearnote { display: none; }
+
+@media (max-width: 760px) {
+  .cable { padding: 6px 8px 6px 6px; font-size: 10.5px; }
+  .cable small { display: none; }
+  .tray { gap: 8px; }
+  .cu-status { bottom: 96px; font-size: 12px; }
+}
+</style>
+</head>
+<body class="v-stand">
+
+<div class="stage">
+  <div class="cam" id="cam">
+    <div class="room"></div>
+    <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg></div></div>
+    <div class="screen" id="main">
+      <div class="nosig" id="nosig">NO CONSOLE<b>click the rack and plug in a console cable</b></div>
+      <div class="term" id="term" hidden>
+        <div class="log" id="log"></div>
+        <div class="inl"><span class="pr" id="pr"></span><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
+      </div>
+    </div>
+    <div class="screen" id="right"><div class="side" id="ticket"></div></div>
+    <div class="screen" id="small"><div class="side" id="count"></div></div>
+    <div class="hot" id="hot-rack" data-tip="tip-rack"></div>
+    <div class="hot" id="hot-desksw" data-tip="tip-desksw"></div>
+    <div class="shade"></div>
+  </div>
+</div>
+<div class="tip" id="tip-rack"><b>acc-sw-01</b> · EX4300-48T · rack R1</div>
+<div class="tip" id="tip-desksw">desk switch · unmanaged</div>
+
+<div class="hint" id="hint"></div>
+<div class="tools">
+  <button id="t-snd" title="Sound"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6h3l4-3v10l-4-3H2z"/><path id="snd-w" d="M11.5 5.5a3.5 3.5 0 0 1 0 5"/></svg></button>
+  <button id="t-reset" title="Reset the switch to factory default"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8a5 5 0 1 0 1.5-3.5"/><path d="M3 2.5V5h2.5"/></svg></button>
+  <a href="junle.html" title="Classic Junle"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="9" rx="1"/><path d="M5 7l1.5 1.5L5 10M8 10h3"/></svg></a>
+</div>
+<div class="toast" id="toast"></div>
+
+<div id="cu">
+  <div class="cu-bg" id="cu-bg"></div>
+  <div class="cu-panel" id="cu-panel"><svg id="cu-svg" viewBox="0 0 1200 237"></svg></div>
+  <div class="cu-top">
+    <div class="name"><b>acc-sw-01</b><span>EX4300-48T · rack R1 · U22</span></div>
+    <div class="seg"><button id="v-front" class="on">Front</button><button id="v-rear">Rear</button></div>
+    <button class="cu-close" id="cu-close">Back to desk</button>
+  </div>
+  <div class="cu-status" id="cu-status">Drag a cable onto a port.</div>
+  <div class="tray" id="tray">
+    <div class="cable" data-cable="con-rj"><svg viewBox="0 0 34 22"><rect x="1" y="5" width="18" height="12" rx="1.5" fill="#3d6fa3"/><rect x="19" y="7" width="8" height="8" fill="#9aa3ab"/><path d="M27 11h6" stroke="#3d6fa3" stroke-width="3"/></svg><div>Console cable<small>RJ-45 rollover</small></div></div>
+    <div class="cable" data-cable="con-mini"><svg viewBox="0 0 34 22"><rect x="1" y="6" width="16" height="10" rx="1.5" fill="#2b2b2b" stroke="#666"/><rect x="17" y="8.5" width="7" height="5" fill="#9aa3ab"/><path d="M24 11h9" stroke="#2b2b2b" stroke-width="3"/></svg><div>Console cable<small>mini-USB</small></div></div>
+    <div class="cable" data-cable="patch"><svg viewBox="0 0 34 22"><rect x="1" y="5" width="18" height="12" rx="1.5" fill="#c9a227"/><rect x="19" y="7" width="8" height="8" fill="#9aa3ab"/><path d="M27 11h6" stroke="#c9a227" stroke-width="3"/></svg><div>Patch cable<small>Ethernet</small></div></div>
+  </div>
+  <button class="unplug" id="unplug" hidden>Unplug</button>
+  <div class="rearnote">rear view · placeholder art</div>
+</div>
+<svg id="wire"></svg>
+
+<script>
+const $ = (s) => document.querySelector(s);
+const SAVE = "junle-room-v1";
+const PATCHED = { "ge-0/0/4": "srv-01", "ge-0/0/47": "core-sw" };
+const MODEL = "ex4300-48t";
+const JVER = "21.4R3.15";
+
+const U = { t: "u" };
+const F = { t: "f" };
+const PW = { t: "pw" };
+const K = (c, p) => ({ t: "k", c, p: !!p });
+const V = (test, o) => Object.assign({ t: "v", test }, o || {});
+const N = (test, body, alt) => ({ t: "n", test, body, alt: alt || [] });
+const NU = (test, body) => ({ t: "nu", test, body });
+
+const any = (s) => s.length > 0;
+const isIf = (s) => /^(ge|xe|et|mge)-\d{1,2}\/\d{1,2}\/\d{1,2}$/.test(s) || /^(irb|vme|me0|lo0|em0)$/.test(s) || /^ae\d{1,3}$/.test(s);
+const ifOrAll = (s) => s === "all" || isIf(s);
+const vname = (s) => /^[A-Za-z][A-Za-z0-9_.-]{0,63}$/.test(s);
+const rng = (a, b) => (v) => !/^\d+$/.test(v) ? false : (+v >= a && +v <= b ? true : `error: value ${v} is not within range (${a}..${b})`);
+const mem = (s) => s === "all" || vname(s) || (/^\d+$/.test(s) && +s >= 1 && +s <= 4094) || /^\d+-\d+$/.test(s);
+const cidr = (s) => /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/.test(s) && s.split("/")[0].split(".").every((o) => +o <= 255) && +s.split("/")[1] <= 32;
+
+const UNIT = K({
+  family: K({
+    "ethernet-switching": K({ "interface-mode": V((s) => s === "access" || s === "trunk"), vlan: K({ members: V(mem, { m: 1 }) }), "storm-control": V(any), filter: U, "recovery-timeout": U }, true),
+    inet: K({ address: V(cidr), filter: U, dhcp: U }, true),
+    inet6: U, mpls: U
+  }),
+  description: V(any), disable: F, "vlan-id": V(rng(1, 4094))
+}, true);
+const IFB = K({
+  description: V(any), disable: F, unit: NU(rng(0, 16385), UNIT), mtu: V(rng(256, 9216)), "native-vlan-id": V(rng(1, 4094)),
+  "vlan-tagging": F, "flexible-vlan-tagging": F, "ether-options": U, "gigether-options": U, speed: U, "link-mode": U,
+  encapsulation: U, "aggregated-ether-options": U, traceoptions: U, "hold-time": U
+}, true);
+const VLB = K({ "vlan-id": V(rng(1, 4094)), description: V(any), "l3-interface": V((s) => /^irb\.\d+$/.test(s)), interface: U, "vlan-id-list": U, filter: U, "forwarding-options": U, "switch-options": U, "private-vlan": U }, true);
+const LLDP = K({ interface: N(ifOrAll, K({ disable: F }, true)), disable: F, "advertisement-interval": U }, true);
+const SCHEMA = K({
+  system: K({
+    "host-name": V((s) => /^[A-Za-z0-9][A-Za-z0-9.-]{0,62}$/.test(s)),
+    "domain-name": V((s) => /^[A-Za-z0-9.-]+$/.test(s)),
+    "root-authentication": K({ "plain-text-password": PW, "encrypted-password": V(any), "ssh-rsa": U, "ssh-ecdsa": U, "ssh-ed25519": U }),
+    services: U, syslog: U, login: U, ntp: U, "name-server": U, "time-zone": U, commit: U, archival: U, location: U, ports: U,
+    "authentication-order": U, "radius-server": U, "tacplus-server": U, "static-host-mapping": U, arp: U
+  }),
+  chassis: U, "class-of-service": U, "event-options": U, firewall: U, poe: U, "policy-options": U, "routing-instances": U,
+  "routing-options": U, services: U, snmp: U, "switch-options": U, "virtual-chassis": U, access: U, "accounting-options": U,
+  applications: U, groups: U, security: U, "multi-chassis": U,
+  interfaces: N(isIf, IFB, ["interface-range", "traceoptions", "interface-set"]),
+  "forwarding-options": K({
+    "storm-control-profiles": N(any, K({ all: K({ "bandwidth-percentage": V(rng(1, 100)), "bandwidth-level": V(any), "no-broadcast": F, "no-multicast": F, "no-unknown-unicast": F, "no-registered-multicast": F, "no-unregistered-multicast": F }, true) }, true)),
+    analyzer: U, "dhcp-relay": U, sampling: U, "port-mirroring": U
+  }),
+  protocols: K({
+    rstp: K({ interface: N(ifOrAll, K({ edge: F, "no-root-port": F, priority: U, cost: U, mode: U }, true)), "bridge-priority": V(any), "bpdu-block-on-edge": F, "max-age": U, "hello-time": U, "forward-delay": U, disable: F }, true),
+    lldp: LLDP, "lldp-med": LLDP,
+    "igmp-snooping": K({ vlan: N(any, K({}, true)) }, true),
+    ospf: U, ospf3: U, bgp: U, mstp: U, vstp: U, dot1x: U, "layer2-control": U, mvrp: U, sflow: U, isis: U, pim: U,
+    "router-advertisement": U, "mld-snooping": U, "uplink-failure-detection": U, oam: U, evpn: U, mpls: U, rsvp: U, ldp: U
+  }),
+  vlans: N(vname, VLB, ["traceoptions"])
+});
+const TOP = ["system", "chassis", "interfaces", "snmp", "forwarding-options", "routing-options", "protocols", "vlans"];
+
+function matchKw(tok, keys) {
+  if (keys.includes(tok)) return { k: tok };
+  const p = keys.filter((k) => k.startsWith(tok));
+  if (p.length === 1) return { k: p[0] };
+  if (p.length > 1) return { amb: p };
+  return { none: true };
+}
+
+function tokenize(s) {
+  const out = [];
+  let i = 0;
+  while (i < s.length) {
+    if (s[i] === " ") { i++; continue; }
+    const st = i;
+    if (s[i] === '"') {
+      const j = s.indexOf('"', i + 1);
+      if (j < 0) return { err: { pos: i, msg: "syntax error." } };
+      out.push({ v: s.slice(i + 1, j), q: true, s: st });
+      i = j + 1;
+    } else if (s[i] === "[" || s[i] === "]") {
+      out.push({ v: s[i], s: st });
+      i++;
+    } else {
+      let j = i;
+      while (j < s.length && s[j] !== " " && s[j] !== "[" && s[j] !== "]" && s[j] !== '"') j++;
+      out.push({ v: s.slice(i, j), s: st });
+      i = j;
+    }
+  }
+  return { toks: out };
+}
+
+function splitPipes(s) {
+  const parts = [];
+  let cur = "", q = false, start = 0, starts = [0];
+  for (let i = 0; i < s.length; i++) {
+    const c = s[i];
+    if (c === '"') q = !q;
+    if (c === "|" && !q) { parts.push(cur); cur = ""; starts.push(i + 1); continue; }
+    cur += c;
+  }
+  parts.push(cur);
+  return { parts, starts };
+}
+
+function walk(node, toks, mode, base) {
+  const lv = base.slice();
+  const levels = [];
+  let i = 0;
+  const E = (at, msg, list) => ({ ok: false, at, msg, list });
+  for (;;) {
+    if (i >= toks.length) {
+      if (mode === "set" && (node.t === "n" || (node.t === "k" && !node.p))) return E(i, "missing argument.");
+      return { ok: true, lv, node, levels };
+    }
+    const tk = toks[i];
+    if (node.t === "n") {
+      if (node.alt.includes(tk.v)) return { ok: false, ns: tk.v, at: i };
+      const r = node.test(tk.v);
+      if (r !== true) return E(i, typeof r === "string" ? r : "syntax error.");
+      lv.push(tk.v);
+      node = node.body;
+      i++;
+      levels.push({ node, n: lv.length });
+      continue;
+    }
+    const mm = matchKw(tk.v, Object.keys(node.c));
+    if (mm.none || tk.q) return E(i, "syntax error.");
+    if (mm.amb) return E(i, `'${tk.v}' is ambiguous.`, mm.amb);
+    const m = mm.k, ch = node.c[m];
+    if (ch.t === "u") return { ok: false, ns: m, at: i };
+    if (ch.t === "f" || ch.t === "pw") {
+      if (i + 1 < toks.length) return E(i + 1, "syntax error.");
+      return { ok: true, lv, k: m, f: ch.t === "f", pw: ch.t === "pw", levels };
+    }
+    if (ch.t === "v") {
+      if (i + 1 >= toks.length) {
+        if (mode !== "set") return { ok: true, lv, k: m, vals: null, m: !!ch.m, levels };
+        return E(i + 1, "missing argument.");
+      }
+      const vals = [];
+      let j = i + 1;
+      if (ch.m && toks[j].v === "[" && !toks[j].q) {
+        j++;
+        while (j < toks.length && !(toks[j].v === "]" && !toks[j].q)) { vals.push(toks[j]); j++; }
+        if (j >= toks.length || !vals.length) return E(j, "syntax error.");
+        j++;
+      } else {
+        vals.push(toks[j]);
+        j++;
+      }
+      for (const t of vals) {
+        const r = ch.test(t.v);
+        if (r !== true) return E(toks.indexOf(t), typeof r === "string" ? r : "syntax error.");
+      }
+      if (j < toks.length) return E(j, "syntax error.");
+      return { ok: true, lv, k: m, vals: vals.map((t) => t.v), m: !!ch.m, levels };
+    }
+    if (ch.t === "k" || ch.t === "n") {
+      lv.push(m);
+      node = ch;
+      i++;
+      levels.push({ node, n: lv.length });
+      continue;
+    }
+    if (ch.t === "nu") {
+      const v = toks[i + 1];
+      if (!v) return mode === "set" ? E(i + 1, "missing argument.") : E(i + 1, "syntax error.");
+      const r = ch.test(v.v);
+      if (r !== true) return E(i + 1, typeof r === "string" ? r : "syntax error.");
+      lv.push(m + " " + v.v);
+      node = ch.body;
+      i += 2;
+      levels.push({ node, n: lv.length });
+      continue;
+    }
+  }
+}
+
+const keyOf = (s) => s.lv.join("\u0001") + "\u0002" + (s.k || "") + (s.m ? "\u0002" + s.v : "");
+let seq = 0;
+
+function cfgAdd(cfg, s) {
+  const key = keyOf(s);
+  for (const [k, o] of cfg) {
+    if (o.k == null && o.lv.length <= s.lv.length && o.lv.every((x, i) => x === s.lv[i]) && (o.lv.length < s.lv.length || s.k != null)) cfg.delete(k);
+  }
+  if (s.k == null) {
+    for (const o of cfg.values()) if (o.lv.length >= s.lv.length && s.lv.every((x, i) => x === o.lv[i])) return;
+  }
+  const old = cfg.get(key);
+  cfg.set(key, Object.assign({}, s, { q: old ? old.q : ++seq }));
+}
+
+function cfgFromSet(lines) {
+  const cfg = new Map();
+  for (const l of lines) {
+    const t = tokenize(l.replace(/^set /, "")).toks;
+    const r = walk(SCHEMA, t, "set", []);
+    if (!r.ok) continue;
+    applySet(cfg, r);
+  }
+  return cfg;
+}
+
+function applySet(cfg, r, pwHash) {
+  if (r.pw) { cfgAdd(cfg, { lv: r.lv, k: "encrypted-password", v: pwHash }); return; }
+  if (r.k == null) { cfgAdd(cfg, { lv: r.lv, k: null }); return; }
+  if (r.f) { cfgAdd(cfg, { lv: r.lv, k: r.k, f: true }); return; }
+  for (const v of r.vals) cfgAdd(cfg, { lv: r.lv, k: r.k, v, m: r.m });
+}
+
+function applyDelete(cfg, r) {
+  let n = 0;
+  for (const [k, o] of [...cfg]) {
+    const pre = o.lv.length >= r.lv.length && r.lv.every((x, i) => x === o.lv[i]);
+    if (!pre) continue;
+    if (r.k != null) {
+      if (o.lv.length !== r.lv.length || o.k !== r.k) continue;
+      if (r.vals && !r.vals.includes(o.v)) continue;
+    }
+    cfg.delete(k);
+    n++;
+  }
+  return n;
+}
+
+const natural = (a, b) => a.localeCompare(b, undefined, { numeric: true });
+function ordered(cfg) {
+  return [...cfg.values()].sort((a, b) => {
+    const ta = TOP.indexOf(a.lv[0] || a.k), tb = TOP.indexOf(b.lv[0] || b.k);
+    if (ta !== tb) return (ta < 0 ? 99 : ta) - (tb < 0 ? 99 : tb);
+    if (a.lv[0] === "interfaces" && b.lv[0] === "interfaces" && a.lv[1] !== b.lv[1]) return natural(a.lv[1], b.lv[1]);
+    return a.q - b.q;
+  });
+}
+function tree(list) {
+  const root = { items: [], c: new Map() };
+  for (const s of list) {
+    let n = root;
+    for (const l of s.lv) {
+      if (!n.c.has(l)) { n.c.set(l, { items: [], c: new Map() }); n.items.push({ t: "c", name: l }); }
+      n = n.c.get(l);
+    }
+    if (s.k != null) {
+      let li = n.items.find((x) => x.t === "l" && x.k === s.k);
+      if (!li) { li = { t: "l", k: s.k, vals: [], f: s.f, m: s.m }; n.items.push(li); }
+      if (!s.f) li.vals.push(s.v);
+    }
+  }
+  return root;
+}
+const qv = (v, force) => (force || /[\s;{}#"]/.test(v) || v === "") ? '"' + v + '"' : v;
+const RANK = { description: 0, disable: 1, "vlan-tagging": 2, "native-vlan-id": 3, mtu: 4, "interface-mode": 10, vlan: 11, "storm-control": 12, members: 13, "vlan-id": 1, "l3-interface": 3 };
+const rank = (it) => { const k = it.t === "l" ? it.k : it.name; if (k in RANK) return RANK[k]; if (/^unit /.test(k)) return 40; return 20; };
+const sortItems = (items) => items.map((x, i) => [x, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map((x) => x[0]);
+function printTree(n, ind, out) {
+  for (const it of sortItems(n.items)) {
+    const pad = "    ".repeat(ind);
+    if (it.t === "l") {
+      if (it.f) out.push(pad + it.k + ";");
+      else if (it.m && it.vals.length > 1) out.push(pad + it.k + " [ " + it.vals.map((v) => qv(v)).join(" ") + " ];");
+      else if (it.k === "encrypted-password") out.push(pad + it.k + " " + qv(it.vals[0], true) + "; ## SECRET-DATA");
+      else out.push(pad + it.k + " " + qv(it.vals[0]) + ";");
+    } else {
+      const ch = n.c.get(it.name);
+      if (!ch.items.length) out.push(pad + it.name + ";");
+      else { out.push(pad + it.name + " {"); printTree(ch, ind + 1, out); out.push(pad + "}"); }
+    }
+  }
+}
+function setLines(n, path, out) {
+  for (const it of sortItems(n.items)) {
+    if (it.t === "l") {
+      const p = "set " + (path.length ? path.join(" ") + " " : "") + it.k;
+      if (it.f) out.push(p);
+      else for (const v of it.vals) out.push(p + " " + qv(v, it.k === "encrypted-password"));
+    } else {
+      const ch = n.c.get(it.name);
+      if (!ch.items.length) out.push("set " + path.concat(it.name).join(" "));
+      else setLines(ch, path.concat(it.name), out);
+    }
+  }
+}
+function subtree(cfg, r) {
+  const list = ordered(cfg).filter((o) => {
+    if (o.lv.length < r.lv.length || !r.lv.every((x, i) => x === o.lv[i])) return false;
+    if (r.k != null) return o.lv.length === r.lv.length && o.k === r.k;
+    return true;
+  }).map((o) => Object.assign({}, o, { lv: o.lv.slice(r.lv.length) }));
+  return tree(list);
+}
+
+const FACTORY = (() => {
+  const l = [];
+  for (let i = 0; i < 48; i++) l.push(`set interfaces ge-0/0/${i} unit 0 family ethernet-switching storm-control default`);
+  l.push("set forwarding-options storm-control-profiles default all");
+  l.push("set protocols igmp-snooping vlan default");
+  l.push("set protocols rstp interface all");
+  l.push("set protocols lldp interface all");
+  l.push("set protocols lldp-med interface all");
+  l.push("set vlans default vlan-id 1");
+  return l;
+})();
+
+const clone = (cfg) => new Map([...cfg].map(([k, v]) => [k, Object.assign({}, v)]));
+const ser = (cfg) => [...cfg.values()];
+const deser = (arr) => { const m = new Map(); for (const s of arr) { m.set(keyOf(s), s); seq = Math.max(seq, s.q || 0); } return m; };
+const sameCfg = (a, b) => a.size === b.size && [...a.keys()].every((k) => b.has(k) && JSON.stringify(Object.assign({}, a.get(k), { q: 0 })) === JSON.stringify(Object.assign({}, b.get(k), { q: 0 })));
+
+let st;
+function fresh() {
+  seq = 0;
+  const f = cfgFromSet(FACTORY);
+  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [] };
+}
+function load() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(SAVE) || "null");
+    if (raw && raw.v === 1) {
+      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [] };
+    }
+  } catch (e) {}
+  return fresh();
+}
+function save() {
+  try {
+    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass"].includes(st.sess) ? (st.sess === "pass" ? "login" : "conf") : st.sess, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
+  } catch (e) {}
+}
+
+const hostOf = (cfg) => { for (const s of cfg.values()) if (s.lv.length === 1 && s.lv[0] === "system" && s.k === "host-name") return s.v; return ""; };
+const hasRootAuth = (cfg) => [...cfg.values()].some((s) => s.lv[0] === "system" && s.lv[1] === "root-authentication" && s.k);
+
+function editNode() {
+  let r = { node: SCHEMA, lv: [] };
+  if (!st.edit.length) return r;
+  const t = tokenize(st.edit.map((x) => x.replace(" ", " ")).join(" ")).toks;
+  const w = walk(SCHEMA, t, "edit", []);
+  return w.ok ? { node: w.node, lv: w.lv } : r;
+}
+
+function prompt() {
+  const h = hostOf(st.active);
+  if (st.sess === "login") return "login: ";
+  if (st.sess === "pass") return "Password:";
+  if (st.sess === "shell") return `root@${h}:RE:0% `;
+  if (st.sess === "oper") return h ? `root@${h}> ` : "root> ";
+  if (st.sess === "conf") return h ? `root@${h}# ` : "root# ";
+  if (st.sess === "pw1") return "New password:";
+  if (st.sess === "pw2") return "Retype new password:";
+  if (st.sess === "exitq") return "Exit with uncommitted changes? [yes,no] (yes) ";
+  if (st.sess === "delq") return "Delete everything under this level? [yes,no] (no) ";
+  return "";
+}
+const editHdr = () => "{master:0}[edit" + (st.edit.length ? " " + st.edit.join(" ") : "") + "]";
+
+const out = [];
+function say(...lines) { for (const l of lines) for (const x of String(l).split("\n")) st.log.push(x); }
+function caret(col, msg) { say(" ".repeat(col) + "^", msg); }
+function prePrompt() {
+  if (st.sess === "oper") say("", "{master:0}");
+  if (st.sess === "conf") say("", editHdr());
+}
+
+function banner() {
+  const h = hostOf(st.active);
+  say("", (h || "Amnesiac") + " (ttyu0)", "");
+}
+
+let pendingPw = null, pendingDel = null, scratchPw = null, wasConf = false;
+
+function run(raw) {
+  const pr = prompt();
+  const hidden = ["pass", "pw1", "pw2"].includes(st.sess);
+  say(pr + (hidden ? "" : raw));
+  const line = raw.replace(/\s+$/, "");
+  switch (st.sess) {
+    case "login": return doLogin(line);
+    case "pass": return doPass(line);
+    case "shell": return doShell(line);
+    case "oper": return doOper(line, pr.length, false);
+    case "conf": return doConf(line, pr.length);
+    case "pw1": scratchPw = line; st.sess = "pw2"; return;
+    case "pw2": return doPw2(line);
+    case "exitq": return doExitQ(line);
+    case "delq": return doDelQ(line);
+  }
+}
+
+function doLogin(line) {
+  const u = line.trim();
+  if (!u) return;
+  if (u === "root" && !hasRootAuth(st.active)) { loginOk(); return; }
+  st.loginUser = u;
+  st.sess = "pass";
+}
+function doPass(line) {
+  if (st.loginUser === "root" && st.pw && line === st.pw) { loginOk(); return; }
+  say("Login incorrect");
+  st.sess = "login";
+}
+function loginOk() {
+  say("", `--- JUNOS ${JVER} Kernel 64-bit  JNPR-12.1-20230120.fbd5ec7_buil`);
+  st.sess = "shell";
+  tick("login");
+}
+function doShell(line) {
+  const t = line.trim();
+  if (!t) return;
+  const w = t.split(/\s+/)[0];
+  if (w === "cli") { st.sess = "oper"; st.seenCli = true; tick("cli"); prePrompt(); return; }
+  if (w === "exit" || w === "logout") { st.sess = "login"; banner(); return; }
+  if (w === "ls") { say(".cshrc   .history   .login   .profile"); return; }
+  if (w === "pwd") { say("/root"); return; }
+  say(`${w}: Command not found.`);
+}
+
+const OPER = ["clear", "configure", "file", "help", "load", "monitor", "mtrace", "op", "ping", "quit", "exit", "request", "restart", "save", "set", "show", "ssh", "start", "telnet", "test", "traceroute"];
+const SHOW = ["arp", "bfd", "bgp", "chassis", "cli", "configuration", "dhcp", "ethernet-switching", "host", "interfaces", "lacp", "lldp", "log", "ntp", "ospf", "poe", "route", "snmp", "spanning-tree", "system", "version", "virtual-chassis", "vlans"];
+const CONF = ["activate", "annotate", "commit", "copy", "deactivate", "delete", "edit", "exit", "extension", "help", "insert", "load", "prompt", "protect", "quit", "rename", "replace", "rollback", "run", "save", "set", "show", "status", "top", "unprotect", "up", "update", "wildcard"];
+const PIPES = ["append", "compare", "count", "display", "except", "find", "hold", "last", "match", "no-more", "refresh", "request", "resolve", "save", "tee", "trim"];
+const DISPLAY = ["changed", "commit-scripts", "detail", "inheritance", "json", "omit", "set", "xml"];
+
+function notSim(word) { say(`(not simulated in this room yet: '${word}' is real Junos, the room just can't run it)`); }
+
+function parseLine(line, col) {
+  const sp = splitPipes(line);
+  const tk = tokenize(sp.parts[0]);
+  if (tk.err) { caret(col + tk.err.pos, tk.err.msg); return null; }
+  const pipes = [];
+  for (let i = 1; i < sp.parts.length; i++) {
+    const pt = tokenize(sp.parts[i]);
+    if (pt.err || !pt.toks.length) { caret(col + sp.starts[i], "syntax error."); return null; }
+    const mm = matchKw(pt.toks[0].v, PIPES);
+    if (mm.none) { caret(col + sp.starts[i] + pt.toks[0].s, "syntax error."); return null; }
+    if (mm.amb) { caret(col + sp.starts[i] + pt.toks[0].s, `'${pt.toks[0].v}' is ambiguous.`); listPossible(mm.amb); return null; }
+    pipes.push({ k: mm.k, args: pt.toks.slice(1), col: col + sp.starts[i] });
+  }
+  return { toks: tk.toks, pipes };
+}
+
+function listPossible(arr) { say("Possible completions:"); for (const a of arr) say("  " + a); }
+
+function applyPipes(lines, pipes, isConfig) {
+  for (const p of pipes) {
+    if (p.k === "match" || p.k === "except") {
+      if (!p.args.length) { say("error: missing argument"); return null; }
+      let re;
+      try { re = new RegExp(p.args.map((a) => a.v).join(" "), "i"); } catch (e) { say("error: invalid regular expression"); return null; }
+      lines = lines.filter((l) => (p.k === "match") === re.test(l));
+    } else if (p.k === "count") {
+      lines = [`Count: ${lines.length} lines`];
+    } else if (p.k === "no-more") {
+    } else if (p.k === "display") {
+      const a = p.args[0];
+      if (!a) { say("error: missing argument"); return null; }
+      const mm = matchKw(a.v, DISPLAY);
+      if (mm.k !== "set") { notSim("display " + a.v); return null; }
+      if (!isConfig) { say("error: 'display set' applies to configuration output only"); return null; }
+    } else if (p.k === "last") {
+      const n = p.args[0] ? +p.args[0].v : 0;
+      if (n > 0) lines = lines.slice(-n);
+    } else {
+      notSim("| " + p.k);
+      return null;
+    }
+  }
+  return lines;
+}
+
+function doOper(line, col, fromRun) {
+  const p = parseLine(line, col);
+  if (!p) { if (!fromRun) prePrompt(); return; }
+  const t = p.toks;
+  if (!t.length) { if (!fromRun) prePrompt(); return; }
+  const mm = matchKw(t[0].v, OPER);
+  if (mm.none) { caret(col + t[0].s, "unknown command."); if (!fromRun) prePrompt(); return; }
+  if (mm.amb) { caret(col + t[0].s, `'${t[0].v}' is ambiguous.`); listPossible(mm.amb); if (!fromRun) prePrompt(); return; }
+  const cmd = mm.k;
+  if (cmd === "configure" && !fromRun) {
+    if (t[1]) { const a = matchKw(t[1].v, ["dynamic", "exclusive", "private", "batch", "shared"]); if (a.none) { caret(col + t[1].s, "syntax error."); prePrompt(); return; } if (a.k !== "private" && a.k !== "exclusive") { notSim("configure " + a.k); prePrompt(); return; } }
+    say("Entering configuration mode");
+    if (!sameCfg(st.cand, st.active)) say("The configuration has been changed but not committed");
+    st.sess = "conf";
+    st.edit = [];
+    prePrompt();
+    return;
+  }
+  if ((cmd === "exit" || cmd === "quit") && !fromRun) { st.sess = "shell"; return; }
+  if (cmd === "show") { showCmd(t.slice(1), p.pipes, col); if (!fromRun) prePrompt(); return; }
+  if (fromRun && (cmd === "configure" || cmd === "exit" || cmd === "quit")) { say("error: command is not valid in this context"); return; }
+  notSim(cmd);
+  if (!fromRun) prePrompt();
+}
+
+function showCmd(t, pipes, col) {
+  if (!t.length) { caret(col + 5, "syntax error, expecting <command>."); return; }
+  const mm = matchKw(t[0].v, SHOW);
+  if (mm.none) { caret(col + t[0].s, "syntax error, expecting <command>."); return; }
+  if (mm.amb) { caret(col + t[0].s, `'${t[0].v}' is ambiguous.`); listPossible(mm.amb); return; }
+  let lines = null, isConfig = false;
+  const rest = t.slice(1);
+  switch (mm.k) {
+    case "version": lines = showVersion(); break;
+    case "configuration": {
+      const r = walk(SCHEMA, rest, "show", []);
+      if (!r.ok) { if (r.ns) { notSim(r.ns); return; } caret(col + (rest[r.at] ? rest[r.at].s : (t[t.length - 1].s + t[t.length - 1].v.length + 1)), r.msg); if (r.list) listPossible(r.list); return; }
+      isConfig = true;
+      lines = cfgOut(st.active, r, pipes);
+      break;
+    }
+    case "interfaces": lines = showIfs(rest, col); break;
+    case "vlans": lines = showVlans(rest); break;
+    case "chassis": {
+      if (!rest.length) { caret(col + t[0].s + t[0].v.length + 1, "syntax error, expecting <command>."); return; }
+      const c = matchKw(rest[0].v, ["alarms", "environment", "fan", "fpc", "hardware", "led", "mac-addresses", "pic", "routing-engine", "temperature-thresholds"]);
+      if (c.none) { caret(col + rest[0].s, "syntax error."); return; }
+      if (c.amb) { caret(col + rest[0].s, `'${rest[0].v}' is ambiguous.`); listPossible(c.amb); return; }
+      if (c.k !== "hardware") { notSim("show chassis " + c.k); return; }
+      lines = showHw();
+      break;
+    }
+    default: notSim("show " + mm.k); return;
+  }
+  if (!lines) return;
+  const piped = applyPipes(lines, pipes.filter((p) => !(p.k === "display" && isConfig && p.args[0] && matchKw(p.args[0].v, DISPLAY).k === "set")), isConfig);
+  if (piped) say(...piped);
+}
+
+function cfgOut(cfg, r, pipes) {
+  const ds = pipes.some((p) => p.k === "display" && p.args[0] && matchKw(p.args[0].v, DISPLAY).k === "set");
+  const o = [];
+  if (ds) {
+    const full = ordered(cfg).filter((x) => x.lv.length >= r.lv.length && r.lv.every((y, i) => y === x.lv[i]) && (r.k == null || (x.lv.length === r.lv.length && x.k === r.k)));
+    setLines(tree(full), [], o);
+  } else {
+    printTree(subtree(cfg, r), 0, o);
+  }
+  if (!ds && r.lv.length === 0 && r.k == null) o.unshift(`## Last changed: ${new Date().toISOString().slice(0, 19).replace("T", " ")} UTC`, `version ${JVER};`);
+  return o;
+}
+
+function showVersion() {
+  const h = hostOf(st.active);
+  return ["fpc0:", "--------------------------------------------------------------------------", `Hostname: ${h}`, `Model: ${MODEL}`, `Junos: ${JVER}`, `JUNOS OS Kernel 64-bit  [20230120.fbd5ec7_builder_stable_11]`, `JUNOS EX  Software Suite [${JVER}]`];
+}
+function showHw() {
+  return ["Hardware inventory:", "Item             Version  Part number  Serial number     Description", "Chassis                                PE3719AB0042      EX4300-48T", "Routing Engine 0          BUILTIN      BUILTIN           EX4300-48T", "FPC 0            REV 10   650-044930   PE3719AB0042      EX4300-48T", "  CPU                     BUILTIN      BUILTIN           FPC CPU", "  PIC 0                   BUILTIN      BUILTIN           48x 10/100/1000 Base-T", "  PIC 1          REV 10   650-044930   PE3719AB0042      4x 40GE QSFP+", "Power Supply 0   REV 04   740-046873   1EDE3220318       JPSU-350-AC-AFO", "Fan Tray 0                                               Fan Module, Airflow Out (AFO)", "Fan Tray 1                                               Fan Module, Airflow Out (AFO)"];
+}
+
+function ifInfo(cfg) {
+  const list = [...cfg.values()];
+  const res = {};
+  for (let i = 0; i < 48; i++) {
+    const n = `ge-0/0/${i}`;
+    const es = list.filter((s) => s.lv[0] === "interfaces" && s.lv[1] === n && s.lv[2] === "unit 0" && s.lv[3] === "family" && s.lv[4] === "ethernet-switching");
+    const mode = (es.find((s) => s.k === "interface-mode") || {}).v || "access";
+    const members = es.filter((s) => s.k === "members").map((s) => s.v);
+    const disabled = list.some((s) => s.lv[0] === "interfaces" && s.lv[1] === n && s.lv.length === 2 && s.k === "disable");
+    const desc = (list.find((s) => s.lv[0] === "interfaces" && s.lv[1] === n && s.lv.length === 2 && s.k === "description") || {}).v || "";
+    res[n] = { eth: es.length > 0, mode, members: es.length && !members.length && mode === "access" ? ["default"] : members, disabled, desc, link: !!PATCHED[n] && !disabled };
+  }
+  return res;
+}
+function vlansOf(cfg) {
+  const out = [];
+  for (const s of cfg.values()) if (s.lv[0] === "vlans" && s.lv.length === 2 && s.k === "vlan-id") out.push({ name: s.lv[1], id: +s.v });
+  for (const s of cfg.values()) if (s.lv[0] === "vlans" && s.lv.length === 2 && !out.find((o) => o.name === s.lv[1])) out.push({ name: s.lv[1], id: null });
+  return out;
+}
+const pad = (s, n) => (s + " ".repeat(n)).slice(0, Math.max(n, s.length + 1) > n ? n : n);
+const padr = (s, n) => s.length >= n ? s + " " : s + " ".repeat(n - s.length);
+
+function showIfs(rest, col) {
+  const info = ifInfo(st.active);
+  let filter = null, mode = "full";
+  for (const a of rest) {
+    if (isIf(a.v)) { filter = a.v; continue; }
+    const m = matchKw(a.v, ["brief", "descriptions", "detail", "diagnostics", "extensive", "media", "statistics", "terse"]);
+    if (m.none) { caret(col + a.s, "syntax error."); return null; }
+    if (m.amb) { caret(col + a.s, `'${a.v}' is ambiguous.`); listPossible(m.amb); return null; }
+    if (m.k === "terse" || m.k === "descriptions") mode = m.k;
+    else { notSim("show interfaces " + m.k); return null; }
+  }
+  const mgmtUp = st.plugged && st.plugged.cable === "patch" && st.plugged.port === "mgmt";
+  if (mode === "descriptions") {
+    const o = ["Interface       Admin Link Description"];
+    for (const [n, x] of Object.entries(info)) if (x.desc && (!filter || filter === n)) o.push(padr(n, 16) + padr(x.disabled ? "down" : "up", 6) + padr(x.link ? "up" : "down", 5) + x.desc);
+    return o.length > 1 ? o : [];
+  }
+  if (mode === "full" && filter) {
+    const x = info[filter];
+    if (!x) return [`error: device ${filter} not found`];
+    return [`Physical interface: ${filter}, ${x.disabled ? "Administratively down" : "Enabled"}, Physical link is ${x.link ? "Up" : "Down"}`, `  Description: ${x.desc || ""}`.replace(/  Description: $/, "").trimEnd() || null, `  Link-level type: Ethernet, MTU: 1514, Link-mode: ${x.link ? "Full-duplex" : "Auto"}, Speed: ${x.link ? "1000mbps" : "Auto"}`, `  Current address: 2c:6b:f5:3a:91:${(10 + +filter.split("/")[2]).toString(16).padStart(2, "0")}`, "", `  Logical interface ${filter}.0`, `    Protocol eth-switch`].filter((l) => l !== null);
+  }
+  if (mode === "full" && !filter) { notSim("show interfaces (full, all ports)"); say("try: show interfaces terse"); return null; }
+  const o = ["Interface               Admin Link Proto    Local                 Remote"];
+  for (const [n, x] of Object.entries(info)) {
+    if (filter && filter !== n) continue;
+    o.push(padr(n, 24) + padr(x.disabled ? "down" : "up", 6) + (x.link ? "up" : "down"));
+    if (x.eth) o.push(padr(n + ".0", 24) + padr(x.disabled ? "down" : "up", 6) + padr(x.link ? "up" : "down", 5) + "eth-switch");
+  }
+  if (!filter || filter === "me0") { o.push(padr("me0", 24) + padr("up", 6) + (mgmtUp ? "up" : "down")); }
+  if (!filter) o.push(padr("vme", 24) + padr("up", 6) + "down");
+  return o;
+}
+
+function showVlans(rest) {
+  const info = ifInfo(st.active);
+  const vl = vlansOf(st.active);
+  const o = ["", "Routing instance        VLAN name             Tag          Interfaces"];
+  for (const v of vl) {
+    if (rest[0] && rest[0].v !== v.name) continue;
+    const ports = Object.entries(info).filter(([n, x]) => x.eth && (x.members.includes(v.name) || x.members.includes(String(v.id)) || (x.mode === "trunk" && x.members.includes("all")))).map(([n, x]) => n + ".0" + (x.link ? "*" : ""));
+    o.push(padr("default-switch", 24) + padr(v.name, 22) + padr(String(v.id == null ? "" : v.id), 13) + (ports[0] || ""));
+    for (const p of ports.slice(1)) o.push(" ".repeat(59) + p);
+    o.push("");
+  }
+  return o;
+}
+
+function doConf(line, col) {
+  const p = parseLine(line, col);
+  if (!p) { prePrompt(); return; }
+  const t = p.toks;
+  if (!t.length) { prePrompt(); return; }
+  const mm = matchKw(t[0].v, CONF);
+  if (mm.none) { caret(col + t[0].s, "unknown command."); prePrompt(); return; }
+  if (mm.amb) { caret(col + t[0].s, `'${t[0].v}' is ambiguous.`); listPossible(mm.amb); prePrompt(); return; }
+  const cmd = mm.k, rest = t.slice(1);
+  const here = editNode();
+  const errAt = (r) => {
+    if (r.ns) { notSim(r.ns); return; }
+    const tok = rest[r.at];
+    caret(col + (tok ? tok.s : line.length + 1), r.msg);
+    if (r.list) listPossible(r.list);
+  };
+  switch (cmd) {
+    case "set": {
+      const r = walk(here.node, rest, "set", here.lv);
+      if (!r.ok) { errAt(r); break; }
+      if (r.pw) { pendingPw = r; st.sess = "pw1"; return; }
+      applySet(st.cand, r);
+      break;
+    }
+    case "delete": {
+      if (!rest.length) { pendingDel = here; st.sess = "delq"; return; }
+      const r = walk(here.node, rest, "del", here.lv);
+      if (!r.ok) { errAt(r); break; }
+      if (applyDelete(st.cand, r) === 0) say("warning: statement not found");
+      break;
+    }
+    case "edit": {
+      if (!rest.length) { caret(col + line.length + 1, "missing argument."); break; }
+      const r = walk(here.node, rest, "edit", here.lv);
+      if (!r.ok) { errAt(r); break; }
+      if (r.k != null) { caret(col + rest[rest.length - 1].s, "syntax error."); break; }
+      st.edit = r.lv.slice();
+      break;
+    }
+    case "up": case "top": {
+      if (cmd === "top") st.edit = [];
+      else {
+        const n = rest[0] && /^\d+$/.test(rest[0].v) ? +rest[0].v : 1;
+        st.edit = popLevels(st.edit, n);
+      }
+      break;
+    }
+    case "exit": case "quit": {
+      if (st.edit.length) { st.edit = popLevels(st.edit, 1); break; }
+      if (!sameCfg(st.cand, st.active)) { say("The configuration has been changed but not committed"); st.sess = "exitq"; return; }
+      say("Exiting configuration mode");
+      st.sess = "oper";
+      prePrompt();
+      return;
+    }
+    case "show": {
+      const r = walk(here.node, rest, "show", here.lv);
+      if (!r.ok) { errAt(r); break; }
+      const cmp = p.pipes.find((x) => x.k === "compare");
+      if (cmp) { say(...compareOut(st.active, st.cand)); break; }
+      const rel = Object.assign({}, r);
+      const lines = cfgOut(st.cand, rel, p.pipes);
+      const fin = applyPipes(lines, p.pipes.filter((x) => !(x.k === "display" && x.args[0] && matchKw(x.args[0].v, DISPLAY).k === "set")), true);
+      if (fin) say(...fin);
+      break;
+    }
+    case "commit": return doCommit(rest, col);
+    case "rollback": {
+      let n = 0;
+      if (rest[0]) { if (!/^\d+$/.test(rest[0].v)) { if (rest[0].v === "rescue") { notSim("rollback rescue"); break; } caret(col + rest[0].s, "syntax error."); break; } n = +rest[0].v; }
+      if (n > 49) { caret(col + rest[0].s, `error: value ${n} is not within range (0..49)`); break; }
+      const src = st.commits[st.commits.length - 1 - n];
+      if (!src) { say(`error: Cannot load rollback ${n}: file does not exist`); break; }
+      st.cand = clone(src);
+      say("load complete");
+      break;
+    }
+    case "run": {
+      if (!rest.length) { caret(col + line.length + 1, "missing argument."); break; }
+      const sub = line.slice(line.indexOf(t[0].v) + t[0].v.length).replace(/^\s+/, "");
+      const off = line.length - sub.length;
+      doOper(sub, col + off, true);
+      break;
+    }
+    default: notSim(cmd);
+  }
+  prePrompt();
+}
+
+function popLevels(edit, n) {
+  if (!edit.length) return edit;
+  const t = tokenize(edit.join(" ")).toks;
+  const w = walk(SCHEMA, t, "edit", []);
+  if (!w.ok) return [];
+  const ns = [0].concat(w.levels.map((l) => l.n));
+  const idx = Math.max(0, ns.length - 1 - n);
+  return w.lv.slice(0, ns[idx]);
+}
+
+function compareOut(a, b) {
+  const o = [];
+  const all = ordered(new Map([...a, ...b]));
+  let hdr = null;
+  for (const s of all) {
+    const k = keyOf(s);
+    const inA = a.has(k) && (!b.has(k) || JSON.stringify(Object.assign({}, a.get(k), { q: 0 })) === JSON.stringify(Object.assign({}, b.get(k), { q: 0 })));
+    const inB = b.has(k);
+    const lines = [];
+    const fmt = (x) => x.k == null ? null : x.f ? x.k + ";" : x.k + " " + qv(x.v, x.k === "encrypted-password") + ";" + (x.k === "encrypted-password" ? " ## SECRET-DATA" : "");
+    if (a.has(k) && b.has(k) && !inA) { lines.push("-   " + fmt(a.get(k))); lines.push("+   " + fmt(b.get(k))); }
+    else if (a.has(k) && !b.has(k)) lines.push("-   " + (fmt(s) || s.lv[s.lv.length - 1] + ";"));
+    else if (!a.has(k) && inB) lines.push("+   " + (fmt(s) || s.lv[s.lv.length - 1] + ";"));
+    if (!lines.length) continue;
+    const h = "[edit" + ((s.k == null ? s.lv.slice(0, -1) : s.lv).length ? " " + (s.k == null ? s.lv.slice(0, -1) : s.lv).join(" ") : "") + "]";
+    if (h !== hdr) { o.push(h); hdr = h; }
+    o.push(...lines);
+  }
+  return o;
+}
+
+function validate(cfg) {
+  const errs = [];
+  if (!hasRootAuth(cfg)) return { mandatory: true, lines: ["[edit]", "  'system'", "    Missing mandatory statement: 'root-authentication'", "error: commit failed: (missing mandatory statements)"] };
+  const vl = vlansOf(cfg);
+  const seen = {};
+  for (const v of vl) {
+    if (v.id == null) continue;
+    if (seen[v.id]) errs.push(`[edit vlans]`, `  '${v.name}'`, `    vlan-id ${v.id} is already used by vlan '${seen[v.id]}'`);
+    else seen[v.id] = v.name;
+  }
+  const info = ifInfo(cfg);
+  for (const [n, x] of Object.entries(info)) {
+    if (!x.eth) continue;
+    for (const m of x.members) {
+      if (m === "default" || m === "all") continue;
+      const ok = /^\d+(-\d+)?$/.test(m) ? vl.some((v) => String(v.id) === m || (m.includes("-") && v.id >= +m.split("-")[0] && v.id <= +m.split("-")[1])) : vl.some((v) => v.name === m);
+      if (!ok) errs.push(`[edit interfaces ${n} unit 0 family ethernet-switching vlan]`, `  'members ${m}'`, `    VLAN '${m}' is not configured`);
+    }
+    if (x.mode === "access" && (x.members.length > 1 || x.members.includes("all"))) errs.push(`[edit interfaces ${n} unit 0 family ethernet-switching]`, "  'interface-mode access'", "    Access interface can be a member of only one VLAN");
+  }
+  if (errs.length) return { lines: errs.concat(["error: configuration check-out failed"]) };
+  return null;
+}
+
+function doCommit(rest, col) {
+  let check = false, quit = false;
+  for (let i = 0; i < rest.length; i++) {
+    const a = rest[i];
+    const m = matchKw(a.v, ["activate", "and-quit", "at", "check", "comment", "confirmed", "display", "prepare", "scripts", "synchronize"]);
+    if (m.none) { caret(col + a.s, "syntax error."); prePrompt(); return; }
+    if (m.amb) { caret(col + a.s, `'${a.v}' is ambiguous.`); listPossible(m.amb); prePrompt(); return; }
+    if (m.k === "check") check = true;
+    else if (m.k === "and-quit") quit = true;
+    else if (m.k === "comment") { i++; if (!rest[i]) { caret(col + a.s + a.v.length + 1, "missing argument."); prePrompt(); return; } }
+    else if (m.k === "confirmed") { if (rest[i + 1] && /^\d+$/.test(rest[i + 1].v)) i++; }
+    else { notSim("commit " + m.k); prePrompt(); return; }
+  }
+  const v = validate(st.cand);
+  if (v) { say(...v.lines); SFX.err(); prePrompt(); return; }
+  say("configuration check succeeds");
+  if (check) { prePrompt(); return; }
+  st.active = clone(st.cand);
+  st.commits.push(clone(st.cand));
+  say("commit complete");
+  SFX.ok();
+  if (quit) { say("Exiting configuration mode"); st.sess = "oper"; }
+  prePrompt();
+}
+
+function doPw2(line) {
+  const a = scratchPw;
+  scratchPw = null;
+  st.sess = "conf";
+  if (a !== line) { say("error: Passwords are not equal"); prePrompt(); return; }
+  if (a.length < 6) { say("error: minimum password length is 6"); prePrompt(); return; }
+  if (/^[a-z]+$/.test(a) || /^[A-Z]+$/.test(a) || /^\d+$/.test(a)) { say("error: require change of case, digits or punctuation"); prePrompt(); return; }
+  const salt = Math.random().toString(36).slice(2, 10);
+  const hash = "$6$" + salt + "$" + Array.from({ length: 86 }, () => "./ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"[Math.floor(Math.random() * 64)]).join("");
+  applySet(st.cand, pendingPw, hash);
+  st.pendingPlain = a;
+  pendingPw = null;
+  prePrompt();
+}
+function doExitQ(line) {
+  const a = line.trim().toLowerCase();
+  if (a === "" || a === "yes" || a === "y") { say("Exiting configuration mode"); st.sess = "oper"; prePrompt(); return; }
+  st.sess = "conf";
+  prePrompt();
+}
+function doDelQ(line) {
+  const a = line.trim().toLowerCase();
+  st.sess = "conf";
+  if (a === "yes" || a === "y") applyDelete(st.cand, { lv: pendingDel.lv, k: null });
+  pendingDel = null;
+  prePrompt();
+}
+
+function completions(text) {
+  const sp = splitPipes(text);
+  if (sp.parts.length > 1) return null;
+  const tk = tokenize(text);
+  if (tk.err) return null;
+  const toks = tk.toks;
+  const trailing = /\s$/.test(text) || !text.length;
+  const done = trailing ? toks : toks.slice(0, -1);
+  const part = trailing ? "" : toks[toks.length - 1].v;
+  let pool = [];
+  if (st.sess === "oper" || st.sess === "conf") {
+    const top = st.sess === "oper" ? OPER : CONF;
+    if (!done.length) pool = top;
+    else {
+      const c = matchKw(done[0].v, top);
+      if (!c.k) return null;
+      if (st.sess === "oper" && c.k === "show") {
+        if (done.length === 1) pool = SHOW;
+        else if (matchKw(done[1].v, SHOW).k === "configuration") pool = keysAt(SCHEMA, done.slice(2), []);
+        else return null;
+      } else if (st.sess === "conf" && ["set", "delete", "edit", "show"].includes(c.k)) {
+        const h = editNode();
+        pool = keysAt(h.node, done.slice(1), h.lv);
+      } else if (st.sess === "conf" && c.k === "commit") pool = ["and-quit", "check", "comment", "confirmed"];
+      else return null;
+    }
+  } else return null;
+  return { part, list: pool.filter((k) => k.startsWith(part)) };
+}
+function keysAt(node, toks, lv) {
+  if (!toks.length) return node.t === "k" ? Object.keys(node.c) : [];
+  const r = walk(node, toks, "edit", lv);
+  if (!r.ok || r.k != null) return [];
+  return r.node.t === "k" ? Object.keys(r.node.c) : [];
+}
+
+const TASKS = [
+  { id: "console", t: "Plug into the console", why: "A factory-new switch has no IP address, so the console is the only way in. Click the rack, then plug a console cable into a console port: RJ-45 on the back, or mini-USB on the front.", c: [] },
+  { id: "login", t: "Log in", why: "A factory-default Junos box has one account: root, with no password. 'Amnesiac' means it has no hostname yet.", c: ["root"] },
+  { id: "cli", t: "Start the Junos CLI", why: "root lands in the FreeBSD shell (the % prompt), not in Junos. Junos commands only work after you start the CLI.", c: ["cli"] },
+  { id: "rootauth", t: "Secure root", why: "Junos refuses to commit anything until root has a password. Enter configuration mode and set one. It asks twice and only stores a hash. Commit to make it real.", c: ["configure", "set system root-authentication plain-text-password", "commit"] },
+  { id: "host", t: "Name the switch", why: "The prompt only changes after commit, not after set. That is your proof the commit landed.", c: ["set system host-name acc-sw-01", "commit"] },
+  { id: "vlan", t: "Create VLAN staff (10)", why: "A name for humans, a number for the wire. Both are needed.", c: ["set vlans staff vlan-id 10", "commit"] },
+  { id: "port", t: "Put the server port in staff", why: "The server is patched into ge-0/0/4. ELS syntax: interface-mode, not the legacy port-mode. Watch port 4 on the left screen change colour after commit.", c: ["set interfaces ge-0/0/4 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members staff", "commit"] }
+];
+function taskDone(id) {
+  const a = st.active;
+  if (id === "console") return !!(st.plugged && isConsole(st.plugged));
+  if (id === "login") return ["shell", "oper", "conf", "pw1", "pw2", "exitq", "delq"].includes(st.sess) || st.seenCli;
+  if (id === "cli") return st.seenCli;
+  if (id === "rootauth") return hasRootAuth(a);
+  if (id === "host") return hostOf(a) === "acc-sw-01";
+  if (id === "vlan") return vlansOf(a).some((v) => v.name === "staff" && v.id === 10);
+  if (id === "port") { const x = ifInfo(a)["ge-0/0/4"]; return x.mode === "access" && x.members.length === 1 && x.members[0] === "staff"; }
+}
+let revealed = {};
+let lastDone = -1;
+function tick() {}
+
+function renderTicket() {
+  const done = TASKS.map((x) => taskDone(x.id));
+  const n = done.filter(Boolean).length;
+  const cur = TASKS.find((x, i) => !done[i]);
+  const el = $("#ticket");
+  const dots = '<div class="dots">' + TASKS.map((x, i) => `<i class="${done[i] ? "d" : x === cur ? "c" : ""}"></i>`).join("") + "</div>";
+  if (!cur) {
+    el.innerHTML = `<h4><span>TICKET 001</span><span>CLOSED</span></h4><div class="st-title done-msg">acc-sw-01 is commissioned.</div><div class="st-why">Root is secured, the switch is named, VLAN staff exists and the server port is in it. Try show vlans and show interfaces terse to see your work.</div>${dots}`;
+  } else {
+    el.innerHTML = `<h4><span>TICKET 001 · COMMISSION</span><span>${n}/${TASKS.length}</span></h4><div class="st-title">${cur.t}</div><div class="st-why">${cur.why}</div><div class="cmds">${cur.c.map((c, i) => `<button class="chip${revealed[cur.id + i] ? " shown" : ""}" data-r="${cur.id + i}">${esc(c)}</button>`).join("")}</div>${dots}`;
+  }
+  $("#count").innerHTML = cur ? `<div class="big">${n}<small>/${TASKS.length}</small></div><div class="lbl">STEPS</div>` : `<div class="big" style="font-size:20cqw;color:var(--ok)">DONE</div><div class="lbl">TICKET 001</div>`;
+  if (n > lastDone && lastDone >= 0) SFX.ok();
+  lastDone = n;
+}
+const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
+
+const VCOL = ["#e0a83e", "#6fb3c9", "#b58ad6", "#86c79b", "#d97a6c"];
+function vlanColor(name, vl) {
+  if (name === "default") return "#4a4842";
+  const idx = vl.filter((v) => v.name !== "default").findIndex((v) => v.name === name);
+  return VCOL[(idx < 0 ? 0 : idx) % VCOL.length];
+}
+function renderPanel() {
+  const a = ifInfo(st.active), c = ifInfo(st.cand), vl = vlansOf(st.active);
+  const h = hostOf(st.active);
+  $("#l-host").textContent = (h || "Amnesiac").toUpperCase();
+  let s = "";
+  const x0 = 6, pitch = 13.4, gap = 5;
+  const px = (col) => x0 + col * pitch + Math.floor(col / 6) * gap;
+  for (let i = 0; i < 48; i++) {
+    const n = `ge-0/0/${i}`;
+    const col = Math.floor(i / 2), row = i % 2;
+    const x = px(col), y = 14 + row * 15;
+    const pa = a[n], pc = c[n];
+    const pend = JSON.stringify([pa.mode, pa.members, pa.disabled]) !== JSON.stringify([pc.mode, pc.members, pc.disabled]);
+    const fill = pa.disabled ? "#1a1918" : pa.mode === "trunk" ? "#3f6f86" : vlanColor(pa.members[0] || "default", vl);
+    s += `<rect x="${x}" y="${y}" width="11" height="11" rx="1.5" fill="${fill}" opacity="${pa.link ? 1 : .55}" ${pend ? 'stroke="#fff" stroke-dasharray="2 1.5" stroke-width=".9"' : ""}/>`;
+    if (pa.link) s += `<circle cx="${x + 9}" cy="${y + 2.3}" r="1.3" fill="#7dff9a"/>`;
+    if (i === 4 || i === 47) s += `<text x="${x + 5.5}" y="${row ? y + 22 : y - 3}" font-size="8" fill="#8a867c" text-anchor="middle">${i}</text>`;
+  }
+  const y0 = 62;
+  const p4 = a["ge-0/0/4"], p47 = a["ge-0/0/47"];
+  const lc = (p) => p.link ? (p.mode === "trunk" ? "#3f6f86" : vlanColor(p.members[0] || "default", vl)) : "#3a3833";
+  s += `<g font-size="9" fill="#d9d3c4" text-anchor="middle">`;
+  s += node(40, y0 + 34, "core-sw", "uplink") + node(170, y0 + 34, h || "amnesiac", "EX4300") + node(300, y0 + 34, "srv-01", "server");
+  s += `<line x1="76" y1="${y0 + 34}" x2="136" y2="${y0 + 34}" stroke="${lc(p47)}" stroke-width="2"/><text x="106" y="${y0 + 27}" fill="#8a867c" font-size="8">ge-0/0/47</text>`;
+  s += `<line x1="204" y1="${y0 + 34}" x2="264" y2="${y0 + 34}" stroke="${lc(p4)}" stroke-width="2"/><text x="234" y="${y0 + 27}" fill="#8a867c" font-size="8">ge-0/0/4</text>`;
+  s += `<text x="234" y="${y0 + 62}" fill="${lc(p4)}" font-size="8.5">${p4.mode} · ${p4.members.join(" ")}</text></g>`;
+  const legend = vl.map((v) => `<rect x="0" y="0" width="7" height="7" rx="1" fill="${vlanColor(v.name, vl)}"/><text x="10" y="6.3">${esc(v.name)}${v.id ? " " + v.id : ""}</text>`);
+  let lx = 6;
+  s += `<g font-size="8.5" fill="#8a867c">`;
+  vl.forEach((v, i) => { s += `<g transform="translate(${lx} 128)">${legend[i]}</g>`; lx += 24 + (v.name.length + String(v.id || "").length) * 5.4; });
+  s += `</g>`;
+  const con = st.plugged ? plugText(st.plugged) : "no cable";
+  s += `<text x="6" y="160" font-size="8.5" fill="${st.plugged && isConsole(st.plugged) ? "#86c79b" : "#8a867c"}">${esc(con)}</text>`;
+  if (!sameCfg(st.cand, st.active)) s += `<text x="334" y="160" font-size="8.5" fill="#e0a83e" text-anchor="end">uncommitted</text>`;
+  $("#panel").innerHTML = s;
+}
+function node(x, y, name, sub) {
+  return `<rect x="${x - 34}" y="${y - 15}" width="68" height="30" rx="3" fill="#121414" stroke="#2c2a26"/><text x="${x}" y="${y - 1}">${esc(name.slice(0, 11))}</text><text x="${x}" y="${y + 10}" fill="#8a867c" font-size="7.5">${sub}</text>`;
+}
+
+const PORTS = {};
+function isConsole(p) { return (p.cable === "con-rj" && p.port === "con-rj45") || (p.cable === "con-mini" && p.port === "con-usb"); }
+function plugText(p) {
+  const pn = PORTS[p.port] ? PORTS[p.port].label : p.port;
+  const cn = { "con-rj": "RJ-45 console", "con-mini": "mini-USB console", patch: "Ethernet patch" }[p.cable];
+  return isConsole(p) ? `console: ${cn} · 9600 8N1` : `${cn} in ${pn}`;
+}
+
+function buildPanel(side) {
+  let s = `<rect x="4" y="6" width="1192" height="225" rx="6" fill="#1d2023" stroke="#3b4147" stroke-width="2"/><rect x="4" y="6" width="1192" height="225" rx="6" fill="url(#brush)" opacity=".35"/>`;
+  s += `<defs><linearGradient id="brush" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".12"/><stop offset=".5" stop-color="#fff" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".25"/></linearGradient></defs>`;
+  const lab = (x, y, t, a) => `<text x="${x}" y="${y}" font-size="11" fill="#9aa3ab" text-anchor="${a || "middle"}" font-family="var(--mono)">${t}</text>`;
+  const rj = (id, x, y, label, kind, w, hgt) => {
+    PORTS[id] = { label, type: "rj45", kind };
+    w = w || 30; hgt = hgt || 26;
+    return `<g class="prt" data-port="${id}"><rect class="hit" x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hgt + 8}" fill="transparent"/><rect class="jack" x="${x}" y="${y}" width="${w}" height="${hgt}" rx="2" fill="#0b0c0d" stroke="#59626b"/><rect x="${x + w * .3}" y="${y + hgt - 6}" width="${w * .4}" height="5" fill="#2a2e32"/><circle class="led1" cx="${x + 5}" cy="${y + 5}" r="2.6" fill="#1f2a22"/><circle cx="${x + w - 5}" cy="${y + 5}" r="2.6" fill="#2a2516"/></g>`;
+  };
+  if (side === "front") {
+    s += `<rect x="24" y="30" width="150" height="58" rx="3" fill="#0c1f17" stroke="#2e3a33"/><text id="lcd" x="34" y="56" font-size="15" fill="#7fd7a0" font-family="var(--mono)">${esc((hostOf(st.active) || "Amnesiac").slice(0, 16))}</text><text x="34" y="76" font-size="11" fill="#4fa772" font-family="var(--mono)">EX4300-48T</text>`;
+    s += `<circle cx="38" cy="110" r="8" fill="#2b2f33" stroke="#59626b"/><circle cx="80" cy="110" r="8" fill="#2b2f33" stroke="#59626b"/>` + lab(38, 134, "MENU") + lab(80, 134, "ENTER");
+    s += `<circle cx="116" cy="108" r="4" fill="#5cff8a"/><circle cx="140" cy="108" r="4" fill="#2a1a12"/><circle cx="164" cy="108" r="4" fill="#5cff8a"/>` + lab(116, 124, "SYS") + lab(140, 124, "ALM") + lab(164, 124, "MST");
+    PORTS["con-usb"] = { label: "front mini-USB console (CON)", type: "miniusb", kind: "console" };
+    s += `<g class="prt" data-port="con-usb"><rect class="hit" x="86" y="150" width="56" height="34" fill="transparent"/><rect class="jack" x="96" y="158" width="34" height="16" rx="3" fill="#0b0c0d" stroke="#59626b"/><rect x="104" y="164" width="18" height="5" fill="#2a2e32"/></g>` + lab(113, 196, "CON");
+    const x0 = 200, pitch = 35, gap = 14;
+    for (let i = 0; i < 48; i++) {
+      const col = Math.floor(i / 2), row = i % 2;
+      const x = x0 + col * pitch + Math.floor(col / 6) * gap, y = row ? 128 : 66;
+      s += rj(`ge-0/0/${i}`, x, y, `ge-0/0/${i}`, "data");
+      if (col % 6 === 0 || col % 6 === 5) s += lab(x + 15, row ? 172 : 56, String(i));
+    }
+    s += `<rect x="1112" y="40" width="72" height="150" rx="3" fill="#15181a" stroke="#3b4147" stroke-dasharray="4 3"/>` + lab(1148, 112, "UPLINK") + lab(1148, 128, "(empty)");
+  } else {
+    s += `<rect x="24" y="30" width="190" height="176" rx="4" fill="#24282c" stroke="#4a5158"/>${grill(119, 105, 50)}<circle cx="196" cy="48" r="4" fill="#5cff8a"/>` + lab(119, 198, "PSU 0  350W AC");
+    s += `<rect x="226" y="30" width="190" height="176" rx="4" fill="#191c1f" stroke="#3b4147"/>` + lab(321, 120, "PSU 1 (blank)");
+    s += `<rect x="430" y="30" width="120" height="176" rx="4" fill="#24282c" stroke="#4a5158"/>${grill(490, 108, 42)}` + lab(490, 198, "FAN 0");
+    s += `<rect x="560" y="30" width="120" height="176" rx="4" fill="#24282c" stroke="#4a5158"/>${grill(620, 108, 42)}` + lab(620, 198, "FAN 1");
+    s += rj("mgmt", 712, 92, "management port (me0)", "mgmt", 40, 32) + lab(732, 146, "MGMT");
+    s += rj("con-rj45", 776, 92, "rear RJ-45 console (CON)", "console", 40, 32) + lab(796, 146, "CON");
+    PORTS["usb"] = { label: "USB port", type: "usba", kind: "usb" };
+    s += `<g class="prt" data-port="usb"><rect class="hit" x="834" y="92" width="48" height="40" fill="transparent"/><rect class="jack" x="842" y="100" width="30" height="14" rx="1.5" fill="#0b0c0d" stroke="#59626b"/><rect x="846" y="104" width="22" height="4" fill="#2f5fa8"/></g>` + lab(857, 146, "USB");
+    for (let q = 0; q < 4; q++) {
+      PORTS["qsfp" + q] = { label: `QSFP+ port ${q} (et-0/1/${q})`, type: "qsfp", kind: "vcp" };
+      const x = 912 + q * 68;
+      s += `<g class="prt" data-port="qsfp${q}"><rect class="hit" x="${x - 4}" y="78" width="64" height="58" fill="transparent"/><rect class="jack" x="${x}" y="84" width="56" height="44" rx="3" fill="#0b0c0d" stroke="#59626b"/><rect x="${x + 8}" y="96" width="40" height="20" fill="#202428"/></g>` + lab(x + 28, 148, String(q));
+    }
+    s += lab(1048, 170, "QSFP+  ·  VCP");
+  }
+  return s;
+}
+function grill(cx, cy, r) {
+  let g = `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#121416" stroke="#3b4147"/>`;
+  for (let i = 1; i < 5; i++) g += `<circle cx="${cx}" cy="${cy}" r="${r * i / 5}" fill="none" stroke="#2c3136"/>`;
+  return g + `<path d="M${cx - r} ${cy}H${cx + r}M${cx} ${cy - r}V${cy + r}" stroke="#2c3136"/>`;
+}
+
+let cuSide = "front";
+function layoutCu() {
+  const vw = innerWidth, vh = innerHeight;
+  const slotW = Math.min(vw * .9, (vh - 260) * 5.07, 1500);
+  const W = slotW * 1024 / 304, H = W * 572 / 1024;
+  const bg = $("#cu-bg");
+  bg.style.width = W + "px";
+  bg.style.height = H + "px";
+  const cy = Math.max(110 + slotW / 5.07 / 2, (vh - 160) / 2);
+  bg.style.left = vw / 2 - W * 516 / 1024 + "px";
+  bg.style.top = cy - H * 295 / 572 + "px";
+  const p = $("#cu-panel");
+  p.style.width = slotW + "px";
+  p.style.height = slotW / 5.07 + "px";
+  p.style.left = vw / 2 - slotW / 2 + "px";
+  p.style.top = cy - slotW / 5.07 / 2 + "px";
+  drawPlugged();
+}
+function renderCu() {
+  $("#cu-svg").innerHTML = buildPanel(cuSide);
+  $("#cu").classList.toggle("rear", cuSide === "rear");
+  $("#v-front").classList.toggle("on", cuSide === "front");
+  $("#v-rear").classList.toggle("on", cuSide === "rear");
+  const info = ifInfo(st.active);
+  document.querySelectorAll("#cu-svg [data-port^='ge-']").forEach((g) => { if (info[g.dataset.port].link) g.querySelector(".led1").setAttribute("fill", "#5cff8a"); });
+  if (st.plugged && st.plugged.cable === "patch" && st.plugged.port === "mgmt") { const g = document.querySelector('#cu-svg [data-port="mgmt"] .led1'); if (g) g.setAttribute("fill", "#5cff8a"); }
+  document.querySelectorAll(".cable").forEach((c) => c.classList.toggle("in", !!(st.plugged && st.plugged.cable === c.dataset.cable)));
+  $("#unplug").hidden = !st.plugged;
+  layoutCu();
+}
+function openCu() {
+  if (st.plugged && PORTS[st.plugged.port] === undefined) buildPanel("front"), buildPanel("rear");
+  cuSide = st.plugged && ["mgmt", "con-rj45", "usb", "qsfp0", "qsfp1", "qsfp2", "qsfp3"].includes(st.plugged.port) ? "rear" : "front";
+  renderCu();
+  $("#cu").classList.add("on");
+  status(st.plugged ? plugText(st.plugged) : "Drag a cable onto a port. Front and back both have ports: use the toggle to walk around the rack.");
+}
+function closeCu() { $("#cu").classList.remove("on"); $("#wire").innerHTML = ""; }
+function status(t, cls) { const e = $("#cu-status"); e.textContent = t; e.className = "cu-status" + (cls ? " " + cls : ""); }
+
+const CCOL = { "con-rj": "#3d6fa3", "con-mini": "#2b2b2b", patch: "#c9a227" };
+function drawPlugged() {
+  const w = $("#wire");
+  if (!$("#cu").classList.contains("on") || !st.plugged || dragging) { if (!dragging) w.innerHTML = ""; return; }
+  const g = document.querySelector(`#cu-svg [data-port="${st.plugged.port}"] .jack`);
+  if (!g) { w.innerHTML = ""; return; }
+  const r = g.getBoundingClientRect();
+  const x = r.left + r.width / 2, y = r.top + r.height / 2;
+  w.innerHTML = cablePath(x, y, x + 30, innerHeight + 40, CCOL[st.plugged.cable]) + `<rect x="${x - r.width * .45}" y="${y - r.height * .45}" width="${r.width * .9}" height="${r.height * .9}" rx="2" fill="${CCOL[st.plugged.cable]}" stroke="#000" stroke-opacity=".4"/>`;
+}
+function cablePath(x1, y1, x2, y2, col) {
+  const mx = (x1 + x2) / 2, sag = Math.abs(x2 - x1) * .15 + 60;
+  return `<path d="M${x1} ${y1} C${x1} ${y1 + sag}, ${x2} ${y2 - sag}, ${x2} ${y2}" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="9" stroke-linecap="round"/><path d="M${x1} ${y1} C${x1} ${y1 + sag}, ${x2} ${y2 - sag}, ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round"/>`;
+}
+
+let dragging = null;
+function startDrag(e, el) {
+  e.preventDefault();
+  const r = el.getBoundingClientRect();
+  dragging = { cable: el.dataset.cable, ox: r.left + r.width / 2, oy: r.top };
+  SFX.tick();
+  moveDrag(e);
+}
+function moveDrag(e) {
+  if (!dragging) return;
+  const x = e.clientX, y = e.clientY;
+  document.querySelectorAll(".prt.over").forEach((p) => p.classList.remove("over"));
+  const hit = document.elementFromPoint(x, y);
+  const prt = hit && hit.closest && hit.closest(".prt");
+  if (prt) prt.classList.add("over");
+  $("#wire").innerHTML = cablePath(x, y, dragging.ox, dragging.oy + 6, CCOL[dragging.cable]) + `<rect x="${x - 12}" y="${y - 9}" width="24" height="18" rx="2" fill="${CCOL[dragging.cable]}" stroke="#000" stroke-opacity=".5"/>`;
+}
+function endDrag(e) {
+  if (!dragging) return;
+  const d = dragging;
+  dragging = null;
+  document.querySelectorAll(".prt.over").forEach((p) => p.classList.remove("over"));
+  const hit = document.elementFromPoint(e.clientX, e.clientY);
+  const prt = hit && hit.closest && hit.closest(".prt");
+  if (!prt) { $("#wire").innerHTML = ""; drawPlugged(); return; }
+  plug(d.cable, prt.dataset.port);
+}
+
+const FITS = { "con-rj": "rj45", patch: "rj45", "con-mini": "miniusb" };
+function plug(cable, port) {
+  const P = PORTS[port];
+  if (FITS[cable] !== P.type) {
+    SFX.err();
+    status(`That connector does not fit the ${P.label}.`, "bad");
+    drawPlugged();
+    return;
+  }
+  const was = st.plugged && isConsole(st.plugged);
+  st.plugged = { cable, port };
+  SFX.plug();
+  const p = st.plugged;
+  if (isConsole(p)) {
+    status(p.port === "con-usb" ? "Console session open over mini-USB · 9600 baud, 8N1. When both console ports are cabled, the mini-USB one wins." : "Console session open over the rear RJ-45 port · 9600 baud, 8N1.", "good");
+    if (!was && st.sess === "login" && !st.log.length) banner();
+    afterChange();
+    setTimeout(() => { closeCu(); setView("sit"); focusCmd(); }, 1300);
+  } else if (port === "mgmt") {
+    status(cable === "patch" ? "Link light on the management port. But a factory-default switch has no management IP, so there is nothing to SSH to. Console in first." : "MGMT is an Ethernet port (me0), not a serial console. The terminal stays silent.", "bad");
+  } else {
+    status(cable === "patch" ? `Link on ${port}. Data ports carry traffic, not a CLI. No prompt for you here.` : `${port} is a data port. It speaks Ethernet, not serial, so the console stays silent.`, "bad");
+  }
+  renderCu();
+  afterChange();
+}
+
+let AC = null, snd = true;
+try { snd = localStorage.getItem(SAVE + "-snd") !== "0"; } catch (e) {}
+function beep(f, d, type, vol) {
+  if (!snd) return;
+  try {
+    AC = AC || new (window.AudioContext || window.webkitAudioContext)();
+    const o = AC.createOscillator(), g = AC.createGain();
+    o.type = type || "sine";
+    o.frequency.value = f;
+    g.gain.setValueAtTime(vol || .04, AC.currentTime);
+    g.gain.exponentialRampToValueAtTime(.0001, AC.currentTime + d);
+    o.connect(g).connect(AC.destination);
+    o.start();
+    o.stop(AC.currentTime + d);
+  } catch (e) {}
+}
+const SFX = {
+  tick: () => beep(1800, .03, "square", .012),
+  plug: () => { beep(240, .05, "square", .05); setTimeout(() => beep(150, .07, "square", .04), 45); },
+  err: () => beep(110, .2, "sawtooth", .025),
+  ok: () => { beep(660, .08, "sine", .035); setTimeout(() => beep(990, .14, "sine", .035), 90); }
+};
+
+let view = "stand";
+const HINTS = {
+  stand: "Click the rack to plug in  ·  click a screen to sit down",
+  sit: "Double-click the main screen to focus  ·  Esc to lean back",
+  focus: "Double-click or Esc to sit back"
+};
+function camFor(v) {
+  const vw = innerWidth, vh = innerHeight;
+  const sw = Math.max(vw, vh * 1024 / 572), sh = sw * 572 / 1024;
+  const sl = (vw - sw) / 2, stp = (vh - sh) / 2;
+  if (v === "stand") return "translate(0px, 0px) scale(1)";
+  const box = v === "sit" ? [0.0996, 0.4650, 0.9004, 0.9230] : [0.3506, 0.4650, 0.6514, 0.7430];
+  const bw = (box[2] - box[0]) * sw, bh = (box[3] - box[1]) * sh;
+  const s = v === "sit" ? Math.min(vw * .97 / bw, vh * .8 / bh, 1.35) : Math.min(vw * .82 / bw, vh * .72 / bh, 2.6);
+  const cx = (box[0] + box[2]) / 2 * sw, cy = (box[1] + box[3]) / 2 * sh;
+  let tx = vw / 2 - sl - cx * s, ty = vh * (v === "sit" ? .53 : .5) - stp - cy * s;
+  tx = Math.min(-sl, Math.max(vw - sl - sw * s, tx));
+  ty = Math.min(-stp, Math.max(vh - stp - sh * s, ty));
+  return `translate(${tx}px, ${ty}px) scale(${s})`;
+}
+function setView(v) {
+  view = v;
+  document.body.className = "v-" + v;
+  $("#cam").style.transform = camFor(v);
+  $("#hint").textContent = HINTS[v];
+}
+
+function renderTerm() {
+  const on = !!(st.plugged && isConsole(st.plugged));
+  $("#nosig").hidden = on;
+  $("#term").hidden = !on;
+  if (!on) return;
+  const log = $("#log");
+  if (st.log.length > 400) st.log = st.log.slice(-400);
+  log.textContent = st.log.join("\n");
+  $("#pr").textContent = prompt();
+  $("#cmd").classList.toggle("hide", ["pass", "pw1", "pw2"].includes(st.sess));
+  log.scrollTop = log.scrollHeight;
+}
+function afterChange() {
+  if (st.pendingPlain && hasRootAuth(st.active)) { st.pw = st.pendingPlain; }
+  renderTerm();
+  renderPanel();
+  renderTicket();
+  save();
+}
+function focusCmd() { const c = $("#cmd"); if (!$("#term").hidden) c.focus({ preventScroll: true }); }
+
+let hist = [], hi = 0;
+$("#cmd").addEventListener("keydown", (e) => {
+  const c = e.target;
+  if (e.key === "Enter") {
+    const v = c.value;
+    c.value = "";
+    if (v.trim() && !["pass", "pw1", "pw2"].includes(st.sess)) { hist.push(v); }
+    hi = hist.length;
+    run(v);
+    afterChange();
+    return;
+  }
+  if (e.key === "Escape") { e.preventDefault(); setView(view === "focus" ? "sit" : "stand"); c.blur(); return; }
+  if (["pass", "pw1", "pw2"].includes(st.sess)) return;
+  if (e.key === "ArrowUp") { e.preventDefault(); if (hi > 0) { hi--; c.value = hist[hi]; } return; }
+  if (e.key === "ArrowDown") { e.preventDefault(); if (hi < hist.length - 1) { hi++; c.value = hist[hi]; } else { hi = hist.length; c.value = ""; } return; }
+  if (e.key === "Tab" || e.key === "?") {
+    e.preventDefault();
+    const cp = completions(c.value);
+    if (e.key === "?") {
+      say(prompt() + c.value + "?");
+      if (cp && cp.list.length) listPossible(cp.list);
+      else if (cp) say("No valid completions");
+      else say("(help is not simulated at this position)");
+      prePrompt();
+      afterChange();
+      return;
+    }
+    if (!cp || !cp.list.length) { SFX.err(); return; }
+    if (cp.list.length === 1) { c.value = c.value.slice(0, c.value.length - cp.part.length) + cp.list[0] + " "; return; }
+    let pre = cp.list[0];
+    for (const k of cp.list) while (!k.startsWith(pre)) pre = pre.slice(0, -1);
+    if (pre.length > cp.part.length) c.value = c.value.slice(0, c.value.length - cp.part.length) + pre;
+    else { say(prompt() + c.value); listPossible(cp.list); prePrompt(); afterChange(); }
+  }
+});
+
+$("#main").addEventListener("click", () => { if (view === "stand") setView("sit"); focusCmd(); });
+$("#main").addEventListener("dblclick", () => { setView(view === "focus" ? "sit" : "focus"); focusCmd(); });
+["#left", "#right", "#small"].forEach((s) => $(s).addEventListener("click", (e) => { if (e.target.closest(".chip")) return; if (view === "stand") setView("sit"); focusCmd(); }));
+$("#right").addEventListener("click", (e) => {
+  const ch = e.target.closest(".chip");
+  if (!ch) return;
+  revealed[ch.dataset.r] = true;
+  ch.classList.add("shown");
+  focusCmd();
+});
+document.querySelectorAll(".hot").forEach((h) => {
+  const tip = $("#" + h.dataset.tip);
+  h.addEventListener("mouseenter", () => { tip.classList.add("on"); SFX.tick(); });
+  h.addEventListener("mouseleave", () => tip.classList.remove("on"));
+});
+function placeTips() {
+  const r = $("#hot-rack").getBoundingClientRect(), d = $("#hot-desksw").getBoundingClientRect();
+  const tr = $("#tip-rack"), td = $("#tip-desksw");
+  tr.style.left = Math.min(innerWidth - tr.offsetWidth - 10, r.left - tr.offsetWidth - 12) + "px";
+  tr.style.right = "auto";
+  tr.style.top = r.top + r.height * .32 + "px";
+  td.style.left = d.left + d.width / 2 - td.offsetWidth / 2 + "px";
+  td.style.top = d.top - td.offsetHeight - 10 + "px";
+}
+$("#cam").addEventListener("transitionend", placeTips);
+$("#hot-rack").addEventListener("mouseenter", placeTips);
+$("#hot-desksw").addEventListener("mouseenter", placeTips);
+$("#hot-rack").addEventListener("click", () => { $("#tip-rack").classList.remove("on"); openCu(); });
+$("#hot-desksw").addEventListener("click", () => toast("An unmanaged desk switch: no console port, no CLI, nothing to configure. The real work is in the rack."));
+
+let tt;
+function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => e.classList.remove("on"), 3600); }
+
+$("#cu-close").addEventListener("click", () => { closeCu(); setView(st.plugged && isConsole(st.plugged) ? "sit" : "stand"); focusCmd(); });
+$("#v-front").addEventListener("click", () => { cuSide = "front"; renderCu(); });
+$("#v-rear").addEventListener("click", () => { cuSide = "rear"; renderCu(); });
+$("#unplug").addEventListener("click", () => { st.plugged = null; SFX.tick(); status("Unplugged. A console session survives an unplug: plug back in and you are where you left off."); renderCu(); afterChange(); });
+document.querySelectorAll(".cable").forEach((c) => c.addEventListener("pointerdown", (e) => startDrag(e, c)));
+addEventListener("pointermove", moveDrag);
+addEventListener("pointerup", endDrag);
+addEventListener("resize", () => { layoutCu(); $("#cam").style.transform = camFor(view); placeTips(); });
+addEventListener("keydown", (e) => {
+  if ($("#cu").classList.contains("on")) { if (e.key === "Escape") { closeCu(); setView(st.plugged && isConsole(st.plugged) ? "sit" : "stand"); } return; }
+  if (e.target === $("#cmd")) return;
+  if (e.key === "Escape") { setView(view === "focus" ? "sit" : "stand"); return; }
+  if (e.key.length === 1 && !e.metaKey && !e.ctrlKey && !$("#term").hidden) { if (view === "stand") setView("sit"); focusCmd(); }
+});
+
+$("#t-snd").addEventListener("click", () => { snd = !snd; try { localStorage.setItem(SAVE + "-snd", snd ? "1" : "0"); } catch (e) {} $("#snd-w").style.opacity = snd ? 1 : .15; toast(snd ? "Sound on" : "Sound off"); });
+$("#t-reset").addEventListener("click", () => {
+  if (!confirm("Reset acc-sw-01 to factory default and restart the ticket?")) return;
+  st = fresh();
+  revealed = {};
+  hist = [];
+  lastDone = -1;
+  afterChange();
+  setView("stand");
+  toast("acc-sw-01 is back to factory default.");
+});
+
+document.addEventListener("scroll", (e) => {
+  const t = e.target;
+  if (t === document) { if (scrollX || scrollY) scrollTo(0, 0); return; }
+  if (t.id !== "log" && (t.scrollTop || t.scrollLeft)) { t.scrollTop = 0; t.scrollLeft = 0; }
+}, true);
+st = load();
+$("#snd-w").style.opacity = snd ? 1 : .15;
+buildPanel("front");
+buildPanel("rear");
+if (st.plugged && isConsole(st.plugged) && !st.log.length) banner();
+setView(st.plugged && isConsole(st.plugged) ? "sit" : "stand");
+afterChange();
+lastDone = TASKS.filter((x) => taskDone(x.id)).length;
+</script>
+</body>
+</html>
