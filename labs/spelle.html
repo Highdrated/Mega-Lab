@@ -231,24 +231,32 @@
     justify-content: center;
     overflow: auto;
   }
-  #grid { display: grid; gap: 2px; }
+  #dungeon-sheet { background: #0d0b09 !important; }
+  #grid { display: grid; gap: 0; position: relative; --cs: 58px; box-shadow: 0 0 0 1px #000, 0 18px 50px rgba(0,0,0,0.55); }
   .cell {
-    width: 34px; height: 34px;
+    width: var(--cs); height: var(--cs);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 19px;
-    border-radius: 3px;
     position: relative;
-    transition: background 0.2s;
+    background-size: cover;
   }
-  .cell.floor { background: #d9c9a3; box-shadow: inset 0 0 4px rgba(74,59,42,0.35); }
-  .cell.wall  { background: var(--stone); box-shadow: inset 0 -3px 0 var(--stone-dark); }
-  .cell.fog   { background: #241c10; box-shadow: none; }
-  .cell.fog::after { content: ""; }
-  .cell .item { position: absolute; }
-  .cell .hero { position: absolute; z-index: 2; transition: transform 0.12s; }
+  .cell.floor { background-color: #3a3631; }
+  .cell.wall  { background-color: #1d1b19; }
+  .cell.wall::before { content: ""; position: absolute; inset: 0; background: rgba(8,6,4,0.46); box-shadow: inset 0 -5px 8px rgba(0,0,0,0.45); }
+  .cell.fog   { background: #0d0b09 !important; }
+  .cell.fog::before { display: none; }
+  .cell .item { position: absolute; width: 64%; height: auto; filter: drop-shadow(0 3px 3px rgba(0,0,0,0.6)); pointer-events: none; }
+  .cell .item.big { width: 96%; }
+  .cell .item.door { width: 100%; height: 100%; object-fit: contain; }
+  .cell .hero { position: absolute; z-index: 2; height: 112%; width: auto; bottom: 2%; filter: drop-shadow(0 4px 4px rgba(0,0,0,0.7)); transition: transform 0.12s; pointer-events: none; }
+  .cell .hero.left { transform: scaleX(-1); }
+  .cell .hero.down { height: auto; width: 110%; bottom: 14%; }
   .cell .hero.bump { animation: bump 0.25s; }
+  .torch { position: absolute; inset: 0; pointer-events: none; z-index: 3; transition: background 0.18s; }
+  .ico { height: 1.25em; width: auto; vertical-align: -0.3em; }
+  #satchel:empty { display: none; }
+  #satchel .ico { height: 22px; }
   @keyframes bump {
     0% { transform: translateX(0); }
     40% { transform: translateX(5px); }
@@ -558,7 +566,7 @@ A JS program is a list of <b>statements</b>, run top to bottom. The most common 
 <div class="ex">move("right");
 └──┘ └─────┘
 name  argument (extra info the function needs)</div>
-<div class="teach">Your hero 🧙 understands the spell <code>move</code>. The argument — text in quotes, called a <b>string</b> — tells it which way: <code>"up"</code>, <code>"down"</code>, <code>"left"</code>, <code>"right"</code>. Each statement ends with <code>;</code> — same habit as CSS.</div>
+<div class="teach">Your hero <img class="ico" src="img/spelle/hero-idle.webp" alt="hero"> understands the spell <code>move</code>. The argument — text in quotes, called a <b>string</b> — tells it which way: <code>"up"</code>, <code>"down"</code>, <code>"left"</code>, <code>"right"</code>. Each statement ends with <code>;</code> — same habit as CSS.</div>
 <p><em>Quest:</em> the stairs lie two steps right. Cast <code>move("right");</code> twice — one statement per line — and press CAST.</p>`,
       starter: "",
       level: ["#######", "#@.E..#", "#######"],
@@ -613,7 +621,7 @@ name  argument (extra info the function needs)</div>
     },
     {
       brief: `<h2>GRAB</h2>
-<div class="teach">Some spells take NO arguments — the parentheses stay, empty: <code>grab();</code> picks up whatever the hero stands on. The door 🚪 ahead is locked; it opens only if the satchel holds the key 🗝.</div>
+<div class="teach">Some spells take NO arguments — the parentheses stay, empty: <code>grab();</code> picks up whatever the hero stands on. The door <img class="ico" src="img/spelle/door-closed.webp" alt="door"> ahead is locked; it opens only if the satchel holds the key <img class="ico" src="img/spelle/key.webp" alt="key">.</div>
 <p><em>Quest:</em> walk onto the key, <code>grab();</code> it, then continue through the door to the stairs.</p>`,
       starter: "",
       level: ["#########", "#@.K.DE.#", "#########"],
@@ -1158,7 +1166,7 @@ let f = 1;                       ← facing right
     {
       brief: `<h2>DELVE I · THE ANTECHAMBER</h2>
 <div class="teach">No lesson. No starter. The dungeon is dark — only tiles near your hero's path are revealed. Cast, watch, learn the map, recast. Every spell you know is legal.</div>
-<p><em>Quest:</em> find the key 🗝, open the door 🚪, reach the stairs.</p>`,
+<p><em>Quest:</em> find the key <img class="ico" src="img/spelle/key.webp" alt="key">, open the door <img class="ico" src="img/spelle/door-closed.webp" alt="door">, reach the stairs.</p>`,
       starter: "",
       fog: true,
       level: ["#########", "#@..#...#", "#.#.#.#.#", "#.#K..#.#", "#.#####.#", "#....D.E#", "#########"],
@@ -1170,7 +1178,7 @@ let f = 1;                       ← facing right
     },
     {
       brief: `<h2>DELVE II · THE TREASURY</h2>
-<div class="teach">The chest 💰 is optional plunder — but what apprentice leaves treasure?</div>
+<div class="teach">The chest <img class="ico" src="img/spelle/chest.webp" alt="chest"> is optional plunder — but what apprentice leaves treasure?</div>
 <p><em>Quest:</em> grab the treasure AND reach the stairs.</p>`,
       starter: "",
       fog: true,
@@ -1241,31 +1249,52 @@ function currentDrill() {
   return { m: state.mod, d: state.drill, drill: MODULES[state.mod].drills[state.drill] };
 }
 
-const EMOJI = { K: "🗝", C: "💰", D: "🚪", E: "🌀" };
+const IMG = "img/spelle/";
+const ITEM_IMG = { K: ["key", ""], C: ["chest", ""], D: ["door-closed", "door"], E: ["portal", "big"] };
+const HERO = { pose: "idle", face: 1 };
+const ICO = { hero: "hero-idle", door: "door-closed", key: "key", chest: "chest", portal: "portal", coins: "coins" };
+const ico = (k, alt) => `<img class="ico" src="${IMG}${ICO[k]}.webp" alt="${alt || k}">`;
+function tileVar(x, y, n) { const h = ((x * 73856093) ^ (y * 19349663)) >>> 0; const r = h % 100; return r < 76 ? 1 : 2 + (h >> 7) % (n - 1); }
+function cellSize(cols, rows) {
+  const box = $("dungeon-sheet");
+  if (!box || box.clientWidth < 120 || box.clientHeight < 120) return 58;
+  const w = box.clientWidth - 48, h = box.clientHeight - 90;
+  return Math.max(34, Math.min(64, Math.floor(Math.min(w / cols, h / rows))));
+}
 
 /* render level; visited = Set("x,y") for fog; heroPos = {x,y} */
 function renderDungeon(levelRows, heroPos, removed, opened, visited) {
   const grid = $("grid");
   const rows = levelRows.map(r => r.split(""));
-  grid.style.gridTemplateColumns = `repeat(${rows[0].length}, 34px)`;
+  const cs = cellSize(rows[0].length, rows.length);
+  grid.style.setProperty("--cs", cs + "px");
+  grid.style.gridTemplateColumns = `repeat(${rows[0].length}, ${cs}px)`;
   grid.innerHTML = "";
   rows.forEach((row, y) => row.forEach((c, x) => {
     const cell = document.createElement("div");
     const k = x + "," + y;
     const isFog = visited && !visited.has(k);
-    if (c === "#") cell.className = "cell wall" + (isFog ? " fog" : "");
-    else cell.className = "cell floor" + (isFog ? " fog" : "");
+    if (c === "#") { cell.className = "cell wall" + (isFog ? " fog" : ""); if (!isFog) cell.style.backgroundImage = `url(${IMG}wall${tileVar(x, y, 4)}.webp)`; }
+    else { cell.className = "cell floor" + (isFog ? " fog" : ""); if (!isFog) cell.style.backgroundImage = `url(${IMG}floor${tileVar(x + 7, y + 3, 4)}.webp)`; }
     if (!isFog) {
       let t = c === "@" ? "." : c;
       if (removed && removed.has(k)) t = ".";
       if (opened && opened.has(k)) t = ".";
-      if (EMOJI[t]) cell.innerHTML = `<span class="item">${EMOJI[t]}</span>`;
+      if (opened && opened.has(k) && c === "D") cell.innerHTML = `<img class="item door" src="${IMG}door-open.webp" alt="open door">`;
+      else if (ITEM_IMG[t]) cell.innerHTML = `<img class="item ${ITEM_IMG[t][1]}" src="${IMG}${ITEM_IMG[t][0]}.webp" alt="${ITEM_IMG[t][0].replace("-", " ")}">`;
     }
     if (heroPos && heroPos.x === x && heroPos.y === y) {
-      cell.innerHTML += `<span class="hero" id="hero">🧙</span>`;
+      cell.innerHTML += `<img class="hero ${HERO.pose}${HERO.face < 0 ? " left" : ""}" id="hero" src="${IMG}hero-${HERO.pose}.webp" alt="the hero">`;
     }
     grid.appendChild(cell);
   }));
+  if (visited && heroPos) {
+    const t = document.createElement("div");
+    t.className = "torch";
+    const px = (heroPos.x + 0.5) * cs, py = (heroPos.y + 0.5) * cs;
+    t.style.background = `radial-gradient(circle at ${px}px ${py}px, rgba(255,170,80,0.10) 0, rgba(0,0,0,0) ${cs * 1.4}px, rgba(0,0,0,0.62) ${cs * 3.4}px)`;
+    grid.appendChild(t);
+  }
 }
 
 function heroStart(levelRows) {
@@ -1362,8 +1391,11 @@ function newRunCtx(drill, code) {
   };
 }
 
+function satchelHtml(list) { return list.map(it => `<img class="ico" src="${IMG}${it === "key" ? "key" : "coins"}.webp" alt="${it}">`).join(" "); }
 function applyAction(ctx) {
   const a = ctx.res.actions[ctx.i++];
+  HERO.pose = a.type === "move" ? "walk" : a.type === "say" ? "cast" : "idle";
+  if (a.dir === "left") HERO.face = -1; else if (a.dir === "right") HERO.face = 1;
   if (a.type === "move") {
     ctx.pos = { x: a.x, y: a.y };
     if (ctx.visited) neighbors(a.x, a.y).forEach(k => ctx.visited.add(k));
@@ -1371,12 +1403,12 @@ function applyAction(ctx) {
   if (a.type === "unlock") { ctx.opened.add(a.x + "," + a.y); log(`<em>CLUNK</em> — the door yields to the key.`); }
   if (a.type === "grab") {
     ctx.removed.add(a.x + "," + a.y);
-    ctx.satchel.push(a.item === "key" ? "🗝" : "💰");
-    $("satchel").textContent = ctx.satchel.join(" ");
+    ctx.satchel.push(a.item);
+    $("satchel").innerHTML = satchelHtml(ctx.satchel);
     log(`<em>GRABBED</em> — ${a.item} into the satchel.`);
   }
   if (a.type === "grabfail") log(`<i>grab()</i> — nothing here but dust.`);
-  if (a.type === "say") log(`🧙 <em>"${escapeHtml(a.text)}"</em>`);
+  if (a.type === "say") log(`${ico("hero", "hero")} <em>"${escapeHtml(a.text)}"</em>`);
   renderDungeon(ctx.drill.level, ctx.pos, ctx.removed, ctx.opened, ctx.visited);
   if (a.type === "bump") {
     const h = $("hero");
@@ -1392,12 +1424,15 @@ function castSpell() {
   const { drill } = currentDrill();
   const code = editor.value;
   const ctx = newRunCtx(drill, code);
+  HERO.pose = "idle"; HERO.face = 1;
   if (ctx.res.error) log(`<i>THE SPELL MISFIRES</i> — ${escapeHtml(ctx.res.error)}`);
   $("satchel").textContent = "";
   renderDungeon(drill.level, ctx.pos, ctx.removed, ctx.opened, ctx.visited);
   animTimer = setInterval(() => {
     if (ctx.i >= ctx.res.actions.length) {
       clearInterval(animTimer);
+      HERO.pose = ctx.res.error ? "down" : "idle";
+      renderDungeon(ctx.drill.level, ctx.pos, ctx.removed, ctx.opened, ctx.visited);
       finishCast(code, ctx.res);
       return;
     }
@@ -1411,6 +1446,7 @@ function stepCast() {
   const code = editor.value;
   if (!stepCtx || stepCtx.code !== code || stepCtx.drill !== drill) {
     stepCtx = newRunCtx(drill, code);
+    HERO.pose = "idle"; HERO.face = 1;
     if (stepCtx.res.error) log(`<i>THE SPELL MISFIRES</i> — ${escapeHtml(stepCtx.res.error)}`);
     $("satchel").textContent = "";
     renderDungeon(drill.level, stepCtx.pos, stepCtx.removed, stepCtx.opened, stepCtx.visited);
