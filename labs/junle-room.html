@@ -40,6 +40,14 @@ body.v-sit .shade, body.v-focus .shade { opacity: 1; }
 #small::after { background: radial-gradient(ellipse 60% 50% at 0% 10%, rgba(255, 190, 110, .2), transparent 70%); }
 .sky { position: absolute; inset: 0; pointer-events: none; -webkit-mask: url(img/junle-room/window-mask.png) 0 0 / 100% 100% no-repeat; mask: url(img/junle-room/window-mask.png) 0 0 / 100% 100% no-repeat; }
 .flyer { position: absolute; left: 0; top: 0; width: 6.2%; aspect-ratio: 185.5 / 171; background: url(img/junle-room/griffon.png) 0 0 / 400% 100% no-repeat; filter: brightness(.66) saturate(.7) contrast(.92) sepia(.12) blur(.3px); opacity: 0; will-change: transform; }
+#junie { position: absolute; left: 30.9%; top: 71.2%; width: 4.6%; aspect-ratio: 1; pointer-events: auto; z-index: 4; }
+#junie img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; filter: brightness(.82) saturate(.85) sepia(.08) drop-shadow(0 .35vw .45vw rgba(0, 0, 0, .55)); animation: bob 4.2s ease-in-out infinite; transition: opacity .25s; }
+#junie.still img { animation: none; }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-7%) rotate(1.5deg); } }
+#junie .glowj { position: absolute; left: 10%; right: 10%; bottom: -14%; height: 26%; border-radius: 50%; background: radial-gradient(closest-side, rgba(150, 220, 190, .22), transparent); mix-blend-mode: screen; pointer-events: none; }
+.bubble { position: fixed; z-index: 40; max-width: 260px; padding: 8px 11px; background: rgba(10, 12, 12, .94); border: 1px solid #3a3a30; border-radius: 6px; font-size: 12px; line-height: 1.5; color: var(--ink); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity .25s, transform .25s; }
+.bubble.on { opacity: 1; transform: none; }
+.bubble b { color: #9fdcc0; font-weight: 400; }
 .glow { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; mix-blend-mode: screen; filter: blur(14px);
   background: radial-gradient(closest-side, rgba(125, 170, 205, .26), rgba(125, 170, 205, .08) 70%, transparent); transition: opacity .6s; }
 #g-small { background: radial-gradient(closest-side, rgba(125, 170, 205, .2), transparent); }
@@ -159,6 +167,7 @@ body.cur, body.cur * { cursor: none !important; }
     <div class="sky"><div class="flyer" id="flyer"></div></div>
     <div class="glow" id="g-main"></div><div class="glow" id="g-left"></div><div class="glow" id="g-right"></div><div class="glow" id="g-small"></div>
     <div class="spill"></div>
+    <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junie/junie-idle.webp" alt=""></div>
     <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg></div></div>
     <div class="screen" id="main">
       <div class="nosig" id="nosig">NO CONSOLE<b>click the rack and plug in a console cable</b></div>
@@ -187,6 +196,7 @@ body.cur, body.cur * { cursor: none !important; }
   <a href="junle.html" title="Classic Junle"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="9" rx="1"/><path d="M5 7l1.5 1.5L5 10M8 10h3"/></svg></a>
 </div>
 <div class="toast" id="toast"></div>
+<div class="bubble" id="bubble"></div>
 
 <div id="cu">
   <div class="cu-bg" id="cu-bg"></div>
@@ -1438,6 +1448,7 @@ function plug(cable, port) {
   if (isConsole(p)) {
     status(p.port === "con-usb" ? "Console session open over mini-USB · 9600 baud, 8N1. When both console ports are cabled, the mini-USB one wins." : "Console session open over the rear RJ-45 port · 9600 baud, 8N1.", "good");
     if (!was && st.sess === "login" && !st.log.length) banner();
+    setTimeout(() => junie("wave", 3000), 1500);
     afterChange();
     setTimeout(() => { closeCu(); setView("sit"); focusCmd(); }, 1300);
   } else if (port === "mgmt") {
@@ -1582,10 +1593,13 @@ $("#cmd").addEventListener("keydown", (e) => {
     c.value = "";
     if (v.trim() && !["pass", "pw1", "pw2"].includes(st.sess)) { hist.push(v); }
     hi = hist.length;
+    const before = st.log.length;
     run(v);
     afterChange();
+    junieReact(before);
     return;
   }
+  if (e.key.length === 1 && jMood !== "think" && !jUntil) junie("think");
   if (e.key === "Escape") { e.preventDefault(); setView(view === "focus" ? "sit" : "stand"); c.blur(); return; }
   if (["pass", "pw1", "pw2"].includes(st.sess)) return;
   if (e.key === "ArrowUp") { e.preventDefault(); if (hi > 0) { hi--; c.value = hist[hi]; } return; }
@@ -1618,6 +1632,7 @@ $("#right").addEventListener("click", (e) => {
   const ch = e.target.closest(".chip");
   if (!ch) return;
   revealed[ch.dataset.r] = true;
+  junie("point", 2500);
   ch.classList.add("shown");
   focusCmd();
 });
@@ -1754,6 +1769,47 @@ $("#t-fly").addEventListener("click", () => {
 });
 $("#t-fly").style.opacity = flyOn ? 1 : .4;
 scheduleFly(25000 + Math.random() * 20000);
+let jMood = "idle", jUntil = 0, jIdleSince = Date.now();
+const JPOSES = ["idle", "cheer", "worry", "think", "sleep", "wave", "point", "read", "confused", "wrench"];
+JPOSES.forEach((m) => { const i = new Image(); i.src = `img/junie/junie-${m}.webp`; });
+function junie(m, ms) {
+  jMood = m;
+  jUntil = ms ? Date.now() + ms : 0;
+  $("#junie-img").src = `img/junie/junie-${m}.webp`;
+  $("#junie").classList.toggle("still", m === "sleep" || m === "think");
+}
+function junieTick() {
+  const now = Date.now();
+  if (jUntil && now > jUntil) junie("idle");
+  if (!jUntil && jMood !== "sleep" && now - jIdleSince > 120000) junie("sleep");
+  if (!jUntil && jMood === "think" && now - lastKey > 2500) junie("idle");
+}
+setInterval(junieTick, 1000);
+function junieReact(before) {
+  jIdleSince = Date.now();
+  const fresh = st.log.slice(before).join("\n");
+  if (/commit complete/.test(fresh)) junie("cheer", 3500);
+  else if (/syntax error|unknown command|error:|is ambiguous|missing argument|Command not found|Login incorrect/.test(fresh)) junie(/is ambiguous|missing argument/.test(fresh) ? "confused" : "worry", 3000);
+  else if (jMood === "sleep" || jMood === "think") junie("idle");
+}
+function junieSay(html, ms) {
+  const b = $("#bubble"), r = $("#junie").getBoundingClientRect();
+  b.innerHTML = html;
+  b.classList.add("on");
+  b.style.left = Math.max(10, r.left + r.width * .4 - b.offsetWidth) + "px";
+  b.style.top = Math.min(innerHeight - b.offsetHeight - 40, r.bottom + 6) + "px";
+  clearTimeout(junieSay.t);
+  junieSay.t = setTimeout(() => b.classList.remove("on"), ms || 4200);
+}
+$("#junie").addEventListener("click", (e) => {
+  e.stopPropagation();
+  jIdleSince = Date.now();
+  const cur = TASKS.find((x) => !taskDone(x.id));
+  if (!cur) { junie("cheer", 3000); junieSay("<b>Junie</b> Ticket closed. Try <b>show vlans</b> and admire your work."); return; }
+  junie("point", 3500);
+  junieSay(`<b>Junie</b> Next up: ${esc(cur.t)}.` + (cur.id === "console" ? " The rack is on your right." : " The hint is on the right screen."));
+});
+$("#junie").addEventListener("mouseenter", () => { if (jMood === "sleep") junie("idle"); jIdleSince = Date.now(); });
 st = load();
 if (st.boot) BOOT_T = st.boot;
 placeScreens();
