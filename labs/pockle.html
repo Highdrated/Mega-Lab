@@ -137,6 +137,15 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .misses .m .code { font-size: 12px; margin-top: 4px; }
 .misses .m b { color: var(--muted); font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: .08em; display: block; }
 .misses .m .ans { font-family: var(--mono); color: var(--good); }
+.reveal { width: 100%; min-height: 64px; margin-top: 12px; border: 1px dashed var(--accent); border-radius: 11px; background: color-mix(in srgb, var(--accent) 7%, var(--panel)); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; }
+.reveal b { font-family: var(--serif); font-weight: 500; font-size: 16px; }
+.reveal span { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.hide { display: none !important; }
+.chipbtn.on { border-color: var(--accent); color: var(--text); }
+.lab small b { font-weight: 600; }
+.lab small b.fluent { color: var(--good); }
+.lab small b.slow { color: var(--warn); }
+.lab small b.shaky { color: var(--bad); }
 .empty { text-align: center; padding: 26px 10px; color: var(--muted); font-size: 14px; line-height: 1.6; }
 .empty img { width: 96px; height: 96px; object-fit: contain; }
 </style>
@@ -146,6 +155,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
   <div class="top">
     <span class="logo">Pockle<i>pocket mix</i></span>
     <span class="spacer"></span>
+    <button class="chipbtn" id="recallBtn">recall on</button>
     <button class="chipbtn" id="themeBtn">orbital</button>
   </div>
   <div class="rail"><span id="rank">Cadet</span><div class="bar"><i id="xpbar"></i></div><span><b id="xp">0</b> xp · <b id="streak">0</b>d</span></div>
@@ -2463,12 +2473,13 @@ const THEMES = ["orbital", "verdant", "graphite"];
 const THEME_COLORS = { orbital: "#e8eaee", verdant: "#0e1712", graphite: "#111214" };
 const RANKS = [[0, "Cadet"], [150, "Deckhand"], [400, "Technician"], [800, "Operator"], [1400, "Engineer"], [2200, "Navigator"], [3300, "Commander"], [5000, "Admiral"]];
 const GAPS = [0, 1, 2, 4, 8, 16, 32];
+const SLOW = 10000;
 const JUNIE = { good: ["junie-cheer", "junie-point", "junie-swim"], bad: ["junie-think", "junie-confused", "junie-worry"] };
 
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
 function load() { try { return JSON.parse(lsGet(KEY)) || {}; } catch (e) { return {}; } }
-let S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0 }, load());
+let S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0, recall: true }, load());
 function save() { lsSet(KEY, JSON.stringify(S)); }
 function today() { const d = new Date(); return Math.floor((d - d.getTimezoneOffset() * 6e4) / 864e5); }
 
@@ -2551,6 +2562,16 @@ function pickMix(pool, n) {
   return spread(shuffle([...picked.values()]));
 }
 
+function fluency(cards) {
+  const seen = cards.map(st).filter(Boolean);
+  if (seen.length < 3) return null;
+  if (seen.some(s => s.ok === false)) return "shaky";
+  if (seen.filter(s => s.t > SLOW).length / seen.length > 0.3) return "slow";
+  return "fluent";
+}
+function paintRecall() { $("recallBtn").textContent = S.recall ? "recall on" : "recall off"; $("recallBtn").classList.toggle("on", !!S.recall); }
+$("recallBtn").onclick = () => { S.recall = !S.recall; save(); paintRecall(); toast(S.recall ? "Options stay hidden until you have an answer in mind" : "Options show straight away"); };
+
 function paintHome() {
   scan(); paintRail();
   const unlockedLabs = LABSTATE.filter(l => l.cards.length);
@@ -2579,7 +2600,7 @@ function paintHome() {
     const row = document.createElement("div");
     row.className = "lab" + (locked ? " locked" : "") + (inMix ? " in" : "");
     row.innerHTML = '<button class="tog" aria-label="toggle"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></button>'
-      + '<div class="nm"><strong>' + esc(l.b.name) + '</strong><small>' + esc(l.b.topic) + " · " + (locked ? "nothing finished yet" : l.units.length + "/" + l.b.units.length + " done · " + l.cards.length + " cards") + '</small>'
+      + '<div class="nm"><strong>' + esc(l.b.name) + '</strong><small>' + esc(l.b.topic) + " · " + (locked ? "nothing finished yet" : l.units.length + "/" + l.b.units.length + " done · " + l.cards.length + " cards") + (fluency(l.cards) ? ' · <b class="' + fluency(l.cards) + '">' + fluency(l.cards) + "</b>" : "") + '</small>'
       + '<div class="meter"><i style="width:' + (l.cards.length ? Math.round(seen / l.cards.length * 100) : 0) + '%"></i></div></div>'
       + (locked ? '<a class="solo" href="' + esc(l.b.href) + '">open</a>' : '<button class="solo">solo</button>');
     if (!locked) {
@@ -2618,13 +2639,21 @@ function render() {
     + '<div class="choices">' + order.map(k => '<button class="choice" data-k="' + k + '">' + esc(c.o[k]) + '</button>').join("") + '</div>'
     + '<div class="fb" id="fb"></div>';
   $("qcard").querySelectorAll(".choice").forEach(b => b.onclick = () => answer(+b.dataset.k));
+  R.t0 = performance.now();
+  if (S.recall && R.mode !== "sprint") {
+    const ch = $("qcard").querySelector(".choices"); ch.classList.add("hide");
+    const b = document.createElement("button"); b.className = "reveal";
+    b.innerHTML = "<b>Think of the answer</b><span>then tap to show options</span>";
+    ch.before(b); b.onclick = () => { b.remove(); ch.classList.remove("hide"); };
+  }
   $("nextBtn").classList.remove("on");
 }
 
-function grade(c, right) {
+function grade(c, right, dt) {
   const s = S.cards[c.id] || { b: 0, due: 0, w: 0, n: 0 };
-  s.n++;
-  if (right) { s.b = Math.min(s.b + 1, GAPS.length - 1); s.due = today() + GAPS[s.b]; }
+  s.n++; s.ok = right; s.t = dt;
+  if (right && dt > SLOW) { s.b = Math.max(s.b, 1); s.due = today() + 1; }
+  else if (right) { s.b = Math.min(s.b + 1, GAPS.length - 1); s.due = today() + GAPS[s.b]; }
   else { s.b = 1; s.due = today(); s.w++; }
   S.cards[c.id] = s;
 }
@@ -2632,7 +2661,8 @@ function grade(c, right) {
 function answer(k) {
   if (R.answered) return; R.answered = true;
   const c = R.cards[R.i], right = k === c.a;
-  grade(c, right);
+  const dt = Math.round(performance.now() - R.t0), slow = right && dt > SLOW && R.mode !== "sprint";
+  grade(c, right, R.mode === "sprint" ? 0 : dt);
   const gain = right ? 10 : 2; R.xp += gain; S.xp += gain;
   if (right) R.ok++; else R.miss.push(c);
   bumpStreak(); save(); paintRail();
@@ -2645,7 +2675,7 @@ function answer(k) {
   if (R.mode === "sprint") { $("count").textContent = R.ok + " right"; setTimeout(advance, right ? 450 : 1100); return; }
   const pic = JUNIE[right ? "good" : "bad"][Math.floor(Math.random() * 3)];
   const fb = $("fb"); fb.classList.add("on");
-  fb.innerHTML = '<div class="fbrow"><div><span class="verdict ' + (right ? "good" : "bad") + '">' + (right ? "Right." : "Not quite.") + '</span>' + inl(c.why)
+  fb.innerHTML = '<div class="fbrow"><div><span class="verdict ' + (right ? "good" : "bad") + '">' + (right ? "Right." : "Not quite.") + '</span>' + inl(c.why) + (slow ? " Right, but it took " + Math.round(dt / 1000) + "s. It comes back tomorrow to get faster." : "")
     + '<div style="margin-top:6px"><a href="' + esc(c.href) + '">revisit in ' + esc(c.labName) + '</a></div></div><img src="img/junie/' + pic + '.webp" alt=""></div>';
   $("nextBtn").textContent = R.i + 1 < R.cards.length ? "Next" : "Finish";
   $("nextBtn").classList.add("on");
@@ -2723,6 +2753,7 @@ window.addEventListener("storage", () => { if ($("home").classList.contains("on"
 document.addEventListener("visibilitychange", () => { if (!document.hidden && $("home").classList.contains("on")) paintHome(); });
 
 setTheme(THEMES.includes(S.theme) ? S.theme : "orbital");
+paintRecall();
 paintHome();
 </script>
 </body>
