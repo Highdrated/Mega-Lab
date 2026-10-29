@@ -2389,6 +2389,176 @@
         { task: "Enable IP source guard on the VLAN.", answers: ["set vlans klanten forwarding-options dhcp-security ip-source-guard"], fx: "isg", chip: "IP SRC GUARD", why: "drops packets whose source IP/MAC does not match the binding table \u2014 stops IP spoofing." },
         { task: "Cap access port ge-0/0/5 to 2 MAC addresses and drop the excess.", answers: ["set switch-options interface ge-0/0/5 interface-mac-limit 2 packet-action drop"], fx: "maclimit", chip: "MAC LIMIT", why: "a port that learns unlimited MACs can be flooded to overflow the table; capping it stops CAM-exhaustion attacks." }
       ]
+    },
+    {
+      id: "irb",
+      name: "INTER-VLAN (IRB)",
+      intro: "Route between VLANs on the switch itself. ELS: the VLAN binds to an irb unit, the address lives on the irb.",
+      ordered: true,
+      art: "vlans",
+      drills: [
+        { task: "Create VLAN servers with tag 20.", answers: ["set vlans servers vlan-id 20"], fx: "i1", chip: "VLAN 20", why: "the VLAN must exist before anything can bind to it." },
+        { task: "Give irb.20 the gateway address 10.20.0.1/24.", answers: ["set interfaces irb unit 20 family inet address 10.20.0.1/24"], fx: "i2", chip: "IRB.20", why: "irb unit 20 is a convention, not a rule: the number only matters in the next line." },
+        { task: "Bind VLAN servers to irb.20 so it routes.", answers: ["set vlans servers l3-interface irb.20"], fx: "i3", chip: "L3 BINDING", why: "without l3-interface the irb exists but no VLAN feeds it: it stays down." },
+        { task: "Create VLAN klanten with tag 30.", answers: ["set vlans klanten vlan-id 30"], fx: "i4", chip: "VLAN 30" },
+        { task: "Give irb.30 the gateway address 10.30.0.1/24.", answers: ["set interfaces irb unit 30 family inet address 10.30.0.1/24"], fx: "i5", chip: "IRB.30" },
+        { task: "Bind VLAN klanten to irb.30.", answers: ["set vlans klanten l3-interface irb.30"], fx: "i6", chip: "L3 BINDING 30" },
+        { task: "Describe irb.20 as: servers gateway", answers: ["set interfaces irb unit 20 description \"servers gateway\"", "set interfaces irb unit 20 description servers gateway"], fx: "i7", chip: "DESCRIPTION" },
+        { task: "Add a default route via the core at 10.20.0.254.", answers: ["set routing-options static route 0.0.0.0/0 next-hop 10.20.0.254"], fx: "i8", chip: "DEFAULT ROUTE", why: "two VLANs can now talk to each other; without a default route they still cannot leave the switch." },
+        { task: "Show the irb interfaces, briefly.", answers: ["show interfaces irb terse"], fx: "i9", chip: "IRB TERSE", why: "an irb unit shows up only when a VLAN with an active port is bound to it." },
+        { task: "Show the route the switch has for 10.30.0.0/24.", answers: ["show route 10.30.0.0/24"], fx: "i10", chip: "DIRECT ROUTE", why: "a Direct route with preference 0: the proof that irb.30 is up." },
+        { task: "Show the ARP entries learned on irb.20.", answers: ["show arp interface irb.20"], fx: "i11", chip: "ARP" },
+        { task: "Ping the klanten gateway three times.", answers: ["ping 10.30.0.1 count 3"], fx: "i12", chip: "PING" },
+        { task: "Unbind VLAN servers from its irb again.", answers: ["delete vlans servers l3-interface"], fx: "i13", chip: "UNBOUND", why: "delete removes the statement; the irb unit and its address stay in the config." }
+      ]
+    },
+    {
+      id: "lacp",
+      name: "LACP / LAG",
+      intro: "Bundle two ports into ae0 the way the EX4300 actually wants it. Order matters: chassis first, members bare, config on the bundle.",
+      ordered: true,
+      art: "vlans",
+      drills: [
+        { task: "Tell the chassis it may have 2 aggregated interfaces.", answers: ["set chassis aggregated-devices ethernet device-count 2"], fx: "l1", chip: "DEVICE COUNT", why: "no ae interface exists until the chassis reserves slots; commit fails without this." },
+        { task: "Member ports must carry no unit 0 config. Remove unit 0 from ge-0/0/44.", answers: ["delete interfaces ge-0/0/44 unit 0"], fx: "l2", chip: "MEMBER CLEARED", why: "a member with family ethernet-switching left on it refuses to join: commit error." },
+        { task: "Make ge-0/0/44 a member of ae0.", answers: ["set interfaces ge-0/0/44 ether-options 802.3ad ae0"], fx: "l3", chip: "MEMBER 44" },
+        { task: "Make ge-0/0/45 a member of ae0 too.", answers: ["set interfaces ge-0/0/45 ether-options 802.3ad ae0"], fx: "l4", chip: "MEMBER 45", why: "one member is a bundle with no redundancy." },
+        { task: "Turn on LACP in active mode on ae0.", answers: ["set interfaces ae0 aggregated-ether-options lacp active"], fx: "l5", chip: "LACP ACTIVE", why: "at least one side must be active or no LACPDUs are ever sent." },
+        { task: "Send LACP packets every second instead of every 30.", answers: ["set interfaces ae0 aggregated-ether-options lacp periodic fast"], fx: "l6", chip: "PERIODIC FAST", why: "fast detects a dead member in 3 seconds instead of 90." },
+        { task: "Keep ae0 up as long as at least 1 member link is up.", answers: ["set interfaces ae0 aggregated-ether-options minimum-links 1"], fx: "l7", chip: "MIN LINKS" },
+        { task: "Describe ae0 as: server-01 bond", answers: ["set interfaces ae0 description \"server-01 bond\"", "set interfaces ae0 description server-01 bond"], fx: "l8", chip: "DESCRIPTION" },
+        { task: "Make the bundle a trunk.", answers: ["set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk"], fx: "l9", chip: "AE0 TRUNK", why: "VLAN config goes on ae0, never on the members." },
+        { task: "Let VLAN servers ride the bundle.", answers: ["set interfaces ae0 unit 0 family ethernet-switching vlan members servers"], fx: "l10", chip: "VLAN ON AE0" },
+        { task: "Show the LACP state of every bundle.", answers: ["show lacp interfaces"], fx: "l11", chip: "LACP STATE", why: "look for Collecting Distributing on both members; Defaulted means the far side is silent." },
+        { task: "Show the LACP packet counters for ae0.", answers: ["show lacp statistics interfaces ae0"], fx: "l12", chip: "LACP STATS", why: "LACP Rx stuck at 0 on a member means the cable or the far end never sent a thing." },
+        { task: "Show ae0 and its members, briefly.", answers: ["show interfaces ae0 terse"], fx: "l13", chip: "AE0 TERSE" },
+        { task: "Show the aggregated-devices the chassis has reserved.", answers: ["show configuration chassis aggregated-devices"], fx: "l14", chip: "CHASSIS CHECK" }
+      ]
+    },
+    {
+      id: "rstp",
+      name: "SPANNING TREE TUNING",
+      intro: "Beyond the loops module: timers, costs, priorities and the checks that tell you the tree is healthy.",
+      art: "vlans",
+      drills: [
+        { task: "Enable RSTP on every interface at once.", answers: ["set protocols rstp interface all"], fx: "s1", chip: "RSTP ALL" },
+        { task: "Make this switch the backup root with priority 8192.", answers: ["set protocols rstp bridge-priority 8192"], fx: "s2", chip: "BACKUP ROOT", why: "priorities go in steps of 4096; 4096 for the root, 8192 for its standby." },
+        { task: "Give ge-0/0/47 a path cost of 2000.", answers: ["set protocols rstp interface ge-0/0/47 cost 2000"], fx: "s3", chip: "PATH COST", why: "a higher cost makes RSTP prefer the other uplink." },
+        { task: "Make ge-0/0/46 a point-to-point link.", answers: ["set protocols rstp interface ge-0/0/46 mode point-to-point"], fx: "s4", chip: "P2P MODE", why: "point-to-point allows fast transition; shared mode falls back to slow timers." },
+        { task: "Set the hello time to 1 second.", answers: ["set protocols rstp hello-time 1"], fx: "s5", chip: "HELLO 1S" },
+        { task: "Turn on BPDU block for every edge port.", answers: ["set protocols rstp bpdu-block-on-edge"], fx: "s6", chip: "BPDU BLOCK" },
+        { task: "Set a 60 second recovery timer for error-disabled ports.", answers: ["set protocols layer2-control bpdu-block disable-timeout 60"], fx: "s7", chip: "AUTO RECOVER", why: "without a timeout a blocked port stays down until someone clears it by hand." },
+        { task: "Show the root bridge and timers.", answers: ["show spanning-tree bridge"], fx: "s8", chip: "ROOT BRIDGE" },
+        { task: "Show the spanning tree role of ge-0/0/47 in detail.", answers: ["show spanning-tree interface ge-0/0/47 detail"], fx: "s9", chip: "PORT ROLE" },
+        { task: "Show spanning tree statistics for every interface.", answers: ["show spanning-tree statistics interface"], fx: "s10", chip: "STP STATS", why: "a rising topology-change counter is a flapping port somewhere." },
+        { task: "Clear the spanning tree protocol statistics.", answers: ["clear spanning-tree statistics"], fx: "s11", chip: "STATS CLEARED" }
+      ]
+    },
+    {
+      id: "ospf",
+      name: "OSPF",
+      intro: "One area to start, the knobs that matter, and the show commands that prove an adjacency.",
+      ordered: true,
+      art: "vlans",
+      drills: [
+        { task: "Set the router ID to 10.0.0.5.", answers: ["set routing-options router-id 10.0.0.5"], fx: "o1", chip: "ROUTER ID", why: "set it yourself; a router ID that changes with an interface address resets every adjacency." },
+        { task: "Put irb.20 into the backbone area.", answers: ["set protocols ospf area 0.0.0.0 interface irb.20", "set protocols ospf area 0 interface irb.20"], fx: "o2", chip: "AREA 0" },
+        { task: "Put the uplink irb.100 into area 0 as well.", answers: ["set protocols ospf area 0.0.0.0 interface irb.100", "set protocols ospf area 0 interface irb.100"], fx: "o3", chip: "UPLINK IN OSPF" },
+        { task: "Make irb.20 passive: advertise it, form no neighbours on it.", answers: ["set protocols ospf area 0.0.0.0 interface irb.20 passive", "set protocols ospf area 0 interface irb.20 passive"], fx: "o4", chip: "PASSIVE", why: "a server VLAN never needs to hear hellos; passive stops a rogue box from joining your routing." },
+        { task: "Give irb.100 an OSPF metric of 50.", answers: ["set protocols ospf area 0.0.0.0 interface irb.100 metric 50", "set protocols ospf area 0 interface irb.100 metric 50"], fx: "o5", chip: "METRIC 50" },
+        { task: "Set the reference bandwidth to 100g so 10G and 1G links get sane costs.", answers: ["set protocols ospf reference-bandwidth 100g"], fx: "o6", chip: "REF BANDWIDTH", why: "the default 100M reference makes every link faster than 100M cost 1." },
+        { task: "Protect irb.100 with MD5 key 1, password s3cret.", answers: ["set protocols ospf area 0.0.0.0 interface irb.100 authentication md5 1 key s3cret", "set protocols ospf area 0 interface irb.100 authentication md5 1 key s3cret"], fx: "o7", chip: "MD5 AUTH" },
+        { task: "Export your static routes into OSPF using policy named static-to-ospf.", answers: ["set protocols ospf export static-to-ospf"], fx: "o8", chip: "EXPORT POLICY", why: "OSPF only advertises what it learns itself unless a policy says otherwise." },
+        { task: "Show your OSPF neighbours.", answers: ["show ospf neighbor", "show ospf neighbour"], fx: "o9", chip: "NEIGHBOURS", why: "Full is the only good state; ExStart that never moves is an MTU mismatch." },
+        { task: "Show which interfaces run OSPF and their state.", answers: ["show ospf interface"], fx: "o10", chip: "OSPF INTERFACES" },
+        { task: "Show the OSPF routes in the routing table.", answers: ["show route protocol ospf"], fx: "o11", chip: "OSPF ROUTES" },
+        { task: "Show the OSPF database summary.", answers: ["show ospf database"], fx: "o12", chip: "LSDB" },
+        { task: "Restart the adjacency with neighbour 10.0.0.9.", answers: ["clear ospf neighbor 10.0.0.9", "clear ospf neighbour 10.0.0.9"], fx: "o13", chip: "ADJ RESET" }
+      ]
+    },
+    {
+      id: "bgp",
+      name: "BGP",
+      intro: "An eBGP session to the carrier: identity, group, peer, policy, verify. The same lines on an EX, an MX or an SRX.",
+      ordered: true,
+      art: "vlans",
+      drills: [
+        { task: "Set your autonomous system number to 65010.", answers: ["set routing-options autonomous-system 65010"], fx: "b1", chip: "LOCAL AS", why: "BGP will not even start without a local AS." },
+        { task: "Set the router ID to 10.0.0.5.", answers: ["set routing-options router-id 10.0.0.5"], fx: "b2", chip: "ROUTER ID" },
+        { task: "Create group upstream as an external peering group.", answers: ["set protocols bgp group upstream type external"], fx: "b3", chip: "EBGP GROUP" },
+        { task: "The carrier is AS 65020. Set it on the group.", answers: ["set protocols bgp group upstream peer-as 65020"], fx: "b4", chip: "PEER AS", why: "peer-as on the group applies to every neighbour inside it." },
+        { task: "Add neighbour 203.0.113.1 to group upstream.", answers: ["set protocols bgp group upstream neighbor 203.0.113.1"], fx: "b5", chip: "NEIGHBOUR" },
+        { task: "Source the session from your own address 203.0.113.2.", answers: ["set protocols bgp group upstream local-address 203.0.113.2"], fx: "b6", chip: "LOCAL ADDRESS", why: "the carrier only accepts a TCP session from the address they gave you." },
+        { task: "Protect the session with authentication key s3cret.", answers: ["set protocols bgp group upstream authentication-key s3cret"], fx: "b7", chip: "MD5 KEY" },
+        { task: "Write a policy named export-lan: term lan matches protocol direct.", answers: ["set policy-options policy-statement export-lan term lan from protocol direct"], fx: "b8", chip: "POLICY FROM" },
+        { task: "Term lan then accepts the route.", answers: ["set policy-options policy-statement export-lan term lan then accept"], fx: "b9", chip: "POLICY THEN", why: "without a terminating accept the default BGP export policy still advertises nothing you did not learn from BGP." },
+        { task: "Apply export-lan as the export policy of group upstream.", answers: ["set protocols bgp group upstream export export-lan"], fx: "b10", chip: "EXPORT APPLIED" },
+        { task: "Set the hold time for the group to 30 seconds.", answers: ["set protocols bgp group upstream hold-time 30"], fx: "b11", chip: "HOLD TIME", why: "keepalives become 10 seconds; a dead carrier is noticed in half a minute instead of three." },
+        { task: "Show the state of all BGP sessions.", answers: ["show bgp summary"], fx: "b12", chip: "BGP SUMMARY", why: "Established shows a prefix count; Active or Connect means the TCP session never came up." },
+        { task: "Show every detail about neighbour 203.0.113.1.", answers: ["show bgp neighbor 203.0.113.1", "show bgp neighbour 203.0.113.1"], fx: "b13", chip: "NEIGHBOUR DETAIL" },
+        { task: "Show the routes you are sending to 203.0.113.1.", answers: ["show route advertising-protocol bgp 203.0.113.1"], fx: "b14", chip: "ADVERTISED" },
+        { task: "Show the routes you received from 203.0.113.1.", answers: ["show route receive-protocol bgp 203.0.113.1"], fx: "b15", chip: "RECEIVED" },
+        { task: "Show all BGP routes in the routing table.", answers: ["show route protocol bgp"], fx: "b16", chip: "BGP ROUTES" },
+        { task: "Reset the session with 203.0.113.1.", answers: ["clear bgp neighbor 203.0.113.1", "clear bgp neighbour 203.0.113.1"], fx: "b17", chip: "SESSION RESET", why: "a hard clear drops the session; the carrier sees a flap. Use it on purpose only." }
+      ]
+    },
+    {
+      id: "vrrp",
+      name: "VRRP",
+      intro: "One gateway address, two switches. The master answers, the backup waits, and nobody re-configures a PC.",
+      ordered: true,
+      art: "vlans",
+      drills: [
+        { task: "Give irb.20 its own address 10.20.0.2/24.", answers: ["set interfaces irb unit 20 family inet address 10.20.0.2/24"], fx: "v1", chip: "REAL ADDRESS", why: "each router keeps a real address; the virtual one floats between them." },
+        { task: "Put VRRP group 20 on that address with virtual address 10.20.0.1.", answers: ["set interfaces irb unit 20 family inet address 10.20.0.2/24 vrrp-group 20 virtual-address 10.20.0.1"], fx: "v2", chip: "VIRTUAL ADDRESS", why: "the virtual address is the gateway every host points at." },
+        { task: "Give this switch priority 200 in group 20.", answers: ["set interfaces irb unit 20 family inet address 10.20.0.2/24 vrrp-group 20 priority 200"], fx: "v3", chip: "PRIORITY 200", why: "highest priority wins; default is 100, so 200 makes this the master." },
+        { task: "Let it take mastership back when it returns (preempt).", answers: ["set interfaces irb unit 20 family inet address 10.20.0.2/24 vrrp-group 20 preempt"], fx: "v4", chip: "PREEMPT" },
+        { task: "Let the master also answer pings on the virtual address.", answers: ["set interfaces irb unit 20 family inet address 10.20.0.2/24 vrrp-group 20 accept-data"], fx: "v5", chip: "ACCEPT DATA", why: "without accept-data the virtual address does not reply to ping, which confuses every ticket." },
+        { task: "Drop priority by 150 if uplink ge-0/0/47 goes down.", answers: ["set interfaces irb unit 20 family inet address 10.20.0.2/24 vrrp-group 20 track interface ge-0/0/47 priority-cost 150"], fx: "v6", chip: "TRACK UPLINK", why: "a master with a dead uplink is a black hole; tracking hands over before anyone notices." },
+        { task: "Show the VRRP state of every group.", answers: ["show vrrp"], fx: "v7", chip: "VRRP STATE", why: "exactly one master per group; two masters means the routers cannot hear each other." },
+        { task: "Show VRRP in detail.", answers: ["show vrrp detail"], fx: "v8", chip: "VRRP DETAIL" },
+        { task: "Show the VRRP packet statistics.", answers: ["show vrrp statistics"], fx: "v9", chip: "VRRP STATS" }
+      ]
+    },
+    {
+      id: "storm",
+      name: "STORM CONTROL",
+      intro: "Cap floods at the edge so one looped desk switch cannot take the CPU down. ELS: forwarding-options, not interfaces.",
+      ordered: true,
+      art: "vlans",
+      drills: [
+        { task: "Create storm-control profile edge that limits all flood traffic to 20 percent.", answers: ["set forwarding-options storm-control-profiles edge all bandwidth-percentage 20"], fx: "st1", chip: "PROFILE 20%", why: "percentage of link speed; on a 1G port that is 200 Mbps of broadcast, multicast and unknown unicast." },
+        { task: "Make the profile shut the port down when the limit is hit.", answers: ["set forwarding-options storm-control-profiles edge action-shutdown"], fx: "st2", chip: "ACTION SHUTDOWN", why: "the default only drops the excess; shutdown turns a slow storm into a visible dead port." },
+        { task: "Apply profile edge to access port ge-0/0/10.", answers: ["set interfaces ge-0/0/10 unit 0 family ethernet-switching storm-control edge"], fx: "st3", chip: "APPLIED", why: "storm-control hangs under family ethernet-switching on ELS." },
+        { task: "Show storm control for ge-0/0/10.", answers: ["show ethernet-switching interface ge-0/0/10"], fx: "st5", chip: "PORT STATE" },
+        { task: "Show the interface statistics so you can see the flood counters.", answers: ["show interfaces ge-0/0/10 extensive"], fx: "st6", chip: "FLOOD COUNTERS" },
+        { task: "Clear a storm-disabled port back into service.", answers: ["clear ethernet-switching recovery-timeout"], fx: "st7", chip: "RECOVERED" }
+      ]
+    },
+    {
+      id: "commit",
+      name: "COMMIT MODEL",
+      intro: "Candidate, compare, confirm, comment, roll back. The workflow that makes a change window boring, which is the goal.",
+      ordered: true,
+      art: "rescue",
+      drills: [
+        { task: "Enter configuration mode.", answers: ["configure", "edit"], fx: "c1", chip: "CONFIG MODE" },
+        { task: "Describe ge-0/0/13 as: printer", answers: ["set interfaces ge-0/0/13 description printer"], fx: "c2", chip: "A CHANGE" },
+        { task: "Show what you changed versus the running config.", answers: ["show | compare", "show|compare"], fx: "c3", chip: "COMPARE", why: "read the diff before every commit; plus lines appear, minus lines disappear." },
+        { task: "Check the candidate for errors without committing.", answers: ["commit check"], fx: "c4", chip: "COMMIT CHECK" },
+        { task: "Commit with a 3-minute safety net.", answers: ["commit confirmed 3"], fx: "c5", chip: "CONFIRMED 3", why: "if you lock yourself out, the box reverts on its own after 3 minutes." },
+        { task: "You are still connected. Make the change permanent.", answers: ["commit"], fx: "c6", chip: "CONFIRMED", why: "the second commit cancels the rollback timer." },
+        { task: "Commit with the comment: printer port", answers: ["commit comment \"printer port\"", "commit comment printer port"], fx: "c7", chip: "COMMENTED", why: "the comment shows in show system commit, so the next engineer knows why." },
+        { task: "Show the commit history.", answers: ["show system commit"], fx: "c8", chip: "COMMIT LOG" },
+        { task: "Show what rollback 1 would change compared to now.", answers: ["show system rollback compare 1 0", "show system rollback 1 compare 0"], fx: "c9", chip: "ROLLBACK DIFF" },
+        { task: "Load the previous configuration into the candidate.", answers: ["rollback 1"], fx: "c10", chip: "ROLLBACK 1", why: "nothing happens on the box until you commit the loaded candidate." },
+        { task: "Commit and leave configuration mode in one go.", answers: ["commit and-quit"], fx: "c11", chip: "COMMIT AND-QUIT" },
+        { task: "Enter configuration mode so nobody else can edit at the same time.", answers: ["configure exclusive"], fx: "c12", chip: "EXCLUSIVE", why: "plain configure shares one candidate with every other session." },
+        { task: "Disable ge-0/0/13 without deleting its config.", answers: ["deactivate interfaces ge-0/0/13"], fx: "c13", chip: "DEACTIVATED" },
+        { task: "Bring it back.", answers: ["activate interfaces ge-0/0/13"], fx: "c14", chip: "ACTIVATED" },
+        { task: "Schedule a commit for 02:00.", answers: ["commit at 02:00"], fx: "c15", chip: "COMMIT AT" },
+        { task: "Cancel that scheduled commit.", answers: ["clear system commit"], fx: "c16", chip: "CANCELLED", mode: "oper" }
+      ]
     }
   ];
 
@@ -4361,7 +4531,7 @@
     s.steps.forEach(function(d) { d._m = s.id; });
   });
 
-  const META_CMDS = ["help", "modules", "scenarios", "skip", "score", "clear", "sound", "reset stats", "width wide", "width ultra", "width standard", "save", "load", "weather", "scene bedroom", "scene sleek", "realm", "city", "dragon", "ambience rain", "ambience wind", "ambience auto", "ambience off", "configure", "exit", "cli", "desktop", "blueprint", "export config", "reset blueprint", "review", "review weak", "track", "path", "mix", "tourney", "mistakes", "lab", "shift lacp", "shift vlans", "shift ospf", "learn", "learn lacp", "learn vrrp", "learn ospf", "learn bgp", "learn rstp", "learn vc", "learn irb", "learn storm", "learn commit", "show configuration", "show | display set", "commit", "commit check", "rollback 1", "start basics", "start dayzero", "start vlans", "start vc", "start rescue", "start all", "run ghost", "run deadport", "run safechange"];
+  const META_CMDS = ["help", "modules", "scenarios", "skip", "score", "clear", "sound", "reset stats", "width wide", "width ultra", "width standard", "save", "load", "weather", "scene bedroom", "scene sleek", "realm", "city", "dragon", "ambience rain", "ambience wind", "ambience auto", "ambience off", "configure", "exit", "cli", "desktop", "blueprint", "export config", "reset blueprint", "review", "review weak", "track", "path", "mix", "tourney", "mistakes", "lab", "shift lacp", "shift vlans", "shift ospf", "learn", "learn lacp", "learn vrrp", "learn ospf", "learn bgp", "learn rstp", "learn vc", "learn irb", "learn storm", "learn commit", "show configuration", "show | display set", "commit", "commit check", "rollback 1", "start basics", "start dayzero", "start vlans", "start vc", "start rescue", "start irb", "start lacp", "start rstp", "start ospf", "start bgp", "start vrrp", "start storm", "start commit", "start all", "run ghost", "run deadport", "run safechange"];
   const ALL_CMDS = (function() {
     const set = {};
     MODULES.forEach(function(m) {
