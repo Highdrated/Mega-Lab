@@ -240,7 +240,7 @@ body.cur, body.cur * { cursor: none !important; }
   <button id="t-fly" title="Creatures outside the window"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 9c2-3 4.5-3.5 6.5-1 2-2.5 4.5-2 6.5 1"/><path d="M8 8v3"/></svg></button>
   <button id="t-snd" title="Sound"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M2 6h3l4-3v10l-4-3H2z"/><path id="snd-w" d="M11.5 5.5a3.5 3.5 0 0 1 0 5"/></svg></button>
   <button id="t-reset" title="Reset the switch to factory default"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M3 8a5 5 0 1 0 1.5-3.5"/><path d="M3 2.5V5h2.5"/></svg></button>
-  <a href="junle.html" title="Classic Junle"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="9" rx="1"/><path d="M5 7l1.5 1.5L5 10M8 10h3"/></svg></a>
+  <a href="junle.html?classic=1" title="Classic Junle"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="9" rx="1"/><path d="M5 7l1.5 1.5L5 10M8 10h3"/></svg></a>
 </div>
 <div class="toast" id="toast"></div>
 <div class="bubble" id="bubble"></div>
@@ -1623,7 +1623,7 @@ function openApp(a) {
   if (a === "console") { setMain("console"); if (view === "stand") setView("sit"); focusCmd(); return; }
   const wrap = $("#appwrap");
   let f = wrap.querySelector("iframe");
-  const hash = { terminal: "terminal", track: "track", mix: "mix", scenarios: "scenarios", manual: "manual", tourney: "tourney" }[a];
+  const hash = { terminal: "terminal", track: "track", mix: "mix", scenarios: "scenarios", manual: "manual", tourney: "tourney", review: "review" }[a] || a;
   if (!f) {
     f = document.createElement("iframe");
     f.title = "Junle";
@@ -1981,7 +1981,15 @@ if (st.plugged && isConsole(st.plugged) && st.log.length > 3) mainMode = "consol
 setView(mainMode === "console" ? "sit" : "stand");
 afterChange();
 lastDone = TASKS.filter((x) => taskDone(x.id)).length;
-if (!(st.met && st.met.intro) && lastDone === 0) setTimeout(() => visit("intro"), 1400);
+const startHash = location.hash.slice(1);
+function routeHash(hh) {
+  if (!hh) return false;
+  try { history.replaceState(null, "", location.pathname); } catch (e) {}
+  setTimeout(() => openApp(hh), 300);
+  return true;
+}
+addEventListener("hashchange", () => routeHash(location.hash.slice(1)));
+if (!routeHash(startHash) && !(st.met && st.met.intro) && lastDone === 0) setTimeout(() => visit("intro"), 1400);
 </script>
 </body>
 </html>
