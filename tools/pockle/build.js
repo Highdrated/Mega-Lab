@@ -33,5 +33,6 @@ const banks = files.map(id => {
   return "<script>\n" + s.replace(/<\/script/gi, "<\\/script").replace(/<!--/g, "\\x3C!--").replace(/<script/gi, "\\x3Cscript") + "\n</script>";
 }).join("\n");
 const tpl = fs.readFileSync(path.join(__dirname, "pockle.template.html"), "utf8");
-fs.writeFileSync(process.argv[2], tpl.replace("<!--BANKS-->", () => banks));
+const sync = fs.readFileSync(path.join(__dirname, "../../js/sync.js"), "utf8");
+fs.writeFileSync(process.argv[2], tpl.replace("<!--SYNC-->", () => "<script>\n" + sync + "\n</script>").replace("<!--BANKS-->", () => banks));
 console.log("built with", files.join(", "));

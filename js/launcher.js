@@ -468,6 +468,7 @@ function importProgress(file) {
   reader.readAsText(file);
 }
 $("exportBtn").addEventListener("click", exportProgress);
+$("sendBtn").addEventListener("click", () => { if (window.MegaSync) MegaSync.send().catch((e) => toast("send failed: " + e.message)); });
 $("importFile").addEventListener("change", (e) => { if (e.target.files[0]) importProgress(e.target.files[0]); e.target.value = ""; });
 
 let toastTimer = null;

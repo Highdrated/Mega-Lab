@@ -171,7 +171,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
     <div class="labs" id="labList"></div>
     <div class="links">
       <a href="../index.html">Workshop</a>
-      <label title="Load a Workshop progress export from another device">Sync<input type="file" id="syncFile" accept="application/json"></label>
+      <button id="sendBtn">Send</button>
       <button id="resetBtn">Reset</button>
     </div>
   </section>
@@ -214,6 +214,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 const BANKS = [];
 const POCKET = { register: b => BANKS.push(b) };
 </script>
+<!--SYNC-->
 <!--BANKS-->
 <script>
 const $ = id => document.getElementById(id);
@@ -328,7 +329,7 @@ function paintHome() {
   const due = dueCards(POOL).length, miss = missCards(POOL).length;
   if (!unlockedLabs.length) {
     $("welcomeImg").src = "img/junie/junie-sleep.webp";
-    $("welcomeTxt").innerHTML = "Nothing to quiz yet. Finish a lesson in any lab and its cards show up here. On another device? Tap <b>Sync</b> and load a Workshop export.";
+    $("welcomeTxt").innerHTML = "Nothing to quiz yet. Finish a lesson in any lab and its cards show up here. On another device? Use <b>Send to phone</b> in the Workshop and scan the code.";
   } else {
     $("welcomeImg").src = "img/junie/junie-wave.webp";
     $("welcomeTxt").innerHTML = "Only what you've already done. <b>" + POOL.length + " cards</b> from <b>" + totalUnits + " finished lessons</b> across <b>" + unlockedLabs.length + " labs</b>. Tap only, no typing.";
@@ -480,23 +481,8 @@ $("sprintBtn").onclick = () => go("sprint");
 
 $("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0 }; save(); paintHome(); } };
 
-$("syncFile").addEventListener("change", e => {
-  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
-  const r = new FileReader();
-  r.onload = () => {
-    try {
-      const p = JSON.parse(r.result);
-      if (!p || p.workshop !== 1 || typeof p.data !== "object") throw new Error("not a Workshop export");
-      const keys = new Set(BANKS.flatMap(b => b.keys)); keys.add(KEY);
-      let n = 0;
-      for (const [k, v] of Object.entries(p.data)) if (keys.has(k)) { lsSet(k, v); n++; }
-      S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0 }, load());
-      setTheme(THEMES.includes(S.theme) ? S.theme : "orbital");
-      paintHome(); toast("synced " + n + " lab saves");
-    } catch (err) { toast("sync failed: " + err.message); }
-  };
-  r.readAsText(f);
-});
+$("sendBtn").onclick = () => MegaSync.send().catch(e => toast("send failed: " + e.message));
+MegaSync.listen(() => { S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0, recall: true }, load()); setTheme(THEMES.includes(S.theme) ? S.theme : "orbital"); paintRecall(); paintHome(); });
 
 window.addEventListener("storage", () => { if ($("home").classList.contains("on")) paintHome(); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden && $("home").classList.contains("on")) paintHome(); });
