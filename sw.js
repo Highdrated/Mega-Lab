@@ -1,9 +1,9 @@
-const CACHE = "workshop-v23";
+const CACHE = "workshop-v24";
 const PRECACHE = [
   "./",
   "./index.html",
   "./css/launcher.css?v=12",
-  "./js/labs.config.js?v=16",
+  "./js/labs.config.js?v=17",
   "./js/launcher.js?v=15",
   "./js/station.js?v=1",
   "./manifest.webmanifest",

@@ -3,6 +3,7 @@ const ST_LOCAL = ["station-device", "station-snap", "station-sync", "station-sta
 const ST_TRACK = [
   ["junos-lab", /^junoslab-(xp|quizdone|subnet-streak|wrongq|predict$)/],
   ["junle", /^junle_(review|mix|mastery|stats|mistakes|track|tny_best)$/],
+  ["pockle", /^pockle\.v1$/],
   ["pyle-pocket", /^pyle-pocket-v1$/],
   ["pyle", /^pyle-(save-v1|fp-last|git-v1|fs-v1)$/],
   ["subnle-pocket", /^subnle-pocket-v1$/],
@@ -279,7 +280,7 @@ async function stConnect(token) {
   }
 }
 
-const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=12", "./js/labs.config.js?v=16", "./js/launcher.js?v=15", "./js/station.js?v=1", "./icons/icon-192.png", "./icons/icon-512.png"];
+const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=12", "./js/labs.config.js?v=17", "./js/launcher.js?v=15", "./js/station.js?v=1", "./icons/icon-192.png", "./icons/icon-512.png"];
 let stPackBusy = false, stPackGuard = null;
 function stPackInfo() { return lsParse("station-pack") || {}; }
 async function stPack(manual) {
