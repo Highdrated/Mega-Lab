@@ -180,6 +180,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 6l1.5 1.5L6 9M8.5 9.5h1.5"/>'
   },
   {
+    id: "opsle",
+    name: "Opsle",
+    tag: "Practice",
+    sub: "ops missions · labs chained · on your Mac",
+    path: "labs/opsle.html",
+    ring: "ring-inner",
+    angle: 290,
+    glyph: '<circle cx="4" cy="8" r="2"/><circle cx="12" cy="4" r="2"/><circle cx="12" cy="12" r="2"/><path d="M6 7l4-2M6 9l4 2"/>'
+  },
+  {
     id: "rebble",
     name: "Rebble",
     tag: "Practice",

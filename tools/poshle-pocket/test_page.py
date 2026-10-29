@@ -65,6 +65,18 @@ try:
             pg.click("#nextBtn")
         print("lesson 1 practice:", pg.inner_text("#resMsg"))
         if not pg.evaluate("S.passed[DATA[0].id]"): errs.append("lesson 1 not passed")
+        if pg.evaluate("!!MISSIONS[DATA[0].id]"):
+            if "Field mission" not in pg.inner_text("#homeBtn"): errs.append("no mission button after pass")
+            pg.click("#homeBtn")
+            if not pg.is_disabled("#missionDone"): errs.append("mission done enabled before ticks")
+            for j in range(pg.locator(".mstep").count()):
+                pg.click(f".mstep >> nth={j}")
+            if pg.locator(".mhint button").count(): pg.click(".mhint button >> nth=0")
+            pg.screenshot(path=SHOTS + "/pp-mission.png", full_page=True)
+            pg.click("#missionDone")
+            if not pg.evaluate("S.missions[DATA[0].id]"): errs.append("mission not saved")
+            if "mission done" not in pg.inner_text("#pathList"): errs.append("path missing mission tag")
+            print("missions:", pg.evaluate("Object.keys(MISSIONS).length"), "first mission done ok")
 
         total = 0
         for li in range(n):
