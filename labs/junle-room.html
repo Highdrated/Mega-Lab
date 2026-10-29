@@ -26,8 +26,24 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 .shade { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1s; background: radial-gradient(ellipse 46% 30% at 50% 62%, transparent 60%, rgba(3, 4, 5, .55) 100%); }
 body.v-sit .shade, body.v-focus .shade { opacity: 1; }
 
-.screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; background: var(--screen); overflow: hidden; container-type: size; box-shadow: 0 0 1.4vw rgba(120, 170, 200, .08); }
-.screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(118deg, rgba(255, 255, 255, .035), transparent 38%); }
+.screen { position: absolute; left: 0; top: 0; transform-origin: 0 0; overflow: hidden; container-type: size;
+  background: radial-gradient(ellipse 80% 75% at 50% 42%, #111618 0%, #0b0e0f 62%, #070909 100%);
+  -webkit-mask: linear-gradient(90deg, transparent, #000 1.1cqw, #000 calc(100% - 1.1cqw), transparent), linear-gradient(180deg, transparent, #000 1.6cqh, #000 calc(100% - 1.6cqh), transparent);
+  -webkit-mask-composite: source-in; mask-composite: intersect; }
+.screen::before { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 2;
+  box-shadow: inset 0 0 1.2cqw .3cqw rgba(0, 0, 0, .9), inset 0 0 6cqw rgba(0, 0, 0, .55); }
+#main::before { box-shadow: inset 0 0 1.2cqw .3cqw rgba(0, 0, 0, .9), inset 0 0 5cqw rgba(0, 0, 0, .45);
+  background: linear-gradient(90deg, rgba(0, 0, 0, .38), transparent 9%, transparent 91%, rgba(0, 0, 0, .38)); }
+.screen::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3; mix-blend-mode: screen;
+  background: linear-gradient(172deg, rgba(190, 215, 235, .07) 0%, rgba(190, 215, 235, .02) 16%, transparent 30%), linear-gradient(118deg, transparent 58%, rgba(255, 255, 255, .025) 70%, transparent 82%); }
+#right::after { background: linear-gradient(172deg, rgba(190, 215, 235, .06), transparent 30%), radial-gradient(ellipse 22% 30% at 4% 92%, rgba(255, 190, 110, .16), transparent 70%); }
+#small::after { background: radial-gradient(ellipse 60% 50% at 0% 10%, rgba(255, 190, 110, .2), transparent 70%); }
+.glow { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; mix-blend-mode: screen; filter: blur(14px);
+  background: radial-gradient(closest-side, rgba(125, 170, 205, .26), rgba(125, 170, 205, .08) 70%, transparent); transition: opacity .6s; }
+#g-small { background: radial-gradient(closest-side, rgba(125, 170, 205, .2), transparent); }
+.spill { position: absolute; left: 28%; top: 73%; width: 44%; height: 22%; pointer-events: none; mix-blend-mode: screen;
+  background: radial-gradient(ellipse 50% 46% at 50% 18%, rgba(125, 172, 210, .13), transparent 72%); transition: opacity .6s; }
+body.dark-main #g-main, body.dark-main .spill { opacity: .45; }
 
 .term { position: absolute; inset: 0; padding: 3.4cqh 3.2cqw; display: flex; flex-direction: column; font-size: calc(var(--fs, 2.1) * 1cqw); line-height: 1.5; }
 .log { flex: 1; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-all; scrollbar-width: none; display: flex; flex-direction: column; }
@@ -138,6 +154,8 @@ body.cur, body.cur * { cursor: none !important; }
 <div class="stage">
   <div class="cam" id="cam">
     <div class="room"></div>
+    <div class="glow" id="g-main"></div><div class="glow" id="g-left"></div><div class="glow" id="g-right"></div><div class="glow" id="g-small"></div>
+    <div class="spill"></div>
     <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg></div></div>
     <div class="screen" id="main">
       <div class="nosig" id="nosig">NO CONSOLE<b>click the rack and plug in a console cable</b></div>
@@ -1505,6 +1523,11 @@ function placeScreens() {
     el.style.width = w + "px";
     el.style.height = hh + "px";
     el.style.transform = quadMatrix(w, hh, P);
+    const G = q.map(([x, y]) => [(cx + (x - cx) * 1.22) / 1024 * sw, (cy + (y - cy) * 1.35) / 572 * sh]);
+    const g = $("#g-" + id);
+    g.style.width = w + "px";
+    g.style.height = hh + "px";
+    g.style.transform = quadMatrix(w, hh, G);
   }
 }
 function paintInput() {
@@ -1528,6 +1551,7 @@ function setFs(v) {
 function renderTerm() {
   const on = !!(st.plugged && isConsole(st.plugged));
   $("#nosig").hidden = on;
+  document.body.classList.toggle("dark-main", !on);
   $("#term").hidden = !on;
   if (!on) return;
   const log = $("#log");
