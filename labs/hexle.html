@@ -243,6 +243,9 @@ body[data-theme=grove] .lt{font-weight:700;font-size:30px}
 .plot .cap{flex:none;height:40px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--mute);background:var(--panel2)}
 .idle{display:flex;gap:12px;align-items:flex-start}
 .idle img{width:84px;height:84px;flex:none}
+#cauld{height:34px;width:auto;margin-right:2px;vertical-align:middle;filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))}
+#cauld.bump{animation:wHop .7s cubic-bezier(.2,.9,.3,1.4)}
+body[data-stage="target"]::before{content:"";position:fixed;inset:0;z-index:-1;background:url(img/hexle/brew/desk-bg.webp) center/cover;opacity:.32;pointer-events:none}
 .idle img.hop{animation:wHop .7s cubic-bezier(.2,.9,.3,1.4)}
 .idle img.shake{animation:wShake .5s}
 @keyframes wHop{0%,100%{transform:none}40%{transform:translateY(-10px) rotate(-4deg)}}
@@ -448,7 +451,7 @@ body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spaci
       </div>
     </div>
     <div class="panel"><div class="ph"><b>Target</b><span class="sp">match this</span></div><div class="fr"><iframe id="tframe" title="Target"></iframe></div></div>
-    <div class="panel"><div class="ph"><b>Your build</b><span class="sp meter" id="meter"><span class="bar"><i></i></span><b>0%</b></span></div>
+    <div class="panel"><div class="ph"><b>Your build</b><span class="sp meter" id="meter"><img id="cauld" src="img/hexle/brew/cauldron-0.webp" alt=""><span class="bar"><i></i></span><b>0%</b></span></div>
       <div class="fr"><iframe id="bframe" title="Your build"></iframe><iframe id="ovl" title="Target overlay" tabindex="-1"></iframe></div>
       <div class="slide">Mine<input id="slider" type="range" min="0" max="100" step="1" value="0" aria-label="Fade the target over your build">Target</div></div>
     <div class="panel edp"><div class="ph"><b id="fname">index.html</b><span id="tabs" class="tabs"></span><span class="sp" style="display:flex;gap:8px"><button id="treeb">Folder</button><button id="reset">Reset</button><button id="check" class="pri">Check · Ctrl+Enter</button></span></div>
@@ -2181,6 +2184,7 @@ function drillsFor(t){
 
 function go(v){if(v!=='tourney'&&typeof tnTick!=='undefined'){clearInterval(tnTick);tnTick=null}S.stage=v;save();render()}
 function render(){
+  if(document.body)document.body.dataset.stage=S.stage;
   const vw=(S.stage==='practice'||S.stage==='trial')?'school':S.stage;document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
   const sel=$('tsel');sel.innerHTML='';let og=null,ogn='';TARGETS.forEach((tg,i)=>{const gn=tg.project?'Grimoire projects':tg.spell?'Spells · JavaScript':tg.master!=null?'Master editions':'Village plates';if(gn!==ogn){og=document.createElement('optgroup');og.label=gn;sel.appendChild(og);ogn=gn}const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);og.appendChild(o)});sel.value=S.t;
@@ -2419,6 +2423,7 @@ async function evaluate(code,css,js){
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
+  {const cd=$('cauld'),cs='img/hexle/brew/cauldron-'+(pct>=100?3:pct>=50?2:pct>0?1:0)+'.webp';if(cd&&cd.getAttribute('src')!==cs){cd.setAttribute('src',cs);cd.classList.remove('bump');void cd.offsetWidth;cd.classList.add('bump')}}
   const now=res.indexOf(false);
   const ol=$('steps');ol.innerHTML='';
   const hide=S.memo&&S.memo.t===S.t&&!S.memo.peek;

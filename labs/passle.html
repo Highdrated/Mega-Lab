@@ -322,6 +322,19 @@ iframe{border:0;width:100%;height:100%;display:block;background:#fff}
 .slip{margin:10px 12px 4px;padding:8px 12px 9px;background:var(--field);border:1px solid var(--line);border-left:3px solid var(--brass2);border-radius:2px;box-shadow:0 8px 16px -14px rgba(60,40,10,.5);transform:rotate(-.35deg);flex:none}
 .slip .sh{display:flex;justify-content:space-between;gap:8px;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--brass)}
 .slip p{margin:4px 0 0;font-style:italic;font-size:13.5px;line-height:1.45;color:var(--ink2)}
+.slip .gwrap{display:flex;gap:10px;align-items:flex-end;margin-top:6px}
+.slip .gwrap p{flex:1;margin:0}
+.slip .guest{width:62px;height:auto;flex:none;transition:transform .3s}
+.slip .guest.bump{animation:gBump .6s cubic-bezier(.2,.9,.3,1.4)}
+.slip .gplate{width:58px;height:auto;flex:none;align-self:center;filter:drop-shadow(0 2px 2px rgba(90,74,58,.2))}
+@keyframes gBump{40%{transform:translateY(-6px) scale(1.06)}}
+.kscene{position:relative;width:100%;max-width:980px;margin:0 auto 6px;aspect-ratio:1024/400;overflow:hidden;border-radius:10px;border:1px solid var(--line)}
+.kscene .kin{position:absolute;left:0;right:0;top:-6%;aspect-ratio:1024/572;background:url(img/passle/guests/kitchen-bg.webp) center/cover}
+.kscene .kwin{position:absolute;left:26.2%;top:10.6%;width:46.4%;height:48.6%;overflow:hidden}
+.kscene .kwin img{position:absolute;bottom:-4%;height:74%;width:auto;transform:translateX(-50%);filter:brightness(.92) saturate(.95)}
+.kscene .kwin img:nth-child(odd){transform:translateX(-50%) scaleX(-1)}
+.kscene .kcap{position:absolute;left:14px;bottom:10px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#fffaf0;background:rgba(60,44,30,.55);padding:4px 8px;border-radius:4px}
+body[data-stage="target"]::before{content:"";position:fixed;inset:0;z-index:-1;background:url(img/passle/guests/kitchen-bg.webp) center/cover;opacity:.2;pointer-events:none}
 #svc{font-style:normal;display:flex;align-items:center;gap:6px;flex:none;height:32px;padding:0 10px 0 6px;border:1px solid var(--line);border-radius:999px;background:var(--field);cursor:pointer;font-family:var(--mono);font-size:11px;color:var(--ink2)}
 #svc svg{width:22px;height:22px;transform:rotate(-90deg)}
 #svc .tr{fill:none;stroke:var(--line);stroke-width:3}
@@ -728,6 +741,7 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
       <div class="efoot"><span id="scan">Waiting for the stove.</span><span class="sp">Tab indents · runs as you type</span></div></div>
   </section>
   <section class="view" id="v-kitchen">
+    <div id="kscene"></div>
     <div class="board"><img id="kroux" src="img/roux/idle.png" alt=""><div><h2>Roux's Bistro</h2><p>Every plate you match is served here. Click one to see it full size.</p></div><div class="kside"><span class="rank" id="krank"></span><button class="knext" id="knext"></button><span class="cnt" id="kcnt"></span><div class="kbtn"><button id="bguide" title="Show how Passle works">How it works</button><button id="bsave" title="Download your Passle progress as a file">Save progress</button><button id="bload" title="Load a progress file from another device">Load progress</button><input type="file" id="bfile" accept="application/json,.json" hidden></div></div></div>
     <div class="plates" id="plates"></div>
   </section>
@@ -11675,7 +11689,16 @@ function renderSlip(tg){
   const el=$('slip');if(!el)return;const s=storyOf(tg);
   if(!s){el.innerHTML='';el.hidden=true;return}
   el.hidden=false;const ph=PHASES[phaseIdx()];
-  el.title=s.o;el.innerHTML='<div class="sh"><span>Order · '+esc(s.w)+'</span><span>'+ph[0]+'</span></div><p>'+esc(S.mode==='hunt'?'Back from the dining room: something tastes wrong. Three mistakes slipped into this plate.':s.o)+'</p>';
+  el.title=s.o;el.innerHTML='<div class="sh"><span>Order · '+esc(s.w)+'</span><span>'+ph[0]+'</span></div><div class="gwrap"><img class="guest" id="sguest" src="'+guestSrc(s.w,0)+'" alt="'+esc(s.w)+'"><p>'+esc(S.mode==='hunt'?'Back from the dining room: something tastes wrong. Three mistakes slipped into this plate.':s.o)+'</p><img class="gplate" id="splate" src="'+GU+'plate-0.webp" alt=""></div>';
+}
+const GU='img/passle/guests/';
+const GUESTS4=['odile','bastien','lucien','blogger'];
+function guestKey(w){w=String(w||'');if(/Odile/.test(w))return'odile';if(/Bastien/.test(w))return'bastien';if(/Lucien/.test(w))return'lucien';if(/inspector|critic|app|screen|blogger/i.test(w))return'blogger';if(/Roux/.test(w))return'roux';if(/Armand/.test(w))return'armand';if(/Th[eé]o/.test(w))return'theo';let h=0;for(const c of w)h=(h*31+c.charCodeAt(0))>>>0;return GUESTS4[h%4]}
+function guestSrc(w,pct){const k=guestKey(w);if(k==='roux')return ROUX+(pct>=100?'cheer':pct>0?'call':'idle')+'.png';if(k==='armand'||k==='theo')return 'img/passle/room/'+k+'.webp';return GU+k+'-'+(pct>=100?'joy':pct>0?'curious':'wait')+'.webp'}
+function updateGuest(pct){const tg=T(),s=storyOf(tg),g=$('sguest'),pl=$('splate');if(!s||!g)return;const src=guestSrc(s.w,pct);if(g.getAttribute('src')!==src){g.setAttribute('src',src);g.classList.remove('bump');void g.offsetWidth;g.classList.add('bump')}if(pl){const st=pct>=100?3:pct>=50?2:pct>0?1:0,ps=GU+'plate-'+st+'.webp';if(pl.getAttribute('src')!==ps)pl.setAttribute('src',ps)}}
+function kitchenScene(){
+  const n=servedCount(),list=[['lucien',1,22],['odile',3,47],['bastien',6,70],['blogger',10,90]].filter(x=>n>=x[1]);
+  return '<div class="kscene" role="img" aria-label="Your kitchen, with guests eating in the dining room behind the pass"><div class="kin"><div class="kwin">'+list.map(x=>'<img src="'+GU+x[0]+'-seat.webp" alt="" style="left:'+x[2]+'%">').join('')+'</div></div><span class="kcap">'+(list.length?list.length+(list.length===1?' guest':' guests')+' eating your plates':'The dining room is waiting for your first plate')+'</span></div>';
 }
 let sayT;
 function rouxSay(text){
@@ -12168,14 +12191,15 @@ const ROOM_ITEMS=[
  {id:'chandelier',img:'chandelier',cx:372,b:150,h:150},
  {id:'*',img:'chalkboard',cx:230,b:540,h:120},
  {id:'up:somm',img:'armand',cx:165,b:560,h:118},
- {id:'up:theo',img:'theo',cx:770,b:566,h:118}
+ {id:'up:theo',img:'theo',cx:770,b:566,h:118},
+ {id:'served',src:'img/passle/guests/odile-seat.webp',cx:262,b:505,h:150}
 ];
 let freshDecor=null;
 function roomSvg(own){
-  const has=it=>it.id==='*'?own.length>0:it.id.startsWith('up:')?lvlOf(it.id.slice(3))>0:own.includes(it.id);
+  const has=it=>it.id==='served'?servedCount()>0:it.id==='*'?own.length>0:it.id.startsWith('up:')?lvlOf(it.id.slice(3))>0:own.includes(it.id);
   return '<div class="room2" role="img" aria-label="Your dining room">'+ROOM_ITEMS.filter(has).map(it=>{
     const fresh=freshDecor&&(it.id===freshDecor||it.id==='up:'+freshDecor);
-    return '<img class="ri'+(fresh?' fresh':'')+'" src="'+RM+it.img+'.webp" alt="" style="left:'+(it.cx/10.24).toFixed(2)+'%;bottom:'+((572-it.b)/5.72).toFixed(2)+'%;height:'+(it.h/5.72).toFixed(2)+'%">';
+    return '<img class="ri'+(fresh?' fresh':'')+'" src="'+(it.src||RM+it.img+'.webp')+'" alt="" style="left:'+(it.cx/10.24).toFixed(2)+'%;bottom:'+((572-it.b)/5.72).toFixed(2)+'%;height:'+(it.h/5.72).toFixed(2)+'%">';
   }).join('')+'</div>';
 }
 const UP_IMG={pans:'pans',bell:'bell',somm:'armand',theo:'theo'};
@@ -12652,6 +12676,7 @@ function drillsFor(t){
 }
 function go(v){S.stage=v;save();render()}
 function render(){
+  if(document.body)document.body.dataset.stage=S.stage;
   const vw=S.stage==='practice'||S.stage==='rush'?'school':S.stage;
   document.querySelectorAll('.view').forEach(e=>e.classList.toggle('on',e.id==='v-'+vw));
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[T().id])});
@@ -12889,6 +12914,7 @@ function evaluate(k,files){
   const prevPass=lastPass;lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
+  updateGuest(pct);
   const now=res.indexOf(false);
   const ol=$('steps');ol.innerHTML='';ol.classList.toggle('compact',now===-1);
   steps.forEach((s,i)=>{const li=document.createElement('li');li.className=(res[i]?'ok':(i===now?'now':''))+(res[i]&&prevPass&&!prevPass[i]?' justok':'');li.innerHTML='<span class="n">'+(res[i]?'✓':i+1)+'</span><span>'+fmt(s.t)+'</span>';ol.appendChild(li)});
@@ -12974,6 +13000,7 @@ function fitPlates(){requestAnimationFrame(()=>document.querySelectorAll('.pview
 window.addEventListener('resize',()=>{if(S.stage==='kitchen')fitPlates()});
 function openViewer(name,out){$('vname').textContent=name;$('vframe').srcdoc=out;$('vraw').textContent=out;$('viewer').classList.add('on')}
 function renderKitchen(){
+  const ks=$('kscene');if(ks)ks.innerHTML=kitchenScene();
   const box=$('plates');box.innerHTML='';let served=0;
   const newGrid=()=>{const g=document.createElement('div');g.className='pgrid';box.appendChild(g);return g};let grid=newGrid();
   BASE().forEach((tg,i)=>{
