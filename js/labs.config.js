@@ -23,7 +23,7 @@ const LABS_CONFIG = [
     id: "pyle",
     name: "Pyle",
     tag: "Code",
-    sub: "python",
+    sub: "python · academy for Sleeple",
     path: "labs/pyle.html",
     ring: "ring-outer",
     angle: 100,
