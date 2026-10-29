@@ -1483,6 +1483,7 @@
   .learn-desc { color: var(--dim); font-size: 13px; line-height: 1.6; }
   body.full .line { font-size: 19px; }
   body.full #answer, body.full .prompt-label { font-size: 17px; }
+    .back-to-lab{display:block;margin:8px 0;padding:8px 14px;background:transparent;border:1px solid currentColor;color:inherit;font:inherit;cursor:pointer;letter-spacing:.08em;text-transform:uppercase;font-size:11px;}
 </style>
 </head>
 <body>
@@ -3710,12 +3711,15 @@
   function saveMistakes() {
     try { localStorage.setItem("junle_mistakes", JSON.stringify({ items: mistakes })); } catch (e) {}
   }
-  function logMistake(expected, got) {
+  function logMistake(expected, got, task, topic) {
     if (!got || !expected) return;
     const key = expected;
     if (!mistakes[key]) mistakes[key] = { n: 0, last: "" };
     mistakes[key].n++;
     mistakes[key].last = got;
+    if (task) mistakes[key].task = task;
+    if (topic) mistakes[key].topic = topic;
+    mistakes[key].at = Date.now();
     saveMistakes();
   }
   function showMistakes() {
@@ -3911,7 +3915,7 @@
         if (d.answers[0].length <= 46) pool.push(d);
       });
     });
-    const weak = weakestTopics(2);
+    const weak = weakestTopics(2).concat(labWeakTopics());
     if (weak.length) {
       const weakPool = pool.filter(function(d) { return weak.indexOf(TOPIC_OF[d._m] || "basics") >= 0; });
       if (weakPool.length) return shuffle(weakPool)[0];
@@ -4357,7 +4361,7 @@
     s.steps.forEach(function(d) { d._m = s.id; });
   });
 
-  const META_CMDS = ["help", "modules", "scenarios", "skip", "score", "clear", "sound", "reset stats", "width wide", "width ultra", "width standard", "save", "load", "weather", "scene bedroom", "scene sleek", "realm", "city", "dragon", "ambience rain", "ambience wind", "ambience auto", "ambience off", "configure", "exit", "cli", "desktop", "blueprint", "export config", "reset blueprint", "review", "review weak", "track", "path", "mix", "tourney", "mistakes", "learn", "learn lacp", "learn vrrp", "learn ospf", "learn bgp", "learn rstp", "learn vc", "learn irb", "learn storm", "learn commit", "show configuration", "show | display set", "commit", "commit check", "rollback 1", "start basics", "start dayzero", "start vlans", "start vc", "start rescue", "start all", "run ghost", "run deadport", "run safechange"];
+  const META_CMDS = ["help", "modules", "scenarios", "skip", "score", "clear", "sound", "reset stats", "width wide", "width ultra", "width standard", "save", "load", "weather", "scene bedroom", "scene sleek", "realm", "city", "dragon", "ambience rain", "ambience wind", "ambience auto", "ambience off", "configure", "exit", "cli", "desktop", "blueprint", "export config", "reset blueprint", "review", "review weak", "track", "path", "mix", "tourney", "mistakes", "lab", "shift lacp", "shift vlans", "shift ospf", "learn", "learn lacp", "learn vrrp", "learn ospf", "learn bgp", "learn rstp", "learn vc", "learn irb", "learn storm", "learn commit", "show configuration", "show | display set", "commit", "commit check", "rollback 1", "start basics", "start dayzero", "start vlans", "start vc", "start rescue", "start all", "run ghost", "run deadport", "run safechange"];
   const ALL_CMDS = (function() {
     const set = {};
     MODULES.forEach(function(m) {
@@ -4781,6 +4785,94 @@
     nextDrill();
   }
 
+  let shiftRun = null;
+  const LAB_DOMAIN_OF = { basics: "ui", commit: "cb", vlans: "cb", irb: "cb", lacp: "cb", rstp: "cb", vc: "cb", storm: "cb", ospf: "rf", bgp: "rf", vrrp: "rf" };
+  function labReadiness() {
+    try { return JSON.parse(localStorage.getItem("junoslab-readiness") || "null"); } catch (e) { return null; }
+  }
+  function labWeakTopics() {
+    const r = labReadiness();
+    if (!r || !r.domains) return [];
+    let weak = null;
+    Object.keys(r.domains).forEach(function(d) { if (weak === null || r.domains[d] < r.domains[weak]) weak = d; });
+    if (weak === null) return [];
+    return Object.keys(LAB_DOMAIN_OF).filter(function(t) { return LAB_DOMAIN_OF[t] === weak; });
+  }
+  function applyLabNudge() {
+    let nudge = null;
+    try { nudge = JSON.parse(localStorage.getItem("junle_nudge") || "null"); } catch (e) {}
+    if (!nudge || !nudge.topics) return;
+    const now = Date.now();
+    let n = 0;
+    Object.keys(nudge.topics).forEach(function(topic) {
+      MODULES.forEach(function(m) {
+        if ((TOPIC_OF[m.id] || "basics") !== topic) return;
+        m.drills.forEach(function(d) {
+          if (!d.rid || !reviewable(d)) return;
+          reviewItems[d.rid] = { iv: 1, due: now };
+          n++;
+        });
+      });
+    });
+    try { localStorage.removeItem("junle_nudge"); } catch (e) {}
+    if (n) { saveReview(); logEvent("lab: " + Object.keys(nudge.topics).join(", ") + " sent back for review (" + n + " drills)", "warn"); }
+  }
+  const TOPIC_KEY = {
+    lacp: /802\.3ad|lacp|aggregated/, irb: /\birb\b|l3-interface/, bgp: /\bbgp\b|peer-as|autonomous-system/, ospf: /\bospf\b|router-id/,
+    vlans: /\bvlan/, rstp: /\brstp\b|spanning|bridge-priority|bpdu|edge\b/, commit: /\bcommit|rollback|rescue|\| compare/, storm: /storm/, vrrp: /vrrp/, vc: /virtual-chassis/
+  };
+  function shiftPool(topic) {
+    const pool = [], seen = {};
+    const add = function(d) { const k = normalize(d.answers[0]); if (seen[k]) return; seen[k] = 1; pool.push(d); };
+    MODULES.forEach(function(m) {
+      const own = (TOPIC_OF[m.id] || "basics") === topic;
+      m.drills.forEach(function(d) {
+        if (!reviewable(d)) return;
+        if (own || (TOPIC_KEY[topic] && TOPIC_KEY[topic].test(d.answers[0]))) add(d);
+      });
+    });
+    const t = TUTORIALS.find(function(x) { return x.id === topic; });
+    if (t) {
+      let lastLabel = "";
+      t.steps.forEach(function(st) {
+        if (st[0]) lastLabel = st[0].replace(/^\d+\.\s*/, "");
+        add({ task: (st[0] ? lastLabel : "next line of: " + lastLabel) + ".", answers: [st[1]], why: st[2] || "", _m: t.id, _tut: true });
+      });
+    }
+    return pool;
+  }
+  function startShiftRun(topic) {
+    const pool = shiftPool(topic);
+    if (!pool.length) { speak("no drills for topic " + topic + ".", "wrong"); return; }
+    restoreSession();
+    moduleName = "SHIFT DRILL · " + (TOPIC_LABEL[topic] || topic.toUpperCase());
+    currentModuleId = null;
+    shiftRun = { topic: topic, ok: 0, total: 0, startedAt: Date.now() };
+    queue = shuffle(pool).slice(0, 6);
+    runTotal = queue.length;
+    logEvent("lab shift: " + topic + " drill started", "");
+    speak("SHIFT DRILL — " + queue.length + " commands on " + (TOPIC_LABEL[topic] || topic) + ". First try counts.", "sys");
+    nextDrill();
+  }
+  function finishShiftRun() {
+    const r = shiftRun;
+    shiftRun = null;
+    const pct = r.total ? Math.round((r.ok / r.total) * 100) : 0;
+    try { localStorage.setItem("junle_handoff", JSON.stringify({ topic: r.topic, day: todayKey(), ok: r.ok, total: r.total, pct: pct, at: Date.now() })); } catch (e) {}
+    typeOut("Shift drill complete: " + r.ok + " of " + r.total + " first try (" + pct + "%).", function() {
+      if (window.parent !== window) {
+        typeOut("Type 'lab' to go back to the Junos Lab, or click the button below.");
+        const b = document.createElement("button");
+        b.className = "back-to-lab";
+        b.textContent = "Back to the Junos Lab";
+        b.onclick = function() { try { window.parent.postMessage({ type: "workshop-launch", id: "junos-lab" }, location.origin); } catch (e) {} b.remove(); };
+        logEl.appendChild(b);
+        logEl.scrollTop = logEl.scrollHeight;
+      } else {
+        typeOut("Switch back to the Junos Lab tab; it picks the result up by itself.");
+      }
+    });
+  }
   function startScenario(id) {
     const s = SCENARIOS.find(function(x) { return x.id === id; });
     if (!s) {
@@ -4826,6 +4918,7 @@
       sfxDone();
       logEvent("training: " + moduleName.toLowerCase() + " complete", "ok");
       if (stats.autosave) setTimeout(exportSave, 1200);
+      if (shiftRun) { finishShiftRun(); return; }
       typeOut(moduleName + " complete. Well done, Kaatje.", function() {
         typeOut("Type 'modules' or 'scenarios' to pick your next one.");
       });
@@ -4840,7 +4933,7 @@
         paintPrompt();
       }
     }
-    if (drill._m !== currentScene) renderScene(drill._m);
+    if (drill._m !== currentScene && !drill._tut) renderScene(drill._m);
     paintSideStatus();
     if (runTotal > 0 && !mixState) {
       viewLabel.textContent = (moduleName || "TERMINAL") + " \u00b7 " + (runTotal - queue.length) + "/" + runTotal;
@@ -4927,6 +5020,7 @@
       exitConfig();
     }
     sfxOk();
+    if (shiftRun) { shiftRun.total++; if (fails === 0) shiftRun.ok++; }
     speak("accepted. proceeding.", "correct");
     const dw = d.why || whyFor(d.answers[0]);
     if (dw) print("why: " + dw, "sys");
@@ -4939,7 +5033,7 @@
     fails++;
     sfxBad();
     logEvent("rejected: " + lastTyped, "warn");
-    if (drill) logMistake(drill.answers[0], lastTyped);
+    if (drill) logMistake(drill.answers[0], lastTyped, drill.task, TOPIC_OF[drill._m] || "basics");
     if (mixState && mixState.awaitingDrill) mixDrillSolved = false;
     if (fails === 1) {
       speak("rejected. retry.", "wrong");
@@ -5128,6 +5222,15 @@
     }
     if (typed === "mistakes" || typed === "journal") {
       showMistakes();
+      return;
+    }
+    if (typed === "lab") {
+      if (window.parent !== window) { try { window.parent.postMessage({ type: "workshop-launch", id: "junos-lab" }, location.origin); } catch (e) {} }
+      else speak("open the Junos Lab from the Workshop; it picks your drill result up by itself.", "sys");
+      return;
+    }
+    if (typed.indexOf("shift ") === 0) {
+      startShiftRun(typed.slice(6).trim());
       return;
     }
     if (typed === "blueprint") {
@@ -6604,13 +6707,16 @@
   showView("desktop");
   function applyHash() {
     const h = location.hash.slice(1);
-    if (h === "mix") { showView("terminal"); startMix(); }
+    if (h.indexOf("shift:") === 0) { showView("terminal"); startShiftRun(h.slice(6)); }
+    else if (h === "mix") { showView("terminal"); startMix(); }
     else if (h === "review") { showView("terminal"); startReview(false); }
     else if (h === "tourney") { showView("terminal"); startTourney(); }
     else return;
     try { window.history.replaceState(null, "", location.pathname); } catch (e) {}
   }
   window.addEventListener("hashchange", applyHash);
+  applyLabNudge();
+  window.addEventListener("storage", function(e) { if (e.key === "junle_nudge" && e.newValue) applyLabNudge(); });
   applyHash();
 </script>
 </body>

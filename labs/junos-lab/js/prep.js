@@ -174,6 +174,44 @@ function prepLoad(){
 }
 function prepSave(){
   try{ localStorage.setItem(PREP_KEY, JSON.stringify(prepLoad())); }catch(e){}
+  try{
+    var r = prepReadiness(), doms = {};
+    PREP_DOMAINS.forEach(function(d){ doms[d.id] = r[d.id].pct; });
+    localStorage.setItem("junoslab-readiness", JSON.stringify({ domains: doms, overall: prepOverall(), at: Date.now() }));
+  }catch(e){}
+}
+var PREP_UNIT_TOPIC = { "junos-arch": "commit", cfgload: "commit", comments: "commit", cfgedit: "basics", pipes: "basics", health: "basics", maintenance: "basics", vlan: "vlans", trunk: "vlans", irb: "irb", rstp: "rstp", lacp: "lacp", ospf: "ospf", bgp: "bgp" };
+var PREP_TOPIC_DOMAIN = { basics: "ui", commit: "cb", vlans: "cb", irb: "cb", lacp: "cb", rstp: "cb", vc: "cb", storm: "cb", ospf: "rf", bgp: "rf", vrrp: "rf" };
+function prepJunleMastery(){
+  try{ var m = JSON.parse(localStorage.getItem("junle_mastery") || "null"); return m && m.topics ? m.topics : {}; }catch(e){ return {}; }
+}
+function prepJunleLevel(topic){
+  var t = prepJunleMastery()[topic];
+  if(!t || t.seen < 3) return 0;
+  var pct = Math.round((t.ok / t.seen) * 100);
+  if(pct >= 90 && t.ok >= 8) return 3;
+  if(pct >= 70 && t.ok >= 4) return 2;
+  return 1;
+}
+function prepJunleCards(){
+  var items = null;
+  try{ var m = JSON.parse(localStorage.getItem("junle_mistakes") || "null"); items = m && m.items ? m.items : null; }catch(e){}
+  if(!items) return [];
+  return Object.keys(items).filter(function(k){ return items[k] && items[k].task && k.indexOf("quiz:") !== 0; }).map(function(k){
+    var it = items[k];
+    return { id: "j:" + k, dom: PREP_TOPIC_DOMAIN[it.topic] || "cb", q: "From your Junle mistake journal. Type the exact Junos command: " + it.task, typed: true, answer: k, why: "Junle expected: " + k + (it.last ? "  (you typed: " + it.last + ")" : ""), junle: true, n: it.n || 1 };
+  });
+}
+function prepJunleAvailable(){
+  try{ return !!localStorage.getItem("junle_stats") || !!localStorage.getItem("junle_mastery"); }catch(e){ return false; }
+}
+function prepJunleNudge(topic){
+  if(!topic) return;
+  var n = null;
+  try{ n = JSON.parse(localStorage.getItem("junle_nudge") || "null"); }catch(e){}
+  n = n && n.topics ? n : { topics: {} };
+  n.topics[topic] = prepDay(0);
+  try{ localStorage.setItem("junle_nudge", JSON.stringify(n)); }catch(e){}
 }
 function prepReset(){ PREP = null; }
 
@@ -215,7 +253,21 @@ function prepDomainName(id){
   var d = PREP_DOMAINS.find(function(x){ return x.id === id; });
   return d ? d.name : id;
 }
-function prepQ(id){ return prepPool().find(function(q){ return q.id === id; }); }
+function prepQ(id){
+  if(id.indexOf("j:") === 0) return prepJunleCards().find(function(q){ return q.id === id; }) || null;
+  return prepPool().find(function(q){ return q.id === id; });
+}
+function prepTypedQuestions(domId, n, exclude){
+  var s = prepLoad(), ex = exclude || {};
+  var junle = prepJunleCards().filter(function(q){ return !ex[q.id]; });
+  junle.sort(function(a, b){ return (b.n || 0) - (a.n || 0); });
+  var bank = prepPool().filter(function(q){ return q.typed && !ex[q.id] && (!domId || q.dom === domId); });
+  var bankAll = prepPool().filter(function(q){ return q.typed && !ex[q.id]; });
+  var fresh = function(list){ return list.filter(function(q){ return !s.cards[q.id]; }).concat(list.filter(function(q){ return s.cards[q.id]; })); };
+  var out = [];
+  fresh(junle).concat(fresh(bank), prepShuffle(bankAll)).forEach(function(q){ if(out.length < n && !out.some(function(x){ return x.id === q.id; })) out.push(q); });
+  return out;
+}
 
 function prepRecord(qid, correct, source){
   var s = prepLoad();
@@ -241,8 +293,20 @@ function prepCardScore(c, today){
   if(!c || !c.hist || !c.hist.length) return null;
   var h = c.hist;
   var score = h.length >= 2 ? h[h.length - 1] * 0.7 + h[h.length - 2] * 0.3 : h[h.length - 1];
-  if(c.last && prepDaysBetween(c.last, today) > PREP_LAPSE_DAYS) score *= 0.5;
-  return score;
+  return score * prepDecay(c.last ? prepDaysBetween(c.last, today) : 0);
+}
+function prepDecay(age){
+  if(age <= 14) return 1;
+  if(age <= 30) return 1 - ((age - 14) / 16) * 0.4;
+  if(age <= 60) return 0.6 - ((age - 30) / 30) * 0.3;
+  return 0.3;
+}
+function prepDomainStale(domId){
+  var s = prepLoad(), today = prepDay(0), ages = [];
+  prepPool().forEach(function(q){ var c = s.cards[q.id]; if(q.dom === domId && c && c.last) ages.push(prepDaysBetween(c.last, today)); });
+  if(!ages.length) return false;
+  ages.sort(function(a, b){ return a - b; });
+  return ages[Math.floor(ages.length / 2)] > PREP_LAPSE_DAYS;
 }
 function prepDomainReadiness(domId){
   var s = prepLoad(), today = prepDay(0);
@@ -336,7 +400,11 @@ function prepUnitState(u){
 function prepUnitQuizPassed(u){
   var st = prepUnitState(u), today = prepDay(0);
   var days = st.quizDays.filter(function(d){ return prepDaysBetween(d, today) <= PREP_LAPSE_DAYS * 2; });
-  return days.length >= 2;
+  if(days.length >= 2) return true;
+  return days.length >= 1 && prepUnitJunleCredit(u);
+}
+function prepUnitJunleCredit(u){
+  return !!PREP_UNIT_TOPIC[u.id] && prepJunleLevel(PREP_UNIT_TOPIC[u.id]) >= 3;
 }
 function prepUnitQuizToday(u){
   return prepUnitState(u).quizDays.indexOf(prepDay(0)) !== -1;
@@ -398,19 +466,64 @@ function prepOnHandsOn(scenId, info){
     var st = prepUnitState(u);
     if(!st.hands) st.hands = today;
     if(clean && !st.handsClean){ st.handsClean = true; st.cleanDay = today; }
+    if(info && info.bench) st.bench = today;
+    if(!clean && PREP_UNIT_TOPIC[u.id]) prepJunleNudge(PREP_UNIT_TOPIC[u.id]);
     s.units[u.id] = st;
   });
   prepSave();
   var sh = prepShift();
-  if(sh && !sh.done && sh.step === "hands" && units.some(function(u){ return u.id === sh.unit; })){
+  var bench = PREP_BENCH;
+  var inShift = sh && !sh.done && sh.step === "hands" && units.some(function(u){ return u.id === sh.unit; });
+  if(inShift){
     sh.active = true;
     sh.handsDone = true;
     sh.handsClean = clean;
     prepSave();
-    prepStrictRelease();
-    setTimeout(function(){ prepShiftContinue(); }, 900);
-  } else if(typeof renderCourseBar === "function") renderCourseBar();
+  }
+  if(PREP_STRICT_LOCK || inShift) prepStrictRelease();
+  var after = function(){ if(inShift) prepShiftContinue(); else if(typeof renderCourseBar === "function") renderCourseBar(); };
+  if(bench && !(info && info.bench)) setTimeout(function(){ prepDebrief(bench, info || {}, clean).then(after); }, 700);
+  else setTimeout(after, inShift ? 900 : 0);
 }
+var PREP_BENCH = null;
+function prepDebrief(b, info, clean){
+  var secs = Math.round((Date.now() - b.start) / 1000);
+  var lines = [
+    "Time: " + Math.floor(secs / 60) + "m " + (secs % 60) + "s",
+    "Commands typed: " + b.cmds + " (" + b.edits + " config edits, " + b.shows + " show commands)",
+    "Commits: " + b.commits + (b.commitFails ? " (" + b.commitFails + " failed)" : "") + " \u00b7 Rollbacks: " + b.rollbacks,
+    "Rejected by the CLI: " + b.rejected,
+    "Hints: " + (info.hints || 0) + (info.revealed ? " \u00b7 fault revealed" : ""),
+    clean ? "Clean run. This counts as proven." : "Not clean. The unit will ask for a hint-free run later, and Junle gets the topic back in its review queue.",
+  ];
+  if(b.rollbacks > 2) lines.push("Three or more rollbacks: plan the change with show | compare before committing.");
+  if(b.commits > 4) lines.push("Many small commits: real change windows prefer one reviewed commit, or commit confirmed.");
+  if(b.rejected > 5) lines.push("Many rejected commands: use ? and Tab; syntax guessing is what the exam punishes.");
+  return modalConfirm("Debrief", lines.join("\n"), "Continue");
+}
+(function(){
+  if(typeof runCliCommand !== "function") return;
+  var orig = runCliCommand;
+  runCliCommand = function(dev, raw, masked){
+    if(PREP_BENCH){
+      var t = String(raw || "").trim();
+      PREP_BENCH.cmds++;
+      if(/^(set|delete|deactivate|activate|rename|insert|replace|load)\b/.test(t)) PREP_BENCH.edits++;
+      if(/^(run )?show\b/.test(t)) PREP_BENCH.shows++;
+      if(/^commit\b/.test(t)) PREP_BENCH.commits++;
+      if(/^rollback\b/.test(t)) PREP_BENCH.rollbacks++;
+      var before = dev && dev.cli && dev.cli.log ? dev.cli.log.length : 0;
+      var r = orig.apply(this, arguments);
+      try{
+        var log = dev && dev.cli && dev.cli.log ? dev.cli.log.slice(before) : [];
+        if(log.some(function(l){ return l && l.cls === "err"; })) PREP_BENCH.rejected++;
+        if(/^commit\b/.test(t) && log.some(function(l){ return l && /commit failed/i.test(String(l.text || "")); })) PREP_BENCH.commitFails++;
+      }catch(e){}
+      return r;
+    }
+    return orig.apply(this, arguments);
+  };
+})();
 
 var PREP_STRICT_LOCK = false;
 var PREP_RESTORE = null;
@@ -424,6 +537,7 @@ function prepStrictEngage(){
   };
   if(typeof setStrict === "function" && !PREP_RESTORE.strict) setStrict(true);
   PREP_STRICT_LOCK = true;
+  PREP_BENCH = { start: Date.now(), cmds: 0, edits: 0, shows: 0, commits: 0, commitFails: 0, rollbacks: 0, rejected: 0 };
   if(typeof setAssist === "function" && PREP_RESTORE.assist) setAssist(false);
   if(typeof setPredict === "function" && PREP_RESTORE.predict) setPredict(false);
   var sol = document.getElementById("solution-btn");
@@ -444,6 +558,7 @@ function prepStrictEngage(){
 function prepStrictRelease(){
   if(!PREP_STRICT_LOCK) return;
   PREP_STRICT_LOCK = false;
+  PREP_BENCH = null;
   if(PREP_RESTORE){
     if(typeof setAssist === "function" && PREP_RESTORE.assist) setAssist(true);
     if(typeof setPredict === "function" && PREP_RESTORE.predict) setPredict(true);
@@ -494,14 +609,21 @@ function prepShiftContinue(){
   sh.active = true;
   if(sh.kind === "diag"){ prepRunDiagnostic(); return; }
   if(sh.step === "warm"){
-    if(!sh.warm.length){ sh.step = "lesson"; prepSave(); prepShiftContinue(); return; }
+    if(!sh.warm.length){ sh.step = "drill"; prepSave(); prepShiftContinue(); return; }
     prepRunQuestions(sh.warm.map(prepQ).filter(Boolean), { title: "Warm-up", sub: "Review cards that are due. One answer each.", source: "review" }).then(function(res){
       if(!res) { sh.active = false; prepSave(); renderCourseBar(); return; }
       sh.warmResult = res;
-      sh.step = "lesson";
+      sh.step = "drill";
       prepSave();
       prepShiftContinue();
     });
+    return;
+  }
+  if(sh.step === "drill"){
+    var du = PREP_UNITS.find(function(x){ return x.id === sh.unit; });
+    var topic = du ? PREP_UNIT_TOPIC[du.id] : null;
+    if(!topic || !prepJunleAvailable() || prepJunleLevel(topic) >= 3 || sh.drillResult || sh.drillSkipped){ sh.step = "lesson"; prepSave(); prepShiftContinue(); return; }
+    prepDrillPrompt(sh, topic);
     return;
   }
   if(sh.step === "lesson"){
@@ -549,9 +671,12 @@ function prepShiftContinue(){
     }
     var ex = {};
     sh.warm.forEach(function(id){ ex[id] = 1; });
-    var qs = prepFreshQuestions(prepWeakestDomain(), PREP_COOLDOWN, ex);
+    var weak = prepWeakestDomain();
+    var typed = prepTypedQuestions(weak, 1, ex);
+    typed.forEach(function(q){ ex[q.id] = 1; });
+    var qs = typed.concat(prepFreshQuestions(weak, PREP_COOLDOWN - typed.length, ex));
     if(!qs.length){ prepShiftFinish(null); return; }
-    prepRunQuestions(qs, { title: "Cool-down", sub: "Two fresh questions from your weakest domain: " + prepDomainName(prepWeakestDomain()) + ".", source: "cool" }).then(function(res){
+    prepRunQuestions(qs, { title: "Cool-down", sub: (typed.length ? "One command to type, one question. " : "Two fresh questions. ") + "Weakest domain: " + prepDomainName(weak) + ".", source: "cool" }).then(function(res){
       if(!res){ sh.active = false; prepSave(); renderCourseBar(); return; }
       sh.coolResult = res;
       prepSave();
@@ -572,7 +697,13 @@ function prepShiftFinish(res){
   var u = PREP_UNITS.find(function(x){ return x.id === sh.unit; });
   var lines = [];
   if(sh.warmResult) lines.push("Warm-up: " + sh.warmResult.correct + " of " + sh.warmResult.total + " review cards.");
-  if(u) lines.push("Lesson: " + prepUnitTitle(u) + (prepUnitPassed(u) ? " passed." : prepUnitQuizPassed(u) ? " quiz passed; hands-on " + (sh.handsDone ? (sh.handsClean ? "clean." : "done with hints, re-prove it later.") : "still open.") : " quiz passed today; pass it again on another day."));
+  if(sh.drillResult) lines.push("Junle drill: " + sh.drillResult.ok + " of " + sh.drillResult.total + " first try.");
+  if(u){
+    var ust = prepUnitState(u);
+    var checkTxt = prepUnitQuizPassed(u) ? "check passed" : ust.quizDays.indexOf(prepDay(0)) !== -1 ? "check passed today, once more on another day" : "check still open";
+    var handsTxt = !u.s ? "" : sh.handsDone ? (sh.handsClean ? "hands-on clean" : "hands-on done with hints, prove it again later") : prepUnitClean(u) ? "hands-on clean" : "hands-on open";
+    lines.push("Lesson: " + prepUnitTitle(u) + (prepUnitPassed(u) ? " mastered." : " \u2014 " + [checkTxt, handsTxt].filter(Boolean).join(", ") + "."));
+  }
   if(res) lines.push((sh.kind === "weekly" ? "Weekly check: " : "Cool-down: ") + res.correct + " of " + res.total + " (" + res.pct + "%).");
   lines.push("Readiness: " + prepOverall() + "% overall.");
   if(typeof SFX !== "undefined") SFX.fanfare();
@@ -627,8 +758,132 @@ function prepRunUnitQuiz(u){
 function prepStartHands(u){
   prepStrictEngage();
   if(typeof protoJumpToScenario === "function") protoJumpToScenario(u.s);
+  var opts = [{ value: "lab", label: "To the lab bench", desc: "Strict Junos locked on, no assist, no predict, no fault reveal. Hints allowed but then the run is not clean." }];
+  if(PREP_BENCH_CHECKS[u.id]) opts.push({ value: "real", label: "I did it on the real EX4300", desc: "Paste show configuration | display set from the switch; the lab checks the lines." });
+  modalChoice("Hands-on: " + prepUnitTitle(u), "Finish every objective to close the step.", opts).then(function(v){
+    if(v === "real") prepBenchPaste(u);
+  });
+}
+function prepDrillPrompt(sh, topic){
+  var embedded = false;
+  try{ embedded = window.parent !== window && !!window.parent.document.getElementById("frames"); }catch(e){ embedded = false; }
+  var label = topic.toUpperCase();
+  modalChoice("Junle drill: " + label, "Three minutes of typing the real commands for this unit in Junle. First try counts. The lab picks the result up by itself when you come back.", [
+    { value: "open", label: "Open Junle", desc: embedded ? "Switches to Junle in the Workshop" : "Opens Junle in a new tab" },
+    { value: "skip", label: "Skip the drill today", desc: "Straight to the lesson" },
+  ]).then(function(v){
+    var s = prepShift();
+    if(!s) return;
+    if(v === "skip"){ s.drillSkipped = true; s.step = "lesson"; prepSave(); prepShiftContinue(); return; }
+    if(v !== "open"){ s.active = false; prepSave(); renderCourseBar(); return; }
+    s.drillOpenedAt = Date.now();
+    s.drillTopic = topic;
+    s.active = false;
+    prepSave();
+    renderCourseBar();
+    if(embedded){ try{ window.parent.postMessage({ type: "workshop-launch", id: "junle", hash: "shift:" + topic }, location.origin); }catch(e){} }
+    else { try{ window.open("../junle.html#shift:" + topic, "junle"); }catch(e){} }
+  });
+}
+function prepOnJunleHandoff(){
   var sh = prepShift();
-  modalConfirm("Hands-on: " + prepUnitTitle(u), "Bench rules are on for this step: strict Junos, no assist ghost, no predict prompts, no fault reveal. Hints are allowed, but a hands-on with hints is not clean and the unit will ask you to prove it again.\n\nFinish every objective to close the step.", "To the bench");
+  if(!sh || sh.done || sh.step !== "drill" || !sh.drillOpenedAt) return;
+  var h = null;
+  try{ h = JSON.parse(localStorage.getItem("junle_handoff") || "null"); }catch(e){}
+  if(!h || h.topic !== sh.drillTopic || !(h.at > sh.drillOpenedAt)) return;
+  sh.drillResult = { ok: h.ok, total: h.total, pct: h.pct };
+  sh.step = "lesson";
+  sh.active = true;
+  prepSave();
+  if(typeof awardXp === "function") awardXp(5 + Math.round((h.pct || 0) / 20), "junle drill");
+  prepShiftContinue();
+}
+if(typeof window !== "undefined" && window.addEventListener){
+  window.addEventListener("storage", function(e){ if(e.key === "junle_handoff") prepOnJunleHandoff(); });
+  document.addEventListener("visibilitychange", function(){ if(!document.hidden) prepOnJunleHandoff(); });
+}
+var PREP_LEGACY = [
+  { re: /\bport-mode\b/, msg: "port-mode is pre-ELS syntax; the EX4300 uses interface-mode" },
+  { re: /\bvlan\.\d+\b/, msg: "vlan.N is pre-ELS; ELS uses irb.N bound with l3-interface" },
+  { re: /set interfaces vlan\b/, msg: "set interfaces vlan is pre-ELS; configure irb instead" },
+  { re: /\bset ethernet-switching-options\b/, msg: "ethernet-switching-options is pre-ELS; most of it moved under switch-options, forwarding-options or protocols" },
+  { re: /\bset vlans \S+ interface\b/, msg: "assigning interfaces under vlans is pre-ELS; put vlan members on the interface" },
+];
+var PREP_BENCH_CHECKS = {
+  vlan: [
+    { re: /^set vlans \S+ vlan-id \d+$/m, label: "a named VLAN with a tag" },
+    { re: /^set interfaces \S+ unit 0 family ethernet-switching vlan members \S+/m, label: "an access port with a vlan member" },
+  ],
+  trunk: [
+    { re: /^set interfaces \S+ unit 0 family ethernet-switching interface-mode trunk$/m, label: "a trunk port (interface-mode trunk)" },
+    { re: /^set interfaces \S+ unit 0 family ethernet-switching vlan members (\[ ?\S+( \S+)+ ?\]|all)/m, label: "the trunk carrying more than one VLAN" },
+    { re: /^set vlans \S+ vlan-id \d+$/m, label: "the VLANs themselves" },
+  ],
+  irb: [
+    { re: /^set vlans \S+ l3-interface irb\.\d+$/m, label: "a VLAN bound to an irb unit" },
+    { re: /^set interfaces irb unit \d+ family inet address \d+\.\d+\.\d+\.\d+\/\d+$/m, label: "an address on that irb unit" },
+  ],
+  rstp: [
+    { re: /^set protocols rstp /m, label: "rstp configured" },
+    { re: /^set protocols rstp (interface \S+ edge|interface \S+ no-root-port|bridge-priority \d+)/m, label: "an edge port, root protection or a bridge priority" },
+  ],
+  lacp: [
+    { re: /^set chassis aggregated-devices ethernet device-count \d+$/m, label: "aggregated-devices device-count before any ae" },
+    { re: /^set interfaces \S+ ether-options 802\.3ad ae\d+$/m, label: "a member port pointed at an ae bundle" },
+    { re: /^set interfaces ae\d+ aggregated-ether-options lacp (active|passive)$/m, label: "LACP mode on the bundle" },
+  ],
+  dhcp: [
+    { re: /^set (system services dhcp-local-server|access address-assignment pool \S+ family inet)/m, label: "a DHCP server with an address pool" },
+    { re: /^set access address-assignment pool \S+ family inet (range \S+ (low|high)|dhcp-attributes router)/m, label: "a range and a router (gateway) option" },
+  ],
+  ospf: [
+    { re: /^set protocols ospf area \S+ interface \S+/m, label: "an interface in an OSPF area" },
+    { re: /^set routing-options router-id \d+\.\d+\.\d+\.\d+$/m, label: "a router-id" },
+  ],
+  dia: [
+    { re: /^set routing-options static route 0(\.0\.0\.0)?\/0 next-hop \d+\.\d+\.\d+\.\d+$/m, label: "a default static route to the ISP" },
+    { re: /^set interfaces \S+ unit \d+ family inet address \d+\.\d+\.\d+\.\d+\/\d+$/m, label: "an addressed uplink or irb" },
+  ],
+  bgp: [
+    { re: /^set protocols bgp group \S+ type external$/m, label: "an external BGP group" },
+    { re: /^set protocols bgp group \S+ (peer-as \d+|neighbor \S+)/m, label: "a peer-as or a neighbor" },
+    { re: /^set routing-options autonomous-system \d+$/m, label: "the local autonomous-system" },
+  ],
+  filters: [
+    { re: /^set firewall family inet filter \S+ term \S+ from /m, label: "a filter term with a from clause" },
+    { re: /^set firewall family inet filter \S+ term \S+ then (discard|reject|accept)/m, label: "a terminating then action" },
+    { re: /^set interfaces \S+ unit \d+ family inet filter (input|output) \S+$/m, label: "the filter applied to an interface" },
+  ],
+};
+function prepBenchCheck(unitId, text){
+  var checks = PREP_BENCH_CHECKS[unitId] || [];
+  var lines = String(text || "").split(/\r?\n/).map(function(l){ return l.trim(); }).filter(Boolean);
+  var body = lines.join("\n");
+  var setLines = lines.filter(function(l){ return /^set /.test(l); }).length;
+  var legacy = [];
+  PREP_LEGACY.forEach(function(x){ if(x.re.test(body)) legacy.push(x.msg); });
+  var results = checks.map(function(c){ return { label: c.label, ok: c.re.test(body) }; });
+  var ok = setLines > 0 && !legacy.length && results.every(function(r){ return r.ok; });
+  return { ok: ok, results: results, legacy: legacy, setLines: setLines };
+}
+function prepBenchPaste(u){
+  modalInput("Real EX4300: " + prepUnitTitle(u), "Paste the output of show configuration | display set from the switch. Only set lines are read; nothing is stored.", "", "textarea").then(function(v){
+    if(v === null) return;
+    var r = prepBenchCheck(u.id, v);
+    var lines = [];
+    if(!r.setLines) lines.push("No set lines found. Use show configuration | display set.");
+    r.results.forEach(function(x){ lines.push((x.ok ? "ok   " : "miss ") + x.label); });
+    r.legacy.forEach(function(m){ lines.push("not allowed: " + m); });
+    if(r.ok){
+      lines.push("", "Accepted. Counts as a clean hands-on done on real hardware.");
+      modalConfirm("Bench check passed", lines.join("\n"), "Continue").then(function(){
+        prepStrictRelease();
+        prepOnHandsOn(u.s, { hints: 0, revealed: false, bench: true });
+      });
+    } else {
+      modalConfirm("Bench check: not yet", lines.join("\n"), "OK");
+    }
+  });
 }
 
 var PREP_RUN = null;
@@ -806,11 +1061,11 @@ function prepReady(){
   var mocksOk = mocks.length === 2 && mocks.every(function(m){ return m.pct >= PREP_PASS; });
   return { ready: doms && mocksOk, domains: doms, mocks: mocksOk, mockCount: mocks.length };
 }
-function prepMockDone(pct, perDom, total){
+function prepMockDone(pct, perDom, total, kind){
   var s = prepLoad();
   var pd = {};
   Object.keys(perDom || {}).forEach(function(k){ pd[PREP_DOMAIN_BY_NAME[k] || k] = perDom[k]; });
-  s.mocks.push({ at: Date.now(), pct: pct, n: total, perDom: pd, kind: "mock" });
+  s.mocks.push({ at: Date.now(), pct: pct, n: total, perDom: pd, kind: kind || "mock" });
   s.mocks = s.mocks.slice(-20);
   prepSave();
 }
@@ -820,7 +1075,7 @@ function prepShiftLabel(){
   var kind = prepShiftKind();
   if(!sh) return { label: kind === "diag" ? "Start: diagnostic" : kind === "weekly" ? "Start shift: weekly check" : "Start shift", sub: kind === "diag" ? "21 questions to place you. About 10 minutes." : kind === "weekly" ? "Warm-up, lesson, then a 20-question check" : "Warm-up, lesson, cool-down. About 10 minutes." };
   if(sh.done) return { label: "Shift done for today", sub: "Free bench. Tickets and scenarios still count." };
-  var step = sh.step === "warm" ? "warm-up" : sh.step === "lesson" ? "lesson" : sh.step === "hands" ? "hands-on" : sh.kind === "weekly" ? "weekly check" : "cool-down";
+  var step = sh.step === "warm" ? "warm-up" : sh.step === "drill" ? "Junle drill" : sh.step === "lesson" ? "lesson" : sh.step === "hands" ? "hands-on" : sh.kind === "weekly" ? "weekly check" : "cool-down";
   return { label: "Continue shift: " + step, sub: "Picks up where you stopped." };
 }
 
@@ -842,8 +1097,42 @@ function prepRenderDomains(parent){
     var fill = prepEl("span", "resume-dom-fill", mini);
     fill.style.width = r[d.id].pct + "%";
     if(r[d.id].pct >= PREP_PASS) fill.classList.add("prep-ok");
-    prepEl("span", "resume-dom-num", row, r[d.id].pct + "%");
+    prepEl("span", "resume-dom-num", row, r[d.id].pct + "%" + (prepDomainStale(d.id) ? " stale" : ""));
   });
+}
+function prepRenderHistory(parent){
+  var s = prepLoad();
+  var box = prepEl("div", "prep-hist", parent);
+  var first = Object.keys(s.shifts).sort()[0] || null;
+  for(var i = 27; i >= 0; i--){
+    var day = prepDay(-i);
+    var sh = s.shifts[day];
+    var cell = prepEl("span", "prep-hist-day", box);
+    var cls = !sh ? (first && day > first && i > 0 ? "missed" : "none") : sh.done ? (sh.kind === "weekly" ? "weekly" : sh.kind === "diag" ? "diag" : "done") : "open";
+    cell.classList.add("prep-hist-" + cls);
+    cell.title = day + (sh ? " · " + (sh.done ? sh.kind + " shift done" : "shift started") : "");
+  }
+  var done = Object.keys(s.shifts).filter(function(d){ return s.shifts[d].done; }).length;
+  var streak = 0;
+  for(var k = 0; k < 365; k++){ var d2 = s.shifts[prepDay(-k)]; if(d2 && d2.done) streak++; else if(k > 0) break; }
+  prepEl("div", "prep-hist-sub", parent, done + " shift" + (done === 1 ? "" : "s") + " done \u00b7 streak " + streak + " \u00b7 last 4 weeks");
+}
+function prepExportCards(){
+  var s = prepLoad(), today = prepDay(0);
+  var pool = prepPool().concat(prepJunleCards());
+  var all = [], due = [];
+  pool.forEach(function(q){
+    var c = s.cards[q.id];
+    var row = { id: q.id, domain: prepDomainName(q.dom), question: q.q, options: q.typed ? null : q.opts, answer: q.typed ? q.answer : q.opts[q.right], typed: !!q.typed, why: q.why, due: c ? c.due : null, lapses: c ? c.lapses : 0 };
+    all.push(row);
+    if(c && c.due && c.due <= today) due.push(row);
+  });
+  var blob = new Blob([JSON.stringify({ exported: new Date().toISOString(), source: "junos-lab", due: due, all: all }, null, 2)], { type: "application/json" });
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "junos-review-cards_" + today + ".json";
+  a.click();
+  setTimeout(function(){ URL.revokeObjectURL(a.href); }, 1000);
 }
 function renderResume(){
   var h = resumeHost();
@@ -891,8 +1180,17 @@ function renderResume(){
 
   prepRenderDomains(card);
 
+  prepRenderHistory(card);
   var due = prepDueCards().length;
-  prepEl("div", "prep-due", card, due ? due + " review card" + (due === 1 ? "" : "s") + " due" : "No review cards due");
+  var dueRow = prepEl("div", "prep-due", card);
+  prepEl("span", null, dueRow, due ? due + " review card" + (due === 1 ? "" : "s") + " due" : "No review cards due");
+  var exp = prepEl("button", "prep-export", dueRow, "Export cards for the bot");
+  exp.title = "Downloads your review cards as JSON, for the Telegram quiz bot";
+  exp.onclick = prepExportCards;
+  if(prepJunleAvailable()){
+    var jm = prepJunleMastery(), mastered = Object.keys(jm).filter(function(t){ return prepJunleLevel(t) >= 3; });
+    prepEl("div", "prep-junle", card, "Junle: " + (mastered.length ? mastered.length + " topic" + (mastered.length === 1 ? "" : "s") + " at mastery (" + mastered.join(", ") + "), " : "no topics at mastery yet, ") + prepJunleCards().length + " journal mistake" + (prepJunleCards().length === 1 ? "" : "s") + " feeding the cool-down");
+  }
 
   var alt = prepEl("div", "resume-alt", card);
   var mock = prepEl("button", "resume-altbtn", alt, "Mock exam");
@@ -929,16 +1227,15 @@ function renderCourseBar(){
   var kind = sh ? sh.kind : prepShiftKind();
   var defs = kind === "diag"
     ? [["diag", "Diagnostic", "21 questions"]]
-    : [["warm", "Warm-up", "review cards"], ["lesson", "Lesson", next ? prepUnitTitle(next.unit) : "all units mastered"], ["hands", "Hands-on", "scenario or ticket"], ["cool", kind === "weekly" ? "Weekly check" : "Cool-down", kind === "weekly" ? "20 questions" : "weakest domain"]];
-  var order = ["warm", "lesson", "hands", "cool", "done"];
+    : [["warm", "Warm-up", "review cards"], ["drill", "Junle drill", next && PREP_UNIT_TOPIC[next.unit.id] ? "type the " + PREP_UNIT_TOPIC[next.unit.id] + " commands" : "no drill for this unit"], ["lesson", "Lesson", next ? prepUnitTitle(next.unit) : "all units mastered"], ["hands", "Hands-on", "scenario, ticket or real EX4300"], ["cool", kind === "weekly" ? "Weekly check" : "Cool-down", kind === "weekly" ? "20 questions" : "1 typed + 1 question"]];
+  var order = ["warm", "drill", "lesson", "hands", "cool", "done"];
   var cur = sh ? (sh.done ? "done" : sh.step) : null;
   defs.forEach(function(d){
     var row = prepEl("div", "prep-step", steps);
     var state = !sh ? "todo" : sh.done ? "done" : order.indexOf(d[0]) < order.indexOf(cur) ? "done" : d[0] === cur ? "now" : "todo";
-    if(d[0] === "hands" && sh && !sh.done && sh.step !== "hands"){
-      var u = next && PREP_UNITS.find(function(x){ return x.id === sh.unit; });
-      if(u && !u.s) state = "skip";
-    }
+    var su = sh && PREP_UNITS.find(function(x){ return x.id === sh.unit; });
+    if(d[0] === "hands" && sh && !sh.done && sh.step !== "hands" && su && !su.s) state = "skip";
+    if(d[0] === "drill" && ((sh && sh.drillSkipped) || !(su ? PREP_UNIT_TOPIC[su.id] : next && PREP_UNIT_TOPIC[next.unit.id]) || !prepJunleAvailable())) state = state === "now" ? "now" : "skip";
     row.classList.add("prep-" + state);
     prepEl("span", "prep-step-mark", row, state === "done" ? "✓" : state === "now" ? "▸" : state === "skip" ? "–" : "·");
     prepEl("span", "prep-step-name", row, d[1]);
@@ -1001,8 +1298,8 @@ function prepGuideBanner(g){
   var t = document.createElement("div");
   t.className = "prep-banner-t";
   var bits = [];
-  bits.push("Check: " + st.quizDays.length + " of 2 passing days");
-  if(u.s) bits.push("Hands-on: " + (st.handsClean ? "clean" : st.hands ? "done with hints, prove it again" : "open"));
+  bits.push("Check: " + st.quizDays.length + " of 2 passing days" + (prepUnitJunleCredit(u) ? " (Junle mastery counts as one)" : ""));
+  if(u.s) bits.push("Hands-on: " + (st.handsClean ? (st.bench ? "clean, on the real EX4300" : "clean") : st.hands ? "done with hints, prove it again" : "open"));
   t.textContent = (lesson ? "Read it through, then take the check at the bottom. " : "") + bits.join(" \u00b7 ");
   b.appendChild(t);
   var jump = document.createElement("button");
@@ -1010,6 +1307,13 @@ function prepGuideBanner(g){
   jump.textContent = "Jump to the check";
   jump.onclick = function(){ var el = document.querySelector(".prep-check-btn"); if(el && el.scrollIntoView) el.scrollIntoView({ behavior: "smooth", block: "center" }); };
   b.appendChild(jump);
+  if(u.s && PREP_BENCH_CHECKS[u.id] && !st.bench){
+    var bench = document.createElement("button");
+    bench.className = "prep-banner-bench";
+    bench.textContent = "Did it on the real EX4300";
+    bench.onclick = function(){ prepBenchPaste(u); };
+    b.appendChild(bench);
+  }
   return b;
 }
 function prepGuideCheckButton(g){

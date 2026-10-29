@@ -388,6 +388,13 @@ for (const m of document.querySelectorAll(".marker")) {
   m.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); launch(labs.find((l) => l.id === id)); } });
 }
 
+window.addEventListener("message", (e) => {
+  if (e.origin !== location.origin) return;
+  const d = e.data;
+  if (!d || d.type !== "workshop-launch") return;
+  const lab = labs.find((l) => l.id === d.id);
+  if (lab) launch(lab, d.hash || "");
+});
 $("backBtn").addEventListener("click", abortDocking);
 $("tabHome").addEventListener("click", showMap);
 $("tabAdd").addEventListener("click", showMap);

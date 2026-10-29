@@ -3748,6 +3748,101 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   prepReset();
 }
 
+
+/* ---------- T73: Junle link, bench checks, decay, debrief counters, exam day ---------- */
+{
+  try{ localStorage.removeItem(PREP_KEY); localStorage.removeItem("junle_mastery"); localStorage.removeItem("junle_mistakes"); localStorage.removeItem("junle_nudge"); }catch(e){}
+  prepReset();
+
+  /* bench paste checks: real ELS syntax passes, legacy syntax is refused */
+  const good = [
+    "set vlans staff vlan-id 10",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+  ].join("\n");
+  ok(prepBenchCheck("vlan", good).ok, "T73 a real EX4300 vlan config passes the bench check");
+  const legacy = good + "\nset interfaces ge-0/0/2 unit 0 family ethernet-switching port-mode trunk";
+  const lr = prepBenchCheck("vlan", legacy);
+  ok(!lr.ok && lr.legacy.length === 1 && /port-mode/.test(lr.legacy[0]), "T73 port-mode is refused as pre-ELS");
+  ok(!prepBenchCheck("vlan", "show configuration\ninterfaces { }").ok, "T73 non-set output is not accepted");
+  const lacp = ["set chassis aggregated-devices ethernet device-count 2", "set interfaces ge-0/0/44 ether-options 802.3ad ae0", "set interfaces ae0 aggregated-ether-options lacp active"].join("\n");
+  ok(prepBenchCheck("lacp", lacp).ok, "T73 lacp bench check wants device-count, a member and an lacp mode");
+  ok(!prepBenchCheck("lacp", lacp.split("\n").slice(1).join("\n")).ok, "T73 and fails without aggregated-devices, like the real box");
+  const irbLegacy = "set vlans staff l3-interface vlan.10\nset interfaces vlan unit 10 family inet address 10.0.10.1/24";
+  ok(!prepBenchCheck("irb", irbLegacy).ok && prepBenchCheck("irb", irbLegacy).legacy.length >= 1, "T73 vlan.N is refused for irb");
+  ok(prepBenchCheck("irb", "set vlans staff l3-interface irb.10\nset interfaces irb unit 10 family inet address 10.0.10.1/24").ok, "T73 irb.N with an address passes");
+  Object.keys(PREP_BENCH_CHECKS).forEach(id => ok(PREP_UNITS.some(u => u.id === id && u.s), "T73 bench checks belong to a hands-on unit: " + id));
+
+  /* a bench hands-on marks the unit clean without the lab scenario */
+  const vu = PREP_UNITS.find(u => u.id === "vlan");
+  prepOnHandsOn(vu.s, { hints: 0, revealed: false, bench: true });
+  ok(prepUnitClean(vu) && prepUnitState(vu).bench === prepDay(0), "T73 a passed bench paste counts as a clean hands-on on real hardware");
+
+  /* shared mastery with Junle: a mastered topic credits one of the two quiz days */
+  localStorage.setItem("junle_mastery", JSON.stringify({ topics: { lacp: { seen: 10, ok: 9, streak: 3 }, vlans: { seen: 10, ok: 8, streak: 2 }, irb: { seen: 2, ok: 2, streak: 2 } } }));
+  ok(prepJunleLevel("lacp") === 3 && prepJunleLevel("vlans") === 2 && prepJunleLevel("irb") === 0, "T73 Junle mastery levels are read the way Junle computes them");
+  const lu = PREP_UNITS.find(u => u.id === "lacp");
+  prepMarkQuizDay(lu, 90);
+  ok(prepUnitQuizPassed(lu), "T73 one lab check plus Junle mastery passes the quiz requirement");
+  prepMarkQuizDay(vu, 90);
+  ok(!prepUnitQuizPassed(vu), "T73 but a topic Junle has only at level 2 still needs two lab days");
+
+  /* Junle mistakes become typed cards */
+  localStorage.setItem("junle_mistakes", JSON.stringify({ items: {
+    "set interfaces ae0 aggregated-ether-options lacp active": { n: 3, last: "set interfaces ae0 lacp active", task: "Make ae0 send LACP packets.", topic: "lacp" },
+    "quiz:lacp:what is": { n: 1, last: "b) nothing" },
+  } }));
+  const jc = prepJunleCards();
+  ok(jc.length === 1 && jc[0].typed && jc[0].answer === "set interfaces ae0 aggregated-ether-options lacp active" && jc[0].dom === "cb", "T73 a journal mistake with a task becomes a typed card; quiz entries are skipped");
+  ok(prepQ(jc[0].id) && prepQ(jc[0].id).id === jc[0].id, "T73 typed Junle cards resolve by id");
+  const typed = prepTypedQuestions("cb", 1, {});
+  ok(typed.length === 1 && typed[0].junle, "T73 the cool-down prefers a Junle mistake for its typed question");
+  ok(prepTypedQuestions("nf", 1, {}).length === 1, "T73 and falls back to bank typed questions when the domain has none");
+
+  /* an unclean hands-on nudges Junle's review queue */
+  prepOnHandsOn("lacp-bundle", { hints: 2, revealed: false });
+  const nudge = JSON.parse(localStorage.getItem("junle_nudge"));
+  ok(nudge && nudge.topics.lacp === prepDay(0), "T73 a hinted hands-on sends the topic back to Junle for review");
+
+  /* readiness summary written for Junle */
+  const rs = JSON.parse(localStorage.getItem("junoslab-readiness"));
+  ok(rs && typeof rs.domains.rf === "number" && typeof rs.overall === "number", "T73 the lab publishes a readiness summary Junle can weight its mix with");
+
+  /* decay */
+  ok(prepDecay(0) === 1 && prepDecay(14) === 1, "T73 fresh cards do not decay");
+  ok(prepDecay(30) < prepDecay(22) && prepDecay(22) < 1, "T73 cards decay gradually after two weeks");
+  ok(prepDecay(60) < prepDecay(45) && prepDecay(400) === 0.3, "T73 and keep decaying past a month, bottoming out at 0.3");
+
+  /* debrief counters follow the CLI */
+  wipeLab();
+  const sw0 = makeSwitch(0, 0, 8);
+  rebuildAllDerived();
+  prepStrictEngage();
+  ["configure", "set vlans staff vlan-id 10", "set vlans staff bogus-keyword", "commit", "rollback 1", "run show vlans"].forEach(c => runCliCommand(devices[sw0], c, false));
+  ok(PREP_BENCH && PREP_BENCH.cmds === 6 && PREP_BENCH.edits === 2 && PREP_BENCH.commits === 1 && PREP_BENCH.rollbacks === 1 && PREP_BENCH.shows === 1,
+     "T73 the debrief counts commands, edits, commits, rollbacks and shows (" + JSON.stringify(PREP_BENCH) + ")");
+  ok(PREP_BENCH.rejected >= 1, "T73 and rejected commands");
+  prepStrictRelease();
+  ok(PREP_BENCH === null, "T73 counters stop when bench rules lift");
+
+  /* exam day: 65 questions, 90 minutes, recorded as its own kind */
+  prepMockDone(70, {}, 65, "examday");
+  ok(prepLoad().mocks[prepLoad().mocks.length - 1].kind === "examday", "T73 exam-day sittings are recorded as such");
+
+  /* shift history strip renders 28 cells */
+  const host = renderResume();
+  ok(host.querySelectorAll(".prep-hist-day").length === 28, "T73 the front door shows four weeks of shift history");
+  ok(!!host.querySelectorAll(".prep-export")[0], "T73 and a review-card export for the bot");
+
+  /* course bar has the drill step */
+  prepLoad().diag = { day: prepDay(-1), pct: 50 }; prepSave();
+  renderCourseBar();
+  const names = document.getElementById("course-bar").querySelectorAll(".prep-step-name").map(n => n.textContent);
+  ok(names.indexOf("Junle drill") !== -1, "T73 the shift panel lists the Junle drill step");
+
+  try{ localStorage.removeItem(PREP_KEY); localStorage.removeItem("junle_mastery"); localStorage.removeItem("junle_mistakes"); localStorage.removeItem("junle_nudge"); localStorage.removeItem("junoslab-readiness"); }catch(e){}
+  prepReset();
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

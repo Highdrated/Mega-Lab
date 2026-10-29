@@ -248,14 +248,18 @@ function startMockExam(){
     { value: 20, label: "20 questions \u00b7 ~25 min", desc: "Coffee-break exam" },
     { value: 40, label: "40 questions \u00b7 ~50 min", desc: "Serious rehearsal" },
     { value: 65, label: "65 questions \u00b7 ~85 min", desc: "Full JNCIA-length simulation" },
+    { value: "day", label: "Exam day \u00b7 65 questions \u00b7 90 min", desc: "No feedback until the end, no pause. Scored like the real sitting." },
   ]).then(function(n){
     if(n === null) return;
+    var day = n === "day";
+    if(day) n = 65;
     MOCK = {
       qs: examDraw(n),
       i: 0, correct: 0,
       perDom: {}, missed: [],
-      endsAt: Date.now() + n * 78 * 1000,
+      endsAt: Date.now() + (day ? 90 * 60 : n * 78) * 1000,
       timer: null,
+      day: day,
     };
     renderMockQuestion();
     MOCK.timer = setInterval(function(){
@@ -290,7 +294,10 @@ function renderMockQuestion(){
   top.innerHTML = "<span>Question " + (MOCK.i + 1) + " / " + MOCK.qs.length + "</span><span id='mock-timer' class='mock-timer'></span>";
   var quit = document.createElement("button");
   quit.textContent = "abandon";
-  quit.onclick = function(){ finishMockExam(false, true); };
+  quit.onclick = function(){
+    if(MOCK.day){ modalConfirm("Abandon exam day?", "On the real day there is no leaving the room. Abandoning scores nothing.", "Abandon").then(function(v){ if(v) finishMockExam(false, true); }); return; }
+    finishMockExam(false, true);
+  };
   top.appendChild(quit);
   card.appendChild(top);
   var qt = document.createElement("div");
@@ -301,7 +308,7 @@ function renderMockQuestion(){
   var settle = function(correct, givenText){
     if(answered) return;
     answered = true;
-    if(typeof SFX !== "undefined") (correct ? SFX.ding : SFX.womp)();
+    if(typeof SFX !== "undefined" && !MOCK.day) (correct ? SFX.ding : SFX.womp)();
     if(correct) MOCK.correct++;
     MOCK.perDom[q.d] = MOCK.perDom[q.d] || { c: 0, t: 0 };
     MOCK.perDom[q.d].t++;
@@ -314,7 +321,8 @@ function renderMockQuestion(){
       MOCK.i++;
       if(MOCK.i >= MOCK.qs.length) finishMockExam(false);
       else renderMockQuestion();
-    }, correct ? 350 : 1200);
+    }, MOCK.day ? 180 : correct ? 350 : 1200);
+    if(MOCK.day) return;
     var fb = document.createElement("div");
     fb.className = correct ? "mock-fb mock-fb-ok" : "mock-fb mock-fb-bad";
     fb.innerHTML = svgMark(correct ? "check" : "cross") + (correct ? "" : " " + (q.typed ? "answer: " + q.answer : ""));
@@ -338,7 +346,7 @@ function renderMockQuestion(){
       b.className = "mock-opt";
       b.textContent = o;
       b.onclick = function(){
-        b.classList.add(oi === q.right ? "pg-q-right" : "pg-q-wrong");
+        if(!MOCK.day) b.classList.add(oi === q.right ? "pg-q-right" : "pg-q-wrong");
         settle(oi === q.right, o);
       };
       card.appendChild(b);
@@ -353,7 +361,7 @@ function finishMockExam(timeUp, abandoned){
   var total = MOCK.i;
   var pct = total ? Math.round((MOCK.correct / total) * 100) : 0;
   var pass = pct >= 65;
-  if(typeof prepMockDone === "function" && total >= 20 && !timeUp) prepMockDone(pct, MOCK.perDom, total);
+  if(typeof prepMockDone === "function" && total >= 20) prepMockDone(pct, MOCK.perDom, total, MOCK.day ? "examday" : "mock");
   if(typeof awardXp === "function" && total >= 5){
     var lengthMult = total >= 65 ? 1.5 : total >= 40 ? 1.2 : 1;
     var xp = Math.round((pct / 3) * lengthMult) + (pass ? 25 : 0);

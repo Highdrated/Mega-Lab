@@ -16,7 +16,7 @@ No build step, no dependencies — open `index.html` in a browser.
 | `js/rank.js` | Rank/XP progression — career ladder (Trainee NOC Technician → Datacenter Chief Architect), fed by tickets, contracts, quiz mastery, and mock exams |
 | `js/course.js` | JNCIA learning path, quiz-mastery tracking, next-up cards, the 15-minute session ritual |
 | `js/mockexam.js` | Timed mock exam engine — weighted toward past mistakes, per-domain scoring |
-| `js/prep.js` | JNCIA prep flow (the default front door): seven JN0-105 blueprint domains, readiness from answer accuracy, spaced review cards, daily shifts (warm-up / lesson / hands-on / cool-down), diagnostic and weekly checks, unit mastery (80% on two days + a hands-on), bench rules that lock strict Junos during hands-on, book-the-exam gate |
+| `js/prep.js` | JNCIA prep flow (the default front door): seven JN0-105 blueprint domains, readiness from answer accuracy with decay, spaced review cards, daily shifts (warm-up / Junle drill / lesson / hands-on / cool-down with a typed command), diagnostic and weekly checks, unit mastery (80% on two days + a hands-on; Junle level-3 mastery credits one day), bench rules that lock strict Junos during hands-on with a debrief after, real-EX4300 paste checks (legacy syntax refused), exam-day mock, shift history, review-card export for the Telegram bot, book-the-exam gate |
 | `tests/no-emoji.js` | Standalone CI guard: fails the build if pictographic emoji creep into any learning material |
 | `js/protocols.js` | The Protocols tab: field guides (problem / how / live prereqs / config / numbers / verify / breaks / ELS notes / 30-second answer / quiz), per-protocol canvas animations, prereq-hover device glow, jump-to-scenario |
 | `js/core.js` | Global state, IP math, device factories, the config-tree engine (set/delete/render/diff) |
@@ -29,6 +29,18 @@ No build step, no dependencies — open `index.html` in a browser.
 | `tests/` | Headless test suite: `node tests/run.js` (DOM shim + end-to-end assertions through the real CLI and engine) |
 | `juniper-lab.html` | Redirect stub (the app's old single-file home) |
 | `juniper-lab-v1-backup.html` | Frozen pre-rewrite version |
+
+## Cross-lab links (same origin, localStorage)
+
+| Key | Written by | Read by | Purpose |
+|---|---|---|---|
+| `junle_mastery`, `junle_mistakes` | Junle | lab | topic mastery credits a unit check day; journal mistakes become typed cool-down cards |
+| `junoslab-readiness` | lab | Junle | `{domains:{nf,jof,ui,cb,omm,rf,rpff}, overall}` so Junle's daily mix leans on the weakest domain |
+| `junle_nudge` | lab | Junle | `{topics:{lacp:"YYYY-MM-DD"}}`: a hinted hands-on sends the topic back to Junle's review queue |
+| `junle_handoff` | Junle | lab | result of a `#shift:<topic>` drill run; the lab's shift picks it up and moves on |
+| Workshop `postMessage({type:"workshop-launch", id, hash})` | either lab | launcher | switch tabs inside the Workshop (Junle `lab` command, lab "Open Junle") |
+
+Review-card export (`Export cards for the bot` on the front door): `{exported, source, due:[...], all:[...]}` with `{id, domain, question, options|null, answer, typed, why, due, lapses}` per card.
 
 ## Conventions
 
