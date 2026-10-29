@@ -299,7 +299,8 @@ def l10():
                 "body": [
                     "`continue` skips to the next item.",
                     "`break` stops the loop completely.",
-                    "Use them in foreach, for and while. In ForEach-Object use `return` to skip.",
+                    "Use them in foreach, for and while.",
+                    "Pitfall: inside `ForEach-Object`, `continue` and `break` act on an outer loop, or stop the whole pipeline. Use `return` to skip one item.",
                 ],
                 "code": "foreach ($n in 1..5) {\n  if ($n -eq 2) { continue }\n  if ($n -eq 4) { break }\n  $n\n}",
                 "out": "1\n3",
@@ -556,7 +557,7 @@ def l11():
              "why": "return leaves before \"b\" is reached."},
             {"t": "predict", "code": "function Get-N {\n  param([int]$N)\n  $N\n}\nGet-N -N 2.7",
              "choices": ["2.7", "2", "3"], "a": 2,
-             "why": "[int] rounds 2.7 to the nearest whole number."},
+             "why": "[int] rounds 2.7 to the nearest whole number. An exact .5 goes to the even number: 2.5 becomes 2."},
             {"t": "predict", "code": 'function Get-Data {\n  $null = "hidden"\n  "shown"\n}\nGet-Data',
              "choices": ["hidden\nshown", "shown", "(nothing shown)"], "a": 1,
              "why": "Assigning to $null throws the value away. Only \"shown\" is output."},
@@ -682,7 +683,7 @@ def l12():
                 "h": "Two kinds of errors",
                 "body": [
                     "Non-terminating: red text, then the next line still runs. Most cmdlet errors are this kind.",
-                    "Terminating: the script stops, unless a `catch` takes it.",
+                    "Terminating: the command stops at once, and a `catch` can take it.",
                     "`-ErrorAction SilentlyContinue` or `Ignore` hides a non-terminating error.",
                 ],
                 "code": 'Get-Item x.txt -ErrorAction Ignore\n"still running"',
@@ -726,7 +727,7 @@ def l12():
                 "h": "$Error and the preference",
                 "body": [
                     "`$Error[0]` is the newest error of this session.",
-                    "`$ErrorActionPreference = \"Stop\"` makes every error terminating from that point on.",
+                    "`$ErrorActionPreference = \"Stop\"` makes cmdlet errors terminating from that point on, as if every cmdlet had `-ErrorAction Stop`.",
                 ],
                 "code": '$ErrorActionPreference = "Stop"\ntry {\n  Get-Item x.txt\n} catch { "caught" }',
                 "out": "caught",
@@ -803,8 +804,8 @@ def l12():
 
             {"t": "fill", "code": 'try {\n  Get-Item x.txt -ErrorAction ___\n} catch { "missing" }',
              "target": "Shows missing when x.txt is not there",
-             "choices": ["Continue", "Stop", "SilentlyContinue", "Catch"], "ok": [1],
-             "why": "Only Stop makes the error reach catch."},
+             "choices": ["Continue", "Stop", "SilentlyContinue", "Ignore"], "ok": [1],
+             "why": "Only Stop makes the error reach catch. The others show red text or hide the error, but catch never runs."},
             {"t": "fill", "code": 'try { throw "x" }\ncatch { $_.___.Message }',
              "target": "Shows x",
              "choices": ["Error", "Exception", "Err"], "ok": [1],
@@ -907,7 +908,7 @@ def l13():
                 "h": "param() at the very top",
                 "body": [
                     "A script takes inputs just like a function.",
-                    "`param()` must be the first command in the file.",
+                    "`param()` must come before any other code. Only comments and `#Requires` may sit above it.",
                     "Run it as `.\\report.ps1 -Dept Helpdesk`.",
                 ],
                 "code": 'param(\n  [string]$Dept = "Sales"\n)\n"Report for $Dept"',
@@ -939,7 +940,7 @@ def l13():
             {
                 "h": "Execution policy",
                 "body": [
-                    "On Windows, the execution policy decides if scripts may run.",
+                    "On Windows, the execution policy decides if scripts may run. On Mac and Linux it is not enforced.",
                     "`RemoteSigned`: your own scripts run; downloaded ones need a signature.",
                     "`Set-ExecutionPolicy RemoteSigned -Scope CurrentUser` sets it only for you, no admin needed.",
                 ],
@@ -1047,7 +1048,7 @@ def l13():
              "why": "-Off would switch it off."},
 
             {"t": "order", "lines": ["Set-StrictMode -Version Latest", '"Report for $Dept"', 'param([string]$Dept = "Sales")'],
-             "target": "Shows Report for Sales",
+             "target": "Turns on StrictMode, then shows Report for Sales",
              "sol": "2,0,1", "ok": ["2,0,1"],
              "why": "param() must be first in the file."},
             {"t": "order", "lines": ["Stop-Transcript", "Start-Transcript -Path $log", '$log = Join-Path $PSScriptRoot "log.txt"', "Get-Date"],
