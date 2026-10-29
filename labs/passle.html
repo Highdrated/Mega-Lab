@@ -393,6 +393,15 @@ body[data-phase="4"] #v-kitchen::before,body[data-phase="5"] #v-kitchen::before{
 .dc{display:flex;gap:8px;align-items:center;text-transform:none;letter-spacing:0;font-family:var(--serif);font-size:13px}
 .dc span{font-family:var(--mono);font-size:10.5px;color:var(--brass)}
 .dc.own{opacity:1!important;background:var(--herb2);border-color:rgba(79,122,51,.35)}
+.room2{position:relative;width:100%;max-width:980px;margin-left:auto!important;margin-right:auto!important;aspect-ratio:1024/572;border-radius:8px;overflow:hidden;background:#f3ead8 url(img/passle/room/room.webp) center/cover no-repeat;border:1px solid var(--line);margin:2px 0 6px}
+.room2 .ri{position:absolute;width:auto;transform:translateX(-50%);pointer-events:none;filter:drop-shadow(0 3px 2px rgba(90,74,58,.22))}
+.room2 .ri.fresh{animation:riIn .9s cubic-bezier(.2,.9,.3,1.25) both}
+@keyframes riIn{0%{opacity:0;transform:translate(-50%,-26px) scale(.86)}60%{opacity:1}100%{opacity:1;transform:translate(-50%,0) scale(1)}}
+.up .uimg{height:56px;width:auto;align-self:flex-start;margin-bottom:2px;filter:drop-shadow(0 2px 2px rgba(90,74,58,.18))}
+.up:not(.max) .uimg.hire{filter:grayscale(.35) opacity(.85)}
+.dc img{height:26px;width:auto}
+.tl .front{display:block;height:124px;width:auto;margin:4px 0 6px;filter:drop-shadow(0 3px 3px rgba(90,74,58,.2))}
+@media (prefers-reduced-motion:reduce){.room2 .ri.fresh{animation:none}}
 .dc.own span{color:var(--herb)}
 @media (max-width:1150px){.till{grid-template-columns:1fr}.ups{grid-template-columns:repeat(2,minmax(0,1fr))}.takings{grid-template-columns:repeat(2,minmax(0,1fr))}.guest{grid-template-columns:auto minmax(0,1fr)}.pat{grid-column:1/-1}}
 .stars{color:var(--brass);letter-spacing:1px;margin-right:8px;font-size:12px}
@@ -11801,16 +11810,17 @@ function takingsHtml(){
 }
 function buy(kind,id){
   tillState();
-  if(kind==='up'){const u=UPGRADES.find(x=>x.id===id),l=lvlOf(id);if(l>=u.max)return;const c=upCost(u);if(S.cash<c){sfx.bad();return}S.cash-=c;S.upg[id]=l+1;toast(u.name+' · level '+(l+1),u.fx(l+1)+'.','happy')}
-  else{const dc=DECOR.find(x=>x.id===id);if(S.decor.includes(id)||S.cash<dc.cost){sfx.bad();return}S.cash-=dc.cost;S.decor.push(id);toast(dc.name,'The dining room looks finer. +5% on all cash.','serve')}
-  sfx.serve();save();renderCash(true);renderKitchen();
+  if(kind==='up'){const u=UPGRADES.find(x=>x.id===id),l=lvlOf(id);if(l>=u.max)return;const c=upCost(u);if(S.cash<c){sfx.bad();return}S.cash-=c;S.upg[id]=l+1;freshDecor=l===0?id:null;toast(u.name+' · level '+(l+1),u.fx(l+1)+'.','happy')}
+  else{const dc=DECOR.find(x=>x.id===id);if(S.decor.includes(id)||S.cash<dc.cost){sfx.bad();return}S.cash-=dc.cost;S.decor.push(id);freshDecor=id;toast(dc.name,'The dining room looks finer. +5% on all cash.','serve')}
+  sfx.place(id);save();renderCash(true);renderKitchen();setTimeout(()=>{freshDecor=null},1200);
+  if(kind!=='up'||freshDecor){const r=document.querySelector('.room2');if(r)r.scrollIntoView({behavior:'smooth',block:'nearest'})}
 }
 function shopHtml(){
   tillState();const li=bistroLevel(),cur=LEVELS[li],nx=LEVELS[li+1];
   const pct=nx?Math.min(100,(S.earned-cur[0])/(nx[0]-cur[0])*100):100;
-  let h='<div class="till"><div class="tl"><small>Your place</small><h3>'+cur[1]+'</h3><div class="lvbar"><i style="width:'+pct.toFixed(1)+'%"></i></div><p>'+(nx?fmtE(nx[0]-S.earned)+' more takings to become a <b>'+nx[1]+'</b>':'The finest table in town.')+'</p><p class="intill">In the till: <b>'+fmtE(S.cash)+'</b></p><p class="mult">Cash per answer ×'+cashMult().toFixed(2)+' · lifetime '+fmtE(S.earned)+'</p></div><div class="ups">';
-  UPGRADES.forEach(u=>{const l=lvlOf(u.id),max=l>=u.max,c=upCost(u);h+='<div class="up'+(max?' max':'')+'"><b>'+u.name+'</b><span class="pips">'+Array.from({length:u.max},(_,i)=>'<i class="'+(i<l?'on':'')+'"></i>').join('')+'</span><small>'+(l?u.fx(l):'Not hired yet')+'</small><button data-kind="up" data-id="'+u.id+'"'+(max||S.cash<c?' disabled':'')+'>'+(max?'Maxed':'Buy · '+fmtE(c))+'</button><em>'+(max?'':'Next: '+u.next)+'</em></div>'});
-  h+='</div><div class="habrow">'+freezeHtml()+recapHtml(weekStats(weekKey())||{days:0,ft:0,cards:0,cash:0,combo:0,weak:null},'This week so far')+'</div>'+ordersHtml()+specialHtml()+regularsHtml()+'<div class="decor"><small>Dining room · +5% cash each · everything you buy appears here</small>'+roomSvg(S.decor)+DECOR.map(dc=>{const own=S.decor.includes(dc.id);return '<button class="dc'+(own?' own':'')+'" data-kind="dc" data-id="'+dc.id+'"'+(own||S.cash<dc.cost?' disabled':'')+'>'+dc.name+'<span>'+(own?'✓ in place':fmtE(dc.cost))+'</span></button>'}).join('')+'</div></div>';
+  let h='<div class="till"><div class="tl"><small>Your place</small><img class="front" src="img/passle/front/'+FRONTS[Math.min(li,FRONTS.length-1)]+'.webp" alt="'+cur[1]+'"><h3>'+cur[1]+'</h3><div class="lvbar"><i style="width:'+pct.toFixed(1)+'%"></i></div><p>'+(nx?fmtE(nx[0]-S.earned)+' more takings to become a <b>'+nx[1]+'</b>':'The finest table in town.')+'</p><p class="intill">In the till: <b>'+fmtE(S.cash)+'</b></p><p class="mult">Cash per answer ×'+cashMult().toFixed(2)+' · lifetime '+fmtE(S.earned)+'</p></div><div class="ups">';
+  UPGRADES.forEach(u=>{const l=lvlOf(u.id),max=l>=u.max,c=upCost(u);h+='<div class="up'+(max?' max':'')+'"><img class="uimg'+(l?'':' hire')+'" src="'+RM+UP_IMG[u.id]+'.webp" alt=""><b>'+u.name+'</b><span class="pips">'+Array.from({length:u.max},(_,i)=>'<i class="'+(i<l?'on':'')+'"></i>').join('')+'</span><small>'+(l?u.fx(l):'Not hired yet')+'</small><button data-kind="up" data-id="'+u.id+'"'+(max||S.cash<c?' disabled':'')+'>'+(max?'Maxed':'Buy · '+fmtE(c))+'</button><em>'+(max?'':'Next: '+u.next)+'</em></div>'});
+  h+='</div><div class="habrow">'+freezeHtml()+recapHtml(weekStats(weekKey())||{days:0,ft:0,cards:0,cash:0,combo:0,weak:null},'This week so far')+'</div>'+ordersHtml()+specialHtml()+regularsHtml()+'<div class="decor"><small>Dining room · +5% cash each · everything you buy appears here</small>'+roomSvg(S.decor)+DECOR.map(dc=>{const own=S.decor.includes(dc.id);return '<button class="dc'+(own?' own':'')+'" data-kind="dc" data-id="'+dc.id+'"'+(own||S.cash<dc.cost?' disabled':'')+'><img src="'+RM+DC_IMG[dc.id]+'.webp" alt="">'+dc.name+'<span>'+(own?'✓ in place':fmtE(dc.cost))+'</span></button>'}).join('')+'</div></div>';
   return h;
 }
 function mountShop(box){
@@ -12123,22 +12133,31 @@ function medalsHtml(){
   return '<div class="medals"><div class="mh"><small>Medals</small><b>'+got+' of '+MEDALS.length+'</b></div><div class="mgrid">'+MEDALS.map(m=>{const own=S.medals.includes(m.id),p=Math.min(m.n,Math.floor(st[m.s]||0));return '<div class="medal'+(own?' own':'')+'" title="'+esc(m.d)+' · '+fmtE(m.cash)+'"><span class="disc">'+(own?'✦':Math.round(p/m.n*100)+'%')+'</span><b>'+esc(m.name)+'</b><small>'+(own?'earned':p.toLocaleString('en-US')+' / '+m.n.toLocaleString('en-US'))+'</small></div>'}).join('')+'</div></div>';
 }
 
+const RM='img/passle/room/';
+const ROOM_ITEMS=[
+ {id:'cellarbar',img:'wine-bar',cx:115,b:492,h:300},
+ {id:'star',img:'arch',cx:912,b:490,h:262},
+ {id:'terrace',img:'awning',cx:640,b:222,h:104},
+ {id:'terrace',img:'olive-l',cx:478,b:490,h:120},
+ {id:'terrace',img:'olive-r',cx:800,b:490,h:120},
+ {id:'piano',img:'piano',cx:640,b:482,h:165},
+ {id:'linen',img:'table-linen',cx:372,b:500,h:175},
+ {id:'chandelier',img:'chandelier',cx:372,b:150,h:150},
+ {id:'*',img:'chalkboard',cx:230,b:540,h:120},
+ {id:'up:somm',img:'armand',cx:165,b:560,h:118},
+ {id:'up:theo',img:'theo',cx:770,b:566,h:118}
+];
+let freshDecor=null;
 function roomSvg(own){
-  const has=id=>own.includes(id);
-  const ink='#5a4a3a',line='#c9b896',wall='#f6efe1',floor='#e9dcc3',wood='#a8794a',brass='#c9a45e',herb='#6f8f4e',cloth='#fffdf6';
-  const table=(x)=>'<g transform="translate('+x+',0)"><rect x="-34" y="150" width="68" height="6" rx="2" fill="'+wood+'"/>'+(has('linen')?'<path d="M-40 148 h80 v14 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -12 0 q-6 6 -8 0z" fill="'+cloth+'" stroke="'+line+'"/>':'')+'<line x1="-26" y1="156" x2="-26" y2="186" stroke="'+wood+'" stroke-width="4"/><line x1="26" y1="156" x2="26" y2="186" stroke="'+wood+'" stroke-width="4"/><path d="M-58 186 v-34 h12 v20 h-12" fill="none" stroke="'+wood+'" stroke-width="3"/><path d="M58 186 v-34 h-12 v20 h12" fill="none" stroke="'+wood+'" stroke-width="3"/><circle cx="-10" cy="146" r="5" fill="#fff" stroke="'+line+'"/><circle cx="12" cy="146" r="5" fill="#fff" stroke="'+line+'"/><path d="M0 132 v12" stroke="'+brass+'" stroke-width="2"/><ellipse cx="0" cy="130" rx="3" ry="5" fill="#f3c66b"/></g>';
-  let s='<svg class="roomsvg" viewBox="-250 0 1400 220" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Your dining room"><rect x="-250" width="1400" height="220" fill="'+wall+'"/><rect x="-250" y="186" width="1400" height="34" fill="'+floor+'"/><line x1="-250" y1="186" x2="1150" y2="186" stroke="'+line+'"/><path d="M-250 120 H1150" stroke="'+line+'" stroke-dasharray="2 6"/>';
-  s+='<g><rect x="560" y="40" width="130" height="100" rx="4" fill="'+(has('terrace')?'#dfe9d2':'#e7eef0')+'" stroke="'+line+'" stroke-width="2"/><line x1="625" y1="40" x2="625" y2="140" stroke="'+line+'" stroke-width="2"/><line x1="560" y1="90" x2="690" y2="90" stroke="'+line+'" stroke-width="2"/>';
-  if(has('terrace'))s+='<path d="M548 40 h154 l-10 -16 h-134z" fill="#b5561d" opacity=".85"/><path d="M548 40 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0 q11 10 22 0" fill="#f3e7cf" stroke="#b5561d"/><circle cx="580" cy="128" r="10" fill="'+herb+'"/><circle cx="670" cy="126" r="12" fill="'+herb+'"/><circle cx="600" cy="120" r="6" fill="#e0a64a"/>';
-  s+='</g>';
-  if(has('chandelier'))s+='<g><line x1="300" y1="0" x2="300" y2="30" stroke="'+brass+'" stroke-width="2"/><path d="M262 40 q38 22 76 0" fill="none" stroke="'+brass+'" stroke-width="3"/><circle cx="300" cy="36" r="6" fill="'+brass+'"/>'+[262,281,300,319,338].map(x=>'<line x1="'+x+'" y1="'+(x===300?44:40)+'" x2="'+x+'" y2="28" stroke="'+brass+'" stroke-width="2"/><ellipse cx="'+x+'" cy="24" rx="3" ry="5" fill="#f3c66b"/>').join('')+'<circle cx="300" cy="40" r="60" fill="#f3c66b" opacity=".12"/></g>';
-  if(has('piano'))s+='<g transform="translate(60,0)"><path d="M0 186 v-60 q0 -24 30 -24 h70 v84" fill="#2b2119"/><rect x="0" y="126" width="100" height="10" fill="#f6efe1"/>'+Array.from({length:9},(_,i)=>'<rect x="'+(6+i*10)+'" y="126" width="4" height="6" fill="#2b2119"/>').join('')+'<line x1="10" y1="186" x2="10" y2="140" stroke="#2b2119" stroke-width="4"/><line x1="92" y1="186" x2="92" y2="140" stroke="#2b2119" stroke-width="4"/><rect x="34" y="160" width="34" height="8" rx="2" fill="'+wood+'"/></g>';
-  if(has('cellarbar'))s+='<g transform="translate(730,0)"><rect x="0" y="60" width="140" height="126" fill="'+wood+'" opacity=".9"/>'+[80,110,140].map(y=>'<line x1="0" y1="'+y+'" x2="140" y2="'+y+'" stroke="#7a5532" stroke-width="3"/>'+Array.from({length:7},(_,i)=>'<rect x="'+(8+i*19)+'" y="'+(y-22)+'" width="8" height="20" rx="3" fill="'+['#6b1f2a','#3f5b2a','#6b1f2a','#c9a45e','#3f5b2a','#6b1f2a','#e8d9a8'][i]+'"/>').join('')).join('')+'<rect x="-10" y="150" width="160" height="10" fill="#7a5532"/></g>';
-  if(has('star'))s+='<g transform="translate(470,0)"><path d="M0 186 v-110 a40 40 0 0 1 80 0 v110" fill="#efe3c9" stroke="'+line+'" stroke-width="3"/><text x="40" y="70" text-anchor="middle" font-family="Fraunces, Georgia, serif" font-size="20" fill="'+brass+'">II</text><path d="M30 186 v-40 h20 v40" fill="'+wood+'" opacity=".4"/></g>';
-  s+=table(240)+table(395);
-  s+='</svg>';
-  return s;
+  const has=it=>it.id==='*'?own.length>0:it.id.startsWith('up:')?lvlOf(it.id.slice(3))>0:own.includes(it.id);
+  return '<div class="room2" role="img" aria-label="Your dining room">'+ROOM_ITEMS.filter(has).map(it=>{
+    const fresh=freshDecor&&(it.id===freshDecor||it.id==='up:'+freshDecor);
+    return '<img class="ri'+(fresh?' fresh':'')+'" src="'+RM+it.img+'.webp" alt="" style="left:'+(it.cx/10.24).toFixed(2)+'%;bottom:'+((572-it.b)/5.72).toFixed(2)+'%;height:'+(it.h/5.72).toFixed(2)+'%">';
+  }).join('')+'</div>';
 }
+const UP_IMG={pans:'pans',bell:'bell',somm:'armand',theo:'theo'};
+const DC_IMG={linen:'table-linen',chandelier:'chandelier',piano:'piano',terrace:'awning',cellarbar:'wine-bar',star:'arch'};
+const FRONTS=['1-cart','2-cafe','3-bistro','4-brasserie','5-restaurant','6-star1','7-star2','8-star3'];
 
 function answerOf(d){
   if(d.k==='pick')return d.o[d.a];
@@ -12488,7 +12507,22 @@ const sfx={
  target(){[392,523,659,784].forEach((f,i)=>beep(f,.14,'sine',.045,i*.11));beep(1047,.4,'triangle',.045,.46);beep(523,.4,'sine',.03,.46)},
  serve(){[523,659,784].forEach((f,i)=>beep(f,.09,'triangle',.035,i*.07));beep(1319,.35,'sine',.03,.24)},
  blip(){beep(1200,.05,'sine',.03,0,800);beep(900,.05,'sine',.025,.06,600)},
- click(){beep(1000,.03,'sine',.02)}
+ click(){beep(1000,.03,'sine',.02)},
+ place(id){
+  const B={
+   linen(){beep(520,.22,'sine',.03,0,260);beep(700,.2,'sine',.02,.08,330);beep(140,.12,'triangle',.05,.3)},
+   chandelier(){[1568,1760,2093,2349,2637,3136].forEach((f,i)=>beep(f,.25,'triangle',.025,i*.06));beep(4186,.6,'sine',.015,.4)},
+   piano(){[262,330,392,523].forEach((f,i)=>beep(f,.7,'triangle',.05,i*.13));[262,330,392].forEach(f=>beep(f,1.1,'sine',.03,.62))},
+   terrace(){[0,.18,.42,.6].forEach((d,i)=>beep(2600+i*180,.08,'sine',.03,d,3600+i*120));beep(1800,.12,'sine',.02,.8,2700)},
+   cellarbar(){beep(380,.06,'sine',.06,0,1300);beep(2637,.35,'sine',.035,.22);beep(3520,.3,'sine',.025,.24);beep(2637,.3,'sine',.03,.5);beep(3951,.28,'sine',.02,.52)},
+   star(){sfx.target()},
+   pans(){beep(196,.25,'square',.02);beep(523,.35,'triangle',.035,.02);beep(1175,.4,'sine',.02,.02);beep(659,.3,'triangle',.03,.22)},
+   bell(){beep(1760,1.1,'sine',.06);beep(3520,.6,'sine',.02);beep(5274,.3,'sine',.01)},
+   somm(){beep(700,.32,'sine',.045,0,1050);beep(1050,.28,'sine',.04,.3,620);beep(2637,.3,'sine',.03,.7);beep(3520,.25,'sine',.02,.72)},
+   theo(){beep(820,.25,'sine',.045,0,1200);beep(1200,.22,'sine',.04,.24,700);[0,1,2,3,4,5].forEach(i=>beep(2400,.02,'square',.012,.6+i*.055))}
+  };
+  (B[id]||sfx.serve)();
+ }
 };
 
 const $=id=>document.getElementById(id);
