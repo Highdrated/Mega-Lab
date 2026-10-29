@@ -19,6 +19,16 @@ const LABS_CONFIG = [
     angle: 150,
     glyph: '<rect x="2" y="2" width="12" height="12"/><path d="M2 6h12M6 2v12M9 9h3v3"/>'
   },
+  {
+    id: "junle-room",
+    name: "Junle Room",
+    tag: "Network",
+    sub: "castle workstation · console",
+    path: "labs/junle-room.html",
+    ring: "ring-mid",
+    angle: 270,
+    glyph: '<rect x="1.5" y="3" width="13" height="8" rx="1"/><path d="M6 14h4M8 11v3M4 6.5l2 1.5-2 1.5"/>'
+  },
     {
     id: "pyle",
     name: "Pyle",

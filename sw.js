@@ -1,4 +1,4 @@
-const CACHE = "workshop-v33";
+const CACHE = "workshop-v34";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -6,7 +6,7 @@ const PRECACHE = [
   "./js/traffic.config.js?v=1",
   "./js/track.js?v=1",
   "./js/sync.js?v=3",
-  "./js/labs.config.js?v=18",
+  "./js/labs.config.js?v=20",
   "./js/launcher.js?v=18",
   "./js/station.js?v=2",
   "./manifest.webmanifest",
