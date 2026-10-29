@@ -37,7 +37,7 @@
     { id: 'paging', label: 'Pagination math', group: 'math', lessons: [L('modle', 'Pagination', 'Pagination'), L('modle', 'Rounding up', 'Rounding up')], uses: [U(8, 'Math.ceil(14 / 10) = 2 pages')] },
     { id: 'cidr', label: 'CIDR sizes', group: 'net', lessons: [L('subnle', 'prefix', 'The /number'), L('subnle', 'block', 'Block size'), L('subnle', 'hosts', 'Counting hosts')], uses: [U(8, 'a /26 holds 64 addresses')] },
     { id: 'post', label: 'GET vs POST', group: 'php', lessons: [L('passle', 'pz21', 'GET reads, POST changes'), L('passle', 'pz20', 'Reading input with ??')], uses: [U(9, 'php://input + ??')] },
-    { id: 'validate', label: 'Allow-lists + 400', group: 'php', lessons: [L('passle', 'pz23', 'Allowlists and an errors list'), L('passle', 'pz46', 'HTTP status codes')], uses: [U(9, 'invalid page → 400')] },
+    { id: 'validate', label: 'Allow-lists + status codes', group: 'php', lessons: [L('passle', 'pz23', 'Allowlists and an errors list'), L('passle', 'pz46', 'HTTP status codes')], uses: [U(9, 'invalid page → 400'), U(17, 'not logged in → 401')] },
     { id: 'locks', label: 'Writing files safely', group: 'php', lessons: [L('passle', 'pz29', 'Writing JSON back'), L('passle', 'pz84', 'File modes, locks and streams')], uses: [U(9, "fopen 'c+' + flock")] },
     { id: 'escape', label: 'Escaping (XSS)', group: 'js', gap: 'webble', lessons: [L('passle', 'pz3', 'Escape on the way out'), L('webble', 'c15', 'App glue')], uses: [U(10, 'escapeHtml() on every note'), U(11, 'activity text')] },
     { id: 'dates', label: 'Dates + time ago', group: 'js', lessons: [L('hexle', 'r68', 'Dates: new Date and toLocaleTimeString'), L('hexle', 'r85', 'Date maths: getDay, getDate and day 0'), L('passle', 'pz51', 'Dates: DateTimeImmutable and format')], uses: [U(10, "date('c') on every post"), U(11, 'relAge() → 5m ago')] },
@@ -50,6 +50,15 @@
     { id: 'phpserver', label: 'php -S + ports', group: 'ship', lessons: [L('shelle', 'procs', 'Processes & ports'), L('shelle', 'port', 'Port is already allocated')], uses: [U(0, 'php -S localhost:8000')] },
     { id: 'curl', label: 'curl an API', group: 'ship', lessons: [L('shelle', 'net', 'Network checks')], uses: [U(0, 'curl -s localhost:8000/api/data.php')] },
     { id: 'docker', label: 'Dockerfile + permissions', group: 'ship', gap: 'shelle', lessons: [L('shelle', 'docker', 'Docker basics'), L('shelle', 'ship', 'Ship a PHP app')], uses: [U(0, 'FROM php:8.2-apache + chown www-data')] }
+,
+    { id: 'serverrules', label: 'Rules in PHP functions', group: 'php', lessons: [L('passle', 'pz13', 'Functions with types'), L('passle', 'pz11', 'if, elseif and else')], uses: [U(14, 'build_alerts() decides what is an alert')] },
+    { id: 'delegation', label: 'Event delegation', group: 'js', lessons: [L('hexle', 'r73', 'Event delegation')], uses: [U(14, 'one click listener for every alert row')] },
+    { id: 'csv', label: 'CSV files', group: 'data', lessons: [L('passle', 'pz62', 'Reading files: fopen, fgetcsv and finally')], uses: [U(15, 'toCSV() with quoted cells'), U(16, 'str_getcsv on every line')] },
+    { id: 'download', label: 'Downloads from the browser', group: 'js', gap: 'webble', lessons: [L('webble', 'c15', 'App glue')], uses: [U(15, 'Blob + object URL + a.download')] },
+    { id: 'validation', label: 'Validating input', group: 'php', lessons: [L('passle', 'pz22', 'Validate with filter_var'), L('passle', 'pz53', 'Regular expressions: preg_match')], uses: [U(16, 'every CSV line checked, errors name the line')] },
+    { id: 'fileinput', label: 'Reading a chosen file', group: 'js', gap: 'webble', lessons: [L('webble', 'c15', 'App glue')], uses: [U(16, 'await input.files[0].text()')] },
+    { id: 'passwords', label: 'Passwords + login', group: 'php', lessons: [L('passle', 'pz47', 'Passwords: hash, never store'), L('passle', 'pz48', 'Safe logins: new session id, CSRF token')], uses: [U(17, 'password_verify + a random token')] },
+    { id: 'forms', label: 'Form submit in JS', group: 'js', lessons: [L('hexle', 'r61', 'Forms in JS: submit and preventDefault')], uses: [U(17, 'the login form')] }
   ];
   const GROUPS = { page: 'Page · HTML + CSS', js: 'Behaviour · JavaScript', php: 'Server · PHP', data: 'Data', math: 'Math', net: 'Network', ship: 'Shipping' };
 

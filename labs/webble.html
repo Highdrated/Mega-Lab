@@ -2332,9 +2332,9 @@ function buildStudio(){
 }
 CH.push(buildStudio());
 CH.push({
-  id:'c15', name:'App glue', sub:'themes · popups · safe text · numbers · SVG maps',
+  id:'c15', name:'App glue', sub:'themes · popups · safe text · numbers · SVG maps · files',
   teach:`<div class="eyebrow">Chapter 15 · School</div><h2>App glue</h2>
-<p>Motion makes a site feel alive. These six small patterns make it work like an <b>app</b>: dashboards, tools, admin pages. You will meet every one of them again in your own projects (Rebble rebuilds them line by line).</p>
+<p>Motion makes a site feel alive. These eight small patterns make it work like an <b>app</b>: dashboards, tools, admin pages. You will meet every one of them again in your own projects (Rebble rebuilds them line by line).</p>
 <div class="flow"><b>script starts</b><i>→</i><b>theme set</b><i>→</i><b>data drawn safely</b><i>→</i><b class="hot">user clicks</b><i>→</i><b class="acc">popup opens / closes</b></div>
 <h3>1 · when may my script start?</h3>
 <div class="cols"><pre>&lt;script src="js/main.js" defer&gt;&lt;/script&gt;
@@ -2376,7 +2376,24 @@ li.innerHTML = site.name;</pre><ul><li><code>textContent</code> shows the text e
   const x = ((lng - B.minLng) / (B.maxLng - B.minLng)) * W;
   const y = H - ((lat - B.minLat) / (B.maxLat - B.minLat)) * H;
   return [Math.round(x), Math.round(y)];
-}</pre><ul><li>works for maps, charts, sliders, gauges: any "this range onto that range"</li><li>SVG's y grows <b>down</b>, latitude grows <b>up</b>: flip with <code>H − …</code></li><li>give the <code>&lt;svg&gt;</code> a <code>viewBox</code> and the browser scales the drawing to any size</li></ul></div>`,
+}</pre><ul><li>works for maps, charts, sliders, gauges: any "this range onto that range"</li><li>SVG's y grows <b>down</b>, latitude grows <b>up</b>: flip with <code>H − …</code></li><li>give the <code>&lt;svg&gt;</code> a <code>viewBox</code> and the browser scales the drawing to any size</li></ul></div>
+<h3>7 · reading a file the user picks</h3>
+<div class="cols"><pre>&lt;input type="file" id="pick" accept=".csv"&gt;
+
+const input = document.querySelector('#pick');
+input.addEventListener('change', async () => {
+  const text = await input.files[0].text();
+  console.log(text);
+});</pre><ul><li><code>input.files</code> = the list of chosen files (empty until you pick)</li><li><code>.text()</code> reads one as a string; it returns a promise, so <code>await</code></li><li>nothing is uploaded yet: the file stays in the browser until you <code>fetch</code> it somewhere</li></ul></div>
+<h3>8 · handing the user a file to save</h3>
+<div class="flow"><b>text</b><i>→</i><b>new Blob([text])</b><i>→</i><b>URL.createObjectURL()</b><i>→</i><b class="acc">&lt;a download&gt;.click()</b></div>
+<pre>const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
+const a = document.createElement('a');
+a.href = url;
+a.download = 'export.csv';
+a.click();
+setTimeout(() =&gt; URL.revokeObjectURL(url), 1000);</pre>
+<p>A <b>Blob</b> is a file that lives in memory. The object URL points at it, <code>download</code> says "save, don't open", and revoking later frees the memory.</p>`,
   drills:[
     {q:'Which event fires when the HTML is fully read? (event name)', a:['DOMContentLoaded'], hint:'DOM + Content + Loaded.'},
     {q:'Switch the page to dark: one line that sets <code>data-theme</code> on &lt;html&gt;.', a:[/^document\.documentElement\.setAttribute\(\s*(['"])data-theme\1\s*,\s*(['"])dark\2\s*\);?$/], kind:'js', show:"document.documentElement.setAttribute('data-theme', 'dark')"},
@@ -2386,7 +2403,10 @@ li.innerHTML = site.name;</pre><ul><li><code>textContent</code> shows the text e
     {q:'Put a user\'s text into <code>li</code> safely: <code>li.____ = text</code>', a:['textContent']},
     {q:'Show <code>n = 12450</code> as <code>12,450</code>. Write the expression.', a:[/^n\.toLocaleString\(\s*(['"])en-US\1\s*\)$/, /^n\.toLocaleString\(\)$/], kind:'js', show:"n.toLocaleString('en-US')"},
     {q:'Range 30 → 44 mapped onto 0 → 400 px. Where does 37 land? (number)', a:['200'], hint:'(37 − 30) / (44 − 30) = 0.5'},
-    {q:'Hide a popup so it can still fade in: opacity 0 plus which property stops it catching clicks? (property: value)', a:[/^pointer-events\s*:\s*none;?$/], kind:'css', show:'pointer-events: none'}
+    {q:'Hide a popup so it can still fade in: opacity 0 plus which property stops it catching clicks? (property: value)', a:[/^pointer-events\s*:\s*none;?$/], kind:'css', show:'pointer-events: none'},
+    {q:'Read the first chosen file of <code>input</code> as text (with await).', a:[/^await input\.files\[0\]\.text\(\)$/], kind:'js', show:'await input.files[0].text()'},
+    {q:'Which attribute on <code>&lt;a&gt;</code> makes a click save the file instead of opening it?', a:['download'], hint:'It also sets the file name.'},
+    {q:'Wrap the string <code>csv</code> in a file that lives in memory. Write the expression.', a:[/^new Blob\(\s*\[\s*csv\s*\]\s*(,\s*\{[^}]*\}\s*)?\)$/], kind:'js', show:'new Blob([csv])'}
   ],
   targets:[
   {
