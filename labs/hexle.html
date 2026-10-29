@@ -50,7 +50,17 @@ body[data-theme=ink] .plot .art{filter:none;mix-blend-mode:multiply}
 body[data-theme=ink] .plot .ground{background:radial-gradient(closest-side,rgba(29,27,24,.12),transparent)}
 body[data-theme=ink] #junie{mix-blend-mode:multiply}
 body[data-theme=ink][data-stage="target"]::before{display:none}
-body[data-theme=ink] #cauld{filter:grayscale(1) contrast(1.15);mix-blend-mode:multiply}
+body[data-theme=ink] #cauld{filter:none;mix-blend-mode:multiply}
+body[data-theme=ink] #hwitch,body[data-theme=ink] .fwitch,body[data-theme=ink] .fbuild,body[data-theme=ink] .art{mix-blend-mode:multiply;filter:none}
+body[data-theme=ink] #v-village:not(.custom) .plot .pframe{background:#f7f1e3;border-color:rgba(29,27,24,.35);outline-color:rgba(29,27,24,.1);box-shadow:0 10px 18px -12px rgba(29,27,24,.35)}
+body[data-theme=ink] .plot .plaque.empty{border-color:rgba(29,27,24,.14)}
+body[data-theme=ink] .plot .pcap i{background:rgba(184,56,43,.4)}
+body[data-theme=ink] #v-village:not(.custom) .plot .plaque:hover .pframe{border-color:rgba(184,56,43,.7);outline-color:rgba(184,56,43,.25)}
+.plot .stamp{position:absolute;right:3%;bottom:5%;width:44px;height:auto;transform:rotate(-7deg);mix-blend-mode:multiply;opacity:.92;pointer-events:none;z-index:2}
+.plot.fresh .stamp{animation:stampIn .55s cubic-bezier(.3,1.6,.5,1) .35s both}
+@keyframes stampIn{0%{opacity:0;transform:rotate(-7deg) scale(1.9)}100%{opacity:.92;transform:rotate(-7deg) scale(1)}}
+.plot .plaque .enso{position:absolute;left:50%;top:50%;width:78%;transform:translate(-50%,-50%);opacity:.16;mix-blend-mode:multiply;pointer-events:none}
+@media (prefers-reduced-motion:reduce){.plot.fresh .stamp{animation:none}}
 #ambient{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;display:none}
 body[data-theme=ink] #ambient{display:block}
 body>header,body>main{position:relative;z-index:1}
@@ -520,7 +530,7 @@ const IMGS={witch:'witchpng',hut:'hut',path:'path',shop:'shop',library:'book',ma
 const IMG_RE=/(?:\.\/)?img\/(witch|hut|path|shop|library|market|tower|garden|candles|observatory|catcafe|gate|bridge)\.png/g;
 const before=(a,b)=>!!a&&!!b&&!!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);
 const altOk=i=>!!i&&(i.getAttribute('alt')||'').trim().length>2;
-const ART_I={"hut":"img/hexle/ink/hut.webp","path":"img/hexle/ink/path.webp","shop":"img/hexle/ink/shop.webp","book":"img/hexle/ink/book.webp","market":"img/hexle/ink/market.webp","tower":"img/hexle/ink/tower.webp","garden":"img/hexle/ink/garden.webp","candle":"img/hexle/ink/candle.webp","observ":"img/hexle/ink/observ.webp","catcafe":"img/hexle/ink/catcafe.webp","gate":"img/hexle/ink/gate.webp","bridge":"img/hexle/ink/bridge.webp"};
+const ART_I={"witch":"img/hexle/ink/witch.webp","witchpng":"img/hexle/ink/witch.webp","drone":"img/hexle/ink/junie.webp","hut":"img/hexle/ink/hut.webp","path":"img/hexle/ink/path.webp","shop":"img/hexle/ink/shop.webp","book":"img/hexle/ink/book.webp","market":"img/hexle/ink/market.webp","tower":"img/hexle/ink/tower.webp","garden":"img/hexle/ink/garden.webp","candle":"img/hexle/ink/candle.webp","observ":"img/hexle/ink/observ.webp","catcafe":"img/hexle/ink/catcafe.webp","gate":"img/hexle/ink/gate.webp","bridge":"img/hexle/ink/bridge.webp"};
 const THEMES={grove:{name:'Grove',art:{},base:'grove',hello:'Grove theme: lanterns lit.'},orbital:{name:'Orbital',art:ART_O,base:'orb',hello:'Orbital theme online.'},ink:{name:'Ink',art:ART_I,base:'ink',hello:'Ink and paper. The brush is wet.'}};
 const TH=()=>THEMES[S.theme]||THEMES.grove;
 const art=k=>TH().art[k]||ART[k];
@@ -2462,7 +2472,7 @@ async function evaluate(code,css,js){
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
-  {const cd=$('cauld'),cs='img/hexle/brew/cauldron-'+(pct>=100?3:pct>=50?2:pct>0?1:0)+'.webp';if(cd&&cd.getAttribute('src')!==cs){cd.setAttribute('src',cs);cd.classList.remove('bump');void cd.offsetWidth;cd.classList.add('bump')}}
+  {const cd=$('cauld'),cs=(S.theme==='ink'?'img/hexle/ink/':'img/hexle/brew/')+'cauldron-'+(pct>=100?3:pct>=50?2:pct>0?1:0)+'.webp';if(cd&&cd.getAttribute('src')!==cs){cd.setAttribute('src',cs);cd.classList.remove('bump');void cd.offsetWidth;cd.classList.add('bump')}}
   const now=res.indexOf(false);
   const ol=$('steps');ol.innerHTML='';
   const hide=S.memo&&S.memo.t===S.t&&!S.memo.peek;
@@ -2573,7 +2583,8 @@ function renderVillage(){
     const g=document.createElement('div');g.className='ground';sc.appendChild(g);sc.appendChild(a);
     const pl=document.createElement('div');
     if(built){pl.className='plaque';pl.title='Open your build';const fr=document.createElement('div');fr.className='pframe';const pv=document.createElement('div');pv.className='pview';const f=document.createElement('iframe');f.title=p.name;f.tabIndex=-1;f.srcdoc=wrap(S.built[bt],S.builtCss[bt],S.builtJs[bt]);pv.appendChild(f);fr.appendChild(pv);pl.appendChild(fr);pl.onclick=()=>{sfx.blip();openViewer(p.name+(sb?' · enchanted':mb?' · master':''),S.built[bt],S.builtCss[bt],S.builtJs[bt])}}
-    else{pl.className='plaque empty';pl.textContent=next?'Awaiting target '+(p.t+1):'Arrives in a later version'}
+    else{pl.className='plaque empty';pl.textContent=next?'Awaiting target '+(p.t+1):'Arrives in a later version';if(next&&S.theme==='ink'){const e=document.createElement('img');e.className='enso';e.alt='';e.src='img/hexle/ink/enso.webp';pl.appendChild(e)}}
+    if(built&&S.theme==='ink'){const st=document.createElement('img');st.className='stamp';st.alt='';st.src='img/hexle/ink/seal-'+(sb?'moon':mb?'star':'hat')+'.webp';sc.appendChild(st)}
     const ROM=['I','II','III','IV','V','VI','VII','VIII','IX','X','XI','XII'];const cp=document.createElement('div');cp.className='pcap';cp.innerHTML='<i></i>Plate '+(ROM[i]||i+1)+(sb?' <b style="color:#c9a227;font-weight:400">☾</b>':mb?' <b style="color:#c9a227;font-weight:400">✦</b>':'')+'<i></i>';pl.appendChild(cp);
     sc.appendChild(pl);el.appendChild(sc);
     v.appendChild(el);
