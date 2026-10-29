@@ -7,7 +7,7 @@ const path = require("path");
 const vm = require("vm");
 
 const root = path.join(__dirname, "..");
-const order = ["core.js", "rank.js", "sound.js", "grammar.js", "cli.js", "engine.js", "ui.js", "planner.js", "juno.js", "scenarios.js", "protocols.js", "course.js", "mockexam.js", "ops.js", "notes.js"];
+const order = ["core.js", "rank.js", "sound.js", "grammar.js", "cli.js", "engine.js", "ui.js", "planner.js", "juno.js", "scenarios.js", "protocols.js", "course.js", "mockexam.js", "prep.js", "ops.js", "notes.js"];
 
 const ctx = vm.createContext({ console });
 ctx.__CSS = fs.readFileSync(path.join(root, "css", "style.css"), "utf8");

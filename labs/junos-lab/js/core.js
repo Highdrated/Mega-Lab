@@ -466,6 +466,10 @@ var STRICT = true;
 try{ STRICT = localStorage.getItem("junoslab-strict") !== "off"; }catch(e){}
 function strictOn(){ return STRICT; }
 function setStrict(on){
+  if(!on && typeof prepLockStrict === "function" && prepLockStrict()){
+    if(typeof modalConfirm === "function") modalConfirm("Bench rules are on", "Strict Junos stays on during a shift hands-on step. Finish or abandon the shift to change it.", "OK");
+    return;
+  }
   STRICT = !!on;
   try{ localStorage.setItem("junoslab-strict", STRICT ? "on" : "off"); }catch(e){}
   if(typeof rebuildAllDerived === "function") rebuildAllDerived();

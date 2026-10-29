@@ -14,9 +14,9 @@ No build step, no dependencies — open `index.html` in a browser.
 | `js/notes.js` | Notes for Claude — a scratchpad for bugs and ideas between sessions; shared by every lab on the Mega Lab origin, exports a markdown briefing |
 | `js/ops.js` | Operations layer — SNMP-style monitoring screen and night-shift incident simulations (pager, diagnosis, debrief) |
 | `js/rank.js` | Rank/XP progression — career ladder (Trainee NOC Technician → Datacenter Chief Architect), fed by tickets, contracts, quiz mastery, and mock exams |
-| `js/course.js` | Dual certification tracks (JNCIA-Junos and CompTIA Network+) with switchable paths, quiz-mastery tracking, next-up cards, 15-minute sessions |
 | `js/course.js` | JNCIA learning path, quiz-mastery tracking, next-up cards, the 15-minute session ritual |
 | `js/mockexam.js` | Timed mock exam engine — weighted toward past mistakes, per-domain scoring |
+| `js/prep.js` | JNCIA prep flow (the default front door): seven JN0-105 blueprint domains, readiness from answer accuracy, spaced review cards, daily shifts (warm-up / lesson / hands-on / cool-down), diagnostic and weekly checks, unit mastery (80% on two days + a hands-on), bench rules that lock strict Junos during hands-on, book-the-exam gate |
 | `tests/no-emoji.js` | Standalone CI guard: fails the build if pictographic emoji creep into any learning material |
 | `js/protocols.js` | The Protocols tab: field guides (problem / how / live prereqs / config / numbers / verify / breaks / ELS notes / 30-second answer / quiz), per-protocol canvas animations, prereq-hover device glow, jump-to-scenario |
 | `js/core.js` | Global state, IP math, device factories, the config-tree engine (set/delete/render/diff) |

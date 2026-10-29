@@ -309,6 +309,7 @@ function renderMockQuestion(){
     var wrong = examWrongSet();
     if(correct) wrong.delete(q.id); else { wrong.add(q.id); MOCK.missed.push({ q: q, given: givenText }); }
     examSaveWrong(wrong);
+    if(typeof prepRecord === "function") prepRecord(q.id, correct, "silent");
     setTimeout(function(){
       MOCK.i++;
       if(MOCK.i >= MOCK.qs.length) finishMockExam(false);
@@ -352,6 +353,7 @@ function finishMockExam(timeUp, abandoned){
   var total = MOCK.i;
   var pct = total ? Math.round((MOCK.correct / total) * 100) : 0;
   var pass = pct >= 65;
+  if(typeof prepMockDone === "function" && total >= 20 && !timeUp) prepMockDone(pct, MOCK.perDom, total);
   if(typeof awardXp === "function" && total >= 5){
     var lengthMult = total >= 65 ? 1.5 : total >= 40 ? 1.2 : 1;
     var xp = Math.round((pct / 3) * lengthMult) + (pass ? 25 : 0);

@@ -1502,6 +1502,8 @@ function evalChecks(){
   const all = renderObjectives();
   if(all && (currentScenario.isTicket || currentScenario.isContract) && !xpChallengeAwarded){
     xpChallengeAwarded = true;
+    if(typeof prepOnHandsOn === "function" && currentScenario.isTicket && currentTicket)
+      prepOnHandsOn("ticket", { faults: currentTicket.faults.map(f => f.id), hints: hintIndex, revealed: !!currentTicket.revealed });
     if(typeof awardXp === "function"){
       if(currentScenario.isTicket)
         awardXp(Math.round(ticketXpValue(currentTicket.faults) * (currentTicket.senior ? 1.5 : 1)), currentScenario.title);
@@ -1511,6 +1513,10 @@ function evalChecks(){
   if(all && Object.keys(devices).length){
     const id = currentScenario.id;
     const first = !(PROGRESS[id] && PROGRESS[id].done);
+    if(!currentScenario.isTicket && !currentScenario.isContract && prepHandsFired !== id && typeof prepOnHandsOn === "function"){
+      prepHandsFired = id;
+      prepOnHandsOn(id, { hints: hintIndex, revealed: false });
+    }
     if(first){
       PROGRESS[id] = { done: true, at: Date.now() };
       if(examState.active){
@@ -1542,9 +1548,11 @@ function resetHintBtn(){
   b.disabled = false;
   b.textContent = "Give me a hint";
 }
+let prepHandsFired = null;
 scenSelect.onchange = () => {
   currentScenario = SCENARIOS[scenSelect.value] || SCENARIOS[0];
   currentTicket = null;
+  prepHandsFired = null;
   hintIndex = 0;
   document.getElementById("hint-list").innerHTML = "";
   resetHintBtn();
@@ -1639,6 +1647,7 @@ document.getElementById("senior-btn").onclick = () => { if(typeof SFX !== "undef
 document.getElementById("night-btn").onclick = () => { if(typeof pickIncident === "function") pickIncident(); };
 document.getElementById("solution-btn").onclick = () => {
   if(!currentTicket) return;
+  currentTicket.revealed = true;
   modalConfirm("The fault(s)", currentTicket.faults.map(f => "• " + f.reveal).join("\n"), "Got it");
 };
 

@@ -1530,7 +1530,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     ok(consistent, "course: next unit is the first undone one, everything before it done");
   }
   const stats = courseDomainStats();
-  ok(Object.keys(stats).length === 6 && Object.values(stats).every(d => d.total > 0), "course: six domains, all populated");
+  ok(Object.keys(stats).length === 7 && Object.values(stats).every(d => d.total > 0), "course: seven domains, all populated");
   const g0 = PROTO_GUIDES.find(g => g.id === "osi");
   g0.quiz.forEach((q, qi) => markQuizDone("osi", qi));
   ok(unitDone({ g: "osi" }) && courseNext().unit.g === "subnetting", "course: mastering a guide's quiz advances the path");
@@ -3480,8 +3480,8 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   Object.keys(TRACKS.jncia.domains).forEach(d => {
     ok((byDom[d] || 0) >= 20, "T70 domain has enough questions to examine fairly: " + d + " (" + (byDom[d] || 0) + ")");
   });
-  ok((byDom["CLI & configuration"] || 0) >= 2 * 20,
-     "T70 CLI & configuration carries double weight, because it covers two real blueprint domains");
+  ok(Object.keys(TRACKS.jncia.domains).length === 7 && PREP_DOMAINS.length === 7,
+     "T70 the JNCIA pool follows the seven JN0-105 blueprint domains");
 
   const seen = new Map();
   pool.forEach(q => {
@@ -3585,18 +3585,15 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(txt(one(".resume-rank-title")).length > 0, "T71 and her current rank");
   const line = one(".resume-courseline");
   ok(/of/.test(txt(line.children[0])), "T71 how many units are done out of how many");
-  ok(/%$/.test(txt(line.children[1])), "T71 and that as a percentage");
+  ok(/%/.test(txt(line.children[1])), "T71 and that as a percentage");
   ok(!!one(".resume-bar-fill"), "T71 with a progress bar");
 
   const go = one(".resume-continue");
   ok(!!go, "T71 there is one obvious thing to click");
-  const next = courseNext();
-  if(next){
-    ok(txt(one(".resume-go-unit")) === unitTitle(next.unit),
-       "T71 and it names the exact next unit on her path, not a generic greeting");
-    ok(/Continue|Start here/.test(txt(one(".resume-go-label"))),
-       "T71 labelled so she knows it resumes rather than restarts");
-  }
+  const next = prepNextUnit();
+  ok(/Start|Continue|Shift done/.test(txt(one(".resume-go-label"))),
+     "T71 labelled as the shift she starts or resumes");
+  ok(txt(one(".resume-go-unit")).length > 0, "T71 with a line saying what the shift holds");
 
   const domRows = host.querySelectorAll(".resume-dom");
   ok(domRows.length === Object.keys(COURSE_DOMAINS).length,
@@ -3625,6 +3622,130 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
      screen is the only thing that greets her before she opens anything */
   ok(typeof __HTML !== "string" || __HTML.indexOf('id="course-bar"') === -1,
      "T71 the course bar is still tablet-only, which is why this screen exists");
+}
+
+
+/* ---------- T72: JNCIA prep flow — mastery, spacing, strict hands-on, readiness ---------- */
+{
+  try{ localStorage.removeItem(PREP_KEY); }catch(e){}
+  prepReset();
+  const pool = prepPool();
+  ok(pool.length >= 250, "T72 the prep pool is deep (" + pool.length + ")");
+  const by = {};
+  pool.forEach(q => { by[q.dom] = (by[q.dom] || 0) + 1; });
+  PREP_DOMAINS.forEach(d => ok((by[d.id] || 0) >= 25, "T72 at least 25 questions per blueprint domain: " + d.name + " (" + (by[d.id] || 0) + ")"));
+  ok(new Set(pool.map(q => q.id)).size === pool.length, "T72 pool ids are unique");
+  pool.forEach(q => {
+    if(q.typed) return;
+    ok(q.opts && q.opts[q.right] !== undefined, "T72 right index valid: " + q.id);
+    ok(new Set(q.opts).size === q.opts.length, "T72 distinct options: " + q.id);
+    ok(typeof q.why === "string" && q.why.length > 20, "T72 explains itself: " + q.id);
+  });
+  const seenQ = new Set();
+  pool.forEach(q => { const k = q.q.toLowerCase().replace(/\W+/g, " ").trim(); ok(!seenQ.has(k), "T72 no duplicate question text: " + q.id); seenQ.add(k); });
+  PREP_UNITS.forEach(u => {
+    ok(!!guideById(u.g), "T72 unit guide exists: " + u.id);
+    if(u.s) ok(SCENARIOS.some(sc => sc.id === u.s), "T72 unit scenario exists: " + u.id);
+    (u.tickets || []).forEach(t => ok(TICKET_FAULTS.some(f => f.id === t), "T72 unit ticket fault exists: " + u.id + "/" + t));
+    ok(PREP_DOMAINS.some(d => d.id === u.dom), "T72 unit domain valid: " + u.id);
+  });
+  ok(new Set(PREP_UNITS.map(u => u.id)).size === PREP_UNITS.length, "T72 unit ids unique");
+
+  /* readiness starts at zero and grows with accuracy, not with ticks */
+  ok(prepOverall() === 0, "T72 readiness starts at 0");
+  const q0 = pool.find(q => q.dom === "nf");
+  prepRecord(q0.id, true, "silent");
+  const r1 = prepDomainReadiness("nf");
+  ok(r1.pct > 0 && r1.pct < 10, "T72 one right answer barely moves a domain (" + r1.pct + "%), coverage matters");
+  prepRecord(q0.id, false, "silent");
+  ok(prepDomainReadiness("nf").pct < r1.pct, "T72 a wrong answer pulls the domain back down");
+  ok(prepLoad().cards[q0.id].due === prepDay(1), "T72 a missed card is due tomorrow");
+  ok(prepDueCards().length === 0, "T72 and not before");
+
+  /* spacing: correct answers on later days stretch the interval */
+  const c = prepLoad().cards[q0.id];
+  c.last = prepDay(-1); c.due = prepDay(0); prepSave();
+  ok(prepDueCards().length === 1, "T72 a card due today is served in the warm-up");
+  prepRecord(q0.id, true, "silent");
+  ok(prepLoad().cards[q0.id].ivl === 1 && prepLoad().cards[q0.id].due === prepDay(3), "T72 right again on a new day: interval grows 1 to 3 days");
+
+  /* unit mastery needs two passing days plus a hands-on */
+  const u = PREP_UNITS.find(x => x.id === "subnetting");
+  ok(!prepUnitPassed(u), "T72 unit starts unpassed");
+  prepMarkQuizDay(u, 79);
+  ok(!prepUnitQuizPassed(u) && prepUnitState(u).quizDays.length === 0, "T72 79% does not count as a passing day");
+  prepMarkQuizDay(u, 80);
+  ok(prepUnitState(u).quizDays.length === 1 && !prepUnitQuizPassed(u), "T72 one passing day is not mastery");
+  prepMarkQuizDay(u, 100);
+  ok(prepUnitState(u).quizDays.length === 1, "T72 a second pass on the same day does not count twice");
+  prepLoad().units[u.id].quizDays.push(prepDay(-2)); prepSave();
+  ok(prepUnitQuizPassed(u) && !prepUnitPassed(u), "T72 two days pass the quiz, but the hands-on is still owed");
+  prepOnHandsOn("basic-connect", { hints: 2, revealed: false });
+  ok(prepUnitHandsDone(u) && !prepUnitClean(u) && prepUnitPassed(u), "T72 a hinted hands-on completes the unit but is not clean");
+  prepOnHandsOn("basic-connect", { hints: 0, revealed: false });
+  ok(prepUnitClean(u), "T72 a hint-free run proves it");
+  ok(prepNextUnit().unit.id === "osi", "T72 next unit is the first unmastered one in blueprint order");
+
+  /* tickets feed units through their fault ids */
+  const vu = PREP_UNITS.find(x => x.id === "vlan");
+  prepOnHandsOn("ticket", { faults: ["wrong-vlan"], hints: 0, revealed: true });
+  ok(prepUnitHandsDone(vu) && !prepUnitClean(vu), "T72 a closed ticket counts as hands-on for its unit, but a revealed fault is not clean");
+
+  /* strict lock during hands-on */
+  const strictBefore = strictOn();
+  setStrict(false);
+  prepStrictEngage();
+  ok(strictOn() === true, "T72 engaging bench rules forces strict Junos on");
+  setStrict(false);
+  ok(strictOn() === true, "T72 and strict cannot be switched off while locked");
+  ok(prepLockStrict(), "T72 lock reported");
+  prepStrictRelease();
+  ok(!prepLockStrict(), "T72 lock released after the step");
+  setStrict(strictBefore);
+
+  /* shift kinds */
+  ok(prepShiftKind() === "diag", "T72 first ever shift is the diagnostic");
+  prepLoad().diag = { day: prepDay(-10), pct: 50 }; prepSave();
+  ok(prepShiftKind() === "daily", "T72 then daily shifts");
+  for(let i = 1; i <= 3; i++) prepLoad().shifts[prepDay(-i)] = { done: true, kind: "daily" };
+  prepSave();
+  ok(prepShiftKind() === "weekly", "T72 after three shifts with no weekly check, the weekly check comes up");
+  prepLoad().weekly = { day: prepDay(-2), pct: 70 }; prepSave();
+  ok(prepShiftKind() === "daily", "T72 a recent weekly check keeps the day daily");
+
+  /* draws */
+  const diag = prepDiagDraw();
+  ok(diag.length === PREP_DIAG && new Set(diag.map(q => q.id)).size === diag.length, "T72 diagnostic draws " + PREP_DIAG + " distinct questions");
+  ok(PREP_DOMAINS.every(d => diag.some(q => q.dom === d.id)), "T72 diagnostic touches every domain");
+  const wk = prepWeeklyDraw();
+  ok(wk.length === PREP_WEEKLY && PREP_DOMAINS.every(d => wk.some(q => q.dom === d.id)), "T72 weekly check draws " + PREP_WEEKLY + " across all domains");
+
+  /* ready-to-book needs every domain plus two passing checks */
+  ok(!prepReady().ready, "T72 not ready with low readiness");
+  pool.forEach(q => { prepLoad().cards[q.id] = { ivl: 2, reps: 1, lapses: 0, hist: [1], last: prepDay(0), due: prepDay(7) }; });
+  prepSave();
+  ok(PREP_DOMAINS.every(d => prepDomainReadiness(d.id).pct === 100), "T72 all-correct cards give 100% readiness");
+  ok(!prepReady().ready && prepReady().domains, "T72 domains alone do not unlock booking");
+  prepMockDone(85, { "Routing Fundamentals": { c: 8, t: 10 } }, 40);
+  prepMockDone(90, {}, 40);
+  ok(prepReady().ready, "T72 two passing checks plus all domains above 80% = ready to book");
+  ok(prepLoad().mocks[0].perDom.rf && prepLoad().mocks[0].perDom.rf.c === 8, "T72 mock domain names are mapped to prep domain ids");
+
+  /* the mock exam now draws from the blueprint pool */
+  const all = examAllQuestions();
+  ok(all.every(q => PREP_DOMAINS.some(d => d.name === q.d)), "T72 the mock exam uses the seven blueprint domains");
+
+  /* front door and shift panel render */
+  const host = renderResume();
+  ok(host.querySelectorAll(".resume-dom").length === 7, "T72 front door shows seven domain rows");
+  ok(!!host.querySelectorAll(".prep-ready")[0], "T72 and the book-the-exam card when ready");
+  renderCourseBar();
+  const bar = document.getElementById("course-bar");
+  ok(bar.querySelectorAll(".prep-step").length >= 4, "T72 shift panel lists the shift steps");
+  ok(!bar.querySelectorAll("button").some(b => /Track:/.test(b.textContent)), "T72 no track switch in the way");
+
+  try{ localStorage.removeItem(PREP_KEY); }catch(e){}
+  prepReset();
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");

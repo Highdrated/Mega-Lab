@@ -2778,6 +2778,7 @@ function renderProtoGuide(box, g){
   var back = protoEl("button", "pg-back", box, "\u25c2 All protocols");
   back.onclick = function(){ protoStopTimer(); protoView = { page: "list", guide: null }; renderProtoTab(); };
   protoEl("h3", "pg-title", box, g.title);
+  if(typeof prepGuideBanner === "function"){ var pbn = prepGuideBanner(g); if(pbn) box.appendChild(pbn); }
   var n = 0;
   var TIER_GLYPH = {
     lead: '<svg viewBox="0 0 14 14"><path d="M2 3.5 Q7 1.5 12 3.5 L12 11 Q7 9.5 2 11 Z" fill="none" stroke="currentColor" stroke-width="1"/><path d="M7 2.2 L7 10.2" stroke="currentColor" stroke-width="1"/></svg>',
@@ -2998,6 +2999,7 @@ function renderProtoGuide(box, g){
       b.onclick = function(){
         var correct = oi === q.right;
         b.classList.add(correct ? "pg-q-right" : "pg-q-wrong");
+        if(typeof prepRecord === "function" && !qbox.prepRecorded){ qbox.prepRecorded = true; prepRecord("g:" + g.id + ":" + qi, correct, "guide"); }
         if(correct && typeof markQuizDone === "function"){
           var wasNew = !quizDoneSet(g.id).has(String(qi));
           markQuizDone(g.id, qi);
@@ -3019,6 +3021,10 @@ function renderProtoGuide(box, g){
     });
   });
 
+  if(typeof prepGuideCheckButton === "function"){
+    var cb = prepGuideCheckButton(g);
+    if(cb) box.appendChild(cb);
+  }
   if(g.scenarioId){
     var pb = protoEl("button", "pg-practice", box, "Practice this → scenario");
     pb.onclick = function(){ protoJumpToScenario(g.scenarioId); };

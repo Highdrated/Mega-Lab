@@ -505,6 +505,15 @@ function todayItems() {
   const out = [];
   const add = (lab, text, kind, hash, weight) => { if (labs.some((l) => l.id === lab)) out.push({ lab, text, kind, hash, weight }); };
 
+  const jp = lsParse("junoslab-prep-v1");
+  if(jp && jp.cards){
+    const today = dayKey(0, true);
+    const due = Object.values(jp.cards).filter((c) => c && c.due && c.due <= today).length;
+    const shift = jp.shifts && jp.shifts[today];
+    if(!jp.diag) add("junos-lab", "Diagnostic · place yourself", "daily", "", 7);
+    else if(!shift || !shift.done) add("junos-lab", (shift ? "Continue shift" : "Start shift") + (due ? " · " + due + " due" : ""), "daily", "", 7);
+    else if(due) add("junos-lab", due + (due === 1 ? " review card due" : " review cards due"), "review", "", 6);
+  } else if(labs.some((l) => l.id === "junos-lab")) add("junos-lab", "Diagnostic · place yourself", "daily", "", 4);
   const jr = lsParse("junle_review");
   if (jr && jr.items) {
     const n = Object.values(jr.items).filter((x) => x && x.due <= Date.now()).length;
