@@ -85,7 +85,23 @@ body.dark-main #g-main, body.dark-main .spill { opacity: .45; }
 @keyframes blink { 50% { background: transparent; color: var(--ink); } }
 .nosig { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2cqh; color: var(--faint); font-size: 2.6cqw; letter-spacing: .5cqw; text-align: center; }
 .nosig b { color: var(--dim); font-weight: 400; letter-spacing: .3cqw; font-size: 2.1cqw; }
-.term[hidden], .nosig[hidden] { display: none; }
+.term[hidden], .nosig[hidden], .home[hidden], .appwrap[hidden] { display: none; }
+.home { position: absolute; inset: 0; padding: 5cqh 4.4cqw; display: flex; flex-direction: column; font-size: 2.3cqw; }
+.home .hh { display: flex; justify-content: space-between; color: var(--dim); font-size: 1.9cqw; letter-spacing: .4cqw; border-bottom: 1px solid #23211d; padding-bottom: 1.6cqh; }
+.home .hh b { color: var(--ink); font-weight: 400; }
+.home .greet { margin: 3cqh 0 2.6cqh; font-size: 2.6cqw; }
+.apps2 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1.4cqw; flex: 1; align-content: start; }
+.ap { text-align: left; padding: 2.2cqh 1.6cqw; border: 1px solid #26231f; border-radius: 3px; background: rgba(255, 255, 255, .012); transition: border-color .2s, background .2s; }
+.ap:hover { border-color: rgba(224, 168, 62, .55); background: rgba(224, 168, 62, .04); }
+.ap .n { display: block; letter-spacing: .35cqw; font-size: 2cqw; color: var(--ink); }
+.ap .d { display: block; margin-top: 1cqh; font-size: 1.55cqw; color: var(--dim); line-height: 1.45; }
+.ap.con { grid-column: span 2; border-color: rgba(134, 199, 155, .3); }
+.ap.con .n { color: var(--ok); }
+.scrbar { position: absolute; top: 1.6cqh; right: 2.4cqw; z-index: 4; font-size: 1.6cqw; letter-spacing: .3cqw; color: var(--dim); padding: .4cqh .8cqw; border: 1px solid #2a2722; border-radius: 3px; background: rgba(8, 9, 10, .8); }
+.scrbar:hover { color: var(--amber); border-color: rgba(224, 168, 62, .5); }
+.scrbar[hidden] { display: none; }
+.appwrap { position: absolute; inset: 0; overflow: hidden; }
+.appwrap iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #0b0d0d; }
 
 .side { position: absolute; inset: 0; padding: 4.5cqh 4cqw; font-size: 3.3cqw; line-height: 1.45; display: flex; flex-direction: column; cursor: default; }
 .side h4 { font-weight: 400; font-size: 2.7cqw; letter-spacing: .5cqw; color: var(--dim); display: flex; justify-content: space-between; border-bottom: 1px solid #23211d; padding-bottom: 1.6cqh; margin-bottom: 2.4cqh; }
@@ -186,7 +202,22 @@ body.cur, body.cur * { cursor: none !important; }
     <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junie/junie-idle.webp" alt=""></div>
     <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg></div></div>
     <div class="screen" id="main">
-      <div class="nosig" id="nosig">NO CONSOLE<b>click the rack and plug in a console cable</b></div>
+      <div class="home" id="home">
+        <div class="hh"><span>JUNLE <b>DESKTOP</b></span><span id="h-clock"></span></div>
+        <div class="greet" id="h-greet"></div>
+        <div class="apps2">
+          <button class="ap con" data-app="console"><span class="n">CONSOLE · ACC-SW-01</span><span class="d" id="h-con">Real EX4300 in the rack. Plug in a console cable first.</span></button>
+          <button class="ap" data-app="terminal"><span class="n">TERMINAL</span><span class="d">Command drills, day zero to rescue.</span></button>
+          <button class="ap" data-app="track"><span class="n">TRACK</span><span class="d">Your guided path.</span></button>
+          <button class="ap" data-app="mix"><span class="n">DAILY MIX</span><span class="d">~10 min, keep the streak.</span></button>
+          <button class="ap" data-app="scenarios"><span class="n">SCENARIOS</span><span class="d">Something is broken. Fix it.</span></button>
+          <button class="ap" data-app="manual"><span class="n">MANUAL</span><span class="d">The command book.</span></button>
+          <button class="ap" data-app="tourney"><span class="n">TOURNEY</span><span class="d">10 timed rounds.</span></button>
+        </div>
+      </div>
+      <div class="nosig" id="nosig" hidden>NO CONSOLE<b>click the rack and plug in a console cable</b></div>
+      <div class="appwrap" id="appwrap" hidden></div>
+      <button class="scrbar" id="scrbar" hidden>[ DESKTOP ]</button>
       <div class="term" id="term" hidden>
         <div class="log" id="log"></div>
         <div class="inl"><span id="pr"></span><span id="typed"></span><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false"></div>
@@ -1470,7 +1501,7 @@ function plug(cable, port) {
     if (!was && st.sess === "login" && !st.log.length) banner();
     setTimeout(() => junie("wave", 3000), 1500);
     afterChange();
-    setTimeout(() => { closeCu(); setView("sit"); focusCmd(); }, 1300);
+    setTimeout(() => { closeCu(); setMain("console"); setView("sit"); focusCmd(); }, 1300);
   } else if (port === "mgmt") {
     status(cable === "patch" ? "Link light on the management port. But a factory-default switch has no management IP, so there is nothing to SSH to. Console in first." : "MGMT is an Ethernet port (me0), not a serial console. The terminal stays silent.", "bad");
   } else {
@@ -1583,12 +1614,56 @@ function setFs(v) {
   try { localStorage.setItem(SAVE + "-fs", fs); } catch (e) {}
   const log = $("#log"); log.scrollTop = log.scrollHeight;
 }
+let mainMode = "home";
+function setMain(m) {
+  mainMode = m;
+  renderTerm();
+}
+function openApp(a) {
+  if (a === "console") { setMain("console"); if (view === "stand") setView("sit"); focusCmd(); return; }
+  const wrap = $("#appwrap");
+  let f = wrap.querySelector("iframe");
+  const hash = { terminal: "terminal", track: "track", mix: "mix", scenarios: "scenarios", manual: "manual", tourney: "tourney" }[a];
+  if (!f) {
+    f = document.createElement("iframe");
+    f.title = "Junle";
+    f.src = "junle.html?embed=1#" + hash;
+    wrap.appendChild(f);
+  } else {
+    f.contentWindow.location.hash = "";
+    f.contentWindow.location.hash = hash;
+  }
+  setMain("app");
+  sizeApp();
+  setView("focus");
+  setTimeout(() => { try { f.contentWindow.focus(); } catch (e) {} }, 400);
+}
+function sizeApp() {
+  const wrap = $("#appwrap"), f = wrap.querySelector("iframe");
+  if (!f) return;
+  const W = 960, s = wrap.clientWidth / W;
+  f.style.width = W + "px";
+  f.style.height = wrap.clientHeight / s + "px";
+  f.style.transform = `scale(${s})`;
+}
+function paintHome() {
+  const hr = new Date().getHours();
+  $("#h-greet").textContent = (hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening") + ", Kaatje.";
+  $("#h-clock").textContent = new Date().toTimeString().slice(0, 5);
+  const on = !!(st.plugged && isConsole(st.plugged));
+  $("#h-con").textContent = on ? `Console cable in · ${(hostOf(st.active) || "amnesiac")} · ticket ${TASKS.filter((x) => taskDone(x.id)).length}/${TASKS.length}` : "Real EX4300 in the rack. Plug in a console cable first.";
+}
+setInterval(() => { if (mainMode === "home") paintHome(); }, 20000);
 function renderTerm() {
   const on = !!(st.plugged && isConsole(st.plugged));
-  $("#nosig").hidden = on;
-  document.body.classList.toggle("dark-main", !on);
-  $("#term").hidden = !on;
-  if (!on) return;
+  $("#home").hidden = mainMode !== "home";
+  $("#appwrap").hidden = mainMode !== "app";
+  $("#scrbar").hidden = mainMode === "home";
+  $("#nosig").hidden = !(mainMode === "console" && !on);
+  $("#term").hidden = !(mainMode === "console" && on);
+  document.body.classList.toggle("dark-main", mainMode === "console" && !on);
+  if (mainMode === "home") paintHome();
+  if (!(mainMode === "console" && on)) return;
   const log = $("#log");
   if (st.log.length > 400) st.log = st.log.slice(-400);
   log.textContent = st.log.join("\n");
@@ -1645,7 +1720,13 @@ $("#cmd").addEventListener("keydown", (e) => {
   }
 });
 
-$("#main").addEventListener("click", () => { if (view === "stand") setView("sit"); focusCmd(); });
+$("#main").addEventListener("click", (e) => {
+  const ap = e.target.closest(".ap");
+  if (ap) { openApp(ap.dataset.app); return; }
+  if (e.target.closest("#scrbar")) { setMain("home"); if (view === "focus") setView("sit"); return; }
+  if (view === "stand") setView("sit");
+  focusCmd();
+});
 $("#main").addEventListener("dblclick", () => { setView(view === "focus" ? "sit" : "focus"); focusCmd(); });
 ["#left", "#right", "#small"].forEach((s) => $(s).addEventListener("click", (e) => { if (e.target.closest(".chip")) return; if (view === "stand") setView("sit"); focusCmd(); }));
 $("#right").addEventListener("click", (e) => {
@@ -1738,7 +1819,7 @@ function moveCursor(e) {
   const el = e.target && e.target.closest ? e.target : null;
   c.classList.toggle("hot", !!(el && el.closest(HOTSEL)));
 }
-addEventListener("resize", () => { placeScreens(); layoutCu(); $("#cam").style.transform = camFor(view); placeTips(); });
+addEventListener("resize", () => { placeScreens(); sizeApp(); layoutCu(); $("#cam").style.transform = camFor(view); placeTips(); });
 $("#t-fsdn").addEventListener("click", () => { setFs(fs - .2); toast("Main screen text " + Math.round(fs / 2.1 * 100) + "%"); });
 $("#t-fsup").addEventListener("click", () => { setFs(fs + .2); toast("Main screen text " + Math.round(fs / 2.1 * 100) + "%"); });
 addEventListener("keydown", (e) => {
@@ -1896,7 +1977,8 @@ $("#snd-w").style.opacity = snd ? 1 : .15;
 buildPanel("front");
 buildPanel("rear");
 if (st.plugged && isConsole(st.plugged) && !st.log.length) banner();
-setView(st.plugged && isConsole(st.plugged) ? "sit" : "stand");
+if (st.plugged && isConsole(st.plugged) && st.log.length > 3) mainMode = "console";
+setView(mainMode === "console" ? "sit" : "stand");
 afterChange();
 lastDone = TASKS.filter((x) => taskDone(x.id)).length;
 if (!(st.met && st.met.intro) && lastDone === 0) setTimeout(() => visit("intro"), 1400);

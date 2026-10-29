@@ -187,6 +187,8 @@
   }
   #desktop, #scenlist, #learn { flex: 1; overflow-y: auto; min-height: 0; }
   body.full { padding: 0; }
+  body.embed #homebtn, body.embed #climode, body.embed .board, body.embed .arms, body.embed .deck, body.embed .sidewrap, body.embed .deckhidden, body.embed #expand { display: none !important; }
+  body.embed, body.embed .rig, body.embed .screen { background: #0b0d0d !important; }
   body.full .shelf, body.full .desk, body.full .neck, body.full .foot { display: none; }
   body.full .bezel { border: none; border-radius: 0; padding: 0; box-shadow: none; }
   body.full .bezel::after, body.full .led { display: none; }
@@ -5880,6 +5882,7 @@
   }
   applyTablet();
   window.addEventListener("resize", applyTablet);
+  if (new URLSearchParams(location.search).get("embed") === "1") { document.body.classList.add("full", "embed"); }
   window.addEventListener("orientationchange", applyTablet);
 
   topoBtn.addEventListener("click", function() {
@@ -6877,7 +6880,8 @@
   showView("desktop");
   function applyHash() {
     const h = location.hash.slice(1);
-    if (h.indexOf("shift:") === 0) { showView("terminal"); startShiftRun(h.slice(6)); }
+    if (h === "desktop" || h === "terminal" || h === "track" || h === "scenarios" || h === "manual") { showView(h); }
+    else if (h.indexOf("shift:") === 0) { showView("terminal"); startShiftRun(h.slice(6)); }
     else if (h === "mix") { showView("terminal"); startMix(); }
     else if (h === "review") { showView("terminal"); startReview(false); }
     else if (h === "tourney") { showView("terminal"); startTourney(); }

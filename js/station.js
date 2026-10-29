@@ -280,7 +280,7 @@ async function stConnect(token) {
   }
 }
 
-const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=12", "./js/sync.js?v=3", "./js/labs.config.js?v=20", "./js/launcher.js?v=17", "./js/station.js?v=2", "./icons/icon-192.png", "./icons/icon-512.png"];
+const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=12", "./js/sync.js?v=3", "./js/labs.config.js?v=21", "./js/launcher.js?v=17", "./js/station.js?v=2", "./icons/icon-192.png", "./icons/icon-512.png"];
 let stPackBusy = false, stPackGuard = null;
 function stPackInfo() { return lsParse("station-pack") || {}; }
 async function stPack(manual) {
