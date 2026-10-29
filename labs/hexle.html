@@ -6,7 +6,7 @@
 <title>Hexle · HTML and CSS</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Crimson+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@500;600;700&family=Crimson+Pro:wght@400;500;600&family=Shippori+Mincho:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --bg:#eef1f4;--grid:#d9dee4;--panel:#ffffff;--panel2:#f7f9fb;--line:#d7dce2;--line2:#c9d0d8;
@@ -25,6 +25,37 @@ body[data-theme=grove]{
   font-size:15px;
 }
 body[data-theme=grove] button,body[data-theme=grove] #tsel{font-family:var(--hud);font-weight:700;font-size:12px;letter-spacing:.1em;color:var(--ink2)}
+body[data-theme=ink]{
+  --bg:#f3ecdd;--grid:#e6dcc7;--panel:#faf6ec;--panel2:#f5efe1;--line:#ddd2bc;--line2:#c9bca2;
+  --ink:#1d1b18;--ink2:#4a443b;--mute:#8d8576;--acc:#1d1b18;--acc2:#ebe3d2;--acc3:#3a352d;
+  --amb:#b8382b;--amb2:#f6e4dc;--cor:#b8382b;--cor2:#f6e4dc;--vio:#5d6b63;--vio2:#e6eae4;
+  --hud:"Shippori Mincho","Cormorant Garamond",Georgia,serif;--sans:"Crimson Pro",Georgia,serif;
+  --field:#fdfaf3;--soft:#f8f3e8;--onpri:#fdfaf3;--sel:rgba(184,56,43,.18);--artbg:#f3ecdd;
+  background:radial-gradient(ellipse 70% 45% at 85% 0%,rgba(29,27,24,.06),transparent 70%),radial-gradient(ellipse 50% 40% at 0% 100%,rgba(29,27,24,.05),transparent 70%),var(--bg);
+  font-size:15px;
+}
+body[data-theme=ink] button,body[data-theme=ink] #tsel{font-family:var(--hud);font-weight:600;font-size:12px;letter-spacing:.08em;color:var(--ink2)}
+body[data-theme=ink] .opts button{font-family:var(--mono);font-weight:400;letter-spacing:0;font-size:13px;color:var(--ink);text-transform:none}
+body[data-theme=ink] .ph{font-size:13px;font-weight:600}
+body[data-theme=ink] button.pri,body[data-theme=ink] button.pri:hover:not(:disabled){background:var(--ink);border-color:var(--ink);color:var(--onpri);box-shadow:none}
+body[data-theme=ink] .stg.on,body[data-theme=ink] .stg.on:hover:not(:disabled){background:transparent;border-color:transparent;color:var(--amb);box-shadow:inset 0 -2px 0 var(--amb)}
+body[data-theme=ink] .stg.on .ck{color:var(--amb)}
+body[data-theme=ink] #bar{box-shadow:none;border-bottom:1px solid var(--line2)}
+body[data-theme=ink] .panel{box-shadow:0 1px 0 rgba(29,27,24,.04)}
+body[data-theme=ink] .dq,body[data-theme=ink] .rcard h3,body[data-theme=ink] .donecard h2{font-family:var(--hud);font-weight:600}
+body[data-theme=ink] .dq{font-size:21px}
+body[data-theme=ink] .lt{font-weight:600;font-size:28px}
+body[data-theme=ink] .tab{font-family:var(--mono);font-weight:400;letter-spacing:0;font-size:12px}
+body[data-theme=ink] .plot .art{filter:none;mix-blend-mode:multiply}
+body[data-theme=ink] .plot .ground{background:radial-gradient(closest-side,rgba(29,27,24,.12),transparent)}
+body[data-theme=ink] #junie{mix-blend-mode:multiply}
+#ambient{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;display:none}
+body[data-theme=ink] #ambient{display:block}
+body>header,body>main{position:relative;z-index:1}
+#ambient .wash{position:absolute;inset:0;background:var(--inkbg,none) center bottom/cover no-repeat;opacity:.22;mix-blend-mode:multiply}
+#ambient .petal{position:absolute;top:-4%;width:9px;height:6px;border-radius:70% 0 70% 0;background:#b8382b;opacity:0;animation:petal linear infinite}
+@keyframes petal{0%{opacity:0;transform:translate(0,0) rotate(0)}10%{opacity:.55}90%{opacity:.4}100%{opacity:0;transform:translate(-14vw,108vh) rotate(540deg)}}
+@media (prefers-reduced-motion:reduce){#ambient .petal{display:none}}
 button,.brand,.brand small,#tsel{white-space:nowrap}
 #bar .stg{padding:0 10px}
 #tsel{max-width:210px;text-overflow:ellipsis}
@@ -487,9 +518,14 @@ const IMGS={witch:'witchpng',hut:'hut',path:'path',shop:'shop',library:'book',ma
 const IMG_RE=/(?:\.\/)?img\/(witch|hut|path|shop|library|market|tower|garden|candles|observatory|catcafe|gate|bridge)\.png/g;
 const before=(a,b)=>!!a&&!!b&&!!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);
 const altOk=i=>!!i&&(i.getAttribute('alt')||'').trim().length>2;
-const art=k=>(S.theme==='orbital'&&ART_O[k])||ART[k];
+const ART_I={};
+const THEMES={grove:{name:'Grove',art:{},base:'grove',hello:'Grove theme: lanterns lit.'},orbital:{name:'Orbital',art:ART_O,base:'orb',hello:'Orbital theme online.'},ink:{name:'Ink',art:ART_I,base:'ink',hello:'Ink and paper. The brush is wet.'}};
+const TH=()=>THEMES[S.theme]||THEMES.grove;
+const art=k=>TH().art[k]||ART[k];
 const BASE_ORB='body{margin:18px;font-family:system-ui,-apple-system,"Segoe UI",sans-serif;color:#232a31;background:#fff;line-height:1.4}img{max-width:min(100%,150px);vertical-align:top}';
 const BASE_GROVE='body{margin:18px;font-family:Georgia,"Times New Roman",serif;color:#2a2418;background:#f2e9d6;line-height:1.4}img{max-width:min(100%,150px);vertical-align:top}';
+const BASE_INK='body{margin:18px;font-family:Georgia,"Times New Roman",serif;color:#1d1b18;background:#faf6ec;line-height:1.4}img{max-width:min(100%,150px);vertical-align:top}';
+const BASES={grove:BASE_GROVE,orb:BASE_ORB,ink:BASE_INK};
 const TEAL='rgb(0, 128, 128)',PURPLE='rgb(128, 0, 128)',DARKRED='rgb(139, 0, 0)';
 
 const RULES={
@@ -2170,7 +2206,7 @@ const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
 const linked=code=>/<link[^>]*href=["']styles\.css["']/i.test(code);
 let BLOBS=[];function jsUrl(js){const u=URL.createObjectURL(new Blob([String(js)],{type:'text/javascript'}));BLOBS.push(u);if(BLOBS.length>80)URL.revokeObjectURL(BLOBS.shift());return u}
 const HXCATCH='<script>window.__hx={errs:[],logs:[]};addEventListener("error",function(e){__hx.errs.push({m:e.message,l:e.lineno,f:String(e.filename||"")})});(function(){var l=console.log;console.log=function(){__hx.logs.push([].map.call(arguments,function(x){return typeof x==="object"?JSON.stringify(x):String(x)}).join(" "));l.apply(console,arguments)}})();<\/script>';
-const wrap=(code,css,js)=>{code=String(code).replace(IMG_RE,(m,k)=>art(IMGS[k]));const base='<style>'+(S.theme==='grove'?BASE_GROVE:BASE_ORB)+'</style>';if(/<html[\s>]/i.test(code)){if(css!=null)code=code.replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i,()=>'<style>'+String(css).replace(/<\/style/gi,'')+'</style>');if(js!=null)code=code.replace(/<script\b([^>]*?)\bsrc=["']script\.js["']([^>]*)>\s*<\/script>/i,(m,a,b)=>'<script'+a+'src="'+jsUrl(js)+'"'+b+'></'+'script>');const pre=base+(/<script/i.test(code)?HXCATCH:'');return /<head[^>]*>/i.test(code)?code.replace(/<head[^>]*>/i,m=>m+pre):code.replace(/<html[^>]*>/i,m=>m+pre)}return '<!doctype html><html><head><meta charset="utf-8">'+base+(css!=null&&linked(code)?'<style>'+String(css).replace(/<\/style/gi,'')+'</style>':'')+'</head><body>'+code+'</body></html>'};
+const wrap=(code,css,js)=>{code=String(code).replace(IMG_RE,(m,k)=>art(IMGS[k]));const base='<style>'+BASES[TH().base]+'</style>';if(/<html[\s>]/i.test(code)){if(css!=null)code=code.replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i,()=>'<style>'+String(css).replace(/<\/style/gi,'')+'</style>');if(js!=null)code=code.replace(/<script\b([^>]*?)\bsrc=["']script\.js["']([^>]*)>\s*<\/script>/i,(m,a,b)=>'<script'+a+'src="'+jsUrl(js)+'"'+b+'></'+'script>');const pre=base+(/<script/i.test(code)?HXCATCH:'');return /<head[^>]*>/i.test(code)?code.replace(/<head[^>]*>/i,m=>m+pre):code.replace(/<html[^>]*>/i,m=>m+pre)}return '<!doctype html><html><head><meta charset="utf-8">'+base+(css!=null&&linked(code)?'<style>'+String(css).replace(/<\/style/gi,'')+'</style>':'')+'</head><body>'+code+'</body></html>'};
 let commsT;function comms(m){const c=$('comms');$('cmsg').textContent=m;c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
 const T=()=>TARGETS[S.t];
 const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[m])m++;return m};
@@ -2182,6 +2218,7 @@ function drillsFor(t){
   return list;
 }
 
+function ambient(){let a=$('ambient');if(!a){a=document.createElement('div');a.id='ambient';a.setAttribute('aria-hidden','true');a.innerHTML='<div class="wash"></div>'+Array.from({length:9},(_,i)=>'<i class="petal" style="left:'+(8+i*11+(i%3)*4)+'%;animation-duration:'+(16+(i*7)%11)+'s;animation-delay:-'+(i*3.3).toFixed(1)+'s;transform:scale('+(.7+(i%4)*.15)+')"></i>').join('');document.body.prepend(a)}a.style.setProperty('--inkbg',ART_I.backdrop?'url('+ART_I.backdrop+')':'none')}
 function go(v){if(v!=='tourney'&&typeof tnTick!=='undefined'){clearInterval(tnTick);tnTick=null}S.stage=v;save();render()}
 function render(){
   if(document.body)document.body.dataset.stage=S.stage;
@@ -2189,7 +2226,7 @@ function render(){
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
   const sel=$('tsel');sel.innerHTML='';let og=null,ogn='';TARGETS.forEach((tg,i)=>{const gn=tg.project?'Grimoire projects':tg.spell?'Spells · JavaScript':tg.master!=null?'Master editions':'Village plates';if(gn!==ogn){og=document.createElement('optgroup');og.label=gn;sel.appendChild(og);ogn=gn}const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);og.appendChild(o)});sel.value=S.t;
   updDue();if(S.sess&&!sessT){sessTick()}sessBar();
-  document.body.dataset.theme=S.theme;$('theme').textContent=S.theme==='grove'?'Grove':'Orbital';$('junie').src=art('drone');
+  if(!THEMES[S.theme])S.theme='grove';document.body.dataset.theme=S.theme;$('theme').textContent=TH().name;$('junie').src=art('drone');ambient();
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else if(S.stage==='grimoire')renderGrimoire();else if(S.stage==='tourney')renderTourney();else renderRules();
 }
@@ -2865,7 +2902,7 @@ async function takeHome(){
 document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{sfx.click();if(b.dataset.v==='practice'||b.dataset.v==='trial')PR=null;go(b.dataset.v)});
 $('treeb').onclick=()=>{const t=$('tree');t.innerHTML=treeHtml();t.classList.toggle('on');sfx.click()};
 $('tsel').onchange=e=>{S.t=+e.target.value;S.les=0;S.drill=schoolDone(S.t)?drillsFor(S.t).length:0;S.stage=schoolDone(S.t)?'target':'school';save();sfx.click();render()};
-$('theme').onclick=()=>{S.theme=S.theme==='grove'?'orbital':'grove';save();sfx.click();$('ed').dataset.t='';render();comms(S.theme==='grove'?'Grove theme: lanterns lit.':'Orbital theme online.')};
+$('theme').onclick=()=>{const k=Object.keys(THEMES);S.theme=k[(k.indexOf(S.theme)+1)%k.length];save();sfx.click();$('ed').dataset.t='';render();comms(TH().hello)};
 $('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.keys=true}else{S.sfx=false;S.keys=false}save();render();sfx.click()};
 $('vol').oninput=e=>{S.vol=+e.target.value;save()};
 const TOURNEY=[
@@ -3019,7 +3056,7 @@ function noteContext(){
     b.push('target '+(S.t+1)+': '+T().name);
     if(S.stage==='school'||S.stage==='practice')b.push('drill '+(S.drill+1));
     if(S.stage==='target'&&typeof file!=='undefined')b.push('file: '+(file==='css'?'styles.css':'index.html'));
-    b.push('theme: '+(S.theme==='grove'?'Grove':'Orbital'));
+    b.push('theme: '+TH().name);
   }catch(e){}
   return b.join(' · ');
 }
