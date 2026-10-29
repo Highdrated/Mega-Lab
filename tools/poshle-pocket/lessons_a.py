@@ -494,7 +494,7 @@ def l04():
               ["+=", "=", "-="], [0, 1],
               "+= adds Ada to the list. = replaces it with one value, which also counts as 1."),
             F("$o = [PSCustomObject]@{\n  Name='Bram'; Dept='IT'\n}\n$o.___", "Shows IT",
-              ["Dept", "IT", "Name", "['Dept']"], [0], "Read a property by its name."),
+              ["Dept", "IT", "Name", "Department"], [0], "Read a property by its exact name."),
             B("Make a list of three users", "", "$u.Count shows 3",
               ["$u", "=", "'Ada',", "'Bram',", "'Noor'", "@{"], "0,1,2,3,4", ["0,1,2,3,4", "0,1,3,2,4"],
               "Commas between items make a list."),
