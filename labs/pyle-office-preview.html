@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pyle · Office car preview</title>
+<style>
+:root{--brass:#d4af5f;--ink:#f3e9d6;--dim:#b9a98c;--tint:.55;--blur:14px;--tilt:10deg}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#120b08;color:var(--ink);font-family:"Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif;overflow:hidden}
+#stage{position:relative;width:100vw;height:100vh;overflow:hidden}
+#world{position:absolute;inset:0;transform-origin:50% 60%}
+#world.bump{animation:bump .45s ease-out}
+#world.bump2{animation:bump2 .6s ease-out}
+@keyframes bump{0%{transform:translateY(0)}25%{transform:translateY(-3px) rotate(.12deg)}55%{transform:translateY(2px)}100%{transform:translateY(0)}}
+@keyframes bump2{0%{transform:translateY(0)}20%{transform:translateY(2px) rotate(-.1deg)}50%{transform:translateY(-2px)}80%{transform:translateY(1px)}100%{transform:translateY(0)}}
+#sky{position:absolute;inset:0;background:linear-gradient(#1a1230 0%,#4a2a3c 35%,#b4562e 58%,#e8a157 70%,#3b2416 100%)}
+#sky.night{background:linear-gradient(#05060f 0%,#0d1230 45%,#1c2a4d 70%,#0a0a12 100%)}
+#sky.day{background:linear-gradient(#5f8fc9 0%,#a9c8e8 50%,#e9d8b4 72%,#8d7a52 100%)}
+.land{position:absolute;left:0;top:0;height:100%;width:400%;background-repeat:repeat-x;background-size:25% 100%;will-change:transform}
+#far{animation:slide 70s linear infinite;opacity:.9}
+#mid{animation:slide 32s linear infinite}
+#near{animation:slide 14s linear infinite}
+@keyframes slide{from{transform:translateX(0)}to{transform:translateX(-25%)}}
+#room{position:absolute;inset:0;background:url("img/pyle/office-car.webp") center/cover no-repeat}
+#desk{position:absolute;left:0;right:0;top:0;bottom:0;pointer-events:none}
+.panel{position:absolute;background:rgba(26,16,10,var(--tint));backdrop-filter:blur(var(--blur)) saturate(.9);-webkit-backdrop-filter:blur(var(--blur)) saturate(.9);border:1px solid rgba(212,175,95,.65);border-radius:5px;box-shadow:0 0 0 3px rgba(60,40,18,.5),0 18px 40px rgba(0,0,0,.45),inset 0 0 40px rgba(255,200,120,.06);padding:18px 22px;color:var(--ink);transform-style:preserve-3d}
+.panel::after{content:"";position:absolute;left:14%;right:14%;bottom:-22px;height:10px;border:1px solid rgba(212,175,95,.55);border-top:none;border-radius:0 0 6px 6px;background:linear-gradient(rgba(212,175,95,.25),rgba(120,90,40,.4))}
+#main{left:30%;width:40%;top:14%;height:62%}
+#left{left:5.5%;width:22%;top:22%;height:50%;transform:perspective(1400px) rotateY(var(--tilt));transform-origin:right center}
+#right{right:5.5%;width:22%;top:22%;height:50%;transform:perspective(1400px) rotateY(calc(var(--tilt) * -1));transform-origin:left center}
+.hd{font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--brass);border-bottom:1px solid rgba(212,175,95,.35);padding-bottom:8px;margin-bottom:12px;display:flex;justify-content:space-between}
+.code{font-family:ui-monospace,Menlo,monospace;font-size:15.5px;line-height:1.6;white-space:pre;color:#f7efe0}
+.k{color:#e9b25c}.s{color:#9fd0a2}.c{color:#8f8470;font-style:italic}.n{color:#8fc4e8}
+.brief{font-size:15px;line-height:1.55;color:var(--ink)}
+.brief b{color:var(--brass);font-weight:600}
+.aid{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;line-height:1.7;color:var(--dim);white-space:pre}
+#ctl{position:absolute;left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:14px;align-items:center;background:rgba(14,8,5,.7);border:1px solid rgba(212,175,95,.4);border-radius:6px;padding:8px 14px;font-family:ui-monospace,Menlo,monospace;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--brass);z-index:5}
+#ctl label{display:flex;gap:8px;align-items:center}
+#ctl input[type=range]{width:90px;accent-color:#d4af5f}
+#ctl button{background:none;border:1px solid rgba(212,175,95,.5);color:var(--brass);padding:4px 10px;border-radius:4px;font:inherit;cursor:pointer;letter-spacing:.14em}
+#ctl button.on{background:rgba(212,175,95,.18)}
+#ice{position:absolute;right:11.5%;top:46%;width:8%;height:14%;transform-origin:50% 100%}
+#ice.wig{animation:wig .7s ease-out}
+@keyframes wig{0%{transform:rotate(0)}20%{transform:rotate(-1.6deg)}45%{transform:rotate(1.2deg)}70%{transform:rotate(-.6deg)}100%{transform:rotate(0)}}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="world">
+    <div id="sky"></div>
+    <div class="land" id="far"></div>
+    <div class="land" id="mid"></div>
+    <div class="land" id="near"></div>
+    <div id="room"></div>
+    <div id="ice"></div>
+  </div>
+  <div id="desk">
+    <div class="panel" id="left">
+      <div class="hd"><span>Brief</span><span>telegram 04</span></div>
+      <div class="brief">The clerk needs a <b>menu board</b> for the dining car. Print the price of cake, add dinner at 30, then list every dish with its price.<br><br>When there is no coffee tonight, say so.</div>
+    </div>
+    <div class="panel" id="main">
+      <div class="hd"><span>menu_board.py</span><span>office car · Pyle</span></div>
+      <div class="code"><span class="c">"""Menu board for the dining car."""</span>
+
+menu = {<span class="s">"tea"</span>: <span class="n">4</span>, <span class="s">"soup"</span>: <span class="n">9</span>, <span class="s">"cake"</span>: <span class="n">12</span>}
+
+<span class="k">print</span>(<span class="s">"Cake costs"</span>, menu[<span class="s">"cake"</span>])
+menu[<span class="s">"dinner"</span>] = <span class="n">30</span>
+
+<span class="k">for</span> dish, price <span class="k">in</span> menu.items():
+    <span class="k">print</span>(<span class="s">f"{dish}: {price} fr"</span>)
+
+<span class="k">if</span> <span class="s">"coffee"</span> <span class="k">not in</span> menu:
+    <span class="k">print</span>(<span class="s">"No coffee tonight"</span>)<span style="opacity:.7">▍</span></div>
+    </div>
+    <div class="panel" id="right">
+      <div class="hd"><span>Visual aid</span><span>dict</span></div>
+      <div class="aid">menu
+┌──────────┬──────┐
+│ key      │ value│
+├──────────┼──────┤
+│ "tea"    │   4  │
+│ "soup"   │   9  │
+│ "cake"   │  12  │
+│ "dinner" │  30  │
+└──────────┴──────┘
+
+menu["cake"]  → 12
+.items()      → pairs
+"coffee" in   → False</div>
+    </div>
+  </div>
+  <div id="ctl">
+    <label>Glass <input type="range" id="tint" min="20" max="90" value="55"></label>
+    <label>Tilt <input type="range" id="tilt" min="0" max="25" value="10"></label>
+    <button id="t-dusk" class="on">Dusk</button><button id="t-night">Night</button><button id="t-day">Day</button>
+    <button id="snd">Sound off</button>
+  </div>
+</div>
+<script>
+const $=id=>document.getElementById(id);
+function mesa(color,seed,h){
+  let r=seed;const rnd=()=>(r=(r*9301+49297)%233280)/233280;
+  let d='M0 400';let x=0;
+  while(x<1000){const w=40+rnd()*120;const y=400-h*(.3+rnd()*.7);const flat=rnd()>.5;
+    if(flat){d+=` L${x+w*.25} ${y} L${x+w*.75} ${y} L${x+w} 400`}else{d+=` Q${x+w/2} ${y} ${x+w} 400`}
+    x+=w+rnd()*60;}
+  d+=' L1000 400 Z';
+  return `url("data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1000 400' preserveAspectRatio='none'><path fill='${color}' d='${d}'/></svg>`)}")`;
+}
+function paint(theme){
+  const c={dusk:['#4a2e3a','#2b1a1f','#160d0e'],night:['#0f1830','#080d1c','#04060c'],day:['#7f8f9c','#5e6d5a','#3f4a36']}[theme];
+  $('far').style.backgroundImage=mesa(c[0],11,120);
+  $('mid').style.backgroundImage=mesa(c[1],7,200);
+  $('near').style.backgroundImage=mesa(c[2],3,110);
+  $('sky').className=theme==='dusk'?'':theme;
+  ['dusk','night','day'].forEach(t=>$('t-'+t).classList.toggle('on',t===theme));
+}
+paint('dusk');
+['dusk','night','day'].forEach(t=>$('t-'+t).onclick=()=>paint(t));
+$('tint').oninput=e=>document.documentElement.style.setProperty('--tint',e.target.value/100);
+$('tilt').oninput=e=>document.documentElement.style.setProperty('--tilt',e.target.value+'deg');
+
+let ac=null,gain=null,on=false;
+function startSound(){
+  ac=new (window.AudioContext||window.webkitAudioContext)();
+  const len=ac.sampleRate*2,buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);
+  for(let i=0;i<len;i++)d[i]=(Math.random()*2-1)*.5;
+  const src=ac.createBufferSource();src.buffer=buf;src.loop=true;
+  const lp=ac.createBiquadFilter();lp.type='lowpass';lp.frequency.value=320;
+  gain=ac.createGain();gain.gain.value=.12;
+  src.connect(lp).connect(gain).connect(ac.destination);src.start();
+}
+function clack(strong){
+  if(!on||!ac)return;
+  const t=ac.currentTime;
+  for(let i=0;i<2;i++){
+    const o=ac.createOscillator(),g=ac.createGain();
+    o.type='square';o.frequency.value=90+Math.random()*60;
+    g.gain.setValueAtTime(strong?.18:.1,t+i*.11);g.gain.exponentialRampToValueAtTime(.001,t+i*.11+.09);
+    o.connect(g).connect(ac.destination);o.start(t+i*.11);o.stop(t+i*.11+.1);
+  }
+  if(strong){const o=ac.createOscillator(),g=ac.createGain();o.type='sine';o.frequency.value=2400+Math.random()*800;
+    g.gain.setValueAtTime(.05,t+.05);g.gain.exponentialRampToValueAtTime(.001,t+.5);o.connect(g).connect(ac.destination);o.start(t+.05);o.stop(t+.6)}
+}
+$('snd').onclick=()=>{on=!on;$('snd').textContent=on?'Sound on':'Sound off';$('snd').classList.toggle('on',on);if(on&&!ac)startSound();if(ac)ac[on?'resume':'suspend']()};
+
+function jolt(){
+  const w=$('world'),strong=Math.random()<.3;
+  w.classList.remove('bump','bump2');void w.offsetWidth;
+  w.classList.add(strong?'bump2':'bump');
+  if(strong){$('ice').classList.remove('wig');void $('ice').offsetWidth;$('ice').classList.add('wig')}
+  clack(strong);
+  setTimeout(jolt,2200+Math.random()*5000);
+}
+setTimeout(jolt,1500);
+</script>
+</body>
+</html>
