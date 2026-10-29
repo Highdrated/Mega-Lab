@@ -54,6 +54,9 @@ body.v-sit .shade, body.v-focus .shade { opacity: 1; }
 .vdlg .act { margin-top: 14px; display: flex; justify-content: flex-end; }
 .vdlg .act button { padding: 8px 16px; border: 1px solid rgba(224, 168, 62, .45); border-radius: 4px; color: var(--amber); letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
 .vdlg .act button:hover { background: rgba(224, 168, 62, .1); }
+.visitor.noimg { display: none; }
+.vdlg.noimg { left: 50%; transform: translateX(-50%); }
+.vdlg.noimg.on { transform: translateX(-50%); }
 .vdim { position: fixed; inset: 0; z-index: 34; background: radial-gradient(ellipse at 20% 80%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .25)); opacity: 0; transition: opacity .6s; pointer-events: none; }
 .vdim.on { opacity: 1; }
 #junie { position: absolute; left: 30.9%; top: 71.2%; width: 4.6%; aspect-ratio: 1; pointer-events: auto; z-index: 4; }
@@ -246,7 +249,7 @@ body.cur, body.cur * { cursor: none !important; }
 <div class="bubble" id="bubble"></div>
 <div class="vdim" id="vdim"></div>
 <div class="visitor" id="visitor"><img src="img/junle-room/visitor-elf.webp" alt=""></div>
-<div class="vdlg" id="vdlg"><div class="who">Veylin<span>keeper of the change ledger</span></div><p id="vline"></p><div class="act"><button id="vbtn"></button></div></div>
+<div class="vdlg" id="vdlg"><div class="who" id="vwho"></div><p id="vline"></p><div class="act"><button id="vbtn"></button></div></div>
 
 <div id="cu">
   <div class="cu-bg" id="cu-bg"></div>
@@ -589,20 +592,20 @@ const utc = (t) => new Date(t).toISOString().slice(0, 19).replace("T", " ") + " 
 function fresh() {
   seq = 0;
   const f = cfgFromSet(FACTORY);
-  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [], rescue: false, ctimes: [BOOT_T] };
+  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [], rescue: false, ctimes: [BOOT_T], met: {}, tk: 0, tkStart: 0, links: {}, ran: {}, cwho: [] };
 }
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(SAVE) || "null");
     if (raw && raw.v === 1) {
-      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {} };
+      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [] };
     }
   } catch (e) {}
   return fresh();
 }
 function save() {
   try {
-    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
+    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
   } catch (e) {}
 }
 
@@ -771,7 +774,7 @@ function doOper(line, col, fromRun) {
   if ((cmd === "exit" || cmd === "quit") && !fromRun) { st.sess = "shell"; return; }
   if (cmd === "show") { showCmd(t.slice(1), p.pipes, col); if (!fromRun) prePrompt(); return; }
   if (cmd === "ping") { pingCmd(t.slice(1), col); if (!fromRun) prePrompt(); return; }
-  if (cmd === "request" && !fromRun) { if (requestCmd(t.slice(1), col)) return; prePrompt(); return; }
+  if (cmd === "request") { if (requestCmd(t.slice(1), col, fromRun)) return; if (!fromRun) prePrompt(); return; }
   if (fromRun && (cmd === "configure" || cmd === "exit" || cmd === "quit")) { say("error: command is not valid in this context"); return; }
   notSim(cmd);
   if (!fromRun) prePrompt();
@@ -809,7 +812,7 @@ function showCmd(t, pipes, col) {
       if (!c) return;
       if (c === "alarms") lines = st.rescue ? ["No alarms currently active"] : ["1 alarms currently active", "Alarm time               Class  Description", `${utc(BOOT_T + 95e3)}  Minor  Rescue configuration is not set`];
       else if (c === "uptime") lines = showUptime();
-      else if (c === "commit") lines = st.ctimes.map((x, i) => i).reverse().map((i, n) => `${n}   ${utc(st.ctimes[i])} by root via ${i === 0 ? "other" : "cli"}`);
+      else if (c === "commit") lines = st.ctimes.map((x, i) => i).reverse().map((i, n) => `${n}   ${utc(st.ctimes[i])} by ${(st.cwho || [])[i] || "root"} via ${i === 0 ? "other" : "cli"}`);
       else if (c === "users") lines = [`${new Date().toISOString().slice(11, 16)}  up ${upStr()},  1 user`, "USER     TTY      FROM                              LOGIN@  IDLE WHAT", `root     u0       -                                 ${new Date(BOOT_T + 3600e3).toISOString().slice(11, 16)}       - cli`];
       else { notSim("show system " + c); return; }
       break;
@@ -839,6 +842,10 @@ function showCmd(t, pipes, col) {
     default: notSim("show " + mm.k); return;
   }
   if (!lines) return;
+  st.ran = st.ran || {};
+  const SUBS = ["neighbors", "terse", "commit", "alarms", "uptime", "table", "hardware", "messages", "descriptions", "users"];
+  const subw = rest.map((x) => matchKw(x.v, SUBS).k).filter(Boolean);
+  st.ran[["show", mm.k].concat(subw.slice(0, 1)).join(" ")] = Date.now();
   const piped = applyPipes(lines, pipes.filter((p) => !(p.k === "display" && isConfig && p.args[0] && matchKw(p.args[0].v, DISPLAY).k === "set")), isConfig);
   if (piped) say(...piped);
 }
@@ -881,7 +888,7 @@ function pingCmd(rest, col) {
   if (!/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) { say(`ping: cannot resolve ${host}: Unknown host`); return; }
   say(`PING ${host} (${host}): 56 data bytes`, "ping: sendto: No route to host", "ping: sendto: No route to host", "ping: sendto: No route to host", "^C", `--- ${host} ping statistics ---`, "3 packets transmitted, 0 packets received, 100% packet loss");
 }
-function requestCmd(rest, col) {
+function requestCmd(rest, col, fromRun) {
   if (!rest.length) { caret(col + 8, "syntax error, expecting <command>."); return false; }
   const a = matchKw(rest[0].v, ["chassis", "message", "routing-engine", "security", "support", "system", "virtual-chassis"]);
   if (a.none) { caret(col + rest[0].s, "syntax error."); return false; }
@@ -889,6 +896,7 @@ function requestCmd(rest, col) {
   if (a.k !== "system") { notSim("request " + a.k); return false; }
   const b = sub(rest.slice(1), ["configuration", "halt", "power-off", "reboot", "snapshot", "software", "storage", "zeroize"], col, rest[0]);
   if (!b) return false;
+  if (fromRun && (b === "reboot" || b === "zeroize")) { notSim("run request system " + b + " (use it from operational mode here)"); return false; }
   if (b === "reboot") { st.sess = "rebootq"; return true; }
   if (b === "zeroize") { say("warning: System will be rebooted and may not boot without configuration"); st.sess = "zeroq"; return true; }
   if (b === "configuration") {
@@ -954,7 +962,7 @@ function ifInfo(cfg) {
     const members = es.filter((s) => s.k === "members").map((s) => s.v);
     const disabled = list.some((s) => s.lv[0] === "interfaces" && s.lv[1] === n && s.lv.length === 2 && s.k === "disable");
     const desc = (list.find((s) => s.lv[0] === "interfaces" && s.lv[1] === n && s.lv.length === 2 && s.k === "description") || {}).v || "";
-    res[n] = { eth: es.length > 0, mode, members: es.length && !members.length && mode === "access" ? ["default"] : members, disabled, desc, link: !!PATCHED[n] && !disabled };
+    res[n] = { eth: es.length > 0, mode, members: es.length && !members.length && mode === "access" ? ["default"] : members, disabled, desc, link: !!(PATCHED[n] || (st && st.links && st.links[n])) && !disabled };
   }
   return res;
 }
@@ -1137,7 +1145,12 @@ function compareOut(a, b) {
     if (h !== hdr) { o.push(h); hdr = h; }
     o.push(...lines);
   }
-  return o;
+  const res = [];
+  let blk = [];
+  const flush = () => { res.push(...blk.filter((l) => l[0] === "-"), ...blk.filter((l) => l[0] === "+")); blk = []; };
+  for (const l of o) { if (l[0] === "[") { flush(); res.push(l); } else blk.push(l); }
+  flush();
+  return res;
 }
 
 function validate(cfg) {
@@ -1185,6 +1198,7 @@ function doCommit(rest, col) {
   st.active = clone(st.cand);
   st.commits.push(clone(st.cand));
   st.ctimes.push(Date.now());
+  (st.cwho = st.cwho || [])[st.ctimes.length - 1] = "root";
   say("commit complete");
   SFX.ok();
   if (quit) { say("Exiting configuration mode"); st.sess = "oper"; }
@@ -1255,43 +1269,110 @@ function keysAt(node, toks, lv) {
   return r.node.t === "k" ? Object.keys(r.node.c) : [];
 }
 
-const TASKS = [
-  { id: "console", t: "Plug into the console", why: "A factory-new switch has no IP address, so the console is the only way in. Click the rack, then plug a console cable into a console port: RJ-45 on the back, or mini-USB on the front.", c: [] },
-  { id: "login", t: "Log in", why: "A factory-default Junos box has one account: root, with no password. 'Amnesiac' means it has no hostname yet.", c: ["root"] },
-  { id: "cli", t: "Start the Junos CLI", why: "root lands in the FreeBSD shell (the % prompt), not in Junos. Junos commands only work after you start the CLI.", c: ["cli"] },
-  { id: "rootauth", t: "Secure root", why: "Junos refuses to commit anything until root has a password. Enter configuration mode and set one. It asks twice and only stores a hash. Commit to make it real.", c: ["configure", "set system root-authentication plain-text-password", "commit"] },
-  { id: "host", t: "Name the switch", why: "The prompt only changes after commit, not after set. That is your proof the commit landed.", c: ["set system host-name acc-sw-01", "commit"] },
-  { id: "vlan", t: "Create VLAN staff (10)", why: "A name for humans, a number for the wire. Both are needed.", c: ["set vlans staff vlan-id 10", "commit"] },
-  { id: "port", t: "Put the server port in staff", why: "The server is patched into ge-0/0/4. ELS syntax: interface-mode, not the legacy port-mode. Watch port 4 on the left screen change colour after commit.", c: ["set interfaces ge-0/0/4 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members staff", "commit"] }
+const GIVERS = {
+  veylin: { name: "Veylin", role: "keeper of the change ledger", img: "img/junle-room/visitor-elf.webp" },
+  maren: { name: "Maren", role: "senior network engineer", img: "img/junle-room/visitor-maren.webp" },
+  brann: { name: "Brann", role: "night watch", img: "img/junle-room/visitor-brann.webp" },
+  odile: { name: "Odile", role: "head archivist", img: "img/junle-room/visitor-odile.webp" }
+};
+const ran = (cmd) => !!(st.ran && st.ran[cmd] && st.ran[cmd] >= (st.tkStart || 0));
+const port = (n) => ifInfo(st.active)["ge-0/0/" + n];
+const TICKETS = [
+  { id: "001", title: "COMMISSION", giver: "veylin",
+    intro: "A new EX4300 was racked in R1 tonight, still factory fresh. Commission it: secure root, name it acc-sw-01, create VLAN staff with tag 10, and put the server on ge-0/0/4 into it. I record every change you commit, so make them clean.",
+    outro: "Committed and recorded. acc-sw-01 is in the ledger: root secured, named, staff on ten, the server where it belongs. Clean work. Others will come to you now.",
+    done: "Root is secured, the switch is named, VLAN staff exists and the server port is in it.",
+    steps: [
+      { id: "console", t: "Plug into the console", why: "A factory-new switch has no IP address, so the console is the only way in. Click the rack, then plug a console cable into a console port: RJ-45 on the back, or mini-USB on the front.", c: [], ok: () => !!(st.plugged && isConsole(st.plugged)) },
+      { id: "login", t: "Log in", why: "A factory-default Junos box has one account: root, with no password. 'Amnesiac' means it has no hostname yet.", c: ["root"], ok: () => ["shell", "oper", "conf", "pw1", "pw2", "exitq", "delq"].includes(st.sess) || st.seenCli },
+      { id: "cli", t: "Start the Junos CLI", why: "root lands in the FreeBSD shell (the % prompt), not in Junos. Junos commands only work after you start the CLI.", c: ["cli"], ok: () => st.seenCli },
+      { id: "rootauth", t: "Secure root", why: "Junos refuses to commit anything until root has a password. Enter configuration mode and set one. It asks twice and only stores a hash. Commit to make it real.", c: ["configure", "set system root-authentication plain-text-password", "commit"], ok: () => hasRootAuth(st.active) },
+      { id: "host", t: "Name the switch", why: "The prompt only changes after commit, not after set. That is your proof the commit landed.", c: ["set system host-name acc-sw-01", "commit"], ok: () => hostOf(st.active) === "acc-sw-01" },
+      { id: "vlan", t: "Create VLAN staff (10)", why: "A name for humans, a number for the wire. Both are needed.", c: ["set vlans staff vlan-id 10", "commit"], ok: () => vlansOf(st.active).some((v) => v.name === "staff" && v.id === 10) },
+      { id: "port", t: "Put the server port in staff", why: "The server is patched into ge-0/0/4. ELS syntax: interface-mode, not the legacy port-mode. Watch port 4 on the left screen change colour after commit.", c: ["set interfaces ge-0/0/4 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members staff", "commit"], ok: () => { const x = port(4); return x.mode === "access" && x.members.length === 1 && x.members[0] === "staff"; } }
+    ] },
+  { id: "002", title: "UPLINK", giver: "maren",
+    intro: "Your switch is lonely. ge-0/0/47 runs to core-sw, but right now it only carries the default VLAN. Make it a proper uplink: a guest VLAN on tag 20, then a trunk that carries staff and guest, labelled so the next person knows what it is. And prove who is on the other end before you call it done.",
+    outro: "Trunk up, both VLANs tagged, and you checked LLDP instead of guessing. That last part is what separates engineers from button pushers.",
+    done: "ge-0/0/47 is a labelled trunk carrying staff and guest to core-sw.",
+    steps: [
+      { id: "guest", t: "Create VLAN guest (20)", why: "Same pattern as staff: a name and a tag. Guests get their own VLAN so they never share a broadcast domain with staff.", c: ["configure", "set vlans guest vlan-id 20", "commit"], ok: () => vlansOf(st.active).some((v) => v.name === "guest" && v.id === 20) },
+      { id: "trunk", t: "Make ge-0/0/47 a trunk", why: "An access port belongs to one VLAN. A link that carries several VLANs between switches must tag each frame: that is a trunk.", c: ["set interfaces ge-0/0/47 unit 0 family ethernet-switching interface-mode trunk", "commit"], ok: () => port(47).mode === "trunk" },
+      { id: "tmem", t: "Carry staff and guest on it", why: "A trunk carries only the VLANs you list. Square brackets add several in one line.", c: ["set interfaces ge-0/0/47 unit 0 family ethernet-switching vlan members [ staff guest ]", "commit"], ok: () => { const x = port(47); return x.mode === "trunk" && x.members.includes("staff") && x.members.includes("guest"); } },
+      { id: "desc", t: "Label the uplink", why: "Descriptions with spaces need quotes, or Junos reads the second word as a new keyword and rejects it.", c: ['set interfaces ge-0/0/47 description "uplink to core-sw"', "commit"], ok: () => !!port(47).desc },
+      { id: "lldp", t: "Prove who is on the other end", why: "LLDP asks the cable's far end for its name and port. Run it from operational mode, or with run in front from configure.", c: ["run show lldp neighbors"], ok: () => ran("show lldp neighbors") }
+    ] },
+  { id: "003", title: "LOCK DOWN", giver: "brann",
+    intro: "Something lit up on the switch during my round. Port nine, blinking, and nobody here put a cable in it. An open port is an open door. Find it, shut it, write on it why it is shut. And leave yourself a way back if tonight goes wrong.",
+    outro: "Dark again. Good. And a rescue config tucked away. I sleep better when doors are locked and keys are copied.",
+    done: "ge-0/0/9 is disabled and labelled, and a rescue configuration is saved.",
+    setup: () => { st.links = st.links || {}; st.links["ge-0/0/9"] = "unknown"; },
+    steps: [
+      { id: "see", t: "Find what is up", why: "terse gives one line per port: Admin is what you configured, Link is what the cable says. Look for a link you did not expect.", c: ["run show interfaces terse"], ok: () => ran("show interfaces terse") },
+      { id: "dis", t: "Disable ge-0/0/9", why: "disable is administrative shutdown. The cable can stay; the port stops forwarding. The left screen will show the port go dark after commit.", c: ["set interfaces ge-0/0/9 disable", "commit"], ok: () => port(9).disabled },
+      { id: "why", t: "Write why it is shut", why: "Six months from now someone will find a disabled port. The description is the note you leave them.", c: ['set interfaces ge-0/0/9 description "disabled - unknown device"', "commit"], ok: () => port(9).disabled && !!port(9).desc },
+      { id: "rescue", t: "Save a rescue configuration", why: "A known-good config you can load from the console if a later change goes wrong. It also clears the minor alarm you have been ignoring.", c: ["run request system configuration rescue save", "run show system alarms"], ok: () => !!st.rescue }
+    ] },
+  { id: "004", title: "LOBBY AP", giver: "odile",
+    intro: "We put a wireless access point in the reading room for visitors. Brann patched it into ge-0/0/12. Visitors must land on the guest network, never on staff. Label the port in the ledger, and show me the VLAN list so I can file it.",
+    outro: "Guest port, labelled, and the VLAN list shows it plainly. Filed under R1, shelf twelve. Thank you.",
+    done: "ge-0/0/12 is a guest access port for the reading room AP.",
+    setup: () => { st.links = st.links || {}; st.links["ge-0/0/12"] = "ap-reading-room"; },
+    steps: [
+      { id: "acc", t: "Put ge-0/0/12 in guest", why: "An AP for visitors is an access port in the guest VLAN. Same two lines as the server port, different VLAN.", c: ["set interfaces ge-0/0/12 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/12 unit 0 family ethernet-switching vlan members guest", "commit"], ok: () => { const x = port(12); return x.mode === "access" && x.members.length === 1 && x.members[0] === "guest"; } },
+      { id: "lbl", t: "Label it", why: "Name the device, not the person: devices stay, people move.", c: ['set interfaces ge-0/0/12 description "ap reading room"', "commit"], ok: () => !!port(12).desc },
+      { id: "list", t: "Show the VLAN list", why: "show vlans lists every VLAN with its member ports. A star means the link is up.", c: ["run show vlans"], ok: () => ran("show vlans") }
+    ] },
+  { id: "005", title: "BAD CHANGE", giver: "veylin",
+    intro: "The ledger shows a commit tonight that was not yours. Since then the server on ge-0/0/4 cannot be reached. Do not fix it by hand: find the commit, then roll the switch back to the version before it. That is what rollback is for.",
+    outro: "One rollback, one commit, and the server is home in staff again. And the ledger shows exactly what happened. That is how a recovery should look.",
+    done: "The bad commit is rolled back and ge-0/0/4 is back in staff.",
+    setup: () => {
+      const c = clone(st.active);
+      for (const [k, s] of [...c]) if (s.lv[0] === "interfaces" && s.lv[1] === "ge-0/0/4" && s.k === "members") c.delete(k);
+      cfgAdd(c, { lv: ["interfaces", "ge-0/0/4", "unit 0", "family", "ethernet-switching", "vlan"], k: "members", v: "guest", m: true });
+      st.active = c; st.cand = clone(c); st.commits.push(clone(c)); st.ctimes.push(Math.max(st.ctimes[st.ctimes.length - 1] + 40000, Date.now() - 90000));
+      (st.cwho = st.cwho || [])[st.ctimes.length - 1] = "intern";
+    },
+    steps: [
+      { id: "who", t: "Find the commit", why: "show system commit lists every commit, newest first, with who made it. 0 is the current one.", c: ["show system commit"], ok: () => ran("show system commit") },
+      { id: "rb", t: "Roll back one version", why: "rollback 1 loads the configuration from before the last commit into your candidate. Nothing changes on the switch until you commit.", c: ["configure", "rollback 1", "show | compare", "commit"], ok: () => { const x = port(4); return x.members.length === 1 && x.members[0] === "staff"; } }
+    ] }
 ];
-function taskDone(id) {
-  const a = st.active;
-  if (id === "console") return !!(st.plugged && isConsole(st.plugged));
-  if (id === "login") return ["shell", "oper", "conf", "pw1", "pw2", "exitq", "delq"].includes(st.sess) || st.seenCli;
-  if (id === "cli") return st.seenCli;
-  if (id === "rootauth") return hasRootAuth(a);
-  if (id === "host") return hostOf(a) === "acc-sw-01";
-  if (id === "vlan") return vlansOf(a).some((v) => v.name === "staff" && v.id === 10);
-  if (id === "port") { const x = ifInfo(a)["ge-0/0/4"]; return x.mode === "access" && x.members.length === 1 && x.members[0] === "staff"; }
-}
+let TASKS = TICKETS[0].steps;
+function curTicket() { return TICKETS[Math.min(st.tk || 0, TICKETS.length - 1)]; }
+function syncTasks() { TASKS = curTicket().steps; }
+function taskDone(id) { const s = TASKS.find((x) => x.id === id); return !!(s && s.ok()); }
 let revealed = {};
 let lastDone = -1;
 function tick() {}
 
 function renderTicket() {
+  syncTasks();
+  const T = curTicket();
+  if (st.tk >= TICKETS.length) {
+    $("#ticket").innerHTML = `<h4><span>LEDGER</span><span>ALL CLOSED</span></h4><div class="st-title done-msg">Every ticket is closed.</div><div class="st-why">acc-sw-01 is commissioned, uplinked, locked down, serving the reading room and recovered from a bad change. Free play: the switch is yours.</div>`;
+    $("#count").innerHTML = `<div class="big" style="font-size:20cqw;color:var(--ok)">ALL</div><div class="lbl">CLOSED</div>`;
+    return;
+  }
+  if (!(st.met && st.met["intro" + T.id])) {
+    $("#ticket").innerHTML = `<h4><span>TICKET ${T.id}</span><span>INCOMING</span></h4><div class="st-title">${esc(GIVERS[T.giver].name)} is on the way.</div><div class="st-why">Stay at your desk. A new ticket is coming.</div>`;
+    $("#count").innerHTML = `<div class="big" style="font-size:18cqw">${T.id}</div><div class="lbl">NEXT</div>`;
+    return;
+  }
   const done = TASKS.map((x) => taskDone(x.id));
   const n = done.filter(Boolean).length;
   const cur = TASKS.find((x, i) => !done[i]);
   const el = $("#ticket");
   const dots = '<div class="dots">' + TASKS.map((x, i) => `<i class="${done[i] ? "d" : x === cur ? "c" : ""}"></i>`).join("") + "</div>";
   if (!cur) {
-    el.innerHTML = `<h4><span>TICKET 001</span><span>CLOSED</span></h4><div class="st-title done-msg">acc-sw-01 is commissioned.</div><div class="st-why">Root is secured, the switch is named, VLAN staff exists and the server port is in it. Try show vlans and show interfaces terse to see your work.</div>${dots}`;
+    el.innerHTML = `<h4><span>TICKET ${T.id}</span><span>CLOSED</span></h4><div class="st-title done-msg">${T.title.toLowerCase()} done.</div><div class="st-why">${esc(T.done)}</div>${dots}`;
   } else {
-    el.innerHTML = `<h4><span>TICKET 001 · COMMISSION</span><span>${n}/${TASKS.length}</span></h4><div class="st-title">${cur.t}</div><div class="st-why">${cur.why}</div><div class="cmds">${cur.c.map((c, i) => `<button class="chip${revealed[cur.id + i] ? " shown" : ""}" data-r="${cur.id + i}">${esc(c)}</button>`).join("")}</div>${dots}`;
+    el.innerHTML = `<h4><span>TICKET ${T.id} · ${T.title}</span><span>${n}/${TASKS.length}</span></h4><div class="st-title">${cur.t}</div><div class="st-why">${cur.why}</div><div class="cmds">${cur.c.map((c, i) => `<button class="chip${revealed[cur.id + i] ? " shown" : ""}" data-r="${cur.id + i}">${esc(c)}</button>`).join("")}</div>${dots}`;
   }
-  $("#count").innerHTML = cur ? `<div class="big">${n}<small>/${TASKS.length}</small></div><div class="lbl">STEPS</div>` : `<div class="big" style="font-size:20cqw;color:var(--ok)">DONE</div><div class="lbl">TICKET 001</div>`;
+  $("#count").innerHTML = cur ? `<div class="big">${n}<small>/${TASKS.length}</small></div><div class="lbl">STEPS</div>` : `<div class="big" style="font-size:20cqw;color:var(--ok)">DONE</div><div class="lbl">TICKET ${T.id}</div>`;
   if (n > lastDone && lastDone >= 0) SFX.ok();
-  if (!cur && lastDone >= 0 && lastDone < TASKS.length && !(st.met && st.met.outro)) setTimeout(() => visit("outro"), 1600);
+  if (!cur && lastDone >= 0 && lastDone < TASKS.length && !(st.met && st.met["outro" + T.id])) setTimeout(() => visit("outro"), 1600);
   lastDone = n;
 }
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
@@ -1757,29 +1838,50 @@ $("#hot-desksw").addEventListener("mouseenter", placeTips);
 $("#hot-rack").addEventListener("click", () => { $("#tip-rack").classList.remove("on"); openCu(); });
 $("#hot-desksw").addEventListener("click", () => toast("An unmanaged desk switch: no console port, no CLI, nothing to configure. The real work is in the rack."));
 
-const VISITS = {
-  intro: { line: "A new EX4300 was racked in R1 tonight, still factory fresh. Commission it: secure root, name it acc-sw-01, create VLAN staff with tag 10, and put the server on ge-0/0/4 into it. I record every change you commit, so make them clean.", btn: "Take the ticket" },
-  outro: { line: "Committed and recorded. acc-sw-01 is in the ledger: root secured, named, staff on ten, the server where it belongs. Clean work. I will be back when the next one arrives.", btn: "Close ticket" }
-};
 function visit(kind) {
-  const v = VISITS[kind];
-  $("#vline").textContent = v.line;
-  $("#vbtn").textContent = v.btn;
+  const T = curTicket();
+  if (!T) return;
+  const g = GIVERS[T.giver];
+  $("#vline").textContent = kind === "intro" ? T.intro : T.outro;
+  $("#vbtn").textContent = kind === "intro" ? "Take the ticket" : "Close ticket";
   $("#vbtn").dataset.k = kind;
+  $("#vwho").innerHTML = `${esc(g.name)}<span>${esc(g.role)}</span>`;
+  const img = $("#visitor img");
+  img.onerror = () => { $("#visitor").classList.add("noimg"); $("#vdlg").classList.add("noimg"); };
+  $("#visitor").classList.remove("noimg");
+  $("#vdlg").classList.remove("noimg");
+  img.src = g.img;
   $("#visitor").classList.add("on");
   $("#vdim").classList.add("on");
   $("#vdlg").classList.add("on");
+  SFX.tick();
   junie("wave", 2500);
 }
+let nextVisit = 0;
 $("#vbtn").addEventListener("click", () => {
+  const T = curTicket(), k = $("#vbtn").dataset.k;
   st.met = st.met || {};
-  st.met[$("#vbtn").dataset.k] = true;
-  save();
+  st.met[k + T.id] = true;
+  if (k === "intro") { st.tkStart = Date.now(); if (T.setup) T.setup(); }
   $("#visitor").classList.remove("on");
   $("#vdim").classList.remove("on");
   $("#vdlg").classList.remove("on");
   SFX.tick();
+  if (k === "outro") {
+    st.tk = (st.tk || 0) + 1;
+    revealed = {};
+    lastDone = -1;
+    if (st.tk < TICKETS.length) { clearTimeout(nextVisit); nextVisit = setTimeout(arrive, 14000); }
+  }
+  afterChange();
+  lastDone = TASKS.filter((x) => taskDone(x.id)).length;
 });
+function arrive() {
+  const T = curTicket();
+  if (!T || st.tk >= TICKETS.length || (st.met && st.met["intro" + T.id])) return;
+  if (Date.now() - lastKey < 6000 || $("#cu").classList.contains("on")) { nextVisit = setTimeout(arrive, 5000); return; }
+  visit("intro");
+}
 let tt;
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => e.classList.remove("on"), 3600); }
 
@@ -1840,6 +1942,7 @@ $("#t-reset").addEventListener("click", () => {
   setView("stand");
   toast("acc-sw-01 is back to factory default.");
   setTimeout(() => visit("intro"), 900);
+  syncTasks();
 });
 
 document.addEventListener("scroll", (e) => {
@@ -1980,6 +2083,10 @@ if (st.plugged && isConsole(st.plugged) && !st.log.length) banner();
 if (st.plugged && isConsole(st.plugged) && st.log.length > 3) mainMode = "console";
 setView(mainMode === "console" ? "sit" : "stand");
 afterChange();
+if (st.met && st.met.intro && !st.met.intro001) { st.met.intro001 = true; if (st.met.outro) st.met.outro001 = true; }
+st.tk = st.tk || 0;
+if (st.tk === 0 && st.met && st.met.outro001) st.tk = 1;
+syncTasks();
 lastDone = TASKS.filter((x) => taskDone(x.id)).length;
 const startHash = location.hash.slice(1);
 function routeHash(hh) {
@@ -1989,7 +2096,7 @@ function routeHash(hh) {
   return true;
 }
 addEventListener("hashchange", () => routeHash(location.hash.slice(1)));
-if (!routeHash(startHash) && !(st.met && st.met.intro) && lastDone === 0) setTimeout(() => visit("intro"), 1400);
+if (!routeHash(startHash) && st.tk < TICKETS.length && !(st.met && st.met["intro" + curTicket().id])) setTimeout(() => (st.tk ? arrive() : visit("intro")), 1400);
 </script>
 </body>
 </html>
