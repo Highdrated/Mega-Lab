@@ -323,6 +323,7 @@ function launch(lab, hash) {
   if (!lab) return;
   for (const r of document.querySelectorAll(".room, .marker")) r.classList.toggle("was-last", r.dataset.id === lab.id);
   lsSet("workshop-last", lab.id);
+  if (window.trackLab) window.trackLab(lab);
   const docked = lsJson("workshop-docked"); docked[lab.id] = Date.now(); lsSet("workshop-docked", JSON.stringify(docked));
 
   const already = openTabs.find((t) => t.id === lab.id);

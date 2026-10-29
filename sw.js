@@ -2,16 +2,18 @@ const CACHE = "workshop-v29";
 const PRECACHE = [
   "./",
   "./index.html",
-  "./css/launcher.css?v=12",
+  "./css/launcher.css?v=13",
+  "./js/traffic.config.js?v=1",
+  "./js/track.js?v=1",
   "./js/sync.js?v=3",
   "./js/labs.config.js?v=18",
-  "./js/launcher.js?v=17",
+  "./js/launcher.js?v=18",
   "./js/station.js?v=2",
   "./manifest.webmanifest",
   "./icons/icon-192.png",
   "./icons/icon-512.png",
 ];
-const NO_CACHE_HOSTS = ["api.github.com", "gist.githubusercontent.com"];
+const NO_CACHE_HOSTS = ["api.github.com", "gist.githubusercontent.com", "gc.zgo.at"];
 const NET_WAIT = 2500;
 
 self.addEventListener("install", (e) => {
@@ -34,7 +36,7 @@ self.addEventListener("fetch", (e) => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
-  if (NO_CACHE_HOSTS.includes(url.hostname)) return;
+  if (NO_CACHE_HOSTS.includes(url.hostname) || url.hostname.endsWith(".goatcounter.com")) return;
   e.respondWith(new Promise((resolve) => {
     let done = false;
     const finish = (res) => { if (!done) { done = true; resolve(res); } };

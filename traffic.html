@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#05070B">
+<title>Traffic</title>
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/launcher.css?v=13">
+<style>
+html, body { height: auto; min-height: 100%; }
+.tr { min-height: 100vh; background: var(--bg); color: var(--ink); font-family: var(--font-ui); padding: 28px clamp(16px, 5vw, 64px) 48px; }
+.tr-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-faint); }
+.tr-top a { color: var(--ink-muted); text-decoration: none; border: 1px solid var(--line-strong); padding: 4px 10px; }
+.tr-top a:hover { color: var(--accent); border-color: var(--accent); }
+.tr-head { margin: 36px 0 28px; }
+.tr-head h1 { font-size: 28px; font-weight: 300; letter-spacing: 1px; margin: 0 0 10px; }
+.tr-head p { font-size: 12px; color: var(--ink-muted); margin: 0; line-height: 1.7; max-width: 520px; }
+.tr-stats { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 1px solid var(--line-strong); border-bottom: 1px solid var(--line); margin-bottom: 32px; }
+.tr-stat { padding: 16px 16px 16px 0; }
+.tr-stat + .tr-stat { padding-left: 16px; border-left: 1px solid var(--line); }
+.tr-stat .k { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-faint); }
+.tr-stat .v { font-size: 26px; font-weight: 300; margin-top: 6px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.tr-stat .v.small { font-size: 14px; margin-top: 12px; color: var(--ink-muted); }
+.tr-block { margin-bottom: 32px; }
+.tr-block h2 { font-family: var(--font-mono); font-size: 10px; letter-spacing: 3px; text-transform: uppercase; color: var(--accent); font-weight: 400; margin: 0 0 12px; }
+.tr-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 48px; }
+.tr-chart { width: 100%; height: 120px; display: block; }
+.tr-chart rect { fill: var(--accent-dim); }
+.tr-chart rect:hover { fill: var(--accent); }
+.tr-chart line { stroke: var(--line); }
+.tr-axis { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 9px; letter-spacing: 1px; color: var(--ink-faint); margin-top: 6px; }
+.tr-list { list-style: none; margin: 0; padding: 0; }
+.tr-list li { display: grid; grid-template-columns: 44px minmax(0, 1fr) 56px; align-items: center; gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 12px; }
+.tr-list .code { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1px; color: var(--ink-faint); }
+.tr-list .name { min-width: 0; }
+.tr-list .name span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--ink); }
+.tr-list .bar { height: 2px; background: var(--line); margin-top: 5px; }
+.tr-list .bar i { display: block; height: 100%; background: var(--accent); }
+.tr-list .n { text-align: right; font-family: var(--font-mono); font-size: 11px; color: var(--ink-muted); font-variant-numeric: tabular-nums; }
+.tr-empty { font-size: 12px; color: var(--ink-faint); padding: 8px 0; }
+.tr-setup { border: 1px solid var(--line-strong); padding: 20px 22px; margin-bottom: 32px; max-width: 640px; }
+.tr-setup h2 { margin-bottom: 14px; }
+.tr-setup ol { margin: 0; padding-left: 18px; font-size: 12px; line-height: 1.9; color: var(--ink-muted); }
+.tr-setup code { font-family: var(--font-mono); font-size: 11px; color: var(--accent); }
+.tr-foot { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 16px; font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: var(--ink-faint); }
+.tr-foot button { font-family: var(--font-mono); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; background: transparent; color: var(--ink-muted); border: 1px solid var(--line-strong); padding: 4px 10px; cursor: pointer; }
+.tr-foot button.on { color: var(--accent); border-color: var(--accent); }
+@media (max-width: 760px) {
+  .tr-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .tr-stat:nth-child(3) { padding-left: 0; border-left: none; border-top: 1px solid var(--line); }
+  .tr-stat:nth-child(4) { border-top: 1px solid var(--line); }
+  .tr-grid { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<main class="tr">
+  <div class="tr-top">
+    <a href="./">&larr; Workshop</a>
+    <span>station <span style="color:var(--line-strong)">//</span> traffic log</span>
+  </div>
+
+  <header class="tr-head">
+    <p class="eyebrow">who docked</p>
+    <h1>Traffic</h1>
+    <p>Visits to the Workshop over the last 30 days. Counted by GoatCounter without cookies, refreshed every 6 hours.</p>
+  </header>
+
+  <section class="tr-setup" id="setup" hidden>
+    <h2>Not connected yet</h2>
+    <ol>
+      <li>Create a free account at <code>goatcounter.com</code> and pick a site code</li>
+      <li>Put that code in <code>js/traffic.config.js</code></li>
+      <li>In GoatCounter: user menu, API, create a key with <code>read statistics</code></li>
+      <li>In GitHub: Settings, Secrets and variables, Actions, new secret <code>GOATCOUNTER_TOKEN</code></li>
+      <li>In GitHub: Actions, traffic, Run workflow</li>
+    </ol>
+  </section>
+
+  <div id="data" hidden>
+    <div class="tr-stats">
+      <div class="tr-stat"><div class="k">last 7 days</div><div class="v" id="s7">0</div></div>
+      <div class="tr-stat"><div class="k">last 30 days</div><div class="v" id="s30">0</div></div>
+      <div class="tr-stat"><div class="k">countries</div><div class="v" id="sc">0</div></div>
+      <div class="tr-stat"><div class="k">updated</div><div class="v small" id="su">-</div></div>
+    </div>
+
+    <section class="tr-block">
+      <h2>Visits per day</h2>
+      <svg class="tr-chart" id="chart" preserveAspectRatio="none"></svg>
+      <div class="tr-axis"><span id="ax0"></span><span id="ax1"></span></div>
+    </section>
+
+    <div class="tr-grid">
+      <section class="tr-block">
+        <h2>Where from</h2>
+        <ul class="tr-list" id="countries"></ul>
+      </section>
+      <section class="tr-block">
+        <h2>Labs opened</h2>
+        <ul class="tr-list" id="labs"></ul>
+      </section>
+      <section class="tr-block">
+        <h2>Found via</h2>
+        <ul class="tr-list" id="referrers"></ul>
+      </section>
+      <section class="tr-block">
+        <h2>Devices</h2>
+        <ul class="tr-list" id="systems"></ul>
+      </section>
+    </div>
+  </div>
+
+  <footer class="tr-foot">
+    <span id="meNote">this device is counted</span>
+    <button id="meBtn">Ignore my visits</button>
+  </footer>
+</main>
+
+<script>
+(function () {
+  const $ = (id) => document.getElementById(id);
+  const ls = {
+    get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } },
+    set(k, v) { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch (e) {} }
+  };
+
+  const theme = ls.get("workshop-theme") || "void";
+  document.body.className = theme === "void" ? "" : "theme-" + theme;
+  const bg = getComputedStyle(document.body).getPropertyValue("--bg").trim();
+  if (bg) document.querySelector('meta[name="theme-color"]').setAttribute("content", bg);
+
+  function paintMe() {
+    const off = ls.get("workshop-traffic-ignore") === "1";
+    $("meBtn").classList.toggle("on", off);
+    $("meBtn").textContent = off ? "Count me again" : "Ignore my visits";
+    $("meNote").textContent = off ? "this device is not counted" : "this device is counted";
+  }
+  $("meBtn").addEventListener("click", () => {
+    ls.set("workshop-traffic-ignore", ls.get("workshop-traffic-ignore") === "1" ? null : "1");
+    paintMe();
+  });
+  paintMe();
+
+  function list(el, rows, codeOf, nameOf) {
+    el.textContent = "";
+    if (!rows.length) { const p = document.createElement("li"); p.className = "tr-empty"; p.style.display = "block"; p.textContent = "Nothing yet"; el.appendChild(p); return; }
+    const max = Math.max(...rows.map((r) => r.count), 1);
+    for (const r of rows.slice(0, 12)) {
+      const li = document.createElement("li");
+      const c = document.createElement("span"); c.className = "code"; c.textContent = codeOf(r);
+      const n = document.createElement("div"); n.className = "name";
+      const t = document.createElement("span"); t.textContent = nameOf(r);
+      const b = document.createElement("div"); b.className = "bar";
+      const i = document.createElement("i"); i.style.width = (r.count / max * 100).toFixed(1) + "%";
+      b.appendChild(i); n.append(t, b);
+      const k = document.createElement("span"); k.className = "n"; k.textContent = r.count;
+      li.append(c, n, k); el.appendChild(li);
+    }
+  }
+
+  function chart(days) {
+    const svg = $("chart");
+    const W = 600, H = 120, pad = 1;
+    svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+    svg.textContent = "";
+    const ns = "http://www.w3.org/2000/svg";
+    const base = document.createElementNS(ns, "line");
+    base.setAttribute("x1", 0); base.setAttribute("x2", W); base.setAttribute("y1", H - pad); base.setAttribute("y2", H - pad);
+    svg.appendChild(base);
+    if (!days.length) return;
+    const max = Math.max(...days.map((d) => d.count), 1);
+    const w = W / days.length;
+    days.forEach((d, i) => {
+      const h = (d.count / max) * (H - pad - 6);
+      const r = document.createElementNS(ns, "rect");
+      r.setAttribute("x", (i * w + 1).toFixed(1)); r.setAttribute("width", Math.max(w - 2, 1).toFixed(1));
+      r.setAttribute("y", (H - pad - h).toFixed(1)); r.setAttribute("height", h.toFixed(1));
+      const tip = document.createElementNS(ns, "title"); tip.textContent = `${d.day}: ${d.count}`;
+      r.appendChild(tip); svg.appendChild(r);
+    });
+    $("ax0").textContent = days[0].day.slice(5);
+    $("ax1").textContent = days[days.length - 1].day.slice(5);
+  }
+
+  fetch("data/traffic.json", { cache: "no-store" })
+    .then((r) => r.json())
+    .then((d) => {
+      if (!d.updated) { $("setup").hidden = false; return; }
+      $("data").hidden = false;
+      $("s7").textContent = d.total7;
+      $("s30").textContent = d.total30;
+      $("sc").textContent = d.countries.filter((c) => c.id).length;
+      $("su").textContent = new Date(d.updated).toLocaleString([], { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+      chart(d.daily);
+      list($("countries"), d.countries, (r) => r.id || "--", (r) => r.name);
+      list($("labs"), d.labs, () => "lab", (r) => r.title || r.path);
+      list($("referrers"), d.referrers, () => "ref", (r) => r.name || "direct");
+      list($("systems"), d.systems, () => "os", (r) => r.name);
+    })
+    .catch(() => { $("setup").hidden = false; });
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,3 @@
+window.TRAFFIC = {
+  goatcounter: ""
+};
