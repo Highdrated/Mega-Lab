@@ -178,5 +178,15 @@ const LABS_CONFIG = [
     ring: "ring-inner",
     angle: 320,
     glyph: '<rect x="2" y="2" width="12" height="12" rx="1.5"/><path d="M2 6h12M6 6v8"/>'
+  },
+  {
+    id: "pockle",
+    name: "Pockle",
+    tag: "Practice",
+    sub: "pocket mix · all labs · tap only",
+    path: "labs/pockle.html",
+    ring: "ring-inner",
+    angle: 160,
+    glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 5.5h4M6 8h4M6 10.5h2"/>'
   }
 ];
