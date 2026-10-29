@@ -326,6 +326,28 @@ len(nums)  ->  4</code></pre>
 <h4>Percentages off</h4>
 <pre><code>price * (1 - 25/100)</code></pre>
 <p>A 25% discount means keeping 75%. Rather than working out the discount and subtracting it, multiply by what's left. One step instead of two.</p>`
+  },
+  {
+    slug: "scaling",
+    title: "Scaling a range",
+    blurb: "Turning a value from one scale into another: maps, bars, sliders.",
+    minutes: 3,
+    drill: "webmath",
+    body: `
+<p>Maps, progress bars and sliders all do one thing: take a value on <em>one</em> scale and put it on <em>another</em>. A temperature between 0 and 40 becomes a bar between 0 and 200 pixels. A longitude becomes an x on the screen.</p>
+<h4>Step 1 · how far along is it? (0 to 1)</h4>
+<pre><code>t = (value - lo) / (hi - lo)</code></pre>
+<p>30 on a 0–40 scale: <code>(30 - 0) / (40 - 0) = 0.75</code>. Three quarters of the way.</p>
+<h4>Step 2 · put that on the new scale</h4>
+<pre><code>out = new_lo + t * (new_hi - new_lo)</code></pre>
+<p>On a 0–200 bar: <code>0 + 0.75 * 200 = 150</code>. That's a <strong>linear mapping</strong>: same position, different ruler.</p>
+<h4>Step 3 · screens count y downwards</h4>
+<pre><code>y = height - t * height</code></pre>
+<p>On a map, north is up. But on a screen <code>y = 0</code> is the <em>top</em>. So the biggest latitude has to land on the smallest y: flip it by subtracting from the height.</p>
+<h4>The one-liner you'll meet in code</h4>
+<pre><code>x = (lng - min_lng) / (max_lng - min_lng) * width
+y = height - (lat - min_lat) / (max_lat - min_lat) * height</code></pre>
+<p>Round at the very end, never in between: rounding <code>t</code> early would snap every point to the edges.</p>`
   }
 ];
 
