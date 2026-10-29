@@ -451,6 +451,30 @@ table.cheat td:first-child, table.cheat th:first-child { text-align: left; color
 .task button { background: none; border: 1px solid var(--line); border-radius: 999px; padding: 5px 10px; font-size: 12px; color: var(--muted); white-space: nowrap; font-weight: 400; }
 .btn:disabled { opacity: .35; }
 .donebtns { display: grid; gap: 8px; margin-top: 14px; }
+
+.welcome { font-size: 13px; line-height: 1.55; color: var(--muted); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+.welcome b { color: var(--text); }
+.nextup { background: var(--term-bg); color: var(--term-text); border-radius: 14px; padding: 16px; display: grid; gap: 6px; }
+.nextup .nk { font-family: var(--mono); font-size: 10px; letter-spacing: .14em; text-transform: uppercase; color: var(--term-accent); }
+.nextup .nt { font-family: var(--serif); font-size: 24px; line-height: 1.2; }
+.nextup .nd { font-size: 13px; color: var(--term-muted); line-height: 1.5; margin-bottom: 6px; }
+.nextup .btn { height: 52px; font-size: 16px; }
+.path { display: grid; gap: 0; position: relative; }
+.pstep { display: grid; grid-template-columns: 30px 1fr auto; align-items: center; gap: 12px; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--line); padding: 10px 2px; }
+.pstep .pn { width: 28px; height: 28px; border-radius: 50%; border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; font-family: var(--mono); font-size: 12px; color: var(--muted); background: var(--panel); }
+.pstep.prac .pn { border-radius: 7px; }
+.pstep strong { font-family: var(--serif); font-weight: 500; font-size: 16px; display: block; }
+.pstep.prac strong { font-family: var(--sans); font-size: 14px; font-weight: 600; }
+.pstep small { font-size: 12px; color: var(--muted); }
+.pstep .ps { font-family: var(--mono); font-size: 11px; color: var(--muted); }
+.pstep.done .pn { background: var(--good); border-color: var(--good); color: var(--panel); }
+.pstep.cur .pn { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 700; }
+.pstep.cur .ps { color: var(--accent); font-weight: 700; }
+.pstep:disabled { opacity: .4; cursor: default; }
+.freebtn { margin-top: 16px; display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; }
+.freebtn strong { font-family: var(--serif); font-weight: 500; font-size: 16px; display: block; }
+.freebtn small { font-size: 12px; color: var(--muted); }
+.howbtn { display: block; margin: 10px auto 0; background: none; border: 0; color: var(--muted); font-size: 13px; text-decoration: underline; text-underline-offset: 3px; padding: 4px; }
 </style>
 </head>
 <body>
@@ -467,6 +491,15 @@ table.cheat td:first-child, table.cheat th:first-child { text-align: left; color
   </div>
 
   <section class="screen on" id="home">
+    <div class="welcome" id="welcome">New here? Just tap <b>Continue</b>. Each step is a short hands-on lesson or 5 practice tickets. Get 4 of 5 right and the next step opens.</div>
+    <div class="nextup" id="nextUp"></div>
+    <div class="sect"><span>Your path</span><span id="pathCount"></span></div>
+    <div class="path" id="pathList"></div>
+    <button class="freebtn" id="freeBtn"><span><strong>Free play</strong><small>daily shift · sprint · pick your own drills · cheat card</small></span><span>›</span></button>
+  </section>
+
+  <section class="screen" id="free">
+    <div class="drillhead"><button class="quit" id="freeBack">‹ path</button><span>free play</span><span></span></div>
     <div class="modes">
       <button class="mode feature" data-mode="daily">
         <span><strong>Daily shift</strong><br><small id="dailySub">10 fixed tickets · same for everyone today</small></span>
@@ -484,7 +517,7 @@ table.cheat td:first-child, table.cheat th:first-child { text-align: left; color
       <button class="chipbtn" id="cheatBtn">Cheat card</button>
       <button class="chipbtn" id="resetBtn">Reset stats</button>
     </div>
-  </section>
+    </section>
 
   <section class="screen" id="drill">
     <div class="drillhead">
@@ -497,6 +530,7 @@ table.cheat td:first-child, table.cheat th:first-child { text-align: left; color
       <div class="ask" id="ask"></div>
       <div class="term" id="big"></div>
       <div class="answer" id="answer"></div>
+      <button class="howbtn" id="howBtn">Not sure? Show me how</button>
       <div class="fb" id="fb"></div>
     </div>
     <div class="pad" id="pad"></div>
@@ -528,7 +562,7 @@ table.cheat td:first-child, table.cheat th:first-child { text-align: left; color
   </section>
 
   <section class="screen" id="lesson">
-    <div class="drillhead"><button class="quit" id="lessonBack">‹ guide</button><span id="lessonPos"></span><span></span></div>
+    <div class="drillhead"><button class="quit" id="lessonBack">‹ path</button><span id="lessonPos"></span><span></span></div>
     <div class="ldots" id="lessonDots"></div>
     <div class="card lesson" id="lessonBody"></div>
     <div class="task none" id="lessonTask"></div>
@@ -604,7 +638,7 @@ const CHAPTERS = [
   { id: "ranges", name: "Ranges", cats: ["priv", "special"] }
 ];
 
-const defaults = () => ({ xp: 0, bestSprint: 0, bestRun: 0, streak: 0, lastDay: "", theme: "orbital", on: Object.keys(CATS), stats: {}, read: [], lsn: {}, daily: { day: "", score: -1 } });
+const defaults = () => ({ xp: 0, bestSprint: 0, bestRun: 0, streak: 0, lastDay: "", theme: "orbital", on: Object.keys(CATS), stats: {}, read: [], lsn: {}, pathDone: [], daily: { day: "", score: -1 } });
 let S = defaults();
 try {
   const raw = localStorage.getItem(KEY);
@@ -684,7 +718,7 @@ const GEN = {
       big: String(n),
       ans: bin8(n),
       check: (s) => /^[01]{1,8}$/.test(s) && parseInt(s, 2) === n,
-      how: bitsHtml(n) + `Walk 128 → 1: take a place value if it still fits, then subtract.`
+      how: bitsHtml(n) + (() => { let r = n; return [128, 64, 32, 16, 8, 4, 2, 1].map((v) => { if (v <= r) { r -= v; return `<b>${v}</b> fits → ${r} left`; } return `${v} too big`; }).join(" · "); })()
     };
   },
   mask() {
@@ -934,6 +968,7 @@ function touchDay() {
 
 function nextQ() {
   if ((G.mode === "pocket" || G.mode === "daily") && G.n >= 10) return finish();
+  if (G.mode === "path" && G.n >= 5) return finish();
   const cat = pickCat();
   G.q = Object.assign({ cat }, GEN[cat]());
   G.buf = "";
@@ -947,6 +982,8 @@ function nextQ() {
   $("answer").className = "answer";
   $("nextBtn").classList.remove("on");
   if (G.mode === "pocket" || G.mode === "daily") $("count").textContent = `${G.n} / 10`;
+  if (G.mode === "path") $("count").textContent = `${G.n} / 5`;
+  $("howBtn").style.display = "";
   if (G.mode === "practice") $("count").textContent = `#${G.n}`;
   $("ok").textContent = G.ok;
   buildPad();
@@ -1028,15 +1065,17 @@ function check() {
   save();
   paintRail();
   $("ok").textContent = G.ok;
-  $("answer").className = "answer " + (good ? "good" : "bad");
+  $("answer").className = "answer " + (good ? "good" : G.buf === "?" ? "" : "bad");
   paintAnswer();
   const shown = G.q.ans === "yes" ? "Yes" : G.q.ans === "no" ? "No" : G.q.ans;
-  $("fb").innerHTML = `<span class="verdict ${good ? "good" : "bad"}">${good ? "✓ Correct" + (G.run > 2 ? ` · ${G.run} in a row` : "") : "✕ It's " + shown}</span><div class="how">${G.q.how}</div>`;
+  const asked = G.buf === "?";
+  $("fb").innerHTML = `<span class="verdict ${good ? "good" : asked ? "" : "bad"}">${good ? "✓ Correct" + (G.run > 2 ? ` · ${G.run} in a row` : "") : asked ? "Here's how. The answer is " + shown : "✕ It's " + shown}</span><div class="how">${G.q.how}</div>`;
   $("fb").className = "fb on";
   if (G.mode === "sprint" && good) {
     return setTimeout(() => { if (G.done && G.mode === "sprint" && $("drill").classList.contains("on")) nextQ(); }, 450);
   }
   $("pad").style.display = "none";
+  $("howBtn").style.display = "none";
   $("nextBtn").classList.add("on");
 }
 
@@ -1058,6 +1097,18 @@ function finish() {
   $("resBest").textContent = G.bestRun;
   const r = rankOf(S.xp);
   $("rankup").textContent = r > G.rank0 ? `Promoted → ${RANKS[r][1]}` : G.mode === "sprint" && G.ok && G.ok === S.bestSprint ? "New sprint record" : "";
+  const isPath = G.mode === "path";
+  G.pathPass = isPath && answered >= 5 && G.ok >= 4;
+  if (G.pathPass && !S.pathDone.includes(G.pathL)) { S.pathDone.push(G.pathL); save(); }
+  if (isPath) {
+    $("resTitle").textContent = "Practice · " + LESSONS[G.pathL].t;
+    $("resSub").textContent = `correct of ${Math.max(answered, 0)}`;
+    const nx = pathCurrent();
+    $("rankup").textContent = G.pathPass ? (nx < PATH.length ? "Passed. Next: " + pathLabel(nx) : "Path complete. Free play is all yours.") : "Get 4 of 5 to open the next step. Read the explanations, then try again.";
+  }
+  $("againBtn").textContent = isPath ? (G.pathPass ? "Continue" : "Try again") : "Again";
+  $("homeBtn").textContent = isPath ? "Back to path" : "Back to free play";
+  if (isPath && !G.pathPass) $("homeBtn").textContent = "Review the lesson";
   $("misses").innerHTML = G.misses.length ? '<div class="sect"><span>Review</span></div>' + G.misses.slice(-6).map((m) => `<div>${m}</div>`).join("") : "";
   show("result");
 }
@@ -1353,7 +1404,7 @@ function renderStep() {
   WST = {};
   WAPI = W[st.w]($("wid"), Object.assign({}, st.o), (s) => { WST = s; paintTask(); });
   paintTask();
-  $("lessonPrev").textContent = STEP ? "‹ Back" : "‹ Guide";
+  $("lessonPrev").textContent = STEP ? "‹ Back" : "‹ Path";
   window.scrollTo(0, 0);
 }
 function paintTask() {
@@ -1371,14 +1422,14 @@ function paintTask() {
 function renderDone() {
   const first = !lessonDone(L);
   if (first) { S.read.push(L); S.xp += 25; save(); paintRail(); }
-  $("lessonBody").innerHTML = `<div class="kicker">${LESSONS[L].t}</div><h3>Lesson complete</h3><p>${first ? "+25 xp. " : ""}Now lock it in: a few drills on exactly this, while it's fresh.</p>
-    <div class="donebtns"><button class="btn main" id="lessonDrill">Drill this · 10 tickets</button>${L < LESSONS.length - 1 ? `<button class="btn" id="lessonNextL">Next lesson: ${LESSONS[L + 1].t} ›</button>` : ""}</div>`;
+  $("lessonBody").innerHTML = `<div class="kicker">${LESSONS[L].t}</div><h3>Lesson complete</h3><p>${first ? "+25 xp. " : ""}Now 5 practice tickets on exactly this, while it's fresh. Get 4 right to open the next lesson.</p>
+    <div class="donebtns"><button class="btn main" id="lessonDrill">Continue: practice</button><button class="btn" id="lessonHome">Back to path</button></div>`;
   $("lessonTask").className = "task none";
   $("lessonTask").innerHTML = "";
   $("lessonNext").disabled = true;
   $("lessonNext").textContent = "Done";
-  $("lessonDrill").onclick = () => start("pocket", CHAPTERS.find((c) => c.id === LESSONS[L].ch).cats);
-  if ($("lessonNextL")) $("lessonNextL").onclick = () => openLesson(L + 1);
+  $("lessonDrill").onclick = () => startPath(L);
+  $("lessonHome").onclick = goHome;
 }
 function stepNext() {
   if ($("lessonNext").disabled) return;
@@ -1389,9 +1440,44 @@ function stepNext() {
   renderStep();
 }
 function stepPrev() {
-  if (STEP === 0) { paintGuide(); show("guide"); return; }
+  if (STEP === 0) return goHome();
   STEP = Math.min(STEP, LESSONS[L].steps.length) - 1;
   renderStep();
+}
+
+const PRAC = [["bin", "dec2bin"], ["mask", "cidr", "hostbits"], ["block", "hosts"], ["net", "bc", "first", "last", "valid", "same"], ["fit", "hosts"], ["subnets", "nth", "next"], ["summ"], ["priv", "special", "wild"]];
+const PATH = LESSONS.flatMap((l, i) => [{ type: "lesson", l: i }, { type: "prac", l: i }]);
+const stepDone = (st) => (st.type === "lesson" ? S.read.includes(st.l) : S.pathDone.includes(st.l));
+function pathCurrent() { const i = PATH.findIndex((st) => !stepDone(st)); return i === -1 ? PATH.length : i; }
+function pathLabel(i) { const st = PATH[i]; return st.type === "lesson" ? "Lesson · " + LESSONS[st.l].t : "Practice · " + LESSONS[st.l].t; }
+function startPath(l) { G.pathL = l; start("path", PRAC[l]); }
+function runStep(i) {
+  const st = PATH[i];
+  if (st.type === "lesson") { const at = (S.lsn && S.lsn[st.l]) || 0; openLesson(st.l, lessonDone(st.l) || at >= LESSONS[st.l].steps.length ? 0 : at); }
+  else startPath(st.l);
+}
+function continueNext() { const i = pathCurrent(); if (i >= PATH.length) return show("free"); runStep(i); }
+function goHome() { paintPath(); show("home"); }
+function paintPath() {
+  const cur = pathCurrent();
+  const doneN = PATH.filter(stepDone).length;
+  $("pathCount").textContent = `${doneN} / ${PATH.length}`;
+  $("welcome").style.display = doneN < 2 ? "" : "none";
+  if (cur >= PATH.length) {
+    $("nextUp").innerHTML = `<div class="nk">all done</div><div class="nt">You finished the path</div><div class="nd">Keep it sharp with the daily shift and sprints in free play.</div><button class="btn main" id="continueBtn">Open free play</button>`;
+  } else {
+    const st = PATH[cur], les = LESSONS[st.l];
+    const at = (S.lsn && S.lsn[st.l]) || 0;
+    const desc = st.type === "lesson" ? (at && at < les.steps.length ? `You're at step ${at + 1} of ${les.steps.length}. Picks up where you left off.` : `${les.steps.length} short steps. Tap, slide and try things — no typing.`) : `5 tickets on what you just learned. Get 4 right to open the next lesson.`;
+    $("nextUp").innerHTML = `<div class="nk">next up · step ${cur + 1}</div><div class="nt">${st.type === "lesson" ? les.t : "Practice: " + les.t}</div><div class="nd">${desc}</div><button class="btn main" id="continueBtn">Continue</button>`;
+  }
+  $("pathList").innerHTML = PATH.map((st, i) => {
+    const done = stepDone(st), open = i <= cur;
+    const les = LESSONS[st.l];
+    const title = st.type === "lesson" ? les.t : "Practice";
+    const sub = st.type === "lesson" ? les.sub : "5 tickets · 4 to pass";
+    return `<button class="pstep ${st.type} ${done ? "done" : ""} ${i === cur ? "cur" : ""}" data-i="${i}" ${open ? "" : "disabled"}><span class="pn">${done ? "✓" : i + 1}</span><span class="pt"><strong>${title}</strong><small>${sub}</small></span><span class="ps">${done ? "redo" : i === cur ? "now" : open ? "" : "locked"}</span></button>`;
+  }).join("");
 }
 
 function paintCheat() {
@@ -1428,15 +1514,20 @@ $("allBtn").addEventListener("click", () => { S.on = Object.keys(CATS); save(); 
 $("pad").addEventListener("click", (e) => { const k = e.target.closest(".key"); if (k) press(k.dataset.k); });
 $("nextBtn").addEventListener("click", nextQ);
 $("quitBtn").addEventListener("click", finish);
-$("againBtn").addEventListener("click", () => start(G.mode, G.pool));
-$("homeBtn").addEventListener("click", () => show("home"));
+$("againBtn").addEventListener("click", () => { if (G.mode !== "path") return start(G.mode, G.pool); if (G.pathPass) continueNext(); else startPath(G.pathL); });
+$("homeBtn").addEventListener("click", () => { if (G.mode !== "path") return show("free"); if (G.pathPass) goHome(); else openLesson(G.pathL); });
+$("freeBtn").addEventListener("click", () => show("free"));
+$("freeBack").addEventListener("click", goHome);
+$("nextUp").addEventListener("click", (e) => { if (e.target.closest("#continueBtn")) continueNext(); });
+$("pathList").addEventListener("click", (e) => { const b = e.target.closest(".pstep"); if (!b || b.disabled) return; runStep(+b.dataset.i); });
+$("howBtn").addEventListener("click", () => { if (G.done) return; G.buf = "?"; check(); });
 $("cheatBtn").addEventListener("click", () => show("cheat"));
 $("guideBtn").addEventListener("click", () => { paintGuide(); show("guide"); });
 $("guideList").addEventListener("click", (e) => { const b = e.target.closest(".gitem"); if (b) openLesson(Number(b.dataset.l)); });
-$("lessonBack").addEventListener("click", () => { paintGuide(); show("guide"); });
+$("lessonBack").addEventListener("click", goHome);
 $("lessonNext").addEventListener("click", stepNext);
 $("lessonPrev").addEventListener("click", stepPrev);
-document.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => show("home")));
+document.querySelectorAll("[data-back]").forEach((b) => b.addEventListener("click", () => show("free")));
 $("resetBtn").addEventListener("click", () => {
   if (!confirm("Reset accuracy stats? XP and rank stay.")) return;
   S.stats = {};
@@ -1464,6 +1555,7 @@ document.addEventListener("keydown", (e) => {
 });
 
 applyTheme();
+paintPath();
 paintRail();
 paintCats();
 paintCheat();
