@@ -8,6 +8,8 @@ import { checkAchievements } from "../../progress/hud.js";
 
 const SIZE = 10;
 
+const known = (k) => (P.attempts[k] || 0) >= 3;
+
 function weakestCats(n) {
   return catList.map(c => c[0])
     .filter(k => P.prefs.enabled.includes(k) && (P.attempts[k] || 0) >= 3)
@@ -22,10 +24,12 @@ export function buildSet() {
   const plan = [];
   const t = todayStr();
   const spots = weakSpots(12);
-  spots.filter(w => w.due <= t).concat(spots.filter(w => w.due > t)).slice(0, 5)
+  spots.filter(w => w.due <= t && known(w.cat)).slice(0, 5)
     .forEach(w => plan.push({ cat: w.cat, diff: w.diff, kind: w.kind }));
   weakestCats(3).forEach(k => plan.push({ cat: k, diff: P.prefs.difficulty }));
-  const pool = P.prefs.enabled.length ? P.prefs.enabled : catList.map(c => c[0]);
+  const enabled = P.prefs.enabled.length ? P.prefs.enabled : catList.map(c => c[0]);
+  const met = enabled.filter(known);
+  const pool = met.length ? met : enabled;
   while (plan.length < SIZE) plan.push({ cat: pool[Math.floor(Math.random() * pool.length)], diff: P.prefs.difficulty });
   const out = [];
   const rest = plan.slice(0, SIZE);

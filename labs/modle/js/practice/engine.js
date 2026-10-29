@@ -5,6 +5,8 @@ import { updateHud, checkAchievements } from "../progress/hud.js";
 import { vizRenderers } from "./viz/renderers.js";
 import { hints } from "./hints.js";
 import { gen } from "./generators.js";
+import { baby } from "./baby.js";
+import { withSystemRng } from "../core/rng.js";
 import { grade } from "../drill/schedule.js";
 import { todayStr } from "../core/dates.js";
 import { typeKey, kindLabel } from "./kinds.js";
@@ -15,6 +17,10 @@ let session = null;
 let item = null;
 let answered = false;
 let retryNext = null;
+let ladder = null;
+
+const STEPS = 3;
+const side = (it) => !!(it && (it.retry || it.baby));
 
 export const activeSession = () => session;
 export const activeItem = () => item;
@@ -70,8 +76,9 @@ function paint() {
   p.innerHTML = '<span class="arrows">&gt;&gt;&gt; </span>' + item.pz.code.split("\n>>> ").join('\n<span class="arrows">&gt;&gt;&gt; </span>');
   el("card").className = "card" + (item.retry ? " retrying" : "");
   const tag = el("retrytag");
-  tag.classList.toggle("hidden", !item.retry && !item.focus);
-  tag.textContent = item.retry ? "one more like it — " + kindLabel(item.cat, item.pz.kind) : item.focus ? "focus — " + kindLabel(item.cat, item.pz.kind) : "";
+  if (item.baby) el("card").className = "card baby";
+  tag.classList.toggle("hidden", !item.retry && !item.focus && !item.baby);
+  tag.textContent = item.baby ? "baby step " + item.baby + " of " + STEPS + " — " + kindLabel(item.cat, item.pz.kind) : item.retry ? "one more like it — " + kindLabel(item.cat, item.pz.kind) : item.focus ? "focus — " + kindLabel(item.cat, item.pz.kind) : "";
   el("answer").value = "";
   el("feedback").textContent = "";
   el("feedback").className = "feedback";
@@ -89,6 +96,8 @@ function paint() {
   inp.placeholder = item.pz.placeholder || "your answer";
   inp.setAttribute("inputmode", numeric ? "decimal" : (item.pz.inputmode || "text"));
   el("next").classList.add("hidden");
+  el("babynext").classList.add("hidden");
+  paintBabyBtn(false);
   toggleHint(false);
   paintVizBtn();
   if (!tf) inp.focus();
@@ -105,6 +114,50 @@ function chrome() {
   }
 }
 
+function babyAllowed() {
+  return !!(session && item && item.pz.kind && !session.autoAdvance && !ladder);
+}
+
+function paintBabyBtn(nudge) {
+  const b = el("babybtn");
+  if (!b) return;
+  b.classList.toggle("hidden", !babyAllowed());
+  b.classList.toggle("nudge", !!nudge && babyAllowed());
+}
+
+function stepPuzzle() {
+  const o = ladder.origin;
+  const make = () => withSystemRng(() => (ladder.step < STEPS - 1 && baby(o.cat, o.pz.kind)) || gen(o.cat, "easy", o.pz.kind));
+  let pz = make();
+  for (let i = 0; i < 6 && (pz.code === o.pz.code || (item && item.baby && pz.code === item.pz.code)); i++) pz = make();
+  return pz;
+}
+
+function presentStep() {
+  present({ pz: stepPuzzle(), cat: ladder.origin.cat, diff: "easy", baby: ladder.step + 1 });
+}
+
+export function startBaby() {
+  if (!babyAllowed()) return;
+  const o = item;
+  if (!answered) {
+    grade(typeKey(o.cat, o.pz.kind), false, itemDiff(o));
+    o.usedBaby = true;
+    save();
+  }
+  ladder = { origin: o, after: answered ? "retry" : "same", step: 0, lastOk: false };
+  retryNext = null;
+  presentStep();
+}
+
+function endLadder() {
+  const o = ladder.origin, after = ladder.after;
+  ladder = null;
+  if (after === "same") { present(o); return; }
+  const d = itemDiff(o);
+  present({ pz: withSystemRng(() => gen(o.cat, d, o.pz.kind)), cat: o.cat, diff: d, retry: true });
+}
+
 export function refreshChrome() { if (session) chrome(); }
 
 export function startSession(s) {
@@ -112,6 +165,7 @@ export function startSession(s) {
   session = s;
   answered = false;
   retryNext = null;
+  ladder = null;
   chrome();
   advance();
 }
@@ -122,6 +176,7 @@ export function stopSession() {
   item = null;
   answered = false;
   retryNext = null;
+  ladder = null;
 }
 
 export function present(nextItem) {
@@ -134,7 +189,7 @@ export function present(nextItem) {
 }
 
 function gradeType(correct) {
-  if (!item.pz.kind || item.retry) return;
+  if (!item.pz.kind || side(item) || item.usedBaby) return;
   const key = typeKey(item.cat, item.pz.kind);
   if (item.key === key) return;
   if (!correct) grade(key, false, itemDiff(item));
@@ -150,7 +205,7 @@ export function submit() {
   const fb = el("feedback"), card = el("card");
   const correct = matches(raw, item.pz.answer);
 
-  P.attempts[item.cat] = (P.attempts[item.cat] || 0) + 1;
+  if (!item.baby) P.attempts[item.cat] = (P.attempts[item.cat] || 0) + 1;
   markPlayedToday();
 
   if (isTF(item.pz.answer)) {
@@ -163,16 +218,18 @@ export function submit() {
 
   if (correct) {
     const before = levelOf(P.xp);
-    const gain = gainFor(P.streak);
-    P.streak++;
-    P.solved++;
-    P.maxStreak = Math.max(P.maxStreak, P.streak);
+    const gain = item.baby ? 1 : gainFor(P.streak);
+    if (!item.baby) {
+      P.streak++;
+      P.solved++;
+      P.maxStreak = Math.max(P.maxStreak, P.streak);
+      P.cats[item.cat] = (P.cats[item.cat] || 0) + 1;
+    }
     P.xp += gain;
-    P.cats[item.cat] = (P.cats[item.cat] || 0) + 1;
     if (item.retry) P.retriesWon = (P.retriesWon || 0) + 1;
     card.className = "card correct";
     fb.className = "feedback ok";
-    fb.innerHTML = '<span class="verdict">' + (item.retry ? "got it this time." : "correct.") + '</span><span class="explain">' + item.pz.explain + "</span>";
+    fb.innerHTML = '<span class="verdict">' + (item.baby ? "step done." : item.retry ? "got it this time." : "correct.") + '</span><span class="explain">' + item.pz.explain + "</span>";
     const pop = el("xppop");
     pop.textContent = "+" + gain + " xp";
     pop.classList.remove("show"); void pop.offsetWidth; pop.classList.add("show");
@@ -181,7 +238,7 @@ export function submit() {
     checkAchievements();
     if (leveled) cat.onLevel(); else cat.onAnswer(true);
   } else {
-    P.streak = 0;
+    if (!item.baby) P.streak = 0;
     card.className = "card wrong";
     fb.className = "feedback no";
     fb.innerHTML = '<span class="verdict">not quite — answer was <code>' + esc(String(item.pz.answer)) + '</code></span><span class="explain">' + item.pz.explain + "</span>";
@@ -192,8 +249,16 @@ export function submit() {
   renderViz(item.pz.viz);
 
   gradeType(correct);
-  if (!item.retry) session.onResult(correct, item);
+  if (!side(item)) session.onResult(correct, item);
   chrome();
+
+  if (item.baby) {
+    ladder.lastOk = correct;
+    el("next").textContent = !correct ? "Try this step again →" : ladder.step < STEPS - 1 ? "Next baby step →" : ladder.after === "same" ? "Back to the real one →" : "Now one like the real one →";
+    el("next").classList.remove("hidden");
+    if (isTF(item.pz.answer) || matchMedia("(pointer: coarse)").matches) el("next").focus({ preventScroll: true });
+    return;
+  }
 
   coach.record(item.cat, itemDiff(item), correct);
   if (session.kind === "free" && session.onCoach) {
@@ -204,17 +269,24 @@ export function submit() {
   if (session.autoAdvance) { setTimeout(() => { if (session && session.autoAdvance) advance(); }, 900); return; }
 
   retryNext = null;
-  if (!correct && !item.retry && item.pz.kind && session.allowRetry !== false) {
+  if (!correct && !side(item) && item.pz.kind && session.allowRetry !== false) {
     const d = itemDiff(item);
     retryNext = { pz: gen(item.cat, d, item.pz.kind), cat: item.cat, diff: d, retry: true };
   }
   el("next").textContent = retryNext ? "Try one like it →" : (session.nextLabel ? session.nextLabel() : "Next puzzle →");
   el("next").classList.remove("hidden");
+  if (!correct) { paintBabyBtn(true); el("babynext").classList.toggle("hidden", !babyAllowed()); }
   if (isTF(item.pz.answer) || matchMedia("(pointer: coarse)").matches) el("next").focus({ preventScroll: true });
 }
 
 export function advance() {
   if (!session) return;
+  if (ladder && item && item.baby) {
+    if (ladder.lastOk) ladder.step++;
+    ladder.lastOk = false;
+    if (ladder.step >= STEPS) endLadder(); else presentStep();
+    return;
+  }
   if (retryNext) { const r = retryNext; retryNext = null; present(r); return; }
   const nxt = session.next();
   if (nxt) present(nxt);
@@ -232,6 +304,8 @@ export function wire() {
   el("check").onclick = submit;
   el("next").onclick = advance;
   el("helpbtn").onclick = () => toggleHint();
+  el("babybtn").onclick = startBaby;
+  el("babynext").onclick = startBaby;
   el("vizbtn").onclick = () => toggleViz();
   el("pmkey").onclick = flipSign;
   el("tfrow").querySelectorAll("button").forEach(b => {
