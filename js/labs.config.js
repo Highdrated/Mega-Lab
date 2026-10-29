@@ -170,6 +170,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 6l1.5 1.5L6 9M8.5 9.5h1.5"/>'
   },
   {
+    id: "poshle-pocket",
+    name: "Poshle Pocket",
+    tag: "Practice",
+    sub: "powershell · tap only · on the go",
+    path: "labs/poshle-pocket.html",
+    ring: "ring-mid",
+    angle: 110,
+    glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 6l1.5 1.5L6 9M8.5 9.5h1.5"/>'
+  },
+  {
     id: "rebble",
     name: "Rebble",
     tag: "Practice",

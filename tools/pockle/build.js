@@ -1,6 +1,6 @@
 const fs = require("fs"), path = require("path");
 const dir = path.join(__dirname, "banks");
-const order = ["junle", "junos-lab", "subnle-pocket", "pyle", "pyle-pocket", "sleeple", "passle", "seqle", "hexle", "webble", "spelle", "rebble", "git-lab", "shelle", "poshle", "modle"];
+const order = ["junle", "junos-lab", "subnle-pocket", "pyle", "pyle-pocket", "sleeple", "passle", "seqle", "hexle", "webble", "spelle", "rebble", "git-lab", "shelle", "poshle", "poshle-pocket", "modle"];
 const files = order.filter(id => fs.existsSync(path.join(dir, id + ".js")));
 
 function strip(src) {
