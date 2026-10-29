@@ -39,7 +39,23 @@ body.v-sit .shade, body.v-focus .shade { opacity: 1; }
 #right::after { background: linear-gradient(172deg, rgba(190, 215, 235, .06), transparent 30%), radial-gradient(ellipse 22% 30% at 4% 92%, rgba(255, 190, 110, .16), transparent 70%); }
 #small::after { background: radial-gradient(ellipse 60% 50% at 0% 10%, rgba(255, 190, 110, .2), transparent 70%); }
 .sky { position: absolute; inset: 0; pointer-events: none; -webkit-mask: url(img/junle-room/window-mask.png) 0 0 / 100% 100% no-repeat; mask: url(img/junle-room/window-mask.png) 0 0 / 100% 100% no-repeat; }
-.flyer { position: absolute; left: 0; top: 0; width: 6.2%; aspect-ratio: 185.5 / 171; background: url(img/junle-room/griffon.png) 0 0 / 400% 100% no-repeat; filter: brightness(.66) saturate(.7) contrast(.92) sepia(.12) blur(.3px); opacity: 0; will-change: transform; }
+.flyer { position: absolute; left: 0; top: 0; background-repeat: no-repeat; background-position: 0 0; will-change: transform; }
+.flyer.griffon { filter: brightness(.66) saturate(.7) contrast(.92) sepia(.12) blur(.3px); }
+.flyer.dragon { filter: brightness(.6) saturate(.65) contrast(.95) blur(.35px); }
+.flyer.bird { filter: brightness(.38) saturate(.2) blur(.2px); }
+.visitor { position: fixed; left: 0; bottom: 0; z-index: 35; height: min(82vh, 760px); aspect-ratio: 573 / 768; pointer-events: none; transform: translateX(-105%); transition: transform .9s cubic-bezier(.3, .7, .2, 1); }
+.visitor img { width: 100%; height: 100%; object-fit: contain; object-position: left bottom; -webkit-mask: linear-gradient(90deg, #000 78%, transparent 99%); mask: linear-gradient(90deg, #000 78%, transparent 99%); filter: brightness(.9) saturate(.92) drop-shadow(1.2vw 0 2vw rgba(0, 0, 0, .65)); }
+.visitor.on { transform: translateX(-6%); }
+.vdlg { position: fixed; z-index: 36; left: min(46vh, 430px); bottom: 9vh; width: min(520px, 54vw); padding: 18px 22px 16px; background: rgba(9, 10, 11, .94); border: 1px solid #3a352c; border-radius: 6px; box-shadow: 0 20px 60px rgba(0, 0, 0, .55); opacity: 0; transform: translateY(10px); transition: opacity .4s .35s, transform .4s .35s; pointer-events: none; }
+.vdlg.on { opacity: 1; transform: none; pointer-events: auto; }
+.vdlg .who { font-size: 11px; letter-spacing: .18em; text-transform: uppercase; color: var(--amber); margin-bottom: 8px; }
+.vdlg .who span { color: var(--dim); margin-left: 8px; }
+.vdlg p { font-size: 14px; line-height: 1.65; color: var(--ink); }
+.vdlg .act { margin-top: 14px; display: flex; justify-content: flex-end; }
+.vdlg .act button { padding: 8px 16px; border: 1px solid rgba(224, 168, 62, .45); border-radius: 4px; color: var(--amber); letter-spacing: .12em; text-transform: uppercase; font-size: 11px; }
+.vdlg .act button:hover { background: rgba(224, 168, 62, .1); }
+.vdim { position: fixed; inset: 0; z-index: 34; background: radial-gradient(ellipse at 20% 80%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .25)); opacity: 0; transition: opacity .6s; pointer-events: none; }
+.vdim.on { opacity: 1; }
 #junie { position: absolute; left: 30.9%; top: 71.2%; width: 4.6%; aspect-ratio: 1; pointer-events: auto; z-index: 4; }
 #junie img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; filter: brightness(.82) saturate(.85) sepia(.08) drop-shadow(0 .35vw .45vw rgba(0, 0, 0, .55)); animation: bob 4.2s ease-in-out infinite; transition: opacity .25s; }
 #junie.still img { animation: none; }
@@ -164,7 +180,7 @@ body.cur, body.cur * { cursor: none !important; }
 <div class="stage">
   <div class="cam" id="cam">
     <div class="room"></div>
-    <div class="sky"><div class="flyer" id="flyer"></div></div>
+    <div class="sky" id="sky"></div>
     <div class="glow" id="g-main"></div><div class="glow" id="g-left"></div><div class="glow" id="g-right"></div><div class="glow" id="g-small"></div>
     <div class="spill"></div>
     <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junie/junie-idle.webp" alt=""></div>
@@ -197,6 +213,9 @@ body.cur, body.cur * { cursor: none !important; }
 </div>
 <div class="toast" id="toast"></div>
 <div class="bubble" id="bubble"></div>
+<div class="vdim" id="vdim"></div>
+<div class="visitor" id="visitor"><img src="img/junle-room/visitor-elf.webp" alt=""></div>
+<div class="vdlg" id="vdlg"><div class="who">Veylin<span>keeper of the change ledger</span></div><p id="vline"></p><div class="act"><button id="vbtn"></button></div></div>
 
 <div id="cu">
   <div class="cu-bg" id="cu-bg"></div>
@@ -545,14 +564,14 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(SAVE) || "null");
     if (raw && raw.v === 1) {
-      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot };
+      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {} };
     }
   } catch (e) {}
   return fresh();
 }
 function save() {
   try {
-    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
+    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
   } catch (e) {}
 }
 
@@ -1241,6 +1260,7 @@ function renderTicket() {
   }
   $("#count").innerHTML = cur ? `<div class="big">${n}<small>/${TASKS.length}</small></div><div class="lbl">STEPS</div>` : `<div class="big" style="font-size:20cqw;color:var(--ok)">DONE</div><div class="lbl">TICKET 001</div>`;
   if (n > lastDone && lastDone >= 0) SFX.ok();
+  if (!cur && lastDone >= 0 && lastDone < TASKS.length && !(st.met && st.met.outro)) setTimeout(() => visit("outro"), 1600);
   lastDone = n;
 }
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;");
@@ -1656,6 +1676,29 @@ $("#hot-desksw").addEventListener("mouseenter", placeTips);
 $("#hot-rack").addEventListener("click", () => { $("#tip-rack").classList.remove("on"); openCu(); });
 $("#hot-desksw").addEventListener("click", () => toast("An unmanaged desk switch: no console port, no CLI, nothing to configure. The real work is in the rack."));
 
+const VISITS = {
+  intro: { line: "A new EX4300 was racked in R1 tonight, still factory fresh. Commission it: secure root, name it acc-sw-01, create VLAN staff with tag 10, and put the server on ge-0/0/4 into it. I record every change you commit, so make them clean.", btn: "Take the ticket" },
+  outro: { line: "Committed and recorded. acc-sw-01 is in the ledger: root secured, named, staff on ten, the server where it belongs. Clean work. I will be back when the next one arrives.", btn: "Close ticket" }
+};
+function visit(kind) {
+  const v = VISITS[kind];
+  $("#vline").textContent = v.line;
+  $("#vbtn").textContent = v.btn;
+  $("#vbtn").dataset.k = kind;
+  $("#visitor").classList.add("on");
+  $("#vdim").classList.add("on");
+  $("#vdlg").classList.add("on");
+  junie("wave", 2500);
+}
+$("#vbtn").addEventListener("click", () => {
+  st.met = st.met || {};
+  st.met[$("#vbtn").dataset.k] = true;
+  save();
+  $("#visitor").classList.remove("on");
+  $("#vdim").classList.remove("on");
+  $("#vdlg").classList.remove("on");
+  SFX.tick();
+});
 let tt;
 function toast(t) { const e = $("#toast"); e.textContent = t; e.classList.add("on"); clearTimeout(tt); tt = setTimeout(() => e.classList.remove("on"), 3600); }
 
@@ -1715,6 +1758,7 @@ $("#t-reset").addEventListener("click", () => {
   afterChange();
   setView("stand");
   toast("acc-sw-01 is back to factory default.");
+  setTimeout(() => visit("intro"), 900);
 });
 
 document.addEventListener("scroll", (e) => {
@@ -1724,51 +1768,85 @@ document.addEventListener("scroll", (e) => {
 }, true);
 let flyOn = true, lastKey = 0, flying = false, flyTimer = 0;
 try { flyOn = localStorage.getItem(SAVE + "-fly") !== "0"; } catch (e) {}
+const CREATURES = {
+  griffon: { img: "griffon.png", n: 4, fw: 185.5, fh: 171, w: 6.2, seq: [0, 1, 2, 3], fps: 7.5, flap: 1.7, cycle: 3.2, glide: 1, dur: [9000, 13000], every: [240000, 360000] },
+  dragon: { img: "dragon.png", n: 4, fw: 244.5, fh: 129, w: 9.5, seq: [0, 1, 2, 3], fps: 4.5, flap: 2.6, cycle: 4.4, glide: 1, dur: [12000, 16000], every: [900000, 1500000] },
+  bird: { img: "bird.png", n: 10, fw: 63.5, fh: 65, w: 1.45, seq: [1, 6, 2, 7, 3, 8], fps: 10, flap: 9, cycle: 9, glide: 0, dur: [7000, 10000], every: [70000, 130000], flock: 5 }
+};
+const nextAt = {};
+function rnd(a, b) { return a + Math.random() * (b - a); }
 function scheduleFly(ms) { clearTimeout(flyTimer); flyTimer = setTimeout(tryFly, ms); }
+function quietNow() { return Date.now() - lastKey > 8000 && view !== "focus" && !$("#cu").classList.contains("on") && !document.hidden && !$("#visitor").classList.contains("on"); }
 function tryFly() {
   if (!flyOn) return;
-  const quiet = Date.now() - lastKey > 8000 && view !== "focus" && !$("#cu").classList.contains("on") && !document.hidden;
-  if (!quiet || flying) { scheduleFly(15000); return; }
-  flyNow();
-  scheduleFly(240000 + Math.random() * 120000);
+  if (!flying && quietNow()) {
+    const now = Date.now();
+    const due = Object.keys(CREATURES).filter((k) => now >= nextAt[k]).sort((a, b) => nextAt[a] - nextAt[b]);
+    if (due.length) { const k = due[0]; flyNow(k); const c = CREATURES[k]; nextAt[k] = now + rnd(c.every[0], c.every[1]); }
+  }
+  scheduleFly(5000);
 }
-function flyNow() {
-  const f = $("#flyer");
+function spawn(kind, opts) {
+  const c = CREATURES[kind];
+  const el = document.createElement("div");
+  el.className = "flyer " + kind;
+  el.style.width = c.w * opts.scale + "%";
+  el.style.aspectRatio = c.fw + " / " + c.fh;
+  el.style.backgroundImage = `url(img/junle-room/${c.img})`;
+  el.style.backgroundSize = `${c.n * 100}% 100%`;
+  $("#sky").appendChild(el);
+  const t0 = performance.now() + (opts.delay || 0);
+  return new Promise((done) => {
+    (function step(now) {
+      if (now < t0) { el.style.opacity = 0; requestAnimationFrame(step); return; }
+      el.style.opacity = 1;
+      const p = Math.min(1, (now - t0) / opts.dur);
+      const e = p * p * (3 - 2 * p) * .35 + p * .65;
+      const x = opts.x0 + (opts.x1 - opts.x0) * e + (opts.dx || 0);
+      const y = opts.y0 + (opts.y1 - opts.y0) * p + Math.sin(p * Math.PI * 3 + (opts.ph || 0)) * (opts.bob || .9);
+      const ts = (now - t0) / 1000 + (opts.ph || 0);
+      const cyc = ts % c.cycle;
+      const fr = cyc < c.flap ? c.seq[Math.floor(cyc * c.fps) % c.seq.length] : c.glide;
+      el.style.backgroundPositionX = (fr * 100 / (c.n - 1)) + "%";
+      el.style.left = x + "%";
+      el.style.top = y + "%";
+      const s = 1 + p * .12;
+      el.style.transform = `scale(${s * (opts.ltr ? 1 : -1)}, ${s}) rotate(${Math.sin(p * Math.PI * 2 + (opts.ph || 0)) * 2}deg)`;
+      if (p < 1) requestAnimationFrame(step);
+      else { el.remove(); done(); }
+    })(performance.now());
+  });
+}
+function flyNow(kind) {
+  kind = kind || "griffon";
+  const c = CREATURES[kind];
   flying = true;
   const ltr = Math.random() < .6;
-  const y0 = 9 + Math.random() * 16, y1 = y0 + (Math.random() * 8 - 3);
-  const x0 = ltr ? 34 : 62, x1 = ltr ? 62 : 34;
-  const dur = 9000 + Math.random() * 4000;
-  const s0 = .85 + Math.random() * .2;
-  const t0 = performance.now();
-  const seq = [0, 1, 2, 3];
-  f.style.opacity = 1;
-  (function step(now) {
-    const p = Math.min(1, (now - t0) / dur);
-    const e = p * p * (3 - 2 * p) * .35 + p * .65;
-    const x = x0 + (x1 - x0) * e;
-    const y = y0 + (y1 - y0) * p + Math.sin(p * Math.PI * 3) * .9;
-    const cyc = ((now - t0) / 1000) % 3.2;
-    const fr = cyc < 1.7 ? seq[Math.floor(cyc * 7.5) % 4] : 1;
-    f.style.backgroundPositionX = (fr * 100 / 3) + "%";
-    f.style.left = x + "%";
-    f.style.top = y + "%";
-    f.style.transform = `scale(${(s0 + p * .12) * (ltr ? 1 : -1)}, ${s0 + p * .12}) rotate(${Math.sin(p * Math.PI * 2) * 2}deg)`;
-    if (p < 1) requestAnimationFrame(step);
-    else { f.style.opacity = 0; flying = false; }
-  })(t0);
+  const y0 = (kind === "dragon" ? 6 : 9) + Math.random() * 16, y1 = y0 + (Math.random() * 8 - 3);
+  const x0 = ltr ? 33 : 63, x1 = ltr ? 63 : 33;
+  const dur = rnd(c.dur[0], c.dur[1]);
+  const base = { ltr, x0, x1, y0, y1, dur, scale: rnd(.85, 1.05) };
+  const jobs = [];
+  if (c.flock) {
+    for (let i = 0; i < c.flock; i++) jobs.push(spawn(kind, Object.assign({}, base, { dx: (ltr ? -1 : 1) * (i * 1.1 + rnd(0, .6)), y0: y0 + (i % 2 ? 1 : -1) * i * .7 + rnd(-.4, .4), y1: y1 + (i % 2 ? 1 : -1) * i * .7, delay: i * rnd(80, 220), ph: rnd(0, 3), bob: .5, scale: rnd(.8, 1.1) })));
+  } else jobs.push(spawn(kind, base));
+  Promise.all(jobs).then(() => { flying = false; });
 }
 window.flyNow = flyNow;
 addEventListener("keydown", () => { lastKey = Date.now(); }, true);
 $("#t-fly").addEventListener("click", () => {
   flyOn = !flyOn;
+  if (!flyOn) $("#sky").innerHTML = "";
   try { localStorage.setItem(SAVE + "-fly", flyOn ? "1" : "0"); } catch (e) {}
   $("#t-fly").style.opacity = flyOn ? 1 : .4;
   toast(flyOn ? "Creatures outside the window: on" : "Creatures outside the window: off");
-  if (flyOn) scheduleFly(4000);
+  if (flyOn) scheduleFly(5000);
 });
 $("#t-fly").style.opacity = flyOn ? 1 : .4;
-scheduleFly(25000 + Math.random() * 20000);
+nextAt.bird = Date.now() + rnd(15000, 30000);
+nextAt.griffon = Date.now() + rnd(60000, 110000);
+nextAt.dragon = Date.now() + rnd(420000, 900000);
+scheduleFly(5000);
 let jMood = "idle", jUntil = 0, jIdleSince = Date.now();
 const JPOSES = ["idle", "cheer", "worry", "think", "sleep", "wave", "point", "read", "confused", "wrench"];
 JPOSES.forEach((m) => { const i = new Image(); i.src = `img/junie/junie-${m}.webp`; });
@@ -1821,6 +1899,7 @@ if (st.plugged && isConsole(st.plugged) && !st.log.length) banner();
 setView(st.plugged && isConsole(st.plugged) ? "sit" : "stand");
 afterChange();
 lastDone = TASKS.filter((x) => taskDone(x.id)).length;
+if (!(st.met && st.met.intro) && lastDone === 0) setTimeout(() => visit("intro"), 1400);
 </script>
 </body>
 </html>
