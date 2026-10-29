@@ -377,7 +377,7 @@ kbd{font-family:var(--mono);font-size:10px;opacity:.7}
 .at-col{position:relative;z-index:1;display:flex;flex-direction:column;gap:6px}
 .at-h{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink3);font-weight:700;margin:0 0 4px}
 .atl,.atc,.ats-row{animation:atIn .5s var(--ease) both;animation-delay:calc(var(--i) * 22ms)}
-@keyframes atIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes atIn{from{opacity:0;transform:translateY(10px)}to{opacity:var(--o,1);transform:none}}
 .atl{display:grid;grid-template-columns:1fr auto;gap:0 8px;padding:10px 12px;border:1px solid var(--line);border-radius:12px;background:var(--card);text-decoration:none;color:var(--ink);transition:transform .25s var(--ease),border-color .25s,opacity .25s}
 .atl small{grid-column:1;color:var(--ink3);font-size:11px}
 .atl .atk{grid-row:1/3;grid-column:2;align-self:center;font:600 11px var(--mono);color:var(--ink3)}
@@ -414,6 +414,19 @@ kbd{font-family:var(--mono);font-size:10px;opacity:.7}
 .atrow .go{font-size:11.5px;color:var(--acc);font-weight:600}
 @media (prefers-reduced-motion:reduce){.atl,.atc,.ats-row,.at-detail{animation:none}.at-lines path{transition:none}}
 @media (max-width:1100px){.at-grid{grid-template-columns:1fr;gap:18px}.at-lines{display:none}.atlas .at-head,.at-two{grid-template-columns:1fr}.keep{grid-template-columns:1fr}}
+.atc.f-fading{--o:.62;opacity:.62}
+.atc.f-faded{--o:.3;opacity:.3}
+.atc.f-fading:not(.built),.atc.f-faded:not(.built){border-style:dashed}
+.atc.f-fading:hover,.atc.f-faded:hover,.atc.f-fading.on,.atc.f-faded.on{--o:1;opacity:1}
+.at-grid.picked .atc.f-fading:not(.on),.at-grid.picked .atc.f-faded:not(.on){opacity:.25}
+.at-legend .lg.fading{background:var(--ink);opacity:.62}
+.at-legend .lg.faded{background:var(--ink);opacity:.3}
+.at-warm{display:flex;align-items:center;gap:12px;margin-top:14px;padding:10px 12px;border:1px dashed var(--line2);border-radius:12px}
+.at-warm span{flex:1;font-size:12.5px;color:var(--ink3)}
+.at-warm b{color:var(--ink)}
+.atfade{margin:-4px 0 12px;font-size:12.5px;color:var(--ink3)}
+.atfade b{color:var(--ink)}
+.atfade.f-fading b,.atfade.f-faded b{color:var(--tip)}
 
 </style>
 </head>
@@ -497,6 +510,36 @@ function dailyTicket() {
   const n = list[h % list.length];
   return { n, b: (h >> 3) % ST(n).bugs.length, date: d };
 }
+const GAPS = [2, 4, 8, 16, 30];
+const dayOf = (t) => { const x = new Date(t); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
+function touch(n) {
+  if (!n) return;
+  const T = S.touch || (S.touch = {}), b = T[S.bp] || (T[S.bp] = {}), p = S.passed[key(n)], d = today();
+  const x = b[n] || (p ? { t: p.at || 0, c: 1, d: dayOf(p.at || 0) } : { t: 0, c: 0, d: '' });
+  if (x.d !== d) { x.c++; x.d = d; }
+  x.t = Date.now(); b[n] = x;
+}
+function stageTouch(n) {
+  const x = ((S.touch || {})[S.bp] || {})[n]; if (x) return x;
+  const p = S.passed[key(n)]; return p ? { t: p.at || Date.now(), c: 1 } : null;
+}
+function stageFade(n) {
+  if (!passed(n)) return null;
+  const x = stageTouch(n), gap = GAPS[Math.min(Math.max(x.c, 1), GAPS.length) - 1] * 864e5, age = Date.now() - x.t;
+  return { t: x.t, c: x.c, age, gap, due: x.t + gap, level: age < gap ? 'fresh' : age < 2 * gap ? 'fading' : 'faded' };
+}
+const FADE_RANK = { fresh: 0, fading: 1, faded: 2 };
+function conceptFade(used) {
+  const f = used.filter((u) => u.stage).map((u) => stageFade(u.stage)).filter(Boolean);
+  if (!f.length) return null;
+  return f.reduce((a, b) => (b.t > a.t ? b : a));
+}
+function fadeList() {
+  const M = window.MegaLinks; if (!M) return [];
+  return M.CONCEPTS.map((c) => { const used = c.uses.filter((u) => u.p === S.bp); return { c, used, f: conceptFade(used) }; })
+    .filter((x) => x.f && x.f.level !== 'fresh').sort((a, b) => a.f.t - b.f.t);
+}
+const daysAgo = (t) => { const d = Math.floor((Date.now() - t) / 864e5); return d <= 0 ? 'today' : d === 1 ? 'yesterday' : d + ' days ago'; };
 function testsFor(n = curN()) { return S.mode === 'grand' && BP().grand ? BP().grand.map(([s, i]) => Object.assign({}, BP().stages[s - 1].tests[i], { gs: s, cp: 'Stage ' + s + ' · ' + BP().stages[s - 1].title })) : ST(n).tests; }
 
 let S = null;
@@ -1143,6 +1186,7 @@ async function check() {
   const fails = res.filter((r) => !r.ok).length;
   if (fails) { sfx.bad(); setJn('jnBrief', 'worry', fails + ' to fix. The small line under each red check says what is missing.'); toast(fails + ' check' + (fails > 1 ? 's' : '') + ' to fix'); return; }
   sfx.pass();
+  if (S.mode === 'grand') { for (let g = 1; g <= (BP().grandStage || 13); g++) touch(g); } else touch(n);
   if (S.mode === 'hunt') { S.hunt[key(n)] = Date.now(); save(); renderBrief(); bugsFoundModal(n, st.bugs || []); return; }
   if (S.mode === 'repair') {
     const t = dailyTicket(), d = S.daily || {};
@@ -1359,16 +1403,21 @@ function renderSchool() {
   if ($('#toAtlas')) $('#toAtlas').onclick = (e) => { e.preventDefault(); S.atlasPick = ($('#toAtlas').dataset.c || null); setView('atlas'); };
   $('#school').scrollTop = 0; $('.teach').scrollTop = 0;
 }
-function recall() {
+function recall(faded) {
   const pool = [];
-  BP().stages.forEach((st, i) => { if (passed(i + 1)) st.drills.forEach((d) => pool.push({ d, n: i + 1 })); });
-  if (pool.length < 3) { toast('Pass a few stages first: Recall mixes their warm-ups'); return; }
+  if (faded) {
+    const list = fadeList(), seen = new Set();
+    list.forEach((x) => x.used.forEach((u) => { if (u.stage && passed(u.stage) && !seen.has(u.stage)) { seen.add(u.stage); ST(u.stage).drills.forEach((d) => pool.push({ d, n: u.stage, c: x.c.label })); } }));
+    if (!pool.length) { toast('Nothing is fading. Everything you built is fresh'); return; }
+  } else BP().stages.forEach((st, i) => { if (passed(i + 1)) st.drills.forEach((d) => pool.push({ d, n: i + 1 })); });
+  if (pool.length < 3 && !faded) { toast('Pass a few stages first: Recall mixes their warm-ups'); return; }
   for (let i = pool.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [pool[i], pool[j]] = [pool[j], pool[i]]; }
-  const set = pool.slice(0, 6);
+  if (faded) { const order = [...new Set(pool.map((x) => x.n))]; pool.sort((a, b) => stageFade(a.n).t - stageFade(b.n).t || order.indexOf(a.n) - order.indexOf(b.n)); const by = {}; const spread = []; pool.forEach((x) => (by[x.n] = by[x.n] || []).push(x)); const keys = Object.keys(by); while (spread.length < pool.length) keys.forEach((k) => by[k].length && spread.push(by[k].shift())); pool.splice(0, pool.length, ...spread); }
+  const set = pool.slice(0, 6), hit = {};
   let okN = 0;
-  modal('<div class="eyebrow">Recall · ' + set.length + ' mixed warm-ups</div><h2>Keep it in your hands</h2><div id="rcl" style="display:flex;flex-direction:column;gap:10px">' + set.map((x, i) => drillHtml(x.d, 'rc' + i).replace('<div class="eyebrow">', '<div class="eyebrow">Stage ' + x.n + ' · ')).join('') + '</div><div class="row" style="margin-top:14px"><button class="btn" id="rcDone">Done</button><span class="note" id="rcN" style="margin:0">0 / ' + set.length + '</span><span class="grow"></span><button class="btn ghost sm" id="rcCards">Cards for your quiz bot · JSON</button></div>', true);
+  modal('<div class="eyebrow">' + (faded ? 'Warm-up · fading concepts' : 'Recall · ' + set.length + ' mixed warm-ups') + '</div><h2>' + (faded ? 'Bring it back' : 'Keep it in your hands') + '</h2>' + (faded ? '<p class="note">Pulled from the stages you have not touched for longest. Every right answer refreshes its stage.</p>' : '') + '<div id="rcl" style="display:flex;flex-direction:column;gap:10px">' + set.map((x, i) => drillHtml(x.d, 'rc' + i).replace('<div class="eyebrow">', '<div class="eyebrow">Stage ' + x.n + (x.c ? ' · ' + esc(x.c) : '') + ' · ')).join('') + '</div><div class="row" style="margin-top:14px"><button class="btn" id="rcDone">Done</button><span class="note" id="rcN" style="margin:0">0 / ' + set.length + '</span><span class="grow"></span><button class="btn ghost sm" id="rcCards">Cards for your quiz bot · JSON</button></div>', true);
   $('#rcCards').onclick = exportCards;
-  set.forEach((x, i) => wireDrill($('#rc' + i), x.d, () => { okN++; $('#rcN').textContent = okN + ' / ' + set.length; if (okN === set.length) { S.recall = (S.recall || 0) + 1; save(); toast('Recall round ' + S.recall + ' complete'); } }));
+  set.forEach((x, i) => wireDrill($('#rc' + i), x.d, () => { okN++; if (!hit[x.n]) { hit[x.n] = 1; touch(x.n); save(); } $('#rcN').textContent = okN + ' / ' + set.length; if (okN === set.length) { S.recall = (S.recall || 0) + 1; save(); toast(faded ? 'Warm-up done. Those concepts are fresh again' : 'Recall round ' + S.recall + ' complete'); if (S.view === 'atlas') renderAtlas(); if (S.view === 'home') renderHome(); } }));
   $('#rcDone').onclick = closeModal;
 }
 
@@ -1404,16 +1453,30 @@ function archMap() {
 function exportCards() {
   const strip = (h) => String(h == null ? '' : h).replace(/<[^>]+>/g, '').replace(/&lt;/g, '<').replace(/&gt;/g, '>').replace(/&quot;/g, '"').replace(/&#96;/g, '`').replace(/&amp;/g, '&');
   const cards = [];
+  const M = window.MegaLinks, cOf = (n) => (M ? M.CONCEPTS.filter((c) => c.uses.some((u) => u.p === S.bp && u.stage === n)).map((c) => c.label) : []);
+  const fadeOf = (n) => { const f = stageFade(n); return f ? { fade: f.level, due: f.level !== 'fresh', last: new Date(f.t).toISOString().slice(0, 10), review: new Date(f.due).toISOString().slice(0, 10) } : { fade: 'new', due: false }; };
   BP().stages.forEach((st, i) => st.drills.forEach((d) => {
-    const c = { question: strip(d.q), code: d.code || '', topic: 'Rebble · ' + BP().name + ' · ' + st.title, stage: i + 1, hint: strip(d.hint), stars: passed(i + 1) ? 1 : 0 };
+    const c = Object.assign({ question: strip(d.q), code: d.code || '', topic: 'Rebble · ' + BP().name + ' · ' + st.title, stage: i + 1, concepts: cOf(i + 1), hint: strip(d.hint), stars: passed(i + 1) ? 1 : 0 }, fadeOf(i + 1));
     if (d.k === 'pick') Object.assign(c, { options: d.o.map(strip), answers: [d.a], choose: 1 });
     else if (d.k === 'order') Object.assign(c, { question: c.question + ' (put the lines in order)', code: d.lines.slice().sort().join('\n'), options: [], answers: [d.lines.join('\n')], choose: 0 });
     else Object.assign(c, { options: [], answers: [String(d.show || d.a[0])], choose: 0 });
     cards.push(c);
   }));
-  BP().stages.forEach((st, i) => { if (st.explain) cards.push({ question: strip(st.explain.q), code: '', topic: 'Rebble · explain it back', stage: i + 1, options: [], answers: [strip(st.explain.a)], choose: 0, hint: '' }); });
-  download(new Blob([JSON.stringify({ source: 'rebble', blueprint: BP().id, made: new Date().toISOString(), cards }, null, 2)], { type: 'application/json' }), 'rebble-cards.json');
-  toast(cards.length + ' cards exported');
+  BP().stages.forEach((st, i) => { if (st.explain) cards.push(Object.assign({ question: strip(st.explain.q), code: '', topic: 'Rebble · explain it back', stage: i + 1, options: [], answers: [strip(st.explain.a)], choose: 0, hint: '' }, fadeOf(i + 1))); });
+  const rk = { faded: 0, fading: 1, fresh: 2, new: 3 };
+  cards.sort((a, b) => rk[a.fade] - rk[b.fade] || a.stage - b.stage);
+  const due = cards.filter((c) => c.due).length;
+  download(new Blob([JSON.stringify({ source: 'rebble', blueprint: BP().id, made: new Date().toISOString(), due, cards }, null, 2)], { type: 'application/json' }), 'rebble-cards.json');
+  toast(cards.length + ' cards exported · ' + due + ' due for review');
+}
+function fadeRowHtml() {
+  const L = fadeList(); if (!maxPassed()) return '';
+  if (!L.length) {
+    const nx = BP().stages.map((_, i) => stageFade(i + 1)).filter(Boolean).reduce((a, f) => Math.min(a, f.due), Infinity);
+    return '<div class="td"><span class="tdi">◌</span><div><b>All fresh</b><small>' + (isFinite(nx) ? 'next concept starts fading ' + new Date(nx).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'nothing to review') + '</small></div></div>';
+  }
+  const faded = L.filter((x) => x.f.level === 'faded').length;
+  return '<div class="td fade"><span class="tdi">◌</span><div><b>Fading · ' + L.length + ' concept' + (L.length > 1 ? 's' : '') + '</b><small>' + esc(L.slice(0, 2).map((x) => x.c.label).join(', ')) + (L.length > 2 ? ' +' + (L.length - 2) : '') + (faded ? ' · ' + faded + ' faded' : '') + '</small></div><button class="btn ghost sm" id="tdFade">Warm up</button></div>';
 }
 function todayHtml() {
   const t = dailyTicket(), d = S.daily || {}, doneToday = t && d.last === t.date, mp = maxPassed(), total = NST();
@@ -1421,6 +1484,7 @@ function todayHtml() {
   return '<div class="today"><div class="eyebrow">Today</div>'
     + (t ? '<div class="td"><span class="tdi">⚑</span><div><b>Repair ticket · stage ' + t.n + '</b><small>' + (doneToday ? 'Closed today ✓ · streak ' + (d.streak || 1) : 'Something in ' + esc(ST(t.n).title) + ' broke. ' + (d.streak ? 'Streak ' + d.streak + ': keep it going.' : 'Start a streak.')) + '</small></div>' + (doneToday ? '' : '<button class="btn sm" id="tdFix">Fix it</button>') + '</div>' : '<div class="td"><span class="tdi">⚑</span><div><b>Repair tickets</b><small>Pass a stage and a daily ticket appears here.</small></div></div>')
     + (mp < total ? '<div class="td"><span class="tdi">→</span><div><b>Next · stage ' + (mp + 1) + '</b><small>' + esc(ST(mp + 1).title) + '</small></div><button class="btn ghost sm" id="tdNext">Go</button></div>' : '')
+    + fadeRowHtml()
     + '<div class="td"><span class="tdi">↻</span><div><b>Recall</b><small>' + (S.recall || 0) + ' rounds done · mixed warm-ups</small></div><button class="btn ghost sm" id="tdRecall">Start</button></div>'
     + (grandOk ? '<div class="td"><span class="tdi">⏱</span><div><b>Grand run</b><small>' + (gb ? 'best ' + fmtTime(gb) : 'the core dashboard from empty files, timed') + '</small></div><button class="btn ghost sm" id="tdGrand">Start</button></div>' : '')
     + '</div>';
@@ -1429,7 +1493,8 @@ function wireToday() {
   const t = dailyTicket();
   if ($('#tdFix')) $('#tdFix').onclick = () => startSpecial('repair', t.n);
   if ($('#tdNext')) $('#tdNext').onclick = () => goStage(maxPassed() + 1, 'school');
-  if ($('#tdRecall')) $('#tdRecall').onclick = recall;
+  if ($('#tdRecall')) $('#tdRecall').onclick = () => recall();
+  if ($('#tdFade')) $('#tdFade').onclick = () => recall(true);
   if ($('#tdGrand')) $('#tdGrand').onclick = () => startSpecial('grand', BP().grandStage || 13);
 }
 function renderHome() {
@@ -1599,11 +1664,11 @@ function atlasData() {
   const concepts = M.CONCEPTS.map((c) => {
     const known = c.lessons.filter((l) => st(l) !== null), done = known.filter((l) => st(l) === true);
     const used = c.uses.filter((u) => u.p === S.bp);
-    return { c, known: known.length, done: done.length, used, built: used.length && used.every((u) => (u.stage ? passed(u.stage) : S.mission[S.bp] && S.mission[S.bp].done)) };
+    return { c, known: known.length, done: done.length, used, f: conceptFade(used), built: used.length && used.every((u) => (u.stage ? passed(u.stage) : S.mission[S.bp] && S.mission[S.bp].done)) };
   }).filter((x) => x.used.length);
   const labs = {};
   concepts.forEach((x) => x.c.lessons.forEach((l) => { const L = labs[l.lab] || (labs[l.lab] = { id: l.lab, n: 0, done: 0, ids: new Set() }); L.n++; if (st(l) === true) L.done++; L.ids.add(x.c.id); }));
-  return { M, concepts, labs: Object.values(labs).sort((a, b) => b.n - a.n) };
+  return { M, concepts, fading: concepts.filter((x) => x.f && x.f.level !== 'fresh').length, labs: Object.values(labs).sort((a, b) => b.n - a.n) };
 }
 function renderAtlas() {
   const D = atlasData(), box = $('#atlas');
@@ -1611,9 +1676,9 @@ function renderAtlas() {
   const { M, concepts, labs } = D, groups = Object.keys(M.GROUPS).filter((g) => concepts.some((x) => x.c.group === g));
   const f = S.atlasGroup || 'all';
   let k = 0;
-  const pill = (x) => '<button class="atc' + (x.built ? ' built' : '') + (x.c.lessons.length ? '' : ' only') + '" data-c="' + x.c.id + '" style="--i:' + (k++) + '"><span class="atn">' + esc(x.c.label) + '</span><span class="ats">' + x.used.map((u) => (u.stage ? u.stage : '⌂')).join(' · ') + '</span>' + (x.known ? '<span class="atbar"><i style="width:' + Math.round((x.done / x.known) * 100) + '%"></i></span>' : '') + '</button>';
-  box.innerHTML = '<div class="panel at-head"><div><div class="eyebrow">Concept map · ' + esc(BP().name) + '</div><h2>Where you learn it, where you use it</h2><p>Every idea your project uses, the lessons that teach it in the other labs, and the stages that need it. Pick a concept.</p></div>' + junie('point', 'Bars fill as you finish lessons in the other labs. Solid pills are built into your project already.') + '</div>'
-    + '<div class="at-chips">' + ['all'].concat(groups).map((g) => '<button class="chip' + (f === g ? ' on' : '') + '" data-g="' + g + '">' + esc(g === 'all' ? 'Everything' : M.GROUPS[g]) + '</button>').join('') + '<span class="grow"></span><span class="at-legend"><i class="lg built"></i>built in your project <i class="lg only"></i>only in Rebble</span></div>'
+  const pill = (x) => '<button class="atc' + (x.built ? ' built' : '') + (x.f ? ' f-' + x.f.level : '') + (x.c.lessons.length ? '' : ' only') + '" data-c="' + x.c.id + '" style="--i:' + (k++) + '"><span class="atn">' + esc(x.c.label) + '</span><span class="ats">' + x.used.map((u) => (u.stage ? u.stage : '⌂')).join(' · ') + '</span>' + (x.known ? '<span class="atbar"><i style="width:' + Math.round((x.done / x.known) * 100) + '%"></i></span>' : '') + '</button>';
+  box.innerHTML = '<div class="panel at-head"><div><div class="eyebrow">Concept map · ' + esc(BP().name) + '</div><h2>Where you learn it, where you use it</h2><p>Every idea your project uses, the lessons that teach it in the other labs, and the stages that need it. Pick a concept.</p>' + (D.fading ? '<div class="at-warm"><span><b>' + D.fading + ' concept' + (D.fading > 1 ? 's' : '') + ' fading.</b> Faint pills have not been practised for a while.</span><button class="btn ghost sm" id="atFade">Warm up</button></div>' : '') + '</div>' + junie('point', 'Bars fill as you finish lessons in the other labs. Solid pills are built into your project already.') + '</div>'
+    + '<div class="at-chips">' + ['all'].concat(groups).map((g) => '<button class="chip' + (f === g ? ' on' : '') + '" data-g="' + g + '">' + esc(g === 'all' ? 'Everything' : M.GROUPS[g]) + '</button>').join('') + '<span class="grow"></span><span class="at-legend"><i class="lg built"></i>built in your project <i class="lg only"></i>only in Rebble <i class="lg fading"></i>fading <i class="lg faded"></i>faded</span></div>'
     + '<div class="at-grid" id="atGrid"><svg class="at-lines" id="atLines" aria-hidden="true"></svg>'
     + '<div class="at-col"><div class="at-h">Labs</div>' + labs.map((L, i) => { const info = M.LABS[L.id] || { name: L.id, sub: '' }; return '<a class="atl" href="' + M.labHref(L.id) + '" target="_self" data-l="' + L.id + '" style="--i:' + i + '"><b>' + esc(info.name) + '</b><small>' + esc(info.sub || '') + '</small><span class="atk">' + (M.LABS[L.id] && M.LABS[L.id].key ? L.done + ' / ' + L.n : L.n + ' lessons') + '</span></a>'; }).join('') + '</div>'
     + '<div class="at-col at-mid"><div class="at-h">Concepts</div>' + groups.filter((g) => f === 'all' || f === g).map((g) => '<div class="atg"><div class="atgl">' + esc(M.GROUPS[g]) + '</div><div class="atgp">' + concepts.filter((x) => x.c.group === g).map(pill).join('') + '</div></div>').join('') + '</div>'
@@ -1621,6 +1686,7 @@ function renderAtlas() {
     + '</div><div class="panel at-detail" id="atDetail"></div>';
   $$('.at-chips [data-g]').forEach((b) => (b.onclick = () => { S.atlasGroup = b.dataset.g; save(); renderAtlas(); }));
   $$('.atc').forEach((b) => (b.onclick = () => { S.atlasPick = b.dataset.c; pickAtlas(); sfx.click(); }));
+  if ($('#atFade')) $('#atFade').onclick = () => recall(true);
   $$('.atl').forEach((a) => { a.onmouseenter = () => hoverAtlas('l', a.dataset.l); a.onmouseleave = () => hoverAtlas(); });
   $$('.ats-row').forEach((b) => { b.onmouseenter = () => hoverAtlas('s', +b.dataset.s); b.onmouseleave = () => hoverAtlas(); b.onclick = () => { const n = +b.dataset.s; if (!n) { if (missionOpen()) setView('mission'); else toast('Unlocks after stage ' + BP().mission.after); } else goStage(n, 'school'); }; });
   if (S.atlasPick && !concepts.some((x) => x.c.id === S.atlasPick && (f === 'all' || x.c.group === f))) S.atlasPick = null;
@@ -1642,7 +1708,7 @@ function pickAtlas() {
   $('#atGrid').classList.toggle('picked', !!x);
   if (!x) { det.innerHTML = '<p class="note" style="margin:0">Pick a concept to see the lessons that teach it and the stages that use it.</p>'; drawAtlasLines(); return; }
   const M = D.M;
-  det.innerHTML = '<div class="eyebrow">' + esc(M.GROUPS[x.c.group]) + '</div><h3 class="atdh">' + esc(x.c.label) + '</h3><div class="at-two"><div><div class="at-h">Learn it</div>'
+  det.innerHTML = '<div class="eyebrow">' + esc(M.GROUPS[x.c.group]) + '</div><h3 class="atdh">' + esc(x.c.label) + '</h3>' + (x.f ? '<p class="atfade f-' + x.f.level + '"><b>' + ({ fresh: 'Fresh', fading: 'Fading', faded: 'Faded' })[x.f.level] + '</b> · last practised ' + daysAgo(x.f.t) + ' · ' + (x.f.level === 'fresh' ? 'review by ' + new Date(x.f.due).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) : 'due for a warm-up') + '</p>' : '') + '<div class="at-two"><div><div class="at-h">Learn it</div>'
     + (x.c.lessons.length ? x.c.lessons.map((l) => { const d = M.lessonDone(l.lab, l.ref); return '<a class="atrow" href="' + M.labHref(l.lab) + '" target="_self"><span class="mk ' + (d === true ? 'ok' : d === false ? 'no' : '') + '">' + (d === true ? '✓' : d === false ? '○' : '·') + '</span><span><b>' + esc((M.LABS[l.lab] || {}).name || l.lab) + '</b> · ' + esc(l.title) + (x.c.gap === l.lab ? ' <em>new lesson</em>' : '') + '</span><span class="go">open →</span></a>'; }).join('') : '<p class="note">No lab teaches this yet: Rebble is the only place. It is a good candidate for a new lesson.</p>')
     + '</div><div><div class="at-h">Use it</div>' + x.used.map((u) => '<button class="atrow" data-s="' + (u.stage || 0) + '"><span class="mk ' + ((u.stage ? passed(u.stage) : S.mission[S.bp] && S.mission[S.bp].done) ? 'ok' : 'no') + '">' + (u.stage || '⌂') + '</span><span><b>' + esc(u.stage ? ST(u.stage).title : BP().mission.title) + '</b> · ' + esc(u.note) + '</span><span class="go">open →</span></button>').join('') + '</div></div>';
   $$('#atDetail [data-s]').forEach((b) => (b.onclick = () => { const n = +b.dataset.s; if (n) goStage(n, 'school'); else if (missionOpen()) setView('mission'); else toast('Unlocks after stage ' + BP().mission.after); }));
