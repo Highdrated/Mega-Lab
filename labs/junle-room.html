@@ -4,6 +4,9 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Junle Room</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500&family=Atkinson+Hyperlegible+Next:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500&family=JetBrains+Mono:wght@400;500&family=EB+Garamond:wght@400;500&display=swap">
 <style>
 :root {
   --ink: #d9d3c4;
@@ -13,7 +16,10 @@
   --ok: #86c79b;
   --bad: #e07a5f;
   --screen: #0b0d0d;
-  --mono: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --sys: ui-monospace, "SF Mono", Menlo, Consolas, "Liberation Mono", monospace;
+  --mono: "Atkinson Hyperlegible Mono", var(--sys);
+  --read: "Atkinson Hyperlegible Next", system-ui, sans-serif;
+  --rs: 1;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
@@ -39,6 +45,19 @@ body.v-sit .shade, body.v-focus .shade { opacity: 1; }
 #main::after { background: linear-gradient(172deg, rgba(190, 215, 235, .06) 0%, rgba(190, 215, 235, .02) 16%, transparent 30%), radial-gradient(ellipse 14% 34% at 2% 100%, rgba(255, 190, 110, .14), transparent 70%); }
 #left::after { background: linear-gradient(172deg, rgba(190, 215, 235, .06), transparent 30%), radial-gradient(ellipse 18% 30% at 100% 100%, rgba(255, 190, 110, .1), transparent 70%); }
 .sky { position: absolute; inset: 0; pointer-events: none; -webkit-mask: url(img/junle-room/window-mask.png) 0 0 / 100% 100% no-repeat; mask: url(img/junle-room/window-mask.png) 0 0 / 100% 100% no-repeat; }
+#leds { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; mix-blend-mode: screen; }
+.beacon { position: absolute; left: 92%; top: 7%; width: 7%; height: 10%; pointer-events: none; mix-blend-mode: screen; background: radial-gradient(closest-side, rgba(255, 170, 60, .55), transparent); opacity: 0; transition: opacity .6s; }
+body.alarm .beacon { animation: beacon 2.4s ease-in-out infinite; }
+@keyframes beacon { 0%, 100% { opacity: .05; } 50% { opacity: .55; } }
+.evt { font-size: 2.45cqw; color: var(--dim); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-top: 1px solid #23211d; padding-top: 1.4cqh; margin-top: 1cqh; font-family: var(--mono); }
+.evt b { color: var(--faint); font-weight: 400; margin-right: 1.4cqw; }
+.evt.new { color: var(--ink); }
+.noc { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity .5s; }
+.noc .v { font-size: 22cqw; color: var(--ink); letter-spacing: .5cqw; line-height: 1.1; }
+.noc .v small { font-size: 11cqw; color: var(--dim); }
+.noc .l { font-size: 8.5cqw; letter-spacing: 1.4cqw; color: var(--dim); margin-top: 2cqh; }
+.noc.amber .v { color: var(--amber); }
+.noc.ok .v { color: var(--ok); }
 .wx { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 18s ease; }
 .wx.on { opacity: 1; }
 #wx-dark { background: linear-gradient(180deg, rgba(14, 20, 30, .55), rgba(20, 28, 40, .35)); }
@@ -53,6 +72,13 @@ body.v-sit .shade, body.v-focus .shade { opacity: 1; }
 .say .w { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--amber); margin-bottom: 4px; }
 .say .w span { color: var(--faint); margin-left: 6px; }
 .say p { font-size: 12.5px; line-height: 1.55; color: var(--ink); }
+.say.ask { pointer-events: auto; }
+.say .ch { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.say .ch button { text-align: left; padding: 7px 10px; border: 1px solid #2f2b25; border-radius: 4px; font-size: 12.5px; line-height: 1.4; color: var(--ink); font-family: var(--read); }
+.say .ch button:hover { border-color: rgba(224, 168, 62, .5); background: rgba(224, 168, 62, .05); }
+.say .ch button.right { border-color: rgba(134, 199, 155, .6); color: #b9e3c5; }
+.say .ch button.wrong { border-color: rgba(224, 122, 95, .5); color: #f0b39f; }
+.say .ex { margin-top: 8px; font-size: 12.5px; color: var(--dim); font-family: var(--read); }
 .flyer { position: absolute; left: 0; top: 0; background-repeat: no-repeat; background-position: 0 0; will-change: transform; }
 .flyer.griffon { filter: brightness(.66) saturate(.7) contrast(.92) sepia(.12) blur(.3px); }
 .flyer.dragon { filter: brightness(.6) saturate(.65) contrast(.95) blur(.35px); }
@@ -88,6 +114,23 @@ body.v-sit .shade, body.v-focus .shade { opacity: 1; }
   background: radial-gradient(ellipse 50% 46% at 50% 18%, rgba(125, 172, 210, .13), transparent 72%); transition: opacity .6s; }
 body.dark-main #g-main, body.dark-main .spill { opacity: .45; }
 
+.term { font-family: var(--mono); }
+.st-why, .st-title, .vdlg p, .say p, .bubble, .aid .x, .row .d, .home .greet, .cu-status, .toast, .lead { font-family: var(--read); letter-spacing: 0; }
+.st-why { font-size: calc(3.05cqw * var(--rs)); line-height: 1.5; }
+.st-title { font-size: calc(3.4cqw * var(--rs)); }
+.row .d { font-size: calc(1.6cqw * var(--rs)); }
+.home .greet { font-size: calc(2.5cqw * var(--rs)); }
+.vdlg p { font-size: calc(15px * var(--rs)); }
+.say p { font-size: calc(13.5px * var(--rs)); }
+.fontpick { position: fixed; right: 14px; top: 50px; z-index: 45; width: 290px; max-height: calc(100vh - 70px); overflow-y: auto; padding: 10px; background: rgba(9, 10, 11, .96); border: 1px solid #332f28; border-radius: 6px; box-shadow: 0 16px 50px rgba(0, 0, 0, .55); display: none; }
+.fontpick.on { display: block; }
+.fontpick .h { font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; color: var(--faint); padding: 2px 6px 8px; font-family: var(--sys); }
+.fopt { display: block; width: 100%; text-align: left; padding: 9px 10px; border: 1px solid transparent; border-radius: 4px; }
+.fopt:hover { border-color: #2f2b25; background: rgba(255, 255, 255, .02); }
+.fopt.on { border-color: rgba(224, 168, 62, .5); background: rgba(224, 168, 62, .05); }
+.fopt .t { display: block; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--amber); font-family: var(--sys); margin-bottom: 4px; }
+.fopt .r { display: block; font-size: 14px; color: var(--ink); line-height: 1.35; }
+.fopt .m { display: block; font-size: 12.5px; color: var(--dim); margin-top: 3px; }
 .term { position: absolute; inset: 0; padding: 3.4cqh 3.2cqw; display: flex; flex-direction: column; font-size: calc(var(--fs, 2.1) * 1cqw); line-height: 1.5; }
 .log { flex: 1; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-all; scrollbar-width: none; display: flex; flex-direction: column; }
 .log::-webkit-scrollbar { display: none; }
@@ -228,10 +271,12 @@ body.cur, body.cur * { cursor: none !important; }
     <div class="room"></div>
     <div class="sky" id="sky-wx"><div class="wx" id="wx-dark"></div><canvas class="wx" id="wx-rain"></canvas><div class="wx" id="wx-mist"></div><div class="wx" id="wx-bolt"></div></div>
     <div class="sky" id="sky"></div>
+    <canvas id="leds"></canvas>
+    <div class="beacon"></div>
     <div class="glow" id="g-main"></div><div class="glow" id="g-left"></div><div class="glow" id="g-right"></div><div class="glow" id="g-small"></div>
     <div class="spill"></div>
     <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junie/junie-idle.webp" alt=""></div>
-    <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg></div></div>
+    <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg><div class="evt" id="evt"><b>--:--:--</b>waiting for events</div></div></div>
     <div class="screen" id="main">
       <div class="home" id="home">
         <div class="hh"><span>JUNLE <b>DESKTOP</b></span><span id="h-clock"></span></div>
@@ -267,6 +312,7 @@ body.cur, body.cur * { cursor: none !important; }
 
 <div class="hint" id="hint"></div>
 <div class="tools">
+  <button class="fs" id="t-font" title="Fonts">Aa</button>
   <button class="fs" id="t-fsdn" title="Smaller text on the main screen">A-</button>
   <button class="fs" id="t-fsup" title="Larger text on the main screen">A+</button>
   <button id="t-fly" title="Creatures outside the window"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><path d="M1.5 9c2-3 4.5-3.5 6.5-1 2-2.5 4.5-2 6.5 1"/><path d="M8 8v3"/></svg></button>
@@ -276,9 +322,10 @@ body.cur, body.cur * { cursor: none !important; }
   <a href="junle.html?classic=1" title="Classic Junle"><svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.3"><rect x="2" y="3" width="12" height="9" rx="1"/><path d="M5 7l1.5 1.5L5 10M8 10h3"/></svg></a>
 </div>
 <div class="toast" id="toast"></div>
+<div class="fontpick" id="fontpick"><div class="h">Reading and terminal font</div><div id="fopts"></div></div>
 <div class="bubble" id="bubble"></div>
 <div class="flash" id="flash"></div>
-<div class="say" id="say"><div class="av" id="say-av"></div><div><div class="w" id="say-w"></div><p id="say-t"></p></div></div>
+<div class="say" id="say"><div class="av" id="say-av"></div><div><div class="w" id="say-w"></div><p id="say-t"></p><div id="say-x"></div></div></div>
 <div class="vdim" id="vdim"></div>
 <div class="visitor" id="visitor"><img src="img/junle-room/visitor-elf.webp" alt=""></div>
 <div class="vdlg" id="vdlg"><div class="who" id="vwho"></div><p id="vline"></p><div class="act"><button id="vbtn"></button></div></div>
@@ -630,14 +677,14 @@ function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(SAVE) || "null");
     if (raw && raw.v === 1) {
-      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, typed: raw.typed || [], tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [], estk: raw.estk || [], pendingPlain: raw.pendingPlain || null };
+      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, lore: raw.lore || { right: 0, seen: [] }, typed: raw.typed || [], tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [], estk: raw.estk || [], pendingPlain: raw.pendingPlain || null };
     }
   } catch (e) {}
   return fresh();
 }
 function save() {
   try {
-    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, typed: (st.typed || []).slice(-200), tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], estk: st.estk || [], pendingPlain: st.pendingPlain || null, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
+    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, lore: st.lore || { right: 0, seen: [] }, typed: (st.typed || []).slice(-200), tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], estk: st.estk || [], pendingPlain: st.pendingPlain || null, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
   } catch (e) {}
 }
 
@@ -716,6 +763,7 @@ function doPass(line) {
   st.sess = "login";
 }
 function loginOk() {
+  evt("login: ROOT LOGIN ON ttyu0");
   say("", `--- JUNOS ${JVER} Kernel 64-bit  JNPR-12.1-20230120.fbd5ec7_buil`);
   st.sess = "shell";
 }
@@ -916,6 +964,8 @@ function logMessages() {
   const o = [`${d(BOOT_T)}  ${h} newsyslog[1214]: logfile turned over due to size>1024K`, `${d(BOOT_T + 70e3)}  ${h} chassisd[1630]: CHASSISD_IFDEV_DETACH_ALL_PSEUDO: ifdev_detach(pseudo devices: all)`, `${d(BOOT_T + 95e3)}  ${h} alarmd[1702]: Alarm set: RE color=YELLOW, class=CHASSIS, reason=Rescue configuration is not set`];
   for (const [n, x] of Object.entries(ifInfo(st.active))) if (x.link) o.push(`${d(BOOT_T + 120e3)}  ${h} mib2d[1690]: SNMP_TRAP_LINK_UP: ifIndex ${520 + +n.split("/")[2]}, ifAdminStatus up(1), ifOperStatus up(1), ifName ${n}`);
   st.ctimes.slice(1).forEach((t) => o.push(`${d(t)}  ${h} mgd[2042]: UI_COMMIT: User 'root' requested 'commit' operation (comment: none)`));
+  EVTS.filter((e) => !/UI_COMMIT/.test(e[1])).forEach((e) => o.push(`${d(e[0])}  ${h} ${e[1].replace(/^(\w+): /, "$1[" + (1600 + e[1].length) + "]: ")}`));
+  o.sort();
   return o;
 }
 function pingCmd(rest, col) {
@@ -1235,6 +1285,7 @@ function doCommit(rest, col) {
   st.active = clone(st.cand);
   st.commits.push(clone(st.cand));
   st.ctimes.push(Date.now());
+  evt(`mgd: UI_COMMIT: User 'root' requested 'commit' operation`);
   (st.cwho = st.cwho || [])[st.ctimes.length - 1] = "root";
   say("commit complete");
   SFX.ok();
@@ -1312,6 +1363,29 @@ const GIVERS = {
   brann: { name: "Brann", role: "night watch", img: "img/junle-room/visitor-brann.webp" },
   odile: { name: "Odile", role: "head archivist", img: "img/junle-room/visitor-odile.webp" }
 };
+const CAST = Object.assign({}, GIVERS, {
+  pip: { name: "Pip", role: "apprentice scribe", img: "img/junle-room/visitor-pip.webp" },
+  ulric: { name: "Ulric", role: "quartermaster", img: "img/junle-room/visitor-ulric.webp" },
+  mira: { name: "Mira", role: "travelling bard", img: "img/junle-room/visitor-mira.webp" },
+  corvin: { name: "Corvin", role: "keeper of the tower clock", img: "img/junle-room/visitor-corvin.webp" },
+  sable: { name: "Sable", role: "court artificer", img: "img/junle-room/visitor-sable.webp" }
+});
+const LORE = [
+  { id: "trunk", who: "pip", q: "Maren keeps saying trunk. Is a trunk just a very big access port?", a: ["Yes, it carries more traffic", "No, it carries several VLANs and tags every frame", "It is a port only the core switch may use"], ok: 1, ex: "Access ports belong to one VLAN, untagged. Trunks carry many VLANs, so each frame needs a tag to say which one." },
+  { id: "cand", who: "pip", q: "Why does nothing change on the switch when I type set?", a: ["Junos edits a candidate copy until you commit", "The switch is slow at night", "It needs a reboot first"], ok: 0, ex: "set and delete change the candidate configuration. commit checks it and makes it active." },
+  { id: "pct", who: "pip", q: "My prompt ends in a percent sign. Where am I?", a: ["In the Junos CLI", "In the FreeBSD shell", "In configuration mode"], ok: 1, ex: "% is the shell. cli takes you to Junos, where > is operational and # is configuration mode." },
+  { id: "qsfp", who: "ulric", q: "Your EX4300 came with four QSFP+ ports on the back. What are they for by default?", a: ["Console access", "Virtual Chassis ports, or uplinks if you convert them", "Power for the fans"], ok: 1, ex: "On the EX4300 the rear QSFP+ ports are Virtual Chassis ports by default and can be turned into network ports." },
+  { id: "hw", who: "ulric", q: "I need serial numbers for the inventory ledger. Which command?", a: ["show version", "show chassis hardware", "show system uptime"], ok: 1, ex: "show chassis hardware lists every part with its serial number." },
+  { id: "guest", who: "mira", q: "The guests have wifi but cannot reach the staff printer. Is something broken?", a: ["Yes, fix it at once", "No, guest and staff are separate VLANs on purpose", "The access point needs a reboot"], ok: 1, ex: "Separate VLANs are separate broadcast domains. Without routing between them, guests cannot reach staff devices, which is the point." },
+  { id: "vlan1", who: "mira", q: "I wrote a ballad about VLAN 1. Should we put our servers there?", a: ["Yes, it is the default", "Better not, give them their own VLAN", "VLAN 1 cannot hold servers"], ok: 1, ex: "Every untouched port lands in the default VLAN. Servers belong in their own VLAN so a random cable never joins them." },
+  { id: "ntp", who: "corvin", q: "If my tower clock runs wrong, which logs start lying?", a: ["None of them", "All of them, every timestamp comes from the clock", "Only the commit history"], ok: 1, ex: "Logs, commit history and alarms all use the system clock. That is why real networks sync time with NTP." },
+  { id: "rb", who: "corvin", q: "rollback 1. What does that bring back?", a: ["The factory configuration", "The configuration from before the last commit", "The rescue configuration"], ok: 1, ex: "rollback 0 is the current active config, 1 is the one before the last commit, and so on. It loads into the candidate; commit makes it real." },
+  { id: "con", who: "sable", q: "I enchanted a cable that speaks only serial. Which port will understand it?", a: ["ge-0/0/0", "MGMT", "CON"], ok: 2, ex: "Serial goes to the console port, RJ-45 on the back or mini-USB on the front. MGMT is Ethernet." },
+  { id: "hash", who: "sable", q: "Your prompt ends in #. What does the rune mean?", a: ["Operational mode", "Configuration mode", "The FreeBSD shell"], ok: 1, ex: "> is operational mode, # is configuration mode, % is the shell." },
+  { id: "dis", who: "brann", q: "A port is disabled. Can the cable still be plugged in?", a: ["Yes, disable is administrative, the cable can stay", "No, disable unplugs it", "Only on trunk ports"], ok: 0, ex: "disable shuts the port in software. The link light goes off, but the cable is untouched." },
+  { id: "desc", who: "odile", q: "Where should I write down what a port is for?", a: ["In its description", "In the hostname", "Nowhere, people remember"], ok: 0, ex: "set interfaces ge-0/0/N description \"...\" travels with the config, so the next engineer can read it." },
+  { id: "cmp", who: "maren", q: "show | compare shows a line with a minus in front. What does it mean?", a: ["That line will be removed on commit", "That line has an error", "That line is a comment"], ok: 0, ex: "Minus lines leave the configuration on commit, plus lines join it. Always read it before you commit." }
+];
 const ran = (cmd) => !!(st.ran && st.ran[cmd] && st.ran[cmd] >= (st.tkStart || 0));
 const port = (n) => ifInfo(st.active)["ge-0/0/" + n];
 const TICKETS = [
@@ -1388,12 +1462,12 @@ function renderTicket() {
   const T = curTicket();
   if (st.tk >= TICKETS.length) {
     $("#ticket").innerHTML = `<h4><span>LEDGER</span><span>ALL CLOSED</span></h4><div class="st-title done-msg">Every ticket is closed.</div><div class="st-why">acc-sw-01 is commissioned, uplinked, locked down, serving the reading room and recovered from a bad change. Free play: the switch is yours.</div>`;
-    $("#count").innerHTML = `<div class="big" style="font-size:20cqw;color:var(--ok)">ALL</div><div class="lbl">CLOSED</div>`;
+    nocI = 0; renderNoc();
     return;
   }
   if (!(st.met && st.met["intro" + T.id])) {
     $("#ticket").innerHTML = `<h4><span>TICKET ${T.id}</span><span>INCOMING</span></h4><div class="st-title">${esc(GIVERS[T.giver].name)} is on the way.</div><div class="st-why">Stay at your desk. A new ticket is coming.</div>`;
-    $("#count").innerHTML = `<div class="big" style="font-size:18cqw">${T.id}</div><div class="lbl">NEXT</div>`;
+    $("#count").innerHTML = `<div class="noc"><div class="v">${T.id}</div><div class="l">INCOMING</div></div>`;
     return;
   }
   const done = TASKS.map((x) => taskDone(x.id));
@@ -1406,7 +1480,8 @@ function renderTicket() {
   } else {
     el.innerHTML = `<h4><span>TICKET ${T.id} · ${T.title}</span><span>${n}/${TASKS.length}</span></h4><div class="st-title">${cur.t}</div><div class="st-why">${cur.why}</div><div class="cmds">${cur.c.map((c, i) => `<button class="chip${revealed[cur.id + i] ? " shown" : ""}" data-r="${cur.id + i}">${revealed[cur.id + i] ? esc(c) : "show command " + (i + 1)}</button>`).join("")}</div>${dots}`;
   }
-  $("#count").innerHTML = cur ? `<div class="big">${n}<small>/${TASKS.length}</small></div><div class="lbl">STEPS</div>` : `<div class="big" style="font-size:20cqw;color:var(--ok)">DONE</div><div class="lbl">TICKET ${T.id}</div>`;
+  if (n !== lastDone) nocI = 0;
+  if (cur) renderNoc(); else $("#count").innerHTML = `<div class="noc ok"><div class="v">DONE</div><div class="l">TICKET ${T.id}</div></div>`;
   if (n > lastDone && lastDone >= 0) SFX.ok();
   if (!cur && lastDone >= 0 && lastDone < TASKS.length && !(st.met && st.met["outro" + T.id])) setTimeout(() => visit("outro"), 1600);
   lastDone = n;
@@ -1453,6 +1528,15 @@ function renderPanel() {
   const con = st.plugged ? plugText(st.plugged) : "no cable";
   s += `<text x="6" y="160" font-size="8.5" fill="${st.plugged && isConsole(st.plugged) ? "#86c79b" : "#8a867c"}">${esc(con)}</text>`;
   if (!sameCfg(st.cand, st.active)) s += `<text x="334" y="160" font-size="8.5" fill="#e0a83e" text-anchor="end">uncommitted</text>`;
+  const spark = (n, x0, w, y) => {
+    const hs = (typeof hist2 !== "undefined" && hist2[n]) || [];
+    if (!hs.length || !a[n].link) return "";
+    const mx = Math.max(60, ...hs) * 1.15;
+    const pts = hs.map((v, i) => `${(x0 + i * w / 39).toFixed(1)},${(y - v / mx * 9).toFixed(1)}`).join(" ");
+    const cur = hs[hs.length - 1];
+    return `<polyline points="${pts}" fill="none" stroke="#6fb3c9" stroke-width=".8" opacity=".8"/><text x="${x0 + w}" y="${y + 8}" font-size="6.5" fill="#6fb3c9" text-anchor="end">${cur >= 1000 ? (cur / 1000).toFixed(1) + "G" : Math.round(cur) + "M"}</text>`;
+  };
+  s += spark("ge-0/0/47", 78, 56, y0 + 58) + spark("ge-0/0/4", 206, 56, y0 + 58).replace(/<text[^>]*>[^<]*<\/text>$/, "");
   $("#panel").innerHTML = s;
 }
 function node(x, y, name, sub) {
@@ -1611,6 +1695,7 @@ function plug(cable, port) {
     return;
   }
   const was = st.plugged && isConsole(st.plugged);
+  evt(port === "mgmt" ? "kernel: me0: link state changed to UP" : /^ge-/.test(port) && cable === "patch" ? `kernel: ${port}: link state changed to UP` : isConsole({ cable, port }) ? "getty: console session on ttyu0" : "kernel: unrecognised device on " + port);
   st.plugged = { cable, port };
   SFX.plug();
   const p = st.plugged;
@@ -1749,6 +1834,7 @@ function openApp(a) {
     f = document.createElement("iframe");
     f.title = "Junle";
     f.src = "junle.html?embed=1#" + hash;
+    f.addEventListener("load", embedFont);
     wrap.appendChild(f);
   } else {
     f.contentWindow.location.hash = "";
@@ -2210,6 +2296,12 @@ const WX = {
   rain: { name: "rain", dur: [8, 16], next: [["clear", 3], ["storm", 2], ["mist", 1]] },
   storm: { name: "storm", dur: [4, 8], next: [["rain", 4], ["clear", 1]] }
 };
+const WXEXTRA = {
+  rain: { pip: ["Is it true the racks get nervous in the rain? Mine do."], ulric: ["Rain. I counted every bucket. We have enough. Probably."], mira: ["Rain on old stone. Give me a lute and I will make it a song about packet loss."], corvin: ["The clock gears swell in the damp. NTP does not. Trust NTP."], sable: ["Rain makes the runes on the cables glow. That is not in the manual."] },
+  storm: { pip: ["Was that thunder or did someone drop a chassis?"], ulric: ["If lightning takes a power supply, I have one spare. One."], mira: ["A storm! Finally, a dramatic backdrop for your commit."], corvin: ["The bells rang thirteen. Ignore them, the storm counts badly."], sable: ["I would ground the north tower, but the dragon likes it ungrounded."] },
+  mist: { pip: ["I cannot see the castle. Is it still there? Please say yes."], ulric: ["Mist means nobody comes for supplies. Quiet ledger tonight."], mira: ["Mist is just a cloud that came to learn networking."], corvin: ["Mist muffles the bells. Your log timestamps stay sharp."], sable: ["My lenses fog in this. Your screen does not. Unfair."] },
+  clear: { pip: ["The stars are out! Can we name a VLAN after one?"], ulric: ["Clear skies. Good night for a delivery run."], mira: ["Clear night. The valley sounds like a slow ballad."], corvin: ["Clear sky, true time. The tower agrees with the switch."], sable: ["Clear again. The griffons will test my new wing lamps."] }
+};
 const WXLINES = {
   rain: {
     veylin: ["Rain again. The ledger does not mind, but the parchment does. Keep your cups away from the switch.", "Listen to it on the glass. Every drop is logged somewhere, I am sure of it."],
@@ -2290,6 +2382,7 @@ function rainLoop() {
   rainRAF = requestAnimationFrame(rainLoop);
 }
 function bolt() {
+  if (Math.random() < .5) evt("chassisd: power supply 0 input voltage dip detected, recovered");
   const b = $("#wx-bolt"), f = $("#flash");
   const seq = [[0, .85], [70, 0], [140, .6], [230, 0]];
   seq.forEach(([t, o]) => setTimeout(() => { b.style.opacity = o; f.style.opacity = o ? 1 : 0; }, t));
@@ -2326,8 +2419,9 @@ let sayT = 0;
 function commentWx(w) {
   if (!wxOn || wx.w !== w) return;
   if (Date.now() - lastKey < 6000 || $("#vdlg").classList.contains("on") || $("#cu").classList.contains("on")) { setTimeout(() => commentWx(w), 8000); return; }
-  const who = Object.keys(GIVERS)[Math.floor(Math.random() * 4)];
-  const g = GIVERS[who], lines = WXLINES[w][who];
+  const keys = Object.keys(CAST);
+  const who = keys[Math.floor(Math.random() * keys.length)];
+  const g = CAST[who], lines = (WXLINES[w][who] || WXEXTRA[w][who]);
   const av = $("#say-av");
   av.textContent = g.name[0];
   av.style.backgroundImage = "";
@@ -2336,11 +2430,54 @@ function commentWx(w) {
   im.src = g.img;
   $("#say-w").innerHTML = `${esc(g.name)}<span>${esc(g.role)}</span>`;
   $("#say-t").textContent = lines[Math.floor(Math.random() * lines.length)];
+  $("#say").classList.remove("ask");
+  $("#say-x").innerHTML = "";
   $("#say").classList.add("on");
   SFX.tick();
   clearTimeout(sayT);
   sayT = setTimeout(() => $("#say").classList.remove("on"), 9000);
 }
+function sayAs(who) {
+  const g = CAST[who], av = $("#say-av");
+  av.textContent = g.name[0];
+  av.style.backgroundImage = "";
+  const im = new Image();
+  im.onload = () => { av.textContent = ""; av.style.backgroundImage = `url(${g.img})`; };
+  im.src = g.img;
+  $("#say-w").innerHTML = `${esc(g.name)}<span>${esc(g.role)}</span>`;
+}
+function dropIn(force) {
+  if (!force && (Date.now() - lastKey < 7000 || $("#vdlg").classList.contains("on") || $("#cu").classList.contains("on") || $("#say").classList.contains("on") || view === "focus")) return false;
+  st.lore = st.lore || { right: 0, seen: [] };
+  let pool = LORE.filter((x) => !st.lore.seen.includes(x.id));
+  if (!pool.length) { st.lore.seen = []; pool = LORE.slice(); }
+  const L = pool[Math.floor(Math.random() * pool.length)];
+  st.lore.seen.push(L.id);
+  sayAs(L.who);
+  $("#say-t").textContent = L.q;
+  $("#say-x").innerHTML = `<div class="ch">${L.a.map((t, i) => `<button data-i="${i}">${esc(t)}</button>`).join("")}</div>`;
+  $("#say").classList.add("on", "ask");
+  SFX.tick();
+  clearTimeout(sayT);
+  sayT = setTimeout(() => $("#say").classList.remove("on", "ask"), 45000);
+  $("#say-x").onclick = (e) => {
+    const b = e.target.closest("button");
+    if (!b || $("#say-x").dataset.done === L.id) return;
+    $("#say-x").dataset.done = L.id;
+    const i = +b.dataset.i, good = i === L.ok;
+    b.classList.add(good ? "right" : "wrong");
+    if (!good) $("#say-x").querySelector(`[data-i="${L.ok}"]`).classList.add("right");
+    $("#say-x").insertAdjacentHTML("beforeend", `<div class="ex">${good ? "Exactly. " : "Not quite. "}${esc(L.ex)}</div>`);
+    if (good) { st.lore.right++; SFX.ok(); junie("cheer", 2500); } else { SFX.err(); junie("worry", 2000); }
+    save();
+    clearTimeout(sayT);
+    sayT = setTimeout(() => { $("#say").classList.remove("on", "ask"); $("#say-x").dataset.done = ""; }, 9000);
+  };
+  return true;
+}
+window.dropIn = dropIn;
+let nextDrop = Date.now() + rnd(6, 9) * 60e3;
+setInterval(() => { if (Date.now() > nextDrop && dropIn()) nextDrop = Date.now() + rnd(9, 15) * 60e3; }, 10000);
 window.commentWx = commentWx;
 $("#t-wx").addEventListener("click", () => {
   wxOn = !wxOn;
@@ -2350,6 +2487,129 @@ $("#t-wx").addEventListener("click", () => {
   toast(wxOn ? "Weather: on" : "Weather: off");
 });
 $("#t-wx").style.opacity = wxOn ? 1 : .4;
+const FONTS = {
+  comfort: { name: "Comfort", note: "built for readability", mono: '"Atkinson Hyperlegible Mono"', read: '"Atkinson Hyperlegible Next"', rs: 1 },
+  clean: { name: "Clean", note: "crisp and modern", mono: '"IBM Plex Mono"', read: '"IBM Plex Sans"', rs: 1 },
+  scholar: { name: "Scholar", note: "castle library", mono: '"JetBrains Mono"', read: '"EB Garamond"', rs: 1.14 },
+  classic: { name: "Classic", note: "the original terminal look", mono: "var(--sys)", read: "var(--sys)", rs: .95 }
+};
+let font = "comfort";
+try { font = localStorage.getItem(SAVE + "-font") || "comfort"; } catch (e) {}
+if (!FONTS[font]) font = "comfort";
+function applyFont() {
+  const f = FONTS[font], r = document.documentElement.style;
+  r.setProperty("--mono", f.mono + ", var(--sys)");
+  r.setProperty("--read", f.read + ", system-ui, sans-serif");
+  r.setProperty("--rs", f.rs);
+  $("#fopts").innerHTML = Object.entries(FONTS).map(([k, o]) => `<button class="fopt${k === font ? " on" : ""}" data-f="${k}"><span class="t">${o.name} · ${o.note}</span><span class="r" style="font-family:${o.read.replace(/"/g, "'")}, system-ui">Maren is on the way with a new ticket.</span><span class="m" style="font-family:${o.mono.replace(/"/g, "'")}, monospace">root@acc-sw-01# commit</span></button>`).join("");
+  embedFont();
+}
+function embedFont() {
+  const f = $("#appwrap iframe");
+  if (!f) return;
+  try {
+    const d = f.contentDocument;
+    let s = d.getElementById("room-font");
+    if (!s) { s = d.createElement("style"); s.id = "room-font"; d.head.appendChild(s); }
+    const m = FONTS[font].mono.replace("var(--sys)", 'ui-monospace, Menlo, Consolas, monospace');
+    s.textContent = `@import url("https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Mono:wght@400;500&family=IBM+Plex+Mono:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap"); html, body, body * { font-family: ${m}, ui-monospace, Menlo, Consolas, monospace !important; }`;
+  } catch (e) {}
+}
+const LEDS = [[1215.5,235.5,"g"],[1198.5,240.5,"g"],[1212.5,241.0,"g"],[1364.5,244.0,"g"],[1368.5,243.5,"g"],[1355.5,246.0,"g"],[1360.5,245.0,"g"],[1368.5,251.5,"g"],[1364.5,252.5,"g"],[1355.0,254.0,"g"],[1360.5,253.0,"g"],[1315.0,262.0,"g"],[1073.0,275.0,"g"],[1373.5,295.5,"g"],[1365.5,297.0,"g"],[1039.0,300.5,"g"],[1205.0,339.5,"g"],[1216.0,339.0,"g"],[1365.0,351.0,"g"],[1369.5,351.0,"g"],[1374.5,351.0,"g"],[1342.5,353.0,"g"],[1344.5,352.5,"g"],[1318.5,353.5,"g"],[1217.5,358.0,"g"],[1321.0,400.5,"g"],[1327.5,401.0,"g"],[1331.0,401.0,"g"],[1335.0,401.0,"g"],[1349.5,401.0,"g"],[1359.5,401.5,"g"],[1373.0,401.5,"g"],[1315.5,442.5,"g"],[1322.0,443.5,"g"],[1322.0,451.5,"g"],[1316.0,472.0,"g"],[1349.0,580.5,"g"],[1349.0,587.0,"g"],[912.5,627.0,"g"],[920.5,628.0,"g"],[912.5,633.5,"g"],[920.5,634.5,"g"],[1347.0,150.0,"b"],[1347.5,175.5,"b"],[1199.0,184.5,"b"],[1314.5,187.5,"b"],[1347.5,199.5,"b"],[1198.5,203.5,"b"],[1091.5,218.5,"b"],[1198.5,221.5,"b"],[1092.0,223.0,"b"],[1092.5,239.0,"b"],[1092.5,244.0,"b"],[1348.5,247.5,"b"],[1092.5,250.5,"b"],[1314.5,253.5,"b"],[1092.0,256.0,"b"],[1348.5,255.5,"b"],[1093.5,258.5,"b"],[1199.0,260.0,"b"],[1092.5,261.5,"b"],[1073.0,262.0,"b"],[1038.5,262.0,"b"],[1063.0,266.5,"b"],[1348.0,272.0,"b"],[1316.0,276.0,"b"],[1199.0,279.5,"b"],[1348.0,280.0,"b"],[1020.5,282.0,"b"],[1178.0,285.0,"b"],[1199.0,285.5,"b"],[1316.5,286.5,"b"],[1178.5,290.0,"b"],[1073.0,292.0,"b"],[1357.5,297.5,"b"],[1349.5,298.5,"b"],[1039.5,300.5,"b"],[1327.5,302.5,"b"],[1321.5,303.5,"b"],[1323.5,303.5,"b"],[1338.5,313.5,"b"],[1304.5,320.5,"b"],[1091.5,375.5,"b"],[1051.5,378.5,"b"],[1231.5,402.0,"b"],[1231.5,416.5,"b"],[1229.5,431.5,"b"],[1230.0,446.5,"b"],[1342.0,447.5,"b"],[1232.5,449.5,"b"],[1342.5,453.5,"b"],[1230.5,455.0,"b"],[1342.0,476.0,"b"],[1342.5,486.0,"b"],[1342.0,507.5,"b"],[1342.5,516.0,"b"],[1342.0,580.5,"b"],[845.5,590.5,"b"],[849.5,590.5,"b"],[853.5,590.5,"b"],[855.5,590.5,"b"],[893.0,590.5,"b"],[897.5,590.5,"b"],[902.5,590.5,"b"],[890.5,591.5,"b"],[845.5,592.5,"b"],[883.5,595.0,"b"],[939.5,598.5,"b"],[953.0,598.5,"b"],[945.0,603.0,"b"],[872.5,615.5,"b"],[857.0,621.0,"a"],[929.5,629.0,"a"],[938.0,629.5,"a"],[949.5,630.0,"a"],[948.0,631.5,"a"],[929.5,635.5,"a"],[938.5,634.5,"a"],[946.5,636.5,"a"],[949.5,637.0,"a"],[948.5,638.5,"a"]];
+const ledState = LEDS.map(() => ({ on: Math.random() < .8, t: 0, kind: Math.random() < .35 ? "act" : Math.random() < .2 ? "slow" : "solid" }));
+let ledLast = 0;
+function ledLoop(now) {
+  requestAnimationFrame(ledLoop);
+  if (now - ledLast < 90 || document.hidden) return;
+  ledLast = now;
+  const c = $("#leds"), W = c.clientWidth, H = c.clientHeight;
+  const dpr = Math.min(2, devicePixelRatio || 1);
+  if (c.width !== Math.round(W * dpr)) { c.width = Math.round(W * dpr); c.height = Math.round(H * dpr); }
+  const x = c.getContext("2d");
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  x.clearRect(0, 0, W, H);
+  const busy = 1 + (lastKey && Date.now() - lastKey < 4000 ? 1.5 : 0) + (wxOn && wx.w === "storm" ? .5 : 0);
+  const r = W / IW;
+  for (let i = 0; i < LEDS.length; i++) {
+    const [lx, ly, col] = LEDS[i], s = ledState[i];
+    if (s.kind === "act") { if (Math.random() < .28 * busy) s.on = !s.on; }
+    else if (s.kind === "slow") { s.on = Math.floor(now / 900 + i) % 2 === 0; }
+    if (!s.on) continue;
+    const rgb = col === "g" ? "120,255,150" : col === "b" ? "120,180,255" : "255,190,90";
+    const g = x.createRadialGradient(lx * r, ly * r, 0, lx * r, ly * r, 5 * r + 2);
+    g.addColorStop(0, `rgba(${rgb},.85)`);
+    g.addColorStop(1, `rgba(${rgb},0)`);
+    x.fillStyle = g;
+    x.fillRect(lx * r - 6 * r - 2, ly * r - 6 * r - 2, 12 * r + 4, 12 * r + 4);
+  }
+}
+requestAnimationFrame(ledLoop);
+const EVTS = [];
+function evt(msg) {
+  const t = new Date();
+  EVTS.push([t.getTime(), msg]);
+  if (EVTS.length > 60) EVTS.shift();
+  const e = $("#evt");
+  if (e) { e.innerHTML = `<b>${t.toTimeString().slice(0, 8)}</b>${esc(msg)}`; e.classList.add("new"); setTimeout(() => e.classList.remove("new"), 2500); }
+}
+window.evt = evt;
+const AMBIENT = [
+  () => `chassisd: fan tray 0 speed normal (${4200 + Math.floor(Math.random() * 400)} rpm)`,
+  () => `chassisd: FPC 0 temperature ${36 + Math.floor(Math.random() * 6)} C, within limits`,
+  () => "lldpd: refreshed neighbor core-sw on ge-0/0/47",
+  () => "sshd: no login attempts in the last hour",
+  () => "ntpd: clock synchronised to the tower bell",
+  () => `mib2d: interface counters polled (${Object.values(ifInfo(st.active)).filter((p) => p.link).length} links up)`,
+  () => "rpd: no routing changes"
+];
+setInterval(() => { if (!document.hidden && Math.random() < .5) evt(AMBIENT[Math.floor(Math.random() * AMBIENT.length)]()); }, 45000);
+let nocI = 0;
+function nocTiles() {
+  const T = curTicket();
+  const tiles = [];
+  if (st.tk < TICKETS.length && st.met && st.met["intro" + T.id]) {
+    const n = TASKS.filter((x) => x.ok()).length;
+    tiles.push({ v: `${n}<small>/${TASKS.length}</small>`, l: "TICKET " + T.id });
+  } else if (st.tk >= TICKETS.length) tiles.push({ v: "ALL", l: "CLOSED", c: "ok" });
+  const alarms = st.rescue ? 0 : 1;
+  tiles.push({ v: String(alarms), l: alarms ? "MINOR ALARM" : "ALARMS", c: alarms ? "amber" : "ok" });
+  const up = Object.values(ifInfo(st.active)).filter((p) => p.link).length;
+  tiles.push({ v: `${up}<small>/48</small>`, l: "LINKS UP" });
+  const tp = traffic["ge-0/0/47"] || 0;
+  tiles.push({ v: tp >= 1000 ? (tp / 1000).toFixed(1) + "<small>G</small>" : Math.round(tp) + "<small>M</small>", l: "UPLINK" });
+  tiles.push({ v: `${36 + Math.round(Math.sin(Date.now() / 6e5) * 2 + 1)}<small>C</small>`, l: "FPC 0 TEMP" });
+  return tiles;
+}
+function renderNoc() {
+  const tiles = nocTiles(), t = tiles[nocI % tiles.length];
+  $("#count").innerHTML = `<div class="noc ${t.c || ""}"><div class="v">${t.v}</div><div class="l">${t.l}</div></div>`;
+  document.body.classList.toggle("alarm", !st.rescue);
+}
+setInterval(() => { nocI++; renderNoc(); }, 5000);
+const traffic = {}, hist2 = {};
+setInterval(() => {
+  const info = ifInfo(st.active);
+  for (const n of ["ge-0/0/47", "ge-0/0/4", "ge-0/0/12", "ge-0/0/9"]) {
+    const p = info[n];
+    const base = !p || !p.link ? 0 : n === "ge-0/0/47" ? 420 : n === "ge-0/0/4" ? 180 : n === "ge-0/0/12" ? 60 : 8;
+    const prev = traffic[n] || base;
+    traffic[n] = Math.max(0, base ? prev * .7 + (base * (.6 + Math.random() * .9)) * .3 : 0);
+    (hist2[n] = hist2[n] || []).push(traffic[n]);
+    if (hist2[n].length > 40) hist2[n].shift();
+  }
+  if (!document.hidden) renderPanel();
+}, 2000);
+$("#t-font").addEventListener("click", (e) => { e.stopPropagation(); $("#fontpick").classList.toggle("on"); });
+$("#fopts").addEventListener("click", (e) => {
+  const b = e.target.closest(".fopt");
+  if (!b) return;
+  font = b.dataset.f;
+  try { localStorage.setItem(SAVE + "-font", font); } catch (err) {}
+  applyFont();
+  setTimeout(() => { const log = $("#log"); log.scrollTop = log.scrollHeight; }, 50);
+});
+addEventListener("pointerdown", (e) => { if (!e.target.closest("#fontpick") && !e.target.closest("#t-font")) $("#fontpick").classList.remove("on"); });
+applyFont();
 st = load();
 if (st.boot) BOOT_T = st.boot;
 placeScreens();
