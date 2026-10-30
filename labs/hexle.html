@@ -533,6 +533,7 @@ body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spaci
     <button id="notes" title="Notes for Claude: jot a bug or idea now, hand it over next session (Ctrl+Shift+Y for a quick one)">Notes</button>
     <button id="theme" title="Switch theme">Grove</button>
     <button id="mute" title="Click to cycle: sound, sound with typing clicks, muted">Sound</button>
+    <button id="ambb" title="Background sound of the world: weather, birds, wind, chimes">Ambience</button>
     <input id="vol" type="range" min="0" max="100" step="1" aria-label="Volume">
   </div>
   <button id="backup" title="Save or restore your progress">Backup</button><button class="home" id="home" title="Download this target as a real HTML file for VS Code">Take it home</button>
@@ -2288,6 +2289,43 @@ const SFX_INK={
 };
 Object.keys(SFX_INK).forEach(k=>{const o=sfx[k];sfx[k]=function(){return S.theme==='ink'?SFX_INK[k].apply(this,arguments):o.apply(this,arguments)}});
 
+const AMB={g:null,nodes:[],timers:[],kind:null};
+function noiseBuf(c){if(AMB.nb)return AMB.nb;const n=c.sampleRate*4,b=c.createBuffer(1,n,c.sampleRate),d=b.getChannelData(0);for(let i=0;i<n;i++)d[i]=Math.random()*2-1;return AMB.nb=b}
+function aNoise(c,type,freq,q,gain){const s=c.createBufferSource();s.buffer=noiseBuf(c);s.loop=true;s.loopStart=Math.random();const f=c.createBiquadFilter();f.type=type;f.frequency.value=freq;f.Q.value=q;const g=c.createGain();g.gain.value=gain;s.connect(f);f.connect(g);g.connect(AMB.g);s.start();AMB.nodes.push(s,f,g);return{s,f,g}}
+function aLfo(c,param,rate,depth){const o=c.createOscillator(),g=c.createGain();o.frequency.value=rate;g.gain.value=depth;o.connect(g);g.connect(param);o.start();AMB.nodes.push(o,g)}
+function aTone(c,f,gain){const o=c.createOscillator(),g=c.createGain();o.frequency.value=f;g.gain.value=gain;o.connect(g);g.connect(AMB.g);o.start();AMB.nodes.push(o,g);return{o,g}}
+function aBlip(f,d,type,v,delay,f2){const c=AC;if(!c||!AMB.g)return;const t=c.currentTime+(delay||0),o=c.createOscillator(),g=c.createGain();o.type=type||'sine';o.frequency.setValueAtTime(f,t);if(f2)o.frequency.exponentialRampToValueAtTime(f2,t+d);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+Math.min(.02,d/4));g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AMB.g);o.start(t);o.stop(t+d+.05)}
+function aBurst(d,v,lo,hi,delay){const c=AC;if(!c||!AMB.g)return;const t=c.currentTime+(delay||0),s=c.createBufferSource();s.buffer=noiseBuf(c);const f=c.createBiquadFilter();f.type='bandpass';f.Q.value=.9;f.frequency.setValueAtTime(lo,t);f.frequency.linearRampToValueAtTime(hi,t+d);const g=c.createGain();g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(v,t+d*.3);g.gain.exponentialRampToValueAtTime(.0001,t+d);s.connect(f);f.connect(g);g.connect(AMB.g);s.start(t,Math.random()*3,d+.05)}
+function aEvery(min,max,fn){const tick=()=>{AMB.timers.push(setTimeout(()=>{if(!AMB.kind)return;fn();if(AMB.timers.length>40)AMB.timers=AMB.timers.slice(-20);tick()},min+Math.random()*(max-min)))};tick()}
+const anyOf=a=>a[Math.floor(Math.random()*a.length)];
+const SCAPES={
+ spring(c){const w=aNoise(c,'lowpass',420,.6,.4);aLfo(c,w.f.frequency,.07,180);aLfo(c,w.g.gain,.11,.1);
+  aEvery(5000,14000,()=>{const n=2+Math.floor(Math.random()*3),b=2500+Math.random()*1300;for(let i=0;i<n;i++)aBlip(b+i*90,.09,'sine',.05,i*.14,b*1.4)});
+  aEvery(14000,30000,()=>aBlip(anyOf([1046,1175,1397,1568]),2.4,'sine',.03))},
+ summer(c){aNoise(c,'bandpass',2600,.35,.26);aNoise(c,'lowpass',380,.5,.14);
+  aEvery(120,650,()=>{const f=1700+Math.random()*2600;aBlip(f,.035,'sine',.02,0,f*.55)});
+  aEvery(25000,50000,()=>aBurst(2.6,.25,90,60))},
+ autumn(c){const w=aNoise(c,'lowpass',520,.7,.4);aLfo(c,w.f.frequency,.06,260);aLfo(c,w.g.gain,.09,.16);
+  aEvery(1500,5000,()=>aBurst(.4+Math.random()*.4,.06,2400,4600));
+  aEvery(9000,22000,()=>{const n=1+Math.floor(Math.random()*3);for(let i=0;i<n;i++)aBlip(anyOf([1046,1175,1397,1568,1760]),2.6,'sine',.03,i*.28)})},
+ winter(c){const w=aNoise(c,'lowpass',300,.8,.5);aLfo(c,w.f.frequency,.05,130);aLfo(c,w.g.gain,.08,.2);
+  aEvery(20000,40000,()=>{[1,2.76,5.4].forEach((r,i)=>aBlip(196*r,4.5/(i+1),'sine',.045/(i*1.6+1)))})},
+ grove(c){const w=aNoise(c,'lowpass',320,.7,.42);aLfo(c,w.f.frequency,.05,120);
+  aEvery(500,1700,()=>{for(let i=0;i<3;i++)aBlip(4300+Math.random()*200,.025,'sine',.012,i*.055)});
+  aEvery(70,650,()=>aBurst(.03,.06,1800,900))},
+ orbital(c){aTone(c,55,.07);const h=aTone(c,110.4,.03);aLfo(c,h.g.gain,.13,.012);aNoise(c,'lowpass',900,.5,.07);
+  aEvery(15000,30000,()=>{aBlip(880,.18,'sine',.02);aBlip(1320,.22,'sine',.015,.2)})}
+};
+function ambStop(){const g=AMB.g,nodes=AMB.nodes;AMB.timers.forEach(clearTimeout);AMB.timers=[];AMB.nodes=[];AMB.g=null;AMB.kind=null;
+  if(g&&AC){g.gain.cancelScheduledValues(AC.currentTime);g.gain.setTargetAtTime(0,AC.currentTime,.25);setTimeout(()=>{nodes.forEach(n=>{try{n.stop&&n.stop()}catch(e){}try{n.disconnect()}catch(e){}});try{g.disconnect()}catch(e){}},1500)}}
+const ambLevel=()=>.11*(S.vol/70);
+function ambSync(){if(S.amb==null)S.amb=true;const b=$('ambb');if(b){b.classList.toggle('off',!S.amb||!S.sfx);b.textContent=S.amb?'Ambience':'No ambience'}
+  const want=S.amb&&S.sfx&&!document.hidden?(S.theme==='ink'?season():S.theme):null;
+  if(want!==AMB.kind){ambStop();if(!want)return;const c=ctx();if(!c||c.state!=='running')return;AMB.g=c.createGain();AMB.g.gain.value=0;AMB.g.connect(c.destination);AMB.kind=want;(SCAPES[want]||SCAPES.grove)(c);AMB.g.gain.setTargetAtTime(ambLevel(),c.currentTime,1.2)}
+  else if(AMB.g&&AC)AMB.g.gain.setTargetAtTime(ambLevel(),AC.currentTime,.2)}
+['pointerdown','keydown'].forEach(ev=>document.addEventListener(ev,()=>{if(!AMB.kind)setTimeout(ambSync,60)},true));
+document.addEventListener('visibilitychange',ambSync);
+
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
@@ -2343,7 +2381,7 @@ function render(){
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
   const sel=$('tsel');sel.innerHTML='';let og=null,ogn='';TARGETS.forEach((tg,i)=>{const gn=tg.project?'Grimoire projects':tg.spell?'Spells · JavaScript':tg.master!=null?'Master editions':'Village plates';if(gn!==ogn){og=document.createElement('optgroup');og.label=gn;sel.appendChild(og);ogn=gn}const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);og.appendChild(o)});sel.value=S.t;
   updDue();if(S.sess&&!sessT){sessTick()}sessBar();
-  if(!THEMES[S.theme])S.theme='grove';{const hw=$('hwitch');if(hw){hw.dataset.pose='';if(S.theme==='ink'&&typeof witchSet==='function')witchSet(typeof wPose==='string'?wPose:'calm');else hw.src=art('witch')}}document.body.dataset.theme=S.theme;$('theme').textContent=TH().name;$('junie').src=art('drone');ambient();
+  if(!THEMES[S.theme])S.theme='grove';{const hw=$('hwitch');if(hw){hw.dataset.pose='';if(S.theme==='ink'&&typeof witchSet==='function')witchSet(typeof wPose==='string'?wPose:'calm');else hw.src=art('witch')}}document.body.dataset.theme=S.theme;$('theme').textContent=TH().name;$('junie').src=art('drone');ambient();if(typeof ambSync==='function')ambSync();
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else if(S.stage==='grimoire')renderGrimoire();else if(S.stage==='tourney')renderTourney();else renderRules();
 }
@@ -3028,8 +3066,9 @@ document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{sfx.click();if(b.dat
 $('treeb').onclick=()=>{const t=$('tree');t.innerHTML=treeHtml();t.classList.toggle('on');sfx.click()};
 $('tsel').onchange=e=>{S.t=+e.target.value;S.les=0;S.drill=schoolDone(S.t)?drillsFor(S.t).length:0;S.stage=schoolDone(S.t)?'target':'school';save();sfx.click();render()};
 $('theme').onclick=()=>{const k=Object.keys(THEMES);S.theme=k[(k.indexOf(S.theme)+1)%k.length];save();sfx.click();$('ed').dataset.t='';render();comms(S.theme==='ink'?TH().hello+' '+SEASONS[season()].line:TH().hello)};
-$('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.keys=true}else{S.sfx=false;S.keys=false}save();render();sfx.click()};
-$('vol').oninput=e=>{S.vol=+e.target.value;save()};
+$('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.keys=true}else{S.sfx=false;S.keys=false}save();render();sfx.click();ambSync()};
+$('ambb').onclick=()=>{S.amb=!(S.amb!==false);save();sfx.click();ambSync();comms(S.amb?'Ambience on. Listen to the world.':'Ambience off. Quiet desk.')};
+$('vol').oninput=e=>{S.vol=+e.target.value;save();ambSync()};
 const TOURNEY=[
 {t:"Forge a coin",target:"<style>.x{width:80px;height:80px;background:goldenrod;border-radius:50%;}</style><div class=\"x\"></div>",starter:"<style>\n.coin {\n  background: goldenrod;\n}\n</style>\n\n<div class=\"coin\"></div>",sol:"<style>\n.coin {\n  background: goldenrod;\n  width: 80px;\n  height: 80px;\n  border-radius: 50%;\n}\n</style>\n\n<div class=\"coin\"></div>",hint:"Square it (80 × 80), then border-radius: 50%;",reqs:[["width & height 80px",/\.coin\s*\{(?=[^}]*width\s*:\s*80px)(?=[^}]*height\s*:\s*80px)[^}]*\}/i],["border-radius: 50%",/\.coin\s*\{[^}]*border-radius\s*:\s*50%\s*;?[^}]*\}/i]]},
 {t:"Raise a pennant",target:"<style>.x{width:0;height:0;border-left:30px solid transparent;border-right:30px solid transparent;border-bottom:60px solid firebrick;}</style><div class=\"x\"></div>",starter:"<style>\n.flag {\n\n}\n</style>\n\n<div class=\"flag\"></div>",sol:"<style>\n.flag {\n  width: 0;\n  height: 0;\n  border-left: 30px solid transparent;\n  border-right: 30px solid transparent;\n  border-bottom: 60px solid firebrick;\n}\n</style>\n\n<div class=\"flag\"></div>",hint:"The border triangle trick: zero size, transparent sides, solid bottom",reqs:[["width & height 0",/\.flag\s*\{(?=[^}]*width\s*:\s*0)(?=[^}]*height\s*:\s*0)[^}]*\}/i],["side borders 30px transparent",/\.flag\s*\{(?=[^}]*border-left\s*:\s*30px\s+solid\s+transparent)(?=[^}]*border-right\s*:\s*30px\s+solid\s+transparent)[^}]*\}/i],["border-bottom 60px solid firebrick",/\.flag\s*\{[^}]*border-bottom\s*:\s*60px\s+solid\s+firebrick\s*;?[^}]*\}/i]]},
