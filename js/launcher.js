@@ -23,7 +23,7 @@ const labs = LABS_CONFIG.map((lab, i) => {
   return { ...lab, ring, index: i, angle, x: CX + Math.cos(a) * r, y: CY + Math.sin(a) * r, sector: (lab.tag || "general").trim() };
 });
 
-const SECTOR_ORDER = ["network", "code", "practice", "reference"];
+const SECTOR_ORDER = ["python", "networking", "web", "php & sql", "shell", "practice", "reference"];
 const sectors = [];
 for (const lab of labs) {
   const key = lab.sector.toLowerCase();

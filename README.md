@@ -50,7 +50,7 @@ After that it opens full-screen like a native app and works offline.
 |---|---|
 | `id` | unique, no spaces (used for "last opened") |
 | `name` | shown in the list |
-| `tag` | sector: Network, Code, Practice or Reference |
+| `tag` | sector (one per topic): Python, Networking, Web, PHP & SQL, Shell, Practice or Reference |
 | `sub` | short hint under the name |
 | `path` | path to the lab's HTML file |
 | `ring` | orbit: `ring-inner`, `ring-mid` or `ring-outer` |
