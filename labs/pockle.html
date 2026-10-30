@@ -2803,7 +2803,7 @@ function renderTyped(c) {
       const j = +b.dataset.j, right = j === c.bad;
       box.querySelectorAll("#pool .lrow").forEach((x, xi) => { x.disabled = true; if (xi === c.bad) x.classList.add("good"); });
       if (!right) b.classList.add("bad");
-      settle(c, right, "Line " + (c.bad + 1) + " fixed:" + '<div class="code">' + hl(c.fix.trim()) + '</div>');
+      settle(c, right, "Line " + (c.bad + 1) + " fixed:" + '<div class="code">' + hl(c.fix.trimEnd()) + '</div>');
     });
     wireGuess();
   } else if (c.t === "trace") {
@@ -2893,7 +2893,7 @@ function settle(c, right, extra) {
 }
 
 function advance() {
-  if (!R) return;
+  if (!R || R.done) return;
   R.i++;
   if (R.mode === "sprint" && R.i >= R.cards.length) R.cards.push(...pickMix(POOL.filter(SPRINTABLE), 20)), $("dots").innerHTML = "";
   if (R.i >= R.cards.length) return finish();
@@ -2905,7 +2905,6 @@ $("quitBtn").onclick = () => { if (R && R.i > 0 || (R && R.answered)) finish(); 
 function stopTimer() { if (R && R.timer) { clearInterval(R.timer); R.timer = null; } }
 function finish() {
   stopTimer(); if (!R) return;
-  const total = R.mode === "sprint" ? R.i + (R.answered ? 0 : 0) : R.cards.length;
   const answered = R.mode === "sprint" ? R.ok + R.miss.length : Math.min(R.i + (R.answered ? 1 : 0), R.cards.length);
   let msg = "", cls = "good";
   if (R.mode === "sprint") {
@@ -2929,7 +2928,7 @@ function finish() {
     '<div class="m"><b>' + esc(c.labName) + " · " + esc(c.unitTitle) + '</b>' + missBody(c) + '<div>' + inl(c.why) + '</div></div>').join("") : "";
   R.done = true; show("result");
 }
-$("againBtn").onclick = () => { const m = R ? R.mode : "mix"; scan(); go(m); };
+$("againBtn").onclick = () => { const m = R ? R.mode : "mix", lab = R && R.mode === "solo" && LABSTATE.find(l => l.b.name === R.label); scan(); if (lab) { const l = LABSTATE.find(x => x.b.id === lab.b.id); start("solo", pickMix(l.cards, 10), l.b.name); } else go(m); };
 $("homeBtn").onclick = () => { R = null; paintHome(); show("home"); };
 
 function missBody(c) {
@@ -2938,7 +2937,7 @@ function missBody(c) {
   if (c.t === "fill") return code(c.code.replace(/_{3,}/, c.o[c.ok[0]]));
   if (c.t === "build") return (c.setup ? code(c.setup) : "") + code(c.sol.split(",").map(t => c.tiles[+t]).join(" "));
   if (c.t === "order") return code(c.sol.split(",").map(t => c.lines[+t]).join("\n"));
-  if (c.t === "bug") return "line " + (c.bad + 1) + " should be" + code(c.fix.trim());
+  if (c.t === "bug") return "line " + (c.bad + 1) + " should be" + code(c.fix.trimEnd());
   if (c.t === "trace") return code(c.code) + '<table class="trace"><tr><th>after lap</th>' + c.cols.map(x => '<th>' + esc(x) + '</th>').join("") + '</tr>' + c.rows.map((r, i) => '<tr><td>' + (i + 1) + '</td>' + r.map(v => '<td>' + esc(v) + '</td>').join("") + '</tr>').join("") + '</table>';
   return "";
 }
@@ -2952,7 +2951,7 @@ $("mixBtn").onclick = () => go("mix");
 $("missBtn").onclick = () => go("miss");
 $("sprintBtn").onclick = () => go("sprint");
 
-$("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0 }; save(); paintHome(); } };
+$("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0, recall: S.recall }; save(); paintHome(); } };
 
 $("sendBtn").onclick = () => MegaSync.send().catch(e => toast("send failed: " + e.message));
 MegaSync.listen(() => { S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0, recall: true }, load()); setTheme(THEMES.includes(S.theme) ? S.theme : "orbital"); paintRecall(); paintHome(); });
