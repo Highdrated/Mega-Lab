@@ -151,7 +151,7 @@ function renderCourseBar(){
   host.appendChild(strip);
   var label = document.createElement("div");
   label.className = "course-label";
-  label.textContent = "JNCIA path \\u00b7 " + done + " / " + COURSE.length + " units";
+  label.textContent = activeTrack().label + " \u00b7 " + done + " / " + COURSE.length + " units";
   host.appendChild(label);
   var row = document.createElement("div");
   row.className = "course-btns";
@@ -164,7 +164,7 @@ function renderCourseBar(){
   } else {
     var doneEl = document.createElement("div");
     doneEl.className = "course-label";
-    doneEl.textContent = "\\ud83c\\udf93 Path complete — Exam mode is your arena now";
+    doneEl.textContent = "Path complete — Exam mode is your arena now";
     row.appendChild(doneEl);
   }
   var tsw = document.createElement("button");
@@ -194,10 +194,10 @@ function courseOnComplete(scenId){
   var card = document.createElement("div");
   card.className = "course-nextcard";
   var t = document.createElement("div");
-  t.textContent = "\\u2705 Done! Next up: " + unitTitle(next.unit);
+  t.textContent = "Done! Next up: " + unitTitle(next.unit);
   card.appendChild(t);
   var b = document.createElement("button");
-  b.textContent = "Go \\u2192";
+  b.textContent = "Go \u2192";
   b.onclick = function(){ host.innerHTML = ""; courseGoTo(next.unit); };
   card.appendChild(b);
   host.appendChild(card);
@@ -216,20 +216,20 @@ function randomReviewQuestion(){
 function quickSession(){
   var next = courseNext();
   var steps = [
-    { value: "drill", label: "1 \\u00b7 Two subnetting drills", desc: "Warm the math up — opens the drill" },
-    { value: "review", label: "2 \\u00b7 One review question", desc: "Something you answered before — spaced repetition, the cheap way" },
-    { value: "next", label: "3 \\u00b7 " + (next ? unitTitle(next.unit) : "Free practice"), desc: next ? "Your next step on the JNCIA path" : "Path complete — pick any scenario" },
+    { value: "drill", label: "1 \u00b7 Two subnetting drills", desc: "Warm the math up — opens the drill" },
+    { value: "review", label: "2 \u00b7 One review question", desc: "Something you answered before — spaced repetition, the cheap way" },
+    { value: "next", label: "3 \u00b7 " + (next ? unitTitle(next.unit) : "Free practice"), desc: next ? "Your next step on the JNCIA path" : "Path complete — pick any scenario" },
   ];
   modalChoice("15-minute session", "Three steps, in order — small, daily, relentless. Pick where to start:", steps).then(function(v){
     if(v === "drill"){ courseGoTo({ g: "subnetting" }); }
     else if(v === "review"){
       var r = randomReviewQuestion();
       if(!r){ modalConfirm("Nothing to review yet", "Answer some guide quiz questions first — they become your review pool.", "OK"); return; }
-      modalChoice("Review \\u00b7 " + r.g.title, r.q.q, r.q.opts.map(function(o, oi){ return { value: oi, label: o }; })).then(function(ans){
+      modalChoice("Review \u00b7 " + r.g.title, r.q.q, r.q.opts.map(function(o, oi){ return { value: oi, label: o }; })).then(function(ans){
         if(ans === null) return;
         var right = ans === r.q.right;
         if(typeof SFX !== "undefined") (right ? SFX.ding : SFX.womp)();
-        modalConfirm(right ? "\\u2713 Still got it" : "\\u2715 Worth re-reading", r.q.why, "OK");
+        modalConfirm(right ? "\u2713 Still got it" : "\u2715 Worth re-reading", r.q.why, "OK");
       });
     }
     else if(v === "next" && next){ courseGoTo(next.unit); }

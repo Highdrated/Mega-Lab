@@ -1145,7 +1145,7 @@ var PROTO_GUIDES = [
         right: 1,
         why: "Route selection is preference first, and lower is better: Direct 0, Static 5, OSPF 10, BGP 170. The terse view puts the Prf column right beside the protocol letter precisely so you can read that decision rather than guess at it." },
       { q: "You suspect a link somewhere in the path has a small MTU. Which command actually proves it?",
-        opts: ["ping with size 1500", "ping with size 1500 and do-not-fragment", "show interfaces extensive"],
+        opts: ["ping with size 1472", "ping with size 1472 and do-not-fragment", "show interfaces extensive"],
         right: 1,
         why: "Without do-not-fragment the oversized packet is simply fragmented and the ping succeeds, hiding the narrow link. With DF set the packet is refused instead, and the refusal names the MTU that stopped it." },
     ],

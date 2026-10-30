@@ -11641,8 +11641,8 @@ function renderRush(){
   const names=Object.keys(cats).sort((x,y)=>cats[x].ok/cats[x].n-cats[y].ok/cats[y].n||cats[y].n-cats[x].n);
   const weak=names.find(c=>cats[c].ok<cats[c].n);
   const missed=RUSH.answers.filter(a=>!a.ok);
-  const ansText=d=>d.k==='pick'?d.o[d.a]:(d.k==='gap'?d.a[0]:d.ans);
-  const given=a=>a.skipped||a.v==null||a.v===''?'—':(a.d.k==='pick'?a.d.o[a.v]:a.v);
+  const ansText=d=>d.k==='pick'?d.o[d.a]:(d.k==='multi'?d.a.map(i=>d.o[i].replace(/`/g,'')).join(' and '):(d.k==='gap'?d.a[0]:d.ans));
+  const given=a=>a.skipped||a.v==null||a.v===''||(Array.isArray(a.v)&&!a.v.length)?'—':(a.d.k==='pick'?a.d.o[a.v]:(a.d.k==='multi'?a.v.map(i=>a.d.o[i].replace(/`/g,'')).join(' and '):a.v));
   $('dtitle').textContent='Service report';
   box.innerHTML='<div class="donecard"><div class="lhead"><div><div class="dk">'+(RUSH.grand?'Grand tasting · ':'')+(RUSH.timeUp?'Time is up':'Service complete')+' · '+fmtClock(RUSH.used)+'</div><h2>'+pct+'% · '+ok+' of '+n+' tickets right</h2></div>'+(pct>=70?dishImg('badge','ldish'):'')+'<img src="'+ROUX+(pct>=70?'cheer':'stern')+'.png" alt=""></div>'
    +'<p class="why">'+(pct>=70?'That is a passing service. '+(weak?'Your weakest station today: <b>'+esc(weak)+'</b>.':'Flawless. Roux is speechless.'):'Not yet a passing service (70%). Start with <b>'+esc(weak||names[0])+'</b>: reread those rules in the Rulebook, then run Practice.')+'</p>'
