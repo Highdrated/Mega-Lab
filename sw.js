@@ -6,7 +6,7 @@ const PRECACHE = [
   "./js/traffic.config.js?v=1",
   "./js/track.js?v=1",
   "./js/sync.js?v=3",
-  "./js/labs.config.js?v=23",
+  "./js/labs.config.js?v=24",
   "./js/launcher.js?v=19",
   "./js/station.js?v=2",
   "./manifest.webmanifest",

@@ -36,7 +36,7 @@ const LABS_CONFIG = [
     sub: "junos · castle workstation",
     path: "labs/junle-room.html",
     ring: "ring-mid",
-    angle: -64,
+    angle: -58,
     glyph: '<rect x="2" y="2" width="12" height="12"/><path d="M2 6h12M6 2v12M9 9h3v3"/>'
   },
   {
@@ -56,7 +56,7 @@ const LABS_CONFIG = [
     sub: "ip · subnetting · tap only",
     path: "labs/subnle-pocket.html",
     ring: "ring-mid",
-    angle: 39,
+    angle: 32,
     glyph: '<path d="M2 4h12M2 8h12M2 12h12"/><path d="M6 2v12M10 2v12"/>'
   },
   {
@@ -116,7 +116,7 @@ const LABS_CONFIG = [
     sub: "powershell",
     path: "labs/poshle.html",
     ring: "ring-mid",
-    angle: 90,
+    angle: 77,
     glyph: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M4 6.5l2.5 1.8L4 10.1M8 10.5h4"/>'
   },
   {
@@ -126,8 +126,18 @@ const LABS_CONFIG = [
     sub: "powershell · tap only",
     path: "labs/poshle-pocket.html",
     ring: "ring-mid",
-    angle: 141,
+    angle: 122,
     glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 6l1.5 1.5L6 9M8.5 9.5h1.5"/>'
+  },
+  {
+    id: "poshle-forge",
+    name: "Poshle Forge",
+    tag: "Shell",
+    sub: "powershell · error clinic · katas",
+    path: "labs/poshle-forge.html",
+    ring: "ring-mid",
+    angle: 167,
+    glyph: '<path d="M2 12h12M4 12V9h8v3M6 9V6l2-3 2 3v3"/>'
   },
   {
     id: "shelle",
@@ -136,7 +146,7 @@ const LABS_CONFIG = [
     sub: "zsh · docker",
     path: "labs/shelle.html",
     ring: "ring-mid",
-    angle: 193,
+    angle: 212,
     glyph: '<path d="M2.5 4l3.5 3-3.5 3"/><path d="M7.5 11.5h6"/>'
   },
   {
@@ -146,7 +156,7 @@ const LABS_CONFIG = [
     sub: "git",
     path: "labs/git-lab.html",
     ring: "ring-mid",
-    angle: 244,
+    angle: 250,
     glyph: '<circle cx="4" cy="3.5" r="1.5"/><circle cx="4" cy="12.5" r="1.5"/><circle cx="12" cy="6" r="1.5"/><path d="M4 5v6M12 7.5c0 2.5-3 2.5-8 3.5"/>'
   },
   {

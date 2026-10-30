@@ -1,0 +1,552 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="night">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Poshle Forge</title>
+<style>
+:root{
+  --sans: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: ui-monospace, "SF Mono", Menlo, "JetBrains Mono", Consolas, monospace;
+  --r: 4px;
+  --rail: 264px;
+  --top: 56px;
+}
+html[data-theme="day"]{
+  --bg:#e7ebef; --panel:#f8f9fb; --sunk:#eef1f4; --ink:#151e27; --strong:#0a1118;
+  --muted:#5d6b79; --faint:#8a97a3; --line:#d4dae0; --hair:#e2e7ec;
+  --accent:#1f6feb; --accent-soft:#dbe7fb; --good:#1a7f4b; --good-soft:#d9efe3; --warn:#b5532a; --warn-soft:#f6e3d9;
+}
+html[data-theme="night"]{
+  --bg:#0e1419; --panel:#151c22; --sunk:#111920; --ink:#d9e2e8; --strong:#f1f6f9;
+  --muted:#8a9dab; --faint:#65788a; --line:#242f38; --hair:#1d262e;
+  --accent:#5aa2ff; --accent-soft:#132b47; --good:#4cc38a; --good-soft:#12301f; --warn:#e98a5c; --warn-soft:#3a2216;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);font-size:14px;line-height:1.5;overflow:hidden}
+button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+code{font-family:var(--mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--hair);border-radius:3px;padding:0 4px}
+
+.top{height:var(--top);display:flex;align-items:center;gap:18px;padding:0 16px;background:var(--panel);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:baseline;gap:9px;flex:none}
+.brand b{font-family:var(--mono);font-size:18px;font-weight:700;color:var(--strong);letter-spacing:-.01em}
+.brand span{font-size:12px;color:var(--faint)}
+.seg{display:flex;border:1px solid var(--line);border-radius:var(--r);overflow:hidden;flex:none}
+.seg button{padding:6px 14px;font-size:12.5px;color:var(--muted)}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+.stats{display:flex;gap:18px;margin-left:auto;font-family:var(--mono);font-size:12px;color:var(--muted)}
+.stats div{display:flex;flex-direction:column;align-items:flex-end;line-height:1.2}
+.stats b{font-size:15px;color:var(--strong);font-weight:600}
+.tbtn{width:32px;height:32px;display:grid;place-items:center;border-radius:var(--r);color:var(--muted);flex:none}
+.tbtn:hover{background:var(--sunk);color:var(--ink)}
+.tbtn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5}
+
+.shell{display:grid;grid-template-columns:var(--rail) minmax(0,1fr);height:calc(100vh - var(--top))}
+.rail{background:var(--panel);border-right:1px solid var(--line);overflow-y:auto;padding:14px 0 24px}
+.rail h4{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);padding:10px 16px 6px}
+.rail h4:first-child{padding-top:0}
+.sc{display:grid;grid-template-columns:28px 1fr;gap:10px;align-items:center;width:100%;text-align:left;padding:7px 16px;border-left:3px solid transparent}
+.sc:hover{background:var(--sunk)}
+.sc.on{background:var(--sunk);border-left-color:var(--accent)}
+.sc i{font-style:normal;font-family:var(--mono);font-size:11px;font-weight:600;width:28px;height:28px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r);color:var(--muted);background:var(--panel)}
+.sc.on i{border-color:var(--accent);color:var(--accent)}
+.sc.full i{background:var(--good-soft);border-color:var(--good);color:var(--good)}
+.sc b{display:block;font-size:13.5px;font-weight:600;color:var(--strong);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sc span{min-width:0}
+.sc small{display:block;font-size:11.5px;color:var(--faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+.main{overflow-y:auto;padding:26px 34px 60px}
+.wrap{max-width:980px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.head .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.head h1{font-size:22px;font-weight:650;color:var(--strong);margin-top:2px}
+.head p{color:var(--muted);margin-top:6px;max-width:760px}
+.lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline}
+.lbl em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.task{border-left:3px solid var(--accent)}
+.twocol{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+
+.term{background:#0b0f13;color:#d6dde3;border:1px solid #1d262e;border-radius:var(--r);font-family:var(--mono);font-size:12.5px;line-height:1.55;padding:12px 14px;white-space:pre-wrap;word-break:break-word;min-height:120px}
+.term .ps{color:#6cb6ff}
+.term .err{color:#ff7b72}
+.term .dim{color:#7d8b97}
+
+.ed{position:relative}
+.ed textarea{width:100%;min-height:220px;resize:vertical;background:var(--sunk);color:var(--ink);border:1px solid var(--line);border-radius:var(--r);font-family:var(--mono);font-size:13px;line-height:1.55;padding:12px 14px;tab-size:4;outline:none}
+.ed textarea:focus{border-color:var(--accent)}
+
+.acts{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.btn{padding:7px 14px;border:1px solid var(--line);border-radius:var(--r);font-size:13px;color:var(--ink);background:var(--panel)}
+.btn:hover{border-color:var(--muted)}
+.btn.main{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.main:hover{filter:brightness(1.08)}
+.acts .kbd{font-family:var(--mono);font-size:11px;color:var(--faint);margin-left:auto}
+
+.fb{border-radius:var(--r);padding:10px 14px;font-size:13.5px;display:none}
+.fb.show{display:block}
+.fb.ok{background:var(--good-soft);color:var(--good);border:1px solid var(--good)}
+.fb.no{background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn)}
+.fb.hint{background:var(--accent-soft);color:var(--ink);border:1px solid var(--accent)}
+
+.why{display:none}
+.why.show{display:block}
+.why p+p{margin-top:8px}
+.why pre,.kata pre{font-family:var(--mono);font-size:12.5px;background:var(--sunk);border:1px solid var(--hair);border-radius:var(--r);padding:10px 12px;white-space:pre-wrap;margin-top:8px;color:var(--ink)}
+
+.kata ul{padding-left:18px;display:flex;flex-direction:column;gap:4px}
+.kata li::marker{color:var(--faint)}
+.steps{counter-reset:s;display:flex;flex-direction:column;gap:10px}
+.steps li{list-style:none;counter-increment:s;display:grid;grid-template-columns:24px 1fr;gap:10px}
+.steps li::before{content:counter(s);font-family:var(--mono);font-size:11px;font-weight:600;width:22px;height:22px;display:grid;place-items:center;border:1px solid var(--line);border-radius:50%;color:var(--muted)}
+.cmd{display:flex;gap:8px;align-items:stretch;margin-top:6px}
+.cmd code{flex:1;display:block;padding:7px 10px;white-space:pre-wrap;word-break:break-all}
+.done-tag{font-family:var(--mono);font-size:11px;color:var(--good);border:1px solid var(--good);border-radius:var(--r);padding:2px 8px}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%) translateY(20px);background:var(--strong);color:var(--bg);padding:8px 14px;border-radius:var(--r);font-size:13px;opacity:0;transition:.2s;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+
+@media (max-width: 980px){
+  .twocol{grid-template-columns:1fr}
+}
+@media (max-width: 760px){
+  body{overflow:auto}
+  .shell{grid-template-columns:1fr;height:auto}
+  .rail{border-right:none;border-bottom:1px solid var(--line);max-height:240px}
+  .main{padding:18px 16px 48px}
+  .brand span,.stats{display:none}
+}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><b>Poshle Forge</b><span>write it, break it, fix it</span></div>
+  <div class="seg" role="tablist">
+    <button data-tab="clinic">Error clinic</button>
+    <button data-tab="katas">Katas</button>
+  </div>
+  <div class="stats">
+    <div><b id="stFixed">0/0</b>fixed</div>
+    <div><b id="stKatas">0/0</b>katas green</div>
+  </div>
+  <button class="tbtn" id="themeBtn" title="Day / night"><svg viewBox="0 0 16 16"><circle cx="8" cy="8" r="3.2"/><path d="M8 1v1.6M8 13.4V15M1 8h1.6M13.4 8H15M3 3l1.1 1.1M11.9 11.9L13 13M3 13l1.1-1.1M11.9 4.1L13 3"/></svg></button>
+</header>
+<div class="shell">
+  <nav class="rail" id="rail"></nav>
+  <main class="main"><div class="wrap" id="view"></div></main>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const CLINIC_RAW = [
+  {
+    id: "switch", area: "Parameters", title: "A switch with a value",
+    task: "Block Noor's sign-in. Fix line 2 so PowerShell accepts it.",
+    code: "$id = 'noor.haddad@dcu.be'\nUpdate-MgUser -UserId $id -AccountEnabled $false",
+    said: [["ps", "PS> ./block-user.ps1"], ["err", "Update-MgUser: A positional parameter cannot be found that accepts argument 'False'."]],
+    pass: (c) => /-AccountEnabled:\s*\$false\b/i.test(c),
+    bug: (c) => /-AccountEnabled\s+\$false/i.test(c),
+    hint: "-AccountEnabled is a switch, like -Force. A switch never takes a value after a space.",
+    fix: "Update-MgUser -UserId $id -AccountEnabled:$false",
+    why: ["A switch parameter is on when you name it and off when you leave it out. With a space, PowerShell treats <code>$false</code> as a separate positional argument, and no parameter of Update-MgUser takes it.", "To pass an explicit value to a switch, glue it on with a colon: <code>-AccountEnabled:$false</code>. You also see this with <code>-Confirm:$false</code>."]
+  },
+  {
+    id: "splat", area: "Parameters", title: "Splatting with the wrong sigil",
+    task: "List the .log files in ./logs using the $params hashtable.",
+    code: "$params = @{\n    Path   = './logs'\n    Filter = '*.log'\n}\nGet-ChildItem $params",
+    said: [["ps", "PS> ./list-logs.ps1"], ["err", "Get-ChildItem: Cannot find path '/Users/kaatje/System.Collections.Hashtable' because it does not exist."]],
+    pass: (c) => /Get-ChildItem\s+@params\b/i.test(c),
+    bug: (c) => /Get-ChildItem\s+\$params\b/i.test(c),
+    hint: "Look at the path in the error. Where did 'System.Collections.Hashtable' come from?",
+    fix: "Get-ChildItem @params",
+    why: ["With <code>$params</code> you pass the hashtable itself as one value. It lands in the first positional parameter, -Path, and gets turned into the text 'System.Collections.Hashtable'.", "With <code>@params</code> PowerShell splats it: every key becomes a parameter name and every value its value. Same variable, different sigil."]
+  },
+  {
+    id: "trycatch", area: "Errors", title: "A catch that never runs",
+    task: "The warning should appear when the file is missing. Make the catch block run.",
+    code: "try {\n    Remove-Item ./old-report.csv\n}\ncatch {\n    Write-Warning 'Could not delete the old report'\n}",
+    said: [["ps", "PS> ./cleanup.ps1"], ["err", "Remove-Item: Cannot find path '/Users/kaatje/old-report.csv' because it does not exist."], ["dim", "(no warning)"]],
+    pass: (c) => /Remove-Item[^\n]*-(ErrorAction|EA)\s+['"]?Stop\b/i.test(c) || /\$ErrorActionPreference\s*=\s*['"]Stop['"][\s\S]*try\s*\{/i.test(c),
+    hint: "try/catch only catches terminating errors. Most cmdlet errors are not terminating.",
+    fix: "Remove-Item ./old-report.csv -ErrorAction Stop",
+    why: ["Remove-Item reports a missing file as a non-terminating error: it writes the red text and carries on, so there is nothing for catch to catch.", "<code>-ErrorAction Stop</code> turns that error into a terminating one for this command, and now catch runs. You will want this on almost every cmdlet inside a try block."]
+  },
+  {
+    id: "catchmsg", area: "Strings", title: "The error message in a string",
+    task: "Print only the error message after 'Failed: '.",
+    code: "try {\n    Get-Item ./missing.txt -ErrorAction Stop\n}\ncatch {\n    Write-Host \"Failed: $_.Exception.Message\"\n}",
+    said: [["ps", "PS> ./read.ps1"], ["", "Failed: Cannot find path '/Users/kaatje/missing.txt' because it does not exist..Exception.Message"]],
+    pass: (c) => /"Failed: \$\(\s*\$(_|PSItem)\.Exception\.Message\s*\)"/i.test(c),
+    bug: (c) => /"Failed: \$(_|PSItem)\.Exception/i.test(c),
+    hint: "Inside double quotes, PowerShell only expands the variable itself, not the .Property after it.",
+    fix: "Write-Host \"Failed: $($_.Exception.Message)\"",
+    why: ["In a double-quoted string, <code>$_</code> is expanded and <code>.Exception.Message</code> stays plain text. That is why the output ends in a literal '.Exception.Message'.", "Wrap any expression in <code>$( )</code> to evaluate it inside a string: <code>\"$($_.Exception.Message)\"</code>."]
+  },
+  {
+    id: "propstr", area: "Strings", title: "A property inside a string",
+    task: "Print 'Mail: noor@dcu.be'.",
+    code: "$u = [pscustomobject]@{ Name = 'Noor'; Mail = 'noor@dcu.be' }\n\"Mail: $u.Mail\"",
+    said: [["ps", "PS> ./show.ps1"], ["", "Mail: @{Name=Noor; Mail=noor@dcu.be}.Mail"]],
+    pass: (c) => /"Mail: \$\(\s*\$u\.Mail\s*\)"/i.test(c) || /'Mail: '\s*\+\s*\$u\.Mail/i.test(c),
+    bug: (c) => /"Mail: \$u\.Mail"/i.test(c),
+    hint: "Same rule as the catch message: only the variable expands, not the property.",
+    fix: "\"Mail: $($u.Mail)\"",
+    why: ["PowerShell expands <code>$u</code>, which turns the whole object into its text form <code>@{Name=Noor; Mail=noor@dcu.be}</code>, then adds '.Mail' as plain text.", "Use <code>$($u.Mail)</code>. Rule of thumb: the moment there is a dot, brackets or a method call, you need <code>$( )</code>."]
+  },
+  {
+    id: "quotes", area: "Strings", title: "Single quotes",
+    task: "Greet Noor by name.",
+    code: "$name = 'Noor'\nWrite-Output 'Welcome $name'",
+    said: [["ps", "PS> ./greet.ps1"], ["", "Welcome $name"]],
+    pass: (c) => /"Welcome \$(name|\(\s*\$name\s*\))"/i.test(c),
+    bug: (c) => /'Welcome \$name'/i.test(c),
+    hint: "One kind of quote expands variables, the other keeps text exactly as written.",
+    fix: "Write-Output \"Welcome $name\"",
+    why: ["Single quotes are literal: what you type is what you get. Double quotes expand variables and <code>$( )</code> expressions.", "Use single quotes by default (safer, nothing surprises you), double quotes when you want something filled in."]
+  },
+  {
+    id: "nullcall", area: "Errors", title: "Calling a method on nothing",
+    task: "Nobody works in Legal yet. Only run line 3 when a user was found.",
+    code: "$users = Import-Csv ./users.csv\n$first = $users | Where-Object Department -eq 'Legal' | Select-Object -First 1\n$first.Mail.ToLower()",
+    said: [["ps", "PS> ./first-legal.ps1"], ["err", "InvalidOperation: \nLine |\n   3 |  $first.Mail.ToLower()\n     |  ~~~~~~~~~~~~~~~~~~~~~\n     | You cannot call a method on a null-valued expression."]],
+    pass: (c) => /if\s*\(\s*(\$first|\$null\s*-ne\s*\$first|\$first\s*-ne\s*\$null)\s*\)\s*\{[\s\S]*\$first\.Mail\.ToLower\(\)/i.test(c) || /\$\{first\}\?\.Mail\?\.ToLower\(\)/i.test(c),
+    hint: "Where-Object found nothing, so $first is $null. Guard the line with an if.",
+    fix: "if ($first) {\n    $first.Mail.ToLower()\n}",
+    why: ["When a filter matches nothing, the variable is <code>$null</code>. Reading a property of <code>$null</code> just gives <code>$null</code> again, but calling a method on it is an error.", "Guard it with <code>if ($first) { ... }</code>. PowerShell 7 also has the null-conditional <code>?.</code>, but because <code>?</code> is allowed in variable names you must write <code>${first}?.Mail?.ToLower()</code> with braces."]
+  },
+  {
+    id: "fixedarr", area: "Collections", title: "Adding to an array",
+    task: "Collect both site names in $list.",
+    code: "$list = @()\nforeach ($site in 'OOST1', 'ANTW2') {\n    $list.Add($site)\n}",
+    said: [["ps", "PS> ./sites.ps1"], ["err", "MethodInvocationException: \nLine |\n   3 |      $list.Add($site)\n     |      ~~~~~~~~~~~~~~~~\n     | Exception calling \"Add\" with \"1\" argument(s): \"Collection was of a fixed size.\""]],
+    pass: (c) => (/\$list\s*=\s*\[(System\.)?Collections\.Generic\.List\[\w+\]\]::new\(\)/i.test(c) && /\$list\.Add\(\$site\)/i.test(c)) || (/\$list\s*\+=\s*\$site/i.test(c) && !/\$list\.Add\(/i.test(c)),
+    hint: "@() is a fixed-size array. Either use a real list type, or use +=.",
+    fix: "$list = [System.Collections.Generic.List[string]]::new()",
+    why: ["<code>@()</code> creates an array, and .NET arrays have a fixed size, so <code>.Add()</code> fails.", "<code>$list += $site</code> works, but it builds a brand-new array on every loop: fine for 10 items, slow for 10,000. For growing collections use <code>[System.Collections.Generic.List[string]]::new()</code> and keep <code>.Add()</code>."]
+  },
+  {
+    id: "notfound", area: "Syntax", title: "A command that does not exist",
+    task: "List every user's display name.",
+    code: "Get-MgUsers -All | Select-Object DisplayName",
+    said: [["ps", "PS> ./users.ps1"], ["err", "Get-MgUsers: The term 'Get-MgUsers' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again."]],
+    pass: (c) => /\bGet-MgUser\s+-All\b/i.test(c),
+    bug: (c) => /Get-MgUsers/i.test(c),
+    hint: "PowerShell nouns are always singular, even when the command returns many things.",
+    fix: "Get-MgUser -All | Select-Object DisplayName",
+    why: ["The naming rule is Verb-SingularNoun: Get-MgUser, Get-Mailbox, Get-ChildItem. -All decides how many come back, not the name.", "When you are not sure of a name, ask PowerShell: <code>Get-Command *MgUser*</code>."]
+  },
+  {
+    id: "gt", area: "Logic", title: "Comparing with >",
+    task: "Warn when there are more than 50 log files.",
+    code: "$count = (Get-ChildItem ./logs).Count\nif ($count > 50) {\n    Write-Warning 'Too many logs'\n}",
+    said: [["ps", "PS> ./check-logs.ps1"], ["dim", "(no warning, even with 120 logs)"], ["ps", "PS> ls"], ["", "50   check-logs.ps1   logs"]],
+    pass: (c) => /\$count\s+-gt\s+50/i.test(c) && !/\$count\s*>\s*50/.test(c),
+    hint: "In a shell, > has a job already. Where did the new file called 50 come from?",
+    fix: "if ($count -gt 50) {",
+    why: ["<code>&gt;</code> is redirection: it wrote the value of $count into a new file named 50. The condition itself became empty, so it was false.", "PowerShell comparisons are words: <code>-eq -ne -gt -ge -lt -le</code>."]
+  },
+  {
+    id: "assignfilter", area: "Logic", title: "= inside a filter",
+    task: "Count the enabled users.",
+    code: "$users | Where-Object { $_.Enabled = $true } | Measure-Object",
+    said: [["ps", "PS> ./count-enabled.ps1"], ["", "Count    : 0\nAverage  :\nSum      :\nMaximum  :\nMinimum  :\nProperty :"]],
+    pass: (c) => /\$_\.Enabled\s+-eq\s+\$true/i.test(c) || /Where-Object\s*\{\s*\$_\.Enabled\s*\}/i.test(c) || /Where-Object\s+Enabled\b/i.test(c),
+    bug: (c) => /\$_\.Enabled\s*=\s*\$/i.test(c),
+    hint: "= assigns. It does not compare.",
+    fix: "$users | Where-Object { $_.Enabled -eq $true } | Measure-Object",
+    why: ["<code>$_.Enabled = $true</code> is an assignment. It outputs nothing, so the filter drops everyone, and as a bonus it sets Enabled to $true on every object in memory.", "Compare with <code>-eq</code>, or simply <code>Where-Object Enabled</code> for a true/false property."]
+  },
+  {
+    id: "expand", area: "Pipeline", title: "Select-Object keeps the wrapper",
+    task: "Print just the Id of the first member.",
+    code: "$ids = Get-MgGroupMember -GroupId $groupId | Select-Object Id\n\"First member: $($ids[0])\"",
+    said: [["ps", "PS> ./members.ps1"], ["", "First member: @{Id=6f1c2a7e-0d4b-4c39-9b8e-2a51f0c3d7a1}"]],
+    pass: (c) => /Select-Object\s+-ExpandProperty\s+Id\b/i.test(c) || /\$\(\s*\$ids\[0\]\.Id\s*\)/i.test(c),
+    hint: "Select-Object Id makes new objects that have one property. You want the value itself.",
+    fix: "$ids = Get-MgGroupMember -GroupId $groupId | Select-Object -ExpandProperty Id",
+    why: ["<code>Select-Object Id</code> returns objects with a single Id property, shown as <code>@{Id=...}</code>. Pass that to a cmdlet expecting a plain id and it fails in confusing ways.", "<code>-ExpandProperty Id</code> returns the bare values. Shortcut: <code>(Get-MgGroupMember -GroupId $groupId).Id</code>."]
+  },
+  {
+    id: "hashcsv", area: "Pipeline", title: "Exporting a hashtable",
+    task: "Write one row with Site and Racks columns to sites.csv.",
+    code: "$row = @{ Site = 'OOST1'; Racks = 40 }\n$row | Export-Csv ./sites.csv -NoTypeInformation",
+    said: [["ps", "PS> Get-Content ./sites.csv"], ["", "\"IsReadOnly\",\"IsFixedSize\",\"IsSynchronized\",\"Keys\",\"Values\",\"SyncRoot\",\"Count\"\n\"False\",\"False\",\"False\",\"System.Collections.Hashtable+KeyCollection\",\"System.Collections.Hashtable+ValueCollection\",\"System.Object\",\"2\""]],
+    pass: (c) => /\$row\s*=\s*\[pscustomobject\]\s*@\{/i.test(c),
+    hint: "Export-Csv writes the properties of the object. Which object has Site and Racks as properties?",
+    fix: "$row = [pscustomobject]@{ Site = 'OOST1'; Racks = 40 }",
+    why: ["A hashtable keeps Site and Racks as keys, not properties. Export-Csv writes properties, so you get the hashtable's own ones: IsReadOnly, Keys, Count.", "Put <code>[pscustomobject]</code> in front of the <code>@{ }</code> and the keys become real properties. Do this whenever you build rows for a report."]
+  },
+  {
+    id: "brace", area: "Syntax", title: "A missing brace",
+    task: "Make the script run again.",
+    code: "foreach ($site in $sites) {\n    if ($site.Racks -gt 30) {\n        Write-Output $site.Name\n}",
+    said: [["ps", "PS> ./big-sites.ps1"], ["err", "ParserError: \nLine |\n   1 |  foreach ($site in $sites) {\n     |                            ~\n     | Missing closing '}' in statement block or type definition."]],
+    pass: (c) => { const o = (c.match(/\{/g) || []).length, cl = (c.match(/\}/g) || []).length; return o === cl && o >= 2 && /foreach\s*\(/i.test(c) && /if\s*\(/i.test(c); },
+    hint: "Count the { and the }. Indentation shows which block was left open.",
+    fix: "foreach ($site in $sites) {\n    if ($site.Racks -gt 30) {\n        Write-Output $site.Name\n    }\n}",
+    why: ["The parser points at the block that never got closed: the foreach on line 1. The } on line 4 closes the if, so the foreach is still open at the end of the file.", "Keep the indentation honest and missing braces jump out. VS Code also highlights the matching brace when the cursor is next to one."]
+  }
+];
+
+const CLINIC = [...new Set(CLINIC_RAW.map((c) => c.area))].flatMap((a) => CLINIC_RAW.filter((c) => c.area === a));
+
+const KATAS = [
+  { id: "01-New-MailNickname", fn: "New-MailNickname", learn: "Substring, Trim, -replace",
+    task: ["Return the DCU mail nickname: first letter of the first name + first 2 letters of the surname, in lower case.", "Ignore spaces inside the surname ('De Smet' counts as 'desmet').", "Trim spaces around the first name.", "A one-letter surname gives just that letter."],
+    ex: "New-MailNickname -GivenName 'Stijn' -Surname 'Raes'      # sra\nNew-MailNickname -GivenName 'Jan' -Surname 'De Smet'     # jde" },
+  { id: "02-ConvertTo-Upn", fn: "ConvertTo-Upn", learn: "removing accents, -f format, default parameters",
+    task: ["Return first.last@domain in lower case.", "Remove accents (é becomes e), spaces and anything that is not a letter or digit.", "-Domain defaults to datacenterunited.com and is lower-cased too."],
+    ex: "ConvertTo-Upn -GivenName 'Émile' -Surname 'Van den Broeck'\n# emile.vandenbroeck@datacenterunited.com" },
+  { id: "03-Get-LicenseSummary", fn: "Get-LicenseSummary", learn: "Group-Object, Sort-Object, custom objects",
+    task: ["Each user has a Licenses property (a list of SKU names, may be empty).", "Return one object per SKU with exactly two properties: Sku and Count.", "Most used first; ties sorted by name."],
+    ex: "Get-LicenseSummary -User $users\n# Sku   Count\n# E3        3\n# Teams     2\n# F3        1" },
+  { id: "04-Get-StaleAccount", fn: "Get-StaleAccount", learn: "pipeline input, begin/process, dates",
+    task: ["Take users from the pipeline (UserPrincipalName, Enabled, LastSignIn).", "Output the original objects of enabled users whose LastSignIn is empty or older than -Days (default 90) before -Now.", "A sign-in exactly on the cutoff day is not stale."],
+    ex: "$users | Get-StaleAccount -Days 90" },
+  { id: "05-Compare-DlMembership", fn: "Compare-DlMembership", learn: "comparing lists, -notin, clean input",
+    task: ["Compare who should be in a distribution list with who is in it now.", "Ignore case, stray spaces and blank entries.", "Output Address + Action objects: all Adds first, then all Removes, each sorted by address.", "No changes means no output."],
+    ex: "Compare-DlMembership -Desired 'ann@dcu.be','bob@dcu.be' -Current 'ann@dcu.be','carl@dcu.be'\n# Address      Action\n# bob@dcu.be   Add\n# carl@dcu.be  Remove" },
+  { id: "06-Import-SiteList", fn: "Import-SiteList", learn: "Test-Path, throw, Import-Csv, type casting",
+    task: ["Missing file: throw \"Site list not found: <path>\".", "Columns Site, Racks and Region are required; throw \"Missing column: <name>\" for the first one missing.", "Output Site, Racks as [int] and Region in capitals."],
+    ex: "Import-SiteList -Path ./sites.csv\n# Site  Racks Region\n# OOST1    40 WEST" },
+  { id: "07-Rename-LogFile", fn: "Rename-LogFile", learn: "SupportsShouldProcess, -WhatIf",
+    task: ["Add -Prefix to every .log file in -Path, sorted by name.", "Skip files that already start with the prefix; leave other file types alone.", "Return the new names.", "With -WhatIf nothing may change. Use $PSCmdlet.ShouldProcess."],
+    ex: "Rename-LogFile -Path ./logs -Prefix '2026-10-30_' -WhatIf" },
+  { id: "08-ConvertTo-ByteCount", fn: "ConvertTo-ByteCount", learn: "regex, $Matches, Exchange size strings",
+    task: ["Turn an Exchange size like '1.234 GB (1,325,000,000 bytes)' into a [long] byte count.", "Thousand separators can be commas or dots.", "Accept pipeline input.", "Anything else: throw \"Cannot parse size: <text>\"."],
+    ex: "(Get-EXOMailboxStatistics noor).TotalItemSize.ToString() | ConvertTo-ByteCount" }
+];
+
+const KEY = "poshle-forge.v1";
+const KATA_URL = "../katas/powershell/";
+const REPO_URL = "https://github.com/Highdrated/Mega-Lab/tree/main/katas/powershell";
+let S = load();
+
+function load() {
+  let s = null;
+  try { s = JSON.parse(localStorage.getItem(KEY)); } catch (e) {}
+  s = s && typeof s === "object" ? s : {};
+  s.theme = s.theme || "night";
+  s.tab = s.tab === "katas" ? "katas" : "clinic";
+  s.cur = s.cur || {};
+  s.clinic = s.clinic || {};
+  s.katas = s.katas || {};
+  if (!CLINIC.some((c) => c.id === s.cur.clinic)) s.cur.clinic = CLINIC[0].id;
+  if (!KATAS.some((k) => k.id === s.cur.kata)) s.cur.kata = KATAS[0].id;
+  return s;
+}
+function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
+
+const $ = (id) => document.getElementById(id);
+const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 1600); }
+
+function stats() {
+  $("stFixed").textContent = CLINIC.filter((c) => S.clinic[c.id] && S.clinic[c.id].solved).length + "/" + CLINIC.length;
+  $("stKatas").textContent = KATAS.filter((k) => S.katas[k.id] && S.katas[k.id].done).length + "/" + KATAS.length;
+}
+
+function rail() {
+  const r = $("rail");
+  r.innerHTML = "";
+  if (S.tab === "clinic") {
+    const areas = [...new Set(CLINIC.map((c) => c.area))];
+    let n = 0;
+    for (const a of areas) {
+      const h = document.createElement("h4"); h.textContent = a; r.appendChild(h);
+      for (const c of CLINIC.filter((x) => x.area === a)) {
+        n++;
+        const st = S.clinic[c.id] || {};
+        const b = document.createElement("button");
+        b.className = "sc" + (c.id === S.cur.clinic ? " on" : "") + (st.solved ? " full" : "");
+        b.innerHTML = `<i>${String(n).padStart(2, "0")}</i><span><b>${esc(c.title)}</b><small>${st.solved ? "fixed" : st.tries ? st.tries + " tr" + (st.tries === 1 ? "y" : "ies") : "not started"}</small></span>`;
+        b.onclick = () => { S.cur.clinic = c.id; save(); render(); };
+        r.appendChild(b);
+      }
+    }
+  } else {
+    const h = document.createElement("h4"); h.textContent = "On your Mac"; r.appendChild(h);
+    const s = document.createElement("button");
+    s.className = "sc" + (S.cur.kata === "setup" ? " on" : "") + (S.setupSeen ? " full" : "");
+    s.innerHTML = `<i>00</i><span><b>Setup</b><small>pwsh, Pester, the files</small></span>`;
+    s.onclick = () => { S.cur.kata = "setup"; save(); render(); };
+    r.appendChild(s);
+    const h2 = document.createElement("h4"); h2.textContent = "Katas"; r.appendChild(h2);
+    for (const k of KATAS) {
+      const st = S.katas[k.id] || {};
+      const b = document.createElement("button");
+      b.className = "sc" + (k.id === S.cur.kata ? " on" : "") + (st.done ? " full" : "");
+      b.innerHTML = `<i>${k.id.slice(0, 2)}</i><span><b>${esc(k.fn)}</b><small>${esc(k.learn)}</small></span>`;
+      b.onclick = () => { S.cur.kata = k.id; save(); render(); };
+      r.appendChild(b);
+    }
+  }
+}
+
+function termHtml(lines) {
+  return lines.map(([cls, t]) => cls ? `<span class="${cls}">${esc(t)}</span>` : esc(t)).join("\n");
+}
+
+function viewClinic() {
+  const c = CLINIC.find((x) => x.id === S.cur.clinic);
+  const st = S.clinic[c.id] || (S.clinic[c.id] = {});
+  const i = CLINIC.indexOf(c);
+  const v = $("view");
+  v.innerHTML = `
+    <div class="head"><p class="eyebrow">Case ${i + 1} of ${CLINIC.length} · ${esc(c.area)}</p><h1>${esc(c.title)}</h1></div>
+    <div class="card task">${esc(c.task)}</div>
+    <div class="twocol">
+      <div><div class="lbl">PowerShell said</div><div class="term">${termHtml(c.said)}</div></div>
+      <div><div class="lbl">Your script <em>Ctrl+Enter checks</em></div><div class="ed"><textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off"></textarea></div></div>
+    </div>
+    <div class="acts">
+      <button class="btn main" id="check">Check</button>
+      <button class="btn" id="hint">Hint</button>
+      <button class="btn" id="peek">Show fix</button>
+      <button class="btn" id="reset">Reset</button>
+      <button class="btn" id="next">Next case</button>
+      ${st.solved ? '<span class="done-tag">fixed</span>' : ""}
+    </div>
+    <div class="fb" id="fb"></div>
+    <div class="card why" id="why"><div class="lbl">Why</div>${c.why.map((p) => `<p>${p}</p>`).join("")}</div>`;
+  const ta = $("code");
+  ta.value = st.code != null ? st.code : c.code;
+  ta.addEventListener("input", () => { st.code = ta.value; save(); });
+  ta.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); check(); return; }
+    if (e.key === "Tab" && !e.shiftKey) {
+      e.preventDefault();
+      const a = ta.selectionStart, b = ta.selectionEnd;
+      ta.setRangeText("    ", a, b, "end");
+      st.code = ta.value; save();
+    }
+  });
+  const fb = $("fb"), why = $("why");
+  if (st.solved) why.classList.add("show");
+  function say(kind, html) { fb.className = "fb show " + kind; fb.innerHTML = html; }
+  function check() {
+    const code = ta.value.replace(/\r/g, "");
+    const stillBug = c.bug ? c.bug(code) : false;
+    const ok = c.pass(code) && !stillBug;
+    st.tries = (st.tries || 0) + (st.solved ? 0 : 1);
+    if (ok) {
+      const first = !st.solved;
+      st.solved = true; st.at = Date.now();
+      say("ok", first ? "Fixed. PowerShell would run this now." : "Still fixed.");
+      why.classList.add("show");
+    } else if (stillBug) {
+      say("no", "The original problem is still in there. Look at the line PowerShell complained about.");
+    } else {
+      say("no", "Not quite. Try again, or take a hint.");
+    }
+    save(); stats(); rail();
+  }
+  $("check").onclick = check;
+  $("hint").onclick = () => say("hint", esc(c.hint));
+  $("peek").onclick = () => { st.peeked = true; save(); say("hint", "One way to fix it:<pre>" + esc(c.fix) + "</pre>"); why.classList.add("show"); };
+  $("reset").onclick = () => { ta.value = c.code; st.code = null; save(); fb.className = "fb"; };
+  $("next").onclick = () => {
+    const open = CLINIC.slice(i + 1).concat(CLINIC.slice(0, i)).find((x) => !(S.clinic[x.id] && S.clinic[x.id].solved));
+    S.cur.clinic = (open || CLINIC[(i + 1) % CLINIC.length]).id; save(); render();
+  };
+  ta.focus();
+}
+
+function viewSetup() {
+  S.setupSeen = true; save();
+  $("view").innerHTML = `
+    <div class="head"><p class="eyebrow">Once</p><h1>Set up the katas on your Mac</h1><p>Katas run in real PowerShell on your own machine. Pester (PowerShell's test framework) checks your function and tells you green or red.</p></div>
+    <div class="card"><ol class="steps">
+      <li><div>Install PowerShell 7 and open it.<div class="cmd"><code>brew install --cask powershell</code><button class="btn" data-copy="brew install --cask powershell">Copy</button></div></div></li>
+      <li><div>Inside <code>pwsh</code>, install Pester 5.<div class="cmd"><code>Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck</code><button class="btn" data-copy="Install-Module Pester -MinimumVersion 5.5 -Scope CurrentUser -Force -SkipPublisherCheck">Copy</button></div></div></li>
+      <li><div>Get the kata files (or <code>git pull</code> if you already cloned the Mega Lab).<div class="cmd"><code>git clone https://github.com/Highdrated/Mega-Lab.git</code><button class="btn" data-copy="git clone https://github.com/Highdrated/Mega-Lab.git">Copy</button></div></div></li>
+      <li><div>Open the folder in VS Code.<div class="cmd"><code>code Mega-Lab/katas/powershell</code><button class="btn" data-copy="code Mega-Lab/katas/powershell">Copy</button></div></div></li>
+    </ol></div>
+    <div class="card"><div class="lbl">The loop, for every kata</div><ol class="steps">
+      <li><div>Open the kata's <code>.ps1</code> and replace <code>throw 'Not done yet'</code> with your code.</div></li>
+      <li><div>Run its tests in the VS Code terminal: <code>Invoke-Pester ./01-New-MailNickname.Tests.ps1 -Output Detailed</code></div></li>
+      <li><div>Red: read what the test expected, change your code, run again. Green everywhere: mark it here.</div></li>
+    </ol></div>
+    <div class="acts"><a class="btn" href="${REPO_URL}" target="_blank" rel="noopener">Open the folder on GitHub</a></div>`;
+  wireCopy();
+}
+
+function viewKata() {
+  const k = KATAS.find((x) => x.id === S.cur.kata);
+  const st = S.katas[k.id] || (S.katas[k.id] = {});
+  const i = KATAS.indexOf(k);
+  const run = `Invoke-Pester ./${k.id}.Tests.ps1 -Output Detailed`;
+  $("view").innerHTML = `
+    <div class="head"><p class="eyebrow">Kata ${i + 1} of ${KATAS.length} · ${esc(k.learn)}</p><h1>${esc(k.fn)}</h1></div>
+    <div class="twocol">
+      <div class="card task kata"><div class="lbl">Your task</div><ul>${k.task.map((t) => `<li>${esc(t)}</li>`).join("")}</ul></div>
+      <div class="card kata"><div class="lbl">Example</div><pre>${esc(k.ex)}</pre></div>
+    </div>
+    <div class="card"><div class="lbl">Files <em>in Mega-Lab/katas/powershell</em></div>
+      <div class="cmd"><code>${esc(k.id)}.ps1</code><span class="btn" style="cursor:default">you edit this</span></div>
+      <div class="cmd"><code>${esc(run)}</code><button class="btn" data-copy="${esc(run)}">Copy</button></div>
+    </div>
+    <div class="acts">
+      <button class="btn main" id="mark">${st.done ? "Mark as not green" : "All tests green"}</button>
+      <button class="btn" id="tests">Show tests</button>
+      <button class="btn" id="sol">Show solution</button>
+      <button class="btn" id="nextk">Next kata</button>
+      ${st.done ? '<span class="done-tag">green</span>' : ""}
+    </div>
+    <div class="card why" id="peekbox"><div class="lbl"><span id="peekT"></span></div><pre id="peekC"></pre></div>`;
+  wireCopy();
+  $("mark").onclick = () => { st.done = !st.done; if (st.done) { st.at = Date.now(); toast("Nice. Kata marked green."); } save(); stats(); render(); };
+  $("nextk").onclick = () => { S.cur.kata = KATAS[(i + 1) % KATAS.length].id; save(); render(); };
+  async function show(title, url) {
+    const box = $("peekbox");
+    $("peekT").textContent = title;
+    $("peekC").textContent = "Loading...";
+    box.classList.add("show");
+    try {
+      const r = await fetch(url, { cache: "no-cache" });
+      if (!r.ok) throw new Error(r.status);
+      $("peekC").textContent = await r.text();
+    } catch (e) {
+      $("peekC").textContent = "Could not load the file here. Open it in VS Code instead.";
+    }
+  }
+  $("tests").onclick = () => show(k.id + ".Tests.ps1", KATA_URL + k.id + ".Tests.ps1");
+  $("sol").onclick = () => {
+    if (!st.done && !st.solConfirm) {
+      st.solConfirm = true; save();
+      toast("Give it 20 minutes first. Click again to show it anyway.");
+      return;
+    }
+    show("solutions/" + k.id + ".ps1", KATA_URL + "solutions/" + k.id + ".ps1");
+  };
+}
+
+function wireCopy() {
+  document.querySelectorAll("[data-copy]").forEach((b) => {
+    b.onclick = async () => {
+      try { await navigator.clipboard.writeText(b.dataset.copy); toast("Copied"); }
+      catch (e) { toast("Copy failed. Select the text instead."); }
+    };
+  });
+}
+
+function render() {
+  document.documentElement.dataset.theme = S.theme;
+  document.querySelectorAll(".seg button").forEach((b) => b.classList.toggle("on", b.dataset.tab === S.tab));
+  rail(); stats();
+  if (S.tab === "clinic") viewClinic();
+  else if (S.cur.kata === "setup") viewSetup();
+  else viewKata();
+}
+
+document.querySelectorAll(".seg button").forEach((b) => b.onclick = () => {
+  S.tab = b.dataset.tab;
+  if (S.tab === "katas" && !S.setupSeen) S.cur.kata = "setup";
+  save(); render();
+});
+$("themeBtn").onclick = () => { S.theme = S.theme === "night" ? "day" : "night"; save(); render(); };
+render();
+</script>
+</body>
+</html>
