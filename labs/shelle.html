@@ -245,7 +245,7 @@ const SCEN = [
  {task:"How many lines in the log mention error, upper or lower case? Pipe <b>|</b> the matches into <b>wc -l</b>, which counts lines.", cmd:"grep -i \"error\" logs/app.log | wc -l", out:"      17\n"},
  {task:"Find log files older than 7 days. Always look before you delete.", cmd:"find logs -name \"*.log\" -mtime +7", out:"logs/app-2026-10-01.log\nlogs/app-2026-10-04.log\nlogs/app-2026-10-08.log\n"},
  {task:"Same search, now delete them. <b>-delete</b> removes what the search found, without a prompt.", cmd:"find logs -name \"*.log\" -mtime +7 -delete"},
- {task:"Which URLs are requested most? Take field 5 (space separated), count duplicates, sort biggest first, show the top 3.", cmd:"cut -d \" \" -f 5 logs/app.log | sort | uniq -c | sort -rn | head -n 3", out:" 412 /api/menu\n  96 /api/order\n  31 /health\n"},
+ {task:"Which URLs are requested most? Take field 6 (space separated; the two spaces after INFO make an empty field 4), count duplicates, sort biggest first, show the top 3.", cmd:"cut -d \" \" -f 6 logs/app.log | sort | uniq -c | sort -rn | head -n 3", out:" 412 /api/menu\n  96 /api/order\n  31 /health\n"},
  {task:"Find which files are taking the most space here, human-readable, biggest last.", cmd:"du -sh * | sort -h", out:"4.0K\tREADME.md\n4.0K\tdeploy.sh\n4.0K\tdocker-compose.yml\n1.8M\tsrc\n 46M\tlogs\n"},
  {task:"How full is the disk?", cmd:"df -h /", out:"Filesystem     Size   Used  Avail Capacity  Mounted on\n/dev/disk3s1  460Gi  312Gi  130Gi    71%    /\n"}
 ]},
@@ -311,10 +311,10 @@ const SCEN = [
  {task:"In zsh <kbd>Ctrl</kbd><kbd>U</kbd> wipes the whole line. Do that, then type pwd.", pre:"rm -rf ~/Projects/station-site", at:10, cmd:"pwd", use:["C-u"], out:"/Users/user\n"},
  {task:"Change 8080 into 9090: <kbd>⌥</kbd><kbd>B</kbd> jumps back one word, <kbd>⌥</kbd><kbd>D</kbd> cuts the word after the cursor, then type 9090.", pre:"lsof -i :8080", cmd:"lsof -i :9090", use:["M-b","M-d"]},
  {task:"Two letters are swapped and the cursor sits on the r. <kbd>Ctrl</kbd><kbd>T</kbd> swaps the letter before the cursor with the one under it.", pre:"gerp -rn TODO src", at:2, cmd:"grep -rn TODO src", use:["C-t"], out:"src/api/menu.php:14:// TODO cache this\n"},
- {task:"<kbd>⌥</kbd><kbd>F</kbd> jumps forward word by word, and the dash splits ssh-keygen into two words. Press it twice to land after keygen, cut the rest with <kbd>Ctrl</kbd><kbd>K</kbd>, then type a space and <b>-t ed25519</b>.", pre:"ssh-keygen -t rsa", at:0, cmd:"ssh-keygen -t ed25519", use:["M-f","C-k"]},
+ {task:"<kbd>⌥</kbd><kbd>F</kbd> jumps forward word by word. zsh counts the dash as part of a word, so ssh-keygen is one word: press it once to land after it, cut the rest with <kbd>Ctrl</kbd><kbd>K</kbd>, then type a space and <b>-t ed25519</b>.", pre:"ssh-keygen -t rsa", at:0, cmd:"ssh-keygen -t ed25519", use:["M-f","C-k"]},
  {task:"Wipe the line with <kbd>Ctrl</kbd><kbd>U</kbd>, then undo with <kbd>Ctrl</kbd><kbd>_</kbd> (Ctrl+Shift+-) and run it.", pre:"docker compose ps", cmd:"docker compose ps", use:["C-u","undo"], out:"NAME                 IMAGE           SERVICE   STATUS\nstation-site-app-1   station-app     app       Up 2 minutes\n"},
  {task:"Run this once so it lands in your history.", cmd:"ssh admin@203.0.113.20 \"uptime\"", out:" 18:52:40 up 23 days,  4:19,  0 users,  load average: 0.04, 0.06, 0.01\n"},
- {task:"Run something else in between.", cmd:"date", out:()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");return d.toDateString().slice(0,10)+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())+" CEST "+d.getFullYear()+"\n"}},
+ {task:"Run something else in between.", cmd:"date", out:()=>{const d=new Date(),p=n=>String(n).padStart(2,"0");return d.toDateString().slice(0,8)+String(d.getDate()).padStart(2," ")+" "+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())+(d.getTimezoneOffset()===-120?" CEST ":" CET ")+d.getFullYear()+"\n"}},
  {task:"Find it again: <kbd>Ctrl</kbd><kbd>R</kbd>, type <b>upt</b>, press <kbd>Enter</kbd>.", cmd:"ssh admin@203.0.113.20 \"uptime\"", use:["C-r"], out:" 18:53:02 up 23 days,  4:20,  0 users,  load average: 0.03, 0.05, 0.01\n"},
  {task:"Split a long command: type <b>docker run -d --name web \\</b> and press <kbd>Enter</kbd>. zsh waits with <b>&gt;</b>. Type the rest and press <kbd>Enter</kbd>.", cmd:"docker run -d --name web \\\n  -p 8080:80 nginx:1.27", use:["cont"], out:"8b1e5d3c9f2a7e4b6d0c1a8f3e5b7d9c2a4f6e8b0d1c3a5e7f9b2d4c6a8e0f1b\n"},
  {task:"Start typing anything, cancel the line with <kbd>Ctrl</kbd><kbd>C</kbd>, then run whoami.", cmd:"whoami", use:["C-c"], out:"user\n"}
@@ -402,7 +402,7 @@ const CASES = [
   {cmd:["./deploy.sh"], out:"→ building assets\n→ syncing to 203.0.113.20\nsending incremental file list\nsent 1,204 bytes  received 64 bytes\n→ done\n", needs:"chmod"},
   {cmd:["sudo ./deploy.sh"], out:"Password:\nsudo: ./deploy.sh: command not found\n", err:true, clue:"sudo"},
   {cmd:["ls -l deploy.sh", "ls -la deploy.sh", "ls -l"], out:"-rw-r--r--  1 user    staff  418 Oct 19 18:20 deploy.sh\n", clue:["owner", "nox"], needs:"!chmod"},
-  {cmd:["ls -l deploy.sh", "ls -la deploy.sh"], out:"-rwxr-xr-x  1 user    staff  418 Oct 19 18:20 deploy.sh\n", needs:"chmod"},
+  {cmd:["ls -l deploy.sh", "ls -la deploy.sh", "ls -l"], out:"-rwxr-xr-x  1 user    staff  418 Oct 19 18:20 deploy.sh\n", needs:"chmod"},
   {cmd:["whoami"], out:"user\n", clue:"owner"},
   {cmd:["head -n 3 deploy.sh", "cat deploy.sh"], out:"#!/bin/zsh\nset -e\necho \"→ building assets\"\n"},
   {cmd:["git ls-files -s deploy.sh", "git ls-files --stage deploy.sh"], out:"100644 6f2a9c1e4b7d3f8a0c5e2b9d1f4a7c3e6b8d0f2a 0\tdeploy.sh\n", clue:"git"},
@@ -545,7 +545,7 @@ const MANUAL_PARAMS = {
 const FS = {"~/":["Desktop/","Documents/","Downloads/","Projects/",".ssh/",".zshrc"],"~/Projects/":["station-site/","lunch-tool/","notes.txt"],"~/.ssh/":["config","id_ed25519","id_ed25519.pub","known_hosts"],"./":["README.md","deploy.sh","docker-compose.yml","logs/","src/",".env"],"logs/":["app.log","app-2026-10-01.log","app-2026-10-04.log","app-2026-10-08.log"],"src/":["api/","js/","index.php"],"/var/":["lib/","log/","cache/","tmp/"]};
 const AUTO_VARS = ["$HOME","$PATH","$USER","$SHELL","$PWD","$?","$EDITOR"];
 const KEYWORDS = ["if","then","else","elif","fi","for","in","do","done","while","until","case","esac","function","time","!","{","}","&&","||"];
-const WD = ";:,.[]{}()/\\|^&*-=+'\"–—―";
+const WD = "*?_-.[]~=/&;!#$%^(){}<>";
 
 const KEYMAP = [
  {g:"Move", rows:[
@@ -584,7 +584,7 @@ const KEYMAP = [
   {ids:["list"], k:[["⌥","="]], t:"List all options"}
  ]},
  {g:"Control", rows:[
-  {ids:["enter"], k:[["Enter"]], t:"Run · unfinished line: >>"},
+  {ids:["enter"], k:[["Enter"]], t:"Run · unfinished line: >"},
   {ids:["cont"], k:[["Shift","Enter"]], t:"New line without running"},
   {ids:["C-c"], k:[["Ctrl","C"]], t:"Cancel the line"},
   {ids:["C-l"], k:[["Ctrl","L"]], t:"Clear the screen"},
@@ -595,7 +595,6 @@ const KEYMAP = [
 const USE_LABEL = {"C-a":"Ctrl+A","C-e":"Ctrl+E","C-w":"Ctrl+W","C-u":"Ctrl+U","C-k":"Ctrl+K","C-y":"Ctrl+Y","C-t":"Ctrl+T","C-r":"Ctrl+R","C-l":"Ctrl+L","C-c":"Ctrl+C","M-b":"⌥B","M-f":"⌥F","M-d":"⌥D","M-.":"⌥.","undo":"Ctrl+_","hist":"↑","tab":"Tab","cont":"Enter after a \\ at the end of the line (>)"};
 
 
-const COMMON = [];
 const KNOWN = new Map();
 const PARAMS = {};
 function cmdKey(words){
@@ -655,13 +654,13 @@ const screenEl = $("screen"), scrollEl = $("scroll"), liveEl = $("live"), ta = $
 const S = {
   scen: null, idx: 0, list: null, case: null,
   buf: "", cur: 0,
-  undo: [], kill: [], killIdx: 0,
+  undo: [], kill: [],
   hIdx: hist.length, pending: "",
   last: "", yank: null, lastArg: null,
   search: null, meta: false,
   used: new Set(), assisted: false, pasted: false, revealed: false, misses: 0,
   t0: 0, focused: false, vars: new Set(),
-  session: {lines: 0, clean: 0, done: 0, wpmSum: 0, wpmN: 0, streak: 0}
+  session: {clean: 0, done: 0, wpmSum: 0, wpmN: 0, streak: 0}
 };
 
 function esc(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -817,7 +816,7 @@ function insert(text){
   render();
 }
 
-function isW(c){ return c !== undefined && !/\s/.test(c) && WD.indexOf(c) < 0; }
+function isW(c){ return c !== undefined && (/[A-Za-z0-9]/.test(c) || WD.indexOf(c) >= 0); }
 function backWord(){ let i = S.cur; while (i > 0 && !isW(S.buf[i-1])) i--; while (i > 0 && isW(S.buf[i-1])) i--; return i; }
 function fwdWord(){ let i = S.cur; const n = S.buf.length; while (i < n && !isW(S.buf[i])) i++; while (i < n && isW(S.buf[i])) i++; return i; }
 function lineStart(){ const i = S.buf.lastIndexOf("\n", S.cur - 1); return i + 1; }
@@ -1018,12 +1017,6 @@ function wordsBefore(pos){
   const segs = splitSegments(S.buf.slice(0, pos));
   return segs[segs.length - 1].replace(/"[^"]*"|'[^']*'/g, '""').trim().replace(/^sudo\s+/, "").split(/\s+/).filter(Boolean);
 }
-function commandBefore(pos){
-  const segs = splitSegments(S.buf.slice(0, pos));
-  const seg = segs[segs.length - 1].trim().replace(/^\$[\w:]+\s*=\s*/, "").replace(/^\(/, "");
-  const m = seg.match(/^([A-Za-z]+-[A-Za-z0-9]+)/);
-  return m ? m[1].toLowerCase() : null;
-}
 function candidates(tok, start){
   const lo = tok.toLowerCase();
   const before = wordsBefore(start);
@@ -1109,11 +1102,11 @@ function incomplete(s){
 }
 
 function norm(s){
-  return s.replace(/\s+/g, " ").trim().replace(/\s*([|;,(){}=])\s*/g, "$1").replace(/;$/, "").toLowerCase();
+  return s.replace(/\s+/g, " ").trim().replace(/\s*([|;,(){}=])\s*/g, "$1").replace(/;$/, "");
 }
 function firstDiff(a, b){
   const x = a.replace(/\s+/g, " ").trim(), y = b.replace(/\s+/g, " ").trim();
-  let i = 0; while (i < x.length && i < y.length && x[i].toLowerCase() === y[i].toLowerCase()) i++;
+  let i = 0; while (i < x.length && i < y.length && x[i] === y[i]) i++;
   return {i, typed: x, want: y};
 }
 

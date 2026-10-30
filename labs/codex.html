@@ -288,8 +288,8 @@ groups:[
  {c:"set vlans SERVERS vlan-id 10", d:"Create a VLAN with a name and a tag", n:"In ELS the VLAN name is the handle you use everywhere else. Numbers live only in the vlan-id statement.", x:"set vlans SERVERS vlan-id 10\nset vlans SERVERS description Customer-facing servers"},
  {c:"set vlans SERVERS l3-interface irb.10", d:"Give the VLAN a gateway interface", n:"irb is the routed virtual interface for a VLAN. The unit number does not have to match the VLAN id, but make it match anyway so the config reads itself."},
  {c:"set interfaces irb unit 10 family inet address 10.0.10.1/24", d:"Address the VLAN gateway", n:"This is the default gateway your servers in VLAN 10 will point at. The irb stays down until at least one access port in that VLAN is up."},
- {c:"set vlans SERVERS vlan-id 10 vlan-id-list 10-20", d:"Create a range of VLANs at once", n:"A shortcut for building lab or customer ranges. Each id gets its own VLAN named with the range prefix."},
- {c:"set interfaces ge-0/0/2 unit 0 family ethernet-switching native-vlan-id 99", d:"Set the untagged VLAN on a trunk", n:"Frames arriving untagged on the trunk land in VLAN 99. Mismatched native VLANs between two switches are a classic silent misconfiguration."},
+ {c:"set vlans LAB vlan-id-list 10-20", d:"Create a range of VLANs at once", n:"A shortcut for building lab or customer ranges. Each id gets its own VLAN named with the range prefix."},
+ {c:"set interfaces ge-0/0/2 native-vlan-id 99", d:"Set the untagged VLAN on a trunk", n:"On ELS it sits on the physical interface, not under unit 0, and VLAN 99 must also be in the trunk's vlan members. Frames arriving untagged on the trunk land in VLAN 99. Mismatched native VLANs between two switches are a classic silent misconfiguration."},
  {c:"show ethernet-switching table", d:"See which MAC addresses are learned where", n:"Your first stop for 'is the server actually plugged in'. Add vlan SERVERS to narrow it, or interface ge-0/0/1 to check one port."}
 ]},
 {t:"Link aggregation and LACP", e:[
@@ -378,7 +378,7 @@ groups:[
  {c:"a, b = b, a", d:"Swap or unpack several values at once", n:"The right side is built first, so no temporary variable is needed. Works for any sequence: first, rest = items[0], items[1:]."}
 ]},
 {t:"Strings", e:[
- {c:"f'Hello {name}, you have {n} tickets'", d:"Format values into a string (f-string)", n:"The f prefix lets you drop any expression inside braces. f'{price:.2f}' rounds to two decimals, f'{name:>10}' pads to the right."},
+ {c:"f'Hello {name}, you have {n} tickets'", d:"Format values into a string (f-string)", n:"The f prefix lets you drop any expression inside braces. f'{price:.2f}' rounds to two decimals, f'{name:>10}' right-aligns it in 10 characters."},
  {c:"len(s)", d:"Count the characters", n:"Works on any sequence: strings, lists, dicts, tuples."},
  {c:"s.strip()", d:"Remove whitespace from both ends", n:"The fix for input that arrived with a trailing newline. lstrip and rstrip do one side only."},
  {c:"s.split(',')", d:"Break a string into a list", n:"With no argument it splits on any whitespace. ','.join(parts) is the reverse.", x:"line = 'ge-0/0/1,up,trunk'\nport, state, mode = line.split(',')"},
@@ -398,7 +398,7 @@ groups:[
  {c:"items.insert(0, x)  items.pop()  items.remove(x)", d:"Insert, take off the end, delete by value", n:"pop() returns the item it removed, pop(0) takes from the front. remove raises ValueError if the value is not there."},
  {c:"items[1:3]", d:"Slice out a section", n:"Start is included, end is not, so [1:3] gives two items. items[:] makes a shallow copy, items[::-1] reverses.", x:"ports = ['ge-0/0/0','ge-0/0/1','ge-0/0/2','ge-0/0/3']\nprint(ports[1:3])\nprint(ports[-1])"},
  {c:"sorted(items)", d:"Return a new sorted list", n:"items.sort() sorts in place and returns None, which is a classic trap. Add reverse=True, or key=len to sort by a computed value."},
- {c:"len(items)  sum(items)  max(items)", d:"Count, total, largest", n:"min, sum and max only work when the items are comparable to each other."},
+ {c:"len(items)  sum(items)  max(items)", d:"Count, total, largest", n:"sum needs numbers. min and max need items that can be compared with each other."},
  {c:"for i, item in enumerate(items, start=1):", d:"Loop with a counter", n:"Cleaner than tracking an index yourself. zip(a, b) walks two lists side by side in the same way."}
 ]},
 {t:"Dictionaries, sets and tuples", e:[
@@ -639,7 +639,7 @@ groups:[
 ]},
 {t:"Async and fetch", e:[
  {c:"setTimeout(fn, 1000)", d:"Run something later", n:"Milliseconds. setInterval repeats until you clearInterval the id it returned."},
- {c:"const res = await fetch('/api/ports');", d:"Request data from a server", n:"fetch returns a promise. Only await works inside an async function, or at the top level of a module.", x:"async function load() {\n  const res = await fetch('/api/ports');\n  if (!res.ok) throw new Error(res.status);\n  const data = await res.json();\n  return data;\n}"},
+ {c:"const res = await fetch('/api/ports');", d:"Request data from a server", n:"fetch returns a promise. await only works inside an async function, or at the top level of a module.", x:"async function load() {\n  const res = await fetch('/api/ports');\n  if (!res.ok) throw new Error(res.status);\n  const data = await res.json();\n  return data;\n}"},
  {c:"await res.json()", d:"Read and parse the response body", n:"It is a second promise because the body streams in. res.text() when it is not JSON."},
  {c:"if (!res.ok) { ... }", d:"Check the HTTP status", n:"fetch only rejects on a network failure, so a 404 or 500 still counts as success. Checking res.ok yourself is not optional."},
  {c:"Promise.all([a, b])", d:"Wait for several things at once", n:"Runs them in parallel and resolves when all are done. Awaiting them one after another in a loop is much slower."}
@@ -2062,7 +2062,7 @@ const AUG = {
   figure: "  concatenated:  SELECT ... WHERE id = '  \" OR 1=1 --  '\n                 (value became syntax)\n\n  prepared:      SELECT ... WHERE id = ?     <- parsed first\n                 then bind value             <- can never be syntax",
   traps: [
     "Building SQL with string concatenation, even 'just this once' for an internal tool.",
-    "Leaving the default error mode, where a failed query returns false and the script continues.",
+    "Switching to ERRMODE_SILENT (the default before PHP 8), where a failed query returns false and the script continues.",
     "Leaving emulated prepares on, which sends one assembled string rather than a real prepared statement."
   ],
   quiz: [
@@ -2181,7 +2181,7 @@ const RECIPES = [
 ]},
 { vol:"js", t:"Load data and render it, handling failure", why:"The standard shape of every small front end.", steps:[
  { c:"const list = document.querySelector('#rows');", n:"Find the target once, outside the function, not on every render." },
- { c:"async function load() {", n:"async so you can await inside it." },
+ { c:"async function load() { try {", n:"async so you can await inside it, try so any failure lands in the catch below." },
  { c:"const res = await fetch('/api/rows');", n:"Returns as soon as the headers arrive, not the body." },
  { c:"if (!res.ok) throw new Error(`HTTP ${res.status}`);", n:"fetch does not treat a 500 as a failure. You have to." },
  { c:"const data = await res.json();", n:"A second await, because the body streams in separately." },

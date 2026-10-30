@@ -300,7 +300,6 @@ kbd{font-family:var(--mono);font-size:10px;opacity:.7}
   .teach{border-right:0;border-bottom:1px solid var(--line);overflow:visible}
   .drills{overflow:visible}
   .hero{grid-template-columns:1fr}
-  .top .modes-lbl{display:none}
 }
 @media (max-width:760px){
   .logo small{display:none}
@@ -528,7 +527,6 @@ function stageFade(n) {
   const x = stageTouch(n), gap = GAPS[Math.min(Math.max(x.c, 1), GAPS.length) - 1] * 864e5, age = Date.now() - x.t;
   return { t: x.t, c: x.c, age, gap, due: x.t + gap, level: age < gap ? 'fresh' : age < 2 * gap ? 'fading' : 'faded' };
 }
-const FADE_RANK = { fresh: 0, fading: 1, faded: 2 };
 function conceptFade(used) {
   const f = used.filter((u) => u.stage).map((u) => stageFade(u.stage)).filter(Boolean);
   if (!f.length) return null;
@@ -1640,7 +1638,7 @@ function init() {
   $('#logo').onclick = () => setView('home');
   $$('#views button').forEach((b) => (b.onclick = () => setView(b.dataset.v)));
   $('#checkBtn').onclick = check;
-  $('#recallBtn').onclick = recall;
+  $('#recallBtn').onclick = () => recall();
   $('#saveBtn').onclick = saveMenu;
   $('#themeBtn').onclick = (e) => { e.stopPropagation(); themeMenu(); };
   document.addEventListener('click', (e) => { const m = $('#themeMenu'); if (m && !e.target.closest('#themeMenu')) m.remove(); });
@@ -1971,7 +1969,7 @@ const DASH_STAGES = [
   drills: [
     { k: 'type', q: '14 rows, 10 per page. How many pages?', a: ['2'] },
     { k: 'type', q: 'Second page (index 1), 10 per page: <code>rows.slice(____, 20)</code>', a: ['10'] },
-    { k: 'pick', q: "<code>'Gotham · customers'.toLowerCase().includes('brus')</code>", o: ['<code>true</code>', '<code>false</code>', '<code>"brus"</code>'], a: 0 },
+    { k: 'pick', q: "<code>'Gotham · customers'.toLowerCase().includes('goth')</code>", o: ['<code>true</code>', '<code>false</code>', '<code>"brus"</code>'], a: 0 },
     { k: 'pick', q: 'Why jump back to page 0 when the filter changes?', o: ['the old page may not exist in the smaller list', 'to clear the input', 'to fetch again'], a: 0 },
     { k: 'type', q: 'Disable a button called <code>btn</code>', a: [/^btn\.disabled\s*=\s*true\s*;?$/], show: 'btn.disabled = true' }
   ],
@@ -2215,7 +2213,7 @@ const DASH_STAGES = [
     { k: 'pick', q: 'Which status code for "your file is wrong"?', o: ['400', '500', '200'], a: 0 }
   ],
   specs: [['page', 'nav item "Import CSV" (<code>data-page="import"</code>) under External IPs · <code>#page-import</code> › card with <code>input#import-file[type=file]</code>, <code>button#import-btn</code>, <code>#import-result</code>'], ['js', '<code>importCSV()</code>: no file → "Choose a .csv file first." · read with <code>.text()</code> · POST <code>{csv}</code> · "Imported N ranges." · <code>fetchData(true)</code>'], ['endpoint', '<code>api/import.php</code> · POST only (405) · empty → 400'], ['header', 'exactly <code>range,label,total,used</code> → else 400'], ['each line', '4 columns · range like <code>192.0.2.0/26</code> · total and used whole numbers · used ≤ total · errors say <code>line N: …</code>'], ['save', 'write <code>data/ip_external.json</code> (pretty, LOCK_EX) · delete <code>data/response_cache.json</code> · answer <code>{ok: true, count}</code>']],
-  blanks: { 'index.html': ['data-page="import"', 'page-import', 'import-file', 'import-btn'], 'js/app.js': ['input.files.length', 'input.files[0].text()', "'api/import.php'", 'JSON.stringify({ csv })', 'j.count', 'fetchData(true);\n@16|  } catch'.split('\n')[0], "addEventListener('click', importCSV)"], 'api/import.php': ['http_response_code($code)', "!== 'POST'", 'preg_split', 'array_shift($lines)', "['range', 'label', 'total', 'used']", '$i + 2', 'count($cells) !== 4', '[$range, $label, $total, $used] = $cells', '(int) $used > (int) $total', 'LOCK_EX', 'unlink($cache)'] },
+  blanks: { 'index.html': ['data-page="import"', 'page-import', 'import-file', 'import-btn'], 'js/app.js': ['input.files.length', 'input.files[0].text()', "'api/import.php'", 'JSON.stringify({ csv })', 'j.count', 'fetchData(true);', "addEventListener('click', importCSV)"], 'api/import.php': ['http_response_code($code)', "!== 'POST'", 'preg_split', 'array_shift($lines)', "['range', 'label', 'total', 'used']", '$i + 2', 'count($cells) !== 4', '[$range, $label, $total, $used] = $cells', '(int) $used > (int) $total', 'LOCK_EX', 'unlink($cache)'] },
   hints: ['Build import.php first and try it from the console: <code>fetch(\'api/import.php\', {method: \'POST\', body: JSON.stringify({csv: \'range,label,total,used\'})})</code>.', 'A <code>fail($code, $error)</code> helper keeps every check to one line.', 'The line number is <code>$i + 2</code>: index 0 is the second line of the file.'],
   explain: { q: 'Why should the import refuse the whole file when one line is wrong, and say which line?', a: 'A half-imported file leaves the dashboard showing a mix of old and new ranges that nobody can trust. Refusing everything keeps the data consistent, and naming the line tells the person exactly what to fix in the spreadsheet instead of guessing.' },
   tests: [

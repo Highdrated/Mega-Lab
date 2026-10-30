@@ -13,6 +13,8 @@ const ST_TRACK = [
   ["hexle", /^hexle\.v1$/],
   ["modle", /^modle-profile$/],
   ["poshle", /^poshle\.v1$/],
+  ["poshle-pocket", /^poshle-pocket-v1$/],
+  ["opsle", /^opsle\.v1$/],
   ["shelle", /^shelle\.v1$/],
   ["git-lab", /^gitlab\.(v1|cases)$/],
   ["spelle", /^spelle-lab$/],
@@ -280,7 +282,7 @@ async function stConnect(token) {
   }
 }
 
-const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=12", "./js/sync.js?v=3", "./js/labs.config.js?v=22", "./js/launcher.js?v=17", "./js/station.js?v=2", "./icons/icon-192.png", "./icons/icon-512.png"];
+const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=14", "./js/traffic.config.js?v=1", "./js/track.js?v=1", "./js/sync.js?v=3", "./js/labs.config.js?v=23", "./js/launcher.js?v=19", "./js/station.js?v=2", "./icons/icon-192.png", "./icons/icon-512.png"];
 let stPackBusy = false, stPackGuard = null;
 function stPackInfo() { return lsParse("station-pack") || {}; }
 async function stPack(manual) {

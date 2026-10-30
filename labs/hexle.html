@@ -1664,7 +1664,6 @@ TARGETS.push(
  ],
  review:[{k:'type',r:'r61',rv:1,q:'Review: stop the form from reloading the page',ph:'event…;',test:/^event\.preventDefault\(\);?$/i,ans:'event.preventDefault();',h:'event.preventDefault();'}]}
 );
-TARGETS.forEach((t,i)=>{if(t.spell)PLOTS[t.plot].sp=i});
 MORE.push(
  {k:'pick',r:'r53',q:'Which file holds a page\'s behaviour?',o:['index.html','styles.css','script.js','img/'],a:2,h:'Structure, look, behaviour.'},
  {k:'gap',r:'r54',q:'Replace the words',pre:'title.',post:' = "Hello";',a:['textcontent'],h:'text + Content.'},
@@ -2948,15 +2947,15 @@ function tnStart(){
   sfx.target();comms('The tourney begins: ten rounds. Match each target. First check, no hint = flawless.');
   tnClock();renderTourney();
 }
-function tnClock(){
-  clearInterval(tnTick);tnLeft=60;
+function tnClock(keep){
+  clearInterval(tnTick);if(!keep)tnLeft=60;
   if(!S.tny.timed||!TN||TN.over)return;
   tnTick=setInterval(()=>{tnLeft--;const c=$('yclock');if(c)c.textContent=tnLeft+'s';if(tnLeft<=0){clearInterval(tnTick);if(TN&&!TN.sealedRound){TN.missed=true;TN.streak=0}comms('Time! On to the next round.');sfx.bad();tnNext()}},1000);
 }
 function tnCheck(){
   if(!TN||TN.over)return;
   const r=TR(),code=$('yed').value;TN.code=code;
-  TN.res=r.reqs.map(q=>q[1].test(code));
+  TN.res=r.reqs.map(q=>q[1].test(hxBorder(code)));
   const all=TN.res.every(Boolean);
   if(all){
     if(!TN.sealedRound){TN.sealed++;TN.streak++;TN.best=Math.max(TN.best,TN.streak);if(!TN.hinted&&!TN.missed)TN.flawless++;TN.sealedRound=true;clearInterval(tnTick)}
@@ -3010,7 +3009,7 @@ function renderTourney(){
     $('ystart').onclick=tnStart;
     return;
   }
-  if(S.tny.timed&&!TN.sealedRound&&!tnTick)tnClock();
+  if(S.tny.timed&&!TN.sealedRound&&!tnTick)tnClock(true);
   const r=TR();
   $('yround').textContent='round '+(TN.pos+1)+' / 10';
   let h='<div class="dk">Round '+(TN.pos+1)+' of 10</div><h2 class="lt">'+esc(r.t)+'</h2>'+
@@ -3068,7 +3067,7 @@ function noteContext(){
     b.push('stage: '+st);
     b.push('target '+(S.t+1)+': '+T().name);
     if(S.stage==='school'||S.stage==='practice')b.push('drill '+(S.drill+1));
-    if(S.stage==='target'&&typeof file!=='undefined')b.push('file: '+(file==='css'?'styles.css':'index.html'));
+    if(S.stage==='target'&&typeof file!=='undefined')b.push('file: '+(file==='css'?'styles.css':file==='js'?'script.js':'index.html'));
     b.push('theme: '+TH().name);
   }catch(e){}
   return b.join(' · ');
