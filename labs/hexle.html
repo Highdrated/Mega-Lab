@@ -51,6 +51,9 @@ body[data-theme=ink] .plot .ground{background:radial-gradient(closest-side,rgba(
 body[data-theme=ink] #junie{mix-blend-mode:multiply}
 body[data-theme=ink][data-stage="target"]::before{display:none}
 body[data-theme=ink] #cauld{filter:none;mix-blend-mode:multiply}
+body[data-theme=ink] .idle img#hwitch{width:84px;height:116px;object-fit:contain;object-position:center bottom}
+#hwitch.swap{animation:wSwap .3s ease-out}
+@keyframes wSwap{from{opacity:.35;transform:translateY(3px)}to{opacity:1;transform:none}}
 body[data-theme=ink] #hwitch,body[data-theme=ink] .fwitch,body[data-theme=ink] .fbuild,body[data-theme=ink] .art{mix-blend-mode:multiply;filter:none}
 body[data-theme=ink] #v-village:not(.custom) .plot .pframe{background:#f7f1e3;border-color:rgba(29,27,24,.35);outline-color:rgba(29,27,24,.1);box-shadow:0 10px 18px -12px rgba(29,27,24,.35)}
 body[data-theme=ink] .plot .plaque.empty{border-color:rgba(29,27,24,.14)}
@@ -567,7 +570,7 @@ const IMGS={witch:'witchpng',hut:'hut',path:'path',shop:'shop',library:'book',ma
 const IMG_RE=/(?:\.\/)?img\/(witch|hut|path|shop|library|market|tower|garden|candles|observatory|catcafe|gate|bridge)\.png/g;
 const before=(a,b)=>!!a&&!!b&&!!(a.compareDocumentPosition(b)&Node.DOCUMENT_POSITION_FOLLOWING);
 const altOk=i=>!!i&&(i.getAttribute('alt')||'').trim().length>2;
-const ART_I={"witch":"img/hexle/ink/witch.webp","witchpng":"img/hexle/ink/witch.webp","drone":"img/hexle/ink/junie.webp","hut":"img/hexle/ink/hut.webp","path":"img/hexle/ink/path.webp","shop":"img/hexle/ink/shop.webp","book":"img/hexle/ink/book.webp","market":"img/hexle/ink/market.webp","tower":"img/hexle/ink/tower.webp","garden":"img/hexle/ink/garden.webp","candle":"img/hexle/ink/candle.webp","observ":"img/hexle/ink/observ.webp","catcafe":"img/hexle/ink/catcafe.webp","gate":"img/hexle/ink/gate.webp","bridge":"img/hexle/ink/bridge.webp"};
+const ART_I={"witch":"img/hexle/ink/witch-calm.webp","witchpng":"img/hexle/ink/witch-calm.webp","witchcheer":"img/hexle/ink/witch-cheer.webp","drone":"img/hexle/ink/junie.webp","hut":"img/hexle/ink/hut.webp","path":"img/hexle/ink/path.webp","shop":"img/hexle/ink/shop.webp","book":"img/hexle/ink/book.webp","market":"img/hexle/ink/market.webp","tower":"img/hexle/ink/tower.webp","garden":"img/hexle/ink/garden.webp","candle":"img/hexle/ink/candle.webp","observ":"img/hexle/ink/observ.webp","catcafe":"img/hexle/ink/catcafe.webp","gate":"img/hexle/ink/gate.webp","bridge":"img/hexle/ink/bridge.webp"};
 const THEMES={grove:{name:'Grove',art:{},base:'grove',hello:'Grove theme: lanterns lit.'},orbital:{name:'Orbital',art:ART_O,base:'orb',hello:'Orbital theme online.'},ink:{name:'Ink',art:ART_I,base:'ink',hello:'Ink and paper. The brush is wet.'}};
 const TH=()=>THEMES[S.theme]||THEMES.grove;
 const art=k=>TH().art[k]||ART[k];
@@ -2311,7 +2314,7 @@ function typeFx(e){document.body.classList.add('typing');clearTimeout(typT);typT
   for(let i=0;i<n;i++){const d=document.createElement('i');d.className='spark'+(S.theme==='ink'&&Math.random()<.17?' red':'');
     d.style.left=(p[0]+2)+'px';d.style.top=p[1]+'px';d.style.setProperty('--dx',(Math.random()*18-9).toFixed(1)+'px');d.style.setProperty('--dy',(del?14+Math.random()*10:-(14+Math.random()*16)).toFixed(1)+'px');
     d.addEventListener('animationend',()=>d.remove());document.body.appendChild(d)}}
-document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('textarea'))typeFx(e)},true);
+document.addEventListener('input',e=>{if(e.target.matches&&e.target.matches('textarea')){typeFx(e);if(wPose==='calm'||wPose==='write')witchPose('write',1500)}},true);
 function gainFx(m,from,to){if(!MOTION||!(to>from))return;const b=m.querySelector('b').getBoundingClientRect(),g=document.createElement('span');g.className='gain';g.textContent='+'+(to-from)+'%';g.style.left=(b.left+b.width/2)+'px';g.style.top=(b.top-4)+'px';g.addEventListener('animationend',()=>g.remove());document.body.appendChild(g);m.classList.remove('shine');void m.offsetWidth;m.classList.add('shine')}
 function go(v){if(v!=='tourney'&&typeof tnTick!=='undefined'){clearInterval(tnTick);tnTick=null}S.stage=v;save();render();const vw=document.querySelector('.view.on');if(vw&&MOTION){vw.classList.remove('enter');void vw.offsetWidth;vw.classList.add('enter');setTimeout(()=>vw.classList.remove('enter'),900)}}
 function render(){
@@ -2569,11 +2572,16 @@ async function evaluate(code,css,js){
   if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save();sfx.target();comms('Target matched. Build approved for the village.');render();hxFinale(tg)}
   else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save()}
 }
-function witchDo(c){const w=$('hwitch');if(!w)return;w.classList.remove('hop','shake');void w.offsetWidth;w.classList.add(c)}
+function witchDo(c){const w=$('hwitch');if(!w)return;w.classList.remove('hop','shake');void w.offsetWidth;w.classList.add(c);witchPose(c==='hop'?'cheer':'puzzled',c==='hop'?1800:3400)}
+let wPose='calm',wT,sleepT;
+function witchSet(p){const w=$('hwitch');if(!w||S.theme!=='ink')return;if(w.dataset.pose===p)return;w.dataset.pose=p;wPose=p;w.src='img/hexle/ink/witch-'+p+'.webp';w.classList.remove('swap');void w.offsetWidth;w.classList.add('swap')}
+function witchPose(p,ms){if(S.theme!=='ink')return;clearTimeout(wT);witchSet(p);if(ms)wT=setTimeout(()=>witchSet('calm'),ms)}
+function wake(){clearTimeout(sleepT);if(wPose==='sleep')witchSet('calm');sleepT=setTimeout(()=>witchSet('sleep'),90000)}
+['keydown','pointerdown','input'].forEach(ev=>document.addEventListener(ev,wake,true));wake();
 function hxFinale(tg){
   const old=document.querySelector('.finale');if(old)old.remove();
   const im=String(tg.solution||'').match(/img\/([a-z0-9-]+)\.(?:png|webp|jpg)/i),key=tg.art||(im&&ART[im[1]]?im[1]:null)||(IMGS[tg.plot]&&ART[IMGS[tg.plot]]?IMGS[tg.plot]:null)||'hut',f=document.createElement('div');f.className='finale';f.setAttribute('role','status');
-  f.innerHTML='<div class="fcard">'+(/^witch/.test(key)?'':'<img class="fbuild" src="'+art(key)+'" alt="">')+'<img class="fwitch" src="'+art('witchpng')+'" alt="The witch celebrating"><div class="ftext"><small>'+(tg.project?'Bound into your grimoire':'Build approved for the village')+'</small><h2>'+esc(tg.name)+'</h2><p>Tap anywhere to carry on.</p></div></div>';
+  f.innerHTML='<div class="fcard">'+(/^witch/.test(key)?'':'<img class="fbuild" src="'+art(key)+'" alt="">')+'<img class="fwitch" src="'+(art('witchcheer')||art('witchpng'))+'" alt="The witch celebrating"><div class="ftext"><small>'+(tg.project?'Bound into your grimoire':'Build approved for the village')+'</small><h2>'+esc(tg.name)+'</h2><p>Tap anywhere to carry on.</p></div></div>';
   const close=()=>{f.remove();document.removeEventListener('keydown',close)};
   f.onclick=close;setTimeout(()=>document.addEventListener('keydown',close),400);setTimeout(()=>{if(f.isConnected)close()},4200);
   document.body.appendChild(f);
@@ -2597,7 +2605,7 @@ function renderHelp(){
   }
   $('hstep').textContent='step '+(curStep+1);
   const st=tg.steps[curStep],names=['Nudge','Point','Example','Answer'];
-  if(lv===0)lad.innerHTML='<div class="idle"><img id="hwitch" src="'+art('witch')+'" alt=""><div class="hint0">Try it yourself first. Stuck? Help comes in four levels, from a small nudge to the full answer.</div></div>';
+  if(lv===0)lad.innerHTML='<div class="idle"><img id="hwitch" src="'+(S.theme==='ink'?'img/hexle/ink/witch-'+wPose+'.webp':art('witch'))+'" data-pose="'+(S.theme==='ink'?wPose:'')+'" alt=""><div class="hint0">Try it yourself first. Stuck? Help comes in four levels, from a small nudge to the full answer.</div></div>';
   for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&(st.pre||!/`/.test(st.help[i]));div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
   if(lv===4){const nt=document.createElement('div');nt.className='hint0';nt.textContent='Flagged: this comes back as a review drill in a later School.';lad.appendChild(nt)}
   if(S.hunt&&S.hunt.t===S.t){const hb=document.createElement('div');hb.className='hunt';hb.innerHTML='<b>Bug hunt</b><br>'+S.hunt.n+' bugs hide in: '+esc(huntFiles()||'your files')+'. Every step was green before. Press Ctrl+Enter for the scanner.';lad.prepend(hb);const g=document.createElement('button');g.textContent='Give up';g.onclick=()=>endHunt(false);foot.appendChild(g)}
