@@ -108,6 +108,25 @@ body[data-theme=ink] .gain{color:var(--amb);font-family:var(--hud)}
   .plot .ground{transition:transform .5s,opacity .5s}
   .plot:hover .ground{transform:scale(.88);opacity:.75}
 }
+#perch{position:absolute;right:16px;bottom:50px;display:flex;align-items:flex-end;gap:8px;pointer-events:none}
+#perch img{width:78px;height:108px;object-fit:contain;object-position:center bottom;flex:none}
+body[data-theme=ink] #perch img{mix-blend-mode:multiply}
+#bubble{max-width:270px;padding:9px 12px;margin-bottom:58px;background:var(--panel);border:1px solid var(--line2);border-radius:6px;font-family:var(--sans);font-size:13px;line-height:1.45;color:var(--ink);box-shadow:0 6px 18px -8px rgba(0,0,0,.35);position:relative;opacity:0;transform:translateY(6px);transition:opacity .25s,transform .25s;white-space:normal}
+#bubble::after{content:"";position:absolute;right:-6px;bottom:12px;width:10px;height:10px;background:var(--panel);border-right:1px solid var(--line2);border-bottom:1px solid var(--line2);transform:rotate(-45deg)}
+#bubble.on{opacity:1;transform:none}
+#bubble code{font-family:var(--mono);font-size:12px;background:var(--soft);border:1px solid var(--line);padding:0 4px;border-radius:2px}
+#bubble b{color:var(--amb)}
+#hwitch.hop{animation:wHop .7s cubic-bezier(.2,.9,.3,1.4)}
+#hwitch.shake{animation:wShake .5s}
+@media (prefers-reduced-motion:reduce){#hwitch.hop,#hwitch.shake,#bubble{animation:none;transition:none}}
+body[data-theme=ink] .panel{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 .12 0 0 0 0 .1 0 0 0 0 .08 0 0 0 .07 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>")}
+body[data-theme=ink] .panel:has(#tframe) .fr{border:0;background:#fbf7ee;box-shadow:0 10px 22px -14px rgba(29,27,24,.45);margin:4px 10px 10px}
+body[data-theme=ink] .panel:has(#tframe) .fr iframe{top:12px;height:calc(100% - 24px)}
+body[data-theme=ink] .panel:has(#tframe) .fr::before,body[data-theme=ink] .panel:has(#tframe) .fr::after{content:"";position:absolute;left:0;right:0;height:9px;z-index:2;border-radius:5px;background:linear-gradient(#5a4632,#2e241a 55%,#4a3a2a);box-shadow:0 2px 3px rgba(29,27,24,.3)}
+body[data-theme=ink] .panel:has(#tframe) .fr::before{top:0}
+body[data-theme=ink] .panel:has(#tframe) .fr::after{bottom:0}
+body[data-theme=ink] .steps li.now{background:linear-gradient(90deg,rgba(184,56,43,.10),rgba(184,56,43,.03) 55%,transparent);border-left-color:var(--amb)}
+body[data-theme=ink] .steps li.ok .n{background:var(--ink);border-color:var(--ink);color:var(--onpri)}
 button,.brand,.brand small,#tsel{white-space:nowrap}
 #bar .stg{padding:0 10px}
 #tsel{max-width:210px;text-overflow:ellipsis}
@@ -539,6 +558,7 @@ body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spaci
       <div class="slide">Mine<input id="slider" type="range" min="0" max="100" step="1" value="0" aria-label="Fade the target over your build">Target</div></div>
     <div class="panel edp"><div class="ph"><b id="fname">index.html</b><span id="tabs" class="tabs"></span><span class="sp" style="display:flex;gap:8px"><button id="treeb">Folder</button><button id="reset">Reset</button><button id="check" class="pri">Check · Ctrl+Enter</button></span></div>
       <div class="tree" id="tree"></div><div class="ed"><pre class="gut" id="gut">1</pre><div class="code"><pre id="hl" aria-hidden="true"></pre><textarea id="ed" spellcheck="false" autocomplete="off" autocapitalize="off" aria-label="Code editor"></textarea></div></div>
+      <div id="perch" aria-live="polite"><div id="bubble"></div><img id="hwitch" alt=""></div>
       <div class="efoot"><span id="scan">Scanner idle.</span><span class="sp">Tab indents · live preview</span></div></div>
   </section>
   <section class="view" id="v-village"></section>
@@ -2323,7 +2343,7 @@ function render(){
   document.querySelectorAll('.stg').forEach(b=>{b.classList.toggle('on',b.dataset.v===S.stage);if(b.dataset.v==='school')b.classList.toggle('done',schoolDone(S.t));if(b.dataset.v==='target')b.classList.toggle('done',!!S.done[S.t])});
   const sel=$('tsel');sel.innerHTML='';let og=null,ogn='';TARGETS.forEach((tg,i)=>{const gn=tg.project?'Grimoire projects':tg.spell?'Spells · JavaScript':tg.master!=null?'Master editions':'Village plates';if(gn!==ogn){og=document.createElement('optgroup');og.label=gn;sel.appendChild(og);ogn=gn}const o=document.createElement('option');o.value=i;o.textContent='Target '+(i+1)+' / '+TARGETS.length+' · '+tg.name;o.disabled=i>maxT()&&!(tg.master!=null&&S.done[tg.master])&&!(tg.after!=null&&S.done[tg.after]);og.appendChild(o)});sel.value=S.t;
   updDue();if(S.sess&&!sessT){sessTick()}sessBar();
-  if(!THEMES[S.theme])S.theme='grove';document.body.dataset.theme=S.theme;$('theme').textContent=TH().name;$('junie').src=art('drone');ambient();
+  if(!THEMES[S.theme])S.theme='grove';{const hw=$('hwitch');if(hw){hw.dataset.pose='';if(S.theme==='ink'&&typeof witchSet==='function')witchSet(typeof wPose==='string'?wPose:'calm');else hw.src=art('witch')}}document.body.dataset.theme=S.theme;$('theme').textContent=TH().name;$('junie').src=art('drone');ambient();
   $('mute').classList.toggle('off',!S.sfx);$('mute').textContent=!S.sfx?'Muted':(S.keys?'Sound + keys':'Sound');$('vol').value=S.vol;
   if(S.stage==='school'||S.stage==='practice'||S.stage==='trial')renderSchool();else if(S.stage==='target')renderTarget();else if(S.stage==='village')renderVillage();else if(S.stage==='grimoire')renderGrimoire();else if(S.stage==='tourney')renderTourney();else renderRules();
 }
@@ -2553,7 +2573,7 @@ async function evaluate(code,css,js){
     else{sc.className='';sc.textContent='Console › quiet'}
     f.onload=null;f.srcdoc=wrap(code,css,js)}
   const prevPass=lastPass;
-  if(lastPass&&res.some((r,i)=>r&&!lastPass[i])){sfx.magic();markDay();witchDo('hop')}
+  if(lastPass&&res.some((r,i)=>r&&!lastPass[i])){sfx.magic();markDay();witchDo('hop');const i=res.findIndex((r,k)=>r&&!lastPass[k]),nx=res.indexOf(false);say(nx<0?'<b>Every step is green.</b> Press Check to seal it.':'<b>Step '+(i+1)+' done.</b> Next: '+fmt(tg.steps[nx].t),4200)}
   lastPass=res;
   const n=res.filter(Boolean).length,pct=Math.round(n/res.length*100);
   const m=$('meter');{const pk=S.t+':'+S.stage,pv=m.dataset.k===pk?+m.dataset.p:null;m.dataset.k=pk;m.dataset.p=pct;if(pv!=null)gainFx(m,pv,pct)}m.querySelector('i').style.width=pct+'%';m.querySelector('b').textContent=pct+'%';m.classList.toggle('full',pct===100);
@@ -2572,11 +2592,13 @@ async function evaluate(code,css,js){
   if(now===-1&&!S.done[S.t]){S.done[S.t]=true;S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save();sfx.target();comms('Target matched. Build approved for the village.');render();hxFinale(tg)}
   else if(now===-1&&S.done[S.t]){S.built[S.t]=code;if(css!=null)S.builtCss[S.t]=css;if(js!=null)S.builtJs[S.t]=js;save()}
 }
+let bubT;function say(h,ms){const b=$('bubble');if(!b)return;clearTimeout(bubT);b.innerHTML=h;b.classList.add('on');if(ms)bubT=setTimeout(()=>b.classList.remove('on'),ms)}
+function hush2(){clearTimeout(bubT);const b=$('bubble');if(b)b.classList.remove('on')}
 function witchDo(c){const w=$('hwitch');if(!w)return;w.classList.remove('hop','shake');void w.offsetWidth;w.classList.add(c);witchPose(c==='hop'?'cheer':'puzzled',c==='hop'?1800:3400)}
 let wPose='calm',wT,sleepT;
 function witchSet(p){const w=$('hwitch');if(!w||S.theme!=='ink')return;if(w.dataset.pose===p)return;w.dataset.pose=p;wPose=p;w.src='img/hexle/ink/witch-'+p+'.webp';w.classList.remove('swap');void w.offsetWidth;w.classList.add('swap')}
 function witchPose(p,ms){if(S.theme!=='ink')return;clearTimeout(wT);witchSet(p);if(ms)wT=setTimeout(()=>witchSet('calm'),ms)}
-function wake(){clearTimeout(sleepT);if(wPose==='sleep')witchSet('calm');sleepT=setTimeout(()=>witchSet('sleep'),90000)}
+function wake(){clearTimeout(sleepT);if(wPose==='sleep'){witchSet('calm');hush2()}sleepT=setTimeout(()=>{if(S.stage!=='target')return;witchSet('sleep');say('Resting her eyes. Any key wakes her.')},90000)}
 ['keydown','pointerdown','input'].forEach(ev=>document.addEventListener(ev,wake,true));wake();
 function hxFinale(tg){
   const old=document.querySelector('.finale');if(old)old.remove();
@@ -2605,7 +2627,7 @@ function renderHelp(){
   }
   $('hstep').textContent='step '+(curStep+1);
   const st=tg.steps[curStep],names=['Nudge','Point','Example','Answer'];
-  if(lv===0)lad.innerHTML='<div class="idle"><img id="hwitch" src="'+(S.theme==='ink'?'img/hexle/ink/witch-'+wPose+'.webp':art('witch'))+'" data-pose="'+(S.theme==='ink'?wPose:'')+'" alt=""><div class="hint0">Try it yourself first. Stuck? Help comes in four levels, from a small nudge to the full answer.</div></div>';
+  if(lv===0)lad.innerHTML='<div class="idle"><div class="hint0">Try it yourself first. Stuck? Help comes in four levels, from a small nudge to the full answer.</div></div>';
   for(let i=0;i<lv;i++){const div=document.createElement('div');div.className='lv'+(i===3?' ans':'');const isCode=i>=2&&(st.pre||!/`/.test(st.help[i]));div.innerHTML='<small>'+(i+1)+' · '+names[i]+'</small>'+(isCode?'<pre>'+esc(st.help[i])+'</pre>':fmt(st.help[i]));lad.appendChild(div)}
   if(lv===4){const nt=document.createElement('div');nt.className='hint0';nt.textContent='Flagged: this comes back as a review drill in a later School.';lad.appendChild(nt)}
   if(S.hunt&&S.hunt.t===S.t){const hb=document.createElement('div');hb.className='hunt';hb.innerHTML='<b>Bug hunt</b><br>'+S.hunt.n+' bugs hide in: '+esc(huntFiles()||'your files')+'. Every step was green before. Press Ctrl+Enter for the scanner.';lad.prepend(hb);const g=document.createElement('button');g.textContent='Give up';g.onclick=()=>endHunt(false);foot.appendChild(g)}
@@ -2626,7 +2648,7 @@ function checkNow(){
   if(T().js!=null){const js=S.js[S.t]||'';try{new Function(js)}catch(e){issues.unshift('script.js: '+e.message)}}
   if(T().css!=null&&css!=null){if(count(css,/\{/g)!==count(css,/\}/g))issues.push('styles.css: braces { } do not match');if(T().css!=null&&!linked(code))issues.push('index.html does not link styles.css yet')}
   if(lastPass&&lastPass.every(Boolean)){s.className='ok';s.textContent='Scanner: everything matches.';sfx.ok();return}
-  if(issues.length){sfx.sputter();witchDo('shake')}else sfx.bad();
+  if(issues.length){sfx.sputter();witchDo('shake');say('<b>Something breaks the spell:</b> '+esc(issues[0])+'.',6000)}else{sfx.bad();witchDo('shake');const k=lastPass?lastPass.indexOf(false):-1;if(k>=0)say('<b>Not yet.</b> Step '+(k+1)+': '+fmt(T().steps[k].t),6000)}
   s.className='bad spell';s.textContent=issues.length?'The spell sputters: '+issues.join(' · '):'The spell holds, but the picture is not right yet. Look at the glowing step.';
   const li=$('steps').querySelector('.now');if(li){li.classList.remove('pulse');void li.offsetWidth;li.classList.add('pulse')}
 }
