@@ -107,6 +107,21 @@ body.alarm .beacon { animation: beacon 2.4s ease-in-out infinite; }
 .bubble { position: fixed; z-index: 40; max-width: 260px; padding: 8px 11px; background: rgba(10, 12, 12, .94); border: 1px solid #3a3a30; border-radius: 6px; font-size: 12px; line-height: 1.5; color: var(--ink); pointer-events: none; opacity: 0; transform: translateY(4px); transition: opacity .25s, transform .25s; }
 .bubble.on { opacity: 1; transform: none; }
 .bubble b { color: #9fdcc0; font-weight: 400; }
+.bubble.live { max-width: 320px; }
+.bubble.live.on { pointer-events: auto; }
+.bubble .jq { display: block; margin-top: 4px; }
+.bubble .jn { display: block; margin-top: 6px; font-size: 10.5px; letter-spacing: .08em; color: var(--faint); }
+.bubble .bl { display: flex; flex-wrap: wrap; gap: 4px 6px; margin-top: 7px; padding: 6px 8px; border: 1px solid #2c2a24; border-radius: 4px; background: rgba(0, 0, 0, .35); font-family: var(--mono, monospace); font-size: 12px; }
+.bubble .bw { filter: blur(4.5px); color: #9fdcc0; cursor: pointer; transition: filter .25s; user-select: none; }
+.bubble .bw.on { filter: none; }
+#pile { position: absolute; left: 69.2%; top: 82.6%; width: 6.4%; aspect-ratio: 1.5; z-index: 4; pointer-events: auto; cursor: pointer; transform: rotate(-4deg); }
+#pile svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; filter: brightness(.74) saturate(.8) drop-shadow(0 .3vw .4vw rgba(0, 0, 0, .6)); transition: filter .3s; }
+#pile:hover svg { filter: brightness(.95) saturate(.9) drop-shadow(0 .3vw .5vw rgba(0, 0, 0, .6)); }
+#pile .pn { position: absolute; right: -12%; top: 62%; min-width: 1.6em; padding: 0 .35em; border-radius: 1em; background: #6a1f17; border: 1px solid #a4483a; color: #f1d9b5; font-size: max(10px, .7vw); line-height: 1.5; text-align: center; font-family: var(--read); opacity: 0; transform: scale(.6); transition: opacity .3s, transform .3s; }
+#pile.has .pn { opacity: 1; transform: none; }
+#pile.empty { opacity: .0; pointer-events: none; }
+#pile.drop svg { animation: drop .7s cubic-bezier(.3, .7, .2, 1); }
+@keyframes drop { 0% { transform: translateY(-40%); opacity: 0; } 60% { transform: translateY(4%); opacity: 1; } 100% { transform: none; } }
 .glow { position: absolute; left: 0; top: 0; transform-origin: 0 0; pointer-events: none; mix-blend-mode: screen; filter: blur(14px);
   background: radial-gradient(closest-side, rgba(125, 170, 205, .26), rgba(125, 170, 205, .08) 70%, transparent); transition: opacity .6s; }
 #g-small { background: radial-gradient(closest-side, rgba(125, 170, 205, .2), transparent); }
@@ -278,6 +293,7 @@ body.cur, body.cur * { cursor: none !important; }
     <div class="glow" id="g-main"></div><div class="glow" id="g-left"></div><div class="glow" id="g-right"></div><div class="glow" id="g-small"></div>
     <div class="spill"></div>
     <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junie/junie-idle.webp" alt=""></div>
+    <div id="pile" class="empty" title="Ticket pile"><svg viewBox="0 0 120 80"><g id="pile-sheets"></g></svg><span class="pn" id="pile-n">0</span></div>
     <div class="screen" id="left"><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg><div class="evt" id="evt"><b>--:--:--</b>waiting for events</div></div></div>
     <div class="screen" id="main">
       <div class="home" id="home">
@@ -673,20 +689,20 @@ const utc = (t) => new Date(t).toISOString().slice(0, 19).replace("T", " ") + " 
 function fresh() {
   seq = 0;
   const f = cfgFromSet(FACTORY);
-  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [], rescue: false, ctimes: [BOOT_T], met: {}, tk: 0, tkStart: 0, links: {}, ran: {}, cwho: [], estk: [], pendingPlain: null };
+  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [], rescue: false, ctimes: [BOOT_T], met: {}, tk: 0, tkStart: 0, links: {}, ran: {}, cwho: [], estk: [], pendingPlain: null, crowns: 0, pile: [], jobs: [], devs: {}, rescueAt: 0, seenAt: Date.now() };
 }
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(SAVE) || "null");
     if (raw && raw.v === 1) {
-      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, lore: raw.lore || { right: 0, seen: [] }, typed: raw.typed || [], tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [], estk: raw.estk || [], pendingPlain: raw.pendingPlain || null };
+      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, lore: raw.lore || { right: 0, seen: [] }, typed: raw.typed || [], tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [], estk: raw.estk || [], pendingPlain: raw.pendingPlain || null, crowns: raw.crowns || 0, pile: raw.pile || [], jobs: raw.jobs || [], devs: raw.devs || {}, rescueAt: raw.rescueAt || 0, seenAt: raw.seenAt || Date.now() };
     }
   } catch (e) {}
   return fresh();
 }
 function save() {
   try {
-    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, lore: st.lore || { right: 0, seen: [] }, typed: (st.typed || []).slice(-200), tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], estk: st.estk || [], pendingPlain: st.pendingPlain || null, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
+    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, lore: st.lore || { right: 0, seen: [] }, typed: (st.typed || []).slice(-200), tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], estk: st.estk || [], pendingPlain: st.pendingPlain || null, crowns: st.crowns || 0, pile: st.pile || [], jobs: st.jobs || [], devs: st.devs || {}, rescueAt: st.rescueAt || 0, seenAt: Date.now(), pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
   } catch (e) {}
 }
 
@@ -990,7 +1006,7 @@ function requestCmd(rest, col, fromRun) {
   if (b === "zeroize") { say("warning: System will be rebooted and may not boot without configuration"); st.sess = "zeroq"; return true; }
   if (b === "configuration") {
     const c = rest[2] && rest[2].v === "rescue" && rest[3] && matchKw(rest[3].v, ["delete", "save"]).k;
-    if (c === "save") { st.rescue = true; return false; }
+    if (c === "save") { st.rescue = true; st.rescueAt = Date.now(); return false; }
     if (c === "delete") { st.rescue = false; return false; }
     notSim("request system configuration " + rest.slice(2).map((x) => x.v).join(" "));
     return false;
@@ -1492,6 +1508,229 @@ const TICKETS = [
       { id: "rb", t: "Roll back one version", why: "rollback 1 loads the configuration from before the last commit into your candidate. Nothing changes on the switch until you commit.", c: ["configure", "rollback 1", "show | compare", "commit"], ok: () => { const x = port(4); return x.members.length === 1 && x.members[0] === "staff"; } }
     ] }
 ];
+const STORY_N = TICKETS.length;
+const JQ = {
+  console: "A factory-new switch has no IP address yet. So how do you reach it at all?",
+  login: "On a factory-default Junos box, which single user exists, and does it have a password?",
+  cli: "Your prompt ends in %. Are you in Junos yet, or in the shell underneath it?",
+  rootauth: "What does Junos insist on before it accepts the very first commit?",
+  host: "You set a name. Has it reached the active configuration yet, and how would the prompt tell you?",
+  vlan: "A VLAN needs two things: what people call it and what the wire calls it. Which two?",
+  port: "The server needs exactly one VLAN, untagged. Which interface-mode is that in the ELS dialect?",
+  guest: "Same pattern as staff. Which name, which tag?",
+  trunk: "A link between switches that carries several VLANs. Access or trunk?",
+  tmem: "A trunk only carries the VLANs you list. How do you list two in one line?",
+  desc: "Your description has spaces in it. What does Junos need around it to read it as one value?",
+  lldp: "Which protocol lets the far end announce its own name? And are you in the right mode to run show?",
+  see: "Admin is what you configured, Link is what the cable says. Which command shows both, one line per port?",
+  dis: "You want the port shut without touching the cable. What is the administrative off switch?",
+  why: "Someone finds this disabled port in six months. Where does your note to them live?",
+  rescue: "If a later change breaks the switch, which known-good config can you load from the console? Which request saves it?",
+  acc: "Visitors only, one VLAN, untagged. Which mode, which VLAN?",
+  lbl: "Should the label name the person who asked, or the device?",
+  list: "Which show command lists every VLAN with its member ports?",
+  cv: "Cameras get their own VLAN: name cameras, tag 30. Which statement creates a VLAN?",
+  cp: "You have done this exact thing three times now. Which two lines make an access port?",
+  cd: "Port 20 needs a note in the config. Which statement under the interface?",
+  cm: "Which table lists every MAC address the switch has learned, with its VLAN and port?",
+  who: "Who changed what, and when. Which show command keeps that list?",
+  rb: "Do not fix it by hand. Which command loads the config from before the last commit, and what makes it real afterwards?"
+};
+const SITES = [
+  { v: "forge", dev: "forge-terminal", who: "thrain", place: "the forge", line: "My rune-press talks to the network now. It wants its own VLAN, away from the scribes and their gossip." },
+  { v: "kitchen", dev: "kitchen-till", who: "fen", place: "the kitchen", line: "Cook bought a talking till. It keeps getting lost among the guests. Maren says it needs its own VLAN." },
+  { v: "armory", dev: "armory-lock", who: "ilse", place: "the armory", line: "The armory door lock is networked now. A door lock on the guest network would be a joke nobody laughs at." },
+  { v: "tower", dev: "tower-clock", who: "corvin", place: "the clock tower", line: "My tower clock now asks the network for the time. Give it a home of its own." },
+  { v: "stables", dev: "stable-cam", who: "grukk", place: "the stables", line: "Grukk put box with eye in stables. Box need network. Not guest network. Own network." },
+  { v: "scribes", dev: "scroll-printer", who: "pip", place: "the scriptorium", line: "We got a printer that copies whole scrolls! It needs the network, but Odile says it gets its own VLAN." },
+  { v: "workshop", dev: "artificer-bench", who: "sable", place: "the workshop", line: "My test bench speaks Ethernet now. Keep it apart from everything else. My experiments are sometimes loud." },
+  { v: "loft", dev: "courier-ap", who: "nyx", place: "the courier loft", line: "The courier loft has a new access point for my messengers. Their own VLAN, please. They gossip." },
+  { v: "vault", dev: "vault-sensor", who: "ulric", place: "the vault", line: "The vault has a damp sensor now. The ledgers rot if it gets wet. Its own VLAN, nothing else on it." },
+  { v: "chapel", dev: "chapel-display", who: "greylady", place: "the chapel", line: "They hung a glowing screen in my chapel. It wants the network. I want it kept apart from the noise." }
+];
+const RANKS = [[0, "Apprentice of the Rack"], [120, "Cable Squire"], [300, "Warden of Ports"], [600, "Keeper of VLANs"], [1000, "Master of the Ledger"], [1600, "Archmage of the Core"]];
+const rankOf = (c) => RANKS.filter((r) => c >= r[0]).pop()[1];
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const pn = (n) => "ge-0/0/" + n;
+const acc2 = (n, v) => [`set interfaces ${pn(n)} unit 0 family ethernet-switching interface-mode access`, `set interfaces ${pn(n)} unit 0 family ethernet-switching vlan members ${v}`];
+const isAcc = (n, v) => { const x = port(n); return x.eth && x.mode === "access" && x.members.length === 1 && x.members[0] === v; };
+const hasVlan = (v, id) => vlansOf(st.active).some((x) => x.name === v && (id == null || x.id === id));
+function freePorts() {
+  const info = ifInfo(st.active), out = [];
+  for (let i = 1; i < 46; i++) {
+    const n = pn(i), p = info[n];
+    if ([4, 9, 12, 20].includes(i) || p.desc || p.disabled || PATCHED[n] || (st.links || {})[n]) continue;
+    if ([...st.active.values()].some((s) => s.lv[0] === "interfaces" && s.lv[1] === n && (s.k === "members" || s.k === "interface-mode" || s.lv.length > 5))) continue;
+    out.push(i);
+  }
+  return out;
+}
+function devPorts() { return Object.entries(st.devs || {}).filter(([n, d]) => isAcc(+n, d.v) && (st.links || {})[pn(n)]).map(([n, d]) => ({ n: +n, ...d })); }
+function freeId() { const used = vlansOf(st.active).map((x) => x.id); for (let i = 40; i < 200; i += 10) if (!used.includes(i)) return i; return 201; }
+function genJob() {
+  const free = freePorts(), vl = vlansOf(st.active).map((x) => x.name), last = (st.jobs || []).slice(-1)[0];
+  const opts = [];
+  const newSites = SITES.filter((s) => !vl.includes(s.v));
+  const oldSites = SITES.filter((s) => vl.includes(s.v));
+  if (newSites.length && free.length) opts.push(["site", 5]);
+  if (oldSites.length && free.length) opts.push(["extra", 2]);
+  if (free.length) opts.push(["rogue", 2]);
+  const t47 = port(47);
+  const uncarried = oldSites.filter((s) => t47.mode === "trunk" && !t47.members.includes(s.v));
+  if (uncarried.length) opts.push(["carry", 4]);
+  const dp = devPorts();
+  if (dp.length) opts.push(["fault", 3]);
+  if (dp.length && free.length) opts.push(["move", 2]);
+  if ((st.commits || []).length && (st.ctimes || []).filter((t) => t > (st.rescueAt || 0)).length >= 4) opts.push(["rescue", 2]);
+  const pool = opts.filter((o) => !last || o[0] !== last.tpl || opts.length === 1);
+  if (!pool.length) return null;
+  let r = Math.random() * pool.reduce((a, o) => a + o[1], 0), tpl = pool[0][0];
+  for (const o of pool) { r -= o[1]; if (r <= 0) { tpl = o[0]; break; } }
+  const n = (STORY_N + (st.jobs || []).length + 1), id = String(n).padStart(3, "0");
+  const p = { port: pick(free.slice(0, 18)) };
+  let giver;
+  if (tpl === "site") { const s = pick(newSites); Object.assign(p, { v: s.v, dev: s.dev, place: s.place, line: s.line, vid: freeId() }); giver = s.who; }
+  else if (tpl === "extra") { const s = pick(oldSites); const k = Object.values(st.devs || {}).filter((d) => d.v === s.v).length + 2; Object.assign(p, { v: s.v, dev: s.dev.replace(/-\w+$/, "") + "-desk-" + k, place: s.place }); giver = s.who; }
+  else if (tpl === "rogue") giver = pick(["brann", "ilse", "vael"]);
+  else if (tpl === "carry") { const s = pick(uncarried); p.v = s.v; p.place = s.place; giver = "maren"; }
+  else if (tpl === "fault") { const d = pick(dp); const wrong = pick(vl.filter((x) => x !== d.v && x !== "default")) || "guest"; Object.assign(p, { port: d.n, v: d.v, dev: d.dev, wrong, manual: Math.random() < .5 }); giver = (SITES.find((s) => s.v === d.v) || {}).who || "veylin"; }
+  else if (tpl === "move") { const d = pick(dp); Object.assign(p, { from: d.n, v: d.v, dev: d.dev }); giver = pick(["odile", "ulric"]); }
+  else if (tpl === "rescue") giver = "brann";
+  return { id, tpl, giver, p, at: (st.pile && st.pile[0]) || Date.now() };
+}
+function buildJob(j) {
+  const p = j.p, P = pn(p.port);
+  const late = Date.now() - j.at > 20 * 3600e3 ? "This has been waiting on your pile since yesterday. " : "";
+  const T = { id: j.id, giver: j.giver, job: j, title: "", intro: "", outro: "", done: "", pay: 20, steps: [] };
+  const link = () => { st.links = st.links || {}; st.links[P] = p.dev; };
+  if (j.tpl === "site") Object.assign(T, {
+    title: "NEW VLAN", pay: 30, setup: link,
+    intro: `${late}${p.line} The ${p.dev} is patched into ${P}. Create VLAN ${p.v} with tag ${p.vid}, make the port an access port in it, label it, and show me the VLAN list.`,
+    outro: `${p.place[0].toUpperCase() + p.place.slice(1)} has its own VLAN now. I watched the light on ${P} come on. Thank you, truly.`,
+    done: `${P} is an access port in VLAN ${p.v} (${p.vid}) for the ${p.dev}.`,
+    steps: [
+      { id: "jv", t: `Create VLAN ${p.v} (${p.vid})`, why: "A name for people, a number for the wire.", q: `Which statement creates a VLAN, and what goes in it besides the name ${p.v}?`, c: ["configure", `set vlans ${p.v} vlan-id ${p.vid}`, "commit"], ok: () => hasVlan(p.v, p.vid) },
+      { id: "jp", t: `Put ${P} in ${p.v}`, why: "One device, one VLAN, untagged: an access port.", q: "One VLAN, untagged. Which two lines make an access port on ELS?", c: [...acc2(p.port, p.v), "commit"], ok: () => isAcc(p.port, p.v) },
+      { id: "jl", t: "Label it", why: "Name the device, not the person.", q: "Where does the note about what is on this port live?", c: [`set interfaces ${P} description "${p.dev}"`, "commit"], ok: () => !!port(p.port).desc },
+      { id: "js", t: "Show the VLAN list", why: "A star next to the port means its link is up.", q: "Which show command lists every VLAN with its ports?", c: ["run show vlans"], ok: () => ran("show vlans") && isAcc(p.port, p.v) }
+    ] });
+  if (j.tpl === "extra") Object.assign(T, {
+    title: "ONE MORE", pay: 20, setup: link,
+    intro: `${late}Another device for ${p.place}: the ${p.dev}, patched into ${P}. VLAN ${p.v} already exists, so this one is quick. Port, label, done.`,
+    outro: `The ${p.dev} found its friends on ${p.v}. Quick work.`,
+    done: `${P} is an access port in ${p.v} for the ${p.dev}.`,
+    steps: [
+      { id: "jp", t: `Put ${P} in ${p.v}`, why: "The VLAN exists. Only the port needs work.", q: "The VLAN is there already. Which two lines put a port in it?", c: ["configure", ...acc2(p.port, p.v), "commit"], ok: () => isAcc(p.port, p.v) },
+      { id: "jl", t: "Label it", why: "Future you will thank present you.", q: "Which statement under the interface holds a note?", c: [`set interfaces ${P} description "${p.dev}"`, "commit"], ok: () => !!port(p.port).desc }
+    ] });
+  if (j.tpl === "rogue") Object.assign(T, {
+    title: "ROGUE LINK", pay: 20, setup: () => { st.links = st.links || {}; st.links[P] = "unknown"; },
+    intro: `${late}A light came on during my round. One port, blinking, and nobody signed for a cable there. You find which one. Shut it and write on it why.`,
+    outro: `Dark again. Whoever plugged that in will have to come and ask now. Good.`,
+    done: `${P} is disabled and labelled.`,
+    steps: [
+      { id: "see", t: "Find the unexpected link", why: "terse: one line per port. Look for a Link up that nothing in the ledger explains.", q: JQ.see, c: ["show interfaces terse"], ok: () => ran("show interfaces terse") },
+      { id: "dis", t: "Disable it", why: "The ticket does not say which port. The terse output does.", q: "You found the port. What shuts it without touching the cable?", c: ["configure", `set interfaces ${P} disable`, "commit"], ok: () => port(p.port).disabled },
+      { id: "why", t: "Write why it is shut", why: "A disabled port without a note is a mystery for the next engineer.", q: JQ.why, c: [`set interfaces ${P} description "disabled - unknown device"`, "commit"], ok: () => port(p.port).disabled && !!port(p.port).desc }
+    ] });
+  if (j.tpl === "carry") Object.assign(T, {
+    title: "UPLINK VLAN", pay: 20,
+    intro: `${late}Devices in ${p.v} can talk to each other, but nothing beyond this switch hears them. The trunk to core-sw on ge-0/0/47 only carries the VLANs you list. Add ${p.v}, then prove it.`,
+    outro: `${p.v} reaches the core now. A VLAN that never leaves the switch is a room without a door.`,
+    done: `ge-0/0/47 carries ${p.v} to core-sw.`,
+    steps: [
+      { id: "tm", t: `Add ${p.v} to the trunk`, why: "set on a list adds to it. You do not need to repeat the VLANs already there.", q: "A trunk carries what you list. Do you add one name, or retype the whole list?", c: ["configure", `set interfaces ge-0/0/47 unit 0 family ethernet-switching vlan members ${p.v}`, "commit"], ok: () => port(47).mode === "trunk" && port(47).members.includes(p.v) },
+      { id: "tv", t: "Prove it", why: "ge-0/0/47 should now appear under the VLAN.", q: JQ.list, c: ["run show vlans"], ok: () => ran("show vlans") && port(47).members.includes(p.v) }
+    ] });
+  if (j.tpl === "fault") Object.assign(T, {
+    title: "WRONG VLAN", pay: 35,
+    setup: () => {
+      const c = clone(st.active);
+      for (const [k, s] of [...c]) if (s.lv[0] === "interfaces" && s.lv[1] === P && s.k === "members") c.delete(k);
+      cfgAdd(c, { lv: ["interfaces", P, "unit 0", "family", "ethernet-switching", "vlan"], k: "members", v: p.wrong, m: true });
+      st.active = c; st.cand = clone(c); st.commits.push(clone(c)); st.ctimes.push(Math.max(st.ctimes[st.ctimes.length - 1] + 40000, Date.now() - 120000));
+      (st.cwho = st.cwho || [])[st.ctimes.length - 1] = "intern";
+    },
+    intro: `${late}My ${p.dev} went silent a little while ago. I touched nothing, I swear it. Veylin says the ledger shows a commit that was not yours. Find out what changed and put it right.`,
+    outro: `It speaks again! And you found exactly which commit did it. I will tell the intern to keep his hands off the ledger.`,
+    done: `${P} is back in ${p.v}.`,
+    steps: [
+      { id: "who", t: "Find the commit", why: "Newest first, with who made it.", q: JQ.who, c: ["show system commit"], ok: () => ran("show system commit") },
+      { id: "fx", t: `Put ${P} back in ${p.v}`, why: p.manual ? "An access port takes one VLAN. Remove the wrong one, add the right one, then commit both together." : "The intern's commit is the last one. rollback 1 brings back the version before it.", q: p.manual ? `What is ${P} in now, and what must happen to that member before ${p.v} can go back?` : JQ.rb, c: p.manual ? ["configure", `delete interfaces ${P} unit 0 family ethernet-switching vlan members ${p.wrong}`, `set interfaces ${P} unit 0 family ethernet-switching vlan members ${p.v}`, "show | compare", "commit"] : ["configure", "rollback 1", "show | compare", "commit"], ok: () => isAcc(p.port, p.v) }
+    ] });
+  if (j.tpl === "move") {
+    const F = pn(p.from);
+    Object.assign(T, {
+      title: "MOVED DEVICE", pay: 30,
+      setup: () => { st.links = st.links || {}; delete st.links[F]; st.links[P] = p.dev; },
+      intro: `${late}We carried the ${p.dev} to another table. Its cable came out of ${F} and Thrain ran a new one to ${P}. Make the new port do what the old one did, then clean the old one so the ledger does not lie.`,
+      outro: `New port working, old port wiped. The ledger matches the room again. That is how I like it.`,
+      done: `The ${p.dev} moved from ${F} to ${P}, and ${F} is clean.`,
+      steps: [
+        { id: "mp", t: `Put ${P} in ${p.v}`, why: "Same VLAN as before, new port.", q: `Which VLAN was the ${p.dev} in? Same two access lines, new port number.`, c: ["configure", ...acc2(p.port, p.v), "commit"], ok: () => isAcc(p.port, p.v) },
+        { id: "ml", t: "Label the new port", why: "The description moves with the device.", q: JQ.lbl, c: [`set interfaces ${P} description "${p.dev}"`, "commit"], ok: () => !!port(p.port).desc },
+        { id: "mc", t: `Clean ${F}`, why: "One delete removes everything under the interface: mode, VLAN and description. ", q: `How do you remove everything under ${F} in one command?`, c: [`delete interfaces ${F}`, "commit"], ok: () => { const x = port(p.from); return !x.desc && !x.members.filter((m) => m !== "default").length && x.mode === "access"; } }
+      ] });
+  }
+  if (j.tpl === "rescue") Object.assign(T, {
+    title: "FRESH RESCUE", pay: 15,
+    intro: `${late}You have committed a lot since the last rescue configuration. If tonight goes wrong, that old rescue would undo all your good work too. Save a fresh one.`,
+    outro: `New rescue saved. Keys copied, doors locked. I sleep better.`,
+    done: "A fresh rescue configuration is saved.",
+    steps: [
+      { id: "rs", t: "Save a new rescue configuration", why: "Saving again overwrites the old rescue with what is active now.", q: JQ.rescue, c: ["request system configuration rescue save"], ok: () => (st.rescueAt || 0) >= (st.tkStart || 0) && !!st.rescue }
+    ] });
+  return T;
+}
+function rebuildJobs() { TICKETS.length = STORY_N; for (const j of st.jobs || []) TICKETS.push(buildJob(j)); }
+function jobClosed(T) {
+  const j = T.job;
+  if (!j) return;
+  st.devs = st.devs || {};
+  if (j.tpl === "site" || j.tpl === "extra") st.devs[j.p.port] = { dev: j.p.dev, v: j.p.v };
+  if (j.tpl === "move") { delete st.devs[j.p.from]; st.devs[j.p.port] = { dev: j.p.dev, v: j.p.v }; }
+}
+function payOut(T) {
+  const before = rankOf(st.crowns || 0);
+  st.crowns = (st.crowns || 0) + (T.pay || 40);
+  const after = rankOf(st.crowns);
+  setTimeout(() => toast(after !== before ? `+${T.pay || 40} crowns · new rank: ${after}` : `+${T.pay || 40} crowns`), 400);
+  if (after !== before) setTimeout(() => { junie("cheer", 4000); SFX.ok(); }, 600);
+}
+function storyDone() { return (st.tk || 0) >= STORY_N; }
+function addPile(n, quiet, at) {
+  st.pile = st.pile || [];
+  let added = 0;
+  for (let i = 0; i < n && st.pile.length < 5; i++) { st.pile.push(at || Date.now()); added++; }
+  if (added) { renderPile(true); if (!quiet) { const who = CAST[pick(Object.keys(CAST))]; toast(`${who.name} left a ticket on your pile.`); SFX.tick(); } }
+  return added;
+}
+function pullJob() {
+  if (!storyDone() || st.tk < TICKETS.length || !(st.pile || []).length) return false;
+  const j = genJob();
+  if (!j) return false;
+  st.pile.shift();
+  (st.jobs = st.jobs || []).push(j);
+  TICKETS.push(buildJob(j));
+  renderPile();
+  return true;
+}
+function renderPile(drop) {
+  const n = (st.pile || []).length, el = $("#pile");
+  if (!el) return;
+  el.classList.toggle("empty", !storyDone() && n === 0);
+  el.classList.toggle("has", n > 0);
+  $("#pile-n").textContent = n;
+  let h = "";
+  const k = Math.max(1, Math.min(5, n));
+  for (let i = 0; i < k; i++) {
+    const y = 62 - i * 6, r = (i % 2 ? 1.5 : -2) + i * .4, x = 8 + (i % 3) * 2;
+    h += `<g transform="translate(${x} ${y}) rotate(${r} 50 0)"><path d="M0 0 L100 -2 L102 10 L2 12 Z" fill="${n ? "#d8c7a0" : "#5a5248"}" stroke="#6e5f45" stroke-width=".8"/><path d="M8 4 H70 M8 7 H56" stroke="#8a7a5c" stroke-width=".7" opacity=".7"/></g>`;
+  }
+  if (n) { const ty = 62 - (k - 1) * 6; h += `<circle cx="${84 + ((k - 1) % 3) * 2}" cy="${ty + 5}" r="5" fill="#7a2418" stroke="#b5553f" stroke-width=".8"/>`; }
+  $("#pile-sheets").innerHTML = h;
+  if (drop) { el.classList.remove("drop"); void el.offsetWidth; el.classList.add("drop"); }
+}
 let TASKS = TICKETS[0].steps;
 function curTicket() { return TICKETS[Math.min(st.tk || 0, TICKETS.length - 1)]; }
 function syncTasks() { TASKS = curTicket().steps; }
@@ -1503,12 +1742,13 @@ function renderTicket() {
   syncTasks();
   const T = curTicket();
   if (st.tk >= TICKETS.length) {
-    $("#ticket").innerHTML = `<h4><span>LEDGER</span><span>ALL CLOSED</span></h4><div class="st-title done-msg">Every ticket is closed.</div><div class="st-why">acc-sw-01 is commissioned, uplinked, locked down, serving the reading room, watching the gate and recovered from a bad change. Free play: the switch is yours.</div>`;
+    const pl = (st.pile || []).length;
+    $("#ticket").innerHTML = `<h4><span>LEDGER</span><span>${pl ? "PILE " + pl : "PILE CLEAR"}</span></h4><div class="st-title done-msg">${pl ? "Tickets are waiting on your pile." : "Your pile is clear."}</div><div class="st-why">${pl ? "Click the pile on the desk, or wait: whoever left the top one will come by." : "The castle keeps breaking things. New tickets land on the pile through the day, and more pile up while you are away."}</div><div class="st-why rk">${esc(rankOf(st.crowns || 0))} · ${st.crowns || 0} crowns</div>`;
     nocI = 0; renderNoc();
     return;
   }
   if (!(st.met && st.met["intro" + T.id])) {
-    $("#ticket").innerHTML = `<h4><span>TICKET ${T.id}</span><span>INCOMING</span></h4><div class="st-title">${esc(GIVERS[T.giver].name)} is on the way.</div><div class="st-why">Stay at your desk. A new ticket is coming.</div>`;
+    $("#ticket").innerHTML = `<h4><span>TICKET ${T.id}</span><span>INCOMING</span></h4><div class="st-title">${esc(CAST[T.giver].name)} is on the way.</div><div class="st-why">Stay at your desk. A new ticket is coming.</div>`;
     $("#count").innerHTML = `<div class="noc"><div class="v">${T.id}</div><div class="l">INCOMING</div></div>`;
     return;
   }
@@ -1897,11 +2137,11 @@ function sizeApp() {
 }
 function paintHome() {
   const hr = new Date().getHours();
-  $("#h-greet").textContent = (hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening") + ", Kaatje.";
+  $("#h-greet").textContent = (hr < 12 ? "Good morning" : hr < 18 ? "Good afternoon" : "Good evening") + ", Kaatje." + (st.crowns ? "  ·  " + rankOf(st.crowns) : "");
   $("#h-clock").textContent = (wxOn && wx.w !== "clear" ? wx.w.toUpperCase() + " · " : "") + new Date().toTimeString().slice(0, 5);
   const on = !!(st.plugged && isConsole(st.plugged));
   const T = curTicket();
-  $("#h-con").textContent = `${hostOf(st.active) || "amnesiac"} in rack R1` + (st.tk < TICKETS.length ? ` · ticket ${T.id} ${T.title.toLowerCase()}` : " · all tickets closed");
+  $("#h-con").textContent = `${hostOf(st.active) || "amnesiac"} in rack R1` + (st.tk < TICKETS.length ? ` · ticket ${T.id} ${T.title.toLowerCase()}` : (st.pile || []).length ? ` · ${(st.pile || []).length} on the pile` : " · pile clear");
   $("#h-conm").textContent = on ? "connected" : "no cable";
   $("#h-conrow").classList.toggle("live", on);
   let rev = 0, mix = "";
@@ -2110,7 +2350,8 @@ $("#hot-desksw").addEventListener("click", () => toast("An unmanaged desk switch
 function visit(kind) {
   const T = curTicket();
   if (!T) return;
-  const g = GIVERS[T.giver];
+  const g = CAST[T.giver];
+  if (kind === "outro") { syncTasks(); if (TASKS.some((x) => !x.ok()) || (st.met && st.met["outro" + T.id])) return; }
   $("#vline").textContent = kind === "intro" ? T.intro : T.outro;
   $("#vbtn").textContent = kind === "intro" ? "Take the ticket" : "Close ticket";
   $("#vbtn").dataset.k = kind;
@@ -2137,9 +2378,15 @@ $("#vbtn").addEventListener("click", () => {
   $("#vdlg").classList.remove("on");
   SFX.tick();
   if (k === "outro") {
+    jobClosed(T);
+    payOut(T);
     st.tk = (st.tk || 0) + 1;
     revealed = {};
     lastDone = -1;
+    jh = { key: "", lvl: 0 };
+    if (st.tk === STORY_N && !(st.pile || []).length) addPile(2, true);
+    else if (storyDone() && !(st.pile || []).length) addPile(1, true);
+    pullJob();
     if (st.tk < TICKETS.length) { clearTimeout(nextVisit); nextVisit = setTimeout(arrive, 14000); }
   }
   afterChange();
@@ -2148,7 +2395,7 @@ $("#vbtn").addEventListener("click", () => {
 function arrive() {
   const T = curTicket();
   if (!T || st.tk >= TICKETS.length || (st.met && st.met["intro" + T.id])) return;
-  if (Date.now() - lastKey < 6000 || $("#cu").classList.contains("on")) { nextVisit = setTimeout(arrive, 5000); return; }
+  if (Date.now() - lastKey < 6000 || $("#cu").classList.contains("on") || $("#say").classList.contains("on")) { nextVisit = setTimeout(arrive, 5000); return; }
   visit("intro");
 }
 let tt;
@@ -2203,7 +2450,11 @@ addEventListener("keydown", (e) => {
 $("#t-snd").addEventListener("click", () => { snd = !snd; setTimeout(() => rainSound(rainLevel), 0); try { localStorage.setItem(SAVE + "-snd", snd ? "1" : "0"); } catch (e) {} $("#snd-w").style.opacity = snd ? 1 : .15; toast(snd ? "Sound on" : "Sound off"); });
 $("#t-reset").addEventListener("click", () => {
   if (!confirm("Reset acc-sw-01 to factory default and restart the ticket?")) return;
+  const keep = { crowns: st.crowns || 0, lore: st.lore };
   st = fresh();
+  Object.assign(st, keep);
+  rebuildJobs();
+  renderPile();
   revealed = {};
   hist = [];
   lastDone = -1;
@@ -2332,13 +2583,58 @@ function junieSay(html, ms) {
   clearTimeout(junieSay.t);
   junieSay.t = setTimeout(() => b.classList.remove("on"), ms || 4200);
 }
+let jh = { key: "", lvl: 0 };
+function fitCmd(cmd) {
+  const inConf = st.sess === "conf";
+  if (inConf && /^(show|request|ping)\b/.test(cmd) && !/^show \|/.test(cmd)) return "run " + cmd;
+  if (!inConf && /^run /.test(cmd)) return cmd.slice(4);
+  return cmd;
+}
+function junieHint() {
+  const b = $("#bubble");
+  b.classList.remove("live");
+  if (st.tk >= TICKETS.length) { junie("cheer", 3000); junieSay((st.pile || []).length ? "<b>Junie</b> Nothing open. The pile on the desk has more." : "<b>Junie</b> Pile clear. Try <b>show vlans</b> and admire your work."); return; }
+  if (!(st.met && st.met["intro" + curTicket().id])) { junie("wave", 2500); junieSay("<b>Junie</b> Someone is bringing a ticket. Or click the pile on the desk."); return; }
+  const step = curStep();
+  if (!step) { junie("cheer", 3000); junieSay("<b>Junie</b> Every step is done. Wait for them to close the ticket."); return; }
+  const key = curTicket().id + step.id;
+  if (jh.key !== key) jh = { key, lvl: 0 };
+  jh.lvl = Math.min(3, jh.lvl + 1);
+  const q = step.q || JQ[step.id] || step.why;
+  const more = '<span class="jn">click me again for more</span>';
+  junie(jh.lvl === 1 ? "think" : "point", 3500);
+  if (step.id === "console") {
+    const t = ["<b>Junie</b><span class=\"jq\">" + esc(q) + "</span>" + more,
+      "<b>Junie</b><span class=\"jq\">Through the console port. The rack is on your right: look for <b>CON</b>.</span>" + more,
+      "<b>Junie</b><span class=\"jq\">Click the rack. Drag the RJ-45 console cable to <b>CON</b> on the rear, or the mini-USB one to the front.</span>"];
+    junieSay(t[jh.lvl - 1], 12000); return;
+  }
+  if (st.sess === "login" && !st.seenCli && jh.lvl > 1) { junieSay("<b>Junie</b><span class=\"jq\">Type <b>root</b>. No password on a factory box.</span>", 9000); return; }
+  if (st.sess === "shell" && jh.lvl > 1) { junieSay("<b>Junie</b><span class=\"jq\">The <b>%</b> means shell. Type <b>cli</b> first.</span>", 9000); return; }
+  let nx = nextCmd(step);
+  if (nx && nx.c === "configure" && st.sess === "conf" && step.c[nx.i + 1]) nx = { c: step.c[nx.i + 1], i: nx.i + 1 };
+  if (jh.lvl === 1 || !nx) { junieSay("<b>Junie</b><span class=\"jq\">" + esc(q) + "</span>" + (nx ? more : ""), 14000); return; }
+  const cmd = fitCmd(nx.c);
+  if (st.sess === "oper" && /^(set|delete|edit|rollback|commit)\b/.test(cmd)) { junieSay("<b>Junie</b><span class=\"jq\">This one changes the config. Which mode are you in? Type <b>configure</b> first.</span>", 10000); jh.lvl = 1; return; }
+  const w = cmd.split(" ");
+  if (jh.lvl === 2 && w.length === 1) { junieSay("<b>Junie</b><span class=\"jq\">One word, starting with <b>" + esc(cmd.slice(0, 2)) + "</b>. Press <b>Tab</b> once you have typed that much.</span>" + more, 14000); return; }
+  if (jh.lvl === 2) { junieSay("<b>Junie</b><span class=\"jq\">Start with <b>" + esc(w.slice(0, Math.min(2, w.length - 1) || 1).join(" ")) + "</b>, then press <b>?</b> to see what fits next.</span>" + more, 14000); return; }
+  b.classList.add("live");
+  junieSay("<b>Junie</b><span class=\"jq\">Here it is, hidden. Hover a word to reveal it, so you only peek as far as you need.</span><div class=\"bl\">" + w.map((x, i) => `<span class="bw" data-i="${i}">${esc(x)}</span>`).join("") + "</div>", 30000);
+  b.onmouseover = (e) => {
+    const s = e.target.closest(".bw");
+    if (!s || s.classList.contains("on")) return;
+    s.classList.add("on");
+    SFX.tick();
+    if (b.querySelectorAll(".bw:not(.on)").length === 0) { revealed[step.id + nx.i] = true; renderTicket(); }
+    clearTimeout(junieSay.t);
+    junieSay.t = setTimeout(() => b.classList.remove("on", "live"), 15000);
+  };
+}
 $("#junie").addEventListener("click", (e) => {
   e.stopPropagation();
   jIdleSince = Date.now();
-  const cur = TASKS.find((x) => !taskDone(x.id));
-  if (!cur) { junie("cheer", 3000); junieSay("<b>Junie</b> Ticket closed. Try <b>show vlans</b> and admire your work."); return; }
-  junie("point", 3500);
-  junieSay(`<b>Junie</b> Next up: ${esc(cur.t)}.` + (cur.id === "console" ? " The rack is on your right." : " The hint is on the right screen."));
+  junieHint();
 });
 $("#junie").addEventListener("mouseenter", () => { if (jMood === "sleep") junie("idle"); jIdleSince = Date.now(); });
 const WX = {
@@ -2628,7 +2924,8 @@ function nocTiles() {
   if (st.tk < TICKETS.length && st.met && st.met["intro" + T.id]) {
     const n = TASKS.filter((x) => x.ok()).length;
     tiles.push({ v: `${n}<small>/${TASKS.length}</small>`, l: "TICKET " + T.id });
-  } else if (st.tk >= TICKETS.length) tiles.push({ v: "ALL", l: "CLOSED", c: "ok" });
+  } else if (st.tk >= TICKETS.length) tiles.push({ v: String((st.pile || []).length), l: "ON THE PILE", c: (st.pile || []).length ? "amber" : "ok" });
+  if (storyDone()) tiles.push({ v: String(st.crowns || 0), l: "CROWNS" });
   const alarms = st.rescue ? 0 : 1;
   tiles.push({ v: String(alarms), l: alarms ? "MINOR ALARM" : "ALARMS", c: alarms ? "amber" : "ok" });
   const up = Object.values(ifInfo(st.active)).filter((p) => p.link).length;
@@ -2670,6 +2967,38 @@ addEventListener("pointerdown", (e) => { if (!e.target.closest("#fontpick") && !
 applyFont();
 st = load();
 if (st.boot) BOOT_T = st.boot;
+rebuildJobs();
+if ((st.tk || 0) > TICKETS.length) st.tk = TICKETS.length;
+if (storyDone()) {
+  const away = Math.floor((Date.now() - (st.seenAt || Date.now())) / (90 * 60e3));
+  if (away > 0) { const n = addPile(Math.min(away, 4), true, st.seenAt); if (n) setTimeout(() => toast(`While you were away, ${n} ticket${n > 1 ? "s" : ""} landed on your pile.`), 2600); }
+  if (st.tk >= TICKETS.length && !(st.pile || []).length) addPile(1, true);
+  pullJob();
+}
+renderPile();
+let nextPile = Date.now() + rnd(6, 10) * 60e3;
+setInterval(() => {
+  if (!storyDone() || document.hidden || Date.now() < nextPile) return;
+  nextPile = Date.now() + rnd(7, 12) * 60e3;
+  if ((st.pile || []).length >= 3) return;
+  addPile(1);
+  const was = st.tk >= TICKETS.length;
+  if (was && pullJob()) { clearTimeout(nextVisit); nextVisit = setTimeout(arrive, 6000); }
+  afterChange();
+}, 15000);
+$("#pile").addEventListener("click", (e) => {
+  e.stopPropagation();
+  SFX.tick();
+  const T = curTicket();
+  if (st.tk < TICKETS.length && !(st.met && st.met["intro" + T.id])) { clearTimeout(nextVisit); visit("intro"); return; }
+  if (st.tk >= TICKETS.length) {
+    if (pullJob()) { afterChange(); clearTimeout(nextVisit); visit("intro"); return; }
+    toast("The pile is clear. New tickets arrive through the day.");
+    return;
+  }
+  const n = (st.pile || []).length;
+  toast(`Ticket ${T.id} is still open.` + (n ? ` ${n} more waiting under it.` : ""));
+});
 placeScreens();
 setFs(fs);
 $("#snd-w").style.opacity = snd ? 1 : .15;
