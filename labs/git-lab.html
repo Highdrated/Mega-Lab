@@ -649,10 +649,12 @@ function drawGraph(){
   const headTip=S.branches[S.head]?S.branches[S.head].tip:null;
   S.commits.forEach(c=>node(colX(c.col),laneY(c.lane),
     c.type==='merge'?pal().merge:LANE_COLORS[c.lane%4],c.label,c.id===headTip));
+  const perTip={};
   Object.entries(S.branches).forEach(([name,b])=>{
     const t=byId[b.tip]; if(!t)return;
+    const k=perTip[b.tip]=(perTip[b.tip]||0)+1;
     const lbl=document.createElementNS(NS,'text');
-    lbl.setAttribute('x',colX(t.col)+22);lbl.setAttribute('y',laneY(t.lane)+4);
+    lbl.setAttribute('x',colX(t.col)+22);lbl.setAttribute('y',laneY(t.lane)+4+(k-1)*12);
     lbl.setAttribute('fill',LANE_COLORS[b.lane%4]);lbl.setAttribute('font-size','10');
     lbl.setAttribute('font-family','IBM Plex Mono');lbl.setAttribute('font-weight','600');
     lbl.textContent=name; svg.appendChild(lbl);
@@ -1007,8 +1009,8 @@ const MISSIONS=[
 { name:'M-05 // REJOIN',
   steps:[
     {t:'The detour worked. <b>Merge</b> brings another branch\'s work into the one you are standing on.',
-     c:'git merge scenic-route', m:'Direction matters: you merge INTO your current branch.'},
-    {t:'Confirm main has it now.', c:'cat manifest.txt', m:'The lanes joined on the graph — that is a merge.'}
+     c:'git merge scenic-route', m:'Direction matters: you merge INTO your current branch. Main had not moved since you branched, so git just slid main forward to the detour commit: a fast-forward, no merge commit needed.'},
+    {t:'Confirm main has it now.', c:'cat manifest.txt', m:'main and scenic-route now point at the same commit. A real merge commit, where two lanes join, comes in the next mission.'}
   ]},
 { name:'M-06 // COLLISION',
   steps:[
@@ -1048,7 +1050,9 @@ const MISSIONS=[
     {t:'Commit it.', c:'git commit -m "regrettable"', m:'Now it is in history. Two ways out.'},
     {t:'<b>git reset --soft HEAD~1</b> removes the last commit but keeps your file changes. Use this when you committed too early or wrote a bad message.',
      c:'git reset --soft HEAD~1', m:'HEAD~1 means "one commit before where I am". The commit vanished from the graph.'},
-    {t:'Your changes survived — put them back the way you want.',
+    {t:'Your changes survived, and --soft left them staged. git restore copies the staged version back, so unstage first.',
+     c:'git reset', m:''},
+    {t:'Now throw the change away.',
      c:'git restore crew.txt', m:'There is also --hard, which deletes the commit AND your changes. It is the one truly dangerous git command. Nothing survives it.'},
     {t:'One more. Reset only works on commits nobody else has seen. If a bad commit is already pushed, you use <b>revert</b> instead. Make one to practise on.',
      c:'write crew.txt something to undo later', m:''},
@@ -1096,8 +1100,10 @@ const MISSIONS=[
     {t:'<b>git clone</b> downloads an entire project from GitHub — every file AND the full history — and drops it in a new folder.',
      c:'git clone https://github.com/crew/handbook.git',
      m:'Heads up: this replaces the lab repo with the downloaded one, the way opening a different project would.'},
-    {t:'Look where you ended up. Clone puts you in the new folder automatically.',
-     c:'pwd', m:'It made the folder, named after the repo, and moved you into it.'},
+    {t:'Clone made a new folder named after the repo, but you are still standing outside it. Step in.',
+     c:'cd handbook', m:'Classic slip: running git commands right after a clone, still in the parent folder.'},
+    {t:'Check where you are.',
+     c:'pwd', m:'~/Desktop/handbook: inside the cloned project.'},
     {t:'See what came down with it.', c:'ls', m:'Files you never wrote — they came from the server.'},
     {t:'Now the important bit: you did not just get the files, you got the whole history.',
      c:'git log', m:'Three commits made by someone else, now sitting on your machine. That is what makes clone different from just downloading a zip.'},
@@ -1155,7 +1161,7 @@ function addCommit(label,type,extra){
   if(br.tip) parents.push(br.tip);
   (extra||[]).forEach(p=>parents.push(p));
   S.col++;
-  const c={id:'c'+S.commits.length,col:S.col,lane:br.lane,parents,label,type:type||'commit'};
+  const c={id:'c'+S.commits.reduce((mx,x)=>Math.max(mx,+x.id.slice(1)+1),0),col:S.col,lane:br.lane,parents,label,type:type||'commit'};
   S.commits.push(c); br.tip=c.id;
   S.commitFiles[c.id]=Object.assign({},repoFiles());
   return c;
@@ -1349,13 +1355,22 @@ function run(raw){
     w("Switched to branch '"+esc(n)+"'",'ok'); return after(c);
   }
 
-  m=c.match(/^git merge\s+([\w\-\/]+)$/i);
+  m=c.match(/^git merge\s+(--no-ff\s+)?([\w\-\/]+)$/i);
   if(m){
-    const n=m[1];
+    const n=m[2], noff=!!m[1];
     if(!S.branches[n]){ w('merge: '+esc(n)+' - not something we can merge','err'); return; }
     if(n===S.head){ w('Already up to date.','dim'); return; }
     const ours=S.snapshots[S.head]||{}, theirs=S.snapshots[n]||{};
-    if(sameMap(ours,theirs)){ w('Already up to date.','dim'); return after(c); }
+    const ourTip=S.branches[S.head].tip, theirTip=S.branches[n].tip;
+    if(isAncestor(theirTip,ourTip)){ w('Already up to date.','dim'); return after(c); }
+    if(!noff&&isAncestor(ourTip,theirTip)){
+      S.branches[S.head].tip=theirTip;
+      setRepoFiles(theirs);
+      S.snapshots[S.head]=Object.assign({},theirs);
+      w('Updating '+(ourTip||'')+'..'+theirTip,'dim');
+      w('Fast-forward — '+esc(S.head)+' just moved up to '+esc(n)+', no merge commit needed','ok');
+      return after(c);
+    }
 
     const conflictFile=Object.keys(theirs).find(k=>k in ours && ours[k]!==theirs[k] && bothMoved(S.head,n));
     if(conflictFile){
@@ -1370,7 +1385,7 @@ function run(raw){
     setRepoFiles(merged);
     addCommit('merge','merge',[S.branches[n].tip]);
     S.snapshots[S.head]=merged;
-    w('Merge made by the "recursive" strategy.','ok');
+    w("Merge made by the 'ort' strategy.",'ok');
     return after(c);
   }
 
@@ -1427,6 +1442,7 @@ function run(raw){
   if(m){
     const f=m[1], snap=S.snapshots[S.head]||{};
     if(!(f in snap)){ w("error: pathspec '"+esc(f)+"' did not match any tracked file",'err'); return; }
+    if(S.staged){ w('nothing changed: git restore copies the STAGED version back, and your edit is staged','warn'); w('unstage first with <b>git reset</b>, then git restore '+esc(f),'dim'); return; }
     const rn=repoNode(); rn.children[f]={type:'file',content:snap[f]};
     S.staged=false;
     S.flags.restored=true;
@@ -1497,8 +1513,7 @@ function run(raw){
       'README.md':{type:'file',content:'crew handbook - shared project'},
       'roster.txt':{type:'file',content:'captain: nova'}
     }};
-    S.cwd.push(name);
-    S.repoPath=S.cwd.slice(); S.inited=true;
+    S.repoPath=S.cwd.concat([name]); S.inited=true;
     S.commits=[]; S.col=0; S.commitFiles={};
     S.branches={main:{tip:null,lane:0}}; S.head='main';
     S.snapshots={}; S.staged=false; S.conflict=null; S.pendingMerge=null;
@@ -1516,8 +1531,8 @@ function run(raw){
   }
 
   if(/^git log/.test(c)){
-    const lane=S.branches[S.head].lane;
-    const list=S.commits.filter(x=>x.lane<=lane);
+    const tip=S.branches[S.head].tip;
+    const list=S.commits.filter(x=>isAncestor(x.id,tip)&&tip);
     if(!list.length){ w('fatal: your current branch does not have any commits yet','err'); return; }
     list.slice().reverse().forEach(x=>w('<span style="color:var(--amber)">'+x.id+
       '</span> '+esc(x.label)+(x.type==='merge'?' <span class="dim">(merge)</span>':''),'dim'));
@@ -1555,6 +1570,13 @@ function run(raw){
   w('unknown command — see the COMMAND REF tab','err');
 }
 
+function isAncestor(a,b){
+  if(!a) return true;
+  const byId={}; S.commits.forEach(x=>byId[x.id]=x);
+  const stack=[b], seen={};
+  while(stack.length){ const id=stack.pop(); if(!id||seen[id]) continue; if(id===a) return true; seen[id]=1; (byId[id]?byId[id].parents:[]).forEach(p=>stack.push(p)); }
+  return false;
+}
 function bothMoved(a,b){
   const la=S.branches[a].lane, lb=S.branches[b].lane;
   return S.commits.some(x=>x.lane===la) && S.commits.some(x=>x.lane===lb);
@@ -1624,19 +1646,19 @@ cmdEl.addEventListener('keydown',e=>{
     if(histPos<history.length-1){histPos++;cmdEl.value=history[histPos];}
     else{histPos=history.length;cmdEl.value='';} return; }
 
-  if(e.ctrlKey||e.metaKey){
+  if(e.ctrlKey&&!e.metaKey){
     const k=e.key.toLowerCase();
     if(k==='l'){ e.preventDefault(); logEl.innerHTML=''; return; }
     if(k==='u'){ e.preventDefault(); cmdEl.value=cmdEl.value.slice(cmdEl.selectionStart); cmdEl.setSelectionRange(0,0); return; }
     if(k==='k'){ e.preventDefault(); cmdEl.value=cmdEl.value.slice(0,cmdEl.selectionStart); return; }
     if(k==='w'){ e.preventDefault();
       const pos=cmdEl.selectionStart;
-      const before=cmdEl.value.slice(0,pos).replace(/\s*\S+\s*$/,'');
+      const before=cmdEl.value.slice(0,pos).replace(/\S+\s*$/,'');
       cmdEl.value=before+cmdEl.value.slice(pos);
       cmdEl.setSelectionRange(before.length,before.length); return; }
     if(k==='a'&&e.ctrlKey){ e.preventDefault(); cmdEl.setSelectionRange(0,0); return; }
     if(k==='e'&&e.ctrlKey){ e.preventDefault(); const n=cmdEl.value.length; cmdEl.setSelectionRange(n,n); return; }
-    if(k==='c'&&e.ctrlKey&&!cmdEl.selectionStart!==cmdEl.selectionEnd){
+    if(k==='c'&&cmdEl.selectionStart===cmdEl.selectionEnd){
       e.preventDefault(); wcmd(cmdEl.value+'^C'); cmdEl.value=''; histPos=history.length; return; }
   }
 });
@@ -2152,11 +2174,13 @@ const CASES = [
   {cmd:"git status", out:"On branch main\nYour branch is ahead of 'origin/main' by 1 commit.\n  (use \"git push\" to publish your local commits)\n\nnothing to commit, working tree clean", clue:"mine"},
   {cmd:["git log --oneline", "git log"], out:"e5b0d14 (HEAD -> main) add cargo manifest\na7d2e90 add nav beacon notes\n4b1e7d0 add roster", clue:"mine", needs:"fetched"},
   {cmd:["git log --oneline", "git log"], out:"e5b0d14 (HEAD -> main) add cargo manifest\na7d2e90 (origin/main) add nav beacon notes\n4b1e7d0 add roster", clue:"mine"},
-  {cmd:["git log --oneline origin/main", "git log origin/main --oneline", "git log --oneline main..origin/main"], out:"c4f81b2 (origin/main) update crew list\na7d2e90 add nav beacon notes\n4b1e7d0 add roster", clue:"theirs", needs:"fetched"},
+  {cmd:["git log --oneline origin/main", "git log origin/main --oneline"], out:"c4f81b2 (origin/main) update crew list\na7d2e90 add nav beacon notes\n4b1e7d0 add roster", clue:"theirs", needs:"fetched"},
   {cmd:["git log --oneline origin/main", "git log origin/main --oneline"], out:"a7d2e90 (origin/main) add nav beacon notes\n4b1e7d0 add roster", note:"this is what your computer last heard from GitHub. Has it changed since?"},
   {cmd:["git log --oneline origin/main..main"], out:"e5b0d14 add cargo manifest", clue:"mine"},
+  {cmd:["git log --oneline main..origin/main"], out:"c4f81b2 (origin/main) update crew list", clue:"theirs", needs:"fetched"},
   {cmd:["git log --oneline --all --graph", "git log --oneline --graph --all"], out:"* e5b0d14 (HEAD -> main) add cargo manifest\n| * c4f81b2 (origin/main) update crew list\n|/\n* a7d2e90 add nav beacon notes\n* 4b1e7d0 add roster", clue:["theirs", "mine", "diverged"], needs:"fetched"},
-  {cmd:["git pull --rebase", "git pull --rebase origin main", "git pull", "git pull origin main"], out:"From github.com:contoso/starfarer\n * branch            main       -> FETCH_HEAD\nSuccessfully rebased and updated refs/heads/main.", sets:["pulled", "fetched"], clue:"theirs"},
+  {cmd:["git pull", "git pull origin main"], out:"hint: You have divergent branches and need to specify how to reconcile them.\nhint: You can do so by running one of the following commands sometime before\nhint: your next pull:\nhint:\nhint:   git config pull.rebase false  # merge\nhint:   git config pull.rebase true   # rebase\nhint:   git config pull.ff only       # fast-forward only\nhint:\nhint: You can replace \"git config\" with \"git config --global\" to set a default\nhint: preference for all repositories. You can also pass --rebase, --no-rebase,\nhint: or --ff-only on the command line to override the configured default per\nhint: invocation.\nfatal: Need to specify how to reconcile divergent branches.", err:true, sets:"fetched", note:"git pull fetched their commit but will not guess how to combine the two histories. Say it: git pull --rebase.", needs:"!pulled"},
+  {cmd:["git pull --rebase", "git pull --rebase origin main"], out:"From github.com:contoso/starfarer\n * branch            main       -> FETCH_HEAD\nSuccessfully rebased and updated refs/heads/main.", sets:["pulled", "fetched"], clue:"theirs"},
   {cmd:"git remote -v", out:"origin\tgithub.com:contoso/starfarer.git (fetch)\norigin\tgithub.com:contoso/starfarer.git (push)"}
  ],
  hints:[
@@ -2222,7 +2246,8 @@ const CASES = [
  ],
  map:[
   {cmd:"cat index.html", out:"<!doctype html>\n<html lang=\"en\">\n<head><title>Station</title></head>\n<body>\n<<<<<<< HEAD\n<nav><a href=\"/\">Home</a> <a href=\"/crew\">Crew</a></nav>\n=======\n<nav class=\"top\"><a href=\"/\">Home</a> <a href=\"/crew\">Crew</a> <a href=\"/cargo\">Cargo</a></nav>\n>>>>>>> header\n<main>Welcome aboard.</main>\n</body>\n</html>", clue:"markers"},
-  {cmd:["git grep -n \"<<<<<<<\"", "git grep \"<<<<<<<\"", "grep -rn \"<<<<<<<\" .", "grep -n \"<<<<<<<\" index.html", "grep -rn \"<<<<<<\" .", "git diff --check HEAD~1"], out:"index.html:5:<<<<<<< HEAD", clue:"markers"},
+  {cmd:["git grep -n \"<<<<<<<\"", "git grep \"<<<<<<<\"", "grep -rn \"<<<<<<<\" .", "grep -n \"<<<<<<<\" index.html", "grep -rn \"<<<<<<\" ."], out:"index.html:5:<<<<<<< HEAD", clue:"markers"},
+  {cmd:["git diff --check HEAD~1"], out:"index.html:5: leftover conflict marker\nindex.html:7: leftover conflict marker\nindex.html:9: leftover conflict marker", clue:"markers"},
   {cmd:["git log --oneline", "git log"], out:"8e2b6c4 (HEAD -> main, origin/main) Merge branch 'header'\n2c7e0b8 shorter nav labels\n5a1f3d9 (header) new header menu\n7d4a1c0 add homepage", clue:"merge"},
   {cmd:["git log --oneline --graph", "git log --oneline --graph --all", "git log --graph --oneline"], out:"*   8e2b6c4 (HEAD -> main, origin/main) Merge branch 'header'\n|\\\n| * 5a1f3d9 (header) new header menu\n* | 2c7e0b8 shorter nav labels\n|/\n* 7d4a1c0 add homepage", clue:"merge"},
   {cmd:["git show 2c7e0b8"], out:"commit 2c7e0b8\n\n    shorter nav labels\n\n--- a/index.html\n+++ b/index.html\n@@ -4 +4 @@\n-<nav><a href=\"/\">Home page</a> <a href=\"/crew\">Crew list</a></nav>\n+<nav><a href=\"/\">Home</a> <a href=\"/crew\">Crew</a></nav>", clue:"conflict", needs:"sawHeader", sets:"sawMain"},
