@@ -63,9 +63,18 @@ body[data-theme=ink] #v-village:not(.custom) .plot .plaque:hover .pframe{border-
 @media (prefers-reduced-motion:reduce){.plot.fresh .stamp{animation:none}}
 #ambient{position:fixed;inset:0;pointer-events:none;z-index:0;overflow:hidden;display:none}
 body[data-theme=ink] #ambient{display:block}
+body[data-theme=ink][data-stage="village"] #ambient{z-index:5}
+body[data-theme=ink][data-stage="village"] #ambient .petal{opacity:.85}
 body>header,body>main{position:relative;z-index:1}
 #ambient .wash{position:absolute;inset:0;background:var(--inkbg,none) center bottom/cover no-repeat;opacity:.22;mix-blend-mode:multiply}
 #ambient .petal{position:absolute;top:-4%;width:9px;height:6px;border-radius:70% 0 70% 0;background:#b8382b;opacity:0;animation:petal linear infinite}
+#ambient.summer .petal{width:1px;height:26px;border-radius:0;background:rgba(29,27,24,.28);animation-name:rain;animation-duration:1.6s!important}
+#ambient.autumn .petal{width:12px;height:12px;border-radius:0;clip-path:polygon(50% 0,61% 30%,92% 22%,74% 50%,100% 66%,64% 68%,58% 100%,50% 76%,42% 100%,36% 68%,0 66%,26% 50%,8% 22%,39% 30%);background:#a8432a}
+#ambient.autumn .petal:nth-child(3n){background:#7d3a24}
+#ambient.autumn .petal:nth-child(4n){background:#c46a3a}
+#ambient.winter .petal{width:5px;height:5px;border-radius:50%;background:rgba(29,27,24,.22);animation-name:snowfall}
+@keyframes rain{0%{opacity:0;transform:translate(0,0) rotate(12deg)}10%{opacity:.6}100%{opacity:0;transform:translate(-18vw,108vh) rotate(12deg)}}
+@keyframes snowfall{0%{opacity:0;transform:translate(0,0)}10%{opacity:.7}50%{transform:translate(3vw,54vh)}100%{opacity:0;transform:translate(-2vw,108vh)}}
 @keyframes petal{0%{opacity:0;transform:translate(0,0) rotate(0)}10%{opacity:.55}90%{opacity:.4}100%{opacity:0;transform:translate(-14vw,108vh) rotate(540deg)}}
 @media (prefers-reduced-motion:reduce){#ambient .petal{display:none}}
 button,.brand,.brand small,#tsel{white-space:nowrap}
@@ -2211,6 +2220,23 @@ const sfx={
  click(){beep(1000,.03,'sine',.02)}
 };
 
+function hush(d,v,delay,lo,hi){const c=ctx();if(!c)return;const t=c.currentTime+(delay||0),n=Math.max(1,Math.floor(c.sampleRate*d)),b=c.createBuffer(1,n,c.sampleRate),x=b.getChannelData(0);for(let i=0;i<n;i++)x[i]=(Math.random()*2-1)*Math.pow(1-i/n,2);const src=c.createBufferSource();src.buffer=b;const f=c.createBiquadFilter();f.type='bandpass';f.frequency.setValueAtTime(lo,t);f.frequency.exponentialRampToValueAtTime(hi,t+d);f.Q.value=.8;const g=c.createGain();g.gain.value=(v||.05)*(S.vol/70);src.connect(f);f.connect(g);g.connect(c.destination);src.start(t)}
+function bell(f,v,delay,len){[1,2.76,5.4].forEach((r,i)=>beep(f*r,(len||1.6)/(i+1),'sine',(v||.04)/(i*1.6+1),delay))}
+const SFX_INK={
+ click(){hush(.05,.05,0,2600,1800)},
+ key(){if(S.keys)hush(.03,.025,0,3200,2400)},
+ ok(){beep(740,.09,'triangle',.035,0,700);beep(988,.12,'triangle',.03,.08,940)},
+ bad(){beep(196,.18,'sine',.05,0,150);hush(.08,.03,0,500,300)},
+ hint(){hush(.18,.05,0,900,3200)},
+ blip(){beep(1175,.08,'sine',.025,0,1100)},
+ magic(){hush(.25,.05,0,700,2600);bell(1175,.02,.12,.9)},
+ sputter(){hush(.14,.05,0,400,200)},
+ rule(){hush(.3,.05,0,800,2400);bell(784,.03,.18,1.4)},
+ target(){bell(523,.05,0,2.2);bell(784,.035,.35,2)},
+ build(){beep(110,.12,'sine',.08,0,70);hush(.07,.07,0,300,180);bell(659,.04,.18,2.4)}
+};
+Object.keys(SFX_INK).forEach(k=>{const o=sfx[k];sfx[k]=function(){return S.theme==='ink'?SFX_INK[k].apply(this,arguments):o.apply(this,arguments)}});
+
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 const fmt=s=>esc(s).replace(/`([^`]+)`/g,'<code>$1</code>');
@@ -2218,7 +2244,19 @@ const linked=code=>/<link[^>]*href=["']styles\.css["']/i.test(code);
 let BLOBS=[];function jsUrl(js){const u=URL.createObjectURL(new Blob([String(js)],{type:'text/javascript'}));BLOBS.push(u);if(BLOBS.length>80)URL.revokeObjectURL(BLOBS.shift());return u}
 const HXCATCH='<script>window.__hx={errs:[],logs:[]};addEventListener("error",function(e){__hx.errs.push({m:e.message,l:e.lineno,f:String(e.filename||"")})});(function(){var l=console.log;console.log=function(){__hx.logs.push([].map.call(arguments,function(x){return typeof x==="object"?JSON.stringify(x):String(x)}).join(" "));l.apply(console,arguments)}})();<\/script>';
 const wrap=(code,css,js)=>{code=String(code).replace(IMG_RE,(m,k)=>art(IMGS[k]));const base='<style>'+BASES[TH().base]+'</style>';if(/<html[\s>]/i.test(code)){if(css!=null)code=code.replace(/<link[^>]*href=["']styles\.css["'][^>]*>/i,()=>'<style>'+String(css).replace(/<\/style/gi,'')+'</style>');if(js!=null)code=code.replace(/<script\b([^>]*?)\bsrc=["']script\.js["']([^>]*)>\s*<\/script>/i,(m,a,b)=>'<script'+a+'src="'+jsUrl(js)+'"'+b+'></'+'script>');const pre=base+(/<script/i.test(code)?HXCATCH:'');return /<head[^>]*>/i.test(code)?code.replace(/<head[^>]*>/i,m=>m+pre):code.replace(/<html[^>]*>/i,m=>m+pre)}return '<!doctype html><html><head><meta charset="utf-8">'+base+(css!=null&&linked(code)?'<style>'+String(css).replace(/<\/style/gi,'')+'</style>':'')+'</head><body>'+code+'</body></html>'};
-let commsT;function comms(m){const c=$('comms');$('cmsg').textContent=m;c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
+const INK_VOICE=[
+ [/^(\d+) requirements? still open\. Adjust and check again\.$/,(m,n)=>n+(n==='1'?' stroke is':' strokes are')+' still missing. Wet the brush and try again.'],
+ [/^Target matched\. Build approved for the village\.$/,()=>'The ink matches the picture. Junie carries it to the village.'],
+ [/^(.+) built in the village\.$/,(m,x)=>x+' is painted into the village. The seal is pressed.'],
+ [/^(.+) bound into your grimoire\.$/,(m,x)=>x+' is sewn into your grimoire with red thread.'],
+ [/^New rules added to the Rulebook and the Codex\.$/,()=>'New rules brushed into the Rulebook and the Codex. Let them dry.'],
+ [/^Next target unlocked: (.+)\. School first\.$/,(m,x)=>'A new page turns: '+x+'. School first.'],
+ [/^All bugs squashed\. (.+)$/,(m,x)=>'Every blot lifted from the page. '+x],
+ [/^Bug hunt: (\d+) bugs planted/,(m,n)=>'Ink blots: '+n+' slipped into your files. Lift them until every step is green.'],
+ [/^The tourney begins/,()=>'The brush duel begins: ten rounds. Match each target. First check, no hint = flawless.']
+];
+const inkVoice=m=>{if(S.theme!=='ink')return m;for(const [re,f] of INK_VOICE){const x=String(m).match(re);if(x)return f(...x)}return m};
+let commsT;function comms(m){m=inkVoice(m);const c=$('comms');$('cmsg').textContent=m;c.classList.add('flash');clearTimeout(commsT);commsT=setTimeout(()=>c.classList.remove('flash'),1600)}
 const T=()=>TARGETS[S.t];
 const maxT=()=>{let m=0;while(m<TARGETS.length-1&&S.done[m])m++;return m};
 const schoolDone=t=>TARGETS[t].rules.every(r=>S.learned.includes(r));
@@ -2229,7 +2267,10 @@ function drillsFor(t){
   return list;
 }
 
-function ambient(){let a=$('ambient');if(!a){a=document.createElement('div');a.id='ambient';a.setAttribute('aria-hidden','true');a.innerHTML='<div class="wash"></div>'+Array.from({length:9},(_,i)=>'<i class="petal" style="left:'+(8+i*11+(i%3)*4)+'%;animation-duration:'+(16+(i*7)%11)+'s;animation-delay:-'+(i*3.3).toFixed(1)+'s;transform:scale('+(.7+(i%4)*.15)+')"></i>').join('');document.body.prepend(a)}a.style.setProperty('--inkbg',ART_I.backdrop?'url('+ART_I.backdrop+')':'none')}
+const SEASONS={spring:{n:'Spring',line:'Petals on the wind.',m:[3,4,5]},summer:{n:'Summer',line:'Warm rain on the roofs.',m:[6,7,8]},autumn:{n:'Autumn',line:'Maple leaves on the path.',m:[9,10,11]},winter:{n:'Winter',line:'Snow on the village.',m:[12,1,2]}};
+const season=()=>{const m=new Date().getMonth()+1;return Object.keys(SEASONS).find(k=>SEASONS[k].m.includes(m))};
+function inkGreet(){const h=new Date().getHours(),se=SEASONS[season()];return (h<6?'Late ink. The village sleeps.':h<12?'Morning. The ink stone is wet.':h<18?'Afternoon. Fresh paper on the desk.':'Evening. Lanterns along the path.')+' '+se.line}
+function ambient(){let a=$('ambient');if(!a){a=document.createElement('div');a.id='ambient';a.setAttribute('aria-hidden','true');a.innerHTML='<div class="wash"></div>'+Array.from({length:14},(_,i)=>'<i class="petal" style="left:'+(4+i*7+(i%3)*3)+'%;animation-duration:'+(16+(i*7)%11)+'s;animation-delay:-'+(i*2.3).toFixed(1)+'s;transform:scale('+(.7+(i%4)*.15)+')"></i>').join('');document.body.prepend(a)}a.style.setProperty('--inkbg',ART_I.backdrop?'url('+ART_I.backdrop+')':'none');a.className=season();if(S.theme==='ink'&&!ambient.hi){ambient.hi=1;comms(inkGreet())}}
 function go(v){if(v!=='tourney'&&typeof tnTick!=='undefined'){clearInterval(tnTick);tnTick=null}S.stage=v;save();render()}
 function render(){
   if(document.body)document.body.dataset.stage=S.stage;
@@ -2914,7 +2955,7 @@ async function takeHome(){
 document.querySelectorAll('.stg').forEach(b=>b.onclick=()=>{sfx.click();if(b.dataset.v==='practice'||b.dataset.v==='trial')PR=null;go(b.dataset.v)});
 $('treeb').onclick=()=>{const t=$('tree');t.innerHTML=treeHtml();t.classList.toggle('on');sfx.click()};
 $('tsel').onchange=e=>{S.t=+e.target.value;S.les=0;S.drill=schoolDone(S.t)?drillsFor(S.t).length:0;S.stage=schoolDone(S.t)?'target':'school';save();sfx.click();render()};
-$('theme').onclick=()=>{const k=Object.keys(THEMES);S.theme=k[(k.indexOf(S.theme)+1)%k.length];save();sfx.click();$('ed').dataset.t='';render();comms(TH().hello)};
+$('theme').onclick=()=>{const k=Object.keys(THEMES);S.theme=k[(k.indexOf(S.theme)+1)%k.length];save();sfx.click();$('ed').dataset.t='';render();comms(S.theme==='ink'?TH().hello+' '+SEASONS[season()].line:TH().hello)};
 $('mute').onclick=()=>{if(!S.sfx){S.sfx=true;S.keys=false}else if(!S.keys){S.keys=true}else{S.sfx=false;S.keys=false}save();render();sfx.click()};
 $('vol').oninput=e=>{S.vol=+e.target.value;save()};
 const TOURNEY=[
