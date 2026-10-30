@@ -145,7 +145,7 @@
   #tbCurtains .tie { position: absolute; top: 58%; width: 16%; height: 3%; background: linear-gradient(#f0d48a,#a67c35); border-radius: 2px; transition: opacity .6s; }
   #tbCurtains .tie.l { left: 8%; } #tbCurtains .tie.r { right: 8%; }
   #tbStage.shut .cur { width: 52%; } #tbStage.shut .tie { opacity: 0; }
-  @media (min-width: 900px) {
+  @media (min-width: 1101px) {
     body[data-theme="train"] .deck { display: block; padding: 0; height: 100vh; animation: fpsway 2.6s ease-in-out infinite; }
     body[data-theme="train"] .topbar { position: absolute; left: 14px; right: 14px; top: 8px; height: 36px; clip-path: none; background: rgba(14,8,5,0.72); border-color: var(--edge); }
     body[data-theme="train"] .panel.nav { position: absolute; left: var(--tbLl); top: var(--tbLt); width: var(--tbLw); height: var(--tbLh); }
@@ -304,6 +304,7 @@
   .chi-fill { height: 100%; width: 0%; background: linear-gradient(90deg, var(--edge2), var(--cyan)); transition: width 0.4s ease; }
   .flow-stats { font-size: 11px; color: var(--dim); line-height: 1.85; margin-top: 10px; }
   .flow-stats b { color: var(--text); font-weight: normal; float: right; }
+  .flow-stats span { display: block; }
   .theme-row { display: flex; flex-wrap: wrap; align-items: center; gap: 5px; margin-top: 12px; }
   .theme-row .tr-lbl { font-size: 9px; letter-spacing: 2px; color: var(--tdim); margin-right: 2px; }
   .theme-row button {
@@ -714,12 +715,6 @@
 .fp-homebtn:hover{color:var(--text);background:var(--track)}
 .fp-xlink{color:var(--amber);text-decoration:none;display:inline-flex;align-items:center}
 @media (max-width:900px){
-#flight .fp-wrap{height:auto;padding:24px 16px;grid-template-rows:auto 220px auto auto}
-#flight .fp-head{padding:12px 16px;grid-template-columns:1fr;row-gap:8px}
-#flight .fp-head .r{flex-wrap:wrap;row-gap:8px;column-gap:16px}
-#flight .fp-head .l .fp-hide,#flight .fp-head .fp-sep{display:none}
-#flight .fp-mid{grid-template-columns:1fr;row-gap:16px}
-#flight .fp-next,#flight .fp-brief,#flight .fp-scan{grid-column:auto}
 #flight .fp-dock{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 #flight .fp-dock button,#flight .fp-dock a{padding:16px}
 #flight .fp-dock a{grid-column:1/-1}
@@ -915,7 +910,6 @@ function setPrompt() {
   const p = $("prompt");
   if (mode === "ghost") { p.textContent = "⌨"; return; }
   if (fsEdit) { p.textContent = String(fsEdit.lines.length + 1).padStart(3) + " >"; return; }
-  if (blk) { p.textContent = "..."; return; }
   if (blk) { p.textContent = "..."; return; }
   if (wcap) { p.textContent = "..."; return; }
   if (fcap) { p.textContent = "..."; return; }
@@ -1299,7 +1293,7 @@ function loadState() {
     if (d.bestChi) bestChi = d.bestChi;
     if (d.kata) Object.assign(kata, d.kata);
     if (d.snd) sndOn = true;
-    if (d.theme && d.theme !== "obsidian") setTheme(d.theme);
+    if (d.theme) setTheme(d.theme);
     renderScroll();
     return true;
   } catch (e) { return false; }
@@ -3637,7 +3631,7 @@ function childrenOf(p) {
   return [...out].sort();
 }
 function shortCwd() { return cwd.startsWith("/home/kaatje") ? "~" + cwd.slice(12) : cwd; }
-function boxPrompt() { return (venvActive ? "(" + venvActive + ") " : "") + "kaatje@" + HOST + ":" + shortCwd() + "$"; }
+function boxPrompt() { return (venvActive ? "(" + venvActive.split("/").pop() + ") " : "") + "kaatje@" + HOST + ":" + shortCwd() + "$"; }
 function fsSave() {
   try { localStorage.setItem("pyle-fs-v1", JSON.stringify({ fs: FS, cwd, venv: venvActive, services, screens })); } catch (e) {}
 }
@@ -3862,7 +3856,7 @@ function boxCmd(raw) {
         line("(simulated server — it is 'running'. ps to see it, Ctrl+C in real life to stop)", "c-dim");
         return true;
       }
-      if (a[1] === "-c") { runPyFile.call(null, null); const code = a.slice(2).join(" "); pyInline(code); return true; }
+      if (a[1] === "-c") { const code = a.slice(2).join(" "); pyInline(code); return true; }
       if (a[1] && a[1].endsWith(".py")) { runPyFile(norm2(a[1]), a.slice(2)); return true; }
       if (!a[1]) { line("Entering the interpreter — use the sandbox command for that.", "c-dim"); return true; }
       line("python3: can't open file '" + a[1] + "'", "c-red"); return true;
@@ -3872,7 +3866,7 @@ function boxCmd(raw) {
       if (!p.includes("activate")) { line("source: " + p + ": not an activation script", "c-red"); return true; }
       const venvDir = norm2(p).replace(/\/bin\/activate$/, "");
       if (!exists(venvDir)) { line("bash: " + p + ": No such file or directory", "c-red"); return true; }
-      venvActive = venvDir.split("/").pop();
+      venvActive = venvDir;
       setPrompt(); fsSave();
       return true;
     }
@@ -3904,7 +3898,7 @@ function boxCmd(raw) {
       }
       if (a[1] === "list" || a[1] === "freeze") {
         if (redir) { FS[norm2(redir[2])] = pkgs.join("\n") + "\n"; fsSave(); return true; }
-        if (!pkgs.length) { line("(no packages installed in " + venvActive + ")", "c-dim"); return true; }
+        if (!pkgs.length) { line("(no packages installed in " + venvActive.split("/").pop() + ")", "c-dim"); return true; }
         pkgs.forEach(p => line(a[1] === "freeze" ? p : p.replace("==", "  ")));
         return true;
       }
@@ -4459,7 +4453,7 @@ const CATEGORIES = [
   { h: "TOOLS", items: [
     ["quests", "Quest log", "full progress across everything"],
     ["scroll", "Codex", "print your learned forms"],
-    ["theme", "Theme", "obsidian / paper / ember"]
+    ["theme", "Theme", "train / space / obsidian / paper / ember"]
   ]}
 ];
 function buildCatMenu() {
@@ -4476,6 +4470,7 @@ function buildCatMenu() {
   m.querySelectorAll("button").forEach(b => b.addEventListener("click", () => {
     m.classList.remove("on");
     const c = b.dataset.c;
+    if (cliMode === "shell" && c === "exit()") { line("You are already in the shell.", "c-dim"); cmd.focus(); return; }
     if (cliMode === "shell" && c !== "exit()") { line("(entering python3 for you)", "c-dim"); cliMode = "python"; setStatus(); logEvent("python 3.12 interpreter started", "ok"); }
     echoPrompt(esc(c));
     handle(c);
@@ -4729,6 +4724,7 @@ const SCENARIOS = [
     "broken": "stamp = datetime.utcnow().isoformat()\nprint(len(stamp) > 10)",
     "diagnosis": "utcnow() returns a naive datetime with no timezone attached — a genuine source of bugs, which is why it was deprecated.",
     "expect": ["True"],
+    "require": ["datetime.now("],
     "hints": [
       "datetime.now() takes a timezone argument.",
       "datetime.now(UTC) is the replacement.",
@@ -4908,7 +4904,6 @@ async function scRun() {
     return;
   }
   if (s.forbid_in_fn) {
-    const body = user.split(/\n(?=\S)/)[0] || "";
     if (/def [\s\S]*?print\(/.test(user.split("\n").filter(l => l.startsWith("    ") || l.startsWith("def ")).join("\n"))) {
       wbOutMsg('<span class="wb-fail">The function still prints. Its job is to RETURN the status \u2014 the caller prints.</span>');
       return;
@@ -6489,7 +6484,7 @@ const MODULES = [
         "task": "That switch has 48 ports. Store the number in port_count.",
         "answers": ["port_count = 48"],
         "chip": "NUMBER",
-        "note": "Numbers take no quotes. 87 is an int."
+        "note": "Numbers take no quotes. 48 is an int."
       },
       {
         "teach": [
@@ -6505,7 +6500,7 @@ const MODULES = [
         "teach": ["input() asks the person at the keyboard a question and hands back whatever they type — always as text."],
         "task": "Stop hardcoding the device. Ask which host to check: prompt \"Hostname: \", store the answer in target.",
         "answers": ["target = input(\"Hostname: \")"],
-        "out": ["Name: kaatje"],
+        "out": ["Hostname: sw-core-01"],
         "chip": "INPUT",
         "note": "input() pauses, shows the prompt, returns whatever gets typed — always as text."
       },
@@ -6931,18 +6926,18 @@ const MODULES = [
         "note": "Parameters are the function's own local variables."
       },
       {
-        "teach": ["A parameter can carry a fallback: steps=1 means callers may leave it out."],
+        "teach": ["A parameter can carry a fallback: retries=1 means callers may leave it out."],
         "task": "Most calls only want one attempt. Define connect taking host, and retries defaulting to 1.",
         "answers": ["def connect(host, retries=1):"],
         "chip": "DEFAULT",
-        "note": "steps=1 makes the argument optional."
+        "note": "retries=1 makes the argument optional."
       },
       {
-        "teach": ["Arguments fill parameters in order: the first goes to direction, the second to steps."],
+        "teach": ["Arguments fill parameters in order: the first argument goes to the first parameter, the second to the second."],
         "task": "This one is flaky, give it three tries. Call connect for \"sw-core-01\" with 3 retries.",
         "answers": ["connect(\"sw-core-01\", 3)"],
         "chip": "ARGS",
-        "note": "Arguments land in order: direction, then steps."
+        "note": "Arguments land in order: first argument to first parameter, second to second."
       },
       {
         "teach": ["return can hold a full expression — Python computes it first, then sends the result back."],
@@ -7778,7 +7773,7 @@ const MODULES = [
         "task": "creds is already a list in the right order. Call connect spreading the list creds as its arguments.",
         "answers": ["connect(*creds)"],
         "chip": "UNPACK ARGS",
-        "note": "If steps is ['north', 3], this calls move('north', 3). Two stars do the same for a dict into keyword arguments."
+        "note": "If creds is ['10.0.0.1', 2222], this calls connect('10.0.0.1', 2222). Two stars do the same for a dict into keyword arguments."
       },
       {
         "teach": ["A lambda is a one-line unnamed function. Useful only where a tiny function is expected as a value."],
@@ -7880,7 +7875,7 @@ const MODULES = [
         "task": "Print the host of sw.",
         "answers": ["print(sw.host)"],
         "chip": "READ ATTRIBUTE",
-        "note": "No brackets — name is a value, not something to run. This is the same dot as random.pi or f.read.",
+        "note": "No brackets — host is a value, not something to run. This is the same dot as math.pi or f.read.",
         "out": ["sw-core-01"]
       },
       {
@@ -7896,7 +7891,7 @@ const MODULES = [
         "answers": ["def __str__(self):"],
         "indent": 4,
         "chip": "__STR__",
-        "note": "Return a string from it and print(d) shows something readable. A small touch that makes debugging far easier."
+        "note": "Return a string from it and print(sw) shows something readable. A small touch that makes debugging far easier."
       },
       {
         "teach": [
@@ -8011,7 +8006,7 @@ const MODULES = [
         "task": "Store the current date and time in now.",
         "answers": ["now = datetime.now()"],
         "chip": "NOW",
-        "note": "datetime.now() is local time; datetime.utcnow() is UTC. On servers, prefer UTC and convert only for display."
+        "note": "datetime.now() is local time; datetime.now(timezone.utc) is UTC. On servers, prefer UTC and convert only for display."
       },
       {
         "teach": ["strftime formats a datetime into text using placeholders: %Y year, %m month, %d day, %H hour, %M minute."],
@@ -8050,7 +8045,7 @@ const MODULES = [
         "note": "A small language of its own. Worth learning slowly; worth not overusing."
       },
       {
-        "teach": ["\\d means any digit, + means one or more. Together d+ finds runs of numbers."],
+        "teach": ["\\d means any digit, + means one or more. Together \\d+ finds runs of numbers."],
         "task": "Find every run of digits in line, store the list in nums. Pattern: r\"\\d+\"",
         "answers": ["nums = re.findall(r\"\\d+\", line)"],
         "chip": "FINDALL",
@@ -8341,7 +8336,7 @@ const BUGS = [
     "code": ["print(\"Port \" + 3)"],
     "bad": 0,
     "err": "TypeError: can only concatenate str (not \"int\") to str (line 1)",
-    "fix": "print(\"Port \" + str(3)),print(f\"Port {3}\"),print(\"Port\", 3)",
+    "fix": ["print(\"Port \" + str(3))", "print(f\"Port {3}\")", "print(\"Port\", 3)"],
     "hint": "Text + number won't glue. Wrap the number in str(), or use an f-string."
   },
   {
@@ -8992,7 +8987,7 @@ function runFieldLine(inputLine) {
   }
   drawField();
   const m = MISSIONS[field.mission];
-  if (m.check(field)) {
+  if (!runFieldLine._depth && m.check(field)) {
     score.missions++; setStatus(); carPay(40, "mission");
     blank(); line(m.name + " COMPLETE.", "c-green");
     sndChime();
@@ -9065,6 +9060,8 @@ function execDrone(st) {
     const dist = f.r + f.c;
     if (!spend(Math.max(1, Math.ceil(dist / 2)))) return true;
     f.r = 0; f.c = 0; f.battery = 100;
+    f.cornersHit = f.cornersHit || {};
+    f.cornersHit["0_0"] = true;
     line("Straight-line flight to dock. Battery 100%.", "c-blue");
     return true;
   }
@@ -9236,8 +9233,8 @@ function handle(raw) {
   if (/^ghost [1-6]$/.test(t)) { startGhost(parseInt(t.slice(6), 10)); return; }
   if (t === "forge") { forgeMenu(); return; }
   if (/^forge [1-6]$/.test(t)) { startForge(parseInt(t.slice(6), 10)); return; }
-  if (t === "theme") { line("themes: space (default) - obsidian - paper (day watch) - ember (long haul)", "c-dim"); line("usage: theme space", "c-dim"); return; }
-  if (/^theme (space|obsidian|paper|ember)$/.test(t)) {
+  if (t === "theme") { line("themes: train (default) - space - obsidian - paper (day watch) - ember (long haul)", "c-dim"); line("usage: theme space", "c-dim"); return; }
+  if (/^theme (train|space|obsidian|paper|ember)$/.test(t)) {
     setTheme(t.slice(6));
     line("Theme set: " + t.slice(6), "c-green");
     return;
@@ -9307,7 +9304,7 @@ function showHelp() {
   line("  field              fly Junie with drone.move() etc.", "c-dim");
   line("  forge / forge 1-6  write full programs from specs, no ghost", "c-dim");
   line("  hint               inside drills/forge: reveal the line shape", "c-dim");
-  line("  theme <name>       obsidian - paper - ember", "c-dim");
+  line("  theme <name>       train - space - obsidian - paper - ember", "c-dim");
   line("  scroll             print your learned forms (handy on mobile)", "c-dim");
   line("  tour               what Pyle contains and the order to use it", "c-dim");
   line("  quests             quest log: every module + mode with progress", "c-dim");
@@ -9325,9 +9322,6 @@ function showHelp() {
   line("  wipe               erase all saved progress (asks to confirm)", "c-dim");
   line("  score · clear · menu", "c-dim");
   line("  keys: ↑↓ history · Tab complete/indent · ^C cancel · ^D exit · ^L clear", "c-dim");
-  line("  blocks: a line ending in : opens one — the prompt becomes ... and", "c-dim")
-  ;
-  line("  auto-indents; a blank line runs the block, like a real REPL", "c-dim");
   line("  blocks: a line ending in : opens one — the prompt becomes ... and", "c-dim");
   line("  auto-indents; a blank line runs it, exactly like a real REPL", "c-dim");
 }
@@ -9355,7 +9349,7 @@ function tabComplete() {
       cands = ["help", "academy", "workbook", "scenarios", "grimoire", "modules", "start", "ghost", "bugs", "field", "forge", "sandbox", "exam", "kata", "quests", "scroll", "cheatsheet", "score", "save", "sound", "clear", "menu", "theme", "hint", "skip", "what is", "exit()"];
       if (mode === "field") cands = cands.concat(['drone.move("', "drone.scan()", "drone.spray()", "drone.water()", "drone.home()", "drone.pos()", "mission", "map"]);
     } else if (first === "start") cands = ["zero", "basics", "numstr", "logic", "loops", "lists", "funcs", "errors", "imports", "files", "blueprint", "tuples", "comprehensions", "args", "classes", "iterators", "toolbox", "testing", "craft", "servers", "web", "all", "review"];
-    else if (first === "theme") cands = ["obsidian", "paper", "ember"];
+    else if (first === "theme") cands = ["train", "space", "obsidian", "paper", "ember"];
     else if (first === "ghost" || first === "forge") cands = ["1", "2", "3", "4", "5", "6"];
   } else return;
   const m = cands.filter(c => c.toLowerCase().startsWith(token.toLowerCase()));
@@ -10214,7 +10208,7 @@ carRender();
   setTimeout(jolt,4000);
   const PAN={L:[17.4,29.5,16.3,49.8],C:[34.7,23,30.8,55.4],R:[66.5,29.5,16.3,49.8]};
   function trainLayout(){
-    if(document.body.dataset.theme!=="train"||innerWidth<900)return;
+    if(document.body.dataset.theme!=="train"||innerWidth<1101)return;
     const vw=innerWidth,vh=innerHeight,top=54,bot=vh-40;
     let Sw=(vw-28)/0.654,Hs=Sw*IH/IW;
     if(Hs*0.564>bot-top){Hs=(bot-top)/0.564;Sw=Hs*IW/IH}

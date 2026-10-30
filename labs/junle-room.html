@@ -172,7 +172,6 @@ body.v-focus .hot { pointer-events: none; }
 .unplug { position: absolute; right: 22px; bottom: 34px; padding: 7px 12px; border: 1px solid rgba(217, 211, 196, .18); border-radius: 4px; font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 .unplug:hover { color: var(--bad); border-color: rgba(224, 122, 95, .4); }
 .unplug[hidden] { display: none; }
-.prt { }
 body.cur, body.cur * { cursor: none !important; }
 #cur { position: fixed; left: 0; top: 0; z-index: 50; pointer-events: none; transform: translate(-100px, -100px); }
 #cur svg { position: absolute; left: -12px; top: -12px; width: 24px; height: 24px; overflow: visible; }
@@ -592,20 +591,20 @@ const utc = (t) => new Date(t).toISOString().slice(0, 19).replace("T", " ") + " 
 function fresh() {
   seq = 0;
   const f = cfgFromSet(FACTORY);
-  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [], rescue: false, ctimes: [BOOT_T], met: {}, tk: 0, tkStart: 0, links: {}, ran: {}, cwho: [] };
+  return { active: f, cand: clone(f), commits: [clone(f)], sess: "login", pw: null, plugged: null, seenCli: false, log: [], edit: [], rescue: false, ctimes: [BOOT_T], met: {}, tk: 0, tkStart: 0, links: {}, ran: {}, cwho: [], estk: [], pendingPlain: null };
 }
 function load() {
   try {
     const raw = JSON.parse(localStorage.getItem(SAVE) || "null");
     if (raw && raw.v === 1) {
-      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [] };
+      return { active: deser(raw.active), cand: deser(raw.cand), commits: raw.commits.map(deser), sess: raw.sess, pw: raw.pw, plugged: raw.plugged, seenCli: raw.seenCli, log: raw.log || [], edit: raw.edit || [], rescue: !!raw.rescue, ctimes: raw.ctimes || [BOOT_T], boot: raw.boot, met: raw.met || {}, tk: raw.tk || 0, tkStart: raw.tkStart || 0, links: raw.links || {}, ran: raw.ran || {}, cwho: raw.cwho || [], estk: raw.estk || [], pendingPlain: raw.pendingPlain || null };
     }
   } catch (e) {}
   return fresh();
 }
 function save() {
   try {
-    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
+    localStorage.setItem(SAVE, JSON.stringify({ v: 1, active: ser(st.active), cand: ser(st.cand), commits: st.commits.slice(-12).map(ser), sess: ["pw1", "pw2", "exitq", "delq", "pass", "rebootq", "zeroq"].includes(st.sess) ? (st.sess === "pass" ? "login" : ["rebootq", "zeroq"].includes(st.sess) ? "oper" : "conf") : st.sess, rescue: st.rescue, ctimes: st.ctimes.slice(-12), boot: BOOT_T, met: st.met || {}, tk: st.tk || 0, tkStart: st.tkStart || 0, links: st.links || {}, ran: st.ran || {}, cwho: st.cwho || [], estk: st.estk || [], pendingPlain: st.pendingPlain || null, pw: st.pw, plugged: st.plugged, seenCli: st.seenCli, log: st.log.slice(-160), edit: st.edit }));
   } catch (e) {}
 }
 
@@ -637,7 +636,6 @@ function prompt() {
 }
 const editHdr = () => "{master:0}[edit" + (st.edit.length ? " " + st.edit.join(" ") : "") + "]";
 
-const out = [];
 function say(...lines) { for (const l of lines) for (const x of String(l).split("\n")) st.log.push(x); }
 function caret(col, msg) { say(" ".repeat(col) + "^", msg); }
 function prePrompt() {
@@ -650,7 +648,7 @@ function banner() {
   say("", (h || "Amnesiac") + " (ttyu0)", "");
 }
 
-let pendingPw = null, pendingDel = null, scratchPw = null, wasConf = false;
+let pendingPw = null, pendingDel = null, scratchPw = null;
 
 function run(raw) {
   const pr = prompt();
@@ -687,13 +685,12 @@ function doPass(line) {
 function loginOk() {
   say("", `--- JUNOS ${JVER} Kernel 64-bit  JNPR-12.1-20230120.fbd5ec7_buil`);
   st.sess = "shell";
-  tick("login");
 }
 function doShell(line) {
   const t = line.trim();
   if (!t) return;
   const w = t.split(/\s+/)[0];
-  if (w === "cli") { st.sess = "oper"; st.seenCli = true; tick("cli"); prePrompt(); return; }
+  if (w === "cli") { st.sess = "oper"; st.seenCli = true; prePrompt(); return; }
   if (w === "exit" || w === "logout") { st.sess = "login"; banner(); return; }
   if (w === "ls") { say(".cshrc   .history   .login   .profile"); return; }
   if (w === "pwd") { say("/root"); return; }
@@ -768,6 +765,7 @@ function doOper(line, col, fromRun) {
     if (!sameCfg(st.cand, st.active)) say("The configuration has been changed but not committed");
     st.sess = "conf";
     st.edit = [];
+    st.estk = [];
     prePrompt();
     return;
   }
@@ -918,7 +916,6 @@ function doRebootQ(line) {
   st.sess = "login";
   st.edit = [];
   BOOT_T = Date.now() - 95e3;
-  st.rescue = st.rescue;
   banner();
 }
 function doZeroQ(line) {
@@ -940,7 +937,7 @@ function cfgOut(cfg, r, pipes) {
   } else {
     printTree(subtree(cfg, r), 0, o);
   }
-  if (!ds && r.lv.length === 0 && r.k == null) o.unshift(`## Last changed: ${new Date().toISOString().slice(0, 19).replace("T", " ")} UTC`, `version ${JVER};`);
+  if (!ds && r.lv.length === 0 && r.k == null) o.unshift(cfg === st.active ? `## Last commit: ${utc(st.ctimes[st.ctimes.length - 1])} by ${(st.cwho || [])[st.ctimes.length - 1] || "root"}` : `## Last changed: ${utc(Date.now())}`, `version ${JVER};`);
   return o;
 }
 
@@ -972,7 +969,6 @@ function vlansOf(cfg) {
   for (const s of cfg.values()) if (s.lv[0] === "vlans" && s.lv.length === 2 && !out.find((o) => o.name === s.lv[1])) out.push({ name: s.lv[1], id: null });
   return out;
 }
-const pad = (s, n) => (s + " ".repeat(n)).slice(0, Math.max(n, s.length + 1) > n ? n : n);
 const padr = (s, n) => s.length >= n ? s + " " : s + " ".repeat(n - s.length);
 
 function showIfs(rest, col) {
@@ -1017,9 +1013,8 @@ function showVlans(rest) {
   for (const v of vl) {
     if (rest[0] && rest[0].v !== v.name) continue;
     const ports = Object.entries(info).filter(([n, x]) => x.eth && (x.members.includes(v.name) || x.members.includes(String(v.id)) || (x.mode === "trunk" && x.members.includes("all")))).map(([n, x]) => n + ".0" + (x.link ? "*" : ""));
-    o.push(padr("default-switch", 24) + padr(v.name, 22) + padr(String(v.id == null ? "" : v.id), 13) + (ports[0] || ""));
-    for (const p of ports.slice(1)) o.push(" ".repeat(59) + p);
-    o.push("");
+    o.push((padr("default-switch", 24) + padr(v.name, 22) + String(v.id == null ? "" : v.id)).trimEnd());
+    for (const p of ports) o.push(" ".repeat(59) + p);
   }
   return o;
 }
@@ -1060,11 +1055,12 @@ function doConf(line, col) {
       const r = walk(here.node, rest, "edit", here.lv);
       if (!r.ok) { errAt(r); break; }
       if (r.k != null) { caret(col + rest[rest.length - 1].s, "syntax error."); break; }
+      (st.estk = st.estk || []).push(st.edit.slice());
       st.edit = r.lv.slice();
       break;
     }
     case "up": case "top": {
-      if (cmd === "top") st.edit = [];
+      if (cmd === "top") { st.edit = []; st.estk = []; }
       else {
         const n = rest[0] && /^\d+$/.test(rest[0].v) ? +rest[0].v : 1;
         st.edit = popLevels(st.edit, n);
@@ -1072,7 +1068,10 @@ function doConf(line, col) {
       break;
     }
     case "exit": case "quit": {
-      if (st.edit.length) { st.edit = popLevels(st.edit, 1); break; }
+      if (rest[0] && !matchKw(rest[0].v, ["configuration-mode"]).k) { caret(col + rest[0].s, "syntax error."); break; }
+      if (st.edit.length && !rest[0]) { st.edit = (st.estk && st.estk.length) ? st.estk.pop() : []; break; }
+      st.edit = [];
+      st.estk = [];
       if (!sameCfg(st.cand, st.active)) { say("The configuration has been changed but not committed"); st.sess = "exitq"; return; }
       say("Exiting configuration mode");
       st.sess = "oper";
@@ -1345,7 +1344,6 @@ function syncTasks() { TASKS = curTicket().steps; }
 function taskDone(id) { const s = TASKS.find((x) => x.id === id); return !!(s && s.ok()); }
 let revealed = {};
 let lastDone = -1;
-function tick() {}
 
 function renderTicket() {
   syncTasks();
@@ -1529,7 +1527,7 @@ function drawPlugged() {
   w.innerHTML = cablePath(x, y, x + 30, innerHeight + 40, CCOL[st.plugged.cable]) + `<rect x="${x - r.width * .45}" y="${y - r.height * .45}" width="${r.width * .9}" height="${r.height * .9}" rx="2" fill="${CCOL[st.plugged.cable]}" stroke="#000" stroke-opacity=".4"/>`;
 }
 function cablePath(x1, y1, x2, y2, col) {
-  const mx = (x1 + x2) / 2, sag = Math.abs(x2 - x1) * .15 + 60;
+  const sag = Math.abs(x2 - x1) * .15 + 60;
   return `<path d="M${x1} ${y1} C${x1} ${y1 + sag}, ${x2} ${y2 - sag}, ${x2} ${y2}" fill="none" stroke="#000" stroke-opacity=".45" stroke-width="9" stroke-linecap="round"/><path d="M${x1} ${y1} C${x1} ${y1 + sag}, ${x2} ${y2 - sag}, ${x2} ${y2}" fill="none" stroke="${col}" stroke-width="6" stroke-linecap="round"/>`;
 }
 
@@ -1585,6 +1583,8 @@ function plug(cable, port) {
     setTimeout(() => { closeCu(); setMain("console"); setView("sit"); focusCmd(); }, 1300);
   } else if (port === "mgmt") {
     status(cable === "patch" ? "Link light on the management port. But a factory-default switch has no management IP, so there is nothing to SSH to. Console in first." : "MGMT is an Ethernet port (me0), not a serial console. The terminal stays silent.", "bad");
+  } else if (P.kind === "console") {
+    status(`The ${P.label} is a serial port. An Ethernet patch cable gets no link there, and no prompt.`, "bad");
   } else {
     status(cable === "patch" ? `Link on ${port}. Data ports carry traffic, not a CLI. No prompt for you here.` : `${port} is a data port. It speaks Ethernet, not serial, so the console stays silent.`, "bad");
   }

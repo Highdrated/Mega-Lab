@@ -3,7 +3,6 @@ import { P, save, reset } from "../core/profile.js";
 import { catList, diffList } from "../core/catalog.js";
 import { go } from "../core/router.js";
 import { updateHud, renderShelf } from "../progress/hud.js";
-import { forgetTheme } from "../core/theme.js";
 import * as trackPicker from "../lang/track.js";
 import * as themes from "../core/themes.js";
 import * as cat from "../progress/cat.js";
@@ -105,7 +104,7 @@ export function wire() {
     btn.classList.remove("armed");
     btn.textContent = "Reset all progress";
     applyMotion();
-    forgetTheme();
+    themes.apply();
     render();
     renderShelf();
     updateHud(false);

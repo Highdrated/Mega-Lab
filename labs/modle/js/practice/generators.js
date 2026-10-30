@@ -52,11 +52,6 @@ function toBinWorking(n) {
 }
 const FLAGS = ["flags", "mask", "bits", "state", "byte", "n", "raw", "code"];
 
-function named(expr, sym, val, pool) {
-  const name = pick(pool || NAMES);
-  return name + " = " + val + "\n>>> " + expr.split(String(val)).join(name);
-}
-
 let lastKind = null;
 
 export const generators = {

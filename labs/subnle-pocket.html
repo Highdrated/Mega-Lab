@@ -1143,7 +1143,7 @@ function press(k) {
   const kind = CATS[G.q.cat].kind;
   if (kind === "yn" || kind === "mc") {
     if (k === "ok" || k === "⌫") return;
-    if (kind === "yn" && k !== "yes" && k !== "no") return;
+    if (kind === "yn" ? k !== "yes" && k !== "no" : !G.q.opts.includes(k)) return;
     G.buf = k;
     return check();
   }
@@ -1329,13 +1329,13 @@ W.block = (el, o, emit) => {
     <label class="rl">address <input type="range" min="0" max="255" value="${st.oct}" class="rng" data-k="oct"></label>`;
   const out = el.querySelector(".out");
   const render = () => {
-    const f = focusOctet(st.p), b = f.block, n = 256 / b, s = Math.floor(st.oct / b) * b, e = s + b - 1;
+    const mo = maskOct(st.p - 24), b = 256 - mo, n = 256 / b, s = Math.floor(st.oct / b) * b, e = s + b - 1;
     const segs = Array.from({ length: n }, (_, i) => `<i class="${i * b === s ? "hit" : ""}">${n <= 8 ? i * b : ""}</i>`).join("");
     const nb = o.nb ? `<div class="kv"><span>network</span><b>.${s}</b><span>first host</span><b>.${s + 1}</b><span>last host</span><b>.${e - 1}</b><span>broadcast</span><b>.${e}</b></div>` : "";
     out.innerHTML = `<div class="ipline">192.168.10.<b>${st.oct}</b><em>/${st.p}</em></div>
       <div class="track"><div class="segs">${segs}</div><div class="pin" style="left:${((st.oct + 0.5) / 256) * 100}%"></div></div>
       <div class="axis"><span>0</span><span>255</span></div>
-      <div class="calc">mask <b>${f.mOct}</b> → block <b>256 − ${f.mOct} = ${b}</b> → ${n} blocks<br>${st.oct} sits in <b>${s} – ${e}</b></div>${nb}`;
+      <div class="calc">mask <b>${mo}</b> → block <b>256 − ${mo} = ${b}</b> → ${n} blocks<br>${st.oct} sits in <b>${s} – ${e}</b></div>${nb}`;
   };
   el.oninput = (e) => { const r = e.target.closest(".rng"); if (!r) return; st[r.dataset.k] = +r.value; render(); emit({ ...st }); };
   render(); emit({ ...st });
@@ -1601,8 +1601,8 @@ function paintPath() {
 function paintCheat() {
   let rows = "";
   for (let p = 24; p <= 30; p++) {
-    const f = focusOctet(p);
-    rows += `<tr><td>/${p}</td><td>${f.mOct}</td><td>${255 - f.mOct}</td><td>${f.block}</td><td>${hostsOf(p)}</td></tr>`;
+    const mo = maskOct(p - 24);
+    rows += `<tr><td>/${p}</td><td>${mo}</td><td>${255 - mo}</td><td>${256 - mo}</td><td>${hostsOf(p)}</td></tr>`;
   }
   $("cheatBody").innerHTML = rows;
 }
