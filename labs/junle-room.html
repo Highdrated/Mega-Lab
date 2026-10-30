@@ -135,6 +135,8 @@ body.dark-main #g-main, body.dark-main .spill { opacity: .45; }
 .log { flex: 1; overflow-y: auto; overflow-x: hidden; white-space: pre-wrap; word-break: break-all; scrollbar-width: none; display: flex; flex-direction: column; }
 .log::-webkit-scrollbar { display: none; }
 .log::before { content: ""; margin-top: auto; }
+.log .ln { white-space: pre-wrap; word-break: break-all; min-height: 1.5em; }
+.log .ln.wide { white-space: pre; word-break: normal; overflow: hidden; line-height: 1.9; }
 .log .e { color: var(--ink); }
 .inl { position: relative; white-space: pre-wrap; word-break: break-all; min-height: 1.5em; }
 #cmd { position: absolute; inset: 0; width: 100%; opacity: 0; border: 0; outline: 0; font: inherit; padding: 0; background: none; color: transparent; caret-color: transparent; }
@@ -956,6 +958,7 @@ function macTable() {
   const add = (n, mac) => { const x = info[n]; if (!x.link || !x.eth) return; const v = x.mode === "trunk" ? null : x.members[0]; if (v) rows.push(`   ${padr(v, 20)}${padr(mac, 20)}D             -   ${padr(n + ".0", 23)}0         0`); };
   add("ge-0/0/47", "2c:6b:f5:aa:10:00");
   add("ge-0/0/4", "52:54:00:1a:2b:3c");
+  Object.keys(st.links || {}).sort(natural).forEach((n) => { const k = +n.split("/")[2]; add(n, "00:1b:4f:" + (16 + k).toString(16).padStart(2, "0") + ":" + (k * 7 % 256).toString(16).padStart(2, "0") + ":2c"); });
   return ["", "MAC flags (S - static MAC, D - dynamic MAC, L - locally learned, P - Persistent static", "           SE - statistics enabled, NM - non configured MAC, R - remote PE MAC, O - ovsdb MAC)", "", "", `Ethernet switching table : ${rows.length} entries, ${rows.length} learned`, "Routing instance : default-switch", "   Vlan                MAC                 MAC         Age    Logical                NH        RTR ", "   name                address             flags              interface              Index     ID", ...rows];
 }
 function logMessages() {
@@ -1361,14 +1364,25 @@ const GIVERS = {
   veylin: { name: "Veylin", role: "keeper of the change ledger", img: "img/junle-room/visitor-elf.webp" },
   maren: { name: "Maren", role: "senior network engineer", img: "img/junle-room/visitor-maren.webp" },
   brann: { name: "Brann", role: "night watch", img: "img/junle-room/visitor-brann.webp" },
-  odile: { name: "Odile", role: "head archivist", img: "img/junle-room/visitor-odile.webp" }
+  odile: { name: "Odile", role: "head archivist", img: "img/junle-room/visitor-odile.webp" },
+  garrick: { name: "Garrick", role: "rune-knight of the gate", img: "img/junle-room/visitor-garrick.webp" }
 };
 const CAST = Object.assign({}, GIVERS, {
   pip: { name: "Pip", role: "apprentice scribe", img: "img/junle-room/visitor-pip.webp" },
   ulric: { name: "Ulric", role: "quartermaster", img: "img/junle-room/visitor-ulric.webp" },
   mira: { name: "Mira", role: "travelling bard", img: "img/junle-room/visitor-mira.webp" },
   corvin: { name: "Corvin", role: "keeper of the tower clock", img: "img/junle-room/visitor-corvin.webp" },
-  sable: { name: "Sable", role: "court artificer", img: "img/junle-room/visitor-sable.webp" }
+  sable: { name: "Sable", role: "court artificer", img: "img/junle-room/visitor-sable.webp" },
+  morrow: { name: "Morrow", role: "wizard of the old ways", img: "img/junle-room/visitor-morrow.webp" },
+  ilse: { name: "Captain Ilse", role: "captain of the guard", img: "img/junle-room/visitor-ilse.webp" },
+  thrain: { name: "Thrain", role: "dwarven runesmith", img: "img/junle-room/visitor-thrain.webp" },
+  nyx: { name: "Nyx", role: "fae courier", img: "img/junle-room/visitor-nyx.webp" },
+  grukk: { name: "Grukk", role: "orc porter", img: "img/junle-room/visitor-grukk.webp" },
+  ossian: { name: "Ossian", role: "golem of the archive", img: "img/junle-room/visitor-ossian.webp" },
+  vael: { name: "Lady Vael", role: "countess of the night shift", img: "img/junle-room/visitor-vael.webp" },
+  greylady: { name: "The Grey Lady", role: "ghost of the library", img: "img/junle-room/visitor-greylady.webp" },
+  thessaly: { name: "Thessaly", role: "royal messenger", img: "img/junle-room/visitor-thessaly.webp" },
+  fen: { name: "Fen", role: "kitchen boy", img: "img/junle-room/visitor-fen.webp" }
 });
 const LORE = [
   { id: "trunk", who: "pip", q: "Maren keeps saying trunk. Is a trunk just a very big access port?", a: ["Yes, it carries more traffic", "No, it carries several VLANs and tags every frame", "It is a port only the core switch may use"], ok: 1, ex: "Access ports belong to one VLAN, untagged. Trunks carry many VLANs, so each frame needs a tag to say which one." },
@@ -1384,6 +1398,23 @@ const LORE = [
   { id: "hash", who: "sable", q: "Your prompt ends in #. What does the rune mean?", a: ["Operational mode", "Configuration mode", "The FreeBSD shell"], ok: 1, ex: "> is operational mode, # is configuration mode, % is the shell." },
   { id: "dis", who: "brann", q: "A port is disabled. Can the cable still be plugged in?", a: ["Yes, disable is administrative, the cable can stay", "No, disable unplugs it", "Only on trunk ports"], ok: 0, ex: "disable shuts the port in software. The link light goes off, but the cable is untouched." },
   { id: "desc", who: "odile", q: "Where should I write down what a port is for?", a: ["In its description", "In the hostname", "Nowhere, people remember"], ok: 0, ex: "set interfaces ge-0/0/N description \"...\" travels with the config, so the next engineer can read it." },
+  { id: "old", who: "morrow", q: "In my day we wrote port-mode access and the switch obeyed. Why does this young EX4300 spit at me?", a: ["It is broken", "ELS switches use interface-mode instead", "You need to reboot it first"], ok: 1, ex: "EX4300 runs the ELS dialect: family ethernet-switching interface-mode access. port-mode belongs to older EX switches." },
+  { id: "vlanN", who: "morrow", q: "Then I shall give the VLAN a voice with interface vlan.10, as the old scrolls teach.", a: ["Perfect, carry on", "On ELS it is irb.10, tied to the VLAN with l3-interface", "VLANs cannot have addresses"], ok: 1, ex: "ELS replaced vlan.N with irb.N: set interfaces irb unit 10 family inet address ..., then set vlans NAME l3-interface irb.10." },
+  { id: "unused", who: "ilse", q: "Unused ports on the switch. Leave them open in case someone needs one?", a: ["Yes, convenience first", "No, disable them or park them in an empty VLAN", "Only close the even-numbered ones"], ok: 1, ex: "An open unused port is an open door. Disable it or put it in a VLAN that goes nowhere." },
+  { id: "rootpw", who: "ilse", q: "Why did the switch refuse to commit before you gave root a password?", a: ["Junos requires root-authentication before any commit", "It was tired", "Passwords are optional on Junos"], ok: 0, ex: "On a factory-default box, the first commit fails until system root-authentication is set." },
+  { id: "rj45", who: "thrain", q: "I forge cables by hand. A copper Ethernet cable can run how far before the signal fades?", a: ["About 10 metres", "About 100 metres", "About 1 kilometre"], ok: 1, ex: "Twisted-pair Ethernet is specified for 100 metres. Longer runs need fibre." },
+  { id: "led", who: "thrain", q: "The little green light by a port. What does it usually tell you?", a: ["The port has a link", "The port is in VLAN 1", "The port is overheating"], ok: 0, ex: "Link and activity LEDs show a physical connection and traffic. No light usually means no link." },
+  { id: "ssid", who: "nyx", q: "I flew in on the guest wifi. Which VLAN should the reading room AP put me in?", a: ["staff", "guest", "default"], ok: 1, ex: "Visitors belong in guest. That is exactly what ticket 004 set up on ge-0/0/12." },
+  { id: "lldpq", who: "nyx", q: "How can a switch know the name of its neighbour without anyone telling it?", a: ["LLDP announcements", "Magic", "DNS"], ok: 0, ex: "LLDP lets directly connected devices announce their name and port to each other. show lldp neighbors reads them." },
+  { id: "psu", who: "grukk", q: "Grukk carry big switch. Two power slots, one power box. Is that okay?", a: ["Yes, but a second supply gives redundancy", "No, it will not boot", "Grukk should unplug it"], ok: 0, ex: "The EX4300 runs on one supply. A second one keeps it alive if the first fails." },
+  { id: "air", who: "grukk", q: "Grukk feel hot wind from switch back. Bad?", a: ["Yes, call the dragon", "No, AFO fans blow air front to back, so the back is warm", "Turn the switch around"], ok: 1, ex: "AFO means airflow out: cool air in at the front, warm air out at the back. Racks are arranged in hot and cold aisles for this." },
+  { id: "commits", who: "ossian", q: "I. Remember. Every. Commit. Which command shows. Who committed. And when.", a: ["show system commit", "show log users", "show version"], ok: 0, ex: "show system commit lists every commit, newest first, with user and method." },
+  { id: "check", who: "ossian", q: "Before. Committing. How can you test. Without changing anything.", a: ["commit check", "commit force", "rollback 0"], ok: 0, ex: "commit check validates the candidate configuration without activating it." },
+  { id: "confirm", who: "vael", q: "I work only at night. If a change cuts me off from the switch, how does it heal itself?", a: ["commit confirmed, which rolls back unless you confirm", "It never heals", "Reboot from the shell"], ok: 0, ex: "commit confirmed 10 rolls back automatically after 10 minutes unless you commit again to confirm." },
+  { id: "window", who: "vael", q: "Why do engineers love the dead of night for changes?", a: ["Fewer people affected if something goes wrong", "Switches run faster at night", "The ledger is closed by day"], ok: 0, ex: "Maintenance windows are planned when the least people depend on the network." },
+  { id: "hist", who: "greylady", q: "The page I am haunting says Oct 30 09:35 chassisd. Where did you find such pages?", a: ["show log messages", "show interfaces", "show vlans"], ok: 0, ex: "show log messages is the main syslog file on the switch." },
+  { id: "urgent", who: "thessaly", q: "Urgent! The king wants port 7 changed now. What do you do before committing?", a: ["show | compare to read exactly what changes", "Commit immediately", "Reboot to be safe"], ok: 0, ex: "Even in a hurry, show | compare shows exactly what your commit will change." },
+  { id: "pingq", who: "fen", q: "Can I ping the kitchen from the switch?", a: ["Only once the switch has an IP address and a route", "Always, switches can ping anything", "Never, switches cannot ping"], ok: 0, ex: "A factory switch has no IP. It needs an address, for example on an irb interface, before ping can work." },
   { id: "cmp", who: "maren", q: "show | compare shows a line with a minus in front. What does it mean?", a: ["That line will be removed on commit", "That line has an error", "That line is a comment"], ok: 0, ex: "Minus lines leave the configuration on commit, plus lines join it. Always read it before you commit." }
 ];
 const ran = (cmd) => !!(st.ran && st.ran[cmd] && st.ran[cmd] >= (st.tkStart || 0));
@@ -1434,7 +1465,18 @@ const TICKETS = [
       { id: "lbl", t: "Label it", why: "Name the device, not the person: devices stay, people move.", c: ['set interfaces ge-0/0/12 description "ap reading room"', "commit"], ok: () => !!port(12).desc },
       { id: "list", t: "Show the VLAN list", why: "show vlans lists every VLAN with its member ports. A star means the link is up.", c: ["run show vlans"], ok: () => ran("show vlans") }
     ] },
-  { id: "005", title: "BAD CHANGE", giver: "veylin",
+  { id: "005", title: "GATE CAMERA", giver: "garrick",
+    intro: "The artificers fixed a scrying eye above the main gate and Thrain ran its cable to your switch: ge-0/0/20. It should live on its own VLAN, cameras, tag 30. Nobody from guest or staff should ever reach it. Label it, and prove the switch has learned the camera's address.",
+    outro: "The eye is on its own VLAN and the switch knows its address. Now I can watch the gate and the gate cannot watch us back. Well done.",
+    done: "ge-0/0/20 carries the gate camera on VLAN cameras (30), labelled, and its MAC address is learned.",
+    setup: () => { st.links = st.links || {}; st.links["ge-0/0/20"] = "gate-camera"; },
+    steps: [
+      { id: "cv", t: "Create VLAN cameras (30)", why: "Cameras get their own VLAN so a compromised camera cannot reach staff or guests.", c: ["configure", "set vlans cameras vlan-id 30", "commit"], ok: () => vlansOf(st.active).some((v) => v.name === "cameras" && v.id === 30) },
+      { id: "cp", t: "Put ge-0/0/20 in cameras", why: "The same two lines as every access port so far. You know these now.", c: ["set interfaces ge-0/0/20 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/20 unit 0 family ethernet-switching vlan members cameras", "commit"], ok: () => { const x = port(20); return x.mode === "access" && x.members.length === 1 && x.members[0] === "cameras"; } },
+      { id: "cd", t: "Label it", why: "Garrick will ask what is on port 20 in a year. The description answers for you.", c: ['set interfaces ge-0/0/20 description "gate camera"', "commit"], ok: () => !!port(20).desc },
+      { id: "cm", t: "Prove the switch learned it", why: "The ethernet-switching table lists every MAC address the switch has seen, with its VLAN and port. Find the camera on ge-0/0/20 in cameras.", c: ["run show ethernet-switching table"], ok: () => ran("show ethernet-switching table") && port(20).members[0] === "cameras" }
+    ] },
+  { id: "006", title: "BAD CHANGE", giver: "veylin",
     intro: "The ledger shows a commit tonight that was not yours. Since then the server on ge-0/0/4 cannot be reached. Do not fix it by hand: find the commit, then roll the switch back to the version before it. That is what rollback is for.",
     outro: "One rollback, one commit, and the server is home in staff again. And the ledger shows exactly what happened. That is how a recovery should look.",
     done: "The bad commit is rolled back and ge-0/0/4 is back in staff.",
@@ -1461,7 +1503,7 @@ function renderTicket() {
   syncTasks();
   const T = curTicket();
   if (st.tk >= TICKETS.length) {
-    $("#ticket").innerHTML = `<h4><span>LEDGER</span><span>ALL CLOSED</span></h4><div class="st-title done-msg">Every ticket is closed.</div><div class="st-why">acc-sw-01 is commissioned, uplinked, locked down, serving the reading room and recovered from a bad change. Free play: the switch is yours.</div>`;
+    $("#ticket").innerHTML = `<h4><span>LEDGER</span><span>ALL CLOSED</span></h4><div class="st-title done-msg">Every ticket is closed.</div><div class="st-why">acc-sw-01 is commissioned, uplinked, locked down, serving the reading room, watching the gate and recovered from a bad change. Free play: the switch is yours.</div>`;
     nocI = 0; renderNoc();
     return;
   }
@@ -1882,7 +1924,16 @@ function renderTerm() {
   if (!(mainMode === "console" && on)) return;
   const log = $("#log");
   if (st.log.length > 400) st.log = st.log.slice(-400);
-  log.textContent = st.log.join("\n");
+  let probe = log.querySelector(".probe");
+  if (!probe) { log.textContent = ""; }
+  const pw = (() => { const s = document.createElement("span"); s.className = "probe"; s.textContent = "0000000000"; s.style.cssText = "position:absolute;visibility:hidden;white-space:pre"; log.appendChild(s); const w = s.getBoundingClientRect().width / 10; s.remove(); return w; })();
+  const cols = Math.max(40, Math.floor((log.clientWidth - 4) / (pw || 8)));
+  const pr = prompt().trim().split(" ")[0];
+  log.innerHTML = st.log.map((l) => {
+    const isCmd = /^(root|login:|Password:)/.test(l) || (pr && l.startsWith(pr));
+    if (!isCmd && l.length > cols) return `<div class="ln wide" style="font-size:${Math.max(.7, cols / l.length).toFixed(3)}em">${esc(l)}</div>`;
+    return `<div class="ln">${esc(l) || " "}</div>`;
+  }).join("");
   $("#pr").textContent = prompt();
   paintInput();
   log.scrollTop = log.scrollHeight;
@@ -2302,6 +2353,12 @@ const WXEXTRA = {
   mist: { pip: ["I cannot see the castle. Is it still there? Please say yes."], ulric: ["Mist means nobody comes for supplies. Quiet ledger tonight."], mira: ["Mist is just a cloud that came to learn networking."], corvin: ["Mist muffles the bells. Your log timestamps stay sharp."], sable: ["My lenses fog in this. Your screen does not. Unfair."] },
   clear: { pip: ["The stars are out! Can we name a VLAN after one?"], ulric: ["Clear skies. Good night for a delivery run."], mira: ["Clear night. The valley sounds like a slow ballad."], corvin: ["Clear sky, true time. The tower agrees with the switch."], sable: ["Clear again. The griffons will test my new wing lamps."] }
 };
+const WXFANT = {
+  rain: { garrick: "Rain on the gate runes makes them sing. Annoying tune.", morrow: "Rain. In my day we routed it through the moat.", thrain: "Damp forge, damp beard. The cables stay dry, I checked twice.", nyx: "My wings hate this. Your racks seem fine with it.", grukk: "Grukk like rain. Rain is free shower.", ossian: "Rain. Logged.", vael: "Rain at night. The perfect hour for a maintenance window.", greylady: "I have watched this rain for three hundred years. It never gets old." },
+  storm: { garrick: "Lightning struck the gate sigil. It held. So should your config.", morrow: "A storm! I did not summon it. Probably.", ilse: "Storm drill: everyone away from the windows, except the griffons.", thrain: "That was my anvil or the sky. Hard to tell tonight.", grukk: "Big noise. Grukk not scared. Grukk is standing behind rack for other reasons.", ossian: "Thunder. Detected. Ignored.", vael: "Ah, a proper storm. Finally some atmosphere.", thessaly: "The king says the storm is not approved. I said I would tell it." },
+  mist: { garrick: "Mist on the drawbridge. I would not trust anyone who walks out of that.", ilse: "Double the watch in the mist. And double-check your VLANs.", nyx: "Mist is just fog that went to finishing school.", ossian: "Visibility. Low. Uptime. High.", vael: "Mist suits this castle. Mist suits me.", greylady: "In the mist they cannot see me. Restful." },
+  clear: { garrick: "Clear skies. The gate runes are quiet again.", morrow: "Clear. Good for reading the stars, and the syslog.", thrain: "Clear night. Good light for crimping.", nyx: "Clear sky, clear signal. My favourite.", grukk: "Sky clean. Grukk approve.", vael: "The moon is out. Sublime.", fen: "The cook says the stars came out to watch you work." }
+};
 const WXLINES = {
   rain: {
     veylin: ["Rain again. The ledger does not mind, but the parchment does. Keep your cups away from the switch.", "Listen to it on the glass. Every drop is logged somewhere, I am sure of it."],
@@ -2419,9 +2476,10 @@ let sayT = 0;
 function commentWx(w) {
   if (!wxOn || wx.w !== w) return;
   if (Date.now() - lastKey < 6000 || $("#vdlg").classList.contains("on") || $("#cu").classList.contains("on")) { setTimeout(() => commentWx(w), 8000); return; }
-  const keys = Object.keys(CAST);
+  const lineFor = (k) => WXLINES[w][k] || WXEXTRA[w][k] || (WXFANT[w][k] ? [WXFANT[w][k]] : null);
+  const keys = Object.keys(CAST).filter((k) => lineFor(k));
   const who = keys[Math.floor(Math.random() * keys.length)];
-  const g = CAST[who], lines = (WXLINES[w][who] || WXEXTRA[w][who]);
+  const g = CAST[who], lines = lineFor(who);
   const av = $("#say-av");
   av.textContent = g.name[0];
   av.style.backgroundImage = "";
