@@ -106,6 +106,36 @@
   @keyframes breathe { 50% { transform: scaleY(1.025); } }
   #fpR .car-shop, #flight .car-shop { font-size: .68cqw; }
   #flight .car-shop .cs-item button { font-size: .62cqw; }
+
+  .wx-scene { position: absolute; left: 0; top: 0; height: 100%; width: 394cqw; background-repeat: repeat-x; background-size: 197cqw 100%; animation: fpscene 90s linear infinite; opacity: 0; transition: opacity 8s ease; }
+  .wx-scene.on { opacity: 1; }
+  .wx-moon { position: absolute; left: 95.6%; top: 30.5%; width: 3.6%; aspect-ratio: 1; background: url("img/pyle/wx/moon.webp") center/contain no-repeat; opacity: 0; transition: opacity 8s ease; filter: drop-shadow(0 0 .8cqw rgba(200,215,255,.5)); }
+  .wx-moon.on { opacity: 1; }
+  .wx-rain, .wx-snow { position: absolute; inset: 0; opacity: 0; transition: opacity 6s ease; pointer-events: none; }
+  .wx-rain { background: repeating-linear-gradient(103deg, transparent 0 .55cqw, rgba(205,215,235,.28) .55cqw .6cqw), repeating-linear-gradient(98deg, transparent 0 .9cqw, rgba(205,215,235,.18) .9cqw .94cqw); background-size: 3cqw 6cqw, 4.4cqw 8cqw; animation: wxrain .45s linear infinite; }
+  .wx-rain.heavy { animation-duration: .3s; }
+  @keyframes wxrain { to { background-position: -1.4cqw 6cqw, -1.9cqw 8cqw; } }
+  .wx-snow { background: radial-gradient(circle, rgba(255,255,255,.95) 0 .14cqw, transparent .19cqw), radial-gradient(circle, rgba(255,255,255,.8) 0 .1cqw, transparent .14cqw), radial-gradient(circle, rgba(255,255,255,.6) 0 .07cqw, transparent .1cqw); background-size: 3.4cqw 3.4cqw, 2.3cqw 2.6cqw, 1.5cqw 1.7cqw; background-position: 0 0, 1.1cqw .8cqw, .4cqw 1.3cqw; animation: wxsnow 3.2s linear infinite; }
+  @keyframes wxsnow { to { background-position: -10.2cqw 3.4cqw, -8.1cqw 3.4cqw, -6.6cqw 3.4cqw; } }
+  .wx-rain.on, .wx-snow.on { opacity: 1; }
+  .wx-tint { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; opacity: 0; transition: opacity 8s ease, background-color 8s ease; }
+  .wx-glow { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity 8s ease;
+    background: radial-gradient(circle at 12.5% 62%, rgba(255,190,110,.55), transparent 9%), radial-gradient(circle at 2% 64%, rgba(255,180,100,.45), transparent 6%), radial-gradient(circle at 16.5% 31%, rgba(255,190,110,.4), transparent 6%), radial-gradient(circle at 84% 30%, rgba(255,190,110,.4), transparent 6%), radial-gradient(ellipse at 50% 85%, rgba(255,170,90,.18), transparent 40%); }
+  .wx-flash { position: absolute; inset: 0; pointer-events: none; background: #dfe8ff; mix-blend-mode: screen; opacity: 0; }
+  .wx-flash.go { animation: wxflash .9s ease-out; }
+  @keyframes wxflash { 0% { opacity: 0; } 6% { opacity: .55; } 14% { opacity: .05; } 22% { opacity: .4; } 100% { opacity: 0; } }
+  .wx-fg { position: absolute; inset: 0; background: url("img/pyle/office-car-fg.webp") center/100% 100% no-repeat; pointer-events: none; }
+  .npc-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+  .npc { position: absolute; bottom: 19.5%; height: 63%; }
+  .npc img { height: 100%; width: auto; display: block; animation: npcbob .62s ease-in-out infinite alternate; transform-origin: 50% 100%; filter: brightness(.86) saturate(.9) drop-shadow(0 .5cqw .8cqw rgba(0,0,0,.45)); }
+  .npc.flip img { scale: -1 1; }
+  @keyframes npcbob { from { translate: 0 0; rotate: -.5deg; } to { translate: 0 -.35cqw; rotate: .5deg; } }
+  #flight .glass { backdrop-filter: blur(9px) saturate(.9); -webkit-backdrop-filter: blur(9px) saturate(.9); }
+  @media (min-width: 1101px) { body[data-theme="train"] .panel, body[data-theme="train"] .console { backdrop-filter: blur(9px) saturate(.9); -webkit-backdrop-filter: blur(9px) saturate(.9); } }
+  #npcToast { position: fixed; left: 50%; bottom: 40px; transform: translate(-50%, 10px); z-index: 6000; max-width: min(560px, 90vw); padding: 10px 18px; background: rgba(20,11,6,.88); border: 1px solid rgba(217,181,106,.55); color: #f6ecd8; font: 14px/1.45 "Iowan Old Style","Palatino Linotype",Palatino,Georgia,serif; opacity: 0; transition: opacity .6s, transform .6s; pointer-events: none; box-shadow: 0 8px 24px rgba(0,0,0,.5); }
+  #npcToast b { color: #e2bd6e; font-weight: 600; }
+  #npcToast.on { opacity: 1; transform: translate(-50%, 0); }
+  @media (prefers-reduced-motion: reduce) { .wx-rain, .wx-snow, .npc img, .wx-scene { animation: none !important; } }
   .deck {
     position: relative; z-index: 1;
     height: 100vh;
@@ -689,11 +719,12 @@
         <div class="car-shop fp-mono" id="carShopFp"></div>
       </section>
     </div></div>
-    <div id="fpCtl" class="fp-mono"><button id="fpSnd">Sound off</button><button id="fpCur">Curtains</button></div>
+    <div id="fpCtl" class="fp-mono"><button id="fpWx">Dusk</button><button id="fpSnd">Sound off</button><button id="fpCur">Curtains</button></div>
   </div>
 </div>
 <div id="trainBg" aria-hidden="true"><div id="tbStage"><div id="tbWorld"><div id="tbScene"></div><div id="tbCurtains"></div><div id="tbRoom"></div><div id="tbProps"></div></div></div></div>
-<div id="tbCtl"><button id="tbSnd">Sound off</button><button id="tbCur">Curtains</button></div>
+<div id="tbCtl"><button id="tbWx">Dusk</button><button id="tbSnd">Sound off</button><button id="tbCur">Curtains</button></div>
+<div id="npcToast"></div>
 
 <div class="deck" id="deck">
   <div class="topbar">
@@ -10051,6 +10082,7 @@ carRender();
     if(WINS.some(([a,b,c,d])=>x>=a&&x<=c&&y>=b&&y<=d))toggleCur();
   }));
   let ac=null,on=false;
+  window.trainAudio={get ac(){return ac},get on(){return on&&trainVisible()}};
   function startSound(){
     ac=new (window.AudioContext||window.webkitAudioContext)();
     const len=ac.sampleRate*2,buf=ac.createBuffer(1,len,ac.sampleRate),d=buf.getChannelData(0);
@@ -10091,6 +10123,105 @@ carRender();
   }
   window.addEventListener("resize",trainLayout);
   trainLayout();
+})();
+
+(function(){
+  const $=id=>document.getElementById(id);
+  const WX={
+    dusk:{name:"Dusk",scene:null,tint:null,glow:0},
+    night:{name:"Night",scene:"night",moon:1,tint:["#5d6aa6",.6],glow:1},
+    rain:{name:"Rain",scene:"rain",rain:1,tint:["#8a909c",.45],glow:.7},
+    storm:{name:"Storm",scene:"rain",rain:2,tint:["#6a707e",.62],glow:.9,flash:1},
+    fog:{name:"Fog",scene:"fog",tint:["#cfd2d8",.3],glow:.5},
+    snow:{name:"Snow",scene:"snow",snow:1,tint:["#b6c1de",.35],glow:.6}
+  };
+  const ORDER=["dusk","night","rain","storm","fog","snow"];
+  const stages=[["fpStage","fpScene","fpRoom"],["tbStage","tbScene","tbRoom"]];
+  const L=[];
+  stages.forEach(([st,sc,rm])=>{
+    const stage=$(st),scene=$(sc),room=$(rm);if(!stage||!scene||!room)return;
+    scene.classList.add("wx-scene","on");scene.dataset.w="dusk";
+    const mk=(cls,attrs)=>{const d=document.createElement("div");d.className=cls;Object.assign(d.dataset,attrs||{});return d};
+    let after=scene;const scenes={dusk:scene};
+    ["night","rain","fog","snow"].forEach(w=>{const d=mk("wx-scene",{w});d.style.backgroundImage='url("img/pyle/wx/'+w+'.webp")';after.after(d);after=d;scenes[w]=d});
+    const moon=mk("wx-moon"),rain=mk("wx-rain"),snow=mk("wx-snow");
+    after.after(moon);moon.after(rain);rain.after(snow);
+    const npc=mk("npc-layer"),fg=mk("wx-fg"),tint=mk("wx-tint"),glow=mk("wx-glow"),flash=mk("wx-flash");
+    room.after(npc);npc.after(fg);fg.after(tint);tint.after(glow);glow.after(flash);
+    L.push({stage,scenes,moon,rain,snow,npc,tint,glow,flash});
+  });
+  let cur="dusk",timer=null;
+  function apply(w){
+    cur=w;const c=WX[w];
+    L.forEach(l=>{
+      Object.entries(l.scenes).forEach(([k,el])=>el.classList.toggle("on",k===(c.scene||"dusk")));
+      l.moon.classList.toggle("on",!!c.moon);
+      l.rain.classList.toggle("on",!!c.rain);l.rain.classList.toggle("heavy",c.rain===2);
+      l.snow.classList.toggle("on",!!c.snow);
+      if(c.tint){l.tint.style.backgroundColor=c.tint[0];l.tint.style.opacity=c.tint[1]}else l.tint.style.opacity=0;
+      l.glow.style.opacity=c.glow||0;
+    });
+    ["fpWx","tbWx"].forEach(id=>{const b=$(id);if(b)b.textContent=c.name});
+    try{logEvent("weather: "+c.name.toLowerCase(),"ok")}catch(e){}
+  }
+  function pickNext(){
+    const h=new Date().getHours(),dark=h>=20||h<7;
+    const bag=dark?["night","night","night","rain","storm","fog","snow"]:["dusk","dusk","dusk","rain","storm","fog","snow","night"];
+    let w;do{w=bag[Math.floor(Math.random()*bag.length)]}while(w===cur);
+    return w;
+  }
+  function schedule(){clearTimeout(timer);timer=setTimeout(()=>{apply(pickNext());schedule()},(10+Math.random()*10)*60000)}
+  const cycle=()=>{apply(ORDER[(ORDER.indexOf(cur)+1)%ORDER.length]);schedule()};
+  ["fpWx","tbWx"].forEach(id=>{const b=$(id);if(b)b.onclick=cycle});
+  const h0=new Date().getHours();apply(h0>=20||h0<7?"night":"dusk");schedule();
+
+  let rainGain=null,noiseBuf=null;
+  function noise(ac){if(noiseBuf)return noiseBuf;const len=ac.sampleRate*2;noiseBuf=ac.createBuffer(1,len,ac.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<len;i++)d[i]=Math.random()*2-1;return noiseBuf}
+  setInterval(()=>{
+    const A=window.trainAudio;if(!A||!A.ac)return;const ac=A.ac;
+    if(!rainGain){const src=ac.createBufferSource();src.buffer=noise(ac);src.loop=true;const bp=ac.createBiquadFilter();bp.type="bandpass";bp.frequency.value=1400;bp.Q.value=.5;rainGain=ac.createGain();rainGain.gain.value=0;src.connect(bp).connect(rainGain).connect(ac.destination);src.start()}
+    const r=WX[cur].rain||0;rainGain.gain.setTargetAtTime(A.on?(r===2?.1:r?.06:0):0,ac.currentTime,1.5);
+  },1000);
+  function thunder(){
+    const A=window.trainAudio;if(!A||!A.on||!A.ac)return;const ac=A.ac,t=ac.currentTime+.4+Math.random()*1.4;
+    const src=ac.createBufferSource();src.buffer=noise(ac);const lp=ac.createBiquadFilter();lp.type="lowpass";lp.frequency.value=140;const g=ac.createGain();
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.55,t+.15);g.gain.exponentialRampToValueAtTime(.001,t+3.2);
+    src.connect(lp).connect(g).connect(ac.destination);src.start(t);src.stop(t+3.3);
+  }
+  (function flashLoop(){
+    setTimeout(()=>{if(WX[cur].flash){L.forEach(l=>{l.flash.classList.remove("go");void l.flash.offsetWidth;l.flash.classList.add("go")});thunder()}flashLoop()},9000+Math.random()*16000);
+  })();
+
+  const CAST=[
+    {id:"nox",face:1,w:.49},{id:"porter",face:1,w:.66},{id:"lady",face:-1,w:.49},{id:"waiter",face:-1,w:.54}
+  ];
+  function toast(html){const t=$("npcToast");t.innerHTML=html;t.classList.add("on");clearTimeout(t._h);t._h=setTimeout(()=>t.classList.remove("on"),6500)}
+  let walking=false;
+  function walk(){
+    if(walking||document.hidden)return;walking=true;
+    const who=CAST[Math.floor(Math.random()*CAST.length)],dir=Math.random()<.5?1:-1,dur=(30+Math.random()*12)*1000;
+    const span=who.w*63*(768/1376);
+    const from=dir>0?-span-2:102,to=dir>0?102:-span-2;
+    L.forEach(l=>{
+      const n=document.createElement("div");n.className="npc"+(dir!==who.face?" flip":"");
+      n.innerHTML='<img src="img/pyle/npc/'+who.id+'.webp" alt="">';
+      l.npc.appendChild(n);
+      const a=n.animate([{left:from+"%"},{left:to+"%"}],{duration:dur,easing:"linear"});
+      a.onfinish=()=>n.remove();
+    });
+    setTimeout(()=>{
+      try{
+        if(who.id==="nox"){const d=dueMissed().length;if(d){toast("<b>Nox</b> slides a telegram across the desk: "+d+" form"+(d===1?"":"s")+" due for review. Type <b>review</b>.");logEvent("Nox: telegram, "+d+" due","ok")}else logEvent("Nox tips his cap and walks on","ok")}
+        if(who.id==="waiter"&&chi>=5){carPay(5,"the waiter brought you a drink");toast("<b>The waiter</b> sets down a whiskey: "+chi+" in a row deserves one. +5 fr")}
+        if(who.id==="porter")logEvent("the porter wheels luggage to the sleepers","ok");
+        if(who.id==="lady")logEvent("a passenger reads the evening paper","ok");
+      }catch(e){}
+    },dur*.5);
+    setTimeout(()=>{walking=false},dur);
+  }
+  (function npcLoop(){setTimeout(()=>{walk();npcLoop()},25000+Math.random()*35000)})();
+  setTimeout(walk,9000);
+  window.trainWeather=apply;window.trainWalk=walk;
 })();
 
 if (restored) logEvent("progress restored from local save", "ok");
