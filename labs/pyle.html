@@ -100,9 +100,16 @@
   .car-shop .cs-walk small { display: block; color: var(--amber); letter-spacing: 1px; margin-top: 3px; }
   .prop { position: absolute; pointer-events: none; filter: drop-shadow(0 .3cqw .5cqw rgba(0,0,0,.55)); }
   .prop img { width: 100%; height: auto; display: block; }
-  .prop.sofa-cat { left: 7.5%; top: 55%; width: 10%; animation: breathe 5s ease-in-out infinite; }
-  .prop.panel-cat { left: 73.5%; top: 24.6%; width: 7%; animation: breathe 6s ease-in-out infinite; }
-  .prop.gramophone { left: 86%; top: 40%; width: 5.5%; }
+  .prop.sofa-cat { left: 4.6%; bottom: 26.6%; width: 5.7%; transform-origin: 50% 100%; animation: breathe 5s ease-in-out infinite; }
+  .prop.panel-cat { left: 72.2%; bottom: 70.2%; width: 3.9%; }
+  .prop.gramophone { left: 14.8%; bottom: 8.4%; width: 5.9%; }
+  #tbPropsFront, #tbProps .panel-cat { display: none; }
+  .prop.clock { left: 48.6%; bottom: 8.4%; width: 2.75%; }
+  .prop .hand { position: absolute; left: 50%; top: 54%; width: 6%; background: #1c140c; border-radius: 1px; transform-origin: 50% 100%; translate: -50% -100%; }
+  .prop .hand.h { height: 15%; } .prop .hand.m { height: 22%; width: 4%; }
+  .prop .face { position: absolute; left: 50%; top: 54%; width: 50%; aspect-ratio: 1; translate: -50% -50%; border-radius: 50%; background: radial-gradient(circle, #f1ece1 55%, rgba(241,236,225,0) 72%); }
+  .prop.panel-cat img { animation: pepper 9s ease-in-out infinite; transform-origin: 50% 100%; }
+  @keyframes pepper { 0%,86%,100% { rotate: 0deg; } 90% { rotate: -3deg; } 95% { rotate: 2deg; } }
   @keyframes breathe { 50% { transform: scaleY(1.025); } }
   #fpR .car-shop, #flight .car-shop { font-size: .68cqw; }
   #flight .car-shop .cs-item button { font-size: .62cqw; }
@@ -10026,8 +10033,9 @@ flightInit();
 const CAR_KEY = "pyle-car.v1";
 const CAR_ITEMS = [
   { id: "sofa-cat", name: "Ash, sofa cat", cost: 120, where: "asleep on the velvet sofa" },
-  { id: "panel-cat", name: "Pepper, panel cat", cost: 220, where: "perched on the right glass" },
-  { id: "gramophone", name: "Brass gramophone", cost: 300, where: "on the bar cart" }
+  { id: "clock", name: "Carriage clock", cost: 200, where: "on the desk, keeps your real time" },
+  { id: "panel-cat", name: "Pepper, panel cat", cost: 220, where: "keeps watch from the right glass" },
+  { id: "gramophone", name: "Brass gramophone", cost: 300, where: "plays while you're on a 5+ streak" }
 ];
 function carLoad() { try { return Object.assign({ fr: 0, life: 0, owned: [] }, JSON.parse(localStorage.getItem(CAR_KEY) || "{}")); } catch (e) { return { fr: 0, life: 0, owned: [] }; } }
 let CAR = carLoad();
@@ -10045,9 +10053,10 @@ function carBuy(id) {
   carRender();
 }
 function carProps() {
-  const h = CAR.owned.map(id => '<div class="prop ' + id + '"><img src="img/pyle/props/' + id + '.webp" alt="" onerror="this.parentNode.remove()"></div>').join("");
-  const a = document.getElementById("fpProps"), b = document.getElementById("tbProps");
-  if (a) a.innerHTML = h; if (b) b.innerHTML = h;
+  const FRONT = ["gramophone", "clock"];
+  const mk = ids => ids.map(id => '<div class="prop ' + id + '"><img src="img/pyle/props/' + id + '.webp" alt="" onerror="this.parentNode.remove()">' + (id === "clock" ? '<i class="face"></i><i class="hand h"></i><i class="hand m"></i>' : '') + '</div>').join("");
+  const back = mk(CAR.owned.filter(id => !FRONT.includes(id))), front = mk(CAR.owned.filter(id => FRONT.includes(id)));
+  [["fpProps", back], ["tbProps", back], ["fpPropsFront", front], ["tbPropsFront", front]].forEach(([id, h]) => { const el = document.getElementById(id); if (el) el.innerHTML = h; });
 }
 function carShopHtml() {
   let coupled = 0; try { const dk = JSON.parse(localStorage.getItem("sleeple.v1") || "{}"); coupled = Object.keys(dk.done || {}).length; } catch (e) {}
@@ -10222,6 +10231,29 @@ carRender();
   (function npcLoop(){setTimeout(()=>{walk();npcLoop()},25000+Math.random()*35000)})();
   setTimeout(walk,9000);
   window.trainWeather=apply;window.trainWalk=walk;
+})();
+
+(function(){
+  const $=id=>document.getElementById(id);
+  [["fpProps","fpRoom"],["tbProps","tbRoom"]].forEach(([p,r])=>{const pr=$(p),room=$(r);if(!pr||!room)return;const fg=room.parentNode.querySelector(".wx-fg");if(fg)fg.after(pr)});
+  [["fpPropsFront","fpJolt"],["tbPropsFront","tbWorld"]].forEach(([id,par])=>{const d=document.createElement("div");d.id=id;$(par).appendChild(d)});
+  carRender();
+  function hands(){const d=new Date(),m=d.getMinutes()+d.getSeconds()/60,h=(d.getHours()%12)+m/60;document.querySelectorAll(".prop.clock .hand.h").forEach(e=>e.style.rotate=(h*30)+"deg");document.querySelectorAll(".prop.clock .hand.m").forEach(e=>e.style.rotate=(m*6)+"deg")}
+  hands();setInterval(hands,15000);
+  const _cr=carRender;carRender=function(){_cr();hands()};
+  const N={A3:220,C4:261.6,E4:329.6,A4:440,G3:196,B3:246.9,D4:293.7,G4:392,F3:174.6,F4:349.2,E3:164.8,Gs3:207.7,B4:493.9,C5:523.3};
+  const SONG=["A3","C4","E4","A4","E4","C4","G3","B3","D4","G4","D4","B3","F3","A3","C4","F4","C4","A3","E3","Gs3","B3","E4","B4","Gs3"];
+  let step=0,playing=false;
+  setInterval(()=>{
+    const A=window.trainAudio,want=A&&A.on&&A.ac&&CAR.owned.includes("gramophone")&&chi>=5;
+    if(want&&!playing){playing=true;try{logEvent("the gramophone starts to play","ok")}catch(e){}}
+    if(!want){if(playing){playing=false;step=0}return}
+    const ac=A.ac,t=ac.currentTime,f=N[SONG[step%SONG.length]];step++;
+    const o=ac.createOscillator(),o2=ac.createOscillator(),g=ac.createGain(),lp=ac.createBiquadFilter();
+    o.type="triangle";o.frequency.value=f;o2.type="sine";o2.frequency.value=f*2;lp.type="lowpass";lp.frequency.value=1600;
+    g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.045,t+.02);g.gain.exponentialRampToValueAtTime(.001,t+1.1);
+    o.connect(lp);o2.connect(lp);lp.connect(g).connect(ac.destination);o.start(t);o2.start(t);o.stop(t+1.2);o2.stop(t+1.2);
+  },420);
 })();
 
 if (restored) logEvent("progress restored from local save", "ok");
