@@ -1618,7 +1618,7 @@ const DATA = [
     "t": "Name and address formulas",
     "e": [
      {
-      "c": "($u.GivenName.Substring(0,1) + $last.Substring(0,2)).ToLower()",
+      "c": "($u.GivenName.Substring(0,1) + $u.Surname.Substring(0,2)).ToLower()",
       "d": "Standard DCU address: 1 letter first name + 2 letters last name",
       "n": "Substring(start, length). Counting starts at 0, so Substring(0,1) is the first letter and Substring(0,2) the first two.",
       "x": "GivenName  = \"Stijn\"   -> Substring(0,1) = \"S\"\nSurname    = \"Raes\"    -> Substring(0,2) = \"Ra\"\n\"S\" + \"Ra\"  = \"SRa\"    -> ToLower() = \"sra\"\nResult: sra@datacenterunited.com"
@@ -2312,7 +2312,7 @@ const RECIPES = [
     "n": "Dry run. One 'What if' line per mailbox, no changes."
    },
    {
-    "c": "& {\n    Start-Sleep -Seconds ((Get-Date \"18:00\") - (Get-Date)).TotalSeconds\n    $log = foreach ($r in $rows) {\n        try {\n            Set-Mailbox -Identity $r.OldUPN -WindowsEmailAddress $r.NewUPN -ErrorAction Stop\n            Update-MgUser -UserId $r.OldUPN -UserPrincipalName $r.NewUPN -ErrorAction Stop\n            $status = \"OK\"\n        } catch { $status = $_.Exception.Message }\n        [pscustomobject]@{ OldUPN = $r.OldUPN; NewUPN = $r.NewUPN; Status = $status }\n    }\n    $log | Export-Csv ~/Desktop/security-log.csv -NoTypeInformation -Encoding UTF8\n}",
+    "c": "& {\n    $wait = (Get-Date \"18:00\") - (Get-Date)\n    if ($wait.TotalSeconds -gt 0) { Start-Sleep -Seconds $wait.TotalSeconds }\n    $log = foreach ($r in $rows) {\n        try {\n            Set-Mailbox -Identity $r.OldUPN -WindowsEmailAddress $r.NewUPN -ErrorAction Stop\n            Update-MgUser -UserId $r.OldUPN -UserPrincipalName $r.NewUPN -ErrorAction Stop\n            $status = \"OK\"\n        } catch { $status = $_.Exception.Message }\n        [pscustomobject]@{ OldUPN = $r.OldUPN; NewUPN = $r.NewUPN; Status = $status }\n    }\n    $log | Export-Csv ~/Desktop/security-log.csv -NoTypeInformation -Encoding UTF8\n}",
     "n": "The timed run. & { } makes it one block, Start-Sleep waits until 18:00, -ErrorAction Stop lets catch see every failure, and the log is your receipt."
    },
    {
@@ -2378,8 +2378,8 @@ const RECIPES = [
     "n": "Copy the licence of a colleague in the same role, and check Total minus ConsumedUnits before you assign."
    },
    {
-    "c": "Set-MgUserLicense -UserId $new.Id -AddLicenses @{SkuId = $sku} -RemoveLicenses @()",
-    "n": "Works because UsageLocation came with the template."
+    "c": "Set-MgUserLicense -UserId $new.Id -AddLicenses ($sku | ForEach-Object { @{SkuId = $_} }) -RemoveLicenses @()",
+    "n": "Works because UsageLocation came with the template. The ForEach-Object turns every SkuId into its own @{SkuId=...}, so a colleague with two licences copies both."
    },
    {
     "c": "Connect-ExchangeOnline -ShowBanner:$false\nwhile (-not (Get-EXOMailbox -Identity $new.UserPrincipalName -ErrorAction SilentlyContinue)) { Start-Sleep -Seconds 30 }",
