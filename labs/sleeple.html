@@ -797,9 +797,7 @@ const PY={w:null,ready:false,failed:false,busy:null,seq:0,waiters:[],
  fail(msg){this.failed=true;this.ready=false;engineState('fail',msg);this.waiters.splice(0).forEach(f=>f())},
  whenReady(){return this.ready||this.failed?Promise.resolve():new Promise(r=>this.waiters.push(r))},
  async run(code,ms){
-  await this.whenReady();
-  if(this.failed)return{out:'',err:'',offline:true};
-  while(this.busy)await this.busy.p.catch(()=>{});
+  for(;;){await this.whenReady();if(this.failed)return{out:'',err:'',offline:true};if(!this.busy)break;await this.busy.p.catch(()=>{})}
   const id=++this.seq;let resolve;const p=new Promise(r=>resolve=r);
   this.busy={id,resolve,p,timer:setTimeout(()=>{if(this.busy&&this.busy.id===id){this.busy=null;this.w.terminate();resolve({out:'',err:'',timeout:true});this.boot()}},ms||4000)};
   this.w.postMessage({type:'run',id,code});
@@ -1094,7 +1092,7 @@ function drillUI(box,con,stat,d,done,onRight){
  const finish=ok=>{nxt.hidden=false;const c=$('chk');if(c)c.hidden=true;$('reveal').hidden=true;nxt.focus();nxt.onclick=()=>done(firstOk)};
  const wrong=msg=>{tries++;firstOk=false;sfx.bad();fb.className='fb err';fb.innerHTML=md(msg||'Not yet.')+(d.h?' '+md(d.h):'');if(tries>=2)$('reveal').hidden=false};
  const right=()=>{sfx.ok();fb.className='fb ok';fb.textContent=firstOk?'Correct.':'Correct now. This one comes back in Review soon.';if(onRight)onRight(firstOk);finish(true)};
- $('reveal').onclick=()=>{firstOk=false;const a=$('ans');if(d.k==='pick'){}else if(a){a.value=d.k==='predict'?d.a:d.ans}fb.className='fb';fb.innerHTML='The answer is filled in. Read it, then check it.';$('reveal').hidden=true};
+ $('reveal').onclick=()=>{firstOk=false;const a=$('ans');if(d.k==='pick'){const g=box.querySelector('.opts button[data-k="'+d.a+'"]');if(g)g.classList.add('good');fb.className='fb';fb.innerHTML='The right option is marked. Read it, then pick it.';$('reveal').hidden=true;return}if(a){a.value=d.k==='predict'?d.a:d.ans}fb.className='fb';fb.innerHTML='The answer is filled in. Read it, then check it.';$('reveal').hidden=true};
  if(d.k==='pick'){
   box.querySelectorAll('.opts button').forEach(b=>b.onclick=()=>{if(!nxt.hidden)return;const k=+b.dataset.k;if(k===d.a){b.classList.add('good');right()}else{b.classList.add('bad');b.disabled=true;wrong('Not that one.')}});
   return;
@@ -1301,7 +1299,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape')$('viewer').classLis
 function applyHash(){const h=decodeURIComponent(location.hash.slice(1));if(!h)return;const m=h.match(/^target:(\w+)$/);if(m){const i=TARGETS.findIndex(t=>t.id===m[1]);if(i>=0&&i<=maxT()){S.t=i;go('target')}}else if(['school','target','hangar','port','logbook','review'].includes(h)){if(h==='review')RQ=null;go(h)}try{window.history.replaceState(null,'',location.pathname)}catch(e){}}
 window.addEventListener('hashchange',applyHash);
 window.addEventListener('pagehide',()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}});
-if(S.t>maxT()&&!S.done[TARGETS[S.t].id])S.t=maxT();
+if(!TARGETS[S.t]||(S.t>maxT()&&!S.done[TARGETS[S.t].id]))S.t=maxT();
 comms(S.learned.length?'Welcome back. The lamps are lit.':'Good evening. I am Nox, your conductor. Journeys come in, you write the Python, carriages join your train.');
 PY.boot();
 render();
