@@ -70,6 +70,15 @@ Deep links: Poshle and Shelle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#
 `#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
 Pyle `#review` / `#kata`, Sleeple `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Codex `#<volume>` (e.g. `#sql`), Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
+## Immersion layer (soul.js)
+
+`js/soul.js` gives each lab a resident NPC (Mara at the Shelle harbour, Ines on the Poshle night shift,
+Chef Roux in Seqle, Old Pell in the Spelle dungeon, ...) plus ambient motion (bubbles, steam, falling
+bits, stars, fireflies, packets). They chat while you pause, react to real right and wrong answers, and
+every line teaches a real-world habit. Add it to a lab with
+`<script src="../js/soul.js?v=1" data-lab="<id>"></script>` and a config entry in `soul.js`.
+Click the avatar to quiet it (remembered per device); it is off under reduced-motion and never runs hidden.
+
 ## Progress and sync
 
 Labs save progress in the browser (`localStorage`). This is per device —
