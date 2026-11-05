@@ -70,6 +70,14 @@ Deep links: Poshle and Shelle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#
 `#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
 Pyle `#review` / `#kata`, Sleeple `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Codex `#<volume>` (e.g. `#sql`), Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
+## Soul layer
+
+`labs/data/soul.js` gives labs a resident NPC (Wren in Shelle, Chef Roux in Seqle, Oriel in Spelle, ...),
+drifting ambient motion that fits each world, real-world good-habit reminders, and reactions to your
+wins and misses. Add `<script src="data/soul.js" data-world="<name>"></script>` before `</body>`
+and a world entry in the script. Click "hush" to silence the resident (saved), and it respects
+reduced-motion settings.
+
 ## Progress and sync
 
 Labs save progress in the browser (`localStorage`). This is per device —
