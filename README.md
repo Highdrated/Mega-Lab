@@ -70,6 +70,12 @@ Deep links: Poshle and Shelle `#<scenario>` / `#case:<id>` / `#weak`, Git Lab `#
 `#detective` / `#guided` / `#free`, Junle `#review` / `#mix` / `#tourney`,
 Pyle `#review` / `#kata`, Sleeple `#school` / `#target` / `#hangar` / `#port` / `#logbook` / `#review`, Seqle `#school` / `#target` / `#dining` / `#till` / `#cookbook` / `#review` / `#target:<id>`, Codex `#<volume>` (e.g. `#sql`), Hexle `#review` / `#tourney` / any stage, Modle `#/practice/daily`.
 
+## Ambient life
+
+`js/soul.js` gives labs drifting scenery and in-world voices (chef, conductor, NOC, archivist...) that
+reinforce one good real-world habit each. Add `<script src="../js/soul.js" data-lab="<key>" defer></script>`
+and a `WORLDS` entry. Respects reduced motion; the `voices` toggle (bottom right) is remembered.
+
 ## Progress and sync
 
 Labs save progress in the browser (`localStorage`). This is per device —
