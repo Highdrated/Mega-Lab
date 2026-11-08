@@ -99,10 +99,6 @@
       "Ops desk: 'Write down what you did. The 3 a.m. you will thank you.'",
       "Keyboard clatter. Staging first, production second.",
       "Ops desk: 'Check the logs before you restart the service. A restart erases clues.'"] },
-    dockle: { fx: "stars", who: "Night porter", lines: [
-      "Porter: 'Short, plain sentences first. Fluency is built from small, certain pieces.'",
-      "Lamplight. Say the answer aloud before revealing it. Retrieval beats rereading.",
-      "Porter: 'A wrong answer today is a right answer next week. Keep going.'"] },
     "junos-lab": { fx: "bits", who: "NOC", lines: [
       "NOC: 'show before set. Know the state before you change it.'",
       "Fans spin up. Use commit check, then commit confirm 5. Never commit blind on a remote box.",
@@ -153,6 +149,89 @@
       "Distant clank. commit confirm, so a mistake undoes itself.",
       "A raven shifts on the rafter. Read the whole config before you change a line of it."] }
   };
+
+
+  var EXTRA = {
+    sleeple: ["Conductor: 'range(len(x)) is a smell. Loop over the items themselves, or use enumerate.'",
+      "A bell clangs. Never use a mutable default argument like def f(x=[]). It is shared between calls.",
+      "Conductor: 'with open(...) closes the file for you, even when something breaks.'",
+      "Wheels on iron. Compare to None with is, not ==.",
+      "Conductor: 'Keep secrets out of the code. Read them from the environment.'",
+      "Lantern swing. Use pathlib for paths. Gluing strings with slashes breaks on another machine.",
+      "Conductor: 'A comprehension for a simple map or filter. A loop when it needs thought.'",
+      "The compartment door slides. Raise specific exceptions with a clear message."],
+    seqle: ["Chef: 'Alias your tables and keep the aliases short but meaningful.'",
+      "A pan hisses. COUNT(*) counts rows, COUNT(col) skips NULLs. Know which one you want.",
+      "Chef: 'Never SELECT * in application code. Name the columns, the schema will change.'",
+      "Knife on board. Back up the table before a bulk DELETE. Better: run it in a transaction first.",
+      "Chef: 'A foreign key is a promise. Let the database keep it.'",
+      "Ticket printer chatters. Store money as integers of cents, not floats.",
+      "Chef: 'DISTINCT is not a cure for a bad JOIN. Find why the duplicates appeared.'",
+      "Chef: 'Read the query out loud in plain English. If it sounds wrong, it is wrong.'"],
+    passle: ["Roux: 'Use === not ==. Loose comparison is how 0 equals \"abc\".'",
+      "A whisk taps. Check the CSRF token on every form that changes something.",
+      "Roux: 'Regenerate the session id after login.'",
+      "The dining room murmurs. Never echo raw user input into HTML, a URL or a query.",
+      "Roux: 'Set the right Content-Type and status code. Your API is a conversation.'",
+      "Roux: 'Composer for dependencies. Pin the version, read the changelog.'",
+      "The kettle sings. Check file uploads by type and size on the server, not just in the form.",
+      "Roux: 'Null-safe operator and defaults. Handle the missing case on purpose.'"],
+    poshle: ["Nurse: 'Select-Object only the properties you need. Less to carry, less to break.'",
+      "Pager. Use -Filter on the server side, not Where-Object after fetching everything.",
+      "Nurse: 'Splat long parameter lists. A readable call is a safe call.'",
+      "Clip clop of shoes. $ErrorActionPreference = 'Stop' in scripts, so failures stop.",
+      "Nurse: 'Export to CSV a copy of what you are about to change. That is your undo.'",
+      "Nurse: 'Never run a script you cannot read. Check the signature and the source.'",
+      "Quiet corridor. Comment the why. The commands already show the what.",
+      "Nurse: 'Use Measure-Object and Group-Object to check your numbers before you act on them.'"],
+    shelle: ["Dock master: 'Use [[ ]] and quote inside. Test, don't hope.'",
+      "A buoy clangs. Use trap to clean up temp files, even when the script dies.",
+      "Dock master: 'Pin your image tags. latest is a moving target.'",
+      "A winch whines. Run containers as a non-root user.",
+      "Dock master: 'ls the glob first, echo before rm. Measure twice.'",
+      "A ship horn. Use ~/.ssh with 700 and keys with 600. SSH refuses loose keys for good reason.",
+      "Dock master: 'Prune unused images and volumes, but read what the list says first.'",
+      "Dock master: 'Pipes carry text. Use null separators (-print0, xargs -0) for names with spaces.'"],
+    "git-lab": ["Console: 'Write the subject line in the imperative: Add, Fix, Remove.'",
+      "Pulse. Use .gitignore for build output and secrets before the first add.",
+      "Console: 'Rebase your own branch, never a shared one.'",
+      "Static. git stash is a drawer, not a bin. Label it and empty it.",
+      "Console: 'Tag the release. A name beats a hash for rollbacks.'",
+      "Console: 'Review your own diff first. Half the bugs are caught there.'",
+      "Console: 'git restore for files, git revert for shared history. Don't rewrite what others have.'",
+      "A fan whirs. Protect main. Reviews are cheaper than rollbacks."],
+    "junos-lab": ["NOC: 'Set a login banner and a real root password before anything else.'",
+      "NOC: 'Prefer SSH over telnet. Disable what you don't need.'",
+      "A rack door clangs. Use groups and apply-groups for repeated config, not copy-paste.",
+      "NOC: 'Check routing with show route before you blame the firewall.'",
+      "NOC: 'Policy: name it for what it does, order it on purpose, end with an explicit action.'",
+      "NOC: 'Syslog and NTP first. Logs without time are stories without a plot.'",
+      "NOC: 'Lock the config with configure exclusive when two of you might edit.'",
+      "NOC: 'Load a saved config with rollback rescue after a disaster. Save one while healthy.'"],
+    webble: ["Studio: 'will-change is a promise. Use it sparingly or it costs memory.'",
+      "Studio: 'requestAnimationFrame for JS motion, never setInterval.'",
+      "Studio: 'Stagger by 40 to 80ms. Longer feels slow, shorter feels simultaneous.'",
+      "Studio: 'Test with the keyboard only. Then with a screen reader on.'",
+      "Studio: 'Give every motion a purpose: guide, confirm, or delight. In that order.'"],
+    opsle: ["Ops desk: 'Alert on symptoms users feel, not on every graph that twitches.'",
+      "Ops desk: 'Rotate secrets on a schedule. Rotate immediately after a leak.'",
+      "Ops desk: 'cron jobs log their output, or you will never know they failed.'",
+      "Ops desk: 'Document the rollback before you deploy.'",
+      "Ops desk: 'Read the diff. Then read it again. Then apply.'"],
+    rebble: ["Foreman: 'Make the smallest version that runs, then grow it.'",
+      "Foreman: 'Delete dead code. Version control remembers it.'",
+      "Foreman: 'Handle the empty case and the error case first. The happy path is easy.'",
+      "Foreman: 'Write the test you wish you had during the last bug.'"],
+    modle: ["Study hall: 'Spaced practice: today, tomorrow, in four days, in two weeks.'",
+      "Study hall: 'Explain it to the wall. Where you stumble is where to study.'",
+      "Study hall: 'Mixed practice feels harder and works better than blocks of one kind.'",
+      "Study hall: 'Sleep is part of studying. Memory settles overnight.'"],
+    "subnle-pocket": ["Switchboard: 'Count in powers of two: 128, 64, 32, 16, 8, 4, 2, 1. Own them.'",
+      "Switchboard: 'Document every subnet: purpose, range, gateway, owner.'",
+      "Switchboard: 'Never overlap ranges. Plan the address space before you plug in.'",
+      "Switchboard: 'Private ranges: 10/8, 172.16/12, 192.168/16. Public space is not yours to borrow.'"]
+  };
+  Object.keys(EXTRA).forEach(function (k) { if (WORLDS[k]) WORLDS[k].lines = WORLDS[k].lines.concat(EXTRA[k]); });
 
   var W = WORLDS[lab];
   if (!W) return;
@@ -211,9 +290,16 @@
   var box, timer, hideT, last = -1, tg;
   function say() {
     if (off || document.hidden || !W.lines.length) return schedule();
+    var ae = document.activeElement;
+    if (ae && (/^(INPUT|TEXTAREA|SELECT)$/.test(ae.tagName) || ae.isContentEditable)) { clearTimeout(timer); timer = setTimeout(say, 12000); return; }
     var i;
     do { i = Math.floor(Math.random() * W.lines.length); } while (i === last && W.lines.length > 1);
     last = i;
+    var txt = W.lines[i], m = txt.match(/^[A-Za-z' ]{2,22}: '(.*)'$/);
+    show(m ? m[1] : txt);
+    schedule();
+  }
+  function show(text) {
     if (!box) {
       box = document.createElement("div");
       box.className = "soul-say";
@@ -221,16 +307,18 @@
       box.setAttribute("aria-live", "polite");
       box.onclick = hide;
       document.body.appendChild(box);
+      var cs = getComputedStyle(document.body), bg = cs.backgroundColor;
+      if (bg && bg !== 'rgba(0, 0, 0, 0)') { box.style.background = bg; box.style.color = cs.color; box.style.borderColor = cs.color.replace(/rgb\((.*)\)/, 'rgba($1,.35)'); }
+      box.style.fontFamily = cs.fontFamily;
     }
     box.innerHTML = "<b></b><span></span>";
     box.firstChild.textContent = W.who;
-    var txt = W.lines[i], m = txt.match(/^[A-Za-z' ]{2,22}: '(.*)'$/);
-    box.lastChild.textContent = m ? m[1] : txt;
+    box.lastChild.textContent = text;
     requestAnimationFrame(function () { box.classList.add("on"); });
     clearTimeout(hideT);
-    hideT = setTimeout(hide, 9000 + W.lines[i].length * 45);
-    schedule();
+    hideT = setTimeout(hide, 9000 + text.length * 45);
   }
+  window.Soul = { say: function (t) { if (!off) show(t); }, lab: lab };
   function hide() { if (box) box.classList.remove("on"); }
   function schedule() { clearTimeout(timer); timer = setTimeout(say, rnd(45000, 95000)); }
 
@@ -249,7 +337,15 @@
     };
     paintToggle();
     document.body.appendChild(tg);
-    timer = setTimeout(say, rnd(12000, 22000));
+    var now = Date.now(), prev = 0, vk = "soul:seen:" + lab;
+    try { prev = +localStorage.getItem(vk) || 0; localStorage.setItem(vk, String(now)); } catch (e) {}
+    var days = prev ? Math.floor((now - prev) / 864e5) : -1;
+    var hello = days < 0 ? "First time here. Stay curious, mistakes are the point."
+      : days >= 7 ? "Back after " + days + " days. Things fade, so go gently and review first."
+      : days >= 2 ? "Welcome back, " + days + " days away. A short review will wake it all up."
+      : "";
+    if (hello && !off) setTimeout(function () { show(hello); }, 3000);
+    timer = setTimeout(say, rnd(30000, 60000));
     document.addEventListener("visibilitychange", function () {
       if (fx) fx.style.display = document.hidden ? "none" : "";
     });
