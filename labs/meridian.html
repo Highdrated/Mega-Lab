@@ -169,6 +169,18 @@ dialog::backdrop{background:rgba(0,0,0,.4)}
 dialog textarea{width:100%;height:120px;font-family:var(--mono);font-size:12px;background:var(--field);border:1px solid var(--line2);border-radius:var(--r);padding:8px;resize:none}
 dialog .bar{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
 .rail{display:none}
+.board{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}
+.svc{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--ink2);min-height:22px}
+.svc i{width:7px;height:7px;border-radius:50%;background:var(--ok);flex:none;transition:background .3s}
+.svc.down{color:var(--bad)}
+.svc.down i{background:var(--bad);box-shadow:0 0 0 3px var(--bad2)}
+.svc.watch span{font-weight:500}
+.comms{display:flex;flex-direction:column;gap:10px;margin-bottom:18px}
+.msg{display:flex;gap:10px}
+.face.sm{width:28px;height:28px;font-size:10px}
+.msg .mt{font-size:11px;color:var(--mute)}
+.msg p{margin:2px 0 0;font-size:13px;color:var(--ink2);line-height:1.5}
+#v-tickets.sandbox .record,#v-tickets.sandbox #stacklbl,#v-tickets.sandbox #stack,#v-tickets.sandbox #stacknote{display:none}
 .ex{font-family:var(--sans);font-size:13px;line-height:1.6;color:var(--ink2);border-left:2px solid var(--acc);padding:2px 0 4px 12px;margin:6px 0 12px;white-space:normal;max-width:760px}
 .ex b{display:block;font-weight:500;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--acc);margin-bottom:2px}
 .ex.why{border-left-color:var(--ok)}
@@ -207,10 +219,10 @@ details.ex.why[open]{border-left-color:var(--ok)}
 @media (max-width:1180px){
  .desk{grid-template-columns:240px minmax(0,1fr) 52px}
  .col.side{padding:12px 6px;overflow:hidden}
- .col.side .stack,.col.side .lbl,.col.side .stack-note{display:none}
+ .col.side .stack,.col.side .lbl,.col.side .stack-note,.col.side .board{display:none}
  .col.side .rail{display:flex;flex-direction:column;align-items:center;gap:6px}
  .col.side.open{position:absolute;right:0;top:0;bottom:0;width:250px;background:var(--panel);z-index:5;padding:18px;overflow:auto;box-shadow:-1px 0 0 var(--line)}
- .col.side.open .stack,.col.side.open .lbl,.col.side.open .stack-note{display:flex}
+ .col.side.open .stack,.col.side.open .lbl,.col.side.open .stack-note,.col.side.open .board{display:flex}
  .col.side.open .lbl,.col.side.open .stack-note{display:block}
  .col.side.open .rail{display:none}
  .desk{position:relative}
@@ -232,6 +244,7 @@ details.ex.why[open]{border-left-color:var(--ok)}
  .col.side .stack{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px}
  .col.side .stack .link{display:none}
  .col.side .stack .node{flex:1 1 160px}
+ .col.side .board{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr))}
  .col.side .lbl,.col.side .stack-note{display:block}
  .col.side .rail{display:none}
  .mods{border-right:0;border-bottom:1px solid var(--line)}
@@ -285,7 +298,9 @@ details.ex.why[open]{border-left-color:var(--ok)}
    </div>
    <div class="col side" id="tk-side">
     <div class="rail"><button class="ghost" id="b-rail" title="Show affected stack"></button></div>
-    <p class="lbl">Affected stack</p>
+    <p class="lbl">Ship status</p>
+    <div class="board" id="board"></div>
+    <p class="lbl" id="stacklbl" style="margin-top:20px">Affected stack</p>
     <div class="stack" id="stack"></div>
     <p class="stack-note" id="stacknote"></p>
    </div>
@@ -351,6 +366,7 @@ const CONCEPTS={
  'maint-mode':{q:'Why will a VM not power on while its host is in maintenance mode?',a:'Maintenance mode tells vSphere the host is being serviced: no VMs may run or start on it. Exit maintenance mode (or move the VM to another host) first.'},
  'evidence':{q:'When are you allowed to call something the fault?',a:'Only when you have evidence: output, a log line, a state you saw yourself. A hunch is a hypothesis to test, not a finding.'},
  'smallest-fix':{q:'Why not just reboot the host when something on it is broken?',a:'A reboot is the biggest hammer: it takes minutes, drops everything still running, and often does not touch the cause. Find the cause, then apply the smallest fix that removes it.'},
+ 'collateral':{q:'Before you run a command that changes something, what do you check, and who do you tell?',a:'What else runs on or depends on the thing you change, and the owners of those services. Nobody should learn about your change from their own users.'},
  'record':{q:'What five things does an incident record need here?',a:'What happened, why (root cause), how to roll back what you did, how you verified the service, and the follow-up that stops it happening again.'}
 };
 
@@ -432,92 +448,352 @@ const MISSIONS={
  'x0-map':{module:'m0',title:'Map your own stack',hw:'Your Mac, NAS and switch',steps:['List every device you own that runs a service (NAS, Mac, switch, router)','For one service, write the chain it depends on, top to bottom','Mark which link in that chain has no backup or no second path','Find where each device gets its IP address from'],prompt:'What did you see? Which single failure would take the most down?'}
 };
 
-const VM02=['galley-disp-01','cabin-tv-02','crew-wiki-01'];
-const VM01=['nav-log-01','nav-log-02','comms-relay-01','dock-ctl-01','med-rec-01','cargo-db-01','cargo-app-01','lounge-pos-01','door-ctl-02','print-01','mon-01'];
-const pad=(s,n)=>String(s).padEnd(n);
-const vmRow=(n,w)=>`${pad(n,17)}${pad(w.vms[n].on?'PoweredOn':'PoweredOff',12)}${pad(w.vms[n].host,8)}2       4`;
-const VMHEAD='Name             PowerState  VMHost  NumCpu  MemoryGB\n----             ----------  ------  ------  --------';
+const HOSTS0={'esx-01':{cluster:'AFT',ip:'10.4.1.11',cpu:18200},'esx-02':{cluster:'AFT',ip:'10.4.1.12',cpu:16400},'esx-03':{cluster:'FWD',ip:'10.4.2.11',cpu:6100}};
+const VMLIST=[
+ ['nav-log-01','esx-01','ubuntu'],['nav-log-02','esx-01','ubuntu'],['comms-relay-01','esx-01','ubuntu'],['dock-ctl-01','esx-01','ubuntu'],['med-rec-01','esx-01','ubuntu'],['cabin-tv-01','esx-01','ubuntu'],['door-ctl-01','esx-01','ubuntu'],['ad-dc-01','esx-01','windows'],['dns-01','esx-01','windows'],['backup-proxy-01','esx-01','ubuntu'],['crew-portal-01','esx-01','ubuntu'],['lounge-music-01','esx-01','ubuntu'],
+ ['galley-disp-01','esx-02','ubuntu','local'],['cabin-tv-02','esx-02','ubuntu','local'],['crew-wiki-01','esx-02','ubuntu','local'],['cargo-db-01','esx-02','ubuntu'],['cargo-app-01','esx-02','ubuntu'],['lounge-pos-01','esx-02','ubuntu'],['door-ctl-02','esx-02','ubuntu'],['print-01','esx-02','ubuntu'],['mon-01','esx-02','ubuntu'],['ad-dc-02','esx-02','windows'],['dns-02','esx-02','windows'],['crew-mail-01','esx-02','ubuntu'],['hr-app-01','esx-02','ubuntu'],['spa-book-01','esx-02','ubuntu'],
+ ['vcsa-01','esx-03','appliance'],['bridge-ui-01','esx-03','ubuntu'],['sensor-agg-01','esx-03','ubuntu'],['nav-core-01','esx-03','ubuntu']
+];
+const SVCS=[
+ {id:'galley',name:'Galley display',vms:['galley-disp-01'],port:443,unit:'galley-display',owner:'linnea'},
+ {id:'tv13',name:'Cabin TV decks 1-3',vms:['cabin-tv-01'],port:8443,unit:'cabin-tv',owner:'linnea'},
+ {id:'tv46',name:'Cabin TV decks 4-6',vms:['cabin-tv-02'],port:8443,unit:'cabin-tv',owner:'linnea'},
+ {id:'pos',name:'Lounge tills',vms:['lounge-pos-01'],port:443,unit:'pos',owner:'linnea'},
+ {id:'wiki',name:'Crew wiki',vms:['crew-wiki-01'],port:443,unit:'wiki',owner:'odran'},
+ {id:'mail',name:'Crew mail',vms:['crew-mail-01'],port:443,unit:'mail',owner:'odran'},
+ {id:'cargo',name:'Cargo system',vms:['cargo-db-01','cargo-app-01'],port:443,unit:'cargo-app',owner:'odran'},
+ {id:'doors',name:'Door control',vms:['door-ctl-01','door-ctl-02'],any:true,port:443,unit:'door-ctl',owner:'odran'},
+ {id:'dir',name:'Directory and DNS',vms:['ad-dc-01','ad-dc-02','dns-01','dns-02'],any:true,port:53,owner:'odran'},
+ {id:'med',name:'Medical records',vms:['med-rec-01'],port:443,unit:'medrec',owner:'seraphine'},
+ {id:'nav',name:'Navigation log',vms:['nav-log-01','nav-log-02'],any:true,port:443,unit:'navlog',owner:'tamsin'},
+ {id:'comms',name:'Comms relay',vms:['comms-relay-01'],port:443,unit:'relay',owner:'tamsin'},
+ {id:'bridge',name:'Bridge displays',vms:['bridge-ui-01','sensor-agg-01'],port:443,unit:'bridge-ui',owner:'seraphine'}
+];
+const svcOfVm=n=>SVCS.find(s=>s.vms.includes(n));
+const DSS0={'DS-HULL-01':{cluster:'AFT',cap:2048,free:412,lun:'LUN 12 on SAN-A'},'DS-BOW-01':{cluster:'FWD',cap:1024,free:566,lun:'LUN 3 on SAN-B'}};
 
-function shakeStart(names,w,c){
- const out=[],notes=[];
- for(const n of names){
-  const v=w.vms[n];
-  if(!v)return{err:`Start-VM: VM with name '${n}' was not found.`};
-  if(w.hostState==='Maintenance'&&v.host==='esx-02')return{err:`Start-VM: The operation is not allowed in the current state of the host (Maintenance mode).`,fail:['maint-mode','Tried to power on a VM on a host still in maintenance mode.'],why:'vSphere refuses this outright. In real life the screen just shows this error and nothing changes, but it tells everyone watching that you started fixing before you understood the cause. Take the host out of maintenance mode first.'};
-  if(v.on){out.push(`${pad(n,17)}PoweredOn   (already running)`);continue}
-  v.on=true;out.push(`${pad(n,17)}PoweredOn`);
- }
- return{out:'Name             PowerState\n----             ----------\n'+out.join('\n'),note:VM02.every(n=>w.vms[n].on)?'Every VM you started reports PoweredOn. Running only means the operating system booted.':'Only the VM you named was started. PowerShell does exactly what you type, nothing more.'};
+function baseWorld(){
+ const w={clock:7*60+42,hosts:{},vms:{},ds:JSON.parse(JSON.stringify(DSS0)),events:[],logs:{},journal:{},comms:[],f:{},svcLast:{}};
+ Object.entries(HOSTS0).forEach(([h,v])=>{w.hosts[h]={...v,state:'Connected',uptimeH:24*41+3}; w.logs[h]={'hostd.log':[['2026-11-10T06:00:01Z','info','hostd','Scheduled health check passed']],'esxupdate.log':[],'vmkernel.log':[['2026-11-10T05:12:44Z','info','vmkernel','NetPort: link up vmnic0']]}});
+ let id=1;VMLIST.forEach(([n,h,os,disk])=>{w.vms[n]={vmid:id++,host:h,reg:h,os,on:true,ds:HOSTS0[h].cluster==='FWD'?'DS-BOW-01':'DS-HULL-01',local:!!disk,cpu:2,mem:4}});
+ w.events.push({t:'06:00',e:'cluster AFT',u:'',m:'Scheduled health check completed'});
+ SVCS.forEach(s=>w.svcLast[s.id]=true);
+ return w;
+}
+const hhmm=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
+function svcUp(w,s){const ok=n=>{const v=w.vms[n];return v&&v.on&&w.hosts[v.host].state==='Connected'};return s.any?s.vms.some(ok):s.vms.every(ok)}
+
+const CMDLETS={
+ 'Connect-VIServer':{params:{'-Server':'vc'},pos:'-Server'},
+ 'Disconnect-VIServer':{params:{'-Confirm':'switch'},pos:null},
+ 'Get-VM':{params:{'-Name':'vm','-Location':'loc'},pos:'-Name'},
+ 'Get-VMHost':{params:{'-Name':'host','-Location':'cluster'},pos:'-Name'},
+ 'Get-Cluster':{params:{'-Name':'cluster'},pos:'-Name'},
+ 'Get-Datastore':{params:{'-Name':'ds'},pos:'-Name'},
+ 'Get-VIEvent':{params:{'-Entity':'entity','-MaxSamples':'int'},pos:'-Entity'},
+ 'Start-VM':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
+ 'Stop-VM':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
+ 'Restart-VM':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
+ 'Set-VMHost':{params:{'-VMHost':'host','-State':'state','-Confirm':'switch'},pos:'-VMHost'},
+ 'Restart-VMHost':{params:{'-VMHost':'host','-Force':'switch','-Confirm':'switch'},pos:'-VMHost'},
+ 'Where-Object':{params:{'-Property':'prop','-eq':'val','-ne':'val','-like':'val','-notlike':'val','-gt':'int','-lt':'int'},pos:'-Property'},
+ 'Select-Object':{params:{'-Property':'prop','-First':'int','-Last':'int','-ExpandProperty':'prop'},pos:'-Property'},
+ 'Sort-Object':{params:{'-Property':'prop','-Descending':'switch'},pos:'-Property'},
+ 'Format-List':{params:{'-Property':'prop'},pos:'-Property'},
+ 'Format-Table':{params:{'-Property':'prop','-AutoSize':'switch'},pos:'-Property'},
+ 'Measure-Object':{params:{},pos:null},
+ 'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'},
+ 'Test-Connection':{params:{'-TargetName':'vm','-Count':'int'},pos:'-TargetName'},
+ 'ssh':{params:{},pos:'target',syn:'ssh [user@]host'},
+ 'ping':{params:{},pos:'vm',syn:'ping <host>'}
+};
+const PALIAS={'?':'Where-Object',where:'Where-Object',select:'Select-Object',sort:'Sort-Object',fl:'Format-List',ft:'Format-Table',measure:'Measure-Object'};
+const PROPS={vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const DEFCOLS={vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const VC='vcenter.meridian.local';
+
+function wvalues(kind){
+ const w=S.cur&&S.cur.w;if(!w)return[];
+ if(kind==='vm')return Object.keys(w.vms);
+ if(kind==='host')return Object.keys(w.hosts);
+ if(kind==='cluster')return['AFT','FWD'];
+ if(kind==='loc')return Object.keys(w.hosts).concat(['AFT','FWD']);
+ if(kind==='entity')return Object.keys(w.hosts).concat(Object.keys(w.vms));
+ if(kind==='ds')return Object.keys(w.ds);
+ if(kind==='vc')return[VC];
+ if(kind==='state')return['Connected','Maintenance'];
+ if(kind==='port')return['443','8443','22','53','80'];
+ if(kind==='prop')return[...new Set([].concat(...Object.values(PROPS)))];
+ if(kind==='val')return['PoweredOn','PoweredOff','Connected','Maintenance'];
+ if(kind==='target')return['root@esx-01','root@esx-02','root@esx-03'].concat(Object.keys(w.vms).filter(n=>w.vms[n].os==='ubuntu').map(n=>'kaatje@'+n));
+ return[];
 }
 
+const vmObj=(w,n)=>{const v=w.vms[n];return{_t:'vm',Name:n,PowerState:v.on?'PoweredOn':'PoweredOff',NumCpu:v.cpu,MemoryGB:v.mem,VMHost:v.host,Guest:v.os==='windows'?'Microsoft Windows Server 2022':v.os==='appliance'?'VMware Photon OS':'Ubuntu Linux (64-bit)',Datastore:v.ds,Id:'VirtualMachine-vm-'+(1000+v.vmid)}};
+const hostObj=(w,h)=>{const x=w.hosts[h],n=Object.values(w.vms).filter(v=>v.host===h&&v.on).length;return{_t:'host',Name:h,ConnectionState:x.state,PowerState:'PoweredOn',NumCpu:32,CpuUsageMhz:x.state==='Maintenance'?190:Math.round(900+n*1250),MemoryTotalGB:512,Version:'8.0.2',Parent:x.cluster}};
+const dsObj=(w,d)=>({_t:'ds',Name:d,FreeSpaceGB:w.ds[d].free,CapacityGB:w.ds[d].cap,State:'Available'});
+const clObj=(w,c)=>({_t:'cluster',Name:c,HAEnabled:'True',DrsEnabled:c==='AFT'?'False':'True',VMHosts:Object.keys(w.hosts).filter(h=>w.hosts[h].cluster===c).join(', ')});
+const wild=(pat,s)=>new RegExp('^'+pat.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i').test(s);
+function pickNames(list,args,label,cmd){
+ if(!args)return{items:list};
+ const out=[];
+ for(const a of args.split(',').map(x=>x.trim().replace(/^['"]|['"]$/g,'')).filter(Boolean)){
+  const hit=list.filter(n=>wild(a,n));
+  if(!hit.length&&!/[*?]/.test(a))return{err:`${cmd}: ${label} with name '${a}' was not found using the specified filter(s).`};
+  hit.forEach(h=>{if(!out.includes(h))out.push(h)});
+ }
+ return{items:out};
+}
+function table(objs,cols){
+ if(!objs.length)return'';
+ const w=cols.map(c=>Math.max(c.length,...objs.map(o=>String(o[c]??'').length)));
+ const right=c=>/GB|Mhz|NumCpu|Count/.test(c);
+ const cell=(v,i)=>right(cols[i])?String(v).padStart(w[i]):String(v).padEnd(w[i]);
+ return[cols.map(cell).join('  '),cols.map((c,i)=>'-'.repeat(c.length).padStart(right(c)?w[i]:0).padEnd(right(c)?0:w[i])).join('  '),...objs.map(o=>cols.map((c,i)=>cell(o[c]??'',i)).join('  '))].map(l=>l.trimEnd()).join('\n');
+}
+function listFmt(objs,cols){return objs.map(o=>{const ks=cols||Object.keys(o).filter(k=>k!=='_t');const L=Math.max(...ks.map(k=>k.length));return ks.map(k=>`${k.padEnd(L)} : ${o[k]??''}`).join('\n')}).join('\n\n')}
+function parseArgs(seg){const t=seg.split(' ');const name=t[0];const pos=[],named={};for(let i=1;i<t.length;i++){if(/^-[A-Za-z]/.test(t[i])){const k=t[i].toLowerCase();if(k==='-confirm:$false'){named['-confirm']='false';continue}const d=CMDLETS[name]&&Object.entries(CMDLETS[name].params).find(([p])=>p.toLowerCase()===k);if(d&&d[1]==='switch'){named[k]=true;continue}named[k]=t[++i]}else pos.push(t[i])}return{name,pos:pos.join(' '),named}}
+
+function see(c,o){
+ const s=c.saw||(c.saw={vm:{},hostVms:{},host:{},events:{},logs:{},svc:{},esxiVms:{}});
+ if(o._t==='vm')s.vm[o.Name]=o.PowerState;
+ if(o._t==='host')s.host[o.Name]=o.ConnectionState;
+}
+
+function psExec(nl,c,w,gate){
+ const segs=nl.split(' | ');
+ let data=null,type=null,out=null,note=null,cols=null,fmt='table',writes=[];
+ const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'];
+ if(segs.some(s=>writeCmds.includes(s.split(' ')[0]))){const g=gate();if(g)return g}
+ for(let si=0;si<segs.length;si++){
+  const a=parseArgs(segs[si]),n=a.name,first=si===0;
+  if(['Get-VM','Get-VMHost','Get-Cluster','Get-Datastore','Get-VIEvent','Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'].includes(n)&&!c.vc)return{err:`${n}: You are not currently connected to any servers. Please connect first using a Connect cmdlet.`};
+  if(n==='Get-VM'){
+   let pool=Object.keys(w.vms);
+   if(!first&&type==='host')pool=pool.filter(v=>data.some(h=>h.Name===w.vms[v].host));
+   else if(!first&&type==='cluster')pool=pool.filter(v=>data.some(cl=>w.hosts[w.vms[v].host].cluster===cl.Name));
+   if(a.named['-location']){const L=a.named['-location'];const hk=Object.keys(w.hosts).find(h=>h.toLowerCase()===L.toLowerCase());const ck=['AFT','FWD'].find(x=>x.toLowerCase()===L.toLowerCase());if(!hk&&!ck)return{err:`Get-VM: Could not find VIContainer with name '${L}'.`};pool=pool.filter(v=>hk?w.vms[v].host===hk:w.hosts[w.vms[v].host].cluster===ck);c.saw=c.saw||{};see(c,{});c.saw.hostVms[hk||ck]=true}
+   else if(!first&&type==='host')data.forEach(h=>{see(c,{});c.saw.hostVms[h.Name]=true});
+   const r=pickNames(pool,a.pos,'VM','Get-VM');if(r.err)return{err:r.err};
+   data=r.items.map(x=>vmObj(w,x));type='vm';data.forEach(o=>see(c,o));continue;
+  }
+  if(n==='Get-VMHost'){let pool=Object.keys(w.hosts);if(a.named['-location'])pool=pool.filter(h=>w.hosts[h].cluster.toLowerCase()===a.named['-location'].toLowerCase());if(!first&&type==='vm')pool=pool.filter(h=>data.some(v=>v.VMHost===h));const r=pickNames(pool,a.pos,'VMHost','Get-VMHost');if(r.err)return{err:r.err};data=r.items.map(x=>hostObj(w,x));type='host';data.forEach(o=>see(c,o));continue}
+  if(n==='Get-Cluster'){const r=pickNames(['AFT','FWD'],a.pos,'Cluster','Get-Cluster');if(r.err)return{err:r.err};data=r.items.map(x=>clObj(w,x));type='cluster';continue}
+  if(n==='Get-Datastore'){const r=pickNames(Object.keys(w.ds),a.pos,'Datastore','Get-Datastore');if(r.err)return{err:r.err};data=r.items.map(x=>dsObj(w,x));type='ds';data.forEach(d=>{c.seen[d.Name]=1});continue}
+  if(n==='Get-VIEvent'){
+   const ent=a.pos||a.named['-entity'];let ev=w.events.slice();
+   if(ent){const e=ent.toLowerCase();if(!w.hosts[e]&&!w.vms[e])return{err:`Get-VIEvent: Could not find VIObject with name '${ent}'.`};ev=ev.filter(x=>x.e===e||(w.hosts[e]&&w.vms[x.e]&&w.vms[x.e].reg===e));see(c,{});c.saw.events[e]=true}
+   ev=ev.slice().reverse();const ms=+(a.named['-maxsamples']||100);ev=ev.slice(0,ms);
+   data=ev.map(x=>({_t:'event',CreatedTime:'10/11/2026 '+x.t+':00',UserName:x.u||'',FullFormattedMessage:x.m}));type='event';continue;
+  }
+  if(n==='Where-Object'){
+   if(!data)return{err:'Where-Object: nothing to filter. Pipe a Get- command into it.'};
+   const m=segs[si].match(/^Where-Object\s+(?:\{\s*\$_\.)?(\w+)\s+(-eq|-ne|-like|-notlike|-gt|-lt)\s+['"]?([^'"}]+?)['"]?\s*\}?$/i);
+   if(!m)return{err:`Where-Object: use the form  Where-Object PowerState -eq PoweredOff`};
+   const[,p,op,val]=m,prop=Object.keys(data[0]||{}).find(k=>k.toLowerCase()===p.toLowerCase());
+   if(data.length&&!prop){data=[];continue}
+   data=data.filter(o=>{const v=String(o[prop]);switch(op.toLowerCase()){case'-eq':return v.toLowerCase()===val.toLowerCase();case'-ne':return v.toLowerCase()!==val.toLowerCase();case'-like':return wild(val,v);case'-notlike':return!wild(val,v);case'-gt':return+v>+val;case'-lt':return+v<+val}});
+   continue;
+  }
+  if(n==='Select-Object'){
+   if(!data)return{err:'Select-Object: nothing to select from.'};
+   if(a.named['-first'])data=data.slice(0,+a.named['-first']);
+   if(a.named['-last'])data=data.slice(-a.named['-last']);
+   if(a.named['-expandproperty']){const p=a.named['-expandproperty'];out=data.map(o=>o[Object.keys(o).find(k=>k.toLowerCase()===p.toLowerCase())]).join('\n');data=null;continue}
+   if(a.pos){const want=a.pos.split(',').map(x=>x.trim()).filter(Boolean);const all=Object.keys(data[0]||{});const keys=want[0]==='*'?all.filter(k=>k!=='_t'):want.map(x=>all.find(k=>k.toLowerCase()===x.toLowerCase())||x);cols=keys;data=data.map(o=>{const r={_t:o._t};keys.forEach(k=>r[k]=o[k]??'');return r})}
+   continue;
+  }
+  if(n==='Sort-Object'){if(!data)continue;const p=a.pos||'Name';const k=Object.keys(data[0]||{}).find(x=>x.toLowerCase()===p.toLowerCase())||'Name';data=data.slice().sort((x,y)=>{const A=x[k],B=y[k];return(typeof A==='number'?A-B:String(A).localeCompare(String(B)))*(a.named['-descending']?-1:1)});continue}
+  if(n==='Format-List'){fmt='list';if(a.pos)cols=a.pos.split(',').map(x=>x.trim()).map(x=>x==='*'?null:Object.keys(data[0]||{}).find(k=>k.toLowerCase()===x.toLowerCase())||x).filter(Boolean);if(a.pos==='*')cols=null;continue}
+  if(n==='Format-Table'){fmt='table';if(a.pos)cols=a.pos.split(',').map(x=>x.trim()).map(x=>Object.keys(data[0]||{}).find(k=>k.toLowerCase()===x.toLowerCase())||x);continue}
+  if(n==='Measure-Object'){out=`Count    : ${data?data.length:0}\nAverage  :\nSum      :\nMaximum  :\nMinimum  :\nProperty :`;data=null;continue}
+  if(['Start-VM','Stop-VM','Restart-VM'].includes(n)){
+   let names;if(!first&&type==='vm')names=data.map(o=>o.Name);else{const r=pickNames(Object.keys(w.vms),a.pos,'VM',n);if(r.err)return{err:r.err};names=r.items}
+   if(!names.length)return{err:`${n}: Cannot validate argument on parameter 'VM'. The argument is null or empty.`};
+   if(n!=='Start-VM'&&a.named['-confirm']!=='false'&&!c.confirmed)return{confirm:nl,out:`Confirm\nAre you sure you want to perform this action?\nPerforming the operation "${n==='Stop-VM'?'Stop':'Restart'}" on target "VM '${names.join("', '")}'".\n[Y] Yes  [A] Yes to All  [N] No  [L] No to All  [?] Help (default is "Y"):`};
+   const rows=[];
+   for(const vn of names){const v=w.vms[vn],h=w.hosts[v.host];
+    if(n==='Start-VM'){if(h.state==='Maintenance')return{err:`Start-VM: ${hhmm(w.clock)} Start-VM  The operation for the entity "${vn}" failed with the following message: "The operation is not allowed in the current state of the host."`,ev:{k:'start-in-maint',vm:vn}};if(!v.on){v.on=true;w.clock+=1;w.journal[vn]=(w.journal[vn]||[]).concat([[hhmm(w.clock),'Started']]);w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`${vn} on ${v.host} is powered on`})}}
+    else{if(v.on){v.on=false;w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`${vn} on ${v.host} is powered off`})}if(n==='Restart-VM')v.on=true}
+    rows.push(vmObj(w,vn));rows[rows.length-1]._t='vm';see(c,rows[rows.length-1]);
+   }
+   data=rows;type='vm';cols=['Name','PowerState','NumCpu','MemoryGB'];continue;
+  }
+  if(n==='Set-VMHost'){
+   let hostsN;if(!first&&type==='host')hostsN=data.map(o=>o.Name);else{const r=pickNames(Object.keys(w.hosts),a.pos,'VMHost','Set-VMHost');if(r.err)return{err:r.err};hostsN=r.items}
+   const st=a.named['-state'];if(!st||!/^(connected|maintenance)$/i.test(st))return{err:`Set-VMHost: Cannot bind parameter 'State'. Use Connected or Maintenance.`};
+   const target=/^c/i.test(st)?'Connected':'Maintenance';
+   for(const hn of hostsN){const h=w.hosts[hn];if(target==='Maintenance'&&Object.values(w.vms).some(v=>v.host===hn&&v.on))return{err:`Set-VMHost: The operation for the entity "${hn}" failed: running virtual machines must be migrated or powered off first.`};if(h.state!==target){h.state=target;w.clock+=2;w.events.push({t:hhmm(w.clock),e:hn,u:'MERIDIAN\\kaatje',m:target==='Connected'?`Host ${hn} in AFT has exited maintenance mode`:`Host ${hn} in AFT has entered maintenance mode`});c.react=(c.react||[]).concat([{k:'host-state',host:hn,state:target}])}}
+   data=hostsN.map(x=>hostObj(w,x));type='host';cols=['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'];data.forEach(o=>see(c,o));continue;
+  }
+  if(n==='Restart-VMHost'){
+   const r=pickNames(Object.keys(w.hosts),a.pos,'VMHost','Restart-VMHost');if(r.err)return{err:r.err};
+   if(a.named['-confirm']!=='false'&&!c.confirmed)return{confirm:nl,out:`Confirm\nAre you sure you want to perform this action?\nPerforming the operation "Restart" on target "${r.items.join(', ')}".\n[Y] Yes  [A] Yes to All  [N] No  [L] No to All  [?] Help (default is "Y"):`};
+   const out2=[];
+   for(const hn of r.items){const h=w.hosts[hn];if(h.state!=='Maintenance'&&!a.named['-force'])return{err:`Restart-VMHost: The operation for the entity "${hn}" failed with the following message: "The operation is not allowed in the current state." Put the host in maintenance mode or use -Force.`};
+    Object.values(w.vms).filter(v=>v.host===hn&&v.on).forEach(v=>{v.on=false});w.clock+=9;h.uptimeH=0;w.events.push({t:hhmm(w.clock),e:hn,u:'MERIDIAN\\kaatje',m:`Host ${hn} rebooted`});out2.push(hn)}
+   return{out:out2.map(h=>`${h}: restart issued ... host back after 9 minutes. ConnectionState: ${w.hosts[h].state}`).join('\n'),ev:{k:'reboot',hosts:out2}};
+  }
+  return{err:`${n}: this command cannot take pipeline input here.`};
+ }
+ if(out!=null)return{out};
+ if(!data)return{out:''};
+ if(!data.length)return{out:''};
+ const C=cols||DEFCOLS[type]||Object.keys(data[0]).filter(k=>k!=='_t');
+ return{out:fmt==='list'?listFmt(data,cols):table(data,C),type,note:PSNOTE[type]};
+}
+const PSNOTE={vm:'PowerState tells you if a VM runs. Get-VM shows no host by default: add <code>| Select-Object Name,PowerState,VMHost</code> or <code>| Format-List</code> to see every property.',host:'ConnectionState: Connected is normal, Maintenance means the host refuses to run VMs, NotResponding means vCenter lost contact. CpuUsageMhz shows how busy it is.',ds:'Free and total space in GB. Divide to get the percentage used.',event:'Events are vCenter\'s diary: what happened, when, and which account did it. Newest first.',cluster:'A cluster is a group of hosts that share storage and can take over from each other.'};
+
+function netExec(nl,c,w){
+ const a=parseArgs(nl),n=a.name;
+ if(n==='Connect-VIServer'){if(!/^vcenter(\.meridian\.local)?$/i.test(a.pos))return{err:`Connect-VIServer: Could not resolve the requested VC server '${a.pos}'.`};c.vc=true;return{out:`Name                    Port  User\n----                    ----  ----\n${VC}  443   MERIDIAN\\kaatje`,note:'Connected to vCenter, which manages every host and VM on the ship. PowerCLI commands now go through it.'}}
+ if(n==='Disconnect-VIServer'){c.vc=false;return{out:''}}
+ const host=x=>x.toLowerCase().replace(/\.meridian\.local$/,'');
+ if(n==='ping'||n==='Test-Connection'){const t=host(a.pos);const up=w.hosts[t]?true:w.vms[t]?(w.vms[t].on&&w.hosts[w.vms[t].host].state==='Connected'):null;if(up===null)return{err:`Ping request could not find host ${a.pos}. Please check the name and try again.`};return{out:`Pinging ${t}.meridian.local with 32 bytes of data:\n`+Array(4).fill(up?'Reply: bytes=32 time<1ms TTL=64':'Request timed out.').join('\n'),ev:{k:'ping',t,up}}}
+ if(n==='Test-NetConnection'){const t=host(a.pos),p=+(a.named['-port']||0);const v=w.vms[t];if(!v&&!w.hosts[t])return{err:`Test-NetConnection: Name resolution of ${a.pos} failed.`};let ok;if(w.hosts[t])ok=[22,443,902].includes(p);else{const up=v.on&&w.hosts[v.host].state==='Connected',s=svcOfVm(t);ok=up&&(p===22&&v.os==='ubuntu'||s&&s.port===p||(v.os==='windows'&&[53,3389].includes(p)))}
+  if(ok&&w.vms[t]){const s=svcOfVm(t);if(s&&s.port===p){see(c,{});c.saw.svc[s.id]=svcUp(w,s)}}
+  return{out:`ComputerName     : ${t}\nRemoteAddress    : ${w.hosts[t]?w.hosts[t].ip:'10.4.8.'+(20+(v?v.vmid:0))}\nRemotePort       : ${p||'(none)'}\nTcpTestSucceeded : ${p?ok?'True':'False':'n/a'}`+(p?'':'\nWARNING: No port given, only ping was tested.'),note:'True means something answered on that port. That is the closest a remote check gets to "the service works".'}}
+ if(n==='ssh'){
+  const t=a.pos.toLowerCase(),[user,h0]=t.includes('@')?t.split('@'):['kaatje',t],h=host(h0);
+  if(w.hosts[h]){if(user!=='root')return{err:`${user}@${h}: Permission denied (publickey,keyboard-interactive).`,note:'ESXi hosts take root (or a named host admin), not your domain account.'};c.shell={kind:'esxi',host:h};return{out:'The time and date of this login have been changed in the system logs.\n\nVMware ESXi 8.0.2 build-22380479\n\nThe ESXi Shell can be disabled by an administrative user. See the vSphere Security documentation for more information.'}}
+  const v=w.vms[h];if(!v)return{err:`ssh: Could not resolve hostname ${h}: Name or service not known`};
+  if(!(v.on&&w.hosts[v.host].state==='Connected'))return{err:`ssh: connect to host ${h}.meridian.local port 22: Connection timed out`,note:'Nothing answered. That says the machine is unreachable, not why: it could be off, or the path to it could be down.'};
+  if(v.os!=='ubuntu')return{err:`ssh: connect to host ${h}.meridian.local port 22: Connection refused`,note:v.os==='windows'?'Windows servers here are managed over RDP or PowerShell remoting, not SSH. The machine is up: it actively refused.':'Appliances do not take shell logins from your account.'};
+  if(user==='root')return{err:`root@${h}: Permission denied (publickey).`,note:'Root login over SSH is switched off on the Linux VMs. Use your own account.'};
+  c.shell={kind:'linux',host:h};return{out:`Welcome to Ubuntu 24.04 LTS (GNU/Linux 6.8.0-45-generic x86_64)\nLast login: Mon Nov  9 16:02:11 2026 from 10.4.0.12`};
+ }
+ return null;
+}
+
+const logFmt=r=>`${r[0]} ${r[1].padEnd(7)} ${r[2]}: ${r[3]}`;
+function esxiWords(host){const w=S.cur.w;return['esxcli','system','maintenanceMode','get','set','--enable','false','true','storage','filesystem','list','vim-cmd','vmsvc/getallvms','vmsvc/power.getstate','vmsvc/power.on','vmsvc/power.off','tail','-n','grep','-i','cat','ls','/var/log/','/var/log/hostd.log','/var/log/vmkernel.log','/var/log/esxupdate.log','uptime','hostname','exit','help'].concat(Object.values(w.vms).filter(v=>v.host===host).map(v=>String(v.vmid)))}
+function linuxWords(host){const s=svcOfVm(host);return['systemctl','status','journalctl','-u','-n','20','curl','-s','-k','-sk',`https://localhost/health`,`https://localhost:${s?s.port:443}/health`,'uptime','hostname','df','-h','free','exit','help'].concat(s&&s.unit?[s.unit]:[])}
+function promptStr(){const c=S.cur;if(c&&c.shell)return c.shell.kind==='esxi'?`[root@${c.shell.host}:~]`:`kaatje@${c.shell.host}:~$`;return PROMPT}
+function shellExec(line,c,w,gate){
+ const sh=c.shell,host=sh.host;
+ if(/^(exit|logout)$/.test(line)){c.shell=null;return{out:`Connection to ${host}.meridian.local closed.`}}
+ if(/^hostname$/.test(line))return{out:host+'.meridian.local'};
+ if(sh.kind==='esxi'){
+  const H=w.hosts[host],mine=Object.values(w.vms).filter(v=>v.host===host),name=v=>Object.keys(w.vms).find(k=>w.vms[k]===v);
+  if(/^help$/.test(line))return{out:'esxcli system maintenanceMode get\nesxcli system maintenanceMode set --enable true|false\nesxcli storage filesystem list\nvim-cmd vmsvc/getallvms\nvim-cmd vmsvc/power.getstate <vmid>\nvim-cmd vmsvc/power.on <vmid>\nvim-cmd vmsvc/power.off <vmid>\nls /var/log\ntail [-n N] <file>\ngrep [-i] <text> <file>\ncat <file>\nuptime  hostname  exit'};
+  if(/^esxcli system maintenanceMode get$/.test(line)){see(c,{});c.saw.host[host]=H.state;return{out:H.state==='Maintenance'?'Enabled':'Disabled',note:'Enabled means the host is in maintenance mode and will not run or start VMs.'}}
+  let m=line.match(/^esxcli system maintenanceMode set (?:--enable|-e) (true|false)$/);
+  if(m){const g=gate();if(g)return g;const t=m[1]==='true'?'Maintenance':'Connected';if(t==='Maintenance'&&mine.some(v=>v.on))return{err:'Unable to enter maintenance mode: running virtual machines must be migrated or powered off first.'};if(H.state!==t){H.state=t;w.clock+=2;w.events.push({t:hhmm(w.clock),e:host,u:'root',m:t==='Connected'?`Host ${host} in ${H.cluster} has exited maintenance mode`:`Host ${host} in ${H.cluster} has entered maintenance mode`});w.logs[host]['hostd.log'].push([`2026-11-10T${hhmm(w.clock)}:00Z`,'info','hostd',t==='Connected'?'Host exited maintenance mode (user root)':'Host entered maintenance mode (user root)']);c.react=(c.react||[]).concat([{k:'host-state',host,state:t}])}return{out:'',note:'No output means success on ESXi. Run the get command if you want proof.'}}
+  if(/^vim-cmd vmsvc\/getallvms$/.test(line)){see(c,{});c.saw.esxiVms[host]=true;return{out:'Vmid  Name              File                                          Guest OS\n'+mine.map(v=>`${String(v.vmid).padEnd(6)}${name(v).padEnd(18)}${`[${v.ds}] ${name(v)}/${name(v)}.vmx`.padEnd(46)}${v.os==='windows'?'windows2022srvNext_64Guest':v.os==='appliance'?'vmwarePhoton64Guest':'ubuntu64Guest'}`).join('\n'),note:'Every VM registered on this host and its Vmid. This list shows what lives here, not whether it runs.'}}
+  m=line.match(/^vim-cmd vmsvc\/power\.(getstate|on|off) (\d+)$/);
+  if(m){const v=mine.find(x=>String(x.vmid)===m[2]);if(!v)return{err:`Unable to find a VM corresponding to "${m[2]}"`};const vn=name(v);
+   if(m[1]==='getstate'){see(c,{});c.saw.vm[vn]=v.on?'PoweredOn':'PoweredOff';return{out:`Retrieved runtime info\n${v.on?'Powered on':'Powered off'}`}}
+   const g=gate();if(g)return g;
+   if(m[1]==='on'){if(H.state==='Maintenance')return{err:'Powering on VM:\n(vim.fault.InvalidState) {\n   msg = "The operation is not allowed in the current state of the host."\n}',ev:{k:'start-in-maint',vm:vn}};if(v.on)return{out:'Powering on VM:\nThe attempted operation cannot be performed in the current state (Powered on).'};v.on=true;w.clock+=1;w.journal[vn]=(w.journal[vn]||[]).concat([[hhmm(w.clock),'Started']]);w.events.push({t:hhmm(w.clock),e:vn,u:'root',m:`${vn} on ${host} is powered on`});return{out:'Powering on VM:'}}
+   if(!v.on)return{out:'Powering off VM:\nThe attempted operation cannot be performed in the current state (Powered off).'};v.on=false;w.events.push({t:hhmm(w.clock),e:vn,u:'root',m:`${vn} on ${host} is powered off`});return{out:'Powering off VM:'}}
+  if(/^esxcli storage filesystem list$/.test(line)){const ds=Object.entries(w.ds).filter(([,d])=>d.cluster===H.cluster);ds.forEach(([d])=>c.seen[d]=1);return{out:'Mount Point                                        Volume Name  Type    Size           Free\n'+ds.map(([d,x])=>`/vmfs/volumes/64a1f2c3-9e8d7a10-4b21-${(x.cap*7).toString(16).padStart(12,'0')}  ${d.padEnd(11)}  VMFS-6  ${String(x.cap*1073741824).padEnd(13)}  ${x.free*1073741824}`).join('\n'),note:'Size and Free are in bytes. Divide by 1073741824 for GB.'}}
+  if(/^ls( -l)? \/var\/log\/?$/.test(line))return{out:'auth.log  esxupdate.log  hostd.log  shell.log  syslog.log  vmkernel.log  vobd.log'};
+  m=line.match(/^(?:tail(?: -n (\d+))?|cat) \/var\/log\/(\S+)$/);
+  if(m){const L=w.logs[host][m[2]];if(!L){if(['auth.log','shell.log','syslog.log','vobd.log'].includes(m[2]))return{out:''};return{err:`${line.split(' ')[0]}: can't open '/var/log/${m[2]}': No such file or directory`}}see(c,{});c.saw.logs[host]=true;const k=line.startsWith('cat')?L.length:+(m[1]||10);return{out:L.slice(-k).map(logFmt).join('\n'),note:m[2]==='hostd.log'?'hostd is the ESXi management service. Its log records every task on the host: who started it, when, and how it ended.':''}}
+  m=line.match(/^grep (-i )?("?)([^"]+)\2 \/var\/log\/(\S+)$/);
+  if(m){const L=w.logs[host][m[4]];if(!L)return{err:`grep: /var/log/${m[4]}: No such file or directory`};const rows=L.filter(r=>m[1]?r[3].toLowerCase().includes(m[3].toLowerCase()):r[3].includes(m[3]));if(rows.length){see(c,{});c.saw.logs[host]=true}return{out:rows.map(logFmt).join('\n'),note:rows.length?'':'No matches. grep is case sensitive unless you add -i.'}}
+  if(/^uptime$/.test(line))return{out:` ${hhmm(w.clock)}:02 up ${H.uptimeH>48?Math.floor(H.uptimeH/24)+' days, '+(H.uptimeH%24)+':12':H.uptimeH+':22'},  load average: ${H.state==='Maintenance'?'0.01, 0.02, 0.00':'0.71, 0.66, 0.60'}`};
+  return{err:`-sh: ${line.split(' ')[0]}: not found`};
+ }
+ const v=w.vms[host],s=svcOfVm(host);
+ if(/^help$/.test(line))return{out:'systemctl status <service>\njournalctl -u <service> [-n N]\ncurl [-s] [-k] <url>\ndf -h   free -h   uptime   hostname   exit'};
+ let m=line.match(/^systemctl status (\S+?)(\.service)?$/);
+ if(m){if(!s||m[1]!==s.unit)return{err:`Unit ${m[1]}.service could not be found.`};return{out:`● ${s.unit}.service - ${s.name}\n     Loaded: loaded (/etc/systemd/system/${s.unit}.service; enabled)\n     Active: active (running) since Tue 2026-11-10 ${hhmm((w.journal[host]&&w.journal[host].length)?w.clock-2:w.clock-60*30)}\n   Main PID: 812 (${s.unit})`}}
+ m=line.match(/^journalctl -u (\S+?)(\.service)?( -n \d+)?$/);
+ if(m){if(!s||m[1]!==s.unit)return{out:'-- No entries --'};const J=(w.journalPre&&w.journalPre[host]||[]).concat((w.journal[host]||[]).map(([t])=>[t,`systemd[1]: Started ${s.unit}.service.`]));return{out:J.length?J.map(([t,x])=>`Nov 10 ${t} ${host} ${x}`).join('\n'):`Nov 09 18:00 ${host} systemd[1]: Started ${s.unit}.service.`}}
+ m=line.match(/^curl((?: -[sk]+)*) (https?):\/\/localhost(?::(\d+))?\/health$/);
+ if(m){if(m[2]==='https'&&!/k/.test(m[1]))return{err:'curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html'};const port=+(m[3]||(m[2]==='https'?443:80));if(!s||port!==s.port)return{err:`curl: (7) Failed to connect to localhost port ${port}: Connection refused`};const up=svcUp(w,s);see(c,{});c.saw.svc[s.id]=up;return{out:JSON.stringify({status:up?'ok':'degraded',service:s.unit,uptime_s:Math.max(60,(w.clock-(w.f.bootAt&&w.f.bootAt[host]||w.clock-600))*60)}),note:'The service answers its own health check from inside the machine. That is proof from the service itself.'}}
+ if(/^uptime$/.test(line))return{out:` ${hhmm(w.clock)}:40 up ${w.journal[host]&&w.journal[host].length?'2 min':'41 days'},  1 user,  load average: 0.31, 0.12, 0.04`};
+ if(/^df -h$/.test(line))return{out:'Filesystem      Size  Used Avail Use% Mounted on\n/dev/sda2        39G   11G   26G  30% /\ntmpfs           2.0G     0  2.0G   0% /dev/shm'};
+ if(/^free -h$/.test(line))return{out:'               total        used        free      shared  buff/cache   available\nMem:           3.8Gi       1.1Gi       1.9Gi        12Mi       0.9Gi       2.6Gi'};
+ return{err:`${line.split(' ')[0]}: command not found`};
+}
+
+function cmdbRows(w){
+ const rows=[];
+ Object.entries(w.vms).forEach(([n,v])=>{const s=svcOfVm(n);rows.push([n,'Virtual machine',s?s.name:'Infrastructure',`runs on ${v.reg} / disk on ${v.ds}`,s?CREW[s.owner].role:'Engineering'])});
+ Object.entries(w.hosts).forEach(([h,x])=>rows.push([h,'ESXi host',`Hosts ${VMLIST.filter(r=>r[1]===h).length} VMs`,`member of cluster ${x.cluster}`,'Engineering']));
+ Object.entries(w.ds).forEach(([d,x])=>rows.push([d,'Datastore',`Shared VMFS datastore, cluster ${x.cluster}`,`on ${x.lun}`,'Engineering']));
+ rows.push(['vcsa','vCenter',VC,'manages clusters AFT and FWD','Engineering']);
+ return rows;
+}
+
+function react(c,w,before){
+ const T=cur(),out=[];
+ SVCS.forEach(s=>{const now=svcUp(w,s),was=before[s.id];if(now===was)return;
+  const who=CREW[s.owner];
+  if(!now){out.push({who:s.owner,text:T.sandbox?`${s.name} just went dark on my side. Was that you?`:`${s.name} just went down. Was that you? Nobody told me about work on it.`});if(!T.sandbox&&!(T.expectDown||[]).includes(s.id))c.collateral=(c.collateral||[]).concat([s.id])}
+  else out.push({who:s.owner,text:(T.upLine&&T.upLine[s.id])||`${s.name} is back up on my side. Thanks.`});
+ });
+ (c.react||[]).forEach(r=>{if(r.k==='host-state')out.push({who:'odran',text:r.state==='Connected'?`I see ${r.host} just left maintenance mode. Yours? Make sure it is in the change log.`:`${r.host} just went into maintenance mode. Is that planned?`})});
+ c.react=[];
+ out.forEach(m=>w.comms.push({t:hhmm(w.clock),who:m.who,text:m.text}));
+ return out.length;
+}
+function svcSnapshot(w){const o={};SVCS.forEach(s=>o[s.id]=svcUp(w,s));return o}
+function renderBoard(){
+ const c=S.cur,w=c.w,T=cur();
+ $('board').innerHTML=SVCS.map(s=>{const up=svcUp(w,s);return `<div class="svc ${up?'up':'down'} ${(T.watch||[]).includes(s.id)?'watch':''}"><i></i><span>${esc(s.name)}</span></div>`}).join('');
+}
+function renderComms(){
+ const c=S.cur,w=c.w;
+ $('comms').innerHTML=w.comms.map(m=>`<div class="msg"><span class="face sm">${face(m.who)}</span><div><span class="mt">${esc(CREW[m.who].name)} · ${m.t}</span><p>${esc(m.text)}</p></div></div>`).join('');
+}
+
+const VM02=['galley-disp-01','cabin-tv-02','crew-wiki-01'];
+const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
+const WAYS_IN='<p class="lbl">Ways in</p><p>vCenter: <code>Connect-VIServer vcenter.meridian.local</code>, then PowerCLI. Hosts: <code>ssh root@esx-01</code>, <code>esx-02</code>, <code>esx-03</code>, ESXi shell. Linux VMs: <code>ssh</code> with your own account, root login is disabled. Windows servers do not take SSH.</p>';
 const TICKETS={
+ 'sandbox':{sandbox:true,module:'*',type:'free roam',npc:'odran',reward:0,
+  title:'Ship console',
+  brief:'No ticket, nothing graded. The ship is healthy. Walk around every system, try commands, break things and see who notices.',
+  ci:[],stack:[],steps:[],hints:[],checks:[],watch:[],
+  fault:null,
+  help:SHIP_HELP,
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Ideas</p><p>Find every VM that runs on esx-02. Find which host is the busiest. Read the hostd log on a host. Stop a VM and see who calls you, then start it again.</p>'
+ },
  't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:120,
   title:'The galley order screens are black',
   brief:'"Every order screen in the galley went black around breakfast. Guests are queuing at the counter and the kitchen is reading orders off paper. Can you look?"',
   ci:['galley-disp-01','esx-02'],
+  watch:['galley'],
+  upLine:{galley:'The screens just came back! Orders are flowing again. Thank you so much.',tv46:'Cabin TV on decks 4 to 6 is back. The guests stopped calling me.',wiki:'Wiki is back, cheers. Was it the patch night?'},
   stack:[['svc','service','Galley display'],['galley-disp-01','vm','galley-disp-01'],['esx-02','host','esx-02'],['DS-HULL-01','ds','DS-HULL-01']],
-  fault:{node:'esx-02',evidence:'hostSeen'},
-  cmdbRows:[
-   ['galley-disp-01','Virtual machine','Galley order display','runs on esx-02 / disk on DS-HULL-01','Purser'],
-   ['cabin-tv-02','Virtual machine','Cabin entertainment, decks 4-6','runs on esx-02 / disk on DS-HULL-01','Purser'],
-   ['crew-wiki-01','Virtual machine','Crew knowledge base','runs on esx-02 / disk on DS-HULL-01','Engineering'],
-   ['esx-02','ESXi host','Hosts 14 VMs','member of cluster AFT','Engineering'],
-   ['esx-01','ESXi host','Hosts 12 VMs','member of cluster AFT','Engineering'],
-   ['DS-HULL-01','Datastore','Shared VMFS datastore','on LUN 12, array SAN-A','Engineering'],
-   ['vault-01','Backup repository','Nightly VM backups','backs up cluster AFT','Engineering']
-  ],
-  init:()=>({hostState:'Maintenance',reboots:0,vms:Object.fromEntries(VM02.map(n=>[n,{on:false,host:'esx-02'}]).concat(VM01.map(n=>[n,{on:true,host:'esx-01'}]))),f:{}}),
+  fault:{node:'esx-02',evidence:c=>!!(c.saw&&(c.saw.host['esx-02']==='Maintenance'||c.saw.events['esx-02']||c.saw.logs['esx-02']))},
+  setup(w){
+   const h=w.hosts['esx-02'];h.state='Maintenance';h.uptimeH=5;
+   Object.entries(w.vms).forEach(([n,v])=>{if(v.reg!=='esx-02')return;if(v.local)v.on=false;else v.host='esx-01'});
+   w.events.push({t:'02:10',e:'esx-02',u:'MERIDIAN\\svc-patch',m:'Task: Enter maintenance mode'});
+   Object.entries(w.vms).filter(([,v])=>v.reg==='esx-02'&&!v.local).forEach(([n])=>w.events.push({t:'02:10',e:n,u:'MERIDIAN\\svc-patch',m:`Migrating ${n} from esx-02 to esx-01 completed`}));
+   VM02.forEach(n=>w.events.push({t:'02:11',e:n,u:'MERIDIAN\\svc-patch',m:`${n} on esx-02 is powered off`}));
+   w.events.push({t:'02:12',e:'esx-02',u:'',m:'Host esx-02 in AFT has entered maintenance mode'});
+   w.events.push({t:'02:21',e:'esx-02',u:'',m:'Host esx-02 rebooted after update'});
+   w.events.push({t:'02:50',e:'esx-02',u:'MERIDIAN\\svc-patch',m:'Task: Remediate entity completed (baseline 2026-11)'});
+   w.events.push({t:'07:31',e:'galley-disp-01',u:'',m:'Alarm "Virtual machine power state" changed to Red'});
+   w.ds['DS-HULL-01'].free=412;
+   w.events.push({t:'06:00',e:'DS-HULL-01',u:'',m:'Alarm "Datastore usage on disk" changed from Green to Yellow (80%)'});
+   const L=w.logs['esx-02'];
+   L['hostd.log']=[['2026-11-10T02:10:04Z','info','hostd','Task Created : haTask-ha-host-vim.HostSystem.enterMaintenanceMode-118 user=svc-patch'],['2026-11-10T02:10:51Z','info','hostd','11 VMs migrated off host (vMotion) to esx-01'],['2026-11-10T02:11:08Z','warning','hostd','vm 13 galley-disp-01: powered off by maintenance task, no vMotion (local template disk)'],['2026-11-10T02:11:08Z','warning','hostd','vm 14 cabin-tv-02: powered off by maintenance task, no vMotion (local template disk)'],['2026-11-10T02:11:09Z','warning','hostd','vm 15 crew-wiki-01: powered off by maintenance task, no vMotion (local template disk)'],['2026-11-10T02:12:30Z','info','hostd','Host entered maintenance mode'],['2026-11-10T02:21:40Z','info','hostd','Host rebooted after update installation'],['2026-11-10T02:50:18Z','info','hostd','Task Completed : remediate user=svc-patch'],['2026-11-10T07:31:02Z','info','hostd','Rejected power on of vm 13 (auto-start): host in maintenance mode']];
+   L['esxupdate.log']=[['2026-11-10T02:14:02Z','info','esxupdate','Installing VIBs from baseline 2026-11'],['2026-11-10T02:50:17Z','info','esxupdate','Baseline 2026-11 compliant. Remediation finished.']];
+   w.journalPre={'galley-disp-01':[['02:11','systemd[1]: Stopping galley-display.service...'],['02:11','systemd[1]: Stopped galley-display.service.'],['02:11','systemd[1]: Reached target Power-Off.']]};
+   w.comms.push({t:'07:40',who:'odran',text:'Morning. Patch night ran on the AFT cluster, the job reported success. Shout if anything looks off.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='start-in-maint')return{fail:['maint-mode','Tried to power on a VM on a host still in maintenance mode.'],why:'vSphere refuses this outright. Nothing breaks, but you started fixing before removing the cause. Take the host out of maintenance mode first.'};
+   if(ev.k==='reboot'&&ev.hosts.includes('esx-02'))return{fail:['smallest-fix','Rebooted a host as a fix without knowing the cause.'],why:'The reboot cost nine minutes of queueing guests and changed nothing: maintenance mode survives a reboot. Find the cause first, then do the smallest thing that removes it.'};
+  },
   steps:[
    ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know what the service runs on and who owns it. Nothing has been touched yet.'],
-   ['scope','Scope',w=>!!(w.f.vmSeen&&w.f.hostListSeen),'You know how big this is. Look at what you found and decide what it points to.'],
+   ['scope','Scope',(w,c)=>!!(c.saw&&c.saw.vm['galley-disp-01']&&(c.saw.hostVms['esx-02']||c.saw.esxiVms['esx-02'])),'You know how big this is. Look at what you found and decide what it points to.'],
    ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Now prove it or kill it. One targeted command beats ten random ones.'],
    ['isolate','Isolate',(w,c)=>!!c.isolated,'Proven, not guessed.'],
    ['fix','Fix',w=>VM02.every(n=>w.vms[n].on),'The cause is gone and what it stopped is running.'],
-   ['verify','Verify',w=>!!(w.f.svcOk&&w.f.allOkSeen),'Proven at the level people actually use, across everything that was hit.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.svc.galley===true&&VM02.every(n=>c.saw.vm[n]==='PoweredOn')),'Proven at the level people actually use, across everything that was hit.'],
    ['record','Document',(w,c)=>!!c.recordOk,'']
   ],
-  help:['Connect-VIServer <server>','ssh [user@]host','ping <host>','Get-VM <name>','Get-VM -Location <host>','Get-VMHost [<name>]','Get-VIEvent -Entity <host> [-MaxSamples <n>]','Get-Datastore [<name>]','Set-VMHost <name> -State Connected|Maintenance','Start-VM <name>[,<name>]','Get-VM -Location <host> | Start-VM','Restart-VMHost <name>','Test-NetConnection <name> -Port <port>','cmdb <name>','Get-Help <command>','Get-History'],
-  complete:{
-   cmdlets:{
-    'Get-VM':{params:{'-Name':'vm','-Location':'host'},pos:'-Name'},
-    'Get-VMHost':{params:{'-Name':'host'},pos:'-Name'},
-    'Get-VIEvent':{params:{'-Entity':'host','-MaxSamples':'int'},pos:'-Entity'},
-    'Get-Datastore':{params:{'-Name':'ds'},pos:'-Name'},
-    'Set-VMHost':{params:{'-VMHost':'host','-State':'state','-Confirm':'switch'},pos:'-VMHost'},
-    'Start-VM':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
-    'Restart-VMHost':{params:{'-VMHost':'host','-Confirm':'switch'},pos:'-VMHost'},
-    'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'},
-    'Connect-VIServer':{params:{'-Server':'vc'},pos:'-Server'},
-    'Test-Connection':{params:{'-TargetName':'vm'},pos:'-TargetName'},
-    'ssh':{params:{},pos:'target',syn:'ssh [user@]host'},
-    'ping':{params:{},pos:'vm',syn:'ping <host>'}
-   },
-   values:{vc:['vcenter.meridian.local'],target:['root@esx-01','root@esx-02'].concat(VM02.map(n=>'kaatje@'+n)),vm:VM02.concat(VM01),host:['esx-01','esx-02'],ds:['DS-HULL-01'],state:['Connected','Maintenance'],port:['443','80','22']}
-  },
-  cmds:[
-   {re:/^connect-viserver\s+(\S+)$/i,run(m,w,c){if(!/^vcenter(\.meridian\.local)?$/i.test(m[1]))return{err:`Connect-VIServer: Could not resolve the requested VC server '${m[1]}'.`};c.vc=true;return{out:'Name                       Port  User\n----                       ----  ----\nvcenter.meridian.local     443   MERIDIAN\\kaatje',note:'You are connected to vCenter, which manages every host and VM. PowerCLI commands now talk to it until you close the session.'}}},
-   {re:/^ssh\s+(\S+)$/i,run(m,w,c){const t=m[1].toLowerCase(),[user,hst]=t.includes('@')?t.split('@'):['kaatje',t],h=hst.replace(/\.meridian\.local$/,'');
-    if(h==='esx-01'||h==='esx-02'){if(user!=='root')return{err:`${user}@${h}: Permission denied (publickey,keyboard-interactive).`,note:'ESXi hosts take root (or a named host admin), not your domain account.'};c.shell={kind:'esxi',host:h};return{out:'The time and date of this login have been changed in the system logs.\n\nVMware ESXi 8.0.2 build-22380479\n\nThe ESXi Shell can be disabled by an administrative user. See the vSphere Security documentation for more information.',note:'You are now inside the host itself, below vCenter. Type help for the host commands, exit to go back.'}}
-    const v=w.vms[h];if(!v)return{err:`ssh: Could not resolve hostname ${h}: Name or service not known`};
-    if(!v.on)return{err:`ssh: connect to host ${h}.meridian.local port 22: Connection timed out`,note:'Nothing answered. That tells you the machine is unreachable, not why: it could be off, or the network between you could be down.'};
-    if(user==='root')return{err:`root@${h}: Permission denied (publickey).`,note:'Root login over SSH is switched off on the Linux VMs. Use your own account.'};
-    if(h!=='galley-disp-01')return{out:`Welcome to Ubuntu 24.04 LTS\nConnection to ${h} closed.`,note:'Up and running. Nothing to do on this one.'};
-    c.shell={kind:'linux',host:h};return{out:'Welcome to Ubuntu 24.04 LTS (GNU/Linux 6.8.0-45-generic x86_64)\nLast login: Mon Nov  9 16:02:11 2026 from 10.4.0.12'}}},
-   {re:/^(ping|test-connection)\s+(\S+)$/i,run(m,w,c){const h=m[2].toLowerCase().replace(/\.meridian\.local$/,''),v=w.vms[h],up=h==='esx-01'||h==='esx-02'||(v&&v.on);if(!v&&!/^esx-0[12]$/.test(h))return{err:`Ping request could not find host ${m[2]}. Please check the name and try again.`};return{out:up?`Pinging ${h}.meridian.local with 32 bytes of data:\nReply: bytes=32 time<1ms TTL=64\nReply: bytes=32 time<1ms TTL=64\nReply: bytes=32 time<1ms TTL=64\nReply: bytes=32 time<1ms TTL=64`:`Pinging ${h}.meridian.local with 32 bytes of data:\nRequest timed out.\nRequest timed out.\nRequest timed out.\nRequest timed out.`}}},
-   {re:/^get-vm\s+-location\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h!=='esx-01'&&h!=='esx-02')return{err:`Get-VM: Could not find VIContainer with name '${m[1]}'.`};const list=Object.keys(w.vms).filter(n=>w.vms[n].host===h);if(h==='esx-02'){w.f.hostListSeen=true;if(VM02.every(n=>w.vms[n].on))w.f.allOkSeen=true}return{out:VMHEAD+'\n'+list.map(n=>vmRow(n,w)).join('\n'),note:h==='esx-02'?(VM02.every(n=>w.vms[n].on)?'All VMs on esx-02 are PoweredOn. That is your proof that nothing else was left behind.':'Every VM on this host is off, and the live count is far below what the CMDB registers. The CMDB tells you what should be, the live system tells you what is. When they disagree, that is a clue.'):'Eleven VMs, all running, on esx-01. These are the ones that were moved over. So esx-01 is healthy and carrying the extra load.'}}},
-   {re:/^get-vmhost\s+(\S+)\s*\|\s*get-vm$/i,run(m,w,c,T){return T.cmds[0].run(['',m[1]],w,c,T)}},
-   {re:/^get-vm\s+-location\s+(\S+)\s*\|\s*start-vm$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02'){if(m[1].toLowerCase()==='esx-01')return{out:'All VMs on esx-01 are already PoweredOn. Nothing to do.'};return{err:`Get-VM: Could not find VIContainer with name '${m[1]}'.`}}return shakeStart(VM02,w,c)}},
-   {re:/^get-vm\s+(\S+)$/i,run(m,w,c){const n=m[1].toLowerCase(),v=w.vms[n];if(!v)return{err:`Get-VM: VM with name '${m[1]}' was not found.`};c.seen[n]=1;if(n==='galley-disp-01')w.f.vmSeen=true;return{out:VMHEAD+'\n'+vmRow(n,w),note:n==='galley-disp-01'?(v.on?'PoweredOn. The VM runs. Whether the galley screen answers is a separate question.':'PoweredOff: the machine behind the screens is not running. VMs rarely switch themselves off. Something did this, and the galley may not be the only victim.'):(v.on?'Running.':'Off too. Same host as the galley VM.')}}},
-   {re:/^get-vmhost$/i,run(m,w,c){c.seen['esx-02']=1;w.f.hostSeen=true;return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-01  Connected        PoweredOn   ${w.hostState==='Maintenance'?'27310':'15120'}\nesx-02  ${pad(w.hostState,15)}  PoweredOn   ${w.hostState==='Maintenance'?'190':'12460'}`,note:hostNote(w)}}},
-   {re:/^get-vmhost\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h==='esx-01')return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-01  Connected        PoweredOn   ${w.hostState==='Maintenance'?'27310':'15120'}`,note:'esx-01 is fine, but busy: it is carrying the VMs that were moved off esx-02.'};if(h!=='esx-02')return{err:`Get-VMHost: VMHost with name '${m[1]}' was not found.`};c.seen['esx-02']=1;w.f.hostSeen=true;return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-02  ${pad(w.hostState,15)}  PoweredOn   ${w.hostState==='Maintenance'?'190':'12460'}`,note:hostNote(w)}}},
-   {re:/^get-vievent\s+(\S+)(\s+-maxsamples\s+\d+)?$/i,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{out:'CreatedTime          FullFormattedMessage\n-----------          --------------------\n05:00:12             Scheduled health check passed',note:'Nothing interesting on this host.'};w.f.eventsSeen=true;w.f.hostSeen=true;c.seen['esx-02']=1;return{out:`CreatedTime          FullFormattedMessage\n-----------          --------------------\n02:10:04             Task: Enter maintenance mode (user svc-patch)\n02:10:51             11 virtual machines migrated to esx-01\n02:11:08             3 virtual machines powered off (no vMotion licence on templates)\n02:21:40             Host rebooted after update installation\n02:50:17             Patch baseline "2026-11" compliant\n${w.hostState==='Connected'?'now                  Task: Exit maintenance mode (user you)':''}`.trim(),note:'This is the story in one table. At 02:10 the patch account put esx-02 in maintenance mode, moved 11 VMs away and powered off 3. Patching finished at 02:50. There is no "Exit maintenance mode" afterwards. Events are the best evidence you have: they say what happened, when, and who did it.'}}},
-   {re:/^get-datastore(\s+\S+)?$/i,run(m,w,c){c.seen['DS-HULL-01']=1;return{out:'Name        FreeSpaceGB  CapacityGB  State\n----        -----------  ----------  -----\nDS-HULL-01  412          2048        Available\nWARNING: Datastore usage 80% (warning threshold 80%)',note:'A red herring. 80% used is worth its own follow-up ticket, but it is not your cause: a full datastore makes running VMs pause with a "no space" message, it does not power them off, and the datastore is Available. Note it, do not chase it now.'}}},
-   {re:/^set-vmhost\s+(\S+)\s+-state\s+(connected|maintenance)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Set-VMHost: VMHost with name '${m[1]}' was not found.`};const st=m[2].toLowerCase()==='connected'?'Connected':'Maintenance';if(st==='Maintenance'&&VM02.some(n=>w.vms[n].on))return{err:'Set-VMHost: The host has powered-on virtual machines. Migrate or power them off first.'};w.hostState=st;return{out:`Name    ConnectionState\n----    ---------------\nesx-02  ${st}`,note:st==='Connected'?'The host is out of maintenance mode and accepts VMs again. Your rollback is the reverse of this command. The VMs do not start by themselves: they were powered off, so they stay off until you start them.':'Back in maintenance. That is your rollback path: it only works when no VMs run on the host.'}}},
-   {re:/^start-vm\s+([\w-]+(?:\s*,\s*[\w-]+)*)$/i,write:true,run(m,w,c){return shakeStart(m[1].split(',').map(x=>x.trim().toLowerCase()),w,c)}},
-   {re:/^restart-vmhost\s+(\S+)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Restart-VMHost: VMHost with name '${m[1]}' was not found.`};w.reboots++;return{out:'Restarting esx-02 ... (9 min)\nesx-02 is back. ConnectionState: Maintenance',fail:['smallest-fix','Rebooted a host as a fix without knowing the cause.'],why:'The reboot cost nine minutes of queueing guests and changed nothing: maintenance mode survives a reboot. A reboot feels like action, but on a host it also kills anything still running. Find the cause first, then do the smallest thing that removes it.'}}},
-   {re:/^test-netconnection\s+(\S+)\s+-port\s+(\d+)$/i,run(m,w,c){const n=m[1].toLowerCase(),v=w.vms[n];if(!v)return{err:`Test-NetConnection: Name resolution of ${m[1]} failed.`};const ok=v.on;if(n==='galley-disp-01'&&ok&&m[2]==='443')w.f.svcOk=true;return{out:`ComputerName     : ${n}\nRemotePort       : ${m[2]}\nTcpTestSucceeded : ${ok&&['443','80'].includes(m[2])?'True':'False'}`,note:n==='galley-disp-01'&&m[2]==='443'?(ok?'True: the display service answers on its port. That is service-level proof, stronger than a VM state.':'False: nothing answers on that port.'):'This only tells you whether something answers on that port of that machine.'}}}
-  ],
-  hints:['Start in the CMDB: which VM runs the galley display, which host is it on, and what else lives on that host? Then connect to vCenter: Connect-VIServer vcenter.meridian.local','Look at the host itself. From vCenter: Get-VMHost and Get-VIEvent. Or go in directly: ssh root@esx-02, then esxcli system maintenanceMode get and the hostd log in /var/log.','esx-02 is still in maintenance mode after patching. Write the rollback, then Set-VMHost esx-02 -State Connected, then Get-VM -Location esx-02 | Start-VM, then Test-NetConnection galley-disp-01 -Port 443.'],
+  help:SHIP_HELP,
+  hints:['Start in the CMDB: which VM runs the galley display, which host is it on, and what else lives on that host? Then connect to vCenter.','Look at the host itself. From vCenter: Get-VMHost and Get-VIEvent -Entity esx-02. Or go in directly: ssh root@esx-02, then esxcli system maintenanceMode get and the hostd log in /var/log.','esx-02 is still in maintenance mode after patching. Write the rollback, then Set-VMHost esx-02 -State Connected, then Get-VM -Location esx-02 | Start-VM, then check the service on port 443.'],
   checks:[
    ['Names the affected VMs','what',/galley-disp-01/i],
    ['Names the host','what|why',/esx-02/i],
@@ -528,7 +804,7 @@ const TICKETS={
   ],
   debrief:{
    path:[
-    ['CMDB','cmdb galley-disp-01, cmdb esx-02','Know the VM, its host, and that 14 services are registered there.'],
+    ['CMDB','cmdb galley-disp-01, cmdb esx-02','Know the VM, its host, and that 14 VMs are registered there.'],
     ['Scope','Get-VM galley-disp-01, Get-VM -Location esx-02','One VM down or a whole host? Three down, all on esx-02.'],
     ['Hypothesis','"Host esx-02, because only its VMs are off and patching ran overnight"','Name a layer and the reason.'],
     ['Isolate','Get-VMHost esx-02, Get-VIEvent -Entity esx-02  or  ssh root@esx-02: esxcli system maintenanceMode get, grep -i maint /var/log/hostd.log','Maintenance mode, entered 02:10 by svc-patch, never exited.'],
@@ -536,72 +812,13 @@ const TICKETS={
     ['Verify','Test-NetConnection galley-disp-01 -Port 443  or  ssh galley-disp-01: curl -k https://localhost/health','The service answers and nothing else is left behind.'],
     ['Record','what, why, rollback, verification, follow-up','Hand the root cause over as a problem: the patch process lacks an exit step.']
    ],
-   senior:['Tell the purser it is fixed, in plain words, before writing the record.','Open a problem record: the patch job skips "exit maintenance mode". Fixing the runbook stops this for good.','Raise a separate ticket for DS-HULL-01 at 80%. A different problem, noticed on the way.','Ask why the CMDB says 14 VMs on esx-02 when it normally runs 3 on a bad day: is the CMDB out of date?'],
-   readings:[['Get-VM galley-disp-01','PoweredOff: the service is down because its VM is off.'],['Get-VM -Location esx-02','All 3 VMs on the host are off while the CMDB registers 14: the host is the common factor, 11 VMs were moved away.'],['Get-VMHost esx-02','Maintenance: the host is up but refuses to run VMs. Idle CPU confirms it.'],['Get-VIEvent -Entity esx-02','Maintenance entered at 02:10 by svc-patch, patching done at 02:50, no exit. The root cause, with time and owner.'],['Get-Datastore','80% used: worth its own ticket, not this incident. A full datastore pauses VMs, it does not power them off.'],['Test-NetConnection galley-disp-01 -Port 443','True: the service answers. That is what the galley cares about.']],
-   take:['Get-VM -Location esx-02 | Start-VM starts every VM on a host in one line.','Symptoms show at the top, causes live lower down.','Scope before you fix: one VM versus a whole host is a different priority.','Events (Get-VIEvent) tell you what happened and who did it.','Running is not working: verify the service.']
+   readings:[['Get-VM galley-disp-01','PoweredOff: the service is down because its VM is off.'],['Get-VM -Location esx-02','Only 3 VMs on the host, all off, while the CMDB registers 14: the host is the common factor, 11 VMs were moved away.'],['Get-VMHost esx-02','Maintenance: the host is up but refuses to run VMs. Idle CPU confirms it.'],['Get-VIEvent -Entity esx-02','Maintenance entered at 02:10 by svc-patch, patching done at 02:50, no exit. Root cause, with time and owner.'],['Get-Datastore','DS-HULL-01 80% used: worth its own ticket, not this incident. A full datastore pauses VMs, it does not power them off.'],['Test-NetConnection galley-disp-01 -Port 443','True: the service answers. That is what the galley cares about.']],
+   senior:['Tell the purser it is fixed, in plain words, before writing the record.','Open a problem record: the patch job skips "exit maintenance mode". Fixing the runbook stops this for good.','Raise a separate ticket for DS-HULL-01 at 80%. A different problem, noticed on the way.','Ask why the 11 moved VMs are still on esx-01: the cluster has no DRS to balance them back. esx-01 is now carrying two hosts of load.'],
+   take:['Get-VM | Where-Object PowerState -eq PoweredOff shows every stopped VM on the ship in one line.','Get-VM -Location esx-02 | Start-VM starts every VM on a host in one line.','Symptoms show at the top, causes live lower down.','Running is not working: verify the service.']
   },
-  docs:'<p class="lbl">Ways in</p><p>vCenter: <code>Connect-VIServer vcenter.meridian.local</code>, then PowerCLI. Hosts: <code>ssh root@esx-01</code> or <code>esx-02</code>, ESXi shell. Linux VMs: <code>ssh</code> with your own account, root login is disabled.</p><p class="lbl" style="margin-top:18px">Runbook: host patching</p><p>Hosts are patched overnight by the account svc-patch. The job puts a host in maintenance mode, moves VMs that can move (vMotion) and powers off the rest, installs the updates and reboots.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>Port 443 is HTTPS, where the galley display service listens.</p>'
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Runbook: host patching</p><p>Hosts are patched overnight by the account svc-patch. The job puts a host in maintenance mode, moves VMs that can move (vMotion) and powers off the rest, installs the updates and reboots.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>The galley display listens on port 443 (HTTPS).</p>'
  }
 };
-
-const VMID={'galley-disp-01':4,'cabin-tv-02':7,'crew-wiki-01':9};
-const IDVM=Object.fromEntries(Object.entries(VMID).map(([k,v])=>[v,k]));
-const HOSTD=[
- ['2026-11-10T02:10:04Z','info','hostd','Task Created : haTask-ha-host-vim.HostSystem.enterMaintenanceMode-118 user=svc-patch'],
- ['2026-11-10T02:10:51Z','info','hostd','11 VMs migrated off host (vMotion) to esx-01'],
- ['2026-11-10T02:11:08Z','warning','hostd','vm 4 galley-disp-01: powered off by maintenance task, no vMotion (local template disk)'],
- ['2026-11-10T02:11:08Z','warning','hostd','vm 7 cabin-tv-02: powered off by maintenance task, no vMotion (local template disk)'],
- ['2026-11-10T02:11:09Z','warning','hostd','vm 9 crew-wiki-01: powered off by maintenance task, no vMotion (local template disk)'],
- ['2026-11-10T02:12:30Z','info','hostd','Host entered maintenance mode'],
- ['2026-11-10T02:14:02Z','info','esxupdate','Installing VIBs from baseline 2026-11'],
- ['2026-11-10T02:21:40Z','info','hostd','Host rebooted after update installation'],
- ['2026-11-10T02:50:17Z','info','esxupdate','Baseline 2026-11 compliant. Remediation finished.'],
- ['2026-11-10T02:50:18Z','info','hostd','Task Completed : remediate user=svc-patch'],
- ['2026-11-10T07:42:11Z','info','hostd','Rejected power on of vm 4: host in maintenance mode']
-];
-const logLine=r=>`${r[0]} ${r[1].padEnd(7)} ${r[2]}[2099${r[2]==='hostd'?'1':'7'}]: ${r[3]}`;
-function esxiShell(host){return{
- prompt:`[root@${host}:~]`,
- words:['esxcli','system','maintenanceMode','get','set','--enable','false','true','storage','filesystem','list','vim-cmd','vmsvc/getallvms','vmsvc/power.getstate','vmsvc/power.on','tail','-n','grep','-i','cat','ls','/var/log/','/var/log/hostd.log','/var/log/vmkernel.log','uptime','hostname','exit','help','4','7','9'],
- help:'esxcli system maintenanceMode get|set --enable true|false\nesxcli storage filesystem list\nvim-cmd vmsvc/getallvms\nvim-cmd vmsvc/power.getstate <vmid>\nvim-cmd vmsvc/power.on <vmid>\nls /var/log\ntail [-n N] <file>\ngrep [-i] <text> <file>\ncat <file>\nuptime  hostname  exit'
-}}
-function linuxShell(host){return{
- prompt:`kaatje@${host}:~$`,
- words:['systemctl','status','galley-display','journalctl','-u','-n','20','curl','-s','-k','https://localhost/health','uptime','hostname','exit','help'],
- help:'systemctl status <service>\njournalctl -u <service> [-n N]\ncurl [-s] [-k] <url>\nuptime  hostname  exit'
-}}
-function promptStr(){const c=S.cur;if(c&&c.shell)return(c.shell.kind==='esxi'?esxiShell(c.shell.host):linuxShell(c.shell.host)).prompt;return PROMPT}
-function runShell(line){
- const c=S.cur,w=c.w,sh=c.shell,host=sh.host;
- if(/^(exit|logout)$/.test(line)){c.shell=null;return{out:`Connection to ${host} closed.`}}
- if(/^help$/.test(line))return{out:(sh.kind==='esxi'?esxiShell(host):linuxShell(host)).help};
- if(/^hostname$/.test(line))return{out:host+'.meridian.local'};
- if(sh.kind==='esxi'){
-  if(host==='esx-01'){if(/^esxcli system maintenanceMode get$/.test(line))return{out:'Disabled'};if(/^vim-cmd vmsvc\/getallvms$/.test(line))return{out:'Vmid  Name            File\n'+VM01.map((n,i)=>`${String(i+11).padEnd(6)}${n.padEnd(16)}[DS-HULL-01] ${n}/${n}.vmx`).join('\n')};if(/^uptime$/.test(line))return{out:' 07:44:02 up 41 days,  3:12, load average: 0.71, 0.66, 0.60'};return{err:`-sh: ${line.split(' ')[0]}: nothing interesting on this host for this ticket`}}
-  if(/^esxcli system maintenanceMode get$/.test(line)){c.seen['esx-02']=1;w.f.hostSeen=true;return{out:w.hostState==='Maintenance'?'Enabled':'Disabled',note:w.hostState==='Maintenance'?'Enabled: this host is in maintenance mode. ESXi will not run or start VMs on it.':'Disabled: the host runs VMs normally.'}}
-  let m=line.match(/^esxcli system maintenanceMode set (?:--enable|-e) (true|false)$/);
-  if(m)return{write:true,run(){if(m[1]==='true'&&VM02.some(n=>w.vms[n].on))return{err:'Unable to enter maintenance mode: running virtual machines must be migrated or powered off first.'};w.hostState=m[1]==='true'?'Maintenance':'Connected';return{out:'',note:m[1]==='false'?'No output means success on ESXi. Check it with the get command if you want proof.':'Back in maintenance mode.'}}};
-  if(/^vim-cmd vmsvc\/getallvms$/.test(line)){w.f.hostListSeen=true;c.seen['esx-02']=1;return{out:'Vmid  Name            File                                     Guest OS\n'+VM02.map(n=>`${String(VMID[n]).padEnd(6)}${n.padEnd(16)}[DS-HULL-01] ${n}/${n}.vmx`.padEnd(63)+'ubuntu64Guest').join('\n'),note:'Every VM registered on this host, with the Vmid you need for other vim-cmd commands. This list shows what lives here, not whether it runs.'}}
-  m=line.match(/^vim-cmd vmsvc\/power\.getstate (\d+)$/);
-  if(m){const n=IDVM[m[1]];if(!n)return{err:`Unable to find a VM corresponding to "${m[1]}"`};c.seen[n]=1;if(n==='galley-disp-01')w.f.vmSeen=true;w.f.state=w.f.state||{};if(w.vms[n].on)w.f.state[n]=1;if(VM02.every(x=>w.f.state&&w.f.state[x]))w.f.allOkSeen=true;return{out:`Retrieved runtime info\n${w.vms[n].on?'Powered on':'Powered off'}`}}
-  m=line.match(/^vim-cmd vmsvc\/power\.on (\d+)$/);
-  if(m)return{write:true,run(){const n=IDVM[m[1]];if(!n)return{err:`Unable to find a VM corresponding to "${m[1]}"`};if(w.hostState==='Maintenance')return{err:'Powering on VM:\n(vim.fault.InvalidState) {\n   msg = "The operation is not allowed in the current state of the host."\n}',fail:['maint-mode','Tried to power on a VM on a host still in maintenance mode.'],why:'ESXi refuses this outright. Nothing breaks, but you started fixing before removing the cause. Take the host out of maintenance mode first.'};if(w.vms[n].on)return{out:'Powering on VM:\nThe attempted operation cannot be performed in the current state (Powered on).'};w.vms[n].on=true;return{out:'Powering on VM:'}}};
-  if(/^esxcli storage filesystem list$/.test(line)){c.seen['DS-HULL-01']=1;return{out:'Mount Point                                        Volume Name  Type    Size           Free\n/vmfs/volumes/64a1f2c3-9e8d7a10-4b21-a0369f0e2b1c  DS-HULL-01   VMFS-6  2199023255552  442381631488',note:'Size and free space in bytes: roughly 2 TB with 412 GB free, so 80% used. Worth watching, but a datastore with free space does not power VMs off.'}}
-  if(/^ls( -l)? \/var\/log\/?$/.test(line))return{out:'auth.log  esxupdate.log  hostd.log  shell.log  syslog.log  vmkernel.log  vobd.log'};
-  m=line.match(/^(?:tail(?: -n (\d+))?|cat) \/var\/log\/(\S+)$/);
-  if(m){if(m[2]!=='hostd.log'){if(['vmkernel.log','syslog.log','vobd.log','auth.log','esxupdate.log','shell.log'].includes(m[2]))return{out:m[2]==='esxupdate.log'?'2026-11-10T02:14:02Z esxupdate: Installing VIBs from baseline 2026-11\n2026-11-10T02:50:17Z esxupdate: Baseline 2026-11 compliant.':'(nothing relevant to this ticket in this log)'};return{err:`${line.startsWith('cat')?'cat':'tail'}: can't open '/var/log/${m[2]}': No such file or directory`}}w.f.eventsSeen=true;w.f.hostSeen=true;c.seen['esx-02']=1;const n=line.startsWith('cat')?HOSTD.length:+(m[1]||10);return{out:HOSTD.slice(-n).map(logLine).join('\n'),note:'hostd is the ESXi management service. Its log records every task on the host: who started it, when, and how it ended.'}}
-  m=line.match(/^grep (-i )?("?)([^"]+)\2 \/var\/log\/hostd\.log$/);
-  if(m){const q=m[3],rows=HOSTD.filter(r=>m[1]?r[3].toLowerCase().includes(q.toLowerCase()):r[3].includes(q));if(rows.length){w.f.eventsSeen=true;w.f.hostSeen=true;c.seen['esx-02']=1}return{out:rows.map(logLine).join('\n')||'',note:rows.length?'grep only prints matching lines. Use -i to ignore upper and lower case.':'No matches. grep is case sensitive unless you add -i.'}}
-  if(/^uptime$/.test(line))return{out:' 07:44:02 up  4:22,  load average: 0.01, 0.02, 0.00'};
-  return{err:`-sh: ${line.split(' ')[0]}: not found`};
- }
- if(/^systemctl status galley-display(\.service)?$/.test(line))return{out:'● galley-display.service - Galley order display\n     Loaded: loaded (/etc/systemd/system/galley-display.service; enabled)\n     Active: active (running) since Tue 2026-11-10 07:5x; 2min ago\n   Main PID: 812 (galley-display)'};
- if(/^journalctl -u galley-display(\.service)?( -n \d+)?$/.test(line))return{out:'Nov 10 02:11:07 galley-disp-01 systemd[1]: Stopping galley-display.service...\nNov 10 02:11:08 galley-disp-01 systemd[1]: Stopped galley-display.service.\n-- Boot 3f2a --\nNov 10 07:5x galley-disp-01 systemd[1]: Started galley-display.service.\nNov 10 07:5x galley-disp-01 galley-display[812]: listening on :443',note:'The service stopped at 02:11, the same minute the host started its maintenance task. It was a clean shutdown, not a crash.'};
- if(/^curl( -[sk]+| -s| -k)* https?:\/\/localhost(:443)?\/health$/.test(line)){if(!/-[sk]*k/.test(line)&&line.includes('https'))return{err:'curl: (60) SSL certificate problem: self-signed certificate\nMore details here: https://curl.se/docs/sslcerts.html'};w.f.svcOk=true;return{out:'{"status":"ok","orders":"accepting","screens":12}',note:'The service answers its own health check: it is accepting orders and 12 screens are connected. That is proof from inside the service.'}}
- if(/^uptime$/.test(line))return{out:' 07:58:40 up 2 min,  1 user,  load average: 0.31, 0.12, 0.04'};
- return{err:`${line.split(' ')[0]}: command not found`};
-}
-function hostNote(w){return w.hostState==='Maintenance'?'ConnectionState Maintenance: the host is up but closed for business. vSphere will not run VMs on a host in this state. 190 MHz of CPU means it is idle.':'Connected: the host accepts VMs.'}
 
 const DEF={v:1,hist:[],stats:{},theme:'promenade',sfx:true,explain:false,ui:2,cr:0,xp:0,les:{},done:{},journal:[],srs:{},missions:{},view:'school',mod:'m0',lesson:'l0-orient',page:{},cur:null};
 let S;
@@ -667,35 +884,40 @@ function heroArt(){return `<div class="hero"><svg viewBox="0 0 860 150" preserve
 function renderQueue(){
  const m=modOf(S.mod);
  const items=(m.tickets||[]).map(id=>{const T=TICKETS[id],d=S.done[id],open=lessonsRead(m),cr=CREW[T.npc];return `<button class="row ${open?'':'lock'}" data-t="${id}" ${open?'':'aria-disabled="true"'}><span class="face">${face(T.npc)}</span><span class="t"><b>${esc(T.title)}</b><small>${esc(cr.name)} · ${esc(cr.role)} · ${T.type}</small></span><span class="s ${d?'ok':''}">${d?`Closed · ${d.cr} cr · replay`:open?`${T.reward} cr`:'Finish the lessons first'}</span></button>`}).join('');
- $('queue').innerHTML=`<p class="lbl">Ticket queue · Module ${m.n} · ${esc(m.name)}</p>${items||'<p class="empty">No tickets in this module yet.</p>'}`;
+ $('queue').innerHTML=`<p class="lbl">Ship console</p><button class="row" data-t="sandbox"><span class="face">${ic('host')}</span><span class="t"><b>Open the ship console</b><small>Free roam on the live ship. Nothing graded.</small></span><span class="s">explore</span></button><p class="lbl" style="margin-top:28px">Ticket queue · Module ${m.n} · ${esc(m.name)}</p>${items||'<p class="empty">No tickets in this module yet.</p>'}`;
 }
 function face(id){const c=CREW[id];return `<img src="img/meridian/npc-${id}.webp" alt="" onerror="this.replaceWith(document.createTextNode('${c.mono}'))">`}
 
 function startTicket(id){
  const T=TICKETS[id];
- if(!S.cur||S.cur.id!==id||S.cur.recordOk)S.cur={id,vc:false,shell:null,w:T.init(),seen:{},cmdbSeen:{},ciAll:false,hypo:null,isolated:false,recordOk:false,fails:0,hints:0,subs:0,rec:{what:'',why:'',rollback:'',verify:'',follow:''},log:[],failed:{},mistakes:[]};
+ if(!S.cur||S.cur.id!==id||S.cur.recordOk||!S.cur.w||!S.cur.w.hosts){const w=baseWorld();if(T.setup)T.setup(w);S.cur={id,vc:false,shell:null,confirm:null,w,seen:{},cmdbSeen:{},saw:{vm:{},hostVms:{},host:{},events:{},logs:{},svc:{},esxiVms:{}},ciAll:!T.ci.length,hypo:null,isolated:false,recordOk:false,fails:0,hints:0,subs:0,rec:{what:'',why:'',rollback:'',verify:'',follow:''},log:[],failed:{},mistakes:[]}}
  save();setPane('console');renderDesk(true);
 }
 const cur=()=>S.cur&&TICKETS[S.cur.id];
+function curTicketId(){return S.cur&&S.cur.id}
 function stepIdx(){const T=cur(),c=S.cur;return T.steps.findIndex(s=>!s[2](c.w,c))}
 
 function renderDesk(fresh){
  const T=cur(),c=S.cur;
  $('v-tickets').classList.toggle('list',!T);
  if(!T){renderQueue();return}
+ $('v-tickets').classList.toggle('sandbox',!!T.sandbox);
  const k=stepIdx(),cr=CREW[T.npc],hk=T.steps.findIndex(s=>s[0]==='hypo');
  let hypoHtml='';
- if(k===hk)hypoHtml=`<div class="hypo"><p class="lbl">Your hypothesis</p><p style="font-size:13px;color:var(--ink2);margin:0 0 8px">Which layer do you think is broken, and what makes you think so?</p><select id="h-layer"><option value="">Pick a layer</option>${T.stack.map(n=>`<option value="${esc(n[0])}">${esc(n[1])}: ${esc(n[2])}</option>`).join('')}</select><textarea id="h-why" placeholder="I think it is ... because ..."></textarea><button class="pri" id="h-go">Commit hypothesis</button></div>`;
+ if(hk>=0&&k===hk)hypoHtml=`<div class="hypo"><p class="lbl">Your hypothesis</p><p style="font-size:13px;color:var(--ink2);margin:0 0 8px">Which layer do you think is broken, and what makes you think so?</p><select id="h-layer"><option value="">Pick a layer</option>${T.stack.map(n=>`<option value="${esc(n[0])}">${esc(n[1])}: ${esc(n[2])}</option>`).join('')}</select><textarea id="h-why" placeholder="I think it is ... because ..."></textarea><button class="pri" id="h-go">Commit hypothesis</button></div>`;
  else if(c.hypo)hypoHtml=`<div class="hypo"><p class="lbl">Your hypothesis</p><p class="mine">${esc(c.hypo.layer)}: ${esc(c.hypo.why)}</p></div>`;
- $('tk-left').innerHTML=`<div class="npc"><span class="face">${face(T.npc)}</span><span><span class="nm">${esc(cr.name)}</span><br><span class="rl">${esc(cr.role)}</span></span></div><span class="tk-type">${T.type}</span><p class="tk-title">${esc(T.title)}</p><p class="brief">${esc(T.brief)}</p><p class="lbl">Steps</p><ul class="steps">${T.steps.map((s,i)=>`<li class="${i<k||k<0?'done':i===k?'now':''}">${ic(i<k||k<0?'check':i===k?'point':'lock')}${s[1]}</li>`).join('')}</ul>${hypoHtml}<div class="hintbox">${T.hints.slice(0,c.hints).map(h=>`<p class="hint">${esc(h)}</p>`).join('')}</div>`;
+ const steps=T.steps.length?`<p class="lbl">Steps</p><ul class="steps">${T.steps.map((s,i)=>`<li class="${i<k||k<0?'done':i===k?'now':''}">${ic(i<k||k<0?'check':i===k?'point':'lock')}${s[1]}</li>`).join('')}</ul>`:'';
+ $('tk-left').innerHTML=`<div class="npc"><span class="face">${face(T.npc)}</span><span><span class="nm">${esc(cr.name)}</span><br><span class="rl">${esc(cr.role)}</span></span></div><span class="tk-type">${T.type}</span><p class="tk-title">${esc(T.title)}</p><p class="brief">${esc(T.brief)}</p>${steps}${hypoHtml}<div class="hintbox">${T.hints.slice(0,c.hints).map(h=>`<p class="hint">${esc(h)}</p>`).join('')}</div><p class="lbl" style="margin-top:18px">Comms · ship time ${hhmm(c.w.clock)}</p><div class="comms" id="comms"></div>`;
+ renderComms();
  const hg=$('h-go');if(hg)hg.onclick=commitHypo;
- renderStack();renderCmdb();
- $('docs').innerHTML=T.docs+`<p class="lbl" style="margin-top:20px">Commands for this ticket</p><p class="mono" style="white-space:pre-line">${T.help.map(esc).join('\n')}</p>`;
+ renderBoard();renderStack();renderCmdb();
+ $('b-hint').hidden=!T.hints.length;
+ $('docs').innerHTML=T.docs+`<p class="lbl" style="margin-top:20px">Commands on this ship</p><p class="mono" style="white-space:pre-line">${T.help.map(esc).join('\n')}</p>`;
  $('t-debrief').hidden=!c.recordOk;
- if(!K.search)$('ps1').textContent=promptStr();
+ if(!K.search)$('ps1').textContent=c.confirm?'':promptStr();
  if(fresh){
   $('term').innerHTML='';
-  if(!c.log.length)c.log.push(['sys','Meridian systems console. Type help for the commands on this ticket.']);
+  if(!c.log.length)c.log.push(['sys',T.sandbox?'Meridian ship console. Free roam: every system is live. Type help for ideas.':'Meridian systems console. Type help for the commands on this ship.']);
   c.log.forEach(([cl,t])=>termLine(cl,t,true));
   FIELDS.forEach(f=>$('r-'+f).value=c.rec[f]||'');
   $('grade').innerHTML='';
@@ -714,14 +936,15 @@ function commitHypo(){
  save();renderDesk(false);
 }
 function renderStack(){
- const T=cur(),c=S.cur;
- $('stack').innerHTML=T.stack.map((n,i)=>{const[id,kind,label]=n,seen=c.seen[id]||c.cmdbSeen[id],fault=c.isolated&&T.fault.node===id;return `${i?'<div class="link"></div>':''}<button class="node ${fault?'fault':seen?'seen':''}" data-n="${id}">${ic(kind==='service'?'service':kind)}<span><span class="k">${kind}</span><span class="v">${esc(label)}</span></span></button>`}).join('');
- $('stacknote').textContent=c.isolated?'Fault proven and marked.':'Layers you have looked at turn blue. Tap a layer to mark it as the fault once you have proof.';
+ const T=cur(),c=S.cur,sw=c.saw||{};
+ const seenAny=id=>c.seen[id]||c.cmdbSeen[id]||(sw.vm&&sw.vm[id])||(sw.host&&sw.host[id])||(sw.hostVms&&sw.hostVms[id])||(sw.esxiVms&&sw.esxiVms[id])||(sw.logs&&sw.logs[id])||(sw.events&&sw.events[id])||(id==='svc'&&sw.svc&&Object.keys(sw.svc).length);
+ $('stack').innerHTML=T.stack.map((n,i)=>{const[id,kind,label]=n,fault=c.isolated&&T.fault&&T.fault.node===id;return `${i?'<div class="link"></div>':''}<button class="node ${fault?'fault':seenAny(id)?'seen':''}" data-n="${id}">${ic(kind==='service'?'service':kind)}<span><span class="k">${kind}</span><span class="v">${esc(label)}</span></span></button>`}).join('');
+ $('stacknote').textContent=!T.stack.length?'':c.isolated?'Fault proven and marked.':'Layers you have looked at turn blue. Tap a layer to mark it as the fault once you have proof.';
  $('b-rail').innerHTML=ic('stack');
 }
 function renderCmdb(){
- const T=cur(),c=S.cur,q=($('cmdbq').value||'').toLowerCase();
- const rows=T.cmdbRows.filter(r=>!q||r.join(' ').toLowerCase().includes(q));
+ const c=S.cur,q=($('cmdbq').value||'').toLowerCase();
+ const rows=cmdbRows(c.w).filter(r=>!q||r.join(' ').toLowerCase().includes(q));
  $('cmdbt').innerHTML=`<table><thead><tr><th>CI</th><th>Class</th><th>Role</th><th>Relations</th><th>Owner</th></tr></thead><tbody>${rows.map(r=>`<tr class="ci ${c.cmdbSeen[r[0]]?'seen':''}" data-ci="${esc(r[0])}"><td><code>${esc(r[0])}</code></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td></tr>`).join('')}</tbody></table>`;
 }
 function termLine(cl,t,noLog){
@@ -733,11 +956,10 @@ function termLine(cl,t,noLog){
 const termEx=(kind,title,html)=>termLine(`ex:${kind}:${title}`,html);
 
 function cmdbLook(name){
- const T=cur(),c=S.cur,r=T.cmdbRows.find(x=>x[0].toLowerCase()===String(name).toLowerCase());
- if(!r)return{err:`cmdb: no configuration item named '${name}'.`};
- c.cmdbSeen[r[0]]=1;const was=c.ciAll;c.ciAll=T.ci.every(x=>c.cmdbSeen[x]);
- const notes={'galley-disp-01':'The galley display is one VM, owned by the purser. The Relations column is your map of what it depends on.','esx-02':'esx-02 is a physical host with 14 VMs registered on it. If the host is the problem, the galley is just the loudest of up to 14 victims.','DS-HULL-01':'The datastore holds the VM disks for the whole cluster.','vault-01':'The backup repository. Not needed today, good to know it exists.'};
- return{out:`CI         ${r[0]}\nClass      ${r[1]}\nRole       ${r[2]}\nRelations  ${r[3]}\nOwner      ${r[4]}`,note:notes[r[0]]||'Another CI on this cluster.'};
+ const T=cur(),c=S.cur,r=cmdbRows(c.w).find(x=>x[0].toLowerCase()===String(name).toLowerCase());
+ if(!r)return{err:`cmdb: no configuration item named '${name}'. Try the CMDB tab to search.`};
+ c.cmdbSeen[r[0]]=1;c.ciAll=T.ci.every(x=>c.cmdbSeen[x]);
+ return{out:`CI         ${r[0]}\nClass      ${r[1]}\nRole       ${r[2]}\nRelations  ${r[3]}\nOwner      ${r[4]}`,note:'The CMDB records what should be: where things were registered and who owns them. The live system can differ.'};
 }
 function fail(concept,text,why){
  const c=S.cur;c.fails++;sfx.bad();
@@ -755,9 +977,10 @@ const BUILTIN={
  'help':{params:{},pos:null,syn:'help'}
 };
 const ALIAS={cls:'Clear-Host',clear:'Clear-Host',h:'Get-History',history:'Get-History',ghy:'Get-History'};
-const TYPE={int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
-function schema(){const T=cur();return Object.assign({},T?T.complete.cmdlets:{},BUILTIN)}
-function values(kind){const T=cur();if(!T)return[];if(kind==='cmdlet')return Object.keys(schema()).filter(k=>/-/.test(k));if(kind==='ci')return T.cmdbRows.map(r=>r[0]);return T.complete.values[kind]||[]}
+const TYPE={loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
+function schema(){return Object.assign({},CMDLETS,BUILTIN)}
+function values(kind){if(kind==='cmdlet')return Object.keys(schema()).filter(k=>/-/.test(k));if(kind==='ci')return S.cur?cmdbRows(S.cur.w).map(r=>r[0]):[];return wvalues(kind)}
+Object.assign(ALIAS,PALIAS);
 function canon(name){const sc=schema(),k=Object.keys(sc).find(x=>x.toLowerCase()===String(name).toLowerCase());if(k)return k;const a=ALIAS[String(name).toLowerCase()];return a||null}
 function syntaxOf(name){const d=schema()[name];if(!d)return'';if(d.syn)return d.syn;const ps=Object.entries(d.params).map(([p,t])=>{if(t==='switch')return `[${p}]`;const ty=TYPE[t]||'Int32';return p===d.pos?`[${p}] <${ty}>`:`[${p} <${ty}>]`});return `${name} ${ps.join(' ')}`.trim()}
 
@@ -779,7 +1002,7 @@ function normalize(line){
     if(!hits.length)return{err:`${name}: A parameter cannot be found that matches parameter name '${bare.slice(1)}'.`};
     if(hits.length>1&&!exact)return{err:`${name}: Parameter cannot be processed because the parameter name '${bare.slice(1)}' is ambiguous. Possible matches include: ${hits.join(' ')}.`};
     const full=exact||hits[0];
-    if(full==='-Confirm')continue;
+    if(d.params[full]==='switch'){named.push(full==='-Confirm'?(/:\$false$/i.test(t)?'-Confirm:$false':'-Confirm'):full);continue}
     let val=t.includes(':')?t.slice(t.indexOf(':')+1):null;
     if(val==null){if(i+1>=toks.length)return{err:`${name}: Missing an argument for parameter '${full.slice(1)}'. Specify a parameter of type '${TYPE[d.params[full]]||'Int32'}' and try again.`};val=toks[++i]}
     if(full===d.pos)posv.unshift(val);else named.push(full+' '+val);
@@ -796,7 +1019,7 @@ function tokenAt(v,pos){
 }
 function completions(v,pos){
  const{start,end,word}=tokenAt(v,pos);
- if(S.cur&&S.cur.shell){const sh=S.cur.shell.kind==='esxi'?esxiShell(S.cur.shell.host):linuxShell(S.cur.shell.host);return{start,end,items:word?sh.words.filter(x=>x.startsWith(word)&&x!==word):[]}}
+ if(S.cur&&S.cur.shell){const ws=S.cur.shell.kind==='esxi'?esxiWords(S.cur.shell.host):linuxWords(S.cur.shell.host);return{start,end,items:word?[...new Set(ws)].filter(x=>x.startsWith(word)&&x!==word):[]}}
  const segStart=v.lastIndexOf('|',start-1)+1;
  const before=v.slice(segStart,start).trim();
  const toks=before?before.split(/\s+/):[];
@@ -902,32 +1125,46 @@ function keyDown(e){
 }
 
 function run(raw){
- const T=cur(),c=S.cur,line=raw.trim().replace(/\s+/g,' ');if(!line){termLine('in',promptStr());return}
+ const T=cur(),c=S.cur,w=c.w,line=raw.trim().replace(/\s+/g,' ');
+ if(c.confirm){const pend=c.confirm;c.confirm=null;termLine('in',line);if(/^(y|a|yes|)$/i.test(line)){c.confirmed=true;run2(pend,true);c.confirmed=false}else{save();renderDesk(false)}return}
+ if(!line){termLine('in',promptStr());return}
  const h0=hist();if(h0[h0.length-1]!==line){h0.push(line);if(h0.length>300)h0.shift()}
  termLine('in',promptStr()+' '+line);
- const before=stepIdx();
- let res,norm=null;
- if(c.shell){const r=runShell(line);if(r.write){const g=gateWrite(c);res=g||r.run()}else res=r}
- else if(/^help$/i.test(line))res={out:T.help.join('\n'),note:'Get- commands only read and are always safe. Everything else changes something and needs a rollback plan first. Try <code>Get-Help Get-VM</code> for the full syntax of one command.'};
- else{norm=normalize(line);if(norm.err)res={err:norm.err}}
+ run2(line,false);
+}
+function run2(line,confirmed){
+ const T=cur(),c=S.cur,w=c.w;
+ const before=stepIdx(),svcBefore=svcSnapshot(w);
+ const gate=()=>T.sandbox?null:gateWrite(c);
+ let res=null,norm=null;
+ if(c.shell&&!confirmed)res=shellExec(line,c,w,gate);
+ else if(/^help$/i.test(line))res={out:T.help.join('\n'),note:'Get- commands only read and are always safe. Everything else changes something. Try <code>Get-Help Get-VM</code> for the syntax of one command.'};
+ else{norm=confirmed?{line}:normalize(line);if(norm.err)res={err:norm.err}}
  if(norm&&!norm.err){
   const nl=norm.line,parts=nl.split(' '),first=parts[0];
-  if(first==='Clear-Host'){$('term').innerHTML='';c.log=[];res=null}
-  else if(first==='Get-History'){const h=hist().slice(0,-1),start=Math.max(0,h.length-20);res={out:'  Id CommandLine\n  -- -----------\n'+h.slice(start).map((x,i)=>String(start+i+1).padStart(4)+' '+x).join('\n'),note:'Your history is kept between tickets, like PSReadLine keeps it between sessions. Ctrl+R searches it, and the grey suggestion while you type comes from it.'}}
+  if(first==='Clear-Host'){$('term').innerHTML='';c.log=[]}
+  else if(first==='Get-History'){const h=hist().slice(0,-1),start=Math.max(0,h.length-20);res={out:'  Id CommandLine\n  -- -----------\n'+h.slice(start).map((x,i)=>String(start+i+1).padStart(4)+' '+x).join('\n')}}
   else if(first==='Get-Help'){const n=canon(parts[1]||'');res=n?{out:'NAME\n    '+n+'\n\nSYNTAX\n    '+syntaxOf(n)}:{err:'Get-Help: Get-Help could not find '+(parts[1]||'a topic')+' in a help file in this session.'}}
   else if(first==='cmdb'){res=parts[1]?cmdbLook(parts[1]):{err:'cmdb: Missing an argument. Usage: cmdb <ConfigurationItem>'}}
-  else res=runCmd(nl);
+  else res=netExec(nl,c,w)||psExec(nl,c,w,gate);
  }
+ if(res&&res.ev&&T.on){const r=T.on(res.ev,c,w);if(r){res.fail=r.fail;res.why=r.why}}
+ if(res&&res.confirm){c.confirm=res.confirm}
+ w.clock+=1;
  if(res){
   if(res.out)termLine('',res.out);
   if(res.err)termLine('err',res.err);
-  if(res.fail){const key=res.fail[0];if(!c.failed[key]){c.failed[key]=1;fail(res.fail[0],res.fail[1],res.why)}else{c.fails++;sfx.bad()}termEx('bad','What this would mean for real',res.why||CONCEPTS[key].a)}
+  if(res.fail&&!T.sandbox){const key=res.fail[0];if(!c.failed[key]){c.failed[key]=1;fail(res.fail[0],res.fail[1],res.why)}else{c.fails++;sfx.bad()}termEx('bad','What this would mean for real',res.why||CONCEPTS[key].a)}
   else if(!res.err)sfx.key();
   if(res.note)termEx('info','What this tells you',res.note);
  }
+ const nmsg=react(c,w,svcBefore);
+ if(nmsg){tone(620,.08);setTimeout(()=>tone(830,.1),90);setTimeout(()=>{$('tk-left').scrollTop=1e9},0)}
+ if(c.collateral&&c.collateral.length&&!T.sandbox){const ids=c.collateral;c.collateral=[];ids.forEach(id=>{const sv=SVCS.find(x=>x.id===id),k='collateral:'+id;if(!c.failed[k]){c.failed[k]=1;fail('collateral',`Took down ${sv.name} without warning its owner.`,'A service went down because of your action and its owner found out from their users, not from you. Before any change, check what else runs there, and tell the owner first.');termEx('bad','What this would mean for real',`${esc(sv.name)} went down because of what you just did. On a real ship that is a second incident, caused by the person fixing the first one.`)}})}
  const after=stepIdx();
- if(after!==before&&before>=0){sfx.step();for(let i=before;i<(after<0?T.steps.length:after);i++){termLine('ok',`Step complete: ${T.steps[i][1]}`);if(T.steps[i][3])termEx('why','Why this step',T.steps[i][3])}}
+ if(T.steps.length&&after!==before&&before>=0){sfx.step();for(let i=before;i<(after<0?T.steps.length:after);i++){termLine('ok',`Step complete: ${T.steps[i][1]}`);if(T.steps[i][3])termEx('why','Why this step',T.steps[i][3])}}
  save();renderDesk(false);
+ if(c.confirm)$('ps1').textContent='';
 }
 function gateWrite(c){
  if(!c.ciAll)return{err:'Blocked: no change before the CMDB lookup.',fail:['cmdb-first','Tried to change something before checking the CMDB.'],why:'You were about to change a system without knowing what else depends on it. On a shared host that can take down services you did not even know were there.'};
@@ -935,24 +1172,12 @@ function gateWrite(c){
  if(words(c.rec.rollback)<5)return{err:'Change refused: there is no rollback plan on the record yet.',fail:['rollback-first','Tried to make a change with no rollback plan written.'],why:'Every command that changes something is a change. If it goes wrong at 3am you want a written way back, not an improvised one. Write the Rollback field first: how would you undo exactly what you are about to do?'};
  return null;
 }
-function runCmd(line){
- const T=cur(),c=S.cur;let res;
- if(/^(Get-VM|Get-VMHost|Get-VIEvent|Get-Datastore|Set-VMHost|Start-VM|Restart-VMHost)\b/.test(line)&&!c.vc)return{err:`${line.split(' ')[0]}: You are not currently connected to any servers. Please connect first using a Connect cmdlet.`};
-  const h=T.cmds.find(x=>x.re.test(line));
-  if(!h)res={err:`${line.split(' ')[0]}: That parameter combination is not used on this ticket. Try Get-Help ${line.split(' ')[0]} or the Docs tab.`};
-  else if(T.type==='change'&&!c.ciAll)res={err:'Blocked: find the affected configuration items in the CMDB first.'};
-  else if(h.write&&!c.ciAll)res={err:'Blocked: no change before the CMDB lookup.',fail:['cmdb-first','Tried to change something before checking the CMDB.'],why:'You were about to change a system without knowing what else depends on it. On a shared host that can take down services you did not even know were there.'};
-  else if(h.write&&!c.isolated)res={err:'Blocked: the cause is not proven yet. Scope, hypothesis, evidence, then mark the faulty layer in the stack.'};
-  else if(h.write&&words(c.rec.rollback)<5)res={err:'Change refused: there is no rollback plan on the record yet.',fail:['rollback-first','Tried to make a change with no rollback plan written.'],why:'Every command that changes something is a change. If it goes wrong at 3am you want a written way back, not an improvised one. Write the Rollback field first: how would you undo exactly what you are about to do?'};
-  else res=h.run(line.match(h.re),c.w,c,T);
- return res;
-}
 function flagNode(id){
  const T=cur(),c=S.cur;if(c.isolated)return;
  const k=stepIdx(),iso=T.steps.findIndex(s=>s[0]==='isolate');
  if(k<iso){toast(k<T.steps.findIndex(s=>s[0]==='hypo')?'Not yet: scope the problem before you name a fault.':'Commit a hypothesis first, then prove it.');return}
  if(id!==T.fault.node){if(!c.failed['evidence:'+id]){c.failed['evidence:'+id]=1;fail('evidence',`Marked ${id} as the fault, but it was healthy.`,'Naming the wrong layer sends the fix to the wrong team. On a real shift that is an hour lost and a confused colleague. Mark a fault only when output you saw proves it.');termEx('bad','What this would mean for real',`You marked ${esc(id)} as the fault, but nothing you ran shows it broken. Query it, read the output, then decide.`)}else{c.fails++;sfx.bad()}save();renderDesk(false);return}
- if(!c.w.f[T.fault.evidence]){toast('You may be right, but you have no proof yet. Query that layer first.');return}
+ if(!T.fault.evidence(c,c.w)){toast('You may be right, but you have no proof yet. Query that layer first.');return}
  c.isolated=true;sfx.step();termLine('ok',`Fault isolated: ${id}`);
  termEx('why','Why this step',T.steps[iso][3]+(c.hypo&&c.hypo.id!==id?' Your hypothesis pointed elsewhere and the evidence corrected you. That is exactly how it should go.':' Your hypothesis held up under evidence.'));
  save();renderDesk(false);
@@ -986,7 +1211,7 @@ function showClosed(){
  $('tk-left').insertAdjacentHTML('beforeend',`<div class="done-panel"><p class="lbl">Ticket closed</p><p style="font-size:22px;margin:0;color:var(--gold)">+${d.cr} cr</p><p style="color:var(--mute);font-size:12px">${d.fails} mistake${d.fails===1?'':'s'} · ${c.hints} hint${c.hints===1?'':'s'}</p><button class="pri" id="b-next">Back to queue</button></div>`);
  $('b-next').onclick=leave;
 }
-function leave(){if(S.cur&&S.cur.recordOk)S.cur=null;$('v-tickets').classList.add('list');renderQueue();save()}
+function leave(){if(S.cur&&(S.cur.recordOk))S.cur=null;$('v-tickets').classList.remove('sandbox');$('v-tickets').classList.add('list');renderQueue();save()}
 function setPane(p){document.querySelectorAll('#wtabs button[data-p]').forEach(x=>x.classList.toggle('on',x.dataset.p===p));document.querySelectorAll('.pane').forEach(x=>x.classList.toggle('on',x.id==='p-'+p))}
 
 function renderMissions(){
