@@ -120,6 +120,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M2.5 6.5h11M2.5 9.75h11M6.5 3v10"/>'
   },
   {
+    id: "syncle",
+    name: "Syncle",
+    tag: "Shell",
+    sub: "powershell · memory corridor · M365",
+    path: "labs/syncle.html",
+    ring: "ring-mid",
+    angle: 100,
+    glyph: '<path d="M8 1.5l5.6 3.2v6.6L8 14.5l-5.6-3.2V4.7z"/><path d="M2.4 4.7L8 8l5.6-3.3M8 8v6.5"/>'
+  },
+  {
     id: "poshle",
     name: "Poshle",
     tag: "Shell",
