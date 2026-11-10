@@ -93,8 +93,20 @@ main{position:relative;z-index:1;height:calc(100% - var(--top))}
 .term .sys{color:var(--mute)}
 .term .ok{color:var(--ok)}
 .prompt{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);background:var(--term);padding:0 16px;height:46px;font-family:var(--mono);font-size:13px}
-.prompt span{color:var(--acc)}
-.prompt input{flex:1;background:none;border:0;outline:0;height:100%;color:var(--term-ink);font-family:var(--mono)}
+.prompt>span{color:var(--acc);white-space:nowrap}
+.prompt .line{position:relative;flex:1;height:100%;min-width:0}
+.prompt input,.prompt .ghost{position:absolute;inset:0;width:100%;height:100%;background:none;border:0;outline:0;padding:0;font:13px var(--mono);line-height:46px;color:var(--term-ink)}
+.prompt .ghost{color:var(--mute);white-space:pre;overflow:hidden;pointer-events:none}
+.cmenu{display:flex;flex-wrap:wrap;gap:6px;padding:10px 16px;border-top:1px solid var(--line);background:var(--term)}
+.cmenu[hidden]{display:none}
+.cmenu button{height:30px;font:12.5px var(--mono);color:var(--term-ink)}
+.cmenu button.on{border-color:var(--acc);color:var(--acc);background:var(--acc2)}
+.cmenu .tip{flex-basis:100%;margin:2px 0 0;font:12px var(--mono);color:var(--mute)}
+.kbhint{display:flex;flex-wrap:wrap;gap:4px 14px;padding:7px 16px;border-top:1px solid var(--line);font-size:11.5px;color:var(--mute);background:var(--term)}
+kbd{font:11px var(--mono);border:1px solid var(--line2);border-bottom-width:2px;border-radius:3px;padding:0 5px;margin-right:4px;color:var(--ink2);background:var(--panel)}
+.keys{display:none;gap:6px;padding:8px 12px;border-top:1px solid var(--line);background:var(--term);overflow-x:auto}
+.keys button{height:40px;min-width:52px;font:12.5px var(--mono);flex:none}
+@media (pointer:coarse){.keys{display:flex}.kbhint{display:none}}
 .cmdb{padding:14px 16px;overflow:auto}
 .cmdb input{width:100%;height:36px;border:1px solid var(--line2);background:var(--field);border-radius:var(--r);padding:0 10px;margin-bottom:12px}
 table{width:100%;border-collapse:collapse;font-size:13px}
@@ -257,7 +269,7 @@ dialog .bar{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
      <button data-p="debrief" id="t-debrief" hidden>Debrief</button>
      <span style="margin-left:auto;display:flex;align-items:center;gap:8px"><button class="ghost tog" id="b-explain">Explain</button><button class="ghost" id="b-hint">Ask Junie</button><button class="ghost" id="b-leave">Back to queue</button></span>
     </div>
-    <div class="pane on" id="p-console"><div class="term" id="term"></div><div class="prompt"><span>PS&gt;</span><input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command"></div></div>
+    <div class="pane on" id="p-console"><div class="term" id="term"></div><div class="cmenu" id="cmenu" hidden></div><div class="prompt"><span id="ps1">PS C:\ops&gt;</span><div class="line"><div class="ghost" id="ghost"></div><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Command"></div></div><div class="kbhint"><span><kbd>Tab</kbd>complete</span><span><kbd>Shift</kbd><kbd>Tab</kbd>back</span><span><kbd>Ctrl</kbd><kbd>Space</kbd>menu</span><span><kbd>&#8594;</kbd>accept</span><span><kbd>Ctrl</kbd><kbd>&#8594;</kbd>word</span><span><kbd>&#8593;</kbd><kbd>&#8595;</kbd>history</span><span><kbd>Ctrl</kbd><kbd>R</kbd>search</span><span><kbd>Esc</kbd>clear</span><span><kbd>Ctrl</kbd><kbd>L</kbd>screen</span></div><div class="keys" id="keys"><button data-k="Tab">Tab</button><button data-k="STab">Shift Tab</button><button data-k="Menu">Menu</button><button data-k="ArrowRight">Accept</button><button data-k="ArrowUp">Up</button><button data-k="ArrowDown">Down</button><button data-k="CtrlR">Search</button><button data-k="Escape">Esc</button><button data-k="-">-</button><button data-k="|">|</button></div></div>
     <div class="pane" id="p-cmdb"><div class="cmdb"><input id="cmdbq" placeholder="Search configuration items"><div id="cmdbt"></div></div></div>
     <div class="pane" id="p-docs"><div class="docs" id="docs"></div></div>
     <div class="pane" id="p-debrief"><div class="debrief" id="debrief"></div></div>
@@ -388,6 +400,20 @@ const LESSONS={
   `<p class="kick">Basics</p><h1>The stack</h1><p>Every service on the ship hangs on a chain of things below it. The lab draws that chain next to every ticket.</p>${fig(FIG_STACK)}<ul><li><b>Service</b>: what people see. The galley order screens.</li><li><b>VM</b>: a virtual machine. A full computer made of software. Many share one physical host.</li><li><b>Host</b>: the physical server. It runs a hypervisor (VMware ESXi) that runs the VMs.</li><li><b>Datastore</b>: where the VM disks live, shared by several hosts.</li><li><b>LUN</b>: a slice of the storage array handed to the hosts. Module 3 goes deeper.</li><li><b>Backup</b>: a copy somewhere else. Module 4.</li></ul><p>A fault low in the chain breaks everything above it. That is why you check one layer at a time, top to bottom.</p>`,
   `<p class="kick">Basics</p><h1>Maintenance mode</h1><p>Hosts need patches. You cannot patch a host while VMs run on it, so you put it in maintenance mode first. vSphere then refuses to run or start any VM on that host.</p>${fig(FIG_MAINT,'The classic mistake: the patch finishes, the engineer goes home, the host stays in maintenance.')}<p>Before maintenance, VMs are either moved live to another host (vMotion, Module 1) or shut down. The ones that were shut down stay down until someone exits maintenance mode and starts them again.</p>`,
   `<p class="kick">Basics</p><h1>Reading the console</h1><p>The console speaks PowerCLI, the PowerShell module for VMware. Same Verb-Noun pattern as the PowerShell you already use.</p>${fig(FIG_PS)}<ul><li><code>Get-</code> reads. Always safe. Run as many as you like.</li><li><code>Set-</code>, <code>Start-</code>, <code>Restart-</code> change things. Those are changes, so they need a rollback plan first.</li><li>The pipe <code>|</code> hands results to the next command: <code>Get-VM -Location esx-02 | Start-VM</code> starts every VM on that host.</li></ul><p>Read every column. The answer is usually already on screen: a state, and a pointer to the next layer down.</p>`,
+  `<p class="kick">Basics</p><h1>Typing like a pro</h1><p>The console behaves like PowerShell 7 with PSReadLine, the same as on your work laptop. Learn these now and they carry straight over.</p><div class="fig"><table><thead><tr><th>Keys</th><th>What it does</th><th>Why it matters</th></tr></thead><tbody>
+<tr><td><kbd>Tab</kbd></td><td>Completes commands, parameters after a dash, and values: VM names, hosts, states</td><td>No typos in server names. A typo in a name can hit the wrong server.</td></tr>
+<tr><td><kbd>Shift</kbd><kbd>Tab</kbd></td><td>Cycles back through the same completions</td><td>When you went one past the one you wanted</td></tr>
+<tr><td><kbd>Ctrl</kbd><kbd>Space</kbd></td><td>Shows every option as a menu, with the command syntax</td><td>When you do not remember the name at all</td></tr>
+<tr><td><kbd>&#8594;</kbd></td><td>Accepts the grey suggestion from your history</td><td>Repeat checks in one keystroke</td></tr>
+<tr><td><kbd>Ctrl</kbd><kbd>&#8594;</kbd></td><td>Accepts the suggestion one word at a time</td><td>Reuse a command but change the end</td></tr>
+<tr><td><kbd>&#8593;</kbd><kbd>&#8595;</kbd></td><td>Walks through your history</td><td>Rerun the check after a fix</td></tr>
+<tr><td><kbd>F8</kbd></td><td>History that starts with what you typed</td><td>Type <code>Get-VM</code>, then F8 for the last Get-VM</td></tr>
+<tr><td><kbd>Ctrl</kbd><kbd>R</kbd></td><td>Searches history for any part of a command</td><td>Find that one command from an hour ago</td></tr>
+<tr><td><kbd>Esc</kbd></td><td>Clears the line</td><td>Start over without backspacing</td></tr>
+<tr><td><kbd>Ctrl</kbd><kbd>C</kbd></td><td>Cancels the line</td><td>Same, and leaves a trace in the output</td></tr>
+<tr><td><kbd>Ctrl</kbd><kbd>L</kbd></td><td>Clears the screen</td><td>A clean slate for the next step</td></tr>
+<tr><td><kbd>Ctrl</kbd><kbd>Backspace</kbd></td><td>Deletes a whole word</td><td>Fix a parameter quickly</td></tr>
+</tbody></table></div><h2>Parameters</h2><p>PowerShell accepts any unique start of a parameter name: <code>-Loc</code> works for <code>-Location</code>. Names are not case sensitive. The first value can usually go without its name: <code>Get-VM galley-disp-01</code> is the same as <code>Get-VM -Name galley-disp-01</code>.</p><p>Habit to build: type three letters, press Tab, check what appeared, then continue. That is how seniors type fast without mistakes.</p>`,
   `<p class="kick">Basics</p><h1>CMDB versus the live system</h1><p>The CMDB is the ship's register: every configuration item (CI), what it does, what it depends on and who owns it. It tells you what <i>should</i> be.</p><p>The live system (vCenter, the console) tells you what <i>is</i>. When the two disagree, that difference is a clue, and often a follow-up of its own.</p><h2>Why CMDB first</h2><ul><li>It tells you who else is hit before you touch anything</li><li>It tells you who owns it, so you know who to inform</li><li>It gives you the names to query, so you are not guessing</li></ul><p>That is everything you need for the first ticket. Linnea is waiting in the galley.</p>`
  ]}
 };
@@ -406,8 +432,8 @@ function shakeStart(names,w,c){
  const out=[],notes=[];
  for(const n of names){
   const v=w.vms[n];
-  if(!v)return{err:`Start-VM : VM with name '${n}' was not found.`};
-  if(w.hostState==='Maintenance'&&v.host==='esx-02')return{err:`Start-VM : The operation is not allowed in the current state of the host (Maintenance mode).`,fail:['maint-mode','Tried to power on a VM on a host still in maintenance mode.'],why:'vSphere refuses this outright. In real life the screen just shows this error and nothing changes, but it tells everyone watching that you started fixing before you understood the cause. Take the host out of maintenance mode first.'};
+  if(!v)return{err:`Start-VM: VM with name '${n}' was not found.`};
+  if(w.hostState==='Maintenance'&&v.host==='esx-02')return{err:`Start-VM: The operation is not allowed in the current state of the host (Maintenance mode).`,fail:['maint-mode','Tried to power on a VM on a host still in maintenance mode.'],why:'vSphere refuses this outright. In real life the screen just shows this error and nothing changes, but it tells everyone watching that you started fixing before you understood the cause. Take the host out of maintenance mode first.'};
   if(v.on){out.push(`${pad(n,17)}PoweredOn   (already running)`);continue}
   v.on=true;out.push(`${pad(n,17)}PoweredOn`);
  }
@@ -440,20 +466,33 @@ const TICKETS={
    ['verify','Verify',w=>!!(w.f.svcOk&&w.f.allOkSeen),'Verified at service level and across everything that was hit. Now write it up so the next person understands what happened in thirty seconds.'],
    ['record','Document',(w,c)=>!!c.recordOk,'']
   ],
-  help:['Get-VM <name>','Get-VM -Location <host>','Get-VMHost [<name>]','Get-VIEvent -Entity <host>','Get-Datastore [<name>]','Set-VMHost <name> -State Connected|Maintenance','Start-VM <name>[,<name>]','Get-VM -Location <host> | Start-VM','Restart-VMHost <name>','Test-NetConnection <name> -Port <port>','cmdb <name>'],
+  help:['Get-VM <name>','Get-VM -Location <host>','Get-VMHost [<name>]','Get-VIEvent -Entity <host> [-MaxSamples <n>]','Get-Datastore [<name>]','Set-VMHost <name> -State Connected|Maintenance','Start-VM <name>[,<name>]','Get-VM -Location <host> | Start-VM','Restart-VMHost <name>','Test-NetConnection <name> -Port <port>','cmdb <name>','Get-Help <command>','Get-History'],
+  complete:{
+   cmdlets:{
+    'Get-VM':{params:{'-Name':'vm','-Location':'host'},pos:'-Name'},
+    'Get-VMHost':{params:{'-Name':'host'},pos:'-Name'},
+    'Get-VIEvent':{params:{'-Entity':'host','-MaxSamples':'int'},pos:'-Entity'},
+    'Get-Datastore':{params:{'-Name':'ds'},pos:'-Name'},
+    'Set-VMHost':{params:{'-VMHost':'host','-State':'state','-Confirm':'switch'},pos:'-VMHost'},
+    'Start-VM':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
+    'Restart-VMHost':{params:{'-VMHost':'host','-Confirm':'switch'},pos:'-VMHost'},
+    'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'}
+   },
+   values:{vm:VM02.concat(VM01),host:['esx-01','esx-02'],ds:['DS-HULL-01'],state:['Connected','Maintenance'],port:['443','80','22']}
+  },
   cmds:[
-   {re:/^get-vm\s+-location\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h!=='esx-01'&&h!=='esx-02')return{err:`Get-VM : Could not find VIContainer with name '${m[1]}'.`};const list=Object.keys(w.vms).filter(n=>w.vms[n].host===h);if(h==='esx-02'){w.f.hostListSeen=true;if(VM02.every(n=>w.vms[n].on))w.f.allOkSeen=true}return{out:VMHEAD+'\n'+list.map(n=>vmRow(n,w)).join('\n'),note:h==='esx-02'?(VM02.every(n=>w.vms[n].on)?'All VMs on esx-02 are PoweredOn. That is your proof that nothing else was left behind.':'Three VMs on esx-02, all PoweredOff. The CMDB said this host has 14 VMs, the live system shows 3. The other 11 were probably moved to esx-01 before something happened to this host. The CMDB tells you what should be, vCenter tells you what is.'):'Eleven VMs, all running, on esx-01. These are the ones that were moved over. So esx-01 is healthy and carrying the extra load.'}}},
+   {re:/^get-vm\s+-location\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h!=='esx-01'&&h!=='esx-02')return{err:`Get-VM: Could not find VIContainer with name '${m[1]}'.`};const list=Object.keys(w.vms).filter(n=>w.vms[n].host===h);if(h==='esx-02'){w.f.hostListSeen=true;if(VM02.every(n=>w.vms[n].on))w.f.allOkSeen=true}return{out:VMHEAD+'\n'+list.map(n=>vmRow(n,w)).join('\n'),note:h==='esx-02'?(VM02.every(n=>w.vms[n].on)?'All VMs on esx-02 are PoweredOn. That is your proof that nothing else was left behind.':'Three VMs on esx-02, all PoweredOff. The CMDB said this host has 14 VMs, the live system shows 3. The other 11 were probably moved to esx-01 before something happened to this host. The CMDB tells you what should be, vCenter tells you what is.'):'Eleven VMs, all running, on esx-01. These are the ones that were moved over. So esx-01 is healthy and carrying the extra load.'}}},
    {re:/^get-vmhost\s+(\S+)\s*\|\s*get-vm$/i,run(m,w,c,T){return T.cmds[0].run(['',m[1]],w,c,T)}},
-   {re:/^get-vm\s+-location\s+(\S+)\s*\|\s*start-vm$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02'){if(m[1].toLowerCase()==='esx-01')return{out:'All VMs on esx-01 are already PoweredOn. Nothing to do.'};return{err:`Get-VM : Could not find VIContainer with name '${m[1]}'.`}}return shakeStart(VM02,w,c)}},
-   {re:/^get-vm\s+(\S+)$/i,run(m,w,c){const n=m[1].toLowerCase(),v=w.vms[n];if(!v)return{err:`Get-VM : VM with name '${m[1]}' was not found.`};c.seen[n]=1;if(n==='galley-disp-01')w.f.vmSeen=true;return{out:VMHEAD+'\n'+vmRow(n,w),note:n==='galley-disp-01'?(v.on?'PoweredOn. The VM runs. Whether the galley screen answers is a separate question.':'PoweredOff. That explains the black screens: the machine behind them is not running. But a VM does not power itself off for no reason. Before starting it, ask why. And ask who else is affected: run <code>Get-VM -Location esx-02</code> to see its neighbours.'):(v.on?'Running.':'Off too. Same host as the galley VM.')}}},
+   {re:/^get-vm\s+-location\s+(\S+)\s*\|\s*start-vm$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02'){if(m[1].toLowerCase()==='esx-01')return{out:'All VMs on esx-01 are already PoweredOn. Nothing to do.'};return{err:`Get-VM: Could not find VIContainer with name '${m[1]}'.`}}return shakeStart(VM02,w,c)}},
+   {re:/^get-vm\s+(\S+)$/i,run(m,w,c){const n=m[1].toLowerCase(),v=w.vms[n];if(!v)return{err:`Get-VM: VM with name '${m[1]}' was not found.`};c.seen[n]=1;if(n==='galley-disp-01')w.f.vmSeen=true;return{out:VMHEAD+'\n'+vmRow(n,w),note:n==='galley-disp-01'?(v.on?'PoweredOn. The VM runs. Whether the galley screen answers is a separate question.':'PoweredOff. That explains the black screens: the machine behind them is not running. But a VM does not power itself off for no reason. Before starting it, ask why. And ask who else is affected: run <code>Get-VM -Location esx-02</code> to see its neighbours.'):(v.on?'Running.':'Off too. Same host as the galley VM.')}}},
    {re:/^get-vmhost$/i,run(m,w,c){c.seen['esx-02']=1;w.f.hostSeen=true;return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-01  Connected        PoweredOn   ${w.hostState==='Maintenance'?'27310':'15120'}\nesx-02  ${pad(w.hostState,15)}  PoweredOn   ${w.hostState==='Maintenance'?'190':'12460'}`,note:hostNote(w)}}},
-   {re:/^get-vmhost\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h==='esx-01')return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-01  Connected        PoweredOn   ${w.hostState==='Maintenance'?'27310':'15120'}`,note:'esx-01 is fine, but busy: it is carrying the VMs that were moved off esx-02.'};if(h!=='esx-02')return{err:`Get-VMHost : VMHost with name '${m[1]}' was not found.`};c.seen['esx-02']=1;w.f.hostSeen=true;return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-02  ${pad(w.hostState,15)}  PoweredOn   ${w.hostState==='Maintenance'?'190':'12460'}`,note:hostNote(w)}}},
-   {re:/^get-vievent\s+-entity\s+(\S+)(\s+-maxsamples\s+\d+)?$/i,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{out:'CreatedTime          FullFormattedMessage\n-----------          --------------------\n05:00:12             Scheduled health check passed',note:'Nothing interesting on this host.'};w.f.eventsSeen=true;w.f.hostSeen=true;c.seen['esx-02']=1;return{out:`CreatedTime          FullFormattedMessage\n-----------          --------------------\n02:10:04             Task: Enter maintenance mode (user svc-patch)\n02:10:51             11 virtual machines migrated to esx-01\n02:11:08             3 virtual machines powered off (no vMotion licence on templates)\n02:21:40             Host rebooted after update installation\n02:50:17             Patch baseline "2026-11" compliant\n${w.hostState==='Connected'?'now                  Task: Exit maintenance mode (user you)':''}`.trim(),note:'This is the story in one table. At 02:10 the patch account put esx-02 in maintenance mode, moved 11 VMs away and powered off 3. Patching finished at 02:50. There is no "Exit maintenance mode" afterwards. Events are the best evidence you have: they say what happened, when, and who did it.'}}},
+   {re:/^get-vmhost\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h==='esx-01')return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-01  Connected        PoweredOn   ${w.hostState==='Maintenance'?'27310':'15120'}`,note:'esx-01 is fine, but busy: it is carrying the VMs that were moved off esx-02.'};if(h!=='esx-02')return{err:`Get-VMHost: VMHost with name '${m[1]}' was not found.`};c.seen['esx-02']=1;w.f.hostSeen=true;return{out:`Name    ConnectionState  PowerState  CpuUsageMhz\n----    ---------------  ----------  -----------\nesx-02  ${pad(w.hostState,15)}  PoweredOn   ${w.hostState==='Maintenance'?'190':'12460'}`,note:hostNote(w)}}},
+   {re:/^get-vievent\s+(\S+)(\s+-maxsamples\s+\d+)?$/i,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{out:'CreatedTime          FullFormattedMessage\n-----------          --------------------\n05:00:12             Scheduled health check passed',note:'Nothing interesting on this host.'};w.f.eventsSeen=true;w.f.hostSeen=true;c.seen['esx-02']=1;return{out:`CreatedTime          FullFormattedMessage\n-----------          --------------------\n02:10:04             Task: Enter maintenance mode (user svc-patch)\n02:10:51             11 virtual machines migrated to esx-01\n02:11:08             3 virtual machines powered off (no vMotion licence on templates)\n02:21:40             Host rebooted after update installation\n02:50:17             Patch baseline "2026-11" compliant\n${w.hostState==='Connected'?'now                  Task: Exit maintenance mode (user you)':''}`.trim(),note:'This is the story in one table. At 02:10 the patch account put esx-02 in maintenance mode, moved 11 VMs away and powered off 3. Patching finished at 02:50. There is no "Exit maintenance mode" afterwards. Events are the best evidence you have: they say what happened, when, and who did it.'}}},
    {re:/^get-datastore(\s+\S+)?$/i,run(m,w,c){c.seen['DS-HULL-01']=1;return{out:'Name        FreeSpaceGB  CapacityGB  State\n----        -----------  ----------  -----\nDS-HULL-01  412          2048        Available\nWARNING: Datastore usage 80% (warning threshold 80%)',note:'A red herring. 80% used is worth its own follow-up ticket, but it is not your cause: a full datastore makes running VMs pause with a "no space" message, it does not power them off, and the datastore is Available. Note it, do not chase it now.'}}},
-   {re:/^set-vmhost\s+(\S+)\s+-state\s+(connected|maintenance)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Set-VMHost : VMHost with name '${m[1]}' was not found.`};const st=m[2].toLowerCase()==='connected'?'Connected':'Maintenance';if(st==='Maintenance'&&VM02.some(n=>w.vms[n].on))return{err:'Set-VMHost : The host has powered-on virtual machines. Migrate or power them off first.'};w.hostState=st;return{out:`Name    ConnectionState\n----    ---------------\nesx-02  ${st}`,note:st==='Connected'?'The host is out of maintenance mode and accepts VMs again. Your rollback is the reverse of this command. The VMs do not start by themselves: they were powered off, so they stay off until you start them.':'Back in maintenance. That is your rollback path: it only works when no VMs run on the host.'}}},
+   {re:/^set-vmhost\s+(\S+)\s+-state\s+(connected|maintenance)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Set-VMHost: VMHost with name '${m[1]}' was not found.`};const st=m[2].toLowerCase()==='connected'?'Connected':'Maintenance';if(st==='Maintenance'&&VM02.some(n=>w.vms[n].on))return{err:'Set-VMHost: The host has powered-on virtual machines. Migrate or power them off first.'};w.hostState=st;return{out:`Name    ConnectionState\n----    ---------------\nesx-02  ${st}`,note:st==='Connected'?'The host is out of maintenance mode and accepts VMs again. Your rollback is the reverse of this command. The VMs do not start by themselves: they were powered off, so they stay off until you start them.':'Back in maintenance. That is your rollback path: it only works when no VMs run on the host.'}}},
    {re:/^start-vm\s+([\w-]+(?:\s*,\s*[\w-]+)*)$/i,write:true,run(m,w,c){return shakeStart(m[1].split(',').map(x=>x.trim().toLowerCase()),w,c)}},
-   {re:/^restart-vmhost\s+(\S+)(\s+-confirm:\$false)?$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Restart-VMHost : VMHost with name '${m[1]}' was not found.`};w.reboots++;return{out:'Restarting esx-02 ... (9 min)\nesx-02 is back. ConnectionState: Maintenance',fail:['smallest-fix','Rebooted a host as a fix without knowing the cause.'],why:'The reboot cost nine minutes of queueing guests and changed nothing: maintenance mode survives a reboot. A reboot feels like action, but on a host it also kills anything still running. Find the cause first, then do the smallest thing that removes it.'}}},
-   {re:/^test-netconnection\s+(\S+)\s+-port\s+(\d+)$/i,run(m,w,c){const n=m[1].toLowerCase(),v=w.vms[n];if(!v)return{err:`Test-NetConnection : Name resolution of ${m[1]} failed.`};const ok=v.on;if(n==='galley-disp-01'&&ok&&m[2]==='443')w.f.svcOk=true;return{out:`ComputerName     : ${n}\nRemotePort       : ${m[2]}\nTcpTestSucceeded : ${ok&&['443','80'].includes(m[2])?'True':'False'}`,note:n==='galley-disp-01'&&m[2]==='443'?(ok?'True: the display service answers on its port. That is service-level proof, much stronger than "the VM is on". Now check nothing else on esx-02 was left behind.':'False: nothing answers. The VM is off, so of course the service is too.'):'Port 443 (HTTPS) is where the galley display listens. Check that one.'}}}
+   {re:/^restart-vmhost\s+(\S+)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Restart-VMHost: VMHost with name '${m[1]}' was not found.`};w.reboots++;return{out:'Restarting esx-02 ... (9 min)\nesx-02 is back. ConnectionState: Maintenance',fail:['smallest-fix','Rebooted a host as a fix without knowing the cause.'],why:'The reboot cost nine minutes of queueing guests and changed nothing: maintenance mode survives a reboot. A reboot feels like action, but on a host it also kills anything still running. Find the cause first, then do the smallest thing that removes it.'}}},
+   {re:/^test-netconnection\s+(\S+)\s+-port\s+(\d+)$/i,run(m,w,c){const n=m[1].toLowerCase(),v=w.vms[n];if(!v)return{err:`Test-NetConnection: Name resolution of ${m[1]} failed.`};const ok=v.on;if(n==='galley-disp-01'&&ok&&m[2]==='443')w.f.svcOk=true;return{out:`ComputerName     : ${n}\nRemotePort       : ${m[2]}\nTcpTestSucceeded : ${ok&&['443','80'].includes(m[2])?'True':'False'}`,note:n==='galley-disp-01'&&m[2]==='443'?(ok?'True: the display service answers on its port. That is service-level proof, much stronger than "the VM is on". Now check nothing else on esx-02 was left behind.':'False: nothing answers. The VM is off, so of course the service is too.'):'Port 443 (HTTPS) is where the galley display listens. Check that one.'}}}
   ],
   hints:['Start in the CMDB: which VM runs the galley display, which host is it on, and what else lives on that host?','Something happened to esx-02 overnight. Get-VMHost shows its state, Get-VIEvent -Entity esx-02 shows its history.','esx-02 is still in maintenance mode after patching. Write the rollback, then Set-VMHost esx-02 -State Connected, then Get-VM -Location esx-02 | Start-VM, then Test-NetConnection galley-disp-01 -Port 443.'],
   checks:[
@@ -482,7 +521,7 @@ const TICKETS={
 };
 function hostNote(w){return w.hostState==='Maintenance'?'esx-02 is powered on but in Maintenance. CPU at 190 MHz means it is doing nothing. That is your evidence: in maintenance mode vSphere will not run VMs on this host. Want the full story of how it got here? <code>Get-VIEvent -Entity esx-02</code>.':'esx-02 is Connected and working again.'}
 
-const DEF={v:1,theme:'promenade',sfx:true,explain:true,cr:0,xp:0,les:{},done:{},journal:[],srs:{},missions:{},view:'school',mod:'m0',lesson:'l0-orient',page:{},cur:null};
+const DEF={v:1,hist:[],stats:{},theme:'promenade',sfx:true,explain:true,cr:0,xp:0,les:{},done:{},journal:[],srs:{},missions:{},view:'school',mod:'m0',lesson:'l0-orient',page:{},cur:null};
 let S;
 function load(){let d={};try{d=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}S=Object.assign(JSON.parse(JSON.stringify(DEF)),d);if(S.cur&&(!S.cur.rec||!('follow' in S.cur.rec)||!S.cur.w||!S.cur.w.vms))S.cur=null}
 function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
@@ -624,24 +663,175 @@ function fail(concept,text,why){
  c.mistakes.push({concept,text,why:why||CONCEPTS[concept].a});
  toast(text,true);
 }
-const HIST=[];let hi=0;
-function run(raw){
- const T=cur(),c=S.cur,line=raw.trim().replace(/\s+/g,' ');if(!line)return;
- HIST.push(line);hi=HIST.length;
- termLine('in','PS> '+line);
- const before=stepIdx();
- let res;
- if(/^help$/i.test(line))res={out:T.help.join('\n'),note:'Get- commands only read and are always safe. Everything else changes something and needs a rollback plan first.'};
- else if(/^(clear|cls)$/i.test(line)){$('term').innerHTML='';c.log=[];res=null}
- else if(/^cmdb\s+(\S+)$/i.test(line))res=cmdbLook(line.split(/\s+/)[1]);
+const PROMPT='PS C:\\ops>';
+const BUILTIN={
+ 'Clear-Host':{params:{},pos:null,syn:'Clear-Host'},
+ 'Get-History':{params:{'-Count':null},pos:null,syn:'Get-History [[-Count] <Int32>]'},
+ 'Get-Help':{params:{'-Name':'cmdlet'},pos:'-Name',syn:'Get-Help [[-Name] <String>]'},
+ 'cmdb':{params:{},pos:'ci',syn:'cmdb <ConfigurationItem>'},
+ 'help':{params:{},pos:null,syn:'help'}
+};
+const ALIAS={cls:'Clear-Host',clear:'Clear-Host',h:'Get-History',history:'Get-History',ghy:'Get-History'};
+const TYPE={int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
+function schema(){const T=cur();return Object.assign({},T?T.complete.cmdlets:{},BUILTIN)}
+function values(kind){const T=cur();if(!T)return[];if(kind==='cmdlet')return Object.keys(schema()).filter(k=>/-/.test(k));if(kind==='ci')return T.cmdbRows.map(r=>r[0]);return T.complete.values[kind]||[]}
+function canon(name){const sc=schema(),k=Object.keys(sc).find(x=>x.toLowerCase()===String(name).toLowerCase());if(k)return k;const a=ALIAS[String(name).toLowerCase()];return a||null}
+function syntaxOf(name){const d=schema()[name];if(!d)return'';if(d.syn)return d.syn;const ps=Object.entries(d.params).map(([p,t])=>{if(t==='switch')return `[${p}]`;const ty=TYPE[t]||'Int32';return p===d.pos?`[${p}] <${ty}>`:`[${p} <${ty}>]`});return `${name} ${ps.join(' ')}`.trim()}
+
+function normalize(line){
+ const segs=line.split('|').map(s=>s.trim());
+ const out=[];
+ for(const seg of segs){
+  if(!seg)return{err:'ParserError: An empty pipe element is not allowed.'};
+  const toks=seg.split(' ');
+  const name=canon(toks[0]);
+  if(!name)return{err:`${toks[0]}: The term '${toks[0]}' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.`};
+  const d=schema()[name],posv=[],named=[];
+  for(let i=1;i<toks.length;i++){
+   const t=toks[i];
+   if(/^-/.test(t)&&!/^-\d/.test(t)){
+    const bare=t.split(':')[0];
+    const hits=Object.keys(d.params).filter(p=>p.toLowerCase().startsWith(bare.toLowerCase()));
+    const exact=hits.find(p=>p.toLowerCase()===bare.toLowerCase());
+    if(!hits.length)return{err:`${name}: A parameter cannot be found that matches parameter name '${bare.slice(1)}'.`};
+    if(hits.length>1&&!exact)return{err:`${name}: Parameter cannot be processed because the parameter name '${bare.slice(1)}' is ambiguous. Possible matches include: ${hits.join(' ')}.`};
+    const full=exact||hits[0];
+    if(full==='-Confirm')continue;
+    let val=t.includes(':')?t.slice(t.indexOf(':')+1):null;
+    if(val==null){if(i+1>=toks.length)return{err:`${name}: Missing an argument for parameter '${full.slice(1)}'. Specify a parameter of type '${TYPE[d.params[full]]||'Int32'}' and try again.`};val=toks[++i]}
+    if(full===d.pos)posv.unshift(val);else named.push(full+' '+val);
+   }else posv.push(t);
+  }
+  out.push([name].concat(posv,named).join(' '));
+ }
+ return{line:out.join(' | ')};
+}
+
+function tokenAt(v,pos){
+ let s=pos;while(s>0&&!/[\s|,]/.test(v[s-1]))s--;
+ return{start:s,end:pos,word:v.slice(s,pos)};
+}
+function completions(v,pos){
+ const{start,end,word}=tokenAt(v,pos);
+ const segStart=v.lastIndexOf('|',start-1)+1;
+ const before=v.slice(segStart,start).trim();
+ const toks=before?before.split(/\s+/):[];
+ const lw=word.toLowerCase();
+ let items=[];
+ if(!toks.length)items=Object.keys(schema()).concat(Object.keys(ALIAS)).filter(k=>k.toLowerCase().startsWith(lw)&&(lw||/-/.test(k)));
  else{
-  const h=T.cmds.find(x=>x.re.test(line));
-  if(!h)res={err:`The term '${line.split(/\s+/)[0]}' is not recognized here, or the syntax is off. Type help, or check the Docs tab.`};
-  else if(T.type==='change'&&!c.ciAll)res={err:'Blocked: find the affected configuration items in the CMDB first.'};
-  else if(h.write&&!c.ciAll)res={err:'Blocked: no change before the CMDB lookup.',fail:['cmdb-first','Tried to change something before checking the CMDB.'],why:'You were about to change a system without knowing what else depends on it. On a shared host that can take down services you did not even know were there.'};
-  else if(h.write&&!c.isolated)res={err:'Blocked: the cause is not proven yet.',note:'Fixing something you have not proven is guessing, and guesses on production systems cause the next incident. Scope it, commit a hypothesis, prove it with evidence and mark the faulty layer in the stack. Then the fix unlocks.'};
-  else if(h.write&&words(c.rec.rollback)<5)res={err:'Change refused: there is no rollback plan on the record yet.',fail:['rollback-first','Tried to make a change with no rollback plan written.'],why:'Every command that changes something is a change. If it goes wrong at 3am you want a written way back, not an improvised one. Write the Rollback field first: how would you undo exactly what you are about to do?'};
-  else res=h.run(line.match(h.re),c.w,c,T);
+  const name=canon(toks[0]),d=name&&schema()[name];
+  if(d){
+   if(word.startsWith('-'))items=Object.keys(d.params).filter(p=>p.toLowerCase().startsWith(lw)&&!toks.some(t=>t.toLowerCase()===p.toLowerCase()));
+   else{
+    const prev=toks[toks.length-1];let kind;
+    if(prev.startsWith('-')){const p=Object.keys(d.params).find(x=>x.toLowerCase()===prev.toLowerCase());kind=p?d.params[p]:null}
+    else if(toks.length===1||v.slice(start-1,start)===',')kind=d.pos&&d.pos.startsWith('-')?d.params[d.pos]:d.pos;
+    if(kind)items=values(kind).filter(x=>x.toLowerCase().startsWith(lw));
+   }
+  }
+ }
+ items=items.filter((x,i,a)=>a.indexOf(x)===i).sort((a,b)=>a.localeCompare(b));
+ return{start,end,items};
+}
+
+const K={comp:null,menu:null,hidx:null,search:null,draft:''};
+function hist(){return S.hist||(S.hist=[])}
+function setVal(v,cur){const el=$('cmd');el.value=v;const p=cur==null?v.length:cur;el.setSelectionRange(p,p);ghost()}
+function ghost(){
+ const el=$('cmd'),v=el.value;
+ let sug='';
+ if(v&&!K.search&&el.selectionStart===v.length){const h=hist();for(let i=h.length-1;i>=0;i--){if(h[i].length>v.length&&h[i].toLowerCase().startsWith(v.toLowerCase())){sug=h[i];break}}}
+ K.sug=sug;
+ $('ghost').innerHTML=sug?`<span style="visibility:hidden">${esc(v)}</span>${esc(sug.slice(v.length))}`:'';
+ $('ghost').scrollLeft=el.scrollLeft;
+}
+function tabCycle(dir){
+ const el=$('cmd'),v=el.value,pos=el.selectionStart;
+ if(!K.comp||K.comp.after!==v){
+  const c=completions(v,pos);
+  if(!c.items.length){tone(220,.05);return}
+  K.comp={base:v,start:c.start,end:c.end,items:c.items,i:dir>0?-1:c.items.length};
+ }
+ const c=K.comp;c.i=(c.i+dir+c.items.length)%c.items.length;
+ const nv=c.base.slice(0,c.start)+c.items[c.i]+c.base.slice(c.end);
+ const p=c.start+c.items[c.i].length;
+ c.after=nv;setVal(nv,p);S.stats.tab=(S.stats.tab||0)+1;
+}
+function openMenu(){
+ const el=$('cmd'),c=completions(el.value,el.selectionStart);
+ if(!c.items.length){tone(220,.05);return}
+ if(c.items.length===1){K.comp=null;const nv=el.value.slice(0,c.start)+c.items[0]+el.value.slice(c.end);setVal(nv,c.start+c.items[0].length);return}
+ K.menu={base:el.value,start:c.start,end:c.end,items:c.items,i:0};drawMenu();
+}
+function drawMenu(){
+ const m=K.menu,box=$('cmenu');
+ if(!m){box.hidden=true;box.innerHTML='';return}
+ box.hidden=false;
+ box.innerHTML=m.items.map((x,i)=>`<button class="${i===m.i?'on':''}" data-i="${i}">${esc(x)}</button>`).join('')+`<p class="tip">${esc(syntaxOf(m.items[m.i])||'Arrow keys to move, Enter or Tab to accept, Esc to close')}</p>`;
+}
+function acceptMenu(i){const m=K.menu;if(!m)return;const it=m.items[i==null?m.i:i];K.menu=null;drawMenu();setVal(m.base.slice(0,m.start)+it+m.base.slice(m.end),m.start+it.length);$('cmd').focus()}
+function startSearch(){K.search={q:'',idx:hist().length,match:''};drawSearch()}
+function findBack(from){const h=hist(),q=K.search.q.toLowerCase();for(let i=from-1;i>=0;i--)if(!q||h[i].toLowerCase().includes(q))return i;return -1}
+function drawSearch(){const s=K.search;$('ps1').textContent=s?`bck-i-search: ${s.q}_`:PROMPT;if(s){$('cmd').value=s.match;$('ghost').innerHTML=''}}
+function endSearch(keep){const m=K.search&&K.search.match;K.search=null;drawSearch();setVal(keep?m:'')}
+function wordEnd(str,from){let i=from;while(i<str.length&&/\s/.test(str[i]))i++;while(i<str.length&&!/[\s|]/.test(str[i]))i++;return i}
+
+function keyDown(e){
+ const el=$('cmd'),v=el.value,pos=el.selectionStart,atEnd=pos===v.length&&el.selectionEnd===v.length;
+ if(K.search){
+  const s=K.search;
+  if(e.key==='Enter'){e.preventDefault();const m=s.match;endSearch(false);if(m)run(m);return}
+  if(e.key==='Escape'||(e.ctrlKey&&e.key.toLowerCase()==='g')){e.preventDefault();endSearch(false);return}
+  if(e.ctrlKey&&e.key.toLowerCase()==='r'){e.preventDefault();const i=findBack(s.idx);if(i>=0){s.idx=i;s.match=hist()[i]}drawSearch();return}
+  if(e.key==='Backspace'){e.preventDefault();s.q=s.q.slice(0,-1);s.idx=hist().length;const i=findBack(s.idx);s.idx=i<0?hist().length:i;s.match=i>=0?hist()[i]:'';drawSearch();return}
+  if(e.key.length===1&&!e.ctrlKey&&!e.metaKey){e.preventDefault();s.q+=e.key;const i=findBack(hist().length);s.idx=i<0?hist().length:i;s.match=i>=0?hist()[i]:'';drawSearch();return}
+  if(/Arrow|Home|End|Tab/.test(e.key)){e.preventDefault();endSearch(true);return}
+  return;
+ }
+ if(K.menu){
+  const m=K.menu;
+  if(e.key==='ArrowRight'||e.key==='ArrowDown'||(e.key==='Tab'&&!e.shiftKey)){e.preventDefault();m.i=(m.i+1)%m.items.length;drawMenu();return}
+  if(e.key==='ArrowLeft'||e.key==='ArrowUp'||(e.key==='Tab'&&e.shiftKey)){e.preventDefault();m.i=(m.i-1+m.items.length)%m.items.length;drawMenu();return}
+  if(e.key==='Enter'){e.preventDefault();acceptMenu();return}
+  if(e.key==='Escape'){e.preventDefault();K.menu=null;drawMenu();return}
+  K.menu=null;drawMenu();
+ }
+ if(e.key==='Tab'){e.preventDefault();tabCycle(e.shiftKey?-1:1);return}
+ if(e.ctrlKey&&(e.key===' '||e.code==='Space')){e.preventDefault();openMenu();return}
+ if(e.key!=='Shift')K.comp=null;
+ if(e.key==='Enter'){e.preventDefault();K.hidx=null;$('cmenu').hidden=true;setVal('');run(v);return}
+ if(e.key==='Escape'){e.preventDefault();K.hidx=null;setVal('');return}
+ if(e.ctrlKey&&e.key.toLowerCase()==='c'&&el.selectionStart===el.selectionEnd){e.preventDefault();termLine('in',`${PROMPT} ${v}^C`);setVal('');return}
+ if(e.ctrlKey&&e.key.toLowerCase()==='l'){e.preventDefault();$('term').innerHTML='';if(S.cur)S.cur.log=[];save();return}
+ if(e.ctrlKey&&e.key.toLowerCase()==='r'){e.preventDefault();startSearch();return}
+ if(e.key==='ArrowRight'&&atEnd&&K.sug){e.preventDefault();if(e.ctrlKey){setVal(K.sug.slice(0,wordEnd(K.sug,v.length)))}else setVal(K.sug);S.stats.pred=(S.stats.pred||0)+1;return}
+ if(e.key==='End'&&atEnd&&K.sug){e.preventDefault();setVal(K.sug);S.stats.pred=(S.stats.pred||0)+1;return}
+ if(e.key==='ArrowUp'||e.key==='ArrowDown'||e.key==='F8'){
+  e.preventDefault();const h=hist();if(!h.length)return;
+  if(K.hidx==null){K.hidx=h.length;K.draft=v}
+  if(e.key==='F8'){const q=K.draft.toLowerCase();for(let i=K.hidx-1;i>=0;i--)if(h[i].toLowerCase().startsWith(q)){K.hidx=i;setVal(h[i]);return}tone(220,.05);return}
+  if(e.key==='ArrowUp'){if(K.hidx>0)K.hidx--;setVal(h[K.hidx])}
+  else{if(K.hidx<h.length-1){K.hidx++;setVal(h[K.hidx])}else{K.hidx=h.length;setVal(K.draft)}}
+  return;
+ }
+}
+
+function run(raw){
+ const T=cur(),c=S.cur,line=raw.trim().replace(/\s+/g,' ');if(!line){termLine('in',PROMPT);return}
+ const h0=hist();if(h0[h0.length-1]!==line){h0.push(line);if(h0.length>300)h0.shift()}
+ termLine('in',PROMPT+' '+line);
+ const before=stepIdx();
+ let res,norm=null;
+ if(/^help$/i.test(line))res={out:T.help.join('\n'),note:'Get- commands only read and are always safe. Everything else changes something and needs a rollback plan first. Try <code>Get-Help Get-VM</code> for the full syntax of one command.'};
+ else{norm=normalize(line);if(norm.err)res={err:norm.err}}
+ if(norm&&!norm.err){
+  const nl=norm.line,parts=nl.split(' '),first=parts[0];
+  if(first==='Clear-Host'){$('term').innerHTML='';c.log=[];res=null}
+  else if(first==='Get-History'){const h=hist().slice(0,-1),start=Math.max(0,h.length-20);res={out:'  Id CommandLine\n  -- -----------\n'+h.slice(start).map((x,i)=>String(start+i+1).padStart(4)+' '+x).join('\n'),note:'Your history is kept between tickets, like PSReadLine keeps it between sessions. Ctrl+R searches it, and the grey suggestion while you type comes from it.'}}
+  else if(first==='Get-Help'){const n=canon(parts[1]||'');res=n?{out:'NAME\n    '+n+'\n\nSYNTAX\n    '+syntaxOf(n)}:{err:'Get-Help: Get-Help could not find '+(parts[1]||'a topic')+' in a help file in this session.'}}
+  else if(first==='cmdb'){res=parts[1]?cmdbLook(parts[1]):{err:'cmdb: Missing an argument. Usage: cmdb <ConfigurationItem>'}}
+  else res=runCmd(nl);
  }
  if(res){
   if(res.out)termLine('',res.out);
@@ -653,6 +843,17 @@ function run(raw){
  const after=stepIdx();
  if(after!==before&&before>=0){sfx.step();for(let i=before;i<(after<0?T.steps.length:after);i++){termLine('ok',`Step complete: ${T.steps[i][1]}`);if(T.steps[i][3])termEx('why','Why this step',T.steps[i][3])}}
  save();renderDesk(false);
+}
+function runCmd(line){
+ const T=cur(),c=S.cur;let res;
+  const h=T.cmds.find(x=>x.re.test(line));
+  if(!h)res={err:`${line.split(' ')[0]}: That parameter combination is not used on this ticket. Try Get-Help ${line.split(' ')[0]} or the Docs tab.`};
+  else if(T.type==='change'&&!c.ciAll)res={err:'Blocked: find the affected configuration items in the CMDB first.'};
+  else if(h.write&&!c.ciAll)res={err:'Blocked: no change before the CMDB lookup.',fail:['cmdb-first','Tried to change something before checking the CMDB.'],why:'You were about to change a system without knowing what else depends on it. On a shared host that can take down services you did not even know were there.'};
+  else if(h.write&&!c.isolated)res={err:'Blocked: the cause is not proven yet.',note:'Fixing something you have not proven is guessing, and guesses on production systems cause the next incident. Scope it, commit a hypothesis, prove it with evidence and mark the faulty layer in the stack. Then the fix unlocks.'};
+  else if(h.write&&words(c.rec.rollback)<5)res={err:'Change refused: there is no rollback plan on the record yet.',fail:['rollback-first','Tried to make a change with no rollback plan written.'],why:'Every command that changes something is a change. If it goes wrong at 3am you want a written way back, not an improvised one. Write the Rollback field first: how would you undo exactly what you are about to do?'};
+  else res=h.run(line.match(h.re),c.w,c,T);
+ return res;
 }
 function flagNode(id){
  const T=cur(),c=S.cur;if(c.isolated)return;
@@ -719,12 +920,19 @@ document.querySelector('.nav').onclick=e=>{const b=e.target.closest('button');if
 $('modlist').onclick=e=>{const l=e.target.closest('.les');if(l){if(l.classList.contains('lock'))return;S.lesson=l.dataset.l;save();renderSchool();$('lesson').parentNode.scrollTop=0;return}const b=e.target.closest('.mod');if(!b||b.classList.contains('lock'))return;S.mod=b.dataset.m;const m=modOf(S.mod);if(m.lessons)S.lesson=m.lessons[0];if(S.cur&&TICKETS[S.cur.id].module!==S.mod&&S.cur.recordOk)S.cur=null;save();render()};
 $('queue').onclick=e=>{const b=e.target.closest('.row');if(!b||b.classList.contains('lock'))return;startTicket(b.dataset.t)};
 $('wtabs').onclick=e=>{const b=e.target.closest('button[data-p]');if(!b)return;setPane(b.dataset.p);if(b.dataset.p==='console')$('cmd').focus()};
-$('cmd').onkeydown=e=>{
- if(e.key==='Enter'){const v=$('cmd').value;$('cmd').value='';run(v)}
- else if(e.key==='ArrowUp'){if(hi>0){hi--;$('cmd').value=HIST[hi]}e.preventDefault()}
- else if(e.key==='ArrowDown'){if(hi<HIST.length-1){hi++;$('cmd').value=HIST[hi]}else{hi=HIST.length;$('cmd').value=''}e.preventDefault()}
- else if(e.key==='Tab'){e.preventDefault();const v=$('cmd').value,T=cur();if(!T)return;const opts=T.help.map(h=>h.split(' ')[0]).concat(['help','clear','cmdb']).filter((x,i,a)=>a.indexOf(x)===i&&x.toLowerCase().startsWith(v.toLowerCase()));if(opts.length===1)$('cmd').value=opts[0]+' '}
-};
+$('cmd').onkeydown=keyDown;
+$('cmd').addEventListener('input',()=>{K.hidx=null;K.comp=null;if(K.menu){K.menu=null;drawMenu()}ghost()});
+$('cmd').addEventListener('scroll',()=>{$('ghost').scrollLeft=$('cmd').scrollLeft});
+$('cmd').addEventListener('click',ghost);
+$('cmenu').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(b){e.preventDefault();acceptMenu(+b.dataset.i)}});
+$('keys').addEventListener('pointerdown',e=>{const b=e.target.closest('button');if(!b)return;e.preventDefault();const k=b.dataset.k,el=$('cmd');el.focus();
+ if(k==='|'||k==='-'){const v=el.value,p=el.selectionStart,ins=k==='|'?' | ':'-';setVal(v.slice(0,p)+ins+v.slice(el.selectionEnd),p+ins.length);return}
+ if(k==='ArrowRight')el.setSelectionRange(el.value.length,el.value.length);
+ const ev={key:k,shiftKey:false,ctrlKey:false,code:'',preventDefault(){}};
+ if(k==='STab'){ev.key='Tab';ev.shiftKey=true}
+ if(k==='Menu'){ev.key=' ';ev.ctrlKey=true}
+ if(k==='CtrlR'){ev.key='r';ev.ctrlKey=true}
+ keyDown(ev)});
 $('cmdbq').oninput=renderCmdb;
 $('cmdbt').onclick=e=>{const r=e.target.closest('tr.ci');if(r)run('cmdb '+r.dataset.ci)};
 $('stack').onclick=e=>{const b=e.target.closest('.node');if(b)flagNode(b.dataset.n)};
