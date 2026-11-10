@@ -13,6 +13,7 @@ const ST_TRACK = [
   ["meridian", /^meridian\.v1$/],
   ["hexle", /^hexle\.v1$/],
   ["modle", /^modle-profile$/],
+  ["syncle", /^syncle\.v1$/],
   ["poshle", /^poshle\.v1$/],
   ["poshle-pocket", /^poshle-pocket-v1$/],
   ["poshle-forge", /^poshle-forge\.v1$/],
