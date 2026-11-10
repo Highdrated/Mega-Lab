@@ -1,0 +1,590 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#f3f1ec">
+<title>Meridian</title>
+<style>
+:root{--sans:"Inter","Segoe UI",Roboto,system-ui,sans-serif;--mono:"JetBrains Mono","SF Mono",ui-monospace,Menlo,Consolas,monospace;--g:12px;--r:3px;--top:52px}
+body[data-theme=promenade]{--bg:#f3f1ec;--bg2:#ebe8e1;--panel:#fbfaf7;--field:#ffffff;--line:#dcd8cf;--line2:#c4bfb4;--ink:#1c2226;--ink2:#4b555c;--mute:#868d91;--acc:#2c6a70;--acc2:rgba(44,106,112,.1);--gold:#a8783a;--gold2:rgba(168,120,58,.12);--ok:#3b7a4a;--ok2:rgba(59,122,74,.1);--bad:#b4473a;--bad2:rgba(180,71,58,.09);--term:#f6f4ef;--term-ink:#22292d;--scrim:rgba(243,241,236,.9);--on:#fff}
+body[data-theme=nightwatch]{--bg:#0d0f11;--bg2:#121518;--panel:#14171a;--field:#101316;--line:#23282d;--line2:#323940;--ink:#e4e7ea;--ink2:#a7afb6;--mute:#6c757d;--acc:#8fbccb;--acc2:rgba(143,188,203,.12);--gold:#d2a865;--gold2:rgba(210,168,101,.12);--ok:#7fbf8e;--ok2:rgba(127,191,142,.12);--bad:#e0786b;--bad2:rgba(224,120,107,.12);--term:#0a0c0e;--term-ink:#d6dde2;--scrim:rgba(13,15,17,.88);--on:#0d0f11}
+body[data-theme=bridge]{--bg:#0c1220;--bg2:#111a2b;--panel:#121b2c;--field:#0e1626;--line:#1f2b40;--line2:#2c3b55;--ink:#ece7da;--ink2:#b3b1a8;--mute:#7c8496;--acc:#c9a85c;--acc2:rgba(201,168,92,.13);--gold:#c9a85c;--gold2:rgba(201,168,92,.13);--ok:#86c19a;--ok2:rgba(134,193,154,.12);--bad:#e48a7c;--bad2:rgba(228,138,124,.12);--term:#0a101c;--term-ink:#e1dccf;--scrim:rgba(12,18,32,.88);--on:#0c1220}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.55 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
+body.art::before{content:"";position:fixed;inset:0;background:var(--art) center/cover no-repeat;opacity:.18;pointer-events:none}
+button,input,textarea{font:inherit;color:inherit}
+button{background:none;border:1px solid var(--line2);border-radius:var(--r);padding:0 12px;height:34px;cursor:pointer;touch-action:manipulation;white-space:nowrap}
+button:hover{border-color:var(--acc);color:var(--acc)}
+button.pri{background:var(--acc);border-color:var(--acc);color:var(--on)}
+button.pri:hover{color:var(--on);filter:brightness(1.08)}
+button.ghost{border-color:transparent}
+button:disabled{opacity:.45;cursor:default}
+svg.i{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none;vertical-align:-3px}
+.lbl{font-size:10.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:0 0 8px}
+.top{height:var(--top);display:flex;align-items:center;gap:20px;padding:0 20px;border-bottom:1px solid var(--line);background:var(--scrim);position:relative;z-index:2}
+.brand{display:flex;align-items:center;gap:10px;font-weight:500;letter-spacing:.2em;text-transform:uppercase;font-size:12px}
+.brand svg{width:22px;height:22px;stroke:var(--acc)}
+.nav{display:flex;gap:2px}
+.nav button{border:0;border-bottom:2px solid transparent;border-radius:0;height:var(--top);color:var(--ink2);padding:0 12px}
+.nav button.on{color:var(--ink);border-bottom-color:var(--acc)}
+.meta{margin-left:auto;display:flex;align-items:center;gap:16px;color:var(--ink2);font-size:12.5px;white-space:nowrap}
+.meta b{color:var(--ink);font-weight:500}
+.meta .cr{color:var(--gold)}
+.meta button{height:30px;padding:0 9px}
+main{position:relative;z-index:1;height:calc(100% - var(--top))}
+.view{display:none;height:100%}
+.view.on{display:grid}
+#v-school{grid-template-columns:280px minmax(0,1fr)}
+.mods{border-right:1px solid var(--line);overflow:auto;padding:20px 0}
+.mods .lbl{padding:0 20px}
+.mod{display:flex;align-items:center;gap:12px;width:100%;height:auto;min-height:44px;border:0;border-radius:0;padding:8px 20px;text-align:left;color:var(--ink2)}
+.mod .n{font-family:var(--mono);font-size:11px;color:var(--mute);width:18px}
+.mod .t{flex:1}
+.mod.on{background:var(--acc2);color:var(--ink)}
+.mod.lock{color:var(--mute);cursor:default}
+.mod.lock:hover{color:var(--mute)}
+.mod .st{color:var(--ok)}
+.reader{overflow:auto;padding:36px 48px 48px}
+.reader .wrap{max-width:860px;margin:0 auto}
+.reader h1{font-weight:400;font-size:28px;letter-spacing:.01em;margin:0 0 6px}
+.reader h2{font-weight:500;font-size:16px;margin:28px 0 8px}
+.reader p,.reader li{color:var(--ink2);font-size:15px;line-height:1.7}
+.reader .kick{color:var(--acc);font-size:11px;letter-spacing:.16em;text-transform:uppercase;margin:0 0 10px}
+.fig{margin:22px 0;padding:18px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.fig svg{width:100%;height:auto;display:block}
+.fig .cap{font-size:12px;color:var(--mute);margin:10px 0 0}
+.pager{display:flex;align-items:center;gap:10px;margin-top:32px;padding-top:16px;border-top:1px solid var(--line)}
+.pager .dots{display:flex;gap:6px;margin-right:auto}
+.pager .dots i{width:18px;height:2px;background:var(--line2)}
+.pager .dots i.on{background:var(--acc)}
+.hero{position:relative;height:150px;margin:0 0 26px;border-bottom:1px solid var(--line);overflow:hidden}
+.hero img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.hero svg{position:absolute;inset:0;width:100%;height:100%}
+#v-tickets{grid-template-rows:minmax(0,1fr) auto}
+.desk{display:grid;grid-template-columns:270px minmax(0,1fr) 230px;min-height:0}
+.col{min-height:0;overflow:auto;padding:18px 18px}
+.col+.col{border-left:1px solid var(--line)}
+.npc{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.face{width:46px;height:46px;border-radius:50%;border:1px solid var(--line2);overflow:hidden;display:grid;place-items:center;color:var(--acc);font-size:13px;letter-spacing:.06em;flex:none;background:var(--bg2)}
+.face img{width:100%;height:100%;object-fit:cover}
+.npc .nm{font-weight:500}
+.npc .rl{font-size:12px;color:var(--mute)}
+.tk-title{font-size:16px;font-weight:500;margin:0 0 8px;line-height:1.35}
+.tk-type{display:inline-block;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--gold);margin-bottom:8px}
+.brief{color:var(--ink2);font-size:13.5px;margin:0 0 18px}
+.steps{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+.steps li{display:flex;align-items:center;gap:10px;height:36px;border-bottom:1px solid var(--line);color:var(--mute);font-size:13px}
+.steps li.done{color:var(--ok)}
+.steps li.now{color:var(--ink)}
+.steps li.now svg{color:var(--acc)}
+.hintbox{margin-top:18px}
+.hint{font-size:13px;color:var(--ink2);border-left:2px solid var(--acc);padding:4px 0 4px 10px;margin:8px 0}
+.work{display:flex;flex-direction:column;padding:0}
+.tabs{display:flex;border-bottom:1px solid var(--line);padding:0 12px}
+.tabs button{border:0;border-radius:0;border-bottom:2px solid transparent;height:42px;color:var(--ink2)}
+.tabs button.on{color:var(--ink);border-bottom-color:var(--acc)}
+.pane{display:none;flex:1;min-height:0}
+.pane.on{display:flex;flex-direction:column}
+.term{flex:1;min-height:0;overflow:auto;background:var(--term);color:var(--term-ink);font:13px/1.6 var(--mono);padding:14px 16px;white-space:pre-wrap;word-break:break-word}
+.term .in{color:var(--acc)}
+.term .err{color:var(--bad)}
+.term .sys{color:var(--mute)}
+.term .ok{color:var(--ok)}
+.prompt{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line);background:var(--term);padding:0 16px;height:46px;font-family:var(--mono);font-size:13px}
+.prompt span{color:var(--acc)}
+.prompt input{flex:1;background:none;border:0;outline:0;height:100%;color:var(--term-ink);font-family:var(--mono)}
+.cmdb{padding:14px 16px;overflow:auto}
+.cmdb input{width:100%;height:36px;border:1px solid var(--line2);background:var(--field);border-radius:var(--r);padding:0 10px;margin-bottom:12px}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;font-weight:400;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding:6px 8px;border-bottom:1px solid var(--line2)}
+td{padding:8px;border-bottom:1px solid var(--line);color:var(--ink2);vertical-align:top}
+tr.ci{cursor:pointer}
+tr.ci:hover td{background:var(--acc2)}
+tr.ci.seen td:first-child{color:var(--ok)}
+td code,.mono{font-family:var(--mono);font-size:12.5px;color:var(--ink)}
+.docs{padding:16px;overflow:auto;color:var(--ink2)}
+.docs a{color:var(--acc)}
+.stack{display:flex;flex-direction:column;align-items:stretch}
+.node{display:flex;align-items:center;gap:10px;height:auto;min-height:44px;padding:6px 10px;border:1px solid var(--line2);border-radius:var(--r);text-align:left;color:var(--ink);background:var(--panel)}
+.node .k{font-size:10.5px;color:var(--mute);letter-spacing:.08em;text-transform:uppercase;display:block}
+.node .v{font-family:var(--mono);font-size:12.5px}
+.node.seen{border-color:var(--acc)}
+.node.fault{border-color:var(--bad);background:var(--bad2);color:var(--bad)}
+.node.fault .v{color:var(--bad)}
+.link{width:1px;height:16px;background:var(--line2);margin:0 auto}
+.stack-note{font-size:12px;color:var(--mute);margin-top:12px}
+.record{border-top:1px solid var(--line);padding:12px 18px 14px;background:var(--scrim)}
+.rec-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr)) auto;gap:var(--g);align-items:end}
+.rec-grid label{display:flex;flex-direction:column;gap:4px;font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.rec-grid textarea{resize:none;height:62px;border:1px solid var(--line2);background:var(--field);border-radius:var(--r);padding:6px 8px;font-size:13px;text-transform:none;letter-spacing:0;color:var(--ink)}
+.rec-grid textarea:focus,.cmdb input:focus{outline:0;border-color:var(--acc)}
+.grade{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:10px;font-size:12.5px}
+.grade span{display:flex;align-items:center;gap:6px;color:var(--ok)}
+.grade span.no{color:var(--bad)}
+.queue{display:none;overflow:auto;padding:28px 40px}
+#v-tickets.list .desk,#v-tickets.list .record{display:none}
+#v-tickets.list .queue{display:block}
+.qwrap{max-width:900px;margin:0 auto}
+.row{display:flex;align-items:center;gap:14px;width:100%;height:auto;min-height:58px;border:0;border-bottom:1px solid var(--line);border-radius:0;padding:8px 4px;text-align:left}
+.row:first-of-type{border-top:1px solid var(--line)}
+.row .t{flex:1}
+.row .t b{display:block;font-weight:500;color:var(--ink)}
+.row .t small{color:var(--mute);font-size:12px}
+.row .s{font-size:12px;color:var(--mute)}
+.row .s.ok{color:var(--ok)}
+.row.lock{cursor:default;color:var(--mute)}
+.row.lock:hover{color:var(--mute)}
+.simple{grid-template-columns:minmax(0,1fr)}
+.simple>.inner{overflow:auto;padding:28px 40px}
+.check{display:flex;align-items:center;gap:12px;min-height:42px;border-bottom:1px solid var(--line);cursor:pointer}
+.check input{width:18px;height:18px;accent-color:var(--acc)}
+.note{width:100%;min-height:90px;border:1px solid var(--line2);background:var(--field);border-radius:var(--r);padding:8px 10px;margin-top:12px;resize:vertical}
+.card{border-top:1px solid var(--line);border-bottom:1px solid var(--line);padding:18px 0;margin:10px 0 26px}
+.card .q{font-size:16px;margin:0 0 12px}
+.card .a{color:var(--ink2);border-left:2px solid var(--acc);padding-left:12px;margin:12px 0}
+.jr{display:grid;grid-template-columns:110px 160px minmax(0,1fr);gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:13px}
+.jr .d{color:var(--mute);font-family:var(--mono);font-size:12px}
+.jr .c{color:var(--bad)}
+.empty{color:var(--mute);font-size:13px;padding:14px 0}
+.done-panel{text-align:center;padding:30px 0}
+#toast{position:fixed;left:50%;top:calc(var(--top) + 12px);transform:translateX(-50%) translateY(-12px);opacity:0;background:var(--panel);border:1px solid var(--line2);padding:10px 16px;border-radius:var(--r);font-size:13px;transition:.2s;z-index:9;pointer-events:none;max-width:90vw}
+#toast.on{opacity:1;transform:translateX(-50%)}
+#toast.bad{border-color:var(--bad);color:var(--bad)}
+dialog{background:var(--panel);color:var(--ink);border:1px solid var(--line2);border-radius:var(--r);padding:20px;width:min(560px,92vw)}
+dialog::backdrop{background:rgba(0,0,0,.4)}
+dialog textarea{width:100%;height:120px;font-family:var(--mono);font-size:12px;background:var(--field);border:1px solid var(--line2);border-radius:var(--r);padding:8px;resize:none}
+dialog .bar{display:flex;gap:8px;justify-content:flex-end;margin-top:12px}
+.rail{display:none}
+@media (max-width:1180px){
+ .desk{grid-template-columns:240px minmax(0,1fr) 52px}
+ .col.side{padding:12px 6px;overflow:hidden}
+ .col.side .stack,.col.side .lbl,.col.side .stack-note{display:none}
+ .col.side .rail{display:flex;flex-direction:column;align-items:center;gap:6px}
+ .col.side.open{position:absolute;right:0;top:0;bottom:0;width:250px;background:var(--panel);z-index:5;padding:18px;overflow:auto;box-shadow:-1px 0 0 var(--line)}
+ .col.side.open .stack,.col.side.open .lbl,.col.side.open .stack-note{display:flex}
+ .col.side.open .lbl,.col.side.open .stack-note{display:block}
+ .col.side.open .rail{display:none}
+ .desk{position:relative}
+ .rec-grid textarea{height:52px}
+ #v-school{grid-template-columns:230px minmax(0,1fr)}
+ .reader{padding:28px 30px}
+}
+@media (max-width:820px){
+ body{overflow:auto}
+ main{height:auto}
+ .view.on{display:block}
+ .desk{display:block}
+ .col+.col{border-left:0;border-top:1px solid var(--line)}
+ .term{min-height:240px}
+ .col.side{padding:18px}
+ .col.side .stack{display:flex;flex-direction:row;flex-wrap:wrap;gap:8px}
+ .col.side .stack .link{display:none}
+ .col.side .stack .node{flex:1 1 160px}
+ .col.side .lbl,.col.side .stack-note{display:block}
+ .col.side .rail{display:none}
+ .mods{border-right:0;border-bottom:1px solid var(--line)}
+ .meta .hide-s{display:none}
+ .top{gap:10px;padding:0 12px}
+ .jr{grid-template-columns:1fr}
+ .rec-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .rec-grid>button{grid-column:span 2}
+}
+</style>
+</head>
+<body data-theme="promenade">
+<header class="top">
+ <div class="brand"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.4"><circle cx="12" cy="12" r="9"/><path d="M3 12c4-3 14-3 18 0"/><path d="M12 3v18"/></svg>Meridian</div>
+ <nav class="nav">
+  <button data-v="school">School</button>
+  <button data-v="tickets">Tickets</button>
+  <button data-v="missions">Missions</button>
+  <button data-v="journal">Journal</button>
+ </nav>
+ <div class="meta">
+  <span class="hide-s" id="m-mod"></span>
+  <span class="hide-s"><b id="m-rank"></b></span>
+  <span class="cr"><b id="m-cr" style="color:var(--gold)"></b> cr</span>
+  <button id="b-sfx" title="Sound"></button>
+  <button id="b-theme" title="Switch theme"></button>
+  <button id="b-save" title="Save code">Save code</button>
+ </div>
+</header>
+<main>
+ <section class="view" id="v-school">
+  <aside class="mods"><p class="lbl">Curriculum</p><div id="modlist"></div></aside>
+  <article class="reader"><div class="wrap" id="lesson"></div></article>
+ </section>
+ <section class="view list" id="v-tickets">
+  <div class="queue"><div class="qwrap" id="queue"></div></div>
+  <div class="desk">
+   <div class="col" id="tk-left"></div>
+   <div class="col work">
+    <div class="tabs" id="wtabs">
+     <button data-p="console" class="on">Console</button>
+     <button data-p="cmdb">CMDB</button>
+     <button data-p="docs">Docs</button>
+     <span style="margin-left:auto;display:flex;align-items:center;gap:8px"><button class="ghost" id="b-hint">Ask Junie</button><button class="ghost" id="b-leave">Back to queue</button></span>
+    </div>
+    <div class="pane on" id="p-console"><div class="term" id="term"></div><div class="prompt"><span>PS&gt;</span><input id="cmd" autocomplete="off" autocapitalize="off" spellcheck="false" aria-label="Command"></div></div>
+    <div class="pane" id="p-cmdb"><div class="cmdb"><input id="cmdbq" placeholder="Search configuration items"><div id="cmdbt"></div></div></div>
+    <div class="pane" id="p-docs"><div class="docs" id="docs"></div></div>
+   </div>
+   <div class="col side" id="tk-side">
+    <div class="rail"><button class="ghost" id="b-rail" title="Show affected stack"></button></div>
+    <p class="lbl">Affected stack</p>
+    <div class="stack" id="stack"></div>
+    <p class="stack-note" id="stacknote"></p>
+   </div>
+  </div>
+  <div class="record">
+   <div class="rec-grid">
+    <label>What<textarea id="r-what" placeholder="What happened or what will change"></textarea></label>
+    <label>Why<textarea id="r-why" placeholder="Root cause or reason for the change"></textarea></label>
+    <label>Rollback<textarea id="r-rollback" placeholder="How you undo it if it goes wrong"></textarea></label>
+    <label>Verification<textarea id="r-verify" placeholder="How you proved it works"></textarea></label>
+    <button class="pri" id="b-submit">Submit record</button>
+   </div>
+   <div class="grade" id="grade"></div>
+  </div>
+ </section>
+ <section class="view simple" id="v-missions"><div class="inner"><div class="qwrap" id="missions"></div></div></section>
+ <section class="view simple" id="v-journal"><div class="inner"><div class="qwrap" id="journal"></div></div></section>
+</main>
+<div id="toast"></div>
+<dialog id="dlg">
+ <p class="lbl">Save code</p>
+ <p style="margin:0 0 10px;color:var(--ink2);font-size:13px">Copy this code to move your progress to another device, or paste a code here and load it.</p>
+ <textarea id="dlg-code" spellcheck="false"></textarea>
+ <div class="bar"><button id="dlg-copy">Copy</button><button id="dlg-load">Load pasted code</button><button class="pri" id="dlg-close">Close</button></div>
+</dialog>
+<script>
+const KEY='meridian.v1';
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const words=s=>(s||'').trim().split(/\s+/).filter(Boolean).length;
+const ICON={
+ host:'<rect x="3" y="4" width="18" height="6" rx="1"/><rect x="3" y="14" width="18" height="6" rx="1"/><path d="M7 7h.01M7 17h.01"/>',
+ vm:'<rect x="4" y="5" width="16" height="12" rx="1"/><path d="M4 9h16M9 21h6M12 17v4"/>',
+ ds:'<ellipse cx="12" cy="6" rx="7" ry="2.5"/><path d="M5 6v12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5V6"/><path d="M5 12c0 1.4 3.1 2.5 7 2.5s7-1.1 7-2.5"/>',
+ lun:'<rect x="5" y="3" width="14" height="18" rx="1"/><path d="M5 9h14M5 15h14"/>',
+ backup:'<path d="M4 8h16v12H4z"/><path d="M3 4h18v4H3zM10 12h4"/>',
+ service:'<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3"/>',
+ check:'<path d="M5 12l5 5 9-10"/>',
+ point:'<circle cx="12" cy="12" r="3"/>',
+ lock:'<rect x="6" y="11" width="12" height="9" rx="1"/><path d="M9 11V8a3 3 0 0 1 6 0v3"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ stack:'<path d="M12 3l9 5-9 5-9-5z"/><path d="M3 13l9 5 9-5"/>',
+ sound:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9a4 4 0 0 1 0 6"/>',
+ mute:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 10l4 4M21 10l-4 4"/>'
+};
+const ic=(n,extra)=>`<svg class="i" viewBox="0 0 24 24" ${extra||''}>${ICON[n]}</svg>`;
+
+const THEMES=[['promenade','Promenade','#f3f1ec'],['nightwatch','Night watch','#0d0f11'],['bridge','Bridge','#0c1220']];
+const RANKS=[[0,'First line'],[400,'Second line'],[1200,'Third line'],[2500,'Infra lead']];
+
+const CREW={
+ seraphine:{name:'Seraphine Ashby',role:'Captain',mono:'SA'},
+ odran:{name:'Odran Hale',role:'Chief engineer',mono:'OH'},
+ linnea:{name:'Linnea Morrow',role:'Purser',mono:'LM'},
+ tamsin:{name:'Tamsin Vell',role:'Comms officer',mono:'TV'}
+};
+
+const CONCEPTS={
+ 'cmdb-first':{q:'Before you touch anything on a change, what do you look up first, and why?',a:'The affected configuration items in the CMDB. You need to know what depends on the thing you are about to change, who owns it, and which services go down with it.'},
+ 'rollback-first':{q:'When must the rollback plan exist?',a:'Before the change starts. A change without a written rollback plan is not approved. If it goes wrong you follow the plan, you do not invent one under pressure.'},
+ 'maint-mode':{q:'Why will a VM not power on while its host is in maintenance mode?',a:'Maintenance mode tells vSphere the host is being serviced: no VMs may run or start on it. Exit maintenance mode (or move the VM to another host) first.'},
+ 'evidence':{q:'When are you allowed to call something the fault?',a:'Only when you have evidence: output, a log line, a state you saw yourself. A hunch is a hypothesis to test, not a finding.'},
+ 'record':{q:'What four things does every change or incident record need?',a:'What happened or changed, why (root cause or reason), how to roll it back, and how you verified the result.'}
+};
+
+const MODULES=[
+ {id:'m0',n:0,name:'Basics',lessons:['l0-orient'],tickets:['t0-shake'],mission:'x0-map'},
+ {id:'m1',n:1,name:'Virtualization'},
+ {id:'m2',n:2,name:'Windows Server'},
+ {id:'m3',n:3,name:'Storage'},
+ {id:'m4',n:4,name:'Backup and DR'},
+ {id:'m5',n:5,name:'MS SQL Server'},
+ {id:'m6',n:6,name:'AAA and directory'},
+ {id:'m7',n:7,name:'Voice'},
+ {id:'m8',n:8,name:'Edge'},
+ {id:'m9',n:9,name:'ITIL in practice'},
+ {id:'m10',n:10,name:'Third line'}
+];
+
+const FIG_LOOP=`<svg viewBox="0 0 760 120" role="img" aria-label="Ticket loop"><title>The ticket loop</title><g font-family="var(--sans)" font-size="13" text-anchor="middle">${['CMDB','Scope','Isolate','Fix','Verify','Record'].map((t,i)=>{const x=20+i*124;return `<rect x="${x}" y="38" width="104" height="44" rx="3" fill="none" stroke="var(--line2)"/><text x="${x+52}" y="65" fill="var(--ink)">${t}</text>${i<5?`<path d="M${x+106} 60h14" stroke="var(--acc)" stroke-width="1.5"/><path d="M${x+116} 56l4 4-4 4" fill="none" stroke="var(--acc)" stroke-width="1.5"/>`:''}`}).join('')}<text x="72" y="22" fill="var(--mute)" font-size="11">find what is affected</text><text x="692" y="104" fill="var(--mute)" font-size="11">graded against a checklist</text></g></svg>`;
+const FIG_STACK=`<svg viewBox="0 0 760 90" role="img" aria-label="Affected stack"><title>A typical affected stack</title><g font-family="var(--mono)" font-size="12" text-anchor="middle">${['service','vm','host','datastore','lun','backup'].map((t,i)=>{const x=10+i*126;return `<rect x="${x}" y="24" width="108" height="40" rx="3" fill="none" stroke="${i===2?'var(--bad)':'var(--line2)'}"/><text x="${x+54}" y="49" fill="${i===2?'var(--bad)':'var(--ink)'}">${t}</text>${i<5?`<path d="M${x+110} 44h14" stroke="var(--line2)"/>`:''}`}).join('')}<text x="262" y="82" fill="var(--bad)" font-family="var(--sans)" font-size="11">the fault lights up once you prove it</text></g></svg>`;
+
+const LESSONS={
+ 'l0-orient':{title:'How this ship works',pages:[
+  `<p class="kick">Orientation</p><h1>Welcome aboard the Meridian</h1><p>The Meridian is a long-haul carrier. Every light, door, cabin screen and comms link runs on the infrastructure below deck: hosts, virtual machines, storage, backups, directory, edge. You are the systems officer who keeps it running.</p><p>The crew bring you tickets. Some are incidents (something broke), some are changes (something needs to be done on purpose, safely). You work them the way a real infra team does.</p><h2>What you train here</h2><ul><li>Diagnose: find which layer is actually broken</li><li>Decide: choose the safe action, knowing what it affects</li><li>Execute: in the right order, with real commands</li><li>Document: a record a senior engineer would sign off</li></ul>`,
+  `<p class="kick">Orientation</p><h1>The ticket loop</h1><p>Every ticket follows the same six steps. Steps unlock in order, like a real change process.</p><div class="fig">${FIG_LOOP}<p class="cap">You cannot skip ahead. A fix before a CMDB lookup is a change made blind.</p></div><p>Next to every ticket sits the affected stack: the chain of things that depend on each other. Query a layer and it lights up as seen. Prove a layer is broken and you can mark it as the fault.</p><div class="fig">${FIG_STACK}</div>`,
+  `<p class="kick">Orientation</p><h1>Rules of the deck</h1><h2>No leniency</h2><p>If a command or an order of steps would fail in a real datacenter, it fails here. A failure costs credits and lands in your journal, then comes back later as a review card.</p><h2>CMDB first</h2><p>On a change ticket you look up the affected configuration items before you are allowed to touch anything.</p><h2>Rollback before change</h2><p>Write the rollback plan in the record before the first change command. Without it, change commands are refused.</p><h2>The record ends the ticket</h2><p>What, why, rollback, verification. It is graded against a checklist. Then you get paid.</p><h2>Stuck?</h2><p>Junie rides along. Ask her for a hint: three levels, each costs a few credits.</p>`
+ ]}
+};
+
+const MISSIONS={
+ 'x0-map':{module:'m0',title:'Map your own stack',hw:'Your Mac, NAS and switch',steps:['List every device you own that runs a service (NAS, Mac, switch, router)','For one service, write the chain it depends on, top to bottom','Mark which link in that chain has no backup or no second path','Find where each device gets its IP address from'],prompt:'What did you see? Which single failure would take the most down?'}
+};
+
+const TICKETS={
+ 't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:60,
+  title:'Galley display is dark after last night\'s host maintenance',
+  brief:'The galley order screens went black this morning. Engineering patched a host overnight. Get the display back and write it up.',
+  ci:['galley-disp-01','esx-02'],
+  stack:[['svc','service','Galley display'],['galley-disp-01','vm','galley-disp-01'],['esx-02','host','esx-02'],['DS-HULL-01','ds','DS-HULL-01']],
+  fault:{node:'esx-02',evidence:'hostSeen'},
+  cmdbRows:[
+   ['galley-disp-01','Virtual machine','Galley display','esx-02 / DS-HULL-01','Purser'],
+   ['esx-02','ESXi host','Hosts 14 VMs incl. galley, cabin TV','Cluster AFT','Engineering'],
+   ['esx-01','ESXi host','Hosts 12 VMs','Cluster AFT','Engineering'],
+   ['DS-HULL-01','Datastore','Shared VMFS datastore','LUN 12 on SAN-A','Engineering'],
+   ['cabin-tv-02','Virtual machine','Cabin entertainment','esx-02 / DS-HULL-01','Purser']
+  ],
+  init:()=>({vmOn:false,hostState:'Maintenance',f:{}}),
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll],
+   ['scope','Scope',w=>!!w.f.scoped],
+   ['isolate','Isolate',(w,c)=>!!c.isolated],
+   ['fix','Fix',w=>w.vmOn],
+   ['verify','Verify',w=>!!w.f.verified],
+   ['record','Document',(w,c)=>!!c.recordOk]
+  ],
+  help:['Get-VM <name>','Get-VMHost <name>','Set-VMHost <name> -State Connected|Maintenance','Start-VM <name>','cmdb <name>'],
+  cmds:[
+   {re:/^get-vm\s+(\S+)$/i,run(m,w,c,T){if(m[1].toLowerCase()!=='galley-disp-01')return{err:`Get-VM : VM with name '${m[1]}' was not found.`};w.f.scoped=true;c.seen['galley-disp-01']=1;if(w.vmOn)w.f.verified=true;return{out:`Name             PowerState  VMHost  NumCpu  MemoryGB\n----             ----------  ------  ------  --------\ngalley-disp-01   ${w.vmOn?'PoweredOn ':'PoweredOff'}  esx-02  2       4`}}},
+   {re:/^get-vmhost\s+(\S+)$/i,run(m,w,c){const h=m[1].toLowerCase();if(h==='esx-01')return{out:'Name    ConnectionState  PowerState  NumCpu  CpuUsageMhz\n----    ---------------  ----------  ------  -----------\nesx-01  Connected        PoweredOn   32      18420'};if(h!=='esx-02')return{err:`Get-VMHost : VMHost with name '${m[1]}' was not found.`};c.seen['esx-02']=1;w.f.hostSeen=true;return{out:`Name    ConnectionState  PowerState  NumCpu  CpuUsageMhz\n----    ---------------  ----------  ------  -----------\nesx-02  ${w.hostState.padEnd(15)}  PoweredOn   32      ${w.hostState==='Maintenance'?'210':'14980'}`}}},
+   {re:/^set-vmhost\s+(\S+)\s+-state\s+(connected|maintenance)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='esx-02')return{err:`Set-VMHost : VMHost with name '${m[1]}' was not found.`};const st=m[2].toLowerCase()==='connected'?'Connected':'Maintenance';w.hostState=st;if(st==='Maintenance'&&w.vmOn)return{err:'Set-VMHost : The host has powered-on VMs. Migrate or power them off first.',undo:()=>{w.hostState='Connected'}};return{out:`Name    ConnectionState\n----    ---------------\nesx-02  ${st}`}}},
+   {re:/^start-vm\s+(\S+)$/i,write:true,run(m,w,c){if(m[1].toLowerCase()!=='galley-disp-01')return{err:`Start-VM : VM with name '${m[1]}' was not found.`};if(w.hostState==='Maintenance')return{err:'Start-VM : The operation is not allowed in the current state of the host (Maintenance mode).',fail:['maint-mode','Tried to power on a VM on a host still in maintenance mode.']};if(w.vmOn)return{out:'galley-disp-01 is already powered on.'};w.vmOn=true;return{out:'Name             PowerState\n----             ----------\ngalley-disp-01   PoweredOn'}}}
+  ],
+  hints:['Start in the CMDB: which VM runs the galley display, and on which host?','Get-VM tells you the VM state. Get-VMHost tells you what the host is doing after last night.','The host is still in maintenance mode. Write the rollback, then: Set-VMHost esx-02 -State Connected, then Start-VM galley-disp-01.'],
+  checks:[
+   ['Names the VM','what',/galley-disp-01/i],
+   ['Names the host','what|why',/esx-02/i],
+   ['Root cause: maintenance mode','why',/maintenance/i],
+   ['Rollback can put the host back','rollback',/maintenance|power\s*off|stop-vm/i],
+   ['Verification shows it running','verify',/powered\s*on|poweredon|running|display (is )?(back|working)|screens? (back|working)/i]
+  ],
+  docs:'<p class="lbl">Runbook</p><p>Host maintenance at the Meridian: hosts enter maintenance mode for patching. VMs are migrated or powered off first. After patching the host must be taken out of maintenance mode, or nothing can run on it.</p><p>PowerCLI is the PowerShell module for vSphere. Commands follow Verb-Noun, just like the rest of PowerShell.</p>'
+ }
+};
+
+const DEF={v:1,theme:'promenade',sfx:true,cr:0,xp:0,les:{},done:{},journal:[],srs:{},missions:{},view:'school',mod:'m0',page:{},cur:null};
+let S;
+function load(){let d={};try{d=JSON.parse(localStorage.getItem(KEY)||'{}')||{}}catch(e){}S=Object.assign(JSON.parse(JSON.stringify(DEF)),d)}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+
+const AC=window.AudioContext||window.webkitAudioContext;let actx;
+function tone(f,d,t){if(!S.sfx||!AC)return;try{actx=actx||new AC();const o=actx.createOscillator(),g=actx.createGain();o.type=t||'sine';o.frequency.value=f;g.gain.setValueAtTime(.05,actx.currentTime);g.gain.exponentialRampToValueAtTime(.0001,actx.currentTime+d);o.connect(g).connect(actx.destination);o.start();o.stop(actx.currentTime+d)}catch(e){}}
+const sfx={key:()=>tone(880,.03),ok:()=>{tone(660,.08);setTimeout(()=>tone(990,.12),80)},bad:()=>tone(180,.22,'triangle'),step:()=>tone(740,.1),done:()=>{[523,659,784,1046].forEach((f,i)=>setTimeout(()=>tone(f,.16),i*90))}};
+
+let toastT;
+function toast(msg,bad){const t=$('toast');t.textContent=msg;t.className='on'+(bad?' bad':'');clearTimeout(toastT);toastT=setTimeout(()=>t.className='',2600)}
+
+const rank=()=>{let r=RANKS[0][1];for(const[x,n]of RANKS)if(S.xp>=x)r=n;return r};
+const modOf=id=>MODULES.find(m=>m.id===id);
+const lessonsRead=m=>(m.lessons||[]).every(l=>S.les[l]);
+const modDone=m=>!!m.lessons&&lessonsRead(m)&&(m.tickets||[]).every(t=>S.done[t]);
+function modOpen(m){if(!m.lessons)return false;const i=MODULES.indexOf(m);return i===0||modDone(MODULES[i-1])}
+
+function renderTop(){
+ document.body.dataset.theme=S.theme;
+ const th=THEMES.find(t=>t[0]===S.theme)||THEMES[0];
+ $('b-theme').textContent=th[1];
+ document.querySelector('meta[name=theme-color]').setAttribute('content',th[2]);
+ $('b-sfx').innerHTML=ic(S.sfx?'sound':'mute');
+ $('m-rank').textContent=rank();
+ $('m-cr').textContent=S.cr;
+ const m=modOf(S.mod);$('m-mod').textContent=`Module ${m.n} · ${m.name}`;
+ document.querySelectorAll('.nav button').forEach(b=>b.classList.toggle('on',b.dataset.v===S.view));
+ document.querySelectorAll('.view').forEach(v=>v.classList.toggle('on',v.id==='v-'+S.view));
+ artFor(S.theme);
+}
+const artCache={};
+function artFor(t){
+ const src=`img/meridian/backdrop-${t}.webp`;
+ if(artCache[src]===false){document.body.classList.remove('art');return}
+ if(artCache[src]){document.body.style.setProperty('--art',`url(${src})`);document.body.classList.add('art');return}
+ const im=new Image();im.onload=()=>{artCache[src]=true;if(S.theme===t)artFor(t)};im.onerror=()=>{artCache[src]=false;document.body.classList.remove('art')};im.src=src;
+}
+
+function renderSchool(){
+ $('modlist').innerHTML=MODULES.map(m=>{const open=modOpen(m),done=modDone(m);return `<button class="mod ${m.id===S.mod?'on':''} ${open?'':'lock'}" data-m="${m.id}" ${open?'':'aria-disabled="true"'}><span class="n">${m.n}</span><span class="t">${esc(m.name)}</span>${done?`<span class="st">${ic('check')}</span>`:open?'':`<span>${ic('lock')}</span>`}</button>`}).join('');
+ const m=modOf(S.mod);
+ if(!m.lessons){$('lesson').innerHTML=`<p class="kick">Module ${m.n}</p><h1>${esc(m.name)}</h1><p>This module is being built next.</p>`;return}
+ const lid=m.lessons[0],L=LESSONS[lid],p=Math.min(S.page[lid]||0,L.pages.length-1),last=p===L.pages.length-1;
+ $('lesson').innerHTML=`${p===0?heroArt():''}${L.pages[p]}<div class="pager"><span class="dots">${L.pages.map((_,i)=>`<i class="${i===p?'on':''}"></i>`).join('')}</span>${p>0?'<button id="pg-prev">Previous</button>':''}${last?`<button class="pri" id="pg-done">${S.les[lid]?'Go to tickets':'Mark read and go to tickets'}</button>`:'<button class="pri" id="pg-next">Next</button>'}</div>`;
+ const pv=$('pg-prev'),nx=$('pg-next'),dn=$('pg-done');
+ if(pv)pv.onclick=()=>{S.page[lid]=p-1;save();renderSchool();$('lesson').parentNode.scrollTop=0};
+ if(nx)nx.onclick=()=>{S.page[lid]=p+1;save();sfx.step();renderSchool();$('lesson').parentNode.scrollTop=0};
+ if(dn)dn.onclick=()=>{if(!S.les[lid]){S.les[lid]=true;sfx.ok()}S.view='tickets';save();render()};
+ const hi=$('lesson').querySelector('.hero img');if(hi)hi.onerror=()=>hi.remove();
+}
+function heroArt(){return `<div class="hero"><svg viewBox="0 0 860 150" preserveAspectRatio="xMidYMid slice"><circle cx="640" cy="560" r="470" fill="var(--acc2)" stroke="var(--line2)"/><circle cx="640" cy="560" r="420" fill="none" stroke="var(--line)"/><path d="M0 120h860" stroke="var(--line)"/><circle cx="150" cy="40" r="1.4" fill="var(--mute)"/><circle cx="300" cy="70" r="1" fill="var(--mute)"/><circle cx="90" cy="95" r="1" fill="var(--mute)"/><circle cx="420" cy="30" r="1.2" fill="var(--mute)"/></svg><img src="img/meridian/hero-school.webp" alt=""></div>`}
+
+function renderQueue(){
+ const m=modOf(S.mod);
+ const items=(m.tickets||[]).map(id=>{const T=TICKETS[id],d=S.done[id],open=lessonsRead(m),cr=CREW[T.npc];return `<button class="row ${open?'':'lock'}" data-t="${id}" ${open?'':'aria-disabled="true"'}><span class="face">${face(T.npc)}</span><span class="t"><b>${esc(T.title)}</b><small>${esc(cr.name)} · ${esc(cr.role)} · ${T.type}</small></span><span class="s ${d?'ok':''}">${d?`Closed · ${d.cr} cr`:open?`${T.reward} cr`:'Read the lesson first'}</span></button>`}).join('');
+ $('queue').innerHTML=`<p class="lbl">Ticket queue · Module ${m.n} · ${esc(m.name)}</p>${items||'<p class="empty">No tickets in this module yet.</p>'}`;
+}
+function face(id){const c=CREW[id];return `<img src="img/meridian/npc-${id}.webp" alt="" onerror="this.replaceWith(document.createTextNode('${c.mono}'))">`}
+
+function startTicket(id){
+ const T=TICKETS[id];
+ if(!S.cur||S.cur.id!==id)S.cur={id,w:T.init(),seen:{},cmdbSeen:{},ciAll:false,isolated:false,recordOk:false,fails:0,hints:0,subs:0,rec:{what:'',why:'',rollback:'',verify:''},log:[],failed:{}};
+ save();renderDesk(true);
+}
+const cur=()=>S.cur&&TICKETS[S.cur.id];
+function stepIdx(){const T=cur(),c=S.cur;return T.steps.findIndex(s=>!s[2](c.w,c))}
+
+function renderDesk(fresh){
+ const T=cur(),c=S.cur;
+ $('v-tickets').classList.toggle('list',!T);
+ if(!T){renderQueue();return}
+ const k=stepIdx(),cr=CREW[T.npc];
+ $('tk-left').innerHTML=`<div class="npc"><span class="face">${face(T.npc)}</span><span><span class="nm">${esc(cr.name)}</span><br><span class="rl">${esc(cr.role)}</span></span></div><span class="tk-type">${T.type}</span><p class="tk-title">${esc(T.title)}</p><p class="brief">${esc(T.brief)}</p><p class="lbl">Steps</p><ul class="steps">${T.steps.map((s,i)=>`<li class="${i<k||k<0?'done':i===k?'now':''}">${ic(i<k||k<0?'check':i===k?'point':'lock')}${s[1]}</li>`).join('')}</ul><div class="hintbox">${T.hints.slice(0,c.hints).map(h=>`<p class="hint">${esc(h)}</p>`).join('')}</div>`;
+ renderStack();renderCmdb();
+ $('docs').innerHTML=T.docs+`<p class="lbl" style="margin-top:20px">Commands for this ticket</p><p class="mono" style="white-space:pre-line">${T.help.map(esc).join('\n')}</p>`;
+ if(fresh){
+  $('term').innerHTML='';
+  if(!c.log.length)c.log.push(['sys',`Meridian systems console. Type help for the commands on this ticket.`]);
+  c.log.forEach(([cl,t])=>termLine(cl,t,true));
+  ['what','why','rollback','verify'].forEach(f=>$('r-'+f).value=c.rec[f]||'');
+  $('grade').innerHTML='';
+ }
+ if(k<0)showClosed();
+}
+function renderStack(){
+ const T=cur(),c=S.cur;
+ $('stack').innerHTML=T.stack.map((n,i)=>{const[id,kind,label]=n,seen=c.seen[id]||c.cmdbSeen[id],fault=c.isolated&&T.fault.node===id;return `${i?'<div class="link"></div>':''}<button class="node ${fault?'fault':seen?'seen':''}" data-n="${id}">${ic(kind==='service'?'service':kind)}<span><span class="k">${kind}</span><span class="v">${esc(label)}</span></span></button>`}).join('');
+ $('stacknote').textContent=c.isolated?'Fault proven and marked.':'Tap a layer to mark it as the fault once you have proof.';
+ $('b-rail').innerHTML=ic('stack');
+}
+function renderCmdb(){
+ const T=cur(),c=S.cur,q=($('cmdbq').value||'').toLowerCase();
+ const rows=T.cmdbRows.filter(r=>!q||r.join(' ').toLowerCase().includes(q));
+ $('cmdbt').innerHTML=`<table><thead><tr><th>CI</th><th>Class</th><th>Role</th><th>Relations</th><th>Owner</th></tr></thead><tbody>${rows.map(r=>`<tr class="ci ${c.cmdbSeen[r[0]]?'seen':''}" data-ci="${esc(r[0])}"><td><code>${esc(r[0])}</code></td><td>${esc(r[1])}</td><td>${esc(r[2])}</td><td>${esc(r[3])}</td><td>${esc(r[4])}</td></tr>`).join('')}</tbody></table>`;
+}
+function termLine(cl,t,noLog){const d=document.createElement('div');d.className=cl;d.textContent=t;$('term').appendChild(d);$('term').scrollTop=1e9;if(!noLog){S.cur.log.push([cl,t]);if(S.cur.log.length>200)S.cur.log.shift()}}
+
+function cmdbLook(name,quiet){
+ const T=cur(),c=S.cur,r=T.cmdbRows.find(x=>x[0].toLowerCase()===String(name).toLowerCase());
+ if(!r)return{err:`cmdb: no configuration item named '${name}'.`};
+ c.cmdbSeen[r[0]]=1;c.ciAll=T.ci.every(x=>c.cmdbSeen[x]);
+ return{out:`CI         ${r[0]}\nClass      ${r[1]}\nRole       ${r[2]}\nRelations  ${r[3]}\nOwner      ${r[4]}`};
+}
+function fail(concept,text){
+ const c=S.cur;c.fails++;sfx.bad();
+ S.journal.unshift({at:Date.now(),tid:c.id,concept,text});S.journal=S.journal.slice(0,200);
+ S.srs[concept]={due:Date.now(),lvl:0};
+ toast(text,true);
+}
+const HIST=[];let hi=0;
+function run(raw){
+ const T=cur(),c=S.cur,line=raw.trim();if(!line)return;
+ HIST.push(line);hi=HIST.length;
+ termLine('in','PS> '+line);
+ const before=stepIdx();
+ let res;
+ if(/^help$/i.test(line))res={out:T.help.join('\n')};
+ else if(/^(clear|cls)$/i.test(line)){$('term').innerHTML='';c.log=[];res=null}
+ else if(/^cmdb\s+(\S+)$/i.test(line))res=cmdbLook(line.split(/\s+/)[1]);
+ else{
+  const h=T.cmds.find(x=>x.re.test(line));
+  if(!h)res={err:`The term '${line.split(/\s+/)[0]}' is not recognized here, or the syntax is off. Type help.`};
+  else if(T.type==='change'&&!c.ciAll)res={err:'Blocked: find the affected configuration items in the CMDB first.'};
+  else if(h.write&&!c.ciAll)res={err:'Blocked: no change before the CMDB lookup. Find the affected CIs first.',fail:['cmdb-first','Tried to change something before checking the CMDB.']};
+  else if(h.write&&words(c.rec.rollback)<5)res={err:'Change refused: there is no rollback plan on the record yet.',fail:['rollback-first','Tried to make a change with no rollback plan written.']};
+  else res=h.run(line.match(h.re),c.w,c,T);
+ }
+ if(res){if(res.out)termLine('',res.out);if(res.err)termLine('err',res.err);if(res.undo)res.undo();if(res.fail){const key=res.fail[0];if(!c.failed[key]){c.failed[key]=1;fail(...res.fail)}else{c.fails++;sfx.bad()}}else if(!res.err)sfx.key()}
+ const after=stepIdx();
+ if(after!==before){sfx.step();termLine('ok',`Step complete: ${T.steps[before][1]}`)}
+ save();renderDesk(false);
+}
+function flagNode(id){
+ const T=cur(),c=S.cur;if(c.isolated)return;
+ const k=stepIdx(),iso=T.steps.findIndex(s=>s[0]==='isolate');
+ if(k<iso){toast('Not yet: scope the problem before you name a fault.');return}
+ if(id!==T.fault.node){if(!c.failed['evidence:'+id]){c.failed['evidence:'+id]=1;fail('evidence',`Marked ${id} as the fault without proof. It was not.`)}else{c.fails++;sfx.bad()}save();renderDesk(false);return}
+ if(!c.w.f[T.fault.evidence]){toast('You may be right, but you have no proof yet. Query it first.');return}
+ c.isolated=true;sfx.step();termLine('ok',`Fault isolated: ${id}`);save();renderDesk(false);
+}
+function grade(){
+ const T=cur(),c=S.cur;
+ ['what','why','rollback','verify'].forEach(f=>c.rec[f]=$('r-'+f).value);
+ const k=stepIdx(),rec=T.steps.findIndex(s=>s[0]==='record');
+ if(k<rec){toast('Finish the work first. The record comes last.');return}
+ const res=[['Every field filled in',['what','why','rollback','verify'].every(f=>words(c.rec[f])>=4)]].concat(T.checks.map(([l,fs,re])=>[l,fs.split('|').some(f=>re.test(c.rec[f]))]));
+ $('grade').innerHTML=res.map(([l,ok])=>`<span class="${ok?'':'no'}">${ic(ok?'check':'x')}${esc(l)}</span>`).join('');
+ c.subs++;
+ if(res.every(r=>r[1])){
+  c.recordOk=true;
+  const pay=Math.max(10,T.reward-c.fails*10-c.hints*5-(c.subs-1)*5);
+  S.cr+=pay;S.xp+=T.reward;S.done[c.id]={cr:pay,at:Date.now(),fails:c.fails};
+  sfx.done();save();renderTop();showClosed();
+ }else{sfx.bad();toast('The record is not complete yet. Check the red items.',true)}
+ save();
+}
+function showClosed(){
+ const c=S.cur,d=S.done[c.id];if(!d)return;
+ $('tk-left').insertAdjacentHTML('beforeend',`<div class="done-panel"><p class="lbl">Ticket closed</p><p style="font-size:22px;margin:0;color:var(--gold)">+${d.cr} cr</p><p style="color:var(--mute);font-size:12px">${d.fails} mistake${d.fails===1?'':'s'} · ${c.hints} hint${c.hints===1?'':'s'}</p><button class="pri" id="b-next">Back to queue</button></div>`);
+ $('b-next').onclick=leave;
+}
+function leave(){if(S.cur&&S.done[S.cur.id])S.cur=null;$('v-tickets').classList.add('list');renderQueue();save()}
+
+function renderMissions(){
+ const list=Object.entries(MISSIONS);
+ $('missions').innerHTML=`<p class="lbl">Do it for real · on your own hardware</p>`+list.map(([id,M])=>{const st=S.missions[id]||{c:[],note:''},m=modOf(M.module);return `<div class="card"><p class="lbl">Module ${m.n} · ${esc(m.name)} · ${esc(M.hw)}</p><p class="q">${esc(M.title)}</p>${M.steps.map((s,i)=>`<label class="check"><input type="checkbox" data-x="${id}" data-i="${i}" ${st.c[i]?'checked':''}>${esc(s)}</label>`).join('')}<p class="lbl" style="margin-top:16px">${esc(M.prompt)}</p><textarea class="note" data-xn="${id}">${esc(st.note)}</textarea></div>`}).join('');
+}
+function renderJournal(){
+ const now=Date.now(),due=Object.entries(S.srs).filter(([,v])=>v.due<=now);
+ const card=due.length?(()=>{const[id]=due[0],C=CONCEPTS[id];return `<div class="card" id="rv" data-c="${id}"><p class="lbl">Review · ${due.length} due</p><p class="q">${esc(C.q)}</p><p style="color:var(--mute);font-size:13px">Say your answer out loud or write it down first.</p><div id="rv-a"></div><button class="pri" id="rv-show">Show answer</button></div>`})():`<p class="lbl">Review</p><p class="empty">Nothing due. Mistakes come back here on a schedule.</p>`;
+ $('journal').innerHTML=card+`<p class="lbl" style="margin-top:28px">Mistake journal</p>`+(S.journal.length?S.journal.map(j=>`<div class="jr"><span class="d">${new Date(j.at).toLocaleDateString()}</span><span class="c">${esc(j.concept)}</span><span>${esc(j.text)}</span></div>`).join(''):'<p class="empty">No mistakes logged yet.</p>');
+ const sh=$('rv-show');
+ if(sh)sh.onclick=()=>{const id=$('rv').dataset.c;$('rv-a').innerHTML=`<p class="a">${esc(CONCEPTS[id].a)}</p><div style="display:flex;gap:8px"><button id="rv-miss">Missed it</button><button class="pri" id="rv-got">Got it</button></div>`;sh.remove();
+  const step=[1,3,7,14,30];
+  $('rv-got').onclick=()=>{const v=S.srs[id];v.lvl=Math.min(v.lvl+1,step.length);if(v.lvl>=step.length)delete S.srs[id];else v.due=Date.now()+step[v.lvl-1]*864e5;sfx.ok();save();renderJournal()};
+  $('rv-miss').onclick=()=>{S.srs[id]={due:Date.now()+6e5,lvl:0};save();renderJournal()}};
+}
+
+function render(){renderTop();if(S.view==='school')renderSchool();if(S.view==='tickets')renderDesk(true);if(S.view==='missions')renderMissions();if(S.view==='journal')renderJournal()}
+
+function packCode(){return 'MER1.'+btoa(unescape(encodeURIComponent(JSON.stringify(S))))}
+function unpackCode(s){s=s.trim();if(!s.startsWith('MER1.'))throw 0;const d=JSON.parse(decodeURIComponent(escape(atob(s.slice(5)))));if(!d||d.v!==1)throw 0;return d}
+
+document.querySelector('.nav').onclick=e=>{const b=e.target.closest('button');if(!b)return;S.view=b.dataset.v;save();render()};
+$('modlist').onclick=e=>{const b=e.target.closest('.mod');if(!b||b.classList.contains('lock'))return;S.mod=b.dataset.m;if(S.cur&&TICKETS[S.cur.id].module!==S.mod&&S.done[S.cur.id])S.cur=null;save();render()};
+$('queue').onclick=e=>{const b=e.target.closest('.row');if(!b||b.classList.contains('lock'))return;startTicket(b.dataset.t)};
+$('wtabs').onclick=e=>{const b=e.target.closest('button[data-p]');if(!b)return;document.querySelectorAll('#wtabs button[data-p]').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pane').forEach(p=>p.classList.toggle('on',p.id==='p-'+b.dataset.p));if(b.dataset.p==='console')$('cmd').focus()};
+$('cmd').onkeydown=e=>{
+ if(e.key==='Enter'){const v=$('cmd').value;$('cmd').value='';run(v)}
+ else if(e.key==='ArrowUp'){if(hi>0){hi--;$('cmd').value=HIST[hi]}e.preventDefault()}
+ else if(e.key==='ArrowDown'){if(hi<HIST.length-1){hi++;$('cmd').value=HIST[hi]}else{hi=HIST.length;$('cmd').value=''}e.preventDefault()}
+ else if(e.key==='Tab'){e.preventDefault();const v=$('cmd').value,T=cur();if(!T)return;const opts=T.help.map(h=>h.split(' ')[0]).concat(['help','clear','cmdb']).filter((x,i,a)=>a.indexOf(x)===i&&x.toLowerCase().startsWith(v.toLowerCase()));if(opts.length===1)$('cmd').value=opts[0]+' '}
+};
+$('cmdbq').oninput=renderCmdb;
+$('cmdbt').onclick=e=>{const r=e.target.closest('tr.ci');if(!r)return;const before=stepIdx(),res=cmdbLook(r.dataset.ci);termLine('in','PS> cmdb '+r.dataset.ci);termLine('',res.out);if(stepIdx()!==before){sfx.step();termLine('ok','Step complete: CMDB lookup')}else sfx.key();save();renderDesk(false)};
+$('stack').onclick=e=>{const b=e.target.closest('.node');if(b)flagNode(b.dataset.n)};
+$('b-rail').onclick=()=>$('tk-side').classList.add('open');
+document.addEventListener('pointerdown',e=>{const s=$('tk-side');if(s.classList.contains('open')&&!s.contains(e.target))s.classList.remove('open')});
+['what','why','rollback','verify'].forEach(f=>$('r-'+f).oninput=()=>{if(S.cur){S.cur.rec[f]=$('r-'+f).value;save()}});
+$('b-submit').onclick=grade;
+$('b-leave').onclick=leave;
+$('b-hint').onclick=()=>{const T=cur(),c=S.cur;if(!T)return;if(c.hints>=T.hints.length){toast('That was Junie\'s last hint for this ticket.');return}c.hints++;tone(520,.12);save();renderDesk(false)};
+$('missions').addEventListener('change',e=>{const x=e.target.dataset.x;if(x==null)return;const st=S.missions[x]||(S.missions[x]={c:[],note:''});st.c[+e.target.dataset.i]=e.target.checked;sfx.key();save()});
+$('missions').addEventListener('input',e=>{const x=e.target.dataset.xn;if(x==null)return;(S.missions[x]||(S.missions[x]={c:[],note:''})).note=e.target.value;save()});
+$('b-theme').onclick=()=>{const i=THEMES.findIndex(t=>t[0]===S.theme);S.theme=THEMES[(i+1)%THEMES.length][0];save();renderTop()};
+$('b-sfx').onclick=()=>{S.sfx=!S.sfx;save();renderTop()};
+$('b-save').onclick=()=>{$('dlg-code').value=packCode();$('dlg').showModal()};
+$('dlg-close').onclick=()=>$('dlg').close();
+$('dlg-copy').onclick=()=>{try{navigator.clipboard.writeText($('dlg-code').value);toast('Code copied')}catch(e){$('dlg-code').select()}};
+$('dlg-load').onclick=()=>{try{S=Object.assign(JSON.parse(JSON.stringify(DEF)),unpackCode($('dlg-code').value));save();$('dlg').close();render();toast('Progress loaded')}catch(e){toast('That code could not be read.',true)}};
+window.addEventListener('storage',e=>{if(e.key===KEY){load();render()}});
+
+load();render();
+window.MERIDIAN={S:()=>S,TICKETS,run,flagNode,grade,startTicket,stepIdx,cmdbLook,save};
+</script>
+</body>
+</html>

@@ -10,6 +10,7 @@ const ST_TRACK = [
   ["sleeple", /^(sleeple|dockle)\.v1$/],
   ["passle", /^passle\.v2$/],
   ["seqle", /^seqle\.v1$/],
+  ["meridian", /^meridian\.v1$/],
   ["hexle", /^hexle\.v1$/],
   ["modle", /^modle-profile$/],
   ["poshle", /^poshle\.v1$/],

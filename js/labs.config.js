@@ -50,6 +50,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="1" y="4" width="14" height="8" rx="1.5"/><path d="M4 8h2M7 8h2M10 8h2"/>'
   },
   {
+    id: "meridian",
+    name: "Meridian",
+    tag: "Networking",
+    sub: "infra · systems officer on a carrier",
+    path: "labs/meridian.html",
+    ring: "ring-mid",
+    angle: -103,
+    glyph: '<circle cx="8" cy="8" r="6"/><path d="M2 8c2.5-2 9.5-2 12 0"/><path d="M8 2v12"/>'
+  },
+  {
     id: "subnle-pocket",
     name: "Subnle Pocket",
     tag: "Networking",
