@@ -13,3 +13,6 @@ Goal: make the Mega Lab more efficient, immersive and motivating. One focused ch
 ## Backlog (next cycles pick from the top)
 
 5. Junle room: more ticket NPCs (fantasy names only)
+6. Cross-lab "comeback" nudge: when a lab hasn't been opened for 4+ days, the launcher shows a short warm-up chip for it in Today
+7. Quick run on phone: check the run bar fits at 390px wide and the Today list is reachable without scrolling the map
+8. Check each lab's keyboard flow: Enter/Ctrl+Enter submits everywhere, focus lands in the input after "next"
