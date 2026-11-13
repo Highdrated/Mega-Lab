@@ -578,7 +578,7 @@ function prepShift(){
 }
 function prepShiftKind(){
   var s = prepLoad();
-  if(!s.diag) return "diag";
+  if(!s.diag && !s.diagSkip) return "diag";
   var shiftsDone = Object.keys(s.shifts).filter(function(d){ return s.shifts[d].done; }).length;
   var lastWeekly = s.weekly ? s.weekly.day : null;
   if(shiftsDone >= 3 && (!lastWeekly || prepDaysBetween(lastWeekly, prepDay(0)) >= 7)) return "weekly";
@@ -1166,6 +1166,21 @@ function renderResume(){
   prepEl("span", "resume-go-label", go, lbl.label);
   prepEl("span", "resume-go-unit", go, lbl.sub);
   go.onclick = function(){ hideResume(); prepShiftStart(); };
+
+  if(!prepShift() && prepShiftKind() === "diag" && PREP_UNITS.length){
+    go.classList.add("prep-choice");
+    var fresh = prepEl("button", "resume-continue prep-choice prep-fresh", card);
+    prepEl("span", "resume-go-label", fresh, "Or: start from lesson 1");
+    prepEl("span", "resume-go-unit", fresh, "New to Junos? Read first, practise after. " + prepUnitTitle(PREP_UNITS[0]) + ".");
+    fresh.onclick = function(){
+      var st = prepLoad(); st.diagSkip = prepDay(0); prepSave();
+      hideResume(); prepGoUnit(PREP_UNITS[0]);
+    };
+  }
+  if(!prepShift() && !prepLoad().diag && prepLoad().diagSkip){
+    var later = prepEl("button", "prep-diag-later", card, "Placement test whenever you like · 21 questions");
+    later.onclick = function(){ hideResume(); prepRunDiagnostic(); };
+  }
 
   var sh = prepShift();
   if(sh && sh.done){
