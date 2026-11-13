@@ -78,6 +78,29 @@ function stOwns(s, id) { return id === "junie:idle" || s.unlocked.includes(id); 
 function stLabOf(key) { const hit = ST_TRACK.find(([, re]) => re.test(key)); return hit ? hit[0] : null; }
 
 function stFedDays(s) { return Object.keys(s.days).filter((d) => stSum(s.days[d]) >= ST_FEED).sort(); }
+const ST_WEEK_GOAL = 5, ST_WEEK_BONUS = 10;
+function stWeek(s) {
+  const now = new Date(), mon = (now.getDay() + 6) % 7;
+  const days = [];
+  for (let i = 0; i < 7; i++) {
+    const off = i - mon, key = dayKey(off, true);
+    days.push({ key, fed: stSum(s.days[key]) >= ST_FEED, today: off === 0, future: off > 0 });
+  }
+  return { days, fed: days.filter((d) => d.fed).length, id: days[0].key };
+}
+function stWeekCheck(s) {
+  const w = stWeek(s);
+  if (w.fed >= ST_WEEK_GOAL && lsGet("station-week-bonus") !== w.id) {
+    lsSet("station-week-bonus", w.id);
+    stQueue("Weekly goal · " + ST_WEEK_GOAL + " days · +" + ST_WEEK_BONUS + " sparks");
+    return true;
+  }
+  return false;
+}
+function stWeekPips(w) {
+  const L = "MTWTFSS";
+  return w.days.map((d, i) => `<i class="${d.fed ? "fed" : ""}${d.today ? " now" : ""}${d.future ? " later" : ""}" title="${d.key}">${L[i]}</i>`).join("");
+}
 function stMood(s) {
   if (stToday(s) >= ST_FEED) return { img: s.avatar, line: "Fed and happy. Good shift today.", key: "fed" };
   const fed = stFedDays(s);
@@ -107,7 +130,10 @@ function stEarn(n) {
   const row = s.days[day] || (s.days[day] = {});
   row[dev] = (row[dev] || 0) + add;
   stWrite(s);
-  if (today < ST_FEED && today + add >= ST_FEED) stQueue("Junie is fed · day logged");
+  if (today < ST_FEED && today + add >= ST_FEED) {
+    stQueue("Junie is fed · day logged");
+    if (stWeekCheck(s)) { const left = ST_CAP - stToday(s); if (left > 0) { row[dev] += Math.min(ST_WEEK_BONUS, left); stWrite(s); } }
+  }
   const rankAfter = stRank(stLifetime(s)).name;
   if (rankAfter !== rankBefore) stQueue("Promoted · " + rankAfter);
   stRender();
@@ -346,11 +372,12 @@ function stRender() {
   const s = stRead();
   const total = stLifetime(s), bal = stBalance(s), today = stToday(s), r = stRank(total), mood = stMood(s);
   const pct = r.next ? Math.round(((total - r.at) / (r.next - r.at)) * 100) : 100;
+  const wk = stWeek(s);
   stStrip.classList.toggle("fed", mood.key === "fed");
   stStrip.innerHTML = `<img src="${stImg(mood.img)}" alt="">
     <span class="ss-body"><span class="ss-rank">${esc(r.name)}<span class="ss-sep">·</span><span class="ss-bal">${bal} sparks</span></span>
     <span class="ss-bar"><span style="width:${Math.min(100, (today / ST_FEED) * 100)}%"></span></span></span>
-    <span class="ss-state">${mood.key === "fed" ? "fed" : Math.min(today, ST_FEED) + "/" + ST_FEED}</span>`;
+    <span class="ss-side"><span class="ss-state">${mood.key === "fed" ? "fed" : Math.min(today, ST_FEED) + "/" + ST_FEED}</span><span class="ss-week" title="days fed this week · goal ${ST_WEEK_GOAL}">${stWeekPips(wk)}</span></span>`;
   if (stPanel.hidden) return;
 
   const c = stSyncCfg(), p = stPackInfo();
@@ -367,6 +394,11 @@ function stRender() {
           <div class="st-meter"><span style="width:${Math.min(100, (today / ST_FEED) * 100)}%"></span></div>
           <p class="st-sub">${today >= ST_FEED ? `today ${today} sparks · day logged` : `today ${today} of ${ST_FEED} sparks to feed Junie`}</p>
         </div>
+      </section>
+      <section class="st-block">
+        <div class="st-row"><span class="st-k">this week</span><span class="st-v">${wk.fed} / ${ST_WEEK_GOAL} days</span></div>
+        <div class="st-week">${stWeekPips(wk)}</div>
+        <p class="st-sub">${wk.fed >= ST_WEEK_GOAL ? "weekly goal hit · bonus banked" : `feed Junie on ${ST_WEEK_GOAL - wk.fed} more ${ST_WEEK_GOAL - wk.fed === 1 ? "day" : "days"} this week · +${ST_WEEK_BONUS} sparks`}</p>
       </section>
       <section class="st-block">
         <div class="st-row"><span class="st-k">rank</span><span class="st-v">${esc(r.name)}</span></div>
