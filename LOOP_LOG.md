@@ -11,7 +11,9 @@ Goal: make the Mega Lab more efficient, immersive and motivating. One focused ch
 - **Cycle 4 (19:20)** **Junos Lab** fresh start: next to the 21-question diagnostic there's now an equal "Or: start from lesson 1" button that opens unit 1's reading straight away. Choosing it switches daily shifts on (no diagnostic nagging); a small "Placement test whenever you like" link stays on the card. Junos test suite: 5633 passed, coverage + soak clean.
 - **Cycle 5 (20:40)** Launcher **comeback warm-ups**: any lab (not the Codex references) untouched for 4+ days gets a "Warm-up · back after N days" item in Today — the two longest-neglected first, so Quick run naturally rotates through labs you've drifted from. Today no longer says "Diagnostic" for Junos once you chose lessons-first. Phone check at 390px: Quick run and the run bar fit cleanly.
 - **Cycle 6 (22:00)** Checked Junle ticket NPCs: already 20 fantasy characters with portraits and lore questions — no gap, item closed. Re-ran the health sweep over all 24 pages after today's changes: zero JS errors (only Meridian's art files missing, see PROMPTS.md).
+- **Final (23:15)** Day closed. Loop stopped.
 
-## Backlog (next cycles pick from the top)
+## Left for next time
 
-8. Check each lab's keyboard flow: Enter/Ctrl+Enter submits everywhere, focus lands in the input after "next"
+1. Check each lab's keyboard flow: Enter/Ctrl+Enter submits everywhere, focus lands in the input after "next"
+2. Add the 8 Meridian images from `labs/img/meridian/PROMPTS.md` (needs Gemini)
