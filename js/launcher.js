@@ -655,6 +655,13 @@ function renderToday() {
   todayChip.innerHTML = `Today<span>${todayList.length}</span>`;
   todayGroup.innerHTML = "";
   if (!todayList.length) { todayGroup.innerHTML = '<p class="today-empty">nothing due · pick any room</p>'; }
+  else {
+    const go = document.createElement("button");
+    go.className = "run-start";
+    go.innerHTML = `<span class="run-play">▸</span><span class="run-txt">Quick run</span><span class="run-meta">${todayList.length} stops · ~${Math.max(5, todayList.length * 3)} min</span>`;
+    go.addEventListener("click", startRun);
+    todayGroup.appendChild(go);
+  }
   todayList.forEach((it, i) => {
     const lab = labs.find((l) => l.id === it.lab);
     const b = document.createElement("button");
@@ -673,6 +680,56 @@ function renderToday() {
   });
   if (activeSector === "today") applyFilter();
 }
+const RUN_KEY = "workshop-run";
+let run = lsParse(RUN_KEY);
+if (run && run.day !== dayKey(0, true)) { run = null; lsSet(RUN_KEY, "null"); }
+const runBar = document.createElement("div");
+runBar.className = "run-bar";
+runBar.hidden = true;
+document.querySelector(".tabbar")?.insertBefore(runBar, $("tabAdd"));
+function runSave() { lsSet(RUN_KEY, JSON.stringify(run)); }
+function runRender() {
+  if (!run) { runBar.hidden = true; return; }
+  const cur = run.items[run.i];
+  runBar.hidden = false;
+  const dots = run.items.map((_, k) => `<i class="${k < run.i ? "done" : k === run.i ? "cur" : ""}"></i>`).join("");
+  const last = run.i >= run.items.length - 1;
+  runBar.innerHTML = `<span class="run-dots">${dots}</span><span class="run-now">run ${run.i + 1}/${run.items.length} · ${esc(cur.text)}</span><button class="run-next">${last ? "finish ✓" : "next ›"}</button><button class="run-stop" aria-label="Stop run">×</button>`;
+  runBar.querySelector(".run-next").addEventListener("click", runNext);
+  runBar.querySelector(".run-stop").addEventListener("click", () => { run = null; runSave(); runRender(); toast("run stopped · progress kept"); });
+}
+function runGo() {
+  const it = run.items[run.i];
+  const lab = labs.find((l) => l.id === it.lab);
+  if (lab) launch(lab, it.hash);
+  runRender();
+}
+function startRun() {
+  if (!todayList.length) return;
+  run = { day: dayKey(0, true), i: 0, at: Date.now(), items: todayList.map((t) => ({ lab: t.lab, text: t.text, hash: t.hash })) };
+  runSave();
+  runGo();
+}
+function runNext() {
+  if (!run) return;
+  const prev = run.items[run.i];
+  if (run.i >= run.items.length - 1) {
+    const mins = Math.max(1, Math.round((Date.now() - run.at) / 60000));
+    const n = run.items.length;
+    run = null; runSave(); runRender();
+    const runs = lsJson("workshop-runs"); const d = dayKey(0, true); runs[d] = (runs[d] || 0) + 1; lsSet("workshop-runs", JSON.stringify(runs));
+    const msg = `run complete · ${n} stops in ${mins} min · +3 sparks`;
+    if (typeof stQueue === "function") { const q = lsParse("station-queue") || []; q.unshift(msg); lsSet("station-queue", JSON.stringify(q)); stEarn(3); showMap(); }
+    else { showMap(); toast(msg); }
+    return;
+  }
+  run.i++; runSave();
+  const t = openTabs.find((x) => x.id === prev.lab);
+  if (t && prev.lab !== run.items[run.i].lab) { t.frame.remove(); openTabs.splice(openTabs.indexOf(t), 1); if (activeTab === prev.lab) activeTab = null; }
+  runGo();
+}
+runRender();
+
 let todayTimer = null;
 window.addEventListener("storage", () => { clearTimeout(todayTimer); todayTimer = setTimeout(renderToday, 300); });
 document.addEventListener("visibilitychange", () => { if (!document.hidden) renderToday(); });
