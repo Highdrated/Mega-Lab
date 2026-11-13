@@ -545,7 +545,7 @@ function todayItems() {
     const today = dayKey(0, true);
     const due = Object.values(jp.cards).filter((c) => c && c.due && c.due <= today).length;
     const shift = jp.shifts && jp.shifts[today];
-    if(!jp.diag) add("junos-lab", "Diagnostic · place yourself", "daily", "", 7);
+    if(!jp.diag && !jp.diagSkip) add("junos-lab", "Diagnostic · place yourself", "daily", "", 7);
     else if(!shift || !shift.done) add("junos-lab", (shift ? "Continue shift" : "Start shift") + (due ? " · " + due + " due" : ""), "daily", "", 7);
     else if(due) add("junos-lab", due + (due === 1 ? " review card due" : " review cards due"), "review", "", 6);
   } else if(labs.some((l) => l.id === "junos-lab")) add("junos-lab", "Diagnostic · place yourself", "daily", "", 4);
@@ -636,10 +636,15 @@ function todayItems() {
   } else add("seqle", "Your first SQL order", "next", "school", 2);
   if (hx && typeof hx.t === "number" && !(hx.done && hx.done[hx.t])) add("hexle", "Target " + (hx.t + 1) + " waiting", "next", "", 2);
 
+  const docked = lsJson("workshop-docked"), DAY = 864e5, have = new Set(out.map((o) => o.lab));
+  labs.filter((l) => l.tag !== "Reference" && docked[l.id] && !have.has(l.id) && Date.now() - docked[l.id] >= 4 * DAY)
+    .sort((a, b) => docked[a.id] - docked[b.id]).slice(0, 2)
+    .forEach((l) => { const d = Math.floor((Date.now() - docked[l.id]) / DAY); add(l.id, "Warm-up · back after " + d + " days", "back", "", 4.5); });
+
   return out.sort((a, b) => b.weight - a.weight).slice(0, 6);
 }
 
-const KIND_LABEL = { review: "due", daily: "daily", weekly: "weekly", next: "next" };
+const KIND_LABEL = { review: "due", daily: "daily", weekly: "weekly", next: "next", back: "warm-up" };
 const todayGroup = document.createElement("section");
 todayGroup.className = "today-group";
 todayGroup.hidden = true;
