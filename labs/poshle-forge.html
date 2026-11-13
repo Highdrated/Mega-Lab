@@ -66,6 +66,16 @@ code{font-family:var(--mono);font-size:12.5px;background:var(--sunk);border:1px 
 .lbl{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint);margin-bottom:6px;display:flex;justify-content:space-between;align-items:baseline}
 .lbl em{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.learn{border-left:3px solid var(--accent)}
+.learn p{margin:0 0 10px;line-height:1.6}
+.learn .ex{margin:4px 0 10px;white-space:pre;min-height:0;height:auto}
+.learn .tip{color:var(--faint);font-size:13px}
+.learn code{font-family:var(--mono,ui-monospace,monospace);font-size:.92em}
+.case-body.veiled{opacity:.18;filter:blur(2px);pointer-events:none;user-select:none}
+.learn-mini{display:flex;gap:12px;align-items:baseline;width:100%;margin:0 0 14px;padding:8px 12px;background:none;border:1px solid var(--line);border-radius:6px;color:var(--ink);font:inherit;font-size:13px;text-align:left;cursor:pointer}
+.learn-mini span{font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--faint)}
+.learn-mini em{margin-left:auto;font-style:normal;color:var(--faint);font-size:12px}
+.learn-mini:hover{border-color:var(--accent)}
 .task{border-left:3px solid var(--accent)}
 .twocol{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
 
@@ -289,6 +299,92 @@ const CLINIC_RAW = [
   }
 ];
 
+const LEARN = {
+"switch": {
+"t": "Switch parameters",
+"p": "A switch is a parameter that is on or off, like <code>-Force</code> or <code>-Recurse</code>. Naming it turns it on. It does not take a value after a space.",
+"ex": "Get-ChildItem -Recurse\nRemove-Item ./tmp -Confirm:$false",
+"tip": "To set a switch to an explicit value, glue the value on with a colon."
+},
+"splat": {
+"t": "Splatting",
+"p": "Splatting means putting parameters in a hashtable and handing them to a command in one go. Each key becomes a parameter name. You splat with the <code>@</code> sigil, not <code>$</code>.",
+"ex": "$opts = @{ Name = 'notes.txt'; ItemType = 'File' }\nNew-Item @opts",
+"tip": "<code>$opts</code> is the hashtable as one value. <code>@opts</code> spreads it out as parameters."
+},
+"trycatch": {
+"t": "Terminating errors",
+"p": "PowerShell has two kinds of errors. A terminating error stops the command and jumps to <code>catch</code>. A non-terminating error prints red text and keeps going, and <code>catch</code> never sees it.",
+"ex": "try {\n    Get-Item ./missing.txt -ErrorAction Stop\n}\ncatch {\n    Write-Warning 'Not there'\n}",
+"tip": "<code>-ErrorAction Stop</code> upgrades one command's errors to terminating."
+},
+"catchmsg": {
+"t": "Expanding inside double quotes",
+"p": "In a double-quoted string, PowerShell swaps <code>$name</code> for its value. It stops at the variable name: a <code>.Property</code> after it stays plain text. To expand a full expression, wrap it in <code>$( )</code>.",
+"ex": "$file = Get-Item ./notes.txt\n\"Size: $($file.Length) bytes\"",
+"tip": "<code>$( )</code> is the subexpression operator: anything inside it runs first."
+},
+"propstr": {
+"t": "Properties in strings",
+"p": "Same rule as before: only the bare variable expands inside double quotes. Reaching into an object needs <code>$( )</code>.",
+"ex": "$site = [pscustomobject]@{ Name = 'OOST1' }\n\"Site: $($site.Name)\"",
+"tip": "Without <code>$( )</code> you get the whole object printed, then the literal text <code>.Name</code>."
+},
+"quotes": {
+"t": "Single vs double quotes",
+"p": "Double quotes expand variables. Single quotes keep the text exactly as written, dollar signs included.",
+"ex": "$city = 'Ghent'\n'Hello $city'   # Hello $city\n\"Hello $city\"   # Hello Ghent",
+"tip": "Use single quotes when you want no surprises, double quotes when you want a variable inside."
+},
+"nullcall": {
+"t": "Checking for $null",
+"p": "When a filter finds nothing, the result is <code>$null</code>. Calling a method on <code>$null</code> is an error. Guard it with an <code>if</code> first.",
+"ex": "$u = Get-Process -Name nothing -ErrorAction SilentlyContinue\nif ($u) {\n    $u.Name.ToUpper()\n}",
+"tip": "<code>if ($x)</code> is false for <code>$null</code>, so the inside never runs."
+},
+"fixedarr": {
+"t": "Arrays vs lists",
+"p": "<code>@()</code> makes a fixed-size array: you cannot <code>.Add()</code> to it. Either rebuild it with <code>+=</code> or use a real list that grows.",
+"ex": "$names = [System.Collections.Generic.List[string]]::new()\n$names.Add('Antwerp')\n\n$arr = @()\n$arr += 'Ghent'",
+"tip": "<code>+=</code> makes a new, longer array each time. A List grows in place."
+},
+"notfound": {
+"t": "Verb-Noun names",
+"p": "Every cmdlet is named Verb-Noun, and the noun is always singular, even when it returns many things.",
+"ex": "Get-Process      # not Get-Processes\nGet-ChildItem    # not Get-ChildItems\nGet-Command -Noun *User*",
+"tip": "<code>Get-Command</code> finds the real name when you are not sure."
+},
+"gt": {
+"t": "Comparison operators",
+"p": "In PowerShell, <code>&gt;</code> means redirect output to a file, like in any shell. Comparisons use letters: <code>-gt</code>, <code>-lt</code>, <code>-eq</code>, <code>-ne</code>, <code>-ge</code>, <code>-le</code>.",
+"ex": "if ($count -gt 10) { 'many' }\nif ($name -eq 'Noor') { 'hi Noor' }",
+"tip": "Read <code>-gt</code> as \"greater than\"."
+},
+"assignfilter": {
+"t": "Comparing in a filter",
+"p": "<code>=</code> assigns a value. Inside <code>Where-Object</code> you want a comparison, which is <code>-eq</code>.",
+"ex": "Get-Service | Where-Object { $_.Status -eq 'Running' }",
+"tip": "<code>$_</code> is the current item flowing through the pipeline."
+},
+"expand": {
+"t": "Select-Object vs -ExpandProperty",
+"p": "<code>Select-Object Name</code> builds new objects that still have a Name property, the wrapper. <code>-ExpandProperty Name</code> hands you the raw value.",
+"ex": "Get-Process | Select-Object -First 1 Name             # @{Name=...}\nGet-Process | Select-Object -First 1 -ExpandProperty Name  # just the text",
+"tip": "When you want the value for a string or a variable, expand it."
+},
+"hashcsv": {
+"t": "Objects for Export-Csv",
+"p": "<code>Export-Csv</code> writes one column per property of each object. A hashtable's properties are its internals (Keys, Count...). Turn it into a real object first.",
+"ex": "[pscustomobject]@{ City = 'Ghent'; Sites = 2 } |\n    Export-Csv ./cities.csv -NoTypeInformation",
+"tip": "<code>[pscustomobject]</code> turns each key into a real property."
+},
+"brace": {
+"t": "Blocks and braces",
+"p": "Every <code>{</code> opens a block (if, foreach, function...) and needs a matching <code>}</code>. Indentation is how you see which block is still open.",
+"ex": "foreach ($n in 1..3) {\n    if ($n -gt 1) {\n        $n\n    }\n}",
+"tip": "Each indent level should close at the same indent it opened on."
+}
+};
 const CLINIC = [...new Set(CLINIC_RAW.map((c) => c.area))].flatMap((a) => CLINIC_RAW.filter((c) => c.area === a));
 
 const KATAS = [
@@ -388,6 +484,16 @@ function termHtml(lines) {
   return lines.map(([cls, t]) => cls ? `<span class="${cls}">${esc(t)}</span>` : esc(t)).join("\n");
 }
 
+function learnHtml(c, st) {
+  const L = LEARN[c.id];
+  if (!L) return "";
+  const first = !st.learned && !st.solved;
+  if (!first && !st.learnOpen) return `<button class="learn-mini" id="learnToggle"><span>Concept</span>${esc(L.t)}<em>show</em></button>`;
+  return `<div class="card learn"><div class="lbl">${first ? "Learn first" : "Concept"}<em>${esc(L.t)}</em></div>
+    <p>${L.p}</p><pre class="term ex">${esc(L.ex)}</pre><p class="tip">${L.tip}</p>
+    ${first ? '<button class="btn main" id="learnGo">Got it · show the case</button>' : '<button class="btn" id="learnToggle">Hide</button>'}</div>`;
+}
+
 function viewClinic() {
   const c = CLINIC.find((x) => x.id === S.cur.clinic);
   const st = S.clinic[c.id] || (S.clinic[c.id] = {});
@@ -395,6 +501,8 @@ function viewClinic() {
   const v = $("view");
   v.innerHTML = `
     <div class="head"><p class="eyebrow">Case ${i + 1} of ${CLINIC.length} · ${esc(c.area)}</p><h1>${esc(c.title)}</h1></div>
+    ${learnHtml(c, st)}
+    <div class="case-body${!st.learned && !st.solved && LEARN[c.id] ? " veiled" : ""}" id="caseBody">
     <div class="card task">${esc(c.task)}</div>
     <div class="twocol">
       <div><div class="lbl">PowerShell said</div><div class="term">${termHtml(c.said)}</div></div>
@@ -409,7 +517,12 @@ function viewClinic() {
       ${st.solved ? '<span class="done-tag">fixed</span>' : ""}
     </div>
     <div class="fb" id="fb"></div>
-    <div class="card why" id="why"><div class="lbl">Why</div>${c.why.map((p) => `<p>${p}</p>`).join("")}</div>`;
+    <div class="card why" id="why"><div class="lbl">Why</div>${c.why.map((p) => `<p>${p}</p>`).join("")}</div>
+    </div>`;
+  const lg = $("learnGo");
+  if (lg) lg.onclick = () => { st.learned = true; save(); render(); setTimeout(() => $("code") && $("code").focus(), 30); };
+  const lt = $("learnToggle");
+  if (lt) lt.onclick = () => { st.learnOpen = !st.learnOpen; save(); render(); };
   const ta = $("code");
   ta.value = st.code != null ? st.code : c.code;
   ta.addEventListener("input", () => { st.code = ta.value; save(); });
