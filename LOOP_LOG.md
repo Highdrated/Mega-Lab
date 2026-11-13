@@ -10,8 +10,8 @@ Goal: make the Mega Lab more efficient, immersive and motivating. One focused ch
 - **Cycle 3 (17:55)** Learn-first audit of all 23 labs (contact sheet of first screens): almost all teach before asking. Fixed the odd one out — **Poshle Forge** now opens every case with a *Learn first* card (concept, a different worked example, one tip) while the broken script waits blurred; after "Got it" or solving, it folds into a one-line Concept reminder (no hand-holding once flowing).
 - **Cycle 4 (19:20)** **Junos Lab** fresh start: next to the 21-question diagnostic there's now an equal "Or: start from lesson 1" button that opens unit 1's reading straight away. Choosing it switches daily shifts on (no diagnostic nagging); a small "Placement test whenever you like" link stays on the card. Junos test suite: 5633 passed, coverage + soak clean.
 - **Cycle 5 (20:40)** Launcher **comeback warm-ups**: any lab (not the Codex references) untouched for 4+ days gets a "Warm-up · back after N days" item in Today — the two longest-neglected first, so Quick run naturally rotates through labs you've drifted from. Today no longer says "Diagnostic" for Junos once you chose lessons-first. Phone check at 390px: Quick run and the run bar fit cleanly.
+- **Cycle 6 (22:00)** Checked Junle ticket NPCs: already 20 fantasy characters with portraits and lore questions — no gap, item closed. Re-ran the health sweep over all 24 pages after today's changes: zero JS errors (only Meridian's art files missing, see PROMPTS.md).
 
 ## Backlog (next cycles pick from the top)
 
-5. Junle room: more ticket NPCs (fantasy names only)
 8. Check each lab's keyboard flow: Enter/Ctrl+Enter submits everywhere, focus lands in the input after "next"
