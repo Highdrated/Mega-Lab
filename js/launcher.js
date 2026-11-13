@@ -108,6 +108,32 @@ labs.forEach((lab, i) => {
   markersEl.appendChild(g);
 });
 
+(function declutterLabels() {
+  const items = [...markersEl.querySelectorAll(".marker")].map((g) => {
+    const l = g.querySelector(".mlabel"), t = g.querySelector(".mtag");
+    let b; try { b = l.getBBox(); } catch (e) { b = null; }
+    return { l, t, b, dy: 0 };
+  }).filter((it) => it.b && it.b.width);
+  const pad = 3;
+  for (let pass = 0; pass < 12; pass++) {
+    let moved = false;
+    items.sort((a, b) => (a.b.y + a.dy) - (b.b.y + b.dy));
+    for (let i = 0; i < items.length; i++) for (let j = i + 1; j < items.length; j++) {
+      const A = items[i], B = items[j];
+      const ax = A.b.x, ay = A.b.y + A.dy, bx = B.b.x, by = B.b.y + B.dy;
+      if (ax < bx + B.b.width + pad && bx < ax + A.b.width + pad && ay < by + B.b.height + pad && by < ay + A.b.height + pad) {
+        const push = ay + A.b.height + pad - by;
+        A.dy -= push / 2; B.dy += push / 2; moved = true;
+      }
+    }
+    if (!moved) break;
+  }
+  for (const it of items) if (it.dy) {
+    it.l.setAttribute("y", +it.l.getAttribute("y") + it.dy);
+    it.t.setAttribute("y", +it.t.getAttribute("y") + it.dy);
+  }
+})();
+
 $("nodeCount").textContent = labs.length;
 $("sectorCount").textContent = sectors.length;
 
