@@ -310,7 +310,12 @@ async function stConnect(token) {
   }
 }
 
-const ST_PACK_EXTRA = ["./", "./index.html", "./manifest.webmanifest", "./css/launcher.css?v=14", "./js/traffic.config.js?v=1", "./js/track.js?v=1", "./js/sync.js?v=3", "./js/labs.config.js?v=24", "./js/launcher.js?v=19", "./js/station.js?v=2", "./icons/icon-192.png", "./icons/icon-512.png"];
+// Pack exactly the assets this page loads (read from the live tags, so versions never go stale).
+function stPackExtra() {
+  const own = [...document.querySelectorAll('script[src], link[rel="stylesheet"], link[rel="manifest"], link[rel="icon"], link[rel="apple-touch-icon"]')]
+    .map((el) => el.getAttribute("src") || el.getAttribute("href")).filter((u) => u && !/^(https?:)?\/\//.test(u)).map((u) => "./" + u.replace(/^\.?\//, ""));
+  return [...new Set(["./", "./index.html", "./sw.js", ...own, "./icons/icon-192.png", "./icons/icon-512.png"])];
+}
 let stPackBusy = false, stPackGuard = null;
 function stPackInfo() { return lsParse("station-pack") || {}; }
 async function stPack(manual) {
@@ -322,7 +327,7 @@ async function stPack(manual) {
   stRender();
   clearTimeout(stPackGuard);
   stPackGuard = setTimeout(() => { if (stPackBusy) { stPackBusy = false; stRender(); } }, 120000);
-  const urls = ST_PACK_EXTRA.concat(labs.map((l) => "./" + l.path), ST_MOMENTS.map((m) => "./" + stImg(m.id)));
+  const urls = stPackExtra().concat(labs.map((l) => "./" + l.path), ST_MOMENTS.map((m) => "./" + stImg(m.id)));
   sw.postMessage({ type: "pack", urls });
 }
 if ("serviceWorker" in navigator) {
@@ -496,6 +501,30 @@ stThemeButtons();
 }
 stRender();
 setTimeout(stationFlush, 1600);
+// Junie says hello once per session when you arrive at the station (never while a lab is open).
+function stGreeting() {
+  const s = stRead(), mood = stMood(s), r = stRank(stLifetime(s));
+  const h = new Date().getHours();
+  const tod = h < 5 ? "Night shift again. The station is quiet, I like it." : h < 12 ? "Morning. Coffee is on the console." : h < 18 ? "Afternoon. The rings are humming." : "Evening watch. Lights are low, labs are open.";
+  const due = (typeof todayList !== "undefined" && todayList) ? todayList.length : 0;
+  const rank = r.name;
+  const fresh = !Object.keys(s.days).length;
+  const back = fresh ? ["New here? I am Junie, station keeper. Pick any room; I will log the shift.", tod]
+    : mood.key === "asleep" ? ["Oh! You are back. I kept your seat warm.", "I was dozing. Any lab wakes me right up."]
+    : mood.key === "peek" ? ["Welcome back, " + rank + ". A few minutes anywhere and I perk up."]
+    : mood.key === "fed" ? ["Fed and happy. Anything extra today is a bonus run.", "Good shift already, " + rank + ". Want to stretch it?"]
+    : [tod, "Welcome aboard, " + rank + ".", due ? (due === 1 ? "One stop waiting in Today." : due + " stops waiting in Today. Quick run takes them in order.") : "Nothing due. Pick a room by feel."];
+  const pool = back.concat(mood.key === "waiting" ? [] : [tod]);
+  return "Junie · " + pool[Math.floor(Math.random() * pool.length)];
+}
+(function stHello() {
+  let seen = null;
+  try { seen = sessionStorage.getItem("station-hello"); } catch (e) {}
+  if (seen) return;
+  try { sessionStorage.setItem("station-hello", "1"); } catch (e) {}
+  setTimeout(() => { if (!stage.classList.contains("show") && !opened.classList.contains("show") && !(lsParse("station-queue") || []).length) toast(stGreeting()); }, 2600);
+})();
+
 setTimeout(() => stSyncNow(false), 1500);
 setTimeout(stPackCheck, 4000);
 setInterval(() => { if (!document.hidden) stSyncNow(false); }, 5 * 60000);

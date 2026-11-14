@@ -183,6 +183,7 @@ const starfield = (() => {
   const canvas = $("stars");
   const ctx = canvas.getContext("2d");
   let stars = [], w = 0, h = 0, dpr = 1, px = 0, py = 0, tx = 0, ty = 0, rgb = "230,240,255", raf = null;
+  let comet = null, nextComet = performance.now() + 9000 + Math.random() * 20000;
 
   function readColor() { rgb = getComputedStyle(document.body).getPropertyValue("--star").trim() || rgb; }
 
@@ -213,6 +214,20 @@ const starfield = (() => {
       const size = 0.4 + s.z * 1.3;
       ctx.fillStyle = `rgba(${rgb},${alpha.toFixed(3)})`;
       ctx.beginPath(); ctx.arc(x, y, size, 0, Math.PI * 2); ctx.fill();
+    }
+    if (REDUCED) return;
+    if (!comet && t > nextComet) {
+      const fromLeft = Math.random() < 0.5;
+      comet = { x: fromLeft ? -30 : w + 30, y: Math.random() * h * 0.5, vx: (fromLeft ? 1 : -1) * (0.55 + Math.random() * 0.4), vy: 0.12 + Math.random() * 0.18, life: 0 };
+    }
+    if (comet) {
+      comet.x += comet.vx * 16; comet.y += comet.vy * 16; comet.life++;
+      const tail = 90, fade = Math.min(1, comet.life / 12);
+      const g = ctx.createLinearGradient(comet.x, comet.y, comet.x - comet.vx * tail, comet.y - comet.vy * tail);
+      g.addColorStop(0, `rgba(${rgb},${(0.85 * fade).toFixed(3)})`); g.addColorStop(1, `rgba(${rgb},0)`);
+      ctx.strokeStyle = g; ctx.lineWidth = 1.2;
+      ctx.beginPath(); ctx.moveTo(comet.x, comet.y); ctx.lineTo(comet.x - comet.vx * tail, comet.y - comet.vy * tail); ctx.stroke();
+      if (comet.x < -120 || comet.x > w + 120 || comet.y > h + 40) { comet = null; nextComet = t + 25000 + Math.random() * 50000; }
     }
   }
 
@@ -522,7 +537,8 @@ function tick() {
   $("clock").textContent = now.toTimeString().slice(0, 8);
 }
 tick();
-setInterval(tick, 1000);
+let tickTimer = setInterval(tick, 1000);
+document.addEventListener("visibilitychange", () => { clearInterval(tickTimer); tickTimer = null; if (!document.hidden) { tick(); tickTimer = setInterval(tick, 1000); } });
 
 
 function dayKey(off, pad) {
