@@ -13,7 +13,12 @@ Goal: make the Mega Lab more efficient, immersive and motivating. One focused ch
 - **Cycle 6 (22:00)** Checked Junle ticket NPCs: already 20 fantasy characters with portraits and lore questions — no gap, item closed. Re-ran the health sweep over all 24 pages after today's changes: zero JS errors (only Meridian's art files missing, see PROMPTS.md).
 - **Final (23:15)** Day closed. Loop stopped.
 
+# Improvement loop — 15 Nov 2026
+
+- **Cycle 1 (10:00)** Keyboard audit: every lab with typing handles Enter, and Cmd+Enter alongside Ctrl+Enter where it submits; the remaining Ctrl-only keys are real terminal shortcuts (Ctrl+R/L/C), correct on a Mac too. **Meridian Module 1 · Virtualization, part 1**: three lessons (12 pages, 6 new diagrams): hypervisor & VM files, vCPU/RAM overcommit, vCenter/clusters; vMotion, DRS + anti-affinity, HA, N+1 maths; snapshots, the forgotten snapshot, thin vs thick, a before-you-touch-a-VM checklist. Numbers match the ship (DS-HULL-01 2048 GB, 80%). New real-hardware mission: Snapshot, break, revert (UTM or Synology VMM).
+
 ## Left for next time
 
-1. Check each lab's keyboard flow: Enter/Ctrl+Enter submits everywhere, focus lands in the input after "next"
+1. Meridian console: add Move-VM, Get-Snapshot, New-Snapshot, Remove-Snapshot, NumCpu/MemoryGB fields (the Virtualization lessons mention them)
 2. Add the 8 Meridian images from `labs/img/meridian/PROMPTS.md` (needs Gemini)
+3. Meridian Module 1 tickets (5): forgotten snapshot fills DS-HULL-01; both DCs on one host (anti-affinity); vMotion blocked by a mounted ISO; slow VM with too many vCPUs (CPU ready); N+1 check before patching esx-01
