@@ -376,7 +376,7 @@ const CONCEPTS={
 const MODULES=[
  {id:'m0',n:0,name:'Basics',lessons:['l0-orient','l0-team','l0-stack'],tickets:['t0-shake'],mission:'x0-map'},
  {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc','t1-dimm','t1-ready','t1-n1'],mission:'x1-vm'},
- {id:'m2',n:2,name:'Windows Server',lessons:['l2-roles','l2-logs','l2-patch'],tickets:[],mission:'x2-win'},
+ {id:'m2',n:2,name:'Windows Server',lessons:['l2-roles','l2-logs','l2-patch'],tickets:['t2-dns','t2-spool'],mission:'x2-win'},
  {id:'m3',n:3,name:'Storage'},
  {id:'m4',n:4,name:'Backup and DR'},
  {id:'m5',n:5,name:'MS SQL Server'},
@@ -809,7 +809,7 @@ function winInit(w,h){
   vol:{C:{size:80,free:34.2}},files:{},hotfix:[['KB5044281','Security Update','04/11/2026'],['KB5043936','Update','08/10/2026'],['KB5042881','Security Update','10/09/2026']],pending:false,
   time:{offset:0,source:h==='ad-dc-01'?'ntp1.meridian-ops.local':'ad-dc-01.meridian.local',stratum:h==='ad-dc-01'?2:3,vmtools:false}};
 }
-function winEv(w,h,log,id,lvl,src,msg){winInit(w,h).ev[log].push(['10/11/2026 '+hhmm(w.clock)+':00',id,lvl,src,msg])}
+function winEv(w,h,log,id,lvl,src,msg,when){winInit(w,h).ev[log].push([when||'10/11/2026 '+hhmm(w.clock)+':00',id,lvl,src,msg])}
 function winSvcSet(w,h,n,st){const W=winInit(w,h),s=W.svcs[n];if(!s||s.status===st)return;s.status=st;winEv(w,h,'System',7036,'Information','Service Control Manager',`The ${s.display} service entered the ${st==='Running'?'running':'stopped'} state.`)}
 function winOk(w,n){const v=w.vms[n];if(!v||v.os!=='windows')return true;const r=winRole(n);if(!r)return true;const W=winInit(w,n);return W.svcs[r]&&W.svcs[r].status==='Running'}
 const WIN_CMDS=['Get-Service','Start-Service','Stop-Service','Restart-Service','Set-Service','Get-WinEvent','Get-Volume','Get-PSDrive','Get-ChildItem','Remove-Item','Get-HotFix','Test-Path','Restart-Computer','Resolve-DnsName','Get-Date'];
@@ -817,8 +817,8 @@ const WIN_ONLY_HINT='That command runs on a Windows server. Connect first: Enter
 function fhParse(v){const o={};String(v||'').replace(/^@\{|\}$/g,'').split(';').forEach(kv=>{const i=kv.indexOf('=');if(i<0)return;const k=kv.slice(0,i).trim().toLowerCase(),val=kv.slice(i+1).trim();o[k]=val.split(',').map(x=>unq(x.trim()))});return o}
 const GB=x=>(Math.round(x*100)/100)+' GB';
 function winExec(n,a,first,data,type,c,w,nl){
- const h=c.winHost;if(!h)return{ret:{err:`${n}: ${WIN_ONLY_HINT}`}};
- const W=winInit(w,h),ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
+ const h=c.winHost;if(!h&&n!=='Resolve-DnsName')return{ret:{err:`${n}: ${WIN_ONLY_HINT}`}};
+ const W=h?winInit(w,h):null,ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
  const svcRow=k=>({_t:'service',Name:k,DisplayName:W.svcs[k].display,Status:W.svcs[k].status,StartType:W.svcs[k].start,PSComputerName:h});
  const pickSvc=(v)=>{if(!first&&type==='service')return{items:data.map(o=>o.Name)};if(!v)return{items:Object.keys(W.svcs)};const out=[];for(const p of String(v).split(',')){const m=Object.keys(W.svcs).filter(k=>wild(p,k)||wild(p,W.svcs[k].display));if(!m.length&&!/[*?]/.test(p))return{err:`${n}: Cannot find any service with service name '${p}'.`};out.push(...m)}return{items:[...new Set(out)]}};
  if(n==='Get-Date'){const d=new Date(Date.UTC(2026,10,10,0,0,0)+(w.clock*60+W.time.offset)*1000);return{ret:{out:'Tuesday, 10 November 2026 '+String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')+':'+String(d.getUTCSeconds()).padStart(2,'0')}}}
@@ -850,13 +850,13 @@ function winExec(n,a,first,data,type,c,w,nl){
   return{ret:{out:'',ev:{k:'winstart',host:h,svcs:r.items,start:norm}}};
  }
  if(n==='Get-WinEvent'){
-  let logs=[unq(a.named['-logname']||'System')],ids=null,lvl=null;
+  let logs=[unq(a.named['-logname']||a.pos||'System')],ids=null,lvl=null;
   if(a.named['-filterhashtable']){const f=fhParse(decodeURIComponent(a.named['-filterhashtable']));if(f.logname)logs=f.logname;if(f.id)ids=f.id.map(Number);if(f.level)lvl=f.level.map(Number)}
   const LV={Critical:1,Error:2,Warning:3,Information:4};
   const lg=logs.map(l=>Object.keys(W.ev).find(k=>k.toLowerCase()===String(l).toLowerCase()));
   if(lg.some(x=>!x))return{ret:{err:`Get-WinEvent: There is not an event log on the localhost computer that matches "${logs[lg.indexOf(undefined)]}".`}};
   let rows=[].concat(...lg.map(L=>W.ev[L].map(e=>({_t:'winevent',TimeCreated:e[0],Id:e[1],LevelDisplayName:e[2],ProviderName:e[3],Message:e[4],LogName:L})))).filter(e=>(!ids||ids.includes(e.Id))&&(!lvl||lvl.includes(LV[e.LevelDisplayName])));
-  rows.sort((x,y)=>x.TimeCreated<y.TimeCreated?1:-1);
+  const tk=t=>String(t).replace(/^(\d+)\/(\d+)\/(\d+) (.*)$/,'$3$2$1 $4');rows.sort((x,y)=>tk(x.TimeCreated)<tk(y.TimeCreated)?1:-1);
   if(a.named['-maxevents'])rows=rows.slice(0,+a.named['-maxevents']);
   lg.forEach(L=>sawSet(c,'winlog',h+':'+L));if(ids)ids.forEach(i=>sawSet(c,'winid',h+':'+i));
   if(!rows.length)return{ret:{err:'Get-WinEvent: No events were found that match the specified selection criteria.'}};
@@ -922,7 +922,8 @@ function invokeCmd(targets,inner,c,w,gate){
   const nat=winNative(inner,c,w,h);if(nat){if(nat.out)outs.push(nat.out.split('\n').map(l=>l).join('\n')+`\n(PSComputerName: ${h})`);if(nat.err)errs.push(`[${h}] ${nat.err}`);continue}
   const norm=normalize(inner);if(norm.err){errs.push(norm.err);break}
   c._raw=true;const r=psExec(norm.line,c,w,gate);c._raw=false;
-  if(r.err){errs.push(`[${h}] ${r.err}`);if(r.ev)ev=r.ev;continue}
+  if(r.ev)ev=r.ev;
+  if(r.err){errs.push(`[${h}] ${r.err}`);continue}
   if(r.raw){r.data.forEach(o=>{o.PSComputerName=h});rows.push(...r.data);type=type||r.type;note=note||r.note;if(r.ev)ev=r.ev}else if(r.out)outs.push(r.out)}
  c.winHost=null;
  let out=outs.join('\n\n');if(rows.length){const C=(DEFCOLS[type]||Object.keys(rows[0]).filter(k=>k[0]!=='_')).filter(k=>k!=='PSComputerName').concat(['PSComputerName']);out=(out?out+'\n\n':'')+table(rows,C)}
@@ -1448,6 +1449,126 @@ const TICKETS={
    take:['Get-VMHost | Measure-Object MemoryUsageGB -Sum: the N+1 question in one line.','N+1 means the total fits on n-1 hosts, not that every host has room.','Find the biggest holders: Sort-Object MemoryGB -Descending, then measure their real usage.','Shrinking memory needs a shutdown, so ask for a window.']
   },
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>The captain agreed: hr-app-01 may be down this morning. Nothing else.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>The AFT hosts (esx-01, esx-02) have 512 GB of memory each. hr-app-01 belongs to the ship\'s office.</p>'
+ },
+ 't2-dns':{module:'m2',type:'incident',npc:'tamsin',reward:170,
+  title:'Half the DNS is silent',
+  brief:'"Since last week the crew portal hesitates. You click, nothing for two or three seconds, then the page comes. Mail does the same when it connects. Nothing is down, it is just... sticky. Comms is fine on my side, I checked."',
+  ci:['dns-01','dns-02','crew-portal-01'],
+  watch:['dir'],
+  upLine:{},
+  stack:[['svc','service','Name lookups'],['dns-02','vm','dns-02'],['dns-01','vm','dns-01'],['esx-02','host','esx-02']],
+  fault:{node:'dns-02',evidence:c=>!!(c.saw&&((c.saw.winsvc&&c.saw.winsvc['dns-02:DNS:Stopped'])||(c.saw.resolve&&c.saw.resolve['dns-02:fail'])))},
+  setup(w){
+   const W=winInit(w,'dns-02');W.svcs.DNS.start='Manual';W.svcs.DNS.status='Stopped';
+   W.ev.System=[];
+   winEv(w,'dns-02','System',7040,'Information','Service Control Manager','The start type of the DNS Server service was changed from auto start to demand start.','21/10/2026 14:02:51');
+   winEv(w,'dns-02','System',7036,'Information','Service Control Manager','The DNS Server service entered the stopped state.','21/10/2026 14:03:10');
+   winEv(w,'dns-02','System',7036,'Information','Service Control Manager','The DNS Server service entered the running state.','21/10/2026 14:31:44');
+   winEv(w,'dns-02','System',1074,'Information','User32','The process C:\\Windows\\system32\\svchost.exe (DNS-02) has initiated the restart of computer DNS-02 on behalf of user MERIDIAN\\svc-patch for the following reason: Operating System: Service pack (Planned)','04/11/2026 02:12:08');
+   winEv(w,'dns-02','System',6006,'Information','EventLog','The Event log service was stopped.','04/11/2026 02:12:40');
+   winEv(w,'dns-02','System',6005,'Information','EventLog','The Event log service was started.','04/11/2026 02:14:02');
+   winEv(w,'dns-02','System',7036,'Information','Service Control Manager','The Windows Remote Management (WS-Management) service entered the running state.','04/11/2026 02:14:20');
+   winEv(w,'dns-02','Application',4013,'Warning','Microsoft-Windows-DNS-Client','Name resolution for crew-portal-01.meridian.local timed out after none of the configured DNS servers responded in time. (client log, forwarded)','09/11/2026 19:20:00');
+   w.comms.push({t:'07:50',who:'tamsin',text:'Portal hesitation again just now. Two seconds, then fine.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='winsvc'&&ev.host==='dns-01'&&ev.op!=='Start-Service')return{fail:['smallest-fix','Restarted DNS on dns-01, the half that still works.'],why:'dns-01 was the only DNS server answering. Restarting it gave the whole ship a moment without name lookups. Touch only the broken half.'};
+   if(ev.k==='winreboot'&&ev.host==='dns-01')return{fail:['smallest-fix','Rebooted dns-01, the half that still works.'],why:'For a few minutes nothing on the ship could resolve a name. The healthy half is the one you protect.'};
+   if(ev.k==='winsvc'&&ev.host==='dns-02'&&c.saw&&c.saw.resolve)Object.keys(c.saw.resolve).filter(k=>k.startsWith('dns-02')).forEach(k=>delete c.saw.resolve[k]);
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know the two DNS servers and which one the portal asks first.'],
+   ['scope','Scope',(w,c)=>c.scoped||(c.scoped=!!(c.saw&&c.saw.resolve&&(c.saw.resolve['dns-02:fail']||c.saw.resolve['dns-02:ok'])&&(c.saw.resolve['dns-01:ok']||c.saw.resolve['dns-01:fail']))),'You tested each DNS server on its own instead of "DNS" as a whole.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name the half that is silent.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'Proven on the server itself.'],
+   ['fix','Fix',w=>{const s=winInit(w,'dns-02').svcs.DNS;return s.status==='Running'&&s.start==='Automatic'},'Running, and set to survive the next reboot.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.resolve&&c.saw.resolve['dns-02:ok']),'dns-02 answers a real lookup again.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['"Sticky but working" smells like a timeout and a fallback. Ask each DNS server separately: Resolve-DnsName crew-portal-01 -Server dns-01, then the same with -Server dns-02.','dns-02 does not answer. Look inside: Enter-PSSession dns-02, then Get-Service DNS. Then ask why it is stopped: Get-WinEvent -LogName System -MaxEvents 10.','Someone set it to Manual on 21 October, and the patch reboot on 4 November left it stopped. Write the rollback, then Set-Service DNS -StartupType Automatic and Start-Service DNS. Exit and resolve against dns-02 again.'],
+  checks:[
+   ['Names the server','what',/dns-02/i],
+   ['Says why it was stopped','why',/manual|start ?type|startup|7040|demand/i],
+   ['Connects it to the reboot','why',/reboot|restart|patch|1074|04\/11|4 nov/i],
+   ['Rollback says how to undo','rollback',/manual|set-service|stop/i],
+   ['Verified with a real lookup','verify',/resolve-dnsname|nslookup|53|lookup/i],
+   ['Follow-up: watch both halves','follow',/monitor|alert|both|each|check|runbook|patch|automatic/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb dns-01, dns-02, crew-portal-01','Two DNS servers; clients try one, then the other.'],
+    ['Scope','Resolve-DnsName crew-portal-01 -Server dns-01, then -Server dns-02','dns-01 answers, dns-02 times out.'],
+    ['Hypothesis','"dns-02, its DNS service is not answering"','One half, not the network.'],
+    ['Isolate','Enter-PSSession dns-02; Get-Service DNS; Get-WinEvent -LogName System -MaxEvents 10','Stopped. Start type changed to Manual on 21 Oct; patch reboot on 4 Nov.'],
+    ['Fix','Set-Service DNS -StartupType Automatic; Start-Service DNS','Running now, and still running after the next reboot.'],
+    ['Verify','Resolve-DnsName crew-portal-01 -Server dns-02','An answer, from dns-02 itself.'],
+    ['Record','what, why, rollback, verification, follow-up','Monitor each DNS server separately, not "DNS works".']
+   ],
+   readings:[['Resolve-DnsName -Server dns-02','Timeout. A client that asks dns-02 first waits, gives up, then asks dns-01: the two-second hesitation.'],['Get-Service DNS','Stopped, StartType Manual. Nothing will ever start it.'],['Event 7040, 21 Oct','Someone changed it from auto start to demand start, probably while troubleshooting, and never changed it back.'],['Event 1074, 4 Nov','The patch reboot. The service was running until then, so nobody noticed for two weeks.']],
+   senior:['Redundancy hides failures. One DNS server was dead for nine days and the only symptom was "sticky".','A Manual start type on a role service is a time bomb that goes off at the next reboot. After any troubleshooting, put things back.','Ask Odran who changed it on 21 October, kindly. The fix is a habit, not a person.','Monitoring should resolve a name against each server separately. "DNS works" is not a check.'],
+   take:['Resolve-DnsName name -Server x tests one DNS server. Test each half.','A stopped Automatic service is a red flag; a role service on Manual is a trap.','Set-Service -StartupType fixes the next reboot; Start-Service fixes now. You usually need both.','Event 7040 tells you who changed a start type, and when.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: name lookups</p><p>Every VM asks dns-02 first and dns-01 second. If the first one does not answer, the client waits about two seconds before it tries the other.</p>'
+ },
+ 't2-spool':{module:'m2',type:'incident',npc:'linnea',reward:170,
+  title:'Nothing prints',
+  brief:'"Nothing prints. Not the menus, not the cabin cards, nothing. The printers just sit there. I turned the galley printer off and on, that did nothing. We need tonight\'s menus by four."',
+  ci:['print-01'],
+  watch:['print'],
+  upLine:{print:'The printers are going again! Menus are coming out.'},
+  stack:[['svc','service','Printing'],['print-01','vm','print-01'],['esx-02','host','esx-02'],['DS-HULL-01','ds','DS-HULL-01']],
+  fault:{node:'print-01',evidence:c=>!!(c.saw&&c.saw.winvol&&c.saw.winvol['print-01'])},
+  setup(w){
+   const W=winInit(w,'print-01');W.vol.C={size:60,free:0.3};W.svcs.Spooler.status='Stopped';
+   const P='C:\\Windows\\System32\\spool\\PRINTERS';
+   W.files[P]=[['FP00412.SPL',44023414784,'09/11/2026 22:14'],['FP00412.SHD',4096,'09/11/2026 22:14'],['FP00413.SPL',182272,'10/11/2026 07:02'],['FP00413.SHD',4096,'10/11/2026 07:02']];
+   W.lock={[P.toLowerCase()]:'Spooler'};
+   W.broken={Spooler:{id:7023,msg:'The Print Spooler service terminated with the following error: There is not enough space on the disk.'}};
+   W.ev.System=W.ev.System.concat([['09/11/2026 22:14:02',7036,'Information','Service Control Manager','The Print Spooler service entered the running state.'],['10/11/2026 03:41:17',2013,'Warning','srv','The C: disk is at or near capacity. You may need to delete some files.'],['10/11/2026 04:02:55',7034,'Error','Service Control Manager','The Print Spooler service terminated unexpectedly.  It has done this 1 time(s).'],['10/11/2026 04:03:55',7023,'Error','Service Control Manager','The Print Spooler service terminated with the following error: There is not enough space on the disk.']]);
+   W.ev.Application.push(['09/11/2026 22:14:00',307,'Information','Microsoft-Windows-PrintService','Document 412, Manifest_2026_full owned by svc-cargo on \\\\cargo-app-01 was sent to printer HOLD-A3. Size in bytes: 44023414784. Pages printed: 0.']);
+   w.comms.push({t:'07:30',who:'linnea',text:'Also the cabin card printer on deck 4. Same thing.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='winreboot'&&ev.host==='print-01')return{fail:['evidence','Rebooted print-01 before finding out why the spooler dies.'],why:'A reboot does not free disk space. The spooler starts, hits the full disk and stops again. Read the log first: it says why.'};
+   if(ev.k==='winrm'&&ev.host==='print-01'&&ev.gb>1){const W=winInit(w,'print-01');if(W.vol.C.free>5&&W.broken)delete W.broken.Spooler;if(c.saw){c.saw.svc={};if(c.saw.winvol)delete c.saw.winvol['print-01x']}}
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'One print server for the whole ship.'],
+   ['scope','Scope',(w,c)=>!!(c.saw&&c.saw.winsvc&&Object.keys(c.saw.winsvc).some(k=>k.startsWith('print-01:Spooler'))),'You checked the service that does the printing.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name the layer, then prove why.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'The full disk and what filled it.'],
+   ['fix','Fix',w=>{const W=winInit(w,'print-01');return W.svcs.Spooler.status==='Running'&&W.vol.C.free>5},'Space back, spooler running.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.svc&&c.saw.svc.print===true),'The print service answers again.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['Printing on the ship is one Windows service on print-01. Enter-PSSession print-01 and Get-Service Spooler. Then try to start it and read what happens.','Read why: Get-WinEvent -LogName System -MaxEvents 6. Then look at the disk: Get-Volume. Then what is in the spool folder: Get-ChildItem C:\\Windows\\System32\\spool\\PRINTERS.','A 41 GB job from the cargo system. Write the rollback, then Remove-Item C:\\Windows\\System32\\spool\\PRINTERS\\* (the spooler is already stopped, so the files are free), Start-Service Spooler, exit, Test-NetConnection print-01 -Port 445.'],
+  checks:[
+   ['Names the server','what',/print-01/i],
+   ['Root cause: full disk from a stuck job','why',/spool|disk|full|c:|41|space/i],
+   ['Says where the job came from','why',/cargo|manifest|svc-cargo/i],
+   ['Rollback is honest about deleted jobs','rollback',/cannot|can't|deleted|resend|reprint|gone|not possible/i],
+   ['Verified the service and the space','verify',/445|get-volume|test-netconnection|spooler|print|free/i],
+   ['Follow-up stops a repeat','follow',/alert|quota|limit|cargo|monitor|2013|disk|size/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb print-01','The only print server, owned by Linnea.'],
+    ['Scope','Enter-PSSession print-01; Get-Service Spooler; Start-Service Spooler','Stopped, and it refuses to start.'],
+    ['Hypothesis','"print-01, the spooler cannot run because the disk is full"','The VM itself, not the printers.'],
+    ['Isolate','Get-WinEvent -LogName System -MaxEvents 6; Get-Volume; Get-ChildItem C:\\Windows\\System32\\spool\\PRINTERS','2013 disk at capacity, 7034 and 7023 not enough space, a 41 GB job.'],
+    ['Fix','Remove-Item C:\\Windows\\System32\\spool\\PRINTERS\\*; Start-Service Spooler','Space back, service running.'],
+    ['Verify','Get-Volume; Test-NetConnection print-01 -Port 445','41 GB free, printers reachable.'],
+    ['Record','what, why, rollback, verification, follow-up','The cargo system must not be able to send a 41 GB print job again.']
+   ],
+   readings:[['Start-Service Spooler','Fails: there is not enough space on the disk. The error tells you the cause.'],['Event 2013 at 03:41','The disk warned before it failed. Nobody was watching.'],['Get-Volume','0.3 GB free on a 60 GB disk.'],['Event 307 in Application','svc-cargo on cargo-app-01 sent a 44 GB "Manifest_2026_full" to the A3 printer at 22:14.']],
+   senior:['Turning the printer off and on is what everyone tries first. The printer was never the problem.','Deleting spool files throws away every waiting job, including the small ones. Tell Linnea which jobs to send again.','Ask Odran why the cargo export prints at all. A full-year manifest belongs in a file, not on paper.','Put an alert on disk space for every server. Event 2013 fired five hours before anything broke.'],
+   take:['A service that will not start usually says why: read the System log.','Get-ChildItem folder | Measure-Object Length -Sum finds where the space went.','Stop the service, clear the spool, start the service.','Free space is a dependency of almost everything on Windows.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: printing</p><p>All printers on the ship print through print-01 (Windows Server, Print Spooler service, port 445). Jobs wait as files in C:\\Windows\\System32\\spool\\PRINTERS until the printer takes them.</p>'
  },
  't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:120,
   title:'The galley order screens are black',
