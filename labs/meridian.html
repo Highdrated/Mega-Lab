@@ -375,7 +375,7 @@ const CONCEPTS={
 
 const MODULES=[
  {id:'m0',n:0,name:'Basics',lessons:['l0-orient','l0-team','l0-stack'],tickets:['t0-shake'],mission:'x0-map'},
- {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc','t1-dimm','t1-ready'],mission:'x1-vm'},
+ {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc','t1-dimm','t1-ready','t1-n1'],mission:'x1-vm'},
  {id:'m2',n:2,name:'Windows Server'},
  {id:'m3',n:3,name:'Storage'},
  {id:'m4',n:4,name:'Backup and DR'},
@@ -535,7 +535,7 @@ const CMDLETS={
  'Sort-Object':{params:{'-Property':'prop','-Descending':'switch'},pos:'-Property'},
  'Format-List':{params:{'-Property':'prop'},pos:'-Property'},
  'Format-Table':{params:{'-Property':'prop','-AutoSize':'switch'},pos:'-Property'},
- 'Measure-Object':{params:{},pos:null},
+ 'Measure-Object':{params:{'-Property':'prop','-Sum':'switch','-Average':'switch','-Maximum':'switch','-Minimum':'switch'},pos:'-Property'},
  'Move-VM':{params:{'-VM':'vm','-Destination':'host','-Confirm':'switch'},pos:'-VM'},
  'Set-VM':{params:{'-VM':'vm','-NumCpu':'int','-MemoryGB':'int','-Confirm':'switch'},pos:'-VM'},
  'Get-Snapshot':{params:{'-VM':'vm','-Name':'snap'},pos:'-VM'},
@@ -556,8 +556,8 @@ const CMDLETS={
  'ping':{params:{},pos:'vm',syn:'ping <host>'}
 };
 const PALIAS={'?':'Where-Object',where:'Where-Object',select:'Select-Object',sort:'Sort-Object',fl:'Format-List',ft:'Format-Table',measure:'Measure-Object'};
-const PROPS={vmguest:['Name','State','IPAddress','OSFullName'],question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
-const DEFCOLS={vmguest:['State','IPAddress','OSFullName'],question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const PROPS={vmguest:['Name','State','IPAddress','OSFullName'],question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','CpuTotalMhz','MemoryUsageGB','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const DEFCOLS={vmguest:['State','IPAddress','OSFullName'],question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','CpuTotalMhz','MemoryUsageGB','MemoryTotalGB','Version'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
 const VC='vcenter.meridian.local';
 
 function wvalues(kind){
@@ -582,7 +582,7 @@ function wvalues(kind){
 }
 
 const vmObj=(w,n)=>{const v=w.vms[n];return{_t:'vm',Name:n,PowerState:v.on?'PoweredOn':'PoweredOff',NumCpu:v.cpu,MemoryGB:v.mem,VMHost:v.host,Guest:v.os==='windows'?'Microsoft Windows Server 2022':v.os==='appliance'?'VMware Photon OS':'Ubuntu Linux (64-bit)',Datastore:v.ds,Id:'VirtualMachine-vm-'+(1000+v.vmid)}};
-const hostObj=(w,h)=>{const x=w.hosts[h],n=Object.values(w.vms).filter(v=>v.host===h&&v.on).length;return{_t:'host',Name:h,ConnectionState:x.state,PowerState:'PoweredOn',NumCpu:32,CpuUsageMhz:x.state==='Maintenance'?190:Math.round(900+n*1250),MemoryTotalGB:512,Version:'8.0.2',Parent:x.cluster}};
+const hostObj=(w,h)=>{const x=w.hosts[h],on=Object.values(w.vms).filter(v=>v.host===h&&v.on),n=on.length;return{_t:'host',Name:h,ConnectionState:x.state,PowerState:'PoweredOn',NumCpu:32,CpuUsageMhz:x.state==='Maintenance'?190:Math.round(900+n*1250),CpuTotalMhz:83200,MemoryUsageGB:Math.round((x.state==='Maintenance'?4:6+on.reduce((t,v)=>t+v.mem,0))*10)/10,MemoryTotalGB:512,Version:'8.0.2',Parent:x.cluster}};
 const dsObj=(w,d)=>({_t:'ds',Name:d,FreeSpaceGB:w.ds[d].free,CapacityGB:w.ds[d].cap,State:'Available'});
 const clObj=(w,c)=>({_t:'cluster',Name:c,HAEnabled:'True',DrsEnabled:(w.drsOn?w.drsOn[c]:c!=='AFT')?'True':'False',VMHosts:Object.keys(w.hosts).filter(h=>w.hosts[h].cluster===c).join(', ')});
 const wild=(pat,s)=>new RegExp('^'+pat.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i').test(s);
@@ -793,7 +793,13 @@ function psExec(nl,c,w,gate){
   if(n==='Sort-Object'){if(!data)continue;const p=a.pos||'Name';const k=Object.keys(data[0]||{}).find(x=>x.toLowerCase()===p.toLowerCase())||'Name';data=data.slice().sort((x,y)=>{const A=x[k],B=y[k];return(typeof A==='number'?A-B:String(A).localeCompare(String(B)))*(a.named['-descending']?-1:1)});continue}
   if(n==='Format-List'){fmt='list';if(a.pos)cols=a.pos.split(',').map(x=>x.trim()).map(x=>x==='*'?null:Object.keys(data[0]||{}).find(k=>k.toLowerCase()===x.toLowerCase())||x).filter(Boolean);if(a.pos==='*')cols=null;continue}
   if(n==='Format-Table'){fmt='table';if(a.pos)cols=a.pos.split(',').map(x=>x.trim()).map(x=>Object.keys(data[0]||{}).find(k=>k.toLowerCase()===x.toLowerCase())||x);continue}
-  if(n==='Measure-Object'){out=`Count    : ${data?data.length:0}\nAverage  :\nSum      :\nMaximum  :\nMinimum  :\nProperty :`;data=null;continue}
+  if(n==='Measure-Object'){const pr=a.named['-property']||a.pos||'',rows=data||[];let sum='',avg='',max='',min='';
+   if(pr){const P=(PROPS[type]||[]).find(x=>x.toLowerCase()===pr.toLowerCase());if(!P&&rows.length)return{err:`Measure-Object: The property "${pr}" cannot be found in the input for any objects.`};
+    const nums=rows.map(o=>+o[P]).filter(x=>!isNaN(x));const r2=x=>Math.round(x*100)/100;
+    if(a.named['-sum'])sum=r2(nums.reduce((t,x)=>t+x,0));if(a.named['-average'])avg=nums.length?r2(nums.reduce((t,x)=>t+x,0)/nums.length):'';if(a.named['-maximum'])max=nums.length?Math.max(...nums):'';if(a.named['-minimum'])min=nums.length?Math.min(...nums):'';
+    if(type==='host'&&P==='MemoryUsageGB'&&sum!=='')sawSet(c,'memsum',String(sum));
+    out=`Count    : ${rows.length}\nAverage  : ${avg}\nSum      : ${sum}\nMaximum  : ${max}\nMinimum  : ${min}\nProperty : ${P||pr}`}
+   else out=`Count    : ${rows.length}\nAverage  :\nSum      :\nMaximum  :\nMinimum  :\nProperty :`;data=null;continue}
   if(['Start-VM','Stop-VM','Restart-VM'].includes(n)){
    let names;if(!first&&type==='vm')names=data.map(o=>o.Name);else{const r=pickNames(Object.keys(w.vms),a.pos,'VM',n);if(r.err)return{err:r.err};names=r.items}
    if(!names.length)return{err:`${n}: Cannot validate argument on parameter 'VM'. The argument is null or empty.`};
@@ -828,6 +834,7 @@ function psExec(nl,c,w,gate){
  if(!data.length)return{out:'',ev:evOut,note};
  const C=cols||DEFCOLS[type]||Object.keys(data[0]).filter(k=>k!=='_t');
  if(type==='vm'&&(fmt==='list'||C.includes('VMHost')))data.forEach(o=>sawSet(c,'vmhost',o.Name));
+ if(type==='host'&&(fmt==='list'||C.includes('MemoryUsageGB')))data.forEach(o=>sawSet(c,'hostmem',o.Name));
  return{out:fmt==='list'?listFmt(data,cols):table(data,C),type,note:note||PSNOTE[type],ev:evOut};
 }
 const PSNOTE={vm:'PowerState tells you if a VM runs. Get-VM shows no host by default: add <code>| Select-Object Name,PowerState,VMHost</code> or <code>| Format-List</code> to see every property.',host:'ConnectionState: Connected is normal, Maintenance means the host refuses to run VMs, NotResponding means vCenter lost contact. CpuUsageMhz shows how busy it is.',ds:'Free and total space in GB. Divide to get the percentage used.',event:'Events are vCenter\'s diary: what happened, when, and which account did it. Newest first.',cluster:'A cluster is a group of hosts that share storage and can take over from each other.'};
@@ -1183,6 +1190,67 @@ const TICKETS={
    take:['Get-Stat vm -Stat cpu.ready.summation -Realtime shows waiting time; divide by 20000 and by the vCPUs.','Low usage and high ready: fewer vCPUs, not more.','Removing vCPUs always needs a shutdown, so agree a window.','Measure again after the change. "It feels faster" is not verification.']
   },
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>The hold crew are on break from 10:30 to 10:45. The cargo system may be down in that window.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>cargo-app-01 is the web front end of the cargo system and answers on port 443. Before October it ran happily on 2 vCPUs.</p>'
+ },
+ 't1-n1':{module:'m1',type:'change',npc:'seraphine',reward:180,
+  title:'Can AFT lose a host?',
+  brief:'"The insurer asks one question before renewal: if one host in the aft cluster fails, does everything come back on the other? I need a yes I can sign, with numbers. If the answer is no, make it a yes. The ship\'s office does not use the HR app on Sundays."',
+  ci:['esx-01','esx-02','hr-app-01'],
+  watch:['cargo','med','mail','dir','doors'],
+  stack:[['esx-01','host','esx-01'],['esx-02','host','esx-02'],['cargo-db-01','vm','cargo-db-01'],['hr-app-01','vm','hr-app-01']],
+  fault:{node:'hr-app-01',evidence:c=>!!(c.saw&&c.saw.stat&&c.saw.stat['hr-app-01:mem.usage.average'])},
+  setup(w){
+   w.clock=11*60+5;
+   const M={'nav-log-01':16,'nav-log-02':16,'comms-relay-01':16,'dock-ctl-01':8,'med-rec-01':48,'cabin-tv-01':8,'door-ctl-01':8,'ad-dc-01':16,'dns-01':8,'backup-proxy-01':24,'crew-portal-01':16,'lounge-music-01':8,'galley-disp-01':8,'cabin-tv-02':8,'crew-wiki-01':8,'cargo-db-01':96,'cargo-app-01':16,'lounge-pos-01':8,'door-ctl-02':8,'print-01':4,'mon-01':16,'ad-dc-02':16,'dns-02':8,'crew-mail-01':32,'hr-app-01':160,'spa-book-01':16};
+   Object.entries(M).forEach(([n,g])=>{w.vms[n].mem=g});
+   w.vms['hr-app-01'].memUse=6;w.vms['cargo-db-01'].memUse=78;w.vms['med-rec-01'].memUse=64;w.vms['crew-mail-01'].memUse=52;
+   w.events.push({t:'09:40',e:'hr-app-01',u:'MERIDIAN\\svc-office',m:'Reconfigured hr-app-01 on esx-02 (Mar: MemoryGB 16 -> 160, "year-end payroll report")'});
+   w.comms.push({t:'11:00',who:'seraphine',text:'The HR app may be down this morning if you need it. Nobody from the office is aboard today.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   const v=w.vms['hr-app-01'];
+   if(ev.k==='setvm'){if(c.saw){c.saw.memsum={};if(c.saw.stat)delete c.saw.stat['hr-app-01:mem.usage.average']}
+    if(ev.vms.some(n=>n!=='hr-app-01'))return{fail:['right-size',`Resized ${ev.vms.filter(n=>n!=='hr-app-01').join(', ')}, which really uses its memory.`],why:'Only shrink what you measured as oversized. cargo-db-01 actively uses most of its memory; taking it away makes it swap and crawl.'};
+    if(ev.mem!=null&&ev.mem<12)return{fail:['right-size',`Gave hr-app-01 only ${ev.mem} GB.`],why:'It actively uses about 10 GB. Right-sizing means what it uses plus headroom, not as small as possible. Below its working set it starts swapping.'};
+    if(ev.mem!=null){v.memUse=Math.min(90,Math.round(6*160/ev.mem))}
+   }
+   if(ev.k==='hardstop'&&ev.vms.length)return{fail:['graceful',`Pulled the plug on ${ev.vms.join(', ')} with Stop-VM.`],why:'Even an unused app deserves a clean shutdown: Shutdown-VMGuest.'};
+   if(ev.k==='guestdown'&&ev.vms.some(n=>n!=='hr-app-01'))return{fail:['smallest-fix','Shut down a VM that is in use.'],why:'Only the HR app had an agreed window today.'};
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know the two hosts and the VM the office owns.'],
+   ['scope','Scope',(w,c)=>c.scoped||(c.scoped=!!(c.saw&&c.saw.hostmem&&c.saw.hostmem['esx-01']&&c.saw.hostmem['esx-02'])),'You have the memory numbers of both hosts.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name what makes it a no, then prove it.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'The oversized VM is measured, not guessed.'],
+   ['fix','Fix',w=>{const v=w.vms['hr-app-01'],tot=Object.values(w.vms).filter(x=>x.on&&w.hosts[x.host].cluster==='AFT').reduce((t,x)=>t+x.mem,0)+12;return v.on&&v.mem<=32&&v.mem>=12&&tot<=512},'Everything AFT runs now fits on one host.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.memsum&&Object.keys(c.saw.memsum).some(k=>+k<=512)),'You added it up yourself: the total fits in one host.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['Look at both hosts: Get-VMHost esx-01,esx-02. Then add them up: Get-VMHost esx-01,esx-02 | Measure-Object MemoryUsageGB -Sum. Compare with what one host has.','608 GB in use, 512 GB in one host: a no. Find who is holding memory they do not use: Get-VM -Location esx-02 | Sort-Object MemoryGB -Descending | Select-Object -First 3 Name,MemoryGB, then Get-Stat <vm> -Stat mem.usage.average -Realtime.','hr-app-01 has 160 GB and uses about 6%. Write the rollback, then Shutdown-VMGuest hr-app-01, Set-VM hr-app-01 -MemoryGB 16, Start-VM hr-app-01, and add the hosts up again.'],
+  checks:[
+   ['Names the oversized VM','what',/hr-app-01/i],
+   ['Gives the numbers','why|verify',/\d{3}/],
+   ['Explains N+1','why',/n\+1|one host|lose a host|fail|512/i],
+   ['Rollback restores the old size','rollback',/160|memorygb|set-vm|back/i],
+   ['Verified with a sum','verify',/measure-object|sum|memoryusagegb|total/i],
+   ['Follow-up keeps it true','follow',/admission|review|monitor|capacity|alarm|policy|right.?size|quarter|month/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb esx-01, esx-02, hr-app-01','Two hosts of 512 GB, and the ship\'s office VM.'],
+    ['Scope','Get-VMHost esx-01,esx-02 | Measure-Object MemoryUsageGB -Sum','About 608 GB in use across the pair. One host has 512.'],
+    ['Hypothesis','"hr-app-01, it holds far more memory than it uses"','Not the hosts, a VM.'],
+    ['Isolate','Get-Stat hr-app-01 -Stat mem.usage.average -Realtime','About 6% of 160 GB in active use.'],
+    ['Fix','Shutdown-VMGuest hr-app-01, Set-VM hr-app-01 -MemoryGB 16, Start-VM hr-app-01','In the window the captain gave.'],
+    ['Verify','Get-VMHost esx-01,esx-02 | Measure-Object MemoryUsageGB -Sum','About 464 GB: it fits in one host, with room to spare.'],
+    ['Record','what, why, rollback, verification, follow-up','A yes the captain can sign, with numbers.']
+   ],
+   readings:[['Get-VMHost','esx-01 about 198 GB, esx-02 about 410 GB of 512. Each looks fine on its own.'],['Measure-Object ... -Sum','Together about 608 GB. If esx-01 fails, 198 GB has to fit into the 102 GB left on esx-02. It does not.'],['mem.usage.average','hr-app-01 at 6%: about 10 GB of 160 really used. Sized in March for a year-end report and never shrunk.'],['cargo-db-01 at 78%','Big, but it uses what it has. Not the one to shrink.']],
+   senior:['"Each host is under 80%" sounds safe and means nothing for failover. Always add the cluster up.','This counts memory. CPU can be shared and slowed down; memory cannot. Memory is usually what breaks N+1.','Turn on HA admission control so the cluster refuses a new VM that would break N+1, instead of you finding out during a failure.','Ask the office to request big sizes with an end date, so the next payroll report shrinks itself.'],
+   take:['Get-VMHost | Measure-Object MemoryUsageGB -Sum: the N+1 question in one line.','N+1 means the total fits on n-1 hosts, not that every host has room.','Find the biggest holders: Sort-Object MemoryGB -Descending, then measure their real usage.','Shrinking memory needs a shutdown, so ask for a window.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>The captain agreed: hr-app-01 may be down this morning. Nothing else.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>The AFT hosts (esx-01, esx-02) have 512 GB of memory each. hr-app-01 belongs to the ship\'s office.</p>'
  },
  't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:120,
   title:'The galley order screens are black',
