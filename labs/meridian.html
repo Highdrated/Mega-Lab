@@ -367,13 +367,15 @@ const CONCEPTS={
  'evidence':{q:'When are you allowed to call something the fault?',a:'Only when you have evidence: output, a log line, a state you saw yourself. A hunch is a hypothesis to test, not a finding.'},
  'smallest-fix':{q:'Why not just reboot the host when something on it is broken?',a:'A reboot is the biggest hammer: it takes minutes, drops everything still running, and often does not touch the cause. Find the cause, then apply the smallest fix that removes it.'},
  'collateral':{q:'Before you run a command that changes something, what do you check, and who do you tell?',a:'What else runs on or depends on the thing you change, and the owners of those services. Nobody should learn about your change from their own users.'},
+ 'graceful':{q:'What is the difference between Stop-VM and Shutdown-VMGuest?',a:'Stop-VM is a hard power-off, like pulling the plug: open files and databases can be left damaged. Shutdown-VMGuest asks the guest OS to shut down cleanly. Use Stop-VM only when the guest no longer answers.'},
+ 'right-size':{q:'A VM is slow, its CPU usage is low and its CPU ready is high. What do you do?',a:'Give it fewer vCPUs, not more. High ready with low usage means the VM waits for enough free cores at once. Right-size to what it really uses; it needs a short shutdown, so plan the window with the owner.'},
  'anti-affinity':{q:'How many VMs can one anti-affinity rule hold in a cluster of two hosts?',a:'Two. Every VM in the rule needs its own host, so a rule can never hold more VMs than the cluster has hosts. Make one rule per redundant pair.'},
  'record':{q:'What five things does an incident record need here?',a:'What happened, why (root cause), how to roll back what you did, how you verified the service, and the follow-up that stops it happening again.'}
 };
 
 const MODULES=[
  {id:'m0',n:0,name:'Basics',lessons:['l0-orient','l0-team','l0-stack'],tickets:['t0-shake'],mission:'x0-map'},
- {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc'],mission:'x1-vm'},
+ {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc','t1-dimm','t1-ready'],mission:'x1-vm'},
  {id:'m2',n:2,name:'Windows Server'},
  {id:'m3',n:3,name:'Storage'},
  {id:'m4',n:4,name:'Backup and DR'},
@@ -546,6 +548,7 @@ const CMDLETS={
  'New-DrsRule':{params:{'-Cluster':'cluster','-Name':'str','-KeepTogether':'bool','-VM':'vm','-Confirm':'switch'},pos:'-Name'},
  'Set-Cluster':{params:{'-Cluster':'cluster','-DrsEnabled':'bool','-Confirm':'switch'},pos:'-Cluster'},
  'Get-VMQuestion':{params:{'-VM':'vm'},pos:'-VM'},
+ 'Shutdown-VMGuest':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
  'Set-VMQuestion':{params:{'-Option':'qopt','-Confirm':'switch'},pos:null},
  'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'},
  'Test-Connection':{params:{'-TargetName':'vm','-Count':'int'},pos:'-TargetName'},
@@ -553,8 +556,8 @@ const CMDLETS={
  'ping':{params:{},pos:'vm',syn:'ping <host>'}
 };
 const PALIAS={'?':'Where-Object',where:'Where-Object',select:'Select-Object',sort:'Sort-Object',fl:'Format-List',ft:'Format-Table',measure:'Measure-Object'};
-const PROPS={question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
-const DEFCOLS={question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const PROPS={vmguest:['Name','State','IPAddress','OSFullName'],question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const DEFCOLS={vmguest:['State','IPAddress','OSFullName'],question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
 const VC='vcenter.meridian.local';
 
 function wvalues(kind){
@@ -609,7 +612,7 @@ function see(c,o){
  if(o._t==='host')s.host[o.Name]=o.ConnectionState;
 }
 
-const VIRT_CMDS=['Get-VMQuestion','Set-VMQuestion','Move-VM','Set-VM','Get-Snapshot','New-Snapshot','Remove-Snapshot','Get-Stat','Get-CDDrive','Set-CDDrive','Get-DrsRule','New-DrsRule','Set-Cluster'];
+const VIRT_CMDS=['Shutdown-VMGuest','Get-VMQuestion','Set-VMQuestion','Move-VM','Set-VM','Get-Snapshot','New-Snapshot','Remove-Snapshot','Get-Stat','Get-CDDrive','Set-CDDrive','Get-DrsRule','New-DrsRule','Set-Cluster'];
 const unq=x=>String(x==null?'':x).replace(/^['"]|['"]$/g,'');
 function sawSet(c,k,n){const s=c.saw||(c.saw={vm:{},hostVms:{},host:{},events:{},logs:{},svc:{},esxiVms:{}});(s[k]||(s[k]={}))[n]=true}
 function snapObj(w,vm,x){return{_t:'snap',VM:vm,Name:x.Name,Description:x.Description||'',Created:x.Created,SizeGB:x.SizeGB,PowerState:w.vms[vm].on?'PoweredOn':'PoweredOff'}}
@@ -618,6 +621,13 @@ const confirmOut=(op,tgt)=>`Confirm\nAre you sure you want to perform this actio
 function virtExec(n,a,seg,first,data,type,c,w,nl){
  w.snaps=w.snaps||{};w.drs=w.drs||{AFT:[],FWD:[]};w.drsOn=w.drsOn||{AFT:false,FWD:true};
  const ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
+ if(n==='Shutdown-VMGuest'){
+  const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
+  const off=r.items.filter(vn=>!w.vms[vn].on);if(off.length)return{ret:{err:`Shutdown-VMGuest: ${hhmm(w.clock)} Shutdown-VMGuest  Operation "Shutdown VM guest." failed for VM "${off[0]}" for the following reason: The VM is powered off.`}};
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Shutdown VM guest.',`VM '${r.items.join("', '")}'`)}};
+  r.items.forEach(vn=>{const v=w.vms[vn];v.on=false;v.paused=null;w.clock+=1;w.journal[vn]=(w.journal[vn]||[]).concat([[hhmm(w.clock),'systemd[1]: Stopping services for shutdown...'],[hhmm(w.clock),'systemd[1]: Reached target Power-Off.']]);w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`Guest OS shut down for ${vn} on ${v.host}`})});
+  return{data:r.items.map(vn=>({_t:'vm',Name:vn,State:'NotRunning',IPAddress:'',OSFullName:w.vms[vn].os==='windows'?'Microsoft Windows Server 2022':'Ubuntu Linux (64-bit)'})),type:'vmguest',cols:['State','IPAddress','OSFullName'],note:'Shutdown-VMGuest asks the operating system to shut down cleanly, through VMware Tools. Stop-VM pulls the plug.',ev:{k:'guestdown',vms:r.items}};
+ }
  if(n==='Get-VMQuestion'){
   let vms=Object.keys(w.vms);if(!first&&type==='vm')vms=data.map(o=>o.Name);else if(a.pos||a.named['-vm']){const r=pickNames(vms,a.named['-vm']||a.pos,'VM',n);if(r.err)return{ret:{err:r.err}};vms=r.items}
   const rows=vms.filter(vn=>w.vms[vn].paused).map(vn=>{sawSet(c,'question',vn);const v=w.vms[vn];return{_t:'question',VM:vn,Text:v.paused,Options:'Retry, Cancel'}});
@@ -640,18 +650,19 @@ function virtExec(n,a,seg,first,data,type,c,w,nl){
   const dn=(a.named['-destination']||'').toLowerCase(),dh=w.hosts[dn];
   if(!dn)return{ret:{err:"Move-VM: Missing an argument for parameter 'Destination'. Specify a parameter of type 'VIContainer' and try again."}};
   if(!dh)return{ret:{err:`Move-VM: Could not find VIContainer with name '${a.named['-destination']}'.`}};
-  const rows=[],ev=[];
+  const rows=[],ev=[],errs=[],fails=[];let fnote=null;
   for(const vn of r.items){const v=w.vms[vn],src=v.host;
    if(src===dn){rows.push(vmObj(w,vn));continue}
-   if(dh.state!=='Connected')return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "The operation is not allowed in the current state of the host."`,ev:{k:'move-fail',vm:vn,why:'maint',to:dn}}};
-   if(v.local)return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Currently connected device 'Hard disk 1' uses backing '[local-${src}] ${vn}/${vn}.vmdk', which is not accessible."`,note:'The disk lives on storage only the source host can reach. vMotion moves memory, not disks. A shut-down plus a storage move would be needed.',ev:{k:'move-fail',vm:vn,why:'local',to:dn}}};
-   if(v.iso)return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Currently connected device 'CD/DVD drive 1' uses backing '${v.iso}', which is not accessible."`,note:'A mounted ISO on storage the destination cannot see pins the VM to its host. Look at the CD drive.',ev:{k:'move-fail',vm:vn,why:'iso',to:dn}}};
-   if(w.hosts[src].cluster!==dh.cluster)return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Unable to access the virtual machine configuration: Unable to access file [${v.ds}] ${vn}/${vn}.vmx"`,note:`${dn} is in cluster ${dh.cluster} and cannot see ${v.ds}. vMotion needs storage both hosts share.`,ev:{k:'move-fail',vm:vn,why:'storage',to:dn}}};
+   if(dh.state!=='Connected'){errs.push(`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "The operation is not allowed in the current state of the host."`);fails.push({vm:vn,why:'maint'});continue}
+   if(v.local){errs.push(`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Currently connected device 'Hard disk 1' uses backing '[local-${src}] ${vn}/${vn}.vmdk', which is not accessible."`);fnote=fnote||'The disk lives on storage only the source host can reach. vMotion moves memory, not disks. A shut-down plus a storage move would be needed.';fails.push({vm:vn,why:'local'});continue}
+   if(v.iso){errs.push(`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Currently connected device 'CD/DVD drive 1' uses backing '${v.iso}', which is not accessible."`);fnote=fnote||'A mounted ISO on storage the destination cannot see pins the VM to its host. Look at the CD drive.';fails.push({vm:vn,why:'iso'});continue}
+   if(w.hosts[src].cluster!==dh.cluster){errs.push(`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Unable to access the virtual machine configuration: Unable to access file [${v.ds}] ${vn}/${vn}.vmx"`);fnote=fnote||`${dn} is in cluster ${dh.cluster} and cannot see ${v.ds}. vMotion needs storage both hosts share.`;fails.push({vm:vn,why:'storage'});continue}
    if(ask())return{ret:{confirm:nl,out:confirmOut('Move-VM',`VM '${vn}' to ${dn}`)}};
    v.host=dn;w.clock+=1;w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`Migrating ${vn} from ${src} to ${dn} completed`});ev.push({vm:vn,from:src,to:dn});
    rows.push(vmObj(w,vn));see(c,rows[rows.length-1]);
   }
-  return{data:rows,type:'vm',cols:['Name','PowerState','NumCpu','MemoryGB','VMHost'],ev:{k:'move',moves:ev}};
+  if(errs.length)return{ret:{err:(rows.length?rows.map(o=>`${o.Name}: now on ${o.VMHost}`).join('\n')+'\n':'')+errs.join('\n'),note:fnote,ev:{k:'move',moves:ev,fails}}};
+  return{data:rows,type:'vm',cols:['Name','PowerState','NumCpu','MemoryGB','VMHost'],ev:{k:'move',moves:ev,fails}};
  }
  if(n==='Set-VM'){
   const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
@@ -738,7 +749,7 @@ function virtExec(n,a,seg,first,data,type,c,w,nl){
 function psExec(nl,c,w,gate){
  const segs=nl.split(' | ');
  let data=null,type=null,out=null,note=null,cols=null,fmt='table',writes=[],evOut=null;
- const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Set-VMQuestion','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
+ const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Set-VMQuestion','Shutdown-VMGuest','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
  if(segs.some(s=>writeCmds.includes(s.split(' ')[0]))){const g=gate();if(g)return g}
  for(let si=0;si<segs.length;si++){
   const a=parseArgs(segs[si]),n=a.name,first=si===0;
@@ -790,7 +801,7 @@ function psExec(nl,c,w,gate){
    const rows=[];
    for(const vn of names){const v=w.vms[vn],h=w.hosts[v.host];
     if(n==='Start-VM'){if(h.state==='Maintenance')return{err:`Start-VM: ${hhmm(w.clock)} Start-VM  The operation for the entity "${vn}" failed with the following message: "The operation is not allowed in the current state of the host."`,ev:{k:'start-in-maint',vm:vn}};if(!v.on){v.on=true;w.clock+=1;w.journal[vn]=(w.journal[vn]||[]).concat([[hhmm(w.clock),'Started']]);w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`${vn} on ${v.host} is powered on`})}}
-    else{if(v.on){v.on=false;w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`${vn} on ${v.host} is powered off`})}if(n==='Restart-VM')v.on=true}
+    else{if(v.on){v.on=false;if(n==='Stop-VM')(evOut=evOut||{k:'hardstop',vms:[]}).vms.push(vn);w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`${vn} on ${v.host} is powered off`})}if(n==='Restart-VM')v.on=true}
     rows.push(vmObj(w,vn));rows[rows.length-1]._t='vm';see(c,rows[rows.length-1]);
    }
    data=rows;type='vm';cols=['Name','PowerState','NumCpu','MemoryGB'];continue;
@@ -899,10 +910,11 @@ function react(c,w,before){
  const T=cur(),out=[];
  SVCS.forEach(s=>{const now=svcUp(w,s),was=before[s.id];if(now===was)return;
   const who=CREW[s.owner];
-  if(!now){out.push({who:s.owner,text:T.sandbox?`${s.name} just went dark on my side. Was that you?`:`${s.name} just went down. Was that you? Nobody told me about work on it.`});if(!T.sandbox&&!(T.expectDown||[]).includes(s.id))c.collateral=(c.collateral||[]).concat([s.id])}
+  const agreed=!T.sandbox&&(T.expectDown||[]).includes(s.id);
+  if(!now){out.push({who:s.owner,text:T.sandbox?`${s.name} just went dark on my side. Was that you?`:agreed?`${s.name} is down now, as agreed. Tell me when it is back.`:`${s.name} just went down. Was that you? Nobody told me about work on it.`});if(!T.sandbox&&!(T.expectDown||[]).includes(s.id))c.collateral=(c.collateral||[]).concat([s.id])}
   else out.push({who:s.owner,text:(T.upLine&&T.upLine[s.id])||`${s.name} is back up on my side. Thanks.`});
  });
- (c.react||[]).forEach(r=>{if(r.k==='host-state')out.push({who:'odran',text:r.state==='Connected'?`I see ${r.host} just left maintenance mode. Yours? Make sure it is in the change log.`:`${r.host} just went into maintenance mode. Is that planned?`})});
+ (c.react||[]).forEach(r=>{if(r.k==='host-state'&&(T.plannedHosts||[]).includes(r.host))out.push({who:'odran',text:r.state==='Connected'?`${r.host} is back in the cluster. Good.`:`${r.host} is in maintenance mode. I will let the vendor in.`});else if(r.k==='host-state')out.push({who:'odran',text:r.state==='Connected'?`I see ${r.host} just left maintenance mode. Yours? Make sure it is in the change log.`:`${r.host} just went into maintenance mode. Is that planned?`})});
  c.react=[];
  out.forEach(m=>w.comms.push({t:hhmm(w.clock),who:m.who,text:m.text}));
  return out.length;
@@ -918,7 +930,7 @@ function renderComms(){
 }
 
 const VM02=['galley-disp-01','cabin-tv-02','crew-wiki-01'];
-const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','Move-VM <vm> -Destination <host>   Set-VM <vm> -NumCpu n -MemoryGB n','Get-Snapshot [-VM vm]   New-Snapshot -VM vm -Name name   ... | Remove-Snapshot','Get-Stat <vm> -Stat cpu.ready.summation -Realtime -MaxSamples 3','Get-CDDrive -VM vm   ... | Set-CDDrive -NoMedia','Get-DrsRule -Cluster c   New-DrsRule -Cluster c -Name n -KeepTogether $false -VM a,b   Set-Cluster c -DrsEnabled $true','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
+const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','Move-VM <vm> -Destination <host>   Set-VM <vm> -NumCpu n -MemoryGB n','Get-Snapshot [-VM vm]   New-Snapshot -VM vm -Name name   ... | Remove-Snapshot','Get-Stat <vm> -Stat cpu.ready.summation -Realtime -MaxSamples 3','Shutdown-VMGuest <vm>   (clean OS shutdown; Stop-VM pulls the plug)   Get-VMQuestion | Set-VMQuestion -Option Retry','Get-CDDrive -VM vm   ... | Set-CDDrive -NoMedia','Get-DrsRule -Cluster c   New-DrsRule -Cluster c -Name n -KeepTogether $false -VM a,b   Set-Cluster c -DrsEnabled $true','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
 const WAYS_IN='<p class="lbl">Ways in</p><p>vCenter: <code>Connect-VIServer vcenter.meridian.local</code>, then PowerCLI. Hosts: <code>ssh root@esx-01</code>, <code>esx-02</code>, <code>esx-03</code>, ESXi shell. Linux VMs: <code>ssh</code> with your own account, root login is disabled. Windows servers do not take SSH.</p>';
 const TICKETS={
  'sandbox':{sandbox:true,module:'*',type:'free roam',npc:'odran',reward:0,
@@ -1049,6 +1061,128 @@ const TICKETS={
    take:['Get-VM name1,name2 | Select-Object Name,VMHost answers "are my pairs really apart?" in one line.','Anti-affinity: one rule per pair, never more VMs than hosts.','A rule does nothing while DRS is off.','vMotion fixes placement live. No reboot needed.']
   },
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: directory services</p><p>The ship runs two domain controllers (ad-dc-01, ad-dc-02) and two DNS servers (dns-01, dns-02). Each pair is built so one can fail without anyone noticing. The 01s belong on esx-01, the 02s on esx-02.</p><p class="lbl" style="margin-top:18px">Runbook: host patching</p><p>The patch job evacuates a host with vMotion, patches it, and brings it back. It does not move VMs back afterwards.</p>'
+ },
+ 't1-dimm':{module:'m1',type:'change',npc:'odran',reward:170,
+  title:'Empty esx-02 for a memory swap',
+  brief:'"esx-02 keeps logging memory errors on one DIMM. The vendor engineer is at the door to swap it. The host has to be empty and in maintenance mode before he opens it. Keep the damage as small as you can."',
+  ci:['esx-02','print-01','galley-disp-01'],
+  watch:['galley','tv46','wiki','pos','cargo','mail','doors','dir'],
+  expectDown:['galley','tv46','wiki'],
+  plannedHosts:['esx-02'],
+  upLine:{},
+  stack:[['galley-disp-01','vm','galley-disp-01'],['print-01','vm','print-01'],['esx-02','host','esx-02'],['DS-HULL-01','ds','DS-HULL-01']],
+  fault:{node:'esx-02',evidence:c=>!!(c.saw&&(c.saw.logs['esx-02']||c.saw.events['esx-02']))},
+  setup(w){
+   w.clock=10*60+2;
+   w.vms['print-01'].iso='[local-esx-02] iso/printer-driver-2026.iso';
+   const L=w.logs['esx-02'];
+   L['vmkernel.log']=[['2026-11-10T05:44:12Z','warning','vmkernel','MCA: Corrected memory error on DIMM B2 (count 214 in last 24h)'],['2026-11-10T08:12:40Z','warning','vmkernel','MCA: Corrected memory error on DIMM B2 (count 391 in last 24h)'],['2026-11-10T09:58:03Z','warning','vmkernel','MCA: Corrected memory error rate above threshold on DIMM B2, replacement advised']];
+   w.events.push({t:'08:12',e:'esx-02',u:'',m:'Alarm "Host memory status" changed from Green to Yellow (DIMM B2)'});
+   w.events.push({t:'09:20',e:'print-01',u:'MERIDIAN\\odran',m:'Reconfigured print-01: CD/DVD drive 1 connected to [local-esx-02] iso/printer-driver-2026.iso'});
+   w.comms.push({t:'09:40',who:'linnea',text:'Odran says you might need the galley screens and cabin TV 4-6 for a bit. Between 10 and 11 is fine, the galley is closed then. Please shut them down properly.'});
+   w.comms.push({t:'10:01',who:'odran',text:'Vendor is here. The wiki can go down too, nobody reads it at this hour.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='move'){if(c.saw)c.saw.svc={}}
+   const local=n=>w.vms[n].local;
+   if(ev.k==='hardstop'&&ev.vms.length)return{fail:['graceful',`Pulled the plug on ${ev.vms.join(', ')} with Stop-VM.`],why:'Stop-VM is a hard power-off: the guest gets no chance to close files. Linnea even asked to shut them down properly. Shutdown-VMGuest asks the OS to stop cleanly.'};
+   if(ev.k==='guestdown'&&ev.vms.some(n=>!local(n)))return{fail:['smallest-fix',`Shut down ${ev.vms.filter(n=>!local(n)).join(', ')}, which could have moved live.`],why:'Only VMs on local disks have to go down. Everything on shared storage can move with vMotion while it keeps running. Downtime nobody needed is still downtime.'};
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know what lives on esx-02 and who owns it.'],
+   ['scope','Scope',(w,c)=>!!(c.saw&&c.saw.hostVms['esx-02']),'You have the list of everything that must leave the host.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name the layer that needs the work, then confirm it.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'The hardware fault is confirmed in the host\'s own log.'],
+   ['fix','Fix',w=>Object.values(w.vms).filter(v=>v.reg==='esx-02').every(v=>v.local?!v.on:(v.on&&v.host!=='esx-02'))&&w.hosts['esx-02'].state==='Maintenance','The host is empty and in maintenance mode, and everything that could stay up did.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.host['esx-02']==='Maintenance'&&c.saw.svc&&Object.keys(c.saw.svc).some(k=>c.saw.svc[k]===true&&['pos','cargo','mail','doors','dir'].includes(k))),'You saw the host in maintenance and a moved service answering.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['Look at what runs on the host: Get-VM -Location esx-02. Read the host log (ssh root@esx-02, then cat /var/log/vmkernel.log) to confirm the DIMM. The CMDB and Linnea\'s message tell you what may go down.','Try to move everything: Get-VM -Location esx-02 | Move-VM -Destination esx-01. Read every error. One VM is pinned by a mounted ISO, three live on local disks.','Write the rollback. Get-CDDrive -VM print-01 | Set-CDDrive -NoMedia, then move it. Shutdown-VMGuest galley-disp-01,cabin-tv-02,crew-wiki-01. Then Set-VMHost esx-02 -State Maintenance, and test a moved service.'],
+  checks:[
+   ['Names the host','what',/esx-02/i],
+   ['Says why: the DIMM','why',/dimm|memory|ecc|hardware/i],
+   ['Explains what had to go down','what|why',/local/i],
+   ['Rollback brings the host back','rollback',/connected|exit maintenance|move back|start/i],
+   ['Verified host state and a moved service','verify',/maintenance|get-vmhost/i],
+   ['Follow-up: restart and stop the local-disk trap','follow',/start|power on|local|shared|template|storage vmotion/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb esx-02, print-01, galley-disp-01','What lives there, who owns it, and what was agreed.'],
+    ['Scope','Get-VM -Location esx-02','Fourteen VMs to clear.'],
+    ['Hypothesis','"esx-02, because the vmkernel log shows DIMM B2 errors"','The host is the thing being repaired.'],
+    ['Isolate','ssh root@esx-02: cat /var/log/vmkernel.log  or  Get-VIEvent -Entity esx-02','Corrected memory errors climbing past the threshold.'],
+    ['Fix','Set-CDDrive -NoMedia on print-01, Get-VM -Location esx-02 | Move-VM -Destination esx-01, Shutdown-VMGuest the three local VMs, Set-VMHost esx-02 -State Maintenance','Move what can move, shut down cleanly what cannot.'],
+    ['Verify','Get-VMHost esx-02, Test-NetConnection cargo-db-01 -Port 443','Host in maintenance, services still answering from esx-01.'],
+    ['Record','what, why, rollback, verification, follow-up','After the swap: exit maintenance, start the three VMs, move their disks to shared storage.']
+   ],
+   readings:[['Move-VM ... print-01','Currently connected device CD/DVD drive 1 uses backing [local-esx-02]... : a forgotten ISO pins a VM to its host.'],['Move-VM ... galley-disp-01','Hard disk 1 on local storage: only a shutdown frees this host, or a storage move done in advance.'],['vmkernel.log','Corrected errors are a warning. The DIMM still works, but a rising count means it will fail.'],['Set-VMHost ... Maintenance','Refused while anything still runs. vSphere protects you from yourself.']],
+   senior:['Before the vendor touches anything, check the host is really in maintenance mode, with your own eyes.','The three local-disk VMs have now caused two incidents. Raise a change to move them to DS-HULL-01 with Storage vMotion.','esx-01 now carries the whole AFT cluster. Watch its CPU and memory until esx-02 is back.','After the swap, watch the vmkernel log for an hour. If errors continue, it was not the DIMM.'],
+   take:['Get-VM -Location host | Move-VM -Destination other evacuates a host in one line, and every error tells you why a VM stayed.','Mounted ISOs pin VMs. Get-VM | Get-CDDrive | Where-Object IsoPath finds them all.','Shutdown-VMGuest is a clean shutdown. Stop-VM is the plug.','Maintenance mode is the safety catch: the host refuses to run VMs.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>Linnea agreed: galley display and cabin TV decks 4-6 may be down between 10:00 and 11:00. Odran agreed the crew wiki may be down. Nothing else.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>galley-disp-01, cabin-tv-02 and crew-wiki-01 still run from local template disks on esx-02.</p>'
+ },
+ 't1-ready':{module:'m1',type:'incident',npc:'odran',reward:160,
+  title:'The cargo app is crawling',
+  brief:'"The cargo app is crawling again. Every screen takes ten seconds. Last month I gave it more CPUs and it did not help. The hold crew go on break at 10:30 for a quarter of an hour, if you need to take it down."',
+  ci:['cargo-app-01','esx-02'],
+  watch:['cargo'],
+  expectDown:['cargo'],
+  upLine:{cargo:'Screens are snappy again. What did you do?'},
+  stack:[['svc','service','Cargo system'],['cargo-app-01','vm','cargo-app-01'],['esx-02','host','esx-02'],['DS-HULL-01','ds','DS-HULL-01']],
+  fault:{node:'cargo-app-01',evidence:c=>!!(c.saw&&c.saw.stat&&c.saw.stat['cargo-app-01:cpu.ready.summation'])},
+  setup(w){
+   w.clock=10*60+31;
+   const v=w.vms['cargo-app-01'];v.cpu=8;v.mem=8;v.ready=13200;v.usage=11;
+   w.events.push({t:'09:12',e:'cargo-app-01',u:'MERIDIAN\\odran',m:'Reconfigured cargo-app-01 on esx-02 (12 Oct: NumCpu 2 -> 8, MemoryGB 4 -> 8)'});
+   w.events.push({t:'10:20',e:'cargo-app-01',u:'',m:'Alarm "Virtual machine CPU ready" changed from Green to Yellow'});
+   w.comms.push({t:'10:30',who:'odran',text:'Hold crew just went on break. Fifteen minutes.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   const v=w.vms['cargo-app-01'];
+   if(ev.k==='setvm'&&ev.vms.includes('cargo-app-01')){
+    if(c.saw){if(c.saw.stat)delete c.saw.stat['cargo-app-01:cpu.ready.summation'];c.saw.svc={}}
+    if(ev.cpu!=null&&ev.cpu>8)return{fail:['right-size','Gave a slow VM even more vCPUs.'],why:'High CPU ready with low usage means the VM waits for enough free cores at the same time. More vCPUs make it wait longer. The fix goes the other way.'};
+    if(v.cpu<=4){v.ready=null;v.usage=34}
+   }
+   if(ev.k==='hardstop'&&ev.vms.includes('cargo-app-01'))return{fail:['graceful','Pulled the plug on cargo-app-01 with Stop-VM.'],why:'The app had open sessions and files. Shutdown-VMGuest lets it close them; Stop-VM does not.'};
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know which VM serves the app and where it runs.'],
+   ['scope','Scope',(w,c)=>!!(c.saw&&c.saw.svc&&c.saw.svc.cargo!==undefined)||!!(c.saw&&c.saw.vm['cargo-app-01']),'It is up but slow. Now find where the time goes.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name the layer, then measure it.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'Measured, not guessed.'],
+   ['fix','Fix',w=>{const v=w.vms['cargo-app-01'];return v.on&&v.cpu<=4&&v.ready==null},'Right-sized and running again.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.stat&&c.saw.stat['cargo-app-01:cpu.ready.summation']&&c.saw.svc&&c.saw.svc.cargo===true),'Ready time back to normal and the service answers.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['Check what the VM was given: Get-VM cargo-app-01 | Select-Object Name,NumCpu,MemoryGB,VMHost. Then measure: Get-Stat cargo-app-01 -Stat cpu.usage.average -Realtime -MaxSamples 3.','Now the waiting time: Get-Stat cargo-app-01 -Stat cpu.ready.summation -Realtime -MaxSamples 3. Divide by 20000 for percent, then by the vCPU count. Above 5% per vCPU users feel it.','Low usage plus high ready means too many vCPUs. Write the rollback, then in the break: Shutdown-VMGuest cargo-app-01, Set-VM cargo-app-01 -NumCpu 2, Start-VM cargo-app-01, then measure again and test port 443.'],
+  checks:[
+   ['Names the VM','what',/cargo-app-01/i],
+   ['Root cause: too many vCPUs','why',/vcpu|cpu ready|ready|oversiz|too many|8/i],
+   ['Rollback says how to undo the resize','rollback',/8|numcpu|set-vm|back/i],
+   ['Verified with a measurement','verify',/ready|get-stat|ms|%/i],
+   ['Follow-up stops a repeat','follow',/right.?size|review|monitor|alarm|policy|request|process|ready|baseline/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb cargo-app-01, cmdb esx-02','The app VM and its host.'],
+    ['Scope','Test-NetConnection cargo-app-01 -Port 443, Get-VM cargo-app-01 | Select-Object Name,NumCpu,MemoryGB','Up, but slow, and it has 8 vCPUs.'],
+    ['Hypothesis','"cargo-app-01, it has far more vCPUs than it uses"','The VM configuration, not the host.'],
+    ['Isolate','Get-Stat cargo-app-01 -Stat cpu.usage.average / cpu.ready.summation -Realtime','About 11% usage, about 8% ready per vCPU.'],
+    ['Fix','Shutdown-VMGuest cargo-app-01, Set-VM cargo-app-01 -NumCpu 2, Start-VM cargo-app-01','Fewer vCPUs, in the agreed break.'],
+    ['Verify','Get-Stat ... cpu.ready.summation, Test-NetConnection cargo-app-01 -Port 443','Ready back near zero, service up.'],
+    ['Record','what, why, rollback, verification, follow-up','A sizing review stops the next "just add CPUs".']
+   ],
+   readings:[['Get-VM ... NumCpu','8 vCPUs for an app that used 2 before October.'],['cpu.usage.average','About 11%: the VM is not short of CPU power.'],['cpu.ready.summation','Around 13000 ms per 20 s sample: 66% in total, over 8% per vCPU. It spends its time waiting for 8 free cores at once.'],['Get-VIEvent','Odran raised it from 2 to 8 on 12 October, after the last slowness.']],
+   senior:['Tell Odran why his fix made it worse, kindly. It is the most common sizing mistake there is.','Ask what was slow in October. If it was not CPU, the real cause is still out there.','Suggest a rule: no vCPU increase without a usage and ready measurement first.','A short window agreed with the owner turned a risky change into a non-event.'],
+   take:['Get-Stat vm -Stat cpu.ready.summation -Realtime shows waiting time; divide by 20000 and by the vCPUs.','Low usage and high ready: fewer vCPUs, not more.','Removing vCPUs always needs a shutdown, so agree a window.','Measure again after the change. "It feels faster" is not verification.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>The hold crew are on break from 10:30 to 10:45. The cargo system may be down in that window.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>cargo-app-01 is the web front end of the cargo system and answers on port 443. Before October it ran happily on 2 vCPUs.</p>'
  },
  't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:120,
   title:'The galley order screens are black',
