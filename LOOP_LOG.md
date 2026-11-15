@@ -16,9 +16,9 @@ Goal: make the Mega Lab more efficient, immersive and motivating. One focused ch
 # Improvement loop — 15 Nov 2026
 
 - **Cycle 1 (10:00)** Keyboard audit: every lab with typing handles Enter, and Cmd+Enter alongside Ctrl+Enter where it submits; the remaining Ctrl-only keys are real terminal shortcuts (Ctrl+R/L/C), correct on a Mac too. **Meridian Module 1 · Virtualization, part 1**: three lessons (12 pages, 6 new diagrams): hypervisor & VM files, vCPU/RAM overcommit, vCenter/clusters; vMotion, DRS + anti-affinity, HA, N+1 maths; snapshots, the forgotten snapshot, thin vs thick, a before-you-touch-a-VM checklist. Numbers match the ship (DS-HULL-01 2048 GB, 80%). New real-hardware mission: Snapshot, break, revert (UTM or Synology VMM).
+- **Cycle 2 (11:30)** **Meridian console, virtualization commands**: Move-VM (vMotion; refuses local disks, mounted ISOs, other-cluster storage, hosts in maintenance, with real vCenter error text), Set-VM (CPU/RAM; refuses on a running VM unless hot-add and only upwards), Get/New/Remove-Snapshot (real default columns, merge frees datastore space, takes time), Get-Stat -Realtime (cpu.ready.summation, cpu.usage.average, mem.usage.average), Get/Set-CDDrive -NoMedia, Get/New-DrsRule (anti-affinity), Set-Cluster -DrsEnabled. All changes go through the CMDB/rollback gate, ask Confirm, log vCenter events and emit ticket events. Help, Get-Help syntax and Tab completion updated. Old saves keep working.
 
 ## Left for next time
 
-1. Meridian console: add Move-VM, Get-Snapshot, New-Snapshot, Remove-Snapshot, NumCpu/MemoryGB fields (the Virtualization lessons mention them)
 2. Add the 8 Meridian images from `labs/img/meridian/PROMPTS.md` (needs Gemini)
 3. Meridian Module 1 tickets (5): forgotten snapshot fills DS-HULL-01; both DCs on one host (anti-affinity); vMotion blocked by a mounted ISO; slow VM with too many vCPUs (CPU ready); N+1 check before patching esx-01

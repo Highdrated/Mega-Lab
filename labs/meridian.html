@@ -505,7 +505,8 @@ const DSS0={'DS-HULL-01':{cluster:'AFT',cap:2048,free:412,lun:'LUN 12 on SAN-A'}
 function baseWorld(){
  const w={clock:7*60+42,hosts:{},vms:{},ds:JSON.parse(JSON.stringify(DSS0)),events:[],logs:{},journal:{},comms:[],f:{},svcLast:{}};
  Object.entries(HOSTS0).forEach(([h,v])=>{w.hosts[h]={...v,state:'Connected',uptimeH:24*41+3}; w.logs[h]={'hostd.log':[['2026-11-10T06:00:01Z','info','hostd','Scheduled health check passed']],'esxupdate.log':[],'vmkernel.log':[['2026-11-10T05:12:44Z','info','vmkernel','NetPort: link up vmnic0']]}});
- let id=1;VMLIST.forEach(([n,h,os,disk])=>{w.vms[n]={vmid:id++,host:h,reg:h,os,on:true,ds:HOSTS0[h].cluster==='FWD'?'DS-BOW-01':'DS-HULL-01',local:!!disk,cpu:2,mem:4}});
+ let id=1;VMLIST.forEach(([n,h,os,disk])=>{w.vms[n]={vmid:id++,host:h,reg:h,os,on:true,ds:HOSTS0[h].cluster==='FWD'?'DS-BOW-01':'DS-HULL-01',local:!!disk,cpu:2,mem:4,iso:null,hotadd:false,ready:null,usage:null,memUse:null}});
+ w.snaps={};w.drs={AFT:[],FWD:[]};w.drsOn={AFT:false,FWD:true};
  w.events.push({t:'06:00',e:'cluster AFT',u:'',m:'Scheduled health check completed'});
  SVCS.forEach(s=>w.svcLast[s.id]=true);
  return w;
@@ -532,14 +533,25 @@ const CMDLETS={
  'Format-List':{params:{'-Property':'prop'},pos:'-Property'},
  'Format-Table':{params:{'-Property':'prop','-AutoSize':'switch'},pos:'-Property'},
  'Measure-Object':{params:{},pos:null},
+ 'Move-VM':{params:{'-VM':'vm','-Destination':'host','-Confirm':'switch'},pos:'-VM'},
+ 'Set-VM':{params:{'-VM':'vm','-NumCpu':'int','-MemoryGB':'int','-Confirm':'switch'},pos:'-VM'},
+ 'Get-Snapshot':{params:{'-VM':'vm','-Name':'snap'},pos:'-VM'},
+ 'New-Snapshot':{params:{'-VM':'vm','-Name':'snap','-Description':'str','-Memory':'switch','-Quiesce':'switch','-Confirm':'switch'},pos:'-VM'},
+ 'Remove-Snapshot':{params:{'-RemoveChildren':'switch','-Confirm':'switch'},pos:null},
+ 'Get-Stat':{params:{'-Entity':'entity','-Stat':'stat','-Realtime':'switch','-MaxSamples':'int'},pos:'-Entity'},
+ 'Get-CDDrive':{params:{'-VM':'vm'},pos:'-VM'},
+ 'Set-CDDrive':{params:{'-NoMedia':'switch','-Confirm':'switch'},pos:null},
+ 'Get-DrsRule':{params:{'-Cluster':'cluster','-Name':'str'},pos:'-Cluster'},
+ 'New-DrsRule':{params:{'-Cluster':'cluster','-Name':'str','-KeepTogether':'bool','-VM':'vm','-Confirm':'switch'},pos:'-Name'},
+ 'Set-Cluster':{params:{'-Cluster':'cluster','-DrsEnabled':'bool','-Confirm':'switch'},pos:'-Cluster'},
  'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'},
  'Test-Connection':{params:{'-TargetName':'vm','-Count':'int'},pos:'-TargetName'},
  'ssh':{params:{},pos:'target',syn:'ssh [user@]host'},
  'ping':{params:{},pos:'vm',syn:'ping <host>'}
 };
 const PALIAS={'?':'Where-Object',where:'Where-Object',select:'Select-Object',sort:'Sort-Object',fl:'Format-List',ft:'Format-Table',measure:'Measure-Object'};
-const PROPS={vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
-const DEFCOLS={vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const PROPS={snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const DEFCOLS={snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
 const VC='vcenter.meridian.local';
 
 function wvalues(kind){
@@ -552,6 +564,9 @@ function wvalues(kind){
  if(kind==='ds')return Object.keys(w.ds);
  if(kind==='vc')return[VC];
  if(kind==='state')return['Connected','Maintenance'];
+ if(kind==='stat')return['cpu.ready.summation','cpu.usage.average','mem.usage.average'];
+ if(kind==='bool')return['$true','$false'];
+ if(kind==='snap')return[...new Set([].concat(...Object.values(w.snaps||{}).map(l=>l.map(x=>x.Name))))];
  if(kind==='port')return['443','8443','22','53','80'];
  if(kind==='prop')return[...new Set([].concat(...Object.values(PROPS)))];
  if(kind==='val')return['PoweredOn','PoweredOff','Connected','Maintenance'];
@@ -562,7 +577,7 @@ function wvalues(kind){
 const vmObj=(w,n)=>{const v=w.vms[n];return{_t:'vm',Name:n,PowerState:v.on?'PoweredOn':'PoweredOff',NumCpu:v.cpu,MemoryGB:v.mem,VMHost:v.host,Guest:v.os==='windows'?'Microsoft Windows Server 2022':v.os==='appliance'?'VMware Photon OS':'Ubuntu Linux (64-bit)',Datastore:v.ds,Id:'VirtualMachine-vm-'+(1000+v.vmid)}};
 const hostObj=(w,h)=>{const x=w.hosts[h],n=Object.values(w.vms).filter(v=>v.host===h&&v.on).length;return{_t:'host',Name:h,ConnectionState:x.state,PowerState:'PoweredOn',NumCpu:32,CpuUsageMhz:x.state==='Maintenance'?190:Math.round(900+n*1250),MemoryTotalGB:512,Version:'8.0.2',Parent:x.cluster}};
 const dsObj=(w,d)=>({_t:'ds',Name:d,FreeSpaceGB:w.ds[d].free,CapacityGB:w.ds[d].cap,State:'Available'});
-const clObj=(w,c)=>({_t:'cluster',Name:c,HAEnabled:'True',DrsEnabled:c==='AFT'?'False':'True',VMHosts:Object.keys(w.hosts).filter(h=>w.hosts[h].cluster===c).join(', ')});
+const clObj=(w,c)=>({_t:'cluster',Name:c,HAEnabled:'True',DrsEnabled:(w.drsOn?w.drsOn[c]:c!=='AFT')?'True':'False',VMHosts:Object.keys(w.hosts).filter(h=>w.hosts[h].cluster===c).join(', ')});
 const wild=(pat,s)=>new RegExp('^'+pat.replace(/[.+^${}()|[\]\\]/g,'\\$&').replace(/\*/g,'.*').replace(/\?/g,'.')+'$','i').test(s);
 function pickNames(list,args,label,cmd){
  if(!args)return{items:list};
@@ -590,14 +605,122 @@ function see(c,o){
  if(o._t==='host')s.host[o.Name]=o.ConnectionState;
 }
 
+const VIRT_CMDS=['Move-VM','Set-VM','Get-Snapshot','New-Snapshot','Remove-Snapshot','Get-Stat','Get-CDDrive','Set-CDDrive','Get-DrsRule','New-DrsRule','Set-Cluster'];
+const unq=x=>String(x==null?'':x).replace(/^['"]|['"]$/g,'');
+function sawSet(c,k,n){const s=c.saw||(c.saw={vm:{},hostVms:{},host:{},events:{},logs:{},svc:{},esxiVms:{}});(s[k]||(s[k]={}))[n]=true}
+function snapObj(w,vm,x){return{_t:'snap',VM:vm,Name:x.Name,Description:x.Description||'',Created:x.Created,SizeGB:x.SizeGB,PowerState:w.vms[vm].on?'PoweredOn':'PoweredOff'}}
+function vmTargets(n,a,first,data,type,w,param){if(!first&&type==='vm')return{items:data.map(o=>o.Name)};const v=a.named['-'+param.toLowerCase()]||a.pos;if(!v)return{err:`${n}: Cannot validate argument on parameter '${param}'. The argument is null or empty.`};return pickNames(Object.keys(w.vms),v,'VM',n)}
+const confirmOut=(op,tgt)=>`Confirm\nAre you sure you want to perform this action?\nPerforming the operation "${op}" on target "${tgt}".\n[Y] Yes  [A] Yes to All  [N] No  [L] No to All  [?] Help (default is "Y"):`;
+function virtExec(n,a,seg,first,data,type,c,w,nl){
+ w.snaps=w.snaps||{};w.drs=w.drs||{AFT:[],FWD:[]};w.drsOn=w.drsOn||{AFT:false,FWD:true};
+ const ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
+ if(n==='Move-VM'){
+  const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
+  const dn=(a.named['-destination']||'').toLowerCase(),dh=w.hosts[dn];
+  if(!dn)return{ret:{err:"Move-VM: Missing an argument for parameter 'Destination'. Specify a parameter of type 'VIContainer' and try again."}};
+  if(!dh)return{ret:{err:`Move-VM: Could not find VIContainer with name '${a.named['-destination']}'.`}};
+  const rows=[],ev=[];
+  for(const vn of r.items){const v=w.vms[vn],src=v.host;
+   if(src===dn){rows.push(vmObj(w,vn));continue}
+   if(dh.state!=='Connected')return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "The operation is not allowed in the current state of the host."`,ev:{k:'move-fail',vm:vn,why:'maint',to:dn}}};
+   if(v.local)return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Currently connected device 'Hard disk 1' uses backing '[local-${src}] ${vn}/${vn}.vmdk', which is not accessible."`,note:'The disk lives on storage only the source host can reach. vMotion moves memory, not disks. A shut-down plus a storage move would be needed.',ev:{k:'move-fail',vm:vn,why:'local',to:dn}}};
+   if(v.iso)return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Currently connected device 'CD/DVD drive 1' uses backing '${v.iso}', which is not accessible."`,note:'A mounted ISO on storage the destination cannot see pins the VM to its host. Look at the CD drive.',ev:{k:'move-fail',vm:vn,why:'iso',to:dn}}};
+   if(w.hosts[src].cluster!==dh.cluster)return{ret:{err:`Move-VM: ${hhmm(w.clock)} Move-VM  The operation for the entity "${vn}" failed with the following message: "Unable to access the virtual machine configuration: Unable to access file [${v.ds}] ${vn}/${vn}.vmx"`,note:`${dn} is in cluster ${dh.cluster} and cannot see ${v.ds}. vMotion needs storage both hosts share.`,ev:{k:'move-fail',vm:vn,why:'storage',to:dn}}};
+   if(ask())return{ret:{confirm:nl,out:confirmOut('Move-VM',`VM '${vn}' to ${dn}`)}};
+   v.host=dn;w.clock+=1;w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`Migrating ${vn} from ${src} to ${dn} completed`});ev.push({vm:vn,from:src,to:dn});
+   rows.push(vmObj(w,vn));see(c,rows[rows.length-1]);
+  }
+  return{data:rows,type:'vm',cols:['Name','PowerState','NumCpu','MemoryGB','VMHost'],ev:{k:'move',moves:ev}};
+ }
+ if(n==='Set-VM'){
+  const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
+  const nc=a.named['-numcpu']!=null?+a.named['-numcpu']:null,nm=a.named['-memorygb']!=null?+a.named['-memorygb']:null;
+  if(nc==null&&nm==null)return{ret:{err:'Set-VM: nothing to change. Give -NumCpu and/or -MemoryGB.'}};
+  if((nc!=null&&!(nc>=1&&nc<=32))||(nm!=null&&!(nm>=1&&nm<=512)))return{ret:{err:'Set-VM: Cannot validate argument. NumCpu must be 1-32 and MemoryGB 1-512.'}};
+  for(const vn of r.items){const v=w.vms[vn];if(v.on&&((nc!=null&&(nc<v.cpu||!v.hotadd))||(nm!=null&&(nm<v.mem||!v.hotadd))))return{ret:{err:`Set-VM: ${hhmm(w.clock)} Set-VM  The operation for the entity "${vn}" failed with the following message: "The attempted operation cannot be performed in the current state (Powered on)."`,note:'CPU and memory changes need the VM powered off, unless hot-add is enabled, and even then only upwards. Removing vCPUs always needs a shutdown, so it is a change with downtime.',ev:{k:'setvm-on',vm:vn}}}}
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Set',`VM '${r.items.join("', '")}'`)}};
+  const ev=[];r.items.forEach(vn=>{const v=w.vms[vn];if(nc!=null)v.cpu=nc;if(nm!=null)v.mem=nm;w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`Reconfigured ${vn} on ${v.host}`});ev.push(vn)});
+  return{data:r.items.map(x=>vmObj(w,x)),type:'vm',ev:{k:'setvm',vms:ev,cpu:nc,mem:nm}};
+ }
+ if(n==='Get-Snapshot'){
+  let vms;if(!first&&type==='vm')vms=data.map(o=>o.Name);else if(a.pos||a.named['-vm']){const r=pickNames(Object.keys(w.vms),a.named['-vm']||a.pos,'VM',n);if(r.err)return{ret:{err:r.err}};vms=r.items}else return{ret:{err:"Get-Snapshot: Cannot process argument because the value of argument 'VM' is null. Pipe Get-VM into it: Get-VM | Get-Snapshot"}};
+  const nf=a.named['-name']?unq(a.named['-name']):null,rows=[];
+  vms.forEach(vn=>{sawSet(c,'snap',vn);(w.snaps[vn]||[]).forEach(x=>{if(!nf||wild(nf,x.Name))rows.push(snapObj(w,vn,x))})});
+  return{data:rows,type:'snap',note:rows.length?'Get-Snapshot hides the useful columns by default. Add <code>| Select-Object VM,Name,Created,SizeGB</code> to see age and size.':'No snapshots on what you asked about.'};
+ }
+ if(n==='New-Snapshot'){
+  const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
+  const nm=unq(a.named['-name']||'');if(!nm)return{ret:{err:"New-Snapshot: Missing an argument for parameter 'Name'. Specify a parameter of type 'String' and try again."}};
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Creating a new snapshot',`VM '${r.items.join("', '")}'`)}};
+  const rows=[];r.items.forEach(vn=>{const v=w.vms[vn],x={Name:nm,Description:unq(a.named['-description']||''),Created:'10/11/2026 '+hhmm(w.clock),SizeGB:a.named['-memory']?v.mem+0.01:0.01};(w.snaps[vn]||(w.snaps[vn]=[])).push(x);w.events.push({t:hhmm(w.clock),e:vn,u:'MERIDIAN\\kaatje',m:`Task: Create virtual machine snapshot completed (${nm})`});rows.push(snapObj(w,vn,x))});
+  return{data:rows,type:'snap',ev:{k:'newsnap',vms:r.items,name:nm}};
+ }
+ if(n==='Remove-Snapshot'){
+  if(first||type!=='snap')return{ret:{err:"Remove-Snapshot: Cannot validate argument on parameter 'Snapshot'. Pipe Get-Snapshot into it: Get-Snapshot -VM name | Remove-Snapshot"}};
+  if(!data.length)return{data:[],type:'snap'};
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Removing snapshot',data.map(o=>`${o.VM}: ${o.Name}`).join(', '))}};
+  let gb=0;const ev=[];data.forEach(o=>{const L=w.snaps[o.VM]||[],i=L.findIndex(x=>x.Name===o.Name);if(i<0)return;const x=L[i];L.splice(a.named['-removechildren']?i:i,a.named['-removechildren']?L.length-i:1);gb+=x.SizeGB;w.ds[w.vms[o.VM].ds].free=Math.round((w.ds[w.vms[o.VM].ds].free+x.SizeGB)*10)/10;w.clock+=Math.max(1,Math.ceil(x.SizeGB/40));w.events.push({t:hhmm(w.clock),e:o.VM,u:'MERIDIAN\\kaatje',m:`Task: Remove snapshot completed (${x.Name}, ${x.SizeGB} GB consolidated)`});ev.push({vm:o.VM,name:x.Name,gb:x.SizeGB})});
+  return{data:null,type:null,ret:{out:ev.map(e=>`${e.vm}: snapshot '${e.name}' removed, ${e.gb} GB merged into the base disk.`).join('\n'),note:'Removing a snapshot merges its delta into the base disk. The space comes back on the datastore once the merge finishes.',ev:{k:'rmsnap',snaps:ev,gb}}};
+ }
+ if(n==='Get-Stat'){
+  const ent=(a.named['-entity']||a.pos||'').toLowerCase(),isVm=!!w.vms[ent],isHost=!!w.hosts[ent];
+  let ents;if(!first&&(type==='vm'||type==='host'))ents=data.map(o=>o.Name);else if(isVm||isHost)ents=[ent];else return{ret:{err:`Get-Stat: Could not find VIObject with name '${a.named['-entity']||a.pos||''}'.`}};
+  const st=(a.named['-stat']||'cpu.usage.average').toLowerCase();if(!['cpu.ready.summation','cpu.usage.average','mem.usage.average'].includes(st))return{ret:{err:`Get-Stat: The metric counter "${st}" doesn't exist for entity.`}};
+  if(!a.named['-realtime'])return{ret:{err:'Get-Stat: no data for the default interval in this lab. Add -Realtime for live 20-second samples.'}};
+  const ms=Math.min(+(a.named['-maxsamples']||5),15),rows=[];
+  ents.forEach(e=>{const v=w.vms[e],hh=w.hosts[e];sawSet(c,'stat',e+':'+st);for(let i=0;i<ms;i++){const ts='10/11/2026 '+hhmm(w.clock)+':'+String(40-i*20<0?60+(40-i*20)%60:40-i*20).padStart(2,'0');const j=((i*7)%5)-2;let val,unit;
+   if(st==='cpu.ready.summation'){val=v?(v.on?(v.ready!=null?v.ready:120*v.cpu)+j*15:0):Object.values(w.vms).filter(x=>x.host===e&&x.on).reduce((t,x)=>t+(x.ready!=null?x.ready:120*x.cpu),0)+j*40;unit='millisecond'}
+   else if(st==='cpu.usage.average'){val=v?(v.on?(v.usage!=null?v.usage:22)+j:0):(hh.state==='Maintenance'?1:Math.min(99,18+Object.values(w.vms).filter(x=>x.host===e&&x.on).length*4))+j;unit='%'}
+   else{val=v?(v.on?(v.memUse!=null?v.memUse:45)+j:0):(hh.state==='Maintenance'?2:30+Object.values(w.vms).filter(x=>x.host===e&&x.on).length*3)+j;unit='%'}
+   rows.push({_t:'stat',MetricId:st,Timestamp:ts,Value:Math.max(0,Math.round(val*100)/100),Unit:unit,Instance:'',Entity:e})}});
+  return{data:rows,type:'stat',note:st==='cpu.ready.summation'?'Ready is milliseconds spent waiting for a core, per 20-second sample. Percent = value / 20000 x 100. Divide by the vCPU count for per-vCPU ready: above about 5% users feel it.':'Realtime samples are 20 seconds apart.'};
+ }
+ if(n==='Get-CDDrive'){
+  const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
+  const rows=r.items.map(vn=>{sawSet(c,'cd',vn);const v=w.vms[vn];return{_t:'cd',Parent:vn,Name:'CD/DVD drive 1',IsoPath:v.iso||'',HostDevice:'',RemoteDevice:''}});
+  return{data:rows,type:'cd',note:'An IsoPath means an image is mounted. If it sits on storage only one host sees, the VM cannot move.'};
+ }
+ if(n==='Set-CDDrive'){
+  if(first||type!=='cd')return{ret:{err:"Set-CDDrive: Cannot validate argument on parameter 'CD'. Pipe Get-CDDrive into it: Get-CDDrive -VM name | Set-CDDrive -NoMedia"}};
+  if(!a.named['-nomedia'])return{ret:{err:'Set-CDDrive: nothing to change. Use -NoMedia to unmount the image.'}};
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Setting NoMedia',data.map(o=>o.Parent+': '+o.Name).join(', '))}};
+  const ev=[];data.forEach(o=>{const v=w.vms[o.Parent];if(v.iso){v.iso=null;ev.push(o.Parent);w.events.push({t:hhmm(w.clock),e:o.Parent,u:'MERIDIAN\\kaatje',m:`Reconfigured ${o.Parent}: CD/DVD drive 1 set to no media`})}o.IsoPath=''});
+  return{data,type:'cd',ev:{k:'cdnomedia',vms:ev}};
+ }
+ if(n==='Get-DrsRule'){
+  const cl=(a.named['-cluster']||a.pos||'').toUpperCase();if(!cl)return{ret:{err:"Get-DrsRule: Missing an argument for parameter 'Cluster'."}};if(!w.drs[cl])return{ret:{err:`Get-DrsRule: Could not find Cluster with name '${a.named['-cluster']||a.pos}'.`}};
+  sawSet(c,'rules',cl);
+  return{data:w.drs[cl].map(x=>({_t:'rule',Name:x.name,Enabled:'True',Type:x.keep?'VMAffinity':'VMAntiAffinity',VMs:x.vms.join(', '),Cluster:cl})),type:'rule',note:w.drs[cl].length?'VMAntiAffinity keeps VMs on different hosts. Rules are only enforced while DRS is enabled on the cluster.':`No DRS rules on ${cl}. Nothing keeps redundant VMs apart.`};
+ }
+ if(n==='New-DrsRule'){
+  const cl=(a.named['-cluster']||'').toUpperCase(),nm=unq(a.named['-name']||a.pos||'');
+  if(!w.drs[cl])return{ret:{err:`New-DrsRule: Could not find Cluster with name '${a.named['-cluster']||''}'.`}};
+  if(!nm)return{ret:{err:"New-DrsRule: Missing an argument for parameter 'Name'."}};
+  const kt=a.named['-keeptogether'];if(kt==null||!/^\$(true|false)$/i.test(kt))return{ret:{err:"New-DrsRule: Cannot process argument 'KeepTogether'. Use -KeepTogether $false for anti-affinity, $true for affinity."}};
+  const list=String(a.named['-vm']||'').split(',').map(x=>x.trim().toLowerCase()).filter(Boolean);
+  if(list.length<2)return{ret:{err:'New-DrsRule: a rule needs at least two VMs: -VM vm-a,vm-b'}};
+  for(const x of list){if(!w.vms[x])return{ret:{err:`New-DrsRule: Could not find VirtualMachine with name '${x}'.`}};if(w.hosts[w.vms[x].host].cluster!==cl)return{ret:{err:`New-DrsRule: VM '${x}' is not in cluster ${cl}.`}}}
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Creating DRS rule',`${nm} on ${cl}`)}};
+  const rule={name:nm,keep:/true/i.test(kt),vms:list};w.drs[cl].push(rule);w.events.push({t:hhmm(w.clock),e:'cluster '+cl,u:'MERIDIAN\\kaatje',m:`Rule ${nm} added to cluster ${cl}`});
+  return{data:[{_t:'rule',Name:nm,Enabled:'True',Type:rule.keep?'VMAffinity':'VMAntiAffinity',VMs:list.join(', '),Cluster:cl}],type:'rule',note:w.drsOn[cl]?null:`The rule is saved, but DRS is disabled on ${cl}, so nothing enforces it yet.`,ev:{k:'drsrule',cl,keep:rule.keep,vms:list}};
+ }
+ if(n==='Set-Cluster'){
+  const cl=(a.named['-cluster']||a.pos||'').toUpperCase();if(!w.drs[cl])return{ret:{err:`Set-Cluster: Could not find Cluster with name '${a.named['-cluster']||a.pos||''}'.`}};
+  const de=a.named['-drsenabled'];if(de==null||!/^\$(true|false)$/i.test(de))return{ret:{err:'Set-Cluster: nothing to change. Use -DrsEnabled $true or $false.'}};
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Modifying cluster',cl)}};
+  w.drsOn[cl]=/true/i.test(de);w.events.push({t:hhmm(w.clock),e:'cluster '+cl,u:'MERIDIAN\\kaatje',m:`Reconfigured cluster ${cl}: DRS ${w.drsOn[cl]?'enabled':'disabled'}`});
+  return{data:[clObj(w,cl)],type:'cluster',ev:{k:'setcluster',cl,drs:w.drsOn[cl]}};
+ }
+}
+
 function psExec(nl,c,w,gate){
  const segs=nl.split(' | ');
- let data=null,type=null,out=null,note=null,cols=null,fmt='table',writes=[];
- const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'];
+ let data=null,type=null,out=null,note=null,cols=null,fmt='table',writes=[],evOut=null;
+ const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
  if(segs.some(s=>writeCmds.includes(s.split(' ')[0]))){const g=gate();if(g)return g}
  for(let si=0;si<segs.length;si++){
   const a=parseArgs(segs[si]),n=a.name,first=si===0;
-  if(['Get-VM','Get-VMHost','Get-Cluster','Get-Datastore','Get-VIEvent','Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'].includes(n)&&!c.vc)return{err:`${n}: You are not currently connected to any servers. Please connect first using a Connect cmdlet.`};
+  if(['Get-VM','Get-VMHost','Get-Cluster','Get-Datastore','Get-VIEvent','Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'].concat(VIRT_CMDS).includes(n)&&!c.vc)return{err:`${n}: You are not currently connected to any servers. Please connect first using a Connect cmdlet.`};
   if(n==='Get-VM'){
    let pool=Object.keys(w.vms);
    if(!first&&type==='host')pool=pool.filter(v=>data.some(h=>h.Name===w.vms[v].host));
@@ -616,6 +739,7 @@ function psExec(nl,c,w,gate){
    ev=ev.slice().reverse();const ms=+(a.named['-maxsamples']||100);ev=ev.slice(0,ms);
    data=ev.map(x=>({_t:'event',CreatedTime:'10/11/2026 '+x.t+':00',UserName:x.u||'',FullFormattedMessage:x.m}));type='event';continue;
   }
+  if(VIRT_CMDS.includes(n)){const r=virtExec(n,a,segs[si],first,data,type,c,w,nl);if(r.ret)return r.ret;data=r.data;type=r.type;if(r.cols)cols=r.cols;if(r.note)note=r.note;if(r.ev)evOut=r.ev;continue}
   if(n==='Where-Object'){
    if(!data)return{err:'Where-Object: nothing to filter. Pipe a Get- command into it.'};
    const m=segs[si].match(/^Where-Object\s+(?:\{\s*\$_\.)?(\w+)\s+(-eq|-ne|-like|-notlike|-gt|-lt)\s+['"]?([^'"}]+?)['"]?\s*\}?$/i);
@@ -666,11 +790,11 @@ function psExec(nl,c,w,gate){
   }
   return{err:`${n}: this command cannot take pipeline input here.`};
  }
- if(out!=null)return{out};
- if(!data)return{out:''};
- if(!data.length)return{out:''};
+ if(out!=null)return{out,ev:evOut};
+ if(!data)return{out:'',ev:evOut};
+ if(!data.length)return{out:'',ev:evOut,note};
  const C=cols||DEFCOLS[type]||Object.keys(data[0]).filter(k=>k!=='_t');
- return{out:fmt==='list'?listFmt(data,cols):table(data,C),type,note:PSNOTE[type]};
+ return{out:fmt==='list'?listFmt(data,cols):table(data,C),type,note:note||PSNOTE[type],ev:evOut};
 }
 const PSNOTE={vm:'PowerState tells you if a VM runs. Get-VM shows no host by default: add <code>| Select-Object Name,PowerState,VMHost</code> or <code>| Format-List</code> to see every property.',host:'ConnectionState: Connected is normal, Maintenance means the host refuses to run VMs, NotResponding means vCenter lost contact. CpuUsageMhz shows how busy it is.',ds:'Free and total space in GB. Divide to get the percentage used.',event:'Events are vCenter\'s diary: what happened, when, and which account did it. Newest first.',cluster:'A cluster is a group of hosts that share storage and can take over from each other.'};
 
@@ -771,7 +895,7 @@ function renderComms(){
 }
 
 const VM02=['galley-disp-01','cabin-tv-02','crew-wiki-01'];
-const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
+const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','Move-VM <vm> -Destination <host>   Set-VM <vm> -NumCpu n -MemoryGB n','Get-Snapshot [-VM vm]   New-Snapshot -VM vm -Name name   ... | Remove-Snapshot','Get-Stat <vm> -Stat cpu.ready.summation -Realtime -MaxSamples 3','Get-CDDrive -VM vm   ... | Set-CDDrive -NoMedia','Get-DrsRule -Cluster c   New-DrsRule -Cluster c -Name n -KeepTogether $false -VM a,b   Set-Cluster c -DrsEnabled $true','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
 const WAYS_IN='<p class="lbl">Ways in</p><p>vCenter: <code>Connect-VIServer vcenter.meridian.local</code>, then PowerCLI. Hosts: <code>ssh root@esx-01</code>, <code>esx-02</code>, <code>esx-03</code>, ESXi shell. Linux VMs: <code>ssh</code> with your own account, root login is disabled. Windows servers do not take SSH.</p>';
 const TICKETS={
  'sandbox':{sandbox:true,module:'*',type:'free roam',npc:'odran',reward:0,
@@ -1007,7 +1131,7 @@ const BUILTIN={
  'help':{params:{},pos:null,syn:'help'}
 };
 const ALIAS={cls:'Clear-Host',clear:'Clear-Host',h:'Get-History',history:'Get-History',ghy:'Get-History'};
-const TYPE={loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
+const TYPE={stat:'String[]',bool:'Boolean',snap:'String',str:'String',loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
 function schema(){return Object.assign({},CMDLETS,BUILTIN)}
 function values(kind){if(kind==='cmdlet')return Object.keys(schema()).filter(k=>/-/.test(k));if(kind==='ci')return S.cur?cmdbRows(S.cur.w).map(r=>r[0]):[];return wvalues(kind)}
 Object.assign(ALIAS,PALIAS);
