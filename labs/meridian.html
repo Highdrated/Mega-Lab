@@ -367,12 +367,13 @@ const CONCEPTS={
  'evidence':{q:'When are you allowed to call something the fault?',a:'Only when you have evidence: output, a log line, a state you saw yourself. A hunch is a hypothesis to test, not a finding.'},
  'smallest-fix':{q:'Why not just reboot the host when something on it is broken?',a:'A reboot is the biggest hammer: it takes minutes, drops everything still running, and often does not touch the cause. Find the cause, then apply the smallest fix that removes it.'},
  'collateral':{q:'Before you run a command that changes something, what do you check, and who do you tell?',a:'What else runs on or depends on the thing you change, and the owners of those services. Nobody should learn about your change from their own users.'},
+ 'anti-affinity':{q:'How many VMs can one anti-affinity rule hold in a cluster of two hosts?',a:'Two. Every VM in the rule needs its own host, so a rule can never hold more VMs than the cluster has hosts. Make one rule per redundant pair.'},
  'record':{q:'What five things does an incident record need here?',a:'What happened, why (root cause), how to roll back what you did, how you verified the service, and the follow-up that stops it happening again.'}
 };
 
 const MODULES=[
  {id:'m0',n:0,name:'Basics',lessons:['l0-orient','l0-team','l0-stack'],tickets:['t0-shake'],mission:'x0-map'},
- {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:[],mission:'x1-vm'},
+ {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc'],mission:'x1-vm'},
  {id:'m2',n:2,name:'Windows Server'},
  {id:'m3',n:3,name:'Storage'},
  {id:'m4',n:4,name:'Backup and DR'},
@@ -512,7 +513,7 @@ function baseWorld(){
  return w;
 }
 const hhmm=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
-function svcUp(w,s){const ok=n=>{const v=w.vms[n];return v&&v.on&&w.hosts[v.host].state==='Connected'};return s.any?s.vms.some(ok):s.vms.every(ok)}
+function svcUp(w,s){const ok=n=>{const v=w.vms[n];return v&&v.on&&!v.paused&&w.hosts[v.host].state==='Connected'};return s.any?s.vms.some(ok):s.vms.every(ok)}
 
 const CMDLETS={
  'Connect-VIServer':{params:{'-Server':'vc'},pos:'-Server'},
@@ -544,14 +545,16 @@ const CMDLETS={
  'Get-DrsRule':{params:{'-Cluster':'cluster','-Name':'str'},pos:'-Cluster'},
  'New-DrsRule':{params:{'-Cluster':'cluster','-Name':'str','-KeepTogether':'bool','-VM':'vm','-Confirm':'switch'},pos:'-Name'},
  'Set-Cluster':{params:{'-Cluster':'cluster','-DrsEnabled':'bool','-Confirm':'switch'},pos:'-Cluster'},
+ 'Get-VMQuestion':{params:{'-VM':'vm'},pos:'-VM'},
+ 'Set-VMQuestion':{params:{'-Option':'qopt','-Confirm':'switch'},pos:null},
  'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'},
  'Test-Connection':{params:{'-TargetName':'vm','-Count':'int'},pos:'-TargetName'},
  'ssh':{params:{},pos:'target',syn:'ssh [user@]host'},
  'ping':{params:{},pos:'vm',syn:'ping <host>'}
 };
 const PALIAS={'?':'Where-Object',where:'Where-Object',select:'Select-Object',sort:'Sort-Object',fl:'Format-List',ft:'Format-Table',measure:'Measure-Object'};
-const PROPS={snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
-const DEFCOLS={snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const PROPS={question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const DEFCOLS={question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
 const VC='vcenter.meridian.local';
 
 function wvalues(kind){
@@ -564,6 +567,7 @@ function wvalues(kind){
  if(kind==='ds')return Object.keys(w.ds);
  if(kind==='vc')return[VC];
  if(kind==='state')return['Connected','Maintenance'];
+ if(kind==='qopt')return['Retry','Cancel'];
  if(kind==='stat')return['cpu.ready.summation','cpu.usage.average','mem.usage.average'];
  if(kind==='bool')return['$true','$false'];
  if(kind==='snap')return[...new Set([].concat(...Object.values(w.snaps||{}).map(l=>l.map(x=>x.Name))))];
@@ -605,7 +609,7 @@ function see(c,o){
  if(o._t==='host')s.host[o.Name]=o.ConnectionState;
 }
 
-const VIRT_CMDS=['Move-VM','Set-VM','Get-Snapshot','New-Snapshot','Remove-Snapshot','Get-Stat','Get-CDDrive','Set-CDDrive','Get-DrsRule','New-DrsRule','Set-Cluster'];
+const VIRT_CMDS=['Get-VMQuestion','Set-VMQuestion','Move-VM','Set-VM','Get-Snapshot','New-Snapshot','Remove-Snapshot','Get-Stat','Get-CDDrive','Set-CDDrive','Get-DrsRule','New-DrsRule','Set-Cluster'];
 const unq=x=>String(x==null?'':x).replace(/^['"]|['"]$/g,'');
 function sawSet(c,k,n){const s=c.saw||(c.saw={vm:{},hostVms:{},host:{},events:{},logs:{},svc:{},esxiVms:{}});(s[k]||(s[k]={}))[n]=true}
 function snapObj(w,vm,x){return{_t:'snap',VM:vm,Name:x.Name,Description:x.Description||'',Created:x.Created,SizeGB:x.SizeGB,PowerState:w.vms[vm].on?'PoweredOn':'PoweredOff'}}
@@ -614,6 +618,23 @@ const confirmOut=(op,tgt)=>`Confirm\nAre you sure you want to perform this actio
 function virtExec(n,a,seg,first,data,type,c,w,nl){
  w.snaps=w.snaps||{};w.drs=w.drs||{AFT:[],FWD:[]};w.drsOn=w.drsOn||{AFT:false,FWD:true};
  const ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
+ if(n==='Get-VMQuestion'){
+  let vms=Object.keys(w.vms);if(!first&&type==='vm')vms=data.map(o=>o.Name);else if(a.pos||a.named['-vm']){const r=pickNames(vms,a.named['-vm']||a.pos,'VM',n);if(r.err)return{ret:{err:r.err}};vms=r.items}
+  const rows=vms.filter(vn=>w.vms[vn].paused).map(vn=>{sawSet(c,'question',vn);const v=w.vms[vn];return{_t:'question',VM:vn,Text:v.paused,Options:'Retry, Cancel'}});
+  vms.forEach(vn=>sawSet(c,'askedq',vn));
+  return{data:rows,type:'question',note:rows.length?'A VM with a pending question is stuck until someone answers it. Retry only helps once the cause is gone. Cancel powers the VM off.':'No VM is waiting for an answer.'};
+ }
+ if(n==='Set-VMQuestion'){
+  if(first||type!=='question')return{ret:{err:"Set-VMQuestion: Cannot validate argument on parameter 'VMQuestion'. Pipe Get-VMQuestion into it: Get-VMQuestion -VM name | Set-VMQuestion -Option Retry"}};
+  const opt=unq(a.named['-option']||'');if(!/^(retry|cancel)$/i.test(opt))return{ret:{err:`Set-VMQuestion: Option '${opt}' is not valid. Valid options: Retry, Cancel`}};
+  if(!data.length)return{data:[],type:'question'};
+  if(ask())return{ret:{confirm:nl,out:confirmOut('Answering question with '+opt,data.map(o=>o.VM).join(', '))}};
+  const res=[],ev=[];data.forEach(o=>{const v=w.vms[o.VM],ds=w.ds[v.ds];
+   if(/^cancel$/i.test(opt)){v.paused=null;v.on=false;w.events.push({t:hhmm(w.clock),e:o.VM,u:'MERIDIAN\\kaatje',m:`${o.VM} on ${v.host} is powered off`});res.push(`${o.VM}: answered Cancel. The VM was powered off.`);ev.push({vm:o.VM,opt:'cancel',ok:true})}
+   else if(ds.free<5){w.events.push({t:hhmm(w.clock),e:o.VM,u:'',m:`Message on ${o.VM}: ${v.paused}`});res.push(`${o.VM}: answered Retry. The write failed again: ${v.ds} still has ${ds.free} GB free. The question is back.`);ev.push({vm:o.VM,opt:'retry',ok:false})}
+   else{v.paused=null;w.events.push({t:hhmm(w.clock),e:o.VM,u:'MERIDIAN\\kaatje',m:`${o.VM} resumed after question answered: Retry`});res.push(`${o.VM}: answered Retry. The VM resumed.`);ev.push({vm:o.VM,opt:'retry',ok:true})}});
+  return{ret:{out:res.join('\n'),ev:{k:'vmq',answers:ev}}};
+ }
  if(n==='Move-VM'){
   const r=vmTargets(n,a,first,data,type,w,'VM');if(r.err)return{ret:{err:r.err}};
   const dn=(a.named['-destination']||'').toLowerCase(),dh=w.hosts[dn];
@@ -701,8 +722,9 @@ function virtExec(n,a,seg,first,data,type,c,w,nl){
   if(list.length<2)return{ret:{err:'New-DrsRule: a rule needs at least two VMs: -VM vm-a,vm-b'}};
   for(const x of list){if(!w.vms[x])return{ret:{err:`New-DrsRule: Could not find VirtualMachine with name '${x}'.`}};if(w.hosts[w.vms[x].host].cluster!==cl)return{ret:{err:`New-DrsRule: VM '${x}' is not in cluster ${cl}.`}}}
   if(ask())return{ret:{confirm:nl,out:confirmOut('Creating DRS rule',`${nm} on ${cl}`)}};
+  const nh=Object.values(w.hosts).filter(h=>h.cluster===cl).length,impossible=!/true/i.test(kt)&&list.length>nh;
   const rule={name:nm,keep:/true/i.test(kt),vms:list};w.drs[cl].push(rule);w.events.push({t:hhmm(w.clock),e:'cluster '+cl,u:'MERIDIAN\\kaatje',m:`Rule ${nm} added to cluster ${cl}`});
-  return{data:[{_t:'rule',Name:nm,Enabled:'True',Type:rule.keep?'VMAffinity':'VMAntiAffinity',VMs:list.join(', '),Cluster:cl}],type:'rule',note:w.drsOn[cl]?null:`The rule is saved, but DRS is disabled on ${cl}, so nothing enforces it yet.`,ev:{k:'drsrule',cl,keep:rule.keep,vms:list}};
+  return{data:[{_t:'rule',Name:nm,Enabled:'True',Type:rule.keep?'VMAffinity':'VMAntiAffinity',VMs:list.join(', '),Cluster:cl}],type:'rule',note:impossible?`Warning: ${cl} has ${nh} hosts. An anti-affinity rule for ${list.length} VMs can never be satisfied, so DRS will report it as violated. Make one rule per pair.`:w.drsOn[cl]?null:`The rule is saved, but DRS is disabled on ${cl}, so nothing enforces it yet.`,ev:{k:'drsrule',cl,keep:rule.keep,vms:list,impossible}};
  }
  if(n==='Set-Cluster'){
   const cl=(a.named['-cluster']||a.pos||'').toUpperCase();if(!w.drs[cl])return{ret:{err:`Set-Cluster: Could not find Cluster with name '${a.named['-cluster']||a.pos||''}'.`}};
@@ -716,7 +738,7 @@ function virtExec(n,a,seg,first,data,type,c,w,nl){
 function psExec(nl,c,w,gate){
  const segs=nl.split(' | ');
  let data=null,type=null,out=null,note=null,cols=null,fmt='table',writes=[],evOut=null;
- const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
+ const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Set-VMQuestion','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
  if(segs.some(s=>writeCmds.includes(s.split(' ')[0]))){const g=gate();if(g)return g}
  for(let si=0;si<segs.length;si++){
   const a=parseArgs(segs[si]),n=a.name,first=si===0;
@@ -794,6 +816,7 @@ function psExec(nl,c,w,gate){
  if(!data)return{out:'',ev:evOut};
  if(!data.length)return{out:'',ev:evOut,note};
  const C=cols||DEFCOLS[type]||Object.keys(data[0]).filter(k=>k!=='_t');
+ if(type==='vm'&&(fmt==='list'||C.includes('VMHost')))data.forEach(o=>sawSet(c,'vmhost',o.Name));
  return{out:fmt==='list'?listFmt(data,cols):table(data,C),type,note:note||PSNOTE[type],ev:evOut};
 }
 const PSNOTE={vm:'PowerState tells you if a VM runs. Get-VM shows no host by default: add <code>| Select-Object Name,PowerState,VMHost</code> or <code>| Format-List</code> to see every property.',host:'ConnectionState: Connected is normal, Maintenance means the host refuses to run VMs, NotResponding means vCenter lost contact. CpuUsageMhz shows how busy it is.',ds:'Free and total space in GB. Divide to get the percentage used.',event:'Events are vCenter\'s diary: what happened, when, and which account did it. Newest first.',cluster:'A cluster is a group of hosts that share storage and can take over from each other.'};
@@ -803,15 +826,15 @@ function netExec(nl,c,w){
  if(n==='Connect-VIServer'){if(!/^vcenter(\.meridian\.local)?$/i.test(a.pos))return{err:`Connect-VIServer: Could not resolve the requested VC server '${a.pos}'.`};c.vc=true;return{out:`Name                    Port  User\n----                    ----  ----\n${VC}  443   MERIDIAN\\kaatje`,note:'Connected to vCenter, which manages every host and VM on the ship. PowerCLI commands now go through it.'}}
  if(n==='Disconnect-VIServer'){c.vc=false;return{out:''}}
  const host=x=>x.toLowerCase().replace(/\.meridian\.local$/,'');
- if(n==='ping'||n==='Test-Connection'){const t=host(a.pos);const up=w.hosts[t]?true:w.vms[t]?(w.vms[t].on&&w.hosts[w.vms[t].host].state==='Connected'):null;if(up===null)return{err:`Ping request could not find host ${a.pos}. Please check the name and try again.`};return{out:`Pinging ${t}.meridian.local with 32 bytes of data:\n`+Array(4).fill(up?'Reply: bytes=32 time<1ms TTL=64':'Request timed out.').join('\n'),ev:{k:'ping',t,up}}}
- if(n==='Test-NetConnection'){const t=host(a.pos),p=+(a.named['-port']||0);const v=w.vms[t];if(!v&&!w.hosts[t])return{err:`Test-NetConnection: Name resolution of ${a.pos} failed.`};let ok;if(w.hosts[t])ok=[22,443,902].includes(p);else{const up=v.on&&w.hosts[v.host].state==='Connected',s=svcOfVm(t);ok=up&&(p===22&&v.os==='ubuntu'||s&&s.port===p||(v.os==='windows'&&[53,3389].includes(p)))}
+ if(n==='ping'||n==='Test-Connection'){const t=host(a.pos);const up=w.hosts[t]?true:w.vms[t]?(w.vms[t].on&&!w.vms[t].paused&&w.hosts[w.vms[t].host].state==='Connected'):null;if(up===null)return{err:`Ping request could not find host ${a.pos}. Please check the name and try again.`};return{out:`Pinging ${t}.meridian.local with 32 bytes of data:\n`+Array(4).fill(up?'Reply: bytes=32 time<1ms TTL=64':'Request timed out.').join('\n'),ev:{k:'ping',t,up}}}
+ if(n==='Test-NetConnection'){const t=host(a.pos),p=+(a.named['-port']||0);const v=w.vms[t];if(!v&&!w.hosts[t])return{err:`Test-NetConnection: Name resolution of ${a.pos} failed.`};let ok;if(w.hosts[t])ok=[22,443,902].includes(p);else{const up=v.on&&!v.paused&&w.hosts[v.host].state==='Connected',s=svcOfVm(t);ok=up&&(p===22&&v.os==='ubuntu'||s&&s.port===p||(v.os==='windows'&&[53,3389].includes(p)))}
   if(ok&&w.vms[t]){const s=svcOfVm(t);if(s&&s.port===p){see(c,{});c.saw.svc[s.id]=svcUp(w,s)}}
   return{out:`ComputerName     : ${t}\nRemoteAddress    : ${w.hosts[t]?w.hosts[t].ip:'10.4.8.'+(20+(v?v.vmid:0))}\nRemotePort       : ${p||'(none)'}\nTcpTestSucceeded : ${p?ok?'True':'False':'n/a'}`+(p?'':'\nWARNING: No port given, only ping was tested.'),note:'True means something answered on that port. That is the closest a remote check gets to "the service works".'}}
  if(n==='ssh'){
   const t=a.pos.toLowerCase(),[user,h0]=t.includes('@')?t.split('@'):['kaatje',t],h=host(h0);
   if(w.hosts[h]){if(user!=='root')return{err:`${user}@${h}: Permission denied (publickey,keyboard-interactive).`,note:'ESXi hosts take root (or a named host admin), not your domain account.'};c.shell={kind:'esxi',host:h};return{out:'The time and date of this login have been changed in the system logs.\n\nVMware ESXi 8.0.2 build-22380479\n\nThe ESXi Shell can be disabled by an administrative user. See the vSphere Security documentation for more information.'}}
   const v=w.vms[h];if(!v)return{err:`ssh: Could not resolve hostname ${h}: Name or service not known`};
-  if(!(v.on&&w.hosts[v.host].state==='Connected'))return{err:`ssh: connect to host ${h}.meridian.local port 22: Connection timed out`,note:'Nothing answered. That says the machine is unreachable, not why: it could be off, or the path to it could be down.'};
+  if(!(v.on&&!v.paused&&w.hosts[v.host].state==='Connected'))return{err:`ssh: connect to host ${h}.meridian.local port 22: Connection timed out`,note:'Nothing answered. That says the machine is unreachable, not why: it could be off, or the path to it could be down.'};
   if(v.os!=='ubuntu')return{err:`ssh: connect to host ${h}.meridian.local port 22: Connection refused`,note:v.os==='windows'?'Windows servers here are managed over RDP or PowerShell remoting, not SSH. The machine is up: it actively refused.':'Appliances do not take shell logins from your account.'};
   if(user==='root')return{err:`root@${h}: Permission denied (publickey).`,note:'Root login over SSH is switched off on the Linux VMs. Use your own account.'};
   c.shell={kind:'linux',host:h};return{out:`Welcome to Ubuntu 24.04 LTS (GNU/Linux 6.8.0-45-generic x86_64)\nLast login: Mon Nov  9 16:02:11 2026 from 10.4.0.12`};
@@ -905,6 +928,127 @@ const TICKETS={
   fault:null,
   help:SHIP_HELP,
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Ideas</p><p>Find every VM that runs on esx-02. Find which host is the busiest. Read the hostd log on a host. Stop a VM and see who calls you, then start it again.</p>'
+ },
+ 't1-snap':{module:'m1',type:'incident',npc:'odran',reward:150,
+  title:'The cargo system has frozen',
+  brief:'"Cargo screens froze mid-shift and the hold crew are back on clipboards. Mail is stuck too, and Linnea says the lounge tills just hang. Nothing crashed, everything is just... stopped. Can you look?"',
+  ci:['cargo-db-01','DS-HULL-01'],
+  watch:['cargo','mail','pos'],
+  upLine:{cargo:'Cargo screens are moving again. The hold crew owe you a drink.',mail:'Mail is flowing again, thanks.',pos:'The tills are working again! Guests can pay.'},
+  stack:[['svc','service','Cargo system'],['cargo-db-01','vm','cargo-db-01'],['esx-02','host','esx-02'],['DS-HULL-01','ds','DS-HULL-01']],
+  fault:{node:'DS-HULL-01',evidence:c=>!!(c.seen&&c.seen['DS-HULL-01'])||!!(c.saw&&c.saw.snap&&c.saw.snap['cargo-db-01'])},
+  setup(w){
+   w.ds['DS-HULL-01'].free=0;
+   w.snaps['cargo-db-01']=[{Name:'BACKUP TEMPORARY SNAPSHOT',Description:'Please do not delete this snapshot. It is being used by the backup job.',Created:'20/10/2026 01:14',SizeGB:412}];
+   const Q='There is no more space for virtual disk cargo-db-01-000001.vmdk. You might be able to continue this session by freeing disk space on the relevant volume, and clicking Retry. Click Cancel to terminate this session.';
+   const stuck=['cargo-db-01','crew-mail-01','lounge-pos-01'];
+   stuck.forEach(n=>{w.vms[n].paused=Q.replace(/cargo-db-01/g,n)});
+   w.events.push({t:'01:14',e:'cargo-db-01',u:'MERIDIAN\\svc-backup',m:'Task: Create virtual machine snapshot (BACKUP TEMPORARY SNAPSHOT)'});
+   w.events.push({t:'01:31',e:'cargo-db-01',u:'MERIDIAN\\svc-backup',m:'Task: Remove snapshot failed: the operation was cancelled by the backup proxy (job timeout)'});
+   w.events.push({t:'06:00',e:'DS-HULL-01',u:'',m:'Alarm "Datastore usage on disk" changed from Yellow to Red (96%)'});
+   w.events.push({t:'07:18',e:'DS-HULL-01',u:'',m:'Alarm "Datastore usage on disk": 100% (0 GB free)'});
+   stuck.forEach((n,i)=>w.events.push({t:'07:2'+(i+1),e:n,u:'',m:`Message on ${n} on ${w.vms[n].host}: There is no more space for virtual disk ${n}-000001.vmdk...`}));
+   const L=w.logs['esx-02'];
+   L['vmkernel.log']=[['2026-11-10T07:18:40Z','warning','vmkernel','WARNING: Fil3: 1534: Failed to reserve volume f530 28 1 5b2a (DS-HULL-01): No space left on device'],['2026-11-10T07:21:02Z','warning','vmkernel','WARNING: VSCSI: 6214: handle 8197(vscsi0:0):WRITE10 failed on cargo-db-01-000001.vmdk: No space left on device']];
+   L['hostd.log']=[['2026-11-10T07:21:03Z','info','hostd','vm 11 cargo-db-01: msg.hbacommon.outofspace question raised, VM suspended until answered'],['2026-11-10T07:22:10Z','info','hostd','vm 18 crew-mail-01: msg.hbacommon.outofspace question raised'],['2026-11-10T07:23:31Z','info','hostd','vm 13 lounge-pos-01: msg.hbacommon.outofspace question raised']];
+   w.comms.push({t:'07:40',who:'linnea',text:'The lounge tills froze at the same time as cargo. Is that connected?'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='vmq'&&ev.answers.some(a=>a.opt==='cancel'))return{fail:['smallest-fix','Answered Cancel and powered a frozen VM off.'],why:'Cancel kills the session: the VM powers off hard, mid-write, like pulling its plug. The VM was healthy, only waiting for space. Free the space, then answer Retry.'};
+   if(ev.k==='vmq'&&ev.answers.some(a=>a.opt==='retry'&&!a.ok))return{fail:['evidence','Answered Retry before freeing any space.'],why:'Retry repeats the failed write. With 0 GB free it fails again and the question comes straight back. Remove the cause first, then retry.'};
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know the cargo system runs on cargo-db-01, and that its disk lives on DS-HULL-01 with most of the AFT cluster.'],
+   ['scope','Scope',(w,c)=>!!(c.saw&&c.saw.askedq&&Object.keys(c.saw.askedq).length&&c.seen&&c.seen['DS-HULL-01']),'Three frozen VMs on two hosts, one thing in common: the datastore. Name the layer.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Now find what filled it. Space does not disappear overnight without a reason.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'Proven, not guessed.'],
+   ['fix','Fix',w=>!(w.snaps['cargo-db-01']||[]).length&&w.ds['DS-HULL-01'].free>=100&&!['cargo-db-01','crew-mail-01','lounge-pos-01'].some(n=>w.vms[n].paused),'The space is back and the stuck VMs are running again.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.svc.cargo===true&&(c.saw.svc.mail===true||c.saw.svc.pos===true)),'Proven where people feel it: the services answer.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['Three services froze at the same moment. Look up what they share in the CMDB, then ask vCenter which VMs are stuck: Get-VMQuestion.','Check the datastore with Get-Datastore. Then find out what ate the space: snapshots are the usual suspect. Get-VM | Get-Snapshot | Select-Object VM,Name,Created,SizeGB.','A 412 GB snapshot from 20 October, left by a failed backup job. Write the rollback, then Get-Snapshot -VM cargo-db-01 | Remove-Snapshot, then Get-VMQuestion | Set-VMQuestion -Option Retry, then test the services.'],
+  checks:[
+   ['Names the VM with the snapshot','what',/cargo-db-01/i],
+   ['Names the datastore','what|why',/ds-hull-01|datastore/i],
+   ['Root cause: a forgotten snapshot','why',/snapshot/i],
+   ['Says why it was left behind','why',/backup|job|timeout|forgot|orphan|failed/i],
+   ['Rollback is honest about what can be undone','rollback',/cannot|can't|not possible|irreversible|no way back|permanent|restore|backup/i],
+   ['Verified the services, not just the VMs','verify',/443|test-netconnection|curl|health|port|service|cargo|mail|till/i],
+   ['Follow-up stops a repeat','follow',/alarm|alert|monitor|snapshot age|report|backup job|schedule|check|script|runbook/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb cargo-db-01, cmdb DS-HULL-01','The VM, and the datastore half the ship lives on.'],
+    ['Scope','Get-VMQuestion, Get-Datastore','Three VMs waiting for an answer, 0 GB free on DS-HULL-01.'],
+    ['Hypothesis','"DS-HULL-01, because every stuck VM writes to it and it is full"','The layer they share.'],
+    ['Isolate','Get-VM | Get-Snapshot | Select-Object VM,Name,Created,SizeGB  or  Get-VIEvent -Entity cargo-db-01','A 412 GB backup snapshot from 20 October that the backup job failed to remove.'],
+    ['Fix','Get-Snapshot -VM cargo-db-01 | Remove-Snapshot, then Get-VMQuestion | Set-VMQuestion -Option Retry','Remove the cause, then let the VMs carry on.'],
+    ['Verify','Test-NetConnection cargo-db-01 -Port 443, the same for crew-mail-01 and lounge-pos-01','Services answer again.'],
+    ['Record','what, why, rollback, verification, follow-up','The backup job leaves snapshots behind on timeout. That is a problem record.']
+   ],
+   readings:[['Get-VMQuestion','Three VMs, the same question: no more space for a virtual disk. Paused, not crashed.'],['Get-Datastore','DS-HULL-01 at 0 GB free. Last week it was at 412 free.'],['Get-Snapshot ... SizeGB','412 GB in one snapshot, 21 days old. That is exactly the space that vanished.'],['Get-VIEvent -Entity cargo-db-01','svc-backup created it at 01:14 on 20 October and the removal failed at 01:31: job timeout.'],['vmkernel.log','No space left on device on the snapshot delta file. The VM froze on its own write.']],
+   senior:['Before deleting a snapshot called "do not delete", check the backup job is not running right now. Here it had been dead for three weeks.','Removing a 412 GB snapshot on a busy database causes heavy I/O for minutes. On a normal day that is a change you schedule. On a frozen datastore it is the fix.','Ask Odran for a snapshot age alarm: anything older than 72 hours raises a ticket automatically.','The datastore alarm went Yellow last week and Red at 06:00. Nobody acted. Who watches the alarms at night?'],
+   take:['Get-VM | Get-Snapshot | Select-Object VM,Name,Created,SizeGB finds every snapshot on the ship in one line.','A frozen VM with a question is not broken. Free the cause, then answer Retry.','Cancel is a hard power-off. It is almost never the right answer.','Backup snapshots are temporary by design. When one survives, the backup job failed.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Runbook: nightly backups</p><p>backup-proxy-01 backs up every VM at night as svc-backup. For each VM it takes a temporary snapshot, copies the frozen disk, and removes the snapshot when the copy is done.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>Cargo, mail and the lounge tills all answer on port 443. A VM that hits a full datastore pauses and asks a question in vCenter until someone answers it.</p>'
+ },
+ 't1-dc':{module:'m1',type:'change',npc:'odran',reward:160,
+  title:'Patch night review: esx-01',
+  brief:'"Tonight the patch job takes esx-01 into maintenance mode. After last week I would like a second pair of eyes on the AFT cluster first. Anything that would hurt if esx-01 goes away for an hour?"',
+  ci:['esx-01','ad-dc-01','ad-dc-02','dns-01','dns-02'],
+  watch:['dir'],
+  stack:[['svc','service','Directory and DNS'],['ad-dc-02','vm','ad-dc-02'],['dns-02','vm','dns-02'],['esx-01','host','esx-01'],['esx-02','host','esx-02']],
+  fault:{node:'esx-01',evidence:c=>!!(c.saw&&((c.saw.vmhost&&(c.saw.vmhost['ad-dc-02']||c.saw.vmhost['dns-02']))||(c.saw.hostVms&&c.saw.hostVms['esx-01'])))},
+  setup(w){
+   ['ad-dc-02','dns-02','cargo-db-01','crew-mail-01'].forEach(n=>{w.vms[n].host='esx-01'});
+   w.events.push({t:'02:10',e:'esx-02',u:'MERIDIAN\\svc-patch',m:'Task: Enter maintenance mode (last week, baseline 2026-11)'});
+   ['ad-dc-02','dns-02','cargo-db-01','crew-mail-01'].forEach(n=>w.events.push({t:'02:10',e:n,u:'MERIDIAN\\svc-patch',m:`Migrating ${n} from esx-02 to esx-01 completed`}));
+   w.events.push({t:'08:02',e:'cluster AFT',u:'',m:'Patch job scheduled: esx-01 enters maintenance mode tonight at 02:00'});
+   w.comms.push({t:'08:05',who:'odran',text:'If you change anything, keep it live. Nobody wants a reboot on a Sunday.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='move')ev.moves.forEach(m=>{if(c.saw&&c.saw.vmhost)delete c.saw.vmhost[m.vm]});
+   if(ev.k==='drsrule'&&c.saw&&c.saw.rules)delete c.saw.rules.AFT;
+   if(ev.k==='drsrule'&&ev.impossible)return{fail:['anti-affinity','Made one anti-affinity rule for more VMs than the cluster has hosts.'],why:'AFT has two hosts. Four VMs that must all sit on different hosts can never fit, so DRS flags the rule as violated forever and the alarm gets ignored. One rule per redundant pair.'};
+   if(ev.k==='setvm-on')return null;
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'You know which VMs are supposed to be a redundant pair, and where the CMDB thinks they live.'],
+   ['scope','Scope',(w,c)=>c.scoped||(c.scoped=!!(c.saw&&c.saw.vmhost&&c.saw.vmhost['ad-dc-02']&&c.saw.vmhost['dns-02'])),'You compared where the pairs should be with where they really are.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name the risk, then prove it.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'The single point of failure is named, with evidence.'],
+   ['fix','Fix',w=>w.vms['ad-dc-02'].host!==w.vms['ad-dc-01'].host&&w.vms['dns-02'].host!==w.vms['dns-01'].host&&w.drsOn.AFT&&['ad-dc','dns'].every(p=>w.drs.AFT.some(r=>!r.keep&&r.vms.length<=2&&r.vms.includes(p+'-01')&&r.vms.includes(p+'-02'))),'The pairs are apart, and rules plus DRS keep them apart without you.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.vmhost&&c.saw.vmhost['ad-dc-02']&&c.saw.vmhost['dns-02']&&c.saw.rules&&c.saw.rules.AFT),'You checked the end state yourself instead of trusting the commands.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['Look up the four directory VMs in the CMDB: they are two pairs. Then check where they really run: Get-VM ad-dc-*,dns-* | Select-Object Name,VMHost.','Both halves of each pair are on esx-01, left there by last week\'s patch job. AFT has DRS switched off, so nothing moved them back. Check Get-Cluster and Get-DrsRule -Cluster AFT.','Write the rollback, then Move-VM ad-dc-02 -Destination esx-02 and the same for dns-02. Then one rule per pair: New-DrsRule -Cluster AFT -Name sep-dc -KeepTogether $false -VM ad-dc-01,ad-dc-02 (and sep-dns), then Set-Cluster AFT -DrsEnabled $true.'],
+  checks:[
+   ['Names the redundant pairs','what',/ad-dc|dns/i],
+   ['Names the risk: both on one host','why',/esx-01|same host|one host|single point/i],
+   ['Says why it happened','why',/patch|maintenance|drs|moved|vmotion|migrat/i],
+   ['Rollback says how to undo the moves and rules','rollback',/move|rule|drs|esx-01/i],
+   ['Verified hosts and rules','verify',/vmhost|get-vm|get-drsrule|rule/i],
+   ['Follow-up stops a repeat','follow',/drs|rule|runbook|patch|check|alarm|monitor|review/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb ad-dc-01, ad-dc-02, dns-01, dns-02, esx-01','Two pairs, registered one half on each host.'],
+    ['Scope','Get-VM ad-dc-*,dns-* | Select-Object Name,VMHost','All four on esx-01. The CMDB says otherwise.'],
+    ['Hypothesis','"esx-01, because both halves of each pair live there"','The host is the single point of failure.'],
+    ['Isolate','Get-VIEvent, Get-Cluster, Get-DrsRule -Cluster AFT','Moved by last week\'s patch job, DRS off, no rules: nothing brings them back.'],
+    ['Fix','Move-VM ad-dc-02 -Destination esx-02, Move-VM dns-02 -Destination esx-02, one anti-affinity rule per pair, Set-Cluster AFT -DrsEnabled $true','Live moves, no downtime, and the cluster now keeps them apart itself.'],
+    ['Verify','Get-VM ad-dc-*,dns-* | Select-Object Name,VMHost, Get-DrsRule -Cluster AFT','Each pair split, two rules, DRS on.'],
+    ['Record','what, why, rollback, verification, follow-up','The patch runbook should check DRS and rules before it starts.']
+   ],
+   readings:[['Get-VM ... | Select-Object Name,VMHost','ad-dc-01, ad-dc-02, dns-01, dns-02 all on esx-01. Redundancy that exists only on paper.'],['Get-VIEvent','svc-patch moved them during last week\'s maintenance. Nothing ever moved them back.'],['Get-Cluster','AFT: DrsEnabled False. Without DRS a cluster never rebalances.'],['Get-DrsRule -Cluster AFT','Empty. Even with DRS on, nothing said these must stay apart.']],
+   senior:['This was a change, not an incident: nothing was broken yet. Catching it before patch night is the cheapest fix there is.','cargo-db-01 and crew-mail-01 are on esx-01 too. Not a redundancy problem, but esx-01 now carries more than its share. With DRS on, the cluster can balance that itself.','Tell Odran what you changed before the patch job runs, so nobody is surprised at 02:00.','Ask whether AFT can survive losing either host at all: two hosts means each must stay under half full.'],
+   take:['Get-VM name1,name2 | Select-Object Name,VMHost answers "are my pairs really apart?" in one line.','Anti-affinity: one rule per pair, never more VMs than hosts.','A rule does nothing while DRS is off.','vMotion fixes placement live. No reboot needed.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: directory services</p><p>The ship runs two domain controllers (ad-dc-01, ad-dc-02) and two DNS servers (dns-01, dns-02). Each pair is built so one can fail without anyone noticing. The 01s belong on esx-01, the 02s on esx-02.</p><p class="lbl" style="margin-top:18px">Runbook: host patching</p><p>The patch job evacuates a host with vMotion, patches it, and brings it back. It does not move VMs back afterwards.</p>'
  },
  't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:120,
   title:'The galley order screens are black',
@@ -1131,7 +1275,7 @@ const BUILTIN={
  'help':{params:{},pos:null,syn:'help'}
 };
 const ALIAS={cls:'Clear-Host',clear:'Clear-Host',h:'Get-History',history:'Get-History',ghy:'Get-History'};
-const TYPE={stat:'String[]',bool:'Boolean',snap:'String',str:'String',loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
+const TYPE={qopt:'String',stat:'String[]',bool:'Boolean',snap:'String',str:'String',loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
 function schema(){return Object.assign({},CMDLETS,BUILTIN)}
 function values(kind){if(kind==='cmdlet')return Object.keys(schema()).filter(k=>/-/.test(k));if(kind==='ci')return S.cur?cmdbRows(S.cur.w).map(r=>r[0]):[];return wvalues(kind)}
 Object.assign(ALIAS,PALIAS);
