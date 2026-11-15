@@ -526,6 +526,7 @@ const SVCS=[
  {id:'med',name:'Medical records',vms:['med-rec-01'],port:443,unit:'medrec',owner:'seraphine'},
  {id:'nav',name:'Navigation log',vms:['nav-log-01','nav-log-02'],any:true,port:443,unit:'navlog',owner:'tamsin'},
  {id:'comms',name:'Comms relay',vms:['comms-relay-01'],port:443,unit:'relay',owner:'tamsin'},
+ {id:'print',name:'Printing',vms:['print-01'],port:445,owner:'linnea'},
  {id:'bridge',name:'Bridge displays',vms:['bridge-ui-01','sensor-agg-01'],port:443,unit:'bridge-ui',owner:'seraphine'}
 ];
 const svcOfVm=n=>SVCS.find(s=>s.vms.includes(n));
@@ -541,7 +542,7 @@ function baseWorld(){
  return w;
 }
 const hhmm=m=>String(Math.floor(m/60)%24).padStart(2,'0')+':'+String(m%60).padStart(2,'0');
-function svcUp(w,s){const ok=n=>{const v=w.vms[n];return v&&v.on&&!v.paused&&w.hosts[v.host].state==='Connected'};return s.any?s.vms.some(ok):s.vms.every(ok)}
+function svcUp(w,s){const ok=n=>{const v=w.vms[n];return v&&v.on&&!v.paused&&w.hosts[v.host].state==='Connected'&&winOk(w,n)};return s.any?s.vms.some(ok):s.vms.every(ok)}
 
 const CMDLETS={
  'Connect-VIServer':{params:{'-Server':'vc'},pos:'-Server'},
@@ -575,6 +576,23 @@ const CMDLETS={
  'Set-Cluster':{params:{'-Cluster':'cluster','-DrsEnabled':'bool','-Confirm':'switch'},pos:'-Cluster'},
  'Get-VMQuestion':{params:{'-VM':'vm'},pos:'-VM'},
  'Shutdown-VMGuest':{params:{'-VM':'vm','-Confirm':'switch'},pos:'-VM'},
+ 'Enter-PSSession':{params:{'-ComputerName':'winvm'},pos:'-ComputerName'},
+ 'Exit-PSSession':{params:{},pos:null},
+ 'Get-Service':{params:{'-Name':'winsvc','-RequiredServices':'switch','-DependentServices':'switch'},pos:'-Name'},
+ 'Start-Service':{params:{'-Name':'winsvc','-PassThru':'switch'},pos:'-Name'},
+ 'Stop-Service':{params:{'-Name':'winsvc','-Force':'switch','-PassThru':'switch'},pos:'-Name'},
+ 'Restart-Service':{params:{'-Name':'winsvc','-Force':'switch','-PassThru':'switch'},pos:'-Name'},
+ 'Set-Service':{params:{'-Name':'winsvc','-StartupType':'starttype'},pos:'-Name'},
+ 'Get-WinEvent':{params:{'-LogName':'winlog','-MaxEvents':'int','-FilterHashtable':'str'},pos:'-LogName'},
+ 'Get-Volume':{params:{},pos:null},
+ 'Get-PSDrive':{params:{'-Name':'str'},pos:'-Name'},
+ 'Get-ChildItem':{params:{'-Path':'str','-Recurse':'switch','-File':'switch'},pos:'-Path'},
+ 'Remove-Item':{params:{'-Path':'str','-Recurse':'switch','-Force':'switch'},pos:'-Path'},
+ 'Get-HotFix':{params:{},pos:null},
+ 'Test-Path':{params:{'-Path':'str'},pos:'-Path'},
+ 'Restart-Computer':{params:{'-Force':'switch'},pos:null},
+ 'Resolve-DnsName':{params:{'-Name':'str','-Server':'winvm','-Type':'str'},pos:'-Name'},
+ 'Get-Date':{params:{},pos:null},
  'Set-VMQuestion':{params:{'-Option':'qopt','-Confirm':'switch'},pos:null},
  'Test-NetConnection':{params:{'-ComputerName':'vm','-Port':'port'},pos:'-ComputerName'},
  'Test-Connection':{params:{'-TargetName':'vm','-Count':'int'},pos:'-TargetName'},
@@ -582,8 +600,8 @@ const CMDLETS={
  'ping':{params:{},pos:'vm',syn:'ping <host>'}
 };
 const PALIAS={'?':'Where-Object',where:'Where-Object',select:'Select-Object',sort:'Sort-Object',fl:'Format-List',ft:'Format-Table',measure:'Measure-Object'};
-const PROPS={vmguest:['Name','State','IPAddress','OSFullName'],question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','CpuTotalMhz','MemoryUsageGB','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
-const DEFCOLS={vmguest:['State','IPAddress','OSFullName'],question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','CpuTotalMhz','MemoryUsageGB','MemoryTotalGB','Version'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const PROPS={service:['Name','DisplayName','Status','StartType','PSComputerName'],winevent:['TimeCreated','Id','LevelDisplayName','ProviderName','Message','LogName'],volume:['DriveLetter','FriendlyName','FileSystemType','DriveType','HealthStatus','OperationalStatus','SizeRemaining','Size'],psdrive:['Name','Used (GB)','Free (GB)','Provider','Root'],file:['Mode','LastWriteTime','Length','Name','FullName'],hotfix:['Source','Description','HotFixID','InstalledBy','InstalledOn'],dnsrec:['Name','Type','TTL','Section','IPAddress','Server'],vmguest:['Name','State','IPAddress','OSFullName'],question:['VM','Text','Options'],snap:['VM','Name','Description','Created','SizeGB','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['Parent','Name','IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs','Cluster'],vm:['Name','PowerState','NumCpu','MemoryGB','VMHost','Guest','Datastore','Id'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','CpuTotalMhz','MemoryUsageGB','MemoryTotalGB','Version','Parent'],ds:['Name','FreeSpaceGB','CapacityGB','State'],cluster:['Name','HAEnabled','DrsEnabled','VMHosts'],event:['CreatedTime','UserName','FullFormattedMessage']};
+const DEFCOLS={service:['Status','Name','DisplayName'],winevent:['TimeCreated','Id','LevelDisplayName','Message'],volume:['DriveLetter','FriendlyName','FileSystemType','DriveType','HealthStatus','OperationalStatus','SizeRemaining','Size'],psdrive:['Name','Used (GB)','Free (GB)','Provider','Root'],file:['Mode','LastWriteTime','Length','Name'],hotfix:['Source','Description','HotFixID','InstalledBy','InstalledOn'],dnsrec:['Name','Type','TTL','Section','IPAddress'],vmguest:['State','IPAddress','OSFullName'],question:['VM','Text'],snap:['Name','Description','PowerState'],stat:['MetricId','Timestamp','Value','Unit','Instance'],cd:['IsoPath','HostDevice','RemoteDevice'],rule:['Name','Enabled','Type','VMs'],vm:['Name','PowerState','NumCpu','MemoryGB'],host:['Name','ConnectionState','PowerState','NumCpu','CpuUsageMhz','CpuTotalMhz','MemoryUsageGB','MemoryTotalGB','Version'],ds:['Name','FreeSpaceGB','CapacityGB'],cluster:['Name','HAEnabled','DrsEnabled'],event:['CreatedTime','UserName','FullFormattedMessage']};
 const VC='vcenter.meridian.local';
 
 function wvalues(kind){
@@ -597,6 +615,10 @@ function wvalues(kind){
  if(kind==='vc')return[VC];
  if(kind==='state')return['Connected','Maintenance'];
  if(kind==='qopt')return['Retry','Cancel'];
+ if(kind==='winvm')return Object.keys(w.vms).filter(n=>w.vms[n].os==='windows');
+ if(kind==='winsvc')return S.cur&&S.cur.shell&&S.cur.shell.kind==='win'&&w.win&&w.win[S.cur.shell.host]?Object.keys(w.win[S.cur.shell.host].svcs):Object.keys(WIN_SVCDEF);
+ if(kind==='starttype')return['Automatic','AutomaticDelayedStart','Manual','Disabled'];
+ if(kind==='winlog')return['System','Application','Security'];
  if(kind==='stat')return['cpu.ready.summation','cpu.usage.average','mem.usage.average'];
  if(kind==='bool')return['$true','$false'];
  if(kind==='snap')return[...new Set([].concat(...Object.values(w.snaps||{}).map(l=>l.map(x=>x.Name))))];
@@ -772,14 +794,150 @@ function virtExec(n,a,seg,first,data,type,c,w,nl){
  }
 }
 
+const WIN_ROLE={'ad-dc':'NTDS','dns':'DNS','print':'Spooler'};
+const winRole=h=>{const k=Object.keys(WIN_ROLE).find(p=>h.startsWith(p));return k?WIN_ROLE[k]:null};
+const WIN_SVCDEF={WinRM:['Windows Remote Management (WS-Management)','Automatic',[]],EventLog:['Windows Event Log','Automatic',[]],W32Time:['Windows Time','Automatic',[]],LanmanServer:['Server','Automatic',[]],LanmanWorkstation:['Workstation','Automatic',[]],Netlogon:['Netlogon','Automatic',['LanmanWorkstation']],VMTools:['VMware Tools','Automatic',[]],wuauserv:['Windows Update','Manual',[]],TrustedInstaller:['Windows Modules Installer','Manual',[]],Spooler:['Print Spooler','Automatic',[]],DNS:['DNS Server','Automatic',[]],NTDS:['Active Directory Domain Services','Automatic',[]],Kdc:['Kerberos Key Distribution Center','Automatic',['NTDS']],DFSR:['DFS Replication','Automatic',[]]};
+function winInit(w,h){
+ w.win=w.win||{};if(w.win[h])return w.win[h];
+ const role=winRole(h),dc=role==='NTDS',svcs={};
+ const add=(n,st,start)=>{const d=WIN_SVCDEF[n];svcs[n]={display:d[0],start:start||d[1],status:st||(d[1]==='Automatic'?'Running':'Stopped'),req:d[2]}};
+ ['WinRM','EventLog','W32Time','LanmanServer','LanmanWorkstation','Netlogon','VMTools','wuauserv','TrustedInstaller'].forEach(n=>add(n));
+ if(dc){add('NTDS');add('Kdc');add('DFSR');add('Spooler','Stopped','Disabled')}
+ else if(role==='DNS'){add('DNS');add('Spooler','Stopped','Disabled')}
+ else if(role==='Spooler')add('Spooler');
+ return w.win[h]={svcs,ev:{System:[['10/11/2026 06:02:11',7036,'Information','Service Control Manager','The Windows Update service entered the running state.'],['10/11/2026 06:14:40',7036,'Information','Service Control Manager','The Windows Update service entered the stopped state.']],Application:[],Security:[]},
+  vol:{C:{size:80,free:34.2}},files:{},hotfix:[['KB5044281','Security Update','04/11/2026'],['KB5043936','Update','08/10/2026'],['KB5042881','Security Update','10/09/2026']],pending:false,
+  time:{offset:0,source:h==='ad-dc-01'?'ntp1.meridian-ops.local':'ad-dc-01.meridian.local',stratum:h==='ad-dc-01'?2:3,vmtools:false}};
+}
+function winEv(w,h,log,id,lvl,src,msg){winInit(w,h).ev[log].push(['10/11/2026 '+hhmm(w.clock)+':00',id,lvl,src,msg])}
+function winSvcSet(w,h,n,st){const W=winInit(w,h),s=W.svcs[n];if(!s||s.status===st)return;s.status=st;winEv(w,h,'System',7036,'Information','Service Control Manager',`The ${s.display} service entered the ${st==='Running'?'running':'stopped'} state.`)}
+function winOk(w,n){const v=w.vms[n];if(!v||v.os!=='windows')return true;const r=winRole(n);if(!r)return true;const W=winInit(w,n);return W.svcs[r]&&W.svcs[r].status==='Running'}
+const WIN_CMDS=['Get-Service','Start-Service','Stop-Service','Restart-Service','Set-Service','Get-WinEvent','Get-Volume','Get-PSDrive','Get-ChildItem','Remove-Item','Get-HotFix','Test-Path','Restart-Computer','Resolve-DnsName','Get-Date'];
+const WIN_ONLY_HINT='That command runs on a Windows server. Connect first: Enter-PSSession <server>, or send it with Invoke-Command -ComputerName <server> -ScriptBlock { ... }.';
+function fhParse(v){const o={};String(v||'').replace(/^@\{|\}$/g,'').split(';').forEach(kv=>{const i=kv.indexOf('=');if(i<0)return;const k=kv.slice(0,i).trim().toLowerCase(),val=kv.slice(i+1).trim();o[k]=val.split(',').map(x=>unq(x.trim()))});return o}
+const GB=x=>(Math.round(x*100)/100)+' GB';
+function winExec(n,a,first,data,type,c,w,nl){
+ const h=c.winHost;if(!h)return{ret:{err:`${n}: ${WIN_ONLY_HINT}`}};
+ const W=winInit(w,h),ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
+ const svcRow=k=>({_t:'service',Name:k,DisplayName:W.svcs[k].display,Status:W.svcs[k].status,StartType:W.svcs[k].start,PSComputerName:h});
+ const pickSvc=(v)=>{if(!first&&type==='service')return{items:data.map(o=>o.Name)};if(!v)return{items:Object.keys(W.svcs)};const out=[];for(const p of String(v).split(',')){const m=Object.keys(W.svcs).filter(k=>wild(p,k)||wild(p,W.svcs[k].display));if(!m.length&&!/[*?]/.test(p))return{err:`${n}: Cannot find any service with service name '${p}'.`};out.push(...m)}return{items:[...new Set(out)]}};
+ if(n==='Get-Date'){const d=new Date(Date.UTC(2026,10,10,0,0,0)+(w.clock*60+W.time.offset)*1000);return{ret:{out:'Tuesday, 10 November 2026 '+String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')+':'+String(d.getUTCSeconds()).padStart(2,'0')}}}
+ if(n==='Get-Service'){
+  const r=pickSvc(a.named['-name']||a.pos);if(r.err)return{ret:{err:r.err}};
+  let items=r.items;
+  if(a.named['-requiredservices'])items=[].concat(...items.map(k=>W.svcs[k].req)).filter(k=>W.svcs[k]);
+  if(a.named['-dependentservices'])items=Object.keys(W.svcs).filter(k=>W.svcs[k].req.some(x=>items.includes(x)));
+  items.forEach(k=>sawSet(c,'winsvc',h+':'+k+':'+W.svcs[k].status));
+  return{data:items.map(svcRow),type:'service'};
+ }
+ if(['Start-Service','Stop-Service','Restart-Service'].includes(n)){
+  const r=pickSvc(a.named['-name']||a.pos);if(r.err)return{ret:{err:r.err}};if(first&&!a.pos&&!a.named['-name'])return{ret:{err:`${n}: Cannot validate argument on parameter 'Name'. The argument is null or empty.`}};
+  for(const k of r.items){const s=W.svcs[k];if(s.start==='Disabled'&&n!=='Stop-Service')return{ret:{err:`${n}: Service '${s.display} (${k})' cannot be started due to the following error: Cannot start service ${k} on computer '.'.`,note:'The service is Disabled. Someone chose that. Find out why before you change its startup type.'}};
+   if(n==='Stop-Service'){const deps=Object.keys(W.svcs).filter(x=>W.svcs[x].req.includes(k)&&W.svcs[x].status==='Running');if(deps.length&&!a.named['-force'])return{ret:{err:`Stop-Service: Cannot stop service '${s.display} (${k})' because it has dependent services. It can only be stopped if the Force flag is set.`}}}}
+  
+  const ev=[];r.items.forEach(k=>{const s=W.svcs[k];if(n!=='Start-Service'){Object.keys(W.svcs).filter(x=>W.svcs[x].req.includes(k)).forEach(x=>winSvcSet(w,h,x,'Stopped'));winSvcSet(w,h,k,'Stopped')}
+   if(n!=='Stop-Service'){const br=W.broken&&W.broken[k];if(br){winEv(w,h,'System',br.id||7000,'Error','Service Control Manager',br.msg);ev.push({svc:k,ok:false})}else{s.req.forEach(x=>winSvcSet(w,h,x,'Running'));winSvcSet(w,h,k,'Running');ev.push({svc:k,ok:true})}}else ev.push({svc:k,ok:true,stop:true})});
+  const bad=ev.find(e=>e.ok===false);
+  if(bad)return{ret:{err:`${n}: Failed to start service '${W.svcs[bad.svc].display} (${bad.svc})'.`,ev:{k:'winsvc',host:h,op:n,res:ev},note:'It tried and failed. The System log says why: Get-WinEvent -LogName System -MaxEvents 5.'}};
+  return{data:a.named['-passthru']?r.items.map(svcRow):null,type:'service',ev:{k:'winsvc',host:h,op:n,res:ev},ret:a.named['-passthru']?null:{out:'',ev:{k:'winsvc',host:h,op:n,res:ev}}};
+ }
+ if(n==='Set-Service'){
+  const r=pickSvc(a.named['-name']||a.pos);if(r.err)return{ret:{err:r.err}};const st=unq(a.named['-startuptype']||'');
+  if(!/^(automatic|manual|disabled|automaticdelayedstart)$/i.test(st))return{ret:{err:"Set-Service: Cannot bind parameter 'StartupType'. Valid values: Automatic, AutomaticDelayedStart, Manual, Disabled."}};
+  
+  const norm={automatic:'Automatic',manual:'Manual',disabled:'Disabled',automaticdelayedstart:'AutomaticDelayedStart'}[st.toLowerCase()];
+  r.items.forEach(k=>{W.svcs[k].start=norm;winEv(w,h,'System',7040,'Information','Service Control Manager',`The start type of the ${W.svcs[k].display} service was changed to ${norm}.`)});
+  return{ret:{out:'',ev:{k:'winstart',host:h,svcs:r.items,start:norm}}};
+ }
+ if(n==='Get-WinEvent'){
+  let logs=[unq(a.named['-logname']||'System')],ids=null,lvl=null;
+  if(a.named['-filterhashtable']){const f=fhParse(decodeURIComponent(a.named['-filterhashtable']));if(f.logname)logs=f.logname;if(f.id)ids=f.id.map(Number);if(f.level)lvl=f.level.map(Number)}
+  const LV={Critical:1,Error:2,Warning:3,Information:4};
+  const lg=logs.map(l=>Object.keys(W.ev).find(k=>k.toLowerCase()===String(l).toLowerCase()));
+  if(lg.some(x=>!x))return{ret:{err:`Get-WinEvent: There is not an event log on the localhost computer that matches "${logs[lg.indexOf(undefined)]}".`}};
+  let rows=[].concat(...lg.map(L=>W.ev[L].map(e=>({_t:'winevent',TimeCreated:e[0],Id:e[1],LevelDisplayName:e[2],ProviderName:e[3],Message:e[4],LogName:L})))).filter(e=>(!ids||ids.includes(e.Id))&&(!lvl||lvl.includes(LV[e.LevelDisplayName])));
+  rows.sort((x,y)=>x.TimeCreated<y.TimeCreated?1:-1);
+  if(a.named['-maxevents'])rows=rows.slice(0,+a.named['-maxevents']);
+  lg.forEach(L=>sawSet(c,'winlog',h+':'+L));if(ids)ids.forEach(i=>sawSet(c,'winid',h+':'+i));
+  if(!rows.length)return{ret:{err:'Get-WinEvent: No events were found that match the specified selection criteria.'}};
+  return{data:rows,type:'winevent',note:'Newest first. Read the first error in time, not only the latest one.'};
+ }
+ if(n==='Get-Volume'){sawSet(c,'winvol',h);return{data:Object.entries(W.vol).map(([d,v])=>({_t:'volume',DriveLetter:d,FriendlyName:'',FileSystemType:'NTFS',DriveType:'Fixed',HealthStatus:v.free<1?'Warning':'Healthy',OperationalStatus:'OK',SizeRemaining:GB(v.free),Size:GB(v.size)})),type:'volume'}}
+ if(n==='Get-PSDrive'){sawSet(c,'winvol',h);const want=unq(a.named['-name']||a.pos||'C').replace(':','').toUpperCase();const v=W.vol[want];if(!v)return{ret:{err:`Get-PSDrive: Cannot find drive. A drive with the name '${want}' does not exist.`}};return{data:[{_t:'psdrive',Name:want,'Used (GB)':Math.round((v.size-v.free)*100)/100,'Free (GB)':Math.round(v.free*100)/100,Provider:'FileSystem',Root:want+':\\'}],type:'psdrive'}}
+ if(n==='Get-ChildItem'){
+  const p=unq(a.named['-path']||a.pos||'C:\\Users\\kaatje\\Documents').replace(/\\\*$/,'').replace(/\\$/,'');const k=Object.keys(W.files).find(x=>x.toLowerCase()===p.toLowerCase());
+  sawSet(c,'windir',h+':'+p.toLowerCase());
+  if(!k)return/^c:\\(windows|users|program files)/i.test(p)?{data:[],type:'file'}:{ret:{err:`Get-ChildItem: Cannot find path '${p}' because it does not exist.`}};
+  return{data:W.files[k].map(f=>({_t:'file',Mode:'-a---',LastWriteTime:f[2]||'10/11/2026 06:00',Length:f[1],Name:f[0],FullName:k+'\\'+f[0]})),type:'file'};
+ }
+ if(n==='Remove-Item'){
+  const p=unq(a.named['-path']||a.pos||'');if(!p)return{ret:{err:"Remove-Item: Cannot bind argument to parameter 'Path' because it is null."}};
+  const dir=p.replace(/\\\*(\.\w+)?$/,''),k=Object.keys(W.files).find(x=>x.toLowerCase()===dir.toLowerCase());
+  if(!k)return{ret:{err:`Remove-Item: Cannot find path '${p}' because it does not exist.`}};
+  if(!/\\\*/.test(p))return{ret:{err:`Remove-Item: The item at ${p} has children and the Recurse parameter was not specified. Use ${dir}\\* to remove what is inside.`}};
+  const lock=W.lock&&W.lock[k.toLowerCase()];if(lock&&W.svcs[lock]&&W.svcs[lock].status==='Running'){const f=W.files[k][0];return{ret:{err:`Remove-Item: Cannot remove item ${k}\\${f?f[0]:''}: The process cannot access the file because it is being used by another process.`,note:`${W.svcs[lock].display} has these files open. Stop it first, clear, then start it again.`,ev:{k:'winrm-locked',host:h,path:k}}}}
+  
+  const bytes=W.files[k].reduce((t,f)=>t+f[1],0);W.files[k]=[];const vol=W.vol[k[0].toUpperCase()];if(vol)vol.free=Math.round((vol.free+bytes/1073741824)*100)/100;
+  return{ret:{out:'',ev:{k:'winrm',host:h,path:k,gb:Math.round(bytes/1073741824*100)/100}}};
+ }
+ if(n==='Get-HotFix'){sawSet(c,'hotfix',h);return{data:W.hotfix.map(x=>({_t:'hotfix',Source:h.toUpperCase(),Description:x[1],HotFixID:x[0],InstalledBy:'MERIDIAN\\svc-patch',InstalledOn:x[2]})),type:'hotfix'}}
+ if(n==='Test-Path'){const p=unq(a.named['-path']||a.pos||'');sawSet(c,'testpath',h+':'+p.toLowerCase());if(/RebootPending|RebootRequired/i.test(p)){sawSet(c,'pending',h);return{ret:{out:W.pending?'True':'False'}}}const k=Object.keys(W.files).find(x=>x.toLowerCase()===p.replace(/\\$/,'').toLowerCase());return{ret:{out:k||/^c:\\(windows|users)/i.test(p)?'True':'False'}}}
+ if(n==='Restart-Computer'){
+  
+  w.clock+=4;winEv(w,h,'System',1074,'Information','User32',`The process C:\\Windows\\system32\\wsmprovhost.exe (${h}) has initiated the restart of computer ${h.toUpperCase()} on behalf of user MERIDIAN\\kaatje for the following reason: Other (Planned)`);winEv(w,h,'System',6006,'Information','EventLog','The Event log service was stopped.');winEv(w,h,'System',6005,'Information','EventLog','The Event log service was started.');
+  W.pending=false;Object.keys(W.svcs).forEach(k=>{const s=W.svcs[k];const br=W.broken&&W.broken[k];if(s.start.startsWith('Automatic')&&!br)s.status='Running';else if(br){s.status='Stopped';winEv(w,h,'System',br.id||7000,'Error','Service Control Manager',br.msg)}else if(s.start!=='Automatic')s.status=s.start==='Disabled'?'Stopped':s.status});
+  w.events.push({t:hhmm(w.clock),e:h,u:'',m:`Guest OS on ${h} restarted`});
+  if(c.shell&&c.shell.host===h)c.shell=null;
+  return{ret:{out:`WARNING: The network connection to ${h} has been interrupted. Attempting to reconnect for up to 4 minutes...\nWARNING: The reconnection attempt to ${h} failed. Attempting to disconnect the session...\nError: Unable to reconnect to ${h}. The session has been closed.\nPS C:\\ops> (${h} is back up after about 4 minutes)`,ev:{k:'winreboot',host:h}}};
+ }
+ if(n==='Resolve-DnsName'){
+  const nm=unq(a.named['-name']||a.pos||'').toLowerCase().replace(/\.meridian\.local$/,'');if(!nm)return{ret:{err:"Resolve-DnsName: Cannot validate argument on parameter 'Name'."}};
+  const servers=a.named['-server']?[unq(a.named['-server']).toLowerCase()]:['dns-01','dns-02'];
+  const ok=servers.find(sv=>{const v=w.vms[sv];return v&&v.on&&!v.paused&&w.hosts[v.host].state==='Connected'&&winOk(w,sv)});
+  servers.forEach(sv=>sawSet(c,'resolve',sv+':'+(sv===ok?'ok':'fail')));
+  if(!ok)return{ret:{err:`Resolve-DnsName: ${nm}.meridian.local : ${a.named['-server']?'This operation returned because the timeout period expired':'DNS server failure'}`,note:a.named['-server']?`Nothing answered on ${servers[0]} port 53.`:'Neither DNS server answered.'}};
+  const t=w.vms[nm]||w.hosts[nm]||nm==='vcenter';if(!t)return{ret:{err:`Resolve-DnsName: ${nm}.meridian.local : DNS name does not exist`}};
+  const ip=w.hosts[nm]?w.hosts[nm].ip:nm==='vcenter'?'10.4.0.10':'10.4.8.'+(20+w.vms[nm].vmid);
+  return{data:[{_t:'dnsrec',Name:nm+'.meridian.local',Type:'A',TTL:3600,Section:'Answer',IPAddress:ip,Server:ok}],type:'dnsrec'};
+ }
+}
+function winNative(line,c,w,h){
+ const W=winInit(w,h);
+ if(/^w32tm \/query \/status$/i.test(line)){sawSet(c,'w32tm',h);const off=Math.abs(W.time.offset);return{out:`Leap Indicator: 0(no warning)\nStratum: ${W.time.vmtools?0:W.time.stratum} (${W.time.vmtools?'unspecified':'secondary reference - syncd by (S)NTP'})\nPrecision: -23 (119.209ns per tick)\nRoot Delay: 0.0312500s\nRoot Dispersion: ${W.time.vmtools?'10.0000000s':'0.0468750s'}\nReferenceId: ${W.time.vmtools?'0x4C4F434C (source name:  "LOCL")':'0x0A04081A (source IP:  10.4.8.26)'}\nLast Successful Sync Time: ${W.time.vmtools?'03/11/2026 04:12:55':'10/11/2026 '+hhmm(w.clock-17)+':02'}\nSource: ${W.time.vmtools?'Local CMOS Clock':W.time.source}\nPoll Interval: 10 (1024s)`+(off>60?`\n\n(Your console clock differs from this server by about ${Math.round(off/60)} minutes.)`:'')}}
+ if(/^w32tm \/query \/source$/i.test(line)){sawSet(c,'w32tm',h);return{out:W.time.vmtools?'Local CMOS Clock':W.time.source}}
+ if(/^w32tm \/resync( \/force)?$/i.test(line)){if(W.time.vmtools||W.svcs.W32Time.status!=='Running')return{err:W.svcs.W32Time.status!=='Running'?'The following error occurred: The service has not been started. (0x80070426)':'Sending resync command to local computer\nThe computer did not resync because no time data was available.',note:W.time.vmtools?'The time service has no domain source configured. Something else has been setting this clock.':null};W.time.offset=0;return{out:'Sending resync command to local computer\nThe command completed successfully.',ev:{k:'resync',host:h}}}
+ if(/^w32tm \/config \/syncfromflags:domhier \/update$/i.test(line)){W.time.vmtools=false;W.time.source='ad-dc-01.meridian.local';return{out:'The command completed successfully.',ev:{k:'w32config',host:h}}}
+ if(/^whoami$/i.test(line))return{out:'meridian\\kaatje'};
+ if(/^hostname$/i.test(line))return{out:h.toUpperCase()};
+ if(/^ipconfig$/i.test(line))return{out:`Windows IP Configuration\n\nEthernet adapter Ethernet0:\n   IPv4 Address. . . . . . . . . . . : 10.4.8.${20+w.vms[h].vmid}\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 10.4.8.1`};
+ if(/^help$/i.test(line))return{out:'Get-Service [name]   Start-Service / Stop-Service / Restart-Service <name>   Set-Service <name> -StartupType Automatic\nGet-WinEvent -LogName System -MaxEvents 20\nGet-WinEvent -FilterHashtable @{LogName=\'System\';Id=7034,7036;Level=2} -MaxEvents 10\nGet-Volume   Get-PSDrive C   Get-ChildItem <path> | Measure-Object Length -Sum   Remove-Item <path>\\*\nGet-HotFix   Test-Path <registry path>   Restart-Computer\nResolve-DnsName <name> [-Server dns-02]   Get-Date\nw32tm /query /status   w32tm /query /source   w32tm /resync\nhostname  whoami  ipconfig   Exit-PSSession'};
+ return null;
+}
+
+function invokeCmd(targets,inner,c,w,gate){
+ const hs=targets.split(',').map(x=>x.trim().toLowerCase().replace(/\.meridian\.local$/,'')).filter(Boolean);const outs=[],rows=[];let type=null,note=null,ev=null,errs=[];
+ for(const h of hs){const v=w.vms[h];
+  if(!v||v.os!=='windows'||!(v.on&&!v.paused&&w.hosts[v.host].state==='Connected')||winInit(w,h).svcs.WinRM.status!=='Running'){errs.push(`[${h}] Connecting to remote server ${h} failed with the following error message : WinRM cannot complete the operation.`);continue}
+  c.winHost=h;sawSet(c,'invoke',h);
+  const nat=winNative(inner,c,w,h);if(nat){if(nat.out)outs.push(nat.out.split('\n').map(l=>l).join('\n')+`\n(PSComputerName: ${h})`);if(nat.err)errs.push(`[${h}] ${nat.err}`);continue}
+  const norm=normalize(inner);if(norm.err){errs.push(norm.err);break}
+  c._raw=true;const r=psExec(norm.line,c,w,gate);c._raw=false;
+  if(r.err){errs.push(`[${h}] ${r.err}`);if(r.ev)ev=r.ev;continue}
+  if(r.raw){r.data.forEach(o=>{o.PSComputerName=h});rows.push(...r.data);type=type||r.type;note=note||r.note;if(r.ev)ev=r.ev}else if(r.out)outs.push(r.out)}
+ c.winHost=null;
+ let out=outs.join('\n\n');if(rows.length){const C=(DEFCOLS[type]||Object.keys(rows[0]).filter(k=>k[0]!=='_')).filter(k=>k!=='PSComputerName').concat(['PSComputerName']);out=(out?out+'\n\n':'')+table(rows,C)}
+ return{out:out||null,err:errs.length?errs.join('\n'):null,note,ev};
+}
+
 function psExec(nl,c,w,gate){
  const segs=nl.split(' | ');
  let data=null,type=null,out=null,note=null,cols=null,fmt='table',writes=[],evOut=null;
- const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Set-VMQuestion','Shutdown-VMGuest','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
+ const writeCmds=['Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost','Set-VMQuestion','Shutdown-VMGuest','Start-Service','Stop-Service','Restart-Service','Set-Service','Remove-Item','Restart-Computer','Move-VM','Set-VM','New-Snapshot','Remove-Snapshot','Set-CDDrive','New-DrsRule','Set-Cluster'];
  if(segs.some(s=>writeCmds.includes(s.split(' ')[0]))){const g=gate();if(g)return g}
  for(let si=0;si<segs.length;si++){
   const a=parseArgs(segs[si]),n=a.name,first=si===0;
-  if(['Get-VM','Get-VMHost','Get-Cluster','Get-Datastore','Get-VIEvent','Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'].concat(VIRT_CMDS).includes(n)&&!c.vc)return{err:`${n}: You are not currently connected to any servers. Please connect first using a Connect cmdlet.`};
+  if(c.winHost&&!WIN_CMDS.includes(n)&&!['Where-Object','Select-Object','Sort-Object','Format-List','Format-Table','Measure-Object','Exit-PSSession','Test-NetConnection'].includes(n))return{err:`${n}: The term '${n}' is not recognized as a name of a cmdlet, function, script file, or executable program.`,note:`You are inside ${c.winHost}. PowerCLI and the ship tools live on your console: Exit-PSSession first.`};
+  if(['Get-VM','Get-VMHost','Get-Cluster','Get-Datastore','Get-VIEvent','Start-VM','Stop-VM','Restart-VM','Set-VMHost','Restart-VMHost'].concat(VIRT_CMDS).includes(n)&&!c.vc&&!c.winHost)return{err:`${n}: You are not currently connected to any servers. Please connect first using a Connect cmdlet.`};
   if(n==='Get-VM'){
    let pool=Object.keys(w.vms);
    if(!first&&type==='host')pool=pool.filter(v=>data.some(h=>h.Name===w.vms[v].host));
@@ -798,14 +956,25 @@ function psExec(nl,c,w,gate){
    ev=ev.slice().reverse();const ms=+(a.named['-maxsamples']||100);ev=ev.slice(0,ms);
    data=ev.map(x=>({_t:'event',CreatedTime:'10/11/2026 '+x.t+':00',UserName:x.u||'',FullFormattedMessage:x.m}));type='event';continue;
   }
+  if(n==='Enter-PSSession'){const t=(a.named['-computername']||a.pos||'').toLowerCase().replace(/\.meridian\.local$/,''),v=w.vms[t];
+   if(!v)return{err:`Enter-PSSession: Connecting to remote server ${t} failed with the following error message : WinRM cannot process the request. The following error occurred while using Kerberos authentication: Cannot find the computer ${t}.`};
+   const up=v.on&&!v.paused&&w.hosts[v.host].state==='Connected';
+   if(!up||v.os!=='windows'||winInit(w,t).svcs.WinRM.status!=='Running')return{err:`Enter-PSSession: Connecting to remote server ${t} failed with the following error message : WinRM cannot complete the operation. Verify that the specified computer name is valid, that the computer is accessible over the network, and that a firewall exception for the WinRM service is enabled.`,note:v.os!=='windows'?`${t} runs Linux. Use ssh kaatje@${t}.`:!up?`${t} is not running.`:null};
+   c.shell={kind:'win',host:t};sawSet(c,'winsession',t);return{out:''}}
+  if(n==='Exit-PSSession'){if(c.shell&&c.shell.kind==='win')c.shell=null;return{out:''}}
+  if(WIN_CMDS.includes(n)){const r=winExec(n,a,first,data,type,c,w,nl);if(r.ret)return r.ret;data=r.data;type=r.type;if(r.cols)cols=r.cols;if(r.note)note=r.note;if(r.ev)evOut=r.ev;continue}
   if(VIRT_CMDS.includes(n)){const r=virtExec(n,a,segs[si],first,data,type,c,w,nl);if(r.ret)return r.ret;data=r.data;type=r.type;if(r.cols)cols=r.cols;if(r.note)note=r.note;if(r.ev)evOut=r.ev;continue}
   if(n==='Where-Object'){
    if(!data)return{err:'Where-Object: nothing to filter. Pipe a Get- command into it.'};
-   const m=segs[si].match(/^Where-Object\s+(?:\{\s*\$_\.)?(\w+)\s+(-eq|-ne|-like|-notlike|-gt|-lt)\s+['"]?([^'"}]+?)['"]?\s*\}?$/i);
-   if(!m)return{err:`Where-Object: use the form  Where-Object PowerState -eq PoweredOff`};
-   const[,p,op,val]=m,prop=Object.keys(data[0]||{}).find(k=>k.toLowerCase()===p.toLowerCase());
-   if(data.length&&!prop){data=[];continue}
-   data=data.filter(o=>{const v=String(o[prop]);switch(op.toLowerCase()){case'-eq':return v.toLowerCase()===val.toLowerCase();case'-ne':return v.toLowerCase()!==val.toLowerCase();case'-like':return wild(val,v);case'-notlike':return!wild(val,v);case'-gt':return+v>+val;case'-lt':return+v<+val}});
+   const body=segs[si].replace(/^\S+\s*/,'');const blk=/^\{.*\}$/.test(body.trim());
+   const inner=blk?body.trim().slice(1,-1).trim():body.trim();
+   const parts=inner.split(/\s+(-and|-or)\s+/i),conds=[],joins=[];
+   for(let k=0;k<parts.length;k++){if(k%2){joins.push(parts[k].toLowerCase());continue}
+    const m=parts[k].match(blk?/^\$_\.(\w+)\s+(-eq|-ne|-like|-notlike|-gt|-lt|-ge|-le|-match|-notmatch)\s+(.+)$/i:/^(\w+)\s+(-eq|-ne|-like|-notlike|-gt|-lt|-ge|-le|-match|-notmatch)\s+(.+)$/i);
+    if(!m)return{err:blk?`Where-Object: could not read the condition '${parts[k]}'. Use the form {$_.Status -eq 'Running'}, joined with -and / -or.`:`Where-Object: use the form  Where-Object PowerState -eq PoweredOff  or  Where-Object {$_.Status -ne 'Running'}`};
+    conds.push([m[1],m[2].toLowerCase(),m[3].trim().replace(/^['"]|['"]$/g,'')])}
+   const test=(o,[p,op,val])=>{const prop=Object.keys(o).find(k=>k.toLowerCase()===p.toLowerCase());if(!prop)return false;const v=String(o[prop]);switch(op){case'-eq':return v.toLowerCase()===val.toLowerCase();case'-ne':return v.toLowerCase()!==val.toLowerCase();case'-like':return wild(val,v);case'-notlike':return!wild(val,v);case'-gt':return parseFloat(v)>parseFloat(val);case'-lt':return parseFloat(v)<parseFloat(val);case'-ge':return parseFloat(v)>=parseFloat(val);case'-le':return parseFloat(v)<=parseFloat(val);case'-match':try{return new RegExp(val,'i').test(v)}catch(e){return false}case'-notmatch':try{return!new RegExp(val,'i').test(v)}catch(e){return true}}};
+   data=data.filter(o=>{let r=test(o,conds[0]);for(let k=1;k<conds.length;k++)r=joins[k-1]==='-and'?(r&&test(o,conds[k])):(r||test(o,conds[k]));return r});
    continue;
   }
   if(n==='Select-Object'){
@@ -856,6 +1025,7 @@ function psExec(nl,c,w,gate){
   return{err:`${n}: this command cannot take pipeline input here.`};
  }
  if(out!=null)return{out,ev:evOut};
+ if(c._raw)return{raw:true,data:data||[],type,ev:evOut,note};
  if(!data)return{out:'',ev:evOut};
  if(!data.length)return{out:'',ev:evOut,note};
  const C=cols||DEFCOLS[type]||Object.keys(data[0]).filter(k=>k!=='_t');
@@ -871,7 +1041,7 @@ function netExec(nl,c,w){
  if(n==='Disconnect-VIServer'){c.vc=false;return{out:''}}
  const host=x=>x.toLowerCase().replace(/\.meridian\.local$/,'');
  if(n==='ping'||n==='Test-Connection'){const t=host(a.pos);const up=w.hosts[t]?true:w.vms[t]?(w.vms[t].on&&!w.vms[t].paused&&w.hosts[w.vms[t].host].state==='Connected'):null;if(up===null)return{err:`Ping request could not find host ${a.pos}. Please check the name and try again.`};return{out:`Pinging ${t}.meridian.local with 32 bytes of data:\n`+Array(4).fill(up?'Reply: bytes=32 time<1ms TTL=64':'Request timed out.').join('\n'),ev:{k:'ping',t,up}}}
- if(n==='Test-NetConnection'){const t=host(a.pos),p=+(a.named['-port']||0);const v=w.vms[t];if(!v&&!w.hosts[t])return{err:`Test-NetConnection: Name resolution of ${a.pos} failed.`};let ok;if(w.hosts[t])ok=[22,443,902].includes(p);else{const up=v.on&&!v.paused&&w.hosts[v.host].state==='Connected',s=svcOfVm(t);ok=up&&(p===22&&v.os==='ubuntu'||s&&s.port===p||(v.os==='windows'&&[53,3389].includes(p)))}
+ if(n==='Test-NetConnection'){const t=host(a.pos),p=+(a.named['-port']||0);const v=w.vms[t];if(!v&&!w.hosts[t])return{err:`Test-NetConnection: Name resolution of ${a.pos} failed.`};let ok;if(w.hosts[t])ok=[22,443,902].includes(p);else{const up=v.on&&!v.paused&&w.hosts[v.host].state==='Connected',s=svcOfVm(t);ok=up&&(p===22&&v.os==='ubuntu'||(v.os==='windows'?(p===3389||p===5985&&winInit(w,t).svcs.WinRM.status==='Running'||(p===53&&winRole(t)==='DNS'||p===445&&winRole(t)!=='DNS'||[88,389].includes(p)&&winRole(t)==='NTDS')&&winOk(w,t)):s&&s.port===p))}
   if(ok&&w.vms[t]){const s=svcOfVm(t);if(s&&s.port===p){see(c,{});c.saw.svc[s.id]=svcUp(w,s)}}
   return{out:`ComputerName     : ${t}\nRemoteAddress    : ${w.hosts[t]?w.hosts[t].ip:'10.4.8.'+(20+(v?v.vmid:0))}\nRemotePort       : ${p||'(none)'}\nTcpTestSucceeded : ${p?ok?'True':'False':'n/a'}`+(p?'':'\nWARNING: No port given, only ping was tested.'),note:'True means something answered on that port. That is the closest a remote check gets to "the service works".'}}
  if(n==='ssh'){
@@ -889,9 +1059,10 @@ function netExec(nl,c,w){
 const logFmt=r=>`${r[0]} ${r[1].padEnd(7)} ${r[2]}: ${r[3]}`;
 function esxiWords(host){const w=S.cur.w;return['esxcli','system','maintenanceMode','get','set','--enable','false','true','storage','filesystem','list','vim-cmd','vmsvc/getallvms','vmsvc/power.getstate','vmsvc/power.on','vmsvc/power.off','tail','-n','grep','-i','cat','ls','/var/log/','/var/log/hostd.log','/var/log/vmkernel.log','/var/log/esxupdate.log','uptime','hostname','exit','help'].concat(Object.values(w.vms).filter(v=>v.host===host).map(v=>String(v.vmid)))}
 function linuxWords(host){const s=svcOfVm(host);return['systemctl','status','journalctl','-u','-n','20','curl','-s','-k','-sk',`https://localhost/health`,`https://localhost:${s?s.port:443}/health`,'uptime','hostname','df','-h','free','exit','help'].concat(s&&s.unit?[s.unit]:[])}
-function promptStr(){const c=S.cur;if(c&&c.shell)return c.shell.kind==='esxi'?`[root@${c.shell.host}:~]`:`kaatje@${c.shell.host}:~$`;return PROMPT}
+function promptStr(){const c=S.cur;if(c&&c.shell&&c.shell.kind==='win')return `[${c.shell.host}]: PS C:\\Users\\kaatje\\Documents>`;if(c&&c.shell)return c.shell.kind==='esxi'?`[root@${c.shell.host}:~]`:`kaatje@${c.shell.host}:~$`;return PROMPT}
 function shellExec(line,c,w,gate){
  const sh=c.shell,host=sh.host;
+ if(sh.kind==='win'){if(/^(exit|exit-pssession)$/i.test(line)){c.shell=null;return{out:''}}return winNative(line,c,w,host)}
  if(/^(exit|logout)$/.test(line)){c.shell=null;return{out:`Connection to ${host}.meridian.local closed.`}}
  if(/^hostname$/.test(line))return{out:host+'.meridian.local'};
  if(sh.kind==='esxi'){
@@ -963,7 +1134,7 @@ function renderComms(){
 }
 
 const VM02=['galley-disp-01','cabin-tv-02','crew-wiki-01'];
-const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','Move-VM <vm> -Destination <host>   Set-VM <vm> -NumCpu n -MemoryGB n','Get-Snapshot [-VM vm]   New-Snapshot -VM vm -Name name   ... | Remove-Snapshot','Get-Stat <vm> -Stat cpu.ready.summation -Realtime -MaxSamples 3','Shutdown-VMGuest <vm>   (clean OS shutdown; Stop-VM pulls the plug)   Get-VMQuestion | Set-VMQuestion -Option Retry','Get-CDDrive -VM vm   ... | Set-CDDrive -NoMedia','Get-DrsRule -Cluster c   New-DrsRule -Cluster c -Name n -KeepTogether $false -VM a,b   Set-Cluster c -DrsEnabled $true','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
+const SHIP_HELP=['Connect-VIServer vcenter.meridian.local','Get-VM [name|wildcard] [-Location host|cluster]','Get-VMHost [name]   Get-Cluster   Get-Datastore','Get-VIEvent [-Entity name] [-MaxSamples n]','Start-VM / Stop-VM / Restart-VM <name>','Set-VMHost <host> -State Connected|Maintenance','Restart-VMHost <host> [-Force]','Move-VM <vm> -Destination <host>   Set-VM <vm> -NumCpu n -MemoryGB n','Get-Snapshot [-VM vm]   New-Snapshot -VM vm -Name name   ... | Remove-Snapshot','Get-Stat <vm> -Stat cpu.ready.summation -Realtime -MaxSamples 3','Enter-PSSession <windows server>   (then help, Exit-PSSession)','Invoke-Command -ComputerName dns-01,dns-02 -ScriptBlock { Get-Service DNS }','Shutdown-VMGuest <vm>   (clean OS shutdown; Stop-VM pulls the plug)   Get-VMQuestion | Set-VMQuestion -Option Retry','Get-CDDrive -VM vm   ... | Set-CDDrive -NoMedia','Get-DrsRule -Cluster c   New-DrsRule -Cluster c -Name n -KeepTogether $false -VM a,b   Set-Cluster c -DrsEnabled $true','... | Where-Object Prop -eq Value | Select-Object A,B | Sort-Object A | Format-List','Test-NetConnection <name> -Port <n>   Test-Connection <name>   ping <name>','ssh root@<esxi host>   ssh <linux vm>','cmdb <name>   Get-Help <command>   Get-History'];
 const WAYS_IN='<p class="lbl">Ways in</p><p>vCenter: <code>Connect-VIServer vcenter.meridian.local</code>, then PowerCLI. Hosts: <code>ssh root@esx-01</code>, <code>esx-02</code>, <code>esx-03</code>, ESXi shell. Linux VMs: <code>ssh</code> with your own account, root login is disabled. Windows servers do not take SSH.</p>';
 const TICKETS={
  'sandbox':{sandbox:true,module:'*',type:'free roam',npc:'odran',reward:0,
@@ -1503,7 +1674,7 @@ const BUILTIN={
  'help':{params:{},pos:null,syn:'help'}
 };
 const ALIAS={cls:'Clear-Host',clear:'Clear-Host',h:'Get-History',history:'Get-History',ghy:'Get-History'};
-const TYPE={qopt:'String',stat:'String[]',bool:'Boolean',snap:'String',str:'String',loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
+const TYPE={winvm:'String[]',winsvc:'String[]',starttype:'ServiceStartMode',winlog:'String[]',qopt:'String',stat:'String[]',bool:'Boolean',snap:'String',str:'String',loc:'VIContainer',cluster:'Cluster',entity:'VIObject',vc:'String',prop:'Object',val:'Object',target:'String',int:'Int32',vm:'String',host:'VMHost',ds:'Datastore',state:'VMHostState',port:'Int32',cmdlet:'String',ci:'String'};
 function schema(){return Object.assign({},CMDLETS,BUILTIN)}
 function values(kind){if(kind==='cmdlet')return Object.keys(schema()).filter(k=>/-/.test(k));if(kind==='ci')return S.cur?cmdbRows(S.cur.w).map(r=>r[0]):[];return wvalues(kind)}
 Object.assign(ALIAS,PALIAS);
@@ -1517,6 +1688,7 @@ function normalize(line){
   if(!seg)return{err:'ParserError: An empty pipe element is not allowed.'};
   const toks=seg.split(' ');
   const name=canon(toks[0]);
+  if(name==='Where-Object'&&/\{/.test(seg)){out.push(seg.replace(/^\S+/,'Where-Object'));continue}
   if(!name)return{err:`${toks[0]}: The term '${toks[0]}' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.`};
   const d=schema()[name],posv=[],named=[];
   for(let i=1;i<toks.length;i++){
@@ -1663,7 +1835,13 @@ function run2(line,confirmed){
  const before=stepIdx(),svcBefore=svcSnapshot(w);
  const gate=()=>T.sandbox?null:gateWrite(c);
  let res=null,norm=null;
- if(c.shell&&!confirmed)res=shellExec(line,c,w,gate);
+ line=line.replace(/@\{[^}]*\}/g,m=>m.replace(/\s+/g,''));
+ c.winHost=c.shell&&c.shell.kind==='win'?c.shell.host:null;
+ let viaShell=false;
+ if(c.shell&&!confirmed){res=shellExec(line,c,w,gate);viaShell=!!res||!c.shell||c.shell.kind!=='win';if(viaShell)c.winHost=null}
+ const ic=!viaShell&&!c.winHost&&line.match(/^Invoke-Command\s+(?:-ComputerName\s+)?(\S+)\s+-ScriptBlock\s+\{\s*(.*?)\s*\}\s*$/i);
+ if(viaShell){}
+ else if(ic){res=invokeCmd(ic[1],ic[2],c,w,gate)}
  else if(/^help$/i.test(line))res={out:T.help.join('\n'),note:'Get- commands only read and are always safe. Everything else changes something. Try <code>Get-Help Get-VM</code> for the syntax of one command.'};
  else{norm=confirmed?{line}:normalize(line);if(norm.err)res={err:norm.err}}
  if(norm&&!norm.err){
