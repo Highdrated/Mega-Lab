@@ -376,7 +376,7 @@ const CONCEPTS={
 const MODULES=[
  {id:'m0',n:0,name:'Basics',lessons:['l0-orient','l0-team','l0-stack'],tickets:['t0-shake'],mission:'x0-map'},
  {id:'m1',n:1,name:'Virtualization',lessons:['l1-hyper','l1-move','l1-snap'],tickets:['t1-snap','t1-dc','t1-dimm','t1-ready','t1-n1'],mission:'x1-vm'},
- {id:'m2',n:2,name:'Windows Server',lessons:['l2-roles','l2-logs','l2-patch'],tickets:['t2-dns','t2-spool'],mission:'x2-win'},
+ {id:'m2',n:2,name:'Windows Server',lessons:['l2-roles','l2-logs','l2-patch'],tickets:['t2-dns','t2-spool','t2-time'],mission:'x2-win'},
  {id:'m3',n:3,name:'Storage'},
  {id:'m4',n:4,name:'Backup and DR'},
  {id:'m5',n:5,name:'MS SQL Server'},
@@ -807,7 +807,7 @@ function winInit(w,h){
  else if(role==='Spooler')add('Spooler');
  return w.win[h]={svcs,ev:{System:[['10/11/2026 06:02:11',7036,'Information','Service Control Manager','The Windows Update service entered the running state.'],['10/11/2026 06:14:40',7036,'Information','Service Control Manager','The Windows Update service entered the stopped state.']],Application:[],Security:[]},
   vol:{C:{size:80,free:34.2}},files:{},hotfix:[['KB5044281','Security Update','04/11/2026'],['KB5043936','Update','08/10/2026'],['KB5042881','Security Update','10/09/2026']],pending:false,
-  time:{offset:0,source:h==='ad-dc-01'?'ntp1.meridian-ops.local':'ad-dc-01.meridian.local',stratum:h==='ad-dc-01'?2:3,vmtools:false}};
+  time:{offset:0,source:h==='ad-dc-01'?'ntp1.meridian-ops.local':'ad-dc-01.meridian.local',stratum:h==='ad-dc-01'?2:3,domhier:true,tools:false,toolsOffset:0}};
 }
 function winEv(w,h,log,id,lvl,src,msg,when){winInit(w,h).ev[log].push([when||'10/11/2026 '+hhmm(w.clock)+':00',id,lvl,src,msg])}
 function winSvcSet(w,h,n,st){const W=winInit(w,h),s=W.svcs[n];if(!s||s.status===st)return;s.status=st;winEv(w,h,'System',7036,'Information','Service Control Manager',`The ${s.display} service entered the ${st==='Running'?'running':'stopped'} state.`)}
@@ -821,7 +821,7 @@ function winExec(n,a,first,data,type,c,w,nl){
  const W=h?winInit(w,h):null,ask=()=>a.named['-confirm']!=='false'&&!c.confirmed;
  const svcRow=k=>({_t:'service',Name:k,DisplayName:W.svcs[k].display,Status:W.svcs[k].status,StartType:W.svcs[k].start,PSComputerName:h});
  const pickSvc=(v)=>{if(!first&&type==='service')return{items:data.map(o=>o.Name)};if(!v)return{items:Object.keys(W.svcs)};const out=[];for(const p of String(v).split(',')){const m=Object.keys(W.svcs).filter(k=>wild(p,k)||wild(p,W.svcs[k].display));if(!m.length&&!/[*?]/.test(p))return{err:`${n}: Cannot find any service with service name '${p}'.`};out.push(...m)}return{items:[...new Set(out)]}};
- if(n==='Get-Date'){const d=new Date(Date.UTC(2026,10,10,0,0,0)+(w.clock*60+W.time.offset)*1000);return{ret:{out:'Tuesday, 10 November 2026 '+String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')+':'+String(d.getUTCSeconds()).padStart(2,'0')}}}
+ if(n==='Get-Date'){sawSet(c,'date',h);if(W.time.tools)W.time.offset=W.time.toolsOffset;const d=new Date(Date.UTC(2026,10,10,0,0,0)+(w.clock*60+W.time.offset)*1000);return{ret:{out:'Tuesday, 10 November 2026 '+String(d.getUTCHours()).padStart(2,'0')+':'+String(d.getUTCMinutes()).padStart(2,'0')+':'+String(d.getUTCSeconds()).padStart(2,'0')}}}
  if(n==='Get-Service'){
   const r=pickSvc(a.named['-name']||a.pos);if(r.err)return{ret:{err:r.err}};
   let items=r.items;
@@ -901,16 +901,26 @@ function winExec(n,a,first,data,type,c,w,nl){
   return{data:[{_t:'dnsrec',Name:nm+'.meridian.local',Type:'A',TTL:3600,Section:'Answer',IPAddress:ip,Server:ok}],type:'dnsrec'};
  }
 }
-function winNative(line,c,w,h){
+function winNative(line,c,w,h,gate){
  const W=winInit(w,h);
- if(/^w32tm \/query \/status$/i.test(line)){sawSet(c,'w32tm',h);const off=Math.abs(W.time.offset);return{out:`Leap Indicator: 0(no warning)\nStratum: ${W.time.vmtools?0:W.time.stratum} (${W.time.vmtools?'unspecified':'secondary reference - syncd by (S)NTP'})\nPrecision: -23 (119.209ns per tick)\nRoot Delay: 0.0312500s\nRoot Dispersion: ${W.time.vmtools?'10.0000000s':'0.0468750s'}\nReferenceId: ${W.time.vmtools?'0x4C4F434C (source name:  "LOCL")':'0x0A04081A (source IP:  10.4.8.26)'}\nLast Successful Sync Time: ${W.time.vmtools?'03/11/2026 04:12:55':'10/11/2026 '+hhmm(w.clock-17)+':02'}\nSource: ${W.time.vmtools?'Local CMOS Clock':W.time.source}\nPoll Interval: 10 (1024s)`+(off>60?`\n\n(Your console clock differs from this server by about ${Math.round(off/60)} minutes.)`:'')}}
- if(/^w32tm \/query \/source$/i.test(line)){sawSet(c,'w32tm',h);return{out:W.time.vmtools?'Local CMOS Clock':W.time.source}}
- if(/^w32tm \/resync( \/force)?$/i.test(line)){if(W.time.vmtools||W.svcs.W32Time.status!=='Running')return{err:W.svcs.W32Time.status!=='Running'?'The following error occurred: The service has not been started. (0x80070426)':'Sending resync command to local computer\nThe computer did not resync because no time data was available.',note:W.time.vmtools?'The time service has no domain source configured. Something else has been setting this clock.':null};W.time.offset=0;return{out:'Sending resync command to local computer\nThe command completed successfully.',ev:{k:'resync',host:h}}}
- if(/^w32tm \/config \/syncfromflags:domhier \/update$/i.test(line)){W.time.vmtools=false;W.time.source='ad-dc-01.meridian.local';return{out:'The command completed successfully.',ev:{k:'w32config',host:h}}}
+ const T=W.time;if(T.tools)T.offset=T.toolsOffset;
+ const srcName=T.domhier?T.source:'Local CMOS Clock',fmtOff=x=>(x>=0?'+':'-')+Math.abs(x).toFixed(7)+'s';
+ if(/^w32tm \/query \/status$/i.test(line)){sawSet(c,'w32tm',h);return{out:`Leap Indicator: ${T.domhier?'0(no warning)':'3(not synchronized)'}\nStratum: ${T.domhier?T.stratum+' (secondary reference - syncd by (S)NTP)':'0 (unspecified)'}\nPrecision: -23 (119.209ns per tick)\nRoot Delay: ${T.domhier?'0.0312500s':'0.0000000s'}\nRoot Dispersion: ${T.domhier?'0.0468750s':'10.0000000s'}\nReferenceId: ${T.domhier?'0x0A04081A (source IP:  10.4.8.26)':'0x00000000 (unspecified)'}\nLast Successful Sync Time: ${T.domhier?'10/11/2026 '+hhmm(w.clock-17)+':02':'unspecified'}\nSource: ${srcName}\nPoll Interval: 10 (1024s)`}}
+ if(/^w32tm \/query \/source$/i.test(line)){sawSet(c,'w32tm',h);return{out:srcName}}
+ let m=line.match(/^w32tm \/stripchart \/computer:(\S+)(?: \/samples:(\d+))?(?: \/dataonly)?$/i);
+ if(m){const t=m[1].toLowerCase().replace(/\.meridian\.local$/,''),v=w.vms[t];if(!v||v.os!=='windows'||!v.on)return{err:`Tracking ${m[1]} [0.0.0.0:123].\nerror: 0x800705B4`};
+  const R=winInit(w,t).time;if(R.tools)R.offset=R.toolsOffset;const d=T.offset-R.offset,n=Math.min(+(m[2]||5),8),rows=[];
+  for(let k=0;k<n;k++)rows.push(`${hhmm(w.clock)}:${String(10+k*2).padStart(2,'0')}, ${fmtOff(d+(k%3-1)*0.0004)}`);
+  sawSet(c,'strip',h+':'+t+':'+(Math.abs(d)<1?'ok':'bad'));
+  return{out:`Tracking ${t}.meridian.local [10.4.8.${20+v.vmid}:123].\nCollecting ${n} samples.\nThe current time is 10/11/2026 ${hhmm(w.clock)}:08.\n`+rows.join('\n'),note:Math.abs(d)>300?'Over 300 seconds apart: Kerberos refuses tickets between these two machines.':null}}
+ if(/^w32tm \/resync( \/force| \/rediscover)*$/i.test(line)){if(W.svcs.W32Time.status!=='Running')return{err:'The following error occurred: The service has not been started. (0x80070426)'};if(!T.domhier)return{err:'Sending resync command to local computer\nThe computer did not resync because no time data was available.',note:'No domain time source is configured, so there is nothing to sync from.'};T.offset=0;return{out:'Sending resync command to local computer\nThe command completed successfully.',note:T.tools?'Synced. But something else is also setting this clock: check again in a minute.':null,ev:{k:'resync',host:h}}}
+ if(/^w32tm \/config \/syncfromflags:domhier \/update$/i.test(line)){const g=gate&&gate();if(g)return g;T.domhier=true;T.source=h==='ad-dc-01'?'ntp1.meridian-ops.local':'ad-dc-01.meridian.local';winEv(w,h,'System',37,'Information','Microsoft-Windows-Time-Service','The time provider NtpClient is currently receiving valid time data from ad-dc-01.meridian.local.');return{out:'The command completed successfully.',ev:{k:'w32config',host:h}}}
+ m=line.match(/^(?:&\s*)?['"]?(?:C:\\Program Files\\VMware\\VMware Tools\\)?VMwareToolboxCmd(?:\.exe)?['"]?\s+timesync\s+(status|enable|disable)$/i);
+ if(m){const op=m[1].toLowerCase();if(op==='status'){sawSet(c,'toolsync',h);return{out:T.tools?'Enabled':'Disabled'}}const g=gate&&gate();if(g)return g;T.tools=op==='enable';if(!T.tools)T.toolsOffset=0;return{out:T.tools?'Enabled':'Disabled',ev:{k:'toolsync',host:h,on:T.tools}}}
  if(/^whoami$/i.test(line))return{out:'meridian\\kaatje'};
  if(/^hostname$/i.test(line))return{out:h.toUpperCase()};
  if(/^ipconfig$/i.test(line))return{out:`Windows IP Configuration\n\nEthernet adapter Ethernet0:\n   IPv4 Address. . . . . . . . . . . : 10.4.8.${20+w.vms[h].vmid}\n   Subnet Mask . . . . . . . . . . . : 255.255.255.0\n   Default Gateway . . . . . . . . . : 10.4.8.1`};
- if(/^help$/i.test(line))return{out:'Get-Service [name]   Start-Service / Stop-Service / Restart-Service <name>   Set-Service <name> -StartupType Automatic\nGet-WinEvent -LogName System -MaxEvents 20\nGet-WinEvent -FilterHashtable @{LogName=\'System\';Id=7034,7036;Level=2} -MaxEvents 10\nGet-Volume   Get-PSDrive C   Get-ChildItem <path> | Measure-Object Length -Sum   Remove-Item <path>\\*\nGet-HotFix   Test-Path <registry path>   Restart-Computer\nResolve-DnsName <name> [-Server dns-02]   Get-Date\nw32tm /query /status   w32tm /query /source   w32tm /resync\nhostname  whoami  ipconfig   Exit-PSSession'};
+ if(/^help$/i.test(line))return{out:'Get-Service [name]   Start-Service / Stop-Service / Restart-Service <name>   Set-Service <name> -StartupType Automatic\nGet-WinEvent -LogName System -MaxEvents 20\nGet-WinEvent -FilterHashtable @{LogName=\'System\';Id=7034,7036;Level=2} -MaxEvents 10\nGet-Volume   Get-PSDrive C   Get-ChildItem <path> | Measure-Object Length -Sum   Remove-Item <path>\\*\nGet-HotFix   Test-Path <registry path>   Restart-Computer\nResolve-DnsName <name> [-Server dns-02]   Get-Date\nw32tm /query /status   w32tm /query /source   w32tm /resync   w32tm /stripchart /computer:ad-dc-01 /samples:3 /dataonly\nw32tm /config /syncfromflags:domhier /update   VMwareToolboxCmd timesync status|disable\nhostname  whoami  ipconfig   Exit-PSSession'};
  return null;
 }
 
@@ -919,12 +929,12 @@ function invokeCmd(targets,inner,c,w,gate){
  for(const h of hs){const v=w.vms[h];
   if(!v||v.os!=='windows'||!(v.on&&!v.paused&&w.hosts[v.host].state==='Connected')||winInit(w,h).svcs.WinRM.status!=='Running'){errs.push(`[${h}] Connecting to remote server ${h} failed with the following error message : WinRM cannot complete the operation.`);continue}
   c.winHost=h;sawSet(c,'invoke',h);
-  const nat=winNative(inner,c,w,h);if(nat){if(nat.out)outs.push(nat.out.split('\n').map(l=>l).join('\n')+`\n(PSComputerName: ${h})`);if(nat.err)errs.push(`[${h}] ${nat.err}`);continue}
+  const nat=winNative(inner,c,w,h,gate);if(nat){if(nat.ev)ev=nat.ev;if(nat.out)outs.push(nat.out+`\n(PSComputerName: ${h})`);if(nat.err)errs.push(`[${h}] ${nat.err}`);continue}
   const norm=normalize(inner);if(norm.err){errs.push(norm.err);break}
   c._raw=true;const r=psExec(norm.line,c,w,gate);c._raw=false;
   if(r.ev)ev=r.ev;
   if(r.err){errs.push(`[${h}] ${r.err}`);continue}
-  if(r.raw){r.data.forEach(o=>{o.PSComputerName=h});rows.push(...r.data);type=type||r.type;note=note||r.note;if(r.ev)ev=r.ev}else if(r.out)outs.push(r.out)}
+  if(r.raw){r.data.forEach(o=>{o.PSComputerName=h});rows.push(...r.data);type=type||r.type;note=note||r.note;if(r.ev)ev=r.ev}else if(r.out)outs.push(r.out+`\n(PSComputerName: ${h})`)}
  c.winHost=null;
  let out=outs.join('\n\n');if(rows.length){const C=(DEFCOLS[type]||Object.keys(rows[0]).filter(k=>k[0]!=='_')).filter(k=>k!=='PSComputerName').concat(['PSComputerName']);out=(out?out+'\n\n':'')+table(rows,C)}
  return{out:out||null,err:errs.length?errs.join('\n'):null,note,ev};
@@ -1063,7 +1073,7 @@ function linuxWords(host){const s=svcOfVm(host);return['systemctl','status','jou
 function promptStr(){const c=S.cur;if(c&&c.shell&&c.shell.kind==='win')return `[${c.shell.host}]: PS C:\\Users\\kaatje\\Documents>`;if(c&&c.shell)return c.shell.kind==='esxi'?`[root@${c.shell.host}:~]`:`kaatje@${c.shell.host}:~$`;return PROMPT}
 function shellExec(line,c,w,gate){
  const sh=c.shell,host=sh.host;
- if(sh.kind==='win'){if(/^(exit|exit-pssession)$/i.test(line)){c.shell=null;return{out:''}}return winNative(line,c,w,host)}
+ if(sh.kind==='win'){if(/^(exit|exit-pssession)$/i.test(line)){c.shell=null;return{out:''}}return winNative(line,c,w,host,gate)}
  if(/^(exit|logout)$/.test(line)){c.shell=null;return{out:`Connection to ${host}.meridian.local closed.`}}
  if(/^hostname$/.test(line))return{out:host+'.meridian.local'};
  if(sh.kind==='esxi'){
@@ -1569,6 +1579,65 @@ const TICKETS={
    take:['A service that will not start usually says why: read the System log.','Get-ChildItem folder | Measure-Object Length -Sum finds where the space went.','Stop the service, clear the spool, start the service.','Free space is a dependency of almost everything on Windows.']
   },
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: printing</p><p>All printers on the ship print through print-01 (Windows Server, Print Spooler service, port 445). Jobs wait as files in C:\\Windows\\System32\\spool\\PRINTERS until the printer takes them.</p>'
+ },
+ 't2-time':{module:'m2',type:'incident',npc:'linnea',reward:180,
+  title:'"Wrong password", they say',
+  brief:'"Since this morning about half the crew cannot log on to the portal. It says wrong password, but they swear they did not change it, and if they try again later it sometimes works. I reset Mara\'s password and she still could not log on."',
+  ci:['ad-dc-01','ad-dc-02'],
+  watch:['dir'],
+  stack:[['svc','service','Crew logons'],['ad-dc-02','vm','ad-dc-02'],['esx-02','host','esx-02'],['ad-dc-01','vm','ad-dc-01']],
+  fault:{node:'ad-dc-02',evidence:c=>!!(c.saw&&((c.saw.w32tm&&c.saw.w32tm['ad-dc-02'])||(c.saw.strip&&Object.keys(c.saw.strip).some(k=>k.includes('ad-dc-02')&&k.endsWith('bad')))||(c.saw.winid&&c.saw.winid['ad-dc-02:4771'])))},
+  setup(w){
+   const W=winInit(w,'ad-dc-02');Object.assign(W.time,{domhier:false,tools:true,toolsOffset:421,offset:421});
+   W.ev.System.push(['10/11/2026 05:58:03',1,'Information','Microsoft-Windows-Kernel-General','The system time has changed to 10/11/2026 06:05:04 from 10/11/2026 05:58:03. Change Reason: An application or system component changed the time.']);
+   W.ev.System.push(['10/11/2026 06:20:00',36,'Warning','Microsoft-Windows-Time-Service','The time service has not synchronized the system time for 86400 seconds because none of the time service providers provided a usable time stamp.']);
+   W.ev.System.push(['08/11/2026 16:40:12',7040,'Information','Service Control Manager','The start type of the VMware Tools service was changed from auto start to auto start. (VMware Tools upgraded to 12.4, defaults restored)']);
+   ['mara.quill','tobin.hart','ines.fallow','mara.quill','oren.vale'].forEach((u,i)=>W.ev.Security.push([`10/11/2026 07:${String(12+i*6).padStart(2,'0')}:40`,4771,'Information','Microsoft-Windows-Security-Auditing',`Kerberos pre-authentication failed. Account Name: ${u}. Service Name: krbtgt/MERIDIAN.LOCAL. Client Address: ::ffff:10.4.9.${40+i}. Failure Code: 0x25. Pre-Authentication Type: 2.`]));
+   const W1=winInit(w,'ad-dc-01');W1.ev.Security.push(['10/11/2026 07:20:02',4624,'Information','Microsoft-Windows-Security-Auditing','An account was successfully logged on. Account Name: linnea.morrow. Logon Type: 3.']);
+   w.events.push({t:'08:11',e:'ad-dc-02',u:'MERIDIAN\\odran',m:'Task: Upgrade VMware Tools completed (12.4)'});
+   w.comms.push({t:'07:52',who:'linnea',text:'Mara tried again from the galley terminal and it worked. From her cabin it does not. Same password.'});
+   SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
+  },
+  on(ev,c,w){
+   if(ev.k==='winreboot'&&ev.host==='ad-dc-02')return{fail:['evidence','Rebooted ad-dc-02 before finding the cause.'],why:'VMware Tools sets the clock again at boot, from the same fast host. The reboot cost the ship half its logon capacity for four minutes and fixed nothing.'};
+   if(ev.k==='winreboot'&&ev.host==='ad-dc-01')return{fail:['smallest-fix','Rebooted ad-dc-01, the healthy DC.'],why:'For four minutes every logon on the ship had to go through the broken one.'};
+   if(ev.k==='resync'&&ev.host==='ad-dc-01')return null;
+   if((ev.k==='toolsync'||ev.k==='w32config'||ev.k==='resync')&&c.saw&&c.saw.strip)Object.keys(c.saw.strip).forEach(k=>delete c.saw.strip[k]);
+  },
+  steps:[
+   ['cmdb','CMDB lookup',(w,c)=>c.ciAll,'Two domain controllers; either can answer a logon.'],
+   ['scope','Scope',(w,c)=>c.scoped||(c.scoped=!!(c.saw&&((c.saw.winlog&&c.saw.winlog['ad-dc-02:Security'])||(c.saw.date&&c.saw.date['ad-dc-01']&&c.saw.date['ad-dc-02'])))),'You looked where logons are decided: the DCs themselves.'],
+   ['hypo','Hypothesis',(w,c)=>!!c.hypo,'Name the DC, then prove why.'],
+   ['isolate','Isolate',(w,c)=>!!c.isolated,'Clock skew, proven.'],
+   ['fix','Fix',w=>{const T=winInit(w,'ad-dc-02').time;return !T.tools&&T.domhier&&Math.abs(T.offset)<5},'The clock follows the domain, and nothing else is allowed to move it.'],
+   ['verify','Verify',(w,c)=>!!(c.saw&&c.saw.strip&&Object.keys(c.saw.strip).some(k=>k.includes('ad-dc-02')&&k.endsWith('ok'))),'Measured against the other DC: the same time.'],
+   ['record','Document',(w,c)=>!!c.recordOk,'']
+  ],
+  help:SHIP_HELP,
+  hints:['"Wrong password" that comes and goes depends on which DC answers. Compare the two: Invoke-Command -ComputerName ad-dc-01,ad-dc-02 -ScriptBlock { Get-Date }. Then read the Security log on the one that looks off.','Event 4771 with Failure Code 0x25 means "clock skew too great". On ad-dc-02: w32tm /query /status shows the source. And VMwareToolboxCmd timesync status shows whether VMware Tools is also setting the clock.','The Tools upgrade on 8 November switched host time sync back on, and esx-02 runs 7 minutes fast. Write the rollback, then on ad-dc-02: VMwareToolboxCmd timesync disable, w32tm /config /syncfromflags:domhier /update, w32tm /resync, then w32tm /stripchart /computer:ad-dc-01 /samples:3 /dataonly.'],
+  checks:[
+   ['Names the DC','what',/ad-dc-02/i],
+   ['Root cause: VMware Tools time sync','why',/vmware tools|tools|time ?sync|host/i],
+   ['Explains why logons fail','why',/skew|5 min|five min|kerberos|0x25|4771|clock/i],
+   ['Rollback says how to undo','rollback',/enable|timesync|w32tm|config/i],
+   ['Verified by measuring','verify',/stripchart|w32tm|offset|get-date|second/i],
+   ['Follow-up: the host clock and the other VMs','follow',/esx-02|ntp|host|all|every|policy|check|monitor|tools upgrade/i]
+  ],
+  debrief:{
+   path:[
+    ['CMDB','cmdb ad-dc-01, cmdb ad-dc-02','Two DCs; a client asks whichever answers first.'],
+    ['Scope','Invoke-Command -ComputerName ad-dc-01,ad-dc-02 -ScriptBlock { Get-Date }','Seven minutes apart.'],
+    ['Hypothesis','"ad-dc-02, its clock is too far off for Kerberos"','One DC, not the users\' passwords.'],
+    ['Isolate','Get-WinEvent -LogName Security on ad-dc-02; w32tm /query /status; VMwareToolboxCmd timesync status','4771 with 0x25, source Local CMOS Clock, Tools time sync Enabled.'],
+    ['Fix','VMwareToolboxCmd timesync disable; w32tm /config /syncfromflags:domhier /update; w32tm /resync','Tools stops moving the clock; the domain sets it.'],
+    ['Verify','w32tm /stripchart /computer:ad-dc-01 /samples:3 /dataonly','Within a fraction of a second.'],
+    ['Record','what, why, rollback, verification, follow-up','Fix the host clock on esx-02 and check every VM the Tools upgrade touched.']
+   ],
+   readings:[['Get-Date on both DCs','ad-dc-02 is 421 seconds ahead. Kerberos allows 300.'],['Event 4771, Failure Code 0x25','"Clock skew too great". Windows calls it a failed pre-authentication, users see "wrong password".'],['w32tm /query /status','Source: Local CMOS Clock, Leap Indicator 3: the time service is not syncing from anywhere.'],['VMwareToolboxCmd timesync status','Enabled. Since the Tools upgrade on 8 November, the VM copies esx-02\'s fast clock.'],['A plain w32tm /resync','Fixes it for a minute, then Tools sets it back. Two things were setting one clock.']],
+   senior:['"Wrong password" for many users at once is almost never passwords. Resetting Mara\'s did nothing but give her a new password to remember.','Intermittent symptoms that depend on where you are usually depend on which server answers.','The real root is esx-02\'s own clock. Hosts should take time from NTP too; check it with the ESXi shell.','A Tools upgrade quietly changed a setting on every VM it touched. Check the other DCs and domain members, not just this one.'],
+   take:['Invoke-Command -ComputerName a,b -ScriptBlock { Get-Date } compares clocks in one line.','4771 with 0x25 means clock skew. Kerberos allows 5 minutes.','On domain members, only the domain sets the time: VMware Tools time sync off.','w32tm /stripchart measures the difference; trust the measurement.']
+  },
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: time</p><p>ad-dc-01 holds the PDC emulator role and takes its time from ntp1. Every other Windows server follows the domain. VMware Tools time sync must be off on all of them.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>On a Windows VM, VMware Tools has a command line: VMwareToolboxCmd timesync status | enable | disable.</p>'
  },
  't0-shake':{module:'m0',type:'incident',npc:'linnea',reward:120,
   title:'The galley order screens are black',
