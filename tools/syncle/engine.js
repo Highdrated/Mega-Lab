@@ -964,6 +964,8 @@ function callMethod(o, name, args, ctx) {
   const l = name.toLowerCase();
   if (o === null || o === undefined) throw new PSErr("You cannot call a method on a null-valued expression.", { term: true, kind: "nullcall" });
   if (l === "tostring") { if (o instanceof Date && args.length) return dateFmt(o, String(args[0])); return toStr(o); }
+  if (o instanceof Date && l === "touniversaltime") return new Date(o.getTime() + o.getTimezoneOffset() * 60000);
+  if (o instanceof Date && l === "tolocaltime") return new Date(o);
   if (l === "gettype") return obj("System.RuntimeType", { Name: (typeName(o) || "").split(".").pop(), FullName: typeName(o) });
   if (typeof o === "string") {
     const a0 = args[0], a1 = args[1];
@@ -1183,7 +1185,7 @@ def("Get-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Func
     else if (!b.All) list = list.slice(0, 100);
     return list.map((u) => project(u, props, USER_DEFAULT));
   } });
-def("Update-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Function", pipe: true, whatif: true, params: { UserId: P(0, { req: true, pipe: true }), AccountEnabled: S(), Department: P(null), JobTitle: P(null), DisplayName: P(null), UsageLocation: P(null), OfficeLocation: P(null), MobilePhone: P(null), CompanyName: P(null), City: P(null) },
+def("Update-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Function", pipe: true, whatif: true, params: { UserId: P(0, { req: true, pipe: true }), AccountEnabled: S(), Department: P(null), JobTitle: P(null), DisplayName: P(null), UsageLocation: P(null), OfficeLocation: P(null), MobilePhone: P(null), CompanyName: P(null), City: P(null), PasswordProfile: P(null) },
   run({ ctx, b, name, input, emitErr }) {
     needMg(ctx, name, "UpdateExpanded");
     const ids = b.UserId !== undefined ? flat(b.UserId) : input.map((x) => x.Id);
@@ -1194,6 +1196,12 @@ def("Update-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "F
       const u = ctx.t.users.find((x) => x.Id.toLowerCase() === id || x.UserPrincipalName.toLowerCase() === id);
       if (!u) { emitErr("Resource '" + idv + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", name + "_UpdateExpanded", "notfound404"); continue; }
       for (const k of ["AccountEnabled", "Department", "JobTitle", "DisplayName", "UsageLocation", "OfficeLocation", "MobilePhone", "CompanyName", "City"]) if (b[k] !== undefined) u[k] = b[k];
+      if (b.PasswordProfile !== undefined) {
+        if (!isHT(b.PasswordProfile)) throw new PSErr("Cannot bind parameter 'PasswordProfile'. Cannot convert the \"" + toStr(b.PasswordProfile) + "\" value of type \"" + shortType(typeName(b.PasswordProfile)) + "\" to type \"Microsoft.Graph.PowerShell.Models.IMicrosoftGraphPasswordProfile\".", { cmd: name, term: true, kind: "bind" });
+        const pw = hget(b.PasswordProfile, "Password");
+        if (pw !== undefined && pw !== null && String(pw).length < 8) throw new PSErr("The specified password does not comply with password complexity requirements. Please provide a different password.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_UpdateExpanded", term: true, kind: "pw" });
+        u._pwReset = { password: pw !== undefined && pw !== null, force: truthy(hget(b.PasswordProfile, "ForceChangePasswordNextSignIn")) };
+      }
     }
     return [];
   } });
@@ -1617,7 +1625,7 @@ function formatOut(values, W) {
     }
     const t = typeName(v);
     let j = i;
-    while (j < values.length && isObj(values[j]) && typeName(values[j]) === t) j++;
+    while (j < values.length && isObj(values[j]) && (typeName(values[j]) === t || (v.__fmt === "table" && values[j].__fmt === "table"))) j++;
     const run = values.slice(i, j);
     if (t === "Microsoft.PowerShell.Commands.MemberDefinition") {
       let k = 0;
@@ -1714,6 +1722,7 @@ function extendTenant(t) {
     grp("SG-MFA-Exclusion", "SG-MFA-Exclusion", "Temporary: excluded from MFA policy", [], true, ["Scan Station"].map(() => byName("Rowan Hart")))
   ];
   t.revoked = {};
+  incident(t);
   return t;
 }
 
@@ -2071,6 +2080,282 @@ function render(result) {
   for (const h of result.host) if (h.clear) parts.length = 0; else parts.push(h);
   return parts;
 }
+
+const ATT_IP = "185.220.101.47", GATE_IP = "104.28.66.19";
+const T_SIGNIN = GM + "MicrosoftGraphSignIn", T_SLOC = GM + "MicrosoftGraphSignInLocation", T_SIGSTAT = GM + "MicrosoftGraphSignInStatus", T_SDEV = GM + "MicrosoftGraphDeviceDetail";
+const T_RULE = "Microsoft.Exchange.Management.Tasks.InboxRule", T_TRACE = "Microsoft.Exchange.Management.FfoReporting.MessageTraceV2", T_AUDIT = "Microsoft.Exchange.Management.SystemConfigurationTasks.UnifiedAuditLogEvent";
+const T_AM = GM + "MicrosoftGraphAuthenticationMethod", T_PHONE = GM + "MicrosoftGraphPhoneAuthenticationMethod", T_MSA = GM + "MicrosoftGraphMicrosoftAuthenticatorAuthenticationMethod";
+const PW_METHOD = "28c10230-6103-485e-b985-444c60001490", MOBILE_METHOD = "3179e48a-750b-4051-897c-87b9720928f7";
+const FAIL = { 0: "Other.", 50126: "Error validating credentials due to invalid username or password.", 50053: "The account is locked, you've tried to sign in too many times with an incorrect user ID or password.", 50074: "Strong Authentication is required." };
+DISPLAY[T_RULE] = ["Name", "Enabled", "Priority", "RuleIdentity"];
+DISPLAY[T_TRACE] = ["Received", "SenderAddress", "RecipientAddress", "Subject", "Status"];
+DISPLAY[T_AM] = ["Id"];
+DISPLAY[T_PHONE] = ["Id", "PhoneNumber", "PhoneType", "SmsSignInState"];
+DISPLAY[T_MSA] = ["Id", "DisplayName", "DeviceTag", "PhoneAppVersion"];
+PROPTYPES[T_SIGNIN] = { CreatedDateTime: "System.Nullable[datetime]", Location: T_SLOC, Status: T_SIGSTAT, DeviceDetail: T_SDEV, IsInteractive: "System.Nullable[bool]" };
+PROPTYPES[T_SIGSTAT] = { ErrorCode: "System.Nullable[int]" };
+PROPTYPES[T_AM] = { AdditionalProperties: "System.Collections.Generic.IDictionary[string,System.Object]" };
+
+function atClock(d, hh, mm) { const x = new Date(NOW.getTime() - d * DAY); x.setHours(hh, mm, 0, 0); if (x > NOW) x.setTime(x.getTime() - DAY); return x; }
+function isoZ(d) { return d.toISOString().replace(/\.\d+Z$/, "Z"); }
+function incident(t) {
+  const r = rng(9090);
+  const byName = (dn) => t.users.find((u) => u.DisplayName === dn);
+  const cities = { Bruges: ["81.82.", "Brugge", "West-Vlaanderen"], Ghent: ["81.164.", "Gent", "Oost-Vlaanderen"], Antwerp: ["91.180.", "Antwerpen", "Antwerpen"] };
+  const sigs = [];
+  const sig = (u, when, ip, city, state, cc, code, app, client, dev) => sigs.push(obj(T_SIGNIN, {
+    AppDisplayName: app || "Office 365 Exchange Online", AppId: "00000002-0000-0ff1-ce00-000000000000", ClientAppUsed: client || "Mobile Apps and Desktop clients",
+    ConditionalAccessStatus: code === 0 ? "success" : "notApplied", CorrelationId: guid(r), CreatedDateTime: when,
+    DeviceDetail: obj(T_SDEV, { Browser: dev ? dev[0] : "Rich Client 16.0", DeviceId: "", DisplayName: "", IsCompliant: false, IsManaged: false, OperatingSystem: dev ? dev[1] : "Windows10", TrustType: "" }),
+    IPAddress: ip, Id: guid(r), IsInteractive: true, Location: obj(T_SLOC, { City: city, CountryOrRegion: cc, GeoCoordinates: null, State: state }),
+    ResourceDisplayName: "Office 365 Exchange Online", RiskLevelDuringSignIn: "none", RiskState: "none",
+    Status: obj(T_SIGSTAT, { AdditionalDetails: code === 0 ? null : "The user didn't enter the right credentials.", ErrorCode: code, FailureReason: FAIL[code] }),
+    UserDisplayName: u.DisplayName, UserId: u.Id, UserPrincipalName: u.UserPrincipalName
+  }));
+  const rowan = byName("Rowan Hart"), thea = byName("Thea Gallow");
+  t.users.filter((u) => u.UserType === "Member" && u.AccountEnabled && u !== rowan).forEach((u, i) => {
+    const c = cities[u.City] || cities.Bruges;
+    const ip = c[0] + (10 + (i * 7) % 200) + "." + (20 + (i * 13) % 200);
+    for (let k = 0; k < 2; k++) sig(u, atClock(k * 2 + (i % 3), 8 + (i % 3), (i * 11 + k * 17) % 60), ip, c[1], c[2], "BE", 0);
+  });
+  const sprayed = ["Brannoc Vale", "Maelis Grey", "Oren Halloway", "Aldric Moor", "Fenna Lowe", "Rowan Hart", "Emrys Cole", "Anwen Frost", "Evander Holt"].map(byName);
+  sprayed.forEach((u, i) => sig(u, atClock(4, 3, 10 + i * 4), ATT_IP, "Frankfurt am Main", "Hessen", "DE", u === rowan ? 50126 : (i % 4 === 3 ? 50053 : 50126), "OfficeHome", "Browser", ["Chrome 124.0.0", "Linux"]));
+  sig(rowan, atClock(4, 3, 47), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "OfficeHome", "Browser", ["Chrome 124.0.0", "Linux"]);
+  sig(rowan, atClock(4, 4, 2), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "Office 365 Exchange Online", "Browser", ["Chrome 124.0.0", "Linux"]);
+  sig(rowan, atClock(3, 9, 12), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "Office 365 Exchange Online", "Browser", ["Chrome 124.0.0", "Linux"]);
+  sig(thea, atClock(1, 8, 4), GATE_IP, "Dallas", "Texas", "US", 0, "OfficeHome", "Browser", ["Edge 126.0.0", "Windows10"]);
+  sig(thea, atClock(1, 8, 31), GATE_IP, "Dallas", "Texas", "US", 0, "Office 365 Exchange Online", "Browser", ["Edge 126.0.0", "Windows10"]);
+  sigs.sort((a, b) => b.CreatedDateTime - a.CreatedDateTime);
+  t.signins = sigs;
+  const last = (u) => sigs.filter((s) => s.UserId === u.Id && s.Status.ErrorCode === 0)[0];
+  [rowan, thea].forEach((u) => { const s = last(u); if (s) { u.SignInActivity.LastSignInDateTime = s.CreatedDateTime; u.SignInActivity.LastSuccessfulSignInDateTime = s.CreatedDateTime; u.SignInActivity.LastNonInteractiveSignInDateTime = s.CreatedDateTime; } });
+
+  const rid = () => String(Math.floor(r() * 9e17) + 1e17).slice(0, 18) + "4";
+  const rule = (mbx, name, pri, extra) => { const id = rid(); return Object.assign({ mb: mbx, Name: name, Enabled: true, Priority: pri, RuleIdentity: id, Identity: mbx + "\\" + id, MailboxOwnerId: mbx, From: null, SubjectContainsWords: null, SubjectOrBodyContainsWords: null, MoveToFolder: null, DeleteMessage: false, MarkAsRead: false, ForwardTo: null, RedirectTo: null, StopProcessingRules: false }, extra); };
+  t.rules = [
+    rule("Rowan Hart", "Shift roster", 1, { From: ["Caius Mercer"], MoveToFolder: "Rowan Hart:\\Roster", Description: "If the message:\r\n\tthe message was received from 'Caius Mercer'\r\nTake the following actions:\r\n\tmove the message to folder 'Roster'\r\n" }),
+    rule("Rowan Hart", "..", 2, { SubjectOrBodyContainsWords: ["invoice", "payment", "bank", "IBAN"], MoveToFolder: "Rowan Hart:\\RSS Subscriptions", MarkAsRead: true, StopProcessingRules: true, Description: "If the message:\r\n\tincludes 'invoice' or 'payment' or 'bank' or 'IBAN' in the subject or body\r\nTake the following actions:\r\n\tmove the message to folder 'RSS Subscriptions'\r\n\tand mark the message as read\r\n\tand stop processing more rules on this message\r\n" }),
+    rule("Thea Gallow", "Bank statements", 1, { From: ["statements@kbc.example"], MoveToFolder: "Thea Gallow:\\Bank", Description: "If the message:\r\n\tthe message was received from 'statements@kbc.example'\r\nTake the following actions:\r\n\tmove the message to folder 'Bank'\r\n" }),
+    rule("Thea Gallow", ".", 2, { SubjectContainsWords: ["voicemail", "security", "password", "suspicious"], DeleteMessage: true, StopProcessingRules: true, Description: "If the message:\r\n\tincludes 'voicemail' or 'security' or 'password' or 'suspicious' in the subject\r\nTake the following actions:\r\n\tdelete the message\r\n\tand stop processing more rules on this message\r\n" }),
+    rule("Garrick Penhale", "Clients to folder", 1, { From: ["orders@brightline.example"], MoveToFolder: "Garrick Penhale:\\Clients", Description: "If the message:\r\n\tthe message was received from 'orders@brightline.example'\r\nTake the following actions:\r\n\tmove the message to folder 'Clients'\r\n" }),
+    rule("Elara Wynn", "Newsletters", 1, { SubjectContainsWords: ["newsletter"], MoveToFolder: "Elara Wynn:\\Newsletters", Description: "If the message:\r\n\tincludes 'newsletter' in the subject\r\nTake the following actions:\r\n\tmove the message to folder 'Newsletters'\r\n" }),
+    rule("Hollis Reed", "Board", 1, { From: ["Alaric Strand"], MoveToFolder: "Hollis Reed:\\Board", Description: "If the message:\r\n\tthe message was received from 'Alaric Strand'\r\nTake the following actions:\r\n\tmove the message to folder 'Board'\r\n" })
+  ];
+
+  const msgs = [];
+  const msg = (when, from, to, subject, status, fromIp) => msgs.push(obj(T_TRACE, { MessageTraceId: guid(r), MessageId: "<" + guid(r).replace(/-/g, "").slice(0, 20) + "@halvardco.example>", Received: when, SenderAddress: from, RecipientAddress: to, Subject: subject, Status: status, FromIP: fromIp || "40.107.22.51", ToIP: null, Size: 18000 + Math.floor(r() * 90000) }));
+  const members = t.users.filter((u) => u.UserType === "Member" && u.AccountEnabled);
+  const topics = ["Weekly planning", "Re: dock 3 schedule", "Quote request", "Lunch Thursday?", "Re: invoice 2291", "Updated shift list", "Meeting notes", "Re: pallet count", "Holiday request", "Re: customer visit"];
+  for (let i = 0; i < 60; i++) { const a = members[(i * 7) % members.length], b = members[(i * 11 + 3) % members.length]; if (a === b || a === rowan || b === rowan) continue; msg(atClock(i % 6, 8 + (i % 9), (i * 13) % 60), a.UserPrincipalName, b.UserPrincipalName, topics[i % topics.length], "Delivered", "40.107.22." + (40 + i % 30)); }
+  const R_UPN = rowan.UserPrincipalName;
+  msg(atClock(3, 9, 14), R_UPN, "finance@" + t.domain, "Updated bank details - Brightline Logistics", "Delivered", ATT_IP);
+  msg(atClock(3, 9, 15), R_UPN, byName("Hollis Reed").UserPrincipalName, "Updated bank details - Brightline Logistics", "Delivered", ATT_IP);
+  ["Caius Mercer", "Fenna Lowe", "Emrys Cole", "Torin Ash", "Bastian Crane", "Anwen Frost", "Evander Holt", "Kestrel Wade"].forEach((n, i) => msg(atClock(3, 9, 22 + i), R_UPN, byName(n).UserPrincipalName, "Shared with you: Q4 shift roster", i === 2 || i === 6 ? "FilteredAsSpam" : "Delivered", ATT_IP));
+  const VM = "voicemail@halvardco-voice.example";
+  [["Thea Gallow", "Delivered"], ["Hollis Reed", "Delivered"], ["Tamsin Rook", "Delivered"], ["Ysolde Marrow", "Quarantined"]].forEach(([n, s], i) => msg(atClock(1, 7, 58 + i), VM, byName(n).UserPrincipalName, "New voicemail from +32 50 66 21 09 (0:42)", s, "193.42.33.8"));
+  msgs.sort((a, b) => b.Received - a.Received);
+  t.msgs = msgs;
+
+  const audit = [];
+  const ev = (when, user, op, rtype, data) => audit.push({ when, user, op, rtype, ip: data.ClientIP || data.ClientIPAddress || null, data: Object.assign({ CreationTime: isoZ(when).replace("Z", ""), Id: guid(r), Operation: op, OrganizationId: t.tenantId, RecordType: { AzureActiveDirectoryStsLogon: 15, ExchangeAdmin: 1, ExchangeItem: 2, ExchangeItemAggregated: 50, AzureActiveDirectory: 8 }[rtype], ResultStatus: "Succeeded", UserKey: user, UserType: 0, Version: 1, Workload: rtype.startsWith("Exchange") ? "Exchange" : "AzureActiveDirectory", UserId: user }, data) });
+  sprayed.forEach((u, i) => ev(atClock(4, 3, 10 + i * 4), u.UserPrincipalName, "UserLoginFailed", "AzureActiveDirectoryStsLogon", { ClientIP: ATT_IP, ResultStatus: "Failed", LogonError: "InvalidUserNameOrPassword" }));
+  ev(atClock(4, 3, 47), R_UPN, "UserLoggedIn", "AzureActiveDirectoryStsLogon", { ClientIP: ATT_IP, ResultStatus: "Success" });
+  ev(atClock(4, 3, 58), R_UPN, "MailItemsAccessed", "ExchangeItemAggregated", { ClientIPAddress: ATT_IP, MailboxOwnerUPN: R_UPN, OperationCount: 214 });
+  ev(atClock(4, 4, 5), R_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: ATT_IP + ":51234", ObjectId: "Rowan Hart\\..", Parameters: [{ Name: "Name", Value: ".." }, { Name: "SubjectOrBodyContainsWords", Value: "invoice;payment;bank;IBAN" }, { Name: "MoveToFolder", Value: "RSS Subscriptions" }, { Name: "MarkAsRead", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
+  ev(atClock(4, 4, 11), R_UPN, "User registered security info", "AzureActiveDirectory", { ClientIP: ATT_IP, ObjectId: R_UPN, ModifiedProperties: [{ Name: "StrongAuthenticationPhoneAppDetail", NewValue: "+1 2025550147" }] });
+  ev(atClock(3, 9, 14), R_UPN, "Send", "ExchangeItem", { ClientIP: ATT_IP, Item: { Subject: "Updated bank details - Brightline Logistics" } });
+  ev(atClock(3, 9, 22), R_UPN, "Send", "ExchangeItem", { ClientIP: ATT_IP, Item: { Subject: "Shared with you: Q4 shift roster" } });
+  const T_UPN = thea.UserPrincipalName;
+  ev(atClock(1, 8, 4), T_UPN, "UserLoggedIn", "AzureActiveDirectoryStsLogon", { ClientIP: GATE_IP, ResultStatus: "Success" });
+  ev(atClock(1, 8, 40), T_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: GATE_IP + ":49822", ObjectId: "Thea Gallow\\.", Parameters: [{ Name: "Name", Value: "." }, { Name: "SubjectContainsWords", Value: "voicemail;security;password;suspicious" }, { Name: "DeleteMessage", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
+  const K = "kaatje@" + t.domain;
+  ev(atClock(6, 10, 2), K, "Set-Mailbox", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Support", Parameters: [{ Name: "Identity", Value: "Support" }, { Name: "HiddenFromAddressListsEnabled", Value: "False" }] });
+  ev(atClock(5, 14, 20), K, "Add-MailboxPermission", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Finance Inbox", Parameters: [{ Name: "Identity", Value: "Finance Inbox" }, { Name: "User", Value: "hollis.reed@" + t.domain }, { Name: "AccessRights", Value: "FullAccess" }] });
+  ev(atClock(2, 11, 5), byName("Elara Wynn").UserPrincipalName, "New-InboxRule", "ExchangeAdmin", { ClientIP: "81.164.33.90:50110", ObjectId: "Elara Wynn\\Newsletters", Parameters: [{ Name: "Name", Value: "Newsletters" }, { Name: "SubjectContainsWords", Value: "newsletter" }, { Name: "MoveToFolder", Value: "Newsletters" }] });
+  audit.sort((a, b) => b.when - a.when);
+  t.audit = audit;
+
+  t.auth = {};
+  t.users.filter((u) => u.UserType === "Member").forEach((u, i) => {
+    const list = [{ kind: "password", id: PW_METHOD, created: null }];
+    if (u !== rowan) list.push({ kind: "msa", id: guid(r), name: u.GivenName + (i % 3 ? "'s iPhone" : "'s Pixel"), tag: "SoftwareTokenActivated", ver: "6.8.12", created: ago(150 + i * 3) });
+    t.auth[u.UserPrincipalName.toLowerCase()] = list;
+  });
+  t.auth[rowan.UserPrincipalName.toLowerCase()].push({ kind: "phone", id: MOBILE_METHOD, number: "+1 2025550147", ptype: "mobile", sms: "notAllowedByPolicy", created: atClock(4, 4, 11) });
+}
+
+function sigFilter(f, cname) {
+  const src = String(f).trim();
+  const parts = src.split(/\s+(and|or)\s+/i);
+  const tests = [], ops = [];
+  const paths = { userprincipalname: (s) => s.UserPrincipalName, userid: (s) => s.UserId, ipaddress: (s) => s.IPAddress, appdisplayname: (s) => s.AppDisplayName, createddatetime: (s) => s.CreatedDateTime, "status/errorcode": (s) => s.Status.ErrorCode, "location/countryorregion": (s) => s.Location.CountryOrRegion, "location/city": (s) => s.Location.City, clientappused: (s) => s.ClientAppUsed, userdisplayname: (s) => s.UserDisplayName };
+  const bad = (p) => { throw new PSErr("Invalid filter clause: Syntax error at position " + (src.indexOf(p) + 1) + " in '" + src + "'.\n\nStatus: 400 (BadRequest)\nErrorCode: BadRequest", { cmd: cname, term: true, kind: "filter" }); };
+  for (let i = 0; i < parts.length; i++) {
+    if (i % 2 === 1) { ops.push(parts[i].toLowerCase()); continue; }
+    const p = parts[i].trim();
+    let m = /^([A-Za-z]+(?:\/[A-Za-z]+)?)\s+(eq|ne|ge|gt|le|lt)\s+(?:'([^']*)'|(-?\d+)|(\d{4}-\d\d-\d\dT[\d:.]+Z?))$/i.exec(p);
+    if (m) {
+      const get = paths[m[1].toLowerCase()];
+      if (!get) throw new PSErr("Invalid filter clause: Could not find a property named '" + m[1] + "' on type 'microsoft.graph.signIn'.\n\nStatus: 400 (BadRequest)\nErrorCode: BadRequest", { cmd: cname, term: true, kind: "filter" });
+      const op = m[2].toLowerCase();
+      let val = m[3] !== undefined ? m[3] : m[4] !== undefined ? +m[4] : new Date(m[5]);
+      if (m[1].toLowerCase() === "createddatetime" && !(val instanceof Date)) bad(p);
+      if (m[1].toLowerCase() === "status/errorcode" && typeof val !== "number") bad(p);
+      tests.push((s) => { let x = get(s); let v = val; if (x instanceof Date) { x = x.getTime(); v = v.getTime(); } else if (typeof x === "string") { x = x.toLowerCase(); v = String(v).toLowerCase(); } return op === "eq" ? x === v : op === "ne" ? x !== v : op === "ge" ? x >= v : op === "gt" ? x > v : op === "le" ? x <= v : x < v; });
+      continue;
+    }
+    m = /^startswith\(\s*([A-Za-z]+)\s*,\s*'([^']*)'\s*\)$/i.exec(p);
+    if (m && paths[m[1].toLowerCase()]) { const get = paths[m[1].toLowerCase()], v = m[2].toLowerCase(); tests.push((s) => String(get(s) || "").toLowerCase().startsWith(v)); continue; }
+    bad(p);
+  }
+  return (s) => { let r = tests[0](s); for (let i = 0; i < ops.length; i++) r = ops[i] === "and" ? r && tests[i + 1](s) : r || tests[i + 1](s); return r; };
+}
+function toDateV(v, cname, pname) {
+  if (v instanceof Date) return v;
+  const d = new Date(String(v));
+  if (isNaN(d)) throw new PSErr("Cannot bind parameter '" + pname + "'. Cannot convert value \"" + v + "\" to type \"System.DateTime\". Error: \"String '" + v + "' was not recognized as a valid DateTime.\"", { cmd: cname, term: true, kind: "bind" });
+  return d;
+}
+function ruleObj(x) { const o = obj(T_RULE, {}); for (const k of ["Name", "Enabled", "Priority", "RuleIdentity", "Identity", "MailboxOwnerId", "Description", "From", "SubjectContainsWords", "SubjectOrBodyContainsWords", "MoveToFolder", "DeleteMessage", "MarkAsRead", "ForwardTo", "RedirectTo", "StopProcessingRules"]) o[k] = clone(x[k]); return o; }
+function rulesFor(ctx, mbx, name) {
+  if (mbx === undefined) throw new PSErr(exoNotFound("kaatje@" + ctx.t.domain), { cmd: name, term: true, kind: "exo404" });
+  const m = findMbx(ctx, mbx); if (!m) throw new PSErr(exoNotFound(mbx), { cmd: name, term: true, kind: "exo404" });
+  return { m, rules: ctx.t.rules.filter((r) => r.mb === m.Name) };
+}
+function pickRule(ctx, b, name) {
+  const id = String(b.Identity);
+  let pool, m;
+  if (b.Mailbox !== undefined) { ({ m, rules: pool } = rulesFor(ctx, b.Mailbox, name)); }
+  else if (id.includes("\\")) { m = findMbx(ctx, id.split("\\")[0]); pool = m ? ctx.t.rules.filter((r) => r.mb === m.Name) : []; }
+  else rulesFor(ctx, undefined, name);
+  const key = id.includes("\\") ? id.split("\\").slice(1).join("\\") : id;
+  const hit = pool.find((r) => r.RuleIdentity === key || r.Name.toLowerCase() === key.toLowerCase());
+  if (!hit) throw new PSErr(exoNotFound(id), { cmd: name, term: true, kind: "exo404" });
+  return hit;
+}
+
+def("Get-MgAuditLogSignIn", { module: "Microsoft.Graph.Reports", ver: "2.25.0", ctype: "Function", params: { SignInId: P(null), Filter: P(null), Top: P(null, { type: "System.Int32" }), All: S(), Property: P(null, { type: "System.String[]" }), Sort: P(null), PageSize: P(null) },
+  run({ ctx, b, name }) {
+    const sub = b.SignInId !== undefined ? "Get" : "List";
+    needMg(ctx, name, sub, ["AuditLog.Read.All", "Directory.Read.All"]);
+    if (!ctx.mg.scopes.some((s) => /^AuditLog\.Read\.All$/i.test(s))) throw new PSErr("Insufficient privileges to complete the operation.\n\nStatus: 403 (Forbidden)\nErrorCode: Authorization_RequestDenied", { cmd: name + "_" + sub, term: true, kind: "scope" });
+    let list = ctx.t.signins;
+    if (b.SignInId !== undefined) { const s = list.find((x) => x.Id === String(b.SignInId)); if (!s) throw new PSErr("Resource not found for the segment 'signIns'.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Get", term: true, kind: "notfound404" }); return [clone(s)]; }
+    if (b.Filter !== undefined) list = list.filter(sigFilter(b.Filter, name + "_List"));
+    if (b.Top !== undefined) list = list.slice(0, +b.Top);
+    const props = propList(b, name + "_List", "microsoft.graph.signIn", ctx.t.signins[0]);
+    return list.map((s) => props ? project(s, props, []) : clone(s));
+  } });
+def("Get-InboxRule", { module: "tmpEXO_ycy3rmxz.0wi", ver: "1.0", ctype: "Function", session: true, pipe: true, params: { Mailbox: P(null, { pipe: true }), Identity: P(0), IncludeHidden: S() },
+  run({ ctx, b, name, input }) {
+    needExo(ctx, name);
+    const boxes = b.Mailbox !== undefined ? flat(b.Mailbox) : input.length ? input.map((x) => x.UserPrincipalName || x.PrimarySmtpAddress || x) : [undefined];
+    const out = [];
+    for (const mb of boxes) {
+      if (b.Identity !== undefined) { out.push(ruleObj(pickRule(ctx, { Mailbox: mb, Identity: b.Identity }, name))); continue; }
+      out.push(...rulesFor(ctx, mb, name).rules.map(ruleObj));
+    }
+    return out;
+  } });
+def("Remove-InboxRule", { module: "tmpEXO_ycy3rmxz.0wi", ver: "1.0", ctype: "Function", session: true, pipe: true, whatif: true, params: { Identity: P(0, { req: true, pipe: true }), Mailbox: P(null), Confirm: S(), AlwaysDeleteOutlookRulesBlob: S(), Force: S() },
+  run({ ctx, b, name, input }) {
+    needExo(ctx, name);
+    const ids = b.Identity !== undefined ? flat(b.Identity) : input.map((x) => x.Identity);
+    for (const id of ids) {
+      const r = pickRule(ctx, { Mailbox: b.Mailbox, Identity: id && id.Identity ? id.Identity : id }, name);
+      if (b.WhatIf) { ctx.host.push({ text: "What if: Removing Inbox rule \"" + r.Identity + "\"." }); continue; }
+      if (!confirmGate(ctx, b, "Removing Inbox rule", r.Identity)) continue;
+      ctx.t.rules = ctx.t.rules.filter((x) => x !== r);
+    }
+    return [];
+  } });
+def("Disable-InboxRule", { module: "tmpEXO_ycy3rmxz.0wi", ver: "1.0", ctype: "Function", session: true, pipe: true, whatif: true, params: { Identity: P(0, { req: true, pipe: true }), Mailbox: P(null), Confirm: S() },
+  run({ ctx, b, name, input }) {
+    needExo(ctx, name);
+    const ids = b.Identity !== undefined ? flat(b.Identity) : input.map((x) => x.Identity);
+    for (const id of ids) { const r = pickRule(ctx, { Mailbox: b.Mailbox, Identity: id }, name); if (b.WhatIf) { ctx.host.push({ text: "What if: Disabling Inbox rule \"" + r.Identity + "\"." }); continue; } r.Enabled = false; }
+    return [];
+  } });
+def("Get-MessageTraceV2", { module: "tmpEXO_ycy3rmxz.0wi", ver: "1.0", ctype: "Function", session: true, params: { SenderAddress: P(null, { type: "System.String[]" }), RecipientAddress: P(null, { type: "System.String[]" }), StartDate: P(null), EndDate: P(null), Subject: P(null), SubjectFilterType: P(null), Status: P(null, { type: "System.String[]" }), MessageId: P(null), ResultSize: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const end = b.EndDate !== undefined ? toDateV(b.EndDate, name, "EndDate") : new Date(NOW);
+    const start = b.StartDate !== undefined ? toDateV(b.StartDate, name, "StartDate") : new Date(end.getTime() - 2 * DAY);
+    if (start > end) throw new PSErr("||Invalid StartDate value. The StartDate should be earlier than the EndDate.", { cmd: name, term: true, kind: "exo" });
+    if (end - start > 10 * DAY + 60000) throw new PSErr("||The time range between StartDate and EndDate can't be longer than 10 days.", { cmd: name, term: true, kind: "exo" });
+    if (NOW - start > 90 * DAY) throw new PSErr("||Invalid StartDate value. The StartDate can't be older than 90 days.", { cmd: name, term: true, kind: "exo" });
+    const lc = (v) => flat(v).map((x) => String(x).toLowerCase());
+    let list = ctx.t.msgs.filter((m) => m.Received >= start && m.Received <= end);
+    if (b.SenderAddress !== undefined) { const s = lc(b.SenderAddress); list = list.filter((m) => s.includes(m.SenderAddress.toLowerCase())); }
+    if (b.RecipientAddress !== undefined) { const s = lc(b.RecipientAddress); list = list.filter((m) => s.includes(m.RecipientAddress.toLowerCase())); }
+    if (b.Status !== undefined) { const s = lc(b.Status); list = list.filter((m) => s.includes(m.Status.toLowerCase())); }
+    if (b.Subject !== undefined) { const s = String(b.Subject).toLowerCase(), ty = String(b.SubjectFilterType || "Contains").toLowerCase(); list = list.filter((m) => { const x = m.Subject.toLowerCase(); return ty === "startswith" ? x.startsWith(s) : ty === "endswith" ? x.endsWith(s) : x.includes(s); }); }
+    if (b.MessageId !== undefined) list = list.filter((m) => m.MessageId === String(b.MessageId));
+    const max = b.ResultSize !== undefined ? +b.ResultSize : 1000;
+    return list.slice(0, max).map(clone);
+  } });
+def("Search-UnifiedAuditLog", { module: "tmpEXO_ycy3rmxz.0wi", ver: "1.0", ctype: "Function", session: true, params: { StartDate: P(null, { req: true }), EndDate: P(null, { req: true }), UserIds: P(null, { type: "System.String[]" }), Operations: P(null, { type: "System.String[]" }), RecordType: P(null), IPAddresses: P(null, { type: "System.String[]" }), FreeText: P(null), ResultSize: P(null), SessionId: P(null), SessionCommand: P(null), Formatted: S() },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const start = toDateV(b.StartDate, name, "StartDate"), end = toDateV(b.EndDate, name, "EndDate");
+    if (start > end) throw new PSErr("||The start date should be earlier than the end date.", { cmd: name, term: true, kind: "exo" });
+    const lc = (v) => flat(v).flatMap((x) => String(x).split(",")).map((x) => x.trim().toLowerCase()).filter(Boolean);
+    let list = ctx.t.audit.filter((a) => a.when >= start && a.when <= end);
+    if (b.UserIds !== undefined) { const s = lc(b.UserIds); list = list.filter((a) => s.includes(a.user.toLowerCase())); }
+    if (b.Operations !== undefined) { const s = lc(b.Operations); list = list.filter((a) => s.includes(a.op.toLowerCase())); }
+    if (b.RecordType !== undefined) { const s = String(b.RecordType).toLowerCase(); list = list.filter((a) => a.rtype.toLowerCase() === s); }
+    if (b.IPAddresses !== undefined) { const s = lc(b.IPAddresses); list = list.filter((a) => a.ip && s.includes(a.ip.split(":")[0])); }
+    if (b.FreeText !== undefined) { const s = String(b.FreeText).toLowerCase(); list = list.filter((a) => JSON.stringify(a.data).toLowerCase().includes(s)); }
+    const max = b.ResultSize !== undefined ? Math.min(5000, +b.ResultSize) : 100;
+    list = list.slice(0, max);
+    return list.map((a, i) => obj(T_AUDIT, { RunspaceId: "4b6c2a1e-0d3f-4f1b-9a7e-2c5d8e9f0a1b", RecordType: a.rtype, CreationDate: new Date(a.when), UserIds: a.user, Operations: a.op, AuditData: JSON.stringify(a.data), ResultIndex: i + 1, ResultCount: list.length, Identity: a.data.Id, IsValid: true, ObjectState: "Unchanged" }));
+  } });
+const AUTH_READ = ["UserAuthenticationMethod.Read.All", "UserAuthenticationMethod.ReadWrite.All"];
+function authList(ctx, b, name, sub) {
+  needMg(ctx, name, sub, AUTH_READ);
+  const u = ctx.t.users.find((x) => x.Id.toLowerCase() === String(b.UserId).toLowerCase() || x.UserPrincipalName.toLowerCase() === String(b.UserId).toLowerCase());
+  if (!u) throw new PSErr("Resource '" + b.UserId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_" + sub, term: true, kind: "notfound404" });
+  return { u, list: ctx.t.auth[u.UserPrincipalName.toLowerCase()] || [] };
+}
+def("Get-MgUserAuthenticationMethod", { module: "Microsoft.Graph.Identity.SignIns", ver: "2.25.0", ctype: "Function", params: { UserId: P(0, { req: true }), AuthenticationMethodId: P(null), All: S() },
+  run({ ctx, b, name }) {
+    const { list } = authList(ctx, b, name, "List");
+    return list.map((m) => {
+      const ap = m.kind === "password" ? { "@odata.type": "#microsoft.graph.passwordAuthenticationMethod", createdDateTime: null } : m.kind === "phone" ? { "@odata.type": "#microsoft.graph.phoneAuthenticationMethod", phoneNumber: m.number, phoneType: m.ptype, smsSignInState: m.sms } : { "@odata.type": "#microsoft.graph.microsoftAuthenticatorAuthenticationMethod", displayName: m.name, deviceTag: m.tag, phoneAppVersion: m.ver, createdDateTime: isoZ(m.created) };
+      return obj(T_AM, { Id: m.id, AdditionalProperties: ht(ap) });
+    });
+  } });
+def("Get-MgUserAuthenticationPhoneMethod", { module: "Microsoft.Graph.Identity.SignIns", ver: "2.25.0", ctype: "Function", params: { UserId: P(0, { req: true }), PhoneAuthenticationMethodId: P(null) },
+  run({ ctx, b, name }) { const { list } = authList(ctx, b, name, "List"); return list.filter((m) => m.kind === "phone").map((m) => obj(T_PHONE, { Id: m.id, PhoneNumber: m.number, PhoneType: m.ptype, SmsSignInState: m.sms })); } });
+def("Get-MgUserAuthenticationMicrosoftAuthenticatorMethod", { module: "Microsoft.Graph.Identity.SignIns", ver: "2.25.0", ctype: "Function", params: { UserId: P(0, { req: true }) },
+  run({ ctx, b, name }) { const { list } = authList(ctx, b, name, "List"); return list.filter((m) => m.kind === "msa").map((m) => obj(T_MSA, { CreatedDateTime: m.created, DeviceTag: m.tag, DisplayName: m.name, Id: m.id, PhoneAppVersion: m.ver })); } });
+def("Remove-MgUserAuthenticationPhoneMethod", { module: "Microsoft.Graph.Identity.SignIns", ver: "2.25.0", ctype: "Function", whatif: true, params: { UserId: P(0, { req: true }), PhoneAuthenticationMethodId: P(1, { req: true }), PassThru: S() },
+  run({ ctx, b, name }) {
+    const { list, u } = authList(ctx, b, name, "Delete");
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Remove-MgUserAuthenticationPhoneMethod_Delete\" on target \"Remove-MgUserAuthenticationPhoneMethod_Delete\"." }); return []; }
+    if (!ctx.mg.scopes.some((s) => /^UserAuthenticationMethod\.ReadWrite\.All$/i.test(s))) throw new PSErr("Request Authorization failed\n\nStatus: 403 (Forbidden)\nErrorCode: accessDenied", { cmd: name + "_Delete", term: true, kind: "scope" });
+    const i = list.findIndex((m) => m.kind === "phone" && m.id === String(b.PhoneAuthenticationMethodId));
+    if (i < 0) throw new PSErr("Phone method not found.\n\nStatus: 404 (NotFound)\nErrorCode: notFound", { cmd: name + "_Delete", term: true, kind: "notfound404" });
+    list.splice(i, 1); ctx.t.auth[u.UserPrincipalName.toLowerCase()] = list;
+    return b.PassThru ? [true] : [];
+  } });
+def("ConvertFrom-Json", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { InputObject: P(0, { pipe: true }), AsHashtable: S(), Depth: P(null), NoEnumerate: S() },
+  run({ b, input, name }) {
+    const items = b.InputObject !== undefined ? flat(b.InputObject) : input;
+    const conv = (v) => {
+      if (Array.isArray(v)) return v.map(conv);
+      if (v && typeof v === "object") { const o = b.AsHashtable ? ht({}, true) : obj("System.Management.Automation.PSCustomObject", {}); for (const k of Object.keys(v)) o[k] = conv(v[k]); return o; }
+      if (typeof v === "string" && /^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d(\.\d+)?Z?$/.test(v)) { if (/Z$/.test(v)) return new Date(v); const q = v.split(/[-T:.]/).map(Number); return new Date(q[0], q[1] - 1, q[2], q[3], q[4], q[5]); }
+      return v;
+    };
+    const parse = (s) => { try { return JSON.parse(s); } catch (e) { throw new PSErr("Conversion from JSON failed with error: Unexpected character encountered while parsing value: " + String(s).trim().charAt(0) + ". Path '', line 0, position 0.", { cmd: name, term: true, kind: "json" }); } };
+    const out = [];
+    let ok = true; const vals = [];
+    for (const it of items) { try { vals.push(JSON.parse(String(it))); } catch (e) { ok = false; break; } }
+    const all = ok ? vals : [parse(items.map(String).join("\n"))];
+    for (const v of all) { const c = conv(v); if (Array.isArray(c) && !b.NoEnumerate) out.push(...c); else out.push(c); }
+    return out;
+  } });
 
 return { makeTenant, Ctx, parse, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
 })();

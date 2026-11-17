@@ -17,10 +17,14 @@ function doneOf(id) { return S.done[id] || (S.done[id] = {}); }
 function synced(id) { return !!(S.done[id] && S.done[id].recall); }
 function memsOf(seq) { return MEMORIES.filter((m) => m.seq === seq); }
 function seqProgress(seq) { const ms = memsOf(seq); return [ms.filter((m) => synced(m.id)).length, ms.length]; }
-function gateOpen() { return MEMORIES.filter((m) => m.seq <= 1).every((m) => synced(m.id)); }
+function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
+function curGate() { return R.gateObj || GATE; }
+function gateNeed(g) { return MEMORIES.filter(g.need); }
+function gateOpen(g) { return gateNeed(g || GATE).every((m) => synced(m.id)); }
+function gateHero(g) { return g.hero === "desync" ? ' style="background-image:url(img/syncle/desync.jpg)"' : ""; }
 function drillKey(m, i) { return m.id + ":" + i; }
 function drillsDone(m) { return (DRILLS[m.id] || []).filter((_, i) => S.drills[drillKey(m, i)]).length; }
-function syncPct() { const nd = Object.values(DRILLS).reduce((a, x) => a + x.length, 0); const total = MEMORIES.length * 3 + GATE.tickets.length + nd; const n = MEMORIES.filter((m) => synced(m.id)).length * 3 + GATE.tickets.filter((t) => S.gate[t.id]).length + Object.keys(S.drills).length; return Math.min(100, Math.round(n / total * 100)); }
+function syncPct() { const nd = Object.values(DRILLS).reduce((a, x) => a + x.length, 0); const allT = GATES.flatMap((g) => g.tickets); const total = MEMORIES.length * 3 + allT.length + nd; const n = MEMORIES.filter((m) => synced(m.id)).length * 3 + allT.filter((t) => S.gate[t.id]).length + Object.keys(S.drills).length; return Math.min(100, Math.round(n / total * 100)); }
 function dueReview(id) { const r = S.review[id]; return r && r.due <= Date.now(); }
 
 function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2600); }
@@ -60,7 +64,8 @@ function renderCorridor() {
 
   const ms = memsOf(seq);
   const items = ms.map((m) => ({ kind: "mem", m }));
-  items.push(seq === 1 ? { kind: "gate" } : { kind: "next", to: seq + 1 });
+  const sg = gateFor(seq);
+  items.push(sg ? { kind: "gate", g: sg } : { kind: "next", to: seq + 1 });
   const pts = items.map((_, i) => POS[i]);
   let firstOpen = ms.findIndex((m) => !synced(m.id));
   if (firstOpen < 0) firstOpen = ms.length;
@@ -68,14 +73,14 @@ function renderCorridor() {
   $("pdone").setAttribute("points", pts.slice(0, firstOpen + 1).map((p) => p[0] + "," + p[1]).join(" "));
   $("pahead").setAttribute("points", pts.slice(firstOpen).map((p) => p[0] + "," + p[1]).join(" "));
   const last = pts[pts.length - 1];
-  const gb = $("gatebg"); gb.classList.toggle("hide", seq !== 1); gb.style.left = last[0] + "%"; gb.style.top = last[1] + "%";
+  const gb = $("gatebg"); gb.classList.toggle("hide", !sg); gb.style.backgroundImage = sg && sg.hero === "desync" ? "url(img/syncle/desync.jpg)" : ""; gb.style.left = last[0] + "%"; gb.style.top = last[1] + "%";
   let nh = "";
   items.forEach((it, i) => {
     const [x, y, s] = pts[i];
     let st, name, tag, due = false;
     if (it.kind === "mem") { st = synced(it.m.id) ? "done" : i === firstOpen ? "current" : "ahead"; name = it.m.name; tag = it.m.tag; due = dueReview(it.m.id); }
     else if (it.kind === "next") { const nq = SEQUENCES[it.to]; st = nq && nq.open && seqProgress(seq)[0] === ms.length ? "gate" : "ahead"; name = nq ? nq.name : "More soon"; tag = nq && nq.open ? "NEXT SEQUENCE" : "COMING SOON"; }
-    else { const open = gateOpen(); const done = GATE.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = GATE.name; tag = open ? "TAKEOVER" : "TAKEOVER · LOCKED"; }
+    else { const g = it.g; const open = gateOpen(g); const done = g.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = g.name; const kw = g === GATE ? "TAKEOVER" : "LIVE INCIDENT"; tag = open ? kw : kw + " · LOCKED"; }
     nh += crystal(i, x, y, s, st, name, tag, i === S.selMem, due);
   });
   $("nodes").innerHTML = nh;
@@ -117,11 +122,11 @@ function renderDetail(it, ms) {
     return;
   }
   if (it.kind === "gate") {
-    const open = gateOpen();
-    const done = GATE.tickets.filter((t) => S.gate[t.id]).length;
-    d.innerHTML = '<div class="l"><span class="eyebrow">TAKEOVER · LEVEL 1 · LOGISTICS</span><h3>' + esc(GATE.name) + "</h3><p>" + esc(GATE.story) + '</p><p class="mutetxt">' + done + " of " + GATE.tickets.length + " tickets closed</p></div>" +
-      '<div class="r"><div class="gatehero" role="img" aria-label="Halvard and Co warehouse, reconstructing"></div><div class="row"><button class="go" type="button" id="goGate"' + (open ? "" : " disabled") + ">" + (open ? "ENTER THE TENANT" : "SYNC ALL 12 MEMORIES TO OPEN") + "</button>" + (open ? "" : '<span class="mutetxt">' + MEMORIES.filter((m) => synced(m.id)).length + " / 12 synced</span>") + "</div></div>";
-    if (open) $("goGate").onclick = () => openGate();
+    const g = it.g, need = gateNeed(g), open = gateOpen(g);
+    const done = g.tickets.filter((t) => S.gate[t.id]).length;
+    d.innerHTML = '<div class="l"><span class="eyebrow">' + esc(g.kind) + '</span><h3>' + esc(g.name) + "</h3><p>" + esc(g.story) + '</p><p class="mutetxt">' + done + " of " + g.tickets.length + " tickets closed</p></div>" +
+      '<div class="r"><div class="gatehero"' + gateHero(g) + ' role="img" aria-label="' + esc(g.name) + '"></div><div class="row"><button class="go" type="button" id="goGate"' + (open ? "" : " disabled") + ">" + (open ? (g === GATE ? "ENTER THE TENANT" : "TAKE THE CALL") : "SYNC ALL " + need.length + " MEMORIES TO OPEN") + "</button>" + (open ? "" : '<span class="mutetxt">' + need.filter((m) => synced(m.id)).length + " / " + need.length + " synced</span>") + "</div></div>";
+    if (open) $("goGate").onclick = () => openGate(g);
     return;
   }
   const m = it.m, dn = S.done[m.id] || {};
@@ -149,8 +154,8 @@ function startMix() {
 function enterSelected() {
   const ms = memsOf(S.seqSel);
   if (S.selMem < ms.length) openMemory(ms[S.selMem]);
-  else if (S.seqSel === 0) { S.seqSel = 1; S.selMem = null; save(); renderCorridor(); }
-  else if (gateOpen()) openGate();
+  else if (gateFor(S.seqSel)) { if (gateOpen(gateFor(S.seqSel))) openGate(gateFor(S.seqSel)); }
+  else if (SEQUENCES[S.seqSel + 1] && SEQUENCES[S.seqSel + 1].open) { S.seqSel = S.seqSel + 1; S.selMem = null; save(); renderCorridor(); }
 }
 
 function resetConsole(setup, pre) {
@@ -404,13 +409,13 @@ function checkPractice(res) {
   clearTimeout(R.advT); R.advT = setTimeout(() => { if (R.phase === "practice") advanceDrill(); }, 1400);
 }
 function sidecard(m) {
-  if (R.gate) { $("sidecard").innerHTML = "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage."; return; }
+  if (R.gate) { $("sidecard").innerHTML = curGate() === GATE ? "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage." : "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style."; return; }
   $("sidecard").innerHTML = "<h6>IN THE CHEAT SHEET</h6>" + m.cheat.map(([c, d]) => '<div style="margin:6px 0"><code style="font-size:12px;word-break:break-word">' + esc(c) + '</code><div class="mutetxt" style="font-size:12px">' + esc(d) + "</div></div>").join("") + '<button class="hbtn" type="button" id="openCheat" style="margin-top:8px">OPEN FULL SHEET</button>';
   $("openCheat").onclick = () => drawer(true);
 }
 
 function hintsFor() {
-  if (R.gate) { const t = GATE.tickets[R.gatePick]; return t ? [t.hint] : []; }
+  if (R.gate) { const t = curGate().tickets[R.gatePick]; return t ? [t.hint] : []; }
   const m = R.mem;
   if (R.phase === "trace") return m.traceHints;
   if (R.phase === "recall") return m.recallHints;
@@ -421,7 +426,7 @@ function junie() {
   const hs = hintsFor(), max = hs.length;
   let cls = "j-idle", step = "STANDING BY", line;
   const m = R.mem;
-  if (R.gate) line = "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is.";
+  if (R.gate) line = curGate() === GATE ? "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is." : "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan.";
   else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", practice: "Different ticket, same skill. If you blank, one hint, then the answer.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
   if (R.hint > 0) { cls = "j-hint"; step = "HINT " + R.hint + " OF " + max; line = hs[R.hint - 1]; }
   if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : step; R.jlineOverride = null; R.jstate = null; }
@@ -461,28 +466,31 @@ function synced_overlay(title, text, next, nextLabel, alt) {
   $("syStay").onclick = () => closeOverlay();
 }
 
-function openGate() {
+function openGate(g) {
+  g = g || GATE; R.gateObj = g;
   closeOverlay();
   R.view = "memory"; R.gate = true; R.mem = null; R.hint = 0; R.phase = "gate";
   $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
-  $("crumb").textContent = "Takeover · " + GATE.name;
-  flowband([["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS");
+  $("crumb").textContent = (g === GATE ? "Takeover · " : "Incident · ") + g.name;
+  if (g === GATE) flowband([["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS");
+  else flowband([["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], "LIVE INCIDENT · THE ORDER THAT MATTERS");
   $("tabs").innerHTML = '<button class="tab on" type="button">TICKETS</button>';
   resetConsole("none");
   R.gateBaseline = R.ctx.t.users.map((u) => [u.UserPrincipalName, u.AccountEnabled, u.Department, u.JobTitle].join("|"));
   R.gateHist = [];
-  R.gatePick = GATE.tickets.findIndex((t) => !S.gate[t.id]); if (R.gatePick < 0) R.gatePick = 0;
+  R.gatePick = g.tickets.findIndex((t) => !S.gate[t.id]); if (R.gatePick < 0) R.gatePick = 0;
   renderGate(); sidecard(); junie();
   $("cmd").placeholder = "You are in. Start with ticket 1.";
   $("cmd").focus();
 }
 function renderGate() {
-  $("pbody").innerHTML = '<div class="gatehero" role="img" aria-label="Halvard and Co warehouse"></div><p>' + esc(GATE.story) + '</p><div class="tickets">' +
-    GATE.tickets.map((t, i) => '<div class="ticket' + (i === R.gatePick ? " on" : "") + (S.gate[t.id] ? " done" : "") + '"><small>TICKET ' + (i + 1) + " · FROM " + esc(t.from.toUpperCase()) + (S.gate[t.id] ? " · CLOSED" : "") + "</small><b>" + esc(t.title) + "</b><p>" + esc(t.body) + "</p></div>").join("") + "</div>" +
+  const g = curGate();
+  $("pbody").innerHTML = '<div class="gatehero"' + gateHero(g) + ' role="img" aria-label="' + esc(g.name) + '"></div><p>' + esc(g.story) + '</p><div class="tickets">' +
+    g.tickets.map((t, i) => '<div class="ticket' + (i === R.gatePick ? " on" : "") + (S.gate[t.id] ? " done" : "") + '"><small>TICKET ' + (i + 1) + " · FROM " + esc(t.from.toUpperCase()) + (S.gate[t.id] ? " · CLOSED" : "") + "</small><b>" + esc(t.title) + "</b><p>" + esc(t.body) + "</p></div>").join("") + "</div>" +
     '<p class="mutetxt">The console starts fresh: nothing connected. Each ticket closes the moment your command does what it asks.</p>';
 }
 function checkGate(res) {
-  const t = GATE.tickets[R.gatePick];
+  const g = curGate(); const t = g.tickets[R.gatePick];
   if (res.error) {
     const help = errHelp(res.error.text ? res.error.text() : "");
     R.jlineOverride = help || "Read the red text: the first line usually names the problem."; R.jstate = "desync"; junie();
@@ -490,16 +498,16 @@ function checkGate(res) {
   }
   const collateral = R.ctx.t.users.filter((u, i) => {
     const now = [u.UserPrincipalName, u.AccountEnabled, u.Department, u.JobTitle].join("|");
-    return now !== R.gateBaseline[i] && !/corvin\.ashby|liora\.penn/i.test(u.UserPrincipalName);
+    return now !== R.gateBaseline[i] && !g.allow.test(u.UserPrincipalName);
   });
   if (collateral.length) { R.jlineOverride = "Careful: you changed " + collateral.map((u) => u.DisplayName).join(", ") + ", who is not in any ticket. In a real tenant that is a phone call from someone very confused."; R.jstate = "desync"; junie(); }
   if (!t) return;
   let ok = false; try { ok = t.check(R.ctx, R.gateHist, res); } catch (e) { ok = false; }
   if (ok && !S.gate[t.id]) {
     S.gate[t.id] = true; save(); earn(25, "closed " + t.title);
-    const nx = GATE.tickets.findIndex((x) => !S.gate[x.id]);
-    if (nx < 0) { synced_overlay("Takeover complete", "Halvard & Co is mapped, tidied and safe. Sequence 2, Mailboxes, is next when it is built.", () => renderCorridor(), "BACK TO THE CORRIDOR"); }
-    else { R.gatePick = nx; R.hint = 0; toast("Ticket closed. Next: " + GATE.tickets[nx].title); }
+    const nx = g.tickets.findIndex((x) => !S.gate[x.id]);
+    if (nx < 0) { synced_overlay(g === GATE ? "Takeover complete" : "Incident closed", g.doneMsg, () => renderCorridor(), "BACK TO THE CORRIDOR"); }
+    else { R.gatePick = nx; R.hint = 0; toast("Ticket closed. Next: " + g.tickets[nx].title); }
     renderGate(); junie();
   }
 }

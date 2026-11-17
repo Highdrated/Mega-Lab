@@ -28,7 +28,7 @@ function openDesktop() {
 }
 function closeDesktop() {
   $("desktop").classList.add("hide");
-  if (DK.prev === "memory") { R.view = "memory"; $("memory").classList.remove("hide"); $("crumb").textContent = R.gate ? "Takeover · " + GATE.name : (R.mem ? SEQUENCES[R.mem.seq].name + " · " + R.mem.name : ""); setPrompt(); $("cmd").focus(); }
+  if (DK.prev === "memory") { R.view = "memory"; $("memory").classList.remove("hide"); $("crumb").textContent = R.gate ? (curGate() === GATE ? "Takeover · " : "Incident · ") + curGate().name : (R.mem ? SEQUENCES[R.mem.seq].name + " · " + R.mem.name : ""); setPrompt(); $("cmd").focus(); }
   else renderCorridor();
 }
 function clock() { const d = new Date(); const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; return days[d.getDay()] + " " + d.getDate() + " " + mon[d.getMonth()] + "  " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }

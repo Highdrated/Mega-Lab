@@ -10,7 +10,9 @@ const GRADER = (() => {
     lic: { scopes: ["User.Read.All", "Organization.Read.All"], exo: false },
     licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false },
     reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false, cwd: "/Users/kaatje/Desktop" },
-    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/kaatje/Downloads" }
+    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/kaatje/Downloads" },
+    inv: { scopes: ["User.Read.All", "AuditLog.Read.All", "UserAuthenticationMethod.Read.All", "Group.Read.All"], exo: true, cwd: "/Users/kaatje/Desktop" },
+    resp: { scopes: ["User.ReadWrite.All", "AuditLog.Read.All", "UserAuthenticationMethod.ReadWrite.All", "Group.ReadWrite.All"], exo: true, cwd: "/Users/kaatje/Desktop" }
   };
   function makeCtx(setup, pre) {
     const s = SETUPS[setup] || SETUPS.none;
