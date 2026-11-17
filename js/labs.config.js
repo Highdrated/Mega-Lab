@@ -20,16 +20,6 @@ const LABS_CONFIG = [
     glyph: '<rect x="2" y="4" width="12" height="7" rx="1.5"/><path d="M4.5 7h2M9.5 7h2M1 14h14M5 11v1.5M11 11v1.5"/>'
   },
   {
-    id: "pyle-pocket",
-    name: "Pyle Pocket",
-    tag: "Python",
-    sub: "python · tap only · on the go",
-    path: "labs/pyle-pocket.html",
-    ring: "ring-outer",
-    angle: 22.5,
-    glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 6l1.5 1.5L6 9M8.5 9.5h1.5"/>'
-  },
-  {
     id: "junle",
     name: "Junle",
     tag: "Networking",
@@ -58,16 +48,6 @@ const LABS_CONFIG = [
     ring: "ring-mid",
     angle: -103,
     glyph: '<circle cx="8" cy="8" r="6"/><path d="M2 8c2.5-2 9.5-2 12 0"/><path d="M8 2v12"/>'
-  },
-  {
-    id: "subnle-pocket",
-    name: "Subnle Pocket",
-    tag: "Networking",
-    sub: "ip · subnetting · tap only",
-    path: "labs/subnle-pocket.html",
-    ring: "ring-mid",
-    angle: 32,
-    glyph: '<path d="M2 4h12M2 8h12M2 12h12"/><path d="M6 2v12M10 2v12"/>'
   },
   {
     id: "hexle",
@@ -173,7 +153,7 @@ const LABS_CONFIG = [
     id: "pockle",
     name: "Pockle",
     tag: "Practice",
-    sub: "pocket mix · all labs",
+    sub: "pocket · daily reviews · python · subnetting",
     path: "labs/pockle.html",
     ring: "ring-inner",
     angle: 120,

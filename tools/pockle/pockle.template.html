@@ -196,13 +196,29 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .lab small.m2 { margin-top: 1px; }
 .lab small .mn { color: var(--good); font-weight: 600; }
 .empty { text-align: center; padding: 26px 10px; color: var(--muted); font-size: 14px; line-height: 1.6; }
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; display: grid; grid-template-columns: repeat(3, 1fr); background: var(--panel); border-top: 1px solid var(--line); padding: 0 max(8px, calc(50% - 240px)) env(safe-area-inset-bottom); }
+.tabs button { background: none; border: 0; height: 52px; font-family: var(--mono); font-size: 11px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); position: relative; }
+.tabs button.on { color: var(--text); font-weight: 600; }
+.tabs button.on::before { content: ""; position: absolute; left: 30%; right: 30%; top: 0; height: 2px; background: var(--accent); border-radius: 0 0 2px 2px; }
+.app { padding-bottom: calc(68px + env(safe-area-inset-bottom)); }
+.pane { position: fixed; left: 0; right: 0; top: 0; bottom: calc(53px + env(safe-area-inset-bottom)); width: 100%; height: calc(100% - 53px - env(safe-area-inset-bottom)); border: 0; display: none; background: var(--bg); }
+body.ext .app { display: none; }
+body.ext .pane.on { display: block; }
+.sect .chipbtn { text-transform: none; letter-spacing: 0; font-weight: 500; }
+.day { grid-template-columns: 30px 1fr auto; cursor: pointer; text-align: left; width: 100%; font: inherit; color: inherit; }
+.day .tog { pointer-events: none; }
+.day.done .tog { background: var(--good); border-color: var(--good); }
+.day.done .tog svg { opacity: 1; stroke: var(--bg); }
+.day.done strong { color: var(--muted); }
+.day .cnt { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.day .cnt.due { color: var(--warn); font-weight: 600; }
 .empty img { width: 96px; height: 96px; object-fit: contain; }
 </style>
 </head>
 <body>
 <div class="app">
   <div class="top">
-    <span class="logo">Pockle<i>pocket mix</i></span>
+    <span class="logo">Pockle<i>pocket</i></span>
     <span class="spacer"></span>
     <button class="chipbtn" id="recallBtn">recall on</button>
     <button class="chipbtn" id="themeBtn">orbital</button>
@@ -216,6 +232,8 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
       <button class="qbtn" id="missBtn"><strong>Mistakes</strong><small id="missSub">nothing yet</small></button>
       <button class="qbtn" id="sprintBtn"><strong>Sprint 60</strong><small id="sprintSub">beat your best</small></button>
     </div>
+    <div class="sect"><span>Today's reviews</span><span><span id="dayCount"></span> <button class="chipbtn" id="dayAllBtn">do all</button></span></div>
+    <div class="labs" id="dayList"></div>
     <div class="sect"><span>Labs in the mix</span><span id="labCount"></span></div>
     <div class="labs" id="labList"></div>
     <div class="links">
@@ -257,6 +275,13 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
     </div>
   </section>
 </div>
+<iframe class="pane" id="pane-python" title="Python" data-src="pyle-pocket.html"></iframe>
+<iframe class="pane" id="pane-subnet" title="Subnetting" data-src="subnle-pocket.html"></iframe>
+<nav class="tabs">
+  <button data-tab="review" class="on">Review</button>
+  <button data-tab="python">Python</button>
+  <button data-tab="subnet">Subnetting</button>
+</nav>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -397,6 +422,7 @@ function paintHome() {
   const on = LABSTATE.filter(l => l.cards.length && !S.off.includes(l.b.id)).length;
   const mAll = POOL.filter(mastered).length;
   $("labCount").textContent = on + " on" + (POOL.length ? " · " + mAll + "/" + POOL.length + " mastered" : "");
+  paintDay();
   const list = $("labList"); list.innerHTML = "";
   const sorted = LABSTATE.slice().sort((a, b) => (b.cards.length > 0) - (a.cards.length > 0));
   for (const l of sorted) {
@@ -408,7 +434,8 @@ function paintHome() {
       + '<div class="nm"><strong>' + esc(l.b.name) + '</strong><small>' + esc(l.b.topic) + " · " + (locked ? "nothing finished yet" : l.units.length + "/" + l.b.units.length + " lessons" + (fl ? ' · <b class="' + fl + '">' + fl + "</b>" : "")) + '</small>'
       + (locked ? "" : '<small class="m2"><span class="mn">' + mc + "</span> of " + l.cards.length + " mastered</small>")
       + '<div class="meter"><i class="seen" style="width:' + (l.cards.length ? Math.round(seen / l.cards.length * 100) : 0) + '%"></i><i class="mast" style="width:' + (l.cards.length ? Math.round(mc / l.cards.length * 100) : 0) + '%"></i></div></div>'
-      + (locked ? '<a class="solo" href="' + esc(l.b.href) + '">open</a>' : '<button class="solo">solo</button>');
+      + (locked ? (TAB_OF[l.b.id] ? '<button class="solo" data-tab="' + TAB_OF[l.b.id] + '">open</button>' : '<a class="solo" href="' + esc(l.b.href) + '">open</a>') : '<button class="solo">solo</button>');
+    if (locked && TAB_OF[l.b.id]) row.querySelector(".solo").onclick = () => setTab(TAB_OF[l.b.id]);
     if (!locked) {
       row.querySelector(".tog").onclick = () => { S.off = inMix ? S.off.concat(l.b.id) : S.off.filter(x => x !== l.b.id); save(); paintHome(); };
       row.querySelector(".solo").onclick = () => start("solo", pickMix(l.cards, 10), l.b.name);
@@ -524,7 +551,7 @@ function renderTyped(c) {
       const j = +b.dataset.j, right = j === c.bad;
       box.querySelectorAll("#pool .lrow").forEach((x, xi) => { x.disabled = true; if (xi === c.bad) x.classList.add("good"); });
       if (!right) b.classList.add("bad");
-      settle(c, right, "Line " + (c.bad + 1) + " fixed:" + '<div class="code">' + hl(c.fix.trim()) + '</div>');
+      settle(c, right, "Line " + (c.bad + 1) + " fixed:" + '<div class="code">' + hl(c.fix.trimEnd()) + '</div>');
     });
     wireGuess();
   } else if (c.t === "trace") {
@@ -614,7 +641,7 @@ function settle(c, right, extra) {
 }
 
 function advance() {
-  if (!R) return;
+  if (!R || R.done) return;
   R.i++;
   if (R.mode === "sprint" && R.i >= R.cards.length) R.cards.push(...pickMix(POOL.filter(SPRINTABLE), 20)), $("dots").innerHTML = "";
   if (R.i >= R.cards.length) return finish();
@@ -626,7 +653,6 @@ $("quitBtn").onclick = () => { if (R && R.i > 0 || (R && R.answered)) finish(); 
 function stopTimer() { if (R && R.timer) { clearInterval(R.timer); R.timer = null; } }
 function finish() {
   stopTimer(); if (!R) return;
-  const total = R.mode === "sprint" ? R.i + (R.answered ? 0 : 0) : R.cards.length;
   const answered = R.mode === "sprint" ? R.ok + R.miss.length : Math.min(R.i + (R.answered ? 1 : 0), R.cards.length);
   let msg = "", cls = "good";
   if (R.mode === "sprint") {
@@ -648,9 +674,17 @@ function finish() {
   $("resMsg").textContent = msg; $("resMsg").className = "msg " + cls;
   $("resMiss").innerHTML = R.miss.length ? '<div class="sect"><span>To fix</span><span>' + R.miss.length + '</span></div>' + R.miss.map(c =>
     '<div class="m"><b>' + esc(c.labName) + " · " + esc(c.unitTitle) + '</b>' + missBody(c) + '<div>' + inl(c.why) + '</div></div>').join("") : "";
+  if (R.mode === "daily") {
+    const got = new Set(R.cards.slice(0, answered).map(c => c.id));
+    for (const id of R.dailyLabs) if (R.cards.filter(c => c.lab === id).every(c => got.has(c.id)) && !S.day.done.includes(id)) S.day.done.push(id);
+    save();
+    const left = dayLabs().filter(l => !S.day.done.includes(l.b.id)).length;
+    msg += left ? " " + left + " lab" + (left > 1 ? "s" : "") + " left today." : " All of today's reviews are done.";
+    $("againBtn").textContent = "Today";
+  } else $("againBtn").textContent = "Again";
   R.done = true; show("result");
 }
-$("againBtn").onclick = () => { const m = R ? R.mode : "mix"; scan(); go(m); };
+$("againBtn").onclick = () => { if (R && R.mode === "daily") { R = null; paintHome(); show("home"); return; } const m = R ? R.mode : "mix", lab = R && R.mode === "solo" && LABSTATE.find(l => l.b.name === R.label); scan(); if (lab) { const l = LABSTATE.find(x => x.b.id === lab.b.id); start("solo", pickMix(l.cards, 10), l.b.name); } else go(m); };
 $("homeBtn").onclick = () => { R = null; paintHome(); show("home"); };
 
 function missBody(c) {
@@ -659,10 +693,59 @@ function missBody(c) {
   if (c.t === "fill") return code(c.code.replace(/_{3,}/, c.o[c.ok[0]]));
   if (c.t === "build") return (c.setup ? code(c.setup) : "") + code(c.sol.split(",").map(t => c.tiles[+t]).join(" "));
   if (c.t === "order") return code(c.sol.split(",").map(t => c.lines[+t]).join("\n"));
-  if (c.t === "bug") return "line " + (c.bad + 1) + " should be" + code(c.fix.trim());
+  if (c.t === "bug") return "line " + (c.bad + 1) + " should be" + code(c.fix.trimEnd());
   if (c.t === "trace") return code(c.code) + '<table class="trace"><tr><th>after lap</th>' + c.cols.map(x => '<th>' + esc(x) + '</th>').join("") + '</tr>' + c.rows.map((r, i) => '<tr><td>' + (i + 1) + '</td>' + r.map(v => '<td>' + esc(v) + '</td>').join("") + '</tr>').join("") + '</table>';
   return "";
 }
+
+const DAILY_MAX = 8, DAILY_FRESH = 5;
+function dayState() { if (!S.day || S.day.d !== today()) S.day = { d: today(), done: [] }; return S.day; }
+function dayLabs() { dayState(); return LABSTATE.filter(l => l.cards.length && !S.off.includes(l.b.id)); }
+function dailyCards(l) {
+  const due = dueCards(l.cards).sort((a, b) => st(a).due - st(b).due);
+  return due.length ? due.slice(0, DAILY_MAX) : pickMix(l.cards, DAILY_FRESH);
+}
+function startDaily(labs, label) {
+  if (!labs.length) { toast("All of today's reviews are done"); return; }
+  const cards = labs.flatMap(l => shuffle(dailyCards(l)));
+  if (!cards.length) { toast("Nothing to review yet"); return; }
+  start("daily", cards, label);
+  R.dailyLabs = [...new Set(cards.map(c => c.lab))];
+}
+function paintDay() {
+  const labs = dayLabs(), list = $("dayList"); list.innerHTML = "";
+  const done = labs.filter(l => S.day.done.includes(l.b.id)).length;
+  $("dayCount").textContent = labs.length ? done + "/" + labs.length : "";
+  $("dayAllBtn").hidden = !labs.length || done === labs.length;
+  if (!labs.length) { list.innerHTML = '<div class="empty">Finish a lesson in any lab and its daily review shows up here.</div>'; return; }
+  const order = labs.slice().sort((a, b) => S.day.done.includes(a.b.id) - S.day.done.includes(b.b.id));
+  for (const l of order) {
+    const isDone = S.day.done.includes(l.b.id), due = dueCards(l.cards).length;
+    const row = document.createElement("button");
+    row.className = "lab day" + (isDone ? " done" : "");
+    row.innerHTML = '<span class="tog"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></span>'
+      + '<span class="nm"><strong>' + esc(l.b.name) + '</strong><small>' + esc(l.b.topic) + '</small></span>'
+      + '<span class="cnt' + (!isDone && due ? " due" : "") + '">' + (isDone ? "done" : due ? Math.min(due, DAILY_MAX) + " due" : DAILY_FRESH + " warm-up") + '</span>';
+    row.onclick = () => startDaily([l], l.b.name);
+    list.appendChild(row);
+  }
+}
+$("dayAllBtn").onclick = () => startDaily(dayLabs().filter(l => !S.day.done.includes(l.b.id)), "Today");
+
+const TAB_OF = { "pyle-pocket": "python", "subnle-pocket": "subnet" };
+function setTab(t) {
+  document.querySelectorAll(".tabs button").forEach(b => b.classList.toggle("on", b.dataset.tab === t));
+  document.body.classList.toggle("ext", t !== "review");
+  document.querySelectorAll(".pane").forEach(f => {
+    const on = f.id === "pane-" + t;
+    f.classList.toggle("on", on);
+    if (on && !f.src) f.src = f.dataset.src;
+  });
+  if (t === "review" && !R) { paintHome(); show("home"); }
+  if (S.tab !== t) { S.tab = t; save(); }
+}
+document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setTab(b.dataset.tab));
+const qTab = new URLSearchParams(location.search).get("tab");
 
 function go(mode) {
   if (mode === "miss") start("miss", spread(shuffle(missCards(POOL))).slice(0, 10), "Mistakes");
@@ -673,7 +756,7 @@ $("mixBtn").onclick = () => go("mix");
 $("missBtn").onclick = () => go("miss");
 $("sprintBtn").onclick = () => go("sprint");
 
-$("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0 }; save(); paintHome(); } };
+$("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0, recall: S.recall }; save(); paintHome(); } };
 
 $("sendBtn").onclick = () => MegaSync.send().catch(e => toast("send failed: " + e.message));
 MegaSync.listen(() => { S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0, recall: true }, load()); setTheme(THEMES.includes(S.theme) ? S.theme : "orbital"); paintRecall(); paintHome(); });
@@ -684,6 +767,7 @@ document.addEventListener("visibilitychange", () => { if (!document.hidden && $(
 setTheme(THEMES.includes(S.theme) ? S.theme : "orbital");
 paintRecall();
 paintHome();
+setTab(["review", "python", "subnet"].includes(qTab) ? qTab : (S.tab || "review"));
 </script>
 </body>
 </html>

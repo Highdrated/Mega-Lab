@@ -6,7 +6,7 @@ POCKET.register({
   id: "subnle-pocket",
   name: "Subnle Pocket",
   topic: "Subnetting",
-  href: "subnle-pocket.html",
+  href: "pockle.html?tab=subnet",
   keys: ["subnle-pocket-v1"],
   units: [
     { id: "bits", title: "Bits & octets" },

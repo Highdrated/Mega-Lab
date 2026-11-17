@@ -5,7 +5,7 @@
     spelle: { name: 'Java', path: 'spelle.html', sub: 'JavaScript spells' },
     passle: { name: 'Passle', path: 'passle.html', key: 'passle.v2', kind: 'learned', sub: 'PHP' },
     seqle: { name: 'Seqle', path: 'seqle.html', key: 'seqle.v1', kind: 'learned', sub: 'SQL' },
-    subnle: { name: 'Subnle Pocket', path: 'subnle-pocket.html', sub: 'subnetting' },
+    subnle: { name: 'Subnle Pocket', path: 'pockle.html?tab=subnet', sub: 'subnetting' },
     modle: { name: 'Modle', path: 'modle/index.html', sub: 'math' },
     gitlab: { name: 'Git Lab', path: 'git-lab.html', sub: 'git' },
     shelle: { name: 'Shelle', path: 'shelle.html', sub: 'zsh · Docker' },
