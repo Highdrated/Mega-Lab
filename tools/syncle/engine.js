@@ -141,6 +141,8 @@ const DISPLAY = {
   "Microsoft.PowerShell.Commands.GroupInfoNoElement": ["Count", "Name"],
   "System.Management.Automation.CmdletInfo": ["CommandType", "Name", "Version", "Source"],
   "FileInfo": ["UnixMode", "User", "Group", "LastWriteTime", "Size", "Name"],
+  "System.Management.Automation.PathInfo": ["Path"],
+  "System.Management.Automation.ApplicationInfo": ["CommandType", "Name", "Version", "Source"],
 };
 
 function typeName(v) {
@@ -677,7 +679,7 @@ class Parser {
 function parse(src) { const p = new Parser(src); const ast = p.script(null); return ast; }
 
 const CMDS = {};
-const ALIASES = { where: "Where-Object", "?": "Where-Object", select: "Select-Object", sort: "Sort-Object", group: "Group-Object", measure: "Measure-Object", "%": "ForEach-Object", foreach: "ForEach-Object", ft: "Format-Table", fl: "Format-List", gm: "Get-Member", gcm: "Get-Command", help: "Get-Help", man: "Get-Help", echo: "Write-Output", cat: "Get-Content", gc: "Get-Content", ls: "Get-ChildItem", dir: "Get-ChildItem", gci: "Get-ChildItem", cls: "Clear-Host", clear: "Clear-Host", epcsv: "Export-Csv", ipcsv: "Import-Csv" };
+const ALIASES = { where: "Where-Object", "?": "Where-Object", select: "Select-Object", group: "Group-Object", measure: "Measure-Object", "%": "ForEach-Object", foreach: "ForEach-Object", ft: "Format-Table", fl: "Format-List", gm: "Get-Member", gcm: "Get-Command", help: "Get-Help", echo: "Write-Output", gc: "Get-Content", cd: "Set-Location", sl: "Set-Location", chdir: "Set-Location", pwd: "Get-Location", gl: "Get-Location", move: "Move-Item", copy: "Copy-Item", del: "Remove-Item", ni: "New-Item", dir: "Get-ChildItem", gci: "Get-ChildItem", cls: "Clear-Host", clear: "Clear-Host", epcsv: "Export-Csv", ipcsv: "Import-Csv" };
 const COMMON = { ErrorAction: { kind: "value" }, WarningAction: { kind: "value" }, Verbose: { kind: "switch" }, Debug: { kind: "switch" }, OutVariable: { kind: "value" } };
 const COMMON_ALIAS = { ea: "ErrorAction", ov: "OutVariable", wa: "WarningAction", vb: "Verbose" };
 
@@ -689,10 +691,13 @@ class Ctx {
     this.scopes = [new Map()];
     this.funcs = {};
     this.mg = null; this.exo = false;
+    this.cwd = "/Users/kaatje";
+    this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Downloads"]);
     this.fs = {
-      "/Users/kaatje/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(Date.now() - 36e5) },
-      "/Users/kaatje/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetra.lind@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(Date.now() - 72e5) },
-      "/Users/kaatje/leavers.csv": { text: "UPN,LastDay\nludo.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.crane@halvardco.onmicrosoft.com,2026-11-15\nines.corrigan@halvardco.onmicrosoft.com,2026-11-17", at: new Date(Date.now() - 18e5) }
+      "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hollis (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowan is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(Date.now() - 30 * 864e5) },
+      "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(Date.now() - 36e5) },
+      "/Users/kaatje/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetra.lind@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(Date.now() - 72e5) },
+      "/Users/kaatje/Downloads/leavers.csv": { text: "UPN,LastDay\nludo.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.crane@halvardco.onmicrosoft.com,2026-11-15\nines.corrigan@halvardco.onmicrosoft.com,2026-11-17", at: new Date(Date.now() - 18e5) }
     };
     this.host = [];
     this.errors = [];
@@ -705,7 +710,7 @@ class Ctx {
     if (l === "psitem") return this.getVar("_");
     if (l === "error") return this.errors.slice().reverse();
     if (l === "home") return "/Users/kaatje";
-    if (l === "pwd") return "/Users/kaatje";
+    if (l === "pwd") return this.cwd || "/Users/kaatje";
     for (let i = this.scopes.length - 1; i >= 0; i--) if (this.scopes[i].has(l)) return this.scopes[i].get(l);
     return null;
   }
@@ -718,7 +723,13 @@ class Ctx {
   }
   push(m) { this.scopes.push(m || new Map()); }
   pop() { this.scopes.pop(); }
-  path(p) { p = String(p); if (p.startsWith("~/")) p = "/Users/kaatje/" + p.slice(2); else if (p.startsWith("./")) p = "/Users/kaatje/" + p.slice(2); else if (!p.startsWith("/")) p = "/Users/kaatje/" + p; return p.replace(/\/+/g, "/"); }
+  path(p) {
+    p = String(p).trim().replace(/\\/g, "/");
+    if (p === "~") p = "/Users/kaatje"; else if (p.startsWith("~/")) p = "/Users/kaatje/" + p.slice(2); else if (!p.startsWith("/")) p = (this.cwd || "/Users/kaatje") + "/" + p;
+    const out = [];
+    for (const seg of p.split("/")) { if (!seg || seg === ".") continue; if (seg === "..") out.pop(); else out.push(seg); }
+    return "/" + out.join("/");
+  }
 }
 
 class Return { constructor(v) { this.v = v; } }
@@ -873,6 +884,7 @@ function runCommand(el, ctx, input, idx) {
   const spec = spec0 && spec0.session && !ctx.exo ? null : spec0;
   if (!spec) throw new PSErr("The term '" + raw + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: raw, term: true, kind: "notfound" });
   if (input && input.length && !spec.pipe) throw new PSErr("The input object cannot be bound to any parameters for the command either because the command does not take pipeline input or the input and its properties do not match any of the parameters that take pipeline input.", { cmd: spec.name, term: true, kind: "pipeinput" });
+  if (spec.native) { const rawArgs = (el.args || []).map((x) => x.p !== undefined && x.v === undefined ? "-" + x.p : x.p !== undefined ? "-" + x.p + ":" + toStr(evalArg(x.v, ctx)) : toStr(evalArg(x.v, ctx))); return spec.run({ ctx, rawArgs, input: input || [], name: spec.name }); }
   const b = bindArgs(spec, el.args, ctx, spec.name);
   const stop = b.ErrorAction && /^stop$/i.test(String(b.ErrorAction));
   const silent = b.ErrorAction && /^(silentlycontinue|ignore)$/i.test(String(b.ErrorAction));
@@ -1391,22 +1403,23 @@ function toCsv(input, delim) {
   for (const x of input) lines.push(cols.map((c) => csvCell(isObj(x) ? getMember(x, c) : c === "Length" ? toStr(x).length : null)).join(delim));
   return lines;
 }
-def("Export-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Path: P(0, { req: true }), NoTypeInformation: S(), Delimiter: P(null), Append: S(), Force: S(), Encoding: P(null), UseQuotes: P(null) },
-  run({ ctx, b, input }) {
+def("Export-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Path: P(0, { req: true }), NoTypeInformation: S(), Delimiter: P(null), UseCulture: S(), Append: S(), Force: S(), Encoding: P(null), UseQuotes: P(null) },
+  run({ ctx, b, input, name }) {
     const p = ctx.path(b.Path);
-    const lines = toCsv(input, b.Delimiter ? String(b.Delimiter) : ",");
+    if (!ctx.dirs.has(parentOf(p))) throw new PSErr("Could not find a part of the path '" + p + "'.", { cmd: name, term: true, kind: "nopath" });
+    const lines = toCsv(input, b.UseCulture ? ";" : b.Delimiter ? String(b.Delimiter) : ",");
     if (b.Append && ctx.fs[p]) ctx.fs[p] = { text: ctx.fs[p].text + "\n" + lines.slice(1).join("\n"), at: new Date() };
     else ctx.fs[p] = { text: lines.join("\n"), at: new Date() };
     return [];
   } });
 def("ConvertTo-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { NoTypeInformation: S(), Delimiter: P(null) }, run({ b, input }) { return toCsv(input, b.Delimiter ? String(b.Delimiter) : ","); } });
 function parseCsvLine(line, d) { const out = []; let cur = "", q = false; for (let i = 0; i < line.length; i++) { const c = line[i]; if (q) { if (c === "\"" && line[i + 1] === "\"") { cur += "\""; i++; } else if (c === "\"") q = false; else cur += c; } else if (c === "\"") q = true; else if (c === d) { out.push(cur); cur = ""; } else cur += c; } out.push(cur); return out; }
-def("Import-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), Delimiter: P(null), Header: P(null) },
+def("Import-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), Delimiter: P(null), UseCulture: S(), Header: P(null) },
   run({ ctx, b, name }) {
     const p = ctx.path(b.Path);
     const f = ctx.fs[p];
     if (!f) throw new PSErr("Could not find file '" + p + "'.", { cmd: name, term: true, kind: "nofile" });
-    const d = b.Delimiter ? String(b.Delimiter) : ",";
+    const d = b.UseCulture ? ";" : b.Delimiter ? String(b.Delimiter) : ",";
     const lines = f.text.split("\n").filter((l) => l.length);
     if (!lines.length) return [];
     const head = b.Header ? flat(b.Header).map(String) : parseCsvLine(lines[0], d);
@@ -1414,8 +1427,64 @@ def("Import-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctyp
   } });
 def("Get-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), TotalCount: P(null, { alias: ["First", "Head"] }), Tail: P(null) },
   run({ ctx, b, name }) { const p = ctx.path(b.Path); const f = ctx.fs[p]; if (!f) throw new PSErr("Cannot find path '" + p + "' because it does not exist.", { cmd: name, term: false, kind: "nofile" }); let l = f.text.split("\n"); if (b.TotalCount !== undefined) l = l.slice(0, +b.TotalCount); if (b.Tail !== undefined) l = l.slice(-(+b.Tail)); return l; } });
-def("Get-ChildItem", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Filter: P(null) },
-  run({ ctx, b }) { const re = b.Filter ? wildRe(String(b.Filter)) : null; return Object.keys(ctx.fs).sort().filter((p) => !re || re.test(p.split("/").pop())).map((p) => obj("FileInfo", { UnixMode: "-rw-r--r--", User: "kaatje", Group: "staff", LastWriteTime: ctx.fs[p].at, Size: ctx.fs[p].text.length, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p })); } });
+function parentOf(p) { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); }
+function fileObj(ctx, p) { return obj("FileInfo", { UnixMode: "-rw-r--r--", User: "kaatje", Group: "staff", LastWriteTime: ctx.fs[p].at, Size: ctx.fs[p].text.length, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p, PSIsContainer: false }); }
+function dirObj2(ctx, p) { return obj("FileInfo", { UnixMode: "drwxr-xr-x", User: "kaatje", Group: "staff", LastWriteTime: new Date(Date.now() - 86400000 * 3), Size: 96, Name: p.split("/").pop(), FullName: p, PSIsContainer: true }); }
+function notFoundPath(p) { return "Cannot find path '" + p + "' because it does not exist."; }
+def("Get-ChildItem", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Filter: P(null), File: S(), Directory: S(), Name: S() },
+  run({ ctx, b, name }) {
+    let dir = b.Path !== undefined ? ctx.path(b.Path) : ctx.cwd;
+    let pat = b.Filter ? String(b.Filter) : null;
+    if (!ctx.dirs.has(dir)) {
+      if (ctx.fs[dir]) return [fileObj(ctx, dir)];
+      const last = dir.split("/").pop();
+      if (/[*?]/.test(last) && ctx.dirs.has(parentOf(dir))) { pat = last; dir = parentOf(dir); }
+      else throw new PSErr(notFoundPath(dir), { cmd: name, term: true, kind: "nopath" });
+    }
+    const re = pat ? wildRe(pat) : null;
+    const ds = b.File ? [] : Array.from(ctx.dirs).filter((d) => d !== dir && parentOf(d) === dir && (!re || re.test(d.split("/").pop()))).sort();
+    const fs = b.Directory ? [] : Object.keys(ctx.fs).filter((p) => parentOf(p) === dir && (!re || re.test(p.split("/").pop()))).sort();
+    if (b.Name) return ds.concat(fs).map((p) => p.split("/").pop());
+    if (ds.length + fs.length) ctx.host.push({ text: "\n    Directory: " + dir + "\n" });
+    return ds.map((p) => dirObj2(ctx, p)).concat(fs.map((p) => fileObj(ctx, p)));
+  } });
+def("Set-Location", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0) },
+  run({ ctx, b, name }) {
+    if (b.Path === undefined) { ctx.prevCwd = ctx.cwd; ctx.cwd = "/Users/kaatje"; return []; }
+    if (String(b.Path) === "-") { const p = ctx.prevCwd || ctx.cwd; ctx.prevCwd = ctx.cwd; ctx.cwd = p; return []; }
+    const p = ctx.path(b.Path);
+    if (!ctx.dirs.has(p)) throw new PSErr(notFoundPath(p), { cmd: name, term: true, kind: "nopath" });
+    ctx.prevCwd = ctx.cwd; ctx.cwd = p; return [];
+  } });
+def("Get-Location", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: {},
+  run({ ctx }) { return [obj("System.Management.Automation.PathInfo", { Path: ctx.cwd, Drive: "/", Provider: "Microsoft.PowerShell.Core\\FileSystem", ProviderPath: ctx.cwd })]; } });
+def("Test-Path", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), PathType: P(null) },
+  run({ ctx, b }) { const p = ctx.path(b.Path); const isDir = ctx.dirs.has(p), isFile = !!ctx.fs[p]; const t = b.PathType ? String(b.PathType).toLowerCase() : "any"; return [t === "container" ? isDir : t === "leaf" ? isFile : isDir || isFile]; } });
+def("New-Item", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), ItemType: P(null), Value: P(null), Force: S() },
+  run({ ctx, b, name }) {
+    const p = ctx.path(b.Path);
+    if (!ctx.dirs.has(parentOf(p))) throw new PSErr("Could not find a part of the path '" + p + "'.", { cmd: name, term: true, kind: "nopath" });
+    if ((ctx.dirs.has(p) || ctx.fs[p]) && !b.Force) throw new PSErr("An item with the specified name " + p + " already exists.", { cmd: name, term: true });
+    if (b.ItemType !== undefined && /^dir/i.test(String(b.ItemType))) { ctx.dirs.add(p); ctx.host.push({ text: "\n    Directory: " + parentOf(p) + "\n" }); return [dirObj2(ctx, p)]; }
+    ctx.fs[p] = { text: b.Value !== undefined ? toStr(b.Value) : "", at: new Date() }; ctx.host.push({ text: "\n    Directory: " + parentOf(p) + "\n" }); return [fileObj(ctx, p)];
+  } });
+def("Remove-Item", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", whatif: true, params: { Path: P(0, { req: true }), Recurse: S(), Force: S() },
+  run({ ctx, b, name }) {
+    const p = ctx.path(b.Path);
+    if (ctx.fs[p]) { if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Remove File\" on target \"" + p + "\"." }); return []; } delete ctx.fs[p]; return []; }
+    if (ctx.dirs.has(p)) throw new PSErr("(lab) Removing folders is switched off in this lab.", { cmd: name, term: true });
+    throw new PSErr(notFoundPath(p), { cmd: name, term: true, kind: "nopath" });
+  } });
+function moveCopy(ctx, b, name, move) {
+  const src = ctx.path(b.Path); if (!ctx.fs[src]) throw new PSErr(notFoundPath(src), { cmd: name, term: true, kind: "nopath" });
+  let dst = ctx.path(b.Destination); if (ctx.dirs.has(dst)) dst = dst + "/" + src.split("/").pop();
+  if (!ctx.dirs.has(parentOf(dst))) throw new PSErr("Could not find a part of the path '" + dst + "'.", { cmd: name, term: true, kind: "nopath" });
+  if (move && ctx.fs[dst] && !b.Force) throw new PSErr("Cannot create a file when that file already exists.", { cmd: name, term: true });
+  if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"" + (move ? "Move File" : "Copy File") + "\" on target \"Item: " + src + " Destination: " + dst + "\"." }); return []; }
+  ctx.fs[dst] = { text: ctx.fs[src].text, at: new Date() }; if (move) delete ctx.fs[src]; return [];
+}
+def("Move-Item", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", whatif: true, params: { Path: P(0, { req: true }), Destination: P(1, { req: true }), Force: S() }, run({ ctx, b, name }) { return moveCopy(ctx, b, name, true); } });
+def("Copy-Item", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", whatif: true, params: { Path: P(0, { req: true }), Destination: P(1, { req: true }), Force: S() }, run({ ctx, b, name }) { return moveCopy(ctx, b, name, false); } });
 def("Get-Date", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Date: P(0), Format: P(null), Year: P(null), Month: P(null), Day: P(null) },
   run({ b }) { let d = b.Date !== undefined ? (b.Date instanceof Date ? b.Date : new Date(b.Date)) : new Date(); if (isNaN(d)) throw new PSErr("Cannot bind parameter 'Date'. Cannot convert value \"" + b.Date + "\" to type \"System.DateTime\".", { cmd: "Get-Date", term: true }); if (b.Format) return [dateFmt(d, String(b.Format))]; return [d]; } });
 def("Write-Output", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { InputObject: P(0) }, run({ b, input }) { return input.length ? input : flat(b.InputObject); } });
@@ -1471,6 +1540,7 @@ def("Get-Command", { module: "Microsoft.PowerShell.Core", ver: "7.4.6", ctype: "
         const a = ALIASES[p.toLowerCase()];
         if (a && !hasWild(p)) { res.push(obj("System.Management.Automation.AliasInfo", { CommandType: "Alias", Name: p + " -> " + a, Version: "", Source: "" })); continue; }
         const hit = list.filter((c) => wildRe(p).test(c.name));
+        if (!hasWild(p)) { const nat = Object.values(CMDS).find((c) => c.native && c.name === p.toLowerCase()); if (nat) { res.push(obj("System.Management.Automation.ApplicationInfo", { CommandType: "Application", Name: nat.name, Version: "0.0.0.0", Source: nat.src })); continue; } }
         if (!hit.length && !hasWild(p)) throw new PSErr("The term '" + p + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: name, term: false, kind: "notfound" });
         if (b.Syntax) { for (const c of hit) res.push(syntaxOf(c)); continue; }
         res.push(...hit.map(cmdInfo));
@@ -1944,6 +2014,25 @@ def("Stop-Transcript", { module: "Microsoft.PowerShell.Host", ver: "7.0.0.0", ct
     ctx.transcript = null;
     return ["Transcript stopped, output file is " + p];
   } });
+def("mkdir", { module: "", ver: "", ctype: "Function", params: { Path: P(0, { req: true }) },
+  run({ ctx, b, name }) { const p = ctx.path(b.Path); if (!ctx.dirs.has(parentOf(p))) throw new PSErr("Could not find a part of the path '" + p + "'.", { cmd: "New-Item", term: true, kind: "nopath" }); if (ctx.dirs.has(p) || ctx.fs[p]) throw new PSErr("An item with the specified name " + p + " already exists.", { cmd: "New-Item", term: true }); ctx.dirs.add(p); ctx.host.push({ text: "\n    Directory: " + parentOf(p) + "\n" }); return [dirObj2(ctx, p)]; } });
+def("ls", { module: null, ver: "", ctype: "Application", native: true, params: {},
+  run({ ctx, rawArgs }) {
+    const flags = rawArgs.filter((x) => /^-/.test(x)).join(""); const paths = rawArgs.filter((x) => !/^-/.test(x));
+    const dir = paths.length ? ctx.path(paths[0]) : ctx.cwd;
+    if (ctx.fs[dir]) return [paths[0]];
+    if (!ctx.dirs.has(dir)) { ctx.host.push({ err: "ls: " + (paths[0] || dir) + ": No such file or directory" }); return []; }
+    const names = Array.from(ctx.dirs).filter((d) => d !== dir && parentOf(d) === dir).map((d) => ({ n: d.split("/").pop(), d: true })).concat(Object.keys(ctx.fs).filter((p) => parentOf(p) === dir).map((p) => ({ n: p.split("/").pop(), d: false, p }))).sort((a, b) => a.n.localeCompare(b.n));
+    if (/l/.test(flags)) { const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; const lines = ["total " + names.length * 8]; for (const x of names) { const at = x.d ? new Date(Date.now() - 3 * 864e5) : ctx.fs[x.p].at; const sz = x.d ? 96 : ctx.fs[x.p].text.length; lines.push((x.d ? "drwxr-xr-x  4" : "-rw-r--r--  1") + " kaatje  staff  " + String(sz).padStart(5) + " " + mon[at.getMonth()] + " " + String(at.getDate()).padStart(2) + " " + String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0") + " " + x.n); } return lines; }
+    return [names.map((x) => x.n).join("\t")];
+  } });
+def("cat", { module: null, ver: "", ctype: "Application", native: true, params: {},
+  run({ ctx, rawArgs }) { const out = []; for (const a of rawArgs.filter((x) => !/^-/.test(x))) { const p = ctx.path(a); if (ctx.fs[p]) out.push(...ctx.fs[p].text.split("\n")); else ctx.host.push({ err: "cat: " + a + ": " + (ctx.dirs.has(p) ? "Is a directory" : "No such file or directory") }); } return out; } });
+def("man", { module: null, ver: "", ctype: "Application", native: true, params: {},
+  run({ ctx, rawArgs }) { ctx.host.push({ err: "No manual entry for " + (rawArgs[0] || "") }); return []; } });
+def("sort", { module: null, ver: "", ctype: "Application", native: true, params: {},
+  run({ ctx, rawArgs, input }) { if (!input.length) { ctx.host.push({ text: "(lab) sort is the macOS /usr/bin/sort program here, not Sort-Object. On its own it waits for typed input until Ctrl+D. Use Sort-Object." }); return []; } const out = input.map((x) => toStr(x)).sort(); return rawArgs.includes("-r") ? out.reverse() : out; } });
+CMDS["ls"].src = "/bin/ls"; CMDS["cat"].src = "/bin/cat"; CMDS["man"].src = "/usr/bin/man"; CMDS["sort"].src = "/usr/bin/sort"; CMDS["sort"].pipe = true;
 ["Get-Mailbox", "Set-Mailbox", "Get-MailboxPermission", "Add-MailboxPermission", "Remove-MailboxPermission", "Get-RecipientPermission", "Add-RecipientPermission", "Get-MailboxAutoReplyConfiguration", "Set-MailboxAutoReplyConfiguration", "Get-DistributionGroup", "Get-DistributionGroupMember", "Add-DistributionGroupMember", "Remove-DistributionGroupMember", "New-DistributionGroup"].forEach((n) => { CMDS[n.toLowerCase()].session = true; CMDS[n.toLowerCase()].module = "tmpEXO_" + "ycy3rmxz.0wi"; CMDS[n.toLowerCase()].ver = "1.0"; });
 function run(src, ctx) {
   ctx.host = [];

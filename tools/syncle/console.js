@@ -82,10 +82,15 @@ function completions(text, pos) {
   return res(fileCands(word));
 }
 function fileCands(word) {
-  const home = "/Users/kaatje/";
-  const files = Object.keys(R.ctx.fs || {}).filter((p) => p.startsWith(home)).map((p) => p.slice(home.length)).filter((p) => !p.includes("/"));
-  const w = word.replace(/^\.\//, "").replace(/^~\//, "");
-  return matchPrefix(files, w).sort((a, b) => a.localeCompare(b)).map((f) => "./" + f);
+  const ctx = R.ctx; if (!ctx) return [];
+  let w = word, shown = "./";
+  const slash = w.lastIndexOf("/");
+  let dirTyped = "", rest = w;
+  if (slash >= 0) { dirTyped = w.slice(0, slash + 1); rest = w.slice(slash + 1); shown = dirTyped; }
+  const base = slash >= 0 ? ctx.path(dirTyped === "/" ? "/" : dirTyped.replace(/\/$/, "") || "/") : ctx.cwd;
+  const kids = Array.from(ctx.dirs).filter((d) => d !== base && d.slice(0, d.lastIndexOf("/") || 1) === base).map((d) => d.split("/").pop())
+    .concat(Object.keys(ctx.fs || {}).filter((p) => p.slice(0, p.lastIndexOf("/") || 1) === base).map((p) => p.split("/").pop()));
+  return matchPrefix(kids, rest).sort((a, b) => a.localeCompare(b)).map((f) => shown + f);
 }
 
 function setVal(v, caret) { const i = inp(); CON.undo.push([i.value, i.selectionStart]); if (CON.undo.length > 100) CON.undo.shift(); i.value = v; const c = caret === undefined ? v.length : caret; i.setSelectionRange(c, c); ghost(); }
@@ -115,7 +120,7 @@ function printList(list) {
   const cols = Math.max(1, Math.floor(tcols() / w));
   let lines = [];
   for (let i = 0; i < list.length; i += cols) lines.push(list.slice(i, i + cols).map((x) => x.padEnd(w)).join("").trimEnd());
-  const echo = document.createElement("div"); echo.className = "echo"; echo.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span><span class="c">' + esc(inp().value) + "</span>"; o.appendChild(echo);
+  const echo = document.createElement("div"); echo.className = "echo"; echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(inp().value) + "</span>"; o.appendChild(echo);
   tline(lines.join("\n"), "h");
 }
 function tabComplete() {
@@ -165,7 +170,7 @@ function searchStep(next) {
 }
 function renderSearch() {
   const s = CON.search;
-  $("tprompt").textContent = s ? (s.dir === "bck" ? "bck-i-search: " : "fwd-i-search: ") + s.q + "_" : "PS /Users/kaatje>";
+  $("tprompt").textContent = s ? (s.dir === "bck" ? "bck-i-search: " : "fwd-i-search: ") + s.q + "_" : promptStr();
   if (s) { inp().value = s.found || s.orig; ghost(); }
 }
 function searchEnd(keep) { const s = CON.search; if (!s) return; CON.search = null; const v = keep ? (s.found || s.orig) : s.orig; renderSearch(); inp().value = v; inp().setSelectionRange(v.length, v.length); ghost(); }
@@ -174,7 +179,7 @@ function submitLine() {
   const i = inp();
   const src = i.value;
   i.value = ""; ghost(); CON.undo = []; CON.tabState = null;
-  if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span>'; $("tout").appendChild(d); return; }
+  if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span>'; $("tout").appendChild(d); return; }
   if (R.hist[R.hist.length - 1] !== src) R.hist.push(src);
   R.hpos = R.hist.length; saveHist();
   (R.sessHist = R.sessHist || []).push(src);
@@ -241,7 +246,7 @@ function conKey(e) {
       case "d": e.preventDefault(); if (!v) tline("(lab) Ctrl+D on an empty line closes pwsh. The lab stays open.", "n"); else if (p < v.length) setVal(v.slice(0, p) + v.slice(p + 1), p); return;
       case "t": e.preventDefault(); if (p > 0 && v.length > 1) { const q = p === v.length ? p - 1 : p; setVal(v.slice(0, q - 1) + v[q] + v[q - 1] + v.slice(q + 1), q + 1); } return;
       case "l": e.preventDefault(); $("tout").innerHTML = ""; return;
-      case "c": e.preventDefault(); { const d = document.createElement("div"); d.className = "echo"; d.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span><span class="c">' + esc(v) + '</span><span class="e">^C</span>'; $("tout").appendChild(d); setVal(""); } return;
+      case "c": e.preventDefault(); { const d = document.createElement("div"); d.className = "echo"; d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(v) + '</span><span class="e">^C</span>'; $("tout").appendChild(d); setVal(""); } return;
       case "r": e.preventDefault(); searchStart("bck"); return;
       case "s": e.preventDefault(); searchStart("fwd"); return;
       case "g": e.preventDefault(); return;

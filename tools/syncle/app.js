@@ -42,7 +42,7 @@ const POS = [[30, 84, 1], [42, 72, .9], [54, 64, .82], [66, 56, .74], [77, 47, .
 function renderCorridor() {
   closeOverlay();
   R.view = "corridor";
-  $("corridor").classList.remove("hide"); $("memory").classList.add("hide");
+  $("corridor").classList.remove("hide"); $("memory").classList.add("hide"); $("desktop").classList.add("hide");
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
@@ -160,7 +160,10 @@ function resetConsole(setup, pre) {
   tline(setup === "none" ? "Fresh pwsh window. Nothing is connected yet." : "Lab session. " + GRADER.describe(setup), "n");
   tstate();
 }
-function tstate() { const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : ""); }
+function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/kaatje") + ">"; }
+function setPrompt() { const t = $("tprompt"); if (t) t.textContent = promptStr(); }
+function tstate() {
+  setPrompt(); const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : ""); }
 function tline(t, cls) { const o = $("tout"); const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = t; o.appendChild(d); o.scrollTop = o.scrollHeight; }
 function tcols() { const w = $("tout").clientWidth - 32; return Math.max(60, Math.floor(w / 7.55)); }
 
@@ -169,7 +172,7 @@ function exec(src, opts) {
   const o = $("tout");
   const echo = document.createElement("div");
   echo.className = "echo";
-  echo.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span><span class="c">' + esc(src) + "</span>";
+  echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(src) + "</span>";
   o.appendChild(echo);
   const res = PS.run(src, R.ctx);
   for (const h of res.host) { if (h.clear) { o.innerHTML = ""; continue; } if (h.err) tline(h.err, "e"); else if (h.warn) tline(h.warn, "w"); else if (h.text !== undefined) tline(h.text, h.color ? "hc" : "h"); }
@@ -193,7 +196,7 @@ function openMemory(m, keepMix) {
   closeOverlay();
   if (!keepMix) R.mix = null;
   R.view = "memory"; R.gate = false; R.mem = m; R.hint = 0; R.watchStep = 0; R.pidx = keepMix ? R.pidx : firstOpenDrill(m);
-  $("corridor").classList.add("hide"); $("memory").classList.remove("hide");
+  $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
   $("crumb").textContent = SEQUENCES[m.seq].name + " · " + m.name;
   const dn = doneOf(m.id);
   R.phase = !dn.brief ? "brief" : !dn.watch ? "watch" : !dn.trace ? "trace" : !dn.recall ? "recall" : dueReview(m.id) ? "recall" : "brief";
@@ -461,7 +464,7 @@ function synced_overlay(title, text, next, nextLabel, alt) {
 function openGate() {
   closeOverlay();
   R.view = "memory"; R.gate = true; R.mem = null; R.hint = 0; R.phase = "gate";
-  $("corridor").classList.add("hide"); $("memory").classList.remove("hide");
+  $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
   $("crumb").textContent = "Takeover · " + GATE.name;
   flowband([["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS");
   $("tabs").innerHTML = '<button class="tab on" type="button">TICKETS</button>';

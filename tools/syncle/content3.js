@@ -1,5 +1,5 @@
 SEQUENCES[5].open = true; SEQUENCES[6].open = true;
-const fsText = (ctx, f) => { const x = ctx.fs["/Users/kaatje/" + f]; return x ? x.text : null; };
+const fsText = (ctx, f) => { const x = ctx.fs[ctx.path(f)] || ctx.fs["/Users/kaatje/Desktop/" + f] || ctx.fs["/Users/kaatje/Downloads/" + f]; return x ? x.text : null; };
 const csvRows = (ctx, f) => { const t = fsText(ctx, f); if (!t) return null; const l = t.split("\n").filter(Boolean); return { head: l[0], rows: l.slice(1) }; };
 const hostText = (res) => res.host.map((h) => h.text || "").join("\n");
 const daysAgo = (d) => Math.floor((Date.now() - d.getTime()) / 864e5);
@@ -119,7 +119,7 @@ MEMORIES.push(
     daily: ["Every report anyone asks for", "Before a bulk change: export what you are about to touch", "Evidence for audits"],
     parts: [["Select-Object A,B", "the columns you want"], ["Export-Csv ./report.csv", "write the file"], ["-NoTypeInformation", "no type header line"], ["Get-Content ./report.csv -TotalCount 3", "peek at it"]],
     flow: [["Get", "objects"], ["Select-Object", "columns"], ["Export-Csv", "file"], ["Get-Content", "check"]],
-    traps: [["System.Object[]", "Lists like AssignedLicenses do not fit in a CSV cell. Calculate a readable column instead."], ["Overwrite", "Export-Csv replaces an existing file silently. -Append adds rows instead."], ["Path", "./ means the current folder. In the lab that is /Users/kaatje."]]
+    traps: [["System.Object[]", "Lists like AssignedLicenses do not fit in a CSV cell. Calculate a readable column instead."], ["Overwrite", "Export-Csv replaces an existing file silently. -Append adds rows instead."], ["Path", "./ means the folder you are in (see the prompt). Reports in this sequence start on your Desktop, so they show up there."], ["Excel on a Belgian Mac", "Excel with Belgian region settings expects ; between columns. A normal comma CSV opens as one long column A. Export with -Delimiter ';' or -UseCulture when the file is for Excel."]]
   },
   watch: [
     { code: "Get-MgUser -Filter \"department eq 'Legal'\" -Property DisplayName,JobTitle | Export-Csv ./legal-raw.csv -NoTypeInformation", say: "Export without Select-Object first..." },
@@ -169,11 +169,12 @@ MEMORIES.push(
       "Look before you loop: <b>Get-ChildItem</b> to see the files, <b>Get-Content</b> to see the raw text, <b>Import-Csv</b> to see the objects, and <b>.Count</b> to check the number of rows matches the ticket."
     ],
     daily: ["HR's list of new hires", "Department moves after a reorganisation", "Leaver lists"],
-    parts: [["Get-ChildItem", "which files are here"], ["Import-Csv ./deptmoves.csv", "rows as objects"], ["$rows = Import-Csv ...", "keep them in a variable"], ["$rows[0]", "the first row"], ["$rows.UPN", "one column from every row"]],
+    parts: [["cd ~/Downloads", "go to the folder (Set-Location)"], ["Get-ChildItem", "which files are here"], ["Import-Csv ./deptmoves.csv", "rows as objects"], ["$rows = Import-Csv ...", "keep them in a variable"], ["$rows[0]", "the first row"], ["$rows.UPN", "one column from every row"]],
     flow: [["CSV file", "from HR"], ["Import-Csv", "objects"], ["$rows", "stored"], ["Check", "count + first row"]],
-    traps: [["Everything is text", "Values from a CSV are strings. 'False' is text, and text counts as true. Compare with -eq 'False'."], ["Header names", "The property names are exactly the headers. A header 'E-mail' becomes $_.'E-mail'."], ["Typos in the data", "The CSV is someone else's typing. Expect typos and plan for them."]]
+    traps: [["Where am I?", "The prompt shows your folder. HR files land in ~/Downloads; ./x.csv only works when you are in that folder. Use cd, or the full path ~/Downloads/x.csv."], ["ls is not Get-ChildItem on a Mac", "In pwsh on macOS, ls and cat run the real Mac programs and print plain text. Get-ChildItem and Get-Content give you objects."], ["Everything is text", "Values from a CSV are strings. 'False' is text, and text counts as true. Compare with -eq 'False'."], ["Header names", "The property names are exactly the headers. A header 'E-mail' becomes $_.'E-mail'."], ["Typos in the data", "The CSV is someone else's typing. Expect typos and plan for them."]]
   },
   watch: [
+    { code: "Get-Location", say: "The lab put you in Downloads, where HR's files land. The prompt shows it too." },
     { code: "Get-ChildItem", say: "Three ticket files are waiting." },
     { code: "Get-Content ./deptmoves.csv", say: "The raw text: a header and six rows." },
     { code: "$rows = Import-Csv ./deptmoves.csv", say: "Import into a variable." },
@@ -354,7 +355,9 @@ Object.assign(DRILLS, {
   export: [
     { q: "Export the Sales team (DisplayName, JobTitle) to sales.csv.", fn: (ctx) => { const c = csvRows(ctx, "sales.csv"); return !!c && c.head === "\"DisplayName\",\"JobTitle\"" && c.rows.length === 8; }, sol: ["Get-MgUser -Filter \"department eq 'Sales'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle | Export-Csv ./sales.csv -NoTypeInformation"], hint: "Request, select, export." },
     { q: "Export the SKU report with a Free column to licenses.csv.", fn: (ctx) => { const c = csvRows(ctx, "licenses.csv"); return !!c && /"Free"/.test(c.head) && c.rows.length === 5; }, sol: ["Get-MgSubscribedSku | Select-Object SkuPartNumber,@{n='Free';e={$_.PrepaidUnits.Enabled - $_.ConsumedUnits}} | Export-Csv ./licenses.csv -NoTypeInformation"], hint: "Calculated column, then export." },
-    { q: "Peek at the first 3 lines of deptmoves.csv.", out: "Get-Content ./deptmoves.csv -TotalCount 3", hint: "Get-Content -TotalCount 3" },
+    { q: "You are on your Desktop. Peek at the first 3 lines of deptmoves.csv, which HR put in your Downloads folder.", out: "Get-Content ~/Downloads/deptmoves.csv -TotalCount 3", hint: "~/Downloads/deptmoves.csv" },
+    { q: "Excel on your Belgian Mac wants semicolons. Export the Sales team (DisplayName, JobTitle) to sales-excel.csv so it opens in proper columns.", fn: (ctx) => { const c = csvRows(ctx, "sales-excel.csv"); return !!c && c.head === "\"DisplayName\";\"JobTitle\"" && c.rows.length === 8; }, sol: ["Get-MgUser -Filter \"department eq 'Sales'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle | Export-Csv ./sales-excel.csv -NoTypeInformation -Delimiter ';'"], hint: "-Delimiter ';' (or -UseCulture)" },
+    { q: "Make a folder called reports on your Desktop and export the guests (DisplayName, UserPrincipalName) to guests.csv inside it.", fn: (ctx) => { const x = ctx.fs["/Users/kaatje/Desktop/reports/guests.csv"]; return !!x && x.text.split("\n").filter(Boolean).length === 4; }, sol: ["mkdir reports", "Get-MgUser -All -Filter \"userType eq 'Guest'\" | Select-Object DisplayName,UserPrincipalName | Export-Csv ./reports/guests.csv -NoTypeInformation"], hint: "mkdir reports, then ./reports/guests.csv" },
     { q: "Append Hollis Reed (DisplayName, JobTitle) to sales.csv after exporting Sales to it.", fn: (ctx) => { const c = csvRows(ctx, "sales.csv"); return !!c && c.rows.length === 9 && c.rows.some((r) => /Hollis Reed/.test(r)); }, sol: ["Get-MgUser -Filter \"department eq 'Sales'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle | Export-Csv ./sales.csv -NoTypeInformation", "Get-MgUser -UserId " + U("hollis.reed") + " -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle | Export-Csv ./sales.csv -NoTypeInformation -Append"], hint: "-Append" },
     { q: "Export the guests (DisplayName, UserPrincipalName) to guests.csv, then read it back with Import-Csv.", fn: (ctx, res) => { const c = csvRows(ctx, "guests.csv"); return !!c && c.rows.length === 3 && res.out.length === 3 && !!res.out[0].DisplayName; }, sol: ["Get-MgUser -All -Filter \"userType eq 'Guest'\" | Select-Object DisplayName,UserPrincipalName | Export-Csv ./guests.csv -NoTypeInformation", "Import-Csv ./guests.csv"], hint: "Export, then Import-Csv." }
   ],
@@ -367,6 +370,10 @@ Object.assign(DRILLS, {
   ],
   importcsv: [
     { q: "List the files in the current folder.", out: "Get-ChildItem", hint: "Get-ChildItem" },
+    { q: "Where are you right now? Show your location.", out: "Get-Location", hint: "Get-Location (or pwd)" },
+    { q: "Go to your Desktop, then jump straight back to where you were.", fn: (ctx, res, hist) => ctx.cwd === "/Users/kaatje/Downloads" && hist.some((h) => /^\s*(cd|set-location|sl)\s+~\/desktop/i.test(h)) && hist.some((h) => /^\s*(cd|set-location)\s+-\s*$/i.test(h)), sol: ["cd ~/Desktop", "cd -"], hint: "cd -" },
+    { q: "Without leaving Downloads, list what is in your Documents folder.", out: "Get-ChildItem ~/Documents", hint: "Get-ChildItem with a path" },
+    { q: "The previous admin left a note in Documents. Read it.", out: "Get-Content ~/Documents/halvard-handover.txt", hint: "Get-Content ~/Documents/<file>" },
     { q: "How many rows does newhires.csv have?", out: "(Import-Csv ./newhires.csv).Count", hint: "(Import-Csv ...).Count" },
     { q: "Show only the first row of deptmoves.csv.", out: "(Import-Csv ./deptmoves.csv)[0]", hint: "[0]" },
     { q: "Show the raw text of leavers.csv.", out: "Get-Content ./leavers.csv", hint: "Get-Content" },

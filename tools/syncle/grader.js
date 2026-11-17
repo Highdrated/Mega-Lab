@@ -9,14 +9,15 @@ const GRADER = (() => {
     groupsW: { scopes: ["User.Read.All", "Group.ReadWrite.All"], exo: false },
     lic: { scopes: ["User.Read.All", "Organization.Read.All"], exo: false },
     licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false },
-    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false },
-    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false }
+    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false, cwd: "/Users/kaatje/Desktop" },
+    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/kaatje/Downloads" }
   };
   function makeCtx(setup, pre) {
     const s = SETUPS[setup] || SETUPS.none;
     const ctx = new E.Ctx();
     if (s.scopes.length) E.run("Connect-MgGraph -Scopes " + s.scopes.join(",") + " -NoWelcome", ctx);
     if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
+    if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
@@ -30,7 +31,7 @@ const GRADER = (() => {
   function describe(setup) {
     const s = SETUPS[setup] || SETUPS.none;
     if (!s.scopes.length && !s.exo) return "Fresh window, nothing connected.";
-    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online." : ".");
+    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
   }
   function text(res) { return E.formatOut(res.out, 120).replace(/[ \t]+$/gm, "").trim(); }
   const cache = {};
