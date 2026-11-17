@@ -15,6 +15,7 @@ const ST_TRACK = [
   ["modle", /^modle-profile$/],
   ["opsle", /^opsle\.v1$/],
   ["shelle", /^shelle\.v1$/],
+  ["syncle", /^syncle\.v1$/],
   ["git-lab", /^gitlab\.(v1|cases)$/],
   ["spelle", /^spelle-lab$/],
   ["webble", /^webble\.v1$/],

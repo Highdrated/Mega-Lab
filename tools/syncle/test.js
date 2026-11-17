@@ -1,0 +1,18 @@
+const PS=require('./engine.js'); const G=require('./grader.js'); const {MEMORIES,GATE}=require('./content.node.js');
+const D='halvardco.onmicrosoft.com';
+const SOL={connect:['Connect-MgGraph -Scopes User.Read.All,Group.Read.All -NoWelcome'],context:['(Get-MgContext).Scopes'],command:['Get-Command *License*'],help:['Get-Help Connect-MgGraph -Examples'],member:['Get-MgContext | Get-Member -MemberType Property'],exo:['Connect-ExchangeOnline -ShowBanner:$false','Get-EXOMailbox -ResultSize 3'],getuser:['Get-MgUser -UserId seren.blackwood@'+D],property:['Get-MgUser -UserId brannoc.vale@'+D+' -Property DisplayName,Department,AccountEnabled | Select-Object DisplayName,Department,AccountEnabled'],filter:["Get-MgUser -Filter \"startswith(displayName,'Ro')\""],count:["(Get-MgUser -All -Filter \"userType eq 'Guest'\").Count"],update:['Connect-MgGraph -Scopes User.ReadWrite.All -NoWelcome','Update-MgUser -UserId petra.lind@'+D+' -Department Marketing -JobTitle "Marketing Coordinator"'],block:['Update-MgUser -UserId kestrel.wade@'+D+' -AccountEnabled:$false','Revoke-MgUserSignInSession -UserId kestrel.wade@'+D]};
+const WRONG={connect:['Connect-MgGraph -Scopes User.ReadWrite.All,Group.Read.All -NoWelcome'],context:['(Get-MgContext).Account'],command:['Get-Command License'],help:['Get-Help Connect-MgGraph'],member:['Get-MgContext | Get-Member'],exo:['Get-EXOMailbox -ResultSize 3'],getuser:['Get-MgUser -UserId seren.blackwod@'+D],property:['Get-MgUser -UserId brannoc.vale@'+D+' | Select-Object DisplayName,Department,AccountEnabled'],filter:["Get-MgUser -Filter \"startswith(displayName,Ro)\""],count:["(Get-MgUser -Filter \"userType eq 'guest'\").Count"],update:['Update-MgUser -UserId petra.lind@'+D+' -Department Marketing -JobTitle "Marketing Coordinator"'],block:['Revoke-MgUserSignInSession -UserId kestrel.wade@'+D,'Update-MgUser -UserId kestrel.wade@'+D+' -AccountEnabled:$false']};
+let fail=0;
+for(const m of MEMORIES){
+  const wctx=G.makeCtx(m.setup); for(const w of m.watch){PS.run(w.code,wctx);}
+  const ts=m.trace.setup||m.setup; const tctx=G.makeCtx(ts); const cmd=G.fillTpl(m.trace.tpl,G.gapsOf(m.trace.tpl)); let tr=PS.run(cmd,tctx); for(const a of (m.trace.after||[])) PS.run(a,tctx);
+  const tok=G.verdict(m.trace.check,ts,tctx,tr);
+  const rctx=G.makeCtx(m.recall.setup); let rr; for(const c of SOL[m.id]) rr=PS.run(c,rctx); const rok=G.verdict(m.recall.check,m.recall.setup,rctx,rr);
+  const wctx2=G.makeCtx(m.recall.setup); let wr; for(const c of WRONG[m.id]) wr=PS.run(c,wctx2); const wok=G.verdict(m.recall.check,m.recall.setup,wctx2,wr);
+  console.log(m.id.padEnd(9),'trace',tok,'recall',rok,'wrongRejected',!wok, tr.error?('TRACE ERR '+tr.error.text()):'' , rr&&rr.error?('REC ERR '+rr.error.text()):'');
+  if(!tok||!rok||wok) fail++;
+}
+const gctx=G.makeCtx('none'); const hist=[];
+const gsol=[['Connect-MgGraph -Scopes User.Read.All -NoWelcome','Get-MgContext'],["Get-MgUser -Filter \"jobTitle eq 'IT Lead'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle"],["(Get-MgUser -All -Filter \"accountEnabled eq false\").Count"],['Connect-MgGraph -Scopes User.ReadWrite.All -NoWelcome','Update-MgUser -UserId corvin.ashby@'+D+' -Department Marketing'],['Update-MgUser -UserId liora.penn@'+D+' -AccountEnabled:$false','Revoke-MgUserSignInSession -UserId liora.penn@'+D]];
+GATE.tickets.forEach((t,i)=>{let res;for(const c of gsol[i]){res=PS.run(c,gctx);hist.push(c);if(res.error)console.log('ERR',c,res.error.text());}const ok=t.check(gctx,hist,res);console.log('gate',t.id,ok, i==2?G.text(res):'');if(!ok)fail++;});
+console.log('FAIL',fail);
