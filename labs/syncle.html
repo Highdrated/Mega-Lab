@@ -229,6 +229,12 @@ main{flex:1;min-height:0;position:relative}
 #toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,30px);opacity:0;background:var(--ink);color:#fff;padding:10px 18px;font-size:13px;z-index:40;transition:all .3s;pointer-events:none}
 #toast.show{opacity:1;transform:translate(-50%,0)}
 
+.breakalert{position:absolute;right:28px;bottom:28px;width:360px;z-index:6;background:rgba(255,255,255,.94);border:1px solid #c9d6ea;border-left:3px solid #c0392b;padding:14px 16px;box-shadow:0 10px 30px rgba(17,22,29,.12);animation:brk 2.4s ease-in-out infinite}
+.breakalert small{display:block;font-size:10px;letter-spacing:.22em;color:#c0392b}
+.breakalert b{display:block;font-size:18px;font-weight:500;margin:4px 0 6px}
+.breakalert p{font-size:13px;line-height:1.5;margin:0 0 10px;color:#2b3440}
+@keyframes brk{0%,100%{box-shadow:0 10px 30px rgba(17,22,29,.12)}50%{box-shadow:0 10px 30px rgba(192,57,43,.22)}}
+@media (prefers-reduced-motion:reduce){.breakalert{animation:none}}
 .tdesk{margin-left:12px;background:none;border:1px solid #2c394d;color:#9fb1c8;font:inherit;font-size:10px;letter-spacing:.2em;padding:4px 8px;cursor:pointer}
 .tdesk:hover{color:#fff;border-color:#6fa2ff}
 .thead{align-items:center}
@@ -309,6 +315,7 @@ main{flex:1;min-height:0;position:relative}
       <div id="motes" aria-hidden="true"></div>
       <svg class="path" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><polyline id="pdone" fill="none" stroke="#1f5fc4" vector-effect="non-scaling-stroke" style="stroke-width:2px"/><polyline id="pahead" class="trail" fill="none" stroke="#8a96a6" vector-effect="non-scaling-stroke" style="stroke-width:1.5px"/></svg>
       <div id="gatebg" class="gatebg hide" aria-hidden="true"></div>
+      <div id="breakAlert" class="breakalert hide" role="alert"></div>
       <div id="nodes"></div>
       <nav class="seqs" id="seqs" aria-label="Sequences"></nav>
       <div class="stitle"><span id="stEyebrow">SEQUENCE 0</span><h2 id="stName"></h2><p id="stBlurb"></p></div>
@@ -4806,6 +4813,97 @@ ERR_HELP.unshift(
   [/Conversion from JSON failed/i, "That text is not JSON. ConvertFrom-Json only works on AuditData-style text."]
 );
 
+GATE.type = "takeover"; INCIDENT.type = "incident";
+function mkObj(type, props) { const o = {}; Object.defineProperty(o, PS.TYPE, { value: type, writable: true }); return Object.assign(o, props); }
+const permHas = (ctx, mb, n) => ctx.t.perms.some((p) => p.mb === mb && p.upn === U(n) && p.rights.includes("FullAccess"));
+const ranCmd = (hist, re) => hist.some((h) => re.test(h));
+const outHas = (res, f) => !!res && !res.error && res.out.some((o) => { try { return f(o); } catch (e) { return false; } });
+const QR_FROM = "it-support@halvardco-helpdesk.example";
+const QR_TO = [["Fenna Lowe", "Delivered"], ["Brannoc Vale", "Delivered"], ["Caius Mercer", "Delivered"], ["Ondine Shaw", "Delivered"], ["Juniper Oakes", "Quarantined"]];
+
+const BREAKS = [
+  {
+    id: "b-locked", type: "break", name: "Locked out", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /elara\.wynn/i, hero: "desync", need: (m) => m.seq <= 1,
+    story: "08:02. Elara Wynn (HR) calls: 'It says my account is disabled. I did nothing!' Nobody filed a ticket to block her.",
+    doneMsg: "Elara is back in. You looked first, changed one thing, and read it back.",
+    mutate: (ctx) => { userOf(ctx, "elara.wynn").AccountEnabled = false; },
+    tickets: [
+      { id: "b-locked-1", from: "Elara Wynn", title: "Find out why", body: "Look at Elara's account and show whether sign-in is allowed.", hint: "Get-MgUser with -Property DisplayName,AccountEnabled.",
+        check: (ctx, hist, res) => outHas(res, (o) => o.AccountEnabled === false && /Elara/.test(o.DisplayName || "")) },
+      { id: "b-locked-2", from: "Elara Wynn", title: "Let her back in", body: "Allow sign-in again. Only for her.", hint: "Update-MgUser -AccountEnabled:$true needs a write scope.",
+        check: (ctx) => userOf(ctx, "elara.wynn").AccountEnabled === true },
+      { id: "b-locked-3", from: "You", title: "Read it back", body: "Show her account again: AccountEnabled should be True now.", hint: "Same Get-MgUser as the first ticket.",
+        check: (ctx, hist, res) => outHas(res, (o) => o.AccountEnabled === true && /Elara/.test(o.DisplayName || "")) }
+    ]
+  },
+  {
+    id: "b-forward", type: "break", name: "Support went quiet", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /^$/, hero: "desync", need: (m) => m.seq <= 2,
+    story: "11:30. Ondine (Support): 'Customers say we never answer, but our Support mailbox has been empty since yesterday.' The mail arrives at Exchange. It just never stays.",
+    doneMsg: "Support mail stays in Support again. Forwarding to an outside address is one of the first things to check when mail 'disappears'.",
+    mutate: (ctx) => { const m = findMbxT(ctx, "Support"); m.ForwardingSmtpAddress = "smtp:support-desk@helpdesk-mail.example"; m.DeliverToMailboxAndForward = false; },
+    tickets: [
+      { id: "b-forward-1", from: "Ondine Shaw", title: "Where does it go?", body: "Show the Support mailbox's forwarding settings.", hint: "Get-EXOMailbox -Identity Support -Properties ForwardingSmtpAddress,DeliverToMailboxAndForward",
+        check: (ctx, hist, res) => outHas(res, (o) => /helpdesk-mail/.test(String(o.ForwardingSmtpAddress || ""))) },
+      { id: "b-forward-2", from: "Ondine Shaw", title: "Stop the forwarding", body: "Nobody asked for this. Remove it.", hint: "Set-Mailbox -Identity Support -ForwardingSmtpAddress $null",
+        check: (ctx) => !findMbxT(ctx, "Support").ForwardingSmtpAddress }
+    ]
+  },
+  {
+    id: "b-fullaccess", type: "break", name: "Finance Inbox vanished", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /^$/, hero: "desync", need: (m) => m.seq <= 2,
+    story: "09:15. Hollis Reed (CFO): 'The Finance Inbox is gone from my Outlook. Ysolde still has it.' Month-end closes Friday.",
+    doneMsg: "Hollis has the Finance Inbox back. Comparing who still has access with who lost it is how you spot a removed permission.",
+    mutate: (ctx) => { ctx.t.perms = ctx.t.perms.filter((p) => !(p.mb === "Finance Inbox" && p.upn === U("hollis.reed"))); },
+    tickets: [
+      { id: "b-fullaccess-1", from: "Hollis Reed", title: "Who has access?", body: "Show who has permissions on the Finance Inbox.", hint: "Get-MailboxPermission -Identity \"Finance Inbox\"",
+        check: (ctx, hist) => ranCmd(hist, /get-mailboxpermission\b.*finance inbox/i) },
+      { id: "b-fullaccess-2", from: "Hollis Reed", title: "Give it back", body: "Give Hollis FullAccess to the Finance Inbox again.", hint: "Add-MailboxPermission -Identity \"Finance Inbox\" -User <Hollis> -AccessRights FullAccess",
+        check: (ctx) => permHas(ctx, "Finance Inbox", "hollis.reed") }
+    ]
+  },
+  {
+    id: "b-dl", type: "break", name: "No more team mail", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /^$/, hero: "desync", need: (m) => m.seq <= 3,
+    story: "14:40. Dorian Pike (Sales): 'Everyone talks about the Sales Team mail from this morning. I never got it.' His mailbox works fine otherwise.",
+    doneMsg: "Dorian is back on the Sales Team list. 'I don't get the group mail' is almost always membership.",
+    mutate: (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "Sales Team"); d.members = d.members.filter((x) => x !== U("dorian.pike")); },
+    tickets: [
+      { id: "b-dl-1", from: "Dorian Pike", title: "Is he on the list?", body: "Show the members of the Sales Team distribution list.", hint: "Get-DistributionGroupMember -Identity \"Sales Team\"",
+        check: (ctx, hist) => ranCmd(hist, /get-distributiongroupmember\b.*sales team/i) },
+      { id: "b-dl-2", from: "Dorian Pike", title: "Put him back", body: "Add Dorian to Sales Team.", hint: "Add-DistributionGroupMember -Identity \"Sales Team\" -Member <Dorian>",
+        check: (ctx) => dlHas(ctx, "Sales Team", "dorian.pike") }
+    ]
+  },
+  {
+    id: "b-license", type: "break", name: "Licence expired?", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /garrick\.penhale/i, hero: "desync", need: (m) => m.seq <= 4,
+    story: "08:30. Garrick Penhale (Operations director): 'Word says my licence is no longer valid and Outlook keeps asking me to sign in.' Someone cleaned up licences last night.",
+    doneMsg: "Garrick has Microsoft 365 E3 again. 'Unlicensed product' means look at the user's licences before anything else.",
+    mutate: (ctx) => { const u = userOf(ctx, "garrick.penhale"); const s = ctx.t.skus.find((x) => x.SkuPartNumber === "SPE_E3"); u.AssignedLicenses = u.AssignedLicenses.filter((l) => l.SkuId !== s.SkuId); s.ConsumedUnits -= 1; },
+    tickets: [
+      { id: "b-license-1", from: "Garrick Penhale", title: "What does he have?", body: "Show Garrick's licences (SkuPartNumber).", hint: "Get-MgUserLicenseDetail -UserId <Garrick>",
+        check: (ctx, hist) => ranCmd(hist, /get-mguserlicensedetail\b.*garrick/i) },
+      { id: "b-license-2", from: "Garrick Penhale", title: "Give E3 back", body: "Assign SPE_E3 to Garrick again.", hint: "$e3 = Get-MgSubscribedSku -All | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId ... -AddLicenses @{SkuId = $e3.SkuId} -RemoveLicenses @()",
+        check: (ctx) => hasSku(ctx, "garrick.penhale", "SPE_E3") }
+    ]
+  },
+  {
+    id: "b-qr", type: "break", name: "QR-code wave", kind: "GLOBAL EVENT · BELGIUM", allow: /^$/, hero: "desync", need: (m) => m.seq <= 7,
+    story: "Breaking, 10:00. The Centre for Cybersecurity Belgium warns about a phishing wave: 'Action required: mailbox storage full', with a QR code to scan. It is hitting companies across Flanders this morning. Did it reach Halvard?",
+    doneMsg: "You knew within minutes who got it and handed a clean list to the awareness people. That is what a global event asks of an admin.",
+    mutate: (ctx) => {
+      const now = new Date(PS.NOW.getTime() - 3 * 3600e3);
+      QR_TO.forEach(([n, st], i) => ctx.t.msgs.unshift(mkObj("Microsoft.Exchange.Management.FfoReporting.MessageTraceV2", { MessageTraceId: "9d1e" + i + "a7c-2b4f-4e8a-9c3d-5f6e7a8b9c0" + i, MessageId: "<qr" + i + "@halvardco-helpdesk.example>", Received: new Date(now.getTime() + i * 60000), SenderAddress: QR_FROM, RecipientAddress: userOf(ctx, n.toLowerCase().replace(" ", ".")).UserPrincipalName, Subject: "Action required: mailbox storage full", Status: st, FromIP: "91.215.85.14", ToIP: null, Size: 48211 })));
+      ctx.t.msgs.sort((a, b) => b.Received - a.Received);
+    },
+    tickets: [
+      { id: "b-qr-1", from: "CCB alert", title: "Did it reach us?", body: "Find every mail this morning with 'mailbox storage full' in the subject.", hint: "Get-MessageTraceV2 -Subject 'mailbox storage full' -SubjectFilterType Contains (last 48 hours is the default).",
+        check: (ctx, hist, res) => !!res && !res.error && res.out.length === 5 && res.out.every((o) => o && /storage full/.test(o.Subject || "")) },
+      { id: "b-qr-2", from: "Awareness team", title: "Who got it in their inbox?", body: "Export only the delivered recipients (RecipientAddress) to ~/Desktop/qr-wave.csv for Belgian Excel.", hint: "-Status Delivered | Select-Object RecipientAddress | Export-Csv ~/Desktop/qr-wave.csv -NoTypeInformation -Delimiter ';'",
+        check: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/qr-wave.csv"); return !!c && /RecipientAddress/.test(c.head) && c.rows.length === 4; } },
+      { id: "b-qr-3", from: "You", title: "Did anyone fall for it?", body: "For those four, check for successful sign-ins from outside Belgium. Nothing found is a valid answer, as long as you checked.", hint: "foreach ($r in $to) { Get-MgAuditLogSignIn -Filter \"userPrincipalName eq '$r' and status/errorCode eq 0 and location/countryOrRegion ne 'BE'\" }",
+        check: (ctx, hist, res) => !!res && !res.error && ranCmd(hist, /get-mgauditlogsignin/i) && ranCmd(hist, /foreach|ForEach-Object|%/i) && ranCmd(hist, /countryOrRegion\s+ne\s+'BE'/i) }
+    ]
+  }
+];
+
 const GRADER = (() => {
   const E = typeof PS !== "undefined" ? PS : require("./engine.js");
   const SETUPS = {
@@ -4887,6 +4985,27 @@ function doneOf(id) { return S.done[id] || (S.done[id] = {}); }
 function synced(id) { return !!(S.done[id] && S.done[id].recall); }
 function memsOf(seq) { return MEMORIES.filter((m) => m.seq === seq); }
 function seqProgress(seq) { const ms = memsOf(seq); return [ms.filter((m) => synced(m.id)).length, ms.length]; }
+function breaksEligible() { S.breaksDone = S.breaksDone || {}; return BREAKS.filter((b) => !S.breaksDone[b.id] && gateNeed(b).every((m) => synced(m.id))); }
+function maybeBreak() {
+  S.sinceBreak = (S.sinceBreak || 0) + 1;
+  if (S.breakPending || S.sinceBreak < 3) return;
+  const el = breaksEligible(); if (!el.length || Math.random() > 0.5) return;
+  S.breakPending = el[Math.floor(Math.random() * el.length)].id; S.sinceBreak = 0;
+}
+function pendingBreak() { return S.breakPending ? BREAKS.find((b) => b.id === S.breakPending) || null : null; }
+function renderBreakAlert() {
+  const b = pendingBreak(), el = $("breakAlert");
+  if (!b) { el.classList.add("hide"); return; }
+  el.classList.remove("hide");
+  el.innerHTML = '<small>' + esc(b.kind) + '</small><b>' + esc(b.name) + '</b><p>' + esc(b.story) + '</p><div class="row"><button class="go" type="button" id="takeBreak">TAKE IT</button><span class="mutetxt">It waits until you do.</span></div>';
+  $("takeBreak").onclick = () => openGate(b);
+}
+const GTEXT = {
+  takeover: { crumb: "Takeover · ", done: "Takeover complete", flow: [["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], flowT: "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS", rules: "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage.", junie: "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is." },
+  incident: { crumb: "Incident · ", done: "Incident closed", flow: [["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], flowT: "LIVE INCIDENT · THE ORDER THAT MATTERS", rules: "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style.", junie: "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan." },
+  break: { crumb: "Break · ", done: "Fixed", flow: [["Report", "what they say"], ["Diagnose", "Get- first"], ["Fix", "one change"], ["Verify", "read it back"]], flowT: "SOMETHING BROKE · DIAGNOSE BEFORE YOU FIX", rules: "<h6>BREAK RULES</h6>Something in the tenant changed and nobody told you. Find what, with a Get- command, before you change anything. Fix only that. Nothing is connected yet.", junie: "Don't guess. Look at the thing they complain about first: the answer is usually right there in one property." }
+};
+function gtext() { return GTEXT[curGate().type || "takeover"]; }
 function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
@@ -4917,6 +5036,7 @@ function renderCorridor() {
   closeOverlay();
   R.view = "corridor";
   $("corridor").classList.remove("hide"); $("memory").classList.add("hide"); $("desktop").classList.add("hide");
+  renderBreakAlert();
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
@@ -5206,6 +5326,7 @@ function checkRecall(res) {
     const first = !doneOf(m.id).recall;
     doneOf(m.id).recall = true;
     if (!first) reviewPassed(m.id);
+    if (first) maybeBreak();
     save();
     earn(first ? Math.max(8, EARN.recall - R.hint * 6) : 10, (first ? "synced " : "reviewed ") + m.name);
     const nxt = nextMemory(m);
@@ -5279,7 +5400,7 @@ function checkPractice(res) {
   clearTimeout(R.advT); R.advT = setTimeout(() => { if (R.phase === "practice") advanceDrill(); }, 1400);
 }
 function sidecard(m) {
-  if (R.gate) { $("sidecard").innerHTML = curGate() === GATE ? "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage." : "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style."; return; }
+  if (R.gate) { $("sidecard").innerHTML = gtext().rules; return; }
   $("sidecard").innerHTML = "<h6>IN THE CHEAT SHEET</h6>" + m.cheat.map(([c, d]) => '<div style="margin:6px 0"><code style="font-size:12px;word-break:break-word">' + esc(c) + '</code><div class="mutetxt" style="font-size:12px">' + esc(d) + "</div></div>").join("") + '<button class="hbtn" type="button" id="openCheat" style="margin-top:8px">OPEN FULL SHEET</button>';
   $("openCheat").onclick = () => drawer(true);
 }
@@ -5296,7 +5417,7 @@ function junie() {
   const hs = hintsFor(), max = hs.length;
   let cls = "j-idle", step = "STANDING BY", line;
   const m = R.mem;
-  if (R.gate) line = curGate() === GATE ? "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is." : "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan.";
+  if (R.gate) line = gtext().junie;
   else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", practice: "Different ticket, same skill. If you blank, one hint, then the answer.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
   if (R.hint > 0) { cls = "j-hint"; step = "HINT " + R.hint + " OF " + max; line = hs[R.hint - 1]; }
   if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : step; R.jlineOverride = null; R.jstate = null; }
@@ -5341,11 +5462,12 @@ function openGate(g) {
   closeOverlay();
   R.view = "memory"; R.gate = true; R.mem = null; R.hint = 0; R.phase = "gate";
   $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
-  $("crumb").textContent = (g === GATE ? "Takeover · " : "Incident · ") + g.name;
-  if (g === GATE) flowband([["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS");
-  else flowband([["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], "LIVE INCIDENT · THE ORDER THAT MATTERS");
+  const gt = gtext();
+  $("crumb").textContent = gt.crumb + g.name;
+  flowband(gt.flow, gt.flowT);
   $("tabs").innerHTML = '<button class="tab on" type="button">TICKETS</button>';
-  resetConsole("none");
+  resetConsole(g.setup || "none");
+  if (g.mutate) g.mutate(R.ctx);
   R.gateBaseline = R.ctx.t.users.map((u) => [u.UserPrincipalName, u.AccountEnabled, u.Department, u.JobTitle].join("|"));
   R.gateHist = [];
   R.gatePick = g.tickets.findIndex((t) => !S.gate[t.id]); if (R.gatePick < 0) R.gatePick = 0;
@@ -5376,7 +5498,7 @@ function checkGate(res) {
   if (ok && !S.gate[t.id]) {
     S.gate[t.id] = true; save(); earn(25, "closed " + t.title);
     const nx = g.tickets.findIndex((x) => !S.gate[x.id]);
-    if (nx < 0) { synced_overlay(g === GATE ? "Takeover complete" : "Incident closed", g.doneMsg, () => renderCorridor(), "BACK TO THE CORRIDOR"); }
+    if (nx < 0) { if (g.type === "break") { S.breaksDone = S.breaksDone || {}; S.breaksDone[g.id] = true; if (S.breakPending === g.id) S.breakPending = null; save(); } synced_overlay(gtext().done, g.doneMsg, () => renderCorridor(), "BACK TO THE CORRIDOR"); }
     else { R.gatePick = nx; R.hint = 0; toast("Ticket closed. Next: " + g.tickets[nx].title); }
     renderGate(); junie();
   }
@@ -5441,7 +5563,7 @@ document.addEventListener("keydown", (e) => {
   }
 });
 (function motes() { let h = ""; for (let i = 0; i < 12; i++) h += '<div class="mote" style="left:' + (8 + (i * 37) % 84) + "%;top:" + (40 + (i * 23) % 50) + "%;animation-delay:" + (i * 1.3).toFixed(1) + 's"></div>'; $("motes").innerHTML = h; })();
-window.SYNCLE = { S, R, openMemory, openGate, renderCorridor, setPhase };
+window.SYNCLE = { S, R, openMemory, openGate, renderCorridor, setPhase, maybeBreak };
 renderCorridor();
 
 const HKEY = "syncle.history";
@@ -5746,7 +5868,7 @@ function openDesktop() {
 }
 function closeDesktop() {
   $("desktop").classList.add("hide");
-  if (DK.prev === "memory") { R.view = "memory"; $("memory").classList.remove("hide"); $("crumb").textContent = R.gate ? (curGate() === GATE ? "Takeover · " : "Incident · ") + curGate().name : (R.mem ? SEQUENCES[R.mem.seq].name + " · " + R.mem.name : ""); setPrompt(); $("cmd").focus(); }
+  if (DK.prev === "memory") { R.view = "memory"; $("memory").classList.remove("hide"); $("crumb").textContent = R.gate ? gtext().crumb + curGate().name : (R.mem ? SEQUENCES[R.mem.seq].name + " · " + R.mem.name : ""); setPrompt(); $("cmd").focus(); }
   else renderCorridor();
 }
 function clock() { const d = new Date(); const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; return days[d.getDay()] + " " + d.getDate() + " " + mon[d.getMonth()] + "  " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }

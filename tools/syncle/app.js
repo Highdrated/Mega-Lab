@@ -17,6 +17,27 @@ function doneOf(id) { return S.done[id] || (S.done[id] = {}); }
 function synced(id) { return !!(S.done[id] && S.done[id].recall); }
 function memsOf(seq) { return MEMORIES.filter((m) => m.seq === seq); }
 function seqProgress(seq) { const ms = memsOf(seq); return [ms.filter((m) => synced(m.id)).length, ms.length]; }
+function breaksEligible() { S.breaksDone = S.breaksDone || {}; return BREAKS.filter((b) => !S.breaksDone[b.id] && gateNeed(b).every((m) => synced(m.id))); }
+function maybeBreak() {
+  S.sinceBreak = (S.sinceBreak || 0) + 1;
+  if (S.breakPending || S.sinceBreak < 3) return;
+  const el = breaksEligible(); if (!el.length || Math.random() > 0.5) return;
+  S.breakPending = el[Math.floor(Math.random() * el.length)].id; S.sinceBreak = 0;
+}
+function pendingBreak() { return S.breakPending ? BREAKS.find((b) => b.id === S.breakPending) || null : null; }
+function renderBreakAlert() {
+  const b = pendingBreak(), el = $("breakAlert");
+  if (!b) { el.classList.add("hide"); return; }
+  el.classList.remove("hide");
+  el.innerHTML = '<small>' + esc(b.kind) + '</small><b>' + esc(b.name) + '</b><p>' + esc(b.story) + '</p><div class="row"><button class="go" type="button" id="takeBreak">TAKE IT</button><span class="mutetxt">It waits until you do.</span></div>';
+  $("takeBreak").onclick = () => openGate(b);
+}
+const GTEXT = {
+  takeover: { crumb: "Takeover · ", done: "Takeover complete", flow: [["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], flowT: "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS", rules: "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage.", junie: "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is." },
+  incident: { crumb: "Incident · ", done: "Incident closed", flow: [["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], flowT: "LIVE INCIDENT · THE ORDER THAT MATTERS", rules: "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style.", junie: "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan." },
+  break: { crumb: "Break · ", done: "Fixed", flow: [["Report", "what they say"], ["Diagnose", "Get- first"], ["Fix", "one change"], ["Verify", "read it back"]], flowT: "SOMETHING BROKE · DIAGNOSE BEFORE YOU FIX", rules: "<h6>BREAK RULES</h6>Something in the tenant changed and nobody told you. Find what, with a Get- command, before you change anything. Fix only that. Nothing is connected yet.", junie: "Don't guess. Look at the thing they complain about first: the answer is usually right there in one property." }
+};
+function gtext() { return GTEXT[curGate().type || "takeover"]; }
 function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
@@ -47,6 +68,7 @@ function renderCorridor() {
   closeOverlay();
   R.view = "corridor";
   $("corridor").classList.remove("hide"); $("memory").classList.add("hide"); $("desktop").classList.add("hide");
+  renderBreakAlert();
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
@@ -336,6 +358,7 @@ function checkRecall(res) {
     const first = !doneOf(m.id).recall;
     doneOf(m.id).recall = true;
     if (!first) reviewPassed(m.id);
+    if (first) maybeBreak();
     save();
     earn(first ? Math.max(8, EARN.recall - R.hint * 6) : 10, (first ? "synced " : "reviewed ") + m.name);
     const nxt = nextMemory(m);
@@ -409,7 +432,7 @@ function checkPractice(res) {
   clearTimeout(R.advT); R.advT = setTimeout(() => { if (R.phase === "practice") advanceDrill(); }, 1400);
 }
 function sidecard(m) {
-  if (R.gate) { $("sidecard").innerHTML = curGate() === GATE ? "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage." : "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style."; return; }
+  if (R.gate) { $("sidecard").innerHTML = gtext().rules; return; }
   $("sidecard").innerHTML = "<h6>IN THE CHEAT SHEET</h6>" + m.cheat.map(([c, d]) => '<div style="margin:6px 0"><code style="font-size:12px;word-break:break-word">' + esc(c) + '</code><div class="mutetxt" style="font-size:12px">' + esc(d) + "</div></div>").join("") + '<button class="hbtn" type="button" id="openCheat" style="margin-top:8px">OPEN FULL SHEET</button>';
   $("openCheat").onclick = () => drawer(true);
 }
@@ -426,7 +449,7 @@ function junie() {
   const hs = hintsFor(), max = hs.length;
   let cls = "j-idle", step = "STANDING BY", line;
   const m = R.mem;
-  if (R.gate) line = curGate() === GATE ? "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is." : "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan.";
+  if (R.gate) line = gtext().junie;
   else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", practice: "Different ticket, same skill. If you blank, one hint, then the answer.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
   if (R.hint > 0) { cls = "j-hint"; step = "HINT " + R.hint + " OF " + max; line = hs[R.hint - 1]; }
   if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : step; R.jlineOverride = null; R.jstate = null; }
@@ -471,11 +494,12 @@ function openGate(g) {
   closeOverlay();
   R.view = "memory"; R.gate = true; R.mem = null; R.hint = 0; R.phase = "gate";
   $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
-  $("crumb").textContent = (g === GATE ? "Takeover · " : "Incident · ") + g.name;
-  if (g === GATE) flowband([["Ticket", "what the user says"], ["Look", "Get- first"], ["Change", "only what was asked"], ["Verify", "read it back"]], "HALVARD & CO · HOW A TAKEOVER TICKET FLOWS");
-  else flowband([["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], "LIVE INCIDENT · THE ORDER THAT MATTERS");
+  const gt = gtext();
+  $("crumb").textContent = gt.crumb + g.name;
+  flowband(gt.flow, gt.flowT);
   $("tabs").innerHTML = '<button class="tab on" type="button">TICKETS</button>';
-  resetConsole("none");
+  resetConsole(g.setup || "none");
+  if (g.mutate) g.mutate(R.ctx);
   R.gateBaseline = R.ctx.t.users.map((u) => [u.UserPrincipalName, u.AccountEnabled, u.Department, u.JobTitle].join("|"));
   R.gateHist = [];
   R.gatePick = g.tickets.findIndex((t) => !S.gate[t.id]); if (R.gatePick < 0) R.gatePick = 0;
@@ -506,7 +530,7 @@ function checkGate(res) {
   if (ok && !S.gate[t.id]) {
     S.gate[t.id] = true; save(); earn(25, "closed " + t.title);
     const nx = g.tickets.findIndex((x) => !S.gate[x.id]);
-    if (nx < 0) { synced_overlay(g === GATE ? "Takeover complete" : "Incident closed", g.doneMsg, () => renderCorridor(), "BACK TO THE CORRIDOR"); }
+    if (nx < 0) { if (g.type === "break") { S.breaksDone = S.breaksDone || {}; S.breaksDone[g.id] = true; if (S.breakPending === g.id) S.breakPending = null; save(); } synced_overlay(gtext().done, g.doneMsg, () => renderCorridor(), "BACK TO THE CORRIDOR"); }
     else { R.gatePick = nx; R.hint = 0; toast("Ticket closed. Next: " + g.tickets[nx].title); }
     renderGate(); junie();
   }
@@ -571,5 +595,5 @@ document.addEventListener("keydown", (e) => {
   }
 });
 (function motes() { let h = ""; for (let i = 0; i < 12; i++) h += '<div class="mote" style="left:' + (8 + (i * 37) % 84) + "%;top:" + (40 + (i * 23) % 50) + "%;animation-delay:" + (i * 1.3).toFixed(1) + 's"></div>'; $("motes").innerHTML = h; })();
-window.SYNCLE = { S, R, openMemory, openGate, renderCorridor, setPhase };
+window.SYNCLE = { S, R, openMemory, openGate, renderCorridor, setPhase, maybeBreak };
 renderCorridor();
