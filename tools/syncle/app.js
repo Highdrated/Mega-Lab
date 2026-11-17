@@ -1,4 +1,5 @@
 const KEY = "syncle.v1";
+const KEYS = [["Tab", "Complete: unique match, or the longest common part"], ["Tab Tab", "No progress? The second Tab lists every possibility"], ["Ctrl+Space", "Menu of completions, pick with arrows, Enter accepts"], ["Alt+=", "List possible completions without changing the line"], ["Right arrow / Ctrl+F / End", "At the end of the line: accept the grey suggestion from history"], ["Alt+F", "At the end of the line: accept the next word of the suggestion"], ["Up / Down, Ctrl+P / Ctrl+N", "Previous / next command in history"], ["Ctrl+R / Ctrl+S", "Search history backwards / forwards, Enter runs it"], ["Ctrl+A / Ctrl+E", "Start / end of the line"], ["Ctrl+B / Ctrl+F, Alt+B / Alt+F", "Back / forward a character, a word"], ["Ctrl+U / Ctrl+K", "Cut everything before / after the cursor"], ["Ctrl+W / Alt+D", "Cut the word before / after the cursor"], ["Ctrl+Y", "Paste what you cut"], ["Alt+.", "Insert the last argument of the previous command"], ["Ctrl+T", "Swap two characters"], ["Ctrl+_", "Undo"], ["Ctrl+C", "Cancel the line"], ["Ctrl+L", "Clear the screen"], ["Ctrl+D", "Delete character (on an empty line: exit pwsh)"]];
 const DAYMS = 864e5;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
@@ -171,7 +172,7 @@ function exec(src, opts) {
   echo.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span><span class="c">' + esc(src) + "</span>";
   o.appendChild(echo);
   const res = PS.run(src, R.ctx);
-  for (const h of res.host) { if (h.clear) { o.innerHTML = ""; continue; } if (h.err) tline(h.err, "e"); else if (h.text !== undefined) tline(h.text, "h"); }
+  for (const h of res.host) { if (h.clear) { o.innerHTML = ""; continue; } if (h.err) tline(h.err, "e"); else if (h.warn) tline(h.warn, "w"); else if (h.text !== undefined) tline(h.text, h.color ? "hc" : "h"); }
   const txt = PS.formatOut(res.out, tcols());
   if (txt && txt.trim()) tline(txt.replace(/^\n+/, "").replace(/\s+$/, "") + "\n", "");
   if (res.error) tline(res.error.text ? res.error.text() : String(res.error.message), "e");
@@ -500,52 +501,6 @@ function checkGate(res) {
   }
 }
 
-$("cmd").addEventListener("keydown", (e) => {
-  const inp = e.target;
-  if (R.busy) { e.preventDefault(); return; }
-  if (e.key === "Enter") {
-    e.preventDefault();
-    const src = inp.value; inp.value = "";
-    if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span>'; $("tout").appendChild(d); return; }
-    R.hist.push(src); R.hpos = R.hist.length; (R.sessHist = R.sessHist || []).push(src);
-    if (/^\s*(cls|clear|clear-host)\s*$/i.test(src)) { $("tout").innerHTML = ""; return; }
-    const res = exec(src);
-    if (R.gate) { R.gateHist.push(src); checkGate(res); }
-    else if (R.phase === "recall") checkRecall(res);
-    else if (R.phase === "practice") checkPractice(res);
-    else if (res.error) { const help = errHelp(res.error.text ? res.error.text() : ""); if (help) { R.jlineOverride = help; R.jstate = "desync"; junie(); } }
-    return;
-  }
-  if (e.key === "ArrowUp") { e.preventDefault(); if (R.hpos > 0) { R.hpos--; inp.value = R.hist[R.hpos]; } return; }
-  if (e.key === "ArrowDown") { e.preventDefault(); if (R.hpos < R.hist.length - 1) { R.hpos++; inp.value = R.hist[R.hpos]; } else { R.hpos = R.hist.length; inp.value = ""; } return; }
-  if (e.key === "Escape") { inp.value = ""; return; }
-  if (e.key === "l" && e.ctrlKey) { e.preventDefault(); $("tout").innerHTML = ""; return; }
-  if (e.key === "Tab") { e.preventDefault(); complete(inp, e.shiftKey); return; }
-  R.tab = null;
-});
-function complete(inp, back) {
-  const v = inp.value, pos = inp.selectionStart;
-  if (R.tab && R.tab.full === v) { R.tab.i = (R.tab.i + (back ? -1 : 1) + R.tab.list.length) % R.tab.list.length; apply(); return; }
-  const before = v.slice(0, pos), after = v.slice(pos);
-  const m = /([\w-]*)$/.exec(before); const word = m[1]; const start = before.length - word.length;
-  let list = [];
-  if (word.startsWith("-")) {
-    const seg = before.slice(0, start).split(/[|;]/).pop().trim();
-    const cname = (seg.split(/\s+/)[0] || "").toLowerCase();
-    const al = PS.ALIASES[cname]; const spec = PS.CMDS[(al || cname).toLowerCase()];
-    if (spec) {
-      const names = Object.keys(spec.params || {}).concat(spec.whatif ? ["WhatIf", "Confirm"] : []).concat(["ErrorAction", "OutVariable", "Verbose"]);
-      list = names.filter((n) => ("-" + n).toLowerCase().startsWith(word.toLowerCase())).map((n) => "-" + n);
-    }
-  } else if (word) {
-    list = Object.values(PS.CMDS).map((c) => c.name).filter((n) => n.toLowerCase().startsWith(word.toLowerCase())).sort();
-  }
-  if (!list.length) return;
-  R.tab = { list, i: back ? list.length - 1 : 0, start, after, base: before.slice(0, start) };
-  apply();
-  function apply() { const t = R.tab; const nv = t.base + t.list[t.i] + t.after; inp.value = nv; t.full = nv; const p = (t.base + t.list[t.i]).length; inp.setSelectionRange(p, p); }
-}
-
 function drawer(open, tab) {
   const d = $("drawer");
   if (open === undefined) open = !d.classList.contains("open");
@@ -565,7 +520,7 @@ function renderDrawer() {
     return;
   }
   const q = $("dsearch").value.trim().toLowerCase();
-  let h = '<div class="rules"><b>Golden rules</b><ol><li>Read-only scopes to look, ReadWrite only to change.</li><li>Graph first, then Exchange, in a fresh window on Mac.</li><li>Ask Graph for properties with -Property, or they come back empty.</li><li>-All for anything you count or report.</li><li>Switch values glue on: -AccountEnabled:$false.</li><li>-WhatIf before a change, Get- after it to verify.</li><li>Leaver: block first, then revoke sessions.</li></ol></div>';
+  let h = '<div class="dgroup"><h6>CONSOLE KEYS · PWSH 7 ON MAC (PSREADLINE, EMACS MODE)</h6>' + KEYS.filter(([kk, d]) => !q || (kk + " " + d).toLowerCase().includes(q)).map(([kk, d]) => '<div class="centry" style="cursor:default"><code>' + esc(kk) + "</code><span>" + esc(d) + "</span></div>").join("") + '<p class="mutetxt" style="font-size:12px">Alt keys need Terminal > Settings > Profiles > Keyboard > Use Option as Meta key. On Windows pwsh uses Windows mode instead: Tab cycles and Esc clears the line.</p></div><div class="rules"><b>Golden rules</b><ol><li>Read-only scopes to look, ReadWrite only to change.</li><li>Graph first, then Exchange, in a fresh window on Mac.</li><li>Ask Graph for properties with -Property, or they come back empty.</li><li>-All for anything you count or report.</li><li>Switch values glue on: -AccountEnabled:$false.</li><li>-WhatIf before a change, Get- after it to verify.</li><li>Leaver: block first, then revoke sessions.</li></ol></div>';
   h += '<div class="row" style="margin-top:12px"><button class="hbtn" type="button" id="dMix">START A PRACTICE MIX</button></div>';
   SEQUENCES.filter((s) => s.open).forEach((s) => {
     const rows = [];
@@ -590,11 +545,12 @@ $("dsearch").oninput = () => renderDrawer();
 $("home").onclick = () => { closeOverlay(); renderCorridor(); };
 if (/Mac|iPhone|iPad/.test(navigator.platform)) $("kbdhint").textContent = "Cmd K";
 document.addEventListener("keydown", (e) => {
-  if ((e.ctrlKey || e.metaKey) && (e.key === "k" || e.key === "K")) { e.preventDefault(); drawer(undefined, "cheat"); return; }
-  if (e.key === "Escape") {
+  if ((e.key === "k" || e.key === "K") && (e.metaKey || (e.ctrlKey && document.activeElement !== $("cmd")))) { e.preventDefault(); drawer(undefined, "cheat"); return; }
+  if (e.key === "Escape" && document.activeElement !== $("cmd")) {
     if (!$("ov").classList.contains("hide")) { closeOverlay(); return; }
     if ($("drawer").classList.contains("open")) { drawer(false); return; }
   }
+  if (e.key === "Escape" && !$("ov").classList.contains("hide")) { closeOverlay(); return; }
   if (R.view === "corridor" && document.activeElement && document.activeElement.tagName !== "INPUT") {
     if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
       const n = memsOf(S.seqSel).length + 1;

@@ -140,7 +140,7 @@ const DISPLAY = {
   "Microsoft.PowerShell.Commands.GroupInfo": ["Count", "Name", "Group"],
   "Microsoft.PowerShell.Commands.GroupInfoNoElement": ["Count", "Name"],
   "System.Management.Automation.CmdletInfo": ["CommandType", "Name", "Version", "Source"],
-  "FileInfo": ["Mode", "LastWriteTime", "Length", "Name"],
+  "FileInfo": ["UnixMode", "User", "Group", "LastWriteTime", "Size", "Name"],
 };
 
 function typeName(v) {
@@ -350,6 +350,8 @@ class Parser {
       }
       this.i = save;
     }
+    const inc = /^\$([A-Za-z_][\w]*)(\+\+|--)(?=\s*($|[;})\n]))/.exec(this.s.slice(this.i));
+    if (inc) { this.i += inc[0].length; return { t: "inc", name: inc[1], d: inc[2] === "++" ? 1 : -1, src: this.s.slice(start, this.i) }; }
     const am = /^\$([A-Za-z_][\w]*|\{[^}]+\})\s*(\+=|=)(?!=)/.exec(this.s.slice(this.i));
     if (am) { this.i += am[0].length; this.ws(true); const name = am[1].replace(/^\{|\}$/g, ""); const val = this.statementValue(); return { t: "assign", name, op: am[2], val, src: this.s.slice(start, this.i) }; }
     const p = this.pipeline();
@@ -687,7 +689,11 @@ class Ctx {
     this.scopes = [new Map()];
     this.funcs = {};
     this.mg = null; this.exo = false;
-    this.fs = {};
+    this.fs = {
+      "/Users/kaatje/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(Date.now() - 36e5) },
+      "/Users/kaatje/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetra.lind@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(Date.now() - 72e5) },
+      "/Users/kaatje/leavers.csv": { text: "UPN,LastDay\nludo.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.crane@halvardco.onmicrosoft.com,2026-11-15\nines.corrigan@halvardco.onmicrosoft.com,2026-11-17", at: new Date(Date.now() - 18e5) }
+    };
     this.host = [];
     this.errors = [];
     this.history = [];
@@ -721,6 +727,7 @@ function evalScript(stmts, ctx, out) { for (const s of stmts) execStmt(s, ctx, o
 function execStmt(s, ctx, out) {
   switch (s.t) {
     case "pipe": { const r = runPipeline(s.p, ctx, null); for (const v of r) out.push(v); return; }
+    case "inc": { const cur = ctx.getVar(s.name); ctx.setVar(s.name, (cur === null ? 0 : +cur) + s.d); return; }
     case "assign": {
       let v = s.val.t === "stmtval" ? unwrap(evalScript([s.val.st], ctx, [])) : pipeValue(s.val, ctx, null);
       if (s.op === "+=") { const cur = ctx.getVar(s.name); v = addVals(cur, v); }
@@ -862,7 +869,8 @@ function runCommand(el, ctx, input, idx) {
   const fn = ctx.funcs[l];
   if (fn) return callFunction(fn, el, ctx, input);
   const cname = ALIASES[l] || raw;
-  const spec = CMDS[cname.toLowerCase()];
+  const spec0 = CMDS[cname.toLowerCase()];
+  const spec = spec0 && spec0.session && !ctx.exo ? null : spec0;
   if (!spec) throw new PSErr("The term '" + raw + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: raw, term: true, kind: "notfound" });
   if (input && input.length && !spec.pipe) throw new PSErr("The input object cannot be bound to any parameters for the command either because the command does not take pipeline input or the input and its properties do not match any of the parameters that take pipeline input.", { cmd: spec.name, term: true, kind: "pipeinput" });
   const b = bindArgs(spec, el.args, ctx, spec.name);
@@ -1407,7 +1415,7 @@ def("Import-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctyp
 def("Get-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), TotalCount: P(null, { alias: ["First", "Head"] }), Tail: P(null) },
   run({ ctx, b, name }) { const p = ctx.path(b.Path); const f = ctx.fs[p]; if (!f) throw new PSErr("Cannot find path '" + p + "' because it does not exist.", { cmd: name, term: false, kind: "nofile" }); let l = f.text.split("\n"); if (b.TotalCount !== undefined) l = l.slice(0, +b.TotalCount); if (b.Tail !== undefined) l = l.slice(-(+b.Tail)); return l; } });
 def("Get-ChildItem", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Filter: P(null) },
-  run({ ctx, b }) { const re = b.Filter ? wildRe(String(b.Filter)) : null; return Object.keys(ctx.fs).sort().filter((p) => !re || re.test(p.split("/").pop())).map((p) => obj("FileInfo", { Mode: "-a---", LastWriteTime: ctx.fs[p].at, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p })); } });
+  run({ ctx, b }) { const re = b.Filter ? wildRe(String(b.Filter)) : null; return Object.keys(ctx.fs).sort().filter((p) => !re || re.test(p.split("/").pop())).map((p) => obj("FileInfo", { UnixMode: "-rw-r--r--", User: "kaatje", Group: "staff", LastWriteTime: ctx.fs[p].at, Size: ctx.fs[p].text.length, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p })); } });
 def("Get-Date", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Date: P(0), Format: P(null), Year: P(null), Month: P(null), Day: P(null) },
   run({ b }) { let d = b.Date !== undefined ? (b.Date instanceof Date ? b.Date : new Date(b.Date)) : new Date(); if (isNaN(d)) throw new PSErr("Cannot bind parameter 'Date'. Cannot convert value \"" + b.Date + "\" to type \"System.DateTime\".", { cmd: "Get-Date", term: true }); if (b.Format) return [dateFmt(d, String(b.Format))]; return [d]; } });
 def("Write-Output", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { InputObject: P(0) }, run({ b, input }) { return input.length ? input : flat(b.InputObject); } });
@@ -1455,7 +1463,7 @@ def("Get-Member", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctyp
 function cmdInfo(c) { return obj("System.Management.Automation.CmdletInfo", { CommandType: c.ctype, Name: c.name, Version: c.ver, Source: c.module }); }
 def("Get-Command", { module: "Microsoft.PowerShell.Core", ver: "7.4.6", ctype: "Cmdlet", params: { Name: P(0, { type: "System.String[]" }), Module: P(null), Verb: P(null), Noun: P(null), CommandType: P(null), Syntax: S() },
   run({ ctx, b, name }) {
-    let list = Object.values(CMDS).filter((c) => c.module);
+    let list = Object.values(CMDS).filter((c) => c.module && (!c.session || ctx.exo));
     if (b.Name !== undefined) {
       const pats = flat(b.Name).map(String);
       const res = [];
@@ -1484,7 +1492,8 @@ def("Get-Help", { module: "Microsoft.PowerShell.Core", ver: "7.4.6", ctype: "Cmd
   run({ ctx, b, name }) {
     if (b.Name === undefined) return ["\nTOPIC\n    PowerShell Help System\n\nSHORT DESCRIPTION\n    Displays help about PowerShell cmdlets and concepts.\n\n    Get-Help <CmdletName>            Get-Help Get-MgUser\n    Get-Help <CmdletName> -Examples  Get-Help Where-Object -Examples\n"];
     const n = canonName(String(b.Name));
-    const c = CMDS[n.toLowerCase()];
+    const c0 = CMDS[n.toLowerCase()];
+    const c = c0 && c0.session && !ctx.exo ? null : c0;
     if (!c) throw new PSErr("Get-Help could not find " + b.Name + " in a help file in this session. To download updated help topics type: \"Update-Help\". To get help online, search for the help topic in the TechNet library at https://go.microsoft.com/fwlink/?LinkID=107116.", { cmd: name, term: true, kind: "nohelp" });
     const h = HELP[c.name] || { syn: "", ex: [] };
     if (b.Online) return ["Opened the online help for " + c.name + " in your default browser."];
@@ -1917,6 +1926,25 @@ def("Restore-MgDirectoryDeletedItem", { module: "Microsoft.Graph.Identity.Direct
     return [obj(GM + "MicrosoftGraphDirectoryObject", { DeletedDateTime: null, Id: u.Id })];
   } });
 
+def("Start-Transcript", { module: "Microsoft.PowerShell.Host", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Append: S(), IncludeInvocationHeader: S() },
+  run({ ctx, b, name }) {
+    if (ctx.transcript) throw new PSErr("Transcription has already been started. Use the Stop-Transcript command to stop transcription.", { cmd: name, term: true });
+    const p = b.Path !== undefined ? ctx.path(b.Path) : "/Users/kaatje/Documents/PowerShell_transcript.halvard." + Date.now() + ".txt";
+    const head = "**********************\nPowerShell transcript start\nStart time: " + dateFmt(new Date(), "yyyyMMddHHmmss") + "\nUsername: HALVARD\\kaatje\nRunAs User: HALVARD\\kaatje\nMachine: kaatje-mbp (Unix 25.1.0)\nHost Application: /usr/local/microsoft/powershell/7/pwsh.dll\nPSVersion: 7.4.6\n**********************";
+    ctx.transcript = { path: p, lines: [b.Append && ctx.fs[p] ? ctx.fs[p].text : head] };
+    ctx.fs[p] = { text: ctx.transcript.lines.join("\n"), at: new Date() };
+    return ["Transcript started, output file is " + p];
+  } });
+def("Stop-Transcript", { module: "Microsoft.PowerShell.Host", ver: "7.0.0.0", ctype: "Cmdlet", params: {},
+  run({ ctx, name }) {
+    if (!ctx.transcript) throw new PSErr("An error occurred stopping transcription: The host is not currently transcribing.", { cmd: name, term: true });
+    const p = ctx.transcript.path;
+    ctx.transcript.lines.push("**********************\nPowerShell transcript end\nEnd time: " + dateFmt(new Date(), "yyyyMMddHHmmss") + "\n**********************");
+    ctx.fs[p] = { text: ctx.transcript.lines.join("\n"), at: new Date() };
+    ctx.transcript = null;
+    return ["Transcript stopped, output file is " + p];
+  } });
+["Get-Mailbox", "Set-Mailbox", "Get-MailboxPermission", "Add-MailboxPermission", "Remove-MailboxPermission", "Get-RecipientPermission", "Add-RecipientPermission", "Get-MailboxAutoReplyConfiguration", "Set-MailboxAutoReplyConfiguration", "Get-DistributionGroup", "Get-DistributionGroupMember", "Add-DistributionGroupMember", "Remove-DistributionGroupMember", "New-DistributionGroup"].forEach((n) => { CMDS[n.toLowerCase()].session = true; CMDS[n.toLowerCase()].module = "tmpEXO_" + "ycy3rmxz.0wi"; CMDS[n.toLowerCase()].ver = "1.0"; });
 function run(src, ctx) {
   ctx.host = [];
   const result = { out: [], host: [], error: null, stages: null, parsed: null };
@@ -1938,6 +1966,14 @@ function run(src, ctx) {
   }
   result.out = out;
   result.host = ctx.host.slice();
+  if (ctx.transcript && !/^\s*Start-Transcript/i.test(src)) {
+    const parts = ["PS /Users/kaatje> " + src];
+    for (const h of result.host) parts.push(h.err || h.text || "");
+    const t = formatOut(out, 120).trim(); if (t) parts.push(t);
+    if (result.error) parts.push(result.error.text ? result.error.text() : String(result.error.message));
+    ctx.transcript.lines.push(parts.join("\n"));
+    ctx.fs[ctx.transcript.path] = { text: ctx.transcript.lines.join("\n"), at: new Date() };
+  }
   result.stages = stages;
   return result;
 }

@@ -399,6 +399,7 @@ const ERR_HELP = [
   [/Boolean parameters accept only Boolean/i, "false without $ is just text. Switches want $true or $false."],
   [/value expression following/i, "PowerShell could not read the right side of the comparison. True and false need a $ in front: $true, $false."],
   [/does not exist or one of its queried/i, "Graph found nobody with that exact name. Check the UPN spelling: firstname.lastname@" + DOMAIN + "."],
+  [/The term '(Get|Set|Add|Remove|New)-(Mailbox|MailboxPermission|RecipientPermission|MailboxAutoReplyConfiguration|DistributionGroup|DistributionGroupMember)' is not recognized/i, "That is an Exchange session command. It only exists after Connect-ExchangeOnline: the module creates it when you connect."],
   [/is not recognized as a name of a cmdlet/i, "That command name does not exist. Get-Command *word* finds the real name."],
   [/Invalid filter clause|BadRequest/i, "The OData filter could not be read. The value needs single quotes, the whole filter double quotes: \"department eq 'IT'\"."],
   [/UnsupportedQuery/i, "That filter needs an advanced query: add -ConsistencyLevel eventual."]

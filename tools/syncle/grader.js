@@ -8,7 +8,9 @@ const GRADER = (() => {
     groups: { scopes: ["User.Read.All", "Group.Read.All"], exo: false },
     groupsW: { scopes: ["User.Read.All", "Group.ReadWrite.All"], exo: false },
     lic: { scopes: ["User.Read.All", "Organization.Read.All"], exo: false },
-    licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false }
+    licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false },
+    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false },
+    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false }
   };
   function makeCtx(setup, pre) {
     const s = SETUPS[setup] || SETUPS.none;
