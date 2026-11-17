@@ -23,7 +23,7 @@ function guid(r) { const h = () => Math.floor(r() * 16).toString(16); let s = ""
 const SKUS = [
   { part: "SPE_E3", id: "05e9a617-0261-4cee-bb44-138d3ef5d965", prepaid: 40 },
   { part: "EXCHANGESTANDARD", id: "4b9405b0-7788-4568-add1-99614e613b69", prepaid: 15 },
-  { part: "POWER_BI_PRO", id: "f8a1db68-be16-40ed-86d5-cb42ce701560", prepaid: 10 },
+  { part: "POWER_BI_PRO", id: "f8a1db68-be16-40ed-86d5-cb42ce701560", prepaid: 7 },
   { part: "FLOW_FREE", id: "f30db892-07e9-47e9-837c-80727f46fd3d", prepaid: 10000 },
   { part: "TEAMS_EXPLORATORY", id: "710779e8-3d4a-4c88-adb9-386c958d1fdf", prepaid: 100 },
 ];
@@ -51,7 +51,7 @@ const PEOPLE = [
   ["Alaric", "Strand", "Executive", "Managing Director"],
 ];
 const STALE = { 1: 161, 4: 340, 6: 200, 10: 120, 14: 95, 21: 410, 27: 133, 33: 260, 40: 102 };
-const DISABLED = new Set([2, 17, 23, 30, 36]);
+const DISABLED = new Set([10, 17, 30, 32, 36]);
 const NEVER = new Set([36, 41]);
 
 function makeTenant() {
@@ -683,7 +683,7 @@ function def(name, spec) { spec.name = name; CMDS[name.toLowerCase()] = spec; }
 
 class Ctx {
   constructor(tenant) {
-    this.t = tenant || makeTenant();
+    this.t = tenant || extendTenant(makeTenant());
     this.scopes = [new Map()];
     this.funcs = {};
     this.mg = null; this.exo = false;
@@ -1557,6 +1557,365 @@ function formatOut(values, W) {
   }
   return lines.join("\n").replace(/^\n+/, "\n").replace(/\n{3,}/g, "\n\n");
 }
+
+const EXO_HOST = "AM0PR04MB1234.EURPRD04.PROD.OUTLOOK.COM";
+const T_MBX = "Microsoft.Exchange.Data.Directory.Management.Mailbox";
+const T_PERM = "Microsoft.Exchange.Management.RecipientTasks.MailboxAcePresentationObject";
+const T_RPERM = "Microsoft.Exchange.Management.RecipientTasks.RecipientPermission";
+const T_ARC = "Microsoft.Exchange.Management.StoreTasks.MailboxAutoReplyConfiguration";
+const T_STAT = "Microsoft.Exchange.Management.RestApiClient.ExoMailboxStatistics";
+const T_DG = "Microsoft.Exchange.Data.Directory.Management.DistributionGroup";
+const T_DGM = "Microsoft.Exchange.Data.Directory.Management.ReducedRecipient";
+const T_GRP = GM + "MicrosoftGraphGroup";
+DISPLAY[T_MBX] = ["Name", "Alias", "Database", "ProhibitSendQuota", "ExternalDirectoryObjectId"];
+DISPLAY[T_PERM] = ["Identity", "User", "AccessRights", "IsInherited", "Deny"];
+DISPLAY[T_RPERM] = ["Identity", "Trustee", "AccessControlType", "AccessRights", "Inherited"];
+DISPLAY[T_ARC] = ["Identity", "AutoReplyState", "StartTime", "EndTime"];
+DISPLAY[T_STAT] = ["DisplayName", "ItemCount", "TotalItemSize"];
+DISPLAY[T_DG] = ["Name", "DisplayName", "GroupType", "PrimarySmtpAddress"];
+DISPLAY[T_DGM] = ["Name", "RecipientType"];
+DISPLAY[T_GRP] = ["DisplayName", "Id", "MailNickname", "Description", "GroupTypes"];
+
+function hget(h, k) { if (!h || typeof h !== "object") return undefined; const key = Object.keys(h).find((x) => x.toLowerCase() === k.toLowerCase()); return key === undefined ? undefined : h[key]; }
+function upnOf(t, x) {
+  const s = String(x).toLowerCase();
+  const u = t.users.find((u) => u.UserPrincipalName.toLowerCase() === s || u.Id.toLowerCase() === s || u.DisplayName.toLowerCase() === s || (u.Mail && u.Mail.toLowerCase() === s) || (u.MailNickname && u.MailNickname.toLowerCase() === s));
+  return u || null;
+}
+function userById(t, x) { const s = String(x).toLowerCase(); return t.users.find((u) => u.UserPrincipalName.toLowerCase() === s || u.Id.toLowerCase() === s) || null; }
+function needExo(ctx, name) { if (!ctx.exo) throw new PSErr("You must call the Connect-ExchangeOnline cmdlet before calling any other cmdlets.", { cmd: name, term: true, kind: "noexo" }); }
+function exoNotFound(id) { return "||The operation couldn't be performed because object '" + id + "' couldn't be found on '" + EXO_HOST + "'."; }
+function findMbx(ctx, id) {
+  const s = String(id).toLowerCase();
+  return ctx.t.mailboxes.find((m) => [m.DisplayName, m.Name, m.Alias, m.PrimarySmtpAddress, m.UserPrincipalName, m.ExternalDirectoryObjectId].some((v) => v && String(v).toLowerCase() === s) || m.EmailAddresses.some((e) => e.toLowerCase().replace(/^smtp:/, "") === s));
+}
+function findDG(ctx, id) { const s = String(id).toLowerCase(); return ctx.t.dls.find((d) => [d.Name, d.DisplayName, d.Alias, d.PrimarySmtpAddress].some((v) => v.toLowerCase() === s)); }
+function findGroup(ctx, id) { const s = String(id).toLowerCase(); return ctx.t.groups.find((g) => g.g.Id.toLowerCase() === s); }
+function confirmGate(ctx, b, what, target) {
+  if (b.Confirm === false || b.WhatIf) return true;
+  ctx.host.push({ text: "\nConfirm\nAre you sure you want to perform this action?\n" + what + " \"" + target + "\".\n[Y] Yes  [A] Yes to All  [N] No  [L] No to All  [?] Help (default is \"Y\"):" });
+  ctx.host.push({ err: "(lab) The real console now waits for you to type Y. Nothing was changed. In scripts add -Confirm:$false so it never stops to ask." });
+  return false;
+}
+function sizeStr(mb) { const bytes = Math.round(mb * 1048576); const s = mb >= 1024 ? (mb / 1024).toFixed(2) + " GB" : mb.toFixed(1) + " MB"; return s + " (" + bytes.toLocaleString("en-US") + " bytes)"; }
+
+function extendTenant(t) {
+  const r = rng(4242);
+  const byName = (dn) => t.users.find((u) => u.DisplayName === dn);
+  t.mailboxes.forEach((m, i) => {
+    Object.assign(m, { ForwardingSmtpAddress: null, ForwardingAddress: null, DeliverToMailboxAndForward: false, HiddenFromAddressListsEnabled: false, GrantSendOnBehalfTo: [], Database: "EURPR04DG" + (100 + (i % 7)) + "-db0" + (40 + (i % 9)), ProhibitSendQuota: m.RecipientTypeDetails === "SharedMailbox" ? "49.5 GB (53,150,220,288 bytes)" : "99 GB (106,300,440,576 bytes)", IsMailboxEnabled: true });
+    m._arc = { AutoReplyState: "Disabled", InternalMessage: null, ExternalMessage: null, StartTime: null, EndTime: null };
+    m._stat = { ItemCount: 800 + Math.floor(r() * 24000), MB: 120 + r() * 18000 };
+  });
+  const dor = t.mailboxes.find((m) => m.DisplayName === "Dorian Pike"); if (dor) { dor.ForwardingSmtpAddress = "smtp:dorian.pike.private@outlook.example"; dor.DeliverToMailboxAndForward = true; }
+  const big = t.mailboxes.find((m) => m.DisplayName === "Garrick Penhale"); if (big) big._stat = { ItemCount: 61240, MB: 47600 };
+  t.perms = [];
+  const give = (mb, dn) => { const u = byName(dn); t.perms.push({ mb, upn: u.UserPrincipalName, rights: ["FullAccess"] }); };
+  give("Info", "Elowen Thistle"); give("Info", "Cassian Drake");
+  give("Sales Desk", "Brannoc Vale"); give("Sales Desk", "Garrick Penhale"); give("Sales Desk", "Elara Wynn");
+  give("Finance Inbox", "Ysolde Marrow"); give("Finance Inbox", "Tamsin Rook"); give("Finance Inbox", "Hollis Reed");
+  give("Support", "Cassian Drake"); give("Support", "Ondine Shaw");
+  give("Careers", "Juniper Oakes");
+  t.sendAs = [{ mb: "Sales Desk", upn: byName("Garrick Penhale").UserPrincipalName }, { mb: "Info", upn: byName("Elowen Thistle").UserPrincipalName }];
+  const members = t.users.filter((u) => u.UserType === "Member");
+  const dl = (name, alias, list) => ({ Name: name, DisplayName: name, Alias: alias, PrimarySmtpAddress: alias + "@" + t.domain, GroupType: "Universal", ManagedBy: ["Elowen Thistle"], members: list.map((u) => u.UserPrincipalName) });
+  t.dls = [
+    dl("All Staff", "all", members.filter((u) => u.AccountEnabled && u.DisplayName !== "Rowan Hart")),
+    dl("Sales Team", "sales-team", members.filter((u) => u.Department === "Sales")),
+    dl("Finance Team", "finance-team", members.filter((u) => u.Department === "Finance")),
+    dl("Operations Bruges", "ops-bruges", members.filter((u) => u.Department === "Operations" && u.City === "Bruges")),
+    dl("IT Alerts", "it-alerts", members.filter((u) => u.Department === "IT"))
+  ];
+  const grp = (name, nick, desc, types, sec, list) => ({ g: obj(T_GRP, { Classification: null, CreatedDateTime: new Date(Date.now() - (200 + Math.floor(r() * 900)) * 864e5), Description: desc, DisplayName: name, GroupTypes: types, Id: guid(r), Mail: types.includes("Unified") ? nick + "@" + t.domain : null, MailEnabled: types.includes("Unified"), MailNickname: nick, SecurityEnabled: sec, Visibility: types.includes("Unified") ? "Private" : null }), members: list.map((u) => u.Id) });
+  t.groups = [
+    grp("Halvard Leadership", "leadership", "Directors and heads of department", ["Unified"], false, ["Alaric Strand", "Hollis Reed", "Garrick Penhale", "Caius Mercer", "Elowen Thistle", "Juniper Oakes"].map(byName)),
+    grp("Project Northwind", "northwind", "New warehouse system rollout", ["Unified"], false, ["Caius Mercer", "Lorcan Ivers", "Anwen Frost", "Maelis Grey"].map(byName)),
+    grp("SG-VPN-Users", "SG-VPN-Users", "Allowed to use the VPN", [], true, members.filter((u) => ["IT", "Executive", "Finance"].includes(u.Department))),
+    grp("SG-Finance-Share", "SG-Finance-Share", "Read/write on the finance file share", [], true, members.filter((u) => u.Department === "Finance")),
+    grp("SG-MFA-Exclusion", "SG-MFA-Exclusion", "Temporary: excluded from MFA policy", [], true, ["Scan Station"].map(() => byName("Rowan Hart")))
+  ];
+  t.revoked = {};
+  return t;
+}
+
+const GROUP_READ = ["Group.Read.All", "Group.ReadWrite.All", "GroupMember.Read.All", "GroupMember.ReadWrite.All", "Directory.Read.All", "Directory.ReadWrite.All"];
+const GROUP_WRITE = ["Group.ReadWrite.All", "GroupMember.ReadWrite.All", "Directory.ReadWrite.All"];
+const USER_WRITE = ["User.ReadWrite.All", "Directory.ReadWrite.All"];
+const LIC_WRITE = ["User.ReadWrite.All", "Directory.ReadWrite.All", "LicenseAssignment.ReadWrite.All"];
+function needWrite(ctx, cmd, any) { if (!ctx.mg.scopes.some((s) => any.some((a) => a.toLowerCase() === s.toLowerCase()))) throw new PSErr("Insufficient privileges to complete the operation.\n\nStatus: 403 (Forbidden)\nErrorCode: Authorization_RequestDenied", { cmd, term: true, kind: "scope" }); }
+function dirObj(u) { return obj(GM + "MicrosoftGraphDirectoryObject", { DeletedDateTime: null, Id: u.Id, AdditionalProperties: ht({ "@odata.type": "#microsoft.graph.user", displayName: u.DisplayName, userPrincipalName: u.UserPrincipalName, mail: u.Mail, jobTitle: u.JobTitle }) }); }
+function grpObj(g) { return obj(GM + "MicrosoftGraphDirectoryObject", { DeletedDateTime: null, Id: g.Id, AdditionalProperties: ht({ "@odata.type": "#microsoft.graph.group", displayName: g.DisplayName, mailNickname: g.MailNickname, securityEnabled: g.SecurityEnabled }) }); }
+
+def("Get-EXOMailbox", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { pipe: true }), ResultSize: P(null), RecipientTypeDetails: P(null, { type: "System.String[]" }), Properties: P(null, { type: "System.String[]" }), PropertySets: P(null), Filter: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const base = ["Alias", "DisplayName", "EmailAddresses", "ExternalDirectoryObjectId", "Guid", "Id", "Identity", "Name", "PrimarySmtpAddress", "RecipientType", "RecipientTypeDetails", "UserPrincipalName"];
+    const extra = flat(b.Properties).flatMap((x) => String(x).split(",")).map((x) => x.trim()).filter(Boolean);
+    const sample = ctx.t.mailboxes[0];
+    const keys = extra.map((p) => { const k = Object.keys(sample).filter((x) => !x.startsWith("_")).find((x) => x.toLowerCase() === p.toLowerCase()); if (!k) throw new PSErr("||The property '" + p + "' is not a valid property for this cmdlet. Use -PropertySets or check the property name.", { cmd: name, term: true }); return k; });
+    let m = ctx.t.mailboxes;
+    if (b.Identity !== undefined) { const x = findMbx(ctx, b.Identity); if (!x) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" }); m = [x]; }
+    if (b.RecipientTypeDetails !== undefined) { const kinds = flat(b.RecipientTypeDetails).map((x) => String(x).toLowerCase()); const valid = ["usermailbox", "sharedmailbox", "roommailbox", "equipmentmailbox"]; for (const k of kinds) if (!valid.includes(k)) throw new PSErr("Cannot bind parameter 'RecipientTypeDetails'. Cannot convert value \"" + k + "\" to type \"Microsoft.Exchange.Data.Directory.Recipient.RecipientTypeDetails\".", { cmd: name, term: true }); m = m.filter((x) => kinds.includes(x.RecipientTypeDetails.toLowerCase())); }
+    if (b.ResultSize !== undefined && !/^unlimited$/i.test(String(b.ResultSize))) m = m.slice(0, +b.ResultSize);
+    return m.map((x) => { const o = {}; for (const k of base.concat(keys)) o[k] = Array.isArray(x[k]) ? x[k].slice() : x[k]; return obj("Microsoft.Exchange.Management.RestApiClient.ExoMailbox", o); });
+  } });
+def("Get-Mailbox", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { pipe: true }), ResultSize: P(null), RecipientTypeDetails: P(null, { type: "System.String[]" }), Filter: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    let m = ctx.t.mailboxes;
+    if (b.Identity !== undefined) { const x = findMbx(ctx, b.Identity); if (!x) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" }); m = [x]; }
+    if (b.RecipientTypeDetails !== undefined) { const kinds = flat(b.RecipientTypeDetails).map((x) => String(x).toLowerCase()); m = m.filter((x) => kinds.includes(x.RecipientTypeDetails.toLowerCase())); }
+    if (b.ResultSize !== undefined && !/^unlimited$/i.test(String(b.ResultSize))) m = m.slice(0, +b.ResultSize);
+    return m.map((x) => { const o = {}; for (const k of Object.keys(x)) if (!k.startsWith("_")) o[k] = Array.isArray(x[k]) ? x[k].slice() : x[k]; return obj(T_MBX, o); });
+  } });
+def("Set-Mailbox", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, pipe: true, params: { Identity: P(0, { req: true, pipe: true }), Type: P(null), ForwardingSmtpAddress: P(null), ForwardingAddress: P(null), DeliverToMailboxAndForward: P(null), HiddenFromAddressListsEnabled: P(null), EmailAddresses: P(null), DisplayName: P(null), GrantSendOnBehalfTo: P(null) },
+  run({ ctx, b, name, input }) {
+    needExo(ctx, name);
+    const ids = b.Identity !== undefined ? flat(b.Identity) : input.map((x) => x.Identity || x.PrimarySmtpAddress);
+    for (const id of ids) {
+      const m = findMbx(ctx, id);
+      if (!m) throw new PSErr(exoNotFound(id), { cmd: name, term: true, kind: "exo404" });
+      if (b.WhatIf) { ctx.host.push({ text: "What if: Setting mailbox \"" + m.Name + "\"." }); continue; }
+      if (b.Type !== undefined) { const ty = String(b.Type).toLowerCase(); const map = { shared: "SharedMailbox", regular: "UserMailbox", room: "RoomMailbox", equipment: "EquipmentMailbox" }; if (!map[ty]) throw new PSErr("Cannot bind parameter 'Type'. Cannot convert value \"" + b.Type + "\" to type \"Microsoft.Exchange.Management.RecipientTasks.ConvertibleMailboxSubType\". Error: \"Unable to match the identifier name " + b.Type + " to a valid enumerator name. Specify one of the following enumerator names and try again:\nRegular, Room, Equipment, Shared\"", { cmd: name, term: true }); m.RecipientTypeDetails = map[ty]; }
+      if (b.ForwardingSmtpAddress !== undefined) m.ForwardingSmtpAddress = b.ForwardingSmtpAddress === null || b.ForwardingSmtpAddress === "" ? null : "smtp:" + String(b.ForwardingSmtpAddress).replace(/^smtp:/i, "");
+      if (b.ForwardingAddress !== undefined) m.ForwardingAddress = b.ForwardingAddress;
+      for (const k of ["DeliverToMailboxAndForward", "HiddenFromAddressListsEnabled"]) if (b[k] !== undefined) { if (typeof b[k] === "string") throw new PSErr("Cannot process argument transformation on parameter '" + k + "'. Cannot convert value \"System.String\" to type \"System.Boolean\". Boolean parameters accept only Boolean values and numbers, such as $True, $False, 1 or 0.", { cmd: name, term: true, kind: "switchstr" }); m[k] = truthy(b[k]); }
+      if (b.DisplayName !== undefined) m.DisplayName = String(b.DisplayName);
+      if (b.EmailAddresses !== undefined) {
+        const v = b.EmailAddresses;
+        if (isHT(v)) {
+          for (const a of flat(hget(v, "add"))) { const s = String(a); if (!m.EmailAddresses.some((e) => e.toLowerCase() === s.toLowerCase())) m.EmailAddresses.push(/^smtp:/i.test(s) ? s : "smtp:" + s); }
+          for (const a of flat(hget(v, "remove"))) { const s = String(a).toLowerCase().replace(/^smtp:/, ""); if (m.EmailAddresses.some((e) => e.startsWith("SMTP:") && e.slice(5).toLowerCase() === s)) throw new PSErr("||The primary SMTP address can't be removed. Set a different primary address first.", { cmd: name, term: true }); m.EmailAddresses = m.EmailAddresses.filter((e) => e.toLowerCase().replace(/^smtp:/, "") !== s); }
+        } else ctx.host.push({ err: "(lab) Setting -EmailAddresses to a plain value replaces every address on the mailbox. Use @{add='smtp:...'} or @{remove='smtp:...'}. Nothing was changed." });
+      }
+    }
+    return [];
+  } });
+def("Get-MailboxPermission", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { req: true, pipe: true }), User: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    let rows = [{ user: "NT AUTHORITY\\SELF", rights: ["FullAccess, ReadPermission"] }].concat(ctx.t.perms.filter((p) => p.mb === m.Name).map((p) => ({ user: p.upn, rights: p.rights })));
+    if (b.User !== undefined) { const u = upnOf(ctx.t, b.User); rows = rows.filter((x) => u && x.user === u.UserPrincipalName); }
+    return rows.map((x) => obj(T_PERM, { AccessRights: x.rights.slice(), Deny: false, Identity: m.Name, InheritanceType: "All", IsInherited: false, User: x.user }));
+  } });
+def("Add-MailboxPermission", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Identity: P(0, { req: true }), User: P(null, { req: true }), AccessRights: P(null, { req: true }), AutoMapping: P(null), InheritanceType: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    const u = upnOf(ctx.t, b.User); if (!u) throw new PSErr(exoNotFound(b.User), { cmd: name, term: true, kind: "exo404" });
+    const rights = flat(b.AccessRights).map(String);
+    if (!rights.every((x) => /^(FullAccess|ReadPermission|ChangePermission|ChangeOwner|DeleteItem|ExternalAccount|SendAs)$/i.test(x))) throw new PSErr("Cannot bind parameter 'AccessRights'. Cannot convert value \"" + rights.join(",") + "\" to type \"Microsoft.Exchange.Management.RecipientTasks.MailboxRights\".", { cmd: name, term: true });
+    if (rights.some((x) => /^SendAs$/i.test(x))) throw new PSErr("||SendAs isn't a mailbox permission in Exchange Online. Use Add-RecipientPermission -AccessRights SendAs instead.", { cmd: name, term: true });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Adding mailbox permission for \"" + u.UserPrincipalName + "\" on \"" + m.Name + "\"." }); return []; }
+    if (!ctx.t.perms.some((p) => p.mb === m.Name && p.upn === u.UserPrincipalName)) ctx.t.perms.push({ mb: m.Name, upn: u.UserPrincipalName, rights: ["FullAccess"], automap: b.AutoMapping === undefined ? true : truthy(b.AutoMapping) });
+    return [obj(T_PERM, { AccessRights: ["FullAccess"], Deny: false, Identity: m.Name, InheritanceType: "All", IsInherited: false, User: u.UserPrincipalName })];
+  } });
+def("Remove-MailboxPermission", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Identity: P(0, { req: true }), User: P(null, { req: true }), AccessRights: P(null, { req: true }), InheritanceType: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    const u = upnOf(ctx.t, b.User); if (!u) throw new PSErr(exoNotFound(b.User), { cmd: name, term: true, kind: "exo404" });
+    if (!confirmGate(ctx, b, "Removing mailbox permission", m.Name + "\" for user \"" + u.UserPrincipalName)) return [];
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Removing mailbox permission for \"" + u.UserPrincipalName + "\" on \"" + m.Name + "\"." }); return []; }
+    const before = ctx.t.perms.length; ctx.t.perms = ctx.t.perms.filter((p) => !(p.mb === m.Name && p.upn === u.UserPrincipalName));
+    if (before === ctx.t.perms.length) ctx.host.push({ text: "WARNING: Can't remove the access control entry on the object \"" + m.Name + "\" for account \"" + u.UserPrincipalName + "\" because the ACE doesn't exist on the object." });
+    return [];
+  } });
+def("Get-RecipientPermission", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { pipe: true }), Trustee: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    return [{ upn: "NT AUTHORITY\\SELF" }].concat(ctx.t.sendAs.filter((p) => p.mb === m.Name)).map((p) => obj(T_RPERM, { AccessControlType: "Allow", AccessRights: ["SendAs"], Identity: m.Name, Inherited: false, Trustee: p.upn }));
+  } });
+def("Add-RecipientPermission", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Identity: P(0, { req: true }), Trustee: P(null, { req: true }), AccessRights: P(null, { req: true }) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    const u = upnOf(ctx.t, b.Trustee); if (!u) throw new PSErr(exoNotFound(b.Trustee), { cmd: name, term: true, kind: "exo404" });
+    if (!/^SendAs$/i.test(String(b.AccessRights))) throw new PSErr("Cannot bind parameter 'AccessRights'. Cannot convert value \"" + b.AccessRights + "\" to type \"Microsoft.Exchange.Management.RecipientTasks.MultiValuedProperty`1[Microsoft.Exchange.Management.RecipientTasks.RecipientAccessRight]\".", { cmd: name, term: true });
+    if (!confirmGate(ctx, b, "Adding recipient permission 'SendAs' for user", u.UserPrincipalName + "\" on recipient \"" + m.Name)) return [];
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Adding recipient permission 'SendAs' for user \"" + u.UserPrincipalName + "\" on recipient \"" + m.Name + "\"." }); return []; }
+    if (!ctx.t.sendAs.some((p) => p.mb === m.Name && p.upn === u.UserPrincipalName)) ctx.t.sendAs.push({ mb: m.Name, upn: u.UserPrincipalName });
+    return [obj(T_RPERM, { AccessControlType: "Allow", AccessRights: ["SendAs"], Identity: m.Name, Inherited: false, Trustee: u.UserPrincipalName })];
+  } });
+def("Get-MailboxAutoReplyConfiguration", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { req: true, pipe: true }) },
+  run({ ctx, b, name }) { needExo(ctx, name); const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" }); return [obj(T_ARC, Object.assign({ Identity: m.Name, MailboxOwnerId: m.Name }, m._arc))]; } });
+def("Set-MailboxAutoReplyConfiguration", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Identity: P(0, { req: true, pipe: true }), AutoReplyState: P(null), InternalMessage: P(null), ExternalMessage: P(null), StartTime: P(null), EndTime: P(null), ExternalAudience: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const m = findMbx(ctx, b.Identity); if (!m) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    if (b.AutoReplyState !== undefined) { const v = String(b.AutoReplyState); const ok = ["Disabled", "Enabled", "Scheduled"].find((x) => x.toLowerCase() === v.toLowerCase()); if (!ok) throw new PSErr("Cannot bind parameter 'AutoReplyState'. Cannot convert value \"" + v + "\" to type \"Microsoft.Exchange.Data.Storage.OofState\". Error: \"Unable to match the identifier name " + v + " to a valid enumerator name. Specify one of the following enumerator names and try again:\nDisabled, Enabled, Scheduled\"", { cmd: name, term: true }); if (!b.WhatIf) m._arc.AutoReplyState = ok; }
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Setting automatic replies for \"" + m.Name + "\"." }); return []; }
+    for (const k of ["InternalMessage", "ExternalMessage", "StartTime", "EndTime"]) if (b[k] !== undefined) m._arc[k] = b[k];
+    return [];
+  } });
+def("Get-EXOMailboxStatistics", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { req: true, pipe: true }) },
+  run({ ctx, b, name, input }) {
+    needExo(ctx, name);
+    const ids = b.Identity !== undefined ? flat(b.Identity) : input.map((x) => x.UserPrincipalName || x.PrimarySmtpAddress);
+    return ids.map((id) => { const m = findMbx(ctx, id); if (!m) throw new PSErr(exoNotFound(id), { cmd: name, term: true, kind: "exo404" }); return obj(T_STAT, { DisplayName: m.DisplayName, ItemCount: m._stat.ItemCount, TotalItemSize: sizeStr(m._stat.MB), MailboxGuid: m.Guid }); });
+  } });
+def("Get-DistributionGroup", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { pipe: true }), ResultSize: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    let l = ctx.t.dls;
+    if (b.Identity !== undefined) { const d = findDG(ctx, b.Identity); if (!d) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" }); l = [d]; }
+    return l.map((d) => obj(T_DG, { DisplayName: d.DisplayName, GroupType: d.GroupType, Alias: d.Alias, ManagedBy: d.ManagedBy.slice(), Name: d.Name, PrimarySmtpAddress: d.PrimarySmtpAddress, RecipientTypeDetails: "MailUniversalDistributionGroup" }));
+  } });
+def("Get-DistributionGroupMember", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { req: true, pipe: true }), ResultSize: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const d = findDG(ctx, b.Identity); if (!d) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    return d.members.map((upn) => { const u = upnOf(ctx.t, upn); return obj(T_DGM, { Name: u.DisplayName, DisplayName: u.DisplayName, PrimarySmtpAddress: u.UserPrincipalName, RecipientType: "UserMailbox", Department: u.Department }); });
+  } });
+def("Add-DistributionGroupMember", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Identity: P(0, { req: true }), Member: P(null, { req: true }), BypassSecurityGroupManagerCheck: S() },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const d = findDG(ctx, b.Identity); if (!d) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    const u = upnOf(ctx.t, b.Member); if (!u) throw new PSErr(exoNotFound(b.Member), { cmd: name, term: true, kind: "exo404" });
+    if (d.members.includes(u.UserPrincipalName)) throw new PSErr("||The recipient \"" + u.UserPrincipalName + "\" is already a member of the group \"" + d.Name + "\".", { cmd: name, term: true, kind: "already" });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Adding recipient \"" + u.UserPrincipalName + "\" to distribution group \"" + d.Name + "\"." }); return []; }
+    d.members.push(u.UserPrincipalName); return [];
+  } });
+def("Remove-DistributionGroupMember", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Identity: P(0, { req: true }), Member: P(null, { req: true }), BypassSecurityGroupManagerCheck: S() },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const d = findDG(ctx, b.Identity); if (!d) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" });
+    const u = upnOf(ctx.t, b.Member); if (!u) throw new PSErr(exoNotFound(b.Member), { cmd: name, term: true, kind: "exo404" });
+    if (!d.members.includes(u.UserPrincipalName)) throw new PSErr("||The recipient \"" + u.UserPrincipalName + "\" isn't a member of the group \"" + d.Name + "\".", { cmd: name, term: true, kind: "notmember" });
+    if (!confirmGate(ctx, b, "Removing distribution group member", u.UserPrincipalName + "\" from distribution group \"" + d.Name)) return [];
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Removing distribution group member \"" + u.UserPrincipalName + "\" from distribution group \"" + d.Name + "\"." }); return []; }
+    d.members = d.members.filter((x) => x !== u.UserPrincipalName); return [];
+  } });
+def("New-DistributionGroup", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", whatif: true, params: { Name: P(0, { req: true }), DisplayName: P(null), Alias: P(null), PrimarySmtpAddress: P(null), Members: P(null), ManagedBy: P(null), Type: P(null) },
+  run({ ctx, b, name }) {
+    needExo(ctx, name);
+    const nm = String(b.Name);
+    if (findDG(ctx, nm)) throw new PSErr("||The name \"" + nm + "\" is being used by another recipient object. Please specify a unique name.", { cmd: name, term: true });
+    const alias = b.Alias !== undefined ? String(b.Alias) : nm.replace(/[^A-Za-z0-9.-]/g, "");
+    const smtp = b.PrimarySmtpAddress !== undefined ? String(b.PrimarySmtpAddress) : alias + "@" + ctx.t.domain;
+    const mem = flat(b.Members).map((x) => { const u = upnOf(ctx.t, x); if (!u) throw new PSErr(exoNotFound(x), { cmd: name, term: true, kind: "exo404" }); return u.UserPrincipalName; });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Creating distribution group \"" + nm + "\"." }); return []; }
+    const d = { Name: nm, DisplayName: b.DisplayName !== undefined ? String(b.DisplayName) : nm, Alias: alias, PrimarySmtpAddress: smtp, GroupType: "Universal", ManagedBy: ["kaatje"], members: mem };
+    ctx.t.dls.push(d);
+    return [obj(T_DG, { DisplayName: d.DisplayName, GroupType: d.GroupType, Alias: alias, ManagedBy: d.ManagedBy, Name: nm, PrimarySmtpAddress: smtp, RecipientTypeDetails: "MailUniversalDistributionGroup" })];
+  } });
+
+def("Get-MgGroup", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctype: "Function", params: { GroupId: P(null), All: S(), Filter: P(null), Top: P(null), Property: P(null), Search: P(null), ConsistencyLevel: P(null) },
+  run({ ctx, b, name, emitErr }) {
+    needMg(ctx, name, b.GroupId ? "Get" : "List", GROUP_READ);
+    let gs = ctx.t.groups.map((x) => x.g);
+    if (b.GroupId !== undefined) { const g = findGroup(ctx, b.GroupId); if (!g) { emitErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", name + "_Get", "notfound404"); return []; } gs = [g.g]; }
+    if (b.Filter !== undefined) { const f = odataFilter(b.Filter, name + "_List"); gs = gs.filter(f.fn); }
+    if (b.Top !== undefined) gs = gs.slice(0, +b.Top);
+    return gs.map(clone);
+  } });
+def("Get-MgGroupMember", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctype: "Function", params: { GroupId: P(0, { req: true }), All: S(), Top: P(null) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "List", GROUP_READ);
+    const g = findGroup(ctx, b.GroupId); if (!g) throw new PSErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_List", term: true, kind: "notfound404" });
+    return g.members.map((id) => dirObj(ctx.t.users.find((u) => u.Id === id)));
+  } });
+def("Get-MgGroupMemberAsUser", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctype: "Function", params: { GroupId: P(0, { req: true }), All: S(), Property: P(null) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "List", GROUP_READ);
+    const g = findGroup(ctx, b.GroupId); if (!g) throw new PSErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_List", term: true, kind: "notfound404" });
+    const props = propList(b, name + "_List", "Microsoft.DirectoryServices.User", ctx.t.users[0]);
+    return g.members.map((id) => project(ctx.t.users.find((u) => u.Id === id), props, USER_DEFAULT));
+  } });
+def("New-MgGroupMember", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctype: "Function", whatif: true, params: { GroupId: P(0, { req: true }), DirectoryObjectId: P(null, { req: true }) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "Create", GROUP_READ.concat(USER_WRITE));
+    needWrite(ctx, name + "_Create", GROUP_WRITE);
+    const g = findGroup(ctx, b.GroupId); if (!g) throw new PSErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Create", term: true, kind: "notfound404" });
+    const id = String(b.DirectoryObjectId);
+    const u = ctx.t.users.find((x) => x.Id.toLowerCase() === id.toLowerCase());
+    if (!u) throw new PSErr("Resource '" + id + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Create", term: true, kind: "notfound404" });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"New-MgGroupMember_Create\" on target \"New-MgGroupMember_Create\"." }); return []; }
+    if (g.members.includes(u.Id)) throw new PSErr("One or more added object references already exist for the following modified properties: 'members'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_Create", term: true, kind: "already" });
+    g.members.push(u.Id); return [];
+  } });
+def("Remove-MgGroupMemberByRef", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctype: "Function", whatif: true, params: { GroupId: P(0, { req: true }), DirectoryObjectId: P(null, { req: true }) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "Delete", GROUP_READ.concat(USER_WRITE));
+    needWrite(ctx, name + "_Delete", GROUP_WRITE);
+    const g = findGroup(ctx, b.GroupId); if (!g) throw new PSErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Delete", term: true, kind: "notfound404" });
+    const id = String(b.DirectoryObjectId);
+    if (!g.members.some((m) => m.toLowerCase() === id.toLowerCase())) throw new PSErr("Resource '" + id + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Delete", term: true, kind: "notfound404" });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Remove-MgGroupMemberByRef_Delete\" on target \"Remove-MgGroupMemberByRef_Delete\"." }); return []; }
+    g.members = g.members.filter((m) => m.toLowerCase() !== id.toLowerCase()); return [];
+  } });
+def("Get-MgUserMemberOf", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Function", params: { UserId: P(0, { req: true }), All: S() },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "List", USER_READ);
+    const u = userById(ctx.t, b.UserId); if (!u) throw new PSErr("Resource '" + b.UserId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_List", term: true, kind: "notfound404" });
+    return ctx.t.groups.filter((g) => g.members.includes(u.Id)).map((g) => grpObj(g.g));
+  } });
+
+def("Set-MgUserLicense", { module: "Microsoft.Graph.Users.Actions", ver: "2.25.0", ctype: "Function", whatif: true, params: { UserId: P(0, { req: true }), AddLicenses: P(null), RemoveLicenses: P(null) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "AssignExpanded");
+    if (b.AddLicenses === undefined || b.RemoveLicenses === undefined) throw new PSErr("One or more parameters of the operation 'assignLicense' are missing from the request payload. The missing parameters are: " + (b.AddLicenses === undefined ? "addLicenses" : "removeLicenses") + ".\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_AssignExpanded", term: true, kind: "lic-missing" });
+    needWrite(ctx, name + "_AssignExpanded", LIC_WRITE);
+    const u = userById(ctx.t, b.UserId); if (!u) throw new PSErr("Resource '" + b.UserId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_AssignExpanded", term: true, kind: "notfound404" });
+    const add = flat(b.AddLicenses).map((h) => { const id = isHT(h) ? hget(h, "SkuId") : undefined; if (!id) throw new PSErr("Cannot convert the literal '" + toStr(h) + "' to the expected type 'Edm.Guid'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_AssignExpanded", term: true, kind: "lic-shape" }); return String(id); });
+    const rem = flat(b.RemoveLicenses).map(String);
+    for (const id of add.concat(rem)) if (!SKUS.some((s) => s.id === id)) throw new PSErr("License " + id + " does not correspond to a valid company License.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_AssignExpanded", term: true, kind: "lic-bad" });
+    if (add.length && !u.UsageLocation) throw new PSErr("License assignment cannot be done for user with invalid usage location.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_AssignExpanded", term: true, kind: "lic-usage" });
+    for (const id of add) {
+      if (u.AssignedLicenses.some((l) => l.SkuId === id)) continue;
+      const s = SKUS.find((x) => x.id === id); const used = ctx.t.users.filter((x) => x.AssignedLicenses.some((l) => l.SkuId === id)).length;
+      if (used >= s.prepaid) throw new PSErr("Subscription with SKU " + id + " does not have any available licenses.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_AssignExpanded", term: true, kind: "lic-full" });
+    }
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Set-MgUserLicense_AssignExpanded\" on target \"Set-MgUserLicense_AssignExpanded\"." }); return []; }
+    u.AssignedLicenses = u.AssignedLicenses.filter((l) => !rem.includes(l.SkuId));
+    for (const id of add) if (!u.AssignedLicenses.some((l) => l.SkuId === id)) u.AssignedLicenses.push(obj(GM + "MicrosoftGraphAssignedLicense", { DisabledPlans: [], SkuId: id }));
+    if (u.UserType === "Member" && u.AssignedLicenses.some((l) => l.SkuId === SKUS[0].id || l.SkuId === SKUS[1].id) && !ctx.t.mailboxes.some((m) => m.UserPrincipalName === u.UserPrincipalName)) { const m = mbx(rng(7), u.DisplayName, u.UserPrincipalName, "UserMailbox", u.Id); extendOne(m); ctx.t.mailboxes.push(m); }
+    return [project(u, null, USER_DEFAULT)];
+  } });
+function extendOne(m) { Object.assign(m, { ForwardingSmtpAddress: null, ForwardingAddress: null, DeliverToMailboxAndForward: false, HiddenFromAddressListsEnabled: false, GrantSendOnBehalfTo: [], Database: "EURPR04DG104-db044", ProhibitSendQuota: "99 GB (106,300,440,576 bytes)", IsMailboxEnabled: true }); m._arc = { AutoReplyState: "Disabled", InternalMessage: null, ExternalMessage: null, StartTime: null, EndTime: null }; m._stat = { ItemCount: 0, MB: 0.1 }; }
+def("New-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Function", whatif: true, params: { DisplayName: P(null), UserPrincipalName: P(null), MailNickname: P(null), AccountEnabled: S(), PasswordProfile: P(null), UsageLocation: P(null), Department: P(null), JobTitle: P(null), GivenName: P(null), Surname: P(null), City: P(null), OfficeLocation: P(null) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "CreateExpanded");
+    needWrite(ctx, name + "_CreateExpanded", USER_WRITE);
+    const bad = (p) => { throw new PSErr("Invalid value specified for property '" + p + "' of resource 'User'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_CreateExpanded", term: true, kind: "newuser-missing" }); };
+    if (b.AccountEnabled === undefined) bad("accountEnabled");
+    if (!b.DisplayName) bad("displayName");
+    if (!b.MailNickname) bad("mailNickname");
+    if (!b.UserPrincipalName) bad("userPrincipalName");
+    if (!isHT(b.PasswordProfile) || !hget(b.PasswordProfile, "Password")) bad("passwordProfile");
+    const upn = String(b.UserPrincipalName);
+    if (!upn.toLowerCase().endsWith("@" + ctx.t.domain)) throw new PSErr("The domain portion of the userPrincipalName property is invalid. You must use one of the verified domain names in your organization.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_CreateExpanded", term: true, kind: "newuser-domain" });
+    if (ctx.t.users.some((u) => u.UserPrincipalName.toLowerCase() === upn.toLowerCase())) throw new PSErr("Another object with the same value for property userPrincipalName already exists.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_CreateExpanded", term: true, kind: "newuser-dup" });
+    if (String(hget(b.PasswordProfile, "Password")).length < 8) throw new PSErr("The specified password does not comply with password complexity requirements. Please provide a different password.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_CreateExpanded", term: true, kind: "newuser-pw" });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"New-MgUser_CreateExpanded\" on target \"New-MgUser_CreateExpanded\"." }); return []; }
+    const r = rng(ctx.t.users.length * 97);
+    const u = obj(GM + "MicrosoftGraphUser", { AccountEnabled: !!b.AccountEnabled, AssignedLicenses: [], BusinessPhones: [], City: b.City || null, CompanyName: "Halvard & Co", Country: null, CreatedDateTime: new Date(), Department: b.Department || null, DisplayName: String(b.DisplayName), EmployeeId: null, GivenName: b.GivenName || null, Id: guid(r), JobTitle: b.JobTitle || null, Mail: null, MailNickname: String(b.MailNickname), MobilePhone: null, OfficeLocation: b.OfficeLocation || null, OnPremisesSyncEnabled: null, PreferredLanguage: null, SignInActivity: obj(GM + "MicrosoftGraphSignInActivity", { LastNonInteractiveSignInDateTime: null, LastSignInDateTime: null, LastSuccessfulSignInDateTime: null }), Surname: b.Surname || null, UsageLocation: b.UsageLocation || null, UserPrincipalName: upn, UserType: "Member" });
+    u._pwChange = truthy(hget(b.PasswordProfile, "ForceChangePasswordNextSignIn"));
+    ctx.t.users.push(u);
+    return [project(u, null, USER_DEFAULT)];
+  } });
+def("Remove-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Function", whatif: true, params: { UserId: P(0, { req: true }) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "Delete");
+    needWrite(ctx, name + "_Delete", USER_WRITE);
+    const u = ctx.t.users.find((x) => x.UserPrincipalName.toLowerCase() === String(b.UserId).toLowerCase() || x.Id.toLowerCase() === String(b.UserId).toLowerCase());
+    if (!u) throw new PSErr("Resource '" + b.UserId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Delete", term: true, kind: "notfound404" });
+    if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Remove-MgUser_Delete\" on target \"Remove-MgUser_Delete\"." }); return []; }
+    ctx.t.users = ctx.t.users.filter((x) => x !== u); ctx.t.deleted = (ctx.t.deleted || []).concat([u]);
+    return [];
+  } });
+def("Get-MgDirectoryDeletedItemAsUser", { module: "Microsoft.Graph.Identity.DirectoryManagement", ver: "2.25.0", ctype: "Function", params: { All: S() },
+  run({ ctx, name }) { needMg(ctx, name, "List", USER_READ); return (ctx.t.deleted || []).map((u) => project(u, null, USER_DEFAULT)); } });
+def("Restore-MgDirectoryDeletedItem", { module: "Microsoft.Graph.Identity.DirectoryManagement", ver: "2.25.0", ctype: "Function", whatif: true, params: { DirectoryObjectId: P(0, { req: true }) },
+  run({ ctx, b, name }) {
+    needMg(ctx, name, "Restore"); needWrite(ctx, name + "_Restore", USER_WRITE);
+    const u = (ctx.t.deleted || []).find((x) => x.Id.toLowerCase() === String(b.DirectoryObjectId).toLowerCase());
+    if (!u) throw new PSErr("Resource '" + b.DirectoryObjectId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Restore", term: true, kind: "notfound404" });
+    ctx.t.deleted = ctx.t.deleted.filter((x) => x !== u); ctx.t.users.push(u);
+    return [obj(GM + "MicrosoftGraphDirectoryObject", { DeletedDateTime: null, Id: u.Id })];
+  } });
 
 function run(src, ctx) {
   ctx.host = [];

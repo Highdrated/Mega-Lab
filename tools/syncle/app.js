@@ -2,11 +2,11 @@ const KEY = "syncle.v1";
 const DAYMS = 864e5;
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
-const PHASES = [["brief", "BRIEF"], ["watch", "WATCH"], ["trace", "TRACE"], ["recall", "RECALL"], ["real", "FOR REAL"]];
-const PASS_TXT = { brief: "What it is, why you need it, the traps", watch: "It runs on its own, step by step", trace: "Same idea, a few gaps to fill", recall: "Blank console, new ticket", real: "Read-only, on your own tenant" };
+const PHASES = [["brief", "BRIEF"], ["watch", "WATCH"], ["trace", "TRACE"], ["recall", "RECALL"], ["practice", "PRACTICE"], ["real", "FOR REAL"]];
+const PASS_TXT = { brief: "What it is, why you need it, the traps", watch: "It runs on its own, step by step", trace: "Same idea, a few gaps to fill", recall: "Blank console, new ticket", practice: "Five or six more tickets, all different", real: "Read-only, on your own tenant" };
 const EARN = { watch: 5, trace: 15, recall: 30, real: 20 };
 
-let S = { v: 1, credits: 0, done: {}, journal: [], review: {}, gate: {}, seqSel: 0, selMem: null };
+let S = { v: 1, credits: 0, done: {}, journal: [], review: {}, gate: {}, drills: {}, seqSel: 0, selMem: null };
 try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 
@@ -16,8 +16,10 @@ function doneOf(id) { return S.done[id] || (S.done[id] = {}); }
 function synced(id) { return !!(S.done[id] && S.done[id].recall); }
 function memsOf(seq) { return MEMORIES.filter((m) => m.seq === seq); }
 function seqProgress(seq) { const ms = memsOf(seq); return [ms.filter((m) => synced(m.id)).length, ms.length]; }
-function gateOpen() { return MEMORIES.every((m) => synced(m.id)); }
-function syncPct() { const total = MEMORIES.length + GATE.tickets.length; const n = MEMORIES.filter((m) => synced(m.id)).length + GATE.tickets.filter((t) => S.gate[t.id]).length; return Math.round(n / total * 100); }
+function gateOpen() { return MEMORIES.filter((m) => m.seq <= 1).every((m) => synced(m.id)); }
+function drillKey(m, i) { return m.id + ":" + i; }
+function drillsDone(m) { return (DRILLS[m.id] || []).filter((_, i) => S.drills[drillKey(m, i)]).length; }
+function syncPct() { const nd = Object.values(DRILLS).reduce((a, x) => a + x.length, 0); const total = MEMORIES.length * 3 + GATE.tickets.length + nd; const n = MEMORIES.filter((m) => synced(m.id)).length * 3 + GATE.tickets.filter((t) => S.gate[t.id]).length + Object.keys(S.drills).length; return Math.min(100, Math.round(n / total * 100)); }
 function dueReview(id) { const r = S.review[id]; return r && r.due <= Date.now(); }
 
 function toast(m) { const t = $("toast"); t.textContent = m; t.classList.add("show"); clearTimeout(toast.t); toast.t = setTimeout(() => t.classList.remove("show"), 2600); }
@@ -57,7 +59,7 @@ function renderCorridor() {
 
   const ms = memsOf(seq);
   const items = ms.map((m) => ({ kind: "mem", m }));
-  items.push(seq === 0 ? { kind: "next" } : { kind: "gate" });
+  items.push(seq === 1 ? { kind: "gate" } : { kind: "next", to: seq + 1 });
   const pts = items.map((_, i) => POS[i]);
   let firstOpen = ms.findIndex((m) => !synced(m.id));
   if (firstOpen < 0) firstOpen = ms.length;
@@ -71,7 +73,7 @@ function renderCorridor() {
     const [x, y, s] = pts[i];
     let st, name, tag, due = false;
     if (it.kind === "mem") { st = synced(it.m.id) ? "done" : i === firstOpen ? "current" : "ahead"; name = it.m.name; tag = it.m.tag; due = dueReview(it.m.id); }
-    else if (it.kind === "next") { st = seqProgress(0)[0] === ms.length ? "gate" : "ahead"; name = "Users"; tag = "NEXT SEQUENCE"; }
+    else if (it.kind === "next") { const nq = SEQUENCES[it.to]; st = nq && nq.open && seqProgress(seq)[0] === ms.length ? "gate" : "ahead"; name = nq ? nq.name : "More soon"; tag = nq && nq.open ? "NEXT SEQUENCE" : "COMING SOON"; }
     else { const open = gateOpen(); const done = GATE.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = GATE.name; tag = open ? "TAKEOVER" : "TAKEOVER · LOCKED"; }
     nh += crystal(i, x, y, s, st, name, tag, i === S.selMem, due);
   });
@@ -105,9 +107,12 @@ function crystal(i, x, y, s, st, name, tag, sel, due) {
 function renderDetail(it, ms) {
   const d = $("detail");
   if (it.kind === "next") {
-    const [n, t] = seqProgress(0);
-    d.innerHTML = '<div class="l"><span class="eyebrow">NEXT SEQUENCE</span><h3>Users</h3><p>' + esc(SEQUENCES[1].blurb) + '</p><p class="mutetxt">' + (n === t ? "Connect is fully synced. Step through." : n + " of " + t + " Connect memories synced. You can look ahead, but the Users memories assume you can connect and find commands on your own.") + '</p></div><div class="r"><div class="row"><button class="go" type="button" id="goNext">ENTER THE USERS CORRIDOR</button></div></div>';
-    $("goNext").onclick = () => { S.seqSel = 1; S.selMem = null; save(); renderCorridor(); };
+    const cur = SEQUENCES[S.seqSel], nq = SEQUENCES[it.to];
+    const [n, t] = seqProgress(S.seqSel);
+    if (!nq || !nq.open) { d.innerHTML = '<div class="l"><span class="eyebrow">COMING SOON</span><h3>' + esc(nq ? nq.name : "More") + "</h3><p>" + esc(nq ? nq.blurb : "") + '</p></div><div class="r">' + mixPanel() + "</div>"; bindMix(); return; }
+    d.innerHTML = '<div class="l"><span class="eyebrow">NEXT SEQUENCE</span><h3>' + esc(nq.name) + "</h3><p>" + esc(nq.blurb) + '</p><p class="mutetxt">' + (n === t ? esc(cur.name) + " is fully synced. Step through." : n + " of " + t + " " + esc(cur.name) + " memories synced. You can look ahead, but the next corridor assumes these.") + '</p></div><div class="r"><div class="row"><button class="go" type="button" id="goNext">ENTER ' + esc(nq.name.toUpperCase()) + "</button></div>" + mixPanel() + "</div>";
+    $("goNext").onclick = () => { S.seqSel = it.to; S.selMem = null; save(); renderCorridor(); };
+    bindMix();
     return;
   }
   if (it.kind === "gate") {
@@ -120,12 +125,26 @@ function renderDetail(it, ms) {
   }
   const m = it.m, dn = S.done[m.id] || {};
   d.innerHTML = '<div class="l"><span class="eyebrow">' + esc(m.tag) + " · " + (synced(m.id) ? "SYNCED" : "NOT SYNCED") + (dueReview(m.id) ? " · REVIEW DUE" : "") + "</span><h3>" + esc(m.name) + "</h3><p>" + esc(m.summary) + '</p><div class="codebox">' + esc(m.cheat[0][0]) + "</div></div>" +
-    '<div class="r"><span class="mutetxt" style="letter-spacing:.24em;font-size:11px">ONE MEMORY · FIVE PASSES · ABOUT 8 MINUTES</span><div class="passes">' +
+    '<div class="r"><span class="mutetxt" style="letter-spacing:.24em;font-size:11px">ONE MEMORY · SIX PASSES · ' + (DRILLS[m.id] || []).length + ' PRACTICE TICKETS · ' + drillsDone(m) + ' DONE</span><div class="passes">' +
     PHASES.map(([k, l], i) => '<div class="pass' + (dn[k] ? " done" : "") + '"><b>' + (i + 1) + " · " + l + "</b>" + PASS_TXT[k] + "</div>").join("") +
-    '</div><div class="row"><button class="go" type="button" id="goMem">' + (synced(m.id) ? (dueReview(m.id) ? "REVIEW THIS MEMORY" : "REPLAY MEMORY") : "ENTER MEMORY") + '</button><span class="mutetxt">Double-click a crystal to enter it</span></div></div>';
+    '</div><div class="row"><button class="go" type="button" id="goMem">' + (synced(m.id) ? (dueReview(m.id) ? "REVIEW THIS MEMORY" : "REPLAY MEMORY") : "ENTER MEMORY") + '</button>' + (synced(m.id) ? '<button class="go ghost" type="button" id="goPrac">PRACTICE ONLY</button>' : '<span class="mutetxt">Double-click a crystal to enter it</span>') + "</div>" + mixPanel() + "</div>";
   $("goMem").onclick = () => enterSelected();
+  if (synced(m.id)) $("goPrac").onclick = () => { openMemory(m); setPhase("practice"); };
+  bindMix();
 }
 
+function mixPool() { const out = []; MEMORIES.filter((m) => synced(m.id)).forEach((m) => (DRILLS[m.id] || []).forEach((d, i) => out.push({ m, d, i }))); return out; }
+function mixPanel() { const n = mixPool().length; return '<div class="minicard" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between"><div><h6>DAILY PRACTICE MIX</h6>' + (n ? "10 random tickets from every memory you have synced (" + n + " in the pool). Builds fluency, not just recognition." : "Sync your first memory to unlock the mix.") + '</div><button class="go blue" type="button" id="goMix"' + (n ? "" : " disabled") + ">START MIX</button></div>"; }
+function bindMix() { const b = $("goMix"); if (b && !b.disabled) b.onclick = () => startMix(); }
+function startMix() {
+  const pool = mixPool(); if (!pool.length) return;
+  const pick = []; const used = new Set();
+  const undone = pool.filter((p) => !S.drills[drillKey(p.m, p.i)]);
+  const src = undone.length >= 10 ? undone : pool;
+  while (pick.length < Math.min(10, src.length)) { const k = Math.floor(Math.random() * src.length); if (!used.has(k)) { used.add(k); pick.push(src[k]); } }
+  R.mix = pick; R.pidx = 0; R.mixScore = 0;
+  openMemory(pick[0].m, true); setPhase("practice");
+}
 function enterSelected() {
   const ms = memsOf(S.seqSel);
   if (S.selMem < ms.length) openMemory(ms[S.selMem]);
@@ -133,11 +152,11 @@ function enterSelected() {
   else if (gateOpen()) openGate();
 }
 
-function resetConsole(setup) {
-  R.setup = setup;
-  R.ctx = GRADER.makeCtx(setup);
+function resetConsole(setup, pre) {
+  R.setup = setup; R.pre = pre || null; R.sessHist = [];
+  R.ctx = GRADER.makeCtx(setup, pre);
   $("tout").innerHTML = "";
-  tline(setup === "none" ? "Fresh pwsh window. Nothing is connected yet." : setup === "write" ? "Lab session: connected to Graph with User.ReadWrite.All." : setup === "exo" ? "Lab session: connected to Graph and Exchange." : "Lab session: connected to Graph with User.Read.All.", "n");
+  tline(setup === "none" ? "Fresh pwsh window. Nothing is connected yet." : "Lab session. " + GRADER.describe(setup), "n");
   tstate();
 }
 function tstate() { const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : ""); }
@@ -169,9 +188,10 @@ function lastRun(res, src) {
 
 function errHelp(text) { for (const [re, msg] of ERR_HELP) if (re.test(text)) return msg; return null; }
 
-function openMemory(m) {
+function openMemory(m, keepMix) {
   closeOverlay();
-  R.view = "memory"; R.gate = false; R.mem = m; R.hint = 0; R.watchStep = 0;
+  if (!keepMix) R.mix = null;
+  R.view = "memory"; R.gate = false; R.mem = m; R.hint = 0; R.watchStep = 0; R.pidx = keepMix ? R.pidx : firstOpenDrill(m);
   $("corridor").classList.add("hide"); $("memory").classList.remove("hide");
   $("crumb").textContent = SEQUENCES[m.seq].name + " · " + m.name;
   const dn = doneOf(m.id);
@@ -181,6 +201,7 @@ function openMemory(m) {
   $("cmd").focus();
 }
 
+function firstOpenDrill(m) { const ds = DRILLS[m.id] || []; const i = ds.findIndex((_, k) => !S.drills[drillKey(m, k)]); return i < 0 ? 0 : i; }
 function flowband(flow, label) {
   const n = flow.length;
   let h = '<div class="fbg" aria-hidden="true"></div><div class="fline" aria-hidden="true"></div><span class="flowlabel">' + esc(label) + '</span><span class="lastrun" id="lastrun"></span>';
@@ -197,12 +218,13 @@ function setPhase(p) {
   const m = R.mem, dn = doneOf(m.id);
   $("tabs").innerHTML = PHASES.map(([k, l]) => '<button class="tab' + (k === p ? " on" : "") + (dn[k] ? " done" : "") + '" role="tab" type="button" data-p="' + k + '" aria-selected="' + (k === p) + '">' + l + "</button>").join("");
   $("tabs").querySelectorAll(".tab").forEach((b) => b.onclick = () => setPhase(b.dataset.p));
-  const setup = p === "trace" ? (m.trace.setup || m.setup) : p === "recall" ? m.recall.setup : p === "real" ? "none" : m.setup;
-  resetConsole(setup);
+  const setup = p === "trace" ? (m.trace.setup || m.setup) : p === "recall" ? m.recall.setup : p === "real" ? "none" : p === "practice" ? null : m.setup;
+  if (setup) resetConsole(setup, p === "recall" ? m.recall.pre : p === "trace" ? m.trace.pre : null);
   if (p === "brief") renderBrief(m);
   if (p === "watch") renderWatch(m);
   if (p === "trace") renderTrace(m);
   if (p === "recall") renderRecall(m);
+  if (p === "practice") renderPractice();
   if (p === "real") renderReal(m);
   sidecard(m);
   junie();
@@ -284,7 +306,7 @@ function renderRecall(m) {
   const due = dueReview(m.id) && synced(m.id);
   $("pbody").innerHTML = (due ? '<span class="badge ok">REVIEW · KEEP IT IN MEMORY</span>' : "") + '<h5>New ticket</h5><p class="ask">' + esc(m.recall.ask) + "</p>" +
     '<p class="mutetxt">Type it in the console. Each command runs for real, and Junie checks the result. Explore freely: Get-Command, Get-Help and Get-Member all work.</p>' +
-    '<div class="minicard" style="border-style:dashed"><h6>STARTING STATE</h6>' + ({ none: "Fresh window, nothing connected.", read: "Connected to Graph with User.Read.All only.", write: "Connected to Graph with User.ReadWrite.All.", exo: "Connected to Graph and Exchange." }[m.recall.setup]) + "</div>";
+    '<div class="minicard" style="border-style:dashed"><h6>STARTING STATE</h6>' + esc(GRADER.describe(m.recall.setup)) + "</div>";
   $("cmd").placeholder = "Your turn. No gaps this time.";
   $("cmd").focus();
 }
@@ -300,7 +322,7 @@ function checkRecall(res) {
     junie();
     return;
   }
-  const ok = GRADER.verdict(m.recall.check, m.recall.setup, R.ctx, res);
+  const ok = GRADER.verdict(m.recall.check, m.recall.setup, R.ctx, res, R.sessHist, m.recall.pre);
   if (ok) {
     const first = !doneOf(m.id).recall;
     doneOf(m.id).recall = true;
@@ -308,7 +330,7 @@ function checkRecall(res) {
     save();
     earn(first ? Math.max(8, EARN.recall - R.hint * 6) : 10, (first ? "synced " : "reviewed ") + m.name);
     const nxt = nextMemory(m);
-    synced_overlay("Synchronized", first ? "Memory " + m.name + " is yours. The For Real pass lets you try it on your own tenant, read-only." : "Review done. This one comes back later, spaced further apart.", () => setPhase("real"), "FOR REAL PASS", nxt ? () => openMemory(nxt) : null);
+    synced_overlay("Synchronized", first ? "Memory " + m.name + " is yours. Now practice it: " + (DRILLS[m.id] || []).length + " different tickets, so it sticks." : "Review done. This one comes back later, spaced further apart.", () => setPhase("practice"), "PRACTICE", nxt ? () => openMemory(nxt) : null);
   }
 }
 function nextMemory(m) { const i = MEMORIES.indexOf(m); return MEMORIES[i + 1] && MEMORIES[i + 1].seq === m.seq ? MEMORIES[i + 1] : null; }
@@ -326,6 +348,57 @@ function renderReal(m) {
   $("cmd").placeholder = "This console is the lab. The For Real steps happen in your own Terminal.";
 }
 
+function curDrill() {
+  if (R.mix) { const p = R.mix[R.pidx]; return p ? { m: p.m, d: p.d, i: p.i } : null; }
+  const ds = DRILLS[R.mem.id] || []; return ds[R.pidx] ? { m: R.mem, d: ds[R.pidx], i: R.pidx } : null;
+}
+function renderPractice() {
+  const cd = curDrill();
+  if (!cd) { $("pbody").innerHTML = "<p>No practice tickets for this memory yet.</p>"; return; }
+  const { m, d, i } = cd;
+  if (R.mix && R.mem !== m) { R.mem = m; $("crumb").textContent = "Practice mix · " + m.name; flowband(m.brief.flow, "HOW " + m.name.toUpperCase() + " WORKS"); sidecard(m); }
+  const setup = d.setup || m.recall.setup;
+  resetConsole(setup, d.pre);
+  const list = R.mix ? R.mix.map((p) => ({ done: !!S.drills[drillKey(p.m, p.i)], label: p.m.name })) : (DRILLS[m.id] || []).map((_, k) => ({ done: !!S.drills[drillKey(m, k)], label: "#" + (k + 1) }));
+  const done = !!S.drills[drillKey(m, i)];
+  $("pbody").innerHTML = '<div class="steps">' + list.map((x, k) => "<i" + (x.done ? ' class="on"' : "") + (k === R.pidx ? ' style="outline:1px solid var(--ink);outline-offset:2px"' : "") + "></i>").join("") + "</div>" +
+    "<h5>" + (R.mix ? "Practice mix · " + (R.pidx + 1) + " of " + R.mix.length + " · " + esc(m.name) : "Practice ticket " + (R.pidx + 1) + " of " + list.length) + (done ? ' · <span style="color:var(--blue)">DONE BEFORE</span>' : "") + "</h5>" +
+    '<p class="ask">' + esc(d.q) + "</p>" +
+    '<div class="minicard" style="border-style:dashed"><h6>STARTING STATE</h6>' + esc(GRADER.describe(setup)) + (d.pre ? " Something already happened in this tenant today (see the ticket)." : "") + "</div>" +
+    '<div class="row"><button class="go ghost" type="button" id="pPrev"' + (R.pidx === 0 ? " disabled" : "") + '>PREVIOUS</button><button class="go ghost" type="button" id="pNext">' + (R.pidx >= list.length - 1 ? (R.mix ? "FINISH MIX" : "BACK TO CORRIDOR") : "SKIP / NEXT") + "</button></div>" +
+    '<p class="mutetxt">No gaps, no multiple choice. Junie has one hint and then the answer, which goes to your journal.</p>';
+  $("pPrev").onclick = () => { if (R.pidx > 0) { R.pidx--; R.hint = 0; renderPractice(); junie(); } };
+  $("pNext").onclick = () => advanceDrill();
+  $("cmd").placeholder = "Practice ticket. Type it from memory.";
+  $("cmd").focus();
+}
+function advanceDrill() {
+  const n = R.mix ? R.mix.length : (DRILLS[R.mem.id] || []).length;
+  if (R.pidx >= n - 1) {
+    if (R.mix) { const sc = R.mixScore; R.mix = null; synced_overlay("Mix complete", sc + " of " + n + " tickets solved. Mistakes went to the journal and come back tomorrow.", () => renderCorridor(), "BACK TO THE CORRIDOR"); }
+    else renderCorridor();
+    return;
+  }
+  R.pidx++; R.hint = 0; renderPractice(); junie();
+}
+function checkPractice(res) {
+  const cd = curDrill(); if (!cd) return;
+  const { m, d, i } = cd;
+  const setup = d.setup || m.recall.setup;
+  if (res.error) {
+    $("term").classList.remove("flash"); void $("term").offsetWidth; $("term").classList.add("flash");
+    const help = errHelp(res.error.text ? res.error.text() : "");
+    R.jlineOverride = help ? help : "Read the red text slowly: the first line usually names the problem."; R.jstate = "desync"; junie();
+  }
+  const ok = GRADER.verdict(GRADER.drillCheck(d), setup, R.ctx, res, R.sessHist, d.pre);
+  if (!ok) return;
+  const k = drillKey(m, i), first = !S.drills[k];
+  S.drills[k] = true; if (R.mix) R.mixScore++;
+  save();
+  if (first) earn(R.hint ? 4 : 8, "practice: " + m.name); else toast("Solved again");
+  R.jlineOverride = "Synchronized. Next ticket in a moment."; R.jstate = "ok"; junie();
+  clearTimeout(R.advT); R.advT = setTimeout(() => { if (R.phase === "practice") advanceDrill(); }, 1400);
+}
 function sidecard(m) {
   if (R.gate) { $("sidecard").innerHTML = "<h6>TAKEOVER RULES</h6>Look before you change. Read-only first, write scopes only for the tickets that need them. Changes to people who are not in a ticket count as collateral damage."; return; }
   $("sidecard").innerHTML = "<h6>IN THE CHEAT SHEET</h6>" + m.cheat.map(([c, d]) => '<div style="margin:6px 0"><code style="font-size:12px;word-break:break-word">' + esc(c) + '</code><div class="mutetxt" style="font-size:12px">' + esc(d) + "</div></div>").join("") + '<button class="hbtn" type="button" id="openCheat" style="margin-top:8px">OPEN FULL SHEET</button>';
@@ -337,6 +410,7 @@ function hintsFor() {
   const m = R.mem;
   if (R.phase === "trace") return m.traceHints;
   if (R.phase === "recall") return m.recallHints;
+  if (R.phase === "practice") { const cd = curDrill(); if (!cd) return []; const s = cd.d.sol || [cd.d.out]; return [cd.d.hint, "Answer: " + s.join("   then   ")]; }
   return [];
 }
 function junie() {
@@ -344,9 +418,9 @@ function junie() {
   let cls = "j-idle", step = "STANDING BY", line;
   const m = R.mem;
   if (R.gate) line = "Five tickets, one tenant. Read each one twice: the ticket is what the user says, not always what the fix is.";
-  else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
+  else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", practice: "Different ticket, same skill. If you blank, one hint, then the answer.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
   if (R.hint > 0) { cls = "j-hint"; step = "HINT " + R.hint + " OF " + max; line = hs[R.hint - 1]; }
-  if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : step; R.jlineOverride = null; R.jstate = null; }
+  if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : step; R.jlineOverride = null; R.jstate = null; }
   $("jimg").className = "jimg " + cls;
   $("jstep").textContent = "JUNIE · " + step;
   $("jline").textContent = line;
@@ -433,11 +507,12 @@ $("cmd").addEventListener("keydown", (e) => {
     e.preventDefault();
     const src = inp.value; inp.value = "";
     if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">PS /Users/kaatje&gt; </span>'; $("tout").appendChild(d); return; }
-    R.hist.push(src); R.hpos = R.hist.length;
+    R.hist.push(src); R.hpos = R.hist.length; (R.sessHist = R.sessHist || []).push(src);
     if (/^\s*(cls|clear|clear-host)\s*$/i.test(src)) { $("tout").innerHTML = ""; return; }
     const res = exec(src);
     if (R.gate) { R.gateHist.push(src); checkGate(res); }
     else if (R.phase === "recall") checkRecall(res);
+    else if (R.phase === "practice") checkPractice(res);
     else if (res.error) { const help = errHelp(res.error.text ? res.error.text() : ""); if (help) { R.jlineOverride = help; R.jstate = "desync"; junie(); } }
     return;
   }
@@ -491,6 +566,7 @@ function renderDrawer() {
   }
   const q = $("dsearch").value.trim().toLowerCase();
   let h = '<div class="rules"><b>Golden rules</b><ol><li>Read-only scopes to look, ReadWrite only to change.</li><li>Graph first, then Exchange, in a fresh window on Mac.</li><li>Ask Graph for properties with -Property, or they come back empty.</li><li>-All for anything you count or report.</li><li>Switch values glue on: -AccountEnabled:$false.</li><li>-WhatIf before a change, Get- after it to verify.</li><li>Leaver: block first, then revoke sessions.</li></ol></div>';
+  h += '<div class="row" style="margin-top:12px"><button class="hbtn" type="button" id="dMix">START A PRACTICE MIX</button></div>';
   SEQUENCES.filter((s) => s.open).forEach((s) => {
     const rows = [];
     memsOf(s.id).forEach((m) => m.cheat.forEach(([c, d]) => { if (!q || (c + " " + d + " " + m.name).toLowerCase().includes(q)) rows.push([c, d, m]); }));
@@ -499,6 +575,7 @@ function renderDrawer() {
   });
   h += '<p class="mutetxt" style="margin-top:16px">Click a line to put it in the console, or copy it when you are in the corridor.</p>';
   $("dbody").innerHTML = h;
+  $("dMix").onclick = () => { drawer(false); startMix(); };
   $("dbody").querySelectorAll("[data-c]").forEach((b) => b.onclick = () => {
     const c = b.dataset.c;
     if (R.view === "memory") { $("cmd").value = c; drawer(false); $("cmd").focus(); }
