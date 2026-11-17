@@ -11,11 +11,6 @@ SRC = {
                  "sampleDone": ["vars", "numbers", "types", "strings"]},
         "ask": "What does this print?", "tl": "should print", "key": "pyle-pocket-v1",
     },
-    "poshle-pocket": {
-        "meta": {"id": "poshle-pocket", "name": "Poshle Pocket", "topic": "PowerShell", "href": "poshle-pocket.html", "keys": ["poshle-pocket-v1"],
-                 "sample": {"poshle-pocket-v1": "{\"passed\": {\"cmdlets\": true}}"}, "sampleDone": ["cmdlets"]},
-        "ask": "What does it show?", "tl": "goal", "key": "poshle-pocket-v1",
-    },
 }
 
 

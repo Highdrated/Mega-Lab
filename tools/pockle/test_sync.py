@@ -18,7 +18,6 @@ try:
         laptop.goto(BASE + "labs/pockle.html")
         laptop.evaluate("""() => {
           localStorage.setItem('pyle-pocket-v1', JSON.stringify({xp: 300, passed: {vars: true, numbers: true}, learned: {vars: true, numbers: true}, srs: {}}));
-          localStorage.setItem('poshle-pocket-v1', JSON.stringify({xp: 120, passed: {cmdlets: true}, learned: {cmdlets: true}}));
           localStorage.setItem('pockle.v1', JSON.stringify({xp: 400, streak: 3, last: 20000, off: [], cards: {}, best: 9}));
         }""")
         laptop.goto(BASE + "index.html")
@@ -44,13 +43,10 @@ try:
         phone.click("#msyncOk")
         py = phone.evaluate("JSON.parse(localStorage.getItem('pyle-pocket-v1'))")
         pk = phone.evaluate("JSON.parse(localStorage.getItem('pockle.v1'))")
-        ps = phone.evaluate("JSON.parse(localStorage.getItem('poshle-pocket-v1'))")
         print("pyle passed", sorted(py["passed"]), "xp", py["xp"])
         print("pockle xp", pk["xp"], "best", pk["best"], "off", pk["off"], "cards", list(pk["cards"]))
-        print("poshle passed", ps and sorted(ps["passed"]))
         if sorted(py["passed"]) != ["numbers", "strings", "vars"] or py["xp"] != 300: errs.append("pyle merge wrong")
         if pk["best"] != 12 or "x:1" not in pk["cards"] or pk["xp"] != 400: errs.append("pockle merge wrong")
-        if not ps or not ps["passed"].get("cmdlets"): errs.append("poshle not copied")
         if "#sync" in phone.url: errs.append("hash not cleared")
         print("pockle cards now:", phone.inner_text("#welcomeTxt")[:80])
 

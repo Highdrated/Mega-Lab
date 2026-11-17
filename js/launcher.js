@@ -532,7 +532,6 @@ function dayKey(off, pad) {
 }
 function lsParse(key) { try { return JSON.parse(lsGet(key)); } catch (e) { return null; } }
 const WEEK = 7 * 864e5;
-const POSHLE_CASES = ["alladds", "vanished", "graphlogin", "stuckmail", "skus", "leaverlic", "forward", "room"];
 const GIT_CASES = ["detached", "secret", "rejected", "ignored", "markers"];
 const SHELLE_CASES = ["port", "disk", "exec", "sshkey", "restart"];
 
@@ -559,9 +558,8 @@ function todayItems() {
     const n = (py.missed || []).filter((m) => (m[3] || dayKey(0, true)) <= dayKey(0, true)).length;
     if (n) add("pyle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 10);
   }
-  const ps = lsParse("poshle.v1");
   const sh = lsParse("shelle.v1");
-  for (const [lab, st] of [["poshle", ps], ["shelle", sh]]) {
+  for (const [lab, st] of [["shelle", sh]]) {
     if (!st || !st.steps) continue;
     const n = Object.entries(st.steps).filter(([k, r]) => r && r.miss > 0 && !/^(gym|start):/.test(k) && (r.clean || 0) < r.miss).length;
     if (n) add(lab, Math.min(n, 10) + (n === 1 ? " weak spot" : " weak spots"), "review", "weak", 9);
@@ -613,7 +611,6 @@ function todayItems() {
   if (py && py.kata && py.kata.last !== dayKey(0, true)) add("pyle", "Daily kata" + (py.kata.streak ? " · streak " + py.kata.streak : ""), "daily", "kata", 5);
 
   const DET = [
-    { lab: "poshle", ids: POSHLE_CASES, rec: (ps && ps.cases) || {} },
     { lab: "git-lab", ids: GIT_CASES, rec: lsParse("gitlab.cases") || {} },
     { lab: "shelle", ids: SHELLE_CASES, rec: (sh && sh.cases) || {} },
   ].filter((d) => labs.some((l) => l.id === d.lab));

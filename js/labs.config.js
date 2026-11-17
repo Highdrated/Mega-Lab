@@ -120,36 +120,6 @@ const LABS_CONFIG = [
     glyph: '<rect x="2.5" y="3" width="11" height="10" rx="1"/><path d="M2.5 6.5h11M2.5 9.75h11M6.5 3v10"/>'
   },
   {
-    id: "poshle",
-    name: "Poshle",
-    tag: "Shell",
-    sub: "powershell",
-    path: "labs/poshle.html",
-    ring: "ring-mid",
-    angle: 77,
-    glyph: '<rect x="1.5" y="2.5" width="13" height="11" rx="1.5"/><path d="M4 6.5l2.5 1.8L4 10.1M8 10.5h4"/>'
-  },
-  {
-    id: "poshle-pocket",
-    name: "Poshle Pocket",
-    tag: "Shell",
-    sub: "powershell · tap only",
-    path: "labs/poshle-pocket.html",
-    ring: "ring-mid",
-    angle: 122,
-    glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 6l1.5 1.5L6 9M8.5 9.5h1.5"/>'
-  },
-  {
-    id: "poshle-forge",
-    name: "Poshle Forge",
-    tag: "Shell",
-    sub: "powershell · error clinic · katas",
-    path: "labs/poshle-forge.html",
-    ring: "ring-mid",
-    angle: 167,
-    glyph: '<path d="M2 12h12M4 12V9h8v3M6 9V6l2-3 2 3v3"/>'
-  },
-  {
     id: "shelle",
     name: "Shelle",
     tag: "Shell",

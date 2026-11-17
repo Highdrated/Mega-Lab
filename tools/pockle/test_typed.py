@@ -44,7 +44,7 @@ try:
         pg.evaluate("localStorage.clear()")
         pg.evaluate("""() => {
           for (const b of BANKS) for (const [k, v] of Object.entries(b.sample)) localStorage.setItem(k, v);
-          for (const id of ['pyle-pocket', 'poshle-pocket']) {
+          for (const id of ['pyle-pocket']) {
             const b = BANKS.find(x => x.id === id), passed = {};
             b.units.forEach(u => passed[u.id] = true);
             localStorage.setItem(b.keys[0], JSON.stringify({ passed }));
@@ -52,7 +52,7 @@ try:
         }""")
         pg.reload()
         pg.screenshot(path=f"{SHOTS}/home.png", full_page=True)
-        typed = pg.evaluate("POOL.filter(c => c.lab === 'pyle-pocket' || c.lab === 'poshle-pocket').length")
+        typed = pg.evaluate("POOL.filter(c => c.lab === 'pyle-pocket').length")
         ids = pg.evaluate("POOL.length === new Set(POOL.map(c => c.id)).size")
         print("pool", pg.evaluate("POOL.length"), "pocket cards", typed, "unique ids", ids)
         if not ids:
