@@ -28,7 +28,21 @@ button { font: inherit; color: inherit; background: none; border: 0; cursor: poi
 
 .stage { position: absolute; left: 50%; top: 50%; width: max(100vw, calc(100vh * 1408 / 768)); aspect-ratio: 1408 / 768; transform: translate(-50%, -50%); }
 .cam { position: absolute; inset: 0; transform-origin: 0 0; transition: transform 1s cubic-bezier(.45, 0, .2, 1); }
-.room { position: absolute; inset: 0; background: url(img/junle-room/room.png) center / 100% 100%; }
+.room { position: absolute; inset: 0; background: url(img/junle-room/room@2x.webp) center / 100% 100%; }
+.dof { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1s; background: url(img/junle-room/room@2x.webp) center / 100% 100%; filter: blur(.22vw) brightness(.62) saturate(.85);
+  -webkit-mask: linear-gradient(90deg, #000 30.5%, transparent 33.6%, transparent 66.4%, #000 69.5%), linear-gradient(180deg, #000 36%, transparent 40%, transparent 72.5%, #000 76.5%);
+  mask: linear-gradient(90deg, #000 30.5%, transparent 33.6%, transparent 66.4%, #000 69.5%), linear-gradient(180deg, #000 36%, transparent 40%, transparent 72.5%, #000 76.5%); }
+body.v-focus .dof, body.v-manual .dof { opacity: 1; }
+#left, #right, #small { transition: filter 1s; }
+body.v-focus #left, body.v-focus #right, body.v-focus #small { filter: blur(.12vw) brightness(.55); }
+.flame { position: absolute; pointer-events: none; mix-blend-mode: screen; border-radius: 50%; background: radial-gradient(closest-side, rgba(255, 190, 110, .42), rgba(255, 150, 60, .12) 55%, transparent); animation: flick 3.1s infinite; }
+.flame.f2 { animation-duration: 2.3s; animation-delay: -.8s; }
+.flame.f3 { animation-duration: 3.7s; animation-delay: -1.9s; }
+@keyframes flick { 0%, 100% { opacity: .75; transform: scale(1); } 12% { opacity: .9; transform: scale(1.04) translateY(-1%); } 27% { opacity: .62; transform: scale(.97); } 41% { opacity: .85; } 58% { opacity: .7; transform: scale(1.02); } 73% { opacity: .95; transform: scale(1.05) translateY(-1.5%); } 86% { opacity: .66; } }
+#motes { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.mote { position: absolute; width: .18%; aspect-ratio: 1; border-radius: 50%; background: rgba(225, 215, 190, .55); pointer-events: none; mix-blend-mode: screen; filter: blur(.5px); opacity: 0; animation: drift linear infinite; }
+@keyframes drift { 0% { opacity: 0; transform: translate(0, 0); } 15% { opacity: var(--o, .6); } 85% { opacity: var(--o, .6); } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)); } }
+@media (prefers-reduced-motion: reduce) { .flame, .mote { animation: none; } .mote { display: none; } }
 .shade { position: absolute; inset: 0; pointer-events: none; opacity: 0; transition: opacity 1s; background: radial-gradient(ellipse 46% 30% at 50% 62%, transparent 60%, rgba(3, 4, 5, .55) 100%); }
 body.v-sit .shade, body.v-focus .shade, body.v-manual .shade { opacity: 1; }
 
@@ -284,7 +298,7 @@ body.v-focus .hot { pointer-events: none; }
 
 #cu { position: fixed; inset: 0; z-index: 20; overflow: hidden; background: #050607; opacity: 0; pointer-events: none; transition: opacity .45s; touch-action: none; }
 #cu.on { opacity: 1; pointer-events: auto; }
-.cu-bg { position: absolute; background: url(img/junle-room/rack-front.png) center / 100% 100%; filter: brightness(.62) saturate(.9); transition: filter .4s; }
+.cu-bg { position: absolute; background: url(img/junle-room/rack-front@2x.webp) center / 100% 100%; filter: brightness(.62) saturate(.9); transition: filter .4s; }
 #cu.rear .cu-bg { transform: scaleX(-1); filter: brightness(.34) saturate(.6) blur(1px); }
 .cu-panel { position: absolute; }
 .cu-panel svg { width: 100%; height: 100%; display: block; overflow: visible; }
@@ -336,6 +350,12 @@ body.cur, body.cur * { cursor: none !important; }
 <div class="stage">
   <div class="cam" id="cam">
     <div class="room"></div>
+    <div class="flame" style="left:33.4%;top:68.5%;width:6%;height:11%"></div>
+    <div class="flame f2" style="left:18.6%;top:24.5%;width:4.6%;height:10%"></div>
+    <div class="flame f3" style="left:10.3%;top:15.5%;width:3%;height:6%"></div>
+    <div class="flame f2" style="left:4.4%;top:45.5%;width:4%;height:7%"></div>
+    <div id="motes"></div>
+    <div class="dof"></div>
     <div class="sky" id="sky-wx"><div class="wx" id="wx-dark"></div><canvas class="wx" id="wx-rain"></canvas><div class="wx" id="wx-mist"></div><div class="wx" id="wx-bolt"></div></div>
     <div class="sky" id="sky"></div>
     <canvas id="leds"></canvas>
@@ -2124,6 +2144,24 @@ function quadMatrix(w, hh, q) {
   for (let i = 0; i < 9; i++) t[i] /= t[8];
   return `matrix3d(${[t[0], t[3], 0, t[6], t[1], t[4], 0, t[7], 0, 0, 1, 0, t[2], t[5], 0, t[8]].join(",")})`;
 }
+(function motes() {
+  const box = document.getElementById("motes");
+  if (!box || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (let i = 0; i < 26; i++) {
+    const m = document.createElement("i");
+    m.className = "mote";
+    const win = i < 16;
+    const x = win ? 39 + Math.random() * 22 : 25 + Math.random() * 50, y = win ? 8 + Math.random() * 40 : 45 + Math.random() * 30;
+    m.style.left = x + "%";
+    m.style.top = y + "%";
+    m.style.setProperty("--dx", (Math.random() * 6 - 3) + "vw");
+    m.style.setProperty("--dy", (Math.random() * 4 - 1) + "vw");
+    m.style.setProperty("--o", (.25 + Math.random() * .5).toFixed(2));
+    m.style.animationDuration = (14 + Math.random() * 16) + "s";
+    m.style.animationDelay = -(Math.random() * 30) + "s";
+    box.appendChild(m);
+  }
+})();
 function placeScreens() {
   const stage = $(".stage");
   const sw = stage.offsetWidth, sh = stage.offsetHeight;
