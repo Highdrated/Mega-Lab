@@ -2094,6 +2094,8 @@ function bannerFor(dev){
       `(every real session authenticates first — the lab auto-logs you in on racked gear; brand-new boxes make you do it for real)\n` +
       `Tip: type ? at any point — it lists what can come next, exactly like the real CLI.`;
   if(dev.type === "isp") return `--- upstream provider link: ${dev.name} (read-only) ---`;
+  if(dev.type === "host" && hostOs(dev) === "windows") return `--- ${dev.name} — Windows command prompt (type help for commands) ---`;
+  if(dev.type === "host" && hostOs(dev) === "macos") return `--- ${dev.name} — macOS terminal (type help for commands) ---`;
   return `--- ${dev.name} — linux shell (type ? for commands) ---`;
 }
 const openCliOrig_marker = true;

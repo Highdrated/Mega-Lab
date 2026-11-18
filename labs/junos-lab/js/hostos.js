@@ -105,6 +105,7 @@ function winDhcp(dev){
   return lines("out", winIpconfig(dev, false));
 }
 function winExec(dev, cmd){
+  cmd = cmd.replace(/^([A-Za-z][\w-]*)\/(?=\S)/, "$1 /");
   const parts = cmd.split(/\s+/);
   const c = parts[0].toLowerCase();
   const low = cmd.toLowerCase();

@@ -4141,6 +4141,8 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(/169\.254/.test(cli(w, "ipconfig")), "T77 Windows with no lease shows an APIPA address");
   ok(/IPv4 Address[ .]*: 10\.0\.10\.1\d\d/.test(cli(w, "ipconfig /renew")) && devices[w].cfg.viaDhcp, "T77 ipconfig /renew takes a lease");
   ok(/DHCP Enabled[ .]*: Yes/.test(cli(w, "ipconfig /all")), "T77 ipconfig /all shows DHCP state");
+  cli(w, "ipconfig /release");
+  ok(/IPv4 Address[ .]*: 10\.0\.10\.1\d\d/.test(cli(w, "ipconfig/renew")) && /DHCP Enabled/.test(cli(w, "IPCONFIG/ALL")), "T77 Windows accepts a switch with no space, and any letter case");
   cli(w, 'netsh interface ip set address "Ethernet" static 10.0.10.50 255.255.255.0 10.0.10.1');
   ok(devices[w].cfg.ip === "10.0.10.50" && devices[w].cfg.bits === 24 && devices[w].cfg.gw === "10.0.10.1" && !devices[w].cfg.viaDhcp, "T77 netsh sets a static address");
   ok(pingOk(devices[w], "10.0.10.1"), "T77 Windows PC pings its gateway");
