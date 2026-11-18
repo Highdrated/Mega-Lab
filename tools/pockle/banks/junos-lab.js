@@ -100,7 +100,7 @@ POCKET.register({
       var scen = this.scen, out = [];
       Object.keys(log).forEach(function (sid) {
         var h = log[sid];
-        if (!h || h.clean || !(h.hints > 0) || !scen[sid]) return;
+        if (!h || h.clean || !(h.hints > 0 || h.errs >= 5) || !scen[sid]) return;
         scen[sid].forEach(function (u) { out.push({ u: u, at: h.at || 0 }); });
       });
       return out;

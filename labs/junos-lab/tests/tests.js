@@ -4416,7 +4416,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   const board = document.getElementById("scen-board");
   const item27 = () => board.querySelectorAll(".sb-item").find(b2 => /^27\./.test(b2.title));
   ok(item27().className.includes("redo") && item27().querySelector(".sb-tick").textContent === "redo", "T80 the board marks the scenario redo");
-  ok(/1 to redo without hints/.test(board.querySelector(".sb-site").querySelector(".sb-count").textContent), "T80 the band counts scenarios to redo");
+  ok(/1 to redo clean/.test(board.querySelector(".sb-site").querySelector(".sb-count").textContent), "T80 the band counts scenarios to redo");
 
   wipeLab(); scen("site-new-desk").setup(); rebuildAllDerived(); hintRunReset(); evalChecks();
   ok(document.getElementById("hint-list").children.length === 0 && hintIndex === 0, "T80 loading the setup again starts a fresh, hint-free run");
@@ -4425,6 +4425,17 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   setScenBoard(true);
   ok(item27().querySelector(".sb-tick").textContent === "done" && !item27().className.includes("redo"), "T80 the board shows it done after the clean run");
 
+  HINTLOG = {}; pick("desk-dhcp"); wipeLab(); scen("desk-dhcp").setup(); rebuildAllDerived(); hintRunReset();
+  document.getElementById("hint-btn").onclick();
+  ok(scenStruggled(HINTLOG["desk-dhcp"]) && HINTLOG["desk-dhcp"].hints === 1, "T80 a hint is logged the moment it is opened, before the scenario is finished");
+  HINTLOG = {}; hintRunReset();
+  const wd = byName("win-desk");
+  for(let i = 0; i < 4; i++) runCliCommand(wd, "dhclient eth0");
+  runCliCommand(wd, "ping 10.0.10.1");
+  ok(!HINTLOG["desk-dhcp"], "T80 four rejected commands and a failed ping do not flag a run");
+  runCliCommand(wd, "ifconfig");
+  ok(scenStruggled(HINTLOG["desk-dhcp"]) && HINTLOG["desk-dhcp"].errs === 5 && HINTLOG["desk-dhcp"].hints === 0, "T80 five rejected commands flag the run even with no hints");
+  HINTLOG = {}; hintRunReset();
   pick("colo-no-internet"); wipeLab(); scen("colo-no-internet").setup(); rebuildAllDerived(); renderScenarioMeta();
   ok(/start here/i.test(tour.querySelector(".tour-head").textContent) && tour.querySelectorAll(".tour-row").length === 1 &&
      /could be the cause/.test(tour.querySelector(".tour-note").textContent) && /edge-rtr/.test(tour.querySelector(".tour-note").textContent),

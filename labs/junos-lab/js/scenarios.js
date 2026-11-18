@@ -1579,7 +1579,7 @@ function renderScenBoard(){
     meter.appendChild(fill);
     rail.appendChild(meter);
     const redoN = all.filter(s => scenDone(s) && scenNeedsRedo(s)).length;
-    rail.appendChild(sbEl("div", "sb-count", doneN + " of " + all.length + " done" + (redoN ? ", " + redoN + " to redo without hints" : "")));
+    rail.appendChild(sbEl("div", "sb-count", doneN + " of " + all.length + " done" + (redoN ? ", " + redoN + " to redo clean" : "")));
     row.appendChild(rail);
     const cols = sbEl("div", "sb-cols" + (band.groups.length === 1 ? " sb-flat" : ""));
     band.groups.forEach(gi => {
@@ -1595,7 +1595,7 @@ function renderScenBoard(){
         it.appendChild(sbEl("span", "sb-num", m ? m[1] : ""));
         it.appendChild(sbEl("span", "sb-name", m ? m[2] : s.title));
         it.appendChild(sbEl("span", "sb-tick", redo ? "redo" : (scenDone(s) ? "done" : "")));
-        it.title = s.title + (redo ? " (finished with " + HINTLOG[s.id].hints + " hint" + (HINTLOG[s.id].hints === 1 ? "" : "s") + ": redo it without hints)" : "");
+        it.title = s.title + (redo ? " (finished with " + (HINTLOG[s.id].hints || 0) + " hint" + (HINTLOG[s.id].hints === 1 ? "" : "s") + " and " + (HINTLOG[s.id].errs || 0) + " rejected command" + (HINTLOG[s.id].errs === 1 ? "" : "s") + ": redo it clean)" : "");
         it.onclick = () => { scenBoardOpen = false; try{ localStorage.setItem("junoslab-scen-board", "closed"); }catch(e){} pickScenario(i); };
         list.appendChild(it);
       });
@@ -1753,22 +1753,51 @@ let prepHandsFired = null;
 const LS_HINTLOG = "junoslab-hintlog";
 let HINTLOG = {};
 try{ HINTLOG = JSON.parse(localStorage.getItem(LS_HINTLOG) || "{}") || {}; }catch(e){ HINTLOG = {}; }
-let hintReveals = 0, hintRunLogged = null;
+let hintReveals = 0, hintRunLogged = null, runErrs = 0;
+const RUN_ERR_LIMIT = 5;
+const RUN_ERR_RE = /syntax error|unknown command|not recognized|command not found|missing argument|statement is incomplete|usage:/i;
 function hintLogSave(){ try{ localStorage.setItem(LS_HINTLOG, JSON.stringify(HINTLOG)); }catch(e){} }
 function hintRunReset(){
-  hintIndex = 0; hintReveals = 0; hintRunLogged = null;
+  hintIndex = 0; hintReveals = 0; hintRunLogged = null; runErrs = 0;
   const list = document.getElementById("hint-list");
   if(list) list.innerHTML = "";
   resetHintBtn();
 }
 function hintLogRecord(id){
   const prev = HINTLOG[id] || { runs: 0, clean: false };
-  const rec = { runs: (prev.runs || 0) + 1, clean: !!prev.clean, hints: hintIndex, reveals: hintReveals, at: Date.now() };
-  if(hintIndex === 0) rec.clean = true;
+  const rec = { runs: (prev.runs || 0) + 1, clean: !!prev.clean, hints: hintIndex, reveals: hintReveals, errs: runErrs, at: Date.now() };
+  if(hintIndex === 0 && runErrs < RUN_ERR_LIMIT) rec.clean = true;
   HINTLOG[id] = rec;
   hintLogSave();
 }
-function scenNeedsRedo(s){ const h = HINTLOG[s.id]; return !!(h && !h.clean && h.hints > 0); }
+function hintLogTouch(){
+  if(currentScenario.isTicket || currentScenario.isContract || SCENARIOS.indexOf(currentScenario) < 0) return;
+  if(hintIndex === 0 && runErrs < RUN_ERR_LIMIT) return;
+  const id = currentScenario.id;
+  const prev = HINTLOG[id] || { runs: 0, clean: false };
+  if(prev.clean) return;
+  prev.hints = Math.max(prev.hints || 0, hintIndex);
+  prev.errs = Math.max(prev.errs || 0, runErrs);
+  prev.at = Date.now();
+  HINTLOG[id] = prev;
+  hintLogSave();
+}
+function scenStruggled(h){ return !!(h && !h.clean && (h.hints > 0 || (h.errs || 0) >= RUN_ERR_LIMIT)); }
+function scenNeedsRedo(s){ return scenStruggled(HINTLOG[s.id]); }
+(function(){
+  if(typeof runCliCommand !== "function") return;
+  const orig = runCliCommand;
+  runCliCommand = function(dev, raw, masked){
+    const r = orig.apply(this, arguments);
+    try{
+      if(String(raw || "").trim() && !masked && Array.isArray(r) && r.some(l => l && l.cls === "err" && RUN_ERR_RE.test(String(l.text || "")))){
+        runErrs++;
+        hintLogTouch();
+      }
+    }catch(e){}
+    return r;
+  };
+})();
 function scenRedoList(){ return SCENARIOS.filter(s => scenDone(s) && scenNeedsRedo(s)); }
 scenSelect.onchange = () => pickScenario(parseInt(scenSelect.value, 10));
 scenGroupSelect.onchange = () => {
@@ -1833,11 +1862,12 @@ document.getElementById("hint-btn").onclick = () => {
   if(hintIndex === 0 && SCENARIOS.indexOf(currentScenario) >= 0){
     const note = document.createElement("div");
     note.className = "hint-note";
-    note.textContent = "Hints are fine. This run is logged as a hinted run, and the scenario comes back on the board as redo until you finish it once without hints.";
+    note.textContent = "Hints are fine. This run is logged as a hinted run. The scenario shows as redo on the board, and its topics come up first in Pockle, until you finish it once without hints.";
     document.getElementById("hint-list").appendChild(note);
   }
   document.getElementById("hint-list").appendChild(div);
   hintIndex++;
+  hintLogTouch();
   if(hintIndex >= currentScenario.hints.length){
     const b = document.getElementById("hint-btn");
     b.textContent = "No more hints — you've got everything";
