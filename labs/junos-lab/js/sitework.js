@@ -7,7 +7,7 @@ function siteRole(id, role){ devices[id].role = role; return id; }
 function siteHost(name, x, y){
   const h = makeHost(x, y);
   devices[h].name = name;
-  return siteRole(h, "Windows PC");
+  return siteRole(h, "Linux PC");
 }
 function siteServer(name, x, y, role){
   const s = makeServer(x, y);

@@ -4098,7 +4098,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   protoJumpToScenario("site-warehouse");
   ok(currentScenario.id === "site-warehouse" && scenGroupShown === SITE_L4, "T76 jumping from a guide lands in the right group");
   wipeLab(); scen("site-rack-extension").setup();
-  ok(byName("fileserver-1").role === "Synology NAS · file share" && byName("core-sw").role === "Juniper EX4300 · core" && byName("pc-1").role === "Windows PC",
+  ok(byName("fileserver-1").role === "Synology NAS · file share" && byName("core-sw").role === "Juniper EX4300 · core" && byName("pc-1").role === "Linux PC",
     "T76 site devices carry a make-and-purpose label");
   ok(siteNeighbor("srv-sw", "ge-0/0/7").role === "Juniper EX2300 · new", "T76 a factory-fresh switch is labelled as new");
   const snap = serializeLab(); loadLab(JSON.parse(JSON.stringify(snap)));
