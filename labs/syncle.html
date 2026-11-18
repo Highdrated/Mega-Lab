@@ -235,6 +235,33 @@ main{flex:1;min-height:0;position:relative}
 .breakalert p{font-size:13px;line-height:1.5;margin:0 0 10px;color:#2b3440}
 @keyframes brk{0%,100%{box-shadow:0 10px 30px rgba(17,22,29,.12)}50%{box-shadow:0 10px 30px rgba(192,57,43,.22)}}
 @media (prefers-reduced-motion:reduce){.breakalert{animation:none}}
+.win.code{background:#151b24;color:#d7deea}
+.cbar{background:#1b2230;border-bottom:1px solid #263041;color:#d7deea}
+.cbar .wt{color:#8fa0b8}
+.cbar .wb{background:#243045;border-color:#33425b;color:#d7deea}
+.cbar .wb.run{background:#2a63d4;border-color:#2a63d4;color:#fff}
+.cbody{flex:1;display:flex;min-height:0}
+.ctree{width:190px;flex:none;background:#121821;border-right:1px solid #222c3b;padding:8px 6px;display:flex;flex-direction:column;gap:2px;overflow:auto;font-size:12.5px}
+.chead{display:flex;justify-content:space-between;align-items:center;font-size:10px;letter-spacing:.18em;color:#7d8ca3;padding:2px 6px}
+.chead button{background:none;border:1px solid #33425b;color:#c6d2e4;font-size:11px;padding:1px 6px;border-radius:4px;cursor:pointer;letter-spacing:0}
+.ctree small{color:#7d8ca3;padding:2px 6px 6px;font-family:var(--mono);font-size:11px}
+.ctree input{width:100%;background:#0d1219;border:1px solid #2a63d4;color:#fff;font:12px var(--mono);padding:4px 6px;border-radius:4px;margin-bottom:4px}
+#cdTree button{display:block;width:100%;text-align:left;background:none;border:0;color:#c6d2e4;padding:3px 8px;border-radius:4px;cursor:pointer;font-family:var(--mono);font-size:12px}
+#cdTree button.d{color:#8fb7ff}
+#cdTree button.on{background:#243045}
+#cdTree button:hover{background:#1d2738}
+.cmain{flex:1;display:flex;flex-direction:column;min-width:0}
+.cpath{flex:none;font:11px var(--mono);color:#7d8ca3;padding:5px 12px;border-bottom:1px solid #222c3b}
+.ced{flex:1;display:flex;min-height:0;font:13px/1.55 var(--mono)}
+.cgut{flex:none;margin:0;padding:10px 8px 10px 12px;text-align:right;color:#4d5b72;overflow:hidden;user-select:none;font:inherit;min-width:34px}
+.cwrap{position:relative;flex:1;min-width:0}
+.chl,.cwrap textarea{position:absolute;inset:0;margin:0;padding:10px 12px;font:inherit;white-space:pre;tab-size:4;overflow:auto;border:0}
+.chl{color:#d7deea;pointer-events:none}
+.cwrap textarea{background:transparent;color:transparent;caret-color:#fff;resize:none;outline:none}
+.cwrap textarea::selection{background:rgba(111,162,255,.3)}
+.hc{color:#6f9b6f}.hs{color:#e0b47a}.hv{color:#8fd0ff}.hk{color:#f0d77a}.hw{color:#c99cf0}.hp{color:#9aa8bd}.ht{color:#6fd6c5}
+.cstat{flex:none;display:flex;gap:16px;align-items:center;padding:3px 12px;background:#2a63d4;color:#fff;font:11px var(--mono)}
+.cdprob.ok{color:#d9ffe5}.cdprob.bad{color:#ffe0dc;font-weight:600}
 .tdesk{margin-left:12px;background:none;border:1px solid #2c394d;color:#9fb1c8;font:inherit;font-size:10px;letter-spacing:.2em;padding:4px 8px;cursor:pointer}
 .tdesk:hover{color:#fff;border-color:#6fa2ff}
 .thead{align-items:center}
@@ -344,10 +371,19 @@ main{flex:1;min-height:0;position:relative}
           <div class="wbar"><span class="tl r" role="button" aria-label="Close"></span><span class="tl y"></span><span class="tl g"></span><b>TextEdit</b><span class="wt" id="tTitle"></span></div>
           <pre class="tbody" id="tBody"></pre>
         </div>
+        <div class="win code hide" id="w-code" style="left:120px;top:24px;width:860px;height:520px" role="dialog" aria-label="Code editor">
+          <div class="wbar cbar"><span class="tl r" role="button" aria-label="Close"></span><span class="tl y"></span><span class="tl g"></span><b>Code</b><span class="wt" id="cdTitle"></span><span class="grow"></span><button class="wb" id="cdSave" type="button">Save  Cmd+S</button><button class="wb run" id="cdRun" type="button">Run in terminal</button></div>
+          <div class="cbody">
+            <nav class="ctree"><div class="chead"><span>EXPLORER</span><button type="button" id="cdNew" title="New file">+ file</button></div><small id="cdDir"></small><div class="hide" id="cdNewRow"><input id="cdNewName" placeholder="Name.ps1, then Enter" spellcheck="false" aria-label="New file name"></div><div id="cdTree"></div></nav>
+            <div class="cmain"><div class="cpath" id="cdPath"></div><div class="ced"><pre class="cgut" id="cdGut" aria-hidden="true">1</pre><div class="cwrap"><pre class="chl" id="cdHl" aria-hidden="true"></pre><textarea id="cdArea" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="Script editor"></textarea></div></div></div>
+          </div>
+          <div class="cstat"><span>PowerShell</span><span id="cdPos">Ln 1, Col 1</span><span class="grow"></span><span class="cdprob" id="cdProb"></span></div>
+        </div>
         <nav class="dock" aria-label="Dock">
           <button type="button" id="dockTerm" title="Terminal (back to the lab)"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="2" y="4" width="36" height="32" rx="7" fill="#11161d"/><path d="M10 15l6 5-6 5M19 26h10" stroke="#6fa2ff" stroke-width="2.4" fill="none"/></svg><span>Terminal</span></button>
           <button type="button" id="dockFinder" title="Finder"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="2" y="4" width="36" height="32" rx="7" fill="#5aa1ef"/><path d="M20 4v32" stroke="#fff" stroke-width="1.4"/><circle cx="13" cy="16" r="1.6" fill="#11161d"/><circle cx="27" cy="16" r="1.6" fill="#11161d"/><path d="M12 25q8 5 16 0" stroke="#11161d" stroke-width="1.6" fill="none"/></svg><span>Finder</span></button>
           <button type="button" id="dockExcel" title="Excel (newest CSV)"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="2" y="4" width="36" height="32" rx="7" fill="#1f7a4c"/><path d="M13 14l14 12M27 14L13 26" stroke="#fff" stroke-width="2.6"/></svg><span>Excel</span></button>
+          <button type="button" id="dockCode" title="Code"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="2" y="4" width="36" height="32" rx="7" fill="#1e2b40"/><path d="M14 14l-6 6 6 6M26 14l6 6-6 6M22 12l-4 16" stroke="#7fb0ff" stroke-width="2.2" fill="none"/></svg><span>Code</span></button>
           <button type="button" id="dockText" title="TextEdit"><svg viewBox="0 0 40 40" width="40" height="40" aria-hidden="true"><rect x="6" y="4" width="28" height="32" rx="4" fill="#fff" stroke="#c6ced8"/><path d="M11 13h18M11 18h18M11 23h12" stroke="#9aa4b2" stroke-width="1.6"/></svg><span>TextEdit</span></button>
         </nav>
       </div>
@@ -361,7 +397,7 @@ main{flex:1;min-height:0;position:relative}
         <div class="pbody" id="pbody"></div>
       </div>
       <div class="term" id="term">
-        <div class="thead"><span>CONSOLE · PWSH 7.4 · MACOS</span><span class="grow"></span><span id="tstate">NOT CONNECTED</span><button class="tdesk" id="tDesk" type="button">FILES ON THIS MAC</button></div>
+        <div class="thead"><span>CONSOLE · PWSH 7.4 · MACOS</span><span class="grow"></span><span id="tstate">NOT CONNECTED</span><button class="tdesk" id="tDesk" type="button">FILES</button><button class="tdesk" id="tCode" type="button">CODE</button></div>
         <div class="tout" id="tout" aria-live="polite"></div>
         <div class="tmenu hide" id="tmenu" aria-hidden="true"></div>
         <div class="tin" id="tin"><span class="p" id="tprompt">PS /Users/kaatje&gt;</span><div class="tfield"><div class="tghost" id="tghost" aria-hidden="true"></div><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="PowerShell command"></div></div>
@@ -686,11 +722,14 @@ class Parser {
       if (this.peek() !== "{") this.err("Missing function body in function declaration.");
       this.i++;
       this.ws(true);
+      let cb = null;
+      const cbm = /^\[CmdletBinding\(([^)]*)\)\]\s*/i.exec(this.s.slice(this.i));
+      if (cbm) { cb = cbm[1]; this.i += cbm[0].length; this.ws(true); }
       if (/^param\s*\(/i.test(this.s.slice(this.i))) { this.i = this.s.indexOf("(", this.i) + 1; params = this.paramList(); }
       const body = this.script("}");
       if (this.peek() !== "}") this.err("Missing closing '}' in statement block or type definition.");
       this.i++;
-      return { t: "function", name: m[0], params, body, src: this.s.slice(start, this.i) };
+      return { t: "function", name: m[0], params, body, cb, src: this.s.slice(start, this.i) };
     }
     if (this.kw("foreach")) {
       this.expect("(", "Missing opening '(' after keyword 'foreach'.");
@@ -731,6 +770,9 @@ class Parser {
       }
       return { t: "if", arms, els };
     }
+    if (this.kw("continue")) return { t: "loopctl", k: "continue" };
+    if (this.kw("break")) return { t: "loopctl", k: "break" };
+    if (this.kw("throw")) { this.ws(false); const c = this.peek(); const val = c === undefined || c === "\n" || c === ";" || c === "}" ? null : this.pipeline(); return { t: "throw", val }; }
     if (this.kw("return")) { this.ws(false); const c = this.peek(); const val = c === undefined || c === "\n" || c === ";" || c === "}" ? null : this.pipeline(); return { t: "return", val }; }
     if (this.peek() === "$") {
       const save = this.i;
@@ -759,13 +801,22 @@ class Parser {
     for (;;) {
       this.ws(true);
       if (this.peek() === ")") { this.i++; break; }
-      while (this.peek() === "[") { const j = this.s.indexOf("]", this.i); this.i = j + 1; this.ws(true); }
+      const attrs = [];
+      while (this.peek() === "[") { let d = 0, j = this.i; for (; j < this.s.length; j++) { const ch = this.s[j]; if (ch === "[") d++; else if (ch === "]") { d--; if (!d) break; } } attrs.push(this.s.slice(this.i + 1, j)); this.i = j + 1; this.ws(true); }
       const v = this.varName();
       if (!v) this.err("Missing ')' in function parameter list.");
       this.ws(true);
       let def = null;
-      if (this.peek() === "=") { this.i++; this.ws(true); def = this.expr(); }
-      ps.push({ name: v, def });
+      if (this.peek() === "=") {
+        this.i++; this.ws(true);
+        let d = 0, j = this.i, q = null;
+        for (; j < this.s.length; j++) { const ch = this.s[j]; if (q) { if (ch === q) q = null; continue; } if (ch === "'" || ch === '"') { q = ch; continue; } if ("([{".includes(ch)) d++; else if (")]}".includes(ch)) { if (!d) break; d--; } else if (ch === "," && !d) break; }
+        const sub = new Parser(this.s.slice(this.i, j).trim()); def = sub.expr(); this.i = j;
+      }
+      const at = attrs.join("|");
+      const vs = /ValidateSet\(([^)]*)\)/i.exec(at);
+      const ty = attrs.map((a) => a.trim().toLowerCase()).find((a) => /^(string|int|bool|switch|string\[\]|int\[\]|datetime|object|pscustomobject|hashtable|array)$/.test(a)) || null;
+      ps.push({ name: v, def, mandatory: /Parameter\s*\([^)]*Mandatory/i.test(at), type: ty, set: vs ? vs[1].split(",").map((x) => x.trim().replace(/^['"]|['"]$/g, "")) : null });
       this.ws(true);
       if (this.peek() === ",") { this.i++; continue; }
       if (this.peek() === ")") { this.i++; break; }
@@ -801,7 +852,14 @@ class Parser {
     const start = this.i;
     const c = this.peek();
     if (c === undefined || c === "|" || c === ")" || c === "}" || c === ";") this.err("An empty pipe element is not allowed.");
-    const isCmd = /[A-Za-z?%]/.test(c) || (c === "&" && false);
+    const rest = this.s.slice(this.i);
+    const pm = /^(&\s*|\.\s+)?((?:\.{1,2}\/|~\/|\/)[^\s|;)}]*|'[^']+'|"[^"]+")/.exec(rest);
+    if (pm && (pm[1] || !/^['"]/.test(pm[2]))) {
+      this.i += pm[0].length;
+      const args = this.cmdArgs();
+      return { k: "cmd", name: pm[2].replace(/^['"]|['"]$/g, ""), path: true, dot: !!pm[1] && pm[1].trim() === ".", args, src: this.s.slice(start, this.i).trim() };
+    }
+    const isCmd = /[A-Za-z?%]/.test(c);
     if (isCmd) {
       const m = /^[A-Za-z?%][\w.-]*/.exec(this.s.slice(this.i));
       const name = m ? m[0] : c;
@@ -1083,7 +1141,7 @@ class Ctx {
     this.funcs = {};
     this.mg = null; this.exo = false;
     this.cwd = "/Users/kaatje";
-    this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Downloads"]);
+    this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Documents/scripts", "/Users/kaatje/Downloads"]);
     this.fs = {
       "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hollis (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowan is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(Date.now() - 30 * 864e5) },
       "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(Date.now() - 36e5) },
@@ -1124,6 +1182,7 @@ class Ctx {
 }
 
 class Return { constructor(v) { this.v = v; } }
+class LoopCtl { constructor(k) { this.k = k; } }
 
 function evalScript(stmts, ctx, out) { for (const s of stmts) execStmt(s, ctx, out); return out; }
 function execStmt(s, ctx, out) {
@@ -1137,7 +1196,7 @@ function execStmt(s, ctx, out) {
     }
     case "foreach": {
       const coll = flat(unwrap(runPipeline(s.coll, ctx, null)));
-      for (const item of coll) { ctx.setVar(s.v, item); evalScript(s.body, ctx, out); }
+      for (const item of coll) { ctx.setVar(s.v, item); try { evalScript(s.body, ctx, out); } catch (x) { if (x instanceof LoopCtl) { if (x.k === "break") break; continue; } throw x; } }
       return;
     }
     case "if": {
@@ -1171,6 +1230,8 @@ function execStmt(s, ctx, out) {
       const kk = ek || tgt.name; o[kk] = s.op === "+=" ? addVals(o[kk], v) : v; return;
     }
     case "function": ctx.funcs[s.name.toLowerCase()] = s; return;
+    case "loopctl": throw new LoopCtl(s.k);
+    case "throw": { const v = s.val ? runPipeline(s.val, ctx, null) : []; const m = v.length ? toStr(v[0]) : "ScriptHalted"; throw new PSErr(m, { cmd: "Exception", term: true, kind: "throw" }); }
     case "return": { const v = s.val ? runPipeline(s.val, ctx, null) : []; throw new Return(v); }
   }
 }
@@ -1265,11 +1326,30 @@ function evalArg(v, ctx) {
   return evalExpr(v, ctx);
 }
 
+function runScriptFile(el, ctx, input) {
+  const p = ctx.path(el.name);
+  const f = ctx.fs[p];
+  if (!f || !/\.ps1$/i.test(p)) {
+    if (ctx.dirs && ctx.dirs.has(p)) throw new PSErr("The term '" + el.name + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: el.name, term: true, kind: "notrecognized" });
+    throw new PSErr("The term '" + el.name + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: el.name, term: true, kind: "notrecognized" });
+  }
+  let ast;
+  try { ast = parse("function ScriptBody {\n" + f.text + "\n}"); }
+  catch (e) { const m = e.message; throw new PSErr(m + "\n(in " + p.replace("/Users/kaatje", "~") + ")", { cmd: null, term: true, parse: true, kind: "parse" }); }
+  const fn = ast.stmts ? ast.stmts[0] : ast[0];
+  const def = Object.assign({}, fn, { name: el.name });
+  if (el.dot) return callFunction(def, el, ctx, input, true);
+  const before = new Set(Object.keys(ctx.funcs));
+  try { return callFunction(def, el, ctx, input); }
+  finally { for (const k of Object.keys(ctx.funcs)) if (!before.has(k)) delete ctx.funcs[k]; }
+}
 function runCommand(el, ctx, input, idx) {
+  if (el.path) return runScriptFile(el, ctx, input);
   const raw = el.name;
   const l = raw.toLowerCase();
   const fn = ctx.funcs[l];
   if (fn) return callFunction(fn, el, ctx, input);
+  if (/\.ps1$/i.test(raw) && ctx.fs && ctx.fs[ctx.path(raw)]) throw new PSErr("The term '" + raw + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n\nSuggestion [3,General]: The command \"" + raw + "\" was not found, but does exist in the current location. PowerShell does not load commands from the current location by default (see 'Get-Help about_Command_Precedence').\n\nIf you trust this command, run the following command instead:\n./" + raw, { cmd: raw, term: true, kind: "notrecognized" });
   const cname = ALIASES[l] || raw;
   const spec0 = CMDS[cname.toLowerCase()];
   const spec = spec0 && spec0.session && !ctx.exo ? null : spec0;
@@ -1277,6 +1357,8 @@ function runCommand(el, ctx, input, idx) {
   if (input && input.length && !spec.pipe) throw new PSErr("The input object cannot be bound to any parameters for the command either because the command does not take pipeline input or the input and its properties do not match any of the parameters that take pipeline input.", { cmd: spec.name, term: true, kind: "pipeinput" });
   if (spec.native) { const rawArgs = (el.args || []).map((x) => x.p !== undefined && x.v === undefined ? "-" + x.p : x.p !== undefined ? "-" + x.p + ":" + toStr(evalArg(x.v, ctx)) : toStr(evalArg(x.v, ctx))); return spec.run({ ctx, rawArgs, input: input || [], name: spec.name }); }
   const b = bindArgs(spec, el.args, ctx, spec.name);
+  if (spec.whatif && b.WhatIf === undefined && ctx.getVar("WhatIfPreference") === true) b.WhatIf = true;
+  if (b.ErrorAction === undefined) { const eap = ctx.getVar("ErrorActionPreference"); if (eap && /^stop$/i.test(String(eap))) b.ErrorAction = "Stop"; }
   const stop = b.ErrorAction && /^stop$/i.test(String(b.ErrorAction));
   const silent = b.ErrorAction && /^(silentlycontinue|ignore)$/i.test(String(b.ErrorAction));
   const res = [];
@@ -1285,33 +1367,74 @@ function runCommand(el, ctx, input, idx) {
     if (stop) { e.term = true; throw e; }
     if (!silent) { ctx.errors.push(e); ctx.host.push({ err: e.text() }); }
   };
-  const out = spec.run({ ctx, b, input: input || [], hadInput: input !== null, emitErr, res, name: spec.name });
+  let out;
+  try { out = spec.run({ ctx, b, input: input || [], hadInput: input !== null, emitErr, res, name: spec.name }); }
+  catch (er) {
+    if (!(er instanceof PSErr) || er.term || er.parse) throw er;
+    if (stop) { er.term = true; throw er; }
+    if (!silent) { ctx.errors.push(er); ctx.host.push({ err: er.text() }); }
+    out = res;
+  }
   const r = out === undefined ? res : out;
   if (b.OutVariable) ctx.setVar(String(b.OutVariable), r.slice());
   return r;
 }
-function callFunction(fn, el, ctx, input) {
+function callFunction(fn, el, ctx, input, dot) {
   const scope = new Map();
   const pos = [];
+  const cb = fn.cb !== null && fn.cb !== undefined;
+  const sp = cb && /SupportsShouldProcess/i.test(fn.cb);
+  const common = ["Verbose", "ErrorAction", "WarningAction", "Debug"].concat(sp ? ["WhatIf", "Confirm"] : []);
+  const label = fn.name;
+  const setP = (p, v) => {
+    if (p.type === "int" && v !== null && v !== true) { const n = Number(v); if (isNaN(n)) throw new PSErr("Cannot process argument transformation on parameter '" + p.name + "'. Cannot convert value \"" + toStr(v) + "\" to type \"System.Int32\". Error: \"The input string '" + toStr(v) + "' was not in a correct format.\"", { cmd: label, term: true, kind: "bind" }); v = n; }
+    if (p.type === "string" && v !== null && typeof v !== "string") v = toStr(v);
+    if (p.set && !p.set.some((x) => x.toLowerCase() === String(v).toLowerCase())) throw new PSErr("Cannot validate argument on parameter '" + p.name + "'. The argument \"" + toStr(v) + "\" does not belong to the set \"" + p.set.join(",") + "\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: label, term: true, kind: "bind" });
+    scope.set(p.name.toLowerCase(), v);
+  };
   for (let i = 0; i < el.args.length; i++) {
     const a = el.args[i];
     if (a.p !== undefined) {
-      const p = fn.params.find((x) => x.name.toLowerCase().startsWith(a.p.toLowerCase()));
-      if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + a.p + "'.", { cmd: fn.name, term: true });
-      if (a.colon) { scope.set(p.name.toLowerCase(), evalArg(a.v, ctx)); continue; }
+      const cm = cb && common.find((c) => c.toLowerCase() === a.p.toLowerCase());
+      const p = fn.params.find((x) => x.name.toLowerCase() === a.p.toLowerCase()) || fn.params.find((x) => x.name.toLowerCase().startsWith(a.p.toLowerCase()));
+      if (!p && cm) {
+        let v = true;
+        if (a.colon) v = evalArg(a.v, ctx);
+        else if (cm === "ErrorAction" || cm === "WarningAction") { const nx = el.args[i + 1]; v = nx ? evalArg(nx.v, ctx) : null; i++; }
+        if (cm === "Verbose") scope.set("verbosepreference", truthy(v) ? "Continue" : "SilentlyContinue");
+        if (cm === "WhatIf") scope.set("whatifpreference", truthy(v));
+        if (cm === "ErrorAction") scope.set("erroractionpreference", toStr(v));
+        continue;
+      }
+      if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + a.p + "'.", { cmd: label, term: true });
+      if (a.colon) { setP(p, evalArg(a.v, ctx)); continue; }
+      if (p.type === "switch") { scope.set(p.name.toLowerCase(), true); continue; }
       const nx = el.args[i + 1];
-      if (!nx || nx.p !== undefined) { scope.set(p.name.toLowerCase(), true); continue; }
-      scope.set(p.name.toLowerCase(), evalArg(nx.v, ctx)); i++;
-    } else if (a.splat) { const h = ctx.getVar(a.splat); if (isHT(h)) for (const k of Object.keys(h)) { const p = fn.params.find((x) => x.name.toLowerCase() === k.toLowerCase()); if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + k + "'.", { cmd: fn.name, term: true }); scope.set(p.name.toLowerCase(), h[k]); } }
+      if (!nx || nx.p !== undefined) { if (nx === undefined || nx.p !== undefined) throw new PSErr("Missing an argument for parameter '" + p.name + "'. Specify a parameter of type '" + (p.type === "int" ? "System.Int32" : p.type === "string[]" ? "System.String[]" : "System.String") + "' and try again.", { cmd: label, term: true, kind: "bind" }); }
+      setP(p, evalArg(nx.v, ctx)); i++;
+    } else if (a.splat) { const h = ctx.getVar(a.splat); if (isHT(h)) for (const k of Object.keys(h)) { const p = fn.params.find((x) => x.name.toLowerCase() === k.toLowerCase()); if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + k + "'.", { cmd: label, term: true }); setP(p, h[k]); } }
     else pos.push(evalArg(a.v, ctx));
   }
-  for (const p of fn.params) if (!scope.has(p.name.toLowerCase())) { if (pos.length) scope.set(p.name.toLowerCase(), pos.shift()); else scope.set(p.name.toLowerCase(), p.def ? evalExpr(p.def, ctx) : null); }
+  const missing = [];
+  for (const p of fn.params) if (!scope.has(p.name.toLowerCase())) {
+    if (p.type !== "switch" && pos.length) setP(p, pos.shift());
+    else if (p.mandatory) missing.push(p.name);
+    else scope.set(p.name.toLowerCase(), p.type === "switch" ? false : p.def ? evalExpr(p.def, ctx) : null);
+  }
+  if (missing.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: " + missing.join(" ") + ".", { cmd: label, term: true, kind: "mandatory" });
+  if (cb && pos.length) throw new PSErr("A positional parameter cannot be found that accepts argument '" + toStr(pos[0], true) + "'.", { cmd: label, term: true });
   scope.set("input", input || []);
   scope.set("args", pos);
-  ctx.push(scope);
+  if (cb) scope.set("pscmdlet", Object.defineProperty(obj("System.Management.Automation.PSScriptCmdlet", {}), "__fn", { value: true }));
   const out = [];
+  if (dot) {
+    for (const [k, v] of scope) if (k !== "input" && k !== "args") ctx.setVar(k, v);
+    try { evalScript(fn.body, ctx, out); } catch (e) { if (e instanceof Return) return out.concat(e.v); throw e; }
+    return out;
+  }
+  ctx.push(scope);
   try { evalScript(fn.body, ctx, out); }
-  catch (e) { if (e instanceof Return) { ctx.pop(); return out.concat(e.v); } ctx.pop(); throw e; }
+  catch (e) { if (e instanceof Return) { ctx.pop(); return out.concat(e.v); } ctx.pop(); if (e instanceof PSErr) e.partial = out.concat(e.partial || []); throw e; }
   ctx.pop();
   return out;
 }
@@ -1355,6 +1478,10 @@ function callMethod(o, name, args, ctx) {
   const l = name.toLowerCase();
   if (o === null || o === undefined) throw new PSErr("You cannot call a method on a null-valued expression.", { term: true, kind: "nullcall" });
   if (l === "tostring") { if (o instanceof Date && args.length) return dateFmt(o, String(args[0])); return toStr(o); }
+  if (o && o.__fn && l === "shouldprocess") {
+    if (ctx.getVar("WhatIfPreference") === true) { ctx.host.push({ text: "What if: Performing the operation \"" + toStr(args.length > 1 ? args[1] : "") + "\" on target \"" + toStr(args[0]) + "\"." }); return false; }
+    return true;
+  }
   if (o instanceof Date && l === "touniversaltime") return new Date(o.getTime() + o.getTimezoneOffset() * 60000);
   if (o instanceof Date && l === "tolocaltime") return new Date(o);
   if (l === "gettype") return obj("System.RuntimeType", { Name: (typeName(o) || "").split(".").pop(), FullName: typeName(o) });
@@ -1888,6 +2015,20 @@ def("Get-Date", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype:
   run({ b }) { let d = b.Date !== undefined ? (b.Date instanceof Date ? b.Date : new Date(b.Date)) : new Date(); if (isNaN(d)) throw new PSErr("Cannot bind parameter 'Date'. Cannot convert value \"" + b.Date + "\" to type \"System.DateTime\".", { cmd: "Get-Date", term: true }); if (b.Format) return [dateFmt(d, String(b.Format))]; return [d]; } });
 def("Write-Output", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { InputObject: P(0) }, run({ b, input }) { return input.length ? input : flat(b.InputObject); } });
 def("Write-Host", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Object: P(0), ForegroundColor: P(null), NoNewline: S(), Separator: P(null) }, run({ ctx, b, input }) { const v = b.Object !== undefined ? flat(b.Object) : input; ctx.host.push({ text: v.map((x) => toStr(x)).join(b.Separator ? String(b.Separator) : " "), color: b.ForegroundColor ? String(b.ForegroundColor) : null }); return []; } });
+def("Write-Verbose", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0, { req: true }) }, run({ ctx, b }) { if (String(ctx.getVar("VerbosePreference") || "") === "Continue") ctx.host.push({ warn: "VERBOSE: " + toStr(b.Message) }); return []; } });
+def("Write-Error", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0), ErrorAction: P(null) }, run({ emitErr, b, ctx }) { const e = new PSErr(toStr(b.Message), { cmd: "Write-Error", kind: "writeerror" }); if (String(ctx.getVar("ErrorActionPreference") || "") === "Stop") { e.term = true; throw e; } emitErr(toStr(b.Message), "Write-Error", "writeerror"); return []; } });
+function writeFileCmd(ctx, b, name, append, input) {
+  const p = ctx.path(b.Path || b.FilePath);
+  if (!ctx.dirs.has(parentOf(p))) throw new PSErr("Could not find a part of the path '" + p + "'.", { cmd: name, term: true, kind: "nofile" });
+  const vals = b.Value !== undefined ? flat(b.Value) : b.InputObject !== undefined ? flat(b.InputObject) : input;
+  const text = vals.map((v) => typeof v === "string" ? v : toStr(v)).join("\n");
+  if (append && ctx.fs[p]) ctx.fs[p] = { text: ctx.fs[p].text.replace(/\n?$/, "\n") + text, at: new Date() };
+  else ctx.fs[p] = { text, at: new Date() };
+  return [];
+}
+def("Set-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, whatif: true, params: { Path: P(0, { req: true }), Value: P(1, { pipe: true }), Encoding: P(null), NoNewline: S() }, run({ ctx, b, name, input }) { if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Set Content\" on target \"Path: " + ctx.path(b.Path) + "\"." }); return []; } return writeFileCmd(ctx, b, name, false, input); } });
+def("Add-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, whatif: true, params: { Path: P(0, { req: true }), Value: P(1, { pipe: true }), Encoding: P(null) }, run({ ctx, b, name, input }) { if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Add Content\" on target \"Path: " + ctx.path(b.Path) + "\"." }); return []; } return writeFileCmd(ctx, b, name, true, input); } });
+def("Out-File", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, whatif: true, params: { FilePath: P(0, { req: true, alias: ["Path"] }), InputObject: P(null, { pipe: true }), Append: S(), Encoding: P(null) }, run({ ctx, b, name, input }) { const vals = b.InputObject !== undefined ? flat(b.InputObject) : input; const txt = vals.every((v) => typeof v === "string") ? vals : formatOut(vals, 120).split("\n"); return writeFileCmd(ctx, { FilePath: b.FilePath, Value: txt }, name, !!b.Append, []); } });
 def("Write-Warning", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0, { req: true }) }, run({ ctx, b }) { ctx.host.push({ warn: "WARNING: " + toStr(b.Message) }); return []; } });
 def("Format-Table", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Property: P(0), AutoSize: S(), Wrap: S() }, run({ ctx, b, input, name }) { if (b.Property === undefined) return input.map((x) => fmtTag(x, "table")); const sel = CMDS["select-object"].run({ ctx, b: { Property: b.Property }, input, name }); return sel.map((x) => { const c = fmtTag(x, "table"); if (isObj(c)) Object.defineProperty(c, "__fmtProps", { value: true }); return c; }); } });
 def("Format-List", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Property: P(0) }, run({ ctx, b, input, name }) { const src = b.Property === undefined ? input : CMDS["select-object"].run({ ctx, b: { Property: b.Property }, input, name }); return src.map((x) => fmtTag(x, "list")); } });
@@ -2432,6 +2573,9 @@ def("man", { module: null, ver: "", ctype: "Application", native: true, params: 
   run({ ctx, rawArgs }) { ctx.host.push({ err: "No manual entry for " + (rawArgs[0] || "") }); return []; } });
 def("sort", { module: null, ver: "", ctype: "Application", native: true, params: {},
   run({ ctx, rawArgs, input }) { if (!input.length) { ctx.host.push({ text: "(lab) sort is the macOS /usr/bin/sort program here, not Sort-Object. On its own it waits for typed input until Ctrl+D. Use Sort-Object." }); return []; } const out = input.map((x) => toStr(x)).sort(); return rawArgs.includes("-r") ? out.reverse() : out; } });
+def("code", { module: null, ver: "", ctype: "Application", native: true, params: {},
+  run({ ctx, rawArgs }) { const f = rawArgs.filter((x) => !/^-/.test(x))[0]; ctx.ui = { open: f ? ctx.path(f) : null }; return []; } });
+CMDS["code"].src = "/usr/local/bin/code";
 CMDS["ls"].src = "/bin/ls"; CMDS["cat"].src = "/bin/cat"; CMDS["man"].src = "/usr/bin/man"; CMDS["sort"].src = "/usr/bin/sort"; CMDS["sort"].pipe = true;
 ["Get-Mailbox", "Set-Mailbox", "Get-MailboxPermission", "Add-MailboxPermission", "Remove-MailboxPermission", "Get-RecipientPermission", "Add-RecipientPermission", "Get-MailboxAutoReplyConfiguration", "Set-MailboxAutoReplyConfiguration", "Get-DistributionGroup", "Get-DistributionGroupMember", "Add-DistributionGroupMember", "Remove-DistributionGroupMember", "New-DistributionGroup"].forEach((n) => { CMDS[n.toLowerCase()].session = true; CMDS[n.toLowerCase()].module = "tmpEXO_" + "ycy3rmxz.0wi"; CMDS[n.toLowerCase()].ver = "1.0"; });
 function run(src, ctx) {
@@ -2450,7 +2594,7 @@ function run(src, ctx) {
     }
   } catch (e) {
     if (e instanceof Return) out.push(...e.v);
-    else if (e instanceof PSErr) { result.error = e; ctx.errors.push(e); }
+    else if (e instanceof PSErr) { if (e.partial) out.push(...e.partial); result.error = e; ctx.errors.push(e); }
     else { result.error = new PSErr(String(e && e.message || e), { term: true }); }
   }
   result.out = out;
@@ -2832,6 +2976,69 @@ const HELP = {
 };
 PS.setHelp(HELP);
 if (typeof module!=="undefined") module.exports=PS;
+
+const GRADER = (() => {
+  const E = typeof PS !== "undefined" ? PS : require("./engine.js");
+  const SETUPS = {
+    none: { scopes: [], exo: false },
+    read: { scopes: ["User.Read.All"], exo: false },
+    write: { scopes: ["User.ReadWrite.All"], exo: false },
+    exo: { scopes: ["User.Read.All"], exo: true },
+    groups: { scopes: ["User.Read.All", "Group.Read.All"], exo: false },
+    groupsW: { scopes: ["User.Read.All", "Group.ReadWrite.All"], exo: false },
+    lic: { scopes: ["User.Read.All", "Organization.Read.All"], exo: false },
+    licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false },
+    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false, cwd: "/Users/kaatje/Desktop" },
+    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/kaatje/Downloads" },
+    inv: { scopes: ["User.Read.All", "AuditLog.Read.All", "UserAuthenticationMethod.Read.All", "Group.Read.All"], exo: true, cwd: "/Users/kaatje/Desktop" },
+    resp: { scopes: ["User.ReadWrite.All", "AuditLog.Read.All", "UserAuthenticationMethod.ReadWrite.All", "Group.ReadWrite.All"], exo: true, cwd: "/Users/kaatje/Desktop" }
+  };
+  function makeCtx(setup, pre) {
+    const s = SETUPS[setup] || SETUPS.none;
+    const ctx = new E.Ctx();
+    if (s.scopes.length) E.run("Connect-MgGraph -Scopes " + s.scopes.join(",") + " -NoWelcome", ctx);
+    if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
+    if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
+    if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
+    if (pre && pre.length) {
+      const saved = ctx.mg;
+      E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
+      const ex = ctx.exo; ctx.exo = true;
+      for (const p of pre) E.run(p, ctx);
+      ctx.mg = saved; ctx.exo = ex;
+    }
+    ctx.host = []; ctx.errors = [];
+    return ctx;
+  }
+  function describe(setup) {
+    const s = SETUPS[setup] || SETUPS.none;
+    if (!s.scopes.length && !s.exo) return "Fresh window, nothing connected.";
+    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
+  }
+  function text(res) { return E.formatOut(res.out, 120).replace(/[ \t]+$/gm, "").trim(); }
+  const cache = {};
+  function refText(chk, setup, pre) {
+    const k = JSON.stringify([chk.out, chk.refSetup || setup, chk.needExo, pre || []]);
+    if (cache[k] === undefined) { const ctx = makeCtx(chk.needExo ? "exo" : (chk.refSetup || setup), pre); cache[k] = text(E.run(chk.out, ctx)); }
+    return cache[k];
+  }
+  function verdict(chk, setup, ctx, res, hist, pre) {
+    if (!res || res.error && !chk.fn) return false;
+    if (chk.fn) { try { return !!chk.fn(ctx, res, hist || []); } catch (e) { return false; } }
+    if (res.error) return false;
+    if (chk.out) {
+      if (chk.needExo && !ctx.exo) return false;
+      if (chk.needScopes && !chk.needScopes.every((s) => ctx.mg && ctx.mg.scopes.some((x) => x.toLowerCase() === s.toLowerCase()))) return false;
+      const t = text(res); return t !== "" ? t === refText(chk, setup, pre) : refText(chk, setup, pre) === "" && false;
+    }
+    return false;
+  }
+  function fillTpl(tpl, vals) { let i = 0; return tpl.replace(/\[\[([^\[\]]*)\]\]/g, () => (vals[i++] || "")); }
+  function gapsOf(tpl) { const out = []; tpl.replace(/\[\[([^\[\]]*)\]\]/g, (m, a) => { out.push(a); return m; }); return out; }
+  function drillCheck(d) { return d.fn ? { fn: d.fn } : { out: d.out, refSetup: d.refSetup, needExo: d.needExo, needScopes: d.needScopes }; }
+  return { makeCtx, verdict, text, fillTpl, gapsOf, refText, describe, drillCheck, SETUPS };
+})();
+if (typeof module !== "undefined") module.exports = GRADER;
 
 const DOMAIN = "halvardco.onmicrosoft.com";
 const U = (n) => n + "@" + DOMAIN;
@@ -4825,7 +5032,7 @@ const QR_TO = [["Fenna Lowe", "Delivered"], ["Brannoc Vale", "Delivered"], ["Cai
 const BREAKS = [
   {
     id: "b-locked", type: "break", name: "Locked out", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /elara\.wynn/i, hero: "desync", need: (m) => m.seq <= 1,
-    story: "08:02. Elara Wynn (HR) calls: 'It says my account is disabled. I did nothing!' Nobody filed a ticket to block her.",
+    story: "08:02. Elara Wynn (Sales) calls: 'It says my account is disabled. I did nothing!' Nobody filed a ticket to block her.",
     doneMsg: "Elara is back in. You looked first, changed one thing, and read it back.",
     mutate: (ctx) => { userOf(ctx, "elara.wynn").AccountEnabled = false; },
     tickets: [
@@ -4905,67 +5112,272 @@ const BREAKS = [
   }
 ];
 
-const GRADER = (() => {
-  const E = typeof PS !== "undefined" ? PS : require("./engine.js");
-  const SETUPS = {
-    none: { scopes: [], exo: false },
-    read: { scopes: ["User.Read.All"], exo: false },
-    write: { scopes: ["User.ReadWrite.All"], exo: false },
-    exo: { scopes: ["User.Read.All"], exo: true },
-    groups: { scopes: ["User.Read.All", "Group.Read.All"], exo: false },
-    groupsW: { scopes: ["User.Read.All", "Group.ReadWrite.All"], exo: false },
-    lic: { scopes: ["User.Read.All", "Organization.Read.All"], exo: false },
-    licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false },
-    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false, cwd: "/Users/kaatje/Desktop" },
-    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/kaatje/Downloads" },
-    inv: { scopes: ["User.Read.All", "AuditLog.Read.All", "UserAuthenticationMethod.Read.All", "Group.Read.All"], exo: true, cwd: "/Users/kaatje/Desktop" },
-    resp: { scopes: ["User.ReadWrite.All", "AuditLog.Read.All", "UserAuthenticationMethod.ReadWrite.All", "Group.ReadWrite.All"], exo: true, cwd: "/Users/kaatje/Desktop" }
-  };
-  function makeCtx(setup, pre) {
-    const s = SETUPS[setup] || SETUPS.none;
-    const ctx = new E.Ctx();
-    if (s.scopes.length) E.run("Connect-MgGraph -Scopes " + s.scopes.join(",") + " -NoWelcome", ctx);
-    if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
-    if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
-    if (pre && pre.length) {
-      const saved = ctx.mg;
-      E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
-      const ex = ctx.exo; ctx.exo = true;
-      for (const p of pre) E.run(p, ctx);
-      ctx.mg = saved; ctx.exo = ex;
-    }
-    ctx.host = []; ctx.errors = [];
-    return ctx;
-  }
-  function describe(setup) {
-    const s = SETUPS[setup] || SETUPS.none;
-    if (!s.scopes.length && !s.exo) return "Fresh window, nothing connected.";
-    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
-  }
-  function text(res) { return E.formatOut(res.out, 120).replace(/[ \t]+$/gm, "").trim(); }
-  const cache = {};
-  function refText(chk, setup, pre) {
-    const k = JSON.stringify([chk.out, chk.refSetup || setup, chk.needExo, pre || []]);
-    if (cache[k] === undefined) { const ctx = makeCtx(chk.needExo ? "exo" : (chk.refSetup || setup), pre); cache[k] = text(E.run(chk.out, ctx)); }
-    return cache[k];
-  }
-  function verdict(chk, setup, ctx, res, hist, pre) {
-    if (!res || res.error && !chk.fn) return false;
-    if (chk.fn) { try { return !!chk.fn(ctx, res, hist || []); } catch (e) { return false; } }
-    if (res.error) return false;
-    if (chk.out) {
-      if (chk.needExo && !ctx.exo) return false;
-      if (chk.needScopes && !chk.needScopes.every((s) => ctx.mg && ctx.mg.scopes.some((x) => x.toLowerCase() === s.toLowerCase()))) return false;
-      const t = text(res); return t !== "" ? t === refText(chk, setup, pre) : refText(chk, setup, pre) === "" && false;
-    }
-    return false;
-  }
-  function fillTpl(tpl, vals) { let i = 0; return tpl.replace(/\[\[([^\]]*)\]\]/g, () => (vals[i++] || "")); }
-  function gapsOf(tpl) { const out = []; tpl.replace(/\[\[([^\]]*)\]\]/g, (m, a) => { out.push(a); return m; }); return out; }
-  function drillCheck(d) { return d.fn ? { fn: d.fn } : { out: d.out, refSetup: d.refSetup, needExo: d.needExo, needScopes: d.needScopes }; }
-  return { makeCtx, verdict, text, fillTpl, gapsOf, refText, describe, drillCheck, SETUPS };
-})();
-if (typeof module !== "undefined") module.exports = GRADER;
+SEQUENCES.push({ id: 9, name: "Scripts", short: "SCRIPTS", open: true, blurb: "From one-liners to .ps1 files: parameters, functions, error handling and dry runs. The way real admin work is kept and repeated." });
+const SC = "/Users/kaatje/Documents/scripts";
+const STALE_PS1 = "$days = 90\n$cutoff = (Get-Date).AddDays(-$days)\nGet-MgUser -All -Property DisplayName,SignInActivity |\n    Where-Object { $_.SignInActivity.LastSignInDateTime -lt $cutoff } |\n    Select-Object DisplayName,@{n='LastSignIn';e={$_.SignInActivity.LastSignInDateTime}}\n";
+const DEPT_PS1 = "<#\n.SYNOPSIS\nLists the users of one department.\n#>\nparam(\n    [Parameter(Mandatory)]\n    [ValidateSet('Sales','Finance','Operations','HR','IT','Logistics')]\n    [string]$Department,\n    [int]$Top = 5,\n    [switch]$IncludeDisabled\n)\n$users = Get-MgUser -All -Filter \"department eq '$Department'\" -Property DisplayName,JobTitle,AccountEnabled\nif (-not $IncludeDisabled) { $users = $users | Where-Object { $_.AccountEnabled } }\n$users | Select-Object -First $Top DisplayName,JobTitle\n";
+const SC_FILES = { [SC + "/Get-StaleUsers.ps1"]: STALE_PS1, [SC + "/Get-DeptUsers.ps1"]: DEPT_PS1 };
+GRADER.SETUPS.scripts = { scopes: ["User.ReadWrite.All", "Group.ReadWrite.All", "Organization.Read.All", "AuditLog.Read.All"], exo: true, cwd: SC, files: SC_FILES };
+GRADER.SETUPS.scriptsHome = { scopes: ["User.ReadWrite.All", "Group.ReadWrite.All", "Organization.Read.All", "AuditLog.Read.All"], exo: true, cwd: "/Users/kaatje", files: SC_FILES };
+const scFile = (ctx, n) => { const f = ctx.fs[SC + "/" + n]; return f ? f.text : null; };
+function scClone(ctx, cmd, mutate) {
+  const c = GRADER.makeCtx("scripts");
+  if (mutate) mutate(c);
+  for (const k of Object.keys(ctx.fs)) c.fs[k] = { text: ctx.fs[k].text, at: ctx.fs[k].at };
+  for (const d of ctx.dirs) c.dirs.add(d);
+  c.host = [];
+  const res = PS.run(cmd, c);
+  return { c, res, txt: PS.formatOut(res.out, 120).trim() };
+}
+function scRef(cmd, mutate) { const c = GRADER.makeCtx("scripts"); if (mutate) mutate(c); return PS.formatOut(PS.run(cmd, c).out, 120).trim(); }
+const parses = (t) => { try { PS.parse("function ScriptBody {\n" + t + "\n}"); return true; } catch (e) { return false; } };
+
+MEMORIES.push(
+{
+  id: "runscript", seq: 9, name: "Run a .ps1", tag: "SCRIPT FILES", title: "Commands in a file, run on purpose",
+  summary: "A script is commands saved in a .ps1 file. You run it by path, it gets its own scope, and dot-sourcing keeps what it made.",
+  setup: "scripts",
+  brief: {
+    what: [
+      "Everything you typed so far was gone when the window closed. A <b>script</b> is the same commands saved in a <b>.ps1</b> file, so you can run them again next month, give them to a colleague, or schedule them.",
+      "You run a script <b>by path</b>: <code>./Get-StaleUsers.ps1</code> from its folder, or <code>~/Documents/scripts/Get-StaleUsers.ps1</code> from anywhere. Just the name does <b>not</b> work, even in the right folder: PowerShell never runs things from the current folder by name, so a planted file can't hijack a command. Paths with spaces need quotes and the call operator: <code>&amp; '~/My Scripts/x.ps1'</code>.",
+      "A script runs in <b>its own scope</b>. Variables it creates are gone when it ends. <b>Dot-sourcing</b> (<code>. ./x.ps1</code>, a dot and a space) runs it in your scope instead, so its variables and functions stay.",
+      "On a Mac the execution policy is Unrestricted, so scripts just run. On Windows you'll meet <code>Set-ExecutionPolicy RemoteSigned</code> first."
+    ],
+    daily: ["Running the monthly stale-account report", "A colleague's script from the shared drive", "Anything you do more than twice"],
+    parts: [["./Get-StaleUsers.ps1", "run from its folder"], ["~/Documents/scripts/Get-StaleUsers.ps1", "run from anywhere"], ["& '~/path with space/x.ps1'", "quotes need the & call operator"], [". ./Get-StaleUsers.ps1", "dot-source: keep its variables"], ["code ./Get-StaleUsers.ps1", "open it in the editor"]],
+    flow: [["Find it", "Get-ChildItem"], ["Read it", "before you run it"], ["Run it", "./Name.ps1"], ["Keep?", ". ./Name.ps1"]],
+    traps: [["Name only", "Get-StaleUsers.ps1 alone is 'not recognized', even in the right folder. Read the Suggestion line: it tells you to add ./"], ["Read before you run", "A script runs with your permissions. Open other people's scripts first."], ["My variable is empty", "The script's $days lived in the script's scope. Dot-source if you need it afterwards."]]
+  },
+  watch: [
+    { code: "Get-ChildItem", say: "You are in ~/Documents/scripts. One script from the previous admin." },
+    { code: "Get-Content ./Get-StaleUsers.ps1", say: "Read it first: five lines, one pipeline spread over three. A line ending in | continues on the next." },
+    { code: "Get-StaleUsers.ps1", say: "Name only: refused, with a hint at the bottom." },
+    { code: "./Get-StaleUsers.ps1", say: "With ./ it runs. Output works like any command's." },
+    { code: "$days", say: "Empty. $days lived inside the script." },
+    { code: ". ./Get-StaleUsers.ps1 | Out-Null; $days", say: "Dot-sourced: the variables stayed behind in your session." }
+  ],
+  trace: { ask: "Run the script from its own folder.", tpl: "[[./]]Get-StaleUsers.ps1", check: { out: "./Get-StaleUsers.ps1" }, wrong: "Two characters that mean 'this folder'." },
+  traceHints: ["PowerShell wants a path, not a name.", "'This folder' in a path.", "A dot and a slash.", "Answer: ./"],
+  recall: { ask: "You are in your home folder. Run Get-StaleUsers.ps1 without changing folders.", setup: "scriptsHome", check: { fn: (ctx, res) => !res.error && ctx.cwd === "/Users/kaatje" && PS.formatOut(res.out, 120).trim() === scRef("./Get-StaleUsers.ps1") }, wrong: "Give the whole path, starting with ~." },
+  recallHints: ["No cd. Use the path.", "~ is your home folder.", "~/Documents/scripts/...", "~/Documents/scripts/Get-StaleUsers.ps1"],
+  real: ["mkdir ~/Documents/scripts", "code ~/Documents/scripts/Get-Me.ps1, put Get-Date and $PSVersionTable.PSVersion in it, save", "~/Documents/scripts/Get-Me.ps1"],
+  cheat: [["./Name.ps1", "Run a script from its folder"], ["& '~/path/Name.ps1'", "Run by path, spaces allowed"], [". ./Name.ps1", "Dot-source: keep variables and functions"], ["code ./Name.ps1", "Open it in the editor"]]
+},
+{
+  id: "firstscript", seq: 9, name: "Your first script", tag: "CODE EDITOR", title: "Write it, save it, run it",
+  summary: "Open the editor, write the commands you already know one per line, save with Cmd+S, run with ./",
+  setup: "scripts",
+  brief: {
+    what: [
+      "<b>code ./Name.ps1</b> in the console opens the editor (Code in the dock does too). A new name makes a new file. Write the commands you already know, <b>one per line</b>. Save with <b>Cmd+S</b>: the dot in the title means unsaved.",
+      "Name scripts like commands: <b>Verb-Noun.ps1</b> (Get-FinanceList.ps1, Set-DeptOffice.ps1). Approved verbs (Get, Set, New, Remove, Add, Test, Export) tell a colleague what it does before they open it.",
+      "The status bar checks the syntax while you type, like the PowerShell extension in VS Code. A missing } or ) shows there before you run anything. <b>Run in terminal</b> saves and puts <code>./Name.ps1</code> on your prompt.",
+      "A script does not connect for you unless you write that in. In this lab you are already connected; in real scripts put the Connect lines at the top."
+    ],
+    daily: ["Turning a one-liner you keep retyping into a file", "Monthly reports", "Onboarding steps you always forget one of"],
+    parts: [["code ./Get-FinanceList.ps1", "open or create"], ["Cmd+S", "save"], ["line ending in |", "pipeline continues on the next line"], ["./Get-FinanceList.ps1", "run it"]],
+    flow: [["code", "open / create"], ["Write", "one command per line"], ["Cmd+S", "status: no problems"], ["Run", "./Name.ps1"]],
+    traps: [["Forgot to save", "You run the file on disk, not what is in the editor. Dot in the title = unsaved."], ["Wrong folder", "code ./x.ps1 creates it where you are. Check the prompt."], ["Long lines", "Break after a | and indent. Never break in the middle of a parameter."]]
+  },
+  watch: [
+    { code: "Set-Content ./Get-SalesList.ps1 -Value 'Get-MgUser -All -Filter \"department eq ''Sales''\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle'", say: "Normally you'd type this in the editor. Here the file is written for you: one line, one pipeline." },
+    { code: "Get-Content ./Get-SalesList.ps1", say: "That is the whole script." },
+    { code: "./Get-SalesList.ps1", say: "And it runs like a command." },
+    { code: "code ./Get-SalesList.ps1", say: "The editor: colours, line numbers and a syntax check at the bottom. Close it with the red dot." }
+  ],
+  trace: { ask: "Open a new file Get-FinanceList.ps1 in the editor from the console.", tpl: "[[code]] ./Get-FinanceList.ps1", check: { fn: (ctx, res) => !res.error && !!ctx.ui && /\/Get-FinanceList\.ps1$/.test(ctx.ui.open || "") }, wrong: "The editor's command-line name." },
+  traceHints: ["Same name as the app in the dock.", "Four letters.", "c___", "Answer: code"],
+  recall: { ask: "Write ~/Documents/scripts/Get-FinanceList.ps1 that lists Finance users with DisplayName and JobTitle. Save it, then run it.", setup: "scripts", check: { fn: (ctx, res, hist) => { const t = scFile(ctx, "Get-FinanceList.ps1"); if (!t || !parses(t)) return false; return scClone(ctx, "./Get-FinanceList.ps1").txt === scRef("Get-MgUser -All -Filter \"department eq 'Finance'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle") && hist.some((h) => /Get-FinanceList\.ps1/i.test(h) && !/^code/i.test(h.trim())); } }, wrong: "Is it saved? Does running it give exactly DisplayName and JobTitle for Finance?" },
+  recallHints: ["code ./Get-FinanceList.ps1 opens it.", "One line: Get-MgUser with a department filter and -Property, then Select-Object.", "Get-MgUser -All -Filter \"department eq 'Finance'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle", "In the file: Get-MgUser -All -Filter \"department eq 'Finance'\" -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle   then Cmd+S, then ./Get-FinanceList.ps1"],
+  real: ["code ~/Documents/scripts/Get-MyMailbox.ps1", "Write Get-EXOMailbox -Identity <you> | Select-Object DisplayName,PrimarySmtpAddress", "Save, connect, run it"],
+  cheat: [["code ./Name.ps1", "Open or create in the editor"], ["Cmd+S", "Save"], ["... |", "End a line with | to continue on the next"]]
+},
+{
+  id: "params", seq: 9, name: "param()", tag: "PARAMETERS", title: "One script, any department",
+  summary: "A param() block turns hard-coded values into -Parameters, with types, defaults, mandatory values and allowed lists.",
+  setup: "scripts",
+  brief: {
+    what: [
+      "A script with <code>'Finance'</code> written inside it only does Finance. A <b>param() block</b> at the very top turns that value into a parameter: <code>./Get-DeptUsers.ps1 -Department Sales</code>. Inside the script it is just <code>$Department</code>.",
+      "Decorate parameters so PowerShell checks input for you: <b>[Parameter(Mandatory)]</b> refuses to run without it, a <b>type</b> like [string] or [int] converts or refuses, a <b>default</b> (<code>[int]$Top = 5</code>) fills it in, <b>[ValidateSet('Sales','Finance')]</b> allows only those values, <b>[switch]</b> is an on/off flag with no value.",
+      "The real console asks you to type a missing mandatory value; scripts run unattended stop with an error. Either way, the bad run never starts."
+    ],
+    daily: ["One report script for every department", "A -WhatIf-style switch on your own tools", "Scripts other people run"],
+    parts: [["param( ... )", "first thing in the file"], ["[Parameter(Mandatory)][string]$Department", "required text"], ["[int]$Top = 5", "number with a default"], ["[ValidateSet('A','B')]", "only these values"], ["[switch]$IncludeDisabled", "flag, no value"]],
+    flow: [["param()", "top of the file"], ["Attributes", "Mandatory, type, set"], ["Use", "$Name inside"], ["Call", "-Name value"]],
+    traps: [["param() not first", "Anything above it except comments and [CmdletBinding()] breaks it."], ["Commas", "Parameters are separated by commas; the last one has none."], ["Switch with a value", "-IncludeDisabled true is wrong. Just -IncludeDisabled."]]
+  },
+  watch: [
+    { code: "Get-Content ./Get-DeptUsers.ps1", say: "A param block: mandatory department from a fixed list, a number with a default, a switch." },
+    { code: "./Get-DeptUsers.ps1", say: "No department: refused before anything runs." },
+    { code: "./Get-DeptUsers.ps1 -Department Legal", say: "Not in the list. The message names the allowed values." },
+    { code: "./Get-DeptUsers.ps1 -Department Operations -Top 3", say: "Three, enabled only." },
+    { code: "./Get-DeptUsers.ps1 -Department Operations -Top 20 -IncludeDisabled", say: "The switch flips the filter off." }
+  ],
+  trace: { ask: "Run the department script for Finance.", tpl: "./Get-DeptUsers.ps1 -[[Department]] Finance", check: { out: "./Get-DeptUsers.ps1 -Department Finance" }, wrong: "The parameter name is the variable name without the $." },
+  traceHints: ["Look at the param block.", "$Department becomes -Department.", "-D_________", "Answer: Department"],
+  recall: { ask: "Write Get-CityUsers.ps1 with a mandatory -City parameter that lists DisplayName and Department of the users in that city. Run it for Ghent.", setup: "scripts", check: { fn: (ctx, res, hist) => { const t = scFile(ctx, "Get-CityUsers.ps1"); if (!t || !/param\s*\(/i.test(t)) return false; const ok = scClone(ctx, "./Get-CityUsers.ps1 -City Ghent").txt === scRef("Get-MgUser -All -Filter \"city eq 'Ghent'\" -Property DisplayName,Department | Select-Object DisplayName,Department"); const m = scClone(ctx, "./Get-CityUsers.ps1").res; return ok && !!m.error && /mandatory/i.test(m.error.text()); } }, wrong: "Mandatory -City, a filter on city, two columns. Saved?" },
+  recallHints: ["Start the file with param( ... ).", "[Parameter(Mandatory)][string]$City, then use $City in the filter.", "param([Parameter(Mandatory)][string]$City)  then  Get-MgUser -All -Filter \"city eq '$City'\" ...", "param([Parameter(Mandatory)][string]$City)\nGet-MgUser -All -Filter \"city eq '$City'\" -Property DisplayName,Department | Select-Object DisplayName,Department"],
+  real: ["Give your Get-MyMailbox.ps1 a mandatory -Identity parameter and run it for a shared mailbox you manage."],
+  cheat: [["param([Parameter(Mandatory)][string]$Name)", "Required parameter"], ["[int]$Top = 5", "Default value"], ["[ValidateSet('A','B')]", "Allowed values"], ["[switch]$Force", "On/off flag"]]
+},
+{
+  id: "functions", seq: 9, name: "function", tag: "FUNCTIONS", title: "Your own commands, returning objects",
+  summary: "A function is a named block with its own param(). Return objects, not Write-Host text, so the result still pipes.",
+  setup: "scripts",
+  brief: {
+    what: [
+      "A <b>function</b> is a mini-script with a name: <code>function Get-UserCard { param($UserId) ... }</code>. Call it like any command: <code>Get-UserCard -UserId x</code>.",
+      "<b>Return objects, not text.</b> Whatever a function leaves on the pipeline is its output. <code>[pscustomobject]@{ Name = ...; City = ... }</code> makes a clean object you can Sort, Where, Export-Csv. <b>Write-Host</b> only paints the screen: nothing goes down the pipeline, so Export-Csv gets nothing.",
+      "Keep useful functions in one file (a toolbox) and <b>dot-source</b> it: <code>. ./Halvard-Tools.ps1</code> loads the functions into your session without running anything else."
+    ],
+    daily: ["Get-UserCard for every 'who is this?' question", "Shared toolbox file for the team", "Pieces of a bigger script"],
+    parts: [["function Get-UserCard { param([string]$UserId) ... }", "define"], ["[pscustomobject]@{ Name = $u.DisplayName }", "return an object"], ["Write-Host 'x'", "screen only, not output"], [". ./Halvard-Tools.ps1", "load the toolbox"]],
+    flow: [["Define", "function Verb-Noun"], ["param()", "inputs"], ["Return", "[pscustomobject]"], ["Load", "dot-source"]],
+    traps: [["Write-Host as output", "(Get-X).Count is 0 and the CSV is empty. Output objects instead."], ["Defined after use", "A script runs top to bottom: define functions above the line that calls them."], ["Ran the toolbox with ./", "Its functions vanish with the script's scope. Dot-source it."]]
+  },
+  watch: [
+    { code: "function Get-Hello { Write-Host 'hello' }; (Get-Hello).Count", say: "It printed, but the output is empty: count 0." },
+    { code: "function Get-Hello { 'hello' }; (Get-Hello).Count", say: "Leave the value on the pipeline instead: count 1." },
+    { code: "function Get-UserCard { param([string]$UserId) $u = Get-MgUser -UserId $UserId -Property DisplayName,Department,City; [pscustomobject]@{ Name = $u.DisplayName; Department = $u.Department; City = $u.City } }", say: "A real function: one parameter, one object out." },
+    { code: "Get-UserCard -UserId " + U("elara.wynn"), say: "Called like a cmdlet." },
+    { code: "'elara.wynn','dorian.pike' | ForEach-Object { Get-UserCard -UserId \"$_@" + DOMAIN + "\" } | Sort-Object City", say: "And because it returns objects, it pipes." }
+  ],
+  trace: { ask: "Return an object instead of text.", tpl: "function Get-Card { param([string]$UserId) $u = Get-MgUser -UserId $UserId -Property DisplayName,City; [[[pscustomobject]]]@{ Name = $u.DisplayName; City = $u.City } }; Get-Card -UserId " + U("dorian.pike"), check: { out: "function Get-Card { param([string]$UserId) $u = Get-MgUser -UserId $UserId -Property DisplayName,City; [pscustomobject]@{ Name = $u.DisplayName; City = $u.City } }; Get-Card -UserId " + U("dorian.pike") }, wrong: "The cast that turns a hashtable into an object." },
+  traceHints: ["A type name inside the square brackets, before @{ }.", "PowerShell custom object.", "ps____________", "Answer: pscustomobject"],
+  recall: { ask: "In ~/Documents/scripts/Halvard-Tools.ps1 write a function Get-UserCard with a -UserId parameter that returns an object with Name, Department and City. Dot-source the file, then run Get-UserCard for Elara Wynn.", setup: "scripts", check: { fn: (ctx, res) => { const t = scFile(ctx, "Halvard-Tools.ps1"); return !!t && !!ctx.funcs["get-usercard"] && !res.error && res.out.length === 1 && res.out[0].Name === "Elara Wynn" && res.out[0].City !== undefined && res.out[0].Department !== undefined; } }, wrong: "Is the function in the file, the file dot-sourced (dot space), and the result an object with three properties?" },
+  recallHints: ["function Get-UserCard { param([string]$UserId) ... } in the file.", "Inside: Get-MgUser with -Property, then [pscustomobject]@{ Name = ...; Department = ...; City = ... }", "Save, then: . ./Halvard-Tools.ps1", "In the file: function Get-UserCard { param([string]$UserId) $u = Get-MgUser -UserId $UserId -Property DisplayName,Department,City; [pscustomobject]@{ Name = $u.DisplayName; Department = $u.Department; City = $u.City } }   then . ./Halvard-Tools.ps1; Get-UserCard -UserId " + U("elara.wynn")],
+  real: ["Write a Get-MyInfo function in a toolbox file, dot-source it from your PowerShell profile ($PROFILE) so it is there every session."],
+  cheat: [["function Verb-Noun { param($X) ... }", "Define a function"], ["[pscustomobject]@{ A = 1; B = 2 }", "Return an object"], [". ./Tools.ps1", "Load functions into the session"]]
+},
+{
+  id: "scripterrors", seq: 9, name: "Errors in scripts", tag: "TRY / CATCH", title: "One bad row must not stop the other 199",
+  summary: "Make errors catchable with Stop, catch them per item, collect what failed, report at the end.",
+  setup: "scripts",
+  brief: {
+    what: [
+      "Many errors are <b>non-terminating</b>: PowerShell prints red and carries on, and try/catch never sees them. Put <code>$ErrorActionPreference = 'Stop'</code> at the top of a script (or -ErrorAction Stop on the command) to make them catchable.",
+      "Wrap <b>each item</b> in its own try/catch inside the loop, not the whole loop: one missing user must not stop the other 199. In catch, <b>$_</b> is the error; <b>$_.Exception.Message</b> is its text.",
+      "Report instead of hiding: <b>Write-Warning</b> for the screen, and output a result object per item (<code>[pscustomobject]@{ Upn = $upn; Found = $false }</code>) so the run ends with a list you can export. <b>throw 'reason'</b> stops the whole script on purpose, for example when a required file is missing."
+    ],
+    daily: ["Every bulk script", "Leavers lists with typos", "Scheduled jobs nobody watches"],
+    parts: [["$ErrorActionPreference = 'Stop'", "make errors catchable"], ["foreach ($r in $rows) { try { ... } catch { ... } }", "one try per item"], ["$_.Exception.Message", "the error's text"], ["throw 'No input file'", "stop on purpose"]],
+    flow: [["Stop", "errors become catchable"], ["Per item", "try / catch"], ["Record", "result object"], ["End", "list of what failed"]],
+    traps: [["catch never runs", "The error was non-terminating. Add Stop."], ["try around the loop", "First failure ends the whole loop."], ["Empty catch", "catch { } swallows the error silently. Always record it."]]
+  },
+  watch: [
+    { code: "Import-Csv ~/Downloads/leavers.csv", say: "Three leavers. Not all of them are in the tenant any more." },
+    { code: "foreach ($r in Import-Csv ~/Downloads/leavers.csv) { try { $u = Get-MgUser -UserId $r.UPN -ErrorAction Stop; [pscustomobject]@{ Upn = $r.UPN; Found = $true } } catch { Write-Warning \"$($r.UPN): $($_.Exception.Message)\"; [pscustomobject]@{ Upn = $r.UPN; Found = $false } } }", say: "Every row gets a result. The failures are visible, and the loop finished." },
+    { code: "throw 'leavers.csv is empty'", say: "throw stops on purpose. In a script, nothing after it runs." }
+  ],
+  trace: { ask: "Make the error catchable so the catch block runs.", tpl: "try { Get-MgUser -UserId nobody@" + DOMAIN + " -ErrorAction [[Stop]] } catch { Write-Output \"caught: $($_.Exception.Message)\" }", check: { fn: (ctx, res) => !res.error && res.out.length === 1 && /^caught:/.test(String(res.out[0])) }, wrong: "Which ErrorAction turns an error into a terminating one?" },
+  traceHints: ["catch only sees terminating errors.", "The value that halts.", "S___", "Answer: Stop"],
+  recall: { ask: "Write Test-Leavers.ps1: for every row in ~/Downloads/leavers.csv try Get-MgUser on the UPN and output [pscustomobject] with Upn and Found ($true/$false). Run it.", setup: "scripts", check: { fn: (ctx, res) => { const t = scFile(ctx, "Test-Leavers.ps1"); if (!t || !/catch/i.test(t)) return false; const r = scClone(ctx, "./Test-Leavers.ps1").res; if (r.error || r.out.length !== 3) return false; const want = ["ludo.kerr", "bastian.crane", "ines.corrigan"].map((n) => !!userOf(GRADER.makeCtx("none"), n)); return r.out.every((o, i) => o && o.Upn && o.Found === want[i]); } }, wrong: "Three rows out, each with Upn and Found. Did you use -ErrorAction Stop inside try?" },
+  recallHints: ["foreach over Import-Csv, a try/catch inside.", "In try: Get-MgUser -UserId $r.UPN -ErrorAction Stop, then the Found = $true object.", "In catch: the Found = $false object.", "foreach ($r in Import-Csv ~/Downloads/leavers.csv) {\n    try { Get-MgUser -UserId $r.UPN -ErrorAction Stop | Out-Null; [pscustomobject]@{ Upn = $r.UPN; Found = $true } }\n    catch { [pscustomobject]@{ Upn = $r.UPN; Found = $false } }\n}"],
+  real: ["Add $ErrorActionPreference = 'Stop' and a per-item try/catch to the next bulk script you write at work, and export the results to a CSV."],
+  cheat: [["$ErrorActionPreference = 'Stop'", "Top of a script"], ["try { ... } catch { $_.Exception.Message }", "Catch and read"], ["throw 'reason'", "Stop on purpose"]]
+},
+{
+  id: "shouldprocess", seq: 9, name: "-WhatIf for your script", tag: "DRY RUN", title: "Give your own script a -WhatIf",
+  summary: "[CmdletBinding(SupportsShouldProcess)] gives your script -WhatIf and -Verbose; -WhatIf flows into every cmdlet inside.",
+  setup: "scripts",
+  brief: {
+    what: [
+      "Put <b>[CmdletBinding(SupportsShouldProcess)]</b> right above param(). Your script now accepts <b>-WhatIf</b>, <b>-Confirm</b> and <b>-Verbose</b> like a real cmdlet.",
+      "-WhatIf <b>flows down</b>: every cmdlet inside that supports it (Update-MgUser, Set-Mailbox, Add-DistributionGroupMember...) rehearses instead of changing. For your own steps, ask first: <code>if ($PSCmdlet.ShouldProcess($target, 'what you will do')) { ... }</code> prints a What if line during a dry run and returns $false.",
+      "<b>Write-Verbose</b> lines stay hidden until someone runs with -Verbose. Perfect for progress messages you only want when debugging."
+    ],
+    daily: ["Every script that changes things", "Showing a manager what a run will do", "Debugging with -Verbose"],
+    parts: [["[CmdletBinding(SupportsShouldProcess)]", "above param()"], ["./Set-X.ps1 -WhatIf", "dry run of everything inside"], ["$PSCmdlet.ShouldProcess($u, 'Set office')", "your own guarded step"], ["Write-Verbose \"Doing $u\"", "shown with -Verbose"]],
+    flow: [["CmdletBinding", "SupportsShouldProcess"], ["-WhatIf", "first run"], ["Read", "the What if lines"], ["Run", "for real"]],
+    traps: [["No CmdletBinding", "-WhatIf on your script is then 'parameter not found'."], ["Write-Host inside ShouldProcess", "Changes without a cmdlet (writing files, counters) need their own ShouldProcess check."], ["Verbose with Write-Host", "Write-Host always prints. Use Write-Verbose for optional detail."]]
+  },
+  watch: [
+    { code: "Set-Content ./Set-DeptOffice.ps1 -Value \"[CmdletBinding(SupportsShouldProcess)]`nparam([Parameter(Mandatory)][string]`$Department, [string]`$Office = 'Bruges HQ')`nforeach (`$u in Get-MgUser -All -Filter `\"department eq '`$Department'`\") { Write-Verbose `\"Setting `$(`$u.DisplayName)`\"; Update-MgUser -UserId `$u.Id -OfficeLocation `$Office }\"", say: "The script (written for you here): CmdletBinding, two parameters, one loop." },
+    { code: "./Set-DeptOffice.ps1 -Department Finance -WhatIf", say: "No change. Update-MgUser inherited -WhatIf from the script." },
+    { code: "./Set-DeptOffice.ps1 -Department Finance -Verbose", say: "For real, with the progress lines visible." },
+    { code: "Get-MgUser -All -Filter \"department eq 'Finance'\" -Property DisplayName,OfficeLocation | Select-Object DisplayName,OfficeLocation", say: "Read it back." }
+  ],
+  trace: { ask: "Give the script -WhatIf support.", tpl: "function Set-Test { [CmdletBinding([[SupportsShouldProcess]])] param([string]$UserId) Update-MgUser -UserId $UserId -OfficeLocation 'Lab' }; Set-Test -UserId " + U("dorian.pike") + " -WhatIf", check: { fn: (ctx, res) => !res.error && userOf(ctx, "dorian.pike").OfficeLocation !== "Lab" && res.host.some((h) => /What if/.test(h.text || "")) }, wrong: "The CmdletBinding argument that enables -WhatIf." },
+  traceHints: ["It 'supports' something.", "Should it process?", "Supports______Process", "Answer: SupportsShouldProcess"],
+  recall: { ask: "Write Set-DeptCity.ps1 with SupportsShouldProcess and a mandatory -Department and -City. It sets City for every user in that department. Rehearse it for Finance with -City Antwerp and -WhatIf, then run it for real.", setup: "scripts", check: { fn: (ctx, res, hist) => { const t = scFile(ctx, "Set-DeptCity.ps1"); if (!t || !/SupportsShouldProcess/i.test(t)) return false; const fin = ctx.t.users.filter((u) => u.Department === "Finance"); const wi = hist.findIndex((h) => /Set-DeptCity\.ps1/i.test(h) && /-WhatIf/i.test(h)); const real = hist.findIndex((h, i) => i > wi && /Set-DeptCity\.ps1/i.test(h) && !/-WhatIf/i.test(h)); return wi >= 0 && real > wi && fin.every((u) => u.City === "Antwerp"); } }, wrong: "CmdletBinding(SupportsShouldProcess), two mandatory parameters, a -WhatIf run, then a real run." },
+  recallHints: ["Top: [CmdletBinding(SupportsShouldProcess)] then param().", "Loop over Get-MgUser -All -Filter on $Department, Update-MgUser -City $City inside.", "Save, run with -Department Finance -City Antwerp -WhatIf, then without -WhatIf.", "[CmdletBinding(SupportsShouldProcess)]\nparam([Parameter(Mandatory)][string]$Department, [Parameter(Mandatory)][string]$City)\nforeach ($u in Get-MgUser -All -Filter \"department eq '$Department'\") { Update-MgUser -UserId $u.Id -City $City }"],
+  real: ["Add [CmdletBinding(SupportsShouldProcess)] to a script of yours that changes something, and always run it with -WhatIf first."],
+  cheat: [["[CmdletBinding(SupportsShouldProcess)]", "Script gets -WhatIf/-Confirm/-Verbose"], ["if ($PSCmdlet.ShouldProcess($t, 'action')) { }", "Guard your own step"], ["Write-Verbose 'msg'", "Shown only with -Verbose"]]
+}
+);
+
+Object.assign(DRILLS, {
+  runscript: [
+    { setup: "scripts", q: "Run Get-StaleUsers.ps1 from its folder.", out: "./Get-StaleUsers.ps1", hint: "./" },
+    { setup: "scripts", q: "Run it by name only and read the Suggestion line.", fn: (ctx, res) => !!res.error && /Suggestion/.test(res.error.text()), sol: ["Get-StaleUsers.ps1"], hint: "No ./" },
+    { setup: "scripts", q: "From your Desktop, run it with the call operator and a quoted path.", pre: ["cd ~/Desktop"], fn: (ctx, res, hist) => !res.error && ctx.cwd === "/Users/kaatje/Desktop" && res.out.length > 0 && hist.some((h) => /^&\s*['"]/.test(h.trim())), sol: ["& '~/Documents/scripts/Get-StaleUsers.ps1'"], hint: "& '...'" },
+    { setup: "scripts", q: "How many stale users does the script report? One number.", fn: (ctx, res) => res.out.length === 1 && res.out[0] === scClone(ctx, "./Get-StaleUsers.ps1").res.out.length, sol: ["(./Get-StaleUsers.ps1).Count"], hint: "( ... ).Count" },
+    { setup: "scripts", q: "Dot-source the script, then show $cutoff.", fn: (ctx, res, hist) => res.out.length === 1 && res.out[0] instanceof Date && hist.some((h) => /^\.\s+\.\//.test(h.trim())), sol: [". ./Get-StaleUsers.ps1 | Out-Null", "$cutoff"], hint: "A dot, a space, then the path." },
+    { setup: "scripts", q: "Export the script's output to ~/Desktop/stale.csv for Belgian Excel.", fn: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/stale.csv"); return !!c && /DisplayName/.test(c.head) && c.head.includes(";") && c.rows.length === scClone(ctx, "./Get-StaleUsers.ps1").res.out.length; }, sol: ["./Get-StaleUsers.ps1 | Export-Csv ~/Desktop/stale.csv -NoTypeInformation -Delimiter ';'"], hint: "A script's output pipes like any command." }
+  ],
+  firstscript: [
+    { q: "Write Get-DisabledUsers.ps1 that lists DisplayName of disabled accounts, and run it.", fn: (ctx) => { const t = scFile(ctx, "Get-DisabledUsers.ps1"); return !!t && scClone(ctx, "./Get-DisabledUsers.ps1").txt === scRef("Get-MgUser -All -Filter 'accountEnabled eq false' -Property DisplayName | Select-Object DisplayName"); }, sol: ["Set-Content ./Get-DisabledUsers.ps1 -Value \"Get-MgUser -All -Filter 'accountEnabled eq false' -Property DisplayName | Select-Object DisplayName\"", "./Get-DisabledUsers.ps1"], hint: "code ./Get-DisabledUsers.ps1, one line, Cmd+S." },
+    { q: "Write Get-SalesCount.ps1 over two lines: line 1 stores Sales users in $users, line 2 outputs $users.Count.", fn: (ctx) => { const t = scFile(ctx, "Get-SalesCount.ps1"); if (!t || t.trim().split("\n").length < 2) return false; const r = scClone(ctx, "./Get-SalesCount.ps1").res; return r.out.length === 1 && r.out[0] === 8; }, sol: ["Set-Content ./Get-SalesCount.ps1 -Value \"`$users = Get-MgUser -All -Filter `\"department eq 'Sales'`\"`n`$users.Count\""], hint: "Two lines, one variable." },
+    { q: "Make a script Broken.ps1 with a missing } on purpose. Look at the status bar, then run it and read the ParserError.", fn: (ctx, res) => !!res.error && res.error.parse === true, sol: ["Set-Content ./Broken.ps1 -Value 'if ($true) { Write-Output 1'", "./Broken.ps1"], hint: "if ($true) { ... without the closing brace." },
+    { q: "Write Get-OpsCities.ps1 as one pipeline over three lines (each line ending in |): Operations users, group by City, Name and Count.", fn: (ctx) => { const t = scFile(ctx, "Get-OpsCities.ps1"); return !!t && /\|\s*\n/.test(t) && scClone(ctx, "./Get-OpsCities.ps1").txt === scRef("Get-MgUser -All -Filter \"department eq 'Operations'\" -Property City | Group-Object City | Select-Object Name,Count"); }, sol: ["Set-Content ./Get-OpsCities.ps1 -Value \"Get-MgUser -All -Filter `\"department eq 'Operations'`\" -Property City |`n    Group-Object City |`n    Select-Object Name,Count\""], hint: "End lines with |, indent the next one." },
+    { q: "List the .ps1 files in your scripts folder: names only.", out: "Get-ChildItem -Filter *.ps1 -Name", hint: "Get-ChildItem -Filter *.ps1 -Name" }
+  ],
+  params: [
+    { q: "Run Get-DeptUsers.ps1 for Sales with the default Top.", out: "./Get-DeptUsers.ps1 -Department Sales", hint: "Only -Department." },
+    { q: "Run it with -Top abc and read the error.", fn: (ctx, res) => !!res.error && /Int32/.test(res.error.text()), sol: ["./Get-DeptUsers.ps1 -Department Sales -Top abc"], hint: "A word where a number belongs." },
+    { q: "Run it with a splat: $p = @{ Department = 'Operations'; Top = 2 }", out: "$p = @{ Department = 'Operations'; Top = 2 }; ./Get-DeptUsers.ps1 @p", hint: "@p, not $p" },
+    { q: "Write Get-JobTitle.ps1 with a mandatory -Title and a [switch]$Count: without the switch it lists DisplayName of users with that JobTitle, with it only the number. Run it for 'Account Manager' -Count.", fn: (ctx) => { const t = scFile(ctx, "Get-JobTitle.ps1"); if (!t || !/\[switch\]/i.test(t)) return false; const a = scClone(ctx, "./Get-JobTitle.ps1 -Title 'Account Manager'").txt === scRef("Get-MgUser -All -Filter \"jobTitle eq 'Account Manager'\" -Property DisplayName | Select-Object DisplayName"); const b = scClone(ctx, "./Get-JobTitle.ps1 -Title 'Account Manager' -Count").res; const n = scClone(ctx, "(Get-MgUser -All -Filter \"jobTitle eq 'Account Manager'\").Count").res.out[0]; return a && b.out.length === 1 && b.out[0] === n; }, sol: ["Set-Content ./Get-JobTitle.ps1 -Value \"param([Parameter(Mandatory)][string]`$Title, [switch]`$Count)`n`$u = Get-MgUser -All -Filter `\"jobTitle eq '`$Title'`\" -Property DisplayName`nif (`$Count) { `$u.Count } else { `$u | Select-Object DisplayName }\""], hint: "if ($Count) { ... } else { ... }" },
+    { q: "Add [ValidateSet('Bruges','Ghent','Antwerp')] to -City in Get-CityUsers.ps1, then try -City Paris.", pre: ["Set-Content ./Get-CityUsers.ps1 -Value \"param([Parameter(Mandatory)][string]`$City)`nGet-MgUser -All -Filter `\"city eq '`$City'`\" -Property DisplayName,Department | Select-Object DisplayName,Department\""], fn: (ctx, res) => { const t = scFile(ctx, "Get-CityUsers.ps1"); return !!t && /ValidateSet/i.test(t) && !!res.error && /ValidateSet/.test(res.error.text()); }, sol: ["Set-Content ./Get-CityUsers.ps1 -Value \"param([Parameter(Mandatory)][ValidateSet('Bruges','Ghent','Antwerp')][string]`$City)`nGet-MgUser -All -Filter `\"city eq '`$City'`\" -Property DisplayName,Department | Select-Object DisplayName,Department\"", "./Get-CityUsers.ps1 -City Paris"], hint: "The attribute goes right before [string]$City." }
+  ],
+  functions: [
+    { q: "Define Get-Initials with a -Name parameter that returns the first letter of each word (Elara Wynn → EW), then run it for 'Elara Wynn'.", fn: (ctx, res) => !!ctx.funcs["get-initials"] && res.out.length === 1 && res.out[0] === "EW", sol: ["function Get-Initials { param([string]$Name) ($Name -split ' ' | ForEach-Object { $_.Substring(0,1) }) -join '' }; Get-Initials -Name 'Elara Wynn'"], hint: "-split ' ', first letter of each, -join ''." },
+    { q: "Prove the trap: a function that only uses Write-Host, piped into Measure-Object. Show the Count.", fn: (ctx, res) => res.out.length === 1 && res.out[0] && res.out[0].Count === 0, sol: ["function Show-X { Write-Host 'x' }; Show-X | Measure-Object | Select-Object Count"], hint: "Measure-Object counts what came down the pipe." },
+    { q: "Define Get-UserCard (Name, Department, City), then export cards for everyone in Finance to ~/Desktop/cards.csv with ';'.", fn: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/cards.csv"); return !!c && /Name/.test(c.head) && /City/.test(c.head) && c.rows.length === 5; }, sol: ["function Get-UserCard { param([string]$UserId) $u = Get-MgUser -UserId $UserId -Property DisplayName,Department,City; [pscustomobject]@{ Name = $u.DisplayName; Department = $u.Department; City = $u.City } }", "Get-MgUser -All -Filter \"department eq 'Finance'\" | ForEach-Object { Get-UserCard -UserId $_.Id } | Export-Csv ~/Desktop/cards.csv -NoTypeInformation -Delimiter ';'"], hint: "ForEach-Object calls your function per user." },
+    { q: "Run Halvard-Tools.ps1 with ./ (not dot-sourced), then try Get-UserCard. Read the error.", pre: ["Set-Content ./Halvard-Tools.ps1 -Value 'function Get-UserCard { param([string]$UserId) Get-MgUser -UserId $UserId }'"], fn: (ctx, res, hist) => !!res.error && /not recognized/.test(res.error.text()) && hist.some((h) => /^\.\/Halvard-Tools\.ps1/i.test(h.trim())), sol: ["./Halvard-Tools.ps1", "Get-UserCard -UserId " + U("elara.wynn")], hint: "./ runs it in its own scope." },
+    { q: "Give a function a default: Get-Team with [string]$Department = 'Sales' returning DisplayName. Run it without arguments.", fn: (ctx, res) => !!ctx.funcs["get-team"] && PS.formatOut(res.out, 120).trim() === scRef("Get-MgUser -All -Filter \"department eq 'Sales'\" -Property DisplayName | Select-Object DisplayName"), sol: ["function Get-Team { param([string]$Department = 'Sales') Get-MgUser -All -Filter \"department eq '$Department'\" -Property DisplayName | Select-Object DisplayName }; Get-Team"], hint: "param([string]$Department = 'Sales')" }
+  ],
+  scripterrors: [
+    { q: "Show that try/catch misses a non-terminating error: Get-Content on a missing file inside try, catch outputs 'caught'. Nothing is caught.", fn: (ctx, res, hist) => !res.out.some((o) => o === "caught") && hist.some((h) => /try\s*\{\s*Get-Content/i.test(h)) && !/ErrorAction\s+Stop/i.test(hist[hist.length - 1] || ""), sol: ["try { Get-Content ./nope.txt } catch { 'caught' }"], hint: "No -ErrorAction Stop this time." },
+    { q: "Now make it catchable and output the error message.", fn: (ctx, res) => res.out.length === 1 && /Cannot find path/.test(String(res.out[0])), sol: ["try { Get-Content ./nope.txt -ErrorAction Stop } catch { $_.Exception.Message }"], hint: "-ErrorAction Stop, then $_.Exception.Message" },
+    { q: "Write Need-File.ps1 that throws 'Input file missing' when ~/Downloads/newhires2.csv doesn't exist. Run it.", fn: (ctx, res) => { const t = scFile(ctx, "Need-File.ps1"); return !!t && /throw/i.test(t) && !!res.error && /Input file missing/.test(res.error.text()); }, sol: ["Set-Content ./Need-File.ps1 -Value \"if (-not (Test-Path ~/Downloads/newhires2.csv)) { throw 'Input file missing' }\"", "./Need-File.ps1"], hint: "if (-not (Test-Path ...)) { throw '...' }" },
+    { q: "Loop over 'elara.wynn','nobody.here','dorian.pike' and output only the DisplayNames that exist, with a Write-Warning for the one that doesn't.", fn: (ctx, res) => res.out.length === 2 && res.out.includes("Elara Wynn") && res.out.includes("Dorian Pike") && res.host.some((h) => /WARNING/.test(h.warn || "")), sol: ["foreach ($n in 'elara.wynn','nobody.here','dorian.pike') { try { (Get-MgUser -UserId \"$n@" + DOMAIN + "\" -ErrorAction Stop).DisplayName } catch { Write-Warning \"$n not found\" } }"], hint: "try per item, Write-Warning in catch." },
+    { q: "Collect failures: run the same loop, put each failed name in $failed, and output $failed at the end.", fn: (ctx, res) => res.out.length >= 1 && res.out[res.out.length - 1] === "nobody.here", sol: ["$failed = @(); foreach ($n in 'elara.wynn','nobody.here','dorian.pike') { try { Get-MgUser -UserId \"$n@" + DOMAIN + "\" -ErrorAction Stop | Out-Null } catch { $failed += $n } }; $failed"], hint: "$failed = @() before, $failed += $n in catch." }
+  ],
+  shouldprocess: [
+    { q: "Without CmdletBinding, a script refuses -WhatIf. Write NoBind.ps1 with just param([string]$X) and run it with -WhatIf.", fn: (ctx, res) => !!res.error && /parameter name 'WhatIf'/.test(res.error.text()), sol: ["Set-Content ./NoBind.ps1 -Value 'param([string]$X) $X'", "./NoBind.ps1 -X a -WhatIf"], hint: "Read the error: no such parameter." },
+    { q: "Write Say-Verbose.ps1 with [CmdletBinding()] that does Write-Verbose 'step 1' and outputs 'done'. Run it with -Verbose.", fn: (ctx, res) => res.out.includes("done") && res.host.some((h) => /VERBOSE: step 1/.test(h.warn || "")), sol: ["Set-Content ./Say-Verbose.ps1 -Value \"[CmdletBinding()]`nparam()`nWrite-Verbose 'step 1'`n'done'\"", "./Say-Verbose.ps1 -Verbose"], hint: "[CmdletBinding()] then param() even if empty." },
+    { q: "Guard your own step: a function with SupportsShouldProcess that writes a log line with Add-Content only if $PSCmdlet.ShouldProcess allows. Call it with -WhatIf: no file appears.", fn: (ctx, res) => res.host.some((h) => /What if/.test(h.text || "")) && !ctx.fs["/Users/kaatje/Documents/scripts/guard.log"], sol: ["function Write-Log { [CmdletBinding(SupportsShouldProcess)] param([string]$Msg) if ($PSCmdlet.ShouldProcess('guard.log', 'Write log line')) { Add-Content ./guard.log -Value $Msg } }; Write-Log -Msg 'hi' -WhatIf"], hint: "if ($PSCmdlet.ShouldProcess(target, action)) { ... }" },
+    { q: "Dry-run Set-DeptOffice.ps1 for Operations with -WhatIf: nothing may change.", pre: ["Set-Content ./Set-DeptOffice.ps1 -Value \"[CmdletBinding(SupportsShouldProcess)]`nparam([Parameter(Mandatory)][string]`$Department, [string]`$Office = 'Bruges HQ')`nforeach (`$u in Get-MgUser -All -Filter `\"department eq '`$Department'`\") { Update-MgUser -UserId `$u.Id -OfficeLocation `$Office }\""], fn: (ctx, res) => !res.error && res.host.filter((h) => /What if/.test(h.text || "")).length >= 5 && !ctx.t.users.some((u) => u.OfficeLocation === "Bruges HQ"), sol: ["./Set-DeptOffice.ps1 -Department Operations -WhatIf"], hint: "-WhatIf on the script." },
+    { q: "Run Set-DeptOffice.ps1 for Operations with -Office 'Ghent Depot' for real, then show DisplayName and OfficeLocation of Operations.", pre: ["Set-Content ./Set-DeptOffice.ps1 -Value \"[CmdletBinding(SupportsShouldProcess)]`nparam([Parameter(Mandatory)][string]`$Department, [string]`$Office = 'Bruges HQ')`nforeach (`$u in Get-MgUser -All -Filter `\"department eq '`$Department'`\") { Update-MgUser -UserId `$u.Id -OfficeLocation `$Office }\""], fn: (ctx, res) => ctx.t.users.filter((u) => u.Department === "Operations").every((u) => u.OfficeLocation === "Ghent Depot") && res.out.length >= 10 && res.out.every((o) => o.OfficeLocation === "Ghent Depot"), sol: ["./Set-DeptOffice.ps1 -Department Operations -Office 'Ghent Depot'", "Get-MgUser -All -Filter \"department eq 'Operations'\" -Property DisplayName,OfficeLocation | Select-Object DisplayName,OfficeLocation"], hint: "Run, then read back." }
+  ]
+});
+
+const SYNC_MUT = (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "Operations Bruges"); d.members = d.members.filter((m) => !/torin\.ash|kestrel\.wade|anwen\.frost/.test(m)); };
+const SYNC_CALL = "./Sync-DeptList.ps1 -Department Operations -List 'Operations Bruges'";
+const opsWant = (ctx) => ctx.t.users.filter((u) => u.Department === "Operations" && u.AccountEnabled).map((u) => u.UserPrincipalName.toLowerCase());
+const opsList = (ctx) => ctx.t.dls.find((x) => x.Name === "Operations Bruges").members.map((m) => m.toLowerCase());
+const AUTOMATE = {
+  id: "automate", type: "capstone", name: "The handover script", seq: 9, kind: "CAPSTONE · YOUR FIRST REAL TOOL", allow: /operations|torin|kestrel|anwen|maelis|oren|rowan|bastian|emrys|caius|ludo/i, hero: "gate", setup: "scripts",
+  need: (m) => m.seq === 9, mutate: SYNC_MUT,
+  story: "Garrick: 'Every time someone joins Operations, nobody adds them to the Operations Bruges list, and they miss the shift mails.' He wants a tool the next admin can run without you: Sync-DeptList.ps1 in ~/Documents/scripts. The grader runs your saved script on fresh copies of the tenant, so it has to work every time, not once.",
+  doneMsg: "Sync-DeptList.ps1 works on a fresh tenant, rehearses with -WhatIf, survives a second run and logs what it did. That is a tool, not a one-liner.",
+  tickets: [
+    { id: "a1", from: "Garrick Penhale", title: "Parameters", body: "Create Sync-DeptList.ps1 with mandatory -Department and -List parameters and [CmdletBinding(SupportsShouldProcess)]. Running it without -Department must refuse.", hint: "[CmdletBinding(SupportsShouldProcess)] param([Parameter(Mandatory)][string]$Department, [Parameter(Mandatory)][string]$List)",
+      check: (ctx) => { const t = scFile(ctx, "Sync-DeptList.ps1"); if (!t || !/SupportsShouldProcess/i.test(t) || !parses(t)) return false; const r = scClone(ctx, "./Sync-DeptList.ps1 -List 'Operations Bruges'", SYNC_MUT).res; return !!r.error && /mandatory/i.test(r.error.text()); } },
+    { id: "a2", from: "Garrick Penhale", title: "Add who is missing", body: "It adds every enabled user of -Department who is not yet on -List. Disabled accounts stay off.", hint: "$have = (Get-DistributionGroupMember -Identity $List).PrimarySmtpAddress; loop over Get-MgUser -Filter department, skip if in $have or not AccountEnabled, else Add-DistributionGroupMember.",
+      check: (ctx) => { if (!scFile(ctx, "Sync-DeptList.ps1")) return false; const base = GRADER.makeCtx("scripts"); SYNC_MUT(base); const before = opsList(base); const { c, res } = scClone(ctx, SYNC_CALL, SYNC_MUT); if (res.error) return false; const have = opsList(c); const disabled = c.t.users.filter((u) => !u.AccountEnabled).map((u) => u.UserPrincipalName.toLowerCase()); return opsWant(c).every((u) => have.includes(u)) && !have.some((m) => !before.includes(m) && disabled.includes(m)); } },
+    { id: "a3", from: "You", title: "Rehearse", body: "With -WhatIf it changes nothing and says what it would do.", hint: "SupportsShouldProcess makes Add-DistributionGroupMember inherit -WhatIf.",
+      check: (ctx) => { if (!scFile(ctx, "Sync-DeptList.ps1")) return false; const { c, res } = scClone(ctx, SYNC_CALL + " -WhatIf", SYNC_MUT); const before = GRADER.makeCtx("scripts"); SYNC_MUT(before); return !res.error && opsList(c).length === opsList(before).length && res.host.some((h) => /What if/.test(h.text || "")); } },
+    { id: "a4", from: "Next admin", title: "Safe to run twice", body: "A second run right after the first must finish without errors or warnings: nobody left to add, nothing to complain about.", hint: "Skip people already on the list instead of letting Add-DistributionGroupMember fail.",
+      check: (ctx) => { if (!scFile(ctx, "Sync-DeptList.ps1")) return false; const { c } = scClone(ctx, SYNC_CALL, SYNC_MUT); c.host = []; const r2 = PS.run(SYNC_CALL, c); return !r2.error && !r2.host.some((h) => h.err || h.warn); } },
+    { id: "a5", from: "Garrick Penhale", title: "Leave a trail", body: "Each added person gets a line in ~/Documents/scripts/sync.log (Add-Content), and nothing is logged during -WhatIf.", hint: "Add-Content ~/Documents/scripts/sync.log -Value \"$(Get-Date) added $($u.UserPrincipalName)\" inside the add branch. Add-Content also respects -WhatIf.",
+      check: (ctx) => { if (!scFile(ctx, "Sync-DeptList.ps1")) return false; const a = scClone(ctx, SYNC_CALL, SYNC_MUT).c; const log = a.fs[SC + "/sync.log"]; const prior = ctx.fs[SC + "/sync.log"] ? ctx.fs[SC + "/sync.log"].text.split("\n").filter(Boolean).length : 0; const w = scClone(ctx, SYNC_CALL + " -WhatIf", SYNC_MUT).c; const wl = w.fs[SC + "/sync.log"]; const base = GRADER.makeCtx("scripts"); SYNC_MUT(base); const exp = opsWant(base).filter((u) => !opsList(base).includes(u)).length; const n = log ? log.text.split("\n").filter(Boolean).length - prior : 0; return n === exp && (!wl || wl.text.split("\n").filter(Boolean).length === prior); } }
+  ]
+};
+GATES.push(AUTOMATE);
+AUTOMATE.text = { crumb: "Capstone · ", done: "Tool shipped", flow: [["Ticket", "what Garrick needs"], ["Write", "in Code, Cmd+S"], ["Rehearse", "-WhatIf"], ["Prove", "fresh tenant, twice"]], flowT: "CAPSTONE · BUILD A TOOL, NOT A ONE-LINER", rules: "<h6>CAPSTONE RULES</h6>Write Sync-DeptList.ps1 in Code (button above the console). Every ticket is checked by running your saved file on a fresh copy of the tenant. Save before you expect a ticket to close: run anything in the console to re-check.", junie: "Build it in small steps: params first, save, run. Then the loop. Then -WhatIf. Then the log. Each ticket checks one step." };
 
 const KEY = "syncle.v1";
 const KEYS = [["Tab", "Complete: unique match, or the longest common part"], ["Tab Tab", "No progress? The second Tab lists every possibility"], ["Ctrl+Space", "Menu of completions, pick with arrows, Enter accepts"], ["Alt+=", "List possible completions without changing the line"], ["Right arrow / Ctrl+F / End", "At the end of the line: accept the grey suggestion from history"], ["Alt+F", "At the end of the line: accept the next word of the suggestion"], ["Up / Down, Ctrl+P / Ctrl+N", "Previous / next command in history"], ["Ctrl+R / Ctrl+S", "Search history backwards / forwards, Enter runs it"], ["Ctrl+A / Ctrl+E", "Start / end of the line"], ["Ctrl+B / Ctrl+F, Alt+B / Alt+F", "Back / forward a character, a word"], ["Ctrl+U / Ctrl+K", "Cut everything before / after the cursor"], ["Ctrl+W / Alt+D", "Cut the word before / after the cursor"], ["Ctrl+Y", "Paste what you cut"], ["Alt+.", "Insert the last argument of the previous command"], ["Ctrl+T", "Swap two characters"], ["Ctrl+_", "Undo"], ["Ctrl+C", "Cancel the line"], ["Ctrl+L", "Clear the screen"], ["Ctrl+D", "Delete character (on an empty line: exit pwsh)"]];
@@ -5006,7 +5418,7 @@ const GTEXT = {
   incident: { crumb: "Incident · ", done: "Incident closed", flow: [["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], flowT: "LIVE INCIDENT · THE ORDER THAT MATTERS", rules: "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style.", junie: "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan." },
   break: { crumb: "Break · ", done: "Fixed", flow: [["Report", "what they say"], ["Diagnose", "Get- first"], ["Fix", "one change"], ["Verify", "read it back"]], flowT: "SOMETHING BROKE · DIAGNOSE BEFORE YOU FIX", rules: "<h6>BREAK RULES</h6>Something in the tenant changed and nobody told you. Find what, with a Get- command, before you change anything. Fix only that. Nothing is connected yet.", junie: "Don't guess. Look at the thing they complain about first: the answer is usually right there in one property." }
 };
-function gtext() { return GTEXT[curGate().type || "takeover"]; }
+function gtext() { const g = curGate(); return g.text || GTEXT[g.type || "takeover"]; }
 function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
@@ -5041,10 +5453,10 @@ function renderCorridor() {
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
-  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : "RESPOND");
+  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : "AUTOMATE");
   $("stName").textContent = sq.name; $("stBlurb").textContent = sq.blurb;
   let h = "<h4>THE CURVE</h4>";
-  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND" };
+  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE" };
   SEQUENCES.forEach((q) => {
     if (tiers[q.id]) h += '<div class="tier">' + tiers[q.id] + "</div>";
     const pr = q.open ? seqProgress(q.id) : null;
@@ -5071,7 +5483,7 @@ function renderCorridor() {
     let st, name, tag, due = false;
     if (it.kind === "mem") { st = synced(it.m.id) ? "done" : i === firstOpen ? "current" : "ahead"; name = it.m.name; tag = it.m.tag; due = dueReview(it.m.id); }
     else if (it.kind === "next") { const nq = SEQUENCES[it.to]; st = nq && nq.open && seqProgress(seq)[0] === ms.length ? "gate" : "ahead"; name = nq ? nq.name : "More soon"; tag = nq && nq.open ? "NEXT SEQUENCE" : "COMING SOON"; }
-    else { const g = it.g; const open = gateOpen(g); const done = g.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = g.name; const kw = g === GATE ? "TAKEOVER" : "LIVE INCIDENT"; tag = open ? kw : kw + " · LOCKED"; }
+    else { const g = it.g; const open = gateOpen(g); const done = g.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = g.name; const kw = { takeover: "TAKEOVER", incident: "LIVE INCIDENT", capstone: "CAPSTONE" }[g.type] || "TAKEOVER"; tag = open ? kw : kw + " · LOCKED"; }
     nh += crystal(i, x, y, s, st, name, tag, i === S.selMem, due);
   });
   $("nodes").innerHTML = nh;
@@ -5116,7 +5528,7 @@ function renderDetail(it, ms) {
     const g = it.g, need = gateNeed(g), open = gateOpen(g);
     const done = g.tickets.filter((t) => S.gate[t.id]).length;
     d.innerHTML = '<div class="l"><span class="eyebrow">' + esc(g.kind) + '</span><h3>' + esc(g.name) + "</h3><p>" + esc(g.story) + '</p><p class="mutetxt">' + done + " of " + g.tickets.length + " tickets closed</p></div>" +
-      '<div class="r"><div class="gatehero"' + gateHero(g) + ' role="img" aria-label="' + esc(g.name) + '"></div><div class="row"><button class="go" type="button" id="goGate"' + (open ? "" : " disabled") + ">" + (open ? (g === GATE ? "ENTER THE TENANT" : "TAKE THE CALL") : "SYNC ALL " + need.length + " MEMORIES TO OPEN") + "</button>" + (open ? "" : '<span class="mutetxt">' + need.filter((m) => synced(m.id)).length + " / " + need.length + " synced</span>") + "</div></div>";
+      '<div class="r"><div class="gatehero"' + gateHero(g) + ' role="img" aria-label="' + esc(g.name) + '"></div><div class="row"><button class="go" type="button" id="goGate"' + (open ? "" : " disabled") + ">" + (open ? ({ takeover: "ENTER THE TENANT", incident: "TAKE THE CALL", capstone: "BUILD THE TOOL" }[g.type] || "ENTER") : "SYNC ALL " + need.length + " MEMORIES TO OPEN") + "</button>" + (open ? "" : '<span class="mutetxt">' + need.filter((m) => synced(m.id)).length + " / " + need.length + " synced</span>") + "</div></div>";
     if (open) $("goGate").onclick = () => openGate(g);
     return;
   }
@@ -5177,6 +5589,7 @@ function exec(src, opts) {
   if (res.error) tline(res.error.text ? res.error.text() : String(res.error.message), "e");
   o.scrollTop = o.scrollHeight;
   R.lastRes = res;
+  if (R.ctx.ui && !R.ctx.ui.done) { const u = R.ctx.ui; u.done = true; openDesktop(); openCode(u.open); }
   tstate();
   lastRun(res, src);
   return res;
@@ -5275,7 +5688,7 @@ function playStep(m) {
 function renderTrace(m) {
   const t = m.trace;
   let gi = 0;
-  const tpl = esc(t.tpl).replace(/\[\[([^\]]*)\]\]/g, (_, a) => '<input class="gap" data-g="' + (gi++) + '" style="--w:' + Math.max(90, a.length * 9 + 26) + 'px" aria-label="Gap ' + gi + '" autocomplete="off" spellcheck="false">');
+  const tpl = esc(t.tpl).replace(/\[\[([^\[\]]*)\]\]/g, (_, a) => '<input class="gap" data-g="' + (gi++) + '" style="--w:' + Math.max(90, a.length * 9 + 26) + 'px" aria-label="Gap ' + gi + '" autocomplete="off" spellcheck="false">');
   $("pbody").innerHTML = '<p class="ask">' + esc(t.ask) + '</p><div class="tpl">' + tpl + "</div>" +
     (t.after ? '<p class="mutetxt">Runs afterwards automatically: <code>' + esc(t.after.join("; ")) + "</code></p>" : "") +
     '<div class="row"><button class="go blue" type="button" id="runTrace">RUN</button><span class="mutetxt">Enter in a gap also runs it</span></div>';
@@ -5844,7 +6257,7 @@ const HOME = "/Users/kaatje";
 function dctx() { if (!R.ctx) R.ctx = GRADER.makeCtx("none"); return R.ctx; }
 function pparent(p) { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); }
 function pname(p) { return p.split("/").pop(); }
-function kindOf(p, isDir) { if (isDir) return "Folder"; const e = (pname(p).split(".").pop() || "").toLowerCase(); return e === "csv" ? "CSV document" : e === "log" ? "Log file" : e === "txt" ? "Plain text" : "Document"; }
+function kindOf(p, isDir) { if (isDir) return "Folder"; const e = (pname(p).split(".").pop() || "").toLowerCase(); return e === "csv" ? "CSV document" : e === "ps1" ? "PowerShell script" : e === "log" ? "Log file" : e === "txt" ? "Plain text" : "Document"; }
 function listDir(dir) {
   const c = dctx();
   const ds = Array.from(c.dirs).filter((d) => d !== dir && pparent(d) === dir).map((d) => ({ p: d, dir: true }));
@@ -5855,9 +6268,9 @@ function icon(item, size) {
   const s = size || 46;
   if (item.dir) return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 48 48" aria-hidden="true"><path d="M4 12a3 3 0 0 1 3-3h11l4 4h19a3 3 0 0 1 3 3v21a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="#7fb3ea"/><path d="M4 17h40v20a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3z" fill="#9ccaf6"/></svg>';
   const ext = (pname(item.p).split(".").pop() || "").toLowerCase();
-  const col = ext === "csv" ? "#2f8f5b" : ext === "log" ? "#7a6a52" : "#5a6574";
+  const col = ext === "ps1" ? "#2a63d4" : ext === "csv" ? "#2f8f5b" : ext === "log" ? "#7a6a52" : "#5a6574";
   return '<svg width="' + s + '" height="' + s + '" viewBox="0 0 48 48" aria-hidden="true"><path d="M11 4h18l9 9v29a2 2 0 0 1-2 2H11a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="#fff" stroke="#c6ced8"/><path d="M29 4v9h9" fill="#eef1f4" stroke="#c6ced8"/>' +
-    (ext === "csv" ? '<g stroke="' + col + '" stroke-width="1.2" fill="none"><path d="M14 20h20M14 25h20M14 30h20M14 35h20M21 18v19M28 18v19"/></g>' : '<g stroke="#9aa4b2" stroke-width="1.4"><path d="M15 20h18M15 25h18M15 30h12"/></g>') +
+    (ext === "ps1" ? '<path d="M15 20l6 4-6 4M23 30h9" stroke="#2a63d4" stroke-width="2" fill="none"/>' : ext === "csv" ? '<g stroke="' + col + '" stroke-width="1.2" fill="none"><path d="M14 20h20M14 25h20M14 30h20M14 35h20M21 18v19M28 18v19"/></g>' : '<g stroke="#9aa4b2" stroke-width="1.4"><path d="M15 20h18M15 25h18M15 30h12"/></g>') +
     '<rect x="8" y="34" width="' + (ext.length * 6 + 8) + '" height="9" rx="1.5" fill="' + col + '"/><text x="12" y="41" font-size="7" font-family="Inter,sans-serif" font-weight="600" fill="#fff">' + esc(ext.toUpperCase()) + "</text></svg>";
 }
 function openDesktop() {
@@ -5892,7 +6305,7 @@ function bindIcons(root) {
 function openItem(p, isDir) {
   if (isDir) { DK.finder = p; showWin("finder"); renderFinder(); return; }
   const ext = (pname(p).split(".").pop() || "").toLowerCase();
-  if (ext === "csv") openExcel(p); else openText(p);
+  if (ext === "csv") openExcel(p); else if (ext === "ps1") openCode(p); else openText(p);
 }
 function showWin(id) { const w = $("w-" + id); w.classList.remove("hide"); DK.open[id] = true; w.style.zIndex = ++DK.z; }
 function hideWin(id) { $("w-" + id).classList.add("hide"); DK.open[id] = false; }
@@ -5940,7 +6353,7 @@ function ctxMenu(x, y, p, isDir) {
   const m = $("dkMenu");
   const items = [["Open", () => openItem(p, isDir)]];
   if (!isDir) {
-    items.push(["Open With Excel", () => openExcel(p)], ["Open With TextEdit", () => openText(p)]);
+    items.push(["Open With Excel", () => openExcel(p)], ["Open With TextEdit", () => openText(p)], ["Open With Code", () => openCode(p)]);
     items.push(["sep"]);
     items.push(["Copy \"" + pname(p) + "\" as Pathname", () => { copyText(p); toast("Copied " + p + ". Paste it in the console with Cmd+V."); }]);
     items.push(["Download to my real Mac", () => download(p)]);
@@ -5991,7 +6404,113 @@ $("dkArea").addEventListener("click", (e) => { if (!e.target.closest(".dicon") &
 document.addEventListener("click", (e) => { if (!e.target.closest("#dkMenu")) $("dkMenu").classList.add("hide"); });
 $("deskbtn").onclick = () => (R.view === "desktop" ? closeDesktop() : openDesktop());
 $("tDesk").onclick = () => openDesktop();
+$("tCode").onclick = () => { openDesktop(); openCode(CODE.path); };
 setInterval(() => { if (R.view === "desktop") $("dkClock").textContent = clock(); }, 30000);
+const CODE = { path: null, saved: "", dirty: false, timer: null, dir: HOME + "/Documents/scripts" };
+const KW = /^(function|param|if|elseif|else|foreach|for|while|do|switch|try|catch|finally|throw|return|break|continue|in|begin|process|end)$/i;
+function hlPS(src) {
+  let out = "", i = 0;
+  const push = (cls, s) => { out += cls ? '<span class="' + cls + '">' + esc(s) + "</span>" : esc(s); };
+  while (i < src.length) {
+    const r = src.slice(i);
+    let m;
+    if ((m = /^<#[\s\S]*?(#>|$)/.exec(r))) { push("hc", m[0]); i += m[0].length; continue; }
+    if ((m = /^#[^\n]*/.exec(r))) { push("hc", m[0]); i += m[0].length; continue; }
+    if ((m = /^'(?:[^']|'')*'?/.exec(r))) { push("hs", m[0]); i += m[0].length; continue; }
+    if ((m = /^"(?:[^"`]|`.)*"?/.exec(r))) { push("hs", m[0]); i += m[0].length; continue; }
+    if ((m = /^\$[A-Za-z_][\w:]*|^\$\{[^}]*\}|^\$_/.exec(r))) { push("hv", m[0]); i += m[0].length; continue; }
+    if ((m = /^\[[A-Za-z][\w.\[\]]*\]/.exec(r))) { push("ht", m[0]); i += m[0].length; continue; }
+    if ((m = /^-[A-Za-z][\w]*/.exec(r)) && !/[\w$]$/.test(src.slice(Math.max(0, i - 1), i))) { push("hp", m[0]); i += m[0].length; continue; }
+    if ((m = /^[A-Za-z][\w]*-[A-Za-z][\w]*/.exec(r))) { push("hk", m[0]); i += m[0].length; continue; }
+    if ((m = /^[A-Za-z_]\w*/.exec(r))) { push(KW.test(m[0]) ? "hw" : "", m[0]); i += m[0].length; continue; }
+    push("", src[i]); i++;
+  }
+  return out + "\n";
+}
+function openCode(p) {
+  const c = dctx();
+  if (p && !c.fs[p]) { if (!c.dirs.has(pparent(p))) { toast("That folder doesn't exist: " + pparent(p).replace(HOME, "~")); return; } CODE.path = p; CODE.saved = null; $("cdArea").value = ""; }
+  else if (p) { CODE.path = p; CODE.saved = c.fs[p].text; $("cdArea").value = c.fs[p].text; }
+  if (CODE.path) CODE.dir = pparent(CODE.path);
+  showWin("code");
+  codeRefresh(); renderCodeTree();
+  setTimeout(() => $("cdArea").focus(), 50);
+}
+function codeRefresh() {
+  const t = $("cdArea").value;
+  $("cdHl").innerHTML = hlPS(t);
+  const n = t.split("\n").length;
+  $("cdGut").textContent = Array.from({ length: n }, (_, i) => i + 1).join("\n");
+  CODE.dirty = CODE.path ? t !== CODE.saved : false;
+  $("cdTitle").textContent = CODE.path ? pname(CODE.path) + (CODE.dirty ? "  ●" : "") : "No file open";
+  $("cdPath").textContent = CODE.path ? CODE.path.replace(HOME, "~") : "Open a file from the explorer or type code ./name.ps1 in the console";
+  const pos = $("cdArea").selectionStart, before = t.slice(0, pos).split("\n");
+  $("cdPos").textContent = "Ln " + before.length + ", Col " + (before[before.length - 1].length + 1);
+  clearTimeout(CODE.timer); CODE.timer = setTimeout(codeCheck, 250);
+  syncScroll();
+}
+function codeCheck() {
+  const box = $("cdProb");
+  if (!CODE.path || !/\.ps1$/i.test(CODE.path)) { box.textContent = CODE.path ? "Plain text" : ""; box.className = "cdprob"; return; }
+  try { PS.parse("function ScriptBody {\n" + $("cdArea").value + "\n}"); box.textContent = "No problems"; box.className = "cdprob ok"; }
+  catch (e) { box.textContent = "Problem: " + e.message; box.className = "cdprob bad"; }
+}
+function syncScroll() { const a = $("cdArea"); $("cdHl").scrollTop = a.scrollTop; $("cdHl").scrollLeft = a.scrollLeft; $("cdGut").scrollTop = a.scrollTop; }
+function codeSave() {
+  if (!CODE.path) return false;
+  const c = dctx();
+  if (!c.dirs.has(pparent(CODE.path))) { toast("Folder missing: " + pparent(CODE.path).replace(HOME, "~")); return false; }
+  c.fs[CODE.path] = { text: $("cdArea").value, at: new Date() };
+  CODE.saved = $("cdArea").value; codeRefresh(); renderCodeTree(); renderDesk();
+  toast("Saved " + CODE.path.replace(HOME, "~"));
+  return true;
+}
+function renderCodeTree() {
+  const c = dctx(), dir = CODE.dir;
+  if (!c.dirs.has(dir)) CODE.dir = HOME + "/Documents";
+  const items = listDir(CODE.dir);
+  $("cdDir").textContent = CODE.dir.replace(HOME, "~");
+  $("cdTree").innerHTML = (CODE.dir !== HOME ? '<button type="button" data-up="1">..</button>' : "") + items.map((it) => '<button type="button" class="' + (it.p === CODE.path ? "on" : "") + (it.dir ? " d" : "") + '" data-p="' + esc(it.p) + '" data-dir="' + it.dir + '">' + esc(pname(it.p)) + (it.dir ? "/" : "") + "</button>").join("");
+  $("cdTree").querySelectorAll("[data-p]").forEach((b) => b.onclick = () => { if (b.dataset.dir === "true") { CODE.dir = b.dataset.p; renderCodeTree(); } else codeOpenAsk(b.dataset.p); });
+  const up = $("cdTree").querySelector("[data-up]"); if (up) up.onclick = () => { CODE.dir = pparent(CODE.dir); renderCodeTree(); };
+}
+function codeOpenAsk(p) { if (CODE.dirty && !confirmDiscard()) return; openCode(p); }
+function confirmDiscard() { toast("Unsaved changes: press Cmd+S first, or click again to discard."); if (CODE.discardArmed) { CODE.discardArmed = false; return true; } CODE.discardArmed = true; setTimeout(() => CODE.discardArmed = false, 3000); return false; }
+function runFromCode() {
+  if (!CODE.path) return;
+  if (CODE.dirty && !codeSave()) return;
+  if (!/\.ps1$/i.test(CODE.path)) { toast("Only .ps1 files run."); return; }
+  const c = dctx();
+  const rel = pparent(CODE.path) === c.cwd ? "./" + pname(CODE.path) : "& '" + CODE.path.replace(HOME, "~") + "'";
+  closeDesktop();
+  if (R.view === "memory") { $("cmd").value = rel; $("cmd").focus(); toast("Add any parameters, then Enter."); }
+}
+$("cdArea").addEventListener("input", codeRefresh);
+$("cdArea").addEventListener("scroll", syncScroll);
+$("cdArea").addEventListener("click", codeRefresh);
+$("cdArea").addEventListener("keyup", (e) => { if (/Arrow|Home|End/.test(e.key)) codeRefresh(); });
+$("cdArea").addEventListener("keydown", (e) => {
+  const a = e.target;
+  if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "s") { e.preventDefault(); codeSave(); return; }
+  if (e.key === "Tab") { e.preventDefault(); const s = a.selectionStart, en = a.selectionEnd; a.value = a.value.slice(0, s) + "    " + a.value.slice(en); a.selectionStart = a.selectionEnd = s + 4; codeRefresh(); return; }
+  if (e.key === "Enter") { e.preventDefault(); const s = a.selectionStart, line = a.value.slice(0, s).split("\n").pop(); let ind = (/^\s*/.exec(line) || [""])[0]; if (/[{(|]\s*$/.test(line) && !/^\s/.test(line.replace(/[{(|]\s*$/, "x")) || /[{(]\s*$/.test(line)) ind += "    "; a.value = a.value.slice(0, s) + "\n" + ind + a.value.slice(a.selectionEnd); a.selectionStart = a.selectionEnd = s + 1 + ind.length; codeRefresh(); return; }
+  if (e.key === "}" || e.key === ")") { const s = a.selectionStart, line = a.value.slice(0, s).split("\n").pop(); if (/^\s{4,}$/.test(line)) { a.value = a.value.slice(0, s - 4) + a.value.slice(s); a.selectionStart = a.selectionEnd = s - 4; } }
+});
+$("cdNew").onclick = () => { $("cdNewRow").classList.remove("hide"); $("cdNewName").value = ""; $("cdNewName").focus(); };
+$("cdNewName").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { $("cdNewRow").classList.add("hide"); return; }
+  if (e.key !== "Enter") return;
+  const n = $("cdNewName").value.trim(); if (!n) return;
+  if (!/^[\w.\- ]+$/.test(n)) { toast("Letters, digits, dot, dash and underscore only."); return; }
+  const p = CODE.dir + "/" + n, c = dctx();
+  if (c.fs[p]) { toast(n + " already exists."); return; }
+  c.fs[p] = { text: "", at: new Date() }; $("cdNewRow").classList.add("hide"); openCode(p); renderDesk();
+});
+$("cdSave").onclick = codeSave;
+$("cdRun").onclick = runFromCode;
+$("w-code").querySelector(".tl.r").onclick = () => hideWin("code");
+dragWin($("w-code"));
+$("dockCode").onclick = () => openCode(CODE.path);
 
 </script>
 </body>

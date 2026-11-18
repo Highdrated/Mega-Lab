@@ -20,6 +20,7 @@ const GRADER = (() => {
     if (s.scopes.length) E.run("Connect-MgGraph -Scopes " + s.scopes.join(",") + " -NoWelcome", ctx);
     if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
     if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
+    if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
@@ -53,8 +54,8 @@ const GRADER = (() => {
     }
     return false;
   }
-  function fillTpl(tpl, vals) { let i = 0; return tpl.replace(/\[\[([^\]]*)\]\]/g, () => (vals[i++] || "")); }
-  function gapsOf(tpl) { const out = []; tpl.replace(/\[\[([^\]]*)\]\]/g, (m, a) => { out.push(a); return m; }); return out; }
+  function fillTpl(tpl, vals) { let i = 0; return tpl.replace(/\[\[([^\[\]]*)\]\]/g, () => (vals[i++] || "")); }
+  function gapsOf(tpl) { const out = []; tpl.replace(/\[\[([^\[\]]*)\]\]/g, (m, a) => { out.push(a); return m; }); return out; }
   function drillCheck(d) { return d.fn ? { fn: d.fn } : { out: d.out, refSetup: d.refSetup, needExo: d.needExo, needScopes: d.needScopes }; }
   return { makeCtx, verdict, text, fillTpl, gapsOf, refText, describe, drillCheck, SETUPS };
 })();

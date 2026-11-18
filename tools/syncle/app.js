@@ -37,7 +37,7 @@ const GTEXT = {
   incident: { crumb: "Incident · ", done: "Incident closed", flow: [["Signal", "what the user says"], ["Look", "sign-ins first"], ["Contain", "block, revoke, reset"], ["Clean + prove", "rules, recipients, evidence"]], flowT: "LIVE INCIDENT · THE ORDER THAT MATTERS", rules: "<h6>INCIDENT RULES</h6>Look first, then contain in the right order: block, revoke, reset. Touch only Thea. Exchange tickets need Connect-ExchangeOnline. Evidence goes to your Desktop, Belgian Excel style.", junie: "Breathe. Look first, then contain: block, revoke, reset. Then clean, then prove. Same order as Rowan." },
   break: { crumb: "Break · ", done: "Fixed", flow: [["Report", "what they say"], ["Diagnose", "Get- first"], ["Fix", "one change"], ["Verify", "read it back"]], flowT: "SOMETHING BROKE · DIAGNOSE BEFORE YOU FIX", rules: "<h6>BREAK RULES</h6>Something in the tenant changed and nobody told you. Find what, with a Get- command, before you change anything. Fix only that. Nothing is connected yet.", junie: "Don't guess. Look at the thing they complain about first: the answer is usually right there in one property." }
 };
-function gtext() { return GTEXT[curGate().type || "takeover"]; }
+function gtext() { const g = curGate(); return g.text || GTEXT[g.type || "takeover"]; }
 function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
@@ -72,10 +72,10 @@ function renderCorridor() {
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
-  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : "RESPOND");
+  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : "AUTOMATE");
   $("stName").textContent = sq.name; $("stBlurb").textContent = sq.blurb;
   let h = "<h4>THE CURVE</h4>";
-  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND" };
+  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE" };
   SEQUENCES.forEach((q) => {
     if (tiers[q.id]) h += '<div class="tier">' + tiers[q.id] + "</div>";
     const pr = q.open ? seqProgress(q.id) : null;
@@ -102,7 +102,7 @@ function renderCorridor() {
     let st, name, tag, due = false;
     if (it.kind === "mem") { st = synced(it.m.id) ? "done" : i === firstOpen ? "current" : "ahead"; name = it.m.name; tag = it.m.tag; due = dueReview(it.m.id); }
     else if (it.kind === "next") { const nq = SEQUENCES[it.to]; st = nq && nq.open && seqProgress(seq)[0] === ms.length ? "gate" : "ahead"; name = nq ? nq.name : "More soon"; tag = nq && nq.open ? "NEXT SEQUENCE" : "COMING SOON"; }
-    else { const g = it.g; const open = gateOpen(g); const done = g.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = g.name; const kw = g === GATE ? "TAKEOVER" : "LIVE INCIDENT"; tag = open ? kw : kw + " · LOCKED"; }
+    else { const g = it.g; const open = gateOpen(g); const done = g.tickets.every((t) => S.gate[t.id]); st = done ? "done" : open ? "gate" : "ahead"; name = g.name; const kw = { takeover: "TAKEOVER", incident: "LIVE INCIDENT", capstone: "CAPSTONE" }[g.type] || "TAKEOVER"; tag = open ? kw : kw + " · LOCKED"; }
     nh += crystal(i, x, y, s, st, name, tag, i === S.selMem, due);
   });
   $("nodes").innerHTML = nh;
@@ -147,7 +147,7 @@ function renderDetail(it, ms) {
     const g = it.g, need = gateNeed(g), open = gateOpen(g);
     const done = g.tickets.filter((t) => S.gate[t.id]).length;
     d.innerHTML = '<div class="l"><span class="eyebrow">' + esc(g.kind) + '</span><h3>' + esc(g.name) + "</h3><p>" + esc(g.story) + '</p><p class="mutetxt">' + done + " of " + g.tickets.length + " tickets closed</p></div>" +
-      '<div class="r"><div class="gatehero"' + gateHero(g) + ' role="img" aria-label="' + esc(g.name) + '"></div><div class="row"><button class="go" type="button" id="goGate"' + (open ? "" : " disabled") + ">" + (open ? (g === GATE ? "ENTER THE TENANT" : "TAKE THE CALL") : "SYNC ALL " + need.length + " MEMORIES TO OPEN") + "</button>" + (open ? "" : '<span class="mutetxt">' + need.filter((m) => synced(m.id)).length + " / " + need.length + " synced</span>") + "</div></div>";
+      '<div class="r"><div class="gatehero"' + gateHero(g) + ' role="img" aria-label="' + esc(g.name) + '"></div><div class="row"><button class="go" type="button" id="goGate"' + (open ? "" : " disabled") + ">" + (open ? ({ takeover: "ENTER THE TENANT", incident: "TAKE THE CALL", capstone: "BUILD THE TOOL" }[g.type] || "ENTER") : "SYNC ALL " + need.length + " MEMORIES TO OPEN") + "</button>" + (open ? "" : '<span class="mutetxt">' + need.filter((m) => synced(m.id)).length + " / " + need.length + " synced</span>") + "</div></div>";
     if (open) $("goGate").onclick = () => openGate(g);
     return;
   }
@@ -208,6 +208,7 @@ function exec(src, opts) {
   if (res.error) tline(res.error.text ? res.error.text() : String(res.error.message), "e");
   o.scrollTop = o.scrollHeight;
   R.lastRes = res;
+  if (R.ctx.ui && !R.ctx.ui.done) { const u = R.ctx.ui; u.done = true; openDesktop(); openCode(u.open); }
   tstate();
   lastRun(res, src);
   return res;
@@ -306,7 +307,7 @@ function playStep(m) {
 function renderTrace(m) {
   const t = m.trace;
   let gi = 0;
-  const tpl = esc(t.tpl).replace(/\[\[([^\]]*)\]\]/g, (_, a) => '<input class="gap" data-g="' + (gi++) + '" style="--w:' + Math.max(90, a.length * 9 + 26) + 'px" aria-label="Gap ' + gi + '" autocomplete="off" spellcheck="false">');
+  const tpl = esc(t.tpl).replace(/\[\[([^\[\]]*)\]\]/g, (_, a) => '<input class="gap" data-g="' + (gi++) + '" style="--w:' + Math.max(90, a.length * 9 + 26) + 'px" aria-label="Gap ' + gi + '" autocomplete="off" spellcheck="false">');
   $("pbody").innerHTML = '<p class="ask">' + esc(t.ask) + '</p><div class="tpl">' + tpl + "</div>" +
     (t.after ? '<p class="mutetxt">Runs afterwards automatically: <code>' + esc(t.after.join("; ")) + "</code></p>" : "") +
     '<div class="row"><button class="go blue" type="button" id="runTrace">RUN</button><span class="mutetxt">Enter in a gap also runs it</span></div>';

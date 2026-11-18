@@ -295,11 +295,14 @@ class Parser {
       if (this.peek() !== "{") this.err("Missing function body in function declaration.");
       this.i++;
       this.ws(true);
+      let cb = null;
+      const cbm = /^\[CmdletBinding\(([^)]*)\)\]\s*/i.exec(this.s.slice(this.i));
+      if (cbm) { cb = cbm[1]; this.i += cbm[0].length; this.ws(true); }
       if (/^param\s*\(/i.test(this.s.slice(this.i))) { this.i = this.s.indexOf("(", this.i) + 1; params = this.paramList(); }
       const body = this.script("}");
       if (this.peek() !== "}") this.err("Missing closing '}' in statement block or type definition.");
       this.i++;
-      return { t: "function", name: m[0], params, body, src: this.s.slice(start, this.i) };
+      return { t: "function", name: m[0], params, body, cb, src: this.s.slice(start, this.i) };
     }
     if (this.kw("foreach")) {
       this.expect("(", "Missing opening '(' after keyword 'foreach'.");
@@ -340,6 +343,9 @@ class Parser {
       }
       return { t: "if", arms, els };
     }
+    if (this.kw("continue")) return { t: "loopctl", k: "continue" };
+    if (this.kw("break")) return { t: "loopctl", k: "break" };
+    if (this.kw("throw")) { this.ws(false); const c = this.peek(); const val = c === undefined || c === "\n" || c === ";" || c === "}" ? null : this.pipeline(); return { t: "throw", val }; }
     if (this.kw("return")) { this.ws(false); const c = this.peek(); const val = c === undefined || c === "\n" || c === ";" || c === "}" ? null : this.pipeline(); return { t: "return", val }; }
     if (this.peek() === "$") {
       const save = this.i;
@@ -368,13 +374,22 @@ class Parser {
     for (;;) {
       this.ws(true);
       if (this.peek() === ")") { this.i++; break; }
-      while (this.peek() === "[") { const j = this.s.indexOf("]", this.i); this.i = j + 1; this.ws(true); }
+      const attrs = [];
+      while (this.peek() === "[") { let d = 0, j = this.i; for (; j < this.s.length; j++) { const ch = this.s[j]; if (ch === "[") d++; else if (ch === "]") { d--; if (!d) break; } } attrs.push(this.s.slice(this.i + 1, j)); this.i = j + 1; this.ws(true); }
       const v = this.varName();
       if (!v) this.err("Missing ')' in function parameter list.");
       this.ws(true);
       let def = null;
-      if (this.peek() === "=") { this.i++; this.ws(true); def = this.expr(); }
-      ps.push({ name: v, def });
+      if (this.peek() === "=") {
+        this.i++; this.ws(true);
+        let d = 0, j = this.i, q = null;
+        for (; j < this.s.length; j++) { const ch = this.s[j]; if (q) { if (ch === q) q = null; continue; } if (ch === "'" || ch === '"') { q = ch; continue; } if ("([{".includes(ch)) d++; else if (")]}".includes(ch)) { if (!d) break; d--; } else if (ch === "," && !d) break; }
+        const sub = new Parser(this.s.slice(this.i, j).trim()); def = sub.expr(); this.i = j;
+      }
+      const at = attrs.join("|");
+      const vs = /ValidateSet\(([^)]*)\)/i.exec(at);
+      const ty = attrs.map((a) => a.trim().toLowerCase()).find((a) => /^(string|int|bool|switch|string\[\]|int\[\]|datetime|object|pscustomobject|hashtable|array)$/.test(a)) || null;
+      ps.push({ name: v, def, mandatory: /Parameter\s*\([^)]*Mandatory/i.test(at), type: ty, set: vs ? vs[1].split(",").map((x) => x.trim().replace(/^['"]|['"]$/g, "")) : null });
       this.ws(true);
       if (this.peek() === ",") { this.i++; continue; }
       if (this.peek() === ")") { this.i++; break; }
@@ -410,7 +425,14 @@ class Parser {
     const start = this.i;
     const c = this.peek();
     if (c === undefined || c === "|" || c === ")" || c === "}" || c === ";") this.err("An empty pipe element is not allowed.");
-    const isCmd = /[A-Za-z?%]/.test(c) || (c === "&" && false);
+    const rest = this.s.slice(this.i);
+    const pm = /^(&\s*|\.\s+)?((?:\.{1,2}\/|~\/|\/)[^\s|;)}]*|'[^']+'|"[^"]+")/.exec(rest);
+    if (pm && (pm[1] || !/^['"]/.test(pm[2]))) {
+      this.i += pm[0].length;
+      const args = this.cmdArgs();
+      return { k: "cmd", name: pm[2].replace(/^['"]|['"]$/g, ""), path: true, dot: !!pm[1] && pm[1].trim() === ".", args, src: this.s.slice(start, this.i).trim() };
+    }
+    const isCmd = /[A-Za-z?%]/.test(c);
     if (isCmd) {
       const m = /^[A-Za-z?%][\w.-]*/.exec(this.s.slice(this.i));
       const name = m ? m[0] : c;
@@ -692,7 +714,7 @@ class Ctx {
     this.funcs = {};
     this.mg = null; this.exo = false;
     this.cwd = "/Users/kaatje";
-    this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Downloads"]);
+    this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Documents/scripts", "/Users/kaatje/Downloads"]);
     this.fs = {
       "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hollis (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowan is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(Date.now() - 30 * 864e5) },
       "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(Date.now() - 36e5) },
@@ -733,6 +755,7 @@ class Ctx {
 }
 
 class Return { constructor(v) { this.v = v; } }
+class LoopCtl { constructor(k) { this.k = k; } }
 
 function evalScript(stmts, ctx, out) { for (const s of stmts) execStmt(s, ctx, out); return out; }
 function execStmt(s, ctx, out) {
@@ -746,7 +769,7 @@ function execStmt(s, ctx, out) {
     }
     case "foreach": {
       const coll = flat(unwrap(runPipeline(s.coll, ctx, null)));
-      for (const item of coll) { ctx.setVar(s.v, item); evalScript(s.body, ctx, out); }
+      for (const item of coll) { ctx.setVar(s.v, item); try { evalScript(s.body, ctx, out); } catch (x) { if (x instanceof LoopCtl) { if (x.k === "break") break; continue; } throw x; } }
       return;
     }
     case "if": {
@@ -780,6 +803,8 @@ function execStmt(s, ctx, out) {
       const kk = ek || tgt.name; o[kk] = s.op === "+=" ? addVals(o[kk], v) : v; return;
     }
     case "function": ctx.funcs[s.name.toLowerCase()] = s; return;
+    case "loopctl": throw new LoopCtl(s.k);
+    case "throw": { const v = s.val ? runPipeline(s.val, ctx, null) : []; const m = v.length ? toStr(v[0]) : "ScriptHalted"; throw new PSErr(m, { cmd: "Exception", term: true, kind: "throw" }); }
     case "return": { const v = s.val ? runPipeline(s.val, ctx, null) : []; throw new Return(v); }
   }
 }
@@ -874,11 +899,30 @@ function evalArg(v, ctx) {
   return evalExpr(v, ctx);
 }
 
+function runScriptFile(el, ctx, input) {
+  const p = ctx.path(el.name);
+  const f = ctx.fs[p];
+  if (!f || !/\.ps1$/i.test(p)) {
+    if (ctx.dirs && ctx.dirs.has(p)) throw new PSErr("The term '" + el.name + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: el.name, term: true, kind: "notrecognized" });
+    throw new PSErr("The term '" + el.name + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.", { cmd: el.name, term: true, kind: "notrecognized" });
+  }
+  let ast;
+  try { ast = parse("function ScriptBody {\n" + f.text + "\n}"); }
+  catch (e) { const m = e.message; throw new PSErr(m + "\n(in " + p.replace("/Users/kaatje", "~") + ")", { cmd: null, term: true, parse: true, kind: "parse" }); }
+  const fn = ast.stmts ? ast.stmts[0] : ast[0];
+  const def = Object.assign({}, fn, { name: el.name });
+  if (el.dot) return callFunction(def, el, ctx, input, true);
+  const before = new Set(Object.keys(ctx.funcs));
+  try { return callFunction(def, el, ctx, input); }
+  finally { for (const k of Object.keys(ctx.funcs)) if (!before.has(k)) delete ctx.funcs[k]; }
+}
 function runCommand(el, ctx, input, idx) {
+  if (el.path) return runScriptFile(el, ctx, input);
   const raw = el.name;
   const l = raw.toLowerCase();
   const fn = ctx.funcs[l];
   if (fn) return callFunction(fn, el, ctx, input);
+  if (/\.ps1$/i.test(raw) && ctx.fs && ctx.fs[ctx.path(raw)]) throw new PSErr("The term '" + raw + "' is not recognized as a name of a cmdlet, function, script file, or executable program.\nCheck the spelling of the name, or if a path was included, verify that the path is correct and try again.\n\nSuggestion [3,General]: The command \"" + raw + "\" was not found, but does exist in the current location. PowerShell does not load commands from the current location by default (see 'Get-Help about_Command_Precedence').\n\nIf you trust this command, run the following command instead:\n./" + raw, { cmd: raw, term: true, kind: "notrecognized" });
   const cname = ALIASES[l] || raw;
   const spec0 = CMDS[cname.toLowerCase()];
   const spec = spec0 && spec0.session && !ctx.exo ? null : spec0;
@@ -886,6 +930,8 @@ function runCommand(el, ctx, input, idx) {
   if (input && input.length && !spec.pipe) throw new PSErr("The input object cannot be bound to any parameters for the command either because the command does not take pipeline input or the input and its properties do not match any of the parameters that take pipeline input.", { cmd: spec.name, term: true, kind: "pipeinput" });
   if (spec.native) { const rawArgs = (el.args || []).map((x) => x.p !== undefined && x.v === undefined ? "-" + x.p : x.p !== undefined ? "-" + x.p + ":" + toStr(evalArg(x.v, ctx)) : toStr(evalArg(x.v, ctx))); return spec.run({ ctx, rawArgs, input: input || [], name: spec.name }); }
   const b = bindArgs(spec, el.args, ctx, spec.name);
+  if (spec.whatif && b.WhatIf === undefined && ctx.getVar("WhatIfPreference") === true) b.WhatIf = true;
+  if (b.ErrorAction === undefined) { const eap = ctx.getVar("ErrorActionPreference"); if (eap && /^stop$/i.test(String(eap))) b.ErrorAction = "Stop"; }
   const stop = b.ErrorAction && /^stop$/i.test(String(b.ErrorAction));
   const silent = b.ErrorAction && /^(silentlycontinue|ignore)$/i.test(String(b.ErrorAction));
   const res = [];
@@ -894,33 +940,74 @@ function runCommand(el, ctx, input, idx) {
     if (stop) { e.term = true; throw e; }
     if (!silent) { ctx.errors.push(e); ctx.host.push({ err: e.text() }); }
   };
-  const out = spec.run({ ctx, b, input: input || [], hadInput: input !== null, emitErr, res, name: spec.name });
+  let out;
+  try { out = spec.run({ ctx, b, input: input || [], hadInput: input !== null, emitErr, res, name: spec.name }); }
+  catch (er) {
+    if (!(er instanceof PSErr) || er.term || er.parse) throw er;
+    if (stop) { er.term = true; throw er; }
+    if (!silent) { ctx.errors.push(er); ctx.host.push({ err: er.text() }); }
+    out = res;
+  }
   const r = out === undefined ? res : out;
   if (b.OutVariable) ctx.setVar(String(b.OutVariable), r.slice());
   return r;
 }
-function callFunction(fn, el, ctx, input) {
+function callFunction(fn, el, ctx, input, dot) {
   const scope = new Map();
   const pos = [];
+  const cb = fn.cb !== null && fn.cb !== undefined;
+  const sp = cb && /SupportsShouldProcess/i.test(fn.cb);
+  const common = ["Verbose", "ErrorAction", "WarningAction", "Debug"].concat(sp ? ["WhatIf", "Confirm"] : []);
+  const label = fn.name;
+  const setP = (p, v) => {
+    if (p.type === "int" && v !== null && v !== true) { const n = Number(v); if (isNaN(n)) throw new PSErr("Cannot process argument transformation on parameter '" + p.name + "'. Cannot convert value \"" + toStr(v) + "\" to type \"System.Int32\". Error: \"The input string '" + toStr(v) + "' was not in a correct format.\"", { cmd: label, term: true, kind: "bind" }); v = n; }
+    if (p.type === "string" && v !== null && typeof v !== "string") v = toStr(v);
+    if (p.set && !p.set.some((x) => x.toLowerCase() === String(v).toLowerCase())) throw new PSErr("Cannot validate argument on parameter '" + p.name + "'. The argument \"" + toStr(v) + "\" does not belong to the set \"" + p.set.join(",") + "\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: label, term: true, kind: "bind" });
+    scope.set(p.name.toLowerCase(), v);
+  };
   for (let i = 0; i < el.args.length; i++) {
     const a = el.args[i];
     if (a.p !== undefined) {
-      const p = fn.params.find((x) => x.name.toLowerCase().startsWith(a.p.toLowerCase()));
-      if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + a.p + "'.", { cmd: fn.name, term: true });
-      if (a.colon) { scope.set(p.name.toLowerCase(), evalArg(a.v, ctx)); continue; }
+      const cm = cb && common.find((c) => c.toLowerCase() === a.p.toLowerCase());
+      const p = fn.params.find((x) => x.name.toLowerCase() === a.p.toLowerCase()) || fn.params.find((x) => x.name.toLowerCase().startsWith(a.p.toLowerCase()));
+      if (!p && cm) {
+        let v = true;
+        if (a.colon) v = evalArg(a.v, ctx);
+        else if (cm === "ErrorAction" || cm === "WarningAction") { const nx = el.args[i + 1]; v = nx ? evalArg(nx.v, ctx) : null; i++; }
+        if (cm === "Verbose") scope.set("verbosepreference", truthy(v) ? "Continue" : "SilentlyContinue");
+        if (cm === "WhatIf") scope.set("whatifpreference", truthy(v));
+        if (cm === "ErrorAction") scope.set("erroractionpreference", toStr(v));
+        continue;
+      }
+      if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + a.p + "'.", { cmd: label, term: true });
+      if (a.colon) { setP(p, evalArg(a.v, ctx)); continue; }
+      if (p.type === "switch") { scope.set(p.name.toLowerCase(), true); continue; }
       const nx = el.args[i + 1];
-      if (!nx || nx.p !== undefined) { scope.set(p.name.toLowerCase(), true); continue; }
-      scope.set(p.name.toLowerCase(), evalArg(nx.v, ctx)); i++;
-    } else if (a.splat) { const h = ctx.getVar(a.splat); if (isHT(h)) for (const k of Object.keys(h)) { const p = fn.params.find((x) => x.name.toLowerCase() === k.toLowerCase()); if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + k + "'.", { cmd: fn.name, term: true }); scope.set(p.name.toLowerCase(), h[k]); } }
+      if (!nx || nx.p !== undefined) { if (nx === undefined || nx.p !== undefined) throw new PSErr("Missing an argument for parameter '" + p.name + "'. Specify a parameter of type '" + (p.type === "int" ? "System.Int32" : p.type === "string[]" ? "System.String[]" : "System.String") + "' and try again.", { cmd: label, term: true, kind: "bind" }); }
+      setP(p, evalArg(nx.v, ctx)); i++;
+    } else if (a.splat) { const h = ctx.getVar(a.splat); if (isHT(h)) for (const k of Object.keys(h)) { const p = fn.params.find((x) => x.name.toLowerCase() === k.toLowerCase()); if (!p) throw new PSErr("A parameter cannot be found that matches parameter name '" + k + "'.", { cmd: label, term: true }); setP(p, h[k]); } }
     else pos.push(evalArg(a.v, ctx));
   }
-  for (const p of fn.params) if (!scope.has(p.name.toLowerCase())) { if (pos.length) scope.set(p.name.toLowerCase(), pos.shift()); else scope.set(p.name.toLowerCase(), p.def ? evalExpr(p.def, ctx) : null); }
+  const missing = [];
+  for (const p of fn.params) if (!scope.has(p.name.toLowerCase())) {
+    if (p.type !== "switch" && pos.length) setP(p, pos.shift());
+    else if (p.mandatory) missing.push(p.name);
+    else scope.set(p.name.toLowerCase(), p.type === "switch" ? false : p.def ? evalExpr(p.def, ctx) : null);
+  }
+  if (missing.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: " + missing.join(" ") + ".", { cmd: label, term: true, kind: "mandatory" });
+  if (cb && pos.length) throw new PSErr("A positional parameter cannot be found that accepts argument '" + toStr(pos[0], true) + "'.", { cmd: label, term: true });
   scope.set("input", input || []);
   scope.set("args", pos);
-  ctx.push(scope);
+  if (cb) scope.set("pscmdlet", Object.defineProperty(obj("System.Management.Automation.PSScriptCmdlet", {}), "__fn", { value: true }));
   const out = [];
+  if (dot) {
+    for (const [k, v] of scope) if (k !== "input" && k !== "args") ctx.setVar(k, v);
+    try { evalScript(fn.body, ctx, out); } catch (e) { if (e instanceof Return) return out.concat(e.v); throw e; }
+    return out;
+  }
+  ctx.push(scope);
   try { evalScript(fn.body, ctx, out); }
-  catch (e) { if (e instanceof Return) { ctx.pop(); return out.concat(e.v); } ctx.pop(); throw e; }
+  catch (e) { if (e instanceof Return) { ctx.pop(); return out.concat(e.v); } ctx.pop(); if (e instanceof PSErr) e.partial = out.concat(e.partial || []); throw e; }
   ctx.pop();
   return out;
 }
@@ -964,6 +1051,10 @@ function callMethod(o, name, args, ctx) {
   const l = name.toLowerCase();
   if (o === null || o === undefined) throw new PSErr("You cannot call a method on a null-valued expression.", { term: true, kind: "nullcall" });
   if (l === "tostring") { if (o instanceof Date && args.length) return dateFmt(o, String(args[0])); return toStr(o); }
+  if (o && o.__fn && l === "shouldprocess") {
+    if (ctx.getVar("WhatIfPreference") === true) { ctx.host.push({ text: "What if: Performing the operation \"" + toStr(args.length > 1 ? args[1] : "") + "\" on target \"" + toStr(args[0]) + "\"." }); return false; }
+    return true;
+  }
   if (o instanceof Date && l === "touniversaltime") return new Date(o.getTime() + o.getTimezoneOffset() * 60000);
   if (o instanceof Date && l === "tolocaltime") return new Date(o);
   if (l === "gettype") return obj("System.RuntimeType", { Name: (typeName(o) || "").split(".").pop(), FullName: typeName(o) });
@@ -1497,6 +1588,20 @@ def("Get-Date", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype:
   run({ b }) { let d = b.Date !== undefined ? (b.Date instanceof Date ? b.Date : new Date(b.Date)) : new Date(); if (isNaN(d)) throw new PSErr("Cannot bind parameter 'Date'. Cannot convert value \"" + b.Date + "\" to type \"System.DateTime\".", { cmd: "Get-Date", term: true }); if (b.Format) return [dateFmt(d, String(b.Format))]; return [d]; } });
 def("Write-Output", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { InputObject: P(0) }, run({ b, input }) { return input.length ? input : flat(b.InputObject); } });
 def("Write-Host", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Object: P(0), ForegroundColor: P(null), NoNewline: S(), Separator: P(null) }, run({ ctx, b, input }) { const v = b.Object !== undefined ? flat(b.Object) : input; ctx.host.push({ text: v.map((x) => toStr(x)).join(b.Separator ? String(b.Separator) : " "), color: b.ForegroundColor ? String(b.ForegroundColor) : null }); return []; } });
+def("Write-Verbose", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0, { req: true }) }, run({ ctx, b }) { if (String(ctx.getVar("VerbosePreference") || "") === "Continue") ctx.host.push({ warn: "VERBOSE: " + toStr(b.Message) }); return []; } });
+def("Write-Error", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0), ErrorAction: P(null) }, run({ emitErr, b, ctx }) { const e = new PSErr(toStr(b.Message), { cmd: "Write-Error", kind: "writeerror" }); if (String(ctx.getVar("ErrorActionPreference") || "") === "Stop") { e.term = true; throw e; } emitErr(toStr(b.Message), "Write-Error", "writeerror"); return []; } });
+function writeFileCmd(ctx, b, name, append, input) {
+  const p = ctx.path(b.Path || b.FilePath);
+  if (!ctx.dirs.has(parentOf(p))) throw new PSErr("Could not find a part of the path '" + p + "'.", { cmd: name, term: true, kind: "nofile" });
+  const vals = b.Value !== undefined ? flat(b.Value) : b.InputObject !== undefined ? flat(b.InputObject) : input;
+  const text = vals.map((v) => typeof v === "string" ? v : toStr(v)).join("\n");
+  if (append && ctx.fs[p]) ctx.fs[p] = { text: ctx.fs[p].text.replace(/\n?$/, "\n") + text, at: new Date() };
+  else ctx.fs[p] = { text, at: new Date() };
+  return [];
+}
+def("Set-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, whatif: true, params: { Path: P(0, { req: true }), Value: P(1, { pipe: true }), Encoding: P(null), NoNewline: S() }, run({ ctx, b, name, input }) { if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Set Content\" on target \"Path: " + ctx.path(b.Path) + "\"." }); return []; } return writeFileCmd(ctx, b, name, false, input); } });
+def("Add-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, whatif: true, params: { Path: P(0, { req: true }), Value: P(1, { pipe: true }), Encoding: P(null) }, run({ ctx, b, name, input }) { if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Add Content\" on target \"Path: " + ctx.path(b.Path) + "\"." }); return []; } return writeFileCmd(ctx, b, name, true, input); } });
+def("Out-File", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, whatif: true, params: { FilePath: P(0, { req: true, alias: ["Path"] }), InputObject: P(null, { pipe: true }), Append: S(), Encoding: P(null) }, run({ ctx, b, name, input }) { const vals = b.InputObject !== undefined ? flat(b.InputObject) : input; const txt = vals.every((v) => typeof v === "string") ? vals : formatOut(vals, 120).split("\n"); return writeFileCmd(ctx, { FilePath: b.FilePath, Value: txt }, name, !!b.Append, []); } });
 def("Write-Warning", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0, { req: true }) }, run({ ctx, b }) { ctx.host.push({ warn: "WARNING: " + toStr(b.Message) }); return []; } });
 def("Format-Table", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Property: P(0), AutoSize: S(), Wrap: S() }, run({ ctx, b, input, name }) { if (b.Property === undefined) return input.map((x) => fmtTag(x, "table")); const sel = CMDS["select-object"].run({ ctx, b: { Property: b.Property }, input, name }); return sel.map((x) => { const c = fmtTag(x, "table"); if (isObj(c)) Object.defineProperty(c, "__fmtProps", { value: true }); return c; }); } });
 def("Format-List", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Property: P(0) }, run({ ctx, b, input, name }) { const src = b.Property === undefined ? input : CMDS["select-object"].run({ ctx, b: { Property: b.Property }, input, name }); return src.map((x) => fmtTag(x, "list")); } });
@@ -2041,6 +2146,9 @@ def("man", { module: null, ver: "", ctype: "Application", native: true, params: 
   run({ ctx, rawArgs }) { ctx.host.push({ err: "No manual entry for " + (rawArgs[0] || "") }); return []; } });
 def("sort", { module: null, ver: "", ctype: "Application", native: true, params: {},
   run({ ctx, rawArgs, input }) { if (!input.length) { ctx.host.push({ text: "(lab) sort is the macOS /usr/bin/sort program here, not Sort-Object. On its own it waits for typed input until Ctrl+D. Use Sort-Object." }); return []; } const out = input.map((x) => toStr(x)).sort(); return rawArgs.includes("-r") ? out.reverse() : out; } });
+def("code", { module: null, ver: "", ctype: "Application", native: true, params: {},
+  run({ ctx, rawArgs }) { const f = rawArgs.filter((x) => !/^-/.test(x))[0]; ctx.ui = { open: f ? ctx.path(f) : null }; return []; } });
+CMDS["code"].src = "/usr/local/bin/code";
 CMDS["ls"].src = "/bin/ls"; CMDS["cat"].src = "/bin/cat"; CMDS["man"].src = "/usr/bin/man"; CMDS["sort"].src = "/usr/bin/sort"; CMDS["sort"].pipe = true;
 ["Get-Mailbox", "Set-Mailbox", "Get-MailboxPermission", "Add-MailboxPermission", "Remove-MailboxPermission", "Get-RecipientPermission", "Add-RecipientPermission", "Get-MailboxAutoReplyConfiguration", "Set-MailboxAutoReplyConfiguration", "Get-DistributionGroup", "Get-DistributionGroupMember", "Add-DistributionGroupMember", "Remove-DistributionGroupMember", "New-DistributionGroup"].forEach((n) => { CMDS[n.toLowerCase()].session = true; CMDS[n.toLowerCase()].module = "tmpEXO_" + "ycy3rmxz.0wi"; CMDS[n.toLowerCase()].ver = "1.0"; });
 function run(src, ctx) {
@@ -2059,7 +2167,7 @@ function run(src, ctx) {
     }
   } catch (e) {
     if (e instanceof Return) out.push(...e.v);
-    else if (e instanceof PSErr) { result.error = e; ctx.errors.push(e); }
+    else if (e instanceof PSErr) { if (e.partial) out.push(...e.partial); result.error = e; ctx.errors.push(e); }
     else { result.error = new PSErr(String(e && e.message || e), { term: true }); }
   }
   result.out = out;

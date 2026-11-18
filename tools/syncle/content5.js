@@ -9,7 +9,7 @@ const QR_TO = [["Fenna Lowe", "Delivered"], ["Brannoc Vale", "Delivered"], ["Cai
 const BREAKS = [
   {
     id: "b-locked", type: "break", name: "Locked out", kind: "BREAK · SOMETHING STOPPED WORKING", allow: /elara\.wynn/i, hero: "desync", need: (m) => m.seq <= 1,
-    story: "08:02. Elara Wynn (HR) calls: 'It says my account is disabled. I did nothing!' Nobody filed a ticket to block her.",
+    story: "08:02. Elara Wynn (Sales) calls: 'It says my account is disabled. I did nothing!' Nobody filed a ticket to block her.",
     doneMsg: "Elara is back in. You looked first, changed one thing, and read it back.",
     mutate: (ctx) => { userOf(ctx, "elara.wynn").AccountEnabled = false; },
     tickets: [
