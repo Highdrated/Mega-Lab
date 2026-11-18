@@ -3866,6 +3866,12 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(!cli(p1, "clear").includes("command not found"), "T74 clear is a known host command");
 }
 
+{
+  applyTheme("not-a-theme");
+  ok(document.body.className === "theme-nightops", "T75 Night Ops is the fallback theme");
+  ok(localStorage.getItem("junoslab-theme-default") === "nightops", "T75 one-time switch to the Night Ops default is recorded");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

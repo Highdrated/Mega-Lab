@@ -1660,7 +1660,7 @@ function cssVar(name, fallback){
   return fallback;
 }
 function applyTheme(t){
-  if(!THEMES.includes(t)) t = "space";
+  if(!THEMES.includes(t)) t = "nightops";
   document.body.className = t === "terminal" ? "" : "theme-" + t;
   const sel = document.getElementById("theme-select");
   if(sel) sel.value = t;
@@ -1670,8 +1670,14 @@ function applyTheme(t){
 document.getElementById("theme-select").onchange = (e) => applyTheme(e.target.value);
 (function(){
   let t = null;
-  try{ t = localStorage.getItem("junoslab-theme"); }catch(e){}
-  applyTheme(t || "space");
+  try{
+    t = localStorage.getItem("junoslab-theme");
+    if(!localStorage.getItem("junoslab-theme-default")){
+      localStorage.setItem("junoslab-theme-default", "nightops");
+      t = null;
+    }
+  }catch(e){}
+  applyTheme(t || "nightops");
 })();
 
 /* ============================================================
