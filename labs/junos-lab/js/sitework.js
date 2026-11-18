@@ -228,9 +228,11 @@ const DESKS = ["win-desk", "mac-desk", "linux-desk"];
 const DESK_SCENARIOS = [
   {
     id: "desk-dhcp",
+    tour: { touch: ["@hosts"] },
     group: DESK_GROUP, kind: "starter",
     title: "39. Three Desks, One DHCP Server",
-    desc: DESK_INTRO + "TICKET: DHCP is already running on office-sw. Get an address on all three desks, each with its own system's command, then prove each one can reach the gateway.",
+    intro: DESK_INTRO,
+    desc: "TICKET: DHCP is already running on office-sw. Get an address on all three desks, each with its own system's command, then prove each one can reach the gateway.",
     setup(){ deskBase({ dhcp: true }); },
     checks: [
       { desc: "win-desk (Windows) holds a DHCP lease",
@@ -255,9 +257,11 @@ const DESK_SCENARIOS = [
   },
   {
     id: "desk-static",
+    tour: { touch: ["@hosts"] },
     group: DESK_GROUP, kind: "starter",
     title: "40. Three Static Addresses",
-    desc: DESK_INTRO + "TICKET: this office has no DHCP. Set these by hand, all with mask 255.255.255.0 (that is /24) and gateway 10.0.10.1: win-desk 10.0.10.11, mac-desk 10.0.10.12, linux-desk 10.0.10.13.",
+    intro: DESK_INTRO,
+    desc: "TICKET: this office has no DHCP. Set these by hand, all with mask 255.255.255.0 (that is /24) and gateway 10.0.10.1: win-desk 10.0.10.11, mac-desk 10.0.10.12, linux-desk 10.0.10.13.",
     setup(){ deskBase({}); },
     checks: [
       { desc: "win-desk has 10.0.10.11/24 with gateway 10.0.10.1",
@@ -283,9 +287,11 @@ const DESK_SCENARIOS = [
   },
   {
     id: "desk-back-to-dhcp",
+    tour: { touch: ["@hosts"] },
     group: DESK_GROUP, kind: "starter",
     title: "41. Back to DHCP After the Move",
-    desc: DESK_INTRO + "TICKET: these three machines came from the old office and still carry hand-set 192.168.1.x addresses, so nothing works. This office runs DHCP. Switch every desk from static back to DHCP.",
+    intro: DESK_INTRO,
+    desc: "TICKET: these three machines came from the old office and still carry hand-set 192.168.1.x addresses, so nothing works. This office runs DHCP. Switch every desk from static back to DHCP.",
     setup(){
       const D0 = deskBase({ dhcp: true });
       hostSet(D0.win, "192.168.1.21", 24, "192.168.1.1");
@@ -315,9 +321,11 @@ const DESK_SCENARIOS = [
   },
   {
     id: "desk-three-faults",
+    tour: { start: ["@hosts"] },
     group: DESK_GROUP, kind: "starter",
     title: "42. Three Desks, Three Faults",
-    desc: DESK_INTRO + "TICKET: nobody can print. print-server-1 lives in the printers VLAN at 10.0.20.10 and the switch routes between the VLANs correctly. Each desk has a DIFFERENT mistake in its own network settings. The desks should be 10.0.10.11, .12 and .13, mask 255.255.255.0, gateway 10.0.10.1. Find each fault with that system's show commands, then fix it.",
+    intro: DESK_INTRO,
+    desc: "TICKET: nobody can print. print-server-1 lives in the printers VLAN at 10.0.20.10 and the switch routes between the VLANs correctly. Each desk has a DIFFERENT mistake in its own network settings. The desks should be 10.0.10.11, .12 and .13, mask 255.255.255.0, gateway 10.0.10.1. Find each fault with that system's show commands, then fix it.",
     setup(){
       const D0 = deskBase({ extra: [
         "set vlans printers vlan-id 20",
@@ -355,9 +363,11 @@ const DESK_SCENARIOS = [
   },
   {
     id: "desk-dns",
+    tour: { touch: ["@hosts"] },
     group: DESK_GROUP, kind: "starter",
     title: "43. One Name, Three Resolvers",
-    desc: DESK_INTRO + "TICKET: all three desks have an address from DHCP, but nobody can open intranet.lab. The DNS server dns-server-1 at 10.0.10.53 is running and knows the name. Point each desk at it and prove the name resolves.",
+    intro: DESK_INTRO,
+    desc: "TICKET: all three desks have an address from DHCP, but nobody can open intranet.lab. The DNS server dns-server-1 at 10.0.10.53 is running and knows the name. Point each desk at it and prove the name resolves.",
     setup(){
       const D0 = deskBase({ dhcp: true });
       const ds = siteServer("dns-server-1", 590, 150, "Linux server · DNS + web");
@@ -387,6 +397,7 @@ const DESK_SCENARIOS = [
   },
   {
     id: "desk-rename",
+    tour: { touch: ["@hosts"] },
     group: DESK_GROUP, kind: "starter",
     title: "44. Apply the Naming Standard",
     desc: "One office, three desks, all cabled to office-sw with DHCP running. The machines still have their factory names: the Windows PC is DESKTOP-7QK2, the Mac is Annas-MacBook and the Linux PC is localhost. TICKET: rename them to the company standard, ws-fin-01 for the Windows PC, mac-design-01 for the Mac and lnx-dev-01 for the Linux PC, then give each a DHCP address so the new name shows up on the network.",
@@ -424,9 +435,11 @@ const SITE_INTRO = "The site is already running: a Datacenter with three racks (
 const SITE_SCENARIOS = [
   {
     id: "site-new-desk",
+    tour: { touch: ["new-pc", "office-sw"] },
     group: SITE_L1,
     title: "27. New Desk at the Office",
-    desc: SITE_INTRO + "TICKET: a new colleague starts today. Patch new-pc (a Windows PC) into office-sw port ge-0/0/3, put it in the staff VLAN and let it take its address from DHCP.",
+    intro: SITE_INTRO,
+    desc: "TICKET: a new colleague starts today. Patch new-pc (a Windows PC) into office-sw port ge-0/0/3, put it in the staff VLAN and let it take its address from DHCP.",
     setup(){
       const S = siteBase();
       siteHost("new-pc", 1300, 440);
@@ -454,9 +467,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-rack-server",
+    tour: { touch: ["backup-nas-1", "srv-sw"] },
     group: SITE_L1,
     title: "28. Rack a New Server",
-    desc: SITE_INTRO + "TICKET: backup-nas-1 is mounted in Rack A2 but not connected. Cable it to srv-sw port ge-0/0/2 in the servers VLAN and give it the static address 10.10.20.20/24 with gateway 10.10.20.1. Servers never use DHCP here.",
+    intro: SITE_INTRO,
+    desc: "TICKET: backup-nas-1 is mounted in Rack A2 but not connected. Cable it to srv-sw port ge-0/0/2 in the servers VLAN and give it the static address 10.10.20.20/24 with gateway 10.10.20.1. Servers never use DHCP here.",
     setup(){
       const S = siteBase();
       siteServer("backup-nas-1", 397, 450, "Synology NAS · backups");
@@ -484,9 +499,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-pool-dry",
+    tour: { start: ["new-pc"] },
     group: SITE_L1,
     title: "29. The Pool Ran Dry",
-    desc: SITE_INTRO + "TICKET: new-pc is patched in and its port is correct, but it gets no address. pc-1 and pc-2 work fine. Find out why DHCP refuses it and fix the cause on core-sw. The staff range should run from 10.10.10.100 to 10.10.10.199.",
+    intro: SITE_INTRO,
+    desc: "TICKET: new-pc is patched in and its port is correct, but it gets no address. pc-1 and pc-2 work fine. Find out why DHCP refuses it and fix the cause on core-sw. The staff range should run from 10.10.10.100 to 10.10.10.199.",
     setup(){
       const S = siteBase({ poolHigh: "10.10.10.101" });
       const n = siteHost("new-pc", 1300, 440);
@@ -513,9 +530,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-guest-vlan",
+    tour: { touch: ["guest-pc", "office-sw", "core-sw"] },
     group: SITE_L2,
     title: "30. Guest VLAN with its own DHCP",
-    desc: SITE_INTRO + "TICKET: visitors need internet without touching staff machines. Build VLAN guest (id 30, 10.10.30.0/24, gateway 10.10.30.1 on core-sw), carry it over the existing uplink to office-sw, and serve it by DHCP from core-sw. guest-pc (a Mac) is already patched into office-sw ge-0/0/4.",
+    intro: SITE_INTRO,
+    desc: "TICKET: visitors need internet without touching staff machines. Build VLAN guest (id 30, 10.10.30.0/24, gateway 10.10.30.1 on core-sw), carry it over the existing uplink to office-sw, and serve it by DHCP from core-sw. guest-pc (a Mac) is already patched into office-sw ge-0/0/4.",
     setup(){
       const S = siteBase();
       const g = siteHost("guest-pc", 1300, 440, "macos");
@@ -549,9 +568,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-lacp-uplink",
+    tour: { touch: ["core-sw", "office-sw"] },
     group: SITE_L2,
     title: "31. Bundle the Office Uplink (LACP)",
-    desc: SITE_INTRO + "TICKET: the Office hangs on one cable. A second cable is already run from core-sw ge-0/0/3 to office-sw ge-0/0/5, with both ports shut so it cannot loop. Turn the two links into one LACP bundle (ae0) that still carries the staff VLAN.",
+    intro: SITE_INTRO,
+    desc: "TICKET: the Office hangs on one cable. A second cable is already run from core-sw ge-0/0/3 to office-sw ge-0/0/5, with both ports shut so it cannot loop. Turn the two links into one LACP bundle (ae0) that still carries the staff VLAN.",
     setup(){
       const S = siteBase();
       cable(S.core, "ge-0/0/3", S.off, "ge-0/0/5");
@@ -583,9 +604,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-dia-customer",
+    tour: { touch: ["acme-rtr", "acme-pc", "Carrier"] },
     group: SITE_L2,
     title: "32. Deliver DIA to a Customer",
-    desc: SITE_INTRO + "TICKET: customer Acme rents space in Rack A3 and bought Dedicated Internet Access. Their router acme-rtr is racked and their office PC is cabled to its ge-0/0/1. The carrier handoff is the Carrier node: their side is 198.51.100.1/30, yours is 198.51.100.2/30. Cable the handoff to ge-0/0/0, give Acme a LAN of 192.168.50.0/24 (gateway .1) with DHCP from the router, and get acme-pc online.",
+    intro: SITE_INTRO,
+    desc: "TICKET: customer Acme rents space in Rack A3 and bought Dedicated Internet Access. Their router acme-rtr is racked and their office PC is cabled to its ge-0/0/1. The carrier handoff is the Carrier node: their side is 198.51.100.1/30, yours is 198.51.100.2/30. Cable the handoff to ge-0/0/0, give Acme a LAN of 192.168.50.0/24 (gateway .1) with DHCP from the router, and get acme-pc online.",
     setup(){
       const S = siteBase();
       siteCustomer(S, "Acme office");
@@ -619,9 +642,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-new-access-switch",
+    tour: { touch: ["@fresh", "core-sw", "desk-1", "desk-2"] },
     group: SITE_L3,
     title: "33. Install a New Access Switch",
-    desc: SITE_INTRO + "TICKET: the Office is out of ports. A factory-fresh switch stands next to office-sw, its uplink already cabled from its ge-0/0/0 to core-sw ge-0/0/4, with desk-1 and desk-2 on its ge-0/0/1 and ge-0/0/2. Power it on, do day zero (name it office-sw2), and get both desks onto the staff VLAN with DHCP.",
+    intro: SITE_INTRO,
+    desc: "TICKET: the Office is out of ports. A factory-fresh switch stands next to office-sw, its uplink already cabled from its ge-0/0/0 to core-sw ge-0/0/4, with desk-1 and desk-2 on its ge-0/0/1 and ge-0/0/2. Power it on, do day zero (name it office-sw2), and get both desks onto the staff VLAN with DHCP.",
     setup(){
       const S = siteBase();
       const n = makeSwitch(1300, 200, 12);
@@ -655,9 +680,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-internal-router",
+    tour: { touch: ["lab-rtr", "core-sw", "lab-pc"] },
     group: SITE_L3,
     title: "34. Install an Internal Router for the Test Lab",
-    desc: SITE_INTRO + "TICKET: the test lab needs its own routed network behind lab-rtr (racked in A3, cabled from its ge-0/0/0 to core-sw ge-0/0/5, lab-pc, a Linux PC, on its ge-0/0/1). Use transit 10.10.98.0/30 (core-sw .1 on a new VLAN lab-transit id 98, lab-rtr .2) and lab LAN 10.10.40.0/24 (gateway .1, DHCP from lab-rtr). lab-pc must reach fileserver-1 and the internet.",
+    intro: SITE_INTRO,
+    desc: "TICKET: the test lab needs its own routed network behind lab-rtr (racked in A3, cabled from its ge-0/0/0 to core-sw ge-0/0/5, lab-pc, a Linux PC, on its ge-0/0/1). Use transit 10.10.98.0/30 (core-sw .1 on a new VLAN lab-transit id 98, lab-rtr .2) and lab LAN 10.10.40.0/24 (gateway .1, DHCP from lab-rtr). lab-pc must reach fileserver-1 and the internet.",
     setup(){
       const S = siteBase();
       S.lab = siteZone("Test lab", 1020, 660, 520, 200, "building", 6);
@@ -694,9 +721,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-rack-extension",
+    tour: { touch: ["@fresh", "srv-sw", "db-server-1"] },
     group: SITE_L3,
     title: "35. Extend the Server Row into Rack A3",
-    desc: SITE_INTRO + "TICKET: Rack A2 is full. A factory-fresh switch is mounted in Rack A3, cabled from its ge-0/0/0 to srv-sw ge-0/0/7, with the new database server db-server-1 on its ge-0/0/1. Do day zero (name it srv-sw2), extend the servers VLAN to it, and give db-server-1 the address 10.10.20.30/24 with gateway 10.10.20.1.",
+    intro: SITE_INTRO,
+    desc: "TICKET: Rack A2 is full. A factory-fresh switch is mounted in Rack A3, cabled from its ge-0/0/0 to srv-sw ge-0/0/7, with the new database server db-server-1 on its ge-0/0/1. Do day zero (name it srv-sw2), extend the servers VLAN to it, and give db-server-1 the address 10.10.20.30/24 with gateway 10.10.20.1.",
     setup(){
       const S = siteBase();
       const n = makeSwitch(687, 240, 12);
@@ -730,9 +759,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-new-floor",
+    tour: { touch: ["@fresh", "core-sw", "fl2-staff", "fl2-guest"] },
     group: SITE_L4,
     title: "36. Project: a New Floor",
-    desc: SITE_INTRO + "PROJECT: a second floor opens. A factory-fresh switch is in place with TWO uplinks already cabled: its ge-0/0/10 to core-sw ge-0/0/4 and its ge-0/0/11 to core-sw ge-0/0/5 (both shut on core-sw so they cannot loop). fl2-staff (Windows) is on its ge-0/0/1 and fl2-guest (a Mac) on its ge-0/0/2. Deliver: day zero (name it floor2-sw), an LACP bundle to core-sw, the staff VLAN, and a new guest VLAN (id 30, 10.10.30.0/24, gateway 10.10.30.1 and DHCP on core-sw).",
+    intro: SITE_INTRO,
+    desc: "PROJECT: a second floor opens. A factory-fresh switch is in place with TWO uplinks already cabled: its ge-0/0/10 to core-sw ge-0/0/4 and its ge-0/0/11 to core-sw ge-0/0/5 (both shut on core-sw so they cannot loop). fl2-staff (Windows) is on its ge-0/0/1 and fl2-guest (a Mac) on its ge-0/0/2. Deliver: day zero (name it floor2-sw), an LACP bundle to core-sw, the staff VLAN, and a new guest VLAN (id 30, 10.10.30.0/24, gateway 10.10.30.1 and DHCP on core-sw).",
     setup(){
       const S = siteBase();
       const n = makeSwitch(1300, 200, 12);
@@ -771,9 +802,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-customer-cage",
+    tour: { touch: ["acme-rtr", "@fresh", "acme-pc1", "acme-pc2", "Carrier"] },
     group: SITE_L4,
     title: "37. Project: Onboard a Customer End to End",
-    desc: SITE_INTRO + "PROJECT: customer Acme moves in. In Rack A3: acme-rtr (named, otherwise empty) and a factory-fresh switch, cabled from its ge-0/0/0 to acme-rtr ge-0/0/1. In the Acme office: acme-pc1 (Windows) and acme-pc2 (a Mac) on the switch's ge-0/0/1 and ge-0/0/2. Deliver: DIA on acme-rtr ge-0/0/0 (carrier 198.51.100.1/30, you .2), LAN 192.168.50.0/24 with gateway .1 and DHCP from the router, day zero on the switch (name it acme-sw), and all three switch ports in a VLAN acme with id 50.",
+    intro: SITE_INTRO,
+    desc: "PROJECT: customer Acme moves in. In Rack A3: acme-rtr (named, otherwise empty) and a factory-fresh switch, cabled from its ge-0/0/0 to acme-rtr ge-0/0/1. In the Acme office: acme-pc1 (Windows) and acme-pc2 (a Mac) on the switch's ge-0/0/1 and ge-0/0/2. Deliver: DIA on acme-rtr ge-0/0/0 (carrier 198.51.100.1/30, you .2), LAN 192.168.50.0/24 with gateway .1 and DHCP from the router, day zero on the switch (name it acme-sw), and all three switch ports in a VLAN acme with id 50.",
     setup(){
       const S = siteBase();
       siteCustomer(S, "Acme office");
@@ -814,9 +847,11 @@ const SITE_SCENARIOS = [
   },
   {
     id: "site-warehouse",
+    tour: { touch: ["wh-rtr", "edge-rtr", "wh-pc1", "wh-pc2"] },
     group: SITE_L4,
     title: "38. Project: Bring the Warehouse Online",
-    desc: SITE_INTRO + "PROJECT: a Warehouse joins the site. wh-rtr and wh-sw are in place, wh-pc1 and wh-pc2 are cabled to wh-sw, and a long-haul link runs from wh-rtr ge-0/0/0 to edge-rtr ge-0/0/2. Deliver: interconnect 10.10.97.0/30 (edge-rtr .1, wh-rtr .2), warehouse LAN 10.20.10.0/24 on wh-rtr ge-0/0/1 (gateway .1, DHCP from wh-rtr), and routing so the warehouse reaches fileserver-1 and the internet.",
+    intro: SITE_INTRO,
+    desc: "PROJECT: a Warehouse joins the site. wh-rtr and wh-sw are in place, wh-pc1 and wh-pc2 are cabled to wh-sw, and a long-haul link runs from wh-rtr ge-0/0/0 to edge-rtr ge-0/0/2. Deliver: interconnect 10.10.97.0/30 (edge-rtr .1, wh-rtr .2), warehouse LAN 10.20.10.0/24 on wh-rtr ge-0/0/1 (gateway .1, DHCP from wh-rtr), and routing so the warehouse reaches fileserver-1 and the internet.",
     setup(){
       const S = siteBase();
       S.wh = siteZone("Warehouse", 1020, 660, 520, 300, "building", 6);

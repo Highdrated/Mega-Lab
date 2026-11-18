@@ -1859,7 +1859,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(box.children.length > 0, "objectives panel renders rows");
   const withWhy = box.children.filter(el => el.className && el.className.indexOf("obj-has-why") !== -1);
   ok(withWhy.length === currentScenario.checks.length, "every rendered objective row is flagged as having a why");
-  const btn = withWhy[0].children.find(c => c.className === "obj-why-btn");
+  const btn = withWhy[0].children.find(c => String(c.className).split(" ")[0] === "obj-why-btn");
   ok(btn && btn.textContent === "?", "why-reveal button renders with the expected label");
 }
 {
@@ -4374,6 +4374,89 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   setScenBoard(true);
   ok(document.getElementById("scen-board").querySelectorAll(".sb-band").length === 5, "T79 the board has five bands");
   wipeLab();
+}
+
+/* ---------- T80: hint log, next-step why, site tour ---------- */
+{
+  try{ localStorage.removeItem(LS_HINTLOG); }catch(e){}
+  HINTLOG = {}; PROGRESS = {};
+  const pick = sid => gotoScenario(SCENARIOS.findIndex(x => x.id === sid));
+  const solve27 = () => {
+    cable(byName("new-pc").id, "eth0", byName("office-sw").id, "ge-0/0/3"); rebuildAllDerived();
+    cfgDo(byName("office-sw").id, ["set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members staff"]);
+    cli(byName("new-pc").id, "ipconfig /renew");
+    evalChecks();
+  };
+  const objs = () => document.getElementById("scen-objectives").querySelectorAll(".obj");
+  const whyShown = o => { const w = o.querySelector(".obj-why"); return !!w && w.style.display !== "none"; };
+
+  pick("site-new-desk");
+  const tour = document.getElementById("scen-tour");
+  ok(/Load the starting setup/.test(tour.querySelector(".tour-note").textContent), "T80 the tour asks for the setup when the canvas is empty");
+  wipeLab(); scen("site-new-desk").setup(); rebuildAllDerived(); hintRunReset(); renderScenarioMeta();
+  const rows = tour.querySelectorAll(".tour-row");
+  ok(rows.length === 2 && rows[0].querySelector(".tour-name").textContent === "new-pc" && rows[0].querySelector(".tour-role").textContent === "Windows PC" &&
+     rows[1].querySelector(".tour-role").textContent === "Juniper EX2300 · office", "T80 the tour names the two devices this ticket touches, with what they are");
+  ok(/left alone/.test(tour.querySelector(".tour-note").textContent) && /fileserver-1/.test(tour.querySelector(".tour-note").textContent) &&
+     !/CRAC|AC-Office/.test(tour.querySelector(".tour-note").textContent), "T80 the tour lists the rest as leave-alone, without the cooling units");
+
+  ok(whyShown(objs()[0]) && !whyShown(objs()[1]) && objs()[0].className.includes("obj-next"), "T80 normal mode opens the why of the next unfinished step only");
+  cable(byName("new-pc").id, "eth0", byName("office-sw").id, "ge-0/0/3"); rebuildAllDerived(); evalChecks();
+  ok(!whyShown(objs()[0]) && whyShown(objs()[1]) && /Without/.test(objs()[1].querySelector(".obj-why").textContent), "T80 the open why moves to the next step and says what breaks without it");
+  delete links[Object.keys(links).find(k => links[k].a.dev === byName("new-pc").id || links[k].b.dev === byName("new-pc").id)]; rebuildAllDerived();
+
+  document.getElementById("hint-btn").onclick();
+  document.getElementById("hint-btn").onclick();
+  ok(document.getElementById("hint-list").querySelectorAll(".hint-note").length === 1, "T80 the first hint explains that hinted runs are logged");
+  solve27();
+  ok(HINTLOG["site-new-desk"] && HINTLOG["site-new-desk"].hints === 2 && !HINTLOG["site-new-desk"].clean && scenNeedsRedo(scen("site-new-desk")), "T80 a run finished with two hints is logged as needing a redo");
+  setScenBoard(true);
+  const board = document.getElementById("scen-board");
+  const item27 = () => board.querySelectorAll(".sb-item").find(b2 => /^27\./.test(b2.title));
+  ok(item27().className.includes("redo") && item27().querySelector(".sb-tick").textContent === "redo", "T80 the board marks the scenario redo");
+  ok(/1 to redo without hints/.test(board.querySelector(".sb-site").querySelector(".sb-count").textContent), "T80 the band counts scenarios to redo");
+
+  wipeLab(); scen("site-new-desk").setup(); rebuildAllDerived(); hintRunReset(); evalChecks();
+  ok(document.getElementById("hint-list").children.length === 0 && hintIndex === 0, "T80 loading the setup again starts a fresh, hint-free run");
+  solve27();
+  ok(HINTLOG["site-new-desk"].clean && HINTLOG["site-new-desk"].runs === 2 && !scenNeedsRedo(scen("site-new-desk")), "T80 a hint-free rerun clears the mark");
+  setScenBoard(true);
+  ok(item27().querySelector(".sb-tick").textContent === "done" && !item27().className.includes("redo"), "T80 the board shows it done after the clean run");
+
+  pick("colo-no-internet"); wipeLab(); scen("colo-no-internet").setup(); rebuildAllDerived(); renderScenarioMeta();
+  ok(/start here/i.test(tour.querySelector(".tour-head").textContent) && tour.querySelectorAll(".tour-row").length === 1 &&
+     /could be the cause/.test(tour.querySelector(".tour-note").textContent) && /edge-rtr/.test(tour.querySelector(".tour-note").textContent),
+     "T80 a fault-finding ticket names only the starting point and does not give the culprit away");
+  pick("colo-onboard-tenant"); wipeLab(); scen("colo-onboard-tenant").setup(); rebuildAllDerived(); renderScenarioMeta();
+  ok(tour.querySelectorAll(".tour-row")[0].querySelector(".tour-name").textContent === "new switch", "T80 a factory-fresh switch is listed as the new switch");
+
+  document.getElementById("exam-btn").onclick();
+  ok(examState.active && tour.style.display === "none" && objs().every(o => !o.querySelector(".obj-why") && !o.querySelector(".obj-why-btn")),
+     "T80 exam mode hides the tour and every why");
+  document.getElementById("exam-btn").onclick();
+  ok(!examState.active && whyShown(objs()[0]), "T80 leaving exam mode brings the explanations back");
+
+  PROGRESS = {}; HINTLOG = {};
+  const early = [];
+  SCENARIOS.filter(x => x.setup).forEach(x => {
+    gotoScenario(SCENARIOS.indexOf(x)); wipeLab(); x.setup(); rebuildAllDerived(); evalChecks();
+    if(PROGRESS[x.id]) early.push(x.id);
+  });
+  ok(early.length === 0, "T80 loading a setup never marks its scenario finished (" + early.join(", ") + ")");
+  PROGRESS = {}; HINTLOG = {};
+  ok(SCENARIOS.filter(x => x.group).every(x => x.tour && (x.tour.touch || x.tour.start)), "T80 every pre-built scenario has a tour");
+  pick("colo-named-accounts");
+  const intro = document.getElementById("scen-intro");
+  ok(intro.style.display === "block" && intro.open === true && /three customers/.test(document.getElementById("scen-intro-text").textContent) &&
+     /^TICKET:/.test(document.getElementById("scen-desc").textContent), "T80 the site background sits in its own fold, the description is only the ticket");
+  PROGRESS["colo-mystery-port"] = { done: true }; renderScenarioMeta();
+  ok(intro.open === false, "T80 the site background folds away once one scenario on that site is done");
+  delete PROGRESS["colo-mystery-port"];
+  ok(SCENARIOS.filter(x => x.intro).every(x => x.desc.length < 700), "T80 no ticket text is a wall of words");
+  pick("basic-connect");
+  ok(tour.style.display === "none", "T80 empty-canvas scenarios have no tour");
+  try{ localStorage.removeItem(LS_HINTLOG); localStorage.removeItem(LS_PROGRESS); }catch(e){}
+  HINTLOG = {}; PROGRESS = {}; wipeLab();
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");

@@ -51,6 +51,7 @@ function wipeLab(){
 /* ============================================================
    SCENARIOS
    ============================================================ */
+let SETUP_BUSY = 0;
 const SCENARIOS = [
   {
     id: "basic-connect",
@@ -1050,7 +1051,11 @@ const SCENARIOS = [
 SCENARIOS.forEach(s => {
   if(!s.setup) return;
   const orig = s.setup;
-  s.setup = function(){ orig.call(this); rebuildAllDerived(); };
+  s.setup = function(){
+    SETUP_BUSY++;
+    try{ orig.call(this); }finally{ SETUP_BUSY--; }
+    rebuildAllDerived();
+  };
 });
 
 /* ============================================================
@@ -1487,6 +1492,52 @@ function setScenBoard(open){
   try{ localStorage.setItem("junoslab-scen-board", scenBoardOpen ? "open" : "closed"); }catch(e){}
   renderScenBoard();
 }
+function tourResolve(token){
+  const all = Object.values(devices);
+  if(token === "@fresh") return all.filter(d => d.brandNew || /· new$/.test(d.role || ""));
+  if(token === "@hosts") return all.filter(d => d.type === "host");
+  if(token === "@ups") return all.filter(d => d.type === "ups");
+  const d = byName(token);
+  return d ? [d] : [];
+}
+function tourLabel(d){
+  if(d.role) return d.role;
+  if(d.type === "host") return hostOsLabel(d);
+  return { switch: "Junos switch", router: "Junos router", server: "Server", isp: "Internet provider", crac: "Cooling", ups: "UPS battery", ap: "Wi-Fi access point" }[d.type] || d.type;
+}
+function tourGlow(dev){
+  const g = document.querySelector('[data-dev="' + dev.id + '"]');
+  if(!g || !g.classList) return;
+  g.classList.add("tour-glow");
+  setTimeout(() => { if(g.classList) g.classList.remove("tour-glow"); }, 1600);
+}
+function renderSiteTour(){
+  const box = document.getElementById("scen-tour");
+  if(!box) return;
+  box.innerHTML = "";
+  const t = currentScenario.tour;
+  if(!t || examState.active){ box.style.display = "none"; return; }
+  box.style.display = "block";
+  const keys = t.touch || t.start || [];
+  const picked = [];
+  keys.forEach(k => tourResolve(k).forEach(d => { if(picked.indexOf(d) < 0) picked.push(d); }));
+  box.appendChild(sbEl("div", "tour-head", t.touch ? "This ticket touches" : "Fault-finding ticket: start here"));
+  if(!picked.length){
+    box.appendChild(sbEl("div", "tour-note", "Load the starting setup below to see the site."));
+    return;
+  }
+  picked.forEach(d => {
+    const row = sbEl("button", "tour-row");
+    row.appendChild(sbEl("span", "tour-name", d.brandNew ? "new switch" : d.name));
+    row.appendChild(sbEl("span", "tour-role", tourLabel(d)));
+    row.title = "Show " + d.name + " on the canvas";
+    row.onclick = () => tourGlow(d);
+    box.appendChild(row);
+  });
+  const rest = Object.values(devices).filter(d => picked.indexOf(d) < 0 && d.type !== "crac" && d.type !== "ups");
+  if(rest.length)
+    box.appendChild(sbEl("div", "tour-note", (t.touch ? "Everything else can be left alone: " : "Everything else is on the canvas too, and any of it could be the cause: ") + rest.map(d => d.name).join(", ") + "."));
+}
 const SCEN_BANDS = [
   { key: "empty", title: "Empty canvas", note: "You place and cable everything yourself", groups: [0] },
   { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
@@ -1527,7 +1578,8 @@ function renderScenBoard(){
     fill.style.width = Math.round(doneN / all.length * 100) + "%";
     meter.appendChild(fill);
     rail.appendChild(meter);
-    rail.appendChild(sbEl("div", "sb-count", doneN + " of " + all.length + " done"));
+    const redoN = all.filter(s => scenDone(s) && scenNeedsRedo(s)).length;
+    rail.appendChild(sbEl("div", "sb-count", doneN + " of " + all.length + " done" + (redoN ? ", " + redoN + " to redo without hints" : "")));
     row.appendChild(rail);
     const cols = sbEl("div", "sb-cols" + (band.groups.length === 1 ? " sb-flat" : ""));
     band.groups.forEach(gi => {
@@ -1538,11 +1590,12 @@ function renderScenBoard(){
       SCENARIOS.forEach((s, i) => {
         if(scenGroup(s) !== g) return;
         const m = s.title.match(/^(\d+)\.\s*(.*)$/);
-        const it = sbEl("button", "sb-item" + (scenDone(s) ? " done" : "") + (!live && i === idx ? " cur" : ""));
+        const redo = scenDone(s) && scenNeedsRedo(s);
+        const it = sbEl("button", "sb-item" + (scenDone(s) ? " done" : "") + (redo ? " redo" : "") + (!live && i === idx ? " cur" : ""));
         it.appendChild(sbEl("span", "sb-num", m ? m[1] : ""));
         it.appendChild(sbEl("span", "sb-name", m ? m[2] : s.title));
-        it.appendChild(sbEl("span", "sb-tick", scenDone(s) ? "done" : ""));
-        it.title = s.title;
+        it.appendChild(sbEl("span", "sb-tick", redo ? "redo" : (scenDone(s) ? "done" : "")));
+        it.title = s.title + (redo ? " (finished with " + HINTLOG[s.id].hints + " hint" + (HINTLOG[s.id].hints === 1 ? "" : "s") + ": redo it without hints)" : "");
         it.onclick = () => { scenBoardOpen = false; try{ localStorage.setItem("junoslab-scen-board", "closed"); }catch(e){} pickScenario(i); };
         list.appendChild(it);
       });
@@ -1556,6 +1609,18 @@ function renderScenBoard(){
 function renderScenarioMeta(){
   document.getElementById("scen-title").textContent = currentScenario.title;
   document.getElementById("scen-desc").textContent = currentScenario.desc;
+  const introEl = document.getElementById("scen-intro");
+  if(introEl){
+    const has = !!currentScenario.intro && !examState.active;
+    introEl.style.display = has ? "block" : "none";
+    document.getElementById("scen-intro-text").textContent = has ? currentScenario.intro : "";
+    if(has){
+      const band = SCEN_BANDS.find(b => b.groups.includes(SCEN_GROUPS.indexOf(scenGroup(currentScenario))));
+      const known = !!band && SCENARIOS.some(s => scenDone(s) && band.groups.includes(SCEN_GROUPS.indexOf(scenGroup(s))));
+      introEl.open = !known;
+    }
+  }
+  renderSiteTour();
   const kindEl = document.getElementById("scen-kind");
   if(kindEl){
     const live = currentScenario.isTicket || SCENARIOS.indexOf(currentScenario) < 0;
@@ -1581,17 +1646,21 @@ function renderObjectives(){
   objDiv.innerHTML = "";
   let all = currentScenario.checks.length > 0;
   let doneCount = 0;
+  let nextShown = false;
+  const exam = examState.active;
   currentScenario.checks.forEach(c => {
     let done = false;
     try{ done = !!c.test(); }catch(e){ done = false; }
     if(done) doneCount++;
     if(!done) all = false;
+    const isNext = !done && !nextShown && !exam;
+    if(isNext) nextShown = true;
     const el2 = document.createElement("div");
-    el2.className = "obj" + (done ? " done" : "") + (c.why ? " obj-has-why" : "");
+    el2.className = "obj" + (done ? " done" : "") + (c.why && !exam ? " obj-has-why" : "") + (isNext ? " obj-next" : "");
     const dot = document.createElement("div"); dot.className = "dot";
     const span = document.createElement("span"); span.textContent = c.desc;
     el2.append(dot, span);
-    if(c.why){
+    if(c.why && !exam){
       const q = document.createElement("button");
       q.className = "obj-why-btn";
       q.type = "button";
@@ -1600,7 +1669,8 @@ function renderObjectives(){
       const whyEl = document.createElement("div");
       whyEl.className = "obj-why";
       whyEl.textContent = c.why;
-      whyEl.style.display = "none";
+      whyEl.style.display = isNext ? "block" : "none";
+      if(isNext) q.classList.add("obj-why-open");
       q.onclick = (e) => {
         e.stopPropagation();
         const open = whyEl.style.display !== "none";
@@ -1623,6 +1693,7 @@ function renderObjectives(){
 }
 function evalChecks(){
   if(!document.getElementById("tab-scen")) return;
+  if(SETUP_BUSY) return;
   const all = renderObjectives();
   if(all && (currentScenario.isTicket || currentScenario.isContract) && !xpChallengeAwarded){
     xpChallengeAwarded = true;
@@ -1634,9 +1705,15 @@ function evalChecks(){
       else awardXp(CONTRACT_XP[currentScenario.id.replace("contract-tier", "")] || 30, currentScenario.title);
     }
   }
+  if(!all && hintRunLogged === currentScenario.id && !Object.keys(devices).length) hintRunReset();
   if(all && Object.keys(devices).length){
     const id = currentScenario.id;
     const first = !(PROGRESS[id] && PROGRESS[id].done);
+    if(!currentScenario.isTicket && !currentScenario.isContract && SCENARIOS.indexOf(currentScenario) >= 0 && hintRunLogged !== id){
+      hintRunLogged = id;
+      hintLogRecord(id);
+      if(!first) renderScenSelect();
+    }
     if(!currentScenario.isTicket && !currentScenario.isContract && prepHandsFired !== id && typeof prepOnHandsOn === "function"){
       prepHandsFired = id;
       prepOnHandsOn(id, { hints: hintIndex, revealed: false });
@@ -1673,6 +1750,26 @@ function resetHintBtn(){
   b.textContent = "Give me a hint";
 }
 let prepHandsFired = null;
+const LS_HINTLOG = "junoslab-hintlog";
+let HINTLOG = {};
+try{ HINTLOG = JSON.parse(localStorage.getItem(LS_HINTLOG) || "{}") || {}; }catch(e){ HINTLOG = {}; }
+let hintReveals = 0, hintRunLogged = null;
+function hintLogSave(){ try{ localStorage.setItem(LS_HINTLOG, JSON.stringify(HINTLOG)); }catch(e){} }
+function hintRunReset(){
+  hintIndex = 0; hintReveals = 0; hintRunLogged = null;
+  const list = document.getElementById("hint-list");
+  if(list) list.innerHTML = "";
+  resetHintBtn();
+}
+function hintLogRecord(id){
+  const prev = HINTLOG[id] || { runs: 0, clean: false };
+  const rec = { runs: (prev.runs || 0) + 1, clean: !!prev.clean, hints: hintIndex, reveals: hintReveals, at: Date.now() };
+  if(hintIndex === 0) rec.clean = true;
+  HINTLOG[id] = rec;
+  hintLogSave();
+}
+function scenNeedsRedo(s){ const h = HINTLOG[s.id]; return !!(h && !h.clean && h.hints > 0); }
+function scenRedoList(){ return SCENARIOS.filter(s => scenDone(s) && scenNeedsRedo(s)); }
 scenSelect.onchange = () => pickScenario(parseInt(scenSelect.value, 10));
 scenGroupSelect.onchange = () => {
   const g = SCEN_GROUPS.includes(scenGroupSelect.value) ? scenGroupSelect.value : SCEN_GROUPS[0];
@@ -1682,9 +1779,7 @@ function pickScenario(i){
   currentScenario = SCENARIOS[i] || SCENARIOS[0];
   currentTicket = null;
   prepHandsFired = null;
-  hintIndex = 0;
-  document.getElementById("hint-list").innerHTML = "";
-  resetHintBtn();
+  hintRunReset();
   if(examState.active){
     examState.active = false;
     document.getElementById("exam-btn").classList.remove("active");
@@ -1732,9 +1827,15 @@ document.getElementById("hint-btn").onclick = () => {
     sp.className = "hint-cmd";
     sp.textContent = p.t;
     sp.title = "Try it from the idea first — click to reveal the command";
-    sp.onclick = () => sp.classList.add("revealed");
+    sp.onclick = () => { if(!sp.classList.contains("revealed")) hintReveals++; sp.classList.add("revealed"); };
     div.appendChild(sp);
   });
+  if(hintIndex === 0 && SCENARIOS.indexOf(currentScenario) >= 0){
+    const note = document.createElement("div");
+    note.className = "hint-note";
+    note.textContent = "Hints are fine. This run is logged as a hinted run, and the scenario comes back on the board as redo until you finish it once without hints.";
+    document.getElementById("hint-list").appendChild(note);
+  }
   document.getElementById("hint-list").appendChild(div);
   hintIndex++;
   if(hintIndex >= currentScenario.hints.length){
@@ -1752,7 +1853,9 @@ document.getElementById("load-setup-btn").onclick = async () => {
   wipeLab();
   currentScenario.setup();
   rebuildAllDerived();
+  hintRunReset();
   touchState();
+  renderScenarioMeta();
 };
 document.getElementById("exam-btn").onclick = () => {
   examState.active = !examState.active;

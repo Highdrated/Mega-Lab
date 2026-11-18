@@ -135,9 +135,11 @@ function coloHall(){ return Object.values(zones).find(z => z.name === "Colo hall
 const COLO_SCENARIOS = [
   {
     id: "colo-named-accounts",
+    tour: { touch: ["bor-sw", "noc-pc"] },
     group: COLO_HYGIENE,
     title: "45. Audit Finding: No Named Accounts",
-    desc: COLO_INTRO + "TICKET: the audit found that bor-sw can only be managed as root at the console. Give it a personal account (user noc-admin, class super-user, with a password), turn on SSH, and prove you can reach it from noc-pc.",
+    intro: COLO_INTRO,
+    desc: "TICKET: the audit found that bor-sw can only be managed as root at the console. Give it a personal account (user noc-admin, class super-user, with a password), turn on SSH, and prove you can reach it from noc-pc.",
     setup(){ coloBase(); },
     checks: [
       { desc: "bor-sw has a named user with a login class and a password",
@@ -165,9 +167,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-mystery-port",
+    tour: { touch: ["cob-sw", "unlabelled-device"] },
     group: COLO_HYGIENE,
     title: "46. What Is Plugged into Port 7?",
-    desc: COLO_INTRO + "TICKET: a walk-through found a device nobody ordered, cabled to cob-sw port ge-0/0/7 inside Cobalt's cage. Find out what it is from the switch, move that port into a new VLAN quarantine (id 999, no gateway) so it can reach nothing, and label ports ge-0/0/0, ge-0/0/1 and ge-0/0/7 with a description so the next engineer does not have to guess.",
+    intro: COLO_INTRO,
+    desc: "TICKET: a walk-through found a device nobody ordered, cabled to cob-sw port ge-0/0/7 inside Cobalt's cage. Find out what it is from the switch, move that port into a new VLAN quarantine (id 999, no gateway) so it can reach nothing, and label ports ge-0/0/0, ge-0/0/1 and ge-0/0/7 with a description so the next engineer does not have to guess.",
     setup(){
       const C = coloBase();
       const m = siteHost("unlabelled-device", 980, 630, "linux");
@@ -198,9 +202,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-monitoring-gap",
+    tour: { touch: ["cob-sw", "noc-monitor-1"] },
     group: COLO_HYGIENE,
     title: "47. Nothing Shows Up in Monitoring",
-    desc: COLO_INTRO + "TICKET: Cobalt's switch was installed last week and the NOC screen shows nothing for it: no logs, no clock source, nothing to poll. On cob-sw, send logs to noc-monitor-1 (10.99.0.50), take time from it, and add a read-only SNMP community. One service on the monitoring server itself is also stopped: find it and start it.",
+    intro: COLO_INTRO,
+    desc: "TICKET: Cobalt's switch was installed last week and the NOC screen shows nothing for it: no logs, no clock source, nothing to poll. On cob-sw, send logs to noc-monitor-1 (10.99.0.50), take time from it, and add a read-only SNMP community. One service on the monitoring server itself is also stopped: find it and start it.",
     setup(){
       const C = coloBase();
       devices[C.mon].cfg.services.ntp = false;
@@ -232,9 +238,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-wrong-handover",
+    tour: { start: ["bor-db-1", "bor-sw"] },
     group: COLO_HYGIENE,
     title: "48. The Handover Note Is Wrong",
-    desc: COLO_INTRO + "TICKET: Borealis is down since last night's cable tidy-up. The handover note says bor-db-1 is on bor-sw port ge-0/0/1, and the switch's own description on that port agrees. Believe the switch's live tables, not the note: find where the server really is, bring Borealis back, and correct the port descriptions so the record matches reality.",
+    intro: COLO_INTRO,
+    desc: "TICKET: Borealis is down since last night's cable tidy-up. The handover note says bor-db-1 is on bor-sw port ge-0/0/1, and the switch's own description on that port agrees. Believe the switch's live tables, not the note: find where the server really is, bring Borealis back, and correct the port descriptions so the record matches reality.",
     setup(){
       const C = coloBase();
       const entry = linksOf(C.srv.borealis, "eth0")[0];
@@ -264,9 +272,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-tenant-leak",
+    tour: { start: ["acme-web-1", "bor-db-1"] },
     group: COLO_ISOLATION,
     title: "49. Customer A Can See Customer B",
-    desc: COLO_INTRO + "TICKET: Borealis reports connection attempts on their database from an Acme address. Somebody opened the path between the two customers for a migration and never closed it. Find the hole on colo-core and close it in both directions, without cutting either customer off from the internet or from the NOC.",
+    intro: COLO_INTRO,
+    desc: "TICKET: Borealis reports connection attempts on their database from an Acme address. Somebody opened the path between the two customers for a migration and never closed it. Find the hole on colo-core and close it in both directions, without cutting either customer off from the internet or from the NOC.",
     setup(){
       const C = coloBase();
       cfgDo(C.core, [
@@ -297,9 +307,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-rogue-switch",
+    tour: { touch: ["acme-sw", "acme-laptop-1", "acme-laptop-2"] },
     group: COLO_ISOLATION,
     title: "50. An Unapproved Switch in the Cage",
-    desc: COLO_INTRO + "TICKET: Acme's contract allows one device per cage port. Their staff plugged a small desktop switch into acme-sw port ge-0/0/5 and hung two laptops off it. Enforce the contract on that port: allow one MAC address and shut the port when a second one appears. Their web server must not notice.",
+    intro: COLO_INTRO,
+    desc: "TICKET: Acme's contract allows one device per cage port. Their staff plugged a small desktop switch into acme-sw port ge-0/0/5 and hung two laptops off it. Enforce the contract on that port: allow one MAC address and shut the port when a second one appears. Their web server must not notice.",
     setup(){
       const C = coloBase();
       const dumb = siteRole(makeSwitch(397, 450, 5), "Desktop switch · not ours");
@@ -335,9 +347,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-contractor-filter",
+    tour: { touch: ["colo-core", "contractor-mac"] },
     group: COLO_ISOLATION,
     title: "51. A Contractor on Your Network",
-    desc: COLO_INTRO + "TICKET: an electrician needs internet for a week. His Mac, contractor-mac, is on colo-core port ge-0/0/10 in VLAN contractor (id 98, 10.98.0.0/24, gateway 10.98.0.1) and already online. Right now he can also reach every customer and your NOC. Write a filter on his gateway so he gets the internet and nothing else in the building.",
+    intro: COLO_INTRO,
+    desc: "TICKET: an electrician needs internet for a week. His Mac, contractor-mac, is on colo-core port ge-0/0/10 in VLAN contractor (id 98, 10.98.0.0/24, gateway 10.98.0.1) and already online. Right now he can also reach every customer and your NOC. Write a filter on his gateway so he gets the internet and nothing else in the building.",
     setup(){
       const C = coloBase();
       cfgDo(C.core, [
@@ -374,9 +388,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-onboard-tenant",
+    tour: { touch: ["@fresh", "colo-core", "cob-app-1"] },
     group: COLO_PROVISION,
     title: "52. Onboard a New Customer: Cobalt",
-    desc: COLO_INTRO.replace("Cobalt (VLAN 130, 10.200.30.0/24, cob-sw, cob-app-1)", "Cobalt, who move in today") + "PROJECT: Cage C holds a factory-fresh switch (uplink already cabled to colo-core ge-0/0/3) and the server cob-app-1 on its ge-0/0/1. Build Cobalt exactly like the other two: VLAN cobalt id 130, gateway 10.200.30.1/24 on colo-core, a trunk to the cage, day zero on the switch (name it cob-sw), the server on 10.200.30.10/24, and a filter COB-IN on their gateway that keeps them apart from Acme and Borealis. The edge router already routes 10.200.30.0/24 to the core.",
+    intro: COLO_INTRO.replace("Cobalt (VLAN 130, 10.200.30.0/24, cob-sw, cob-app-1)", "Cobalt, who move in today"),
+    desc: "PROJECT: Cage C holds a factory-fresh switch (uplink already cabled to colo-core ge-0/0/3) and the server cob-app-1 on its ge-0/0/1. Build Cobalt exactly like the other two: VLAN cobalt id 130, gateway 10.200.30.1/24 on colo-core, a trunk to the cage, day zero on the switch (name it cob-sw), the server on 10.200.30.10/24, and a filter COB-IN on their gateway that keeps them apart from Acme and Borealis. The edge router already routes 10.200.30.0/24 to the core.",
     setup(){ coloBase({ fresh: "cobalt" }); },
     checks: [
       { desc: "The cage switch is powered, has a root password and a committed host-name",
@@ -405,9 +421,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-decommission",
+    tour: { touch: ["colo-core", "edge-rtr"] },
     group: COLO_PROVISION,
     title: "53. A Customer Leaves: Decommission Borealis",
-    desc: COLO_INTRO + "TICKET: Borealis' contract ended and their cage is being emptied. Remove every trace of them from YOUR equipment: on colo-core the VLAN, the gateway irb.120, the filter BOR-IN and the trunk config on ge-0/0/2 (shut that port), and on edge-rtr the route for 10.200.20.0/24. Acme, Cobalt and the NOC must not notice.",
+    intro: COLO_INTRO,
+    desc: "TICKET: Borealis' contract ended and their cage is being emptied. Remove every trace of them from YOUR equipment: on colo-core the VLAN, the gateway irb.120, the filter BOR-IN and the trunk config on ge-0/0/2 (shut that port), and on edge-rtr the route for 10.200.20.0/24. Acme, Cobalt and the NOC must not notice.",
     setup(){ coloBase(); },
     checks: [
       { desc: "colo-core no longer has VLAN 120 or a gateway on irb.120",
@@ -436,9 +454,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-tenant-lag",
+    tour: { touch: ["colo-core", "acme-sw"] },
     group: COLO_PROVISION,
     title: "54. Upgrade a Customer to a Bundled Uplink",
-    desc: COLO_INTRO + "TICKET: Acme bought a redundant uplink. The second cable is already run from colo-core ge-0/0/4 to acme-sw ge-0/0/4, with both ports shut so it cannot loop. Turn the two links into one LACP bundle (ae0) that carries VLAN acme, and keep Acme's own switch address 10.200.10.2 reachable from the NOC.",
+    intro: COLO_INTRO,
+    desc: "TICKET: Acme bought a redundant uplink. The second cable is already run from colo-core ge-0/0/4 to acme-sw ge-0/0/4, with both ports shut so it cannot loop. Turn the two links into one LACP bundle (ae0) that carries VLAN acme, and keep Acme's own switch address 10.200.10.2 reachable from the NOC.",
     setup(){
       const C = coloBase();
       cable(C.core, "ge-0/0/4", C.sw.acme, "ge-0/0/4");
@@ -468,9 +488,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-remote-renumber",
+    tour: { touch: ["acme-sw", "noc-pc"] },
     group: COLO_PROVISION,
     title: "55. Renumber a Switch Without Locking Yourself Out",
-    desc: COLO_INTRO + "TICKET: the address plan changes: customer switches move from .2 to .5. Change acme-sw's own address from 10.200.10.2 to 10.200.10.5. You are in the NOC, the cage is locked, and SSH (user noc-admin) is your only way in, so the address you are changing is the one you are connected through.",
+    intro: COLO_INTRO,
+    desc: "TICKET: the address plan changes: customer switches move from .2 to .5. Change acme-sw's own address from 10.200.10.2 to 10.200.10.5. You are in the NOC, the cage is locked, and SSH (user noc-admin) is your only way in, so the address you are changing is the one you are connected through.",
     setup(){
       const C = coloBase();
       cfgDo(C.sw.acme, [
@@ -505,9 +527,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-no-internet",
+    tour: { start: ["bor-db-1"] },
     group: COLO_INCIDENT,
     title: "56. One Customer Has No Internet",
-    desc: COLO_INTRO + "INCIDENT: Borealis calls: no internet since this morning's maintenance. Acme and Cobalt are fine. Their server reaches its gateway and you can reach their switch from the NOC. Find where the path breaks and repair it.",
+    intro: COLO_INTRO,
+    desc: "INCIDENT: Borealis calls: no internet since this morning's maintenance. Acme and Cobalt are fine. Their server reaches its gateway and you can reach their switch from the NOC. Find where the path breaks and repair it.",
     setup(){
       const C = coloBase();
       cfgDo(C.edge, ["delete routing-options static route 10.200.20.0/24"]);
@@ -531,9 +555,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-gateway-gone",
+    tour: { start: ["acme-web-1"] },
     group: COLO_INCIDENT,
     title: "57. A Customer's Gateway Stopped Answering",
-    desc: COLO_INTRO + "INCIDENT: Acme is completely down after a colleague's clean-up on colo-core. acme-web-1 cannot even reach its gateway 10.200.10.1, yet the cage switch, the cables and the trunk all look healthy. Find what was removed and restore it.",
+    intro: COLO_INTRO,
+    desc: "INCIDENT: Acme is completely down after a colleague's clean-up on colo-core. acme-web-1 cannot even reach its gateway 10.200.10.1, yet the cage switch, the cables and the trunk all look healthy. Find what was removed and restore it.",
     setup(){
       const C = coloBase();
       cfgDo(C.core, ["delete vlans acme l3-interface"]);
@@ -558,9 +584,11 @@ const COLO_SCENARIOS = [
   },
   {
     id: "colo-power-drill",
+    tour: { touch: ["@ups"] },
     group: COLO_INCIDENT,
     title: "58. Power Drill: Will Three Customers Stay Up?",
-    desc: COLO_INTRO + "DRILL: the hall has one small UPS in Rack M1, bought when there was one customer. Before the yearly outage test, check whether it can carry everything in the hall. Size the battery for the real load, then run the drill with the hall's grid button and prove all three customers stay online while the grid is out.",
+    intro: COLO_INTRO,
+    desc: "DRILL: the hall has one small UPS in Rack M1, bought when there was one customer. Before the yearly outage test, check whether it can carry everything in the hall. Size the battery for the real load, then run the drill with the hall's grid button and prove all three customers stay online while the grid is out.",
     setup(){
       coloBase();
       makeUps(107, 480, "1U Rack UPS 1000W", 1000);
