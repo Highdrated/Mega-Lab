@@ -331,7 +331,7 @@ function runTrace(m) {
     doneOf(m.id).trace = true; save();
     if (first) earn(Math.max(5, EARN.trace - R.hint * 3), "traced " + m.name);
     synced_overlay("Trace complete", "The command ran exactly as it would in your real tenant. Now the gaps disappear.", () => setPhase("recall"), "GO TO RECALL");
-  } else desync(m, cmd, res, t.wrong);
+  } else desync(m, cmd, res, t.wrong, t.check);
 }
 
 function renderRecall(m) {
@@ -355,6 +355,7 @@ function checkRecall(res) {
     return;
   }
   const ok = GRADER.verdict(m.recall.check, m.recall.setup, R.ctx, res, R.sessHist, m.recall.pre);
+  showCompare(ok ? "" : cmpHTML(m.recall.check, m.recall.setup, m.recall.pre, R.sessHist[R.sessHist.length - 1], res));
   if (ok) {
     const first = !doneOf(m.id).recall;
     doneOf(m.id).recall = true;
@@ -424,6 +425,7 @@ function checkPractice(res) {
     R.jlineOverride = help ? help : "Read the red text slowly: the first line usually names the problem."; R.jstate = "desync"; junie();
   }
   const ok = GRADER.verdict(GRADER.drillCheck(d), setup, R.ctx, res, R.sessHist, d.pre);
+  showCompare(ok ? "" : cmpHTML(GRADER.drillCheck(d), setup, d.pre, R.sessHist[R.sessHist.length - 1], res));
   if (!ok) return;
   const k = drillKey(m, i), first = !S.drills[k];
   S.drills[k] = true; if (R.mix) R.mixScore++;
@@ -471,7 +473,21 @@ $("askj").onclick = () => {
 
 function overlay(html) { const o = $("ov"); o.innerHTML = html; o.classList.remove("hide"); const b = o.querySelector("button"); if (b) b.focus(); }
 function closeOverlay() { $("ov").classList.add("hide"); $("ov").innerHTML = ""; }
-function desync(m, cmd, res, wrong) {
+function cmpHTML(chk, setup, pre, cmd, res, force) {
+  if (!chk || !chk.out || res.error) return "";
+  let exp; try { exp = GRADER.refText(chk, setup, pre); } catch (e) { return ""; }
+  const mine = GRADER.text(res);
+  if (!exp || mine === exp) return "";
+  if (!force && !CMP.attempted(cmd, chk.out, mine, exp)) return "";
+  return CMP.panel(mine, exp, esc);
+}
+function showCompare(html) {
+  let box = $("cmpBox");
+  if (!box) { box = document.createElement("div"); box.id = "cmpBox"; $("pbody").appendChild(box); }
+  box.innerHTML = html ? '<h5 class="cmpt0">WHY IT DID NOT SYNC</h5>' + html : "";
+  if (html) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function desync(m, cmd, res, wrong, chk) {
   const err = res.error ? (res.error.text ? res.error.text() : String(res.error.message)) : null;
   const help = err ? errHelp(err) : null;
   const shown = err || (PS.formatOut(res.out, 90) || "").trim() || "(no output)";
@@ -479,7 +495,7 @@ function desync(m, cmd, res, wrong) {
   journal(m.id, err ? "error" : "wrong result", err || cmd);
   const counts = res.error ? "PowerShell refused to run it." : "It ran, but the result is not what the memory expected.";
   overlay('<div class="ds" role="dialog" aria-label="Desynchronized"><div class="dshero"><div class="dbg" aria-hidden="true"></div><div class="scan" aria-hidden="true"></div><small>MEMORY REJECTED</small><h2>DESYNCHRONIZED</h2><p>' + esc(counts) + "</p></div>" +
-    '<div class="dsbody"><div><h5>WHAT YOU RAN</h5><pre>' + esc(cmd) + "</pre><h5>" + (err ? "WHAT POWERSHELL SAID" : "WHAT CAME BACK") + '</h5><pre class="' + (err ? "e" : "") + '">' + esc(shown.slice(0, 900)) + "</pre></div>" +
+    '<div class="dsbody"><div><h5>WHAT YOU RAN</h5><pre>' + esc(cmd) + "</pre>" + ((!err && chk && cmpHTML(chk, m.trace.setup || m.setup, m.trace.pre, cmd, res, true)) || ("<h5>" + (err ? "WHAT POWERSHELL SAID" : "WHAT CAME BACK") + '</h5><pre class="' + (err ? "e" : "") + '">' + esc(shown.slice(0, 900)) + "</pre>")) + "</div>" +
     '<div style="display:flex;flex-direction:column;gap:14px"><div class="dsj"><div class="jimg j-desync" role="img" aria-label="Junie, a little shaken"></div><div><h5 style="color:var(--red)">JUNIE</h5><p style="margin:0;font-size:14px;line-height:1.55">' + esc(why) + '</p></div></div><p class="mutetxt" style="margin:0">Saved to your journal. This memory comes back for review tomorrow.</p><div class="row"><button class="go" type="button" id="resync">RESYNC</button></div></div></div></div>');
   $("resync").onclick = () => { closeOverlay(); const g = $("pbody").querySelector(".gap"); if (g) g.focus(); };
 }

@@ -199,6 +199,17 @@ main{flex:1;min-height:0;position:relative}
 .dshero p{position:relative;margin:0;font-size:14px;background:rgba(255,255,255,.75);padding:4px 12px}
 .dsbody{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);gap:22px;padding:22px 26px 26px}
 .dsbody h5{margin:0 0 8px;font-size:10px;letter-spacing:.26em;color:var(--mute);font-weight:500}
+.cmp{margin:10px 0 14px;border:1px solid var(--line,#dfe5ee)}
+.cmpl{display:block;font-size:10px;letter-spacing:.22em;color:#6b7686;background:#f4f6f9;padding:5px 10px;border-bottom:1px solid #dfe5ee}
+.cmpb{display:grid;grid-template-columns:1fr}
+.dsbody .cmpb{grid-template-columns:1fr 1fr}
+.cmpb>div{min-width:0}
+.cmpb pre{margin:0!important;max-height:240px;overflow:auto;font:11.5px/1.5 var(--mono)!important;background:#11161d!important;color:#c8d1de!important;padding:8px 10px!important;white-space:pre!important;word-break:normal!important}
+.dsbody .cmpb>div+div{border-left:1px solid #2a3442}
+.cmpb .dx{background:rgba(242,92,84,.22);color:#ffd6d2}
+.cmpt{margin:0;padding:10px 12px 10px 28px;font-size:13px;line-height:1.5;background:#fff8ec;color:#4a3410}
+.cmpt li{margin:2px 0}
+h5.cmpt0{margin:16px 0 0;font-size:10px;letter-spacing:.22em;color:var(--red,#c0392b)}
 .dsbody pre{margin:0 0 14px;font-family:var(--mono);font-size:12.5px;background:var(--ink);color:#d8dee7;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
 .dsbody pre.e{color:var(--red2)}
 .dsj{display:flex;gap:6px;align-items:center;border:1px solid var(--line);padding:6px 14px 6px 4px}
@@ -3040,6 +3051,69 @@ const GRADER = (() => {
 })();
 if (typeof module !== "undefined") module.exports = GRADER;
 
+const CMP = (() => {
+  function shape(t) {
+    const lines = t.split("\n").map((l) => l.replace(/\s+$/, ""));
+    const nz = lines.filter((l) => l.trim());
+    if (nz.length >= 2 && /^-{2,}(\s+-{2,})*$/.test(nz[1].trim())) {
+      const head = nz[0], dash = nz[1];
+      const cols = []; const re = /-+/g; let m;
+      while ((m = re.exec(dash))) cols.push([m.index, m.index + m[0].length]);
+      const cut = (l) => cols.map(([s], i) => l.slice(s, i + 1 < cols.length ? cols[i + 1][0] : undefined).trim());
+      return { kind: "table", cols: cut(head), rows: nz.slice(2).map(cut) };
+    }
+    if (nz.some((l) => /^\S[^:]*?\s*:\s/.test(l)) && nz.filter((l) => /\s:\s|:$/.test(l)).length >= nz.length * 0.6) return { kind: "list", rows: nz };
+    return { kind: "plain", rows: nz.map((l) => l.trim()) };
+  }
+  const key = (r) => (Array.isArray(r) ? r.join("\u0001") : r).toLowerCase();
+  function tips(mine, exp) {
+    const a = shape(mine), b = shape(exp), out = [];
+    if (!mine.trim()) { out.push("Nothing came back. Check the filter spelling, the time window, or whether the thing exists at all."); return out; }
+    if (a.kind === "table" && b.kind === "plain") out.push("The expected answer is plain values with no column header. That is -ExpandProperty, not a one-column Select-Object.");
+    if (a.kind === "plain" && b.kind === "table") out.push("The expected answer has a column header (" + b.cols.join(", ") + "). Use Select-Object with property names, not -ExpandProperty.");
+    if (a.kind === "list" && b.kind === "table") out.push("Yours came out as a list; the answer is a table. Fewer columns (Select-Object) usually switches it to a table.");
+    if (a.kind === "table" && b.kind === "list") out.push("The answer is a list (Format-List), yours is a table.");
+    if (a.kind === "table" && b.kind === "table") {
+      const al = a.cols.map((c) => c.toLowerCase()), bl = b.cols.map((c) => c.toLowerCase());
+      const miss = b.cols.filter((c) => !al.includes(c.toLowerCase())), extra = a.cols.filter((c) => !bl.includes(c.toLowerCase()));
+      if (miss.length) out.push("Missing column" + (miss.length > 1 ? "s" : "") + ": " + miss.join(", ") + ".");
+      if (extra.length) out.push("Extra column" + (extra.length > 1 ? "s" : "") + ": " + extra.join(", ") + ".");
+      if (!miss.length && !extra.length && al.join() !== bl.join()) out.push("Right columns, wrong order. Select-Object shows them in the order you list them: " + b.cols.join(", ") + ".");
+    }
+    const ar = a.rows || [], br = b.rows || [];
+    if (a.kind === b.kind) {
+      const sameCols = a.kind !== "table" || a.cols.join().toLowerCase() === b.cols.join().toLowerCase();
+      const ak = ar.map(key), bk = br.map(key);
+      const dup = ak.length !== new Set(ak).size;
+      if (ar.length > br.length) out.push("You have " + ar.length + " rows, the answer has " + br.length + "." + (dup && new Set(ak).size === br.length ? " Yours repeats values: -Unique." : " A filter is missing or too loose."));
+      else if (ar.length < br.length) out.push("You have " + ar.length + " rows, the answer has " + br.length + ". The filter is too strict, or a -First / -Top / missing -All cut it short.");
+      else if (sameCols && ak.join("\n") !== bk.join("\n")) {
+        if (ak.slice().sort().join("\n") === bk.slice().sort().join("\n")) out.push("Same rows, different order. Sort the way the ticket asks (check the property and -Descending), or drop a Sort-Object it never asked for.");
+        else if (!ak.some((k) => bk.includes(k))) out.push("None of your rows are in the answer. You may be looking at the other end of the list (-First vs -Last, missing or extra -Descending) or at the wrong filter.");
+        else out.push("Same number of rows, different values. Look at the rows marked on both sides.");
+      }
+    }
+    if (!out.length) out.push("Close. Compare the marked lines: spelling, spacing or a property name.");
+    return out;
+  }
+  function panel(mine, exp, escf) {
+    const ml = mine.split("\n"), el = exp.split("\n");
+    const nm = (l) => l.trim().replace(/\s+/g, " ").toLowerCase();
+    const mset = new Set(ml.map(nm)), eset = new Set(el.map(nm));
+    const col = (lines, other) => lines.map((l) => { const t = l.trim(); const bad = t && !/^-+(\s+-+)*$/.test(t) && !other.has(nm(l)); return '<span class="' + (bad ? "dx" : "") + '">' + escf(l || " ") + "</span>"; }).join("\n");
+    return '<div class="cmp"><div class="cmpb"><div><span class="cmpl">YOURS</span><pre>' + col(ml.slice(0, 40), eset) + '</pre></div><div><span class="cmpl">EXPECTED</span><pre>' + col(el.slice(0, 40), mset) + '</pre></div></div><ul class="cmpt">' + tips(mine, exp).map((t) => "<li>" + escf(t) + "</li>").join("") + "</ul></div>";
+  }
+  function attempted(cmd, refCmd, mine, exp) {
+    const first = (s) => { const m = /(?:^|[;|]\s*|=\s*)([A-Za-z]+-[A-Za-z]+)/.exec(String(s || "")); return m ? m[1].toLowerCase() : null; };
+    const stages = (s) => String(s || "").split("|").length;
+    if (first(cmd) && first(cmd) === first(refCmd) && stages(cmd) >= Math.max(1, stages(refCmd) - 1)) return true;
+    const a = shape(mine), b = shape(exp);
+    return a.kind === "table" && b.kind === "table" && a.cols.some((c) => b.cols.map((x) => x.toLowerCase()).includes(c.toLowerCase()));
+  }
+  return { tips, panel, attempted, shape };
+})();
+if (typeof module !== "undefined") module.exports = CMP;
+
 const DOMAIN = "halvardco.onmicrosoft.com";
 const U = (n) => n + "@" + DOMAIN;
 const userOf = (ctx, n) => ctx.t.users.find((x) => x.UserPrincipalName.toLowerCase() === U(n));
@@ -5712,7 +5786,7 @@ function runTrace(m) {
     doneOf(m.id).trace = true; save();
     if (first) earn(Math.max(5, EARN.trace - R.hint * 3), "traced " + m.name);
     synced_overlay("Trace complete", "The command ran exactly as it would in your real tenant. Now the gaps disappear.", () => setPhase("recall"), "GO TO RECALL");
-  } else desync(m, cmd, res, t.wrong);
+  } else desync(m, cmd, res, t.wrong, t.check);
 }
 
 function renderRecall(m) {
@@ -5736,6 +5810,7 @@ function checkRecall(res) {
     return;
   }
   const ok = GRADER.verdict(m.recall.check, m.recall.setup, R.ctx, res, R.sessHist, m.recall.pre);
+  showCompare(ok ? "" : cmpHTML(m.recall.check, m.recall.setup, m.recall.pre, R.sessHist[R.sessHist.length - 1], res));
   if (ok) {
     const first = !doneOf(m.id).recall;
     doneOf(m.id).recall = true;
@@ -5805,6 +5880,7 @@ function checkPractice(res) {
     R.jlineOverride = help ? help : "Read the red text slowly: the first line usually names the problem."; R.jstate = "desync"; junie();
   }
   const ok = GRADER.verdict(GRADER.drillCheck(d), setup, R.ctx, res, R.sessHist, d.pre);
+  showCompare(ok ? "" : cmpHTML(GRADER.drillCheck(d), setup, d.pre, R.sessHist[R.sessHist.length - 1], res));
   if (!ok) return;
   const k = drillKey(m, i), first = !S.drills[k];
   S.drills[k] = true; if (R.mix) R.mixScore++;
@@ -5852,7 +5928,21 @@ $("askj").onclick = () => {
 
 function overlay(html) { const o = $("ov"); o.innerHTML = html; o.classList.remove("hide"); const b = o.querySelector("button"); if (b) b.focus(); }
 function closeOverlay() { $("ov").classList.add("hide"); $("ov").innerHTML = ""; }
-function desync(m, cmd, res, wrong) {
+function cmpHTML(chk, setup, pre, cmd, res, force) {
+  if (!chk || !chk.out || res.error) return "";
+  let exp; try { exp = GRADER.refText(chk, setup, pre); } catch (e) { return ""; }
+  const mine = GRADER.text(res);
+  if (!exp || mine === exp) return "";
+  if (!force && !CMP.attempted(cmd, chk.out, mine, exp)) return "";
+  return CMP.panel(mine, exp, esc);
+}
+function showCompare(html) {
+  let box = $("cmpBox");
+  if (!box) { box = document.createElement("div"); box.id = "cmpBox"; $("pbody").appendChild(box); }
+  box.innerHTML = html ? '<h5 class="cmpt0">WHY IT DID NOT SYNC</h5>' + html : "";
+  if (html) box.scrollIntoView({ block: "nearest", behavior: "smooth" });
+}
+function desync(m, cmd, res, wrong, chk) {
   const err = res.error ? (res.error.text ? res.error.text() : String(res.error.message)) : null;
   const help = err ? errHelp(err) : null;
   const shown = err || (PS.formatOut(res.out, 90) || "").trim() || "(no output)";
@@ -5860,7 +5950,7 @@ function desync(m, cmd, res, wrong) {
   journal(m.id, err ? "error" : "wrong result", err || cmd);
   const counts = res.error ? "PowerShell refused to run it." : "It ran, but the result is not what the memory expected.";
   overlay('<div class="ds" role="dialog" aria-label="Desynchronized"><div class="dshero"><div class="dbg" aria-hidden="true"></div><div class="scan" aria-hidden="true"></div><small>MEMORY REJECTED</small><h2>DESYNCHRONIZED</h2><p>' + esc(counts) + "</p></div>" +
-    '<div class="dsbody"><div><h5>WHAT YOU RAN</h5><pre>' + esc(cmd) + "</pre><h5>" + (err ? "WHAT POWERSHELL SAID" : "WHAT CAME BACK") + '</h5><pre class="' + (err ? "e" : "") + '">' + esc(shown.slice(0, 900)) + "</pre></div>" +
+    '<div class="dsbody"><div><h5>WHAT YOU RAN</h5><pre>' + esc(cmd) + "</pre>" + ((!err && chk && cmpHTML(chk, m.trace.setup || m.setup, m.trace.pre, cmd, res, true)) || ("<h5>" + (err ? "WHAT POWERSHELL SAID" : "WHAT CAME BACK") + '</h5><pre class="' + (err ? "e" : "") + '">' + esc(shown.slice(0, 900)) + "</pre>")) + "</div>" +
     '<div style="display:flex;flex-direction:column;gap:14px"><div class="dsj"><div class="jimg j-desync" role="img" aria-label="Junie, a little shaken"></div><div><h5 style="color:var(--red)">JUNIE</h5><p style="margin:0;font-size:14px;line-height:1.55">' + esc(why) + '</p></div></div><p class="mutetxt" style="margin:0">Saved to your journal. This memory comes back for review tomorrow.</p><div class="row"><button class="go" type="button" id="resync">RESYNC</button></div></div></div></div>');
   $("resync").onclick = () => { closeOverlay(); const g = $("pbody").querySelector(".gap"); if (g) g.focus(); };
 }
