@@ -134,6 +134,9 @@ details .in{padding:2px 12px 12px;display:flex;flex-direction:column;gap:8px}
 .addp .btn{border:0;border-bottom:1px solid var(--line);text-align:left;display:flex;flex-direction:column;gap:2px;padding:9px 12px}
 .addp .btn small{text-transform:none;letter-spacing:0;color:var(--mute);font-size:11px}
 .addp .btn:disabled{opacity:.4}
+.addp{max-height:330px;overflow:auto;min-width:300px}
+.addh{font:600 10px var(--disp);letter-spacing:.12em;text-transform:uppercase;color:var(--acc);padding:8px 12px 4px;margin:0;background:var(--bg)}
+.rk.dragging .moving{transform:translate(var(--dx),var(--dy));pointer-events:none;opacity:.85}
 .drag{cursor:grab;outline:none}
 .rk.dragging[data-dragging="rails"] [data-drag="rails"],.rk.dragging[data-dragging="trol"] [data-drag="trol"],.rk.dragging[data-dragging="trol"] [data-port="trol"],.rk.dragging[data-dragging="server"] [data-drag="server"],.rk.dragging[data-dragging="server"] [data-act="power"],.rk.dragging[data-dragging="server"] [data-act^="usb"],.rk.dragging[data-dragging="server"] [data-port="scr"],.rk.dragging[data-dragging="server"] [data-port="mgmt"],.rk.dragging.rk.dragging[data-dragging="server"] [data-port^="eno"],.rk.dragging[data-dragging="server"] [data-port^="psu"]{transform:translate(var(--dx),var(--dy));pointer-events:none;opacity:.85}
 .drag:hover rect,.drag:focus-visible rect{stroke:var(--warn);stroke-width:2}
@@ -217,7 +220,7 @@ const CA_CLUSTER='7c1e4a52-9b0d-4f6e-a1c3-5d2b8e0f4a91';
 const pad=n=>String(n).padStart(2,'0');
 function stamp(W,sep){const t=W.t,h=Math.floor(t/3600)%24,m=Math.floor(t/60)%60,s=t%60;return sep==='_'?`2026_11_18-${pad(h)}_${pad(m)}_${pad(s)}`:`2026-11-18 ${pad(h)}:${pad(m)}:${pad(s)}`}
 function world(o){
- const W={t:15*3600+125,nodes:{},cluster:null,storages:{},vms:{},backups:{},host:'laptop',stack:[],prompt:null,seen:{},known:{},inst:o.inst?{where:'desk',app:null,url:'',page:'blank',files:[],usbLoc:'drawer',usbImg:null,selImg:'',power:false,screen:'off',vt:false,booted:false,installed:false,done:false,step:0,msg:'',node:null,bmc:{ip:'192.168.0.142',pw:'K7Q2-MXPL',auth:false,bad:false},vmedia:null,vmSel:'',bootImg:null,bootFrom:null,swview:'vlans',cfgReach:false,reserved:null,rev:null,plan:{host:'',ip:'',gw:'',dns:''},rack:{box:'sealed',rails:false,railSlot:null,mounted:false,slot:null,pos:{x:20,y:236},tpos:{x:304,y:40},pick:null,kind:'hands',sel:null,link:{},trol:false,lap:false,view:null},cfg:{fs:'ext4',d0:'sda',d1:'sdb',country:'',pw:'',pw2:'',mail:'',host:'pve.example.invalid',ip:'',gw:'',dns:''}}:null};
+ const W={t:15*3600+125,nodes:{},cluster:null,storages:{},vms:{},backups:{},host:'laptop',stack:[],prompt:null,seen:{},known:{},inst:o.inst?{where:'desk',app:null,url:'',page:'blank',files:[],usbLoc:'drawer',usbImg:null,selImg:'',power:false,screen:'off',vt:false,booted:false,installed:false,done:false,step:0,msg:'',node:null,bmc:{ip:'192.168.0.142',pw:'K7Q2-MXPL',auth:false,bad:false},vmedia:null,vmSel:'',bootImg:null,bootFrom:null,swview:'vlans',cfgReach:false,reserved:null,rev:null,plan:{host:'',ip:'',gw:'',dns:''},rack:{box:'sealed',rails:false,railSlot:null,mounted:false,slot:null,pos:{x:20,y:236},tpos:{x:304,y:40},pick:null,kind:'hands',sel:null,link:{},trol:false,lap:false,view:null,devs:[],xl:[],nid:0},cfg:{fs:'ext4',d0:'sda',d1:'sdb',country:'',pw:'',pw2:'',mail:'',host:'pve.example.invalid',ip:'',gw:'',dns:''}}:null};
  (o.nodes||(o.inst?[]:['pve1','pve2','pve3'])).forEach(n=>W.nodes[n]={ip:IPS[n],up:true,in:false});
  if(o.cluster){W.cluster={name:o.cluster,members:(o.members||['pve1','pve2','pve3']).slice(),expected:null};W.cluster.members.forEach(n=>W.nodes[n].in=true)}
  (o.storages||[]).forEach(s=>W.storages[s.id]=s);
@@ -353,7 +356,9 @@ const conOK=I=>I.rack.link.scr==='trol';
 const SPK={psu1:'power',psu2:'power',eno1:'net',eno2:'net',mgmt:'net',scr:'console',con:'serial'};
 const bmcOK=I=>SRVPORTS.includes(I.rack.link.mgmt)&&powerOK(I);
 const bootSrc=I=>I.usbLoc==='server'&&I.usbImg?['usb',I.usbImg]:I.vmedia?['vcd',I.vmedia]:null;
-const kindOf=p=>SPK[p]||(/^[AB]\d/.test(p)?'power':/^P\d/.test(p)?'net':p==='trol'?'console':p==='lap'?'serial':null);
+const ADDC={sw:[['EX2300-C-12T',12,'Compact fanless access switch, the same model that is already in this rack'],['EX2300-24P',24,'Access switch that also powers phones and access points over the cable'],['EX3400-24T',24,'The access-layer workhorse'],['EX4300-48T',48,'Full wiring-closet switch']],rt:[['SRX300',8,'Branch firewall and gateway'],['MX104',4,'Small aggregation router'],['MX204',12,'Compact high-density core router']]};
+const isX=p=>/^d\d+\./.test(p);
+const kindOf=p=>/\.con$/.test(p)?'serial':/\.ac$/.test(p)?'power':isX(p)?'net':SPK[p]||(/^[AB]\d/.test(p)?'power':/^P\d/.test(p)?'net':p==='trol'?'console':p==='lap'?'serial':null);
 const KNAME={power:'power cord',net:'network cable',console:'screen lead',serial:'console cable'};
 const linkOK=I=>SRVPORTS.includes(I.rack.link.eno1);
 const mirrorOK=W=>{const c=W.inst.cfg;return c.fs==='zfs (RAID1)'&&[c.d0,c.d1].sort().join()==='sda,sdb'};
@@ -542,7 +547,8 @@ function rackGeo(I){
  const R=I.rack,sx=R.mounted?38:R.pos.x,sy=R.mounted?20+R.slot*42:R.pos.y,t=R.tpos,g={};
  [1,2,3,4].forEach(n=>{g['A'+n]=[10,24+(n-1)*42,18,18];g['B'+n]=[262,24+(n-1)*42,18,18]});
  for(let n=1;n<=12;n++)g['P'+n]=[46+(n-1)*16.6,43,12,11];
- Object.assign(g,{usb:[sx+26,sy+21,22,12],scr:[sx+50,sy+21,22,12],mgmt:[sx+76,sy+21,24,12],eno1:[sx+104,sy+21,24,12],eno2:[sx+130,sy+21,24,12],psu1:[sx+160,sy+21,24,12],psu2:[sx+186,sy+21,24,12],trol:[t.x+8,t.y+26,22,12],con:[206,23,10,9],mgt:[190,23,10,9],lap:[312,128,26,12]});
+ Object.assign(g,{usb:[sx+8,sy+21,22,12],scr:[sx+33,sy+21,22,12],mgmt:[sx+60,sy+21,24,12],eno1:[sx+90,sy+21,24,12],eno2:[sx+117,sy+21,24,12],psu1:[sx+152,sy+21,24,12],psu2:[sx+180,sy+21,24,12],trol:[t.x+8,t.y+26,22,12],con:[206,23,10,9],mgt:[190,23,10,9],lap:[312,128,26,12]});
+ R.devs.forEach(d=>{const x=d.slot!=null?38:d.x,y=d.slot!=null?20+d.slot*42:d.y,n=d.ports,two=n>12,cols=two?n/2:n,w=n>24?5:11,st=n>24?6.4:13.4;d._x=x;d._y=y;for(let i=0;i<n;i++){const col=two?Math.floor(i/2):i,row=two?i%2:0;g[d.id+'.p'+i]=[x+8+col*st,two?y+16+row*10.5:y+22,w,two?9:11]}g[d.id+'.me0']=[x+172,y+17,10,9];g[d.id+'.con']=[x+186,y+17,10,9];g[d.id+'.ac']=[x+200,y+17,10,9]});
  return{g,sx,sy,c:id=>[g[id][0]+g[id][2]/2,g[id][1]+g[id][3]/2]};
 }
 function rackView(I){
@@ -552,8 +558,10 @@ function rackView(I){
 }
 function rackHtml(I){
  const R=I.rack,A='var(--acc)',L='var(--line2)',K='var(--ink)',M='var(--mute)',H='var(--warn)',P='var(--panel)',G='var(--bg)',B='var(--bad)';
- const {g,sx,sy,c}=rackGeo(I),taken=id=>Object.values(R.link).includes(id),name=I.node||'no name yet';
- const lit=id=>{const k=SPK[id]?id:Object.keys(R.link).find(x=>R.link[x]===id);if(!k||!R.link[k])return false;const d=R.link[k];return k==='eno1'||k==='eno2'?I.power&&d!=='P7'&&+d.slice(1)<9:k==='mgmt'?powerOK(I)&&d!=='P7'&&+d.slice(1)<9:true};
+ const {g,sx,sy,c}=rackGeo(I),taken=id=>Object.values(R.link).includes(id)||R.xl.some(l=>l.a===id||l.b===id),name=I.node||'no name yet';
+ const xlOf=p=>R.xl.find(l=>l.a===p||l.b===p),dOn=id=>R.xl.some(l=>l.a===id+'.ac'||l.b===id+'.ac');
+ const endUp=p=>isX(p)?dOn(p.split('.')[0]):/^P\d/.test(p)?p!=='P7'&&+p.slice(1)<9:/^eno/.test(p)?I.power:p==='mgmt'?powerOK(I):true;
+ const lit=id=>{const x=xlOf(id);if(x)return endUp(x.a)&&endUp(x.b);const k=SPK[id]?id:Object.keys(R.link).find(z=>R.link[z]===id);if(!k||!R.link[k])return false;return endUp(k)&&endUp(R.link[k])};
  const port=(id,lab,aria,o)=>{o=o||{};const [x,y,w,h]=g[id],on=!!R.link[id]||taken(id),sel=R.sel===id,u=USED[id],up=u||(on&&lit(id));return `<g class="hit" data-act="rk:p:${id}" tabindex="0" role="button" aria-label="${aria}" data-port="${id}" data-c="${x+w/2},${y+h/2}"><title>${aria}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" rx="2" fill="${sel?'var(--warn-soft)':up?(u?L:A):on?'var(--bad-soft)':G}" stroke="${sel?H:on&&!up?B:on?A:M}" stroke-width="${sel?2:1}" ${o.dash?'stroke-dasharray="2 1"':''}/>${lab!==''?`<text x="${x+w/2}" y="${o.under?y+h+7:o.over?y-2.5:y+h/2+2.6}" text-anchor="middle" font-size="${o.under||o.over?6.5:7}" fill="${o.under||o.over?M:up&&!u&&!sel?P:K}">${lab}</text>`:''}</g>`};
  const cable=(a,b,col,w,dash)=>{const [x1,y1]=a,[x2,y2]=b,d=Math.min(40,14+Math.abs(x2-x1)/6);return `<path d="M${x1} ${y1}C${x1} ${y1+d},${x2} ${y2+d},${x2} ${y2}" stroke="${col}" stroke-width="${w||2}" fill="none" stroke-linecap="round" ${dash?`stroke-dasharray="${dash}"`:''} pointer-events="none"/>`};
  const pk=id=>R.pick===id;
@@ -565,7 +573,7 @@ function rackHtml(I){
  s+=port('mgt','MGT','me0: management port, in use by the management network',{under:1})+port('con','CON','CON: serial console port',{under:1,dash:1})+`<circle cx="228" cy="27.5" r="4.5" fill="var(--acc-soft)" stroke="${A}" pointer-events="none"/><text x="228" y="39" text-anchor="middle" font-size="6.5" fill="${M}" pointer-events="none">PWR</text>`;
  for(let n=1;n<=12;n++)s+=port('P'+n,n-1,GE('P'+n)+(USED['P'+n]?', in use by the '+USED['P'+n]:''),{});
  s+=`<g class="hit" data-act="rk:pick:nas" tabindex="0" role="button" aria-label="Synology NAS">${dev(38,62,214,38,'NAS','nas-west',pk('nas'),false)}${[0,1,2,3].map(i=>`<rect x="${150+i*24}" y="80" width="20" height="14" rx="2" fill="${G}" stroke="${L}"/>`).join('')}</g>`;
- [2,3].forEach(n=>{const y=20+n*42,rl=R.rails&&R.railSlot===n;if(R.mounted&&R.slot===n)return;s+=`<g data-drop="${n}"><rect x="38" y="${y}" width="214" height="38" rx="5" fill="${G}" stroke="${A}" stroke-dasharray="5 4"/>${rl?`<path d="M42 ${y+31}H248M42 ${y+34.5}H248" stroke="${K}" stroke-width="1.4"/>`:''}<text x="145" y="${y+20}" text-anchor="middle" font-size="7.5" fill="${rl?A:M}">${rl?'rails fitted':'free space'}</text></g>`});
+ [2,3].forEach(n=>{const y=20+n*42,rl=R.rails&&R.railSlot===n;if((R.mounted&&R.slot===n)||R.devs.some(z=>z.slot===n))return;s+=`<g data-drop="${n}"><rect x="38" y="${y}" width="214" height="38" rx="5" fill="${G}" stroke="${A}" stroke-dasharray="5 4"/>${rl?`<path d="M42 ${y+31}H248M42 ${y+34.5}H248" stroke="${K}" stroke-width="1.4"/>`:''}<text x="145" y="${y+20}" text-anchor="middle" font-size="7.5" fill="${rl?A:M}">${rl?'rails fitted':'free space'}</text></g>`});
  s+=cable([70,98],c('P2'),L,1.4)+cable([50,98],c('A2'),L,1.4)+cable([246,98],c('B2'),L,1.4)+cable([44,40],c('A1'),L,1.4)+cable([248,40],c('B1'),L,1.4)+`<path d="M${c('P1')[0]} 43V14M${c('mgt')[0]} 23V14" stroke="${L}" stroke-width="1.4" pointer-events="none"/>`;
  const tp=R.tpos;
  if(R.trol)s+=`<g class="drag" data-drag="trol" data-act="rk:pick:trol" tabindex="0" role="button" aria-label="Console trolley">${dev(tp.x,tp.y,136,44,'CONSOLE TROLLEY','',pk('trol'),conOK(I))}<text x="${tp.x+36}" y="${tp.y+35}" font-size="7" fill="${M}">screen and keyboard</text></g>`+port('trol','','Console trolley socket');
@@ -573,12 +581,15 @@ function rackHtml(I){
  if(R.box==='sealed')s+=`<g class="hit" data-act="rk:open" tabindex="0" role="button" aria-label="Open the box"><rect x="20" y="222" width="214" height="62" rx="3" fill="${P}" stroke="${K}"/><path d="M20 238H234M127 222V238" stroke="${K}"/><text x="127" y="258" text-anchor="middle" font-size="9" fill="${K}">sealed box: 1U rack server</text><text x="127" y="272" text-anchor="middle" font-size="7.5" fill="${M}">click to cut the tape</text></g>`;
  else{
   if(!R.rails)s+=`<g class="drag" data-drag="rails" tabindex="0" role="button" aria-label="Rail kit. Drag it into a free space in the rack"><rect x="20" y="214" width="214" height="12" rx="2" fill="${P}" stroke="${K}"/><path d="M26 218H228M26 222H228" stroke="${M}"/><text x="240" y="223" font-size="7.5" fill="${K}">rail kit</text></g>`;
-  s+=`<g class="drag" data-drag="server" data-act="rk:pick:server" tabindex="0" role="button" aria-label="${esc(name)}">${dev(sx,sy,214,38,'1U RACK SERVER',esc(name),pk('server'),I.power)}</g>`;
-  s+=`<g class="hit" data-act="power" tabindex="0" role="button" aria-label="Power button"><title>Power button</title><circle cx="${sx+14}" cy="${sy+27}" r="6" fill="${I.power?'var(--acc-soft)':'var(--bad-soft)'}" stroke="${I.power?A:B}" stroke-width="1.2"/><path d="M${sx+14} ${sy+23.5}v3.5" stroke="${I.power?A:B}" stroke-width="1.3" stroke-linecap="round"/></g>`;
+  s+=`<g class="drag" data-drag="server" data-act="rk:pick:server" tabindex="0" role="button" aria-label="${esc(name)}">${dev(sx,sy,214,38,'SERVER','',pk('server'),I.power)}<text x="${sx+44}" y="${sy+11}" font-size="8" fill="${K}">${esc(name)}${I.node?'  '+esc(W.nodes[I.node].ip):''}</text><path d="M1.5 3h13v4h-13zM1.5 9h13v4h-13zM3.5 5h2M3.5 11h2M11.5 5h1.5M11.5 11h1.5" transform="translate(${sx+176},${sy+2.5}) scale(.68)" fill="none" stroke="${M}" stroke-width="1.1"/></g>`;
+  s+=`<g class="hit" data-act="power" tabindex="0" role="button" aria-label="Power button"><title>Power button</title><circle cx="${sx+201}" cy="${sy+8.5}" r="5.5" fill="${I.power?'var(--acc-soft)':'var(--bad-soft)'}" stroke="${I.power?A:B}" stroke-width="1.1"/><path d="M${sx+201} ${sy+5}v3.2M${sx+198.6} ${sy+6.6}a3.4 3.4 0 1 0 4.8 0" fill="none" stroke="${I.power?A:B}" stroke-width="1.3" stroke-linecap="round"/></g>`;
   const st=I.usbLoc==='server';
   s+=`<g class="hit" data-act="${st?'usb:pocket':'usb:server'}" tabindex="0" role="button" aria-label="${st?'Unplug the USB stick':'Plug the USB stick into the server'}"><title>USB port${st?': stick in':''}</title><rect x="${g.usb[0]}" y="${g.usb[1]}" width="22" height="12" rx="2" fill="${st?A:G}" stroke="${st?A:M}"/><text x="${g.usb[0]+11}" y="${g.usb[1]+8.6}" text-anchor="middle" font-size="7" fill="${st?P:K}">USB</text></g>`;
   s+=port('scr','SCR','Screen port')+port('mgmt','MGT','Management port (BMC): remote power and remote screen')+port('eno1','eno1','Network port eno1')+port('eno2','eno2','Network port eno2')+port('psu1','PSU1','Power supply 1')+port('psu2','PSU2','Power supply 2');
  }
+ R.devs.forEach(d=>{const on=dOn(d.id),big=d.ports>24;let ps='';for(let i=0;i<d.ports;i++)ps+=port(d.id+'.p'+i,d.ports<=12?i:'',(d.type==='sw'?'ge-0/0/':'ge-0/0/')+i,{});
+  s+=`<g class="drag" data-drag="${d.id}" data-act="rk:pick:${d.id}" tabindex="0" role="button" aria-label="${d.model}">${dev(d._x,d._y,214,38,d.model,'',pk(d.id),on)}<circle cx="${d._x+205}" cy="${d._y+8}" r="3.2" fill="${on?A:G}" stroke="${on?A:M}"/><text x="${d._x+196}" y="${d._y+10.5}" text-anchor="end" font-size="6.5" fill="${M}">${d.slot!=null?'':'factory fresh'}</text>${ps}${port(d.id+'.me0','MGT','me0: management port',{under:1})}${port(d.id+'.con','CON','CON: serial console port',{under:1,dash:1})}${port(d.id+'.ac','AC','Power inlet',{under:1})}</g>`});
+ R.xl.forEach(l=>{const kd=kindOf(l.a),f=p=>SPK[p]&&p!=='con'?[c(p)[0],g[p][1]+g[p][3]]:c(p);s+=kd==='power'?cable(f(l.a),f(l.b),K,2.2):kd==='net'?cable(f(l.a),f(l.b),lit(l.a)?A:B,2):cable(f(l.a),f(l.b),M,1.6,'2 3')});
  Object.entries(R.link).forEach(([k,d])=>{const kd=SPK[k],from=[c(k)[0],g[k][1]+g[k][3]];s+=kd==='power'?cable(from,c(d),K,2.2):kd==='net'?cable(from,c(d),lit(k)?A:B,2,k==='mgmt'?'6 3':''):kd==='serial'?cable(from,c(d),M,1.6,'2 3'):cable(from,c(d),H,2)});
  s+='</svg>';
  const away=I.where!=='room',cords=2-['psu1','psu2'].filter(x=>R.link[x]).length;
@@ -588,10 +599,11 @@ function rackHtml(I){
  let card='';
  if(R.pick==='server'&&R.box==='open'){const ls=Object.entries(R.link).filter(x=>x[0]!=='scr'&&x[0]!=='con');card=`<h3>Selected: ${esc(name)}</h3><table class="cmds reg">${row('Where',R.mounted?'in the rack, on its rails':'on the floor')}${row('Power',I.power?'on':'off')+row('Disks',I.installed?'Proxmox installed':'empty')+row('Address',I.node?esc(W.nodes[I.node].ip):'none yet')+row('USB port',I.usbLoc==='server'?'stick in':'empty')+row('Pull-out tag','BMC MAC bc:24:11:3a:20:0f<br>user admin · password '+I.bmc.pw)}${ls.map(([k,d])=>`<tr><td>${PORTNAME[k]}</td><td>${d[0]==='P'?GE(d)+(lit(k)?' · link up':' · no link'):'outlet '+d} <button class="btn sm" data-act="rk:pull:${k}">Pull</button></td></tr>`).join('')}</table><p class="foot">Drawn as a diagram: every port faces you. On a real 1U server the power button, USB and screen port are at the front; power supplies, network ports and MGT are at the rear.</p>`}
  else if(R.pick==='switch')card=`<h3>Selected: sw-west-01 · Juniper EX2300-C-12T</h3><table class="cmds">${row('CON',R.link.con==='lap'?'your laptop, serial console open':'serial console, empty')+row('MGT (me0)','management network, in production')+row('ge-0/0/0 and 1','cabled, in production')}${[3,4,5,6,7,8,9,10,11,12].map(n=>row(GE('P'+n),taken('P'+n)?'your cable'+(lit('P'+n)?' · link up':' · no link'):'empty')).join('')}</table><p class="foot">Juniper counts ports from 0. What each port is for is not printed on the switch: look it up in the IP register, or ask the switch over its CON port.</p>`;
+ else if(R.devs.find(z=>z.id===R.pick)){const d=R.devs.find(z=>z.id===R.pick),on=dOn(d.id),cs=R.xl.filter(l=>l.a.split('.')[0]===d.id||l.b.split('.')[0]===d.id);card=`<h3>Selected: Juniper ${d.model}</h3><table class="cmds reg">${row('What it is',d.desc)+row('Ports',d.ports+', counted from 0')+row('Where',d.slot!=null?'in the rack':'on the floor')+row('Power',on?'on, it starts by itself when it gets power':'no power cord')+row('Configuration','factory default: no name, no VLANs, not part of this network')+row('Cables',cs.length?cs.length+' plugged in':'none')}</table><div class="row"><button class="btn sm" data-act="rk:deldev:${d.id}">Take it back to the storeroom</button></div><p class="foot">A Juniper switch has no power button. It boots as soon as its power cord is in.</p>`}
  else if(R.pick==='nas')card=`<h3>Selected: Synology NAS</h3><table class="cmds">${row('Address','192.168.0.50')+row('State','in production, leave its cables alone')}</table>`;
  else if(R.pick==='trol'&&R.trol)card=`<h3>Selected: console trolley</h3><table class="cmds">${row('Screen lead',conOK(I)?'plugged into the server':'not connected')}</table>`;
  else if(R.pick==='lap'&&R.lap)card=`<h3>Selected: your laptop</h3><table class="cmds">${row('Serial adapter',R.link.con==='lap'?'console cable to the switch CON port':'empty')}</table>`;
- return `<div class="row rkbar"><details class="addm"><summary class="chip">Bring in</summary><div class="addp"><button class="btn" data-act="rk:add:trol" ${R.trol?'disabled':''}>Console trolley<small>screen and keyboard, from the storeroom</small></button><button class="btn" data-act="rk:add:lap" ${R.lap?'disabled':''}>Your laptop<small>for a console cable to the switch</small></button></div></details><span class="sep"></span>${kinds.map(k=>`<button class="chip ${R.kind===k[0]?'on':''}" data-act="rk:kind:${k[0]}">${k[1]}</button>`).join('')}<span class="sep"></span><button class="chip" data-act="rk:zoom:out" aria-label="Zoom out">-</button><button class="chip" data-act="rk:zoom:in" aria-label="Zoom in">+</button><button class="chip" data-act="rk:zoom:fit">Fit</button></div><div class="rkwrap ${away?'rkaway':''} k-${R.kind}">${s}</div><p class="foot">${away?'The rack is in the server room. You cannot touch it from your desk.':hand+' Scroll to zoom, drag the floor to look around.'}</p>${card}<h3>In your hands</h3><table class="cmds"><tr><td>USB stick</td><td>${usbWhere(I)}, ${I.usbImg?'holds the '+PROD[I.usbImg].title+' installer':'empty'}</td></tr><tr><td>Power</td><td>${dualOK(I)?'two feeds':powerOK(I)?(R.link.psu1&&R.link.psu2?'two cables, one feed':'one cable'):'not connected'}</td></tr><tr><td>Virtualization</td><td>${I.vt?'enabled in BIOS':'disabled in BIOS'}</td></tr></table>`;
+ return `<div class="row rkbar"><details class="addm"><summary class="chip">Add</summary><div class="addp"><p class="addh">Networking · Juniper switch</p>${ADDC.sw.map((m,i)=>`<button class="btn" data-act="rk:adddev:sw:${i}">${m[0]} · ${m[1]} ports<small>${m[2]}</small></button>`).join('')}<p class="addh">Networking · Juniper router or gateway</p>${ADDC.rt.map((m,i)=>`<button class="btn" data-act="rk:adddev:rt:${i}">${m[0]} · ${m[1]} ports<small>${m[2]}</small></button>`).join('')}<p class="addh">For the install</p><button class="btn" data-act="rk:add:trol" ${R.trol?'disabled':''}>Console trolley<small>screen and keyboard, from the storeroom</small></button><button class="btn" data-act="rk:add:lap" ${R.lap?'disabled':''}>Your laptop<small>for a console cable to a CON port</small></button></div></details><span class="sep"></span>${kinds.map(k=>`<button class="chip ${R.kind===k[0]?'on':''}" data-act="rk:kind:${k[0]}">${k[1]}</button>`).join('')}<span class="sep"></span><button class="chip" data-act="rk:zoom:out" aria-label="Zoom out">-</button><button class="chip" data-act="rk:zoom:in" aria-label="Zoom in">+</button><button class="chip" data-act="rk:zoom:fit">Fit</button></div><div class="rkwrap ${away?'rkaway':''} k-${R.kind}">${s}</div><p class="foot">${away?'The rack is in the server room. You cannot touch it from your desk.':hand+' Scroll to zoom, drag the floor to look around.'}</p>${card}<h3>In your hands</h3><table class="cmds"><tr><td>USB stick</td><td>${usbWhere(I)}, ${I.usbImg?'holds the '+PROD[I.usbImg].title+' installer':'empty'}</td></tr><tr><td>Power</td><td>${dualOK(I)?'two feeds':powerOK(I)?(R.link.psu1&&R.link.psu2?'two cables, one feed':'one cable'):'not connected'}</td></tr><tr><td>Virtualization</td><td>${I.vt?'enabled in BIOS':'disabled in BIOS'}</td></tr></table>`;
 }
 let drag=null;
 document.addEventListener('wheel',e=>{const svg=e.target.closest&&e.target.closest('svg.rk');if(!svg||!W||!W.inst)return;e.preventDefault();const p=svgPt(svg,e),V=rackView(W.inst).V,s0=V.s;V.s=Math.max(.6,Math.min(2.4,V.s*(e.deltaY<0?1.12:1/1.12)));V.x=p.x-(p.x-V.x)*s0/V.s;V.y=p.y-(p.y-V.y)*s0/V.s;W.inst.rack.view=V;svg.setAttribute('viewBox',rackView(W.inst).vb)},{passive:false});
@@ -612,7 +624,7 @@ document.addEventListener('pointermove',e=>{
  if(drag.pan){const V=drag.V;V.x=drag.vx-(e.clientX-drag.cx)/V.s;V.y=drag.vy-(e.clientY-drag.cy)/V.s;drag.moved=true;drag.svg.setAttribute('viewBox',rackView(W.inst).vb);return}
  const p=svgPt(drag.svg,e);
  if(!drag.moved&&Math.hypot(p.x-drag.x,p.y-drag.y)<4)return;drag.moved=true;
- if(drag.el){drag.svg.classList.add('dragging');drag.svg.style.setProperty('--dx',(p.x-drag.x)+'px');drag.svg.style.setProperty('--dy',(p.y-drag.y)+'px');drag.svg.dataset.dragging=drag.id}
+ if(drag.el){if(/^d\d+$/.test(drag.id))drag.el.classList.add('moving');drag.svg.classList.add('dragging');drag.svg.style.setProperty('--dx',(p.x-drag.x)+'px');drag.svg.style.setProperty('--dy',(p.y-drag.y)+'px');drag.svg.dataset.dragging=drag.id}
  else{drag.ln.setAttribute('x2',p.x);drag.ln.setAttribute('y2',p.y)}
 });
 document.addEventListener('pointerup',e=>{
@@ -621,7 +633,8 @@ document.addEventListener('pointerup',e=>{
  window.__noClick=Date.now();
  const p=svgPt(d.svg,e);
  if(d.el){
-  const I=W.inst,R=I.rack,sl=[2,3].find(n=>p.x>=38&&p.x<=252&&p.y>=20+n*42&&p.y<=58+n*42&&!(R.mounted&&R.slot===n));
+  const I=W.inst,R=I.rack,sl=[2,3].find(n=>p.x>=38&&p.x<=252&&p.y>=20+n*42&&p.y<=58+n*42&&!(R.mounted&&R.slot===n)),dv=R.devs.find(z=>z.id===d.id);
+  if(dv){if(sl!=null&&dv.slot==null)doAct('rk','mountdev:'+dv.id+':'+sl);else doAct('rk',`move:${dv.id}:${Math.round(dv._x+p.x-d.x)}:${Math.round(dv._y+p.y-d.y)}`);return}
   if(d.id==='rails'){if(sl!=null)doAct('rk','rails:'+sl);else renderRight()}
   else if(d.id==='server'){if(sl!=null&&!R.mounted)doAct('rk','mount:'+sl);else{const G=rackGeo(I);doAct('rk',`move:server:${Math.round(G.sx+p.x-d.x)}:${Math.round(G.sy+p.y-d.y)}`)}}
   else if(d.id==='trol')doAct('rk',`move:trol:${Math.round(R.tpos.x+p.x-d.x)}:${Math.round(R.tpos.y+p.y-d.y)}`);
@@ -694,7 +707,19 @@ function act(name,arg){
   const R=I.rack,[k,v,v2]=String(arg).split(':');
   if(I.where!=='room'){I.msg='The rack is in the server room. Walk there first.';return}
   const unplug=p=>{const had=powerOK(I);delete R.link[p];I.msg='You pulled the cable out of '+PORTNAME[p]+'.';if(had&&!powerOK(I)&&I.power){cutPower(I);I.msg='You pulled the last power cable. The server went dark at once.'}syncNet(I)};
+  const xlOf=p=>R.xl.find(l=>l.a===p||l.b===p),busy=p=>!!(USED[p]||R.link[p]||Object.values(R.link).includes(p)||xlOf(p));
+  const xlink=(x,y)=>{
+   if(x.split('.')[0]===y.split('.')[0]&&isX(x)&&isX(y)){I.msg='A cable from a device back to itself does nothing useful.';return}
+   if((x==='lap'||y==='lap')&&!R.lap){I.msg='Your laptop is not next to the rack. Bring it in first.';return}
+   if(R.kind==='hands'){I.msg='Your hands are empty. Take a cable from the bar above the rack first.';return}
+   if(kindOf(x)!==R.kind||kindOf(y)!==R.kind){I.msg='A '+KNAME[R.kind]+' does not fit there.';return}
+   if(R.kind==='power'&&!/^[AB]\d$/.test(x)&&!/^[AB]\d$/.test(y)){I.msg='A power cord goes from a device to an outlet on a feed.';return}
+   if(R.kind==='serial'&&x!=='lap'&&y!=='lap'){I.msg='A console cable goes from a CON port to your laptop.';return}
+   if((SPK[x]||SPK[y])&&!R.mounted&&x!=='con'&&y!=='con'){I.msg='Put the server in the rack before you cable it.';return}
+   if(busy(x)||busy(y)){I.msg='That one is already taken.';return}
+   R.xl.push({a:x,b:y});return true};
   const link=(x,y)=>{
+   if(isX(x)||isX(y))return xlink(x,y);
    const sp=SPK[x]?x:SPK[y]?y:null,d=sp===x?y:x;
    if(!sp||SPK[d]){I.msg='Those two do not connect to each other.';return}
    if((d==='trol'&&!R.trol)||(d==='lap'&&!R.lap)){I.msg=d==='trol'?'There is no screen in the room. Bring the console trolley in first.':'Your laptop is not next to the rack. Bring it in first.';return}
@@ -702,19 +727,23 @@ function act(name,arg){
    if(R.kind==='hands'){I.msg='Your hands are empty. Take a cable from the bar above the rack first.';return}
    if(kindOf(sp)!==R.kind||kindOf(d)!==R.kind){I.msg='A '+KNAME[R.kind]+' does not fit there.';return}
    if(R.link[sp]){I.msg='There is already a cable in '+PORTNAME[sp]+'.';return}
-   if(USED[d]||Object.values(R.link).includes(d)){I.msg='That one is already taken.';return}
+   if(busy(d)){I.msg='That one is already taken.';return}
    R.link[sp]=d;syncNet(I);return true};
   const args=String(arg).split(':');
   if(k==='front'||k==='rear'){R.sel=null}
+  else if(k==='adddev'){const m=ADDC[v][+v2],n=R.devs.length;R.devs.push({id:'d'+(++R.nid),type:v,model:m[0],ports:m[1],desc:m[2],x:262+Math.floor(n/2)*222,y:214+(n%2)*44,slot:null});R.pick='d'+R.nid;I.msg='You carried a '+m[0]+' in from the storeroom. It is factory fresh: no name, no configuration, no cables.'}
+  else if(k==='deldev'){if(R.xl.some(l=>l.a.split('.')[0]===v||l.b.split('.')[0]===v)){I.msg='Pull its cables first.';return}R.devs=R.devs.filter(d=>d.id!==v);R.pick=null;I.msg='Back on the storeroom shelf.'}
+  else if(k==='mountdev'){const d=R.devs.find(z=>z.id===v),n=+v2;if(!d)return;if((R.rails&&R.railSlot===n)||(R.mounted&&R.slot===n)){I.msg='That space holds the rails for the server.';return}if(R.devs.some(z=>z.slot===n)){I.msg='That space is taken.';return}d.slot=n;I.msg='You screwed the '+d.model+' into the rack by its ears.'}
   else if(k==='add'){if(v==='trol'){R.trol=true;I.msg='You wheeled the console trolley in from the storeroom.'}else if(v==='lap'){R.lap=true;I.msg='You put your laptop on the shelf next to the rack.'}}
   else if(k==='zoom'){const V=R.view||(R.view=Object.assign({},rackView(I).V));if(v==='fit'){R.view=null}else{V.s=Math.max(.6,Math.min(2.4,V.s*(v==='in'?1.2:1/1.2)));V.x=null}}
   else if(k==='pick'){R.pick=R.pick===v?null:v}
   else if(k==='kind'){if(v==='power'&&R.box!=='open'){I.msg='The power cords are still in the sealed box.';return}R.kind=v;R.sel=null}
   else if(k==='open'){R.box='open';R.pick='server';I.msg='Box open. Inside: the server, a rail kit and two power cords.'}
-  else if(k==='rails'){if(R.box!=='open')return;if(R.mounted){I.msg='The server sits on those rails. Take it out first.';return}R.rails=true;R.railSlot=v?+v:2;I.msg='The rails are screwed into the rack. The server can slide onto them now.'}
+  else if(k==='rails'){if(R.box!=='open')return;if(R.devs.some(z=>z.slot===(v?+v:2))){I.msg='That space is taken.';return}if(R.mounted){I.msg='The server sits on those rails. Take it out first.';return}R.rails=true;R.railSlot=v?+v:2;I.msg='The rails are screwed into the rack. The server can slide onto them now.'}
   else if(k==='mount'){if(R.box!=='open')return;const n=v?+v:R.railSlot;if(!R.rails||n!==R.railSlot){I.msg=R.rails?'The rails are in the other space. The server only fits where the rails are.':'There is nothing in the rack for the server to rest on. Fit the rail kit first.';return}R.mounted=true;R.slot=n;R.pick='server';I.msg='The server slid onto its rails. It has no cables yet.'}
   else if(k==='move'){
-   const x=Math.max(0,Math.min(+args[2],v==='trol'?320:246)),y=Math.max(0,Math.min(+args[3],v==='trol'?250:262));
+   const x=Math.max(-200,Math.min(+args[2],700)),y=Math.max(-100,Math.min(+args[3],500)),dv=R.devs.find(z=>z.id===v);
+   if(dv){if(dv.slot!=null){if(R.xl.some(l=>l.a.split('.')[0]===v||l.b.split('.')[0]===v)){I.msg='Cables are still plugged in. Pull them before you take it out of the rack.';return}dv.slot=null}dv.x=x;dv.y=Math.max(y,206);return}
    if(v==='trol'){if(conOK(I)){I.msg='The screen lead is still plugged in. It only reaches so far: pull it first.';return}R.tpos={x,y}}
    else if(v==='server'){
     if(R.mounted){if(Object.keys(R.link).some(x=>x!=='con')){I.msg='Cables are still plugged into the server. Pull them before you slide it out.';return}if(I.power){I.msg='The server is running. Switch it off before you take it out.';return}R.mounted=false;R.slot=null;I.msg='You slid the server out of the rack.'}
@@ -723,7 +752,9 @@ function act(name,arg){
   else if(k==='pull'){if(R.link[v])unplug(v)}
   else if(k==='p'){
    const isS=!!SPK[v],owner=isS?(R.link[v]?v:null):Object.keys(R.link).find(x=>R.link[x]===v);
-   if(R.kind==='hands'){if(owner)unplug(owner);else I.msg=USED[v]?'That cable belongs to the '+USED[v]+'. Leave it.':'Nothing is plugged in there. Take a cable from the bar above the rack.';R.sel=null}
+   const xo=xlOf(v);
+   if(R.kind==='hands'&&xo){R.xl=R.xl.filter(l=>l!==xo);I.msg='You pulled that cable.';R.sel=null}
+   else if(R.kind==='hands'){if(owner)unplug(owner);else I.msg=USED[v]?'That cable belongs to the '+USED[v]+'. Leave it.':'Nothing is plugged in there. Take a cable from the bar above the rack.';R.sel=null}
    else if(R.sel&&R.sel!==v){if(link(R.sel,v))R.sel=null}
    else R.sel=R.sel===v?null:v}
   else if(k==='link'){link(v,v2);R.sel=null}
@@ -801,7 +832,7 @@ function screenHtml(I){
 function roomHtml(I){
  let scr=screenHtml(I);
  if(!conOK(I))scr=`<pre class="crt off">No screen is connected to the server.\n\nYou cannot see what it is doing, and you cannot press its keys.\nRun a screen lead from the server to the console trolley.</pre>`;
- return `<div class="sbar"><button class="chip" data-act="go:desk">Your desk</button><button class="chip on" data-act="go:room">Server room</button><span class="sep"></span><span class="lbl">Console trolley: screen and keyboard</span></div><div class="sbody">${I.msg?`<p class="smsg">${esc(I.msg)}</p>`:''}<p class="wnote">Your hands work in the rack on the right: unpacking, mounting, cables, power button and USB port.</p><p class="lbl">Screen</p>${scr}${I.rack.link.con==='lap'?`<p class="lbl">Your laptop · serial console on sw-west-01</p><pre class="crt">${SWOUT[I.swview]}</pre><div class="row"><button class="btn" data-act="swview:vlans">show vlans</button><button class="btn" data-act="swview:ifs">show interfaces terse</button></div>`:''}</div>`;
+ return `<div class="sbar"><button class="chip" data-act="go:desk">Your desk</button><button class="chip on" data-act="go:room">Server room</button><span class="sep"></span><span class="lbl">Console trolley: screen and keyboard</span></div><div class="sbody">${I.msg?`<p class="smsg">${esc(I.msg)}</p>`:''}<p class="wnote">Your hands work in the rack on the right: unpacking, mounting, cables, power button and USB port.</p><p class="lbl">Screen</p>${scr}${(()=>{const R=I.rack,l=R.xl.find(z=>z.a==='lap'||z.b==='lap');if(!l)return'';const id=(l.a==='lap'?l.b:l.a).split('.')[0],d=R.devs.find(z=>z.id===id),on=R.xl.some(z=>z.a===id+'.ac'||z.b===id+'.ac');return `<p class="lbl">Your laptop · serial console on the new ${d.model}</p><pre class="crt ${on?'':'off'}">${on?'Amnesiac (ttyu0)\n\nlogin: root\n\n--- JUNOS 21.4R3-S5.4 Kernel 64-bit ---\nroot@:RE:0% cli\nroot> show version\nModel: '+d.model.toLowerCase()+'\nJunos: 21.4R3-S5.4\n\nAmnesiac means: no configuration yet. It has no name,\nno address and no VLANs until someone gives it some.':'No output. The device has no power.'}</pre>`})()}${I.rack.link.con==='lap'?`<p class="lbl">Your laptop · serial console on sw-west-01</p><pre class="crt">${SWOUT[I.swview]}</pre><div class="row"><button class="btn" data-act="swview:vlans">show vlans</button><button class="btn" data-act="swview:ifs">show interfaces terse</button></div>`:''}</div>`;
 }
 function renderScene(){
  const I=W.inst,on=!!I;
