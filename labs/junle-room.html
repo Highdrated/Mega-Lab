@@ -2528,7 +2528,7 @@ function camFor(v) {
   if (v === "stand") return "translate(0px, 0px) scale(1)";
   const box = v === "sit" ? [270 / IW, 290 / IH, 1170 / IW, 705 / IH] : v === "manual" ? [520 / IW, 330 / IH, 1120 / IW, 585 / IH] : [522 / IW, 360 / IH, 894 / IW, 545 / IH];
   const bw = (box[2] - box[0]) * sw, bh = (box[3] - box[1]) * sh;
-  const s = v === "sit" ? Math.min(vw * .97 / bw, vh * .8 / bh, 1.35) : v === "manual" ? Math.min(vw * .95 / bw, vh * .78 / bh, 2.2) : Math.min(vw * .84 / bw, vh * .76 / bh, 2.6);
+  const s = v === "sit" ? Math.min(vw * .97 / bw, vh * .8 / bh, 1.35) : v === "manual" ? Math.min(vw * .95 / bw, vh * .78 / bh, 2.2) : Math.min(vw * .94 / bw, vh * .88 / bh, 3);
   const cx = (box[0] + box[2]) / 2 * sw, cy = (box[1] + box[3]) / 2 * sh;
   let tx = vw / 2 - sl - cx * s, ty = vh * (v === "sit" ? .53 : .5) - stp - cy * s;
   tx = Math.min(-sl, Math.max(vw - sl - sw * s, tx));
@@ -2618,6 +2618,7 @@ function setFs(v) {
   fs = Math.round(Math.min(3.2, Math.max(.9, v)) * 10) / 10;
   $("#main").style.setProperty("--fs", fs);
   try { localStorage.setItem(SAVE + "-fs3", fs); } catch (e) {}
+  if (typeof sizeApp === "function") sizeApp();
   const log = $("#log"); log.scrollTop = log.scrollHeight;
 }
 const TONE = { amber: "#e0a83e", ok: "#86c79b", blue: "#6fb3c9", dim: "#8a867c", red: "#e07a5f", violet: "#b58ad6", ink: "#d9d3c4" };
@@ -3198,7 +3199,8 @@ function openApp(a) {
 function sizeApp() {
   const wrap = $("#appwrap"), f = wrap.querySelector("iframe");
   if (!f) return;
-  const W = 1120, s = wrap.clientWidth / W;
+  const vh = Math.round(780 * 1.2 / (fs || 1.2));
+  const W = Math.max(1120, Math.round(wrap.clientWidth / Math.max(1, wrap.clientHeight) * vh)), s = wrap.clientWidth / W;
   f.style.width = W + "px";
   f.style.height = wrap.clientHeight / s + "px";
   f.style.transform = `scale(${s})`;
