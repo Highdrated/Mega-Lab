@@ -1,7 +1,7 @@
 /* JunOS Lab service worker — after one visit over http(s), the whole lab
    works with no server running at all. Network-first so updates land when a
    server IS present; cache answers when it is not. */
-const CACHE = "junoslab-v38";
+const CACHE = "junoslab-v39";
 const FILES = [
   "./",
   "./index.html",
@@ -20,6 +20,7 @@ const FILES = [
   "./js/planner.js",
   "./js/juno.js",
   "./js/sitework.js",
+  "./js/colo.js",
   "./js/scenarios.js",
   "./js/protocols.js",
   "./js/course.js",

@@ -1043,6 +1043,7 @@ const SCENARIOS = [
     ],
   },
   ...SITE_SCENARIOS,
+  ...COLO_SCENARIOS,
 ];
 // setups cable things up after their commits — make every setup leave the
 // derived network state (NET) consistent, no matter who calls it
@@ -1441,7 +1442,8 @@ function scenKind(s){ return s.kind || (s.group ? "site" : (s.setup ? "starter" 
 const scenSelect = document.getElementById("scenario-select");
 const scenGroupSelect = document.getElementById("scenario-group");
 const SCEN_GROUPS = ["Basics: empty canvas", "Starter topology: switching", "Starter topology: routing and WAN",
-  "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4, DESK_GROUP];
+  "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4, DESK_GROUP,
+  COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT];
 const SCEN_TOPIC = {
   "trunk-span": 1, "lacp-bundle": 1, "rstp-loop": 1, "storm-control": 1, "rogue-switch": 1,
   "interconnect-recovery": 2, "asymmetric-routing": 2, "nat-edge": 2, "ospf-backbone": 2, "speak-bgp": 2,
@@ -1489,6 +1491,7 @@ const SCEN_BANDS = [
   { key: "empty", title: "Empty canvas", note: "You place and cable everything yourself", groups: [0] },
   { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
   { key: "site", title: "Existing site", note: "A full datacenter and office is running, you work a ticket", groups: [5, 6, 7, 8] },
+  { key: "colo", title: "Multi-tenant datacenter", note: "One hall, three customers and your NOC: real provider tickets", groups: [10, 11, 12, 13] },
   { key: "desks", title: "Mixed desks", note: "Windows, Mac and Linux side by side: same job, three sets of commands", groups: [9] },
 ];
 function scenGroupShort(g){

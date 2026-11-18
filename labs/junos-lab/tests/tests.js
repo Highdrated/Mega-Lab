@@ -4066,7 +4066,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   const groups = [];
   SCENARIOS.forEach(s => { const g = s.group || "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
-  ok(groups.length === 6, "T76 scenario list keeps its groups in order: " + groups.length);
+  ok(groups.length === 10, "T76 scenario list keeps its groups in order: " + groups.length);
   ok(scenKind(scen("basic-connect")) === "empty" && scenKind(scen("lacp-bundle")) === "starter" && scenKind(scen("site-new-desk")) === "site",
     "T76 each scenario knows how it starts");
   currentScenario = scen("site-new-desk"); renderScenarioMeta();
@@ -4081,15 +4081,15 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     ok(n > 0 && n <= 8 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
   });
   ok(seen === SCENARIOS.length, "T76 every scenario is reachable through a picker group");
-  ok(scenGroupSelect.querySelectorAll("option").length === 10, "T76 ten picker groups");
+  ok(scenGroupSelect.querySelectorAll("option").length === 14, "T76 fourteen picker groups");
   gotoScenario(5);
   ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[2], "T76 paging follows the scenario into its group");
   gotoScenario(4); 
   ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
   setScenBoard(true);
   const board = document.getElementById("scen-board");
-  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 8 && board.querySelectorAll(".sb-band").length === 4,
-    "T76 the scenario board lists every scenario in four bands with eight column headings");
+  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 12 && board.querySelectorAll(".sb-band").length === 5,
+    "T76 the scenario board lists every scenario in five bands with twelve column headings");
   ok(board.querySelectorAll(".sb-cols").every(c => c.querySelectorAll(".sb-group").length === 1 || c.querySelectorAll(".sb-group").length === 4),
     "T76 every band is one flat list or exactly four aligned columns");
   ok(board.querySelectorAll(".sb-name").every(n => !/^\d+\./.test(n.textContent)) && board.querySelectorAll(".sb-num")[0].textContent === "1",
@@ -4097,7 +4097,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   const want = SCENARIOS.findIndex(x => x.id === "site-guest-vlan");
   board.querySelectorAll(".sb-item").find(b2 => b2.title === SCENARIOS[want].title).onclick();
   ok(currentScenario === SCENARIOS[want] && !scenBoardOpen, "T76 clicking a board entry opens that scenario and folds the list");
-  ok(/show all 44/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
+  ok(/show all 58/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
   setScenBoard(true);
   ok(board.querySelectorAll(".cur").length === 1, "T76 the board marks the current scenario");
   protoJumpToScenario("site-warehouse");
@@ -4226,7 +4226,153 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   ok(SCENARIOS.filter(s => s.group === DESK_GROUP).length === 6 && SCENARIOS.filter(s => s.group === DESK_GROUP).every(s => scenKind(s) === "starter"),
     "T78 six mixed-desk scenarios, each a starter topology");
-  ok(SCENARIOS.length === 44, "T78 forty-four scenarios in total");
+  ok(SCENARIOS.filter(s => !/^colo-/.test(s.id)).length === 44, "T78 forty-four scenarios before the multi-tenant set");
+  wipeLab();
+}
+
+/* ---------- T79: multi-tenant datacenter scenarios ---------- */
+{
+  const go = id => { wipeLab(); scen(id).setup();
+    const hot = Object.values(zones).filter(z => THERMAL.zones[z.id] && THERMAL.zones[z.id].temp > 28).map(z => z.name);
+    const dead = Object.values(devices).filter(d => d.failed || (d.powered === false && !d.brandNew)).map(d => d.name);
+    ok(!hot.length && !dead.length, "T79 " + id + " starts cool and powered (" + hot.concat(dead).join(", ") + ")");
+    ok(!checksPass(scen(id)), "T79 " + id + " starts unfinished"); };
+  const fin = id => ok(checksPass(scen(id)), "T79 " + id + " completable: " + firstFailing(scen(id)));
+  const id = n => byName(n).id;
+  const on = (n, c) => cli(id(n), c);
+
+  go("colo-named-accounts");
+  ok(COLO_TENANTS.every(t => coloOnline(t.key)), "T79 base: all three customers online");
+  ok(coloApart("acme", "borealis") && coloApart("acme", "cobalt") && coloApart("borealis", "cobalt"), "T79 base: customers are separated");
+  ok(COLO_TENANTS.every(t => pingOk("noc-pc", t.net + ".2")) && pingOk("noc-pc", "10.99.0.50"), "T79 base: the NOC reaches every customer switch and its monitor");
+  ok(hostOs(byName("noc-pc")) === "windows" && rackOf(id("colo-core")).name === "Rack M1 · provider" && rackOf(id("bor-db-1")).name === "Cage B · Borealis", "T79 base: NOC PC is Windows, gear sits in its racks");
+  ok(/Connection refused/.test(on("noc-pc", "ssh noc-admin@10.200.20.2")), "T79 45 ssh is refused before hardening");
+  cfgDo(id("bor-sw"), ["set system login user noc-admin class super-user", "set system login user noc-admin authentication plain-text-password Colo!2026", "set system services ssh"]);
+  fin("colo-named-accounts");
+
+  go("colo-mystery-port");
+  ok(pingOk("unlabelled-device", "10.200.30.10"), "T79 46 the unknown device starts inside the customer VLAN");
+  cfgDo(id("cob-sw"), ["set vlans quarantine vlan-id 999",
+    "delete interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members cobalt",
+    "set interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members quarantine",
+    "set interfaces ge-0/0/7 description unknown-device-quarantined",
+    "set interfaces ge-0/0/0 description uplink-colo-core", "set interfaces ge-0/0/1 description cob-app-1"]);
+  fin("colo-mystery-port");
+
+  go("colo-monitoring-gap");
+  cfgDo(id("cob-sw"), ["set system syslog host 10.99.0.50 any any", "set system ntp server 10.99.0.50", "set snmp community colo-ro authorization read-only"]);
+  cfgDo(id("cob-sw"), ["set snmp location cage-c"]);
+  ok(!checksPass(scen("colo-monitoring-gap")), "T79 47 still open until the NTP service runs");
+  on("noc-monitor-1", "service start ntp");
+  fin("colo-monitoring-gap");
+
+  go("colo-wrong-handover");
+  ok(/bor-db-1/.test(on("bor-sw", "show lldp neighbors")), "T79 48 lldp reveals where the server really is");
+  cfgDo(id("bor-sw"), ["set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members borealis", "set interfaces ge-0/0/4 description bor-db-1"]);
+  ok(!checksPass(scen("colo-wrong-handover")), "T79 48 the stale label on the old port still fails the audit");
+  cfgDo(id("bor-sw"), ["delete interfaces ge-0/0/1 description"]);
+  fin("colo-wrong-handover");
+
+  go("colo-tenant-leak");
+  ok(pingOk("acme-web-1", "10.200.20.10"), "T79 49 the leak is real at the start");
+  cfgDo(id("colo-core"), [
+    "set firewall family inet filter ACME-IN term no-borealis from destination-address 10.200.20.0/24",
+    "set firewall family inet filter ACME-IN term no-borealis then discard",
+    "insert firewall family inet filter ACME-IN term no-borealis before term ok",
+    "set firewall family inet filter BOR-IN term no-acme from destination-address 10.200.10.0/24",
+    "set firewall family inet filter BOR-IN term no-acme then discard",
+    "insert firewall family inet filter BOR-IN term no-acme before term ok"]);
+  fin("colo-tenant-leak");
+
+  go("colo-rogue-switch");
+  cfgDo(id("acme-sw"), ["set switch-options interface ge-0/0/5 interface-mac-limit 1", "set switch-options interface ge-0/0/5 packet-action shutdown"]);
+  on("acme-laptop-1", "ping 10.200.10.1"); on("acme-laptop-2", "ping 10.200.10.1");
+  fin("colo-rogue-switch");
+
+  go("colo-contractor-filter");
+  ok(pingOk("contractor-mac", "10.200.10.10") && pingOk("contractor-mac", "10.99.0.50") && pingOk("contractor-mac", "8.8.8.8"), "T79 51 the contractor starts with full access");
+  cfgDo(id("colo-core"), [
+    "set firewall family inet filter CONTRACTOR-IN term no-customers from destination-address 10.200.0.0/16",
+    "set firewall family inet filter CONTRACTOR-IN term no-customers then discard",
+    "set firewall family inet filter CONTRACTOR-IN term no-noc from destination-address 10.99.0.0/24",
+    "set firewall family inet filter CONTRACTOR-IN term no-noc then discard",
+    "set firewall family inet filter CONTRACTOR-IN term ok then accept",
+    "set interfaces irb unit 98 family inet filter input CONTRACTOR-IN"]);
+  fin("colo-contractor-filter");
+
+  go("colo-onboard-tenant");
+  ok(coloOnline("acme") && coloOnline("borealis"), "T79 52 the two existing customers run while Cobalt is empty");
+  const nsw = siteNeighbor("colo-core", "ge-0/0/3");
+  powerOn(nsw); for(let i = 0; i < 30; i++) __fireTimers();
+  cli(nsw.id, "root"); cli(nsw.id, "cli"); cli(nsw.id, "configure");
+  cli(nsw.id, "set system host-name cob-sw"); cli(nsw.id, "set system root-authentication plain-text-password");
+  cli(nsw.id, "Sup3r!pass"); cli(nsw.id, "Sup3r!pass"); cli(nsw.id, "commit"); cli(nsw.id, "exit");
+  cfgDo(nsw.id, ["set vlans cobalt vlan-id 130",
+    "set interfaces ge-0/0/0 unit 0 family ethernet-switching interface-mode trunk",
+    "set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members cobalt",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members cobalt"]);
+  cfgDo(id("colo-core"), ["set vlans cobalt vlan-id 130", "set interfaces irb unit 130 family inet address 10.200.30.1/24", "set vlans cobalt l3-interface irb.130",
+    "set interfaces ge-0/0/3 unit 0 family ethernet-switching interface-mode trunk",
+    "set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members cobalt"]);
+  on("cob-app-1", "ip addr add 10.200.30.10/24 dev eth0"); on("cob-app-1", "ip route add default via 10.200.30.1");
+  ok(pingOk("cob-app-1", "8.8.8.8") && !checksPass(scen("colo-onboard-tenant")), "T79 52 online but not accepted until the isolation filter exists");
+  cfgDo(id("colo-core"), [
+    "set firewall family inet filter COB-IN term no-acme from destination-address 10.200.10.0/24",
+    "set firewall family inet filter COB-IN term no-acme then discard",
+    "set firewall family inet filter COB-IN term no-borealis from destination-address 10.200.20.0/24",
+    "set firewall family inet filter COB-IN term no-borealis then discard",
+    "set firewall family inet filter COB-IN term ok then accept",
+    "set interfaces irb unit 130 family inet filter input COB-IN"]);
+  fin("colo-onboard-tenant");
+
+  go("colo-decommission");
+  cfgDo(id("colo-core"), ["delete interfaces ge-0/0/2 unit 0", "delete vlans borealis", "delete interfaces irb unit 120",
+    "delete firewall family inet filter BOR-IN", "set interfaces ge-0/0/2 disable"]);
+  cfgDo(id("edge-rtr"), ["delete routing-options static route 10.200.20.0/24"]);
+  fin("colo-decommission");
+
+  go("colo-tenant-lag");
+  const lag = (a, b) => ["set chassis aggregated-devices ethernet device-count 1",
+    "delete interfaces " + a + " unit 0", "delete interfaces " + b + " unit 0", "delete interfaces " + a + " disable", "delete interfaces " + b + " disable",
+    "set interfaces " + a + " ether-options 802.3ad ae0", "set interfaces " + b + " ether-options 802.3ad ae0",
+    "set interfaces ae0 aggregated-ether-options lacp active",
+    "set interfaces ae0 unit 0 family ethernet-switching interface-mode trunk",
+    "set interfaces ae0 unit 0 family ethernet-switching vlan members acme"];
+  cfgDo(id("colo-core"), lag("ge-0/0/1", "ge-0/0/4"));
+  cfgDo(id("acme-sw"), lag("ge-0/0/0", "ge-0/0/4"));
+  fin("colo-tenant-lag");
+
+  go("colo-remote-renumber");
+  ok(coloTcp("noc-pc", "10.200.10.2"), "T79 55 ssh to the old address works at the start");
+  cfgDo(id("acme-sw"), ["set interfaces irb unit 110 family inet address 10.200.10.5/24", "delete interfaces irb unit 110 family inet address 10.200.10.2/24"]);
+  fin("colo-remote-renumber");
+
+  go("colo-no-internet");
+  ok(pingOk("bor-db-1", "10.200.20.1") && !pingOk("bor-db-1", "8.8.8.8") && pingOk("noc-pc", "10.200.20.2"), "T79 56 gateway and NOC fine, internet dead");
+  cfgDo(id("edge-rtr"), ["set routing-options static route 10.200.20.0/24 next-hop 10.255.0.2"]);
+  fin("colo-no-internet");
+
+  go("colo-gateway-gone");
+  ok(!pingOk("acme-web-1", "10.200.10.1") && coloOnline("borealis"), "T79 57 only Acme lost its gateway");
+  cfgDo(id("colo-core"), ["set vlans acme l3-interface irb.110"]);
+  fin("colo-gateway-gone");
+
+  go("colo-power-drill");
+  const hall = coloHall();
+  const load79 = buildingInfra(hall).filter(d => d.powered !== false).reduce((a, d) => a + drawOf(d), 0);
+  ok(load79 > 1000, "T79 58 the hall draws more than the small UPS carries (" + load79 + " W)");
+  toggleGridOutage(hall);
+  ok(byName("colo-core").powered === false, "T79 58 undersized UPS: the hall goes dark");
+  toggleGridOutage(hall);
+  makeUps(700, 630, "Tower UPS", Math.ceil(load79 / 1000) * 1000 + 1000);
+  rebuildAllDerived();
+  toggleGridOutage(hall);
+  fin("colo-power-drill");
+  toggleGridOutage(hall);
+
+  ok(SCENARIOS.length === 58 && [COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT].every(g => SCENARIOS.some(s => s.group === g)), "T79 fifty-eight scenarios, four multi-tenant columns");
+  setScenBoard(true);
+  ok(document.getElementById("scen-board").querySelectorAll(".sb-band").length === 5, "T79 the board has five bands");
   wipeLab();
 }
 
