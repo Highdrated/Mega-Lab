@@ -402,14 +402,14 @@ const SC=[
   {t:'Confirm the server carries the name you gave it',why:'The name on the prompt is what every later command and every colleague will rely on.',done:W=>W.seen.host,h:['Ask the server for its name.','hostname']}],
  take:['Gateway and DNS are looked up, never guessed. The address is chosen, pinged and reserved.','Rack, two power feeds, first network port, then software.','Download the right ISO, flash it to a stick, boot the server from the stick.','A server has no name until the installer gives it one.']},
 {id:'switch',g:'Build',t:'Set up a new switch',story:'The rack at site west has one switch, sw-west-01. A second one was ordered so the servers get a second path. It lies on the storeroom shelf: a Juniper EX2300-C-12T, factory fresh, with its own power cord.<br><br>A new switch has no name, no address and no password. It cannot be reached over the network yet. The only way in is the CON port.<br><br>The boxed server on the floor is a job for another day. Leave it.',
- learn:['§Day zero: why the console cable','A factory-fresh switch has <b>no address</b>. You cannot ssh to it. You plug a <b>console cable</b> into its CON port and type on it directly.','Its prompt says <b>Amnesiac</b>: it remembers nothing. The user is <code>root</code>, with no password yet.','§Junos works in two modes','<b>Operational mode</b>, prompt <code>&gt;</code>: you look. <code>show</code> commands live here.','<b>Configuration mode</b>, prompt <code>#</code>: you change. You get there with <code>configure</code>.','Changes go into a <b>candidate</b>. Nothing happens until you <code>commit</code>. Then all of it becomes active at once.','<code>show | compare</code> shows what your commit would change. Look before you commit.','§The four things every new switch gets','A <b>root password</b>. Junos refuses the first commit without one.','A <b>name</b>, so you always see which switch you are typing on.','A <b>management address</b> on the me0 port, with the prefix of the network behind it.','The <b>VLANs</b> its neighbours use. A VLAN is a separate network inside the switch. Same number on both switches, or the traffic does not pass.'],
- cmds:[['root','the login on a factory-fresh switch'],['cli','from the shell (%) into Junos (&gt;)'],['configure','into configuration mode (#)'],['set ...','add a line to the candidate'],['delete ...','take a line out of the candidate'],['show | compare','what would this commit change?'],['commit','make the candidate active'],['show vlans','VLANs on this switch, with their numbers']],
+ learn:['§Day zero: why the console cable','A factory-fresh switch has <b>no address</b>. You cannot ssh to it. You plug a <b>console cable</b> into its CON port and type on it directly.','Its prompt says <b>Amnesiac</b>: it remembers nothing. The user is <code>root</code>, with no password yet.','§Junos works in two modes','<b>Operational mode</b>, prompt <code>&gt;</code>: you look. <code>show</code> commands live here.','<b>Configuration mode</b>, prompt <code>#</code>: you change. You get there with <code>configure</code>.','Changes go into a <b>candidate</b>. Nothing happens until you <code>commit</code>. Then all of it becomes active at once.','<code>show | compare</code> shows what your commit would change. Look before you commit.','§Lost? Ask the switch','Type <code>?</code> anywhere on a line. Junos lists what can come next, without running anything.','<b>Tab</b> or <b>space</b> finishes a word you started. <code>conf</code> becomes <code>configure</code>.','§The four things every new switch gets','A <b>root password</b>. Junos refuses the first commit without one.','A <b>name</b>, so you always see which switch you are typing on.','A <b>management address</b> on the me0 port, with the prefix of the network behind it.','The <b>VLANs</b> its neighbours use. A VLAN is a separate network inside the switch. Same number on both switches, or the traffic does not pass.'],
+ cmds:[['?','what can I type here?'],['root','the login on a factory-fresh switch'],['cli','from the shell (%) into Junos (&gt;)'],['configure','into configuration mode (#)'],['set ...','add a line to the candidate'],['delete ...','take a line out of the candidate'],['show | compare','what would this commit change?'],['commit','make the candidate active'],['show vlans','VLANs on this switch, with their numbers']],
  setup:()=>world({inst:true}),
  obj:[{t:'Find the name and the management address kept for the new switch',why:'Pick an address yourself and one day two devices share it. On a switch that takes the management of a whole rack offline.',done:W=>W.seen.ipam&&W.seen['pingfree:192.168.0.3'],h:['The IP register on your laptop lists switches too. Ping the address from the Terminal to be sure nothing uses it.','IP register > read the sw-west-02 line > Terminal: ping 192.168.0.3']},
   {t:'Carry the new switch in and screw it into a free rack space',why:'A switch left on the floor gets kicked, and its cables pull on the ports. A switch has ears, not rails: it is screwed straight into the rack.',done:W=>W.inst.rack.devs.some(d=>d.type==='sw'&&d.slot!=null),h:['Go to the server room. The Add menu above the rack is the storeroom shelf. Drag the switch into a free space.','Server room > Add > EX2300-C-12T > drag it into a free space in the rack']},
   {t:'Give the switch power',why:'A switch has no power button. It starts by itself as soon as it gets power, and it stops the moment the cord comes out.',done:W=>W.inst.rack.devs.some(d=>d.type==='sw'&&jpow(W.inst,d)),h:['Take the power cord and drag from the small power inlet at the right of the switch to a free outlet on a feed.','Power cord > drag the inlet of the new switch to outlet A3']},
   {t:'Open a console on the new switch, log in and start the Junos CLI',why:'Without an address there is no ssh. The console cable is the only door, and it stays your way back in whenever the network is broken.',done:W=>W.inst.rack.devs.some(d=>d.j&&d.j.cli),h:['Bring your laptop in through the Add menu. Take a console cable and drag from the CON port of the new switch to your laptop. The console appears on the left. The login is root.','Add > Your laptop > Console cable > drag CON of the new switch to the laptop > type root > type cli']},
-  {t:'Set a root password and commit',why:'Junos refuses to commit anything at all until root has a password. A switch without one would be open to anyone with a cable.',done:W=>W.inst.rack.devs.some(d=>d.j&&d.j.act['system root-authentication']),h:['Go into configuration mode. The password is set under system root-authentication. You type it twice, and it stays invisible. Then commit.','configure > set system root-authentication plain-text-password > type a password twice > commit']},
+  {t:'Set a root password and commit',why:'Junos refuses to commit anything at all until root has a password. A switch without one would be open to anyone with a cable.',done:W=>W.inst.rack.devs.some(d=>d.j&&d.j.act['system root-authentication']),h:['Go into configuration mode. Type set system ? and read what the switch offers. The password is typed twice and stays invisible. Then commit.','configure > set system root-authentication plain-text-password > type a password twice > commit']},
   {t:'Name the switch sw-west-02',why:'With two switches in one rack, the name on the prompt is the only thing that tells you which one you are about to change.',done:W=>W.inst.rack.devs.some(d=>d.j&&jhost(d.j.act)==='sw-west-02'),h:['The name lives under system. Set it, then commit. Watch the prompt change.','set system host-name sw-west-02 > commit']},
   {t:'Put the management address on me0',why:'Leave the prefix off and Junos accepts it, as a /32: an address with no network around it. The commit works and the switch still answers nobody.',done:W=>W.inst.rack.devs.some(d=>d.j&&jaddrs(d.j.act,'me0').join()==='192.168.0.3/24'),h:['The address goes on unit 0 of me0, family inet, with /24 behind it. A second set does not replace a wrong address, it adds one. Use show to check and delete to remove.','set interfaces me0 unit 0 family inet address 192.168.0.3/24 > show | compare > commit']},
   {t:'Create the servers VLAN with the same number as on sw-west-01',why:'A VLAN name is only a label. The number travels on the wire. A different number on the new switch and the servers behind it reach nothing.',done:W=>W.inst.rack.devs.some(d=>d.j&&jvlans(d.j.act).some(v=>v[0]==='servers'&&v[1]==='20')),h:['Ask the switch that already works. Move the console cable to the CON port of sw-west-01 and look at its VLANs. Then move it back.','Hands: click the cable end to pull it > Console cable > CON of sw-west-01 to laptop > show vlans > move the cable back > set vlans servers vlan-id 20 > commit']},
@@ -731,6 +731,33 @@ function jexp(t,tree){
  }
  return{t:o,more:n&&n!==1?Object.keys(n):null};
 }
+const JSETH=[['interfaces','Interface configuration',[['<interface-name>','Interface name',[['unit','Logical interface',[['<interface-unit-number>','Logical unit number',[['family','Protocol family',[['inet','IPv4 parameters',[['address','Interface address/destination prefix',[['<address>','Interface address/destination prefix',null]]]]]]]]]]]]]]],['system','System parameters',[['host-name','Hostname for this router',[['<host-name>','Hostname for this router',null]]],['root-authentication','Authentication information for the root login',[['plain-text-password','Prompt for plain text password (autoencrypted)',null]]],['services','System services',[['ssh','Allow ssh access',null]]],['time-zone','Time zone name or POSIX-compliant time zone string',[['<time-zone>','Time zone name or POSIX-compliant time zone string',null]]]]],['vlans','VLAN configuration',[['<vlan-name>','VLAN name',[['vlan-id','802.1q tag',[['<vlan-id>','802.1q tag (1..4094)',null]]]]]]]];
+const JOPH=[['configure','Manipulate software configuration information',null],['quit','Exit the management session',null],['show','Show system information',[['configuration','Show current configuration',null],['interfaces','Show interface information',[['terse','Display terse output',null]]],['version','Show software process revision levels',null],['vlans','Show VLAN information',null]]]];
+const JCFH=[['commit','Commit current set of changes',[['and-quit','Quit configuration mode if commit succeeds',null],['check','Check correctness of syntax; do not apply changes',null]],1],['delete','Delete a data element',JSETH],['exit','Exit from this level',null],['quit','Quit from this level',null],['rollback','Roll back to previous committed configuration',null],['run','Run an operational-mode command',JOPH],['set','Set a parameter',JSETH],['show','Show a parameter',[['|','Pipe through a command',[['compare','Compare configuration changes with prior version',null]]]],1],['top','Exit to top level of configuration',null],['up','Exit one level of configuration',null]];
+function jopts(j,line){
+ if(j.m!=='op'&&j.m!=='cfg')return null;
+ const end=!line||/\s$/.test(line),t=line.trim().split(/\s+/).filter(Boolean),w=end?'':t.pop();
+ let n=j.m==='op'?JOPH:JCFH,ent=false;
+ for(const x of t){
+  if(!n)return{w,list:[],ent:false};
+  const kw=n.filter(e=>e[0][0]!=='<'),hit=kw.filter(e=>e[0]===x),pre=hit.length?hit:kw.filter(e=>e[0].indexOf(x)===0),val=n.find(e=>e[0][0]==='<'),e=pre.length===1?pre[0]:!pre.length&&val?val:null;
+  if(!e)return{w,list:[],ent:false};
+  ent=!e[2]||!!e[3];n=e[2];
+ }
+ const all=n||[],kw=all.filter(e=>e[0][0]!=='<'&&e[0].indexOf(w)===0),val=all.filter(e=>e[0][0]==='<');
+ return{w,kw,list:(w&&kw.length?[]:val).concat(kw),ent:ent&&!w&&t.length>0};
+}
+function jhelp(I,d,line){
+ const j=jsync(I,d),o=jopts(j,line);if(!o)return false;
+ j.out+=jprompt(j)+line+'?\n';
+ const rows=(o.ent?[['<[Enter]>','Execute this command']]:[]).concat(o.list);
+ j.out+=rows.length?'Possible completions:\n'+rows.map(e=>'  '+e[0].padEnd(21)+e[1]).join('\n')+'\n':'No valid completions\n';
+ j.keep=line;W.seen.jhelp=1;return true;
+}
+function jtab(j,line){
+ const o=jopts(j,line);if(!o||!o.w||o.kw.length!==1||o.kw[0][0]===o.w)return null;
+ return line.slice(0,line.length-o.w.length)+o.kw[0][0]+' ';
+}
 function jx(I,d,raw){
  const j=jsync(I,d);if(j.m==='off')return;
  const say=s=>{j.out+=s+'\n'},l=String(raw).replace(/\s+/g,' ').trim(),hide=/^(pass|passx|pw1|pw2)$/.test(j.m),pl=jprompt(j).split('\n').pop().length;
@@ -828,6 +855,7 @@ function act(name,arg){
  }
  else if(name==='swview'){I.swview=arg}
  else if(name==='j'){const d=jconOf(I);if(d&&I.where==='room')jx(I,d,arg==null?'':String(arg))}
+ else if(name==='jq'){const d=jconOf(I);if(d&&I.where==='room')jhelp(I,d,arg==null?'':String(arg))}
  else if(name==='rk'){
   const R=I.rack,[k,v,v2]=String(arg).split(':');
   if(I.where!=='room'){I.msg='The rack is in the server room. Walk there first.';return}
@@ -967,12 +995,13 @@ function renderScene(){
  const keep=document.activeElement&&document.activeElement.id;
  $('wiz').innerHTML=I.where==='desk'?deskHtml(I):roomHtml(I);
  if($('jt'))$('jt').scrollTop=1e9;
+ const jd=I.where==='room'&&jconOf(I);if(jd&&jd.j&&jd.j.keep!=null){if($('jin'))$('jin').value=jd.j.keep;jd.j.keep=null}
  if(keep&&$(keep)&&keep!=='cmd'){$(keep).focus();try{const v=$(keep).value;$(keep).setSelectionRange(v.length,v.length)}catch(e){}}
 }
 function renderWiz(){renderScene()}
 document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('#jt')&&$('jin')&&!String(getSelection()))$('jin').focus()});
 document.addEventListener('input',e=>{const d=e.target.dataset||{};if(!W.inst)return;if(d.ik){W.inst[d.ik]=e.target.value;renderScene();return}if(d.pk){W.inst.plan[d.pk]=e.target.value.trim();W.inst.rev=null;renderLeft();renderRight();return}if(!d.k)return;W.inst.cfg[d.k]=e.target.value.trim();if(e.target.tagName==='SELECT')renderScene();renderLeft()});
-document.addEventListener('keydown',e=>{if(e.target.id==='url'&&e.key==='Enter'){doAct('nav',e.target.value)}else if(e.target.id==='bmcpw'&&e.key==='Enter'){doAct('bmclogin',e.target.value)}else if(e.target.id==='jin'&&e.key==='Enter'){doAct('j',e.target.value)}else if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('hit')){e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}else if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.drag){doAct('rk',e.target.dataset.drag==='rails'?'rails':'mount')}});
+document.addEventListener('keydown',e=>{if(e.target.id==='jin'&&(e.key==='?'||e.key==='Tab'||e.key===' ')){const d=W.inst&&jconOf(W.inst),j=d&&d.j,v=e.target.value;if(j&&(j.m==='op'||j.m==='cfg')){if(e.key==='?'){e.preventDefault();doAct('jq',v)}else{const n=e.target.selectionStart===v.length?jtab(j,v):null;if(n){e.preventDefault();e.target.value=n}else if(e.key==='Tab')e.preventDefault()}}return}if(e.target.id==='url'&&e.key==='Enter'){doAct('nav',e.target.value)}else if(e.target.id==='bmcpw'&&e.key==='Enter'){doAct('bmclogin',e.target.value)}else if(e.target.id==='jin'&&e.key==='Enter'){doAct('j',e.target.value)}else if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('hit')){e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}else if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.drag){doAct('rk',e.target.dataset.drag==='rails'?'rails':'mount')}});
 document.addEventListener('click',e=>{
  const b=e.target.closest('[data-act]');if(!b||!W.inst)return;
  if(window.__noClick&&Date.now()-window.__noClick<120&&e.target.closest('svg.rk'))return;
@@ -1016,7 +1045,7 @@ let skin='orbital';try{skin=localStorage.getItem('pvelab.skin')||'orbital'}catch
 function setSkin(v){skin=v;if(v==='orbital')document.body.dataset.skin='orbital';else delete document.body.dataset.skin;$('b-skin').textContent='Theme: '+(v==='orbital'?'Orbital':'Console');try{localStorage.setItem('pvelab.skin',v)}catch(e){}}
 setSkin(skin);
 load(location.hash.slice(1)||'install',true);
-window.LAB={j:l=>doAct('j',l),plan:c=>{Object.assign(W.inst.plan,c);renderAll()},act:(n,a)=>doAct(n,a),cfg:c=>{Object.assign(W.inst.cfg,c);renderScene();renderLeft()},run,load,W:()=>W,cur:()=>cur,objIndex,ev:i=>{const b=objIndex();cur.ev[i].go(W);after(b)}};
+window.LAB={j:l=>doAct('j',l),jq:l=>doAct('jq',l),jtab:l=>{const d=jconOf(W.inst);return d&&d.j?jtab(d.j,l):null},plan:c=>{Object.assign(W.inst.plan,c);renderAll()},act:(n,a)=>doAct(n,a),cfg:c=>{Object.assign(W.inst.cfg,c);renderScene();renderLeft()},run,load,W:()=>W,cur:()=>cur,objIndex,ev:i=>{const b=objIndex();cur.ev[i].go(W);after(b)}};
 </script>
 </body>
 </html>

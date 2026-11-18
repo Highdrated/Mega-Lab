@@ -19,6 +19,8 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 
 - 18 Nov 20:25: new scenario "Set up a new switch" (Build, second). The serial console on a new Juniper device is now a real typed Junos session (login, shell, cli, configure, set, delete, show, show | compare, commit, rollback, run, exit) instead of a fixed text. Day zero is checked by objectives: root password, host-name, me0 address, servers VLAN, reachable from the desk.
 
+- 18 Nov 21:30: the Junos console answers `?` with the real context help, and Tab or space finishes a word.
+
 ## Her latest feedback (16:00 to 16:15)
 
 - "make the servers look like they do on junos lab and add the variety as well keep it all in juniper".
@@ -49,3 +51,9 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 - Verified: gate ALL OK (11 runs, the new one with the traps above). Real mouse drags for mounting, power cord and console cable, real keyboard typing in the console, screenshots at 1500x900 in both themes.
 - Still rough: only the statements above plus `system services ssh`, `system time-zone` and addresses on other interfaces are known; any other valid Junos statement gets "syntax error". No `?` help and no Tab completion in the console (prefixes like `conf` and `sh ver` do work). Factory-default lines are left out of `show configuration`. The servers VLAN has no member ports yet, so the VLAN objective checks the number only. The boxed server sits unused in this scenario. Error wording is from memory of Junos 21.4, not checked on a device.
 
+### 18 Nov 21:30 · Junos console: ? help and word completion (from "still rough" of the 20:25 cycle)
+- Changed: typing `?` in the switch console lists what can come next at that exact spot, with the Junos one-line descriptions, and puts the line back so she can keep typing. Tab or space finishes a word when it is unique (`conf` becomes `configure`). Works in operational and configuration mode, after `run`, and inside `set` and `delete`. Learn first got a three-line block "Lost? Ask the switch", the command list got `?`, and the nudge for the root password objective now sends her to `set system ?` instead of naming the statement.
+- She will notice: she no longer has to remember a statement. `set system ?` shows host-name, root-authentication, services, time-zone. `set vlans ?` shows that a name comes next. Nothing runs and nothing changes when she asks.
+- Real-life traps in it: `set ?` in operational mode gives "No valid completions" because set only exists after `configure`; `show v` + Tab does nothing because version and vlans both fit; at the login and password prompts `?` is an ordinary character, so a password may contain one; in the shell (%) there is no help.
+- Verified: gate ALL OK. New scripted checks in the switch run (help text, no change to the candidate, completion results) and a real-keyboard run at the end of the test (type, `?`, Tab, space, Enter, a password with `?` in it). Screenshot at 1500x900 read.
+- Still rough: help only knows the statements the lab knows, so the lists are much shorter than on a real switch. Descriptions are from memory of Junos 21.4, not checked on a device. An ambiguous word followed by `?` on a real switch also lists hidden pipes and `<[Enter]>` in more places. sw-west-01's console is still two buttons.
