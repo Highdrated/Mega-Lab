@@ -23,7 +23,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 
 - 18 Nov 22:15: the switch scenario now ends with ssh from the desk. `set system services ssh`, a user of her own (`set system login user ...`), and a real ssh session to the switch in the desk terminal.
 
-- 18 Nov 23:40: `commit confirmed` with its automatic rollback. Two new objectives at the end of the switch scenario: lock yourself out on purpose and get rescued, then a real change that is confirmed in time.
+- 18 Nov 23:20: `commit confirmed` with its automatic rollback. Two new objectives at the end of the switch scenario: lock yourself out on purpose and get rescued, then a real change that is confirmed in time.
 
 ## Her latest feedback (16:00 to 16:15)
 
@@ -69,7 +69,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 - Verified: gate ALL OK. The switch run plays all traps above; a real-keyboard run types the ssh login, `?`, Tab, space and `conf` in the desk terminal. Screenshot at 1500x900 read.
 - Still rough: ssh asks for the password once, a real client asks three times. `show configuration` does not show the `uid` Junos adds to a user. An empty `set system login user x` renders as `user x { }`. Login classes are the four built-in ones only; `full-name`, ssh keys and custom classes are unknown. The wording of the missing class commit error and of the class help lines is from memory, not checked on a device. sw-west-01 (192.168.0.2) still answers ssh with "No route to host". The desk terminal is narrow, so long Junos lines wrap.
 
-### 18 Nov 23:40 · commit confirmed and the automatic rollback (backlog 0, third slice)
+### 18 Nov 23:20 · commit confirmed and the automatic rollback (backlog 0, third slice)
 - Changed: `commit confirmed [minutes]` in the Junos engine (default 10, range 1 to 65535). The change goes live on trial. A plain `commit` or `commit check` keeps it. Otherwise the switch puts the previous configuration back by itself and prints the broadcast message on the console and in a live ssh session. The configuration prompt shows the countdown line above `[edit]`. One Junos minute is 15 real seconds, said in Learn first. Two new objectives in "Set up a new switch" (now thirteen), a Learn first block of three lines, one command line, one takeaway. `commit c` now says ambiguous instead of syntax error. A command that cuts her own ssh session no longer prints its output first.
 - She will notice: at her desk she deletes the me0 address with `commit confirmed 1`. The session dies with Broken pipe, ping says unreachable, and about 15 seconds later ping answers again without anybody touching the rack. Then she sets the time zone with `commit confirmed`, sees the countdown line, and confirms with `commit`.
 - Real-life traps in it: forget to confirm a good change and it is gone, with only the broadcast line as a warning; the same delete with a plain `commit` leaves the switch unreachable for good, fixed only at the rack over the console cable; `commit confirmed 0` is out of range; pulling the power during the trial brings the switch back on the old configuration; during a lockout the earlier "me0 address" objective opens again, because it is true again.
