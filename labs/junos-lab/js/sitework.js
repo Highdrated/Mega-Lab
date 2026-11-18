@@ -4,10 +4,11 @@ function siteZone(name, x, y, w, h, kind, hue){
   return id;
 }
 function siteRole(id, role){ devices[id].role = role; return id; }
-function siteHost(name, x, y){
+function siteHost(name, x, y, os){
   const h = makeHost(x, y);
   devices[h].name = name;
-  return siteRole(h, "Linux PC");
+  devices[h].cfg.os = os || "windows";
+  return h;
 }
 function siteServer(name, x, y, role){
   const s = makeServer(x, y);
@@ -186,14 +187,14 @@ const SITE_L1 = "Site work: Level 1, moves and adds";
 const SITE_L2 = "Site work: Level 2, new services on existing gear";
 const SITE_L3 = "Site work: Level 3, installing new devices";
 const SITE_L4 = "Site work: Level 4, full projects";
-const SITE_INTRO = "The site is already running: a Datacenter with three racks (edge-rtr and core-sw in A1, srv-sw and the file server fileserver-1 in A2), an Office on office-sw, and an ISP. Staff is VLAN 10 (10.10.10.0/24, DHCP from core-sw), servers are VLAN 20 (10.10.20.0/24). Load the setup, then work the ticket. ";
+const SITE_INTRO = "The site is already running: a Datacenter with three racks (edge-rtr and core-sw in A1, srv-sw and the file server fileserver-1 in A2), an Office on office-sw, and an ISP. Staff is VLAN 10 (10.10.10.0/24, DHCP from core-sw), servers are VLAN 20 (10.10.20.0/24). Load the setup, then work the ticket. Every PC shows its operating system on its card, and takes that system's commands: to ask DHCP for an address use ipconfig /renew on Windows, sudo ipconfig set en0 DHCP on a Mac, dhclient eth0 on Linux. ";
 
 const SITE_SCENARIOS = [
   {
     id: "site-new-desk",
     group: SITE_L1,
     title: "27. New Desk at the Office",
-    desc: SITE_INTRO + "TICKET: a new colleague starts today. Patch new-pc into office-sw port ge-0/0/3, put it in the staff VLAN and let it take its address from DHCP.",
+    desc: SITE_INTRO + "TICKET: a new colleague starts today. Patch new-pc (a Windows PC) into office-sw port ge-0/0/3, put it in the staff VLAN and let it take its address from DHCP.",
     setup(){
       const S = siteBase();
       siteHost("new-pc", 1300, 440);
@@ -216,7 +217,7 @@ const SITE_SCENARIOS = [
     hints: [
       "Start by looking, not typing: on office-sw run show vlans and show interfaces terse. See which ports are already in staff and copy that pattern.",
       "Cable new-pc to ge-0/0/3 with a LAN / Data cable. Then on office-sw: set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members staff, and commit.",
-      "On new-pc: dhclient eth0. If there are no offers, run show vlans on office-sw and check that ge-0/0/3 really landed in staff.",
+      "On new-pc: ipconfig /renew. If there are no offers, run show vlans on office-sw and check that ge-0/0/3 really landed in staff.",
     ],
   },
   {
@@ -273,19 +274,19 @@ const SITE_SCENARIOS = [
         test: () => pingOk("pc-1", "10.10.10.1") && pingOk("pc-2", "10.10.10.1") },
     ],
     hints: [
-      "Read the error first: on new-pc run dhclient eth0. The server answers, and tells you exactly what is wrong.",
+      "Read the error first: on new-pc run ipconfig /renew. The server answers, and tells you exactly what is wrong.",
       "On core-sw: show dhcp server binding lists who holds a lease, and show configuration access shows the pool. Compare the range with the number of clients.",
-      "In configure mode on core-sw: set access address-assignment pool STAFF family inet range r1 high 10.10.10.199, commit, then dhclient eth0 on new-pc again.",
+      "In configure mode on core-sw: set access address-assignment pool STAFF family inet range r1 high 10.10.10.199, commit, then ipconfig /renew on new-pc again.",
     ],
   },
   {
     id: "site-guest-vlan",
     group: SITE_L2,
     title: "30. Guest VLAN with its own DHCP",
-    desc: SITE_INTRO + "TICKET: visitors need internet without touching staff machines. Build VLAN guest (id 30, 10.10.30.0/24, gateway 10.10.30.1 on core-sw), carry it over the existing uplink to office-sw, and serve it by DHCP from core-sw. guest-pc is already patched into office-sw ge-0/0/4.",
+    desc: SITE_INTRO + "TICKET: visitors need internet without touching staff machines. Build VLAN guest (id 30, 10.10.30.0/24, gateway 10.10.30.1 on core-sw), carry it over the existing uplink to office-sw, and serve it by DHCP from core-sw. guest-pc (a Mac) is already patched into office-sw ge-0/0/4.",
     setup(){
       const S = siteBase();
-      const g = siteHost("guest-pc", 1300, 440);
+      const g = siteHost("guest-pc", 1300, 440, "macos");
       cable(g, "eth0", S.off, "ge-0/0/4");
       siteFinish();
     },
@@ -311,7 +312,7 @@ const SITE_SCENARIOS = [
       "Plan it as four parts: the VLAN on two switches, the trunk on both ends, the gateway (irb.30) on core-sw, and DHCP. Copy how staff is built: show configuration on core-sw.",
       "On both switches: set vlans guest vlan-id 30. Add it to the uplink on both ends: core-sw ge-0/0/2 and office-sw ge-0/0/0, with set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members guest. On office-sw also put ge-0/0/4 in guest.",
       "Gateway on core-sw: set interfaces irb unit 30 family inet address 10.10.30.1/24 and set vlans guest l3-interface irb.30.",
-      "DHCP on core-sw: set access address-assignment pool GUEST family inet network 10.10.30.0/24, a range r1 low and high, dhcp-attributes router 10.10.30.1, then set system services dhcp-local-server group GUEST interface irb.30. Commit and run dhclient eth0 on guest-pc.",
+      "DHCP on core-sw: set access address-assignment pool GUEST family inet network 10.10.30.0/24, a range r1 low and high, dhcp-attributes router 10.10.30.1, then set system services dhcp-local-server group GUEST interface irb.30. Commit and run sudo ipconfig set en0 DHCP on guest-pc (it is a Mac).",
     ],
   },
   {
@@ -381,7 +382,7 @@ const SITE_SCENARIOS = [
       "Work outside-in: WAN first, then routing, then the LAN, then NAT. Cable acme-rtr ge-0/0/0 to the Carrier, then set interfaces ge-0/0/0 unit 0 family inet address 198.51.100.2/30, commit, and run ping 198.51.100.1.",
       "Routing and LAN: set routing-options static route 0.0.0.0/0 next-hop 198.51.100.1 and set interfaces ge-0/0/1 unit 0 family inet address 192.168.50.1/24.",
       "DHCP on a router is the same as on a switch, bound to the LAN interface: a pool ACME with network 192.168.50.0/24, a range, dhcp-attributes router 192.168.50.1, then set system services dhcp-local-server group ACME interface ge-0/0/1.0.",
-      "NAT: set security nat source rule-set ACME from interface ge-0/0/1.0, to interface ge-0/0/0.0, rule R1 match source-address 192.168.50.0/24, rule R1 then source-nat interface. Commit, dhclient eth0 on acme-pc, ping 8.8.8.8.",
+      "NAT: set security nat source rule-set ACME from interface ge-0/0/1.0, to interface ge-0/0/0.0, rule R1 match source-address 192.168.50.0/24, rule R1 then source-nat interface. Commit, ipconfig /renew on acme-pc, ping 8.8.8.8.",
     ],
   },
   {
@@ -417,20 +418,20 @@ const SITE_SCENARIOS = [
       "Press the power button on the new switch, log in as root, type cli, then configure. In REAL JUNOS mode you need a console cable from a PC to its CON port first.",
       "Day zero: set system host-name office-sw2, set system root-authentication plain-text-password, commit.",
       "On office-sw2: set vlans staff vlan-id 10, make ge-0/0/0 a trunk with vlan members staff, and put ge-0/0/1 and ge-0/0/2 in staff as access ports.",
-      "Do not forget the other end. On core-sw: set interfaces ge-0/0/4 unit 0 family ethernet-switching interface-mode trunk and vlan members staff. Commit, then dhclient eth0 on both desks.",
+      "Do not forget the other end. On core-sw: set interfaces ge-0/0/4 unit 0 family ethernet-switching interface-mode trunk and vlan members staff. Commit, then ipconfig /renew on both desks.",
     ],
   },
   {
     id: "site-internal-router",
     group: SITE_L3,
     title: "34. Install an Internal Router for the Test Lab",
-    desc: SITE_INTRO + "TICKET: the test lab needs its own routed network behind lab-rtr (racked in A3, cabled from its ge-0/0/0 to core-sw ge-0/0/5, lab-pc on its ge-0/0/1). Use transit 10.10.98.0/30 (core-sw .1 on a new VLAN lab-transit id 98, lab-rtr .2) and lab LAN 10.10.40.0/24 (gateway .1, DHCP from lab-rtr). lab-pc must reach fileserver-1 and the internet.",
+    desc: SITE_INTRO + "TICKET: the test lab needs its own routed network behind lab-rtr (racked in A3, cabled from its ge-0/0/0 to core-sw ge-0/0/5, lab-pc, a Linux PC, on its ge-0/0/1). Use transit 10.10.98.0/30 (core-sw .1 on a new VLAN lab-transit id 98, lab-rtr .2) and lab LAN 10.10.40.0/24 (gateway .1, DHCP from lab-rtr). lab-pc must reach fileserver-1 and the internet.",
     setup(){
       const S = siteBase();
       S.lab = siteZone("Test lab", 1020, 660, 520, 200, "building", 6);
       const r = siteRole(makeRouter(687, 240, 4), "Juniper SRX300 · test lab");
       cfgDo(r, ["set system host-name lab-rtr"]);
-      const p = siteHost("lab-pc", 1040, 720);
+      const p = siteHost("lab-pc", 1040, 720, "linux");
       cable(r, "ge-0/0/0", S.core, "ge-0/0/5");
       cable(p, "eth0", r, "ge-0/0/1");
       siteFinish();
@@ -499,12 +500,12 @@ const SITE_SCENARIOS = [
     id: "site-new-floor",
     group: SITE_L4,
     title: "36. Project: a New Floor",
-    desc: SITE_INTRO + "PROJECT: a second floor opens. A factory-fresh switch is in place with TWO uplinks already cabled: its ge-0/0/10 to core-sw ge-0/0/4 and its ge-0/0/11 to core-sw ge-0/0/5 (both shut on core-sw so they cannot loop). fl2-staff is on its ge-0/0/1 and fl2-guest on its ge-0/0/2. Deliver: day zero (name it floor2-sw), an LACP bundle to core-sw, the staff VLAN, and a new guest VLAN (id 30, 10.10.30.0/24, gateway 10.10.30.1 and DHCP on core-sw).",
+    desc: SITE_INTRO + "PROJECT: a second floor opens. A factory-fresh switch is in place with TWO uplinks already cabled: its ge-0/0/10 to core-sw ge-0/0/4 and its ge-0/0/11 to core-sw ge-0/0/5 (both shut on core-sw so they cannot loop). fl2-staff (Windows) is on its ge-0/0/1 and fl2-guest (a Mac) on its ge-0/0/2. Deliver: day zero (name it floor2-sw), an LACP bundle to core-sw, the staff VLAN, and a new guest VLAN (id 30, 10.10.30.0/24, gateway 10.10.30.1 and DHCP on core-sw).",
     setup(){
       const S = siteBase();
       const n = makeSwitch(1300, 200, 12);
       siteFresh(n);
-      const a = siteHost("fl2-staff", 1300, 440), b = siteHost("fl2-guest", 1405, 440);
+      const a = siteHost("fl2-staff", 1300, 440), b = siteHost("fl2-guest", 1405, 440, "macos");
       cable(n, "ge-0/0/10", S.core, "ge-0/0/4");
       cable(n, "ge-0/0/11", S.core, "ge-0/0/5");
       cable(a, "eth0", n, "ge-0/0/1");
@@ -533,14 +534,14 @@ const SITE_SCENARIOS = [
       "Write the plan before you touch anything: 1 day zero, 2 bundle on both ends, 3 VLANs on both ends, 4 guest gateway and DHCP on core-sw, 5 access ports, 6 test. Scenarios 30, 31 and 33 each cover one part.",
       "Bundle: on both switches set chassis aggregated-devices ethernet device-count 1, add the two ports with ether-options 802.3ad ae0, set interfaces ae0 aggregated-ether-options lacp active. On core-sw also delete the disable on ge-0/0/4 and ge-0/0/5.",
       "VLANs: staff (10) and guest (30) on the new switch, guest on core-sw. Make ae0 a trunk on both ends with vlan members staff and guest.",
-      "On core-sw: irb unit 30 with 10.10.30.1/24, vlans guest l3-interface irb.30, a pool GUEST and dhcp-local-server group GUEST interface irb.30. Then the access ports on the new switch, and dhclient eth0 on both PCs.",
+      "On core-sw: irb unit 30 with 10.10.30.1/24, vlans guest l3-interface irb.30, a pool GUEST and dhcp-local-server group GUEST interface irb.30. Then the access ports on the new switch, and ask for an address on both PCs: ipconfig /renew on fl2-staff, sudo ipconfig set en0 DHCP on fl2-guest.",
     ],
   },
   {
     id: "site-customer-cage",
     group: SITE_L4,
     title: "37. Project: Onboard a Customer End to End",
-    desc: SITE_INTRO + "PROJECT: customer Acme moves in. In Rack A3: acme-rtr (named, otherwise empty) and a factory-fresh switch, cabled from its ge-0/0/0 to acme-rtr ge-0/0/1. In the Acme office: acme-pc1 and acme-pc2 on the switch's ge-0/0/1 and ge-0/0/2. Deliver: DIA on acme-rtr ge-0/0/0 (carrier 198.51.100.1/30, you .2), LAN 192.168.50.0/24 with gateway .1 and DHCP from the router, day zero on the switch (name it acme-sw), and all three switch ports in a VLAN acme with id 50.",
+    desc: SITE_INTRO + "PROJECT: customer Acme moves in. In Rack A3: acme-rtr (named, otherwise empty) and a factory-fresh switch, cabled from its ge-0/0/0 to acme-rtr ge-0/0/1. In the Acme office: acme-pc1 (Windows) and acme-pc2 (a Mac) on the switch's ge-0/0/1 and ge-0/0/2. Deliver: DIA on acme-rtr ge-0/0/0 (carrier 198.51.100.1/30, you .2), LAN 192.168.50.0/24 with gateway .1 and DHCP from the router, day zero on the switch (name it acme-sw), and all three switch ports in a VLAN acme with id 50.",
     setup(){
       const S = siteBase();
       siteCustomer(S, "Acme office");
@@ -548,7 +549,7 @@ const SITE_SCENARIOS = [
       cfgDo(r, ["set system host-name acme-rtr"]);
       const n = makeSwitch(687, 340, 12);
       siteFresh(n);
-      const a = siteHost("acme-pc1", 1040, 720), b = siteHost("acme-pc2", 1145, 720);
+      const a = siteHost("acme-pc1", 1040, 720), b = siteHost("acme-pc2", 1145, 720, "macos");
       cable(n, "ge-0/0/0", r, "ge-0/0/1");
       cable(a, "eth0", n, "ge-0/0/1");
       cable(b, "eth0", n, "ge-0/0/2");
@@ -576,7 +577,7 @@ const SITE_SCENARIOS = [
       "Split it in two jobs: the router (WAN, default route, LAN, DHCP, NAT) is scenario 32 again. The switch (day zero, one VLAN, three access ports) is new. Do the router first so you can test from it.",
       "Router: cable ge-0/0/0 to the Carrier, address 198.51.100.2/30, static default to 198.51.100.1, ge-0/0/1 as 192.168.50.1/24, a pool plus dhcp-local-server on ge-0/0/1.0, and a source NAT rule-set from ge-0/0/1.0 to ge-0/0/0.0.",
       "Switch: power on, root, cli, configure, host-name acme-sw, root-authentication, commit. Then set vlans acme vlan-id 50.",
-      "The uplink to the router is an ACCESS port here, not a trunk, because the router interface is untagged: put ge-0/0/0, ge-0/0/1 and ge-0/0/2 all in acme. Commit, then dhclient eth0 on both PCs.",
+      "The uplink to the router is an ACCESS port here, not a trunk, because the router interface is untagged: put ge-0/0/0, ge-0/0/1 and ge-0/0/2 all in acme. Commit, then ipconfig /renew on acme-pc1 and sudo ipconfig set en0 DHCP on acme-pc2.",
     ],
   },
   {

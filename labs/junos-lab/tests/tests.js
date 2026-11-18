@@ -3890,6 +3890,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     cli(dev.id, "Sup3r!pass"); cli(dev.id, "Sup3r!pass");
     cli(dev.id, "commit"); cli(dev.id, "exit");
   };
+  const dh = n => cli(nm(n), { windows: "ipconfig /renew", macos: "sudo ipconfig set en0 DHCP", linux: "dhclient eth0" }[hostOs(byName(n))]);
   const done = (id, label) => { ok(checksPass(scen(id)), "T76 " + label + " completable: " + firstFailing(scen(id))); healthy(id, "when solved"); };
   const notYet = (id, label) => ok(!checksPass(scen(id)), "T76 " + label + " starts unfinished");
   const pool = (name, net, gw, ifn) => [
@@ -3923,9 +3924,9 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(rackOf(nm("core-sw")) && rackOf(nm("core-sw")).name === "Rack A1" && rackOf(nm("fileserver-1")).name === "Rack A2", "T76 base site: gear sits in its racks");
   notYet("site-new-desk", "27");
   cable(nm("new-pc"), "eth0", nm("office-sw"), "ge-0/0/3"); rebuildAllDerived();
-  ok(/no DHCPOFFERS/.test(cli(nm("new-pc"), "dhclient eth0")), "T76 27 default-vlan port gets no offer");
+  ok(/unable to contact your DHCP server/.test(dh("new-pc")), "T76 27 default-vlan port gets no offer");
   cfgDo(nm("office-sw"), [acc("ge-0/0/3", "staff")]);
-  cli(nm("new-pc"), "dhclient eth0");
+  dh("new-pc");
   done("site-new-desk", "27");
 
   start("site-rack-server");
@@ -3939,16 +3940,16 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   start("site-pool-dry");
   notYet("site-pool-dry", "29");
-  ok(/exhausted/.test(cli(nm("new-pc"), "dhclient eth0")), "T76 29 the pool reports exhaustion");
+  ok(/exhausted/.test(dh("new-pc")), "T76 29 the pool reports exhaustion");
   cfgDo(nm("core-sw"), ["set access address-assignment pool STAFF family inet range r1 high 10.10.10.199"]);
-  cli(nm("new-pc"), "dhclient eth0");
+  dh("new-pc");
   done("site-pool-dry", "29");
 
   start("site-guest-vlan");
   notYet("site-guest-vlan", "30");
   cfgDo(nm("core-sw"), guestOnCore.concat([acc("ge-0/0/2", "guest")]));
   cfgDo(nm("office-sw"), ["set vlans guest vlan-id 30", acc("ge-0/0/0", "guest"), acc("ge-0/0/4", "guest")]);
-  cli(nm("guest-pc"), "dhclient eth0");
+  dh("guest-pc");
   done("site-guest-vlan", "30");
 
   start("site-lacp-uplink");
@@ -3977,7 +3978,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
      .concat(nat("ACME", "ge-0/0/1.0", "ge-0/0/0.0", "192.168.50.0/24")));
   };
   acmeRtr();
-  cli(nm("acme-pc"), "dhclient eth0");
+  dh("acme-pc");
   done("site-dia-customer", "32");
   ok(!pingOk("acme-pc", "10.10.20.10"), "T76 32 the customer cannot reach the site's servers");
 
@@ -3987,10 +3988,10 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(nsw.brandNew && nsw.powered === false, "T76 33 the new switch arrives factory-fresh and powered off");
   fresh(nsw, "office-sw2");
   cfgDo(nsw.id, ["set vlans staff vlan-id 10"].concat(trunk("ge-0/0/0", ["staff"]), [acc("ge-0/0/1", "staff"), acc("ge-0/0/2", "staff")]));
-  cli(nm("desk-1"), "dhclient eth0");
+  dh("desk-1");
   ok(!siteLeased("desk-1", "10.10.10.0"), "T76 33 one-sided trunk carries nothing");
   cfgDo(nm("core-sw"), trunk("ge-0/0/4", ["staff"]));
-  cli(nm("desk-1"), "dhclient eth0"); cli(nm("desk-2"), "dhclient eth0");
+  dh("desk-1"); dh("desk-2");
   done("site-new-access-switch", "33");
 
   start("site-internal-router");
@@ -4005,7 +4006,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     "set interfaces ge-0/0/1 unit 0 family inet address 10.10.40.1/24",
     "set routing-options static route 0.0.0.0/0 next-hop 10.10.98.1",
   ].concat(pool("LAB", "10.10.40", "10.10.40.1", "ge-0/0/1.0")));
-  cli(nm("lab-pc"), "dhclient eth0");
+  dh("lab-pc");
   ok(!pingOk("lab-pc", "10.10.20.10"), "T76 34 no return route on core-sw: fileserver-1 unreachable");
   cfgDo(nm("core-sw"), ["set routing-options static route 10.10.40.0/24 next-hop 10.10.98.2"]);
   done("site-internal-router", "34");
@@ -4036,7 +4037,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ].concat(trunk("ae0", ["staff", "guest"]));
   cfgDo(nsw.id, ["set vlans staff vlan-id 10", "set vlans guest vlan-id 30"].concat(lag2("ge-0/0/10", "ge-0/0/11"), [acc("ge-0/0/1", "staff"), acc("ge-0/0/2", "guest")]));
   cfgDo(nm("core-sw"), guestOnCore.concat(lag2("ge-0/0/4", "ge-0/0/5")));
-  cli(nm("fl2-staff"), "dhclient eth0"); cli(nm("fl2-guest"), "dhclient eth0");
+  dh("fl2-staff"); dh("fl2-guest");
   done("site-new-floor", "36");
 
   start("site-customer-cage");
@@ -4045,7 +4046,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   nsw = siteNeighbor("acme-rtr", "ge-0/0/1");
   fresh(nsw, "acme-sw");
   cfgDo(nsw.id, ["set vlans acme vlan-id 50", acc("ge-0/0/0", "acme"), acc("ge-0/0/1", "acme"), acc("ge-0/0/2", "acme")]);
-  cli(nm("acme-pc1"), "dhclient eth0"); cli(nm("acme-pc2"), "dhclient eth0");
+  dh("acme-pc1"); dh("acme-pc2");
   done("site-customer-cage", "37");
 
   start("site-warehouse");
@@ -4056,7 +4057,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     "set interfaces ge-0/0/1 unit 0 family inet address 10.20.10.1/24",
     "set routing-options static route 0.0.0.0/0 next-hop 10.10.97.1",
   ].concat(pool("WH", "10.20.10", "10.20.10.1", "ge-0/0/1.0")));
-  cli(nm("wh-pc1"), "dhclient eth0"); cli(nm("wh-pc2"), "dhclient eth0");
+  dh("wh-pc1"); dh("wh-pc2");
   ok(!pingOk("wh-pc1", "10.10.20.10"), "T76 38 no return route on edge-rtr: fileserver-1 unreachable");
   cfgDo(nm("edge-rtr"), ["set routing-options static route 10.20.10.0/24 next-hop 10.10.97.2"]);
   ok(pingOk("wh-pc1", "10.10.20.10") && !pingOk("wh-pc1", "8.8.8.8"), "T76 38 routed but not yet NATed");
@@ -4087,10 +4088,14 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
   setScenBoard(true);
   const board = document.getElementById("scen-board");
-  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 9,
-    "T76 the scenario board lists every scenario under nine headings");
+  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 8 && board.querySelectorAll(".sb-band").length === 3,
+    "T76 the scenario board lists every scenario in three bands with eight column headings");
+  ok(board.querySelectorAll(".sb-cols").every(c => c.querySelectorAll(".sb-group").length === 1 || c.querySelectorAll(".sb-group").length === 4),
+    "T76 every band is one flat list or exactly four aligned columns");
+  ok(board.querySelectorAll(".sb-name").every(n => !/^\d+\./.test(n.textContent)) && board.querySelectorAll(".sb-num")[0].textContent === "1",
+    "T76 board entries show the number in its own gutter");
   const want = SCENARIOS.findIndex(x => x.id === "site-guest-vlan");
-  board.querySelectorAll(".sb-item")[SCEN_GROUPS.reduce((n, g) => g === SITE_L2 || n < 0 ? (n < 0 ? n : -n - 1) : n + SCENARIOS.filter(x => scenGroup(x) === g).length, 0) * -1 - 1].onclick();
+  board.querySelectorAll(".sb-item").find(b2 => b2.title === SCENARIOS[want].title).onclick();
   ok(currentScenario === SCENARIOS[want] && !scenBoardOpen, "T76 clicking a board entry opens that scenario and folds the list");
   ok(/show all 38/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
   setScenBoard(true);
@@ -4098,7 +4103,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   protoJumpToScenario("site-warehouse");
   ok(currentScenario.id === "site-warehouse" && scenGroupShown === SITE_L4, "T76 jumping from a guide lands in the right group");
   wipeLab(); scen("site-rack-extension").setup();
-  ok(byName("fileserver-1").role === "Synology NAS · file share" && byName("core-sw").role === "Juniper EX4300 · core" && byName("pc-1").role === "Linux PC",
+  ok(byName("fileserver-1").role === "Synology NAS · file share" && byName("core-sw").role === "Juniper EX4300 · core" && hostOsLabel(byName("pc-1")) === "Windows PC",
     "T76 site devices carry a make-and-purpose label");
   ok(siteNeighbor("srv-sw", "ge-0/0/7").role === "Juniper EX2300 · new", "T76 a factory-fresh switch is labelled as new");
   const snap = serializeLab(); loadLab(JSON.parse(JSON.stringify(snap)));
@@ -4107,6 +4112,62 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   currentScenario = SCENARIOS[0];
   [SITE_L1, SITE_L2, SITE_L3, SITE_L4].forEach(g =>
     ok(SCENARIOS.filter(s => s.group === g).length === 3, "T76 three scenarios in " + g));
+  wipeLab();
+}
+
+/* ---------- T77: host operating systems ---------- */
+{
+  wipeLab();
+  const sw77 = makeSwitch(0, 0, 8);
+  const w = setHostOs(makeHost(0, 0), "windows"), m = setHostOs(makeHost(0, 0), "macos"), l = makeHost(0, 0);
+  cfgDo(sw77, [
+    "set vlans staff vlan-id 10", "set interfaces irb unit 10 family inet address 10.0.10.1/24", "set vlans staff l3-interface irb.10",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members staff",
+    "set access address-assignment pool P family inet network 10.0.10.0/24",
+    "set access address-assignment pool P family inet range r1 low 10.0.10.100",
+    "set access address-assignment pool P family inet range r1 high 10.0.10.110",
+    "set access address-assignment pool P family inet dhcp-attributes router 10.0.10.1",
+    "set system services dhcp-local-server group G interface irb.10",
+  ]);
+  cable(w, "eth0", sw77, "ge-0/0/1"); cable(m, "eth0", sw77, "ge-0/0/2"); cable(l, "eth0", sw77, "ge-0/0/3");
+  rebuildAllDerived();
+  ok(hostOs(devices[l]) === "linux" && promptStr(devices[l]) === devices[l].name + "$ ", "T77 a host with no OS set stays a Linux PC");
+  ok(/^C:\\Users\\/.test(promptStr(devices[w])) && / ~ % $/.test(promptStr(devices[m])), "T77 Windows and Mac prompts");
+  ok(/not recognized as an internal or external command/.test(cli(w, "dhclient eth0")) && /ipconfig \/renew/.test(cli(w, "dhclient eth0")),
+    "T77 Windows rejects dhclient and names the Windows way");
+  ok(/not recognized/.test(cli(w, "ip addr add 10.0.10.5/24 dev eth0")) && !devices[w].cfg.ip, "T77 Windows rejects ip addr and changes nothing");
+  ok(/169\.254/.test(cli(w, "ipconfig")), "T77 Windows with no lease shows an APIPA address");
+  ok(/IPv4 Address[ .]*: 10\.0\.10\.1\d\d/.test(cli(w, "ipconfig /renew")) && devices[w].cfg.viaDhcp, "T77 ipconfig /renew takes a lease");
+  ok(/DHCP Enabled[ .]*: Yes/.test(cli(w, "ipconfig /all")), "T77 ipconfig /all shows DHCP state");
+  cli(w, 'netsh interface ip set address "Ethernet" static 10.0.10.50 255.255.255.0 10.0.10.1');
+  ok(devices[w].cfg.ip === "10.0.10.50" && devices[w].cfg.bits === 24 && devices[w].cfg.gw === "10.0.10.1" && !devices[w].cfg.viaDhcp, "T77 netsh sets a static address");
+  ok(pingOk(devices[w], "10.0.10.1"), "T77 Windows PC pings its gateway");
+  cli(w, 'New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 10.0.10.60 -PrefixLength 24 -DefaultGateway 10.0.10.1');
+  ok(devices[w].cfg.ip === "10.0.10.60", "T77 New-NetIPAddress sets a static address");
+  cli(w, "ipconfig /release");
+  ok(!devices[w].cfg.ip, "T77 ipconfig /release drops the address");
+  cli(w, 'netsh interface ip set address "Ethernet" dhcp');
+  ok(devices[w].cfg.viaDhcp && devices[w].cfg.ip, "T77 netsh back to DHCP");
+  ok(/Tracing|traceroute|10\.0\.10\.1/.test(cli(w, "tracert 10.0.10.1")), "T77 tracert works on Windows");
+  cli(w, "cls");
+  ok(devices[w].cli.log.length === 0, "T77 cls wipes the Windows terminal");
+  ok(/not recognized/.test(cli(w, "clear")), "T77 clear is not a Windows command");
+  ok(/command not found: dhclient/.test(cli(m, "dhclient eth0")) && /ipconfig set en0 DHCP/.test(cli(m, "dhclient eth0")), "T77 Mac rejects dhclient and names the macOS way");
+  ok(/DHCP lease 10\.0\.10\.1\d\d/.test(cli(m, "sudo ipconfig set en0 DHCP")), "T77 Mac takes a lease");
+  ok(/inet 10\.0\.10\.1\d\d netmask 255\.255\.255\.0/.test(cli(m, "ifconfig en0")), "T77 Mac ifconfig shows the lease");
+  cli(m, 'networksetup -setmanual "Ethernet" 10.0.10.70 255.255.255.0 10.0.10.1');
+  ok(devices[m].cfg.ip === "10.0.10.70" && devices[m].cfg.gw === "10.0.10.1", "T77 networksetup sets a static address");
+  ok(pingOk(devices[m], "10.0.10.100") || pingOk(devices[m], "10.0.10.1"), "T77 Mac pings on the LAN");
+  ok(/DHCPACK/.test(cli(l, "sudo dhclient eth0")), "T77 Linux accepts sudo and dhclient");
+  ok(/command not found/.test(cli(l, "ipconfig /renew")), "T77 Linux rejects ipconfig");
+  ok(completionsFor(devices[w], "").items.some(i => i.label === "ipconfig") && !completionsFor(devices[w], "").items.some(i => i.label === "dhclient"),
+    "T77 Windows completions list Windows commands only");
+  const snap77 = serializeLab(); loadLab(JSON.parse(JSON.stringify(snap77)));
+  ok(hostOs(devices[w]) === "windows" && hostOs(devices[m]) === "macos", "T77 the OS survives save and load");
+  ok(maskToBits("255.255.255.0") === 24 && maskToBits("255.255.255.252") === 30 && maskToBits("255.0.255.0") === null && bitsToMask(30) === "255.255.255.252",
+    "T77 mask conversion");
   wipeLab();
 }
 

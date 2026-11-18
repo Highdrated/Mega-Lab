@@ -24,6 +24,8 @@ function completionsFor(dev, input){
     const extra = dev.type === "server"
       ? [{ label: "service", help: "start/stop dns, http and syslog" }, { label: "dns", help: "add/del/list name records" }]
       : [];
+    if(dev.type === "host" && hostOs(dev) !== "linux")
+      return { items: HOST_OS_COMPLETIONS[hostOs(dev)].filter(i => i.label.toLowerCase().startsWith(tokens.length ? "" : partial.toLowerCase())) };
     return { items: [...HOST_COMPLETIONS, ...extra,
       { label: "nameserver", help: "point this machine at a DNS server" },
       { label: "nslookup", help: "resolve a name via your nameserver" },
@@ -661,7 +663,7 @@ function renderDevice(dev, parent){
     dev.type === "ap" ? (dev.model ? (/^AP/.test(dev.model) ? "MIST " : "UNIFI ") + dev.model : "ACCESS POINT") :
     dev.type === "crac" ? "COOLING" :
     dev.type === "ups" ? "UPS" :
-    dev.type === "server" ? "SERVER" : "HOST";
+    dev.type === "server" ? "SERVER" : hostOsLabel(dev).toUpperCase();
   if(dev.type === "host" || dev.type === "isp" || dev.type === "ap" || dev.type === "ups")
     el("path", { d: GLYPHS[dev.type], class: "glyph", transform: `translate(${w - 22},6) scale(0.9)` }, g);
   else if(dev.type === "server"){
@@ -1445,11 +1447,18 @@ document.getElementById("add-ups").onclick = async () => {
   rebuildAllDerived(); touchState();
   clickIntoRack(id);
 };
-document.getElementById("add-host").onclick = () => {
+const HOST_OS_CHOICES = [
+  { value: "windows", label: "Windows PC", desc: "The usual office machine: ipconfig, netsh, PowerShell" },
+  { value: "macos", label: "Mac", desc: "ifconfig en0, networksetup, zsh" },
+  { value: "linux", label: "Linux PC", desc: "ip addr, dhclient, the shell servers and engineers use" },
+];
+document.getElementById("add-host").onclick = async () => {
+  const os = await modalChoice("New host", "Which operating system does this user have? It decides which commands the machine accepts, exactly as on a real desk.", HOST_OS_CHOICES);
+  if(os === null) return;
   const p = spawnPos(60);
   pushUndo();
   if(typeof SFX !== "undefined") SFX.drop();
-  makeHost(p.x, p.y);
+  setHostOs(makeHost(p.x, p.y), os);
   touchState();
 };
 document.getElementById("add-server").onclick = () => {
@@ -2059,7 +2068,7 @@ const cliCountdown = document.getElementById("cli-countdown");
 function promptStr(dev){
   if((dev.type === "host" || dev.type === "server") && dev.cli.sshTo && devices[dev.cli.sshTo])
     return promptStr(devices[dev.cli.sshTo]);
-  if(dev.type === "host") return dev.name + "$ ";
+  if(dev.type === "host") return HOST_OS[hostOs(dev)].prompt(dev);
   if(dev.type === "isp") return dev.name + "> ";
   if(dev.type === "crac") return "hvac% ";
   if(dev.powered === false) return "";
@@ -3698,7 +3707,7 @@ wireToolbarMenu("add-btn", "add-menu", [
   { header: "Wi-Fi" },
   { target: "add-ap", label: "Access point", desc: "Mist or UniFi — hosts join its SSID inside the coverage circle" },
   { header: "Endpoints & internet" },
-  { target: "add-host", label: "Host", desc: "An endpoint PC with a Linux shell" },
+  { target: "add-host", label: "Host", desc: "An endpoint PC: Windows, Mac or Linux" },
   { target: "add-server", label: "Server", desc: "Rack-mount box with a power button; runs services — DNS records, a web page (curl it)" },
   { target: "add-isp", label: "ISP / Internet", desc: "The outside world, handed to you on a /30" },
   { header: "Power & cooling" },

@@ -1403,6 +1403,11 @@ function sshForward(dev, cmd){
 function hostExec(dev, cmd){
   const fwd = sshForward(dev, cmd);
   if(fwd) return fwd;
+  if(dev.type === "host" && typeof hostOsExec === "function"){
+    const viaOs = hostOsExec(dev, cmd);
+    if(viaOs) return viaOs;
+  }
+  cmd = cmd.replace(/^sudo\s+/, "");
   const parts = cmd.split(/\s+/);
   if(cmd === "?" || cmd === "help")
     return lines("out",

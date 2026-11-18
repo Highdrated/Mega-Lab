@@ -1485,6 +1485,22 @@ function setScenBoard(open){
   try{ localStorage.setItem("junoslab-scen-board", scenBoardOpen ? "open" : "closed"); }catch(e){}
   renderScenBoard();
 }
+const SCEN_BANDS = [
+  { key: "empty", title: "Empty canvas", note: "You place and cable everything yourself", groups: [0] },
+  { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
+  { key: "site", title: "Existing site", note: "A full datacenter and office is running, you work a ticket", groups: [5, 6, 7, 8] },
+];
+function scenGroupShort(g){
+  const t = g.slice(g.indexOf(":") + 1).trim();
+  return t.charAt(0).toUpperCase() + t.slice(1);
+}
+function scenDone(s){ return !!(PROGRESS[s.id] && PROGRESS[s.id].done); }
+function sbEl(tag, cls, text){
+  const e = document.createElement(tag);
+  if(cls) e.className = cls;
+  if(text !== undefined) e.textContent = text;
+  return e;
+}
 function renderScenBoard(){
   const board = document.getElementById("scen-board");
   const btn = document.getElementById("scen-browse");
@@ -1495,25 +1511,42 @@ function renderScenBoard(){
   board.style.display = scenBoardOpen ? "block" : "none";
   board.innerHTML = "";
   if(!scenBoardOpen) return;
-  SCEN_GROUPS.forEach(g => {
-    const sec = document.createElement("div");
-    sec.className = "sb-group";
-    const inG = SCENARIOS.filter(s => scenGroup(s) === g);
-    const head = document.createElement("div");
-    head.className = "sb-head";
-    head.textContent = g + "  " + inG.filter(s => PROGRESS[s.id] && PROGRESS[s.id].done).length + "/" + inG.length;
-    sec.appendChild(head);
-    inG.forEach(s => {
-      const i = SCENARIOS.indexOf(s);
-      const done = !!(PROGRESS[s.id] && PROGRESS[s.id].done);
-      const it = document.createElement("button");
-      it.className = "sb-item" + (done ? " done" : "") + (!live && i === idx ? " cur" : "");
-      it.textContent = s.title;
-      it.title = SCEN_KINDS[scenKind(s)].text;
-      it.onclick = () => { scenBoardOpen = false; try{ localStorage.setItem("junoslab-scen-board", "closed"); }catch(e){} pickScenario(i); };
-      sec.appendChild(it);
+  SCEN_BANDS.forEach(band => {
+    const all = SCENARIOS.filter(s => band.groups.includes(SCEN_GROUPS.indexOf(scenGroup(s))));
+    const doneN = all.filter(scenDone).length;
+    const row = sbEl("section", "sb-band sb-" + band.key);
+    const rail = sbEl("div", "sb-rail");
+    rail.appendChild(sbEl("div", "sb-band-title", band.title));
+    rail.appendChild(sbEl("div", "sb-band-note", band.note));
+    const meter = sbEl("div", "sb-meter");
+    const fill = sbEl("div", "sb-meter-fill");
+    fill.style.width = Math.round(doneN / all.length * 100) + "%";
+    meter.appendChild(fill);
+    rail.appendChild(meter);
+    rail.appendChild(sbEl("div", "sb-count", doneN + " of " + all.length + " done"));
+    row.appendChild(rail);
+    const cols = sbEl("div", "sb-cols" + (band.groups.length === 1 ? " sb-flat" : ""));
+    band.groups.forEach(gi => {
+      const g = SCEN_GROUPS[gi];
+      const col = sbEl("div", "sb-group");
+      if(band.groups.length > 1) col.appendChild(sbEl("div", "sb-head", scenGroupShort(g)));
+      const list = sbEl("div", "sb-list");
+      SCENARIOS.forEach((s, i) => {
+        if(scenGroup(s) !== g) return;
+        const m = s.title.match(/^(\d+)\.\s*(.*)$/);
+        const it = sbEl("button", "sb-item" + (scenDone(s) ? " done" : "") + (!live && i === idx ? " cur" : ""));
+        it.appendChild(sbEl("span", "sb-num", m ? m[1] : ""));
+        it.appendChild(sbEl("span", "sb-name", m ? m[2] : s.title));
+        it.appendChild(sbEl("span", "sb-tick", scenDone(s) ? "done" : ""));
+        it.title = s.title;
+        it.onclick = () => { scenBoardOpen = false; try{ localStorage.setItem("junoslab-scen-board", "closed"); }catch(e){} pickScenario(i); };
+        list.appendChild(it);
+      });
+      col.appendChild(list);
+      cols.appendChild(col);
     });
-    board.appendChild(sec);
+    row.appendChild(cols);
+    board.appendChild(row);
   });
 }
 function renderScenarioMeta(){
@@ -1673,7 +1706,7 @@ document.getElementById("scen-next").onclick = () => {
   gotoScenario((i < 0 ? -1 : i) + 1);
 };
 function maskHintParts(text){
-  const re = /((?:set|delete|show|run|dhclient|traceroute|ip)\s+[^.!?]*)/g;
+  const re = /((?:set|delete|show|run|dhclient|traceroute|ip|ipconfig|sudo|netsh|tracert)\s+[^.!?]*)/g;
   const parts = [];
   let last = 0, m;
   while((m = re.exec(text))){
