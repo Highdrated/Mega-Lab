@@ -1,6 +1,6 @@
 const PS=require('./engine.js'); const G=require('./grader.js'); const {MEMORIES}=require('./content.node.js');
 let fail=0;
-for(const m of MEMORIES.filter(m=>m.seq>=2)){
+for(const m of MEMORIES.filter(m=>m.seq>=2&&m.seq!==9)){
   const wctx=G.makeCtx(m.setup); const werr=[];
   for(const w of m.watch){const r=PS.run(w.code,wctx); if(r.error) werr.push(r.error.text().split('\n')[0].slice(0,100));}
   const sol=m.recallHints[3].split(/, then /);

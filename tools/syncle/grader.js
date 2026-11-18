@@ -20,6 +20,8 @@ const GRADER = (() => {
     if (s.scopes.length) E.run("Connect-MgGraph -Scopes " + s.scopes.join(",") + " -NoWelcome", ctx);
     if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
     if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
+    if (s.contractors) E.seedContractors(ctx, s.contractors);
+    if (s.quirks) ctx.quirks = JSON.parse(JSON.stringify(s.quirks));
     if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;

@@ -317,6 +317,23 @@ class Parser {
       const body = this.block("foreach");
       return { t: "foreach", v, coll, body };
     }
+    if (this.kw("while")) {
+      this.expect("(", "Missing opening '(' after keyword 'while'.");
+      const cond = this.pipeline();
+      this.expect(")", "Missing closing ')' after expression in 'while' statement.");
+      const body = this.block("while");
+      return { t: "while", cond, body };
+    }
+    if (this.kw("do")) {
+      const body = this.block("do");
+      this.ws(true);
+      let until = false;
+      if (this.kw("until")) until = true; else if (!this.kw("while")) this.err("Missing while or until keyword in do loop.");
+      this.expect("(", "Missing opening '(' after keyword '" + (until ? "until" : "while") + "'.");
+      const cond = this.pipeline();
+      this.expect(")", "Missing closing ')' after expression.");
+      return { t: "do", cond, body, until };
+    }
     if (this.kw("try")) {
       const body = this.block("try");
       this.ws(true);
@@ -767,6 +784,20 @@ function execStmt(s, ctx, out) {
       if (s.op === "+=") { const cur = ctx.getVar(s.name); v = addVals(cur, v); }
       ctx.setVar(s.name, v); return;
     }
+    case "while":
+    case "do": {
+      let n = 0;
+      const test = () => { const v = unwrap(runPipeline(s.cond, ctx, null)); return truthy(Array.isArray(v) ? (v.length === 1 ? v[0] : v.length > 0) : v); };
+      while (true) {
+        if (s.t === "while" && !test()) break;
+        if (++n > 500) throw new PSErr("Lab safety stop: this loop ran 500 times. In the real console it would keep going until you press Ctrl+C. Check the loop condition, and that something inside changes it.", { cmd: null, term: true, kind: "loopcap" });
+        let brk = false;
+        try { evalScript(s.body, ctx, out); } catch (x) { if (x instanceof LoopCtl) { if (x.k === "break") brk = true; } else throw x; }
+        if (brk) break;
+        if (s.t === "do") { const v = test(); if (s.until ? v : !v) break; }
+      }
+      return;
+    }
     case "foreach": {
       const coll = flat(unwrap(runPipeline(s.coll, ctx, null)));
       for (const item of coll) { ctx.setVar(s.v, item); try { evalScript(s.body, ctx, out); } catch (x) { if (x instanceof LoopCtl) { if (x.k === "break") break; continue; } throw x; } }
@@ -782,6 +813,7 @@ function execStmt(s, ctx, out) {
       catch (e) {
         if (!(e instanceof PSErr) || e.parse || !s.cbody) { if (s.fbody) evalScript(s.fbody, ctx, out); throw e; }
         const rec = errRecord(e);
+        if (rec && typeof rec === "object") Object.defineProperty(rec, "__err", { value: e });
         ctx.push(new Map([["_", rec]]));
         try { evalScript(s.cbody, ctx, out); } finally { ctx.pop(); }
       }
@@ -804,10 +836,11 @@ function execStmt(s, ctx, out) {
     }
     case "function": ctx.funcs[s.name.toLowerCase()] = s; return;
     case "loopctl": throw new LoopCtl(s.k);
-    case "throw": { const v = s.val ? runPipeline(s.val, ctx, null) : []; const m = v.length ? toStr(v[0]) : "ScriptHalted"; throw new PSErr(m, { cmd: "Exception", term: true, kind: "throw" }); }
+    case "throw": { if (!s.val) { const cur = ctx.getVar("_"); if (cur && cur.__err) throw cur.__err; } const v = s.val ? runPipeline(s.val, ctx, null) : []; const m = v.length ? toStr(v[0]) : "ScriptHalted"; throw new PSErr(m, { cmd: "Exception", term: true, kind: "throw" }); }
     case "return": { const v = s.val ? runPipeline(s.val, ctx, null) : []; throw new Return(v); }
   }
 }
+function timeSpan(ms) { const s = Math.abs(ms); const sg = ms < 0 ? -1 : 1; return obj("System.TimeSpan", { Days: sg * Math.floor(s / DAY), Hours: sg * Math.floor(s / 3600000) % 24, Minutes: sg * Math.floor(s / 60000) % 60, Seconds: sg * Math.floor(s / 1000) % 60, Milliseconds: sg * (s % 1000), TotalDays: ms / DAY, TotalHours: ms / 3600000, TotalMinutes: ms / 60000, TotalSeconds: ms / 1000, TotalMilliseconds: ms }); }
 function errRecord(e) {
   const ex = obj("System.Exception", { Message: e.cmd ? e.message.split("\n")[0] : e.message, HResult: -2146233087 });
   const rec = obj("ErrorRecord", { Exception: ex, CategoryInfo: e.kind, FullyQualifiedErrorId: e.cmd || "RuntimeException", InvocationInfo: null });
@@ -931,6 +964,7 @@ function runCommand(el, ctx, input, idx) {
   if (spec.native) { const rawArgs = (el.args || []).map((x) => x.p !== undefined && x.v === undefined ? "-" + x.p : x.p !== undefined ? "-" + x.p + ":" + toStr(evalArg(x.v, ctx)) : toStr(evalArg(x.v, ctx))); return spec.run({ ctx, rawArgs, input: input || [], name: spec.name }); }
   const b = bindArgs(spec, el.args, ctx, spec.name);
   if (spec.whatif && b.WhatIf === undefined && ctx.getVar("WhatIfPreference") === true) b.WhatIf = true;
+  if (ctx.quirks && ctx.quirks.throttle && THROTTLED.has(spec.name) && !b.WhatIf) throttleCheck(ctx, spec.name);
   if (b.ErrorAction === undefined) { const eap = ctx.getVar("ErrorActionPreference"); if (eap && /^stop$/i.test(String(eap))) b.ErrorAction = "Stop"; }
   const stop = b.ErrorAction && /^stop$/i.test(String(b.ErrorAction));
   const silent = b.ErrorAction && /^(silentlycontinue|ignore)$/i.test(String(b.ErrorAction));
@@ -943,6 +977,7 @@ function runCommand(el, ctx, input, idx) {
   let out;
   try { out = spec.run({ ctx, b, input: input || [], hadInput: input !== null, emitErr, res, name: spec.name }); }
   catch (er) {
+    if (er instanceof PSErr && silent && /^(exo404|notfound404)$/.test(er.kind || "")) { out = res; return out; }
     if (!(er instanceof PSErr) || er.term || er.parse) throw er;
     if (stop) { er.term = true; throw er; }
     if (!silent) { ctx.errors.push(er); ctx.host.push({ err: er.text() }); }
@@ -1118,7 +1153,7 @@ function evalExpr(e, ctx) {
     case "bin": {
       const a = evalExpr(e.l, ctx), b = evalExpr(e.r, ctx);
       if (e.op === "+") return addVals(a, b);
-      if (a instanceof Date && b instanceof Date && e.op === "-") return obj("System.TimeSpan", { Days: Math.floor((a - b) / DAY), TotalDays: (a - b) / DAY });
+      if (a instanceof Date && b instanceof Date && e.op === "-") return timeSpan(a - b);
       const x = +a, y = +coerceLike(0, b);
       if (isNaN(x) || isNaN(y)) throw new PSErr("Method invocation failed because [" + typeName(a) + "] does not contain a method named 'op_" + (e.op === "-" ? "Subtraction" : e.op === "*" ? "Multiply" : "Division") + "'.", { term: true });
       if (e.op === "-") return x - y; if (e.op === "*") return x * y; if (e.op === "/") { if (y === 0) throw new PSErr("Attempted to divide by zero.", { term: true }); return x / y; } return x % y;
@@ -1228,15 +1263,18 @@ function odataFilter(f, cname) {
     let m = /^([A-Za-z]+)\s+(eq|ne)\s+(?:'([^']*)'|(true|false|null))$/i.exec(p);
     if (m) {
       const prop = m[1], op = m[2].toLowerCase(), val = m[3] !== undefined ? m[3] : m[4] === "null" ? null : m[4] === "true";
-      if (op === "ne") tests.push({ needsAdv: true, fn: (u) => !eqVals(u[propKey(u, prop)], val) });
+      if (op === "ne") tests.push({ needsAdv: true, advProp: "ne", fn: (u) => !eqVals(u[propKey(u, prop)], val) });
       else tests.push({ fn: (u) => { const k = propKey(u, prop); return k !== null && eqVals(u[k], val); }, prop });
       continue;
     }
+    m = /^endswith\(\s*([A-Za-z]+)\s*,\s*'([^']*)'\s*\)$/i.exec(p);
+    if (m) { const prop = m[1], val = m[2].toLowerCase(); tests.push({ needsAdv: true, advProp: prop.charAt(0).toLowerCase() + prop.slice(1), fn: (u) => { const k = propKey(u, prop); return k !== null && u[k] !== null && String(u[k]).toLowerCase().endsWith(val); } }); continue; }
     m = /^startswith\(\s*([A-Za-z]+)\s*,\s*'([^']*)'\s*\)$/i.exec(p);
     if (m) { const prop = m[1], val = m[2].toLowerCase(); tests.push({ fn: (u) => { const k = propKey(u, prop); return k !== null && u[k] !== null && String(u[k]).toLowerCase().startsWith(val); } }); continue; }
     throw new PSErr("Invalid filter clause: Syntax error at position " + (src.indexOf(p) + 1) + " in '" + src + "'.\n\nStatus: 400 (BadRequest)\nErrorCode: BadRequest", { cmd: cname, term: true, kind: "filter" });
   }
-  return { adv: tests.some((t) => t.needsAdv), fn: (u) => { let r = tests[0].fn(u); for (let i = 0; i < ops.length; i++) r = ops[i] === "and" ? r && tests[i + 1].fn(u) : r || tests[i + 1].fn(u); return r; } };
+  const at = tests.find((t) => t.needsAdv);
+  return { adv: !!at, advProp: at ? at.advProp : null, fn: (u) => { let r = tests[0].fn(u); for (let i = 0; i < ops.length; i++) r = ops[i] === "and" ? r && tests[i + 1].fn(u) : r || tests[i + 1].fn(u); return r; } };
 }
 
 const P = (pos, extra) => Object.assign({ kind: "value" }, pos === null ? {} : { pos }, extra || {});
@@ -1269,9 +1307,17 @@ def("Get-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Func
     let list = ctx.t.users;
     if (b.Filter !== undefined) {
       const f = odataFilter(b.Filter, name + "_List");
-      if (f.adv && !b.ConsistencyLevel) throw new PSErr("Unsupported or invalid query filter clause specified for property 'ne' of resource 'User'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_UnsupportedQuery", { cmd: name + "_List", term: true, kind: "filter" });
+      if (f.adv && !b.ConsistencyLevel) throw new PSErr("Unsupported or invalid query filter clause specified for property '" + f.advProp + "' of resource 'User'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_UnsupportedQuery", { cmd: name + "_List", term: true, kind: "filter" });
       list = list.filter(f.fn);
     }
+    if (b.Search !== undefined) {
+      if (!b.ConsistencyLevel) throw new PSErr("Request with $search query parameter only works through MSGraph with a special request header: 'ConsistencyLevel: eventual'\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_List", term: true, kind: "filter" });
+      const sm = /^"?([A-Za-z]+):([^"]*)"?$/.exec(String(b.Search).trim());
+      if (!sm) throw new PSErr("Syntax error: character '" + String(b.Search).trim().charAt(0) + "' is not valid at position 0 in '" + b.Search + "'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_List", term: true, kind: "filter" });
+      const want = sm[2].toLowerCase().trim();
+      list = list.filter((u) => { const k = propKey(u, sm[1]); return k !== null && u[k] !== null && String(u[k]).toLowerCase().split(/[\s.@_-]+/).some((w) => w.startsWith(want)); });
+    }
+    if (b.CountVariable !== undefined) { if (!b.ConsistencyLevel) throw new PSErr("$count is not currently supported.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_List", term: true, kind: "filter" }); ctx.setVar(String(b.CountVariable).replace(/^\$/, ""), list.length); }
     if (b.Top !== undefined) list = list.slice(0, +b.Top);
     else if (!b.All) list = list.slice(0, 100);
     return list.map((u) => project(u, props, USER_DEFAULT));
@@ -1585,7 +1631,7 @@ function moveCopy(ctx, b, name, move) {
 def("Move-Item", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", whatif: true, params: { Path: P(0, { req: true }), Destination: P(1, { req: true }), Force: S() }, run({ ctx, b, name }) { return moveCopy(ctx, b, name, true); } });
 def("Copy-Item", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", whatif: true, params: { Path: P(0, { req: true }), Destination: P(1, { req: true }), Force: S() }, run({ ctx, b, name }) { return moveCopy(ctx, b, name, false); } });
 def("Get-Date", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Date: P(0), Format: P(null), Year: P(null), Month: P(null), Day: P(null) },
-  run({ b }) { let d = b.Date !== undefined ? (b.Date instanceof Date ? b.Date : new Date(b.Date)) : new Date(); if (isNaN(d)) throw new PSErr("Cannot bind parameter 'Date'. Cannot convert value \"" + b.Date + "\" to type \"System.DateTime\".", { cmd: "Get-Date", term: true }); if (b.Format) return [dateFmt(d, String(b.Format))]; return [d]; } });
+  run({ b, ctx }) { let d = b.Date !== undefined ? (b.Date instanceof Date ? b.Date : new Date(b.Date)) : new Date(Date.now() + (ctx.clock || 0)); if (isNaN(d)) throw new PSErr("Cannot bind parameter 'Date'. Cannot convert value \"" + b.Date + "\" to type \"System.DateTime\".", { cmd: "Get-Date", term: true }); if (b.Format) return [dateFmt(d, String(b.Format))]; return [d]; } });
 def("Write-Output", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { InputObject: P(0) }, run({ b, input }) { return input.length ? input : flat(b.InputObject); } });
 def("Write-Host", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Object: P(0), ForegroundColor: P(null), NoNewline: S(), Separator: P(null) }, run({ ctx, b, input }) { const v = b.Object !== undefined ? flat(b.Object) : input; ctx.host.push({ text: v.map((x) => toStr(x)).join(b.Separator ? String(b.Separator) : " "), color: b.ForegroundColor ? String(b.ForegroundColor) : null }); return []; } });
 def("Write-Verbose", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Message: P(0, { req: true }) }, run({ ctx, b }) { if (String(ctx.getVar("VerbosePreference") || "") === "Continue") ctx.host.push({ warn: "VERBOSE: " + toStr(b.Message) }); return []; } });
@@ -1777,9 +1823,10 @@ function upnOf(t, x) {
 function userById(t, x) { const s = String(x).toLowerCase(); return t.users.find((u) => u.UserPrincipalName.toLowerCase() === s || u.Id.toLowerCase() === s) || null; }
 function needExo(ctx, name) { if (!ctx.exo) throw new PSErr("You must call the Connect-ExchangeOnline cmdlet before calling any other cmdlets.", { cmd: name, term: true, kind: "noexo" }); }
 function exoNotFound(id) { return "||The operation couldn't be performed because object '" + id + "' couldn't be found on '" + EXO_HOST + "'."; }
+function visMbx(ctx) { return ctx.t.mailboxes.filter((m) => !(m._readyAt > (ctx.clock || 0))); }
 function findMbx(ctx, id) {
   const s = String(id).toLowerCase();
-  return ctx.t.mailboxes.find((m) => [m.DisplayName, m.Name, m.Alias, m.PrimarySmtpAddress, m.UserPrincipalName, m.ExternalDirectoryObjectId].some((v) => v && String(v).toLowerCase() === s) || m.EmailAddresses.some((e) => e.toLowerCase().replace(/^smtp:/, "") === s));
+  return visMbx(ctx).find((m) => [m.DisplayName, m.Name, m.Alias, m.PrimarySmtpAddress, m.UserPrincipalName, m.ExternalDirectoryObjectId].some((v) => v && String(v).toLowerCase() === s) || m.EmailAddresses.some((e) => e.toLowerCase().replace(/^smtp:/, "") === s));
 }
 function findDG(ctx, id) { const s = String(id).toLowerCase(); return ctx.t.dls.find((d) => [d.Name, d.DisplayName, d.Alias, d.PrimarySmtpAddress].some((v) => v.toLowerCase() === s)); }
 function findGroup(ctx, id) { const s = String(id).toLowerCase(); return ctx.t.groups.find((g) => g.g.Id.toLowerCase() === s); }
@@ -1846,7 +1893,7 @@ def("Get-EXOMailbox", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype:
     const extra = flat(b.Properties).flatMap((x) => String(x).split(",")).map((x) => x.trim()).filter(Boolean);
     const sample = ctx.t.mailboxes[0];
     const keys = extra.map((p) => { const k = Object.keys(sample).filter((x) => !x.startsWith("_")).find((x) => x.toLowerCase() === p.toLowerCase()); if (!k) throw new PSErr("||The property '" + p + "' is not a valid property for this cmdlet. Use -PropertySets or check the property name.", { cmd: name, term: true }); return k; });
-    let m = ctx.t.mailboxes;
+    let m = visMbx(ctx);
     if (b.Identity !== undefined) { const x = findMbx(ctx, b.Identity); if (!x) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" }); m = [x]; }
     if (b.RecipientTypeDetails !== undefined) { const kinds = flat(b.RecipientTypeDetails).map((x) => String(x).toLowerCase()); const valid = ["usermailbox", "sharedmailbox", "roommailbox", "equipmentmailbox"]; for (const k of kinds) if (!valid.includes(k)) throw new PSErr("Cannot bind parameter 'RecipientTypeDetails'. Cannot convert value \"" + k + "\" to type \"Microsoft.Exchange.Data.Directory.Recipient.RecipientTypeDetails\".", { cmd: name, term: true }); m = m.filter((x) => kinds.includes(x.RecipientTypeDetails.toLowerCase())); }
     if (b.ResultSize !== undefined && !/^unlimited$/i.test(String(b.ResultSize))) m = m.slice(0, +b.ResultSize);
@@ -1855,7 +1902,7 @@ def("Get-EXOMailbox", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype:
 def("Get-Mailbox", { module: "ExchangeOnlineManagement", ver: "3.6.0", ctype: "Function", params: { Identity: P(0, { pipe: true }), ResultSize: P(null), RecipientTypeDetails: P(null, { type: "System.String[]" }), Filter: P(null) },
   run({ ctx, b, name }) {
     needExo(ctx, name);
-    let m = ctx.t.mailboxes;
+    let m = visMbx(ctx);
     if (b.Identity !== undefined) { const x = findMbx(ctx, b.Identity); if (!x) throw new PSErr(exoNotFound(b.Identity), { cmd: name, term: true, kind: "exo404" }); m = [x]; }
     if (b.RecipientTypeDetails !== undefined) { const kinds = flat(b.RecipientTypeDetails).map((x) => String(x).toLowerCase()); m = m.filter((x) => kinds.includes(x.RecipientTypeDetails.toLowerCase())); }
     if (b.ResultSize !== undefined && !/^unlimited$/i.test(String(b.ResultSize))) m = m.slice(0, +b.ResultSize);
@@ -2008,7 +2055,9 @@ def("Get-MgGroupMember", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctyp
   run({ ctx, b, name }) {
     needMg(ctx, name, "List", GROUP_READ);
     const g = findGroup(ctx, b.GroupId); if (!g) throw new PSErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_List", term: true, kind: "notfound404" });
-    return g.members.map((id) => dirObj(ctx.t.users.find((u) => u.Id === id)));
+    let ms = g.members.map((id) => dirObj(ctx.t.users.find((u) => u.Id === id)));
+    if (b.Top !== undefined) ms = ms.slice(0, +b.Top); else if (!b.All) ms = ms.slice(0, 100);
+    return ms;
   } });
 def("Get-MgGroupMemberAsUser", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctype: "Function", params: { GroupId: P(0, { req: true }), All: S(), Property: P(null) },
   run({ ctx, b, name }) {
@@ -2023,7 +2072,7 @@ def("New-MgGroupMember", { module: "Microsoft.Graph.Groups", ver: "2.25.0", ctyp
     needWrite(ctx, name + "_Create", GROUP_WRITE);
     const g = findGroup(ctx, b.GroupId); if (!g) throw new PSErr("Resource '" + b.GroupId + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Create", term: true, kind: "notfound404" });
     const id = String(b.DirectoryObjectId);
-    const u = ctx.t.users.find((x) => x.Id.toLowerCase() === id.toLowerCase());
+    const u = ctx.t.users.find((x) => x.Id.toLowerCase() === id.toLowerCase() && !(x._readyAt > (ctx.clock || 0)));
     if (!u) throw new PSErr("Resource '" + id + "' does not exist or one of its queried reference-property objects are not present.\n\nStatus: 404 (NotFound)\nErrorCode: Request_ResourceNotFound", { cmd: name + "_Create", term: true, kind: "notfound404" });
     if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"New-MgGroupMember_Create\" on target \"New-MgGroupMember_Create\"." }); return []; }
     if (g.members.includes(u.Id)) throw new PSErr("One or more added object references already exist for the following modified properties: 'members'.\n\nStatus: 400 (BadRequest)\nErrorCode: Request_BadRequest", { cmd: name + "_Create", term: true, kind: "already" });
@@ -2064,7 +2113,7 @@ def("Set-MgUserLicense", { module: "Microsoft.Graph.Users.Actions", ver: "2.25.0
     if (b.WhatIf) { ctx.host.push({ text: "What if: Performing the operation \"Set-MgUserLicense_AssignExpanded\" on target \"Set-MgUserLicense_AssignExpanded\"." }); return []; }
     u.AssignedLicenses = u.AssignedLicenses.filter((l) => !rem.includes(l.SkuId));
     for (const id of add) if (!u.AssignedLicenses.some((l) => l.SkuId === id)) u.AssignedLicenses.push(obj(GM + "MicrosoftGraphAssignedLicense", { DisabledPlans: [], SkuId: id }));
-    if (u.UserType === "Member" && u.AssignedLicenses.some((l) => l.SkuId === SKUS[0].id || l.SkuId === SKUS[1].id) && !ctx.t.mailboxes.some((m) => m.UserPrincipalName === u.UserPrincipalName)) { const m = mbx(rng(7), u.DisplayName, u.UserPrincipalName, "UserMailbox", u.Id); extendOne(m); ctx.t.mailboxes.push(m); }
+    if (u.UserType === "Member" && u.AssignedLicenses.some((l) => l.SkuId === SKUS[0].id || l.SkuId === SKUS[1].id) && !ctx.t.mailboxes.some((m) => m.UserPrincipalName === u.UserPrincipalName)) { const m = mbx(rng(7), u.DisplayName, u.UserPrincipalName, "UserMailbox", u.Id); extendOne(m); if (ctx.quirks && ctx.quirks.latency) m._readyAt = (ctx.clock || 0) + ctx.quirks.latency.mailbox; ctx.t.mailboxes.push(m); }
     return [project(u, null, USER_DEFAULT)];
   } });
 function extendOne(m) { Object.assign(m, { ForwardingSmtpAddress: null, ForwardingAddress: null, DeliverToMailboxAndForward: false, HiddenFromAddressListsEnabled: false, GrantSendOnBehalfTo: [], Database: "EURPR04DG104-db044", ProhibitSendQuota: "99 GB (106,300,440,576 bytes)", IsMailboxEnabled: true }); m._arc = { AutoReplyState: "Disabled", InternalMessage: null, ExternalMessage: null, StartTime: null, EndTime: null }; m._stat = { ItemCount: 0, MB: 0.1 }; }
@@ -2086,6 +2135,7 @@ def("New-MgUser", { module: "Microsoft.Graph.Users", ver: "2.25.0", ctype: "Func
     const r = rng(ctx.t.users.length * 97);
     const u = obj(GM + "MicrosoftGraphUser", { AccountEnabled: !!b.AccountEnabled, AssignedLicenses: [], BusinessPhones: [], City: b.City || null, CompanyName: "Halvard & Co", Country: null, CreatedDateTime: new Date(), Department: b.Department || null, DisplayName: String(b.DisplayName), EmployeeId: null, GivenName: b.GivenName || null, Id: guid(r), JobTitle: b.JobTitle || null, Mail: null, MailNickname: String(b.MailNickname), MobilePhone: null, OfficeLocation: b.OfficeLocation || null, OnPremisesSyncEnabled: null, PreferredLanguage: null, SignInActivity: obj(GM + "MicrosoftGraphSignInActivity", { LastNonInteractiveSignInDateTime: null, LastSignInDateTime: null, LastSuccessfulSignInDateTime: null }), Surname: b.Surname || null, UsageLocation: b.UsageLocation || null, UserPrincipalName: upn, UserType: "Member" });
     u._pwChange = truthy(hget(b.PasswordProfile, "ForceChangePasswordNextSignIn"));
+    if (ctx.quirks && ctx.quirks.latency) u._readyAt = (ctx.clock || 0) + ctx.quirks.latency.user;
     ctx.t.users.push(u);
     return [project(u, null, USER_DEFAULT)];
   } });
@@ -2465,7 +2515,40 @@ def("ConvertFrom-Json", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0"
     return out;
   } });
 
-return { makeTenant, Ctx, parse, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
+const THROTTLED = new Set(["New-MgUser", "Update-MgUser", "Set-MgUserLicense", "New-MgGroupMember", "Remove-MgGroupMemberByRef", "Revoke-MgUserSignInSession"]);
+function throttleCheck(ctx, name) {
+  const q = ctx.quirks.throttle, now = ctx.clock || 0;
+  q.calls = (q.calls || []).filter((t) => t > now - q.window);
+  if (q.calls.length >= q.limit) {
+    const wait = Math.max(1, Math.ceil((q.calls[0] + q.window - now) / 1000));
+    q.hits = (q.hits || 0) + 1;
+    throw new PSErr("Too Many Requests\n\nStatus: 429 (TooManyRequests)\nErrorCode: TooManyRequests\nDate: " + new Date(Date.now() + now).toISOString().replace(/\.\d+Z$/, "") + "\n\nHeaders:\nRetry-After                   : " + wait, { cmd: name, term: true, kind: "throttle" });
+  }
+  q.calls.push(now);
+}
+def("Start-Sleep", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", params: { Seconds: P(0, { type: "System.Double" }), Milliseconds: P(null, { type: "System.Int32" }) },
+  run({ ctx, b }) { const ms = b.Milliseconds !== undefined ? +b.Milliseconds : (b.Seconds !== undefined ? +b.Seconds : 0) * 1000; if (isNaN(ms)) throw new PSErr("Cannot bind parameter 'Seconds'. Cannot convert value to type \"System.Double\".", { cmd: "Start-Sleep", term: true, kind: "bind" }); ctx.clock = (ctx.clock || 0) + ms; ctx.slept = (ctx.slept || 0) + ms; return []; } });
+function seedContractors(ctx, n) {
+  const base = ctx.t.users.find((u) => u.UserType === "Member");
+  const first = ["Arno", "Bente", "Cas", "Dina", "Elias", "Fien", "Gust", "Hanne", "Ivo", "Jana", "Kobe", "Lien", "Mats", "Nele", "Otto", "Pien", "Quinten", "Roos", "Sem", "Tess"];
+  const last = ["Aerts", "Baert", "Claes", "Daems", "Engels", "Fierens", "Goossens", "Hendrickx", "Jacobs", "Kools", "Lambrecht", "Maes"];
+  const cities = ["Bruges", "Ghent", "Antwerp", "Zeebrugge"];
+  const ids = [];
+  for (let i = 0; i < n; i++) {
+    const gn = first[i % first.length], sn = last[Math.floor(i / first.length) % last.length];
+    const nick = (gn + "." + sn).toLowerCase();
+    const u = clone(base);
+    const id = "c0" + String(i).padStart(6, "0") + "-4e1a-4b7c-9d2e-" + String(100000000000 + i * 7919).slice(0, 12);
+    Object.assign(u, { Id: id, DisplayName: gn + " " + sn, GivenName: gn, Surname: sn, UserPrincipalName: nick + "@" + ctx.t.domain, Mail: nick + "@" + ctx.t.domain, MailNickname: nick.replace(/\./g, ""), Department: "Contractors", JobTitle: "Warehouse contractor", CompanyName: "Polder Freight", City: cities[i % 4], OfficeLocation: null, AccountEnabled: true, UserType: "Member", AssignedLicenses: [], CreatedDateTime: new Date(NOW.getTime() - (20 - (i % 20)) * DAY) });
+    ctx.t.users.push(u); ids.push(id);
+  }
+  const src = ctx.t.groups.find((x) => x.g.DisplayName === "SG-VPN-Users");
+  const ng = {}; for (const k of Object.keys(src)) ng[k] = Array.isArray(src[k]) ? src[k].slice() : src[k];
+  ng.g = clone(src.g); ng.g.Id = "5c0a7d1e-2b3f-4c5d-8e9f-0a1b2c3d4e5f"; ng.g.DisplayName = "SG-Contractors"; ng.g.MailNickname = "SG-Contractors"; ng.g.Description = "Polder Freight contractors (warehouse)";
+  ng.members = ids.slice(); ctx.t.groups.push(ng);
+  return ids;
+}
+return { makeTenant, Ctx, parse, seedContractors, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
 })();
 const HELP = {
   "Get-Command": { syn: "Gets all commands.", ex: [
