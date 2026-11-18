@@ -127,10 +127,15 @@ function portLayout(dev){
   const rows = n <= 8 ? 1 : 2;
   return { rows, cols: Math.ceil(n / rows) };
 }
+function devRoleNeed(dev){
+  if(!dev.role) return 0;
+  const room = (dev.type === "switch" || dev.type === "router") ? 100 : dev.type === "server" ? 54 : 36;
+  return Math.ceil(dev.role.length * 5.6) + room;
+}
 function devNaturalWidth(dev){
-  if(dev.ports.length <= 1) return 92;
+  if(dev.ports.length <= 1) return Math.max(92, devRoleNeed(dev));
   const { cols } = portLayout(dev);
-  return Math.max(178, cols * 18 + 28);
+  return Math.max(178, cols * 18 + 28, devRoleNeed(dev));
 }
 /* racked gear stretches to the rack's full interior width, like real 19-inch kit */
 function devWidth(dev){ return dev.rackW || devNaturalWidth(dev); }
@@ -648,7 +653,8 @@ function renderDevice(dev, parent){
     el("line", { x1: 1.5, y1: devHeaderH() - 3, x2: w - 1.5, y2: devHeaderH() - 3, class: "divh" }, g);
   }
   const icon = el("text", { x: 8, y: 15, class: "label" }, g);
-  icon.textContent =
+  if(dev.role) el("title", {}, g).textContent = dev.name + ": " + dev.role;
+  icon.textContent = dev.role ? dev.role.toUpperCase() :
     dev.type === "switch" ? (dev.model || "JUNOS SWITCH") :
     dev.type === "router" ? (dev.model || "JUNOS ROUTER") :
     dev.type === "isp" ? "ISP / INTERNET" :
@@ -1750,6 +1756,7 @@ async function deleteSnapshot(){
 function serializeLab(){
   const devs = Object.values(devices).map(d => {
     const base = { id: d.id, type: d.type, x: Math.round(d.x), y: Math.round(d.y), name: d.name, portCount: d.ports.length, model: d.model || null };
+    if(d.role) base.role = d.role;
     if(d.type === "switch" || d.type === "router"){
       base.config = d.config; base.candidate = d.candidate; base.stats = d.stats;
       if(d.powered === false) base.powered = false;
@@ -1802,6 +1809,7 @@ function loadLab(data){
         dev = { id: s.id, type: "isp", x: s.x, y: s.y, name: s.name || "ISP", ports: [{ id: "wan0" }],
           cfg: s.cfg || { ip: "203.0.113.1", bits: 30 }, cli: freshCli() };
       }
+      if(s.role) dev.role = s.role;
       devices[dev.id] = dev;
     }
     links = data.links || {};

@@ -855,7 +855,7 @@ const SCENARIOS = [
         "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff",
       ]);
       const srv = makeServer(460, 120);
-      devices[srv].name = "web-1";
+      devices[srv].name = "web-1"; devices[srv].role = "Linux server · web + DNS";
       devices[srv].cfg.ip = "10.0.10.80"; devices[srv].cfg.bits = 24; devices[srv].cfg.gw = "10.0.10.1";
       const h = makeHost(240, 300);
       devices[h].name = "client-pc";
@@ -902,7 +902,7 @@ const SCENARIOS = [
         "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff",
       ]);
       const srv = makeServer(460, 120);
-      devices[srv].name = "ops-1";
+      devices[srv].name = "ops-1"; devices[srv].role = "Linux server · monitoring";
       devices[srv].cfg.ip = "10.0.10.90"; devices[srv].cfg.bits = 24; devices[srv].cfg.gw = "10.0.10.1";
       const h = makeHost(240, 300);
       devices[h].name = "admin-pc";
@@ -1004,7 +1004,7 @@ const SCENARIOS = [
         "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff",
       ]);
       const srv = makeServer(160, 240);
-      devices[srv].name = "files-1";
+      devices[srv].name = "fileserver-1"; devices[srv].role = "Synology NAS · file share";
       devices[srv].cfg.ip = "10.0.10.80"; devices[srv].cfg.bits = 24; devices[srv].cfg.gw = "10.0.10.1";
       const ap = makeAp(420, 130, "hq-wifi", "AP34", 165);
       const h = makeHost(420, 300);
@@ -1031,7 +1031,7 @@ const SCENARIOS = [
           return !!(z && z.gridDown); } },
       { desc: "And everything survived: switch and server still up on battery",
         why: "This is the actual deliverable of the whole exercise — infrastructure staying online through a power event is the entire reason a UPS exists.",
-        test: () => { const sw2 = byName("hq-sw"), s2 = byName("files-1");
+        test: () => { const sw2 = byName("hq-sw"), s2 = byName("fileserver-1");
           const z = Object.values(zones).find(z2 => z2.name === "HQ");
           return !!(z && z.gridDown && sw2 && s2 && sw2.powered !== false && s2.powered !== false); } },
     ],
@@ -1039,7 +1039,7 @@ const SCENARIOS = [
       "The AP first: laptop-1's wifi scan finds nothing, and the canvas says NO POWER over the AP. EX3400-24T supplies no PoE. Two real fixes: tap the AP's port and fit an FS.com injector, or replace the switch with a P-model (EX2300-24P). The injector is 20 euro; check show poe interface either way.",
       "Now the battery: Add > UPS, drop it in HQ (click it into the rack if you have one). Open its status — it compares its capacity to the building's real load. The 1000 W unit carries this room; do the arithmetic before you buy, like a real build.",
       "Drill it: click grid on the HQ header. Watch the status row — if you skipped the UPS, everything dies (and the AP dies WITH the switch, injector or not, because the switch behind it is down).",
-      "While the outage runs: laptop-1 still works (laptop battery), wifi still works (switch on UPS), files-1 still answers. Click OUTAGE to restore the grid. This drill — load, battery, verify — is exactly what a real ops team does yearly.",
+      "While the outage runs: laptop-1 still works (laptop battery), wifi still works (switch on UPS), fileserver-1 still answers. Click OUTAGE to restore the grid. This drill — load, battery, verify — is exactly what a real ops team does yearly.",
     ],
   },
   ...SITE_SCENARIOS,
@@ -1439,24 +1439,37 @@ const SCEN_KINDS = {
 };
 function scenKind(s){ return s.group ? "site" : (s.setup ? "starter" : "empty"); }
 const scenSelect = document.getElementById("scenario-select");
+const scenGroupSelect = document.getElementById("scenario-group");
+const SCEN_GROUPS = ["Basics: empty canvas", "Basics: starter topology", SITE_L1, SITE_L2, SITE_L3, SITE_L4];
+function scenGroup(s){ return s.group || (s.setup ? SCEN_GROUPS[1] : SCEN_GROUPS[0]); }
+let scenGroupShown = SCEN_GROUPS[0];
 function renderScenSelect(){
   const idx = SCENARIOS.indexOf(currentScenario);
+  if(idx >= 0 && !currentScenario.isTicket) scenGroupShown = scenGroup(currentScenario);
+  scenGroupSelect.innerHTML = "";
+  SCEN_GROUPS.forEach(g => {
+    const inG = SCENARIOS.filter(s => scenGroup(s) === g);
+    const opt = document.createElement("option");
+    opt.value = g;
+    opt.textContent = g + "  (" + inG.filter(s => PROGRESS[s.id] && PROGRESS[s.id].done).length + "/" + inG.length + " done)";
+    scenGroupSelect.appendChild(opt);
+  });
+  scenGroupSelect.value = scenGroupShown;
+  scenGroupSelect.selectedIndex = SCEN_GROUPS.indexOf(scenGroupShown);
   scenSelect.innerHTML = "";
-  let grp = null, grpName = null;
+  let pos = -1, n = 0;
   SCENARIOS.forEach((s, i) => {
+    if(scenGroup(s) !== scenGroupShown) return;
     const opt = document.createElement("option");
     opt.value = i;
-    opt.textContent = (PROGRESS[s.id] && PROGRESS[s.id].done ? "✓ " : "") + s.title + "  [" + SCEN_KINDS[scenKind(s)].tag + "]";
-    const g = s.group || "Basics: one topic per lab";
-    if(g !== grpName){
-      grp = document.createElement("optgroup");
-      grp.label = g;
-      grpName = g;
-      scenSelect.appendChild(grp);
-    }
-    grp.appendChild(opt);
+    opt.textContent = (PROGRESS[s.id] && PROGRESS[s.id].done ? "✓ " : "") + s.title;
+    scenSelect.appendChild(opt);
+    if(i === idx) pos = n;
+    n++;
   });
-  scenSelect.selectedIndex = currentScenario.isTicket ? -1 : idx;
+  const live = currentScenario.isTicket || idx < 0;
+  scenSelect.selectedIndex = live ? -1 : pos;
+  if(!live) scenSelect.value = String(idx);
 }
 function renderScenarioMeta(){
   document.getElementById("scen-title").textContent = currentScenario.title;
@@ -1578,8 +1591,13 @@ function resetHintBtn(){
   b.textContent = "Give me a hint";
 }
 let prepHandsFired = null;
-scenSelect.onchange = () => {
-  currentScenario = SCENARIOS[scenSelect.value] || SCENARIOS[0];
+scenSelect.onchange = () => pickScenario(parseInt(scenSelect.value, 10));
+scenGroupSelect.onchange = () => {
+  const g = SCEN_GROUPS.includes(scenGroupSelect.value) ? scenGroupSelect.value : SCEN_GROUPS[0];
+  pickScenario(SCENARIOS.findIndex(s => scenGroup(s) === g));
+};
+function pickScenario(i){
+  currentScenario = SCENARIOS[i] || SCENARIOS[0];
   currentTicket = null;
   prepHandsFired = null;
   hintIndex = 0;
@@ -1590,15 +1608,15 @@ scenSelect.onchange = () => {
     document.getElementById("exam-btn").classList.remove("active");
     document.getElementById("exam-timer").style.display = "none";
   }
+  renderScenSelect();
   renderScenarioMeta();
-};
+}
 document.getElementById("toggle-scenario").onclick = () => {
   if(typeof toggleTablet === "function") toggleTablet("scen");
 };
 function gotoScenario(i){
   const n = SCENARIOS.length;
-  scenSelect.selectedIndex = ((i % n) + n) % n;
-  scenSelect.onchange();
+  pickScenario(((i % n) + n) % n);
 }
 document.getElementById("scen-prev").onclick = () => {
   const i = SCENARIOS.indexOf(currentScenario);

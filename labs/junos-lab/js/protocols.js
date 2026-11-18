@@ -2688,9 +2688,7 @@ function protoJumpToScenario(scenId){
   var idx = -1;
   for(var i = 0; i < SCENARIOS.length; i++) if(SCENARIOS[i].id === scenId) idx = i;
   if(idx === -1) return;
-  var sel = document.getElementById("scenario-select");
-  sel.value = idx;
-  sel.onchange();
+  gotoScenario(idx);
   if(typeof setTabletTab === "function") setTabletTab("scen");
 }
 

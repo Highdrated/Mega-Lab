@@ -1238,7 +1238,7 @@ wipeLab();
 scen("keep-lights-on").setup();
 {
   const z = Object.values(zones).find(z2 => z2.name === "HQ");
-  const sw = byName("hq-sw"), srv = byName("files-1"), lap = byName("laptop-1");
+  const sw = byName("hq-sw"), srv = byName("fileserver-1"), lap = byName("laptop-1");
   const ap = Object.values(devices).find(d => d.type === "ap");
   ok(!!POE.denied[ap.id], "T54 scenario ships with the PoE trap armed");
   // outage with no UPS: everything infra dies, the laptop does not
@@ -3917,10 +3917,10 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   start("site-new-desk");
   ok(siteLeased("pc-1", "10.10.10.0") && pingOk("pc-1", "8.8.8.8"), "T76 base site: staff has DHCP and internet");
-  ok(pingOk("pc-1", "10.10.20.10"), "T76 base site: staff reaches files-1");
+  ok(pingOk("pc-1", "10.10.20.10"), "T76 base site: staff reaches fileserver-1");
   ok(Object.values(zones).filter(z => z.kind === "rack").length === 3 && Object.values(zones).filter(z => z.kind === "building").length === 2,
     "T76 base site: two buildings and three racks");
-  ok(rackOf(nm("core-sw")) && rackOf(nm("core-sw")).name === "Rack A1" && rackOf(nm("files-1")).name === "Rack A2", "T76 base site: gear sits in its racks");
+  ok(rackOf(nm("core-sw")) && rackOf(nm("core-sw")).name === "Rack A1" && rackOf(nm("fileserver-1")).name === "Rack A2", "T76 base site: gear sits in its racks");
   notYet("site-new-desk", "27");
   cable(nm("new-pc"), "eth0", nm("office-sw"), "ge-0/0/3"); rebuildAllDerived();
   ok(/no DHCPOFFERS/.test(cli(nm("new-pc"), "dhclient eth0")), "T76 27 default-vlan port gets no offer");
@@ -3930,11 +3930,11 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   start("site-rack-server");
   notYet("site-rack-server", "28");
-  cable(nm("backup-1"), "eth0", nm("srv-sw"), "ge-0/0/2"); rebuildAllDerived();
+  cable(nm("backup-nas-1"), "eth0", nm("srv-sw"), "ge-0/0/2"); rebuildAllDerived();
   cfgDo(nm("srv-sw"), [acc("ge-0/0/2", "servers")]);
-  cli(nm("backup-1"), "ip addr add 10.10.20.20/24 dev eth0");
-  ok(pingOk("backup-1", "10.10.20.10") && !pingOk("pc-1", "10.10.20.20"), "T76 28 no gateway: same VLAN works, other VLAN does not");
-  cli(nm("backup-1"), "ip route add default via 10.10.20.1");
+  cli(nm("backup-nas-1"), "ip addr add 10.10.20.20/24 dev eth0");
+  ok(pingOk("backup-nas-1", "10.10.20.10") && !pingOk("pc-1", "10.10.20.20"), "T76 28 no gateway: same VLAN works, other VLAN does not");
+  cli(nm("backup-nas-1"), "ip route add default via 10.10.20.1");
   done("site-rack-server", "28");
 
   start("site-pool-dry");
@@ -4006,7 +4006,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     "set routing-options static route 0.0.0.0/0 next-hop 10.10.98.1",
   ].concat(pool("LAB", "10.10.40", "10.10.40.1", "ge-0/0/1.0")));
   cli(nm("lab-pc"), "dhclient eth0");
-  ok(!pingOk("lab-pc", "10.10.20.10"), "T76 34 no return route on core-sw: files-1 unreachable");
+  ok(!pingOk("lab-pc", "10.10.20.10"), "T76 34 no return route on core-sw: fileserver-1 unreachable");
   cfgDo(nm("core-sw"), ["set routing-options static route 10.10.40.0/24 next-hop 10.10.98.2"]);
   done("site-internal-router", "34");
 
@@ -4016,8 +4016,8 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   fresh(nsw, "srv-sw2");
   cfgDo(nsw.id, ["set vlans servers vlan-id 20"].concat(trunk("ge-0/0/0", ["servers"]), [acc("ge-0/0/1", "servers")]));
   cfgDo(nm("srv-sw"), trunk("ge-0/0/7", ["servers"]));
-  cli(nm("db-1"), "ip addr add 10.10.20.30/24 dev eth0");
-  cli(nm("db-1"), "ip route add default via 10.10.20.1");
+  cli(nm("db-server-1"), "ip addr add 10.10.20.30/24 dev eth0");
+  cli(nm("db-server-1"), "ip route add default via 10.10.20.1");
   done("site-rack-extension", "35");
   ok(rackOf(nsw.id) && rackOf(nsw.id).name === "Rack A3", "T76 35 the new switch is mounted in Rack A3");
 
@@ -4057,7 +4057,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     "set routing-options static route 0.0.0.0/0 next-hop 10.10.97.1",
   ].concat(pool("WH", "10.20.10", "10.20.10.1", "ge-0/0/1.0")));
   cli(nm("wh-pc1"), "dhclient eth0"); cli(nm("wh-pc2"), "dhclient eth0");
-  ok(!pingOk("wh-pc1", "10.10.20.10"), "T76 38 no return route on edge-rtr: files-1 unreachable");
+  ok(!pingOk("wh-pc1", "10.10.20.10"), "T76 38 no return route on edge-rtr: fileserver-1 unreachable");
   cfgDo(nm("edge-rtr"), ["set routing-options static route 10.20.10.0/24 next-hop 10.10.97.2"]);
   ok(pingOk("wh-pc1", "10.10.20.10") && !pingOk("wh-pc1", "8.8.8.8"), "T76 38 routed but not yet NATed");
   cfgDo(nm("edge-rtr"), nat("WH", "ge-0/0/2.0", "ge-0/0/0.0", "10.20.10.0/24"));
@@ -4065,15 +4065,35 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   const groups = [];
   SCENARIOS.forEach(s => { const g = s.group || "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
-  ok(groups.length === 5, "T76 scenario list has five groups in order: " + groups.length);
+  ok(groups.length === 5, "T76 scenario list keeps its site groups in order: " + groups.length);
   ok(scenKind(scen("basic-connect")) === "empty" && scenKind(scen("lacp-bundle")) === "starter" && scenKind(scen("site-new-desk")) === "site",
     "T76 each scenario knows how it starts");
   currentScenario = scen("site-new-desk"); renderScenarioMeta();
   ok(/running site/.test(document.getElementById("scen-kind").textContent), "T76 the panel says a site scenario starts pre-built");
   currentScenario = scen("basic-connect"); renderScenarioMeta();
   ok(/empty canvas/.test(document.getElementById("scen-kind").textContent), "T76 the panel says a basics scenario starts empty");
-  renderScenSelect();
-  ok(scenSelect.querySelectorAll("option").length === SCENARIOS.length, "T76 every scenario is in the picker");
+  let seen = 0;
+  SCEN_GROUPS.forEach(g => {
+    scenGroupSelect.value = g; scenGroupSelect.onchange();
+    const n = scenSelect.querySelectorAll("option").length;
+    seen += n;
+    ok(n > 0 && n <= 18 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
+  });
+  ok(seen === SCENARIOS.length, "T76 every scenario is reachable through a picker group");
+  ok(scenGroupSelect.querySelectorAll("option").length === 6, "T76 six picker groups");
+  gotoScenario(5);
+  ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[1], "T76 paging follows the scenario into its group");
+  gotoScenario(4); 
+  ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
+  protoJumpToScenario("site-warehouse");
+  ok(currentScenario.id === "site-warehouse" && scenGroupShown === SITE_L4, "T76 jumping from a guide lands in the right group");
+  wipeLab(); scen("site-rack-extension").setup();
+  ok(byName("fileserver-1").role === "Synology NAS · file share" && byName("core-sw").role === "Juniper EX4300 · core" && byName("pc-1").role === "Windows PC",
+    "T76 site devices carry a make-and-purpose label");
+  ok(siteNeighbor("srv-sw", "ge-0/0/7").role === "Juniper EX2300 · new", "T76 a factory-fresh switch is labelled as new");
+  const snap = serializeLab(); loadLab(JSON.parse(JSON.stringify(snap)));
+  ok(byName("fileserver-1").role === "Synology NAS · file share", "T76 labels survive save and load");
+  wipeLab();
   currentScenario = SCENARIOS[0];
   [SITE_L1, SITE_L2, SITE_L3, SITE_L4].forEach(g =>
     ok(SCENARIOS.filter(s => s.group === g).length === 3, "T76 three scenarios in " + g));
