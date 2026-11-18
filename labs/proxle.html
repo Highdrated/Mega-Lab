@@ -275,6 +275,15 @@ function exec(W,line){
  if(c==='date')return{out:'Wed Nov 18 '+stamp(W).slice(11)+' CET 2026'};
  if(c==='ip')return{out:`1: lo: <LOOPBACK,UP,LOWER_UP>\n    inet 127.0.0.1/8 scope host lo\n2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> master vmbr0\n3: vmbr0: <BROADCAST,MULTICAST,UP,LOWER_UP>\n    inet ${here.ip}/24 scope global vmbr0`,note:'<b>vmbr0</b> is the bridge: the software switch the VMs plug into. The server\'s own address sits on it.'};
  if(c==='ping'){const t=a.filter(x=>!/^-/.test(x)&&!/^\d+$/.test(x))[1]||a[a.length-1];if(!isIp(t))return{err:`ping: ${t}: Name or service not known`,note:NODNS};const n=resolve(W,t),ok=(n&&alive(W,n))||NAS[t]||t==='192.168.0.1'||t==='192.168.0.2'||t==='192.168.0.9'||t==='192.168.0.10'||swAt(W,t);if(ok){W.seen['ping:'+t]=1;return{out:`PING ${t} (${t}) 56(84) bytes of data.\n64 bytes from ${t}: icmp_seq=1 ttl=64 time=0.31 ms\n64 bytes from ${t}: icmp_seq=2 ttl=64 time=0.28 ms\n64 bytes from ${t}: icmp_seq=3 ttl=64 time=0.29 ms\n\n--- ${t} ping statistics ---\n3 packets transmitted, 3 received, 0% packet loss`}}W.seen['pingfree:'+t]=1;return{out:`PING ${t} (${t}) 56(84) bytes of data.\nFrom ${here.ip} icmp_seq=1 Destination Host Unreachable\nFrom ${here.ip} icmp_seq=2 Destination Host Unreachable\n\n--- ${t} ping statistics ---\n3 packets transmitted, 0 received, +2 errors, 100% packet loss`}}
+ if(c==='ssh'&&a[1]&&W.host==='laptop'&&W.inst){
+  const m=a[1].match(/^(?:([^@]+)@)?(\d+\.\d+\.\d+\.\d+)$/),d=m&&W.inst.rack.devs.find(x=>x.j&&jpow(W.inst,x)&&jme0(W.inst,x)&&jaddrs(x.j.act,'me0').includes(m[2]+'/24'));
+  if(d){
+   const u=m[1]||'kaatje',ip=m[2];W.seen.sshtry=1;
+   if(!jsshon(d.j.act))return{err:`ssh: connect to host ${ip} port 22: Connection refused`,note:'The switch answers ping, so the cable and the address are fine. <b>Connection refused</b> means nothing listens on port 22: the ssh service is not switched on. That is done on the console.'};
+   const q={d,u,ip};
+   if(!W.known['laptop>'+ip]){W.prompt={k:'jfp',q};return{out:`The authenticity of host '${ip} (${ip})' can't be established.\nED25519 key fingerprint is SHA256:r7Yd2KpWm0Vx3QeHs9LbT4nC8uAf1JgZoP5iNvUtEwM.\nThis key is not known by any other names.\nAre you sure you want to continue connecting (yes/no/[fingerprint])?`}}
+   W.prompt={k:'jpw',q};return{out:'Password:'}}
+ }
  if(c==='ssh'){if(!a[1])return{err:'usage: ssh [user@]hostname'};const tgt=String(a[1]).replace(/^root@/,'');if(!isIp(a[1]))return{err:`ssh: Could not resolve hostname ${tgt}: Name or service not known`,note:NODNS};if(!/^root@/.test(a[1])&&W.host==='laptop')return{err:`kaatje@${tgt}: Permission denied (publickey,password).`,note:'Without a user name, ssh tries your laptop user. Proxmox servers are administered as root: <code>ssh root@'+tgt+'</code>.'};const n=resolve(W,a[1]);if(!n||!alive(W,n))return{err:`ssh: connect to host ${tgt} port 22: No route to host`};if(n===W.host)return{out:`You are already on ${n}.`};if(W.host!=='laptop'&&here.in&&W.nodes[n].in)return enter(W,n);if(!W.known[W.host+'>'+n]){W.prompt={k:'sshfp',t:n};return{out:`The authenticity of host '${tgt} (${tgt})' can't be established.\nED25519 key fingerprint is SHA256:Qk3v9T0mZr1xW8eYc5uLhB2nD7sAj4GfPp6oKiVtXwE.\nThis key is not known by any other names.\nAre you sure you want to continue connecting (yes/no/[fingerprint])?`}}W.prompt={k:'sshpw',t:n};return{out:`root@${tgt}'s password:`}}
  if(c==='exit'||c==='logout'){if(!W.stack.length)return{out:'This is your own laptop. There is nothing to exit from.'};const from=W.host;W.host=W.stack.pop();return{out:`logout\nConnection to ${W.nodes[from].ip} closed.`}}
  if(c==='ls'){if(/^\/etc\/pve\/nodes\/?$/.test(a[1]||'')){const l=here.in?W.cluster.members:[W.host];W.seen.lsnodes=1;return{out:l.join('  '),note:'One folder per node. Each holds that node\'s own certificate and its VM settings. The folder is shared by the whole cluster.'}}return{err:`ls: cannot access '${a[1]||''}': No such file or directory`}}
@@ -338,9 +347,19 @@ function exec(W,line){
  if(c==='clear')return{clear:1};
  return{err:`-bash: ${c}: command not found`};
 }
-function answerPrompt(W,line){
+function answerPrompt(W,line,raw){
  const p=W.prompt;
  if(p.k==='sshfp'){W.prompt=null;if(!/^yes$/i.test(line))return{err:'Host key verification failed.'};W.known[W.host+'>'+p.t]=1;W.prompt={k:'sshpw',t:p.t};return{out:`Warning: Permanently added '${W.nodes[p.t].ip}' (ED25519) to the list of known hosts.\nroot@${W.nodes[p.t].ip}'s password:`}}
+ if(p.k==='jfp'){W.prompt=null;if(!/^yes$/i.test(line))return{err:'Host key verification failed.'};W.known['laptop>'+p.q.ip]=1;W.prompt={k:'jpw',q:p.q};return{out:`Warning: Permanently added '${p.q.ip}' (ED25519) to the list of known hosts.\nPassword:`}}
+ if(p.k==='jpw'){
+  W.prompt=null;const q=p.q,c=q.d.j.act,den={err:`Permission denied, please try again.\n${q.u}@${q.ip}: Permission denied (publickey,password,keyboard-interactive).`};
+  if(!swAt(W,q.ip))return{err:`ssh: connect to host ${q.ip} port 22: No route to host`};
+  if(q.u==='root'){
+   const rl=(c['system services ssh root-login']||{}).v;
+   if(rl!=='allow'||!c['system root-authentication']||raw!==c['system root-authentication'].v){if(rl!=='allow')den.note='Junos refuses a root password over ssh. That is its default, on purpose: root is for the console. Give yourself a user on the switch and log in with that name.';return den}
+   W.jssh={d:q.d,ip:q.ip,m:'shell',u:'',cli:true,tmp:'',out:''};return{out:JV}}
+  if(!jupw(c,q.u)||raw!==jupw(c,q.u)){den.note=jusers(c).includes(q.u)?null:'The switch knows no user <b>'+esc(q.u)+'</b>. ssh never says whether the name or the password was wrong.';return den}
+  W.jssh={d:q.d,ip:q.ip,m:'op',u:q.u,cli:true,tmp:'',out:''};W.seen.swssh=1;return{out:JV}}
  if(p.k==='sshpw'){W.prompt=null;const need=W.nodes[p.t].pw;if(!line||(need&&line!==need))return{err:`Permission denied, please try again.\nroot@${W.nodes[p.t].ip}: Permission denied (publickey,password).`,note:need?'That is not the root password you set in the installer.':null};if(W.host==='laptop')W.seen.loggedin=1;return enter(W,p.t)}
  if(p.k==='pw'){if(!line){W.prompt=null;return{err:'401 authentication failure'}}W.prompt={k:'fp',t:p.t};return{out:`Establishing API connection with host '${W.nodes[p.t].ip}'\nThe authenticity of host '${W.nodes[p.t].ip}' can't be established.\nX509 SHA256 key fingerprint is 4B:9E:02:7A:C1:5D:88:3F:60:1B:A7:2C:D9:44:EE:15:73:0A:B6:9C:21:F8:5E:D0:37:AC:68:12:9B:E4:50:7D.\nAre you sure you want to continue connecting (yes/no)?`,ps:''}}
  W.prompt=null;if(!/^y(es)?$/i.test(line))return{err:'TASK ERROR: fingerprint not verified, abort!'};
@@ -402,8 +421,8 @@ const SC=[
   {t:'Confirm the server carries the name you gave it',why:'The name on the prompt is what every later command and every colleague will rely on.',done:W=>W.seen.host,h:['Ask the server for its name.','hostname']}],
  take:['Gateway and DNS are looked up, never guessed. The address is chosen, pinged and reserved.','Rack, two power feeds, first network port, then software.','Download the right ISO, flash it to a stick, boot the server from the stick.','A server has no name until the installer gives it one.']},
 {id:'switch',g:'Build',t:'Set up a new switch',story:'The rack at site west has one switch, sw-west-01. A second one was ordered so the servers get a second path. It lies on the storeroom shelf: a Juniper EX2300-C-12T, factory fresh, with its own power cord.<br><br>A new switch has no name, no address and no password. It cannot be reached over the network yet. The only way in is the CON port.<br><br>The boxed server on the floor is a job for another day. Leave it.',
- learn:['§Day zero: why the console cable','A factory-fresh switch has <b>no address</b>. You cannot ssh to it. You plug a <b>console cable</b> into its CON port and type on it directly.','Its prompt says <b>Amnesiac</b>: it remembers nothing. The user is <code>root</code>, with no password yet.','§Junos works in two modes','<b>Operational mode</b>, prompt <code>&gt;</code>: you look. <code>show</code> commands live here.','<b>Configuration mode</b>, prompt <code>#</code>: you change. You get there with <code>configure</code>.','Changes go into a <b>candidate</b>. Nothing happens until you <code>commit</code>. Then all of it becomes active at once.','<code>show | compare</code> shows what your commit would change. Look before you commit.','§Lost? Ask the switch','Type <code>?</code> anywhere on a line. Junos lists what can come next, without running anything.','<b>Tab</b> or <b>space</b> finishes a word you started. <code>conf</code> becomes <code>configure</code>.','§The four things every new switch gets','A <b>root password</b>. Junos refuses the first commit without one.','A <b>name</b>, so you always see which switch you are typing on.','A <b>management address</b> on the me0 port, with the prefix of the network behind it.','The <b>VLANs</b> its neighbours use. A VLAN is a separate network inside the switch. Same number on both switches, or the traffic does not pass.'],
- cmds:[['?','what can I type here?'],['root','the login on a factory-fresh switch'],['cli','from the shell (%) into Junos (&gt;)'],['configure','into configuration mode (#)'],['set ...','add a line to the candidate'],['delete ...','take a line out of the candidate'],['show | compare','what would this commit change?'],['commit','make the candidate active'],['show vlans','VLANs on this switch, with their numbers']],
+ learn:['§Day zero: why the console cable','A factory-fresh switch has <b>no address</b>. You cannot ssh to it. You plug a <b>console cable</b> into its CON port and type on it directly.','Its prompt says <b>Amnesiac</b>: it remembers nothing. The user is <code>root</code>, with no password yet.','§Junos works in two modes','<b>Operational mode</b>, prompt <code>&gt;</code>: you look. <code>show</code> commands live here.','<b>Configuration mode</b>, prompt <code>#</code>: you change. You get there with <code>configure</code>.','Changes go into a <b>candidate</b>. Nothing happens until you <code>commit</code>. Then all of it becomes active at once.','<code>show | compare</code> shows what your commit would change. Look before you commit.','§Lost? Ask the switch','Type <code>?</code> anywhere on a line. Junos lists what can come next, without running anything.','<b>Tab</b> or <b>space</b> finishes a word you started. <code>conf</code> becomes <code>configure</code>.','§What every new switch gets','A <b>root password</b>. Junos refuses the first commit without one.','A <b>name</b>, so you always see which switch you are typing on.','A <b>management address</b> on the me0 port, with the prefix of the network behind it.','The <b>VLANs</b> its neighbours use. A VLAN is a separate network inside the switch. Same number on both switches, or the traffic does not pass.','The <b>ssh service</b>, switched on. Until then nothing listens and your desk gets <b>Connection refused</b>.','A <b>user of your own</b>. Junos refuses a root password over ssh. And a shared root tells nobody who changed what.'],
+ cmds:[['?','what can I type here?'],['root','the login on a factory-fresh switch'],['cli','from the shell (%) into Junos (&gt;)'],['configure','into configuration mode (#)'],['set ...','add a line to the candidate'],['delete ...','take a line out of the candidate'],['show | compare','what would this commit change?'],['commit','make the candidate active'],['show vlans','VLANs on this switch, with their numbers'],['ssh &lt;user&gt;@&lt;ip&gt;','from your desk, once the switch allows it']],
  setup:()=>world({inst:true}),
  obj:[{t:'Find the name and the management address kept for the new switch',why:'Pick an address yourself and one day two devices share it. On a switch that takes the management of a whole rack offline.',done:W=>W.seen.ipam&&W.seen['pingfree:192.168.0.3'],h:['The IP register on your laptop lists switches too. Ping the address from the Terminal to be sure nothing uses it.','IP register > read the sw-west-02 line > Terminal: ping 192.168.0.3']},
   {t:'Carry the new switch in and screw it into a free rack space',why:'A switch left on the floor gets kicked, and its cables pull on the ports. A switch has ears, not rails: it is screwed straight into the rack.',done:W=>W.inst.rack.devs.some(d=>d.type==='sw'&&d.slot!=null),h:['Go to the server room. The Add menu above the rack is the storeroom shelf. Drag the switch into a free space.','Server room > Add > EX2300-C-12T > drag it into a free space in the rack']},
@@ -413,8 +432,10 @@ const SC=[
   {t:'Name the switch sw-west-02',why:'With two switches in one rack, the name on the prompt is the only thing that tells you which one you are about to change.',done:W=>W.inst.rack.devs.some(d=>d.j&&jhost(d.j.act)==='sw-west-02'),h:['The name lives under system. Set it, then commit. Watch the prompt change.','set system host-name sw-west-02 > commit']},
   {t:'Put the management address on me0',why:'Leave the prefix off and Junos accepts it, as a /32: an address with no network around it. The commit works and the switch still answers nobody.',done:W=>W.inst.rack.devs.some(d=>d.j&&jaddrs(d.j.act,'me0').join()==='192.168.0.3/24'),h:['The address goes on unit 0 of me0, family inet, with /24 behind it. A second set does not replace a wrong address, it adds one. Use show to check and delete to remove.','set interfaces me0 unit 0 family inet address 192.168.0.3/24 > show | compare > commit']},
   {t:'Create the servers VLAN with the same number as on sw-west-01',why:'A VLAN name is only a label. The number travels on the wire. A different number on the new switch and the servers behind it reach nothing.',done:W=>W.inst.rack.devs.some(d=>d.j&&jvlans(d.j.act).some(v=>v[0]==='servers'&&v[1]==='20')),h:['Ask the switch that already works. Move the console cable to the CON port of sw-west-01 and look at its VLANs. Then move it back.','Hands: click the cable end to pull it > Console cable > CON of sw-west-01 to laptop > show vlans > move the cable back > set vlans servers vlan-id 20 > commit']},
-  {t:'Cable me0 to the server network and reach the switch from your desk',why:'From now on nobody walks to the rack with a cable for every change. If it does not answer from your desk, it is not finished.',done:W=>W.seen['ping:192.168.0.3'],h:['Take a network cable and drag from the MGT port of the new switch to a free server port on sw-west-01. The register lists which ports those are. Then walk back to your desk.','Network cable > drag MGT of the new switch to port 2 of sw-west-01 > Your desk > Terminal > ping 192.168.0.3']}],
- take:['A new switch has no address. The first visit is always over the console cable.','Junos: configure, set, show | compare, commit. Nothing is active before the commit.','No root password, no commit.','An address without its prefix becomes a /32 and reaches nobody.','A VLAN is its number, not its name.']},
+  {t:'Switch on ssh and give yourself a user on the switch',why:'Out of the box nothing listens for ssh, and Junos refuses a root password over the network. Skip this and every change stays a walk to the rack with a cable.',done:W=>W.inst.rack.devs.some(d=>d.j&&jsshon(d.j.act)&&jusers(d.j.act).some(u=>jucls(d.j.act,u)==='super-user'&&jupw(d.j.act,u))),h:['Both live under system. Ask the switch: set system services ? and set system login user ? and keep asking. A user needs a class and a password. Pick the class that may change things.','set system services ssh > set system login user kaatje class super-user authentication plain-text-password > type a password twice > commit']},
+  {t:'Cable me0 to the server network and reach the switch from your desk',why:'From now on nobody walks to the rack with a cable for every change. If it does not answer from your desk, it is not finished.',done:W=>W.seen['ping:192.168.0.3'],h:['Take a network cable and drag from the MGT port of the new switch to a free server port on sw-west-01. The register lists which ports those are. Then walk back to your desk.','Network cable > drag MGT of the new switch to port 2 of sw-west-01 > Your desk > Terminal > ping 192.168.0.3']},
+  {t:'Log in to the switch from your desk, as yourself',why:'A login you never tried is a login you do not have. Try it now, while the console cable is still within reach.',done:W=>W.seen.swssh,h:['In the Terminal at your desk: ssh, with your own user name in front of the address. Root will not get in this way.','Your desk > Terminal > ssh kaatje@192.168.0.3 > yes > your password']}],
+ take:['A new switch has no address. The first visit is always over the console cable.','Junos: configure, set, show | compare, commit. Nothing is active before the commit.','No root password, no commit.','An address without its prefix becomes a /32 and reaches nobody.','A VLAN is its number, not its name.','ssh is off until you set it. Root stays on the console. Over the network you log in as yourself.']},
 {id:'ready',g:'Build',t:'Is this server ready?',story:'Three Proxmox servers were installed yesterday at site west. In the installer they were named pve1, pve2 and pve3, with the addresses 192.168.0.201, .202 and .203. Before anything is clustered, log in to the first one and check it. You only look in this scenario. Nothing can break.',
  learn:['A server must be healthy <b>before</b> it joins a cluster: right name, right version, reachable.','Commands that only read are always safe to run.'],
  cmds:[['ssh root@&lt;ip&gt;','log in to a server from your laptop'],['hostname','the name of the server you are on'],['pveversion','which Proxmox version runs here'],['pvecm status','the state of the cluster, if there is one'],['ping &lt;ip&gt;','can I reach that machine?']],
@@ -494,7 +515,7 @@ try{doneSet=JSON.parse(localStorage.getItem('pvelab.done')||'{}')||{}}catch(e){}
 function saveDone(){try{localStorage.setItem('pvelab.done',JSON.stringify(doneSet))}catch(e){}}
 const hist=[];let hi=null;
 function line(cl,html){const d=document.createElement('div');d.className=cl;d.innerHTML=html;$('term').appendChild(d);$('term').scrollTop=1e9}
-function ps1(){return W.prompt?'':W.host==='laptop'?'kaatje@laptop:~$':`root@${W.host}:~#`}
+function ps1(){return W.prompt?'':W.jssh?jprompt({m:W.jssh.m,u:W.jssh.u,act:W.jssh.d.j.act}).split('\n').pop().trim():W.host==='laptop'?'kaatje@laptop:~$':`root@${W.host}:~#`}
 function objIndex(){return cur.obj.findIndex(o=>!o.done(W))}
 function hooks(c,res,raw){
  if(/^hostname$/.test(raw.trim())&&W.host!=='laptop')W.seen.host=1;
@@ -507,7 +528,18 @@ function run(raw){
  const before=objIndex();
  const l=raw.replace(/\s+/g,' ').trim();
  let res;
- if(W.prompt){line('in',esc(/pw$/.test(W.prompt.k)?'':l));res=answerPrompt(W,l)}
+ if(W.jssh&&!W.prompt){
+  const s=W.jssh,hid=/^pw/.test(s.m);
+  if(!swAt(W,s.ip)){line('in',`<span class="ok">${esc(ps1())}</span> ${hid?'':esc(raw)}`);line('err','client_loop: send disconnect: Broken pipe');W.jssh=null}
+  else{
+   if(!hid&&l&&hist[hist.length-1]!==l)hist.push(l);
+   const o=jsw(s,()=>jx(W.inst,s.d,raw)).o,end=s.m==='login'||s.m==='off';
+   line('',esc((end?o.split('\n')[0]:o).replace(/\n$/,'')));
+   if(end){W.jssh=null;line('','Connection to '+s.ip+' closed.')}
+  }
+  W.t+=2;after(before);return;
+ }
+ if(W.prompt){line('in',esc(/pw$/.test(W.prompt.k)?'':l));res=answerPrompt(W,l,raw)}
  else{line('in',`<span class="ok">${ps1()}</span> ${esc(l)}`);if(!l){ $('ps1').textContent=ps1();return}if(hist[hist.length-1]!==l)hist.push(l);res=exec(W,l);hooks(l.split(' ')[0],res,l);W.t+=2}
  if(res.clear)$('term').innerHTML='';
  if(res.out)line('',esc(res.out));
@@ -658,7 +690,7 @@ document.addEventListener('pointerup',e=>{
  }
  else{const t=document.elementFromPoint(e.clientX,e.clientY),pt=t&&t.closest('[data-port]');if(pt&&pt.dataset.port!==d.from)doAct('rk','link:'+d.from+':'+pt.dataset.port)}
 });
-function renderAll(){renderPick();renderLeft();renderRight();$('ps1').textContent=ps1();$('where').textContent=W.inst&&W.inst.where==='room'?'in the server room':W.inst&&W.inst.app!=='term'?'at your desk':W.prompt?'waiting for your answer':W.host==='laptop'?'terminal on your laptop':`ssh session on ${W.host}`}
+function renderAll(){renderPick();renderLeft();renderRight();$('ps1').textContent=ps1();$('where').textContent=W.inst&&W.inst.where==='room'?'in the server room':W.inst&&W.inst.app!=='term'?'at your desk':W.prompt?'waiting for your answer':W.jssh?'ssh session on the switch':W.host==='laptop'?'terminal on your laptop':`ssh session on ${W.host}`}
 function load(id,keep){cur=SC.find(s=>s.id===id)||SC[0];W=cur.setup();hints=0;hist.length=0;hi=null;$('term').innerHTML='';line('sys',cur.id==='install'?'Terminal on your laptop. The new server is not reachable until it is installed.':cur.id==='switch'?'Terminal on your laptop. The new switch has no address yet.':`Scenario: ${esc(cur.t)}. You are at your own laptop. Servers are reached with ssh root@<ip>. Passwords: any root password is accepted on servers that were installed for you.`);renderWiz();renderAll();if(!keep)$('cmd').focus()}
 const DISKS=[['sda','/dev/sda (447.13 GiB, SSD)'],['sdb','/dev/sdb (447.13 GiB, SSD)'],['sdc','/dev/sdc (3.49 TiB, SSD)'],['sdd','/dev/sdd (3.49 TiB, SSD)']];
 const FS=['ext4','xfs','zfs (RAID0)','zfs (RAID1)','zfs (RAID10)'];
@@ -700,27 +732,33 @@ const jdirty=j=>JSON.stringify(Object.keys(j.cand).sort().map(k=>k+j.cand[k].l))
 const jhost=c=>c['system host-name']?c['system host-name'].v:'';
 const jaddrs=(c,f)=>Object.keys(c).filter(k=>k.indexOf('interfaces '+f+' unit 0 family inet address ')===0).map(k=>c[k].v);
 const jvlans=c=>Object.keys(c).filter(k=>/^vlans \S+ vlan-id$/.test(k)).map(k=>[k.split(' ')[1],c[k].v]);
+const jsshon=c=>Object.keys(c).some(k=>k.indexOf('system services ssh')===0);
+const jusers=c=>[...new Set(Object.keys(c).filter(k=>k.indexOf('system login user ')===0).map(k=>k.split(' ')[3]))];
+const jucls=(c,u)=>(c['system login user '+u+' class']||{}).v;
+const jupw=(c,u)=>(c['system login user '+u+' authentication']||{}).v;
+const JCLS=['operator','read-only','super-user','unauthorized'];
+function jsw(s,fn){const j=s.d.j,K=['m','out','u','cli','tmp','pk','lu','keep'],sv={};K.forEach(k=>{sv[k]=j[k];j[k]=s[k]});j.out='';const r=fn(),o=j.out;K.forEach(k=>{s[k]=j[k];j[k]=sv[k]});s.out='';return{o,r}}
 const jconOf=I=>{const R=I.rack,l=R.xl.find(z=>z.a==='lap'||z.b==='lap');return l?R.devs.find(z=>z.id===(l.a==='lap'?l.b:l.a).split('.')[0]):null};
 const jpow=(I,d)=>I.rack.xl.some(z=>z.a===d.id+'.ac'||z.b===d.id+'.ac');
 const jme0=(I,d)=>{const l=I.rack.xl.find(z=>z.a===d.id+'.me0'||z.b===d.id+'.me0');return !!l&&SRVPORTS.includes(l.a===d.id+'.me0'?l.b:l.a)};
 const swAt=(W,ip)=>!!(W.inst&&W.inst.rack.devs.some(d=>d.j&&jpow(W.inst,d)&&jme0(W.inst,d)&&jaddrs(d.j.act,'me0').includes(ip+'/24')));
-function jsync(I,d){const j=d.j||(d.j=jnew());if(!jpow(I,d)){j.m='off';j.out='';j.cand=jclone(j.act);j.cli=false}else if(j.m==='off'){j.m='login';j.out=(jhost(j.act)||'Amnesiac')+' (ttyu0)\n\n'}return j}
-function jprompt(j){const h=jhost(j.act),u='root'+(h?'@'+h:'');return j.m==='login'?'login: ':j.m==='pass'||j.m==='passx'?'Password:':j.m==='shell'?'root@'+h+':RE:0% ':j.m==='op'?u+'> ':j.m==='cfg'?'[edit]\n'+u+'# ':j.m==='pw1'?'New password:':j.m==='pw2'?'Retype new password:':j.m==='quit'?'Exit with uncommitted changes? [yes,no] (yes) ':''}
+function jsync(I,d){const j=d.j||(d.j=jnew());if(!jpow(I,d)){j.m='off';j.out='';j.cand=jclone(j.act);j.cli=false;j.u=''}else if(j.m==='off'){j.m='login';j.out=(jhost(j.act)||'Amnesiac')+' (ttyu0)\n\n'}return j}
+function jprompt(j){const h=jhost(j.act),u=(j.u||'root')+(h?'@'+h:'');return j.m==='login'?'login: ':j.m==='pass'||j.m==='passx'?'Password:':j.m==='shell'?'root@'+h+':RE:0% ':j.m==='op'?u+'> ':j.m==='cfg'?'[edit]\n'+u+'# ':j.m==='pw1'?'New password:':j.m==='pw2'?'Retype new password:':j.m==='quit'?'Exit with uncommitted changes? [yes,no] (yes) ':''}
 function jrender(c){
  const T={k:{},l:[]};
- Object.keys(c).sort().forEach(k=>{let n=T;c[k].c.forEach(s=>{n=n.k[s]||(n.k[s]={k:{},l:[]})});n.l.push(c[k].l)});
+ Object.keys(c).sort().forEach(k=>{let n=T;c[k].c.forEach(s=>{n=n.k[s]||(n.k[s]={k:{},l:[]})});if(c[k].l)n.l.push(c[k].l)});
  const w=(n,i)=>n.l.map(x=>i+x+'\n').join('')+Object.keys(n.k).map(s=>i+s+' {\n'+w(n.k[s],i+'    ')+i+'}\n').join('');
  return w(T,'');
 }
 function jcompare(j){
- const g={},add=(c,s)=>{const h='[edit'+(c.length?' '+c.join(' '):'')+']';(g[h]||(g[h]=[])).push(s)};
+ const g={},add=(c,s)=>{if(s.length<5)return;const h='[edit'+(c.length?' '+c.join(' '):'')+']';(g[h]||(g[h]=[])).push(s)};
  Object.keys(j.act).forEach(k=>{if(!j.cand[k]||j.cand[k].l!==j.act[k].l)add(j.act[k].c,'-   '+j.act[k].l)});
  Object.keys(j.cand).forEach(k=>{if(!j.act[k]||j.cand[k].l!==j.act[k].l)add(j.cand[k].c,'+   '+j.cand[k].l)});
  return Object.keys(g).map(h=>h+'\n'+g[h].join('\n')).join('\n');
 }
 const JOP={configure:1,edit:1,exit:1,quit:1,show:{version:1,vlans:1,interfaces:{terse:1},configuration:1}};
 const JCF={set:1,delete:1,show:1,commit:{check:1,'and-quit':1},rollback:1,run:1,exit:1,quit:1,top:1,up:1};
-const JSET={system:{'host-name':1,'root-authentication':{'plain-text-password':1},services:{ssh:1},'time-zone':1},interfaces:1,vlans:1};
+const JSET={system:{'host-name':1,'root-authentication':{'plain-text-password':1},services:{ssh:1},'time-zone':1,login:1},interfaces:1,vlans:1};
 function jexp(t,tree){
  let n=tree;const o=[];
  for(let i=0;i<t.length;i++){
@@ -731,7 +769,7 @@ function jexp(t,tree){
  }
  return{t:o,more:n&&n!==1?Object.keys(n):null};
 }
-const JSETH=[['interfaces','Interface configuration',[['<interface-name>','Interface name',[['unit','Logical interface',[['<interface-unit-number>','Logical unit number',[['family','Protocol family',[['inet','IPv4 parameters',[['address','Interface address/destination prefix',[['<address>','Interface address/destination prefix',null]]]]]]]]]]]]]]],['system','System parameters',[['host-name','Hostname for this router',[['<host-name>','Hostname for this router',null]]],['root-authentication','Authentication information for the root login',[['plain-text-password','Prompt for plain text password (autoencrypted)',null]]],['services','System services',[['ssh','Allow ssh access',null]]],['time-zone','Time zone name or POSIX-compliant time zone string',[['<time-zone>','Time zone name or POSIX-compliant time zone string',null]]]]],['vlans','VLAN configuration',[['<vlan-name>','VLAN name',[['vlan-id','802.1q tag',[['<vlan-id>','802.1q tag (1..4094)',null]]]]]]]];
+const JSETH=[['interfaces','Interface configuration',[['<interface-name>','Interface name',[['unit','Logical interface',[['<interface-unit-number>','Logical unit number',[['family','Protocol family',[['inet','IPv4 parameters',[['address','Interface address/destination prefix',[['<address>','Interface address/destination prefix',null]]]]]]]]]]]]]]],['system','System parameters',[['host-name','Hostname for this router',[['<host-name>','Hostname for this router',null]]],['login','Names, login classes, and passwords for users',[['user','Username',[['<user-name>','User name (login)',[['authentication','Authentication method',[['plain-text-password','Prompt for plain text password (autoencrypted)',null]]],['class','Login class',[['<class>','Login class',null],['operator','permissions [ clear network reset trace view ]',null],['read-only','permissions [ view ]',null],['super-user','permissions [ all ]',null],['unauthorized','permissions [ none ]',null]]]]]]]]],['root-authentication','Authentication information for the root login',[['plain-text-password','Prompt for plain text password (autoencrypted)',null]]],['services','System services',[['ssh','Allow ssh access',[['root-login','Configure root access via ssh',[['allow','Allow root access via ssh',null],['deny','Do not allow root access via ssh',null],['deny-password','Allow for non-password-based authentication methods only',null]]]],1]]],['time-zone','Time zone name or POSIX-compliant time zone string',[['<time-zone>','Time zone name or POSIX-compliant time zone string',null]]]]],['vlans','VLAN configuration',[['<vlan-name>','VLAN name',[['vlan-id','802.1q tag',[['<vlan-id>','802.1q tag (1..4094)',null]]]]]]]];
 const JOPH=[['configure','Manipulate software configuration information',null],['quit','Exit the management session',null],['show','Show system information',[['configuration','Show current configuration',null],['interfaces','Show interface information',[['terse','Display terse output',null]]],['version','Show software process revision levels',null],['vlans','Show VLAN information',null]]]];
 const JCFH=[['commit','Commit current set of changes',[['and-quit','Quit configuration mode if commit succeeds',null],['check','Check correctness of syntax; do not apply changes',null]],1],['delete','Delete a data element',JSETH],['exit','Exit from this level',null],['quit','Quit from this level',null],['rollback','Roll back to previous committed configuration',null],['run','Run an operational-mode command',JOPH],['set','Set a parameter',JSETH],['show','Show a parameter',[['|','Pipe through a command',[['compare','Compare configuration changes with prior version',null]]]],1],['top','Exit to top level of configuration',null],['up','Exit one level of configuration',null]];
 function jopts(j,line){
@@ -768,17 +806,18 @@ function jx(I,d,raw){
   const r=jexp(t,JOP);if(r.bad!=null){if(r.amb.length)amb(t,r);else bad(t,r.bad,r.bad?'syntax error.':'unknown command.');return}
   if(r.more){bad(t,t.length,'syntax error, expecting <command>.');return}
   const c=r.t.join(' '),h=jhost(j.act);
+  if((c==='configure'||c==='edit')&&j.u&&jucls(j.act,j.u)!=='super-user'){bad(t,0,'unknown command.');return}
   if(c==='configure'||c==='edit'){j.m='cfg';say('Entering configuration mode');if(jdirty(j))say('The configuration has been changed but not committed');say('')}
-  else if(c==='exit'||c==='quit'){j.m='shell';say('')}
+  else if(c==='exit'||c==='quit'){if(j.u){j.u='';j.m='login';say('\n'+(h||'Amnesiac')+' (ttyu0)\n')}else{j.m='shell';say('')}}
   else if(c==='show version')say((h?'Hostname: '+h+'\n':'')+'Model: '+d.model.toLowerCase()+'\nJunos: 21.4R3-S5.4\n');
   else if(c==='show vlans')say('\nRouting instance        VLAN name             Tag          Interfaces\ndefault-switch          default               1\n'+jvlans(j.act).map(v=>'default-switch          '+v[0].padEnd(22)+v[1]+'\n').join(''));
   else if(c==='show interfaces terse'){const up=jme0(I,d)?'up  ':'down';say('Interface               Admin Link Proto    Local\n'+Array.from({length:Math.min(d.ports,12)},(x,i)=>'ge-0/0/'+i).map(n=>n.padEnd(24)+'up    '+(I.rack.xl.some(z=>z.a===d.id+'.p'+n.slice(7)||z.b===d.id+'.p'+n.slice(7))?'up':'down')+'\n').join('')+'me0                     up    '+up+'\n'+jaddrs(j.act,'me0').map(a=>'me0.0                   up    '+up+' inet     '+a+'\n').join(''))}
   else if(c==='show configuration')say(jrender(j.act)||'');
  };
- if(j.m==='login'){if(!l)return;if(l==='root'&&!j.act['system root-authentication']){j.m='shell';say('\n'+JV)}else j.m=l==='root'?'pass':'passx';return}
- if(j.m==='pass'||j.m==='passx'){if(j.m==='pass'&&raw===j.act['system root-authentication'].v){j.m='shell';say('\n'+JV)}else{j.m='login';say('Login incorrect\n')}return}
+ if(j.m==='login'){if(!l)return;j.lu=l;if(l==='root'&&!j.act['system root-authentication']){j.m='shell';say('\n'+JV)}else j.m=l==='root'||jupw(j.act,l)?'pass':'passx';return}
+ if(j.m==='pass'||j.m==='passx'){if(j.m==='pass'&&j.lu==='root'&&raw===j.act['system root-authentication'].v){j.m='shell';say('\n'+JV)}else if(j.m==='pass'&&j.lu!=='root'&&raw===jupw(j.act,j.lu)){j.m='op';j.u=j.lu;j.cli=true;say('\n'+JV)}else{j.m='login';say('Login incorrect\n')}return}
  if(j.m==='pw1'){j.m='cfg';if(raw.length<6)say('error: minimum password length is 6\n');else if(!(/[^a-zA-Z]/.test(raw)||(/[a-z]/.test(raw)&&/[A-Z]/.test(raw))))say('error: require change of case, digits or punctuation\n');else{j.tmp=raw;j.m='pw2'}return}
- if(j.m==='pw2'){j.m='cfg';if(raw!==j.tmp)say('error: Passwords do not match\n');else{j.cand['system root-authentication']={c:['system','root-authentication'],l:'encrypted-password "$6$Xk2.pQ7h$u1Zr0nEo9cV4"; ## SECRET-DATA',v:raw};say('')}j.tmp='';return}
+ if(j.m==='pw2'){j.m='cfg';if(raw!==j.tmp)say('error: Passwords do not match\n');else{const k=j.pk||'system root-authentication';j.cand[k]={c:k.replace(/ user (\S+)/,' user_$1').split(' ').map(x=>x.replace('user_','user ')),l:'encrypted-password "$6$'+(j.pk?'Hn4.wB1s$q8Lm2TyVd0aK7':'Xk2.pQ7h$u1Zr0nEo9cV4')+'"; ## SECRET-DATA',v:raw};say('')}j.tmp='';j.pk=null;return}
  if(j.m==='quit'){if(!l||/^y(es)?$/i.test(l)){j.m='op';say('Exiting configuration mode\n')}else j.m='cfg';return}
  if(!l)return;
  const t=l.split(' ');
@@ -794,6 +833,7 @@ function jx(I,d,raw){
  if(v==='commit'){
   const x=t[1]?jexp(t.slice(1),JCF.commit):{t:[]};if(x.bad!=null){syn(1+x.bad);return}
   if(!j.cand['system root-authentication']){say("[edit]\n  'system'\n    Missing mandatory statement: 'root-authentication'\nerror: commit failed: (missing mandatory statements)\n");return}
+  const nc=jusers(j.cand).find(u=>!jucls(j.cand,u));if(nc){say("[edit system login]\n  'user "+nc+"'\n    Missing mandatory statement: 'class'\nerror: commit failed: (missing mandatory statements)\n");return}
   say('configuration check succeeds');if(x.t[0]==='check'){say('');return}
   j.act=jclone(j.cand);say('commit complete\n');if(x.t[0]==='and-quit'){j.m='op';say('Exiting configuration mode\n')}return}
  if(t.length<2){bad(t,1,'syntax error, expecting <statement>.');return}
@@ -807,8 +847,23 @@ function jx(I,d,raw){
  if(e.more){bad(t,t.length,'syntax error, expecting <statement>.');return}
  if(p[0]==='system'){
   if(p[1]==='host-name'){if(p.length!==3){syn(Math.min(p.length,3)+ (p.length>3?1:0));return}if(!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(p[2])){say("error: hostname must contain only letters, digits, '.', '-' and '_'");return}j.cand['system host-name']={c:['system'],l:'host-name '+p[2]+';',v:p[2]}}
-  else if(p[1]==='root-authentication'){j.m='pw1';return}
-  else if(p[1]==='services')j.cand['system services ssh']={c:['system','services'],l:'ssh;',v:1};
+  else if(p[1]==='root-authentication'){j.pk=null;j.m='pw1';return}
+  else if(p[1]==='services'){
+   if(p.length===3){if(!jsshon(j.cand))j.cand['system services ssh']={c:['system','services'],l:'ssh;',v:1}}
+   else{const o=['allow','deny','deny-password'],h=p[4]?o.filter(x=>x===p[4]).concat(o.filter(x=>x.indexOf(p[4])===0)):[];if(!kw(3,'root-login')){syn(4);return}if(p.length<5){bad(t,t.length,'syntax error, expecting <data>.');return}if(!h.length||p.length>5){syn(h.length?6:5);return}delete j.cand['system services ssh'];j.cand['system services ssh root-login']={c:['system','services','ssh'],l:'root-login '+h[0]+';',v:h[0]}}}
+  else if(p[1]==='login'){
+   if(!kw(2,'user')){syn(3);return}
+   const u=p[3];if(!u){bad(t,t.length,'syntax error, expecting <user-name>.');return}
+   if(!/^[A-Za-z_][A-Za-z0-9_-]*$/.test(u)||u.length>64){say("error: invalid user name: '"+u+"'");return}
+   const base='system login user '+u,ch=['system','login','user '+u];let cls=null,pw=false;
+   for(let i=4;i<p.length;i++){
+    if(kw(i,'class')){const x=p[++i];if(x==null){bad(t,t.length,'syntax error, expecting <class>.');return}const h=JCLS.filter(z=>z===x).concat(JCLS.filter(z=>z.indexOf(x)===0));if(!h.length){syn(i+1);return}cls=h[0]}
+    else if(kw(i,'authentication')){const x=p[++i];if(x==null){bad(t,t.length,'syntax error, expecting <statement>.');return}if('plain-text-password'.indexOf(x)!==0){syn(i+1);return}pw=true}
+    else{syn(i+1);return}
+   }
+   if(cls)j.cand[base+' class']={c:ch,l:'class '+cls+';',v:cls};
+   if(!cls&&!pw&&!jusers(j.cand).includes(u))j.cand[base]={c:ch,l:'',v:u};
+   if(pw){j.pk=base+' authentication';j.m='pw1';return}}
   else if(p[1]==='time-zone'){if(p.length!==3){syn(p.length);return}j.cand['system time-zone']={c:['system'],l:'time-zone '+p[2]+';',v:p[2]}}
   say('');return}
  if(p[0]==='interfaces'){
@@ -1024,6 +1079,12 @@ function complete(v){
 }
 $('cmd').addEventListener('keydown',e=>{
  const el=e.target;
+ if(W.jssh&&!W.prompt&&(W.jssh.m==='op'||W.jssh.m==='cfg')&&(e.key==='?'||e.key==='Tab'||e.key===' ')){
+  const s=W.jssh,v=el.value;
+  if(e.key==='?'){e.preventDefault();line('',esc(jsw(s,()=>jhelp(W.inst,s.d,v)).o.replace(/\n$/,'')))}
+  else{const n=el.selectionStart===v.length?jsw(s,()=>jtab(s.d.j,v)).r:null;if(n){e.preventDefault();el.value=n}else if(e.key==='Tab')e.preventDefault()}
+  return;
+ }
  if(e.key==='Enter'){const v=el.value;el.value='';hi=null;run(v)}
  else if(e.key==='ArrowUp'){e.preventDefault();if(!hist.length)return;hi=hi==null?hist.length-1:Math.max(0,hi-1);el.value=hist[hi]}
  else if(e.key==='ArrowDown'){e.preventDefault();if(hi==null)return;hi++;if(hi>=hist.length){hi=null;el.value=''}else el.value=hist[hi]}
