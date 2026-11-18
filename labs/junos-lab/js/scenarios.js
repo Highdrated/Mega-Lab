@@ -1440,8 +1440,14 @@ const SCEN_KINDS = {
 function scenKind(s){ return s.group ? "site" : (s.setup ? "starter" : "empty"); }
 const scenSelect = document.getElementById("scenario-select");
 const scenGroupSelect = document.getElementById("scenario-group");
-const SCEN_GROUPS = ["Basics: empty canvas", "Basics: starter topology", SITE_L1, SITE_L2, SITE_L3, SITE_L4];
-function scenGroup(s){ return s.group || (s.setup ? SCEN_GROUPS[1] : SCEN_GROUPS[0]); }
+const SCEN_GROUPS = ["Basics: empty canvas", "Starter topology: switching", "Starter topology: routing and WAN",
+  "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4];
+const SCEN_TOPIC = {
+  "trunk-span": 1, "lacp-bundle": 1, "rstp-loop": 1, "storm-control": 1, "rogue-switch": 1,
+  "interconnect-recovery": 2, "asymmetric-routing": 2, "nat-edge": 2, "ospf-backbone": 2, "speak-bgp": 2,
+  "dhcp-serve": 3, "wireless-office": 3, "name-and-serve": 3,
+};
+function scenGroup(s){ return s.group || (s.setup ? SCEN_GROUPS[SCEN_TOPIC[s.id] || 4] : SCEN_GROUPS[0]); }
 let scenGroupShown = SCEN_GROUPS[0];
 function renderScenSelect(){
   const idx = SCENARIOS.indexOf(currentScenario);
@@ -1470,6 +1476,45 @@ function renderScenSelect(){
   const live = currentScenario.isTicket || idx < 0;
   scenSelect.selectedIndex = live ? -1 : pos;
   if(!live) scenSelect.value = String(idx);
+  renderScenBoard();
+}
+let scenBoardOpen = true;
+try{ scenBoardOpen = localStorage.getItem("junoslab-scen-board") !== "closed"; }catch(e){}
+function setScenBoard(open){
+  scenBoardOpen = !!open;
+  try{ localStorage.setItem("junoslab-scen-board", scenBoardOpen ? "open" : "closed"); }catch(e){}
+  renderScenBoard();
+}
+function renderScenBoard(){
+  const board = document.getElementById("scen-board");
+  const btn = document.getElementById("scen-browse");
+  if(!board || !btn) return;
+  const idx = SCENARIOS.indexOf(currentScenario);
+  const live = currentScenario.isTicket || idx < 0;
+  btn.textContent = (live ? "Live ticket" : currentScenario.title) + (scenBoardOpen ? "  (hide list)" : "  (show all " + SCENARIOS.length + ")");
+  board.style.display = scenBoardOpen ? "block" : "none";
+  board.innerHTML = "";
+  if(!scenBoardOpen) return;
+  SCEN_GROUPS.forEach(g => {
+    const sec = document.createElement("div");
+    sec.className = "sb-group";
+    const inG = SCENARIOS.filter(s => scenGroup(s) === g);
+    const head = document.createElement("div");
+    head.className = "sb-head";
+    head.textContent = g + "  " + inG.filter(s => PROGRESS[s.id] && PROGRESS[s.id].done).length + "/" + inG.length;
+    sec.appendChild(head);
+    inG.forEach(s => {
+      const i = SCENARIOS.indexOf(s);
+      const done = !!(PROGRESS[s.id] && PROGRESS[s.id].done);
+      const it = document.createElement("button");
+      it.className = "sb-item" + (done ? " done" : "") + (!live && i === idx ? " cur" : "");
+      it.textContent = s.title;
+      it.title = SCEN_KINDS[scenKind(s)].text;
+      it.onclick = () => { scenBoardOpen = false; try{ localStorage.setItem("junoslab-scen-board", "closed"); }catch(e){} pickScenario(i); };
+      sec.appendChild(it);
+    });
+    board.appendChild(sec);
+  });
 }
 function renderScenarioMeta(){
   document.getElementById("scen-title").textContent = currentScenario.title;
@@ -1618,6 +1663,7 @@ function gotoScenario(i){
   const n = SCENARIOS.length;
   pickScenario(((i % n) + n) % n);
 }
+document.getElementById("scen-browse").onclick = () => setScenBoard(!scenBoardOpen);
 document.getElementById("scen-prev").onclick = () => {
   const i = SCENARIOS.indexOf(currentScenario);
   gotoScenario((i < 0 ? 0 : i) - 1);

@@ -4077,14 +4077,24 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     scenGroupSelect.value = g; scenGroupSelect.onchange();
     const n = scenSelect.querySelectorAll("option").length;
     seen += n;
-    ok(n > 0 && n <= 18 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
+    ok(n > 0 && n <= 8 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
   });
   ok(seen === SCENARIOS.length, "T76 every scenario is reachable through a picker group");
-  ok(scenGroupSelect.querySelectorAll("option").length === 6, "T76 six picker groups");
+  ok(scenGroupSelect.querySelectorAll("option").length === 9, "T76 nine picker groups");
   gotoScenario(5);
-  ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[1], "T76 paging follows the scenario into its group");
+  ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[2], "T76 paging follows the scenario into its group");
   gotoScenario(4); 
   ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
+  setScenBoard(true);
+  const board = document.getElementById("scen-board");
+  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 9,
+    "T76 the scenario board lists every scenario under nine headings");
+  const want = SCENARIOS.findIndex(x => x.id === "site-guest-vlan");
+  board.querySelectorAll(".sb-item")[SCEN_GROUPS.reduce((n, g) => g === SITE_L2 || n < 0 ? (n < 0 ? n : -n - 1) : n + SCENARIOS.filter(x => scenGroup(x) === g).length, 0) * -1 - 1].onclick();
+  ok(currentScenario === SCENARIOS[want] && !scenBoardOpen, "T76 clicking a board entry opens that scenario and folds the list");
+  ok(/show all 38/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
+  setScenBoard(true);
+  ok(board.querySelectorAll(".cur").length === 1, "T76 the board marks the current scenario");
   protoJumpToScenario("site-warehouse");
   ok(currentScenario.id === "site-warehouse" && scenGroupShown === SITE_L4, "T76 jumping from a guide lands in the right group");
   wipeLab(); scen("site-rack-extension").setup();
