@@ -17,6 +17,8 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 
 - 18 Nov 16:35: Add menu with Juniper switch and router models (extra links live in rack.xl, added devices in rack.devs); the server is drawn like the Junos lab server.
 
+- 18 Nov 20:25: new scenario "Set up a new switch" (Build, second). The serial console on a new Juniper device is now a real typed Junos session (login, shell, cli, configure, set, delete, show, show | compare, commit, rollback, run, exit) instead of a fixed text. Day zero is checked by objectives: root password, host-name, me0 address, servers VLAN, reachable from the desk.
+
 ## Her latest feedback (16:00 to 16:15)
 
 - "make the servers look like they do on junos lab and add the variety as well keep it all in juniper".
@@ -26,7 +28,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 - "lets focus on juniper": network gear should be Juniper, drawn and behaving like in her Junos lab (labs/junos-lab: Add menu with real EX and SRX models, port grid, MGT, CON, PWR, link colours, rack that gear snaps into). Juniper does not make servers; servers stay generic x86.
 
 ## Backlog
-0. The Add menu now places Juniper switches (EX2300-C-12T, EX2300-24P, EX3400-24T, EX4300-48T) and routers or gateways (SRX300, MX104, MX204) on the floor: movable, rack-mountable in a free space without rails, with ge ports, MGT, CON and an AC inlet, link colours, and an Amnesiac serial console. They are physical objects only. Give them a purpose an objective or ticket can check: day-zero setup of a new switch over CON (root password, hostname, management address, a servers VLAN), a second switch for a redundant uplink, an SRX as the site gateway. Use real Junos commands and keep the Junos lab's rule: if real Junos rejects it, the lab rejects it.
+0. Juniper gear, next steps (day-zero setup of a new switch over CON is done, see Cycles). Still open: put ge ports in the servers VLAN and make the link to sw-west-01 a real uplink, so a server cabled to sw-west-02 works; `set system services ssh` and an ssh login to the switch from the desk; `commit confirmed` with its automatic rollback; an SRX as the site gateway. sw-west-01's own console is still two buttons: give it the same typed CLI. Keep the Junos lab's rule: if real Junos rejects it, the lab rejects it.
 0b. Server variety: she said "not all servers look like this". Juniper makes no servers, so servers stay generic x86, drawn like the Junos lab server (SERVER label, glyph, power button top right). Add a second and third form (2U with more disk bays, a small tower) only where it teaches something, for example which disks go to the system mirror and which to storage.
 1. Other eight scenarios still open straight in a terminal with the cluster diagram. Give them the same physical and desk context where it teaches something (add a node, a node dies, backups to the second site).
 2. Proxmox web interface on port 8006 (simulated): create cluster, join, add storage and backup jobs by clicking, next to the CLI route.
@@ -39,4 +41,11 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 9. Mistake log: what went wrong this run and the real-life consequence.
 
 ## Cycles
+
+### 18 Nov 20:25 · Set up a new switch (backlog 0, first slice)
+- Changed: new scenario `switch` with nine objectives. New Junos console engine (`jx`, state in `dev.j` with candidate and active configuration). The switch brings its own power cord. IP register lists sw-west-01 (192.168.0.2) and the address kept for sw-west-02 (192.168.0.3). `ping` answers for a switch only when me0 has the address with /24, is committed, powered and cabled to a server port. Desk and hands card show only what this job needs. Also fixed: register addresses no longer wrap in the middle, and one install hint still said "Bring in" where the menu is called Add.
+- She will notice: a second Build scenario. She carries the switch in, screws it in, powers it, plugs the console cable, and types everything herself in a black console: `root`, `cli`, `configure`, `set ...`, `commit`. The prompt changes to `root@sw-west-02` after the commit.
+- Real-life traps in it: commit without a root password fails with the real message; too short or all-lowercase password is refused; an address without /24 is accepted as /32 and the switch answers nobody; a second `set ... address` adds instead of replaces; pulling power loses everything that was not committed and the switch asks for the password afterwards; VLAN number must be looked up on sw-west-01 by moving the console cable; me0 in a guest port gives no ping.
+- Verified: gate ALL OK (11 runs, the new one with the traps above). Real mouse drags for mounting, power cord and console cable, real keyboard typing in the console, screenshots at 1500x900 in both themes.
+- Still rough: only the statements above plus `system services ssh`, `system time-zone` and addresses on other interfaces are known; any other valid Junos statement gets "syntax error". No `?` help and no Tab completion in the console (prefixes like `conf` and `sh ver` do work). Factory-default lines are left out of `show configuration`. The servers VLAN has no member ports yet, so the VLAN objective checks the number only. The boxed server sits unused in this scenario. Error wording is from memory of Junos 21.4, not checked on a device.
 
