@@ -1437,11 +1437,11 @@ const SCEN_KINDS = {
   starter: { tag: "starter topology", text: "Starts from a small pre-built topology: load the setup, then finish it" },
   site: { tag: "existing site", text: "Starts from a full running site with buildings and racks: load the setup, then work the ticket" },
 };
-function scenKind(s){ return s.group ? "site" : (s.setup ? "starter" : "empty"); }
+function scenKind(s){ return s.kind || (s.group ? "site" : (s.setup ? "starter" : "empty")); }
 const scenSelect = document.getElementById("scenario-select");
 const scenGroupSelect = document.getElementById("scenario-group");
 const SCEN_GROUPS = ["Basics: empty canvas", "Starter topology: switching", "Starter topology: routing and WAN",
-  "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4];
+  "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4, DESK_GROUP];
 const SCEN_TOPIC = {
   "trunk-span": 1, "lacp-bundle": 1, "rstp-loop": 1, "storm-control": 1, "rogue-switch": 1,
   "interconnect-recovery": 2, "asymmetric-routing": 2, "nat-edge": 2, "ospf-backbone": 2, "speak-bgp": 2,
@@ -1489,6 +1489,7 @@ const SCEN_BANDS = [
   { key: "empty", title: "Empty canvas", note: "You place and cable everything yourself", groups: [0] },
   { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
   { key: "site", title: "Existing site", note: "A full datacenter and office is running, you work a ticket", groups: [5, 6, 7, 8] },
+  { key: "desks", title: "Mixed desks", note: "Windows, Mac and Linux side by side: same job, three sets of commands", groups: [9] },
 ];
 function scenGroupShort(g){
   const t = g.slice(g.indexOf(":") + 1).trim();

@@ -4066,7 +4066,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   const groups = [];
   SCENARIOS.forEach(s => { const g = s.group || "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
-  ok(groups.length === 5, "T76 scenario list keeps its site groups in order: " + groups.length);
+  ok(groups.length === 6, "T76 scenario list keeps its groups in order: " + groups.length);
   ok(scenKind(scen("basic-connect")) === "empty" && scenKind(scen("lacp-bundle")) === "starter" && scenKind(scen("site-new-desk")) === "site",
     "T76 each scenario knows how it starts");
   currentScenario = scen("site-new-desk"); renderScenarioMeta();
@@ -4081,15 +4081,15 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     ok(n > 0 && n <= 8 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
   });
   ok(seen === SCENARIOS.length, "T76 every scenario is reachable through a picker group");
-  ok(scenGroupSelect.querySelectorAll("option").length === 9, "T76 nine picker groups");
+  ok(scenGroupSelect.querySelectorAll("option").length === 10, "T76 ten picker groups");
   gotoScenario(5);
   ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[2], "T76 paging follows the scenario into its group");
   gotoScenario(4); 
   ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
   setScenBoard(true);
   const board = document.getElementById("scen-board");
-  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 8 && board.querySelectorAll(".sb-band").length === 3,
-    "T76 the scenario board lists every scenario in three bands with eight column headings");
+  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 8 && board.querySelectorAll(".sb-band").length === 4,
+    "T76 the scenario board lists every scenario in four bands with eight column headings");
   ok(board.querySelectorAll(".sb-cols").every(c => c.querySelectorAll(".sb-group").length === 1 || c.querySelectorAll(".sb-group").length === 4),
     "T76 every band is one flat list or exactly four aligned columns");
   ok(board.querySelectorAll(".sb-name").every(n => !/^\d+\./.test(n.textContent)) && board.querySelectorAll(".sb-num")[0].textContent === "1",
@@ -4097,7 +4097,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   const want = SCENARIOS.findIndex(x => x.id === "site-guest-vlan");
   board.querySelectorAll(".sb-item").find(b2 => b2.title === SCENARIOS[want].title).onclick();
   ok(currentScenario === SCENARIOS[want] && !scenBoardOpen, "T76 clicking a board entry opens that scenario and folds the list");
-  ok(/show all 38/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
+  ok(/show all 44/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
   setScenBoard(true);
   ok(board.querySelectorAll(".cur").length === 1, "T76 the board marks the current scenario");
   protoJumpToScenario("site-warehouse");
@@ -4168,6 +4168,65 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(hostOs(devices[w]) === "windows" && hostOs(devices[m]) === "macos", "T77 the OS survives save and load");
   ok(maskToBits("255.255.255.0") === 24 && maskToBits("255.255.255.252") === 30 && maskToBits("255.0.255.0") === null && bitsToMask(30) === "255.255.255.252",
     "T77 mask conversion");
+  wipeLab();
+}
+
+/* ---------- T78: mixed-desk scenarios (Windows, Mac, Linux together) ---------- */
+{
+  const go = id => { wipeLab(); scen(id).setup(); ok(!checksPass(scen(id)), "T78 " + id + " starts unfinished"); };
+  const fin = id => ok(checksPass(scen(id)), "T78 " + id + " completable: " + firstFailing(scen(id)));
+  const on = (n, c) => cli(byName(n).id, c);
+  const st = (ip) => ({
+    w: 'netsh interface ip set address "Ethernet" static 10.0.10.' + ip + ' 255.255.255.0 10.0.10.1',
+    m: 'networksetup -setmanual "Ethernet" 10.0.10.' + ip + ' 255.255.255.0 10.0.10.1' });
+
+  go("desk-dhcp");
+  ok(hostOs(byName("win-desk")) === "windows" && hostOs(byName("mac-desk")) === "macos" && hostOs(byName("linux-desk")) === "linux", "T78 one desk per operating system");
+  on("win-desk", "ipconfig /renew"); on("mac-desk", "sudo ipconfig set en0 DHCP"); on("linux-desk", "dhclient eth0");
+  fin("desk-dhcp");
+
+  go("desk-static");
+  on("win-desk", st(11).w); on("mac-desk", st(12).m);
+  on("linux-desk", "ip addr add 10.0.10.13/24 dev eth0");
+  ok(!checksPass(scen("desk-static")), "T78 desk-static needs the Linux default route too");
+  on("linux-desk", "ip route add default via 10.0.10.1");
+  fin("desk-static");
+
+  go("desk-back-to-dhcp");
+  ok(/no adapter is in the state permissible/.test(on("win-desk", "ipconfig /renew")) && byName("win-desk").cfg.ip === "192.168.1.21",
+    "T78 ipconfig /renew refuses on a static Windows adapter");
+  ok(/DHCP Enabled[ .]*: No/.test(on("win-desk", "ipconfig /all")), "T78 ipconfig /all shows the static adapter");
+  on("win-desk", 'netsh interface ip set address "Ethernet" dhcp');
+  on("mac-desk", 'networksetup -setdhcp "Ethernet"');
+  ok(/DHCP Configuration/.test(on("mac-desk", 'networksetup -getinfo "Ethernet"')), "T78 Mac reports DHCP configuration");
+  on("linux-desk", "ip addr del"); on("linux-desk", "ip route del"); on("linux-desk", "dhclient eth0");
+  fin("desk-back-to-dhcp");
+
+  go("desk-three-faults");
+  ok(DESKS.every(n => !pingOk(n, "10.0.20.10")), "T78 all three desks start unable to print");
+  ok(pingOk("print-server-1", "10.0.20.1"), "T78 the print server itself is healthy");
+  on("win-desk", st(11).w); on("mac-desk", st(12).m); on("linux-desk", "ip route add default via 10.0.10.1");
+  fin("desk-three-faults");
+
+  go("desk-dns");
+  ok(DESKS.every(n => pingOk(n, "10.0.10.53")), "T78 the DNS server answers ping from every desk");
+  ok(/can't find|no nameserver/.test(on("linux-desk", "nslookup intranet.lab")), "T78 names fail before a resolver is set");
+  on("win-desk", 'netsh interface ip set dns "Ethernet" static 10.0.10.53');
+  on("mac-desk", 'networksetup -setdnsservers "Ethernet" 10.0.10.53');
+  on("linux-desk", "nameserver 10.0.10.53");
+  ok(/10\.0\.10\.53/.test(on("win-desk", "nslookup intranet.lab")) && /10\.0\.10\.53/.test(on("mac-desk", "nslookup intranet.lab")), "T78 nslookup answers on Windows and Mac");
+  fin("desk-dns");
+
+  go("desk-rename");
+  ok(/only SHOWS/.test(on("DESKTOP-7QK2", "hostname ws-fin-01")) && !byName("ws-fin-01"), "T78 hostname cannot rename a Windows PC");
+  on("DESKTOP-7QK2", "Rename-Computer -NewName ws-fin-01"); on("ws-fin-01", "ipconfig /renew");
+  on("Annas-MacBook", "sudo scutil --set HostName mac-design-01"); on("mac-design-01", "sudo ipconfig set en0 DHCP");
+  on("localhost", "hostname lnx-dev-01"); on("lnx-dev-01", "dhclient eth0");
+  fin("desk-rename");
+
+  ok(SCENARIOS.filter(s => s.group === DESK_GROUP).length === 6 && SCENARIOS.filter(s => s.group === DESK_GROUP).every(s => scenKind(s) === "starter"),
+    "T78 six mixed-desk scenarios, each a starter topology");
+  ok(SCENARIOS.length === 44, "T78 forty-four scenarios in total");
   wipeLab();
 }
 

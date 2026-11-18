@@ -183,6 +183,238 @@ function siteDefaultRoute(devName){
   return !!(d && cfgGet(d.config, ["routing-options", "static", "route", "0.0.0.0/0"]));
 }
 
+const DESK_GROUP = "Mixed desks: Windows, Mac and Linux";
+const DESK_INTRO = "One office, three desks: win-desk is a Windows PC, mac-desk is a Mac and linux-desk is a Linux PC, all cabled to office-sw in the staff VLAN (10.0.10.0/24, gateway 10.0.10.1). The job is the same on each desk, the commands are not. Type help on a PC to see what its system knows. ";
+function deskBase(opts){
+  opts = opts || {};
+  const D0 = {};
+  siteZone("Office", 60, 80, 760, 420, "building", 4);
+  makeCrac(90, 420, "AC-Office", 3500);
+  D0.sw = siteRole(makeSwitch(300, 130, 12), "Juniper EX2300 · office");
+  const cmds = [
+    "set system host-name office-sw",
+    "set vlans staff vlan-id 10",
+    "set interfaces irb unit 10 family inet address 10.0.10.1/24",
+    "set vlans staff l3-interface irb.10",
+    "set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces ge-0/0/3 unit 0 family ethernet-switching vlan members staff",
+    "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members staff",
+  ];
+  if(opts.dhcp) cmds.push(
+    "set access address-assignment pool STAFF family inet network 10.0.10.0/24",
+    "set access address-assignment pool STAFF family inet range r1 low 10.0.10.100",
+    "set access address-assignment pool STAFF family inet range r1 high 10.0.10.199",
+    "set access address-assignment pool STAFF family inet dhcp-attributes router 10.0.10.1",
+    "set system services dhcp-local-server group STAFF interface irb.10");
+  if(opts.extra) cmds.push(...opts.extra);
+  cfgDo(D0.sw, cmds);
+  const names = opts.names || ["win-desk", "mac-desk", "linux-desk"];
+  D0.win = siteHost(names[0], 180, 320, "windows");
+  D0.mac = siteHost(names[1], 340, 320, "macos");
+  D0.lin = siteHost(names[2], 500, 320, "linux");
+  cable(D0.win, "eth0", D0.sw, "ge-0/0/1");
+  cable(D0.mac, "eth0", D0.sw, "ge-0/0/2");
+  cable(D0.lin, "eth0", D0.sw, "ge-0/0/3");
+  return D0;
+}
+function deskHost(os){ return Object.values(devices).find(d => d.type === "host" && hostOs(d) === os) || null; }
+function deskStatic(name, ip, gw){
+  const h = byName(name);
+  return !!(h && h.cfg.ip === ip && h.cfg.bits === 24 && h.cfg.gw === gw && !h.cfg.viaDhcp);
+}
+const DESKS = ["win-desk", "mac-desk", "linux-desk"];
+
+const DESK_SCENARIOS = [
+  {
+    id: "desk-dhcp",
+    group: DESK_GROUP, kind: "starter",
+    title: "39. Three Desks, One DHCP Server",
+    desc: DESK_INTRO + "TICKET: DHCP is already running on office-sw. Get an address on all three desks, each with its own system's command, then prove each one can reach the gateway.",
+    setup(){ deskBase({ dhcp: true }); },
+    checks: [
+      { desc: "win-desk (Windows) holds a DHCP lease",
+        why: "Windows asks with ipconfig /renew. Without knowing that one command you are stuck clicking through settings screens on every PC.",
+        test: () => siteLeased("win-desk", "10.0.10.0") },
+      { desc: "mac-desk (Mac) holds a DHCP lease",
+        why: "A Mac calls its wired port en0 and has its own ipconfig. Without the Mac wording the Windows command simply errors.",
+        test: () => siteLeased("mac-desk", "10.0.10.0") },
+      { desc: "linux-desk (Linux) holds a DHCP lease",
+        why: "Linux uses dhclient on eth0. Without it the machine keeps no address, however healthy the server is.",
+        test: () => siteLeased("linux-desk", "10.0.10.0") },
+      { desc: "All three desks ping the gateway 10.0.10.1",
+        why: "The lease is a promise, the ping is the proof. Without testing from each desk you only know the server answered, not that the PC works.",
+        test: () => DESKS.every(n => pingOk(n, "10.0.10.1")) },
+    ],
+    hints: [
+      "Same idea three times: ask the network for an address, then look at what you got. Type help on each PC first and find the line about DHCP.",
+      "Windows: ipconfig /renew, then ipconfig to read the result.",
+      "Mac: sudo ipconfig set en0 DHCP, then ifconfig en0 to read the result.",
+      "Linux: dhclient eth0, then ip addr to read the result. Finish with ping 10.0.10.1 on all three.",
+    ],
+  },
+  {
+    id: "desk-static",
+    group: DESK_GROUP, kind: "starter",
+    title: "40. Three Static Addresses",
+    desc: DESK_INTRO + "TICKET: this office has no DHCP. Set these by hand, all with mask 255.255.255.0 (that is /24) and gateway 10.0.10.1: win-desk 10.0.10.11, mac-desk 10.0.10.12, linux-desk 10.0.10.13.",
+    setup(){ deskBase({}); },
+    checks: [
+      { desc: "win-desk has 10.0.10.11/24 with gateway 10.0.10.1",
+        why: "Windows wants the mask written out as 255.255.255.0 and takes the gateway in the same line. Without the gateway the PC is stuck inside its own subnet.",
+        test: () => deskStatic("win-desk", "10.0.10.11", "10.0.10.1") },
+      { desc: "mac-desk has 10.0.10.12/24 with gateway 10.0.10.1",
+        why: "macOS sets address, mask and router in one networksetup line. Without the service name Ethernet in quotes, the command has nothing to act on.",
+        test: () => deskStatic("mac-desk", "10.0.10.12", "10.0.10.1") },
+      { desc: "linux-desk has 10.0.10.13/24 with gateway 10.0.10.1",
+        why: "Linux splits the job in two: the address, then the default route. Without the second command the address works locally and nowhere else.",
+        test: () => deskStatic("linux-desk", "10.0.10.13", "10.0.10.1") },
+      { desc: "Every desk pings the other two",
+        why: "Three hand-typed addresses are three chances for a typo. Without a ping between them a wrong digit stays hidden until a user complains.",
+        test: () => { const hs = DESKS.map(byName);
+          return hs.every(h => h && h.cfg.ip) && hs.every(a => hs.every(b => a === b || pingOk(a, b.cfg.ip))); } },
+    ],
+    hints: [
+      "Each system needs the same three facts: address, mask, gateway. Only the spelling differs. /24 and 255.255.255.0 are the same mask written two ways.",
+      "Windows: netsh interface ip set address \"Ethernet\" static 10.0.10.11 255.255.255.0 10.0.10.1",
+      "Mac: networksetup -setmanual \"Ethernet\" 10.0.10.12 255.255.255.0 10.0.10.1",
+      "Linux, two commands: ip addr add 10.0.10.13/24 dev eth0, then ip route add default via 10.0.10.1",
+    ],
+  },
+  {
+    id: "desk-back-to-dhcp",
+    group: DESK_GROUP, kind: "starter",
+    title: "41. Back to DHCP After the Move",
+    desc: DESK_INTRO + "TICKET: these three machines came from the old office and still carry hand-set 192.168.1.x addresses, so nothing works. This office runs DHCP. Switch every desk from static back to DHCP.",
+    setup(){
+      const D0 = deskBase({ dhcp: true });
+      hostSet(D0.win, "192.168.1.21", 24, "192.168.1.1");
+      hostSet(D0.mac, "192.168.1.22", 24, "192.168.1.1");
+      hostSet(D0.lin, "192.168.1.23", 24, "192.168.1.1");
+    },
+    checks: [
+      { desc: "win-desk is on DHCP with an address in 10.0.10.0/24",
+        why: "A Windows adapter set to static ignores ipconfig /renew. Without first switching the adapter to DHCP, the renew has nothing to renew.",
+        test: () => siteLeased("win-desk", "10.0.10.0") },
+      { desc: "mac-desk is on DHCP with an address in 10.0.10.0/24",
+        why: "On a Mac, static and DHCP are two modes of the same service. Without flipping the mode the old address stays in place.",
+        test: () => siteLeased("mac-desk", "10.0.10.0") },
+      { desc: "linux-desk is on DHCP with an address in 10.0.10.0/24",
+        why: "Linux lets the old address linger beside the new one. Without clearing it first you leave a stale address behind for the next engineer to trip over.",
+        test: () => siteLeased("linux-desk", "10.0.10.0") },
+      { desc: "All three desks ping the gateway 10.0.10.1",
+        why: "The old gateway 192.168.1.1 does not exist here. Without checking the new one you cannot tell whether the lease replaced it.",
+        test: () => DESKS.every(n => pingOk(n, "10.0.10.1")) },
+    ],
+    hints: [
+      "Look before you change: ipconfig /all on Windows shows DHCP Enabled: No. That one line explains why nothing works.",
+      "Windows: netsh interface ip set address \"Ethernet\" dhcp. Try ipconfig /renew first if you want to read the real error.",
+      "Mac: networksetup -setdhcp \"Ethernet\", then networksetup -getinfo \"Ethernet\" to confirm it says DHCP Configuration.",
+      "Linux: ip addr del, ip route del, then dhclient eth0.",
+    ],
+  },
+  {
+    id: "desk-three-faults",
+    group: DESK_GROUP, kind: "starter",
+    title: "42. Three Desks, Three Faults",
+    desc: DESK_INTRO + "TICKET: nobody can print. print-server-1 lives in the printers VLAN at 10.0.20.10 and the switch routes between the VLANs correctly. Each desk has a DIFFERENT mistake in its own network settings. The desks should be 10.0.10.11, .12 and .13, mask 255.255.255.0, gateway 10.0.10.1. Find each fault with that system's show commands, then fix it.",
+    setup(){
+      const D0 = deskBase({ extra: [
+        "set vlans printers vlan-id 20",
+        "set interfaces irb unit 20 family inet address 10.0.20.1/24",
+        "set vlans printers l3-interface irb.20",
+        "set interfaces ge-0/0/5 unit 0 family ethernet-switching vlan members printers",
+      ] });
+      const ps = siteServer("print-server-1", 590, 150, "Linux server · print queue");
+      hostSet(ps, "10.0.20.10", 24, "10.0.20.1");
+      cable(ps, "eth0", D0.sw, "ge-0/0/5");
+      hostSet(D0.win, "10.0.10.11", 24, "10.0.10.254");
+      hostSet(D0.mac, "10.0.11.12", 24, "10.0.10.1");
+      hostSet(D0.lin, "10.0.10.13", 24, null);
+    },
+    checks: [
+      { desc: "win-desk prints: it pings 10.0.20.10",
+        why: "The gateway is the only door out of the subnet. Without the right gateway address the PC knocks on a door that is not there.",
+        test: () => pingOk("win-desk", "10.0.20.10") },
+      { desc: "mac-desk prints: it pings 10.0.20.10",
+        why: "One wrong digit in the address puts the Mac in a different subnet from its own gateway. Without matching subnets it cannot even reach the door.",
+        test: () => pingOk("mac-desk", "10.0.20.10") },
+      { desc: "linux-desk prints: it pings 10.0.20.10",
+        why: "An address with no default route works only for neighbours. Without the route, anything in another VLAN is simply unknown.",
+        test: () => pingOk("linux-desk", "10.0.20.10") },
+      { desc: "All three desks ended up as 10.0.10.11, .12 and .13",
+        why: "A fix that works but ignores the address plan creates the next ticket. Without sticking to the plan two machines may one day claim the same address.",
+        test: () => ["11", "12", "13"].every((n, i) => { const h = byName(DESKS[i]); return !!(h && h.cfg.ip === "10.0.10." + n && h.cfg.bits === 24); }) },
+    ],
+    hints: [
+      "On every desk compare three lines with the ticket: address, mask, gateway. Windows: ipconfig. Mac: networksetup -getinfo \"Ethernet\". Linux: ip addr and ip route.",
+      "Windows has the wrong gateway. Set the whole line again: netsh interface ip set address \"Ethernet\" static 10.0.10.11 255.255.255.0 10.0.10.1",
+      "The Mac has a typo in its address (10.0.11 instead of 10.0.10): networksetup -setmanual \"Ethernet\" 10.0.10.12 255.255.255.0 10.0.10.1",
+      "Linux has no default route at all: ip route add default via 10.0.10.1",
+    ],
+  },
+  {
+    id: "desk-dns",
+    group: DESK_GROUP, kind: "starter",
+    title: "43. One Name, Three Resolvers",
+    desc: DESK_INTRO + "TICKET: all three desks have an address from DHCP, but nobody can open intranet.lab. The DNS server dns-server-1 at 10.0.10.53 is running and knows the name. Point each desk at it and prove the name resolves.",
+    setup(){
+      const D0 = deskBase({ dhcp: true });
+      const ds = siteServer("dns-server-1", 590, 150, "Linux server · DNS + web");
+      hostSet(ds, "10.0.10.53", 24, "10.0.10.1");
+      devices[ds].cfg.services = { dns: true, http: true };
+      devices[ds].cfg.records = { "intranet.lab": "10.0.10.53" };
+      cable(ds, "eth0", D0.sw, "ge-0/0/4");
+      siteLease(DESKS);
+    },
+    checks: [
+      { desc: "win-desk resolves intranet.lab",
+        why: "A PC only asks the DNS server it was told about. Without one configured, every name fails even though every address works.",
+        test: () => { const h = byName("win-desk"); return !!h && h.cfg.ns === "10.0.10.53" && resolveName(h, "intranet.lab").ok; } },
+      { desc: "mac-desk resolves intranet.lab",
+        why: "macOS keeps DNS per network service. Without setting it on Ethernet, the Mac keeps asking nobody.",
+        test: () => { const h = byName("mac-desk"); return !!h && h.cfg.ns === "10.0.10.53" && resolveName(h, "intranet.lab").ok; } },
+      { desc: "linux-desk resolves intranet.lab",
+        why: "Linux reads its resolver from /etc/resolv.conf. Without a nameserver line there, lookups stop before they leave the machine.",
+        test: () => { const h = byName("linux-desk"); return !!h && h.cfg.ns === "10.0.10.53" && resolveName(h, "intranet.lab").ok; } },
+    ],
+    hints: [
+      "Prove it is DNS and not the network: ping 10.0.10.53 works from every desk, nslookup intranet.lab does not. Same test, same result, three systems.",
+      "Windows: netsh interface ip set dns \"Ethernet\" static 10.0.10.53, then nslookup intranet.lab",
+      "Mac: networksetup -setdnsservers \"Ethernet\" 10.0.10.53, then nslookup intranet.lab",
+      "Linux: nameserver 10.0.10.53 (the lab's short way of writing that line into /etc/resolv.conf), then nslookup intranet.lab",
+    ],
+  },
+  {
+    id: "desk-rename",
+    group: DESK_GROUP, kind: "starter",
+    title: "44. Apply the Naming Standard",
+    desc: "One office, three desks, all cabled to office-sw with DHCP running. The machines still have their factory names: the Windows PC is DESKTOP-7QK2, the Mac is Annas-MacBook and the Linux PC is localhost. TICKET: rename them to the company standard, ws-fin-01 for the Windows PC, mac-design-01 for the Mac and lnx-dev-01 for the Linux PC, then give each a DHCP address so the new name shows up on the network.",
+    setup(){ deskBase({ dhcp: true, names: ["DESKTOP-7QK2", "Annas-MacBook", "localhost"] }); },
+    checks: [
+      { desc: "The Windows PC is named ws-fin-01",
+        why: "On Windows, hostname only reads the name. Without Rename-Computer the name never changes, whatever you type after hostname.",
+        test: () => { const h = deskHost("windows"); return !!h && h.name === "ws-fin-01"; } },
+      { desc: "The Mac is named mac-design-01",
+        why: "A Mac keeps its names in the system configuration, set with scutil. Without that, the name in the prompt and on the network stay the old one.",
+        test: () => { const h = deskHost("macos"); return !!h && h.name === "mac-design-01"; } },
+      { desc: "The Linux PC is named lnx-dev-01",
+        why: "A machine called localhost tells you nothing in a log or a DHCP table. Without a real name you cannot tell which device a lease belongs to.",
+        test: () => { const h = deskHost("linux"); return !!h && h.name === "lnx-dev-01"; } },
+      { desc: "All three hold a DHCP lease",
+        why: "Names matter once the machine is on the network. Without a lease the renamed PC never appears in show dhcp server binding.",
+        test: () => ["windows", "macos", "linux"].every(os => { const h = deskHost(os);
+          return !!(h && h.cfg.viaDhcp && h.cfg.ip && sameSubnet(h.cfg.ip, "10.0.10.0", 24)); }) },
+    ],
+    hints: [
+      "The card on the canvas tells you which machine runs which system. Type hostname on each first: on all three it shows the current name.",
+      "Windows: Rename-Computer -NewName ws-fin-01, then ipconfig /renew",
+      "Mac: sudo scutil --set HostName mac-design-01, then sudo ipconfig set en0 DHCP",
+      "Linux: hostname lnx-dev-01, then dhclient eth0",
+    ],
+  },
+];
+
 const SITE_L1 = "Site work: Level 1, moves and adds";
 const SITE_L2 = "Site work: Level 2, new services on existing gear";
 const SITE_L3 = "Site work: Level 3, installing new devices";
@@ -624,4 +856,5 @@ const SITE_SCENARIOS = [
       "On edge-rtr: set routing-options static route 10.20.10.0/24 next-hop 10.10.97.2, and a second NAT rule-set from interface ge-0/0/2.0 to interface ge-0/0/0.0 matching 10.20.10.0/24 with source-nat interface. core-sw already sends everything unknown to the edge.",
     ],
   },
+  ...DESK_SCENARIOS,
 ];

@@ -112,7 +112,11 @@ function winExec(dev, cmd){
   if(c === "cls"){ dev.cli.log.length = 0; return []; }
   if(c === "ipconfig"){
     const a = (parts[1] || "").toLowerCase();
-    if(a === "/renew") return winDhcp(dev);
+    if(a === "/renew"){
+      if(dev.cfg.ip && !dev.cfg.viaDhcp)
+        return lines("err", "The operation failed as no adapter is in the state permissible for this operation.\n(this adapter has a hand-set address, so there is no lease to renew. Switch it to DHCP: netsh interface ip set address \"Ethernet\" dhcp)");
+      return winDhcp(dev);
+    }
     if(a === "/release"){ hostClearAddr(dev); return lines("out", winIpconfig(dev, false)); }
     if(a && a !== "/all") return lines("err", "Error: unrecognized or incomplete command line.\nUSAGE: ipconfig [/all | /renew | /release]");
     return lines("out", winIpconfig(dev, a === "/all"));
