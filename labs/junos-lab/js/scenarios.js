@@ -1432,6 +1432,12 @@ let PROGRESS = {};
 try{ PROGRESS = JSON.parse(localStorage.getItem(LS_PROGRESS) || "{}") || {}; }catch(e){ PROGRESS = {}; }
 let examState = { active: false, start: 0 };
 
+const SCEN_KINDS = {
+  empty: { tag: "empty canvas", text: "Starts from an empty canvas: you place and cable everything yourself" },
+  starter: { tag: "starter topology", text: "Starts from a small pre-built topology: load the setup, then finish it" },
+  site: { tag: "existing site", text: "Starts from a full running site with buildings and racks: load the setup, then work the ticket" },
+};
+function scenKind(s){ return s.group ? "site" : (s.setup ? "starter" : "empty"); }
 const scenSelect = document.getElementById("scenario-select");
 function renderScenSelect(){
   const idx = SCENARIOS.indexOf(currentScenario);
@@ -1440,8 +1446,8 @@ function renderScenSelect(){
   SCENARIOS.forEach((s, i) => {
     const opt = document.createElement("option");
     opt.value = i;
-    opt.textContent = (PROGRESS[s.id] && PROGRESS[s.id].done ? "✓ " : "") + s.title;
-    const g = s.group || "Build from scratch";
+    opt.textContent = (PROGRESS[s.id] && PROGRESS[s.id].done ? "✓ " : "") + s.title + "  [" + SCEN_KINDS[scenKind(s)].tag + "]";
+    const g = s.group || "Basics: one topic per lab";
     if(g !== grpName){
       grp = document.createElement("optgroup");
       grp.label = g;
@@ -1455,6 +1461,13 @@ function renderScenSelect(){
 function renderScenarioMeta(){
   document.getElementById("scen-title").textContent = currentScenario.title;
   document.getElementById("scen-desc").textContent = currentScenario.desc;
+  const kindEl = document.getElementById("scen-kind");
+  if(kindEl){
+    const live = currentScenario.isTicket || SCENARIOS.indexOf(currentScenario) < 0;
+    kindEl.textContent = live ? "" : SCEN_KINDS[scenKind(currentScenario)].text;
+    kindEl.className = live ? "" : "kind-" + scenKind(currentScenario);
+    kindEl.style.display = live ? "none" : "block";
+  }
   document.getElementById("load-setup-btn").style.display =
     (currentScenario.setup && !examState.active) ? "block" : "none";
   document.getElementById("hint-btn").style.display = examState.active ? "none" : "block";

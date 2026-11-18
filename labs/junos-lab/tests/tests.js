@@ -4064,8 +4064,17 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   done("site-warehouse", "38");
 
   const groups = [];
-  SCENARIOS.forEach(s => { const g = s.group || "Build from scratch"; if(groups[groups.length - 1] !== g) groups.push(g); });
+  SCENARIOS.forEach(s => { const g = s.group || "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
   ok(groups.length === 5, "T76 scenario list has five groups in order: " + groups.length);
+  ok(scenKind(scen("basic-connect")) === "empty" && scenKind(scen("lacp-bundle")) === "starter" && scenKind(scen("site-new-desk")) === "site",
+    "T76 each scenario knows how it starts");
+  currentScenario = scen("site-new-desk"); renderScenarioMeta();
+  ok(/running site/.test(document.getElementById("scen-kind").textContent), "T76 the panel says a site scenario starts pre-built");
+  currentScenario = scen("basic-connect"); renderScenarioMeta();
+  ok(/empty canvas/.test(document.getElementById("scen-kind").textContent), "T76 the panel says a basics scenario starts empty");
+  renderScenSelect();
+  ok(scenSelect.querySelectorAll("option").length === SCENARIOS.length, "T76 every scenario is in the picker");
+  currentScenario = SCENARIOS[0];
   [SITE_L1, SITE_L2, SITE_L3, SITE_L4].forEach(g =>
     ok(SCENARIOS.filter(s => s.group === g).length === 3, "T76 three scenarios in " + g));
   wipeLab();
