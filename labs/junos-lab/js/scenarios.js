@@ -1042,6 +1042,7 @@ const SCENARIOS = [
       "While the outage runs: laptop-1 still works (laptop battery), wifi still works (switch on UPS), files-1 still answers. Click OUTAGE to restore the grid. This drill — load, battery, verify — is exactly what a real ops team does yearly.",
     ],
   },
+  ...SITE_SCENARIOS,
 ];
 // setups cable things up after their commits — make every setup leave the
 // derived network state (NET) consistent, no matter who calls it
@@ -1435,11 +1436,19 @@ const scenSelect = document.getElementById("scenario-select");
 function renderScenSelect(){
   const idx = SCENARIOS.indexOf(currentScenario);
   scenSelect.innerHTML = "";
+  let grp = null, grpName = null;
   SCENARIOS.forEach((s, i) => {
     const opt = document.createElement("option");
     opt.value = i;
     opt.textContent = (PROGRESS[s.id] && PROGRESS[s.id].done ? "✓ " : "") + s.title;
-    scenSelect.appendChild(opt);
+    const g = s.group || "Build from scratch";
+    if(g !== grpName){
+      grp = document.createElement("optgroup");
+      grp.label = g;
+      grpName = g;
+      scenSelect.appendChild(grp);
+    }
+    grp.appendChild(opt);
   });
   scenSelect.selectedIndex = currentScenario.isTicket ? -1 : idx;
 }

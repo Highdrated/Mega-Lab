@@ -3872,6 +3872,205 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(localStorage.getItem("junoslab-theme-default") === "nightops", "T75 one-time switch to the Night Ops default is recorded");
 }
 
+/* ---------- T76: site-work scenarios (existing infrastructure, levels 1-4) ---------- */
+{
+  const healthy = (id, when) => {
+    const hot = Object.values(zones).filter(z => THERMAL.zones[z.id] && THERMAL.zones[z.id].temp > 28).map(z => z.name);
+    const dead = Object.values(devices).filter(d => d.failed || (d.powered === false && !d.brandNew)).map(d => d.name);
+    ok(!hot.length && !dead.length, "T76 " + id + " " + when + ": rooms cool and gear powered (" + hot.concat(dead).join(", ") + ")");
+  };
+  const start = id => { wipeLab(); scen(id).setup(); healthy(id, "at start"); };
+  const nm = n => byName(n).id;
+  const fresh = (dev, name) => {
+    powerOn(dev);
+    for(let i = 0; i < 30; i++) __fireTimers();
+    cli(dev.id, "root"); cli(dev.id, "cli"); cli(dev.id, "configure");
+    cli(dev.id, "set system host-name " + name);
+    cli(dev.id, "set system root-authentication plain-text-password");
+    cli(dev.id, "Sup3r!pass"); cli(dev.id, "Sup3r!pass");
+    cli(dev.id, "commit"); cli(dev.id, "exit");
+  };
+  const done = (id, label) => { ok(checksPass(scen(id)), "T76 " + label + " completable: " + firstFailing(scen(id))); healthy(id, "when solved"); };
+  const notYet = (id, label) => ok(!checksPass(scen(id)), "T76 " + label + " starts unfinished");
+  const pool = (name, net, gw, ifn) => [
+    "set access address-assignment pool " + name + " family inet network " + net + ".0/24",
+    "set access address-assignment pool " + name + " family inet range r1 low " + net + ".100",
+    "set access address-assignment pool " + name + " family inet range r1 high " + net + ".199",
+    "set access address-assignment pool " + name + " family inet dhcp-attributes router " + gw,
+    "set system services dhcp-local-server group " + name + " interface " + ifn,
+  ];
+  const trunk = (port, vl) => [
+    "set interfaces " + port + " unit 0 family ethernet-switching interface-mode trunk",
+  ].concat(vl.map(v => "set interfaces " + port + " unit 0 family ethernet-switching vlan members " + v));
+  const acc = (port, v) => "set interfaces " + port + " unit 0 family ethernet-switching vlan members " + v;
+  const nat = (name, from, to, src) => [
+    "set security nat source rule-set " + name + " from interface " + from,
+    "set security nat source rule-set " + name + " to interface " + to,
+    "set security nat source rule-set " + name + " rule R1 match source-address " + src,
+    "set security nat source rule-set " + name + " rule R1 then source-nat interface",
+  ];
+  const guestOnCore = [
+    "set vlans guest vlan-id 30",
+    "set interfaces irb unit 30 family inet address 10.10.30.1/24",
+    "set vlans guest l3-interface irb.30",
+  ].concat(pool("GUEST", "10.10.30", "10.10.30.1", "irb.30"));
+
+  start("site-new-desk");
+  ok(siteLeased("pc-1", "10.10.10.0") && pingOk("pc-1", "8.8.8.8"), "T76 base site: staff has DHCP and internet");
+  ok(pingOk("pc-1", "10.10.20.10"), "T76 base site: staff reaches files-1");
+  ok(Object.values(zones).filter(z => z.kind === "rack").length === 3 && Object.values(zones).filter(z => z.kind === "building").length === 2,
+    "T76 base site: two buildings and three racks");
+  ok(rackOf(nm("core-sw")) && rackOf(nm("core-sw")).name === "Rack A1" && rackOf(nm("files-1")).name === "Rack A2", "T76 base site: gear sits in its racks");
+  notYet("site-new-desk", "27");
+  cable(nm("new-pc"), "eth0", nm("office-sw"), "ge-0/0/3"); rebuildAllDerived();
+  ok(/no DHCPOFFERS/.test(cli(nm("new-pc"), "dhclient eth0")), "T76 27 default-vlan port gets no offer");
+  cfgDo(nm("office-sw"), [acc("ge-0/0/3", "staff")]);
+  cli(nm("new-pc"), "dhclient eth0");
+  done("site-new-desk", "27");
+
+  start("site-rack-server");
+  notYet("site-rack-server", "28");
+  cable(nm("backup-1"), "eth0", nm("srv-sw"), "ge-0/0/2"); rebuildAllDerived();
+  cfgDo(nm("srv-sw"), [acc("ge-0/0/2", "servers")]);
+  cli(nm("backup-1"), "ip addr add 10.10.20.20/24 dev eth0");
+  ok(pingOk("backup-1", "10.10.20.10") && !pingOk("pc-1", "10.10.20.20"), "T76 28 no gateway: same VLAN works, other VLAN does not");
+  cli(nm("backup-1"), "ip route add default via 10.10.20.1");
+  done("site-rack-server", "28");
+
+  start("site-pool-dry");
+  notYet("site-pool-dry", "29");
+  ok(/exhausted/.test(cli(nm("new-pc"), "dhclient eth0")), "T76 29 the pool reports exhaustion");
+  cfgDo(nm("core-sw"), ["set access address-assignment pool STAFF family inet range r1 high 10.10.10.199"]);
+  cli(nm("new-pc"), "dhclient eth0");
+  done("site-pool-dry", "29");
+
+  start("site-guest-vlan");
+  notYet("site-guest-vlan", "30");
+  cfgDo(nm("core-sw"), guestOnCore.concat([acc("ge-0/0/2", "guest")]));
+  cfgDo(nm("office-sw"), ["set vlans guest vlan-id 30", acc("ge-0/0/0", "guest"), acc("ge-0/0/4", "guest")]);
+  cli(nm("guest-pc"), "dhclient eth0");
+  done("site-guest-vlan", "30");
+
+  start("site-lacp-uplink");
+  notYet("site-lacp-uplink", "31");
+  const lag = (a, b, vl) => [
+    "set chassis aggregated-devices ethernet device-count 1",
+    "delete interfaces " + a + " unit 0", "delete interfaces " + b + " unit 0",
+    "delete interfaces " + a + " disable", "delete interfaces " + b + " disable",
+    "set interfaces " + a + " ether-options 802.3ad ae0",
+    "set interfaces " + b + " ether-options 802.3ad ae0",
+    "set interfaces ae0 aggregated-ether-options lacp active",
+  ].concat(trunk("ae0", vl));
+  cfgDo(nm("core-sw"), lag("ge-0/0/2", "ge-0/0/3", ["staff"]));
+  cfgDo(nm("office-sw"), lag("ge-0/0/0", "ge-0/0/5", ["staff"]));
+  done("site-lacp-uplink", "31");
+
+  start("site-dia-customer");
+  notYet("site-dia-customer", "32");
+  const acmeRtr = () => {
+    cable(nm("acme-rtr"), "ge-0/0/0", nm("Carrier"), "wan0", "remote"); rebuildAllDerived();
+    cfgDo(nm("acme-rtr"), [
+      "set interfaces ge-0/0/0 unit 0 family inet address 198.51.100.2/30",
+      "set interfaces ge-0/0/1 unit 0 family inet address 192.168.50.1/24",
+      "set routing-options static route 0.0.0.0/0 next-hop 198.51.100.1",
+    ].concat(pool("ACME", "192.168.50", "192.168.50.1", "ge-0/0/1.0"))
+     .concat(nat("ACME", "ge-0/0/1.0", "ge-0/0/0.0", "192.168.50.0/24")));
+  };
+  acmeRtr();
+  cli(nm("acme-pc"), "dhclient eth0");
+  done("site-dia-customer", "32");
+  ok(!pingOk("acme-pc", "10.10.20.10"), "T76 32 the customer cannot reach the site's servers");
+
+  start("site-new-access-switch");
+  notYet("site-new-access-switch", "33");
+  let nsw = siteNeighbor("core-sw", "ge-0/0/4");
+  ok(nsw.brandNew && nsw.powered === false, "T76 33 the new switch arrives factory-fresh and powered off");
+  fresh(nsw, "office-sw2");
+  cfgDo(nsw.id, ["set vlans staff vlan-id 10"].concat(trunk("ge-0/0/0", ["staff"]), [acc("ge-0/0/1", "staff"), acc("ge-0/0/2", "staff")]));
+  cli(nm("desk-1"), "dhclient eth0");
+  ok(!siteLeased("desk-1", "10.10.10.0"), "T76 33 one-sided trunk carries nothing");
+  cfgDo(nm("core-sw"), trunk("ge-0/0/4", ["staff"]));
+  cli(nm("desk-1"), "dhclient eth0"); cli(nm("desk-2"), "dhclient eth0");
+  done("site-new-access-switch", "33");
+
+  start("site-internal-router");
+  notYet("site-internal-router", "34");
+  cfgDo(nm("core-sw"), [
+    "set vlans lab-transit vlan-id 98", acc("ge-0/0/5", "lab-transit"),
+    "set interfaces irb unit 98 family inet address 10.10.98.1/30",
+    "set vlans lab-transit l3-interface irb.98",
+  ]);
+  cfgDo(nm("lab-rtr"), [
+    "set interfaces ge-0/0/0 unit 0 family inet address 10.10.98.2/30",
+    "set interfaces ge-0/0/1 unit 0 family inet address 10.10.40.1/24",
+    "set routing-options static route 0.0.0.0/0 next-hop 10.10.98.1",
+  ].concat(pool("LAB", "10.10.40", "10.10.40.1", "ge-0/0/1.0")));
+  cli(nm("lab-pc"), "dhclient eth0");
+  ok(!pingOk("lab-pc", "10.10.20.10"), "T76 34 no return route on core-sw: files-1 unreachable");
+  cfgDo(nm("core-sw"), ["set routing-options static route 10.10.40.0/24 next-hop 10.10.98.2"]);
+  done("site-internal-router", "34");
+
+  start("site-rack-extension");
+  notYet("site-rack-extension", "35");
+  nsw = siteNeighbor("srv-sw", "ge-0/0/7");
+  fresh(nsw, "srv-sw2");
+  cfgDo(nsw.id, ["set vlans servers vlan-id 20"].concat(trunk("ge-0/0/0", ["servers"]), [acc("ge-0/0/1", "servers")]));
+  cfgDo(nm("srv-sw"), trunk("ge-0/0/7", ["servers"]));
+  cli(nm("db-1"), "ip addr add 10.10.20.30/24 dev eth0");
+  cli(nm("db-1"), "ip route add default via 10.10.20.1");
+  done("site-rack-extension", "35");
+  ok(rackOf(nsw.id) && rackOf(nsw.id).name === "Rack A3", "T76 35 the new switch is mounted in Rack A3");
+
+  start("site-new-floor");
+  notYet("site-new-floor", "36");
+  ok(NET.stormLinks.size === 0, "T76 36 shut uplinks do not loop at the start");
+  nsw = siteNeighbor("core-sw", "ge-0/0/4");
+  fresh(nsw, "floor2-sw");
+  const lag2 = (a, b) => [
+    "set chassis aggregated-devices ethernet device-count 1",
+    "delete interfaces " + a + " disable", "delete interfaces " + b + " disable",
+    "delete interfaces " + a + " unit 0", "delete interfaces " + b + " unit 0",
+    "set interfaces " + a + " ether-options 802.3ad ae0",
+    "set interfaces " + b + " ether-options 802.3ad ae0",
+    "set interfaces ae0 aggregated-ether-options lacp active",
+  ].concat(trunk("ae0", ["staff", "guest"]));
+  cfgDo(nsw.id, ["set vlans staff vlan-id 10", "set vlans guest vlan-id 30"].concat(lag2("ge-0/0/10", "ge-0/0/11"), [acc("ge-0/0/1", "staff"), acc("ge-0/0/2", "guest")]));
+  cfgDo(nm("core-sw"), guestOnCore.concat(lag2("ge-0/0/4", "ge-0/0/5")));
+  cli(nm("fl2-staff"), "dhclient eth0"); cli(nm("fl2-guest"), "dhclient eth0");
+  done("site-new-floor", "36");
+
+  start("site-customer-cage");
+  notYet("site-customer-cage", "37");
+  acmeRtr();
+  nsw = siteNeighbor("acme-rtr", "ge-0/0/1");
+  fresh(nsw, "acme-sw");
+  cfgDo(nsw.id, ["set vlans acme vlan-id 50", acc("ge-0/0/0", "acme"), acc("ge-0/0/1", "acme"), acc("ge-0/0/2", "acme")]);
+  cli(nm("acme-pc1"), "dhclient eth0"); cli(nm("acme-pc2"), "dhclient eth0");
+  done("site-customer-cage", "37");
+
+  start("site-warehouse");
+  notYet("site-warehouse", "38");
+  cfgDo(nm("edge-rtr"), ["set interfaces ge-0/0/2 unit 0 family inet address 10.10.97.1/30"]);
+  cfgDo(nm("wh-rtr"), [
+    "set interfaces ge-0/0/0 unit 0 family inet address 10.10.97.2/30",
+    "set interfaces ge-0/0/1 unit 0 family inet address 10.20.10.1/24",
+    "set routing-options static route 0.0.0.0/0 next-hop 10.10.97.1",
+  ].concat(pool("WH", "10.20.10", "10.20.10.1", "ge-0/0/1.0")));
+  cli(nm("wh-pc1"), "dhclient eth0"); cli(nm("wh-pc2"), "dhclient eth0");
+  ok(!pingOk("wh-pc1", "10.10.20.10"), "T76 38 no return route on edge-rtr: files-1 unreachable");
+  cfgDo(nm("edge-rtr"), ["set routing-options static route 10.20.10.0/24 next-hop 10.10.97.2"]);
+  ok(pingOk("wh-pc1", "10.10.20.10") && !pingOk("wh-pc1", "8.8.8.8"), "T76 38 routed but not yet NATed");
+  cfgDo(nm("edge-rtr"), nat("WH", "ge-0/0/2.0", "ge-0/0/0.0", "10.20.10.0/24"));
+  done("site-warehouse", "38");
+
+  const groups = [];
+  SCENARIOS.forEach(s => { const g = s.group || "Build from scratch"; if(groups[groups.length - 1] !== g) groups.push(g); });
+  ok(groups.length === 5, "T76 scenario list has five groups in order: " + groups.length);
+  [SITE_L1, SITE_L2, SITE_L3, SITE_L4].forEach(g =>
+    ok(SCENARIOS.filter(s => s.group === g).length === 3, "T76 three scenarios in " + g));
+  wipeLab();
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 
