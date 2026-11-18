@@ -546,7 +546,7 @@ function rackGeo(I){
  return{g,sx,sy,c:id=>[g[id][0]+g[id][2]/2,g[id][1]+g[id][3]/2]};
 }
 function rackView(I){
- const R=I.rack,w=Math.max(320,($('right')&&$('right').clientWidth||520)-36),h=340,V=R.view||{x:null,y:-14,s:Math.min(1.3,w/480)};
+ const R=I.rack,w=Math.max(320,($('right')&&$('right').clientWidth||520)-36),h=400,V=R.view||{x:null,y:-14,s:Math.min(1.3,w/480,h/312)};
  const vw=w/V.s,vh=h/V.s;if(V.x==null)V.x=-(vw-460)/2;
  return{w,h,V,vb:`${V.x} ${V.y} ${vw} ${vh}`};
 }
@@ -707,7 +707,7 @@ function act(name,arg){
   const args=String(arg).split(':');
   if(k==='front'||k==='rear'){R.sel=null}
   else if(k==='add'){if(v==='trol'){R.trol=true;I.msg='You wheeled the console trolley in from the storeroom.'}else if(v==='lap'){R.lap=true;I.msg='You put your laptop on the shelf next to the rack.'}}
-  else if(k==='zoom'){const V=R.view||(R.view={x:null,y:-14,s:1.3});if(v==='fit'){R.view=null}else{V.s=Math.max(.6,Math.min(2.4,V.s*(v==='in'?1.2:1/1.2)));V.x=null}}
+  else if(k==='zoom'){const V=R.view||(R.view=Object.assign({},rackView(I).V));if(v==='fit'){R.view=null}else{V.s=Math.max(.6,Math.min(2.4,V.s*(v==='in'?1.2:1/1.2)));V.x=null}}
   else if(k==='pick'){R.pick=R.pick===v?null:v}
   else if(k==='kind'){if(v==='power'&&R.box!=='open'){I.msg='The power cords are still in the sealed box.';return}R.kind=v;R.sel=null}
   else if(k==='open'){R.box='open';R.pick='server';I.msg='Box open. Inside: the server, a rail kit and two power cords.'}
