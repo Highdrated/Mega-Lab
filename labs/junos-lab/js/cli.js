@@ -102,7 +102,7 @@ function deviceExec(dev, raw){
       return lines("err", "Login incorrect\n(factory boxes have exactly one user: root, no password)\nlogin:");
     }
     if(stage === "shell"){
-      if(cmd === "cli"){ dev.cli.stage = null; dev.cli.mode = "op"; dev.user = "root"; return lines("out", "{master:0}"); }
+      if(cmd === "cli" || (cmd === "exit" && dev.cli.fromCli)){ dev.cli.stage = null; dev.cli.mode = "op"; if(!dev.cli.fromCli) dev.user = "root"; dev.cli.fromCli = false; return lines("out", cmd === "cli" ? "{master:0}" : ""); }
       if(cmd === "exit"){ dev.cli.stage = "login"; return lines("out", "login:"); }
       return lines("err", `sh: ${cmd}: not found  — this is the FreeBSD shell; type cli`);
     }
@@ -311,7 +311,7 @@ function cfgPiped(dev, seg){
       return lines("err", 'error: this lab models | display set \u2014 the candidate re-rendered as set commands');
     const full = dev.cli.editKeys.concat(base.split(/\s+/).slice(1));
     const res = full.length ? resolveTreePath(dev.candidate, full) : { keys: [], node: dev.candidate };
-    if(typeof res.err === "string") return lines("out", "## (nothing configured at: " + full.join(" ") + ")");
+    if(typeof res.err === "string") return cfgShowMiss(full);
     const node = res.arrayItem !== undefined ? { [full[full.length - 1]]: res.arrayItem } : res.node;
     const ls = (node && typeof node === "object")
       ? treeToDisplaySet(node, res.keys, annotAll(dev.candidate) || {}, inactAll(dev.candidate) || {})
@@ -805,6 +805,12 @@ function cfgDeleteCmd(dev, rest){
   return [];
 }
 
+function cfgShowMiss(full){
+  const opWord = /^(terse|extensive|descriptions|statistics|neighbors|neighbor|table|summary|brief|detail|messages|uptime|alarms|users|commit|hardware|binding|bridge)$/;
+  const live = full.some(k => opWord.test(k)) || /^(version|route|arp|log|lldp|ethernet-switching|spanning-tree|lacp|ospf|bgp|dhcp)$/.test(full[0]);
+  if(!live) return lines("out", "## (nothing configured at: " + full.join(" ") + ")");
+  return lines("err", "syntax error: in configuration mode, show reads the candidate configuration, and \"" + full.join(" ") + "\" is not a part of it.\n(for the live state put run in front: run show " + full.join(" ") + ")");
+}
 function cfgShowCmd(dev, rest){
   const full = dev.cli.editKeys.concat(rest);
   if(!full.length){
@@ -812,7 +818,7 @@ function cfgShowCmd(dev, rest){
     return lines("out", txt);
   }
   const res = resolveTreePath(dev.candidate, full);
-  if(typeof res.err === "string") return lines("out", "## (nothing configured at: " + full.join(" ") + ")");
+  if(typeof res.err === "string") return cfgShowMiss(full);
   const node = res.arrayItem !== undefined ? res.arrayItem : res.node;
   if(node && typeof node === "object" && !Array.isArray(node))
     return lines("out", Object.keys(node).length ? treeToTextAt(dev.candidate, res.keys, node) : "## (empty)");
@@ -1405,31 +1411,67 @@ function hostExec(dev, cmd){
   if(fwd) return fwd;
   if(dev.type === "host" && typeof hostOsExec === "function"){
     const viaOs = hostOsExec(dev, cmd);
-    if(viaOs) return viaOs;
+    if(Array.isArray(viaOs)) return viaOs;
+    if(viaOs && viaOs.pass) cmd = viaOs.pass;
   }
   cmd = cmd.replace(/^sudo\s+/, "");
   const parts = cmd.split(/\s+/);
+  const nix = dev.type !== "host" || hostOs(dev) === "linux";
   if(cmd === "?" || cmd === "help")
     return lines("out",
       "ip addr add <ip>/<bits> dev eth0     assign an address\n" +
       "dhclient eth0                        get an address via DHCP\n" +
       "wifi scan / join <ssid> / leave      wireless: list, associate, drop\n" +
-      "ip addr                              show the current address\n" +
+      "ip addr   (short: ip a, ip -br a)    show the current address\n" +
       "ip route add default via <gw-ip>     set the default gateway\n" +
-      "ip route [del default]               show / clear routes\n" +
+      "ip route [del default]  (short: ip r) show / clear routes\n" +
+      "ip link / ip neigh                   link state / the ARP cache, the modern way\n" +
+      "dhclient -r eth0                     give the DHCP address back\n" +
       "arp -a                               show the ARP cache\n" +
-      "nameserver <dns-ip>                  point this machine at a DNS server\n" +
+      "nameserver <dns-ip>                  lab shorthand to point this machine at a DNS server\n" +
+      "                                     (the real way: echo \"nameserver <dns-ip>\" | sudo tee /etc/resolv.conf)\n" +
+      "cat /etc/resolv.conf                 show the DNS server in use\n" +
       "nslookup <name> / curl <name>        resolve a name / fetch a web page\n" +
-      "ping <ip-or-name>                    test reachability\n" +
+      "ping -c 4 <ip-or-name>               test reachability\n" +
       "ssh [user@]<ip-or-name>              open a CLI session on a switch, router or server\n" +
       "traceroute <ip>                      show the L3 path\n" +
-      "hostname <name>                      rename this host\n" +
+      "hostname / hostnamectl set-hostname <name>   show / change this host's name\n" +
       "clear                                wipe this terminal screen");
   if(cmd === "clear"){ dev.cli.log.length = 0; return []; }
   if(parts[0] === "hostname"){
-    if(!parts[1] || !/^[\w.-]+$/.test(parts[1])) return lines("err", "usage: hostname <name>");
+    if(!parts[1]) return lines("out", dev.name);
+    if(parts[1] === "-I" || parts[1] === "-i") return lines("out", dev.cfg.ip || "");
+    if(!/^[\w.-]+$/.test(parts[1])) return lines("err", "usage: hostname <name>");
     dev.name = parts[1];
     return [];
+  }
+  if(nix && parts[0] === "hostnamectl"){
+    const nm = parts[1] === "set-hostname" || parts[1] === "hostname" ? parts[2] : null;
+    if(nm && /^[\w.-]+$/.test(nm)){ dev.name = nm; return []; }
+    if(parts[1] && parts[1] !== "status" && !(parts[1] === "hostname" && !parts[2])) return lines("err", "usage: hostnamectl | hostnamectl set-hostname <name>");
+    return lines("out", " Static hostname: " + dev.name + "\nOperating System: Ubuntu 24.04 LTS\n          Kernel: Linux 6.8.0-45-generic\n    Architecture: x86-64");
+  }
+  if(nix && (parts[0] === "exit" || parts[0] === "logout")) return lines("out", "(close this terminal from its tab. The machine keeps running.)");
+  if(nix && parts[0] === "whoami") return lines("out", "user");
+  if(nix && parts[0] === "pwd") return lines("out", "/home/user");
+  if(nix && parts[0] === "ls") return [];
+  if(nix && parts[0] === "uname") return lines("out", parts[1] === "-a" ? "Linux " + dev.name + " 6.8.0-45-generic #45-Ubuntu SMP x86_64 GNU/Linux" : "Linux");
+  if(nix && parts[0] === "cat"){
+    if(parts[1] === "/etc/resolv.conf") return dev.cfg.ns ? lines("out", "nameserver " + dev.cfg.ns) : [];
+    if(parts[1] === "/etc/hostname") return lines("out", dev.name);
+    return lines("err", "cat: " + (parts[1] || "") + ": No such file or directory\n(the lab keeps two files: /etc/resolv.conf and /etc/hostname)");
+  }
+  if(nix && parts[0] === "echo"){
+    const m = cmd.match(/^echo\s+["']?nameserver\s+([0-9.]+)["']?\s*(?:>|\|\s*(?:sudo\s+)?tee)\s*\/etc\/resolv\.conf$/);
+    if(m && validIp(m[1])){ dev.cfg.ns = m[1]; return /\btee\b/.test(cmd) ? lines("out", "nameserver " + m[1]) : []; }
+    if(/[>|]/.test(cmd)) return lines("err", "bash: only one redirect is modelled: echo \"nameserver <dns-ip>\" | sudo tee /etc/resolv.conf");
+    return lines("out", cmd.replace(/^echo\s*/, "").replace(/^["']|["']$/g, ""));
+  }
+  if(nix && parts[0] === "resolvectl"){
+    if(parts[1] === "dns" && parts[2] === "eth0" && validIp(parts[3] || "")){ dev.cfg.ns = parts[3]; return []; }
+    if(!parts[1] || parts[1] === "status" || parts[1] === "dns")
+      return lines("out", "Link 2 (eth0)\n    Current Scopes: " + (dev.cfg.ns ? "DNS" : "none") + (dev.cfg.ns ? "\n         DNS Servers: " + dev.cfg.ns : ""));
+    return lines("err", "usage: resolvectl status | resolvectl dns eth0 <dns-ip>");
   }
   if(parts[0] === "wifi"){
     if(parts[1] === "scan") return lines("out", wifiScan(dev));
@@ -1444,19 +1486,49 @@ function hostExec(dev, cmd){
     }
     return lines("err", "usage: wifi scan | wifi join <ssid> | wifi leave");
   }
-  if(parts[0] === "dhclient" || (parts[0] === "ip" && parts[1] === "addr" && parts[2] === "dhcp"))
+  if(parts[0] === "dhclient"){
+    if(parts.includes("-r") || parts.includes("-x")){ dev.cfg.ip = null; dev.cfg.bits = null; dev.cfg.gw = null; dev.cfg.viaDhcp = false; return []; }
     return runDhclient(dev);
+  }
+  if(parts[0] === "ip"){
+    const brief = parts.some(p => p === "-br" || p === "-brief");
+    const a = parts.slice(1).filter(p => p[0] !== "-");
+    const is = (word, full) => !!word && full.startsWith(word);
+    const obj = is(a[0], "address") ? "addr" : is(a[0], "route") ? "route" : is(a[0], "link") ? "link" : (is(a[0], "neighbour") || is(a[0], "neighbor")) ? "neigh" : "";
+    if(!obj) return lines("err", a[0] ? 'Object "' + a[0] + '" is unknown, try "ip help".' : "Usage: ip [ OPTIONS ] OBJECT { COMMAND | help }\nwhere  OBJECT := { address | route | link | neigh }");
+    parts.length = 0; parts.push("ip", obj, ...a.slice(1));
+    const up = isLinked(dev.id, "eth0");
+    const flags = up ? "<BROADCAST,MULTICAST,UP,LOWER_UP>" : "<NO-CARRIER,BROADCAST,MULTICAST,UP>";
+    const showing = !parts[2] || is(parts[2], "show") || is(parts[2], "list");
+    if(obj === "link"){
+      if(parts[2] === "set") return parts[4] === "up" ? [] : lines("err", "(the lab cannot switch a machine's interface off. Pull its cable on the canvas instead.)");
+      if(!showing) return lines("err", "usage: ip link [show]");
+      return lines("out", brief ? pad("eth0", 17) + pad(up ? "UP" : "DOWN", 15) + macOf(dev.id, "eth0") + " " + flags
+        : "2: eth0: " + flags + " mtu 1500 state " + (up ? "UP" : "DOWN") + " mode DEFAULT\n    link/ether " + macOf(dev.id, "eth0") + " brd ff:ff:ff:ff:ff:ff");
+    }
+    if(obj === "neigh"){
+      if(!showing) return lines("err", "usage: ip neigh [show]");
+      return lines("out", Object.entries(dev.arp).map(([ip, x]) => ip + " dev eth0 lladdr " + x.mac + " REACHABLE").join("\n"));
+    }
+    if(obj === "addr" && showing){
+      if(parts[3] && parts[3] !== "dev" && parts[3] !== "eth0") return lines("err", 'Device "' + parts[3] + '" does not exist.');
+      if(brief) return lines("out", pad("eth0", 17) + pad(up ? "UP" : "DOWN", 15) + (dev.cfg.ip ? dev.cfg.ip + "/" + dev.cfg.bits : ""));
+      return lines("out", "2: eth0: " + flags + " mtu 1500 state " + (up ? "UP" : "DOWN") + "\n    link/ether " + macOf(dev.id, "eth0") + " brd ff:ff:ff:ff:ff:ff" +
+        (dev.cfg.ip ? "\n    inet " + dev.cfg.ip + "/" + dev.cfg.bits + " scope global " + (dev.cfg.viaDhcp ? "dynamic " : "") + "eth0" : "\n    (no inet line: no IP assigned)"));
+    }
+  }
+  if(parts[0] === "ip" && parts[1] === "addr" && parts[2] === "dhcp") return runDhclient(dev);
   if(parts[0] === "ip" && parts[1] === "addr"){
     if(parts[2] === "add"){
       const pfx = parsePrefix(parts[3] || "");
       if(!pfx) return lines("err", "usage: ip addr add <ip>/<bits> dev eth0   (e.g. ip addr add 10.0.10.11/24 dev eth0)");
-      dev.cfg.ip = pfx.ip; dev.cfg.bits = pfx.bits;
+      if(parts[4] !== "dev" || !parts[5]) return lines("err", 'Not enough information: "dev" argument is required.\n(say which interface: ip addr add ' + parts[3] + " dev eth0)");
+      if(parts[5] !== "eth0") return lines("err", 'Cannot find device "' + parts[5] + '"\n(this machine has one interface: eth0)');
+      dev.cfg.ip = pfx.ip; dev.cfg.bits = pfx.bits; dev.cfg.viaDhcp = false;
       return lines("out", `eth0: ${pfx.ip}/${pfx.bits} assigned`);
     }
-    if(parts[2] === "del"){ dev.cfg.ip = null; dev.cfg.bits = null; return []; }
-    return lines("out", dev.cfg.ip
-      ? `eth0: ${dev.cfg.ip}/${dev.cfg.bits}  link/ether ${macOf(dev.id, "eth0")}`
-      : `eth0: no IP assigned  link/ether ${macOf(dev.id, "eth0")}`);
+    if(parts[2] === "del" || parts[2] === "delete" || parts[2] === "flush"){ dev.cfg.ip = null; dev.cfg.bits = null; return []; }
+    return lines("err", "usage: ip addr [show] | ip addr add <ip>/<bits> dev eth0 | ip addr del <ip>/<bits> dev eth0");
   }
   if(parts[0] === "ip" && parts[1] === "route"){
     if(parts[2] === "add"){
@@ -1466,13 +1538,24 @@ function hostExec(dev, cmd){
       }
       return lines("err", "usage: ip route add default via <gateway-ip>");
     }
-    if(parts[2] === "del"){ dev.cfg.gw = null; return []; }
+    if(parts[2] === "del" || parts[2] === "delete"){ dev.cfg.gw = null; return []; }
     const rows = [];
     if(dev.cfg.gw) rows.push(`default via ${dev.cfg.gw} dev eth0`);
     if(dev.cfg.ip) rows.push(`${networkOf(dev.cfg.ip, dev.cfg.bits)}/${dev.cfg.bits} dev eth0 proto kernel scope link src ${dev.cfg.ip}`);
     return lines("out", rows.length ? rows.join("\n") : "(no routes — assign an address first)");
   }
-  if(parts[0] === "ifconfig") return hostExec(dev, "ip addr");
+  if(parts[0] === "ifconfig"){
+    if(parts[1] && parts[1] !== "eth0" && parts[1] !== "-a") return lines("err", parts[1] + ": error fetching interface information: Device not found");
+    if(parts[2]){
+      const bits = parts[3] === "netmask" ? maskToBits(parts[4]) : null;
+      if(!validIp(parts[2]) || bits === null) return lines("err", "usage: ifconfig eth0 <ip> netmask <mask>");
+      dev.cfg.ip = parts[2]; dev.cfg.bits = bits; dev.cfg.viaDhcp = false;
+      return [];
+    }
+    return lines("out", "eth0: flags=4163<UP,BROADCAST,RUNNING,MULTICAST>  mtu 1500" +
+      (dev.cfg.ip ? "\n        inet " + dev.cfg.ip + "  netmask " + bitsToMask(dev.cfg.bits) : "") +
+      "\n        ether " + macOf(dev.id, "eth0") + "  txqueuelen 1000  (Ethernet)");
+  }
   if(parts[0] === "arp"){
     const e = Object.entries(dev.arp);
     return lines("out", e.length
@@ -1480,21 +1563,23 @@ function hostExec(dev, cmd){
       : "(empty — the ARP cache fills when you send traffic)");
   }
   if(parts[0] === "ping"){
-    const target = parts.filter(p => p !== "-c" && !/^\d+$/.test(p))[1];
+    const pa = hostPingArgs(parts, "ciswWtI");
+    const target = pa.target;
+    const po = pa.count ? { count: String(pa.count) } : undefined;
     if(!target) return lines("err", "usage: ping <ip-or-name>");
-    if(validIp(target)) return doDevicePing(dev, target);
+    if(validIp(target)) return doDevicePing(dev, target, po);
     const r = resolveName(dev, target);
     if(!r.ok) return lines("err", "ping: cannot resolve " + target + ": " + r.text);
-    return [{ cls: "out", text: `PING ${target} (${r.ip}) — resolved via ${r.via}` }, ...doDevicePing(dev, r.ip)];
+    return [{ cls: "out", text: `PING ${target} (${r.ip}) — resolved via ${r.via}` }, ...doDevicePing(dev, r.ip, po)];
   }
   if(parts[0] === "nameserver"){
     if(!parts[1]) return lines("out", dev.cfg.ns ? "nameserver " + dev.cfg.ns : "(no nameserver set — nameserver <dns-ip>)");
     if(!validIp(parts[1])) return lines("err", "usage: nameserver <dns-ip>   (writes /etc/resolv.conf)");
     dev.cfg.ns = parts[1];
-    return lines("out", "nameserver set to " + parts[1] + " (/etc/resolv.conf updated)");
+    return lines("out", "nameserver set to " + parts[1] + " (/etc/resolv.conf updated)\n(lab shorthand. On a real machine: echo \"nameserver " + parts[1] + "\" | sudo tee /etc/resolv.conf)");
   }
   if(parts[0] === "nslookup"){
-    if(!parts[1]) return lines("err", "usage: nslookup <name>");
+    if(!parts[1]) return lines("out", "> (real nslookup now waits at this prompt for a name. The lab has no interactive mode: type nslookup <name>)");
     const r = resolveName(dev, parts[1]);
     if(!r.ok) return lines("err", "** server can't find " + parts[1] + ": " + r.text);
     return lines("out", `Server:  ${dev.cfg.ns}\nAddress: ${dev.cfg.ns}#53\n\nName:    ${parts[1]}\nAddress: ${r.ip}`);
@@ -1534,11 +1619,9 @@ function hostExec(dev, cmd){
       (tgt.type === "server" ? "Welcome to " + tgt.name : "--- JUNOS 23.4R1.10 built 2026-08-27 ---") +
       "\n(ssh session open to " + tgt.name + ' — "exit" at the top prompt comes back to ' + dev.name + ")");
   }
-  if(parts[0] === "traceroute"){
-    if(!validIp(parts[1] || "")) return lines("err", "usage: traceroute <ip>");
-    return doTraceroute(dev, parts[1]);
-  }
-  return lines("err", `command not found: "${parts[0]}" — type ? or help`);
+  if(parts[0] === "traceroute")
+    return hostTrace(dev, parts, /^-[mqwf]$/, "%s: Name or service not known") || lines("err", "usage: traceroute [-n] <ip-or-name>");
+  return lines("err", "bash: " + parts[0] + ": command not found\n(type ? or help for what this machine knows)");
 }
 
 /* ---------- isp ---------- */

@@ -4148,8 +4148,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(pingOk(devices[w], "10.0.10.1"), "T77 Windows PC pings its gateway");
   cli(w, 'New-NetIPAddress -InterfaceAlias "Ethernet" -IPAddress 10.0.10.60 -PrefixLength 24 -DefaultGateway 10.0.10.1');
   ok(devices[w].cfg.ip === "10.0.10.60", "T77 New-NetIPAddress sets a static address");
-  cli(w, "ipconfig /release");
-  ok(!devices[w].cfg.ip, "T77 ipconfig /release drops the address");
+  ok(/no adapter is in the state permissible/.test(cli(w, "ipconfig /release")) && devices[w].cfg.ip === "10.0.10.60", "T77 ipconfig /release refuses a hand-set address, as Windows does");
   cli(w, 'netsh interface ip set address "Ethernet" dhcp');
   ok(devices[w].cfg.viaDhcp && devices[w].cfg.ip, "T77 netsh back to DHCP");
   ok(/Tracing|traceroute|10\.0\.10\.1/.test(cli(w, "tracert 10.0.10.1")), "T77 tracert works on Windows");
@@ -4168,6 +4167,44 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     "T77 Windows completions list Windows commands only");
   const snap77 = serializeLab(); loadLab(JSON.parse(JSON.stringify(snap77)));
   ok(hostOs(devices[w]) === "windows" && hostOs(devices[m]) === "macos", "T77 the OS survives save and load");
+  cli(w, 'netsh interface ip set address "Ethernet" static 10.0.10.50 255.255.255.0 10.0.10.1');
+  ok(/64 bytes|Reply/.test(cli(w, "ping -n 4 10.0.10.1")) && /4 packets transmitted/.test(cli(w, "ping -n 4 10.0.10.1")), "T77 Windows ping takes -n and sends that many");
+  ok(/64 bytes|Reply/.test(cli(w, "PING -t 10.0.10.1")) && /64 bytes|Reply/.test(cli(w, "ping 10.0.10.1 -n 2")), "T77 Windows ping takes -t, any letter case, and options after the target");
+  ok(/requires administrative privileges/.test(cli(w, "ping -c 4 10.0.10.1")) && /-n/.test(cli(w, "ping -c 4 10.0.10.1")), "T77 Windows ping -c is refused as Windows does, and names -n");
+  ok(/10\.0\.10\.1/.test(cli(w, "tracert -d 10.0.10.1")) && !/Usage/.test(cli(w, "tracert -d 10.0.10.1")), "T77 tracert takes -d");
+  ok(/Successfully flushed/.test(cli(w, "ipconfig /flushdns")) && /USAGE/.test(cli(w, "ipconfig /?")) && !/unrecognized/.test(cli(w, "ipconfig /?")), "T77 ipconfig /flushdns and /? answer");
+  ok(cli(w, 'netsh int ip set address name="Ethernet" source=static addr=10.0.10.51 mask=255.255.255.0 gateway=10.0.10.1').includes("Ok.") && devices[w].cfg.ip === "10.0.10.51", "T77 netsh takes int for interface and the name= addr= mask= gateway= form");
+  ok(/IP Address:\s+10\.0\.10\.51/.test(cli(w, "netsh interface ip show config")) && /Connected/.test(cli(w, "netsh interface show interface")), "T77 netsh show config and show interface");
+  ok(/IPAddress\s+: 10\.0\.10\.51/.test(cli(w, "Get-NetIPAddress")) && /IPv4DefaultGateway\s+: 10\.0\.10\.1/.test(cli(w, "get-netipconfiguration")) && /Ethernet/.test(cli(w, "Get-NetAdapter")), "T77 PowerShell Get-Net cmdlets, in any letter case");
+  ok(/PingSucceeded\s+: True/.test(cli(w, "Test-NetConnection 10.0.10.1")) && /TcpTestSucceeded : False/.test(cli(w, "Test-NetConnection 10.0.10.1 -Port 22")) && /Bytes/.test(cli(w, "Test-Connection 10.0.10.1")), "T77 Test-NetConnection and Test-Connection");
+  cfgDo(sw77, ["set system services ssh"]);
+  ok(/TcpTestSucceeded : True/.test(cli(w, "tnc 10.0.10.1 -Port 22")), "T77 a port test succeeds once ssh listens on the switch");
+  ok(/DNS name does not exist/.test(cli(w, "Resolve-DnsName nosuch")) && /netsh interface ip set dns/.test(cli(w, "nslookup nosuch")), "T77 a Windows PC with no DNS server is told the Windows way to set one");
+  ok(/[0-9A-F]{2}-[0-9A-F]{2}/.test(cli(w, "getmac")) && /\\user/.test(cli(w, "whoami")) && /Users/.test(cli(w, "cd")) && !/not recognized/.test(cli(w, "exit") + cli(w, "dir") + cli(w, "ver")), "T77 getmac, whoami, cd, dir, ver, exit are known on Windows");
+  ok(/Displays and modifies/.test(cli(w, "arp")) && !/not recognized/.test(cli(w, "arp -a")), "T77 arp alone prints its usage, arp -a the table");
+  cli(w, "Rename-Computer win-77");
+  ok(devices[w].name === "win-77", "T77 Rename-Computer takes the name without -NewName");
+  ok(!/usage|command not found/i.test(cli(m, "networksetup -listallhardwareports") + cli(m, "networksetup -listallnetworkservices") + cli(m, 'networksetup -getdnsservers "Ethernet"') + cli(m, "scutil --get HostName") + cli(m, "dscacheutil -flushcache") + cli(m, "whoami") + cli(m, "ls") + cli(m, "exit")),
+    "T77 the Mac knows its everyday commands");
+  ok(/does not exist/.test(cli(m, "ifconfig en1")) && /on en0/.test((cli(m, "ping -c2 10.0.10.1"), cli(m, "arp -a"))) && !/eth0/.test(cli(m, "arp -a")), "T77 the Mac has en0 only, and arp -a speaks of en0");
+  ok(/2 packets transmitted/.test(cli(m, "ping -c2 10.0.10.1")) && /10\.0\.10\.1/.test(cli(m, "traceroute -n 10.0.10.1")) && /gateway: 10\.0\.10\.1/.test(cli(m, "route -n get default")), "T77 Mac ping -c2, traceroute -n, route get default");
+  cli(m, "sudo ifconfig en0 inet 10.0.10.71 netmask 255.255.255.0");
+  ok(devices[m].cfg.ip === "10.0.10.71", "T77 ifconfig en0 inet sets the address instead of ignoring it");
+  cli(l, "dhclient eth0");
+  ok(/inet 10\.0\.10\.1\d\d\/24/.test(cli(l, "ip a")) && /^eth0\s+UP\s+10\.0\.10/.test(cli(l, "ip -br a")) && /inet 10/.test(cli(l, "ip address show")) && /default via 10\.0\.10\.1/.test(cli(l, "ip r")), "T77 Linux ip takes its short forms: ip a, ip -br a, ip r");
+  ok(/link\/ether/.test(cli(l, "ip link")) && !/command not found/.test(cli(l, "ip n")) && /is unknown/.test(cli(l, "ip bogus")), "T77 ip link and ip neigh exist, an unknown object is named as ip does");
+  cli(l, "dhclient -r eth0");
+  ok(!devices[l].cfg.ip, "T77 dhclient -r gives the lease back instead of asking for a new one");
+  ok(/"dev" argument is required/.test(cli(l, "ip addr add 10.0.10.9/24")) && !devices[l].cfg.ip, "T77 ip addr add without dev is refused, as on Linux");
+  cli(l, "sudo ip addr add 10.0.10.9/24 dev eth0");
+  ok(/3 packets transmitted/.test(cli(l, "ping -c3 10.0.10.1")) && /3 packets transmitted/.test(cli(l, "ping 10.0.10.1 -c 3")), "T77 Linux ping -c3 and a trailing -c 3");
+  cli(l, 'echo "nameserver 10.0.10.53" | sudo tee /etc/resolv.conf');
+  ok(devices[l].cfg.ns === "10.0.10.53" && /nameserver 10\.0\.10\.53/.test(cli(l, "cat /etc/resolv.conf")), "T77 the real way to set a nameserver on Linux works");
+  ok(/lab shorthand/.test(cli(l, "nameserver 10.0.10.54")) && /lab shorthand/.test(cli(l, "help")), "T77 nameserver <ip> is labelled as lab shorthand");
+  const ln77 = devices[l].name;
+  ok(cli(l, "hostname") === ln77 && /Static hostname/.test(cli(l, "hostnamectl")), "T77 hostname alone shows the name");
+  cli(l, "sudo hostnamectl set-hostname lnx-77");
+  ok(devices[l].name === "lnx-77" && cli(l, "whoami") === "user" && /bash: nosuch: command not found/.test(cli(l, "nosuch")), "T77 hostnamectl renames, whoami answers, unknown commands read like bash");
   ok(maskToBits("255.255.255.0") === 24 && maskToBits("255.255.255.252") === 30 && maskToBits("255.0.255.0") === null && bitsToMask(30) === "255.255.255.252",
     "T77 mask conversion");
   wipeLab();
@@ -4659,6 +4696,45 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   const b83 = document.getElementById("scen-board");
   ok(b83.querySelectorAll(".sb-num").map(n => n.textContent).slice(0, 4).join(" ") === "1 1b 2 3", "T83 the board shows lettered numbers in its gutter");
   setStrict(strict83);
+  wipeLab();
+}
+
+/* ---------- T84: Junos CLI accepts the everyday forms a real switch accepts ---------- */
+{
+  const strict84 = strictOn(); setStrict(false);
+  wipeLab();
+  const s84 = makeSwitch(0, 0, 8), r84 = makeRouter(0, 0), h84 = makeHost(0, 0);
+  cable(h84, "eth0", s84, "ge-0/0/1"); cable(s84, "ge-0/0/7", r84, "ge-0/0/0"); rebuildAllDerived();
+  cfgDo(s84, ["set system host-name sw84", "set vlans staff vlan-id 10", "set interfaces irb unit 0 family inet address 10.0.0.1/24", "set vlans default l3-interface irb.0"]);
+  ok(/Physical interface: ge-0\/0\/1/.test(cli(s84, "show interfaces ge-0/0/1")), "T84 show interfaces <name> works without extensive");
+  const t84 = cli(s84, "show interfaces ge-0/0/1 terse");
+  ok(/ge-0\/0\/1/.test(t84) && !/ge-0\/0\/2/.test(t84), "T84 show interfaces <name> terse shows that one port");
+  ok(/10\.0\.0\.0\/24/.test(cli(s84, "show route 10.0.0.0/24")) && !/syntax error/.test(cli(s84, "show route 10.9.0.0/16")), "T84 show route takes a prefix");
+  ok(/^staff/m.test(cli(s84, "show vlans staff")) && !/default/.test(cli(s84, "show vlans staff")) && /staff/.test(cli(s84, "show vlans brief")) && /not configured/.test(cli(s84, "show vlans nosuch")), "T84 show vlans <name> and show vlans brief");
+  ok(/Routing instance|VLAN Name/.test(cli(s84, "show vlans detail")), "T84 show vlans detail still wins over a VLAN name");
+  ok(!/syntax error/.test(cli(s84, "quit")) && cli(s84, "set cli screen-length 0") === "Screen length set to 0", "T84 quit and set cli screen-length are operational commands");
+  ok(/Entering configuration mode/.test(cli(s84, "configure private")) && devices[s84].cli.mode === "cfg", "T84 configure private enters configuration mode");
+  const m84 = cli(s84, "show interfaces terse");
+  ok(/syntax error/.test(m84) && /run show interfaces terse/.test(m84), "T84 an operational show typed in configuration mode names the fix: run");
+  ok(/vlan-id 10/.test(cli(s84, "show vlans")) && /nothing configured/.test(cli(s84, "show protocols")), "T84 configuration show still reads the candidate");
+  cli(s84, "exit");
+  ok(/Entering configuration mode/.test(cli(s84, "configure exclusive")), "T84 configure exclusive");
+  cli(s84, "exit");
+  const u84 = devices[s84].user;
+  cli(s84, "start shell");
+  ok(devices[s84].cli.stage === "shell" && /not found/.test(cli(s84, "show version")), "T84 start shell leaves the CLI for the % shell");
+  cli(s84, "cli");
+  ok(!devices[s84].cli.stage && devices[s84].user === u84 && /Hostname: sw84/.test(cli(s84, "show version")), "T84 cli comes back as the same user");
+  ok(/ex4300-24t/i.test(cli(s84, "show version")) && /EX4300-24T/.test(cli(s84, "show chassis hardware")), "T84 show version and show chassis hardware name the same model");
+  setStrict(strict84);
+  wipeLab();
+  scen("site-new-desk").setup(); rebuildAllDerived();
+  const tr84 = cli(byName("pc-1").id, "tracert 8.8.8.8");
+  ok(/8\.8\.8\.8 \(8\.8\.8\.8\)\s+[\d.]+ ms/.test(tr84) && !/source NAT/.test(tr84), "T84 a trace to the internet completes when NAT is in place, as the ping does");
+  wipeLab();
+  scen("colo-no-internet").setup(); rebuildAllDerived();
+  const tb84 = cli(byName("bor-db-1").id, "traceroute 8.8.8.8");
+  ok(/way back/.test(tb84) && !/Configure source NAT/.test(tb84), "T84 a lost reply is not blamed on NAT");
   wipeLab();
 }
 

@@ -1369,7 +1369,7 @@ function pingRun(dev, target, opts){
   if(!validIp(target)) return { ok: false, lines: lines("err", "ping: bad address " + target) };
   const srcIfaces = ifacesOf(dev).filter(i => i.up || dev.type === "host");
   if(!srcIfaces.length){
-    const why = dev.type === "host" ? "ping: no IP configured on this host (ip addr add <ip>/<bits> dev eth0)"
+    const why = dev.type === "host" ? "ping: no IP configured on this host (" + hostHow(dev, "addr") + ")"
       : dev.type === "switch" ? "ping: no source address — this switch has no usable irb interface"
       : "ping: no source address — no interface has an address and a live link";
     return { ok: false, lines: lines("err", why) };
@@ -1551,7 +1551,17 @@ function doTraceroute(dev, target){
   let n = 1;
   for(const h of fwd.hops) out.push(` ${n++}  ${hostnameOf(h.dev)} (${h.ip})  ${(n * 0.21).toFixed(3)} ms`);
   if(fwd.ok) out.push(` ${n}  ${target} (${target})  ${(n * 0.23).toFixed(3)} ms`);
-  else { out.push(` ${n}  * * *`); out.push(`  ↳ ${fwd.text}`); }
+  else {
+    const natTip = /source NAT/.test(fwd.text || "");
+    const full = natTip ? pingRun(dev, target, {}) : null;
+    const backLost = full && !full.ok && !full.lines.some(l => /source NAT|private address/.test(l.text));
+    if(full && full.ok){
+      out.push(` ${n}  ${target} (${target})  ${(n * 0.23).toFixed(3)} ms`);
+      return lines("out", out.join("\n"));
+    }
+    out.push(` ${n}  * * *`);
+    out.push(backLost ? "  ↳ Request timeout  (the trace gets out to the internet, so the way there works. The reply is lost on the way back: ping " + target + " names the reason.)" : `  ↳ ${fwd.text}`);
+  }
   return lines(fwd.ok ? "out" : "err", out.join("\n"));
 }
 
@@ -1980,7 +1990,7 @@ function showAdvertisingCmd(dev, keys){
   return head + "\n" + pad("Prefix", 22) + pad("Source", 9) + "Why\n" + rows.join("\n");
 }
 function showVersionCmd(dev){
-  const model = dev.model || (dev.type === "switch" ? "ex4300-48t" : "mx204");
+  const model = dev.model || (dev.type === "switch" ? "ex4300-24t" : "mx204");
   const prof = typeof profileFor === "function" ? profileFor(dev.model) : null;
   const ver = (prof && prof.version) || "23.4R1.10";
   return `Hostname: ${hostnameOf(dev)}\nModel: ${model.toLowerCase()} (lab)\nJunos: ${ver} (JunOS Lab edition)`;
@@ -2772,7 +2782,37 @@ function rescueDeleteCmd(dev){
 function showConfigViaTrie(dev, keys){
   return showConfigPathCmd(dev, keys.slice(2));
 }
+function showIfOneTerse(dev, keys){
+  const rows = showTerse(dev).split("\n");
+  return [rows[0]].concat(rows.filter(r => r.split(/\s+/)[0] === keys[2])).join("\n");
+}
+function showRoutePrefixCmd(dev, keys){
+  const pfx = parsePrefix(keys[keys.length - 1]);
+  const hit = routeRows(dev).filter(r => r.bits >= pfx.bits && sameSubnet(r.net, pfx.ip, pfx.bits));
+  if(!hit.length)
+    return "inet.0: 0 destinations, 0 routes (0 active, 0 holddown, 0 hidden)\n(no route sits inside " + keys[keys.length - 1] + ". A real box prints nothing here.)";
+  return routeTableHead(hit) + routeBody(hit) + hiddenFooter(hit);
+}
+function showVlanOneCmd(dev, keys){
+  const rows = showVlansCmd(dev).split("\n");
+  const hit = rows.filter(r => r.split(/\s+/)[0] === keys[2]);
+  if(!hit.length) return { text: "error: vlan " + keys[2] + " is not configured on this switch (show vlans lists the ones that are)", err: true };
+  return [rows[0]].concat(hit).join("\n");
+}
+function enterConfigAlone(dev){
+  dev.cli.mode = "cfg"; dev.cli.editKeys = [];
+  return "warning: uncommitted changes will be discarded on exit\nEntering configuration mode\n[edit]";
+}
 const SHARED_OP_SPECS = [
+  ["show interfaces <interface:physport>", { help: "One interface in full: state, speed, counters, logical unit", fn: showIfExtensive }],
+  ["show interfaces <interface:physport> terse", { help: "The one-line summary for one interface", fn: showIfOneTerse }],
+  ["show route <destination:prefix>", { help: "Every route inside this prefix", fn: showRoutePrefixCmd }],
+  ["quit", { help: "Same as exit", fn: () => "(this is the operational prompt — close the session from the tab bar or ✕)" }],
+  ["set cli screen-length <lines:num>", { help: "Lines per page before --(more)-- (0 = never pause)", fn: (dev, keys) => "Screen length set to " + keys[keys.length - 1] }],
+  ["set cli screen-width <columns:num>", { help: "Terminal width in columns", fn: (dev, keys) => "Screen width set to " + keys[keys.length - 1] }],
+  ["configure private", { help: "Edit a private copy of the configuration (the lab has one user, so it behaves like configure)", fn: enterConfigAlone }],
+  ["configure exclusive", { help: "Lock the configuration so nobody else can commit while you edit", fn: enterConfigAlone }],
+  ["start shell", { help: "Leave the Junos CLI for the Unix shell (type cli to come back)", fn: dev => { dev.cli.stage = "shell"; dev.cli.fromCli = true; return "% (this is the Unix shell under Junos. Type cli to come back.)"; } }],
   ["show configuration <statement:cfgnode>", { help: "One branch of the active configuration, e.g. show configuration interfaces ge-0/0/1", fn: showConfigViaTrie }],
   ["show interfaces descriptions", { help: "Only the ports you described — the fastest way to read a patch panel", fn: showIfDescCmd }],
   ["show system alarms", { help: "System alarms: config and software hygiene (hardware lives under show chassis alarms)", fn: showSystemAlarmsCmd }],
@@ -2807,6 +2847,8 @@ const PING_OPT_FORMS = [
   ["ping <target:ip> size <size:num> do-not-fragment", "An MTU probe: this size, unfragmented, or nothing"],
   ["ping <target:ip> count <count:num> size <size:num> do-not-fragment", "An MTU probe repeated n times"],
 ];
+OP_SPECS.switch.push(["show vlans brief", { help: "VLANs and member ports, short form", fn: showVlansCmd }]);
+OP_SPECS.switch.push(["show vlans <vlan:word>", { help: "One VLAN and its member ports", fn: showVlanOneCmd }]);
 ["switch", "router"].forEach(function(t){
   SHARED_OP_SPECS.forEach(function(e){ OP_SPECS[t].push([e[0], e[1]]); });
   PING_OPT_FORMS.forEach(function(f){ OP_SPECS[t].push([f[0], { help: f[1], fn: pingWithOpts }]); });
@@ -2882,7 +2924,7 @@ function wifiLeave(host){
 function resolveName(host, name){
   if(validIp(name)) return { ok: true, ip: name };
   const ns = host.cfg.ns;
-  if(!ns) return { ok: false, text: "no nameserver configured on this machine — set one first: nameserver <dns-ip>" };
+  if(!ns) return { ok: false, text: "no nameserver configured on this machine — set one first: " + (host.type === "host" ? hostHow(host, "dns") : "nameserver <dns-ip>") };
   const srv = Object.values(devices).find(d => d.type === "server" && d.cfg.ip === ns);
   if(!srv) return { ok: false, text: `nameserver ${ns} exists in the config, but nothing at that address is a DNS server` };
   if(!pingRun(host, ns, {}).ok)
