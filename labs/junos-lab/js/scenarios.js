@@ -56,44 +56,44 @@ const SCENARIOS = [
   {
     id: "basic-connect",
     title: "1. Basic Connectivity",
-    desc: "Get two hosts talking through a switch. No VLANs, no tricks — just prove the plumbing works.",
+    desc: "Get two office PCs talking through a switch: add one Windows PC and one Mac. No VLANs, no tricks, just prove the plumbing works.",
     checks: [
-      { desc: "At least 1 switch and 2 hosts placed",
+      { desc: "At least 1 switch and 2 hosts placed (one Windows PC and one Mac)",
         why: "Ping needs at least two endpoints and something to switch frames between them — this is the minimum topology any test can run on.",
         test: () => devsBy("switch").length >= 1 && devsBy("host").length >= 2 },
-      { desc: "Both hosts cabled into the switch",
+      { desc: "Both PCs cabled into the switch",
         why: "An uncabled port carries nothing. Physical connectivity always comes before configuration — Junos can't route packets down a wire that isn't there.",
         test: () => devsBy("host").length >= 2 && devsBy("host").every(hostOnSwitch) },
-      { desc: "Both hosts have an IP in the same /24",
+      { desc: "Both PCs have an IP in the same /24",
         why: "Two hosts can only ARP for each other directly if they believe they're on the same subnet — different subnets would need a router, not a switch.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           return hs.length >= 2 && new Set(hs.map(h => networkOf(h.cfg.ip, 24))).size === 1; } },
-      { desc: "ping succeeds between the two hosts",
+      { desc: "ping succeeds between the two PCs",
         why: "This is the actual proof. Cabling and addressing can look correct and still not work — ping is the only check that confirms it.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           return hs.length >= 2 && pingOk(hs[0], hs[1].cfg.ip); } },
     ],
     hints: [
-      "Add a switch and two hosts from the toolbar, then use Cable mode to wire host → switch, host → switch.",
-      "Both hosts need an IP: in each host's shell, ip addr add 10.0.0.1/24 dev eth0 (different last number on the second host).",
+      "Add a switch, then Add > Host twice: choose Windows PC for the first and Mac for the second, because office users sit behind those. Then use Connect to wire each PC to the switch.",
+      "Both PCs need an address, each in its own system's words. On the Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. On the Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0. Type help on a PC if you forget.",
       "If ping still fails: show interfaces terse on the switch — are both ports up, and in the same VLAN (default is fine)?",
     ],
   },
   {
     id: "vlan-split",
     title: "2. VLAN Isolation",
-    desc: "Two hosts, one switch, different VLANs. The goal is for the ping to FAIL — that's success here.",
+    desc: "Two office PCs (add one Windows PC and one Mac), one switch, different VLANs. The goal is for the ping to FAIL: that is success here.",
     checks: [
       { desc: "Two VLANs exist on a switch (not counting default)",
         why: "Without a second VLAN there's nothing to isolate — the whole point of this lab is two separate broadcast domains on one switch.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
-      { desc: "The two hosts sit on access ports in different VLANs",
+      { desc: "The Windows PC and the Mac sit on access ports in different VLANs",
         why: "Isolation happens at the PORT, not the host — a host doesn't know its VLAN, the switch enforces it based on which access port it's plugged into.",
         test: () => { const hs = devsBy("host");
           if(hs.length < 2) return false;
           const vs = hs.map(hostAccessVlan).filter(Boolean);
           return vs.length >= 2 && new Set(vs).size >= 2; } },
-      { desc: "Both hosts have IPs configured",
+      { desc: "Both PCs have IPs configured",
         why: "Addresses in the SAME subnet make the coming failure meaningful — if the ping failed just because of mismatched IPs, it wouldn't prove VLAN isolation at all.",
         test: () => devsBy("host").filter(h => h.cfg.ip).length >= 2 },
       { desc: "Ping between them correctly fails (proves the isolation)",
@@ -106,7 +106,7 @@ const SCENARIOS = [
     hints: [
       "In configure mode on the switch: set vlans staff vlan-id 10, then set vlans guest vlan-id 20. Commit!",
       "Move each host's switch port: set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff (and the other port into guest). Type set interfaces ge-0/0/0 ? and let the CLI walk you there.",
-      "Give both hosts IPs in the same subnet anyway — same wire, same subnet, still unreachable: that's what a VLAN does. If ping still works, run show vlans and check which ports really ended up where.",
+      "Give both PCs addresses in the same subnet anyway. Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0. Same wire, same subnet, still unreachable: that is what a VLAN does. If ping still works, run show vlans and check which ports really ended up where.",
     ],
   },
   {
@@ -127,17 +127,17 @@ const SCENARIOS = [
   {
     id: "access-distribution",
     title: "4. Access → Distribution Uplink",
-    desc: "Classic datacenter shape: a distribution switch uplinked to an access switch, hosts off the access switch.",
+    desc: "Classic datacenter shape: a distribution switch uplinked to an access switch, with two office PCs off the switches. Add one Windows PC and one Mac.",
     checks: [
       { desc: "2 switches cabled to each other (the uplink)",
         why: "This cable is the uplink — the one link every host on the access switch depends on to reach anything beyond it.",
         test: () => Object.values(links).some(l => carriesTraffic(l) &&
           devices[l.a.dev] && devices[l.b.dev] &&
           devices[l.a.dev].type === "switch" && devices[l.b.dev].type === "switch") },
-      { desc: "At least 2 hosts hanging off the switches",
+      { desc: "At least 2 hosts hanging off the switches (one Windows PC and one Mac)",
         why: "You need traffic to actually cross the uplink to prove it works, not just exist.",
         test: () => devsBy("host").filter(hostOnSwitch).length >= 2 },
-      { desc: "Hosts share one subnet and ping across the uplink",
+      { desc: "The two PCs share one subnet and ping across the uplink",
         why: "This is the real test: the uplink isn't just plugged in, it's actually carrying traffic between two separate switches.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           return hs.length >= 2 && pingOk(hs[0], hs[1].cfg.ip); } },
@@ -146,17 +146,17 @@ const SCENARIOS = [
         test: () => devsBy("switch").filter(sw => cfgGet(sw.config, ["system", "host-name"])).length >= 2 },
     ],
     hints: [
-      "Two switches, one cable between them — that's your uplink. Hosts plug into one of them.",
-      "Factory-default ports are access ports in vlan default, so same-subnet hosts should ping as soon as cables and IPs are right.",
+      "Two switches, one cable between them: that is your uplink. Add a Windows PC and a Mac (Add > Host) and plug one into each switch with a LAN / Data cable, so the ping has to cross the uplink.",
+      "Factory-default ports are access ports in vlan default, so the PCs ping as soon as cables and addresses are right. Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0.",
       "Rename both switches like rack labels (dist-1, acc-1) — set system host-name, commit.",
     ],
   },
   {
     id: "isp-onboarding",
     title: "5. Onboard a Client via ISP",
-    desc: "A router with a WAN link to an ISP and a LAN link into your switch. Get a brand-new client host to the internet — try pinging 8.8.8.8 once it all works.",
+    desc: "A router with a WAN link to an ISP and a LAN link into your switch. Get a brand-new client PC (add a Windows PC) to the internet, and try pinging 8.8.8.8 once it all works.",
     checks: [
-      { desc: "1 router, 1 ISP node, 1 switch, 1 host placed",
+      { desc: "1 router, 1 ISP node, 1 switch, 1 host placed (the client is a Windows PC)",
         why: "This is the minimum chain a real internet handoff needs: something to deliver service, something to route it, something to distribute it, and something to use it.",
         test: () => devsBy("router").length >= 1 && devsBy("isp").length >= 1 &&
                     devsBy("switch").length >= 1 && devsBy("host").length >= 1 },
@@ -173,7 +173,7 @@ const SCENARIOS = [
       { desc: "Router has a default route (0.0.0.0/0) at the ISP",
         why: "Without a default route, the router has no idea where to send traffic for destinations it doesn't specifically know — which is almost the entire internet.",
         test: () => devsBy("router").some(rt => D(rt).routes.some(r => r.net === "0.0.0.0" && r.bits === 0)) },
-      { desc: "Client host (with a gateway set) pings the ISP",
+      { desc: "The client PC (with a gateway set) pings the ISP",
         why: "This proves the LAN side works end to end before adding NAT to the picture — isolate each layer before stacking the next one on top.",
         test: () => { const isp = devsBy("isp")[0];
           const h = devsBy("host").find(x => x.cfg.ip);
@@ -181,16 +181,16 @@ const SCENARIOS = [
       { desc: "Source NAT configured on the router (the internet won't answer 192.168.x)",
         why: "The internet has no route back to a private address — NAT rewrites the source so replies have somewhere real to go.",
         test: () => devsBy("router").some(rt => (D(rt).natRules || []).length > 0) },
-      { desc: "Client host reaches the internet (ping 8.8.8.8)",
+      { desc: "The client PC reaches the internet (ping 8.8.8.8)",
         why: "This is the actual deliverable — everything before it was necessary, but this is the only check that proves the service works as sold.",
         test: () => { const h = devsBy("host").find(x => x.cfg.ip);
           return h && pingOk(h, "8.8.8.8"); } },
     ],
     hints: [
-      "Layout: Host → Switch → Router(LAN) … Router(WAN) → ISP. Cable it all first.",
+      "Layout: Windows PC → Switch → Router(LAN) … Router(WAN) → ISP. The client is an office user, so pick Windows PC under Add > Host. Cable it all first.",
       "Router WAN: set interfaces ge-0/0/0 unit 0 family inet address 203.0.113.2/30 (same /30 as the ISP — check its IP with show interfaces terse on the ISP node). Router LAN: another address in your client subnet.",
       "Default route: set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1. Commit.",
-      "The host needs an IP in the LAN subnet AND a gateway: ip route add default via <router-lan-ip>. No gateway = 'Network is unreachable'.",
+      "The client PC needs an address in the LAN subnet AND a gateway. Windows takes both in one line: netsh interface ip set address \"Ethernet\" static <pc-ip> 255.255.255.0 <router-lan-ip>. With no gateway the PC cannot leave its own subnet.",
       "Pinging the ISP works, 8.8.8.8 doesn't? The internet can't route replies to private addresses. On the router: set security nat source rule-set OFFICE from interface <lan-if>.0, ... to interface <wan-if>.0, ... rule R1 then source-nat interface. Watch the NAT tag on the animation.",
     ],
   },
@@ -235,17 +235,17 @@ const SCENARIOS = [
       { desc: "Switch has a client VLAN and a separate security VLAN",
         why: "Physical separation isn't enough when devices share a switch — a VLAN is what actually walls the security systems off from client traffic.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
-      { desc: "Client host, access-panel host, and ops host placed (3 hosts)",
+      { desc: "3 hosts placed: a client PC (Windows), an access-panel (Linux, door controllers are small Linux boxes) and an ops host (Linux, the engineer's own machine)",
         why: "You need one device to represent each role — the thing that must be blocked, the thing to protect, and the team that legitimately needs access.",
         test: () => devsBy("host").length >= 3 },
-      { desc: "Ops host shares the access-panel's VLAN (non-default)",
+      { desc: "The ops host shares the access-panel's VLAN (non-default)",
         why: "Ops needs to actually reach the panel to manage it — which means being inside its VLAN, not just on the same physical switch.",
         test: () => { const hs = devsBy("host");
           if(hs.length < 3) return false;
           const vs = hs.map(hostAccessVlan);
           return hs.some((h1, i) => hs.some((h2, j) =>
             i !== j && vs[i] && vs[i] === vs[j] && vs[i] !== "default")); } },
-      { desc: "The client host CANNOT reach the access-panel",
+      { desc: "The client PC CANNOT reach the access-panel",
         why: "This is the actual security requirement. A wall that isn't tested is just a hope.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           if(hs.length < 3) return false;
@@ -257,9 +257,9 @@ const SCENARIOS = [
           return false; } },
     ],
     hints: [
-      "Two non-default VLANs on the switch: set vlans client vlan-id 10, set vlans security vlan-id 99.",
+      "Add three hosts and choose by who uses them: Windows PC for the client, Linux PC for the access-panel and Linux PC for the ops host. Rename them so you can tell them apart (Rename-Computer -NewName client-pc on Windows, hostname panel on Linux). Then two non-default VLANs on the switch: set vlans client vlan-id 10, set vlans security vlan-id 99.",
       "Client host's port → vlan client. BOTH the panel's port AND the ops host's port → vlan security. That's what gives ops reachability while clients stay blind.",
-      "Full port statement: set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members security — and commit. Then prove it with pings from each host.",
+      "Full port statement: set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members security, and commit. Give every host an address in one subnet (Linux: ip addr add 10.0.0.2/24 dev eth0, Windows: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0), then prove it with pings from each host.",
     ],
   },
   {
@@ -270,7 +270,7 @@ const SCENARIOS = [
       { desc: "Switch has two customer VLANs (not counting default)",
         why: "Two tenants sharing hardware absolutely require separate broadcast domains — this is the baseline isolation before the trap even applies.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
-      { desc: "Two customer hosts: different VLANs, different subnets, gateways set",
+      { desc: "Two customer PCs (a Windows PC for customer A, a Mac for customer B): different VLANs, different subnets, gateways set",
         why: "Different subnets are what make the router relevant at all — without them, this would just be the VLAN-isolation lab again.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
@@ -295,7 +295,7 @@ const SCENARIOS = [
           return !pingOk(h1, h2.cfg.ip); } },
     ],
     hints: [
-      "Build it open first: two VLANs (cust-a, cust-b), a host in each with its own subnet, router with a leg in each VLAN (each router port goes to an access port of the right VLAN). Set gateways on the hosts, prove each host pings its gateway — then ping A→B and watch it WORK. That's the trap.",
+      "Build it open first: two VLANs (cust-a, cust-b), a customer PC in each with its own subnet (a Windows PC for customer A, a Mac for customer B), router with a leg in each VLAN (each router port goes to an access port of the right VLAN). Set address and gateway on each PC (Windows: netsh interface ip set address \"Ethernet\" static <ip> 255.255.255.0 <gateway>, Mac: networksetup -setmanual \"Ethernet\" <ip> 255.255.255.0 <gateway>), prove each PC pings its gateway, then ping A→B and watch it WORK. That is the trap.",
       "Now filter: set firewall family inet filter CUST-A-IN term block-cross from destination-address <cust-b-subnet>/24, …then discard. And the crucial part: set firewall family inet filter CUST-A-IN term allow then accept — a JunOS filter ends in an implicit discard-everything!",
       "Apply it: set interfaces <cust-a-facing-port> unit 0 family inet filter input CUST-A-IN. Commit, re-ping: gateway still answers, A→B dies. That's 'allowed by routing, blocked by policy'.",
     ],
@@ -312,7 +312,7 @@ const SCENARIOS = [
       { desc: "Both irb units have addresses (the two gateways)",
         why: "An irb with no address can't be anyone's gateway — hosts need something real to send their inter-VLAN traffic to.",
         test: () => devsBy("switch").some(sw => Object.keys(D(sw).irbs).length >= 2) },
-      { desc: "A host in each VLAN, with IP and matching gateway",
+      { desc: "A PC in each VLAN (a Windows PC in staff, a Mac in guest), with IP and matching gateway",
         why: "The gateway a host is configured with must actually be its own VLAN's irb, or its inter-VLAN traffic has nowhere to go.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
@@ -326,9 +326,9 @@ const SCENARIOS = [
           return pingOk(h1, h2.cfg.ip); } },
     ],
     hints: [
-      "VLANs first: set vlans staff vlan-id 10 / set vlans guest vlan-id 20, one host access-ported into each, different subnets (10.0.10.x, 10.0.20.x).",
+      "VLANs first: set vlans staff vlan-id 10 / set vlans guest vlan-id 20. Add a Windows PC for staff and a Mac for the guest, one access-ported into each VLAN, in different subnets (10.0.10.x, 10.0.20.x).",
       "The L3 part is two statements per VLAN: set interfaces irb unit 10 family inet address 10.0.10.1/24 and set vlans staff l3-interface irb.10 (commit will refuse one without the other).",
-      "Hosts: ip route add default via 10.0.10.1 (their own VLAN's irb). Then ping across. show route on the switch — see the two Direct routes doing the work?",
+      "Each PC points at its own VLAN's irb as gateway. Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.10.11 255.255.255.0 10.0.10.1. Mac: networksetup -setmanual \"Ethernet\" 10.0.20.11 255.255.255.0 10.0.20.1. Then ping across, and run show route on the switch to see the two Direct routes doing the work.",
     ],
   },
   {
@@ -1045,6 +1045,7 @@ const SCENARIOS = [
   },
   ...SITE_SCENARIOS,
   ...COLO_SCENARIOS,
+  ...BGP_SCENARIOS,
 ];
 // setups cable things up after their commits — make every setup leave the
 // derived network state (NET) consistent, no matter who calls it
@@ -1448,7 +1449,7 @@ const scenSelect = document.getElementById("scenario-select");
 const scenGroupSelect = document.getElementById("scenario-group");
 const SCEN_GROUPS = ["Basics: empty canvas", "Starter topology: switching", "Starter topology: routing and WAN",
   "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4, DESK_GROUP,
-  COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT];
+  COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT, BGP_L1, BGP_L2, BGP_L3, BGP_L4];
 const SCEN_TOPIC = {
   "trunk-span": 1, "lacp-bundle": 1, "rstp-loop": 1, "storm-control": 1, "rogue-switch": 1,
   "interconnect-recovery": 2, "asymmetric-routing": 2, "nat-edge": 2, "ospf-backbone": 2, "speak-bgp": 2,
@@ -1543,6 +1544,7 @@ const SCEN_BANDS = [
   { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
   { key: "site", title: "Existing site", note: "A full datacenter and office is running, you work a ticket", groups: [5, 6, 7, 8] },
   { key: "colo", title: "Multi-tenant datacenter", note: "One hall, three customers and your NOC: real provider tickets", groups: [10, 11, 12, 13] },
+  { key: "bgp", title: "BGP step by step", note: "One idea per scenario, from a single session to two providers and your own network", groups: [14, 15, 16, 17] },
   { key: "desks", title: "Mixed desks", note: "Windows, Mac and Linux side by side: same job, three sets of commands", groups: [9] },
 ];
 function scenGroupShort(g){

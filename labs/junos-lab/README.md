@@ -26,6 +26,7 @@ No build step, no dependencies — open `index.html` in a browser.
 | `js/ui.js` | SVG rendering, pan/zoom, cabling, modals, save/load (+v1 migration), autosave, tabbed CLI with `?`/Tab/history, packet animation |
 | `js/sitework.js` | The 12 site-work scenarios (levels 1 to 4) on a running site, and the 6 mixed-desk scenarios (Windows, Mac, Linux) |
 | `js/colo.js` | The 14 multi-tenant datacenter scenarios (hygiene, isolation, provisioning, incidents) on a shared colocation hall |
+| `js/bgplab.js` | The 10 BGP step-by-step scenarios (four levels), on an edge router with one or two providers |
 | `js/hostos.js` | Windows, macOS and Linux host shells |
 | `js/scenarios.js` | The 26 build-from-scratch scenarios, the fault-injection ticket generator, exam mode, progress persistence, boot |
 | `js/planner.js` | Pre-build tooling: buildings/zones, bill of materials (Belgian prices), design rule check, failure-impact heatmap, reachability matrix, rack elevations, build packet |
@@ -85,7 +86,7 @@ Review-card export (`Export cards for the bot` on the front door): `{exported, s
   (`dns add`), an HTTP listener, and clients with `nameserver`/`nslookup`/`curl`,
   so traffic can be followed from name lookup to 200 OK (or told apart from
   connection-refused).
-- Live-checked **scenarios** (58), a fault-injection **ticket generator** (8
+- Live-checked **scenarios** (68), a fault-injection **ticket generator** (8
   fault types), and a **contract mode** that generates office-build briefs at
   three tiers.
 - Visual-learner layer: VLAN color view with legend, IP label view, capability

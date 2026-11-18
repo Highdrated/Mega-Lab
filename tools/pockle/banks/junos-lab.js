@@ -40,7 +40,10 @@ POCKET.register({
     "colo-wrong-handover": ["lldp", "troubleshooting"], "colo-tenant-leak": ["filters"], "colo-rogue-switch": ["ops"],
     "colo-contractor-filter": ["filters"], "colo-onboard-tenant": ["vlan", "filters", "dayzero"], "colo-decommission": ["cfgedit", "filters"],
     "colo-tenant-lag": ["lacp"], "colo-remote-renumber": ["cfgedit"], "colo-no-internet": ["ribfib", "troubleshooting"],
-    "colo-gateway-gone": ["vlan", "troubleshooting"], "colo-power-drill": ["health"]
+    "colo-gateway-gone": ["vlan", "troubleshooting"], "colo-power-drill": ["health"],
+    "bgp-local-as": ["bgp"], "bgp-peer-as": ["bgp"], "bgp-neighbor-address": ["bgp"], "bgp-static-wins": ["bgp", "ribfib"],
+    "bgp-link-first": ["bgp", "troubleshooting"], "bgp-second-provider": ["bgp"], "bgp-failover": ["bgp", "ribfib"],
+    "bgp-announce": ["bgp", "filters"], "bgp-over-announce": ["bgp", "filters"], "bgp-dual-homed": ["bgp", "filters"]
   },
   units: [
     { id: "osi", title: "OSI & TCP/IP" },
@@ -115,6 +118,21 @@ POCKET.register({
   },
   sampleDone: ["osi", "subnetting"],
   cards: [
+    { u: "bgp", q: "In one line, what does BGP do?", o: ["Hands out IP addresses", "Lets two networks tell each other which networks they can reach", "Blocks loops between switches", "Encrypts traffic"], a: 1, why: "Two routers open a session and swap lists of reachable networks." },
+    { u: "bgp", q: "What is an AS number?", o: ["A VLAN id", "The name a whole network uses in BGP", "A port number", "A password"], a: 1, why: "Every network that speaks BGP has one. Yours and your provider's are different." },
+    { u: "bgp", q: "Junos refuses to commit a BGP neighbour. The error mentions no local AS. What is missing?", o: ["set protocols bgp enable", "set routing-options autonomous-system", "set system host-name", "set interfaces lo0"], a: 1, why: "The router must know its own AS before it can introduce itself." },
+    { u: "bgp", q: "show bgp summary says Active. What does that mean?", o: ["The session is working", "Your side is trying but the other end does not agree or answer", "BGP is switched off", "Routes are being sent"], a: 1, why: "Active is not good news: it keeps trying. A wrong peer-as is the classic cause." },
+    { u: "bgp", q: "Which state means routes are being exchanged?", o: ["Idle", "Active", "Connect", "Established"], a: 3, why: "Only Established carries routes. Everything else is a session that is not up." },
+    { u: "bgp", q: "Your interface is 203.0.113.2/30. What can the provider's address be?", o: ["203.0.113.1", "203.0.113.11", "203.0.113.254", "203.0.114.1"], a: 0, why: "A /30 has two usable addresses, .1 and .2. An eBGP neighbour sits on the directly connected network." },
+    { u: "bgp", q: "A static default (preference 5) and a BGP default (preference 170) both exist. Which is used?", o: ["The BGP one", "The static one", "Both, load-shared", "Neither"], a: 1, why: "For the same destination the lower preference wins, so the typed route beats the learned one." },
+    { u: "bgp", q: "The link to the provider goes down. What happens to the default route learned over BGP?", o: ["It stays forever", "It is withdrawn with the session", "It becomes static", "It moves to OSPF"], a: 1, why: "A learned route leaves when the session does. That is what makes failover automatic." },
+    { u: "bgp", q: "You have two providers. Why does each need its own BGP group?", o: ["Junos allows one neighbour per group", "Each provider is a different AS, so the peer-as differs", "To use two cables", "For NAT"], a: 1, why: "peer-as is set per group, and each provider answers with its own AS." },
+    { u: "bgp", q: "By default, which of your own networks does Junos announce to a BGP neighbour?", o: ["All of them", "Only connected ones", "None", "Only static ones"], a: 2, why: "Without an export policy only BGP-learned routes are passed on. Your own networks stay home." },
+    { u: "bgp", q: "What decides which networks you announce to a provider?", o: ["An import policy", "An export policy", "A firewall filter", "The NAT rule"], a: 1, why: "Export is what you tell others. Import is what you accept from them." },
+    { u: "bgp", q: "Which command shows what you are telling a neighbour?", o: ["show route receive-protocol bgp <ip>", "show bgp summary", "show route advertising-protocol bgp <ip>", "show route"], a: 2, why: "advertising-protocol is your outgoing list, receive-protocol is the incoming one." },
+    { u: "bgp", q: "A server with a public address cannot get replies from the internet. The BGP session is Established. Likely cause?", o: ["Wrong peer-as", "Its network was never announced to the provider", "DHCP is off", "The cable is bad"], a: 1, why: "The internet can only send answers to networks someone has announced." },
+    { u: "bgp", q: "Why must you never announce 10.0.0.0/8 style private networks to a provider?", o: ["They are too large", "Every company reuses them, so they are meaningless on the internet", "They are slower", "BGP cannot carry them"], a: 1, why: "An announcement is a promise to carry traffic for that network. Private space cannot be promised." },
+    { u: "bgp", q: "A policy has one term with no from part and then accept. What does it match?", o: ["Nothing", "Only static routes", "Every route", "Only the default route"], a: 2, why: "No condition means everything matches. That is how networks get announced by accident." },
     { u: "dayzero", q: "A factory-fresh Junos switch shows Amnesiac at the console. What does that mean?", o: ["It has no configuration yet", "The disk failed", "It lost its license", "It is in rescue mode"], a: 0, why: "Amnesiac is Junos for a box with no host-name and no config." },
     { u: "dayzero", q: "Your first commit on a new switch fails with a missing mandatory statement. What is missing?", o: ["A host-name", "A management address", "A root password", "A VLAN"], a: 2, why: "Junos refuses the first commit until root-authentication is set." },
     { u: "dayzero", q: "Fill the blank.", code: "set system ___ plain-text-password", o: ["root-password", "root-authentication", "login root", "password root"], a: 1, why: "root-authentication holds the root password." },

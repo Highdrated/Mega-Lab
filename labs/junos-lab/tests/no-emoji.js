@@ -8,7 +8,7 @@ const path = require("path");
 const root = path.join(__dirname, "..");
 const files = [
   "js/core.js", "js/sound.js", "js/grammar.js", "js/cli.js", "js/hostos.js", "js/engine.js",
-  "js/ui.js", "js/planner.js", "js/juno.js", "js/sitework.js", "js/colo.js", "js/scenarios.js",
+  "js/ui.js", "js/planner.js", "js/juno.js", "js/sitework.js", "js/colo.js", "js/bgplab.js", "js/scenarios.js",
   "js/protocols.js", "js/course.js", "js/mockexam.js", "index.html",
 ];
 

@@ -1448,12 +1448,12 @@ document.getElementById("add-ups").onclick = async () => {
   clickIntoRack(id);
 };
 const HOST_OS_CHOICES = [
-  { value: "windows", label: "Windows PC", desc: "The usual office machine: ipconfig, netsh, PowerShell" },
-  { value: "macos", label: "Mac", desc: "ifconfig en0, networksetup, zsh" },
-  { value: "linux", label: "Linux PC", desc: "ip addr, dhclient, the shell servers and engineers use" },
+  { value: "windows", label: "Windows PC", desc: "For a user or a client: the usual office machine (ipconfig, netsh, PowerShell)" },
+  { value: "macos", label: "Mac", desc: "For a user or a client on Apple gear (ifconfig en0, networksetup)" },
+  { value: "linux", label: "Linux PC", desc: "For an engineer's admin or debug machine, or a small device such as a door controller (ip addr, dhclient)" },
 ];
 document.getElementById("add-host").onclick = async () => {
-  const os = await modalChoice("New host", "Which operating system does this user have? It decides which commands the machine accepts, exactly as on a real desk.", HOST_OS_CHOICES);
+  const os = await modalChoice("New host", "Who sits behind it? A user or client gets a Windows PC or a Mac. An admin or debug machine is Linux. The scenario text says which one it wants. The choice decides which commands the machine accepts, exactly as on a real desk.", HOST_OS_CHOICES);
   if(os === null) return;
   const p = spawnPos(60);
   pushUndo();

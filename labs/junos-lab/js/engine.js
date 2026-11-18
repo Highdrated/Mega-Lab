@@ -558,8 +558,8 @@ function rebuildAllDerived(){
     computeNet();
   }
   computeOspf();
-  computeBgp();
-  if(computeThermal()){ computeNet(); computeOspf(); computeBgp(); }   // thermal shutdowns change the graph
+  computeBgp(); computeBgpAdvertised();
+  if(computeThermal()){ computeNet(); computeOspf(); computeBgp(); computeBgpAdvertised(); }   // thermal shutdowns change the graph
 }
 
 /* ============================================================
@@ -629,7 +629,20 @@ function computeThermal(){
    OSPF — adjacency discovery + route propagation
    ============================================================ */
 /* ---------- BGP: buy your default route instead of typing it ---------- */
+function ispLearned(isp, ip){
+  const list = ((NET.bgpAdv || {})[isp.id] || []).filter(a => sameSubnet(ip, a.net, a.bits));
+  if(!list.length) return null;
+  return list.sort((a, b) => b.bits - a.bits)[0];
+}
+function needsAnnouncement(ip){
+  if(!isPublicIp(ip)) return false;
+  const all = Object.values(devices);
+  if(all.some(d => d.type === "isp" && d.cfg && sameSubnet(ip, d.cfg.ip, d.cfg.bits))) return false;
+  const owner = findDeviceByIp(ip);
+  return !!(owner && owner.type !== "isp");
+}
 function computeBgp(){
+  NET.bgpAdv = {};
   for(const dev of Object.values(devices)){
     if(dev.type !== "router" && dev.type !== "switch") continue;
     dev.d.bgpRoutes = []; dev.d.bgpPeers = [];
@@ -660,6 +673,22 @@ function computeBgp(){
         peer.state = "Established";
         if(!dev.d.bgpRoutes.some(r => r.net === "0.0.0.0"))
           dev.d.bgpRoutes.push({ net: "0.0.0.0", bits: 0, nh: nip, fromAs: ispAs });
+        peer.conn = conn.ip; peer.ispId = isp.id;
+      }
+    }
+  }
+}
+function computeBgpAdvertised(){
+  for(const dev of Object.values(devices)){
+    for(const peer of ((dev.d && dev.d.bgpPeers) || [])){
+      if(peer.state !== "Established" || !peer.ispId) continue;
+      let adv = [];
+      try{ adv = advertisedRoutes(dev, peer.addr).routes; }catch(e){ adv = []; }
+      peer.sent = [];
+      for(const x of adv){
+        if(x.r.bits === 0) continue;
+        peer.sent.push(x.r.net + "/" + x.r.bits);
+        (NET.bgpAdv[peer.ispId] = NET.bgpAdv[peer.ispId] || []).push({ net: x.r.net, bits: x.r.bits, nh: peer.conn, dev: dev.id, as: dev.d.as });
       }
     }
   }
@@ -1089,6 +1118,11 @@ function routeLookup(dev, dstIp){
     return { type: "static", nh: best.nh, iface: via || null, route: best, proto: best.proto };
   }
   if(dev.type === "isp"){
+    const adv = ispLearned(dev, dstIp);
+    if(adv){
+      const viaA = up.find(i => sameSubnet(adv.nh, i.ip, i.bits));
+      return { type: "static", nh: adv.nh, iface: viaA || null, route: adv, proto: "bgp" };
+    }
     if(isPublicIp(dstIp)) return { type: "internet" };
     // the provider routes your traffic back down the /30 toward the peer
     const w = up[0];
@@ -1143,7 +1177,14 @@ function pingWalk(startDev, pkt0, opts){
     if(own) return { ok: true, hops, segs, deliveredDev: node };
     if((node.type === "router" || node.type === "switch") && isVrrpVip(node, pkt.dst))
       return { ok: true, hops, segs, deliveredDev: node };
-    if(node.type === "isp" && isPublicIp(pkt.dst) &&
+    if(node.type === "isp" && needsAnnouncement(pkt.dst) && !ispLearned(node, pkt.dst) &&
+       !ifacesOf(node).some(i => i.up && sameSubnet(pkt.dst, i.ip, i.bits))){
+      const other = Object.values(devices).find(x => x.type === "isp" && x !== node && ispLearned(x, pkt.dst));
+      if(other && !seenL3.has(other.id)){ seenL3.add(other.id); node = other; inIface = null; continue; }
+      return fail(`Request timeout  (the internet has no route to ${pkt.dst}: no provider has learned a prefix that covers it. Announce your network to the provider with a BGP export policy, then check show route advertising-protocol bgp <neighbor>.)`,
+        "prefix not announced");
+    }
+    if(node.type === "isp" && isPublicIp(pkt.dst) && !ispLearned(node, pkt.dst) &&
        !ifacesOf(node).some(i => i.up && sameSubnet(pkt.dst, i.ip, i.bits))){
       // beyond the provider = "the internet" — but its own /30 routes normally
       if(!isPublicIp(pkt.src))
@@ -1911,6 +1952,7 @@ function advertisedRoutes(dev, neighbor){
   }
   const d = D(dev);
   const cands = [];
+  ifacesOf(dev).filter(i => i.up).forEach(i => cands.push({ net: networkOf(i.ip, i.bits), bits: i.bits, proto: "direct" }));
   (d.routes || []).forEach(r => cands.push({ net: r.net, bits: r.bits, proto: "static" }));
   (d.bgpRoutes || []).forEach(r => cands.push({ net: r.net, bits: r.bits, proto: "bgp" }));
   (d.ospfRoutes || []).forEach(r => cands.push({ net: r.net, bits: r.bits, proto: "ospf" }));

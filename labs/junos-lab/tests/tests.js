@@ -4066,7 +4066,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   const groups = [];
   SCENARIOS.forEach(s => { const g = s.group || "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
-  ok(groups.length === 10, "T76 scenario list keeps its groups in order: " + groups.length);
+  ok(groups.length === 14, "T76 scenario list keeps its groups in order: " + groups.length);
   ok(scenKind(scen("basic-connect")) === "empty" && scenKind(scen("lacp-bundle")) === "starter" && scenKind(scen("site-new-desk")) === "site",
     "T76 each scenario knows how it starts");
   currentScenario = scen("site-new-desk"); renderScenarioMeta();
@@ -4081,15 +4081,15 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     ok(n > 0 && n <= 8 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
   });
   ok(seen === SCENARIOS.length, "T76 every scenario is reachable through a picker group");
-  ok(scenGroupSelect.querySelectorAll("option").length === 14, "T76 fourteen picker groups");
+  ok(scenGroupSelect.querySelectorAll("option").length === 18, "T76 eighteen picker groups");
   gotoScenario(5);
   ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[2], "T76 paging follows the scenario into its group");
   gotoScenario(4); 
   ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
   setScenBoard(true);
   const board = document.getElementById("scen-board");
-  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 12 && board.querySelectorAll(".sb-band").length === 5,
-    "T76 the scenario board lists every scenario in five bands with twelve column headings");
+  ok(board.querySelectorAll(".sb-item").length === SCENARIOS.length && board.querySelectorAll(".sb-head").length === 16 && board.querySelectorAll(".sb-band").length === 6,
+    "T76 the scenario board lists every scenario in six bands with sixteen column headings");
   ok(board.querySelectorAll(".sb-cols").every(c => c.querySelectorAll(".sb-group").length === 1 || c.querySelectorAll(".sb-group").length === 4),
     "T76 every band is one flat list or exactly four aligned columns");
   ok(board.querySelectorAll(".sb-name").every(n => !/^\d+\./.test(n.textContent)) && board.querySelectorAll(".sb-num")[0].textContent === "1",
@@ -4097,7 +4097,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   const want = SCENARIOS.findIndex(x => x.id === "site-guest-vlan");
   board.querySelectorAll(".sb-item").find(b2 => b2.title === SCENARIOS[want].title).onclick();
   ok(currentScenario === SCENARIOS[want] && !scenBoardOpen, "T76 clicking a board entry opens that scenario and folds the list");
-  ok(/show all 58/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
+  ok(/show all 68/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
   setScenBoard(true);
   ok(board.querySelectorAll(".cur").length === 1, "T76 the board marks the current scenario");
   protoJumpToScenario("site-warehouse");
@@ -4228,7 +4228,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   ok(SCENARIOS.filter(s => s.group === DESK_GROUP).length === 6 && SCENARIOS.filter(s => s.group === DESK_GROUP).every(s => scenKind(s) === "starter"),
     "T78 six mixed-desk scenarios, each a starter topology");
-  ok(SCENARIOS.filter(s => !/^colo-/.test(s.id)).length === 44, "T78 forty-four scenarios before the multi-tenant set");
+  ok(SCENARIOS.filter(s => !/^(colo|bgp)-/.test(s.id)).length === 44, "T78 forty-four scenarios before the multi-tenant set");
   wipeLab();
 }
 
@@ -4372,9 +4372,9 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   fin("colo-power-drill");
   toggleGridOutage(hall);
 
-  ok(SCENARIOS.length === 58 && [COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT].every(g => SCENARIOS.some(s => s.group === g)), "T79 fifty-eight scenarios, four multi-tenant columns");
+  ok(SCENARIOS.filter(s => !/^bgp-/.test(s.id)).length === 58 && [COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT].every(g => SCENARIOS.some(s => s.group === g)), "T79 fifty-eight scenarios, four multi-tenant columns");
   setScenBoard(true);
-  ok(document.getElementById("scen-board").querySelectorAll(".sb-band").length === 5, "T79 the board has five bands");
+  ok(document.getElementById("scen-board").querySelectorAll(".sb-band").length === 6, "T79 the board has six bands");
   wipeLab();
 }
 
@@ -4470,6 +4470,117 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   ok(tour.style.display === "none", "T80 empty-canvas scenarios have no tour");
   try{ localStorage.removeItem(LS_HINTLOG); localStorage.removeItem(LS_PROGRESS); }catch(e){}
   HINTLOG = {}; PROGRESS = {}; wipeLab();
+}
+
+/* ---------- T81: BGP step by step ---------- */
+{
+  const strict81 = strictOn(); setStrict(false);
+  const go = id => { wipeLab(); scen(id).setup(); ok(!checksPass(scen(id)), "T81 " + id + " starts unfinished"); };
+  const fin = id => ok(checksPass(scen(id)), "T81 " + id + " completable: " + firstFailing(scen(id)));
+  const e = () => byName("edge-r1").id;
+  const on = (n, c) => cli(byName(n).id, c);
+  const ann = name => ["set policy-options policy-statement " + name + " term mine from route-filter 192.0.2.0/24 exact",
+    "set policy-options policy-statement " + name + " term mine then accept"];
+
+  go("bgp-local-as");
+  ok(/BGP is not running/.test(on("edge-r1", "show bgp summary")) && !bgpOnline("office-pc"), "T81 59 BGP is not running yet, office offline");
+  on("edge-r1", "configure");
+  ok(/\+\s+neighbor 203\.0\.113\.1/.test(on("edge-r1", "show | compare")), "T81 59 the colleague's lines wait in the candidate");
+  ok(/no local AS/.test(on("edge-r1", "commit")), "T81 59 the commit is refused and names the missing AS");
+  on("edge-r1", "set routing-options autonomous-system 65010");
+  ok(/commit complete/.test(on("edge-r1", "commit")), "T81 59 with the AS set the commit goes through");
+  on("edge-r1", "exit");
+  fin("bgp-local-as");
+
+  go("bgp-peer-as");
+  ok(/Active/.test(on("edge-r1", "show bgp summary")) && /mismatch/.test(on("edge-r1", "show bgp summary")), "T81 60 Active with the AS mismatch named");
+  ok(/65001/.test(on("Provider A", "show bgp")), "T81 60 the provider states its AS");
+  cfgDo(e(), ["set protocols bgp group TO-A peer-as 65001"]);
+  fin("bgp-peer-as");
+
+  go("bgp-neighbor-address");
+  cfgDo(e(), ["set protocols bgp group TO-A neighbor 203.0.113.1"]);
+  ok(bgpUp("203.0.113.1") && !checksPass(scen("bgp-neighbor-address")), "T81 61 adding the right neighbour is not enough while the typo stays");
+  cfgDo(e(), ["delete protocols bgp group TO-A neighbor 203.0.113.11"]);
+  fin("bgp-neighbor-address");
+
+  go("bgp-static-wins");
+  ok(bgpUp("203.0.113.1") && !bgpOnline("office-pc") && bgpDefaultVia() === null, "T81 62 session up, yet the static default wins and the office is offline");
+  ok(/Static\/5/.test(on("edge-r1", "show route")) && /BGP\/170/.test(on("edge-r1", "show route")), "T81 62 show route shows both defaults with their preference");
+  cfgDo(e(), ["delete routing-options static route 0.0.0.0/0"]);
+  fin("bgp-static-wins");
+
+  go("bgp-link-first");
+  ok(!bgpUp("203.0.113.1") && /down/.test(on("edge-r1", "show interfaces terse")), "T81 63 the session is down because the interface is");
+  cfgDo(e(), ["delete interfaces ge-0/0/0 disable"]);
+  fin("bgp-link-first");
+
+  go("bgp-second-provider");
+  ok(bgpUp("203.0.113.1") && bgpOnline("office-pc") && /65002/.test(on("Provider B", "show bgp")), "T81 64 one provider works, the second states its AS");
+  cfgDo(e(), ["set protocols bgp group TO-B type external", "set protocols bgp group TO-B peer-as 65002", "set protocols bgp group TO-B neighbor 198.51.100.1"]);
+  fin("bgp-second-provider");
+
+  go("bgp-failover");
+  ok(bgpDefaultVia() === "203.0.113.1" && bgpOnline("office-pc"), "T81 65 traffic starts on Provider A");
+  cfgDo(e(), ["set interfaces ge-0/0/0 disable"]);
+  fin("bgp-failover");
+
+  go("bgp-announce");
+  ok(bgpOnline("office-pc") && !bgpOnline("web-server-1") && /no provider has learned/.test(on("web-server-1", "ping 8.8.8.8")), "T81 66 the unannounced public server gets no reply, and the ping says why");
+  ok(bgpSent("203.0.113.1").length === 0, "T81 66 nothing is announced by default");
+  cfgDo(e(), ann("ANNOUNCE"));
+  ok(!bgpOnline("web-server-1"), "T81 66 a policy that is not attached changes nothing");
+  cfgDo(e(), ["set protocols bgp group TO-A export ANNOUNCE"]);
+  ok(/192\.0\.2\.0\/24/.test(on("edge-r1", "show route advertising-protocol bgp 203.0.113.1")) && /192\.0\.2\.0\/24/.test(on("Provider A", "show bgp")), "T81 66 both sides show the announcement");
+  fin("bgp-announce");
+
+  go("bgp-over-announce");
+  ok(bgpSent("203.0.113.1").includes("10.0.50.0/24") && bgpSent("203.0.113.1").length > 1 && bgpOnline("web-server-1"), "T81 67 the accept-all policy leaks the private network");
+  cfgDo(e(), ["delete policy-options policy-statement EVERYTHING term all"].concat(ann("EVERYTHING")));
+  fin("bgp-over-announce");
+
+  go("bgp-dual-homed");
+  ok(!bgpOnline("office-pc") && !bgpOnline("web-server-1"), "T81 68 nothing works before BGP exists");
+  cfgDo(e(), ["set routing-options autonomous-system 65010",
+    "set protocols bgp group TO-A type external", "set protocols bgp group TO-A peer-as 65001", "set protocols bgp group TO-A neighbor 203.0.113.1",
+    "set protocols bgp group TO-B type external", "set protocols bgp group TO-B peer-as 65002", "set protocols bgp group TO-B neighbor 198.51.100.1"]
+    .concat(ann("ANNOUNCE"), ["set protocols bgp group TO-A export ANNOUNCE", "set protocols bgp group TO-B export ANNOUNCE"]));
+  ok(bgpUp("203.0.113.1") && bgpUp("198.51.100.1") && bgpOnline("web-server-1") && bgpOnline("office-pc") && !checksPass(scen("bgp-dual-homed")), "T81 68 everything works, but the drill has not been run");
+  cfgDo(e(), ["set interfaces ge-0/0/0 disable"]);
+  fin("bgp-dual-homed");
+  cfgDo(e(), ["delete protocols bgp group TO-B export"]);
+  ok(bgpOnline("office-pc") && !bgpOnline("web-server-1"), "T81 68 without the announcement on the backup line the public server goes dark while NAT traffic survives");
+
+  wipeLab(); scen("speak-bgp").setup();
+  const r25 = byName("edge-r1");
+  cfgDo(r25.id, ["set routing-options autonomous-system 65010", "set protocols bgp group EXT type external", "set protocols bgp group EXT peer-as 65001", "set protocols bgp group EXT neighbor 203.0.113.1"]);
+  ok(checksPass(scen("speak-bgp")), "T81 scenario 25 still works with the announcement model");
+  setStrict(strict81);
+  ok(SCENARIOS.length === 68 && SCENARIOS.filter(s => /^bgp-/.test(s.id)).every(s => s.tour && s.intro && s.desc.length < 700), "T81 sixty-eight scenarios, the BGP ones each with a tour and a short ticket");
+  wipeLab();
+}
+
+/* ---------- T82: build-it-yourself scenarios name the host type, and the taught commands solve them ---------- */
+{
+  const strict82 = strictOn(); setStrict(false);
+  wipeLab();
+  const sw82 = makeSwitch(0, 0, 8);
+  const w82 = setHostOs(makeHost(0, 0), "windows"), m82 = setHostOs(makeHost(0, 0), "macos");
+  cable(w82, "eth0", sw82, "ge-0/0/1"); cable(m82, "eth0", sw82, "ge-0/0/2"); rebuildAllDerived();
+  cli(w82, 'netsh interface ip set address "Ethernet" static 10.0.0.1 255.255.255.0');
+  cli(m82, "sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0");
+  ok(checksPass(scen("basic-connect")), "T82 scenario 1 is solved by a Windows PC and a Mac with the commands its hints teach: " + firstFailing(scen("basic-connect")));
+  ok(/Windows PC/.test(scen("basic-connect").desc) && /Mac/.test(scen("basic-connect").desc), "T82 scenario 1 says which PCs to add");
+  ["basic-connect", "vlan-split", "access-distribution", "isp-onboarding", "access-control-segment", "multi-tenant-vlans", "irb-intervlan"].forEach(id => {
+    const sc = scen(id), txt = sc.desc + " " + sc.checks.map(c => c.desc).join(" ") + " " + sc.hints.join(" ");
+    ok(/Windows PC/.test(txt), "T82 " + id + " names the kind of host to add");
+    ok(!/ip addr add [0-9.]+\/\d+ dev eth0/.test(txt) || /Linux/.test(txt), "T82 " + id + " only teaches Linux commands for a Linux host");
+  });
+  const l82 = makeHost(0, 0);
+  cli(w82, "Rename-Computer -NewName client-pc"); cli(l82, "hostname panel");
+  ok(byName("client-pc") && byName("panel"), "T82 the rename commands from scenario 7 work on Windows and Linux");
+  setStrict(strict82);
+  wipeLab();
 }
 
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");

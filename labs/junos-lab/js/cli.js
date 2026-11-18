@@ -1552,13 +1552,14 @@ function ispExec(dev, cmd){
   if(/^show\s+int/.test(cmd))
     return lines("out", `wan0   up   up   inet   ${dev.cfg.ip}/${dev.cfg.bits}   (upstream provider, AS ${dev.cfg.asn || 65001} — the internet lives behind this)`);
   if(/^show\s+bgp/.test(cmd)){
-    const rows = [];
+    const rows = ["This provider is AS " + (dev.cfg.asn || 65001) + ", reachable at " + dev.cfg.ip + "."];
     for(const d of Object.values(devices))
       for(const p of ((d.d && d.d.bgpPeers) || []))
         if(p.addr === dev.cfg.ip)
-          rows.push(`peer ${d.name}  AS${(d.d && d.d.as) || "?"}  ${p.state}` + (p.state === "Established" ? "  (we advertise 0.0.0.0/0 to them)" : ""));
-    return lines("out", rows.length ? rows.join("\n")
-      : "no BGP sessions — customers configure: routing-options autonomous-system, then protocols bgp group <name> type external / peer-as " + (dev.cfg.asn || 65001) + " / neighbor " + dev.cfg.ip);
+          rows.push(`peer ${d.name}  AS${(d.d && d.d.as) || "?"}  ${p.state}` + (p.state === "Established"
+            ? "  (we advertise 0.0.0.0/0 to them; they announce to us: " + ((p.sent && p.sent.length) ? p.sent.join(", ") : "nothing") + ")" : ""));
+    return lines("out", rows.length > 1 ? rows.join("\n")
+      : rows[0] + "\nno BGP sessions — customers configure: routing-options autonomous-system, then protocols bgp group <name> type external / peer-as " + (dev.cfg.asn || 65001) + " / neighbor " + dev.cfg.ip);
   }
   return lines("err", 'this is a read-only ISP link — try "show interfaces terse" or ?');
 }
