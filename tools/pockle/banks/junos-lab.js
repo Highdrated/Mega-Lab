@@ -23,7 +23,8 @@ POCKET.register({
     "junoslab-progress-v2", "junoslab-hintlog"
   ],
   scen: {
-    "basic-connect": ["osi", "subnetting"], "vlan-split": ["vlan"], "rename-switch": ["dayzero", "cfgedit"],
+    "basic-connect": ["osi", "subnetting"], "meet-the-switch": ["dayzero", "health"], "read-the-switch": ["pipes", "troubleshooting"],
+    "first-router": ["ribfib", "hostos"], "first-default-route": ["ribfib", "dia"], "first-filter": ["filters"], "vlan-split": ["vlan"], "rename-switch": ["dayzero", "cfgedit"],
     "access-distribution": ["vlan", "dayzero"], "isp-onboarding": ["dia", "ribfib"], "interconnect-recovery": ["troubleshooting", "ribfib"],
     "access-control-segment": ["vlan"], "multi-tenant-vlans": ["vlan"], "irb-intervlan": ["vlan", "ribfib"], "trunk-span": ["vlan"],
     "commit-confirmed": ["cfgedit"], "filtered-segment": ["filters"], "lacp-bundle": ["lacp"], "rstp-loop": ["rstp"], "storm-control": ["rstp"],

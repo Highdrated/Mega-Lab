@@ -74,14 +74,14 @@ const SCENARIOS = [
           return hs.length >= 2 && pingOk(hs[0], hs[1].cfg.ip); } },
     ],
     hints: [
-      "Add a switch, then Add > Host twice: choose Windows PC for the first and Mac for the second, because office users sit behind those. Then use Connect to wire each PC to the switch.",
+      "Add a switch, then Add > Host twice: choose Windows PC for the first and Mac for the second, because office users sit behind those. Press the PWR button on the switch: new hardware arrives switched off. Then open the Connect menu, choose LAN / Data (not Console, which is a serial lead and carries no network traffic), and wire each PC to a numbered port on the switch.",
       "Both PCs need an address, each in its own system's words. On the Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. On the Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0. Type help on a PC if you forget.",
       "If ping still fails: show interfaces terse on the switch — are both ports up, and in the same VLAN (default is fine)?",
     ],
   },
   {
     id: "vlan-split",
-    title: "2. VLAN Isolation",
+    title: "3. VLAN Isolation",
     desc: "Two office PCs (add one Windows PC and one Mac), one switch, different VLANs. The goal is for the ping to FAIL: that is success here.",
     checks: [
       { desc: "Two VLANs exist on a switch (not counting default)",
@@ -104,24 +104,28 @@ const SCENARIOS = [
           return !pingOk(hs[0], hs[1].cfg.ip); } },
     ],
     hints: [
-      "In configure mode on the switch: set vlans staff vlan-id 10, then set vlans guest vlan-id 20. Commit!",
+      "A new switch always starts with scenario 2: get to its prompt, configure, a name, a root password, commit. Then, still in configure mode: set vlans staff vlan-id 10, then set vlans guest vlan-id 20, and commit.",
       "Move each host's switch port: set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff (and the other port into guest). Type set interfaces ge-0/0/0 ? and let the CLI walk you there.",
       "Give both PCs addresses in the same subnet anyway. Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0. Same wire, same subnet, still unreachable: that is what a VLAN does. If ping still works, run show vlans and check which ports really ended up where.",
     ],
   },
   {
     id: "rename-switch",
-    title: "3. Day-Zero Basics",
-    desc: "Every deployment starts here: config mode, hostname, commit. Nothing is real until you commit.",
+    title: "2. Day-Zero Basics",
+    desc: "Every deployment starts here. Use one switch (get to its Junos prompt the way you did in scenario 1b), go into configuration mode, give it a name and a root password, and commit. Nothing you type is real until you commit.",
     checks: [
+      { desc: "A switch has a root password set",
+        why: "A factory-fresh switch lets anyone log in as root with no password. Without setting one, Junos refuses your very first commit, so nothing else can be saved either.",
+        test: () => devsBy("switch").some(sw => cfgGet(sw.config, ["system", "root-authentication"])) },
       { desc: "A switch has a committed host-name",
-        why: "Junos edits a candidate configuration — nothing you type is real until commit activates it. This is the single most important habit the CLI teaches.",
+        why: "Junos edits a candidate configuration, and commit is what makes it active. Without the commit your typing is only a draft, and the switch keeps behaving as before.",
         test: () => devsBy("switch").some(sw => cfgGet(sw.config, ["system", "host-name"])) },
     ],
     hints: [
-      "Click a switch, type configure.",
-      "set system host-name rack1-access — then look: the canvas label hasn't changed yet. Run show | compare to see your pending change.",
-      "commit is what makes it real. Watch the label update the moment you do.",
+      "Two modes, two prompts. root> is operational mode: looking and testing. Type configure and the prompt becomes root# : configuration mode, where set and commit live. Typing set at the > prompt is refused.",
+      "Junos commands are words separated by spaces, each word one level deeper: set, system, host-name, then the value. Type set system host-name rack1-access. The canvas label has not changed yet. Run show | compare to see your pending change.",
+      "Now commit. On a factory-fresh switch it is refused, and the error names what is missing. Type set system root-authentication plain-text-password, press Enter, then type a password twice.",
+      "commit again. This time it completes, and the label on the canvas changes the moment it does. These three steps, name, root password, commit, are the start of every new switch from here on.",
     ],
   },
   {
@@ -1047,6 +1051,7 @@ const SCENARIOS = [
   ...COLO_SCENARIOS,
   ...BGP_SCENARIOS,
 ];
+applyBridges(SCENARIOS);
 // setups cable things up after their commits — make every setup leave the
 // derived network state (NET) consistent, no matter who calls it
 SCENARIOS.forEach(s => {
@@ -1447,7 +1452,7 @@ const SCEN_KINDS = {
 function scenKind(s){ return s.kind || (s.group ? "site" : (s.setup ? "starter" : "empty")); }
 const scenSelect = document.getElementById("scenario-select");
 const scenGroupSelect = document.getElementById("scenario-group");
-const SCEN_GROUPS = ["Basics: empty canvas", "Starter topology: switching", "Starter topology: routing and WAN",
+const SCEN_GROUPS = [BASICS_GROUP, "Starter topology: switching", "Starter topology: routing and WAN",
   "Starter topology: services", "Starter topology: safety and operations", SITE_L1, SITE_L2, SITE_L3, SITE_L4, DESK_GROUP,
   COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT, BGP_L1, BGP_L2, BGP_L3, BGP_L4];
 const SCEN_TOPIC = {
@@ -1540,7 +1545,7 @@ function renderSiteTour(){
     box.appendChild(sbEl("div", "tour-note", (t.touch ? "Everything else can be left alone: " : "Everything else is on the canvas too, and any of it could be the cause: ") + rest.map(d => d.name).join(", ") + "."));
 }
 const SCEN_BANDS = [
-  { key: "empty", title: "Empty canvas", note: "You place and cable everything yourself", groups: [0] },
+  { key: "empty", title: "Basics, in order", note: "Start here, top to bottom", groups: [0] },
   { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
   { key: "site", title: "Existing site", note: "A full datacenter and office is running, you work a ticket", groups: [5, 6, 7, 8] },
   { key: "colo", title: "Multi-tenant datacenter", note: "One hall, three customers and your NOC: real provider tickets", groups: [10, 11, 12, 13] },
@@ -1591,7 +1596,7 @@ function renderScenBoard(){
       const list = sbEl("div", "sb-list");
       SCENARIOS.forEach((s, i) => {
         if(scenGroup(s) !== g) return;
-        const m = s.title.match(/^(\d+)\.\s*(.*)$/);
+        const m = s.title.match(/^(\d+[a-z]?)\.\s*(.*)$/);
         const redo = scenDone(s) && scenNeedsRedo(s);
         const it = sbEl("button", "sb-item" + (scenDone(s) ? " done" : "") + (redo ? " redo" : "") + (!live && i === idx ? " cur" : ""));
         it.appendChild(sbEl("span", "sb-num", m ? m[1] : ""));

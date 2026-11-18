@@ -4065,7 +4065,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   done("site-warehouse", "38");
 
   const groups = [];
-  SCENARIOS.forEach(s => { const g = s.group || "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
+  SCENARIOS.forEach(s => { const g = (s.group && s.group !== BASICS_GROUP) ? s.group : "Basics"; if(groups[groups.length - 1] !== g) groups.push(g); });
   ok(groups.length === 14, "T76 scenario list keeps its groups in order: " + groups.length);
   ok(scenKind(scen("basic-connect")) === "empty" && scenKind(scen("lacp-bundle")) === "starter" && scenKind(scen("site-new-desk")) === "site",
     "T76 each scenario knows how it starts");
@@ -4078,13 +4078,13 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
     scenGroupSelect.value = g; scenGroupSelect.onchange();
     const n = scenSelect.querySelectorAll("option").length;
     seen += n;
-    ok(n > 0 && n <= 8 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
+    ok(n > 0 && n <= 13 && scenGroup(currentScenario) === g, "T76 picker group shows only its own scenarios: " + g + " (" + n + ")");
   });
   ok(seen === SCENARIOS.length, "T76 every scenario is reachable through a picker group");
   ok(scenGroupSelect.querySelectorAll("option").length === 18, "T76 eighteen picker groups");
-  gotoScenario(5);
+  gotoScenario(SCENARIOS.findIndex(x => x.id === "interconnect-recovery"));
   ok(currentScenario.id === "interconnect-recovery" && scenGroupShown === SCEN_GROUPS[2], "T76 paging follows the scenario into its group");
-  gotoScenario(4); 
+  gotoScenario(SCENARIOS.findIndex(x => x.id === "isp-onboarding")); 
   ok(scenGroupShown === SCEN_GROUPS[0], "T76 paging back returns to the empty-canvas group");
   setScenBoard(true);
   const board = document.getElementById("scen-board");
@@ -4097,7 +4097,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   const want = SCENARIOS.findIndex(x => x.id === "site-guest-vlan");
   board.querySelectorAll(".sb-item").find(b2 => b2.title === SCENARIOS[want].title).onclick();
   ok(currentScenario === SCENARIOS[want] && !scenBoardOpen, "T76 clicking a board entry opens that scenario and folds the list");
-  ok(/show all 68/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
+  ok(/show all 73/.test(document.getElementById("scen-browse").textContent), "T76 the folded list offers to show all scenarios");
   setScenBoard(true);
   ok(board.querySelectorAll(".cur").length === 1, "T76 the board marks the current scenario");
   protoJumpToScenario("site-warehouse");
@@ -4228,7 +4228,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
 
   ok(SCENARIOS.filter(s => s.group === DESK_GROUP).length === 6 && SCENARIOS.filter(s => s.group === DESK_GROUP).every(s => scenKind(s) === "starter"),
     "T78 six mixed-desk scenarios, each a starter topology");
-  ok(SCENARIOS.filter(s => !/^(colo|bgp)-/.test(s.id)).length === 44, "T78 forty-four scenarios before the multi-tenant set");
+  ok(SCENARIOS.filter(s => !/^(colo|bgp)-/.test(s.id) && !s.after).length === 44, "T78 forty-four scenarios before the multi-tenant set");
   wipeLab();
 }
 
@@ -4372,7 +4372,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   fin("colo-power-drill");
   toggleGridOutage(hall);
 
-  ok(SCENARIOS.filter(s => !/^bgp-/.test(s.id)).length === 58 && [COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT].every(g => SCENARIOS.some(s => s.group === g)), "T79 fifty-eight scenarios, four multi-tenant columns");
+  ok(SCENARIOS.filter(s => !/^bgp-/.test(s.id) && !s.after).length === 58 && [COLO_HYGIENE, COLO_ISOLATION, COLO_PROVISION, COLO_INCIDENT].every(g => SCENARIOS.some(s => s.group === g)), "T79 fifty-eight scenarios, four multi-tenant columns");
   setScenBoard(true);
   ok(document.getElementById("scen-board").querySelectorAll(".sb-band").length === 6, "T79 the board has six bands");
   wipeLab();
@@ -4457,7 +4457,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   });
   ok(early.length === 0, "T80 loading a setup never marks its scenario finished (" + early.join(", ") + ")");
   PROGRESS = {}; HINTLOG = {};
-  ok(SCENARIOS.filter(x => x.group).every(x => x.tour && (x.tour.touch || x.tour.start)), "T80 every pre-built scenario has a tour");
+  ok(SCENARIOS.filter(x => x.group && x.setup).every(x => x.tour && (x.tour.touch || x.tour.start)), "T80 every pre-built scenario has a tour");
   pick("colo-named-accounts");
   const intro = document.getElementById("scen-intro");
   ok(intro.style.display === "block" && intro.open === true && /three customers/.test(document.getElementById("scen-intro-text").textContent) &&
@@ -4556,7 +4556,7 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   cfgDo(r25.id, ["set routing-options autonomous-system 65010", "set protocols bgp group EXT type external", "set protocols bgp group EXT peer-as 65001", "set protocols bgp group EXT neighbor 203.0.113.1"]);
   ok(checksPass(scen("speak-bgp")), "T81 scenario 25 still works with the announcement model");
   setStrict(strict81);
-  ok(SCENARIOS.length === 68 && SCENARIOS.filter(s => /^bgp-/.test(s.id)).every(s => s.tour && s.intro && s.desc.length < 700), "T81 sixty-eight scenarios, the BGP ones each with a tour and a short ticket");
+  ok(SCENARIOS.filter(s => !s.after).length === 68 && SCENARIOS.filter(s => /^bgp-/.test(s.id)).every(s => s.tour && s.intro && s.desc.length < 700), "T81 sixty-eight scenarios, the BGP ones each with a tour and a short ticket");
   wipeLab();
 }
 
@@ -4580,6 +4580,85 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   cli(w82, "Rename-Computer -NewName client-pc"); cli(l82, "hostname panel");
   ok(byName("client-pc") && byName("panel"), "T82 the rename commands from scenario 7 work on Windows and Linux");
   setStrict(strict82);
+  wipeLab();
+}
+
+/* ---------- T83: the Basics run in order, with bridge scenarios in the gaps ---------- */
+{
+  const strict83 = strictOn(); setStrict(false);
+  const order = SCENARIOS.filter(x => scenGroup(x) === BASICS_GROUP).map(x => x.title.split(".")[0]);
+  ok(order.join(" ") === "1 1b 2 3 3b 4 4b 4c 5 7 7b 8 9", "T83 the Basics column reads in learning order: " + order.join(" "));
+  ok(scen("rename-switch").title === "2. Day-Zero Basics" && scen("vlan-split").title === "3. VLAN Isolation" &&
+     SCENARIOS.indexOf(scen("rename-switch")) < SCENARIOS.indexOf(scen("vlan-split")), "T83 day zero now comes before the first VLAN scenario");
+  const nums = SCENARIOS.map(x => x.title.match(/^(\d+)([a-z]?)\./)).map(m => parseInt(m[1], 10) * 10 + (m[2] ? m[2].charCodeAt(0) - 96 : 0));
+  ok(nums.every((n, i) => i === 0 || n > nums[i - 1]), "T83 scenario numbers rise all the way through the list, so the arrows follow the numbers");
+  const go = id => { wipeLab(); if(scen(id).setup) scen(id).setup(); ok(!checksPass(scen(id)), "T83 " + id + " starts unfinished"); };
+  const fin = id => ok(checksPass(scen(id)), "T83 " + id + " completable: " + firstFailing(scen(id)));
+  const on = (n, c) => cli(byName(n).id, c);
+
+  go("meet-the-switch");
+  const sw83 = makeSwitch(0, 0, 8), lap83 = makeHost(0, 0);
+  cable(lap83, "eth0", sw83, "ge-0/0/1"); rebuildAllDerived();
+  ok(firstFailing(scen("meet-the-switch")) === scen("meet-the-switch").checks[1].desc, "T83 1b a LAN cable is not a console cable");
+  cable(lap83, "eth0", sw83, "con", "console"); rebuildAllDerived();
+  ok(!checksPass(scen("meet-the-switch")), "T83 1b still open until you have looked around");
+  cli(sw83, "show version");
+  fin("meet-the-switch");
+  wipeLab();
+  const fresh83 = makeSwitch(0, 0, 8); devices[fresh83].powered = false; devices[fresh83].brandNew = true; devices[fresh83].user = "root";
+  const lap2 = makeHost(0, 0); cable(lap2, "eth0", fresh83, "con", "console"); rebuildAllDerived();
+  ok(!scen("meet-the-switch").checks[2].test(), "T83 1b a switch that is still off fails the power check");
+  powerOn(devices[fresh83]); for(let i = 0; i < 30; i++) __fireTimers();
+  ok(!scen("meet-the-switch").checks[3].test(), "T83 1b at the login prompt you are not in Junos yet");
+  cli(fresh83, "root");
+  ok(!scen("meet-the-switch").checks[3].test(), "T83 1b at the % shell you are not in Junos yet");
+  cli(fresh83, "cli"); cli(fresh83, "show version");
+  fin("meet-the-switch");
+
+  cli(fresh83, "configure"); cli(fresh83, "set system host-name rack1-access");
+  ok(/root-authentication/.test(cli(fresh83, "commit")) && !checksPass(scen("rename-switch")), "T83 2 the first commit is refused without a root password");
+  cli(fresh83, "set system root-authentication plain-text-password"); cli(fresh83, "Sup3r!pass"); cli(fresh83, "Sup3r!pass");
+  cli(fresh83, "commit");
+  ok(checksPass(scen("rename-switch")), "T83 2 day zero completable: " + firstFailing(scen("rename-switch")));
+  ok(scen("rename-switch").checks.length === 2 && scen("rename-switch").hints.length === 4, "T83 2 day zero now checks the root password and has a four-step hint ladder");
+
+  go("read-the-switch");
+  ok(pingOk("pc-anna", "10.0.0.13") && !pingOk("pc-ben", "10.0.0.11") && /down/.test(on("floor-sw", "show interfaces terse")), "T83 3b only pc-ben is cut off, and the port list shows why");
+  cfgDo(byName("floor-sw").id, ["delete interfaces ge-0/0/2 disable"]);
+  ok(pingOk("pc-ben", "10.0.0.11") && !checksPass(scen("read-the-switch")), "T83 3b repaired but not yet labelled");
+  cfgDo(byName("floor-sw").id, ["set interfaces ge-0/0/1 description pc-anna", "set interfaces ge-0/0/2 description pc-ben", "set interfaces ge-0/0/3 description admin-laptop"]);
+  ok(/pc-ben/.test(on("floor-sw", "show interfaces descriptions")), "T83 3b show interfaces descriptions lists the labels");
+  fin("read-the-switch");
+
+  go("first-router");
+  cfgDo(byName("office-rtr").id, ["set interfaces ge-0/0/0 unit 0 family inet address 10.0.1.1/24", "set interfaces ge-0/0/1 unit 0 family inet address 10.0.2.1/24"]);
+  ok(pingOk("pc-sales", "10.0.1.1") && !pingOk("pc-sales", "10.0.2.10"), "T83 4b gateway answers, but no PC knows its gateway yet");
+  on("pc-sales", 'netsh interface ip set address "Ethernet" static 10.0.1.10 255.255.255.0 10.0.1.1');
+  ok(!pingOk("pc-sales", "10.0.2.10"), "T83 4b one gateway is not enough: the reply has no way back");
+  on("pc-design", 'networksetup -setmanual "Ethernet" 10.0.2.10 255.255.255.0 10.0.2.1');
+  fin("first-router");
+
+  go("first-default-route");
+  ok(pingOk("client-pc", "192.168.10.1") && !pingOk("client-pc", "203.0.113.1"), "T83 4c the office works, the provider is out of reach");
+  cfgDo(byName("edge-rtr").id, ["set interfaces ge-0/0/0 unit 0 family inet address 203.0.113.2/30"]);
+  ok(pingOk("edge-rtr", "203.0.113.1") && !checksPass(scen("first-default-route")), "T83 4c the line is up but there is no default route yet");
+  cfgDo(byName("edge-rtr").id, ["set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1"]);
+  fin("first-default-route");
+  ok(/private address/.test(on("client-pc", "ping 8.8.8.8")), "T83 4c the internet ping fails with the NAT explanation, which scenario 5 solves");
+
+  go("first-filter");
+  ok(pingOk("pc-guest", "10.0.1.10"), "T83 7b guests reach staff at the start");
+  cfgDo(byName("office-rtr").id, ["set firewall family inet filter GUEST-IN term no-staff from destination-address 10.0.1.0/24",
+    "set firewall family inet filter GUEST-IN term no-staff then discard", "set interfaces ge-0/0/1 unit 0 family inet filter input GUEST-IN"]);
+  ok(!pingOk("pc-guest", "10.0.1.10") && !pingOk("pc-guest", "10.0.2.1") && !checksPass(scen("first-filter")), "T83 7b without the accept term the guest is cut off from everything");
+  cfgDo(byName("office-rtr").id, ["set firewall family inet filter GUEST-IN term ok then accept"]);
+  fin("first-filter");
+
+  ok(SCENARIOS.length === 73 && BRIDGE_SCENARIOS.every(b => SCENARIOS.indexOf(b) === SCENARIOS.findIndex(x => x.id === b.after) + 1), "T83 seventy-three scenarios, each bridge right after its anchor");
+  setScenBoard(true);
+  const b83 = document.getElementById("scen-board");
+  ok(b83.querySelectorAll(".sb-num").map(n => n.textContent).slice(0, 4).join(" ") === "1 1b 2 3", "T83 the board shows lettered numbers in its gutter");
+  setStrict(strict83);
   wipeLab();
 }
 
