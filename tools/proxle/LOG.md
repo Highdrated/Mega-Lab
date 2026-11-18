@@ -25,7 +25,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 
 - 18 Nov 23:20: `commit confirmed` with its automatic rollback. Two new objectives at the end of the switch scenario: lock yourself out on purpose and get rescued, then a real change that is confirmed in time.
 
-- 19 Nov 00:45: access ports. `family ethernet-switching` with `interface-mode` and `vlan members` in the Junos engine, `show vlans` lists the ports under each VLAN, one new objective at the end of the switch scenario (now fourteen).
+- 19 Nov 00:20: access ports. `family ethernet-switching` with `interface-mode` and `vlan members` in the Junos engine, `show vlans` lists the ports under each VLAN, one new objective at the end of the switch scenario (now fourteen).
 
 ## Her latest feedback (16:00 to 16:15)
 
@@ -78,7 +78,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 - Verified: gate ALL OK. The switch run plays the traps above with a test clock (`LAB.tick(minutes)`), and a real-keyboard run types `commit conf` + `?` + Tab + `1` in the ssh terminal and waits 16 real seconds for the rollback. Screenshots at 1500x900 read (ssh terminal, console, Learn first).
 - Still rough: wording of the commit confirmed lines and the broadcast is from memory of Junos 21.4, not checked on a device. Rolling back after a power loss during the trial is what I believe Junos does, not verified. A second `commit confirmed` during a trial rolls back to the first trial, not to the last confirmed state. No `show system commit`, no `rollback 1`. `set system time-zone` accepts any text; real Junos only takes names from its list. The broadcast time uses the lab clock, which only moves when commands run. Waiting 15 seconds with nothing moving on screen may feel like a hang at the desk: a visible lab clock would help. Objectives after the current one are not visible, so she only learns about the safety net objective when she gets there.
 
-### 19 Nov 00:45 · Access ports: put ge ports in the servers VLAN (backlog 0, fourth slice)
+### 19 Nov 00:20 · Access ports: put ge ports in the servers VLAN (backlog 0, fourth slice)
 - Changed: the Junos engine knows `set interfaces ge-0/0/N unit 0 family ethernet-switching` with `interface-mode access|trunk` and `vlan members <name or number>`, in one line or apart, with `?` help and Tab. `show vlans` now lists the ports under each VLAN, one per line, with a star when a cable is in the port. Ports she has not moved are listed under default, VLAN 1. New last objective in "Set up a new switch": ports ge-0/0/0 and ge-0/0/1 in the servers VLAN, done from her desk over ssh. Learn first got a three-line block, the command list one line, one takeaway.
 - She will notice: `run show vlans` shows all twelve ports under default. After two set lines and a commit, ports 0 and 1 have moved under servers.
 - Real-life traps in it: a typo in the VLAN name is accepted by `set` and only refused at commit; a second `vlan members` adds a VLAN instead of replacing it, and Junos refuses an access port with two (wording checked: "Access interface can be part of only one vlan", "error: configuration check-out failed"); the VLAN number (20) works as well as the name; me0 cannot be a switch port; deleting a VLAN that a port still uses fails the commit; during a `commit confirmed` trial the job is not done, and after the rollback the ports are back in default, together with everything else in that commit; a port turned into a trunk no longer counts.
