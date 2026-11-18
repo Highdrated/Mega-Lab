@@ -82,31 +82,33 @@ const SCENARIOS = [
   {
     id: "vlan-split",
     title: "3. VLAN Isolation",
-    desc: "Two office PCs (add one Windows PC and one Mac), one switch, different VLANs. The goal is for the ping to FAIL: that is success here.",
+    desc: "Two office PCs (add one Windows PC and one Mac), one switch, different VLANs. The goal is for the ping to FAIL: that is success here. Start here: place one switch, a Windows PC and a Mac, and cable each PC to a switch port.",
     checks: [
       { desc: "Two VLANs exist on a switch (not counting default)",
-        why: "Without a second VLAN there's nothing to isolate — the whole point of this lab is two separate broadcast domains on one switch.",
+        why: "Each VLAN is its own separate network inside the switch. Without a second VLAN every port shares one network and there is nothing to keep apart.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
       { desc: "The Windows PC and the Mac sit on access ports in different VLANs",
-        why: "Isolation happens at the PORT, not the host — a host doesn't know its VLAN, the switch enforces it based on which access port it's plugged into.",
+        why: "The switch decides the VLAN by the port a PC is plugged into. The PC itself never knows. Without each port in its own VLAN both PCs stay together in the default VLAN and the ping keeps working.",
         test: () => { const hs = devsBy("host");
           if(hs.length < 2) return false;
           const vs = hs.map(hostAccessVlan).filter(Boolean);
           return vs.length >= 2 && new Set(vs).size >= 2; } },
       { desc: "Both PCs have IPs configured",
-        why: "Addresses in the SAME subnet make the coming failure meaningful — if the ping failed just because of mismatched IPs, it wouldn't prove VLAN isolation at all.",
+        why: "Both PCs get addresses in the same subnet on purpose. Without that, the ping would fail because of the addresses and prove nothing about the VLANs.",
         test: () => devsBy("host").filter(h => h.cfg.ip).length >= 2 },
       { desc: "Ping between them correctly fails (proves the isolation)",
-        why: "A failing ping is the goal here — it's the only evidence that the VLAN boundary is real, not just configured and ignored.",
+        why: "The failing ping is the proof that the wall is real. Without testing it you only know the VLANs are configured, not that they block anything.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           if(hs.length < 2) return false;
           if(new Set(hs.map(hostAccessVlan).filter(Boolean)).size < 2) return false;
           return !pingOk(hs[0], hs[1].cfg.ip); } },
     ],
     hints: [
-      "A new switch always starts with scenario 2: get to its prompt, configure, a name, a root password, commit. Then, still in configure mode: set vlans staff vlan-id 10, then set vlans guest vlan-id 20, and commit.",
-      "Move each host's switch port: set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff (and the other port into guest). Type set interfaces ge-0/0/0 ? and let the CLI walk you there.",
-      "Give both PCs addresses in the same subnet anyway. Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0. Same wire, same subnet, still unreachable: that is what a VLAN does. If ping still works, run show vlans and check which ports really ended up where.",
+      "A VLAN is a private room inside the switch: ports in different rooms cannot hear each other. Build first: one switch, the Windows PC on ge-0/0/0, the Mac on ge-0/0/1. A brand-new switch needs scenario 2 first (name, root password, commit).",
+      "Make the two rooms. On the switch type configure, then set vlans staff vlan-id 10, then set vlans guest vlan-id 20.",
+      "Put each PC's port in a room. The pattern is set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members staff, and the same for ge-0/0/1 with guest, then commit. Type set interfaces ge-0/0/0 ? and let the CLI walk you there.",
+      "Give both PCs an address in the same subnet anyway. Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0.",
+      "Now ping 10.0.0.2 from the Windows PC. It must fail, and that is the pass: same wire, same subnet, still unreachable. If it answers, run show vlans on the switch and check which port landed in which VLAN.",
     ],
   },
   {
@@ -158,44 +160,46 @@ const SCENARIOS = [
   {
     id: "isp-onboarding",
     title: "5. Onboard a Client via ISP",
-    desc: "A router with a WAN link to an ISP and a LAN link into your switch. Get a brand-new client PC (add a Windows PC) to the internet, and try pinging 8.8.8.8 once it all works.",
+    desc: "A router with a WAN link to an ISP and a LAN link into your switch. Get a brand-new client PC (add a Windows PC) to the internet, and try pinging 8.8.8.8 once it all works. Start here: place a router, an ISP, a switch and a Windows PC. Cable router ge-0/0/0 to the ISP, router ge-0/0/1 to the switch, and the PC to the switch.",
     checks: [
       { desc: "1 router, 1 ISP node, 1 switch, 1 host placed (the client is a Windows PC)",
-        why: "This is the minimum chain a real internet handoff needs: something to deliver service, something to route it, something to distribute it, and something to use it.",
+        why: "This is the smallest chain an internet handoff needs: a provider, a router, a switch and a user. Without any one of them there is no path from the PC to the internet.",
         test: () => devsBy("router").length >= 1 && devsBy("isp").length >= 1 &&
                     devsBy("switch").length >= 1 && devsBy("host").length >= 1 },
       { desc: "Router cabled to both the ISP and the switch",
-        why: "The router is the boundary between your network and theirs — it needs a leg on each side, or there's no path for traffic to cross.",
+        why: "The router is the border between your network and the provider's, so it needs a cable on each side. Without both cables traffic has no way to cross.",
         test: () => { const rt = devsBy("router")[0];
           if(!rt) return false;
           const touches = t => Object.values(links).some(l =>
             [l.a, l.b].some(e => e.dev === rt.id) && [l.a, l.b].some(e => devices[e.dev] && devices[e.dev].type === t));
           return touches("isp") && touches("switch"); } },
       { desc: "Router has an address on both WAN and LAN interfaces",
-        why: "An interface with no address can't originate or terminate IP traffic — both sides of the router need an identity before anything can route.",
+        why: "An interface only speaks IP once it has an address. Without an address on both sides the router cannot talk to the provider or to the office.",
         test: () => devsBy("router").some(rt => Object.keys(D(rt).l3ports).length >= 2) },
       { desc: "Router has a default route (0.0.0.0/0) at the ISP",
         why: "Without a default route, the router has no idea where to send traffic for destinations it doesn't specifically know — which is almost the entire internet.",
         test: () => devsBy("router").some(rt => D(rt).routes.some(r => r.net === "0.0.0.0" && r.bits === 0)) },
       { desc: "The client PC (with a gateway set) pings the ISP",
-        why: "This proves the LAN side works end to end before adding NAT to the picture — isolate each layer before stacking the next one on top.",
+        why: "This proves the office side and the line before NAT is added. Without this step a later failure could be the cabling, the gateway or the NAT, and you could not tell which.",
         test: () => { const isp = devsBy("isp")[0];
           const h = devsBy("host").find(x => x.cfg.ip);
           return isp && h && pingOk(h, isp.cfg.ip); } },
       { desc: "Source NAT configured on the router (the internet won't answer 192.168.x)",
-        why: "The internet has no route back to a private address — NAT rewrites the source so replies have somewhere real to go.",
+        why: "The internet has no route back to a private address. Without NAT the ping leaves fine and the reply never comes back.",
         test: () => devsBy("router").some(rt => (D(rt).natRules || []).length > 0) },
       { desc: "The client PC reaches the internet (ping 8.8.8.8)",
-        why: "This is the actual deliverable — everything before it was necessary, but this is the only check that proves the service works as sold.",
+        why: "This is what the customer pays for. Without this final ping you have only proven the parts, not the service.",
         test: () => { const h = devsBy("host").find(x => x.cfg.ip);
           return h && pingOk(h, "8.8.8.8"); } },
     ],
     hints: [
-      "Layout: Windows PC → Switch → Router(LAN) … Router(WAN) → ISP. The client is an office user, so pick Windows PC under Add > Host. Cable it all first.",
-      "Router WAN: set interfaces ge-0/0/0 unit 0 family inet address 203.0.113.2/30 (same /30 as the ISP — check its IP with show interfaces terse on the ISP node). Router LAN: another address in your client subnet.",
-      "Default route: set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1. Commit.",
-      "The client PC needs an address in the LAN subnet AND a gateway. Windows takes both in one line: netsh interface ip set address \"Ethernet\" static <pc-ip> 255.255.255.0 <router-lan-ip>. With no gateway the PC cannot leave its own subnet.",
-      "Pinging the ISP works, 8.8.8.8 doesn't? The internet can't route replies to private addresses. On the router: set security nat source rule-set OFFICE from interface <lan-if>.0, ... to interface <wan-if>.0, ... rule R1 then source-nat interface. Watch the NAT tag on the animation.",
+      "Layout, left to right: Windows PC, switch, router, ISP. The client is an office user, so pick Windows PC under Add > Host. Cable it all first.",
+      "The router needs one address per side, as in scenario 4c. WAN, in the same /30 as the ISP: set interfaces ge-0/0/0 unit 0 family inet address 203.0.113.2/30. LAN, the gateway for the office: set interfaces ge-0/0/1 unit 0 family inet address 192.168.10.1/24.",
+      "Everything the router does not know goes to the provider: set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1, then commit.",
+      "The client PC needs an address in the LAN subnet and the router as its gateway. Windows takes both in one line: netsh interface ip set address \"Ethernet\" static 192.168.10.20 255.255.255.0 192.168.10.1. With no gateway the PC cannot leave its own subnet.",
+      "Pinging the ISP works but 8.8.8.8 does not: the internet has no way back to a private 192.168 address. NAT fixes that by swapping the PC's address for the router's public one on the way out. It is four lines, and all four start with set security nat source rule-set OFFICE.",
+      "First say from where to where, LAN to WAN: set security nat source rule-set OFFICE from interface ge-0/0/1.0, then set security nat source rule-set OFFICE to interface ge-0/0/0.0.",
+      "Then say which traffic and what to do with it: set security nat source rule-set OFFICE rule R1 match source-address 192.168.10.0/24, then set security nat source rule-set OFFICE rule R1 then source-nat interface. Commit, ping 8.8.8.8 from the PC and watch the NAT tag on the animation.",
     ],
   },
   {
@@ -234,23 +238,23 @@ const SCENARIOS = [
   {
     id: "access-control-segment",
     title: "7. Physical Access-Control Segment",
-    desc: "Door controllers share switches with client gear but live walled off in their own VLAN. Ops needs to reach them; clients must not.",
+    desc: "Door controllers share switches with client gear but live walled off in their own VLAN. Ops needs to reach them; clients must not. Start here: place one switch and three hosts (a Windows client PC, a Linux access-panel and a Linux ops host), and cable all three to the switch.",
     checks: [
       { desc: "Switch has a client VLAN and a separate security VLAN",
-        why: "Physical separation isn't enough when devices share a switch — a VLAN is what actually walls the security systems off from client traffic.",
+        why: "Sharing a switch does not have to mean sharing a network: a VLAN walls the security gear off. Without it every client PC can talk to the door controllers.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
       { desc: "3 hosts placed: a client PC (Windows), an access-panel (Linux, door controllers are small Linux boxes) and an ops host (Linux, the engineer's own machine)",
-        why: "You need one device to represent each role — the thing that must be blocked, the thing to protect, and the team that legitimately needs access.",
+        why: "One machine stands for each role: the client that must be blocked, the panel to protect and the ops team that needs access. Without all three you cannot test both sides of the wall.",
         test: () => devsBy("host").length >= 3 },
       { desc: "The ops host shares the access-panel's VLAN (non-default)",
-        why: "Ops needs to actually reach the panel to manage it — which means being inside its VLAN, not just on the same physical switch.",
+        why: "Ops manages the panel, so ops must be inside the panel's VLAN. Without that, the wall you built against clients locks out your own team too.",
         test: () => { const hs = devsBy("host");
           if(hs.length < 3) return false;
           const vs = hs.map(hostAccessVlan);
           return hs.some((h1, i) => hs.some((h2, j) =>
             i !== j && vs[i] && vs[i] === vs[j] && vs[i] !== "default")); } },
       { desc: "The client PC CANNOT reach the access-panel",
-        why: "This is the actual security requirement. A wall that isn't tested is just a hope.",
+        why: "This is the security requirement itself. Without testing it, the wall is only a hope.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
           if(hs.length < 3) return false;
           for(const h1 of hs) for(const h2 of hs){
@@ -261,7 +265,8 @@ const SCENARIOS = [
           return false; } },
     ],
     hints: [
-      "Add three hosts and choose by who uses them: Windows PC for the client, Linux PC for the access-panel and Linux PC for the ops host. Rename them so you can tell them apart (Rename-Computer -NewName client-pc on Windows, hostname panel on Linux). Then two non-default VLANs on the switch: set vlans client vlan-id 10, set vlans security vlan-id 99.",
+      "Three roles, three machines: a Windows PC for the client, a Linux PC for the access-panel and a Linux PC for the ops host. Rename them so you can tell them apart: Rename-Computer -NewName client-pc on Windows, hostname panel on Linux.",
+      "Two rooms on the switch, one for clients and one for the security gear: set vlans client vlan-id 10, then set vlans security vlan-id 99.",
       "Client host's port → vlan client. BOTH the panel's port AND the ops host's port → vlan security. That's what gives ops reachability while clients stay blind.",
       "Full port statement: set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members security, and commit. Give every host an address in one subnet (Linux: ip addr add 10.0.0.2/24 dev eth0, Windows: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0), then prove it with pings from each host.",
     ],
@@ -269,29 +274,29 @@ const SCENARIOS = [
   {
     id: "multi-tenant-vlans",
     title: "8. Multi-Tenant + the Shared Router Trap",
-    desc: "Two customers on one switch, one shared gateway router. Here's the trap: a router with interfaces in both subnets will happily route customer A into customer B. VLANs alone don't save you — you need a firewall filter.",
+    desc: "Two customers on one switch, one shared gateway router. Here's the trap: a router with interfaces in both subnets will happily route customer A into customer B. VLANs alone don't save you — you need a firewall filter. Start here: place one switch, one router, a Windows PC and a Mac. Cable both PCs and two router ports into the switch.",
     checks: [
       { desc: "Switch has two customer VLANs (not counting default)",
-        why: "Two tenants sharing hardware absolutely require separate broadcast domains — this is the baseline isolation before the trap even applies.",
+        why: "Two customers on one switch each need their own VLAN. Without that they share one network and see each other's traffic directly.",
         test: () => devsBy("switch").some(sw => nonDefaultVlans(sw).length >= 2) },
       { desc: "Two customer PCs (a Windows PC for customer A, a Mac for customer B): different VLANs, different subnets, gateways set",
-        why: "Different subnets are what make the router relevant at all — without them, this would just be the VLAN-isolation lab again.",
+        why: "Each customer gets its own subnet and its own gateway. Without different subnets the router plays no part, and this is only the VLAN scenario again.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
           const vs = hs.map(hostAccessVlan).filter(Boolean);
           const nets = new Set(hs.map(h => networkOf(h.cfg.ip, 24)));
           return new Set(vs).size >= 2 && nets.size >= 2; } },
       { desc: "Router has a gateway address in each customer subnet",
-        why: "A router can only forward between subnets it has a presence in — one leg per tenant is what lets it cross the VLAN boundary at all.",
+        why: "A router only forwards between networks it has an address in. Without a leg in each customer subnet, neither customer has a gateway.",
         test: () => devsBy("router").some(rt => Object.keys(D(rt).l3ports).length >= 2) },
       { desc: "Each customer can ping their own gateway",
-        why: "This confirms basic L3 reachability BEFORE the trap — if a tenant can't even reach their own gateway, the cross-tenant test downstream would be meaningless.",
+        why: "This proves the basics before the trap. Without a working gateway the cross-customer test below would fail for the wrong reason.",
         test: () => { const rt = devsBy("router")[0];
           const hs = devsBy("host").filter(h => h.cfg.ip);
           if(!rt || hs.length < 2) return false;
           return hs.every(h => Object.values(D(rt).l3ports).some(p => sameSubnet(p.ip, h.cfg.ip, p.bits) && pingOk(h, p.ip))); } },
       { desc: "Customer A cannot reach Customer B — despite the shared router (firewall filter!)",
-        why: "This is the whole lesson: routing alone will happily connect two tenants through a shared router. Only a filter, explicitly blocking it, actually enforces the isolation everyone assumes VLANs already provide.",
+        why: "A router with a leg in both subnets forwards between them, VLANs or not. Without a filter that blocks it, customer A reaches customer B through the shared router.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip && h.cfg.gw);
           if(hs.length < 2) return false;
           const [h1, h2] = hs;
@@ -299,9 +304,12 @@ const SCENARIOS = [
           return !pingOk(h1, h2.cfg.ip); } },
     ],
     hints: [
-      "Build it open first: two VLANs (cust-a, cust-b), a customer PC in each with its own subnet (a Windows PC for customer A, a Mac for customer B), router with a leg in each VLAN (each router port goes to an access port of the right VLAN). Set address and gateway on each PC (Windows: netsh interface ip set address \"Ethernet\" static <ip> 255.255.255.0 <gateway>, Mac: networksetup -setmanual \"Ethernet\" <ip> 255.255.255.0 <gateway>), prove each PC pings its gateway, then ping A→B and watch it WORK. That is the trap.",
-      "Now filter: set firewall family inet filter CUST-A-IN term block-cross from destination-address <cust-b-subnet>/24, …then discard. And the crucial part: set firewall family inet filter CUST-A-IN term allow then accept — a JunOS filter ends in an implicit discard-everything!",
-      "Apply it: set interfaces <cust-a-facing-port> unit 0 family inet filter input CUST-A-IN. Commit, re-ping: gateway still answers, A→B dies. That's 'allowed by routing, blocked by policy'.",
+      "Build it open first, see the trap, then close it. Start with two VLANs on the switch, one per customer: set vlans cust-a vlan-id 10, then set vlans cust-b vlan-id 20.",
+      "Each customer needs two switch ports in its VLAN: one for its PC and one for a cable to the router. The pattern is set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members cust-a, once per port, four ports in total, then commit.",
+      "The router gets one address per customer, on the port cabled into that customer's VLAN. On the router: set interfaces ge-0/0/0 unit 0 family inet address 10.0.1.1/24, then set interfaces ge-0/0/1 unit 0 family inet address 10.0.2.1/24, and commit.",
+      "Each PC needs an address in its own subnet and the router as its gateway. Windows PC for customer A: netsh interface ip set address \"Ethernet\" static 10.0.1.10 255.255.255.0 10.0.1.1. Mac for customer B: networksetup -setmanual \"Ethernet\" 10.0.2.10 255.255.255.0 10.0.2.1.",
+      "Ping each gateway, then ping from A to B: it works, and that is the trap. Close it with the filter from scenario 7b: set firewall family inet filter CUST-A-IN term block-cross from destination-address 10.0.2.0/24, then set firewall family inet filter CUST-A-IN term block-cross then discard, then set firewall family inet filter CUST-A-IN term allow then accept.",
+      "A filter does nothing until it is attached where customer A's traffic enters the router: set interfaces ge-0/0/0 unit 0 family inet filter input CUST-A-IN. Commit and ping again: the gateway still answers, A to B does not.",
     ],
   },
   {
@@ -460,21 +468,22 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "Both switches: ge-0/0/0 and ge-0/0/1 are members of ae0",
-        why: "LACP membership must be configured identically on BOTH ends — a member declared on only one switch has no partner and never joins the bundle.",
+        why: "Both ends must put the same two ports in the bundle. Without a member on one side, that cable has no partner and stays out of the bundle.",
         test: () => devsBy("switch").filter(sw => D(sw).aes.ae0 && D(sw).aes.ae0.members.length >= 2).length >= 2 },
       { desc: "LACP is configured on both bundles, and both come up",
-        why: "Declaring ports as members isn't enough — the bundle itself needs the lacp active statement, or the two switches never negotiate and nothing forwards.",
+        why: "LACP is how the two switches agree that these cables belong together. Without lacp active on both bundles they never negotiate and nothing is forwarded.",
         test: () => { const sws = devsBy("switch").filter(sw => D(sw).aes.ae0);
           return sws.length >= 2 && sws.every(sw => NET.aeInfo[sw.id] && NET.aeInfo[sw.id].ae0 && NET.aeInfo[sw.id].ae0.up); } },
       { desc: "No more storm — the loop became one logical link",
-        why: "This is the reason LACP exists here at all: two parallel cables were a loop; bundled correctly, they become ONE logical link with no loop at all.",
+        why: "Two loose parallel cables are a loop. Without the bundle every broadcast circles between the switches forever.",
         test: () => NET.stormLinks.size === 0 && Object.keys(links).length > 0 },
       { desc: "pc-a pings pc-b across the bundle",
-        why: "Proves the bundle isn't just administratively up — it's actually forwarding real traffic between the two switches.",
+        why: "Up is not the same as working. Without a ping across it you do not know the bundle carries real traffic.",
         test: () => pingOk("pc-a", "10.0.0.2") },
     ],
     hints: [
       "See the storm first: two parallel L2 paths = a loop. From pc-a, ping 10.0.0.2 and read the error.",
+      "A real EX switch will not create ae0 until the chassis is told how many bundles it may have. On BOTH switches: set chassis aggregated-devices ethernet device-count 1.",
       "On BOTH switches, put the ports in the bundle: set interfaces ge-0/0/0 ether-options 802.3ad ae0 (and ge-0/0/1 the same).",
       "The bundle itself needs config on BOTH sides: set interfaces ae0 aggregated-ether-options lacp active plus set interfaces ae0 unit 0 family ethernet-switching. Commit. One side only = 'no LACP partner' in show lacp interfaces.",
       "show lacp interfaces should say Collecting distributing on both members. Ping again — then try disabling one member port and ping once more: still up. That's the point of a LAG.",
@@ -701,23 +710,23 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "OSPF enabled on all three routers (transit links, plus the LANs)",
-        why: "OSPF only builds a complete map if every router and every relevant interface participates — leave one out and part of the network stays invisible to it.",
+        why: "OSPF only maps the parts that take part. Without OSPF on every router and link, the missing piece stays invisible to the others.",
         test: () => devsBy("router").length >= 3 &&
           devsBy("router").every(rt => Object.keys(D(rt).ospf || {}).length >= 2) },
       { desc: "Adjacencies are Full — every router has two neighbors",
-        why: "A neighbor relationship stuck below Full means the routers haven't actually synchronized their maps of the network yet — no usable routes come from it.",
+        why: "Full means two routers have swapped their complete maps. Without Full, no routes are learned across that link.",
         test: () => devsBy("router").every(rt => (D(rt).ospfNeighbors || []).length >= 2) },
       { desc: "hq-r learned the far LAN via OSPF (no statics anywhere)",
-        why: "This is the actual point of the lab — proving the route was LEARNED, not typed, which is what lets it survive a topology change automatically.",
+        why: "The route must be learned, not typed. Without that, a cut cable would still need you to rewrite routes by hand.",
         test: () => { const r = byName("hq-r");
           return !!(r && (D(r).ospfRoutes || []).some(x => x.net === "10.3.0.0")); } },
       { desc: "hq-pc pings far-pc across the learned routes",
-        why: "The final proof that the dynamically learned routes are not just present in the table, but genuinely usable for real traffic.",
+        why: "A route in the table is a promise and a ping is the proof. Without it you do not know the learned path carries traffic.",
         test: () => pingOk("hq-pc", "10.3.0.10") },
     ],
     hints: [
       "There are zero static routes here — show route on hq-r knows only its own subnets. That's the problem OSPF solves.",
-      "On each router, enable OSPF on the transit interfaces: set protocols ospf area 0 interface ge-0/0/1.0 (and ge-0/0/2.0). Commit, then show ospf neighbor — Full means the adjacency formed.",
+      "On each router, enable OSPF on the transit interfaces: set protocols ospf area 0 interface ge-0/0/1.0 (and ge-0/0/2.0). Commit, then show ospf neighbor: Full means the adjacency formed. Full takes a few seconds to appear, so run the command again if you see another state.",
       "The LANs must be advertised too, but hosts shouldn't hear hellos: set protocols ospf area 0 interface ge-0/0/0.0 passive on hq-r and far-r.",
       "When hq-pc pings far-pc, run traceroute — then unplug the direct hq↔far link and traceroute again. The path re-routes through mid-r by itself. That's the whole point.",
     ],
@@ -1549,8 +1558,8 @@ const SCEN_BANDS = [
   { key: "starter", title: "Starter topology", note: "A small setup is loaded, you finish it", groups: [1, 2, 3, 4] },
   { key: "site", title: "Existing site", note: "A full datacenter and office is running, you work a ticket", groups: [5, 6, 7, 8] },
   { key: "colo", title: "Multi-tenant datacenter", note: "One hall, three customers and your NOC: real provider tickets", groups: [10, 11, 12, 13] },
-  { key: "bgp", title: "BGP step by step", note: "One idea per scenario, from a single session to two providers and your own network", groups: [14, 15, 16, 17] },
-  { key: "desks", title: "Mixed desks", note: "Windows, Mac and Linux side by side: same job, three sets of commands", groups: [9] },
+  { key: "bgp", title: "BGP step by step", note: "One idea per scenario, from a single session to two providers and your own network. BGP 1 to 7 are short: one router, a few commands each", groups: [14, 15, 16, 17] },
+  { key: "desks", title: "Mixed desks", note: "Windows, Mac and Linux side by side: same job, three sets of commands. Short and gentle: a good next step right after Basics 1 to 4b", groups: [9] },
 ];
 function scenGroupShort(g){
   const t = g.slice(g.indexOf(":") + 1).trim();
@@ -1841,7 +1850,7 @@ document.getElementById("scen-next").onclick = () => {
   gotoScenario((i < 0 ? -1 : i) + 1);
 };
 function maskHintParts(text){
-  const re = /((?:set|delete|show|run|dhclient|traceroute|ip|ipconfig|sudo|netsh|tracert)\s+[^.!?]*)/g;
+  const re = /((?:set|delete|show|run|dhclient|traceroute|ip|ipconfig|sudo|netsh|tracert|networksetup)\s+(?:[^.!?]|\.(?=\S))*)/g;
   const parts = [];
   let last = 0, m;
   while((m = re.exec(text))){

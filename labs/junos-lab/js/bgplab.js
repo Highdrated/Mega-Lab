@@ -284,7 +284,7 @@ const BGP_SCENARIOS = [
         test: () => bgpOnline("office-pc") },
     ],
     hints: [
-      "See both directions separately. show route receive-protocol bgp 203.0.113.1 is what the provider tells you. show route advertising-protocol bgp 203.0.113.1 is what you tell the provider, and right now it is empty. On web-server-1, ping 8.8.8.8 and read the reason.",
+      "See both directions separately. show route receive-protocol bgp 203.0.113.1 is what the provider tells you, and show route advertising-protocol bgp 203.0.113.1 is what you tell the provider: nothing of your own yet. On web-server-1, ping 8.8.8.8 and read the reason.",
       "A policy is a list of terms: if a route matches the from part, do the then part. Describe your network and accept it: set policy-options policy-statement ANNOUNCE term mine from route-filter 192.0.2.0/24 exact, and set policy-options policy-statement ANNOUNCE term mine then accept.",
       "A policy does nothing until it is attached: set protocols bgp group TO-A export ANNOUNCE. Commit.",
       "Check your work: show route advertising-protocol bgp 203.0.113.1 now lists 192.0.2.0/24 and names the term that accepted it. Click Provider A and run show bgp to see it from their side.",

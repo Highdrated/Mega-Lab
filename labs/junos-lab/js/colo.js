@@ -415,7 +415,9 @@ const COLO_SCENARIOS = [
     hints: [
       "Use Acme as the template: on colo-core, show configuration and read everything that mentions acme or 110. Cobalt needs the same lines with cobalt, 130, 10.200.30 and ge-0/0/3.",
       "Core: set vlans cobalt vlan-id 130, irb unit 130 with 10.200.30.1/24, vlans cobalt l3-interface irb.130, and ge-0/0/3 as a trunk with vlan members cobalt.",
-      "Cage: power on the switch, root, cli, configure, host-name cob-sw, root-authentication, commit. Then vlan cobalt 130, ge-0/0/0 as a trunk for it, ge-0/0/1 as an access port in it. On cob-app-1: ip addr add 10.200.30.10/24 dev eth0 and ip route add default via 10.200.30.1.",
+      "The cage switch is factory-fresh, so day zero comes first: power it on, log in as root, type cli, then configure, set system host-name cob-sw, set system root-authentication plain-text-password, and commit.",
+      "Then the customer's VLAN on the cage switch: set vlans cobalt vlan-id 130, make ge-0/0/0 a trunk that carries it, and put ge-0/0/1 in it as an access port.",
+      "The server needs an address and a gateway. On cob-app-1: ip addr add 10.200.30.10/24 dev eth0 and ip route add default via 10.200.30.1.",
       "Filter on the core: COB-IN with term no-acme (destination 10.200.10.0/24, discard), term no-borealis (10.200.20.0/24, discard), term ok then accept, and set interfaces irb unit 130 family inet filter input COB-IN.",
     ],
   },
@@ -522,7 +524,7 @@ const COLO_SCENARIOS = [
       "From noc-pc: ssh noc-admin@10.200.10.2, then configure. Think about what happens to this session the instant the address changes.",
       "Stage both lines before committing: set interfaces irb unit 110 family inet address 10.200.10.5/24 and delete interfaces irb unit 110 family inet address 10.200.10.2/24.",
       "Use the safety net: commit confirmed 5. Your session will die, which is expected. If you made a mistake, the switch puts the old address back by itself after five minutes.",
-      "Open a new session on the new address: ssh noc-admin@10.200.10.5, then configure and commit to keep the change.",
+      "Open a new session on the new address: ssh noc-admin@10.200.10.5. A second commit is what keeps the change, so type configure, and after that commit.",
     ],
   },
   {
@@ -548,8 +550,8 @@ const COLO_SCENARIOS = [
         test: () => coloApart("acme", "borealis") && coloApart("borealis", "cobalt") },
     ],
     hints: [
-      "Narrow it down with what works: bor-db-1 pings 10.200.20.1 (cage and core are fine) but not 8.8.8.8. Run traceroute 8.8.8.8 on bor-db-1 and read where it stops.",
-      "Compare a healthy customer with the broken one on the device where the trail ends: on edge-rtr, show route. Acme and Cobalt each have a line. Borealis does not.",
+      "Narrow it down with what works: bor-db-1 pings 10.200.20.1, so cage and core are fine. Run traceroute 8.8.8.8 on bor-db-1: it gets out as far as the ISP, so the way there works and the reply is what gets lost.",
+      "A reply needs a route back to the customer. Compare a healthy customer with the broken one on the router that faces the internet: on edge-rtr, show route. Acme and Cobalt each have a line. Borealis does not.",
       "On edge-rtr: set routing-options static route 10.200.20.0/24 next-hop 10.255.0.2. Commit and ping again from bor-db-1.",
     ],
   },
@@ -616,7 +618,7 @@ const COLO_SCENARIOS = [
     ],
     hints: [
       "Click the UPS in Rack M1 and open its status: it compares its capacity with the hall's real load. The gap is the size of the problem.",
-      "Add capacity: Add > UPS, pick a model big enough for the load plus headroom, and place it inside the Colo hall. Open the status again and check the sum.",
+      "No single UPS model is big enough for this hall, so it takes more than one. Add > UPS, place units inside the Colo hall until the capacity is above the load, then open the status again and check the sum.",
       "Run the drill: click grid on the Colo hall header. If you skipped the sizing, everything in the hall goes dark at once, which is exactly what the drill is meant to reveal.",
       "While the grid is out, ping 8.8.8.8 from all three customer servers. Click the outage button again to restore the grid.",
     ],

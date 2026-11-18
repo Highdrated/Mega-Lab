@@ -42,7 +42,7 @@ const BRIDGE_SCENARIOS = [
         test: () => devsBy("switch").some(sw => sw.cli.sawVersion === true) },
     ],
     hints: [
-      "Add a switch, then Add > Host and choose Linux PC: an engineer's laptop. Open the Connect menu, choose Console, click the laptop, then click the small CON port at the top of the switch.",
+      "Add a switch and choose Brand new, in the box, so it arrives switched off like real hardware. Then Add > Host and choose Linux PC: an engineer's laptop. Open the Connect menu, choose Console, click the laptop, then click the small CON port at the top of the switch.",
       "Press the PWR button on the switch and click the switch to open its terminal. Wait for login:, type root and press Enter. A factory-fresh switch has no password yet.",
       "The prompt ending in % is a Unix shell, not Junos. Type cli. The prompt changes to root> and you are in Junos operational mode, where show commands live.",
       "Now look around: show version tells you the model and software, show interfaces terse lists every port and whether it is up. Type ? at any time to see what you can type next.",

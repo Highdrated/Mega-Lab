@@ -439,7 +439,7 @@ const SITE_SCENARIOS = [
     group: SITE_L1,
     title: "27. New Desk at the Office",
     intro: SITE_INTRO,
-    desc: "TICKET: a new colleague starts today. Patch new-pc (a Windows PC) into office-sw port ge-0/0/3, put it in the staff VLAN and let it take its address from DHCP.",
+    desc: "TICKET: a new colleague starts today. Patch new-pc (a Windows PC) into office-sw port ge-0/0/3, put it in the staff VLAN and let it take its address from DHCP. Start here: only new-pc and office-sw matter. Everything else on the site can be left alone.",
     setup(){
       const S = siteBase();
       siteHost("new-pc", 1300, 440);
@@ -534,7 +534,7 @@ const SITE_SCENARIOS = [
     group: SITE_L2,
     title: "30. Guest VLAN with its own DHCP",
     intro: SITE_INTRO,
-    desc: "TICKET: visitors need internet without touching staff machines. Build VLAN guest (id 30, 10.10.30.0/24, gateway 10.10.30.1 on core-sw), carry it over the existing uplink to office-sw, and serve it by DHCP from core-sw. guest-pc (a Mac) is already patched into office-sw ge-0/0/4.",
+    desc: "TICKET: visitors need internet without touching staff machines. Build VLAN guest (id 30, 10.10.30.0/24, gateway 10.10.30.1 on core-sw), carry it over the existing uplink to office-sw, and serve it by DHCP from core-sw. guest-pc (a Mac) is already patched into office-sw ge-0/0/4. Start here: on core-sw run show configuration and find the four places staff appears. Guest needs the same four.",
     setup(){
       const S = siteBase();
       const g = siteHost("guest-pc", 1300, 440, "macos");
@@ -563,7 +563,8 @@ const SITE_SCENARIOS = [
       "Plan it as four parts: the VLAN on two switches, the trunk on both ends, the gateway (irb.30) on core-sw, and DHCP. Copy how staff is built: show configuration on core-sw.",
       "On both switches: set vlans guest vlan-id 30. Add it to the uplink on both ends: core-sw ge-0/0/2 and office-sw ge-0/0/0, with set interfaces ge-0/0/2 unit 0 family ethernet-switching vlan members guest. On office-sw also put ge-0/0/4 in guest.",
       "Gateway on core-sw: set interfaces irb unit 30 family inet address 10.10.30.1/24 and set vlans guest l3-interface irb.30.",
-      "DHCP on core-sw: set access address-assignment pool GUEST family inet network 10.10.30.0/24, a range r1 low and high, dhcp-attributes router 10.10.30.1, then set system services dhcp-local-server group GUEST interface irb.30. Commit and run sudo ipconfig set en0 DHCP on guest-pc (it is a Mac).",
+      "DHCP needs a pool of addresses to hand out. On core-sw: set access address-assignment pool GUEST family inet network 10.10.30.0/24, set access address-assignment pool GUEST family inet range r1 low 10.10.30.100, set access address-assignment pool GUEST family inet range r1 high 10.10.30.199, and set access address-assignment pool GUEST family inet dhcp-attributes router 10.10.30.1.",
+      "The pool also needs a place to listen, the guest gateway: set system services dhcp-local-server group GUEST interface irb.30. Commit and run sudo ipconfig set en0 DHCP on guest-pc (it is a Mac).",
     ],
   },
   {
@@ -763,7 +764,7 @@ const SITE_SCENARIOS = [
     group: SITE_L4,
     title: "36. Project: a New Floor",
     intro: SITE_INTRO,
-    desc: "PROJECT: a second floor opens. A factory-fresh switch is in place with TWO uplinks already cabled: its ge-0/0/10 to core-sw ge-0/0/4 and its ge-0/0/11 to core-sw ge-0/0/5 (both shut on core-sw so they cannot loop). fl2-staff (Windows) is on its ge-0/0/1 and fl2-guest (a Mac) on its ge-0/0/2. Deliver: day zero (name it floor2-sw), an LACP bundle to core-sw, the staff VLAN, and a new guest VLAN (id 30, 10.10.30.0/24, gateway 10.10.30.1 and DHCP on core-sw).",
+    desc: "PROJECT: a second floor opens. A factory-fresh switch is in place with TWO uplinks already cabled: its ge-0/0/10 to core-sw ge-0/0/4 and its ge-0/0/11 to core-sw ge-0/0/5 (both shut on core-sw so they cannot loop). fl2-staff (Windows) is on its ge-0/0/1 and fl2-guest (a Mac) on its ge-0/0/2. Deliver: day zero (name it floor2-sw), an LACP bundle to core-sw, the staff VLAN, and a new guest VLAN (id 30, 10.10.30.0/24, gateway 10.10.30.1 and DHCP on core-sw). Start here: power on the new switch and do day zero as in scenario 33. Nothing else can be committed on it until that is done.",
     setup(){
       const S = siteBase();
       const n = makeSwitch(1300, 200, 12);
@@ -795,6 +796,7 @@ const SITE_SCENARIOS = [
     ],
     hints: [
       "Write the plan before you touch anything: 1 day zero, 2 bundle on both ends, 3 VLANs on both ends, 4 guest gateway and DHCP on core-sw, 5 access ports, 6 test. Scenarios 30, 31 and 33 each cover one part.",
+      "Day zero comes first, because a factory-fresh switch refuses every commit without a root password. Click the new switch, press PWR, log in as root, type cli, then configure. Then set system host-name floor2-sw, set system root-authentication plain-text-password, type a password twice, and commit.",
       "Bundle: on both switches set chassis aggregated-devices ethernet device-count 1, add the two ports with ether-options 802.3ad ae0, set interfaces ae0 aggregated-ether-options lacp active. On core-sw also delete the disable on ge-0/0/4 and ge-0/0/5.",
       "VLANs: staff (10) and guest (30) on the new switch, guest on core-sw. Make ae0 a trunk on both ends with vlan members staff and guest.",
       "On core-sw: irb unit 30 with 10.10.30.1/24, vlans guest l3-interface irb.30, a pool GUEST and dhcp-local-server group GUEST interface irb.30. Then the access ports on the new switch, and ask for an address on both PCs: ipconfig /renew on fl2-staff, sudo ipconfig set en0 DHCP on fl2-guest.",

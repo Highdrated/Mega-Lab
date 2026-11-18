@@ -4662,6 +4662,33 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   wipeLab();
 }
 
+/* ---------- T85: smoother ladders: typable hints, start-here lines, whole commands blurred ---------- */
+{
+  const strict85 = strictOn(); setStrict(true);
+  const ph = /<[a-z-]+>|\u2026|\.\.\./;
+  ["vlan-split", "isp-onboarding", "multi-tenant-vlans"].forEach(id => {
+    ok(!scen(id).hints.some(h => ph.test(h)), "T85 " + id + " hints can be typed as written: no placeholders");
+    ok(/Start here:/.test(scen(id).desc), "T85 " + id + " says where to start");
+  });
+  ok(/Start here:/.test(scen("access-control-segment").desc) && /Start here:/.test(scen("site-new-desk").desc) && /Start here:/.test(scen("site-guest-vlan").desc) && /Start here:/.test(scen("site-new-floor").desc), "T85 7, 27, 30 and 36 say where to start");
+  ["vlan-split", "isp-onboarding", "access-control-segment", "multi-tenant-vlans", "lacp-bundle", "ospf-backbone"].forEach(id =>
+    ok(scen(id).checks.every(c => /[Ww]ithout/.test(c.why)), "T85 " + id + ": every why says what happens without the step"));
+  wipeLab();
+  scen("lacp-bundle").setup(); rebuildAllDerived();
+  const cmds85 = [];
+  scen("lacp-bundle").hints.forEach(h => h.split(/ plus | \(|, /).forEach(part => (part.match(/set (?:chassis|interfaces) [a-z0-9\/ .-]*[a-z0-9]/g) || []).forEach(c => cmds85.push(c))));
+  cmds85.push("set interfaces ge-0/0/1 ether-options 802.3ad ae0");
+  devsBy("switch").forEach(d => cfgDo(d.id, cmds85));
+  for(let i = 0; i < 60; i++) __fireTimers();
+  ok(/aggregated-devices/.test(cmds85.join(" ")) && checksPass(scen("lacp-bundle")), "T85 13 the hint ladder alone solves the bundle on a strict switch: " + firstFailing(scen("lacp-bundle")));
+  ok(scen("site-new-floor").hints.some(h => /root-authentication/.test(h)) && scen("colo-onboard-tenant").hints.every(h => h.split(/\s+/).length < 75), "T85 36 has a day-zero hint, 52 has no overloaded hint");
+  ok(!/pick a model big enough/.test(scen("colo-power-drill").hints.join(" ")), "T85 58 no longer promises a single UPS that does not exist");
+  const mp85 = maskHintParts("Hint 1: On the router: set interfaces ge-0/0/1 unit 0 family inet address 192.168.10.1/24. Then commit.").filter(p => p.cmd);
+  ok(mp85.length === 1 && mp85[0].t === "set interfaces ge-0/0/1 unit 0 family inet address 192.168.10.1/24", "T85 the blur covers a whole command, dots in addresses included");
+  setStrict(strict85);
+  wipeLab();
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 
