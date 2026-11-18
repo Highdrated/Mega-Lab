@@ -1,5 +1,9 @@
 // Completion rule: units are the Protocols-tab field guides on the lab's default JNCIA-Junos
-// path, in course order. A guide counts as done exactly as the lab's own unitDone() decides:
+// path, in course order, plus three hands-on units (dayzero, hostos, ops) that have no guide
+// quiz: those count as done once any scenario mapped to them in SCEN is finished. weak()
+// reports the units of every scenario that was finished with hints and not yet redone clean
+// (localStorage "junoslab-hintlog"), so Pockle puts those cards first.
+// Guide units are judged A guide counts as done exactly as the lab's own unitDone() decides:
 // every quiz question of that guide answered correctly at least once, i.e. the comma list in
 // localStorage "junoslab-quizdone:<guideId>" holds as many distinct indexes as the guide has
 // quiz questions. Scenario progress (junoslab-progress-v2) is not used for units.
@@ -15,8 +19,29 @@ POCKET.register({
     "junoslab-quizdone:maintenance", "junoslab-quizdone:comments", "junoslab-quizdone:cfgedit",
     "junoslab-quizdone:cfgload", "junoslab-quizdone:dhcp", "junoslab-quizdone:filters",
     "junoslab-quizdone:ribfib", "junoslab-quizdone:ospf", "junoslab-quizdone:dia",
-    "junoslab-quizdone:bgp", "junoslab-quizdone:troubleshooting"
+    "junoslab-quizdone:bgp", "junoslab-quizdone:troubleshooting",
+    "junoslab-progress-v2", "junoslab-hintlog"
   ],
+  scen: {
+    "basic-connect": ["osi", "subnetting"], "vlan-split": ["vlan"], "rename-switch": ["dayzero", "cfgedit"],
+    "access-distribution": ["vlan", "dayzero"], "isp-onboarding": ["dia", "ribfib"], "interconnect-recovery": ["troubleshooting", "ribfib"],
+    "access-control-segment": ["vlan"], "multi-tenant-vlans": ["vlan"], "irb-intervlan": ["vlan", "ribfib"], "trunk-span": ["vlan"],
+    "commit-confirmed": ["cfgedit"], "filtered-segment": ["filters"], "lacp-bundle": ["lacp"], "rstp-loop": ["rstp"], "storm-control": ["rstp"],
+    "asymmetric-routing": ["ribfib", "troubleshooting"], "nat-edge": ["dia"], "dhcp-serve": ["dhcp"], "ospf-backbone": ["ospf"],
+    "rogue-switch": ["ops"], "wireless-office": ["dhcp"], "hot-room": ["health"], "name-and-serve": ["troubleshooting"],
+    "ops-production": ["ops", "lldp"], "speak-bgp": ["bgp"], "keep-lights-on": ["health"],
+    "site-new-desk": ["vlan", "dhcp", "hostos"], "site-rack-server": ["vlan", "ribfib"], "site-pool-dry": ["dhcp", "troubleshooting"],
+    "site-guest-vlan": ["vlan", "dhcp"], "site-lacp-uplink": ["lacp"], "site-dia-customer": ["dia", "dhcp"],
+    "site-new-access-switch": ["dayzero", "vlan"], "site-internal-router": ["ribfib", "dhcp"], "site-rack-extension": ["dayzero", "vlan"],
+    "site-new-floor": ["lacp", "vlan", "dhcp", "dayzero"], "site-customer-cage": ["dia", "dayzero", "vlan"], "site-warehouse": ["ribfib", "dia"],
+    "desk-dhcp": ["hostos"], "desk-static": ["hostos"], "desk-back-to-dhcp": ["hostos"], "desk-three-faults": ["hostos", "troubleshooting"],
+    "desk-dns": ["hostos"], "desk-rename": ["hostos"],
+    "colo-named-accounts": ["ops"], "colo-mystery-port": ["ops", "vlan", "lldp"], "colo-monitoring-gap": ["ops"],
+    "colo-wrong-handover": ["lldp", "troubleshooting"], "colo-tenant-leak": ["filters"], "colo-rogue-switch": ["ops"],
+    "colo-contractor-filter": ["filters"], "colo-onboard-tenant": ["vlan", "filters", "dayzero"], "colo-decommission": ["cfgedit", "filters"],
+    "colo-tenant-lag": ["lacp"], "colo-remote-renumber": ["cfgedit"], "colo-no-internet": ["ribfib", "troubleshooting"],
+    "colo-gateway-gone": ["vlan", "troubleshooting"], "colo-power-drill": ["health"]
+  },
   units: [
     { id: "osi", title: "OSI & TCP/IP" },
     { id: "subnetting", title: "IP Subnetting" },
@@ -37,7 +62,10 @@ POCKET.register({
     { id: "ospf", title: "OSPF" },
     { id: "dia", title: "DIA" },
     { id: "bgp", title: "BGP" },
-    { id: "troubleshooting", title: "Troubleshooting" }
+    { id: "troubleshooting", title: "Troubleshooting" },
+    { id: "dayzero", title: "Day Zero" },
+    { id: "hostos", title: "Windows, Mac, Linux" },
+    { id: "ops", title: "Operations Hygiene" }
   ],
   done(get) {
     try {
@@ -54,6 +82,27 @@ POCKET.register({
         String(v).split(",").forEach(function (x) { x = x.trim(); if (x) seen[x] = true; });
         if (Object.keys(seen).length >= need[id]) out.push(id);
       });
+      var prog = get("junoslab-progress-v2");
+      if (prog && typeof prog === "object") {
+        var scen = this.scen, hands = { dayzero: true, hostos: true, ops: true };
+        Object.keys(scen).forEach(function (sid) {
+          if (!prog[sid] || !prog[sid].done) return;
+          scen[sid].forEach(function (u) { if (hands[u] && out.indexOf(u) < 0) out.push(u); });
+        });
+      }
+      return out;
+    } catch (e) { return []; }
+  },
+  weak(get) {
+    try {
+      var log = get("junoslab-hintlog");
+      if (!log || typeof log !== "object") return [];
+      var scen = this.scen, out = [];
+      Object.keys(log).forEach(function (sid) {
+        var h = log[sid];
+        if (!h || h.clean || !(h.hints > 0) || !scen[sid]) return;
+        scen[sid].forEach(function (u) { out.push({ u: u, at: h.at || 0 }); });
+      });
       return out;
     } catch (e) { return []; }
   },
@@ -66,6 +115,38 @@ POCKET.register({
   },
   sampleDone: ["osi", "subnetting"],
   cards: [
+    { u: "dayzero", q: "A factory-fresh Junos switch shows Amnesiac at the console. What does that mean?", o: ["It has no configuration yet", "The disk failed", "It lost its license", "It is in rescue mode"], a: 0, why: "Amnesiac is Junos for a box with no host-name and no config." },
+    { u: "dayzero", q: "Your first commit on a new switch fails with a missing mandatory statement. What is missing?", o: ["A host-name", "A management address", "A root password", "A VLAN"], a: 2, why: "Junos refuses the first commit until root-authentication is set." },
+    { u: "dayzero", q: "Fill the blank.", code: "set system ___ plain-text-password", o: ["root-password", "root-authentication", "login root", "password root"], a: 1, why: "root-authentication holds the root password." },
+    { u: "dayzero", q: "Which of these is one valid Junos command?", o: ["set-system-host-name sw1", "set system-hostname sw1", "set hostname sw1", "set system host-name sw1"], a: 3, why: "Words are levels of a tree, split by spaces. Dashes only sit inside one keyword." },
+    { u: "dayzero", q: "You typed set system host-name sw1 and the name did not change. Why?", o: ["Reboot needed", "You have not committed", "Names need quotes", "Wrong mode"], a: 1, why: "set edits the candidate. Only commit makes it active." },
+    { u: "dayzero", q: "A new switch has no IP address. How do you reach it?", o: ["SSH to its default address", "Through the console port", "Ping its hostname", "Telnet over the uplink"], a: 1, why: "The serial console works with zero config. Everything else needs an address first." },
+    { u: "dayzero", q: "The prompt ends in >. What can you do there?", o: ["Run show and ping", "Run set and commit", "Only log out", "Edit files"], a: 0, why: "> is operational mode. # is configuration mode, where set and commit live." },
+    { u: "hostos", q: "Which command shows the IP address on a Windows PC?", o: ["ip addr", "ifconfig en0", "ipconfig", "show ip"], a: 2, why: "ipconfig is Windows. ip addr is Linux, ifconfig en0 is a Mac." },
+    { u: "hostos", q: "Ask DHCP for a new address on Windows.", o: ["dhclient eth0", "ipconfig /renew", "ipconfig set en0 DHCP", "netsh renew"], a: 1, why: "ipconfig /renew asks the DHCP server again." },
+    { u: "hostos", q: "Ask DHCP for an address on a Mac.", o: ["ipconfig /renew", "dhclient en0", "sudo ipconfig set en0 DHCP", "netsh interface ip set address en0 dhcp"], a: 2, why: "On macOS the wired port is en0 and ipconfig set switches it to DHCP." },
+    { u: "hostos", q: "Ask DHCP for an address on Linux.", o: ["dhclient eth0", "ipconfig /renew", "networksetup -setdhcp eth0", "ip dhcp"], a: 0, why: "dhclient is the Linux DHCP client." },
+    { u: "hostos", q: "ipconfig shows 169.254.x.x on a Windows PC. What happened?", o: ["Static address set", "DHCP did not answer", "DNS is down", "Wrong gateway"], a: 1, why: "169.254 is a self-assigned address. It means no DHCP server replied." },
+    { u: "hostos", q: "Fill the blank for a static address on Windows.", code: "netsh interface ip set address \"Ethernet\" ___ 10.0.10.11 255.255.255.0 10.0.10.1", o: ["manual", "fixed", "static", "set"], a: 2, why: "static, then address, mask and gateway in one line." },
+    { u: "hostos", q: "Which line sets a static address on a Mac?", o: ["ip addr add 10.0.10.12/24 dev en0", "networksetup -setmanual \"Ethernet\" 10.0.10.12 255.255.255.0 10.0.10.1", "netsh interface ip set address en0 static 10.0.10.12", "ifconfig /static 10.0.10.12"], a: 1, why: "networksetup -setmanual takes address, mask and router." },
+    { u: "hostos", q: "On Linux you ran ip addr add 10.0.10.13/24 dev eth0. Other subnets are unreachable. What is missing?", o: ["A DNS server", "A reboot", "A default route", "A hostname"], a: 2, why: "Linux sets the address and the gateway separately: ip route add default via <gw>." },
+    { u: "hostos", q: "255.255.255.0 is the same mask as...", o: ["/8", "/16", "/24", "/30"], a: 2, why: "Three full octets of ones is 24 bits." },
+    { u: "hostos", q: "ipconfig /renew fails on a Windows PC with a hand-set address. Why?", o: ["The cable is out", "The adapter is static, so there is no lease", "DHCP is full", "Wrong VLAN"], a: 1, why: "Switch the adapter to DHCP first: netsh interface ip set address \"Ethernet\" dhcp." },
+    { u: "hostos", q: "Show the path packets take, on Windows.", o: ["traceroute", "tracert", "pathshow", "route trace"], a: 1, why: "tracert on Windows, traceroute on Mac and Linux." },
+    { u: "hostos", q: "Clear the terminal screen on Windows.", o: ["clear", "cls", "reset", "wipe"], a: 1, why: "cls on Windows, clear on Mac and Linux." },
+    { u: "hostos", q: "Which command renames a Windows PC?", o: ["hostname new-name", "scutil --set HostName new-name", "Rename-Computer -NewName new-name", "set hostname new-name"], a: 2, why: "On Windows hostname only shows the name. Rename-Computer changes it." },
+    { u: "hostos", q: "Which system is a Juniper switch closest to under the hood?", o: ["Windows", "A Unix-style system", "macOS", "DOS"], a: 1, why: "Junos is built on FreeBSD, newer Junos Evolved on Linux." },
+    { u: "ops", q: "Why give every engineer a personal login instead of sharing root?", o: ["It is faster", "The log shows who did what", "Root is slower", "It saves licenses"], a: 1, why: "With a shared root login every change in the log is just root." },
+    { u: "ops", q: "Fill the blank to give a user full rights.", code: "set system login user noc-admin class ___", o: ["admin", "root", "super-user", "operator"], a: 2, why: "super-user is the built-in class with every permission." },
+    { u: "ops", q: "SSH to a switch says Connection refused. What does that tell you?", o: ["No network path", "The switch is off", "Reachable, but SSH is not enabled", "Wrong password"], a: 2, why: "Refused means the box answered and nothing listens on port 22. Timed out means no path." },
+    { u: "ops", q: "Which line turns SSH on?", o: ["set system services ssh", "set protocols ssh", "set ssh enable", "set system ssh on"], a: 0, why: "Remote access services live under system services." },
+    { u: "ops", q: "Why send switch logs to a central server?", o: ["To save disk", "The evidence survives when the switch dies", "It is required for SSH", "To speed up commits"], a: 1, why: "A local log is lost with the box that failed." },
+    { u: "ops", q: "Why do all devices need the same time source?", o: ["For DHCP leases", "So logs from different devices line up", "For faster routing", "For VLAN tags"], a: 1, why: "Without NTP you cannot tell which event came first." },
+    { u: "ops", q: "Which SNMP access should a monitoring system get?", o: ["read-write", "read-only", "super-user", "none"], a: 1, why: "It only needs to read counters. Read-write lets a poller change the switch." },
+    { u: "ops", q: "What is an interface description for?", o: ["It sets the VLAN", "It labels what is plugged in", "It enables the port", "It sets the speed"], a: 1, why: "It is the cable label that cannot fall off." },
+    { u: "ops", q: "One access port shows three MAC addresses. What is most likely behind it?", o: ["A broken cable", "A router", "Another switch", "A trunk"], a: 2, why: "Several MACs on one access port means more than one device, usually a small switch." },
+    { u: "ops", q: "An unknown device sits in a customer VLAN. What is the safest first move?", o: ["Reboot the switch", "Delete the VLAN", "Move its port to a VLAN with no gateway", "Ignore it"], a: 2, why: "A quarantine VLAN with no gateway cuts it off without touching the customer." },
+    { u: "ops", q: "The handover note and show lldp neighbors disagree about a port. Which do you trust?", o: ["The note", "The live table", "Neither", "The newest email"], a: 1, why: "The switch shows what is cabled right now. Then fix the note." },
     { u: "osi", q: "At which OSI layer do switching, VLANs and LACP live?", o: ["Layer 1", "Layer 4", "Layer 3", "Layer 2"], a: 3, why: "Layer 2 delivers frames by MAC address." },
     { u: "osi", q: "BGP runs at which layer?", o: ["Layer 7 only", "Layer 2", "It manages L3 routes but runs over TCP at layer 4", "Layer 1"], a: 2, why: "BGP speaks over TCP port 179." },
     { u: "osi", q: "One VLAN equals one...", o: ["Collision domain", "Broadcast domain", "Subnet mask", "Routing table"], a: 1, why: "That is why DHCP broadcasts cannot cross VLANs." },

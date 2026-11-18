@@ -1,7 +1,7 @@
 const STATION_KEY = "station.v1";
 const ST_LOCAL = ["station-device", "station-snap", "station-sync", "station-stamps", "station-pack", "station-queue"];
 const ST_TRACK = [
-  ["junos-lab", /^junoslab-(xp|quizdone|subnet-streak|wrongq|prep-v1|predict$)/],
+  ["junos-lab", /^junoslab-(xp|quizdone|subnet-streak|wrongq|prep-v1|predict$|hintlog$|progress-v2$)/],
   ["junle", /^junle_(review|mix|mastery|stats|mistakes|track|tny_best)$/],
   ["pockle", /^pockle\.v1$/],
   ["pyle-pocket", /^pyle-pocket-v1$/],

@@ -6,7 +6,7 @@ POCKET.register({
   name: "Junle",
   topic: "Junos",
   href: "junle.html",
-  keys: ["junle_stats"],
+  keys: ["junle_stats", "junle_mistakes"],
   units: [
     { id: "basics", title: "Basics" },
     { id: "dayzero", title: "Day Zero" },
@@ -23,6 +23,21 @@ POCKET.register({
       var s = get("junle_stats");
       if (!s || typeof s !== "object" || !s.done || typeof s.done !== "object") return [];
       return ids.filter(function (id) { return s.done[id] === true; });
+    } catch (e) { return []; }
+  },
+  weak(get) {
+    try {
+      var map = { basics: ["basics", "dayzero"], commit: ["rescue"], vlans: ["vlans"], irb: ["vlans"], lacp: ["vlans"],
+        ospf: ["routing"], bgp: ["routing"], vrrp: ["routing"], rstp: ["loops"], storm: ["loops"], vc: ["vc"], "dc-l2sec": ["dcl2sec"] };
+      var m = get("junle_mistakes");
+      if (!m || typeof m !== "object" || !m.items || typeof m.items !== "object") return [];
+      var out = [];
+      Object.keys(m.items).forEach(function (k) {
+        var it = m.items[k];
+        if (!it || !it.topic || !map[it.topic]) return;
+        map[it.topic].forEach(function (u) { out.push({ u: u, at: it.at || 0 }); });
+      });
+      return out;
     } catch (e) { return []; }
   },
   sample: {

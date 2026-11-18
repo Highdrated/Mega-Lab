@@ -93,7 +93,8 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px; margin-top: 8px; min-width: 0; }
 .ticket { display: flex; justify-content: space-between; gap: 10px; font-family: var(--mono); font-size: 11px; color: var(--muted); padding-bottom: 8px; text-transform: uppercase; letter-spacing: .08em; }
 .ticket span:last-child { text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ticket .lt { color: var(--accent); }
+.ticket .lt { color: var(--accent); white-space: nowrap; flex: none; }
+.ticket .flag { font-style: normal; color: var(--muted); border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; margin-left: 6px; }
 .ask { font-family: var(--serif); font-size: 18px; line-height: 1.35; margin-bottom: 4px; }
 .ask code { font-family: var(--mono); font-size: .85em; background: var(--panel2); padding: 1px 5px; border-radius: 4px; }
 .code { background: var(--term-bg); color: var(--term-text); border-radius: 10px; padding: 11px 13px; font-family: var(--mono); font-size: 13.5px; line-height: 1.55; overflow-x: auto; white-space: pre; margin: 8px 0 0; -webkit-overflow-scrolling: touch; }
@@ -318,13 +319,16 @@ let POOL = [], LABSTATE = [];
 function scan() {
   POOL = []; LABSTATE = [];
   for (const b of BANKS) {
-    let done = [];
+    let done = [], weak = [];
     try { done = b.done(getter) || []; } catch (e) { done = []; }
-    const set = new Set(done);
+    try { weak = (b.weak ? b.weak(getter) : []) || []; } catch (e) { weak = []; }
+    const flagAt = {};
+    weak.forEach(w => { if (w && w.u && b.units.some(u => u.id === w.u)) flagAt[w.u] = Math.max(flagAt[w.u] || 0, w.at || 1); });
+    const set = new Set(done.concat(Object.keys(flagAt)));
     const units = b.units.filter(u => set.has(u.id));
     const cards = b.cards.filter(c => set.has(c.u)).map(c => {
       const unit = b.units.find(u => u.id === c.u);
-      return Object.assign({}, c, { lab: b.id, labName: b.name, topic: b.topic, href: b.href, unitTitle: unit ? unit.title : "", id: b.id + ":" + hash(c.t ? JSON.stringify([c.t, c.code || "", c.setup || "", c.lines || c.tiles || c.cols || "", c.target || "", c.sol || c.bad || ""]) : c.q + "|" + (c.code || "") + "|" + c.o[c.a]) });
+      return Object.assign({}, c, { flagAt: flagAt[c.u] || 0, lab: b.id, labName: b.name, topic: b.topic, href: b.href, unitTitle: unit ? unit.title : "", id: b.id + ":" + hash(c.t ? JSON.stringify([c.t, c.code || "", c.setup || "", c.lines || c.tiles || c.cols || "", c.target || "", c.sol || c.bad || ""]) : c.q + "|" + (c.code || "") + "|" + c.o[c.a]) });
     });
     LABSTATE.push({ b, units, cards });
     if (!S.off.includes(b.id)) POOL.push(...cards);
@@ -372,7 +376,9 @@ function show(id) { document.querySelectorAll(".screen").forEach(s => s.classLis
 
 function st(c) { return S.cards[c.id] || null; }
 function dueCards(pool) { const t = today(); return pool.filter(c => { const s = st(c); return s && s.b > 0 && s.due <= t; }); }
-function missCards(pool) { return pool.filter(c => { const s = st(c); return s && (s.w > 0 || s.g) && s.b <= 1; }); }
+function flagged(c) { if (!c.flagAt) return false; const s = st(c); return !s || !s.ok || !!s.g || (s.at || 0) < c.flagAt; }
+function flagCards(pool) { return pool.filter(flagged); }
+function missCards(pool) { return pool.filter(c => { const s = st(c); return flagged(c) || (s && (s.w > 0 || s.g) && s.b <= 1); }); }
 function mastered(c) { const s = st(c); return !!(s && s.ok && !s.g && s.b >= 4 && !(s.t > slowFor(c))); }
 function shuffle(a) { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 function spread(list) {
@@ -384,6 +390,7 @@ function spread(list) {
 function pickMix(pool, n) {
   const picked = new Map();
   const add = arr => { for (const c of arr) { if (picked.size >= n) return; if (!picked.has(c.id)) picked.set(c.id, c); } };
+  add(spread(shuffle(flagCards(pool))).slice(0, Math.ceil(n / 2)));
   add(shuffle(dueCards(pool)).sort((a, b) => st(a).due - st(b).due));
   add(shuffle(missCards(pool)));
   add(spread(shuffle(pool.filter(c => !st(c)))));
@@ -416,7 +423,8 @@ function paintHome() {
   $("mixBtn").disabled = !POOL.length;
   $("mixSub").textContent = due ? due + " due for review · mix 10" : "mix 10 · all labs shuffled";
   $("missBtn").disabled = !miss;
-  $("missSub").textContent = miss ? miss + " to fix" : "nothing to fix";
+  const fromLabs = flagCards(POOL).length;
+  $("missSub").textContent = miss ? miss + " to fix" + (fromLabs ? " · " + fromLabs + " from the labs" : "") : "nothing to fix";
   $("sprintBtn").disabled = POOL.length < 4;
   $("sprintSub").textContent = S.best ? "best " + S.best + " · beat it" : "as many as you can";
   const on = LABSTATE.filter(l => l.cards.length && !S.off.includes(l.b.id)).length;
@@ -459,7 +467,7 @@ function start(mode, cards, label) {
   show("drill"); render();
 }
 
-function head(c) { return '<div class="ticket"><span class="lt">' + esc(c.labName) + '</span><span>' + esc(c.t ? TNAME[c.t] + " · " + c.unitTitle : c.unitTitle) + '</span></div>'; }
+function head(c) { return '<div class="ticket"><span class="lt">' + esc(c.labName) + (flagged(c) ? ' <i class="flag">lab redo</i>' : "") + '</span><span>' + esc(c.t ? TNAME[c.t] + " · " + c.unitTitle : c.unitTitle) + '</span></div>'; }
 function tgt(c, label, v) { return '<div class="target">' + esc(label) + '<pre>' + esc(v) + '</pre></div>'; }
 function guessRow() { return R.mode === "sprint" ? "" : '<div class="qtools"><button class="guess" id="guessBtn"><i></i>I\'m guessing</button></div>'; }
 function wireGuess() {
@@ -592,7 +600,7 @@ function renderTyped(c) {
 
 function grade(c, right, dt, guess) {
   const s = S.cards[c.id] || { b: 0, due: 0, w: 0, n: 0 };
-  s.n++; s.ok = right; s.t = dt; s.g = !!(right && guess);
+  s.n++; s.at = Date.now(); s.ok = right; s.t = dt; s.g = !!(right && guess);
   if (right && guess) { s.b = Math.max(Math.min(s.b, 1), 1); s.due = today() + 1; }
   else if (right && dt > slowFor(c)) { s.b = Math.max(s.b, 1); s.due = today() + 1; }
   else if (right && s.due > today()) { s.b = Math.max(s.b, 1); }
@@ -748,7 +756,7 @@ document.querySelectorAll(".tabs button").forEach(b => b.onclick = () => setTab(
 const qTab = new URLSearchParams(location.search).get("tab");
 
 function go(mode) {
-  if (mode === "miss") start("miss", spread(shuffle(missCards(POOL))).slice(0, 10), "Mistakes");
+  if (mode === "miss") { const f = spread(shuffle(flagCards(POOL))), ids = new Set(f.map(c => c.id)); start("miss", f.concat(spread(shuffle(missCards(POOL).filter(c => !ids.has(c.id))))).slice(0, 10), "Mistakes"); }
   else if (mode === "sprint") start("sprint", pickMix(POOL.filter(SPRINTABLE), 20), "Sprint");
   else start("mix", pickMix(POOL, 10), "Mix");
 }
