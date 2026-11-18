@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Proxle · Proxmox Cluster Lab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+ --bg:#eef1f3;--panel:#f8fafb;--ink:#15202b;--ink2:#465564;--mute:#7b8a98;--line:#d3dbe1;--line2:#b9c5ce;
+ --acc:#0d8a86;--acc-soft:#d9efee;--warn:#b7791f;--warn-soft:#f6ead2;--bad:#b3403a;--bad-soft:#f6dedc;--code:#10202c;--code-ink:#cfe6e4;
+ --disp:"Chakra Petch","Segoe UI",system-ui,sans-serif;--body:"IBM Plex Sans","Segoe UI",system-ui,sans-serif;--mono:"IBM Plex Mono",ui-monospace,Consolas,monospace;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+ --bg:#0b1218;--panel:#111b23;--ink:#e3ecf2;--ink2:#a9b8c5;--mute:#6f8091;--line:#1f2d38;--line2:#2c3e4c;
+ --acc:#3fc6bf;--acc-soft:#12343a;--warn:#e0a94a;--warn-soft:#33290f;--bad:#e2776f;--bad-soft:#3a1a18;--code:#070d12;--code-ink:#bfe3df;color-scheme:dark}}
+:root[data-theme="dark"]{
+ --bg:#0b1218;--panel:#111b23;--ink:#e3ecf2;--ink2:#a9b8c5;--mute:#6f8091;--line:#1f2d38;--line2:#2c3e4c;
+ --acc:#3fc6bf;--acc-soft:#12343a;--warn:#e0a94a;--warn-soft:#33290f;--bad:#e2776f;--bad-soft:#3a1a18;--code:#070d12;--code-ink:#bfe3df;color-scheme:dark}
+body{--t-bg:var(--code);--t-ink:var(--code-ink);--t-in:#fff;--t-err:#f08f86;--t-note:#8fb7c2;--t-noteline:#2f6f78;--t-ok:#7fe0b0;--t-sys:#8ea3b3;--t-rule:#1d3442;--t-b:#fff;--t-codebg:#1d3442;--t-code:#cfe6e4}
+body[data-skin="orbital"]{
+ --bg:#eef1f4;--panel:#ffffff;--ink:#232a31;--ink2:#4a5560;--mute:#8a94a0;--line:#d7dce2;--line2:#c4ccd4;
+ --acc:#0f8fa8;--acc-soft:#e1f1ee;--warn:#e0701a;--warn-soft:#fdf3e4;--bad:#d64541;--bad-soft:#f8e3e1;--code:#232a31;--code-ink:#e8edf2;
+ --t-bg:#f7f9fb;--t-ink:#232a31;--t-in:#232a31;--t-err:#d64541;--t-note:#4a5560;--t-noteline:#0f8fa8;--t-ok:#0f8fa8;--t-sys:#8a94a0;--t-rule:#d7dce2;--t-b:#232a31;--t-codebg:#e1f1ee;--t-code:#232a31;
+ --disp:-apple-system,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,sans-serif;--body:-apple-system,"SF Pro Text","Segoe UI","Helvetica Neue",Arial,sans-serif;--mono:"SF Mono",Consolas,Menlo,monospace;color-scheme:light}
+body[data-skin="orbital"] .chip,body[data-skin="orbital"] .btn,body[data-skin="orbital"] .tog{border-radius:2px;background:#fff;color:#4a5560;letter-spacing:.12em;font-size:10px;box-shadow:inset 0 -2px 0 transparent;transition:box-shadow .2s,border-color .2s}
+body[data-skin="orbital"] .chip:hover,body[data-skin="orbital"] .btn:hover,body[data-skin="orbital"] .tog:hover{border-color:#b8c1ca;color:var(--ink);box-shadow:inset 0 -2px 0 var(--warn);background:#fff}
+body[data-skin="orbital"] .chip.on,body[data-skin="orbital"] .tog.on,body[data-skin="orbital"] .btn.pri{background:var(--ink);border-color:var(--ink);color:#fff;box-shadow:inset 0 -2px 0 var(--warn)}
+body[data-skin="orbital"] .chip.done .dot{background:var(--acc);border-color:var(--acc)}
+body[data-skin="orbital"] .btn.ev{color:var(--bad);border-color:var(--bad)}
+body[data-skin="orbital"] header{box-shadow:none}
+body[data-skin="orbital"] .pick{box-shadow:0 1px 8px rgba(35,42,49,.06);background:#fff;padding-top:10px}
+body[data-skin="orbital"] .col{border-radius:2px;box-shadow:0 1px 2px rgba(35,42,49,.06)}
+body[data-skin="orbital"] .obj li{border-radius:2px;border:1px solid var(--line);border-left:3px solid #c4ccd4;background:#f1f4f7}
+body[data-skin="orbital"] .obj li.done{border-left-color:var(--acc);background:var(--acc-soft)}
+body[data-skin="orbital"] .obj li.now{border-left-color:var(--warn);background:#fff}
+body[data-skin="orbital"] .hint{border-left:3px solid var(--warn);color:#7a5210;background:var(--warn-soft);padding:6px 10px;border-radius:2px}
+body[data-skin="orbital"] .thead,body[data-skin="orbital"] h3,body[data-skin="orbital"] .kick,body[data-skin="orbital"] summary{letter-spacing:.12em}
+body[data-skin="orbital"] h1{letter-spacing:.14em;font-weight:600}
+body[data-skin="orbital"] h2{font-weight:600;letter-spacing:0}
+body[data-skin="orbital"] .term,body[data-skin="orbital"] .prompt{border-top:1px solid var(--line)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:14.5px/1.5 var(--body);display:grid;grid-template-rows:auto auto minmax(0,1fr)}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--acc);outline-offset:2px}
+header{display:flex;align-items:baseline;gap:18px;padding:14px 24px 8px;flex-wrap:wrap}
+header h1{font:600 18px/1 var(--disp);letter-spacing:.06em;text-transform:uppercase;margin:0}
+header .sub{color:var(--mute);font-size:13px}
+header .tog{align-self:center}
+header .prog{margin-left:auto;font:500 12px var(--mono);color:var(--ink2)}
+.pick{display:flex;gap:6px;padding:0 24px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap;align-items:center}
+.chip{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:6px 11px;border:1px solid var(--line2);color:var(--ink2);display:flex;gap:7px;align-items:center}
+.chip:hover{border-color:var(--acc);color:var(--acc)}
+.chip.on{border-color:var(--acc);color:var(--acc);background:var(--acc-soft)}
+.chip .dot{width:7px;height:7px;border-radius:50%;border:1.5px solid var(--line2)}
+.chip.done .dot{background:var(--acc);border-color:var(--acc)}
+.pick .sep{width:1px;height:18px;background:var(--line);margin:0 6px}
+.pick .lbl{font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+main{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.05fr) minmax(0,1.25fr);gap:14px;padding:14px 24px 18px;min-height:0}
+.col{background:var(--panel);border:1px solid var(--line);min-height:0;display:flex;flex-direction:column;overflow:hidden}
+.pad{padding:16px 18px;overflow:auto;display:flex;flex-direction:column;gap:12px}
+.kick{font:500 10.5px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--acc);margin:0}
+h2{font:600 21px/1.2 var(--disp);margin:0;text-wrap:balance}
+h3{font:600 10.5px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin:4px 0 0}
+p{margin:0;color:var(--ink2)}
+b{color:var(--ink);font-weight:600}
+code{font:12.5px var(--mono);background:var(--acc-soft);padding:1px 5px;color:var(--ink)}
+ul{margin:0;padding-left:18px;display:flex;flex-direction:column;gap:5px;color:var(--ink2)}
+li::marker{color:var(--acc)}
+details{border:1px solid var(--line);background:var(--bg)}
+summary{cursor:pointer;padding:8px 12px;font:600 10.5px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:var(--ink2)}
+details .in{padding:2px 12px 12px;display:flex;flex-direction:column;gap:8px}
+.cmds{width:100%;border-collapse:collapse;font-size:12.5px}
+.cmds td{padding:5px 8px 5px 0;border-top:1px solid var(--line);vertical-align:top;color:var(--ink2)}
+.cmds td:first-child{font-family:var(--mono);color:var(--ink)}
+.obj{display:flex;flex-direction:column;gap:6px;list-style:none;padding:0;margin:0}
+.obj li{border:1px solid var(--line);padding:9px 11px;display:grid;grid-template-columns:18px 1fr;gap:8px;background:var(--bg);transition:border-color .3s,background .3s}
+.obj li i{width:12px;height:12px;border-radius:50%;border:1.5px solid var(--line2);margin-top:4px}
+.obj li.done{border-color:var(--acc);background:var(--acc-soft)}
+.obj li.done i{background:var(--acc);border-color:var(--acc)}
+.obj li.now{border-color:var(--warn)}
+.obj li.now i{border-color:var(--warn);background:var(--warn);animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--warn) 50%,transparent)}50%{box-shadow:0 0 0 6px transparent}}
+.obj .t{color:var(--ink)}
+.obj .why{grid-column:2;font-size:13px;color:var(--ink2)}
+.obj .why small{display:block;font:500 10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--warn);margin-bottom:2px}
+.row{display:flex;gap:8px;flex-wrap:wrap}
+.btn{font:500 11px var(--mono);letter-spacing:.08em;text-transform:uppercase;padding:7px 12px;border:1px solid var(--line2);color:var(--ink2)}
+.btn:hover{border-color:var(--acc);color:var(--acc)}
+.btn.ev{border-color:var(--bad);color:var(--bad)}
+.btn.ev:hover{background:var(--bad-soft)}
+.hint{border-left:2px solid var(--warn);padding:4px 0 4px 12px;font-size:13px;color:var(--ink2)}
+.term{flex:1;min-height:0;overflow:auto;background:var(--t-bg);color:var(--t-ink);font:12.5px/1.6 var(--mono);padding:14px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.term .in{color:var(--t-in)}
+.term .err{color:var(--t-err)}
+.term .note{color:var(--t-note);border-left:2px solid var(--t-noteline);padding-left:10px;margin:4px 0 8px;font-family:var(--body);font-size:12.5px;white-space:normal}
+.term .ok{color:var(--t-ok)}
+.term b{color:var(--t-b)}
+.term code{background:var(--t-codebg);color:var(--t-code)}
+.term .sys{color:var(--t-sys)}
+.prompt{display:flex;gap:8px;align-items:center;background:var(--t-bg);border-top:1px solid var(--t-rule);padding:10px 16px;font:12.5px var(--mono);color:var(--t-ok)}
+.prompt input{flex:1;background:none;border:0;color:var(--t-in);font:12.5px var(--mono);outline:none;min-width:0}
+.wiz{flex:1;min-height:0;display:flex;flex-direction:column;background:var(--bg)}
+.wiz.compact{flex:0 0 auto}
+.sbar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid var(--line);background:var(--panel)}
+.sbar .sep{width:1px;height:18px;background:var(--line);margin:0 6px}
+.sbar .lbl,.things .lbl,p.lbl{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin:0}
+.sbody{flex:1;min-height:0;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.smsg{border-left:3px solid var(--warn);background:var(--warn-soft);color:var(--ink);padding:8px 12px;font-size:13px}
+.things{align-items:center;border-top:1px solid var(--line);padding-top:12px}
+.win{border:1px solid var(--line2);background:var(--panel);display:flex;flex-direction:column;min-height:240px;flex:1}
+.wintitle{font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute);padding:7px 12px;border-bottom:1px solid var(--line);background:var(--bg)}
+.urlbar{display:flex;gap:8px;padding:8px 12px;border-bottom:1px solid var(--line)}
+.urlbar input{flex:1;height:32px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font:13px var(--mono);padding:0 10px;min-width:0}
+.page{padding:16px 18px;display:flex;flex-direction:column;gap:10px;overflow:auto}
+.simtag{font:500 10px var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--mute)}
+.linkbtn{color:var(--acc);text-decoration:underline;padding:0}
+.dlrow{display:flex;justify-content:space-between;align-items:center;gap:12px;border-top:1px solid var(--line);padding:10px 0}
+.dlrow small{color:var(--mute);font-family:var(--mono);font-size:11.5px}
+.row2{display:grid;grid-template-columns:90px 1fr;align-items:center;gap:12px;font-size:13.5px;color:var(--ink2)}
+.row2 select{height:34px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font:13px var(--mono);padding:0 8px;min-width:0}
+.lh{list-style:none;margin:8px 0 0 -18px;font:600 10.5px var(--disp);letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
+.hit{cursor:pointer;outline:none}
+.hit text{pointer-events:none}
+.hit:hover rect:not(.padr),.hit:focus-visible rect:not(.padr),.hit:hover circle,.hit:focus-visible circle{stroke:var(--warn);stroke-width:2}
+.rk{width:100%;height:auto;display:block;touch-action:none;user-select:none}
+.drag{cursor:grab;outline:none}
+.rk.dragging[data-dragging="rails"] [data-drag="rails"],.rk.dragging[data-dragging="trol"] [data-drag="trol"],.rk.dragging[data-dragging="trol"] [data-port="trol"],.rk.dragging[data-dragging="server"] [data-drag="server"],.rk.dragging[data-dragging="server"] [data-act="power"],.rk.dragging[data-dragging="server"] [data-act^="usb"],.rk.dragging[data-dragging="server"] [data-port="scr"],.rk.dragging[data-dragging="server"] [data-port^="eno"],.rk.dragging[data-dragging="server"] [data-port^="psu"]{transform:translate(var(--dx),var(--dy));pointer-events:none;opacity:.85}
+.drag:hover rect,.drag:focus-visible rect{stroke:var(--warn);stroke-width:2}
+.drag text{pointer-events:none}
+.k-power [data-port],.k-net [data-port],.k-console [data-port]{cursor:crosshair}
+.rkbar .sep{width:1px;height:18px;background:var(--line);margin:0 4px}
+.rk text{font-family:var(--mono)}
+.rkaway{opacity:.45;pointer-events:none}
+.rkbar{align-items:center}
+.rkbar .lbl{font:500 10.5px var(--mono);letter-spacing:.1em;text-transform:uppercase;color:var(--mute);margin-left:6px}
+.dim{color:var(--mute)}
+.btn.sm{height:26px;padding:0 8px;font-size:10.5px}
+.reg td:last-child{text-align:right;white-space:nowrap}
+.row2.wide{grid-template-columns:110px 1fr}
+.row2 input{height:34px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font:13px var(--mono);padding:0 8px;min-width:0}
+.rev{border-left:3px solid var(--warn);background:var(--warn-soft);padding:8px 12px 8px 28px;font-size:13px;color:var(--ink)}
+.smsg.good{border-left-color:var(--acc);background:var(--acc-soft)}
+.desk-empty{flex:1;min-height:200px;display:flex;align-items:center;justify-content:center;border:1px dashed var(--line2)}
+.crt{background:#0b1014;color:#cfe6e4;border-left:0;min-height:170px;padding:16px 18px;font:12.5px/1.7 var(--mono);margin:0;white-space:pre-wrap}
+.crt.off{color:#56646f}
+.wizbox{border:1px solid var(--line2);display:flex;flex-direction:column;min-height:330px}
+.btn:disabled{opacity:.45;cursor:default}
+.btn.on{border-color:var(--acc);color:var(--acc);background:var(--acc-soft)}
+.cmds td:first-child{white-space:normal;overflow-wrap:anywhere}
+.wbar{background:var(--code);color:#fff;font:600 13px var(--disp);letter-spacing:.08em;padding:10px 16px}
+.wsteps{display:flex;gap:4px;padding:10px 16px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.wsteps span{font:500 10.5px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mute);padding:3px 8px;border:1px solid var(--line)}
+.wsteps .on{color:var(--acc);border-color:var(--acc);background:var(--acc-soft)}
+.wsteps .past{color:var(--ink2)}
+.wbody{flex:1;overflow:auto;padding:18px 20px;display:flex;flex-direction:column;gap:12px}
+.wbody label{display:grid;grid-template-columns:170px 1fr;align-items:center;gap:12px;font-size:13.5px;color:var(--ink2)}
+.wbody input,.wbody select{height:34px;border:1px solid var(--line2);background:var(--panel);color:var(--ink);font:13px var(--mono);padding:0 10px;min-width:0}
+.wnote{font-size:13px}
+.werr{color:var(--bad);font-size:13px;min-height:18px}
+.wfoot{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--line)}
+.btn.pri{background:var(--acc);border-color:var(--acc);color:var(--panel)}
+.wprog{height:4px;background:var(--line);overflow:hidden}
+.wprog i{display:block;height:100%;background:var(--acc);width:0;animation:wp 2.5s linear forwards}
+@keyframes wp{to{width:100%}}
+[hidden]{display:none!important}
+.thead{display:flex;align-items:center;gap:10px;padding:8px 14px;border-bottom:1px solid var(--line);font:500 10.5px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mute)}
+.thead .sp{flex:1}
+.tog{font:500 10.5px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2);padding:3px 8px;border:1px solid var(--line2)}
+.tog.on{border-color:var(--acc);color:var(--acc);background:var(--acc-soft)}
+svg{width:100%;height:auto;display:block}
+svg text{font-family:var(--mono)}
+.flash{animation:flash 1s ease}
+@keyframes flash{0%{opacity:.2}100%{opacity:1}}
+.donebox{border:1px solid var(--acc);background:var(--acc-soft);padding:12px 14px;display:flex;flex-direction:column;gap:6px;animation:in .4s}
+@keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+.foot{font-size:11.5px;color:var(--mute)}
+@media (max-width:1050px){main{grid-template-columns:1fr}.col{overflow:visible}.term{min-height:300px;max-height:50vh}body{display:block}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<header>
+ <h1>Proxle</h1>
+ <span class="sub">Proxmox cluster lab · build it yourself, one scenario at a time</span>
+ <span class="prog" id="prog"></span>
+ <button class="tog" id="b-skin"></button>
+</header>
+<div class="pick" id="pick"></div>
+<main>
+ <section class="col"><div class="pad" id="left"></div></section>
+ <section class="col">
+  <div class="thead"><span id="where"></span><span class="sp"></span><button class="tog on" id="b-explain">Explain on</button><button class="tog" id="b-reset">Restart scenario</button></div>
+  <div class="wiz" id="wiz" hidden></div>
+  <div class="term" id="term"></div>
+  <div class="prompt"><span id="ps1"></span><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Command"></div>
+ </section>
+ <section class="col"><div class="thead"><span id="rt">Live view of the site</span></div><div class="pad" id="right"></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+const IPS={pve1:'192.168.0.201',pve2:'192.168.0.202',pve3:'192.168.0.203',pve4:'192.168.0.204'};
+const NAS={'192.168.0.50':{name:'Synology NAS, site west',site:'west',exports:['/volume1/pve','/volume1/backup']},'192.168.9.50':{name:'Synology NAS, site north',site:'north',exports:['/volume1/backup']}};
+const VER='pve-manager/9.2-1/3a1f9c2e (running kernel: 6.14.8-2-pve)';
+const CA_CLUSTER='7c1e4a52-9b0d-4f6e-a1c3-5d2b8e0f4a91';
+const pad=n=>String(n).padStart(2,'0');
+function stamp(W,sep){const t=W.t,h=Math.floor(t/3600)%24,m=Math.floor(t/60)%60,s=t%60;return sep==='_'?`2026_11_18-${pad(h)}_${pad(m)}_${pad(s)}`:`2026-11-18 ${pad(h)}:${pad(m)}:${pad(s)}`}
+function world(o){
+ const W={t:15*3600+125,nodes:{},cluster:null,storages:{},vms:{},backups:{},host:'laptop',stack:[],prompt:null,seen:{},known:{},inst:o.inst?{where:'desk',app:null,url:'',page:'blank',files:[],usbLoc:'drawer',usbImg:null,selImg:'',power:false,screen:'off',vt:false,booted:false,installed:false,done:false,step:0,msg:'',node:null,cfgReach:false,reserved:null,rev:null,plan:{host:'',ip:'',gw:'',dns:''},rack:{box:'sealed',rails:false,railSlot:null,mounted:false,slot:null,pos:{x:20,y:236},tpos:{x:304,y:40},pick:null,kind:'hands',sel:null,link:{}},cfg:{fs:'ext4',d0:'sda',d1:'sdb',country:'',pw:'',pw2:'',mail:'',host:'pve.example.invalid',ip:'',gw:'',dns:''}}:null};
+ (o.nodes||(o.inst?[]:['pve1','pve2','pve3'])).forEach(n=>W.nodes[n]={ip:IPS[n],up:true,in:false});
+ if(o.cluster){W.cluster={name:o.cluster,members:(o.members||['pve1','pve2','pve3']).slice(),expected:null};W.cluster.members.forEach(n=>W.nodes[n].in=true)}
+ (o.storages||[]).forEach(s=>W.storages[s.id]=s);
+ (o.vms||[]).forEach(v=>W.vms[v.id]=Object.assign({disk:'scsi0',size:32,mem:2048,status:'running',ha:false},v));
+ Object.assign(W.backups,o.backups||{});
+ return W;
+}
+const NASW={id:'nas-west',type:'nfs',server:'192.168.0.50',export:'/volume1/pve',content:['images']};
+const BKA={id:'backup-a',type:'nfs',server:'192.168.0.50',export:'/volume1/backup',content:['backup']};
+const shared=(W,sid)=>!!(W.storages[sid]&&W.storages[sid].type==='nfs');
+const votes=W=>W.cluster?W.cluster.members.length:1;
+const upCount=W=>W.cluster?W.cluster.members.filter(n=>W.nodes[n].up).length:1;
+const needed=W=>W.cluster&&W.cluster.expected?Math.floor(W.cluster.expected/2)+1:Math.floor(votes(W)/2)+1;
+const quorate=W=>!W.cluster||W.host==='laptop'||!W.nodes[W.host].in||upCount(W)>=needed(W);
+const NOQ='cluster not ready - no quorum? (500)';
+function resolve(W,x){x=String(x||'').replace(/^root@/,'');const n=Object.keys(W.nodes).find(k=>W.nodes[k].ip===x);return n||null}
+const isIp=x=>/^\d+\.\d+\.\d+\.\d+$/.test(String(x||'').replace(/^root@/,''));
+const NODNS='There is no DNS entry for that name on this network. Use the IP address from the planning sheet.';
+const alive=(W,n)=>W.nodes[n].up&&W.nodes[n].reach!==false;
+function enter(W,n){W.stack.push(W.host);W.host=n;W.seen['ssh:'+n]=1;return{out:`Linux ${n} 6.14.8-2-pve #1 SMP PREEMPT_DYNAMIC PMX x86_64\nLast login: Wed Nov 18 14:02:11 2026 from 192.168.0.9`}}
+function hostUuid(n){return 'a9'+n.charCodeAt(3)+'f3c1e-0b7d-4e2a-9c55-1f0e6d3b2a7'+n.charCodeAt(3)%10}
+function pvecmStatus(W){
+ const c=W.cluster,me=W.host;
+ if(!c||!W.nodes[me].in)return{err:"Error: Corosync config '/etc/pve/corosync.conf' does not exist - is this node part of a cluster?"};
+ const ups=c.members.filter(n=>W.nodes[n].up),q=quorate(W),exp=c.expected||c.members.length;
+ let o=`Cluster information\n-------------------\nName:             ${c.name}\nConfig Version:   ${c.members.length}\nTransport:        knet\nSecure auth:      on\n\nQuorum information\n------------------\nDate:             ${stamp(W)}\nQuorum provider:  corosync_votequorum\nNodes:            ${ups.length}\nNode ID:          0x0000000${c.members.indexOf(me)+1}\nQuorate:          ${q?'Yes':'No'}\n\nVotequorum information\n----------------------\nExpected votes:   ${exp}\nHighest expected: ${exp}\nTotal votes:      ${ups.length}\nQuorum:           ${needed(W)}${q?'':' Activity blocked'}\nFlags:            ${q?'Quorate':''}\n\nMembership information\n----------------------\n    Nodeid      Votes Name\n`;
+ ups.forEach(n=>o+=`0x0000000${c.members.indexOf(n)+1}          1 ${W.nodes[n].ip}${n===me?' (local)':''}\n`);
+ W.seen['status:'+ups.length+':'+(q?'q':'nq')]=1;W.seen['status@'+me]=1;
+ return{out:o.trimEnd(),note:q?`<b>Quorate: Yes</b> means a majority of nodes can see each other, so the cluster may make changes. ${ups.length} of ${c.members.length} nodes are up and ${needed(W)} are needed.`:`<b>Quorate: No.</b> Only ${ups.length} of ${c.members.length} nodes are up and ${needed(W)} are needed. The cluster refuses changes so that two halves can never both act on the same VM.`};
+}
+function storRows(W){
+ const rows=[['local','dir','active',98497780,3204836],['local-lvm','lvmthin','active',365760512,W.host==='pve1'?41205760:0]];
+ if(W.nodes[W.host].in||!W.cluster)Object.values(W.storages).forEach(s=>rows.push([s.id,s.type,'active',s.server==='192.168.9.50'?7759462400:3876438016,(W.backups[s.id]||[]).length*4520000+120344576]));
+ return rows;
+}
+function vmsHere(W){return Object.values(W.vms).filter(v=>v.node===W.host)}
+function arg(a,k){const i=a.indexOf(k);return i>=0?a[i+1]:null}
+function exec(W,line){
+ const a=line.trim().split(/\s+/),c=a[0];
+ const here=W.nodes[W.host]||{ip:'192.168.0.9',in:false};
+ if(W.host==='laptop'&&c==='ip'){const k=a[1]||'';if(/^r/.test(k)){W.seen.route=1;if(W.inst){W.inst.plan.gw='192.168.0.1';W.inst.rev=null}return{out:'default via 192.168.0.1 dev wlan0 proto dhcp src 192.168.0.9 metric 600\n192.168.0.0/24 dev wlan0 proto kernel scope link src 192.168.0.9',note:'<b>default via</b> is the gateway: the router every packet goes to when the destination is outside this network. The second line is the network itself: <b>192.168.0.0/24</b>.'+(W.inst?' Gateway noted on your planning sheet.':'')}}if(/^a/.test(k))return{out:'1: lo: <LOOPBACK,UP,LOWER_UP>\n    inet 127.0.0.1/8 scope host lo\n2: wlan0: <BROADCAST,MULTICAST,UP,LOWER_UP>\n    inet 192.168.0.9/24 scope global wlan0'};return{err:'Usage: ip [ a | route ]'}}
+ if(W.host==='laptop'&&c==='cat'){if(a[1]==='/etc/resolv.conf'){W.seen.dns=1;if(W.inst){W.inst.plan.dns='192.168.0.10';W.inst.rev=null}return{out:'nameserver 192.168.0.10\nsearch lab.local',note:'<b>nameserver</b> is the DNS server this laptop asks when it needs a name translated. <b>search</b> is the domain that names here end in.'+(W.inst?' DNS server noted on your planning sheet.':'')}}return{err:`cat: ${a[1]||''}: No such file or directory`}}
+ if(W.host==='laptop'&&c==='ipconfig')return{err:'-bash: ipconfig: command not found',note:'<code>ipconfig /all</code> is the Windows command. This laptop runs Linux, where the same facts come from <code>ip route</code> (gateway) and <code>cat /etc/resolv.conf</code> (DNS).'};
+ if(W.host==='laptop'&&!['help','hostname','ssh','ping','clear','date','exit','logout'].includes(c))return{err:`-bash: ${c}: command not found`,note:['pvecm','pvesm','qm','vzdump','qmrestore','ha-manager','pveversion','openssl','ls','ip'].includes(c)?'You are still on your own laptop. Proxmox commands exist only on the servers. Log in to one first: <code>ssh root@&lt;ip&gt;</code>.':null};
+ if(W.host==='laptop'&&c==='help')return{out:'You are on your laptop. From here you can:\n  ssh root@<ip>     log in to a server\n  ping <ip>         test whether a machine answers\n  ip route          the gateway of the network you are on\n  cat /etc/resolv.conf   the DNS server you use\nOnce you are on a server, type help again for the Proxmox commands.'};
+ if(c==='help')return{out:'Read-only:  hostname  pveversion  date  ip a  ping <host>  pvecm status  pvecm nodes  pvesm status  pvesm list <storage>  qm list  qm config <vmid>  ha-manager status  ls /etc/pve/nodes  openssl x509 -in <file> -noout -subject -issuer\nChanges:    pvecm create <name>  pvecm add <ip>  pvesm add nfs <id> --server <ip> --export <path> --content <types>  qm start|stop|destroy <vmid>  qm disk move <vmid> <disk> <storage>  qm migrate <vmid> <node> --online  ha-manager add vm:<vmid>  vzdump <vmid> --storage <id> --mode snapshot  qmrestore <backup> <vmid>\nMoving:     ssh root@<node>  exit  clear'};
+ if(c==='hostname')return{out:W.host};
+ if(c==='pveversion'){W.seen['ver@'+W.host]=1;return{out:VER,note:'Every node in a cluster should show the same version here.'}}
+ if(c==='date')return{out:'Wed Nov 18 '+stamp(W).slice(11)+' CET 2026'};
+ if(c==='ip')return{out:`1: lo: <LOOPBACK,UP,LOWER_UP>\n    inet 127.0.0.1/8 scope host lo\n2: eno1: <BROADCAST,MULTICAST,UP,LOWER_UP> master vmbr0\n3: vmbr0: <BROADCAST,MULTICAST,UP,LOWER_UP>\n    inet ${here.ip}/24 scope global vmbr0`,note:'<b>vmbr0</b> is the bridge: the software switch the VMs plug into. The server\'s own address sits on it.'};
+ if(c==='ping'){const t=a.filter(x=>!/^-/.test(x)&&!/^\d+$/.test(x))[1]||a[a.length-1];if(!isIp(t))return{err:`ping: ${t}: Name or service not known`,note:NODNS};const n=resolve(W,t),ok=(n&&alive(W,n))||NAS[t]||t==='192.168.0.1'||t==='192.168.0.9'||t==='192.168.0.10';if(ok){W.seen['ping:'+t]=1;return{out:`PING ${t} (${t}) 56(84) bytes of data.\n64 bytes from ${t}: icmp_seq=1 ttl=64 time=0.31 ms\n64 bytes from ${t}: icmp_seq=2 ttl=64 time=0.28 ms\n64 bytes from ${t}: icmp_seq=3 ttl=64 time=0.29 ms\n\n--- ${t} ping statistics ---\n3 packets transmitted, 3 received, 0% packet loss`}}W.seen['pingfree:'+t]=1;return{out:`PING ${t} (${t}) 56(84) bytes of data.\nFrom ${here.ip} icmp_seq=1 Destination Host Unreachable\nFrom ${here.ip} icmp_seq=2 Destination Host Unreachable\n\n--- ${t} ping statistics ---\n3 packets transmitted, 0 received, +2 errors, 100% packet loss`}}
+ if(c==='ssh'){if(!a[1])return{err:'usage: ssh [user@]hostname'};const tgt=String(a[1]).replace(/^root@/,'');if(!isIp(a[1]))return{err:`ssh: Could not resolve hostname ${tgt}: Name or service not known`,note:NODNS};if(!/^root@/.test(a[1])&&W.host==='laptop')return{err:`kaatje@${tgt}: Permission denied (publickey,password).`,note:'Without a user name, ssh tries your laptop user. Proxmox servers are administered as root: <code>ssh root@'+tgt+'</code>.'};const n=resolve(W,a[1]);if(!n||!alive(W,n))return{err:`ssh: connect to host ${tgt} port 22: No route to host`};if(n===W.host)return{out:`You are already on ${n}.`};if(W.host!=='laptop'&&here.in&&W.nodes[n].in)return enter(W,n);if(!W.known[W.host+'>'+n]){W.prompt={k:'sshfp',t:n};return{out:`The authenticity of host '${tgt} (${tgt})' can't be established.\nED25519 key fingerprint is SHA256:Qk3v9T0mZr1xW8eYc5uLhB2nD7sAj4GfPp6oKiVtXwE.\nThis key is not known by any other names.\nAre you sure you want to continue connecting (yes/no/[fingerprint])?`}}W.prompt={k:'sshpw',t:n};return{out:`root@${tgt}'s password:`}}
+ if(c==='exit'||c==='logout'){if(!W.stack.length)return{out:'This is your own laptop. There is nothing to exit from.'};const from=W.host;W.host=W.stack.pop();return{out:`logout\nConnection to ${W.nodes[from].ip} closed.`}}
+ if(c==='ls'){if(/^\/etc\/pve\/nodes\/?$/.test(a[1]||'')){const l=here.in?W.cluster.members:[W.host];W.seen.lsnodes=1;return{out:l.join('  '),note:'One folder per node. Each holds that node\'s own certificate and its VM settings. The folder is shared by the whole cluster.'}}return{err:`ls: cannot access '${a[1]||''}': No such file or directory`}}
+ if(c==='openssl'){const f=arg(a,'-in')||'';const m=f.match(/^\/etc\/pve\/nodes\/([a-z0-9]+)\/pve-ssl\.pem$/)||(f==='/etc/pve/local/pve-ssl.pem'?[0,W.host]:null);if(a[1]!=='x509'||!f)return{err:'usage: openssl x509 -in <file> -noout -subject -issuer'};const ca=n=>W.nodes[n].in?CA_CLUSTER:hostUuid(n);if(f==='/etc/pve/pve-root-ca.pem'){return{out:`subject=CN = Proxmox Virtual Environment, OU = ${ca(W.host)}, O = PVE Cluster Manager CA\nissuer=CN = Proxmox Virtual Environment, OU = ${ca(W.host)}, O = PVE Cluster Manager CA`,note:'This is the certificate authority itself. It signs its own certificate, which is why browsers do not know it.'}}if(!m||!W.nodes[m[1]]||(m[1]!==W.host&&!(here.in&&W.nodes[m[1]].in)))return{err:`Could not open file or uri for loading certificate from ${f}\nNo such file or directory`};W.seen['cert:'+m[1]]=1;return{out:`subject=OU = PVE Cluster Node, O = Proxmox Virtual Environment, CN = ${m[1]}.lab.local\nissuer=CN = Proxmox Virtual Environment, OU = ${ca(m[1])}, O = PVE Cluster Manager CA`,note:`<b>subject</b> is who the certificate belongs to: ${m[1]}. <b>issuer</b> is who signed it: the cluster's own certificate authority. Compare the issuer line between two nodes: in one cluster it is identical.`}}
+ if(c==='pvecm'){
+  const s=a[1];
+  if(s==='status')return pvecmStatus(W);
+  if(s==='nodes'){if(!W.cluster||!here.in)return{err:"Error: Corosync config '/etc/pve/corosync.conf' does not exist - is this node part of a cluster?"};const ups=W.cluster.members.filter(n=>W.nodes[n].up);W.seen['nodes:'+ups.length]=1;return{out:'Membership information\n----------------------\n    Nodeid      Votes Name\n'+ups.map(n=>`         ${W.cluster.members.indexOf(n)+1}          1 ${n}${n===W.host?' (local)':''}`).join('\n')}}
+  if(s==='create'){if(!a[2])return{err:'400 not enough arguments\npvecm create <clustername> [OPTIONS]'};if(here.in)return{err:"cluster config '/etc/pve/corosync.conf' already exists"};if(W.cluster)return{err:`A cluster named '${W.cluster.name}' already exists on this network. Join it from this node with: pvecm add <ip of a member>`};if(!/^[a-zA-Z0-9-]{1,15}$/.test(a[2]))return{err:"400 Parameter verification failed.\nclustername: invalid format - must be 1 to 15 characters: letters, digits, hyphen"};W.cluster={name:a[2],members:[W.host],expected:null};here.in=true;W.t+=4;return{out:'Corosync Cluster Engine Authentication key generator.\nGathering 2048 bits for key from /dev/urandom.\nWriting corosync key to /etc/corosync/authkey.\nWriting corosync config to /etc/pve/corosync.conf\nRestart corosync and cluster filesystem',note:`The cluster <b>${esc(a[2])}</b> now exists with one member. It also just created its own certificate authority, which will sign a certificate for every node that joins.`}}
+  if(s==='add'){if(!a[2])return{err:'400 not enough arguments\npvecm add <hostname> [OPTIONS]'};if(here.in)return{err:"detected the following error(s):\n* authentication key '/etc/corosync/authkey' already exists\n* cluster config '/etc/pve/corosync.conf' already exists\nCheck if node may join a cluster failed!",note:`<b>${W.host}</b> is already a member. <code>pvecm add</code> is run on the <b>new</b> node, pointing at a node that is already in the cluster.`};if(!isIp(a[2]))return{err:`500 Can't connect to ${a[2]}:8006 (Name or service not known)`,note:NODNS};const t=resolve(W,a[2]);if(!t||!alive(W,t))return{err:`500 Can't connect to ${a[2]}:8006 (No route to host)`};if(!W.nodes[t].in)return{err:`unable to join: ${a[2]} is not a member of any cluster`};if(vmsHere(W).length)return{err:'detected the following error(s):\n* this host already contains virtual guests\nCheck if node may join a cluster failed!',note:'A node must be <b>empty</b> to join. Its VM numbers could clash with ones in the cluster. Remove or move the guests first, then join.'};if(!quorate(Object.assign({},W,{host:t})))return{err:NOQ};W.prompt={k:'pw',t};return{out:`Please enter superuser (root) password for '${a[2]}':`,ps:''}}
+  if(s==='expected'){if(!W.cluster||!here.in)return{err:"Error: Corosync config '/etc/pve/corosync.conf' does not exist - is this node part of a cluster?"};const n=+a[2];if(!n)return{err:'400 not enough arguments\npvecm expected <expected>'};W.cluster.expected=n;W.seen.expected=1;return{out:'',note:'<b>Emergency only.</b> You just told this node to act as if a smaller cluster were complete. If the other nodes are in fact alive but unreachable, both sides can now change the same VM. On a real cluster, be certain the others are truly off first.'}}
+  return{err:'ERROR: unknown command \'pvecm '+(s||'')+'\'\nUSAGE: pvecm <COMMAND> [ARGS] [OPTIONS]\n       pvecm add <hostname>\n       pvecm create <clustername>\n       pvecm nodes\n       pvecm status'};
+ }
+ if(c==='pvesm'){
+  const s=a[1];
+  if(s==='status'){W.seen.pvesm=1;return{out:'Name             Type     Status           Total            Used       Available        %\n'+storRows(W).map(r=>`${r[0].padEnd(13)}${r[1].padStart(8)}     ${r[2]}${String(r[3]).padStart(16)}${String(r[4]).padStart(16)}${String(r[3]-r[4]).padStart(16)}${(r[4]/r[3]*100).toFixed(2).padStart(8)}%`).join('\n'),note:'<b>local</b> and <b>local-lvm</b> are disks inside this one server. Anything of type <b>nfs</b> lives on a NAS and is reachable by every node.'}}
+  if(s==='add'){if(a[2]!=='nfs')return{err:'400 Parameter verification failed.\ntype: this lab supports type nfs\npvesm add nfs <storage> --server <ip> --export <path> --content <types>'};const id=a[3],sv=arg(a,'--server'),ex=arg(a,'--export'),ct=(arg(a,'--content')||'images').split(',');if(!id||/^--/.test(id))return{err:'400 not enough arguments\npvesm add <type> <storage> [OPTIONS]'};if(!sv||!ex)return{err:'400 Parameter verification failed.\n'+(!sv?'server: property is missing and it is not optional\n':'')+(!ex?'export: property is missing and it is not optional':'')};if(!quorate(W))return{err:NOQ};if(W.storages[id]||id==='local'||id==='local-lvm')return{err:`create storage failed: storage ID '${id}' already defined`};const bad=ct.find(x=>!['images','backup','iso','rootdir','vztmpl','snippets'].includes(x));if(bad)return{err:`400 Parameter verification failed.\ncontent: invalid content type '${bad}'`};if(!NAS[sv])return{err:`create storage failed: storage '${id}' is not online`};if(!NAS[sv].exports.includes(ex))return{err:`create storage failed: mount error: mount.nfs: access denied by server while mounting ${sv}:${ex}`};W.storages[id]={id,type:'nfs',server:sv,export:ex,content:ct};W.t+=3;return{out:'',note:`Storage <b>${esc(id)}</b> is now defined for the whole cluster, not just this node. It allows: ${ct.join(', ')}.`}}
+  if(s==='list'){const id=a[2];if(!id)return{err:'400 not enough arguments\npvesm list <storage>'};if(id!=='local'&&!W.storages[id])return{err:`storage '${id}' does not exist`};const l=W.backups[id]||[];W.seen['list:'+id]=1;return{out:'Volid'.padEnd(64)+'Format  Type            Size VMID\n'+l.map(b=>`${(id+':backup/'+b.file).padEnd(64)}vma.zst backup    ${b.size} ${b.vmid}`).join('\n'),note:l.length?'Each line is one backup file. The <b>Volid</b> in the first column is the name you give to qmrestore.':'No backups on this storage yet.'}}
+  if(s==='remove'){const id=a[2];if(!W.storages[id])return{err:`delete storage failed: storage '${id||''}' does not exist`};if(!quorate(W))return{err:NOQ};if(Object.values(W.vms).some(v=>v.storage===id))return{err:`delete storage failed: storage '${id}' is still used by a VM disk`};delete W.storages[id];return{out:''}}
+  return{err:'ERROR: unknown command \'pvesm '+(s||'')+'\'\nUSAGE: pvesm add <type> <storage> [OPTIONS]\n       pvesm list <storage>\n       pvesm remove <storage>\n       pvesm status'};
+ }
+ if(c==='qm'){
+  let s=a[1];
+  if(s==='list'){const l=vmsHere(W);W.seen['qmlist@'+W.host]=1;l.forEach(v=>W.seen['sawvm:'+v.id+'@'+W.host]=1);return{out:l.length?'      VMID NAME                 STATUS     MEM(MB)    BOOTDISK(GB) PID\n'+l.map(v=>`${String(v.id).padStart(10)} ${v.name.padEnd(20)} ${v.status.padEnd(10)} ${String(v.mem).padEnd(10)} ${v.size.toFixed(2).padStart(12)} ${v.status==='running'?4000+v.id:0}`).join('\n'):'',note:`<code>qm list</code> only shows the VMs on <b>this</b> node (${W.host}).`+(l.length?'':' There are none here.')}}
+  if(['move-disk','move_disk'].includes(s)){a.splice(1,1,'disk','move');s='disk'}
+  const id=+(s==='disk'?a[3]:a[2]),v=W.vms[id];
+  if(!['config','start','stop','shutdown','destroy','migrate','disk'].includes(s))return{err:`ERROR: unknown command 'qm ${s||''}'\nUSAGE: qm list | config | start | stop | destroy | migrate | disk move`};
+  if(!id)return{err:'400 not enough arguments'};
+  if(!v||v.node!==W.host)return{err:`Configuration file 'nodes/${W.host}/qemu-server/${id}.conf' does not exist`,note:v?`VM ${id} exists, but it runs on <b>${v.node}</b>. Commands for a VM are given on the node it lives on: <code>ssh root@${v.node}</code>.`:null};
+  if(s==='config'){W.seen['config:'+id]=1;return{out:`boot: order=${v.disk}\ncores: 2\nmemory: ${v.mem}\nname: ${v.name}\nnet0: virtio=BC:24:11:3A:${pad(id%100)}:01,bridge=vmbr0\nscsi0: ${v.storage}:${shared(W,v.storage)?id+'/':''}vm-${id}-disk-0${shared(W,v.storage)?'.qcow2':''},size=${v.size}G\nscsihw: virtio-scsi-single`,note:`The line <b>${v.disk}</b> shows where the disk lives: storage <b>${v.storage}</b>. ${shared(W,v.storage)?'That is shared storage, so every node can reach it.':'That is inside this one server. No other node can see it.'}`}}
+  if(!quorate(W)){W.seen.noq=1;return{err:NOQ,note:'Without quorum the cluster settings are read-only. Nothing that changes a VM is allowed, so a cut-off node can never start a second copy of a VM that is still running elsewhere.'}}
+  if(s==='start'){if(v.status==='running')return{err:`VM ${id} already running`};v.status='running';W.t+=6;return{out:''}}
+  if(s==='stop'||s==='shutdown'){if(v.status!=='running')return{err:`VM ${id} not running`};v.status='stopped';W.t+=8;return{out:''}}
+  if(s==='destroy'){if(v.status==='running')return{err:`VM ${id} is running - destroy failed`};delete W.vms[id];return{out:''}}
+  if(s==='disk'){if(a[2]!=='move')return{err:"ERROR: unknown command 'qm disk "+(a[2]||'')+"'"};const d=a[4],st=a[5];if(!d||!st)return{err:'400 not enough arguments\nqm disk move <vmid> <disk> [<storage>] [OPTIONS]'};if(d!==v.disk)return{err:`disk '${d}' does not exist`};const S=st==='local-lvm'?{content:['images']}:W.storages[st];if(!S)return{err:`storage '${st}' does not exist`};if(!S.content.includes('images'))return{err:`storage '${st}' does not support vm images`};if(st===v.storage)return{err:`you can't move to the same storage with same format`};const old=v.storage;v.storage=st;W.t+=95;return{out:`create full clone of drive ${d} (${old}:vm-${id}-disk-0)\ndrive mirror is starting for drive-${d}\ndrive-${d}: transferred 32.0 GiB of 32.0 GiB (100.00%) in 1m 31s, ready\nall 'mirror' jobs are ready\ndrive-${d}: Completed successfully.`,note:`The disk moved from <b>${old}</b> to <b>${st}</b> while the VM kept running.`}}
+  if(s==='migrate'){const tn=a[3];if(!tn)return{err:'400 not enough arguments\nqm migrate <vmid> <target> [OPTIONS]'};if(!W.cluster||!here.in)return{err:'this node is not part of a cluster'};if(tn===W.host)return{err:'400 Parameter verification failed.\ntarget: target is local node.'};if(!W.nodes[tn]||!W.nodes[tn].in)return{err:`400 Parameter verification failed.\ntarget: no such cluster node '${tn}'`};if(!W.nodes[tn].up)return{err:`ERROR: target node '${tn}' is offline`};const on=a.includes('--online');if(v.status==='running'&&!on)return{err:"ERROR: can't migrate running VM without --online"};if(!shared(W,v.storage)&&v.status==='running'&&!a.includes('--with-local-disks')){W.seen.localfail=1;return{err:`ERROR: Problem found while scanning volumes - can't migrate local disk '${v.storage}:vm-${id}-disk-0': can't live migrate attached local disks without with-local-disks option`,note:`The disk of VM ${id} is on <b>${v.storage}</b>, inside ${W.host}. The target node cannot see it. Put the disk on shared storage first, then the VM can move in seconds.`}}const sh=shared(W,v.storage);v.node=tn;W.t+=sh?11:140;W.seen['migrated:'+id+':'+tn]=1;return{out:`${stamp(W)} starting migration of VM ${id} to node '${tn}' (${W.nodes[tn].ip})\n${stamp(W)} ${sh?'found shared disk, no copy needed':'copying local disk (32.0 GiB)'}\n${stamp(W)} starting online/live migration\n${stamp(W)} migration active, transferred 2.1 GiB of 2.0 GiB VM-state\n${stamp(W)} migration finished successfully (duration ${sh?'00:00:11':'00:02:20'})`,note:`VM ${id} now runs on <b>${tn}</b>. ${sh?'Only its memory had to travel, because both nodes can reach the disk.':'The whole disk had to be copied, which is why it took minutes.'}`}}
+ }
+ if(c==='ha-manager'){
+  const s=a[1];if(!W.cluster||!here.in)return{err:'ha-manager needs a cluster'};
+  if(s==='status'){W.seen.hastatus=1;const hv=Object.values(W.vms).filter(v=>v.ha);return{out:`quorum ${quorate(W)?'OK':'No quorum on node \''+W.host+'\'!'}\nmaster ${W.cluster.members.find(n=>W.nodes[n].up)} (active)\n`+hv.map(v=>`service vm:${v.id} (${v.node}, ${v.status==='running'?'started':'stopped'})`).join('\n'),note:hv.length?'Only the VMs listed here are protected by HA. Any VM not in this list stays down when its node dies.':'No VM is under HA yet.'}}
+  if(s==='add'){const m=(a[2]||'').match(/^vm:(\d+)$/);if(!m)return{err:'400 Parameter verification failed.\nsid: invalid format - use vm:<vmid>'};const v=W.vms[+m[1]];if(!v)return{err:`unable to read VM config for 'vm:${m[1]}'`};if(!quorate(W))return{err:NOQ};v.ha=true;return{out:'',note:shared(W,v.storage)?`VM ${v.id} is now under HA. If its node dies, another node restarts it.`:`VM ${v.id} is under HA, but its disk is on <b>${v.storage}</b>, inside one server. If that server dies, HA has nothing to start the VM from.`}}
+  return{err:"ERROR: unknown command 'ha-manager "+(s||'')+"'"};
+ }
+ if(c==='vzdump'){
+  const id=+a[1],v=W.vms[id];if(!id)return{err:'400 not enough arguments\nvzdump <vmid> [OPTIONS]'};const st=arg(a,'--storage')||'local',mode=arg(a,'--mode')||'snapshot';
+  if(!v||v.node!==W.host)return{err:`ERROR: Backup of VM ${id} failed - VM ${id} not found on node '${W.host}'`,note:v?`VM ${id} lives on <b>${v.node}</b>. Run the backup there.`:null};
+  if(!['snapshot','suspend','stop'].includes(mode))return{err:`400 Parameter verification failed.\nmode: value '${mode}' does not have a value in the enumeration 'snapshot, suspend, stop'`};
+  const S=st==='local'?{content:['backup']}:W.storages[st];if(!S)return{err:`ERROR: storage '${st}' does not exist`};if(!S.content.includes('backup'))return{err:`ERROR: storage '${st}' does not support backups`,note:`Storage <b>${st}</b> was added for ${S.content.join(', ')} only. A backup storage needs <code>--content backup</code>.`};
+  const file=`vzdump-qemu-${id}-${stamp(W,'_')}.vma.zst`,start=stamp(W);W.t+=74;(W.backups[st]=W.backups[st]||[]).push({vmid:id,file,size:4627545292,name:v.name,storage:v.storage,mem:v.mem});W.seen['bk:'+id+':'+st+':'+mode]=1;
+  return{out:`INFO: starting new backup job: vzdump ${id} --storage ${st} --mode ${mode}\nINFO: Starting Backup of VM ${id} (qemu)\nINFO: Backup started at ${start}\nINFO: status = ${v.status}\nINFO: backup mode: ${mode}\nINFO: creating vzdump archive '/mnt/pve/${st}/dump/${file}'\nINFO: 100% (32.0 GiB of 32.0 GiB) in 1m 12s\nINFO: archive file size: 4.31GB\nINFO: Finished Backup of VM ${id} (00:01:14)\nINFO: Backup job finished successfully`,note:st==='local'?'This worked, but the file sits on the <b>same server</b> as the VM. If that server dies, the VM and its backup die together. A backup belongs somewhere else.':`One file on <b>${st}</b> now holds the settings and the whole disk of VM ${id}.`+(mode==='snapshot'?' Mode snapshot means the VM kept running.':'')};
+ }
+ if(c==='qmrestore'){
+  const src=a[1],id=+a[2];if(!src||!id)return{err:'400 not enough arguments\nqmrestore <archive> <vmid> [OPTIONS]'};
+  const m=src.match(/^([\w-]+):backup\/(.+)$/)||src.match(/^\/mnt\/pve\/([\w-]+)\/dump\/(.+)$/);const b=m&&(W.backups[m[1]]||[]).find(x=>x.file===m[2]);
+  if(!b)return{err:`ERROR: can't find archive file '${src}'`,note:'Copy the name exactly from the first column of <code>pvesm list &lt;storage&gt;</code>.'};
+  if(W.vms[id])return{err:`unable to restore VM ${id} - VM ${id} already exists on cluster node '${W.vms[id].node}'`};if(!quorate(W))return{err:NOQ};
+  const st=arg(a,'--storage')||b.storage;if(st!=='local-lvm'&&!W.storages[st])return{err:`storage '${st}' does not exist`};
+  W.vms[id]={id,name:b.name,node:W.host,storage:st,disk:'scsi0',size:32,mem:b.mem,status:'stopped',ha:false};W.t+=160;W.seen['restored:'+id+':'+m[1]]=1;
+  return{out:`restore vma archive: zstd -q -d -c /mnt/pve/${m[1]}/dump/${b.file} | vma extract -v -r /var/tmp/vzdumptmp.fifo - /var/tmp/vzdumptmp\nCFG: size: 412 name: qemu-server.conf\nDEV: dev_id=1 size: 34359738368 devname: drive-scsi0\nnew volume ID is '${st}:vm-${id}-disk-0'\nprogress 100% (read 34359738368 bytes, duration 151 sec)\ntotal bytes read 34359738368, sparse bytes 21474836480 (62.5%)`,note:`VM ${id} is back on <b>${W.host}</b>, as it was when the backup was taken. A restored VM is <b>stopped</b>: start it yourself once you have checked it.`};
+ }
+ if(c==='clear')return{clear:1};
+ return{err:`-bash: ${c}: command not found`};
+}
+function answerPrompt(W,line){
+ const p=W.prompt;
+ if(p.k==='sshfp'){W.prompt=null;if(!/^yes$/i.test(line))return{err:'Host key verification failed.'};W.known[W.host+'>'+p.t]=1;W.prompt={k:'sshpw',t:p.t};return{out:`Warning: Permanently added '${W.nodes[p.t].ip}' (ED25519) to the list of known hosts.\nroot@${W.nodes[p.t].ip}'s password:`}}
+ if(p.k==='sshpw'){W.prompt=null;const need=W.nodes[p.t].pw;if(!line||(need&&line!==need))return{err:`Permission denied, please try again.\nroot@${W.nodes[p.t].ip}: Permission denied (publickey,password).`,note:need?'That is not the root password you set in the installer.':null};if(W.host==='laptop')W.seen.loggedin=1;return enter(W,p.t)}
+ if(p.k==='pw'){if(!line){W.prompt=null;return{err:'401 authentication failure'}}W.prompt={k:'fp',t:p.t};return{out:`Establishing API connection with host '${W.nodes[p.t].ip}'\nThe authenticity of host '${W.nodes[p.t].ip}' can't be established.\nX509 SHA256 key fingerprint is 4B:9E:02:7A:C1:5D:88:3F:60:1B:A7:2C:D9:44:EE:15:73:0A:B6:9C:21:F8:5E:D0:37:AC:68:12:9B:E4:50:7D.\nAre you sure you want to continue connecting (yes/no)?`,ps:''}}
+ W.prompt=null;if(!/^y(es)?$/i.test(line))return{err:'TASK ERROR: fingerprint not verified, abort!'};
+ W.cluster.members.push(W.host);W.nodes[W.host].in=true;W.t+=14;
+ return{out:`Login succeeded.\ncheck cluster join API version\nRequest addition of this node\nJoin request OK, finishing setup locally\nstopping pve-cluster service\nbackup old database to '/var/lib/pve-cluster/backup/config-${W.t}.sql.gz'\nwaiting for quorum...OK\n(re)generate node files\ngenerate new node certificate\nmerge authorized SSH keys\ngenerated new node certificate, restart pveproxy and pvedaemon services\nsuccessfully added node '${W.host}' to cluster.`,note:`<b>${W.host}</b> is now a member. Read the lines again: it received a <b>new node certificate</b>, signed by the cluster, and it took over the cluster's shared settings. The cluster now has ${W.cluster.members.length} votes and needs ${needed(W)}.`};
+}
+function powerOff(W,n){W.nodes[n].up=false;const out=[];if(W.host===n){W.host='laptop';W.stack=[];out.push(`Connection to ${W.nodes[n].ip} closed by remote host. You are back on your laptop.`)}W.stack=W.stack.filter(x=>x!==n);if(quorate(W)){Object.values(W.vms).filter(v=>v.node===n).forEach(v=>{if(v.ha&&shared(W,v.storage)){const t=W.cluster.members.find(x=>W.nodes[x].up);v.node=t;v.status='running';out.push(`HA restarted VM ${v.id} (${v.name}) on ${t}.`)}else{v.status='stopped';out.push(`VM ${v.id} (${v.name}) went down with ${n} and stays down.`)}})}else Object.values(W.vms).filter(v=>v.node===n).forEach(v=>{v.status='stopped';out.push(`VM ${v.id} (${v.name}) went down with ${n}.`)});W.t+=130;return out}
+function powerOn(W,n){W.nodes[n].up=true;W.t+=180}
+const sn=W=>W.seen;
+const USED={A1:'switch',A2:'NAS',B1:'switch',B2:'NAS',P1:'router',P2:'NAS'};
+const SRVPORTS=['P3','P4','P5'];
+const powerOK=I=>!!(I.rack.link.psu1||I.rack.link.psu2);
+const dualOK=I=>{const l=I.rack.link;return !!(l.psu1&&l.psu2&&l.psu1[0]!==l.psu2[0])};
+const conOK=I=>I.rack.link.scr==='trol';
+const SPK={psu1:'power',psu2:'power',eno1:'net',eno2:'net',scr:'console'};
+const kindOf=p=>SPK[p]||(/^[AB]\d/.test(p)?'power':/^P\d/.test(p)?'net':p==='trol'?'console':null);
+const KNAME={power:'power cord',net:'network cable',console:'screen lead'};
+const linkOK=I=>SRVPORTS.includes(I.rack.link.eno1);
+const mirrorOK=W=>{const c=W.inst.cfg;return c.fs==='zfs (RAID1)'&&[c.d0,c.d1].sort().join()==='sda,sdb'};
+const netOK=W=>{const c=W.inst.cfg;return c.host==='pve1.lab.local'&&c.ip==='192.168.0.201/24'&&c.gw==='192.168.0.1'&&c.dns==='192.168.0.10'};
+function planCheck(I){
+ const p=I.plan,r=[];
+ if(!p.host)r.push('Name: empty.');else if(!/\.lab\.local$/i.test(p.host))r.push('Name: add the domain too, as the register describes it.');else if(!/^pve1\./i.test(p.host))r.push('Name: this is the first Proxmox node. Check the naming rule in the register.');
+ const m=p.ip.match(/^192\.168\.0\.(\d+)(\/(\d+))?$/);
+ if(!p.ip)r.push('Address: empty.');else if(!m)r.push('Address: that is not inside this network, 192.168.0.0/24.');else{const n=+m[1];
+  if(m[3]!=='24')r.push('Address: write the prefix behind it, the /24 of this network.');
+  if([1,9,10,50].includes(n))r.push('Address: the register shows that one is already in use.');else if(n>=100&&n<=199)r.push('Address: that is inside the DHCP range. A laptop could be handed the same address.');else if(n!==201)r.push('Address: the register keeps a block for Proxmox nodes, and the number follows the name.');
+  else{if(!W.seen['pingfree:192.168.0.201'])r.push('Address: did you ping it? The register can be out of date.');if(I.reserved!=='201')r.push('Address: not reserved in the register yet. Someone else could take it.')}}
+ if(!p.gw)r.push('Gateway: empty.');else if(p.gw!=='192.168.0.1')r.push('Gateway: that is not what the default route on a machine in this network shows.');
+ if(!p.dns)r.push('DNS: empty.');else if(p.dns!=='192.168.0.10')r.push('DNS: that is not the nameserver a machine in this network uses.');
+ return r;
+}
+const planOK=I=>{const p=I.plan;return /^pve1\.lab\.local$/i.test(p.host)&&p.ip==='192.168.0.201/24'&&p.gw==='192.168.0.1'&&p.dns==='192.168.0.10'};
+function syncNet(I){if(I.node&&W.nodes[I.node])W.nodes[I.node].reach=I.cfgReach&&linkOK(I)}
+function cutPower(I){I.power=false;I.screen='off';if(I.node&&W.nodes[I.node]&&W.nodes[I.node].up)powerOff(W,I.node)}
+const SC=[
+{id:'install',g:'Build',t:'Install a new server',story:'A new server was delivered to the server room at site west. It is still in its sealed box on the floor next to the rack: no cables, empty disks, no name, no address. You are at your desk with your laptop. A blank USB stick is in your drawer.<br><br>Nobody hands you the settings this time. You look them up, write the planning sheet, then build the server by hand.<br><br><b>Already decided:</b> the system goes on the two 480 GB SSDs, mirrored. The root password is your own choice. Remember it.',
+ learn:['§Planning: where each value comes from','You do not invent network settings. The <b>network, gateway and DNS already exist</b>. You look them up.','The <b>gateway</b> is the router of that network. Any machine already on the network knows it: <code>ip route</code> shows it after "default via".','The <b>DNS server</b> turns names into addresses. A machine already on the network lists it in <code>/etc/resolv.conf</code>.','The <b>address</b> is your choice, inside rules: free in the IP register, outside the DHCP range, and fixed, because cluster nodes find each other by address.','A register can be out of date. <b>Ping</b> the address first: no answer means nothing is using it. Then reserve it, so nobody else takes it.','The <b>name</b> follows the convention already in use. Its number matches the address.','§Physical: before any software','A new server arrives in a box, with a <b>rail kit</b> and its power cords. The rails go into the rack first. The server slides onto them.','It then gets <b>two power cables on two different feeds</b>, A and B.','The network cable runs from the server\'s <b>first port</b> to a switch port that is set up for servers.','A server has no screen of its own. You connect a <b>console trolley</b> (screen and keyboard) for the install.','§Installing','An empty server cannot install itself. You bring the installer to it on a <b>USB stick</b>.','The installer is a file called an <b>ISO</b>. You download it from the maker\'s website, then a small program writes it onto the stick so a server can start from it.','A server starts from its disks by default. To start from the stick you open its <b>boot menu</b> (F11) during startup.','Its <b>BIOS</b> (F2) holds hardware settings. Virtualization must be switched on there, or no VM will ever start.','The server only gets its <b>name</b> and <b>address</b> when you type them in the installer.'],
+ cmds:[['ip route','your gateway: the address after "default via"'],['cat /etc/resolv.conf','your DNS server: the "nameserver" line'],['ping &lt;ip&gt;','does anything answer on that address?'],['proxmox.com/en/downloads','where the installer is downloaded'],['ssh root@&lt;ip&gt;','log in to the server from your laptop, after the install'],['hostname','the name of the server you are on']],
+ setup:()=>world({inst:true}),
+ obj:[{t:'Find the gateway and the DNS server of this network',why:'Guess them and the install still finishes. The server then cannot reach anything outside its own network, or cannot find anything by name.',done:W=>W.seen.route&&W.seen.dns,h:['Your laptop is already on this network. Open the Terminal and ask it for its default route and its nameserver.','ip route      then      cat /etc/resolv.conf']},
+  {t:'Choose a free address for the server and reserve it',why:'Two machines on one address knock each other off the network at random moments. That fault is very hard to trace afterwards.',done:W=>W.seen['pingfree:192.168.0.201']&&W.inst.reserved==='201',h:['Open the IP register on your laptop and find the block kept for Proxmox nodes. Ping your candidate from the Terminal, then reserve it in the register.','Terminal: ping 192.168.0.201 > IP register: Reserve next to 192.168.0.201']},
+  {t:'Check the planning sheet and have it reviewed',why:'In the server room you have no register and no time to think. Everything you will type there is decided at your desk first.',done:W=>planOK(W.inst)&&!!W.inst.rev&&!W.inst.rev.length,h:['What you found is already noted on the sheet. Open Planning sheet, check the four lines, and ask a colleague to review it.','pve1.lab.local · 192.168.0.201/24 · 192.168.0.1 · 192.168.0.10']},
+  {t:'Download the Proxmox VE installer to your laptop',why:'The server has nothing on it. There are several Proxmox products. The wrong image installs a different product.',done:W=>W.inst.files.includes(PROD.ve.file),h:['Open the Browser on your laptop and go to the Proxmox downloads page.','Browser > type proxmox.com/en/downloads > Download next to Proxmox VE']},
+  {t:'Write the installer onto the USB stick',why:'Copying the ISO file onto a stick is not enough. A server can only start from a stick that was written with a flashing tool.',done:W=>W.inst.usbImg==='ve',h:['Plug the stick into your laptop, then open USB Writer.','Plug in the stick > USB Writer > select proxmox-ve_9.2-1.iso > Flash']},
+  {t:'Mount the server in the rack and give it power from both feeds',why:'Two power supplies on the same feed protect against nothing: when that feed fails, both go dark. One on A and one on B keeps the server running.',done:W=>W.inst.rack.mounted&&dualOK(W.inst),h:['Go to the server room. Open the box, drag the rail kit into the free space, then drag the server onto the rails. Take a power cord and drag from each power supply to a free outlet.','Open box > drag rail kit to a free space > drag server onto it > Power cord > drag PSU1 to A3 > drag PSU2 to B3']},
+  {t:'Cable the first network port to a server port on the switch',why:'The installer puts the address on the first port, eno1. With the cable in eno2, in a guest port or in a switched-off port, the install looks fine and the server is unreachable.',done:W=>linkOK(W.inst),h:['The IP register also lists what each switch port is for. Take a network cable and drag from eno1 to a free server port.','Network cable > drag eno1 to switch port 3']},
+  {t:'Connect a screen, then switch on virtualization in the BIOS',why:'Skip this and Proxmox installs fine, but every VM later fails to start. It is far easier to set now than to come back to the rack.',done:W=>W.inst.vt,h:['Take a screen lead and drag from the server\'s SCR port to the console trolley. Press the power button, and press F2 when it offers Setup.','Screen lead > drag SCR to trolley > Power button > Press F2 > Enable Virtualization Technology > Save and exit']},
+  {t:'Start the server from the USB stick, into the graphical installer',why:'Left alone, the server tries its empty disks and stops with "No bootable device".',done:W=>W.inst.booted,h:['Click the USB port on the server to plug the stick in, start it, and press F11 for the boot menu.','USB port > Power on > Press F11 > UEFI: USB storage device > Install Proxmox VE (Graphical) > I agree']},
+  {t:'Put the system on the two 480 GB SSDs as a mirror',why:'On a single disk, one dead disk means a dead server. And if the system takes the big disks, there is nothing left for VM storage.',done:mirrorOK,h:['On the first installer screen, change the filesystem, then pick the two small disks.','Filesystem: zfs (RAID1) · Harddisk 0: /dev/sda · Harddisk 1: /dev/sdb']},
+  {t:'Enter the name and network settings from your planning sheet',why:'These are very hard to change once the server is in a cluster. A wrong address means you cannot reach the server at all after the install.',done:netOK,h:['The network screen is the fourth one. Your planning sheet is shown on the left. Copy the four values exactly.','Hostname pve1.lab.local · IP 192.168.0.201/24 · Gateway 192.168.0.1 · DNS 192.168.0.10']},
+  {t:'Finish the install and start the server from its own disks',why:'If the stick stays in, the server starts the installer again, because USB comes first in its boot order.',done:W=>W.inst.done,h:['Press Install, then take the stick out before you reboot.','Install > click the USB port to unplug > Reboot > Wait']},
+  {t:'Log in from your laptop',why:'From now on nobody stands at the server. Everything is done remotely, so remote login must work before you leave it.',done:W=>W.seen.loggedin,h:['Back at your desk, open the Terminal. Use the address and password you typed in the installer. No answer? Think physical first: which port is the cable in, at both ends?','Your desk > Terminal > ssh root@192.168.0.201']},
+  {t:'Confirm the server carries the name you gave it',why:'The name on the prompt is what every later command and every colleague will rely on.',done:W=>W.seen.host,h:['Ask the server for its name.','hostname']}],
+ take:['Gateway and DNS are looked up, never guessed. The address is chosen, pinged and reserved.','Rack, two power feeds, first network port, then software.','Download the right ISO, flash it to a stick, boot the server from the stick.','A server has no name until the installer gives it one.']},
+{id:'ready',g:'Build',t:'Is this server ready?',story:'Three Proxmox servers were installed yesterday at site west. In the installer they were named pve1, pve2 and pve3, with the addresses 192.168.0.201, .202 and .203. Before anything is clustered, log in to the first one and check it. You only look in this scenario. Nothing can break.',
+ learn:['A server must be healthy <b>before</b> it joins a cluster: right name, right version, reachable.','Commands that only read are always safe to run.'],
+ cmds:[['ssh root@&lt;ip&gt;','log in to a server from your laptop'],['hostname','the name of the server you are on'],['pveversion','which Proxmox version runs here'],['pvecm status','the state of the cluster, if there is one'],['ping &lt;ip&gt;','can I reach that machine?']],
+ setup:()=>world({}),
+ obj:[{t:'Log in to the server at 192.168.0.201',why:'You are at your laptop. Proxmox commands only exist on the servers, so nothing works until you are logged in to one.',done:W=>W.seen.loggedin,h:['Use ssh, as root, with the address.','ssh root@192.168.0.201']},{t:'Confirm which server you are on',why:'Every cluster command acts on the server you type it on. Typing the right command on the wrong server is the classic mistake.',done:W=>W.seen.host,h:['Ask the server for its name.','hostname']},
+  {t:'Check the Proxmox version',why:'Nodes with different versions can behave oddly together. You want the same version everywhere before clustering.',done:W=>sn(W)['ver@pve1'],h:['There is one command that prints the version.','pveversion']},
+  {t:'Prove this server is not in a cluster yet',why:'If it already belonged to a cluster, creating a new one would be refused. The error you get here is the proof.',done:W=>W.seen.nocluster,h:['Ask for the cluster status and read the error.','pvecm status']},
+  {t:'Check that pve2 (192.168.0.202) answers',why:'Nodes that cannot reach each other can never form a cluster. Test the network before you blame Proxmox.',done:W=>sn(W)['ping:192.168.0.202'],h:['Send a few test packets to its address.','ping 192.168.0.202']}],
+ take:['Look before you change: name, version, cluster state, network.','An error can be the answer you were looking for.']},
+{id:'create',g:'Build',t:'Create the cluster',story:'All three servers checked out. Create a cluster called <b>west</b> on pve1. The other two join in the next scenario.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>.','A cluster starts on <b>one</b> node. That node creates it, the others join later.','Creating the cluster also creates its <b>certificate authority</b>, the stamp that will sign a certificate for every node.','A cluster of one node is already quorate: one vote of one.'],
+ cmds:[['pvecm create &lt;name&gt;','create a new cluster on this node'],['pvecm status','state of the cluster and its votes'],['pvecm nodes','short list of members']],
+ setup:()=>world({}),
+ obj:[{t:'Create a cluster named west',why:'Without a cluster, each server is an island: no shared settings, no moving VMs, no HA.',done:W=>W.cluster&&W.cluster.name==='west',h:['The command is pvecm create followed by the name.','pvecm create west']},
+  {t:'Read the cluster status and find the line Quorate',why:'Never assume a change worked. The status shows one node, one vote, and Quorate: Yes.',done:W=>W.cluster&&sn(W)['status:1:q'],h:['Same command as before, but now it answers.','pvecm status']}],
+ take:['pvecm create runs once, on the first node only.','Always verify with pvecm status.']},
+{id:'join',g:'Build',t:'Join pve2 and pve3',story:'Cluster <b>west</b> exists on pve1. Bring in pve2 and pve3. One of them has a surprise waiting.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>. Servers that are not in the same cluster ask for a password when you hop between them.','Joining is done <b>on the new node</b>, pointing at a node that is already a member.','A joining node must be <b>empty</b>: no VMs on it.','When a node joins, the cluster signs a <b>certificate</b> for it. That is how the nodes trust each other.','The join asks for the root password of the existing node, then to confirm its fingerprint with <code>yes</code>. In this lab any password is accepted.'],
+ cmds:[['ssh root@&lt;ip&gt;','go to another server (exit comes back). Names do not resolve here: use addresses.'],['pvecm add &lt;ip of a member&gt;','join this node to that cluster'],['qm list','VMs on this node'],['qm destroy &lt;vmid&gt;','delete a stopped VM'],['pvecm nodes','short list of members'],['openssl x509 -in /etc/pve/nodes/&lt;node&gt;/pve-ssl.pem -noout -subject -issuer','show who a certificate belongs to and who signed it']],
+ setup:()=>world({cluster:'west',members:['pve1'],vms:[{id:900,name:'install-test',node:'pve3',storage:'local-lvm',status:'stopped'}]}),
+ obj:[{t:'Join pve2 to the cluster',why:'The command must be typed on pve2 itself. On pve1 it is refused, because pve1 is already a member.',done:W=>W.nodes.pve2.in,h:['Go to pve2 first, then point it at pve1.','ssh root@192.168.0.202   then   pvecm add 192.168.0.201']},
+  {t:'Join pve3 to the cluster',why:'pve3 still holds a leftover test VM. A node with guests is refused, because its VM numbers could clash with the cluster\'s.',done:W=>W.nodes.pve3.in,h:['On pve3 the join is refused. Look at what is on it with qm list, remove it, then join.','ssh root@192.168.0.203   qm list   qm destroy 900   pvecm add 192.168.0.201']},
+  {t:'Confirm all three nodes are members',why:'Three members means three votes. From now on the cluster survives the loss of one node.',done:W=>sn(W)['nodes:3']||sn(W)['status:3:q'],h:['Ask any member for the list.','pvecm nodes']},
+  {t:'Look at the certificates of two different nodes',why:'Each node has its own certificate, but both are signed by the same cluster authority. Compare the issuer lines.',done:W=>Object.keys(W.seen).filter(k=>k.startsWith('cert:')).length>=2,h:['The certificates live in /etc/pve/nodes/, one folder per node.','openssl x509 -in /etc/pve/nodes/pve1/pve-ssl.pem -noout -subject -issuer   (then the same for pve2)']}],
+ take:['pvecm add runs on the new node, never on the cluster.','A joining node must be empty.','One certificate authority per cluster, one certificate per node.']},
+{id:'move',g:'Run',t:'Shared storage and a live move',story:'pve1 needs a memory upgrade tonight. VM 101 (web-01) runs on it and may not go down. Its disk sits inside pve1. A Synology NAS at <b>192.168.0.50</b> exports <b>/volume1/pve</b> for VM disks.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>.','A VM can only move quickly if the target node can reach its <b>disk</b>.','Storage on a NAS is added <b>once</b> and every node gets it.','A disk can be moved to other storage while the VM runs.'],
+ cmds:[['qm config &lt;vmid&gt;','settings of a VM, including where its disk is'],['pvesm status','storage this node can use'],['pvesm add nfs &lt;id&gt; --server &lt;ip&gt; --export &lt;path&gt; --content images','add a NAS share for VM disks'],['qm disk move &lt;vmid&gt; &lt;disk&gt; &lt;storage&gt;','move a VM disk to other storage'],['qm migrate &lt;vmid&gt; &lt;node&gt; --online','move a running VM to another node']],
+ setup:()=>world({cluster:'west',vms:[{id:101,name:'web-01',node:'pve1',storage:'local-lvm'}]}),
+ obj:[{t:'Find out where the disk of VM 101 lives',why:'You cannot plan a move without knowing this. A disk on local-lvm is inside one server.',done:W=>sn(W)['config:101'],h:['The VM\'s settings name the storage.','qm config 101']},
+  {t:'Add the NAS share as storage named nas-west',why:'Without shared storage, pve2 has no way to read the disk of a VM that lived on pve1.',done:W=>W.storages['nas-west']&&W.storages['nas-west'].content.includes('images'),h:['Type nfs, id nas-west, the NAS address, the export path, content images.','pvesm add nfs nas-west --server 192.168.0.50 --export /volume1/pve --content images']},
+  {t:'Move the disk of VM 101 onto nas-west',why:'Adding storage does not move anything. The disk is still inside pve1 until you move it.',done:W=>W.vms[101]&&W.vms[101].storage==='nas-west',h:['The disk is called scsi0 (you saw it in qm config).','qm disk move 101 scsi0 nas-west']},
+  {t:'Move VM 101 to pve2 while it runs',why:'This is the point of it all: pve1 can now be switched off for its upgrade and nobody notices.',done:W=>W.vms[101]&&W.vms[101].node==='pve2'&&W.vms[101].status==='running',h:['Migrate, name the target node, and say it must stay online.','qm migrate 101 pve2 --online']}],
+ take:['Shared storage first, then live migration.','Check where a disk lives with qm config.','VMware calls this vMotion and the storage a datastore.']},
+{id:'dies',g:'Run',t:'A node dies',story:'Cluster west runs three VMs on pve3. VM 101 is under HA with its disk on the NAS. VM 102 is not under HA and its disk is inside pve3. Now a power supply fails. Use the red buttons to make it happen.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>.','<b>Quorum:</b> more than half of the nodes must see each other. With 3 nodes, 2 are enough.','<b>HA</b> restarts a VM on another node, if that VM is under HA and its disk is on shared storage.','Without quorum the cluster freezes on purpose.'],
+ cmds:[['pvecm status','votes, and whether the cluster is quorate'],['ha-manager status','which VMs are under HA and where they run'],['qm list','VMs on this node'],['qm start &lt;vmid&gt;','start a VM']],
+ setup:()=>world({cluster:'west',storages:[NASW],vms:[{id:101,name:'web-01',node:'pve3',storage:'nas-west',ha:true},{id:102,name:'legacy-app',node:'pve3',storage:'local-lvm'}]}),
+ ev:[{l:'Cut the power to pve3',when:W=>W.nodes.pve3.up,go:W=>powerOff(W,'pve3')},{l:'Cut the power to pve2 as well',when:W=>!W.nodes.pve3.up&&W.nodes.pve2.up&&sn(W).hastatus,go:W=>powerOff(W,'pve2')},{l:'Restore power to pve2',when:W=>!W.nodes.pve2.up&&sn(W).noq,go:W=>{powerOn(W,'pve2');return['pve2 is booting and rejoins the cluster.']}}],
+ obj:[{t:'Cut the power to pve3, then check the cluster',why:'First question after any failure: is the cluster still in charge? Two of three nodes is a majority.',done:W=>!W.nodes.pve3.up&&sn(W)['status:2:q'],h:['Press the red button, then ask for the cluster status.','pvecm status']},
+  {t:'Find out which VMs came back',why:'HA only rescues what it was told to protect, and only if the disk is reachable. One VM came back. One did not.',done:W=>sn(W).hastatus,h:['The HA manager lists what it protects and where it now runs.','ha-manager status']},
+  {t:'Cut the power to pve2 as well, then check again',why:'One node alone is not a majority. Read the Quorate line.',done:W=>!W.nodes.pve2.up&&sn(W)['status:1:nq']||sn(W).noq&&sn(W)['status:1:nq'],h:['Press the second red button, then the status again.','pvecm status']},
+  {t:'Try to change something and read the refusal',why:'A lone node cannot know if the others are dead or just unreachable. If it acted alone, two copies of one VM could run at once.',done:W=>sn(W).noq,h:['Try to stop and start a VM that runs here. VM 101 is on pve1 now.','qm stop 101']},
+  {t:'Restore power to pve2 and confirm quorum is back',why:'You fix quorum by bringing nodes back, not by forcing the cluster.',done:W=>W.nodes.pve2.up&&sn(W).noq&&sn(W)['status:2:q:after'],h:['Press the button, then check the status once more.','pvecm status']}],
+ take:['Quorum is a majority vote: 2 of 3, 3 of 4, 3 of 5.','HA needs both: the VM under HA and its disk on shared storage.','No quorum means no changes. That is protection, not a fault.']},
+{id:'add',g:'Run',t:'Add a fourth node',story:'Site west is growing. A new server, <b>pve4</b> (192.168.0.204), is racked and has Proxmox installed. Bring it into cluster west and prove it can carry a VM.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>.','Same routine as before: check it, join it <b>from the new node</b>, verify.','Storage and other cluster settings arrive on the new node by themselves.','Four nodes means four votes, and a majority is three.','In this lab any root password is accepted when joining.'],
+ cmds:[['ssh root@&lt;ip&gt;','go to another server'],['pveversion','Proxmox version'],['pvecm add &lt;ip of a member&gt;','join this node'],['pvecm status','votes and quorum'],['pvesm status','storage this node can use'],['qm migrate &lt;vmid&gt; &lt;node&gt; --online','move a running VM']],
+ setup:()=>world({nodes:['pve1','pve2','pve3','pve4'],cluster:'west',storages:[NASW],vms:[{id:101,name:'web-01',node:'pve1',storage:'nas-west'}]}),
+ obj:[{t:'Check the version on pve4',why:'A node on a different version should be updated before it joins, not after.',done:W=>sn(W)['ver@pve4'],h:['Go to pve4 and ask.','ssh root@192.168.0.204   then   pveversion']},
+  {t:'Join pve4 to cluster west',why:'Typed on pve4, pointing at any existing member.',done:W=>W.nodes.pve4.in,h:['On pve4: add, with the address of pve1.','pvecm add 192.168.0.201']},
+  {t:'Confirm four votes, and see how many are needed',why:'With four nodes the cluster still survives only one failure. Even numbers add capacity, not safety.',done:W=>sn(W)['status:4:q'],h:['Read Expected votes and Quorum.','pvecm status']},
+  {t:'Check on pve4 that the NAS storage arrived by itself',why:'You never added nas-west on pve4. It came with the cluster settings. That is what "cluster-wide" means.',done:W=>W.nodes.pve4.in&&sn(W).pvesm4,h:['On pve4, list the storage.','pvesm status']},
+  {t:'Move VM 101 onto pve4 while it runs',why:'A node is only truly part of the cluster when it has carried a real VM.',done:W=>W.vms[101].node==='pve4'&&W.vms[101].status==='running',h:['VM 101 lives on pve1, so the command is given there.','exit   then   qm migrate 101 pve4 --online']}],
+ take:['New node: check, join from the new node, verify, test with a VM.','Cluster settings follow automatically.','4 nodes need 3 votes.']},
+{id:'bka',g:'Protect',t:'Backup A',story:'VM 101 (web-01) has never been backed up. The NAS at site west (192.168.0.50) exports <b>/volume1/backup</b>. Set up backup storage <b>backup-a</b> and take the first backup while the VM runs.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>.','A backup is one file with the VM\'s settings and its whole disk.','It must live <b>somewhere other</b> than the server the VM runs on.','Storage has to be told it may hold backups: <code>--content backup</code>.','Mode <b>snapshot</b> backs up a running VM.'],
+ cmds:[['pvesm add nfs &lt;id&gt; --server &lt;ip&gt; --export &lt;path&gt; --content backup','add a NAS share for backups'],['vzdump &lt;vmid&gt; --storage &lt;id&gt; --mode snapshot','back up one VM now'],['pvesm list &lt;storage&gt;','what is stored there']],
+ setup:()=>world({cluster:'west',storages:[NASW],vms:[{id:101,name:'web-01',node:'pve1',storage:'nas-west'}]}),
+ obj:[{t:'Add backup storage named backup-a',why:'nas-west only accepts VM disks. Backups need storage that allows them, and it is tidier to keep them apart.',done:W=>W.storages['backup-a']&&W.storages['backup-a'].content.includes('backup'),h:['Same command as for VM disks, other export, content backup.','pvesm add nfs backup-a --server 192.168.0.50 --export /volume1/backup --content backup']},
+  {t:'Back up VM 101 to backup-a while it runs',why:'Without a backup, a deleted or corrupted VM is simply gone. HA does not help: it would faithfully restart the broken VM.',done:W=>sn(W)['bk:101:backup-a:snapshot'],h:['vzdump, the VM number, the storage, and mode snapshot.','vzdump 101 --storage backup-a --mode snapshot']},
+  {t:'Check that the backup file is really there',why:'A backup you have not seen is a hope, not a backup.',done:W=>sn(W)['list:backup-a']&&(W.backups['backup-a']||[]).length,h:['List what is on the storage.','pvesm list backup-a']}],
+ take:['Backup storage needs --content backup.','vzdump makes the backup, pvesm list shows it.','In daily life a scheduled job does this every night: Datacenter > Backup.']},
+{id:'bkb',g:'Protect',t:'A restore, and Backup B',story:'At 14:50 someone deleted VM 101 (web-01) by accident. Last night\'s backup is on <b>backup-a</b>. Bring the VM back. Then make sure a second copy exists at site north, on the NAS at <b>192.168.9.50</b>, export <b>/volume1/backup</b>.',
+ learn:['Start by logging in to pve1: <code>ssh root@192.168.0.201</code>.','Restore from <b>A</b> for everyday accidents: it is close and fast.','<b>B</b> is a second copy on another device at another site, for when A or the whole site is lost.','A restored VM comes back <b>stopped</b>.'],
+ cmds:[['pvesm list &lt;storage&gt;','backups on that storage'],['qmrestore &lt;volid&gt; &lt;vmid&gt;','rebuild a VM from a backup'],['qm start &lt;vmid&gt;','start a VM'],['pvesm add nfs &lt;id&gt; --server &lt;ip&gt; --export &lt;path&gt; --content backup','add backup storage'],['vzdump &lt;vmid&gt; --storage &lt;id&gt; --mode snapshot','back up one VM now']],
+ setup:()=>world({cluster:'west',storages:[NASW,BKA],vms:[{id:103,name:'db-01',node:'pve2',storage:'nas-west'}],backups:{'backup-a':[{vmid:101,file:'vzdump-qemu-101-2026_11_18-02_00_04.vma.zst',size:4627545292,name:'web-01',storage:'nas-west',mem:2048},{vmid:103,file:'vzdump-qemu-103-2026_11_18-02_01_21.vma.zst',size:6120045310,name:'db-01',storage:'nas-west',mem:4096}]}}),
+ obj:[{t:'Find last night\'s backup of VM 101',why:'You need the exact name of the backup file. Guessing it does not work.',done:W=>sn(W)['list:backup-a'],h:['List the backup storage and read the first column.','pvesm list backup-a']},
+  {t:'Restore it as VM 101',why:'Without this, web-01 stays gone. The restore rebuilds the VM exactly as it was at 02:00.',done:W=>W.vms[101],h:['qmrestore, the full name from the first column, then the VM number.','qmrestore backup-a:backup/vzdump-qemu-101-2026_11_18-02_00_04.vma.zst 101']},
+  {t:'Start the restored VM',why:'A restore leaves the VM stopped, so you can check it before it goes live.',done:W=>W.vms[101]&&W.vms[101].status==='running',h:['One short command.','qm start 101']},
+  {t:'Add backup storage backup-b at site north',why:'Both the VMs and Backup A are at site west. A fire, a flood or ransomware at west would take everything.',done:W=>W.storages['backup-b']&&W.storages['backup-b'].server==='192.168.9.50'&&W.storages['backup-b'].content.includes('backup'),h:['Same as backup-a, with the north NAS address.','pvesm add nfs backup-b --server 192.168.9.50 --export /volume1/backup --content backup']},
+  {t:'Back up VM 101 to backup-b and check it is there',why:'This is the copy that survives the loss of site west.',done:W=>sn(W)['bk:101:backup-b:snapshot']&&sn(W)['list:backup-b:after'],h:['vzdump to the new storage, then list it.','vzdump 101 --storage backup-b --mode snapshot   then   pvesm list backup-b']}],
+ take:['A for speed, B for disasters.','qmrestore needs the exact name from pvesm list.','3-2-1: three copies, two kinds of storage, one offsite.']}
+];
+let W,cur,hints,explain=true,doneSet={};
+try{doneSet=JSON.parse(localStorage.getItem('pvelab.done')||'{}')||{}}catch(e){}
+function saveDone(){try{localStorage.setItem('pvelab.done',JSON.stringify(doneSet))}catch(e){}}
+const hist=[];let hi=null;
+function line(cl,html){const d=document.createElement('div');d.className=cl;d.innerHTML=html;$('term').appendChild(d);$('term').scrollTop=1e9}
+function ps1(){return W.prompt?'':W.host==='laptop'?'kaatje@laptop:~$':`root@${W.host}:~#`}
+function objIndex(){return cur.obj.findIndex(o=>!o.done(W))}
+function hooks(c,res,raw){
+ if(/^hostname$/.test(raw.trim())&&W.host!=='laptop')W.seen.host=1;
+ if(/^pvecm status$/.test(raw.trim())&&res.err&&/does not exist/.test(res.err))W.seen.nocluster=1;
+ if(/^pvesm status$/.test(raw.trim())&&W.host==='pve4')W.seen.pvesm4=1;
+ if(cur.id==='dies'&&W.seen.noq&&W.nodes.pve2.up&&/^pvecm status$/.test(raw.trim())&&!res.err)W.seen['status:2:q:after']=1;
+ if(cur.id==='bkb'&&W.seen['bk:101:backup-b:snapshot']&&/^pvesm list backup-b$/.test(raw.trim()))W.seen['list:backup-b:after']=1;
+}
+function run(raw){
+ const before=objIndex();
+ const l=raw.replace(/\s+/g,' ').trim();
+ let res;
+ if(W.prompt){line('in',esc(/pw$/.test(W.prompt.k)?'':l));res=answerPrompt(W,l)}
+ else{line('in',`<span class="ok">${ps1()}</span> ${esc(l)}`);if(!l){ $('ps1').textContent=ps1();return}if(hist[hist.length-1]!==l)hist.push(l);res=exec(W,l);hooks(l.split(' ')[0],res,l);W.t+=2}
+ if(res.clear)$('term').innerHTML='';
+ if(res.out)line('',esc(res.out));
+ if(res.err)line('err',esc(res.err));
+ if(res.note&&explain)line('note',res.note);
+ after(before);
+}
+function after(before){
+ const now=objIndex();
+ if(before>=0&&now!==before)for(let i=before;i<(now<0?cur.obj.length:now);i++)line('ok','Objective done: '+esc(cur.obj[i].t));
+ if(now<0&&!doneSet[cur.id]){doneSet[cur.id]=1;saveDone()}
+ if(now!==before)hints=0;
+ renderAll();
+}
+function renderPick(){
+ const groups=[...new Set(SC.map(s=>s.g))];
+ $('pick').innerHTML='<span class="lbl">Group</span>'+groups.map(g=>`<button class="chip ${g===cur.g?'on':''}" data-g="${g}">${g}</button>`).join('')+'<span class="sep"></span><span class="lbl">Scenario</span>'+SC.filter(s=>s.g===cur.g).map(s=>`<button class="chip ${s.id===cur.id?'on':''} ${doneSet[s.id]?'done':''}" data-s="${s.id}"><span class="dot"></span>${s.t}</button>`).join('');
+ $('prog').textContent=`${SC.filter(s=>doneSet[s.id]).length} of ${SC.length} scenarios done`;
+}
+function renderLeft(){
+ const k=objIndex(),n=SC.indexOf(cur)+1;
+ const evs=(cur.ev||[]).filter(e=>e.when(W));
+ const EVBLOCK=evs.length?`<h3>Make it happen</h3><div class="row">${evs.map(e=>`<button class="btn ev" data-ev="${(cur.ev||[]).indexOf(e)}">${e.l}</button>`).join('')}</div>`:'';
+ let h=`<p class="kick">Scenario ${pad(n)} of ${SC.length} · ${cur.g}</p><h2>${cur.t}</h2><p>${cur.story}</p>${W.inst?`<h3>Your planning sheet</h3><table class="cmds">${[['Name','host'],['Address','ip'],['Gateway','gw'],['DNS server','dns']].map(r=>`<tr><td>${r[0]}</td><td>${W.inst.plan[r[1]]?esc(W.inst.plan[r[1]]):'<span class="dim">not found yet</span>'}</td></tr>`).join('')}</table>`:''}
+ <details ${k===0&&!hist.length?'open':''} id="learn"><summary>Learn first</summary><div class="in"><ul>${cur.learn.map(x=>x[0]==='§'?`<li class="lh">${x.slice(1)}</li>`:`<li>${x}</li>`).join('')}</ul><table class="cmds">${cur.cmds.map(c=>`<tr><td>${c[0]}</td><td>${c[1]}</td></tr>`).join('')}</table></div></details>
+ ${EVBLOCK}<h3>Objectives</h3><ul class="obj">${cur.obj.map((o,i)=>`<li class="${i<k||k<0?'done':i===k?'now':''}"><i></i><span class="t">${o.t}</span>${i===k?`<span class="why"><small>Why, and what if you skip it</small>${o.why}</span>`:''}</li>`).join('')}</ul>`;
+ if(k>=0){const hs=cur.obj[k].h;h+=`<div class="row"><button class="btn" id="b-hint">${hints>=hs.length?'No more hints':hints?'Show the exact command':'Give me a hint'}</button></div>${hs.slice(0,hints).map((x,i)=>`<p class="hint">${i?'<code>'+esc(x)+'</code>':esc(x)}</p>`).join('')}`}
+ else{const nx=SC[SC.indexOf(cur)+1];h+=`<div class="donebox"><p class="kick">Scenario complete</p><ul>${cur.take.map(x=>`<li>${x}</li>`).join('')}</ul>${nx?`<div class="row"><button class="btn" data-s="${nx.id}">Next: ${nx.t}</button></div>`:'<p>That was the last one. You have built, run and protected a cluster.</p>'}</div>`}
+ h+=`<p class="foot">Output is shortened and error wording can differ a little from a real server. The commands and their order are real.</p>`;
+ const open=$('learn')?$('learn').open:null;
+ $('left').innerHTML=h;if(open!==null&&hist.length)$('learn').open=open;
+}
+function renderRight(){
+ $('rt').textContent=W.inst?'The rack at site west':'Live view of the site';
+ if(W.inst){$('right').innerHTML=rackHtml(W.inst);return}
+ const ns=Object.keys(W.nodes),nw=ns.length>3?112:150,gap=ns.length>3?8:14,tot=ns.length*nw+(ns.length-1)*gap,x0=(520-tot)/2;
+ const A='var(--acc)',L='var(--line2)',I='var(--ink)',M='var(--mute)',B='var(--bad)';
+ const inC=ns.filter(n=>W.nodes[n].in);
+ let s=`<svg viewBox="0 0 520 480" role="img" aria-label="Live diagram of the cluster">`;
+ if(W.cluster){const xs=inC.map(n=>x0+ns.indexOf(n)*(nw+gap));const a=Math.min(...xs)-12,b=Math.max(...xs)+nw+12,q=quorate(Object.assign({},W,{host:inC.find(n=>W.nodes[n].up)||W.host}));s+=`<rect x="${a}" y="52" width="${b-a}" height="232" fill="none" stroke="${q?A:B}"/><text x="${a+2}" y="42" font-size="13" fill="${q?A:B}">cluster ${esc(W.cluster.name)} · ${upCount(W)} of ${votes(W)} up, needs ${needed(W)} · ${q?'quorate':'NO QUORUM'}</text>`}
+ else s+=`<text x="260" y="42" text-anchor="middle" font-size="13" fill="${M}">no cluster yet: separate servers</text>`;
+ ns.forEach((n,i)=>{const x=x0+i*(nw+gap),N=W.nodes[n],me=n===W.host,vs=Object.values(W.vms).filter(v=>v.node===n);
+  s+=`<g opacity="${N.up?1:.45}"><rect x="${x}" y="70" width="${nw}" height="196" fill="var(--panel)" stroke="${me?A:N.up?L:B}" stroke-width="${me?2:1}" ${N.in?'':'stroke-dasharray="6 5"'}/><text x="${x+8}" y="92" font-size="16" fill="${I}">${n}</text>${N.in?`<rect x="${x+nw-48}" y="78" width="40" height="18" fill="var(--bg)" stroke="${L}"/><text x="${x+nw-28}" y="91" text-anchor="middle" font-size="10.5" fill="${M}">CERT</text>`:''}<text x="${x+8}" y="110" font-size="11.5" fill="${N.up?M:B}">${N.up?(N.in?'node · ':'server · ')+N.ip.replace('192.168','')  :'POWER OFF'}</text>`;
+  vs.forEach((v,k)=>{const y=122+k*68,sh=shared(W,v.storage);s+=`<rect x="${x+6}" y="${y}" width="${nw-12}" height="62" fill="${v.status==='running'?'var(--acc-soft)':'var(--bg)'}" stroke="${v.status==='running'?A:L}"/><text x="${x+12}" y="${y+17}" font-size="12.5" fill="${I}">VM ${v.id}</text><text x="${x+12}" y="${y+32}" font-size="11.5" fill="${I}">${esc(v.name)}</text><text x="${x+12}" y="${y+46}" font-size="10.5" fill="${M}">${v.status}${v.ha?' · HA':''}</text><text x="${x+12}" y="${y+58}" font-size="10.5" fill="${M}">disk: ${sh?'NAS':'in node'}</text>`});
+  s+=`</g>${N.reach===false?`<text x="${x+nw/2}" y="62" text-anchor="middle" font-size="10.5" fill="${B}">unreachable</text>`:''}${me?`<text x="${x+nw/2}" y="280" text-anchor="middle" font-size="11.5" fill="${A}">you are here</text>`:''}`});
+ const st=Object.values(W.storages),west=st.filter(x=>x.server==='192.168.0.50'),north=st.filter(x=>x.server==='192.168.9.50');
+ const nas=(x,title,sub,list)=>{let o=`<rect x="${x}" y="330" width="240" height="${56+Math.max(1,list.length)*20}" fill="var(--panel)" stroke="${list.length?A:L}" ${list.length?'':'stroke-dasharray="6 5"'}/><text x="${x+10}" y="351" font-size="14" fill="${I}">${title}</text><text x="${x+10}" y="368" font-size="11" fill="${M}">${sub}</text>`;if(!list.length)o+=`<text x="${x+10}" y="390" font-size="11.5" fill="${M}">not used by the cluster yet</text>`;list.forEach((t,k)=>{const nb=(W.backups[t.id]||[]).length;o+=`<text x="${x+10}" y="${390+k*20}" font-size="12" fill="${I}">${esc(t.id)}<tspan fill="${M}"> ${t.content.includes('backup')?nb+' backup'+(nb===1?'':'s'):'VM disks'}</tspan></text>`});return o};
+ s+=`<text x="14" y="318" font-size="11.5" fill="${M}">SITE WEST</text><text x="276" y="318" font-size="11.5" fill="${M}">SITE NORTH</text>${nas(10,'Synology NAS','192.168.0.50',west)}${nas(270,'Synology NAS','192.168.9.50',north)}`;
+ if(west.length)s+=`<path d="M130 290V330" stroke="${A}" fill="none"/>`;if(north.length)s+=`<path d="M390 290V330" stroke="${A}" fill="none" stroke-dasharray="5 4"/>`;
+ s+='</svg>';
+ $('right').innerHTML=s+`<p class="foot">${W.host==='laptop'?'You are on your laptop, not on a server yet.':'Green outline: the server you are logged in to.'} Dashed outline: not part of a cluster.</p>`;
+}
+function rackGeo(I){
+ const R=I.rack,sx=R.mounted?38:R.pos.x,sy=R.mounted?20+R.slot*42:R.pos.y,t=R.tpos,g={};
+ [1,2,3,4].forEach(n=>{g['A'+n]=[10,24+(n-1)*42,18,18];g['B'+n]=[262,24+(n-1)*42,18,18]});
+ [1,2,3,4,5,6,7,8].forEach(n=>{g['P'+n]=[122+(n-1)*16,38,13,12]});
+ Object.assign(g,{usb:[sx+26,sy+19,24,14],scr:[sx+54,sy+19,24,14],eno1:[sx+86,sy+19,26,14],eno2:[sx+114,sy+19,26,14],psu1:[sx+148,sy+19,28,14],psu2:[sx+180,sy+19,28,14],trol:[t.x+8,t.y+28,22,14]});
+ return{g,sx,sy,c:id=>[g[id][0]+g[id][2]/2,g[id][1]+g[id][3]/2]};
+}
+function rackHtml(I){
+ const R=I.rack,A='var(--acc)',L='var(--line2)',K='var(--ink)',M='var(--mute)',H='var(--warn)',P='var(--panel)',G='var(--bg)';
+ const {g,sx,sy,c}=rackGeo(I),taken=id=>Object.values(R.link).includes(id),name=I.node||'new server';
+ const port=(id,lab,aria,below)=>{const [x,y,w,h]=g[id],on=!!R.link[id]||taken(id),sel=R.sel===id,u=USED[id];return `<g class="hit" data-act="rk:p:${id}" tabindex="0" role="button" aria-label="${aria}" data-port="${id}" data-c="${x+w/2},${y+h/2}"><title>${aria}</title><rect x="${x}" y="${y}" width="${w}" height="${h}" fill="${sel?'var(--warn-soft)':on?'var(--acc-soft)':u?L:G}" stroke="${sel?H:on?A:L}" stroke-width="${sel?2:1}"/><text x="${x+w/2}" y="${below?y-3:y+h/2+3}" text-anchor="middle" font-size="${below?7.5:8}" fill="${sel?H:below?M:u?P:K}">${lab}</text></g>`};
+ const cable=(a,b,col,w)=>{const [x1,y1]=a,[x2,y2]=b,d=Math.min(46,18+Math.abs(x2-x1)/5);return `<path d="M${x1} ${y1}C${x1} ${y1+d},${x2} ${y2+d},${x2} ${y2}" stroke="${col}" stroke-width="${w||2.5}" fill="none" stroke-linecap="round" pointer-events="none"/>`};
+ const pk=id=>R.pick===id;
+ let s=`<svg class="rk" viewBox="0 0 460 304" role="img" aria-label="The server room: rack and floor"><rect x="34" y="14" width="222" height="178" fill="none" stroke="${L}" stroke-width="2"/><text x="145" y="202" text-anchor="middle" font-size="8" fill="${M}">RACK W-01</text><path d="M0 208H460" stroke="${L}" stroke-dasharray="3 5"/><text x="454" y="220" text-anchor="end" font-size="8" fill="${M}">FLOOR</text>`;
+ ['A','B'].forEach(f=>{const x=f==='A'?8:260;s+=`<rect x="${x}" y="14" width="22" height="178" fill="${P}" stroke="${L}"/><text x="${x+11}" y="202" text-anchor="middle" font-size="8" fill="${M}">FEED ${f}</text>`;[1,2,3,4].forEach(n=>{s+=port(f+n,f+n,'Outlet '+f+n+(USED[f+n]?', in use by the '+USED[f+n]:''))})});
+ s+=`<g class="hit" data-act="rk:pick:switch" tabindex="0" role="button" aria-label="Switch sw-west-01"><rect x="38" y="20" width="214" height="38" fill="${P}" stroke="${pk('switch')?H:L}" stroke-width="${pk('switch')?2:1}"/><text x="44" y="42" font-size="9" fill="${K}">sw-west-01</text></g>`;
+ [1,2,3,4,5,6,7,8].forEach(n=>{s+=port('P'+n,n,'Switch port '+n+(USED['P'+n]?', in use by the '+USED['P'+n]:''),true)});
+ s+=`<g class="hit" data-act="rk:pick:nas" tabindex="0" role="button" aria-label="Synology NAS"><rect x="38" y="62" width="214" height="38" fill="${P}" stroke="${pk('nas')?H:L}" stroke-width="${pk('nas')?2:1}"/><text x="44" y="84" font-size="9" fill="${K}">Synology NAS</text>${[0,1,2,3].map(i=>`<rect x="${170+i*19}" y="70" width="15" height="22" fill="${G}" stroke="${L}"/>`).join('')}</g>`;
+ [2,3].forEach(n=>{const y=20+n*42,rl=R.rails&&R.railSlot===n;if(R.mounted&&R.slot===n)return;s+=`<g data-drop="${n}"><rect x="38" y="${y}" width="214" height="38" fill="${G}" stroke="${A}" stroke-dasharray="5 4"/>${rl?`<path d="M40 ${y+30}H250M40 ${y+34}H250" stroke="${K}" stroke-width="1.6"/>`:''}<text x="145" y="${y+19}" text-anchor="middle" font-size="8.5" fill="${rl?A:M}">${rl?'rails fitted · drag the server here':'free space'}</text></g>`});
+ s+=cable([150,96],c('P2'),L,1.6)+cable([60,96],c('A2'),L,1.6)+cable([240,96],c('B2'),L,1.6)+cable([60,54],c('A1'),L,1.6)+cable([246,54],c('B1'),L,1.6)+`<path d="M${c('P1')[0]} 38V14" stroke="${L}" stroke-width="1.6"/>`;
+ const tp=R.tpos;
+ s+=`<g class="drag" data-drag="trol" data-act="rk:pick:trol" tabindex="0" role="button" aria-label="Console trolley"><rect x="${tp.x}" y="${tp.y}" width="136" height="50" fill="${P}" stroke="${pk('trol')?H:conOK(I)?A:K}" stroke-width="${pk('trol')?2:1}"/><text x="${tp.x+8}" y="${tp.y+14}" font-size="9" fill="${K}">console trolley</text><text x="${tp.x+38}" y="${tp.y+39}" font-size="7.5" fill="${M}">screen and keyboard</text></g>`+port('trol','','Console trolley socket');
+ if(R.box==='sealed')s+=`<g class="hit" data-act="rk:open" tabindex="0" role="button" aria-label="Open the box"><rect x="20" y="222" width="214" height="66" fill="${P}" stroke="${K}"/><path d="M20 240H234M127 222V240" stroke="${K}"/><text x="127" y="262" text-anchor="middle" font-size="10" fill="${K}">sealed box: 1 server</text><text x="127" y="277" text-anchor="middle" font-size="8.5" fill="${M}">click to cut the tape</text></g>`;
+ else{
+  if(!R.rails)s+=`<g class="drag" data-drag="rails" tabindex="0" role="button" aria-label="Rail kit. Drag it into a free space in the rack"><rect x="20" y="214" width="214" height="14" fill="${P}" stroke="${K}"/><path d="M26 219H228M26 223H228" stroke="${M}"/><text x="240" y="224" font-size="8.5" fill="${K}">rail kit</text></g>`;
+  s+=`<g class="drag" data-drag="server" data-act="rk:pick:server" tabindex="0" role="button" aria-label="${esc(name)}"><rect x="${sx}" y="${sy}" width="214" height="38" fill="${P}" stroke="${pk('server')?H:I.power?A:K}" stroke-width="${pk('server')||I.power?2:1}"/><text x="${sx+8}" y="${sy+12}" font-size="9" fill="${K}">${esc(name)}</text><text x="${sx+208}" y="${sy+12}" text-anchor="end" font-size="7.5" fill="${I.power?A:M}">${I.power?'POWER ON':R.mounted?'power off':'on the floor'}</text></g>`;
+  s+=`<g class="hit" data-act="power" tabindex="0" role="button" aria-label="Power button"><title>Power button</title><circle cx="${sx+14}" cy="${sy+26}" r="7" fill="${I.power?'var(--acc-soft)':G}" stroke="${I.power?A:L}" stroke-width="1.6"/><path d="M${sx+14} ${sy+22}v4" stroke="${I.power?A:M}" stroke-width="1.4"/></g>`;
+  const st=I.usbLoc==='server';
+  s+=`<g class="hit" data-act="${st?'usb:pocket':'usb:server'}" tabindex="0" role="button" aria-label="${st?'Unplug the USB stick':'Plug the USB stick into the server'}"><title>USB port${st?': stick in':''}</title><rect x="${g.usb[0]}" y="${g.usb[1]}" width="24" height="14" fill="${st?'var(--acc-soft)':G}" stroke="${st?A:L}"/><text x="${g.usb[0]+12}" y="${g.usb[1]+10}" text-anchor="middle" font-size="8" fill="${st?A:K}">USB</text></g>`;
+  s+=port('scr','SCR','Screen port')+port('eno1','eno1','Network port eno1')+port('eno2','eno2','Network port eno2')+port('psu1','PSU1','Power supply 1')+port('psu2','PSU2','Power supply 2');
+ }
+ Object.entries(R.link).forEach(([k,d])=>{s+=cable([c(k)[0],g[k][1]+g[k][3]],c(d),SPK[k]==='power'?K:SPK[k]==='net'?A:H)});
+ s+='</svg>';
+ const away=I.where!=='room',cords=2-['psu1','psu2'].filter(x=>R.link[x]).length;
+ const kinds=[['hands','Hands'],['power',R.box==='open'?`Power cord · ${cords} left`:'Power cords · in the box'],['net','Network cable'],['console','Screen lead']];
+ const hand=R.sel?`One end is in <b>${PORTNAME[R.sel]||R.sel}</b>. Drag or click to where the other end goes.`:R.kind==='hands'?(R.box==='sealed'?'Hands: the server is still in its box on the floor.':!R.mounted?'Hands: drag things around. The rail kit goes into the rack first, then the server.':'Hands: drag things to move them, click a cable end to pull it, click a device to inspect it.'):`You hold a <b>${KNAME[R.kind]}</b>. Drag from one socket to the other.`;
+ const row=(a,b)=>`<tr><td>${a}</td><td>${b}</td></tr>`;
+ let card='';
+ if(R.pick==='server'&&R.box==='open'){const ls=Object.entries(R.link).filter(x=>x[0]!=='scr');card=`<h3>Selected: ${esc(name)}</h3><table class="cmds reg">${row('Where',R.mounted?'in the rack, on its rails':'on the floor')}${row('Power',I.power?'on':'off')+row('Disks',I.installed?'Proxmox installed':'empty')+row('Address',I.node?esc(W.nodes[I.node].ip):'none yet')+row('USB port',I.usbLoc==='server'?'stick in':'empty')}${ls.map(([k,d])=>`<tr><td>${PORTNAME[k]}</td><td>${d[0]==='P'?'switch port '+d[1]:'outlet '+d} <button class="btn sm" data-act="rk:pull:${k}">Pull</button></td></tr>`).join('')}</table>`}
+ else if(R.pick==='switch')card=`<h3>Selected: sw-west-01</h3><table class="cmds">${row('Ports 1 and 2','cabled, in production')}${[3,4,5,6,7,8].map(n=>row('Port '+n,taken('P'+n)?'your cable':'empty')).join('')}</table><p class="foot">What each port is for is not printed on the switch. Look it up in the IP register.</p>`;
+ else if(R.pick==='nas')card=`<h3>Selected: Synology NAS</h3><table class="cmds">${row('Address','192.168.0.50')+row('State','in production, leave its cables alone')}</table>`;
+ else if(R.pick==='trol')card=`<h3>Selected: console trolley</h3><table class="cmds">${row('Screen lead',conOK(I)?'plugged into the server':'not connected')}</table>`;
+ return `<div class="row rkbar">${kinds.map(k=>`<button class="chip ${R.kind===k[0]?'on':''}" data-act="rk:kind:${k[0]}">${k[1]}</button>`).join('')}</div><div class="${away?'rkaway':''} k-${R.kind}">${s}</div><p class="foot">${away?'The rack is in the server room. You cannot touch it from your desk.':hand}</p>${card}<h3>In your hands</h3><table class="cmds"><tr><td>USB stick</td><td>${usbWhere(I)}, ${I.usbImg?'holds the '+PROD[I.usbImg].title+' installer':'empty'}</td></tr><tr><td>Power</td><td>${dualOK(I)?'two feeds':powerOK(I)?(R.link.psu1&&R.link.psu2?'two cables, one feed':'one cable'):'not connected'}</td></tr><tr><td>Virtualization</td><td>${I.vt?'enabled in BIOS':'disabled in BIOS'}</td></tr></table>`;
+}
+let drag=null;
+const svgPt=(svg,e)=>new DOMPoint(e.clientX,e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+document.addEventListener('pointerdown',e=>{
+ if(!W||!W.inst||W.inst.where!=='room'||!e.target.closest)return;
+ const svg=e.target.closest('svg.rk');if(!svg)return;
+ const R=W.inst.rack,pt=e.target.closest('[data-port]'),p=svgPt(svg,e);
+ let it=e.target.closest('[data-drag]');
+ if(!it&&R.kind==='hands'&&R.box==='open'&&(pt&&(SPK[pt.dataset.port])||e.target.closest('[data-act="power"],[data-act^="usb"]')))it=svg.querySelector('[data-drag="server"]');
+ if(pt&&R.kind!=='hands'){const c=pt.dataset.c.split(','),ln=document.createElementNS('http://www.w3.org/2000/svg','line');Object.entries({x1:c[0],y1:c[1],x2:c[0],y2:c[1],stroke:R.kind==='power'?'var(--ink)':R.kind==='net'?'var(--acc)':'var(--warn)','stroke-width':3,'stroke-linecap':'round','pointer-events':'none'}).forEach(([k,v])=>ln.setAttribute(k,v));svg.appendChild(ln);drag={ln,from:pt.dataset.port,svg,x:p.x,y:p.y,moved:false}}
+ else if(it&&R.kind==='hands')drag={el:it,id:it.dataset.drag,svg,x:p.x,y:p.y,moved:false};
+ if(drag)e.preventDefault();
+});
+document.addEventListener('pointermove',e=>{
+ if(!drag)return;const p=svgPt(drag.svg,e);
+ if(!drag.moved&&Math.hypot(p.x-drag.x,p.y-drag.y)<4)return;drag.moved=true;
+ if(drag.el){drag.svg.classList.add('dragging');drag.svg.style.setProperty('--dx',(p.x-drag.x)+'px');drag.svg.style.setProperty('--dy',(p.y-drag.y)+'px');drag.svg.dataset.dragging=drag.id}
+ else{drag.ln.setAttribute('x2',p.x);drag.ln.setAttribute('y2',p.y)}
+});
+document.addEventListener('pointerup',e=>{
+ if(!drag)return;const d=drag;drag=null;if(d.ln)d.ln.remove();
+ if(!d.moved)return;
+ window.__noClick=Date.now();
+ const p=svgPt(d.svg,e);
+ if(d.el){
+  const I=W.inst,R=I.rack,sl=[2,3].find(n=>p.x>=38&&p.x<=252&&p.y>=20+n*42&&p.y<=58+n*42&&!(R.mounted&&R.slot===n));
+  if(d.id==='rails'){if(sl!=null)doAct('rk','rails:'+sl);else renderRight()}
+  else if(d.id==='server'){if(sl!=null&&!R.mounted)doAct('rk','mount:'+sl);else{const G=rackGeo(I);doAct('rk',`move:server:${Math.round(G.sx+p.x-d.x)}:${Math.round(G.sy+p.y-d.y)}`)}}
+  else if(d.id==='trol')doAct('rk',`move:trol:${Math.round(R.tpos.x+p.x-d.x)}:${Math.round(R.tpos.y+p.y-d.y)}`);
+ }
+ else{const t=document.elementFromPoint(e.clientX,e.clientY),pt=t&&t.closest('[data-port]');if(pt&&pt.dataset.port!==d.from)doAct('rk','link:'+d.from+':'+pt.dataset.port)}
+});
+function renderAll(){renderPick();renderLeft();renderRight();$('ps1').textContent=ps1();$('where').textContent=W.inst&&W.inst.where==='room'?'in the server room':W.inst&&W.inst.app!=='term'?'at your desk':W.prompt?'waiting for your answer':W.host==='laptop'?'terminal on your laptop':`ssh session on ${W.host}`}
+function load(id,keep){cur=SC.find(s=>s.id===id)||SC[0];W=cur.setup();hints=0;hist.length=0;hi=null;$('term').innerHTML='';line('sys',cur.id==='install'?'Terminal on your laptop. The new server is not reachable until it is installed.':`Scenario: ${esc(cur.t)}. You are at your own laptop. Servers are reached with ssh root@<ip>. Passwords: any root password is accepted on servers that were installed for you.`);renderWiz();renderAll();if(!keep)$('cmd').focus()}
+const DISKS=[['sda','/dev/sda (447.13 GiB, SSD)'],['sdb','/dev/sdb (447.13 GiB, SSD)'],['sdc','/dev/sdc (3.49 TiB, SSD)'],['sdd','/dev/sdd (3.49 TiB, SSD)']];
+const FS=['ext4','xfs','zfs (RAID0)','zfs (RAID1)','zfs (RAID10)'];
+const WSTEPS=['Target disk','Location','Password','Network','Summary'];
+const PROD={ve:{file:'proxmox-ve_9.2-1.iso',label:'Proxmox VE 9.2 ISO Installer',size:'1.59 GB',title:'Proxmox Virtual Environment',what:'the virtualization platform'},pbs:{file:'proxmox-backup-server.iso',label:'Proxmox Backup Server ISO Installer',size:'1.21 GB',title:'Proxmox Backup Server',what:'a separate product that only stores backups'},pmg:{file:'proxmox-mail-gateway.iso',label:'Proxmox Mail Gateway ISO Installer',size:'1.38 GB',title:'Proxmox Mail Gateway',what:'a separate product that filters e-mail'}};
+const prodOf=f=>Object.keys(PROD).find(k=>PROD[k].file===f);
+function wizCheck(){
+ const c=W.inst.cfg,k=W.inst.step;
+ if(k===0&&c.fs==='zfs (RAID1)'&&c.d0===c.d1)return'RAID1 needs two different disks.';
+ if(k===0&&c.fs==='zfs (RAID10)')return'RAID10 needs at least 4 disks in this installer. Pick another filesystem.';
+ if(k===1&&!c.country)return'Country is required.';
+ if(k===2&&c.pw.length<8)return'Password must be at least 8 characters long.';
+ if(k===2&&c.pw!==c.pw2)return'Passwords do not match.';
+ if(k===2&&!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(c.mail))return'E-Mail does not look like a valid address (user@domain.tld).';
+ if(k===3&&!/^[a-z0-9-]+(\.[a-z0-9-]+)+$/i.test(c.host))return'Hostname does not look like a fully qualified domain name.';
+ if(k===3&&/example\.invalid$/.test(c.host))return'Hostname is still the default. Enter the name from the planning sheet.';
+ if(k===3&&!/^\d+\.\d+\.\d+\.\d+\/\d+$/.test(c.ip))return'IP address is not valid. Use the form address/prefix, for example 10.0.0.5/24.';
+ if(k===3&&!/^\d+\.\d+\.\d+\.\d+$/.test(c.gw))return'Gateway is not a valid IP address.';
+ if(k===3&&!/^\d+\.\d+\.\d+\.\d+$/.test(c.dns))return'DNS server is not a valid IP address.';
+ return'';
+}
+function bootDisk(I){
+ if(!I.installed){I.screen='nodev';I.msg='The disks are empty, so there is nothing to start from.';return}
+ const c=I.cfg,name=c.host.split('.')[0].toLowerCase(),ip=c.ip.split('/')[0],pre=c.ip.split('/')[1];
+ I.cfgReach=/^192\.168\.0\.\d+$/.test(ip)&&pre==='24'&&c.gw==='192.168.0.1'&&!['192.168.0.1','192.168.0.9','192.168.0.10','192.168.0.50'].includes(ip);
+ W.nodes[name]={ip,up:true,in:false,reach:I.cfgReach&&linkOK(I),pw:c.pw,vt:I.vt};I.node=name;I.screen='running';I.done=true;
+ const bad=[];if(!mirrorOK(W))bad.push('the system is not on the two mirrored 480 GB SSDs');if(!netOK(W))bad.push('the name or network settings differ from the planning sheet');
+ I.msg=bad.length?'Installed, but not as planned: '+bad.join(', and ')+'. On a real server the clean fix is to reinstall. Press Restart scenario to do that.':'The server started from its own disks. Nobody needs to stand here any more: go back to your desk and open the Terminal.';
+}
+function bootDefault(I){
+ if(I.usbLoc==='server'&&I.usbImg){I.screen=I.usbImg==='ve'?'instmenu':'wrongprod';I.msg=I.installed?'The server started from the USB stick again. The stick is still plugged in and comes before the disks in the boot order. Switch off, remove it, and start again.':''}
+ else bootDisk(I);
+}
+function act(name,arg){
+ const I=W.inst;if(!I)return;I.msg='';
+ if(name==='go'){I.where=arg}
+ else if(name==='app'){I.app=arg;if(arg==='ipam')W.seen.ipam=1}
+ else if(name==='reserve'){I.reserved=I.reserved===arg?null:arg;I.rev=null;I.plan.ip=I.reserved?'192.168.0.'+arg+'/24':'';I.plan.host=I.reserved?'pve'+(arg-200)+'.lab.local':'';I.msg=I.reserved?'Reserved. Address and name are noted on your planning sheet.':'Released. Address and name are removed from your planning sheet.'}
+ else if(name==='review'){I.rev=planCheck(I)}
+ else if(name==='nav'){const u=String(arg||'').trim().toLowerCase().replace(/^https?:\/\//,'').replace(/^www\./,'').replace(/\/+$/,'');I.url=arg;I.page=!u?'blank':u==='proxmox.com'||u==='proxmox.com/en'?'home':u==='proxmox.com/en/downloads'||u==='proxmox.com/downloads'?'downloads':!/\./.test(u)?'nosearch':'err'}
+ else if(name==='dl'){if(!I.files.includes(PROD[arg].file))I.files.push(PROD[arg].file);I.msg=PROD[arg].file+' saved to Downloads.'}
+ else if(name==='usb'){
+  if(arg==='laptop'){if(I.where!=='desk'){I.msg='Your laptop is at your desk.';return}I.usbLoc='laptop'}
+  else if(arg==='server'){if(I.where!=='room'){I.msg='The server is in the server room.';return}I.usbLoc='server'}
+  else{if(I.usbLoc==='server'&&['instmenu','eula','wizard','wrongprod'].includes(I.screen)){I.screen='nodev';I.msg='You pulled the stick while the installer was running from it. The installer is gone. Switch the server off and start again.'}I.usbLoc='pocket'}
+ }
+ else if(name==='flash'){const p=prodOf(I.selImg);if(!p){I.msg='Select an image first.';return}if(I.usbLoc!=='laptop'){I.msg='No removable drive found.';return}I.usbImg=p;I.msg='Flash complete. The stick now starts the '+PROD[p].title+' installer. It is safe to unplug.'}
+ else if(name==='power'){
+  if(I.where!=='room'){I.msg='The server is in the server room.';return}
+  if(!I.rack.mounted){I.msg='The server is not in the rack yet.';return}
+  if(!I.power&&!powerOK(I)){I.msg='You press the button. Nothing happens: no power cable is connected.';return}
+  if(I.power)cutPower(I);else{I.power=true;I.screen='post'}
+ }
+ else if(name==='rk'){
+  const R=I.rack,[k,v,v2]=String(arg).split(':');
+  if(I.where!=='room'){I.msg='The rack is in the server room. Walk there first.';return}
+  const unplug=p=>{const had=powerOK(I);delete R.link[p];I.msg='You pulled the cable out of '+PORTNAME[p]+'.';if(had&&!powerOK(I)&&I.power){cutPower(I);I.msg='You pulled the last power cable. The server went dark at once.'}syncNet(I)};
+  const link=(x,y)=>{
+   const sp=SPK[x]?x:SPK[y]?y:null,d=sp===x?y:x;
+   if(!sp||SPK[d]){I.msg='One end goes on the new server, the other on a feed, the switch or the trolley.';return}
+   if(R.kind==='hands'){I.msg='Your hands are empty. Take a cable from the bar above the rack first.';return}
+   if(kindOf(sp)!==R.kind||kindOf(d)!==R.kind){I.msg='A '+KNAME[R.kind]+' does not fit there.';return}
+   if(R.link[sp]){I.msg='There is already a cable in '+PORTNAME[sp]+'.';return}
+   if(USED[d]||Object.values(R.link).includes(d)){I.msg='That one is already taken.';return}
+   R.link[sp]=d;syncNet(I);return true};
+  const args=String(arg).split(':');
+  if(k==='front'||k==='rear'){R.sel=null}
+  else if(k==='pick'){R.pick=R.pick===v?null:v}
+  else if(k==='kind'){if(v==='power'&&R.box!=='open'){I.msg='The power cords are still in the sealed box.';return}R.kind=v;R.sel=null}
+  else if(k==='open'){R.box='open';R.pick='server';I.msg='Box open. Inside: the server, a rail kit and two power cords.'}
+  else if(k==='rails'){if(R.box!=='open')return;if(R.mounted){I.msg='The server sits on those rails. Take it out first.';return}R.rails=true;R.railSlot=v?+v:2;I.msg='The rails are screwed into the rack. The server can slide onto them now.'}
+  else if(k==='mount'){if(R.box!=='open')return;const n=v?+v:R.railSlot;if(!R.rails||n!==R.railSlot){I.msg=R.rails?'The rails are in the other space. The server only fits where the rails are.':'There is nothing in the rack for the server to rest on. Fit the rail kit first.';return}R.mounted=true;R.slot=n;R.pick='server';I.msg='The server slid onto its rails. It has no cables yet.'}
+  else if(k==='move'){
+   const x=Math.max(0,Math.min(+args[2],v==='trol'?320:246)),y=Math.max(0,Math.min(+args[3],v==='trol'?250:262));
+   if(v==='trol'){if(conOK(I)){I.msg='The screen lead is still plugged in. It only reaches so far: pull it first.';return}R.tpos={x,y}}
+   else if(v==='server'){
+    if(R.mounted){if(Object.keys(R.link).length){I.msg='Cables are still plugged into the server. Pull them before you slide it out.';return}if(I.power){I.msg='The server is running. Switch it off before you take it out.';return}R.mounted=false;R.slot=null;I.msg='You slid the server out of the rack.'}
+    R.pos={x,y:Math.max(y,206)}}
+  }
+  else if(k==='pull'){if(R.link[v])unplug(v)}
+  else if(!R.mounted&&(k==='p'||k==='link')){I.msg='Put the server in the rack before you cable it.'}
+  else if(k==='p'){
+   const isS=!!SPK[v],owner=isS?(R.link[v]?v:null):Object.keys(R.link).find(x=>R.link[x]===v);
+   if(R.kind==='hands'){if(owner)unplug(owner);else I.msg=USED[v]?'That cable belongs to the '+USED[v]+'. Leave it.':'Nothing is plugged in there. Take a cable from the bar above the rack.';R.sel=null}
+   else if(R.sel&&R.sel!==v){if(link(R.sel,v))R.sel=null}
+   else R.sel=R.sel===v?null:v}
+  else if(k==='link'){link(v,v2);R.sel=null}
+ }
+ else if(name==='key'){if(I.screen!=='post')return;if(arg==='F2')I.screen='bios';else if(arg==='F11')I.screen='bootmenu';else bootDefault(I)}
+ else if(name==='vt'){I.vt=!I.vt}
+ else if(name==='biosexit'){I.screen='post';I.msg='Settings saved. The server restarts.'}
+ else if(name==='boot'){if(arg==='usb'){if(I.usbLoc==='server'&&I.usbImg){I.screen=I.usbImg==='ve'?'instmenu':'wrongprod'}else{I.screen='nodev';I.msg=I.usbLoc==='server'?'The stick is plugged in, but it is empty. Nothing was written to it.':'There is no USB stick in the server.'}}else if(arg==='pxe'){I.screen='pxe'}else bootDisk(I)}
+ else if(name==='inst'){if(arg==='rescue'){I.msg='Rescue Boot looks for an installed Proxmox system on the disks. There is none yet.';return}I.screen='eula';I.booted=true}
+ else if(name==='eula'){I.screen='wizard';I.step=0}
+ else if(name==='wprev'){I.step--}
+ else if(name==='wnext'){const er=wizCheck();if(er){I.msg=er;return}if(I.step<4){I.step++;return}I.installed=true;I.screen='success';W.t+=600}
+ else if(name==='reboot'){I.screen='post'}
+}
+let postTimer=null;
+function doAct(name,arg){const before=objIndex();act(name,arg);renderScene();after(before);clearTimeout(postTimer);if(W.inst&&W.inst.screen==='post')postTimer=setTimeout(()=>{if(W.inst&&W.inst.screen==='post')doAct('key','wait')},9000)}
+function wizBody(){
+ const c=W.inst.cfg,k=W.inst.step,raid=/RAID/.test(c.fs),two=c.fs==='zfs (RAID1)';
+ const opt=(l,v)=>l.map(x=>`<option value="${Array.isArray(x)?x[0]:x}" ${(Array.isArray(x)?x[0]:x)===v?'selected':''}>${Array.isArray(x)?x[1]:x}</option>`).join('');
+ const f=(lbl,key,type,ph)=>`<label>${lbl}<input id="w-${key}" data-k="${key}" type="${type||'text'}" value="${esc(c[key]).replace(/"/g,'&quot;')}" placeholder="${ph||''}" autocomplete="off" spellcheck="false"></label>`;
+ let body='';
+ if(k===0)body=`<label>Filesystem<select id="w-fs" data-k="fs">${opt(FS,c.fs)}</select></label><label>${two||raid?'Harddisk 0':'Target harddisk'}<select id="w-d0" data-k="d0">${opt(DISKS,c.d0)}</select></label>${two?`<label>Harddisk 1<select id="w-d1" data-k="d1">${opt(DISKS,c.d1)}</select></label>`:''}<p class="wnote">The installer erases every disk you select here. ${raid?'ZFS builds the RAID itself, so the disks must not also be in a hardware RAID.':'ext4 and xfs use a single disk, with no protection if it fails.'}</p>`;
+ if(k===1)body=`${f('Country','country','text','Belgium')}<label>Time zone<select disabled><option>Europe/Brussels</option></select></label><label>Keyboard layout<select disabled><option>Belgian</option></select></label>`;
+ if(k===2)body=`${f('Password','pw','password')}${f('Confirm','pw2','password')}${f('E-Mail','mail','text','you@company.be')}<p class="wnote">This is the password of the user <b>root</b>. You need it to log in afterwards.</p>`;
+ if(k===3)body=`<label>Management interface<select disabled><option>eno1 - bc:24:11:3a:20:01 (igb)</option></select></label>${f('Hostname (FQDN)','host','text','name.domain')}${f('IP address (CIDR)','ip','text','192.168.0.x/24')}${f('Gateway','gw')}${f('DNS server','dns')}`;
+ if(k===4)body=`<table class="cmds">${[['Filesystem',c.fs],['Disk(s)',two?`/dev/${c.d0}, /dev/${c.d1}`:`/dev/${c.d0}`],['Country',c.country],['Timezone','Europe/Brussels'],['Email',c.mail],['Management interface','eno1'],['Hostname',c.host.split('.')[0]],['IP CIDR',c.ip],['Gateway',c.gw],['DNS',c.dns]].map(r=>`<tr><td>${r[0]}</td><td>${esc(r[1])}</td></tr>`).join('')}</table><p class="wnote">Check every line against the planning sheet. Install writes to the disks.</p>`;
+ return `<div class="wbar">Proxmox VE Installer</div><div class="wsteps">${WSTEPS.map((x,i)=>`<span class="${i===k?'on':i<k?'past':''}">${i+1} ${x}</span>`).join('')}</div><div class="wbody"><h2>${WSTEPS[k]}</h2>${body}</div><div class="wfoot">${k?'<button class="btn" data-act="wprev">Previous</button>':''}<span style="flex:1"></span><button class="btn pri" id="w-next" data-act="wnext">${k===4?'Install':'Next'}</button></div>`;
+}
+const PORTNAME={psu1:'PSU 1',psu2:'PSU 2',eno1:'eno1',eno2:'eno2',scr:'the screen port'};
+const usbWhere=I=>({drawer:'in your desk drawer',pocket:'in your pocket',laptop:'plugged into your laptop',server:'plugged into the server'})[I.usbLoc];
+function deskHtml(I){
+ const dock=[['browser','Browser'],['files','Downloads'],['usb','USB Writer'],['ipam','IP register'],['plan','Planning sheet'],['term','Terminal']].map(a=>`<button class="chip ${I.app===a[0]?'on':''}" data-act="app:${a[0]}">${a[1]}</button>`).join('');
+ const usbBtn=I.usbLoc==='laptop'?'<button class="btn" data-act="usb:pocket">Unplug the USB stick</button>':I.usbLoc==='server'?'':'<button class="btn" data-act="usb:laptop">Plug the USB stick into your laptop</button>';
+ let win='';
+ if(!I.app)win=`<div class="desk-empty"><p>Your laptop. Open an app from the bar above.</p></div>`;
+ if(I.app==='browser'){
+  let page='<p class="wnote">Type the address of a website in the bar above and press Enter.</p>';
+  if(I.page==='home')page=`<p class="simtag">Simulated page</p><h2>Proxmox</h2><p>Open-source server software.</p><p><button class="linkbtn" data-act="nav:proxmox.com/en/downloads">Downloads</button></p>`;
+  if(I.page==='downloads')page=`<p class="simtag">Simulated page</p><h2>Downloads</h2><p>ISO images. Pick the product you need.</p>${Object.entries(PROD).map(([k,p])=>`<div class="dlrow"><span><b>${p.label}</b><br><small>${p.file} · ${p.size}</small></span><button class="btn" data-act="dl:${k}">${I.files.includes(p.file)?'Downloaded':'Download'}</button></div>`).join('')}`;
+  if(I.page==='err')page=`<h2>This site can't be reached</h2><p>Check the address for typing errors.</p>`;
+  if(I.page==='nosearch')page=`<h2>No results</h2><p>This laptop has no search engine set up. Type the full address of the site, for example <code>example.com</code>.</p>`;
+  win=`<div class="win"><div class="wintitle">Browser</div><div class="urlbar"><input id="url" value="${esc(I.url).replace(/"/g,'&quot;')}" placeholder="Type a web address" autocomplete="off" spellcheck="false" aria-label="Web address"><button class="btn" data-act="navgo">Go</button></div><div class="page">${page}</div></div>`;
+ }
+ if(I.app==='files')win=`<div class="win"><div class="wintitle">Downloads</div><div class="page">${I.files.length?`<table class="cmds">${I.files.map(f=>`<tr><td>${f}</td><td>${PROD[prodOf(f)].size} · disc image</td></tr>`).join('')}</table>`:'<p class="wnote">This folder is empty.</p>'}</div></div>`;
+ if(I.app==='usb')win=`<div class="win"><div class="wintitle">USB Writer</div><div class="page"><label class="row2">1. Image<select data-ik="selImg"><option value="">${I.files.length?'Select an image':'No image files in Downloads'}</option>${I.files.map(f=>`<option ${I.selImg===f?'selected':''}>${f}</option>`).join('')}</select></label><label class="row2">2. Target<select disabled><option>${I.usbLoc==='laptop'?'USB stick, 32 GB':'No removable drive found. Plug one in.'}</option></select></label><p class="wnote">Your laptop's own disk is hidden here on purpose, so you cannot erase it by mistake. Flashing erases the stick.</p><div class="row"><button class="btn pri" data-act="flash" ${I.selImg&&I.usbLoc==='laptop'?'':'disabled'}>3. Flash</button></div><p class="wnote">Stick contents now: <b>${I.usbImg?PROD[I.usbImg].title+' installer':'empty'}</b></p></div></div>`;
+ if(I.app==='ipam'){
+  const fr=n=>`<tr><td>192.168.0.${n}</td><td>${I.reserved===String(n)?'<b>reserved by you</b>':'free'} · kept for Proxmox node ${n-200}</td><td><button class="btn sm" data-act="reserve:${n}">${I.reserved===String(n)?'Release':'Reserve'}</button></td></tr>`;
+  win=`<div class="win"><div class="wintitle">IP register</div><div class="page"><p class="simtag">Company intranet · site west</p><h2>Network 192.168.0.0/24</h2><table class="cmds reg"><tr><td>192.168.0.1</td><td>router</td><td></td></tr><tr><td>192.168.0.9</td><td>kaatje-laptop, fixed</td><td></td></tr><tr><td>192.168.0.10</td><td>dc01, domain controller</td><td></td></tr><tr><td>192.168.0.50</td><td>Synology NAS</td><td></td></tr><tr><td>.100 to .199</td><td>DHCP range, handed out automatically</td><td></td></tr>${[201,202,203].map(fr).join('')}</table><p class="wnote">Naming rule: Proxmox nodes are called pveN.lab.local. Node N gets the address ending in 20N.</p><h2>Switch sw-west-01</h2><table class="cmds reg"><tr><td>Port 1</td><td>uplink to the router</td></tr><tr><td>Port 2</td><td>Synology NAS</td></tr><tr><td>Ports 3 to 5</td><td>server network, free</td></tr><tr><td>Ports 6 and 8</td><td>guest wifi network</td></tr><tr><td>Port 7</td><td>switched off</td></tr></table><p class="wnote">Power: every device takes one outlet on feed A and one on feed B.</p></div></div>`;
+ }
+ if(I.app==='plan'){
+  const p=I.plan,f=(l,k,ph)=>`<label class="row2 wide">${l}<input id="p-${k}" data-pk="${k}" value="${esc(p[k]).replace(/"/g,'&quot;')}" placeholder="${ph}" autocomplete="off" spellcheck="false"></label>`;
+  win=`<div class="win"><div class="wintitle">Planning sheet</div><div class="page"><p class="wnote">What you look up is noted here for you. You can still change any line by hand.</p>${f('Name','host','name.domain')}${f('Address','ip','address/prefix')}${f('Gateway','gw','')}${f('DNS server','dns','')}<label class="row2 wide">System disks<input value="2 x 480 GB SSD, mirror" disabled></label><div class="row"><button class="btn" data-act="review">Ask a colleague to review it</button></div>${I.rev?(I.rev.length?`<ul class="rev">${I.rev.map(x=>`<li>${esc(x)}</li>`).join('')}</ul>`:'<p class="smsg good">Reviewed: no remarks.</p>'):''}</div></div>`;
+ }
+ return `<div class="sbar"><button class="chip on" data-act="go:desk">Your desk</button><button class="chip" data-act="go:room">Server room</button><span class="sep"></span>${dock}</div>${I.app==='term'?'':`<div class="sbody">${I.msg?`<p class="smsg">${esc(I.msg)}</p>`:''}${win}<div class="row things"><span class="lbl">USB stick: ${usbWhere(I)}</span>${usbBtn}</div></div>`}`;
+}
+function roomHtml(I){
+ let scr='';const k=(a,l)=>`<button class="btn" data-act="${a}">${l}</button>`;
+ if(I.screen==='off')scr=`<pre class="crt off">The screen is dark. The server is switched off.</pre>`;
+ if(I.screen==='post')scr=`<pre class="crt">LAB SYSTEMS BIOS 2.4\n\nCPU     2 x 16 cores\nMemory  256 GB   OK\nDisks   2 x 480 GB SSD, 2 x 3.84 TB SSD\n\nPress F2 for Setup, F11 for Boot Menu\nStarting from the default boot order in a few seconds...</pre><div class="row">${k('key:F2','Press F2')}${k('key:F11','Press F11')}${k('key:wait','Wait')}</div>`;
+ if(I.screen==='bios')scr=`<pre class="crt">LAB SYSTEMS BIOS SETUP\n\nProcessor settings\n  Intel Virtualization Technology     [${I.vt?'Enabled':'Disabled'}]\n\nBoot settings\n  Boot mode                           [UEFI]\n  Boot order                          USB, disk, network</pre><div class="row">${k('vt',I.vt?'Disable Virtualization Technology':'Enable Virtualization Technology')}${k('biosexit','Save and exit')}</div>`;
+ if(I.screen==='bootmenu')scr=`<pre class="crt">BOOT MENU\n\nSelect a boot device:</pre><div class="row">${k('boot:usb','UEFI: USB storage device')}${k('boot:disk','UEFI: Hard disk')}${k('boot:pxe','UEFI: Network (PXE)')}</div>`;
+ if(I.screen==='nodev')scr=`<pre class="crt">No bootable device found.\n\nInsert boot media, then switch the server off and on again.</pre>`;
+ if(I.screen==='pxe')scr=`<pre class="crt">>>Start PXE over IPv4.\n  PXE-E16: No valid offer received.\n\nNo bootable device found.</pre>`;
+ if(I.screen==='instmenu')scr=`<pre class="crt">Welcome to Proxmox Virtual Environment\n\nSelect an entry:</pre><div class="row">${k('inst:gui','Install Proxmox VE (Graphical)')}${k('inst:tui','Install Proxmox VE (Terminal UI)')}${k('inst:rescue','Rescue Boot')}</div>`;
+ if(I.screen==='wrongprod')scr=`<pre class="crt">Welcome to ${PROD[I.usbImg].title}\n\nInstall ${PROD[I.usbImg].title} (Graphical)</pre><p class="smsg">This is the installer of ${PROD[I.usbImg].title}: ${PROD[I.usbImg].what}. It is not the one you need. Switch the server off, take the stick back to your desk, download the right image and flash the stick again.</p>`;
+ if(I.screen==='eula')scr=`<pre class="crt">END USER LICENSE AGREEMENT (EULA)\n\nProxmox VE is free software under the GNU Affero\nGeneral Public License, version 3.\n(shortened for this lab)</pre><div class="row">${k('eula','I agree')}</div>`;
+ if(I.screen==='wizard')scr=`<div class="wizbox">${wizBody()}</div>`;
+ if(I.screen==='success')scr=`<pre class="crt">Installation successful!\n\nThe system needs to restart. Remove the installation\nmedium before you reboot.</pre><div class="row">${k('reboot','Reboot')}</div>`;
+ if(I.screen==='running'){const n=W.nodes[I.node];scr=`<pre class="crt">${'-'.repeat(54)}\n\nWelcome to the Proxmox Virtual Environment. Please use\nyour web browser to configure this server - connect to:\n\n  https://${n.ip}:8006/\n\n${'-'.repeat(54)}\n\n${I.node} login: _</pre>`}
+ if(!conOK(I))scr=`<pre class="crt off">No screen is connected to the server.\n\nYou cannot see what it is doing, and you cannot press its keys.\nRun a screen lead from the server to the console trolley.</pre>`;
+ return `<div class="sbar"><button class="chip" data-act="go:desk">Your desk</button><button class="chip on" data-act="go:room">Server room</button><span class="sep"></span><span class="lbl">Console trolley: screen and keyboard</span></div><div class="sbody">${I.msg?`<p class="smsg">${esc(I.msg)}</p>`:''}<p class="wnote">Your hands work in the rack on the right: unpacking, mounting, cables, power button and USB port.</p><p class="lbl">Screen</p>${scr}</div>`;
+}
+function renderScene(){
+ const I=W.inst,on=!!I;
+ const term=!on||(I.where==='desk'&&I.app==='term');
+ $('wiz').hidden=!on;$('wiz').classList.toggle('compact',on&&term);$('term').hidden=!term;document.querySelector('.prompt').hidden=!term;
+ if(!on)return;
+ const keep=document.activeElement&&document.activeElement.id;
+ $('wiz').innerHTML=I.where==='desk'?deskHtml(I):roomHtml(I);
+ if(keep&&$(keep)&&keep!=='cmd'){$(keep).focus();try{const v=$(keep).value;$(keep).setSelectionRange(v.length,v.length)}catch(e){}}
+}
+function renderWiz(){renderScene()}
+document.addEventListener('input',e=>{const d=e.target.dataset||{};if(!W.inst)return;if(d.ik){W.inst[d.ik]=e.target.value;renderScene();return}if(d.pk){W.inst.plan[d.pk]=e.target.value.trim();W.inst.rev=null;renderLeft();renderRight();return}if(!d.k)return;W.inst.cfg[d.k]=e.target.value.trim();if(e.target.tagName==='SELECT')renderScene();renderLeft()});
+document.addEventListener('keydown',e=>{if(e.target.id==='url'&&e.key==='Enter'){doAct('nav',e.target.value)}else if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('hit')){e.target.dispatchEvent(new MouseEvent('click',{bubbles:true}))}else if(e.key==='Enter'&&e.target.dataset&&e.target.dataset.drag){doAct('rk',e.target.dataset.drag==='rails'?'rails':'mount')}});
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-act]');if(!b||!W.inst)return;
+ if(window.__noClick&&Date.now()-window.__noClick<250)return;
+ const [n,...r]=b.dataset.act.split(':'),arg=r.join(':');
+ if(n==='navgo'){doAct('nav',$('url').value);return}
+ if((n==='dl'&&!W.inst.files.includes(PROD[arg].file))||n==='flash'||(n==='wnext'&&W.inst.step===4&&!wizCheck())){b.disabled=true;b.textContent=n==='dl'?'Downloading...':n==='flash'?'Flashing...':'Installing...';const bar=document.createElement('div');bar.className='wprog';bar.innerHTML='<i></i>';b.parentNode.parentNode.appendChild(bar);setTimeout(()=>doAct(n,arg),2500);return}
+ doAct(n,arg);if(n==='app'&&arg==='term')$('cmd').focus();
+});
+const WORDS=['hostname','pveversion','pvecm','pvesm','qm','vzdump','qmrestore','ha-manager','ssh','ping','exit','clear','help','openssl','ls','date','ip'];
+const SUB={pvecm:['status','nodes','create','add','expected'],pvesm:['status','add','list','remove'],qm:['list','config','start','stop','destroy','migrate','disk'],'ha-manager':['status','add']};
+function complete(v){
+ const parts=v.split(' '),last=parts[parts.length-1];let pool=[];
+ if(parts.length===1)pool=WORDS;else if(parts.length===2&&SUB[parts[0]])pool=SUB[parts[0]];
+ else pool=Object.keys(W.nodes).concat(Object.keys(W.storages),Object.keys(W.vms).map(String),['--server','--export','--content','--storage','--mode','--online','snapshot','images','backup','nfs','move','root@','/etc/pve/nodes/','-in','-noout','-subject','-issuer'],Object.values(IPS),Object.keys(NAS),[].concat(...Object.entries(W.backups).map(([s,l])=>l.map(b=>s+':backup/'+b.file))));
+ const hit=pool.filter(x=>x.startsWith(last)&&x!==last);if(!last||!hit.length)return v;
+ let pre=hit[0];hit.forEach(h=>{while(!h.startsWith(pre))pre=pre.slice(0,-1)});
+ if(hit.length>1&&pre===last){line('sys',hit.join('   '));return v}
+ parts[parts.length-1]=pre+(hit.length===1&&!/[:\/@]$/.test(pre)?' ':'');return parts.join(' ');
+}
+$('cmd').addEventListener('keydown',e=>{
+ const el=e.target;
+ if(e.key==='Enter'){const v=el.value;el.value='';hi=null;run(v)}
+ else if(e.key==='ArrowUp'){e.preventDefault();if(!hist.length)return;hi=hi==null?hist.length-1:Math.max(0,hi-1);el.value=hist[hi]}
+ else if(e.key==='ArrowDown'){e.preventDefault();if(hi==null)return;hi++;if(hi>=hist.length){hi=null;el.value=''}else el.value=hist[hi]}
+ else if(e.key==='Tab'){e.preventDefault();el.value=complete(el.value)}
+ else if(e.key==='l'&&e.ctrlKey){e.preventDefault();$('term').innerHTML=''}
+ else if(e.key==='c'&&e.ctrlKey&&!el.selectionEnd){e.preventDefault();if(W.prompt){W.prompt=null;line('err','^C');renderAll()}else{line('in',`<span class="ok">${ps1()}</span> ${esc(el.value)}^C`);el.value=''}}
+});
+document.addEventListener('click',e=>{
+ const g=e.target.closest('[data-g]');if(g){load(SC.find(s=>s.g===g.dataset.g).id);return}
+ const s=e.target.closest('[data-s]');if(s){load(s.dataset.s);return}
+ const ev=e.target.closest('[data-ev]');if(ev){const before=objIndex(),E=cur.ev[+ev.dataset.ev];const msgs=E.go(W)||[];line('sys','--- '+esc(E.l)+' ---');msgs.forEach(m=>line('sys',esc(m)));after(before);$('cmd').focus();return}
+ if(e.target.id==='b-hint'){const k=objIndex();if(k>=0&&hints<cur.obj[k].h.length){hints++;renderLeft()}return}
+ if(e.target.id==='b-explain'){explain=!explain;e.target.classList.toggle('on',explain);e.target.textContent=explain?'Explain on':'Explain off';return}
+ if(e.target.id==='b-reset'){load(cur.id);return}
+ if(e.target.id==='b-skin'){setSkin(skin==='orbital'?'console':'orbital');return}
+ if(e.target.closest('.term'))$('cmd').focus();
+});
+let skin='orbital';try{skin=localStorage.getItem('pvelab.skin')||'orbital'}catch(e){}
+function setSkin(v){skin=v;if(v==='orbital')document.body.dataset.skin='orbital';else delete document.body.dataset.skin;$('b-skin').textContent='Theme: '+(v==='orbital'?'Orbital':'Console');try{localStorage.setItem('pvelab.skin',v)}catch(e){}}
+setSkin(skin);
+load(location.hash.slice(1)||'install',true);
+window.LAB={plan:c=>{Object.assign(W.inst.plan,c);renderAll()},act:(n,a)=>doAct(n,a),cfg:c=>{Object.assign(W.inst.cfg,c);renderScene();renderLeft()},run,load,W:()=>W,cur:()=>cur,objIndex,ev:i=>{const b=objIndex();cur.ev[i].go(W);after(b)}};
+</script>
+</body>
+</html>

@@ -20,6 +20,7 @@ const ST_TRACK = [
   ["spelle", /^spelle-lab$/],
   ["webble", /^webble\.v1$/],
   ["rebble", /^rebble\.v1$/],
+  ["proxle", /^pvelab\.done$/],
   ["codex", /^codex\.read$/],
   ["mscodex", /^mscodex\.read$/],
 ];

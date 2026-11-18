@@ -50,6 +50,16 @@ const LABS_CONFIG = [
     glyph: '<circle cx="8" cy="8" r="6"/><path d="M2 8c2.5-2 9.5-2 12 0"/><path d="M8 2v12"/>'
   },
   {
+    id: "proxle",
+    name: "Proxle",
+    tag: "Networking",
+    sub: "proxmox · build a cluster by hand",
+    path: "labs/proxle.html",
+    ring: "ring-mid",
+    angle: 32,
+    glyph: '<rect x="2" y="2.5" width="12" height="3"/><rect x="2" y="6.5" width="12" height="3"/><rect x="2" y="10.5" width="12" height="3"/><path d="M4 4h1M4 8h1M4 12h1"/>'
+  },
+  {
     id: "hexle",
     name: "Hexle",
     tag: "Web",
