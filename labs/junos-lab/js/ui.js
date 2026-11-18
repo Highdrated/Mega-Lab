@@ -29,6 +29,7 @@ function completionsFor(dev, input){
       { label: "nslookup", help: "resolve a name via your nameserver" },
       { label: "curl", help: "fetch a web page by name or IP" },
       { label: "ssh", help: "open a CLI session on a switch, router or server" },
+      { label: "clear", help: "wipe this terminal screen" },
     ].filter(i => i.label.startsWith(tokens.length ? "" : partial)) };
   }
   if(dev.type === "isp") return { items: [{ label: "show interfaces terse", help: "this link's public IP" }] };
@@ -982,6 +983,11 @@ function onPortClick(e, devId, portId){
   devLog(devices[devId], `SNMP_TRAP_LINK_UP: ${portId} — cable connected`);
   armedPort = null;
   restoreLinkHint();
+  if(currentCableKind() === "console" && firstEnd.port !== "con" && portId !== "con"){
+    const hintEl = document.getElementById("hint");
+    if(hintEl) hintEl.textContent =
+      "That was a CONSOLE lead with no CON port on either end: it is serial, so it carries no network traffic. For a network cable, open the Connect menu and pick LAN / Data.";
+  }
   rebuildAllDerived();
   touchState();
 }

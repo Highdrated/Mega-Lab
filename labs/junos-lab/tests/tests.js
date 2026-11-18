@@ -3843,6 +3843,29 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   prepReset();
 }
 
+/* ---------- T74: console leads are not network cables ---------- */
+{
+  wipeLab();
+  const a = makeSwitch(0, 0, 8), b = makeSwitch(0, 0, 8), p1 = makeHost(0, 0), p2 = makeHost(0, 0);
+  cable(a, "ge-0/0/0", b, "ge-0/0/0", "console");
+  cable(p1, "eth0", a, "ge-0/0/1", "console");
+  cable(p2, "eth0", b, "ge-0/0/1", "console");
+  rebuildAllDerived();
+  cli(p1, "ip addr add 10.0.0.1/24 dev eth0");
+  cli(p2, "ip addr add 10.0.0.2/24 dev eth0");
+  const sc = scen("access-distribution");
+  ok(!sc.checks[0].test(), "T74 a console lead between switches is not an uplink");
+  ok(!sc.checks[1].test(), "T74 hosts on console leads are not hanging off the switches");
+  ok(cli(p1, "ping 10.0.0.2").includes("Console lead"), "T74 ping names the console lead as the cause");
+  ok(!scen("basic-connect").checks[1].test(), "T74 scenario 1 does not count console leads as cabling");
+  for(const id in links) links[id].kind = "lan";
+  rebuildAllDerived();
+  ok(sc.checks[0].test() && sc.checks[1].test() && sc.checks[2].test(), "T74 same topology passes once the cables are LAN");
+  cli(p1, "clear");
+  ok(devices[p1].cli.log.length === 0, "T74 clear wipes the host terminal");
+  ok(!cli(p1, "clear").includes("command not found"), "T74 clear is a known host command");
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

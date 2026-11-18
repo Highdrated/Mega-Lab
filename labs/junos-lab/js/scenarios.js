@@ -19,6 +19,13 @@ function hostAccessVlan(h){
   if(!pc) return null;
   return pc.mode === "access" ? (pc.vlanNames[0] || null) : null;
 }
+function carriesTraffic(l){ return !!l && l.kind !== "console"; }
+function hostOnSwitch(h){
+  return linksOf(h.id, "eth0").some(([id, l]) => {
+    const other = l.a.dev === h.id ? l.b : l.a;
+    return carriesTraffic(l) && devices[other.dev] && devices[other.dev].type === "switch";
+  });
+}
 function nonDefaultVlans(sw){ return Object.keys(D(sw).vlans).filter(v => v !== "default"); }
 
 /* run real config commands + commit on a device (used by scenario setups) */
@@ -55,7 +62,7 @@ const SCENARIOS = [
         test: () => devsBy("switch").length >= 1 && devsBy("host").length >= 2 },
       { desc: "Both hosts cabled into the switch",
         why: "An uncabled port carries nothing. Physical connectivity always comes before configuration — Junos can't route packets down a wire that isn't there.",
-        test: () => devsBy("host").length >= 2 && devsBy("host").every(h => isLinked(h.id, "eth0")) },
+        test: () => devsBy("host").length >= 2 && devsBy("host").every(hostOnSwitch) },
       { desc: "Both hosts have an IP in the same /24",
         why: "Two hosts can only ARP for each other directly if they believe they're on the same subnet — different subnets would need a router, not a switch.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);
@@ -123,12 +130,12 @@ const SCENARIOS = [
     checks: [
       { desc: "2 switches cabled to each other (the uplink)",
         why: "This cable is the uplink — the one link every host on the access switch depends on to reach anything beyond it.",
-        test: () => Object.values(links).some(l =>
+        test: () => Object.values(links).some(l => carriesTraffic(l) &&
           devices[l.a.dev] && devices[l.b.dev] &&
           devices[l.a.dev].type === "switch" && devices[l.b.dev].type === "switch") },
       { desc: "At least 2 hosts hanging off the switches",
         why: "You need traffic to actually cross the uplink to prove it works, not just exist.",
-        test: () => devsBy("host").length >= 2 },
+        test: () => devsBy("host").filter(hostOnSwitch).length >= 2 },
       { desc: "Hosts share one subnet and ping across the uplink",
         why: "This is the real test: the uplink isn't just plugged in, it's actually carrying traffic between two separate switches.",
         test: () => { const hs = devsBy("host").filter(h => h.cfg.ip);

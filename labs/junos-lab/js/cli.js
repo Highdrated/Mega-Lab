@@ -1418,7 +1418,9 @@ function hostExec(dev, cmd){
       "ping <ip-or-name>                    test reachability\n" +
       "ssh [user@]<ip-or-name>              open a CLI session on a switch, router or server\n" +
       "traceroute <ip>                      show the L3 path\n" +
-      "hostname <name>                      rename this host");
+      "hostname <name>                      rename this host\n" +
+      "clear                                wipe this terminal screen");
+  if(cmd === "clear"){ dev.cli.log.length = 0; return []; }
   if(parts[0] === "hostname"){
     if(!parts[1] || !/^[\w.-]+$/.test(parts[1])) return lines("err", "usage: hostname <name>");
     dev.name = parts[1];

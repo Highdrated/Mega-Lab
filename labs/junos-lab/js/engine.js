@@ -1198,8 +1198,13 @@ function pingWalk(startDev, pkt0, opts){
          l3eps.find(e => e.dev && isVrrpVip(e.dev, targetIp)));
     if(!found){
       const what = r.type === "connected" ? pkt.dst : r.type === "peer" ? "the provider-side peer" : `next-hop ${r.nh}`;
+      const cabs = linksOf(node.id, r.iface.name).map(e => e[1]);
+      const serialOnly = cabs.length > 0 && cabs.every(l => l.kind === "console");
+      const lead = serialOnly
+        ? `the only cable on ${r.iface.name} is a Console lead, which is serial and carries no network traffic: swap it for a LAN / Data cable`
+        : "no L2 path: check cabling, VLANs and link state";
       return fail(
-        `From ${ifaceIpOf(node) || "local"}: Destination Host Unreachable  (ARP for ${what} got no answer out ${r.iface.name} on ${hostnameOf(node)} — no L2 path: check cabling, VLANs and link state)`,
+        `From ${ifaceIpOf(node) || "local"}: Destination Host Unreachable  (ARP for ${what} got no answer out ${r.iface.name} on ${hostnameOf(node)} — ${lead})`,
         "no L2 path / ARP failed");
     }
     if(found.fIn){
