@@ -1,7 +1,7 @@
 /* JunOS Lab service worker — after one visit over http(s), the whole lab
    works with no server running at all. Network-first so updates land when a
    server IS present; cache answers when it is not. */
-const CACHE = "junoslab-v34";
+const CACHE = "junoslab-v35";
 const FILES = [
   "./",
   "./index.html",
@@ -39,7 +39,7 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if(e.request.method !== "GET") return;
   e.respondWith(
-    fetch(e.request)
+    fetch(e.request, { cache: "no-cache" })
       .then(res => {
         const copy = res.clone();
         caches.open(CACHE).then(c => c.put(e.request, copy)).catch(() => {});
