@@ -448,6 +448,19 @@ body.cur, body.cur * { cursor: none !important; }
   .tray { gap: 8px; }
   .cu-status { bottom: 96px; font-size: 12px; }
 }
+.flame { animation-name: flickcalm; animation-duration: 7s; filter: none; transition: none; opacity: .5; }
+.flame.f2 { animation-duration: 8.5s; }
+.flame.f3 { animation-duration: 9.5s; }
+@keyframes flickcalm { 0%, 100% { opacity: .5; } 50% { opacity: .58; } }
+#main::after { background: linear-gradient(172deg, rgba(190, 215, 235, .06) 0%, rgba(190, 215, 235, .02) 16%, transparent 30%); }
+#left::after { background: linear-gradient(172deg, rgba(190, 215, 235, .06), transparent 30%); }
+body.v-focus .flame, body.v-manual .flame { opacity: .22; animation: none; }
+.dof { -webkit-mask: linear-gradient(90deg, #000 29%, transparent 30.8%, transparent 66.8%, #000 68.6%), linear-gradient(180deg, #000 28.5%, transparent 30.5%, transparent 73%, #000 75.5%);
+  mask: linear-gradient(90deg, #000 29%, transparent 30.8%, transparent 66.8%, #000 68.6%), linear-gradient(180deg, #000 28.5%, transparent 30.5%, transparent 73%, #000 75.5%); }
+#main .term { animation: none; }
+body.fx-enter #g-main, body.fx-enter .spill { opacity: var(--lum, .8); filter: blur(14px); }
+body.fx-enter .spill { filter: none; }
+.mote { mix-blend-mode: normal; filter: none; }
 </style>
 </head>
 <body class="v-stand">
@@ -480,6 +493,7 @@ body.cur, body.cur * { cursor: none !important; }
           <button class="row con" data-app="console" id="h-conrow"><span class="n">Console</span><span class="d" id="h-con">acc-sw-01 in rack R1</span><span class="m" id="h-conm">no cable</span></button>
           <button class="row" data-app="rehearse"><span class="n">Rehearse</span><span class="d">your own mistakes, redone</span><span class="m" id="h-rh"></span></button>
           <button class="row" data-app="terminal"><span class="n">Terminal</span><span class="d">command drills, day zero to rescue</span><span class="m" id="h-rev"></span></button>
+          <button class="row" data-app="rehearse"><span class="n">Rehearsal</span><span class="d">what you missed or needed hints for</span><span class="m" id="h-reh"></span></button>
           <button class="row" data-app="track"><span class="n">Track</span><span class="d">your guided path</span><span class="m"></span></button>
           <button class="row" data-app="mix"><span class="n">Daily mix</span><span class="d">ten minutes, keep the streak</span><span class="m" id="h-mix"></span></button>
           <button class="row" data-app="scenarios"><span class="n">Scenarios</span><span class="d">something is broken, fix it</span><span class="m"></span></button>
@@ -3486,8 +3500,8 @@ function openApp(a) {
 function sizeApp() {
   const wrap = $("#appwrap"), f = wrap.querySelector("iframe");
   if (!f) return;
-  const vh = Math.round(780 * 1.2 / (fs || 1.2));
-  const W = Math.max(1120, Math.round(wrap.clientWidth / Math.max(1, wrap.clientHeight) * vh)), s = wrap.clientWidth / W;
+  const vh = Math.round(600 * 1.2 / (fs || 1.2));
+  const W = Math.max(900, Math.round(wrap.clientWidth / Math.max(1, wrap.clientHeight) * vh)), s = wrap.clientWidth / W;
   f.style.width = W + "px";
   f.style.height = wrap.clientHeight / s + "px";
   f.style.transform = `scale(${s})`;
@@ -3504,6 +3518,11 @@ function paintHome() {
   let rev = 0, mix = "";
   try { const jr = JSON.parse(localStorage.getItem("junle_review") || "null"); if (jr && jr.items) rev = Object.values(jr.items).filter((x) => x && x.due <= Date.now()).length; } catch (e) {}
   try { const m = JSON.parse(localStorage.getItem("junle_mix") || "null"); if (m && m.streak) mix = "streak " + m.streak; } catch (e) {}
+  let reh = 0;
+  try { const jm = JSON.parse(localStorage.getItem("junle_mistakes") || "null"); if (jm && jm.items) reh += Object.keys(jm.items).filter((k) => k.indexOf("quiz:") !== 0).length; } catch (e) {}
+  try { const hl = JSON.parse(localStorage.getItem("junoslab-hintlog") || "{}") || {}; reh += Object.values(hl).filter((h) => h && !h.clean && ((h.hints || 0) > 0 || (h.errs || 0) >= 5)).length; } catch (e) {}
+  $("#h-reh").textContent = reh ? reh + " waiting" : "";
+  $("#h-reh").classList.toggle("hot", reh > 0);
   $("#h-rev").textContent = rev ? rev + " due" : "";
   $("#h-rev").classList.toggle("hot", rev > 0);
   $("#h-mix").textContent = mix;
