@@ -1622,7 +1622,23 @@ function renderScenBoard(){
     board.appendChild(row);
   });
 }
+const SCEN_ART = { empty: "basics", starter: "starter", site: "site", colo: "colo", bgp: "bgp", desks: "desks" };
+function scenBandOf(s){ return SCEN_BANDS.find(b => b.groups.includes(SCEN_GROUPS.indexOf(scenGroup(s)))) || null; }
+function renderScenArt(){
+  const box = document.getElementById("scen-art");
+  if(!box) return;
+  const band = SCENARIOS.indexOf(currentScenario) >= 0 ? scenBandOf(currentScenario) : null;
+  const key = band && SCEN_ART[band.key];
+  if(!key || examState.active){ box.style.display = "none"; return; }
+  const img = document.getElementById("scen-art-img");
+  const src = "img/scene-" + key + ".webp";
+  img.onerror = () => { box.style.display = "none"; };
+  img.onload = () => { box.style.display = "block"; };
+  if(img.getAttribute("src") !== src) img.setAttribute("src", src); else if(img.complete && img.naturalWidth) box.style.display = "block";
+  document.getElementById("scen-art-label").textContent = band.title;
+}
 function renderScenarioMeta(){
+  renderScenArt();
   document.getElementById("scen-title").textContent = currentScenario.title;
   document.getElementById("scen-desc").textContent = currentScenario.desc;
   const introEl = document.getElementById("scen-intro");

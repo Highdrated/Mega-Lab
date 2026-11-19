@@ -4789,6 +4789,18 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   wipeLab();
 }
 
+/* ---------- T87: scene art per band ---------- */
+{
+  wipeLab();
+  pickScenario(SCENARIOS.findIndex(x => x.id === "colo-mystery-port"));
+  ok(document.getElementById("scen-art-img").getAttribute("src") === "img/scene-colo.webp" && document.getElementById("scen-art-label").textContent === "Multi-tenant datacenter", "T87 a datacenter scenario asks for the datacenter scene");
+  pickScenario(SCENARIOS.findIndex(x => x.id === "bgp-local-as"));
+  ok(document.getElementById("scen-art-img").getAttribute("src") === "img/scene-bgp.webp", "T87 a BGP scenario asks for the BGP scene");
+  ok(SCEN_BANDS.every(b => !!SCEN_ART[b.key]) && Object.values(SCEN_ART).every(k => __HTML !== undefined), "T87 every band has a scene");
+  pickScenario(0);
+  wipeLab();
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

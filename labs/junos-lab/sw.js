@@ -1,13 +1,20 @@
 /* JunOS Lab service worker — after one visit over http(s), the whole lab
    works with no server running at all. Network-first so updates land when a
    server IS present; cache answers when it is not. */
-const CACHE = "junoslab-v47";
+const CACHE = "junoslab-v48";
 const FILES = [
   "./",
   "./index.html",
   "./manifest.webmanifest",
   "./icon-180.png",
   "./icon-512.png",
+  "./img/scene-basics.webp",
+  "./img/scene-starter.webp",
+  "./img/scene-site.webp",
+  "./img/scene-desks.webp",
+  "./img/scene-colo.webp",
+  "./img/scene-bgp.webp",
+  "./img/scene-noc.webp",
   "./css/style.css",
   "./js/core.js",
   "./js/rank.js",
