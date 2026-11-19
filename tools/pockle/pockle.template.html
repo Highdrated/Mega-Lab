@@ -49,7 +49,9 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .sect { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
 .welcome { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--muted); margin-bottom: 10px; }
 .welcome b { color: var(--text); }
-.junie { width: 64px; height: 64px; object-fit: contain; }
+.junie { width: 64px; height: 64px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); transition: filter .4s; }
+.junie.sleep { filter: grayscale(1) brightness(.85); }
+.ticket .dg { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; vertical-align: -5px; margin-right: 6px; border: 1px solid var(--line); }
 .nextup { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; text-align: left; width: 100%; background: var(--term-bg); color: var(--term-text); border: 0; border-radius: 14px; padding: 14px 16px; min-height: 78px; }
 .nextup small { display: block; font-family: var(--mono); font-size: 11px; color: var(--term-muted); letter-spacing: .1em; text-transform: uppercase; }
 .nextup strong { display: block; font-family: var(--serif); font-size: 20px; font-weight: 500; margin-top: 3px; }
@@ -110,7 +112,10 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .fb { margin-top: 12px; font-size: 14px; line-height: 1.55; display: none; border-top: 1px solid var(--line); padding-top: 10px; }
 .fb.on { display: block; }
 .fbrow { display: grid; grid-template-columns: 1fr 60px; gap: 8px; align-items: start; }
-.fbrow img { width: 60px; height: 60px; object-fit: contain; }
+.fbrow img { width: 60px; height: 60px; object-fit: cover; border-radius: 50%; border: 2px solid var(--line); }
+.fbrow img.good { border-color: var(--good); animation: dgpop .5s ease-out; }
+.fbrow img.bad { border-color: var(--bad); filter: saturate(.45); transform: rotate(-10deg); }
+@keyframes dgpop { 0% { transform: scale(.7); } 60% { transform: scale(1.08); } 100% { transform: scale(1); } }
 .verdict { font-weight: 700; display: block; }
 .verdict.good { color: var(--good); }
 .verdict.bad { color: var(--bad); }
@@ -123,7 +128,7 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .btn { height: 50px; border-radius: 11px; border: 1px solid var(--line); background: var(--panel); font-weight: 600; }
 .btn.main { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 .result { text-align: center; padding-top: 10px; }
-.result img { width: 110px; height: 110px; object-fit: contain; }
+.result img { width: 150px; height: 150px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); }
 .result .num { font-family: var(--serif); font-size: 60px; line-height: 1.1; }
 .result .lbl { color: var(--muted); font-size: 13px; }
 .result .line { margin-top: 16px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
@@ -227,7 +232,7 @@ body.ext .pane.on { display: block; }
   <div class="rail"><span id="rank">Cadet</span><div class="bar"><i id="xpbar"></i></div><span><b id="xp">0</b> xp · <b id="streak">0</b>d</span></div>
 
   <section class="screen on" id="home">
-    <div class="welcome"><img class="junie" id="welcomeImg" src="img/junie/junie-wave.webp" alt=""><div id="welcomeTxt"></div></div>
+    <div class="welcome"><img class="junie" id="welcomeImg" src="img/pockle/dragon-night.webp" alt=""><div id="welcomeTxt"></div></div>
     <button class="nextup" id="mixBtn"><span><small id="mixSub">mix 10</small><strong>Pocket mix</strong></span><span class="go">start</span></button>
     <div class="quick">
       <button class="qbtn" id="missBtn"><strong>Mistakes</strong><small id="missSub">nothing yet</small></button>
@@ -259,7 +264,7 @@ body.ext .pane.on { display: block; }
 
   <section class="screen" id="result">
     <div class="result">
-      <img id="resImg" src="img/junie/junie-cheer.webp" alt="">
+      <img id="resImg" src="img/pockle/dragon-night.webp" alt="">
       <div class="num" id="resNum">0</div>
       <div class="lbl" id="resSub">correct</div>
       <div class="line">
@@ -303,7 +308,19 @@ const SLOW_BY = { fill: 12000, bug: 15000, build: 25000, order: 25000, trace: 45
 const SPRINTABLE = c => !c.t || c.t === "fill" || c.t === "bug";
 const TNAME = { fill: "fill the gap", build: "build it", order: "put in order", bug: "find the bug", trace: "trace the loop" };
 function slowFor(c) { return SLOW_BY[c.t] || SLOW; }
-const JUNIE = { good: ["junie-cheer", "junie-point", "junie-swim"], bad: ["junie-think", "junie-confused", "junie-worry"] };
+const DRAGON_OF = {
+  "junle": "night", "junos-lab": "night", "subnle-pocket": "night", "shelle": "night", "git-lab": "night",
+  "pyle": "jade", "pyle-pocket": "jade", "sleeple": "jade", "modle": "jade",
+  "passle": "ember", "seqle": "ember",
+  "hexle": "pearl", "webble": "pearl", "spelle": "pearl", "rebble": "pearl"
+};
+function dragonOf(lab) { return DRAGON_OF[lab] || "night"; }
+function dragonImg(d, small) { return "img/pockle/dragon-" + d + (small ? "-head" : "") + ".webp"; }
+function topDragon(cards) {
+  const n = {}; let best = "night", hi = 0;
+  cards.forEach(c => { const d = dragonOf(c.lab); n[d] = (n[d] || 0) + 1; if (n[d] > hi) { hi = n[d]; best = d; } });
+  return best;
+}
 
 function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
 function lsSet(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
@@ -414,10 +431,10 @@ function paintHome() {
   const totalUnits = LABSTATE.reduce((n, l) => n + l.units.length, 0);
   const due = dueCards(POOL).length, miss = missCards(POOL).length;
   if (!unlockedLabs.length) {
-    $("welcomeImg").src = "img/junie/junie-sleep.webp";
+    $("welcomeImg").src = dragonImg("night"); $("welcomeImg").classList.add("sleep");
     $("welcomeTxt").innerHTML = "Nothing to quiz yet. Finish a lesson in any lab and its cards show up here. On another device? Use <b>Send to phone</b> in the Workshop and scan the code.";
   } else {
-    $("welcomeImg").src = "img/junie/junie-wave.webp";
+    $("welcomeImg").src = dragonImg(topDragon(dueCards(POOL).length ? dueCards(POOL) : POOL)); $("welcomeImg").classList.remove("sleep");
     $("welcomeTxt").innerHTML = "Only what you've already done. <b>" + POOL.length + " cards</b> from <b>" + totalUnits + " finished lessons</b> across <b>" + unlockedLabs.length + " labs</b>. Tap only, no typing.";
   }
   $("mixBtn").disabled = !POOL.length;
@@ -467,7 +484,7 @@ function start(mode, cards, label) {
   show("drill"); render();
 }
 
-function head(c) { return '<div class="ticket"><span class="lt">' + esc(c.labName) + (flagged(c) ? ' <i class="flag">lab redo</i>' : "") + '</span><span>' + esc(c.t ? TNAME[c.t] + " · " + c.unitTitle : c.unitTitle) + '</span></div>'; }
+function head(c) { return '<div class="ticket"><span class="lt"><img class="dg" src="' + dragonImg(dragonOf(c.lab), true) + '" alt="">' + esc(c.labName) + (flagged(c) ? ' <i class="flag">lab redo</i>' : "") + '</span><span>' + esc(c.t ? TNAME[c.t] + " · " + c.unitTitle : c.unitTitle) + '</span></div>'; }
 function tgt(c, label, v) { return '<div class="target">' + esc(label) + '<pre>' + esc(v) + '</pre></div>'; }
 function guessRow() { return R.mode === "sprint" ? "" : '<div class="qtools"><button class="guess" id="guessBtn"><i></i>I\'m guessing</button></div>'; }
 function wireGuess() {
@@ -634,7 +651,6 @@ function settle(c, right, extra) {
   const dot = $("dots").children[R.i]; if (dot) dot.className = right ? (guess ? "on" : "good") : "bad";
   $("ok").textContent = R.ok;
   if (sprint) { $("count").textContent = R.ok + " right"; setTimeout(advance, right ? 450 : 1100); return; }
-  const pic = JUNIE[right && !guess ? "good" : "bad"][Math.floor(Math.random() * 3)];
   const verdict = right ? (guess ? "Right, but a guess." : "Right.") : "Not quite.";
   const note = right && guess ? " A lucky guess does not count as known yet, so it comes back tomorrow."
     : slow ? " Right, but it took " + Math.round(dt / 1000) + "s. It comes back tomorrow to get faster."
@@ -642,7 +658,7 @@ function settle(c, right, extra) {
   const fb = $("fb"); fb.classList.add("on");
   fb.innerHTML = '<div class="fbrow"><div><span class="verdict ' + (right ? (guess ? "warn" : "good") : "bad") + '">' + verdict + '</span>' + inl(c.why) + note
     + (extra ? '<div style="margin-top:6px">' + extra + '</div>' : "")
-    + '<div style="margin-top:6px"><a href="' + esc(c.href) + '">revisit in ' + esc(c.labName) + '</a></div></div><img src="img/junie/' + pic + '.webp" alt=""></div>';
+    + '<div style="margin-top:6px"><a href="' + esc(c.href) + '">revisit in ' + esc(c.labName) + '</a></div></div><img class="' + (right && !guess ? "good" : "bad") + '" src="' + dragonImg(dragonOf(c.lab), true) + '" alt=""></div>';
   $("nextBtn").textContent = R.i + 1 < R.cards.length ? "Next" : "Finish";
   $("nextBtn").classList.add("on");
   setTimeout(() => fb.scrollIntoView({ behavior: "smooth", block: "nearest" }), 30);
@@ -673,7 +689,7 @@ function finish() {
     if (R.newM) msg += " " + R.newM + " card" + (R.newM > 1 ? "s" : "") + " newly mastered.";
     if (R.guesses) msg += " " + R.guesses + " guess" + (R.guesses > 1 ? "es" : "") + " come" + (R.guesses > 1 ? "" : "s") + " back tomorrow.";
   }
-  $("resImg").src = "img/junie/" + (cls === "good" ? "junie-cheer" : "junie-think") + ".webp";
+  $("resImg").src = dragonImg(topDragon(R.cards.slice(0, Math.max(answered, 1))));
   $("resNum").textContent = R.ok;
   $("resSub").textContent = R.mode === "sprint" ? "right in 60 seconds" : "correct of " + answered;
   $("resAcc").textContent = (answered ? Math.round(R.ok / answered * 100) : 0) + "%";
