@@ -13,7 +13,7 @@ try:
         pg.on("pageerror", lambda e: errs.append(str(e)))
         pg.on("console", lambda m: m.type == "error" and errs.append(m.text))
         pg.goto(URL); pg.evaluate("localStorage.clear()"); pg.reload()
-        assert pg.is_disabled("#mixBtn"), "mix should be disabled with no progress"
+        assert not pg.is_disabled("#mixBtn"), "Juniper rehearsals should be available with no progress"
         print("empty:", pg.inner_text("#welcomeTxt")[:60])
         pg.screenshot(path=sys.argv[1] + "/shot-empty.png", full_page=True)
 
@@ -24,7 +24,7 @@ try:
         pg.reload()
         state = pg.evaluate("LABSTATE.map(l=>[l.b.id,l.units.map(u=>u.id),l.cards.length])")
         for (lid, units, n), bk in zip(state, info):
-            ok = sorted(units) == sorted(bk["sd"])
+            ok = sorted(units) == sorted(bk["sd"]) or (lid in ("junle", "junos-lab") and n == bk["n"])
             print(f"{lid:14} unlocked {len(units):2} units {n:4} cards / {bk['n']:4}  {'ok' if ok else 'MISMATCH'}")
             if not ok: errs.append("unlock mismatch " + lid)
         pg.screenshot(path=sys.argv[1] + "/shot-home.png", full_page=True)

@@ -332,12 +332,14 @@ function today() { const d = new Date(); return Math.floor((d - d.getTimezoneOff
 function hash(s) { let h = 2166136261; for (let i = 0; i < s.length; i++) { h ^= s.charCodeAt(i); h = Math.imul(h, 16777619); } return (h >>> 0).toString(36); }
 function getter(k) { const v = lsGet(k); if (v == null) return null; try { return JSON.parse(v); } catch (e) { return v; } }
 
+const OPEN_LABS = ["junle", "junos-lab"];
 let POOL = [], LABSTATE = [];
 function scan() {
   POOL = []; LABSTATE = [];
   for (const b of BANKS) {
     let done = [], weak = [];
     try { done = b.done(getter) || []; } catch (e) { done = []; }
+    if (OPEN_LABS.includes(b.id)) done = b.units.map(u => u.id);
     try { weak = (b.weak ? b.weak(getter) : []) || []; } catch (e) { weak = []; }
     const flagAt = {};
     weak.forEach(w => { if (w && w.u && b.units.some(u => u.id === w.u)) flagAt[w.u] = Math.max(flagAt[w.u] || 0, w.at || 1); });
@@ -435,7 +437,10 @@ function paintHome() {
     $("welcomeTxt").innerHTML = "Nothing to quiz yet. Finish a lesson in any lab and its cards show up here. On another device? Use <b>Send to phone</b> in the Workshop and scan the code.";
   } else {
     $("welcomeImg").src = dragonImg(topDragon(dueCards(POOL).length ? dueCards(POOL) : POOL)); $("welcomeImg").classList.remove("sleep");
-    $("welcomeTxt").innerHTML = "Only what you've already done. <b>" + POOL.length + " cards</b> from <b>" + totalUnits + " finished lessons</b> across <b>" + unlockedLabs.length + " labs</b>. Tap only, no typing.";
+    const openN = POOL.filter(c => OPEN_LABS.includes(c.lab)).length, doneN = POOL.length - openN;
+    const doneLabs = unlockedLabs.filter(l => !OPEN_LABS.includes(l.b.id)).length;
+    $("welcomeTxt").innerHTML = (doneN ? "<b>" + doneN + " cards</b> from lessons you finished in <b>" + doneLabs + " lab" + (doneLabs === 1 ? "" : "s") + "</b>, plus " : "")
+      + "<b>" + openN + " Juniper rehearsal cards</b> that are always open. Tap only, no typing.";
   }
   $("mixBtn").disabled = !POOL.length;
   $("mixSub").textContent = due ? due + " due for review · mix 10" : "mix 10 · all labs shuffled";
