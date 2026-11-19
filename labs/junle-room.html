@@ -335,7 +335,7 @@ svg.dia .dr { font-family: var(--read); }
 .row .n { letter-spacing: .32cqw; font-size: 1.5cqw; color: var(--ink); text-transform: uppercase; transition: color .2s; }
 .row .d { color: var(--dim); font-size: 1.5cqw; }
 .row .m { color: var(--faint); font-size: 1.35cqw; letter-spacing: .1cqw; }
-.row .m.hot { color: var(--amber); }
+.row .m.lit { color: var(--amber); }
 .row:hover { background: rgba(224, 168, 62, .035); }
 .row:hover .n { color: var(--amber); }
 .row.con { margin-bottom: 2.2cqh; border: 1px solid rgba(134, 199, 155, .22); border-radius: 2px; padding: 1.9cqh 1.6cqw; }
@@ -3601,13 +3601,11 @@ function paintHome() {
   let rev = 0, mix = "";
   try { const jr = JSON.parse(localStorage.getItem("junle_review") || "null"); if (jr && jr.items) rev = Object.values(jr.items).filter((x) => x && x.due <= Date.now()).length; } catch (e) {}
   try { const m = JSON.parse(localStorage.getItem("junle_mix") || "null"); if (m && m.streak) mix = "streak " + m.streak; } catch (e) {}
-  let reh = rhDue().length + drillReh();
-  try { const jm = JSON.parse(localStorage.getItem("junle_mistakes") || "null"); if (jm && jm.items) reh += Object.keys(jm.items).filter((k) => k.indexOf("quiz:") !== 0).length; } catch (e) {}
-  try { const hl = JSON.parse(localStorage.getItem("junoslab-hintlog") || "{}") || {}; reh += Object.values(hl).filter((h) => h && !h.clean && ((h.hints || 0) > 0 || (h.errs || 0) >= 5)).length; } catch (e) {}
+  const reh = rhDue().length + drillReh();
   $("#h-reh").textContent = reh ? reh + " waiting" : "";
-  $("#h-reh").classList.toggle("hot", reh > 0);
+  $("#h-reh").classList.toggle("lit", reh > 0);
   $("#h-rev").textContent = rev ? rev + " due" : "";
-  $("#h-rev").classList.toggle("hot", rev > 0);
+  $("#h-rev").classList.toggle("lit", rev > 0);
   $("#h-mix").textContent = mix;
 }
 setInterval(() => { if (mainMode === "home") paintHome(); }, 20000);
