@@ -24,7 +24,7 @@ try:
         pg.reload()
         state = pg.evaluate("LABSTATE.map(l=>[l.b.id,l.units.map(u=>u.id),l.cards.length])")
         for (lid, units, n), bk in zip(state, info):
-            ok = sorted(units) == sorted(bk["sd"]) or (lid in ("junle", "junos-lab") and n == bk["n"])
+            ok = sorted(units) == sorted(bk["sd"]) or (lid in ("junos-oops", "junle", "junos-lab") and n == bk["n"])
             print(f"{lid:14} unlocked {len(units):2} units {n:4} cards / {bk['n']:4}  {'ok' if ok else 'MISMATCH'}")
             if not ok: errs.append("unlock mismatch " + lid)
         pg.screenshot(path=sys.argv[1] + "/shot-home.png", full_page=True)
