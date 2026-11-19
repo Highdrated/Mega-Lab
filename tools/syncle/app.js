@@ -42,7 +42,9 @@ function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
 function gateOpen(g) { return gateNeed(g || GATE).every((m) => synced(m.id)); }
-function gateHero(g) { return g.hero === "desync" ? ' style="background-image:url(img/syncle/desync.jpg)"' : ""; }
+function heroImg(g) { if (!g) return ""; const f = g.type === "break" ? "break" : ({ halvard: "gate-halvard", incident: "gate-voicemail", automate: "gate-handover", polder: "gate-polder" })[g.id] || "gate-halvard"; return "img/syncle/" + f + ".jpg"; }
+function gateHero(g) { return ' style="background-image:url(' + heroImg(g) + ')"'; }
+function setSeqBg(seq) { const src = "img/syncle/seq" + seq + ".jpg"; const bgs = document.querySelectorAll("#corridor .bg"); const top = bgs[bgs.length - 1]; if (top.dataset.src === src) return; const n = top.cloneNode(); n.dataset.src = src; n.style.backgroundImage = "url(" + src + ")"; n.style.opacity = "0"; top.after(n); requestAnimationFrame(() => requestAnimationFrame(() => { n.style.opacity = "1"; })); setTimeout(() => { document.querySelectorAll("#corridor .bg").forEach((b) => { if (b !== n) b.remove(); }); }, 1300); }
 function drillKey(m, i) { return m.id + ":" + i; }
 function drillsDone(m) { return (DRILLS[m.id] || []).filter((_, i) => S.drills[drillKey(m, i)]).length; }
 function syncPct() { const nd = Object.values(DRILLS).reduce((a, x) => a + x.length, 0); const allT = GATES.flatMap((g) => g.tickets); const total = MEMORIES.length * 3 + allT.length + nd; const n = MEMORIES.filter((m) => synced(m.id)).length * 3 + allT.filter((t) => S.gate[t.id]).length + Object.keys(S.drills).length; return Math.min(100, Math.round(n / total * 100)); }
@@ -72,6 +74,7 @@ function renderCorridor() {
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
+  setSeqBg(seq);
   $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : "REAL WORLD");
   $("stName").textContent = sq.name; $("stBlurb").textContent = sq.blurb;
   let h = "<h4>THE CURVE</h4>";
@@ -96,7 +99,7 @@ function renderCorridor() {
   $("pdone").setAttribute("points", pts.slice(0, firstOpen + 1).map((p) => p[0] + "," + p[1]).join(" "));
   $("pahead").setAttribute("points", pts.slice(firstOpen).map((p) => p[0] + "," + p[1]).join(" "));
   const last = pts[pts.length - 1];
-  const gb = $("gatebg"); gb.classList.toggle("hide", !sg); gb.style.backgroundImage = sg && sg.hero === "desync" ? "url(img/syncle/desync.jpg)" : ""; gb.style.left = last[0] + "%"; gb.style.top = last[1] + "%";
+  const gb = $("gatebg"); gb.classList.toggle("hide", !sg); gb.style.backgroundImage = sg ? "url(" + heroImg(sg) + ")" : ""; gb.style.left = last[0] + "%"; gb.style.top = last[1] + "%";
   let nh = "";
   items.forEach((it, i) => {
     const [x, y, s] = pts[i];
@@ -615,3 +618,11 @@ document.addEventListener("keydown", (e) => {
 (function motes() { let h = ""; for (let i = 0; i < 12; i++) h += '<div class="mote" style="left:' + (8 + (i * 37) % 84) + "%;top:" + (40 + (i * 23) % 50) + "%;animation-delay:" + (i * 1.3).toFixed(1) + 's"></div>'; $("motes").innerHTML = h; })();
 window.SYNCLE = { S, R, openMemory, openGate, renderCorridor, setPhase, maybeBreak };
 renderCorridor();
+
+(function splash() {
+  let seen = false; try { seen = sessionStorage.getItem("syncle-splash") === "1"; sessionStorage.setItem("syncle-splash", "1"); } catch (e) {}
+  const s = document.getElementById("splash"); if (!s) return;
+  if (seen) { s.remove(); return; }
+  const go = () => { s.classList.add("out"); setTimeout(() => s.remove(), 900); };
+  s.onclick = go; document.addEventListener("keydown", go, { once: true }); setTimeout(go, 2600);
+})();
