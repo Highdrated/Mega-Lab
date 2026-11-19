@@ -2,6 +2,26 @@
 
 Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py` must end with `ALL OK`.
 
+## Morning summary (night of 18 to 19 November)
+
+What changed tonight:
+- New Build scenario "Set up a new switch": you carry a Juniper EX in, rack it, power it, plug the console cable and type real Junos (login, `cli`, `configure`, `set`, `commit`).
+- The Junos console answers `?` with context help, and Tab or space finishes a word.
+- ssh to the switch from your desk with a user of your own. Root over ssh is refused, as on a real switch.
+- `commit confirmed`: lock yourself out on purpose and watch the switch rescue itself.
+- Access ports in the servers VLAN, checked with `show vlans`.
+- The uplink: a trunk to sw-west-01, proven with `show ethernet-switching table`.
+- Install scenario: the Proxmox web interface on `https://192.168.0.201:8006` opens in the desk browser. Certificate warning, login with realm Linux PAM, the tree with your node and storages.
+- Install scenario: the node now has System > Network and DNS. You find vmbr0, the bridge that holds your address.
+
+Try first: "Set up a new switch" from the start (it is the biggest new piece), then the last two objectives of "Install a new server".
+
+Needs your decision:
+- Five of eight cycles went to the switch. Next: more Juniper (an SRX gateway, sw-west-01 with a typed CLI) or more Proxmox (create a cluster and add storage by clicking, troubleshooting tickets)?
+- The other eight scenarios still open straight in a terminal. Do you want the desk and server room there too, or only where hardware is touched?
+- Junos and Proxmox wording was written partly from memory (each cycle lists what was not checked). If a line looks different from your real gear, tell me which one.
+- The web interface is drawn narrow inside the desk browser, so the network list is stacked instead of a wide table. Should the browser be allowed to open large?
+
 ## House rules
 
 - Full immersion: if it does not work in real life, it does not work in the lab. Nothing is pre-filled, pre-plugged or pre-named unless the story says someone did it.
@@ -29,6 +49,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 
 - 19 Nov 01:20: the uplink. A trunk port between sw-west-02 and sw-west-01, `show ethernet-switching table` as the proof, one new objective at the end of the switch scenario (now fifteen).
 - 19 Nov 02:20: the Proxmox web interface, first slice. After the install she opens `https://192.168.0.201:8006` in the desk browser, gets past the certificate warning, logs in as root with realm Linux PAM and sees Datacenter, the node and its two storages. One new last objective in the install scenario (now fifteen).
+- 19 Nov 03:15: the web interface, second slice. The node has System > Network and System > DNS. One new last objective in the install scenario (now sixteen): find the bridge vmbr0.
 
 ## Her latest feedback (16:00 to 16:15)
 
@@ -42,7 +63,7 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 0. Juniper gear, next steps (day-zero setup over CON, ssh, `commit confirmed`, access ports and the trunk uplink are done, see Cycles). Still open: a server cabled to an access port of sw-west-02 should really answer ping (the uplink now carries the VLAN, the server side does not use it yet); an SRX as the site gateway. sw-west-01's own console is still two buttons: give it the same typed CLI, so she can build its side of the trunk herself. Keep the Junos lab's rule: if real Junos rejects it, the lab rejects it. Note for whoever picks next: five cycles in a row went to the switch. Items 1 to 4 are the Proxmox ones and deserve the next turn.
 0b. Server variety: she said "not all servers look like this". Juniper makes no servers, so servers stay generic x86, drawn like the Junos lab server (SERVER label, glyph, power button top right). Add a second and third form (2U with more disk bays, a small tower) only where it teaches something, for example which disks go to the system mirror and which to storage.
 1. Other eight scenarios still open straight in a terminal with the cluster diagram. Give them the same physical and desk context where it teaches something (add a node, a node dies, backups to the second site).
-2. Proxmox web interface on port 8006 (simulated). First slice done (open it, certificate warning, login, read-only Summary pages, see Cycles 02:20). Still open: create cluster, join, add storage and backup jobs by clicking, next to the CLI route; and the same page in the other eight scenarios, which have no desk yet.
+2. Proxmox web interface on port 8006 (simulated). Two read-only slices done (open it, certificate warning, login, Summary pages, node System > Network and DNS, see Cycles 02:20 and 03:15). Still open: create cluster, join, add storage and backup jobs by clicking, next to the CLI route; and the same page in the other eight scenarios, which have no desk yet.
 3. Troubleshooting tickets with an injected fault and no step list: wrong gateway, cable in a guest port, one feed dead, no quorum, full backup storage.
 4. Second and third server install with less help each time (spaced practice), ending in a three-node cluster built from boxes.
 5. BMC: default DHCP address should be replaced by a fixed one from the register.
@@ -102,3 +123,10 @@ Lab file: `labs/proxle.html` (single file). Test: `python3 tools/proxle/test.py`
 - Verified: gate ALL OK. Both install runs end in the web interface with the traps above. A real-keyboard run types the address, clicks Advanced and Proceed, types a wrong password, picks the wrong realm, then logs in and clicks through the tree. Screenshots at 1500x900 read (warning, login failure, notice, node summary). First version of the summary table overlapped its values; rows are now stacked.
 - Still rough: the pages are read-only, nothing can be created by clicking yet. Not checked against the documentation this cycle, written from memory: that pveproxy redirects plain http on 8006 to https, the default content of `local` (backup, ISO image, container template), and the wording of the browser warning, which is a generic one. The real login window also has a Language field and the real Summary has graphs; both are left out. The usage numbers are fixed. A VM that cannot start because virtualization is off in the BIOS is not shown in the page. The realm drop-down cuts its text at this width. Only the install scenario has a browser; in the other eight the page does not exist.
 
+
+### 19 Nov 03:15 · The web interface: System > Network and DNS on the node (backlog 2, second slice, last cycle of the night)
+- Changed: clicking the node in the tree now gives three views: Summary, System > Network, System > DNS. Network lists eno1, eno2 and the bridge vmbr0 with Active, Autostart, Ports/Slaves, CIDR and Gateway. DNS shows the search domain (the part after the first dot of the name she typed in the installer) and DNS server 1. All values are the ones she typed in the installer. New last objective in "Install a new server" (now sixteen): find the bridge the installer made. Learn first got one line, the takeaways one.
+- She will notice: her address is not on eno1. It sits on vmbr0, with eno1 as its port. That matches what `ip a` shows over ssh on the same server. eno2, which she did not cable, is not active.
+- Real-life traps in it: Network does not exist under Datacenter or under a storage, only under the node; nothing can be clicked while the "No valid subscription" notice is open; opening DNS does not count as finding the bridge; pulled cable or power still ends in a timeout.
+- Verified: gate ALL OK. Both install runs end on the Network view with the traps above. The real-mouse run clicks DNS and Network and checks that nothing overflows the browser window. Screenshot at 1500x900 read. The first version was a seven-column table like the real page; it was cut off at "Autostart" in the narrow desk browser, so each interface is now a small stacked block with the same field names.
+- Still rough: the real page is a wide table with more columns (VLAN aware, Comment) and Create, Edit and Apply Configuration buttons; here it is read-only and stacked. The real node menu has many more entries (Shell, Certificates, Hosts, Time, Disks, Updates). That the installer leaves eno2 not active and without autostart, and the exact column values for a bridge port, are from memory, not checked against the documentation this cycle. The three view buttons are a simplification of the real side menu.
