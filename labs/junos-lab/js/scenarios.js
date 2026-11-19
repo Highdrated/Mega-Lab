@@ -74,7 +74,7 @@ const SCENARIOS = [
           return hs.length >= 2 && pingOk(hs[0], hs[1].cfg.ip); } },
     ],
     hints: [
-      "Add a switch, then Add > Host twice: choose Windows PC for the first and Mac for the second, because office users sit behind those. Press the PWR button on the switch: new hardware arrives switched off. Then open the Connect menu, choose LAN / Data (not Console, which is a serial lead and carries no network traffic), and wire each PC to a numbered port on the switch.",
+      "Add a switch, then Add > Host twice: choose Windows PC for the first and Mac for the second, because office users sit behind those. If you chose Brand new, in the box, press the PWR button on the switch first: new hardware arrives switched off. Then open the Connect menu, choose LAN / Data (not Console, which is a serial lead and carries no network traffic), and wire each PC to a numbered port on the switch.",
       "Both PCs need an address, each in its own system's words. On the Windows PC: netsh interface ip set address \"Ethernet\" static 10.0.0.1 255.255.255.0. On the Mac: sudo ipconfig set en0 MANUAL 10.0.0.2 255.255.255.0. Type help on a PC if you forget.",
       "If ping still fails: show interfaces terse on the switch — are both ports up, and in the same VLAN (default is fine)?",
     ],
@@ -114,7 +114,7 @@ const SCENARIOS = [
   {
     id: "rename-switch",
     title: "2. Day-Zero Basics",
-    desc: "Every deployment starts here. Use one switch (get to its Junos prompt the way you did in scenario 1b), go into configuration mode, give it a name and a root password, and commit. Nothing you type is real until you commit.",
+    desc: "Every deployment starts here. Add one switch and choose Brand new, in the box, so you see the real first day. Get to its Junos prompt the way you did in scenario 1b, go into configuration mode, give it a name and a root password, and commit. Nothing you type is real until you commit.",
     checks: [
       { desc: "A switch has a root password set",
         why: "A factory-fresh switch lets anyone log in as root with no password. Without setting one, Junos refuses your very first commit, so nothing else can be saved either.",
@@ -447,7 +447,7 @@ const SCENARIOS = [
     ],
     hints: [
       "Load the setup and first PROVE the problem: from guest-pc, ping 10.0.10.5 — it works, because irb routing connects the VLANs.",
-      "Build the filter on sec-core: set firewall family inet filter GUEST-IN term no-ops from destination-address 10.0.10.0/24, then set … term no-ops then discard.",
+      "Build the filter on sec-core. The match: set firewall family inet filter GUEST-IN term no-ops from destination-address 10.0.10.0/24. The action: set firewall family inet filter GUEST-IN term no-ops then discard.",
       "The classic mistake: commit that alone and EVERYTHING guest dies — JunOS filters end with an implicit discard. Add set firewall family inet filter GUEST-IN term ok then accept.",
       "Apply it where guest traffic enters L3: set interfaces irb unit 20 family inet filter input GUEST-IN. Commit. Guest→ops dead, guest→gateway alive.",
     ],
@@ -637,8 +637,8 @@ const SCENARIOS = [
     ],
     hints: [
       "Reproduce first: from client-pc, ping 203.0.113.1 (works) then 8.8.8.8 (fails). READ the failure — it names the exact problem: a private source address.",
-      "On edge-1: set security nat source rule-set OFFICE from interface ge-0/0/1.0, then ... to interface ge-0/0/0.0.",
-      "The rule itself: set security nat source rule-set OFFICE rule R1 match source-address 192.168.50.0/24, and ... rule R1 then source-nat interface. Commit.",
+      "On edge-1, say where the traffic comes from and where it leaves. Inside: set security nat source rule-set OFFICE from interface ge-0/0/1.0. Outside: set security nat source rule-set OFFICE to interface ge-0/0/0.0.",
+      "The rule itself. Who: set security nat source rule-set OFFICE rule R1 match source-address 192.168.50.0/24. What happens to them: set security nat source rule-set OFFICE rule R1 then source-nat interface. Then commit.",
       "Ping 8.8.8.8 again and watch the router: the NAT tag shows your source being rewritten to 203.0.113.2 on the way out. show security nat source lists the rule.",
     ],
   },
@@ -675,7 +675,7 @@ const SCENARIOS = [
     ],
     hints: [
       "Try dhclient eth0 on the laptop first — no offers. Nothing is serving this segment yet.",
-      "The pool, on staff-sw: set access address-assignment pool STAFF family inet network 10.0.10.0/24, ... range r1 low 10.0.10.100, ... range r1 high 10.0.10.199.",
+      "The pool, on staff-sw, is three lines. The network: set access address-assignment pool STAFF family inet network 10.0.10.0/24. First address to hand out: set access address-assignment pool STAFF family inet range r1 low 10.0.10.100. Last one: set access address-assignment pool STAFF family inet range r1 high 10.0.10.199.",
       "Clients also need to learn their gateway from the lease: set access address-assignment pool STAFF family inet dhcp-attributes router 10.0.10.1.",
       "Turn the server on where the VLAN lives: set system services dhcp-local-server group LAN interface irb.10. Commit, dhclient eth0 again, and watch the DISCOVER/OFFER/REQUEST/ACK dots fly. show dhcp server binding shows the lease.",
     ],
@@ -1850,7 +1850,7 @@ document.getElementById("scen-next").onclick = () => {
   gotoScenario((i < 0 ? -1 : i) + 1);
 };
 function maskHintParts(text){
-  const re = /((?:set|delete|show|run|dhclient|traceroute|ip|ipconfig|sudo|netsh|tracert|networksetup)\s+(?:[^.!?]|\.(?=\S))*)/g;
+  const re = /(\b(?:(?:set|delete)\s+(?!the\b|a\b|an\b|at\b|it\b|this\b|mode\b|removes\b|line\b|lines\b|of\b)|show\s+(?!commands\b|the\b|a\b|it\b|you\b)|run\s+(?=show\b|ping\b|traceroute\b)|ip\s+(?=a\b|addr|route\b|r\b|link\b|n\b|neigh|-)|(?:dhclient|traceroute|ipconfig|sudo|netsh|tracert|networksetup)\s+)(?:[^.!?]|\.(?=\S))*)/g;
   const parts = [];
   let last = 0, m;
   while((m = re.exec(text))){

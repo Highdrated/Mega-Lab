@@ -116,7 +116,8 @@ function deviceExec(dev, raw){
       dev.cli.pendingPw = null;
       if(okPw){
         dev.cli.stage = null;
-        cfgSet(dev.candidate, ["system", "root-authentication", "encrypted-password"], pwHash(raw));
+        cfgSet(dev.candidate, dev.cli.pwPath || ["system", "root-authentication", "encrypted-password"], pwHash(raw));
+        dev.cli.pwPath = null;
         return [];
       }
       dev.cli.stage = "newpass";
@@ -737,7 +738,13 @@ function cfgSetCmd(dev, rest, raw){
   }
   const keys = res.keys;
   // root password: bare statement prompts (like the real box); inline stores a hash
+  if(keys.length === 6 && keys[1] === "login" && keys[2] === "user" && keys[4] === "authentication" && keys[5] === "plain-text-password"){
+    dev.cli.pwPath = keys.slice(0, 5).concat("encrypted-password");
+    dev.cli.stage = "newpass";
+    return lines("out", "New password:");
+  }
   if(keys.join(" ") === "system root-authentication plain-text-password"){
+    dev.cli.pwPath = null;
     dev.cli.stage = "newpass";
     return lines("out", "New password:");
   }

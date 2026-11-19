@@ -4765,6 +4765,30 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   wipeLab();
 }
 
+/* ---------- T86: the same faults nowhere else: typable hints everywhere, honest blur, user password prompt ---------- */
+{
+  const ph86 = /<[a-z-]+>|…|\.\.\./;
+  const bad86 = SCENARIOS.filter(x => x.hints.some(h => ph86.test(h))).map(x => x.id);
+  ok(bad86.length === 0, "T86 no hint in any scenario uses a placeholder or skips part of a command: " + bad86.join(" "));
+  const cmdsOf = h => maskHintParts(h).filter(p => p.cmd).map(p => p.t.trim());
+  [["Skip this and the hidden last rule drops all guest traffic.", 0], ["Order matters: terms run top to bottom.", 0], ["delete removes exactly the statement you name.", 0],
+   ["The prompt is where show commands live.", 0], ["Typing set at the > prompt is refused.", 0], ["Then run show vlans.", 1], ["On the PC: ip addr add 10.0.0.2/24 dev eth0.", 1],
+   ["Remove it: delete interfaces ge-0/0/2 disable.", 1]].forEach(([h, n]) => ok(cmdsOf(h).length === n, "T86 blur: " + h + " hides " + n + " command(s), got " + JSON.stringify(cmdsOf(h))));
+  const run86 = (id, devName, hintIdx) => { wipeLab(); scen(id).setup(); rebuildAllDerived(); const d = byName(devName); cli(d.id, "configure");
+    const errs = []; hintIdx.forEach(i => cmdsOf(scen(id).hints[i]).filter(c => /^set /.test(c)).forEach(c => { const r = deviceExec(d, c); if(r.some(l => l.cls === "err")) errs.push(c); })); return errs; };
+  [["filtered-segment", "sec-core", [1]], ["nat-edge", "edge-1", [1, 2]], ["dhcp-serve", "staff-sw", [1]], ["site-dia-customer", "acme-rtr", [2, 3]], ["colo-contractor-filter", "colo-core", [1]]]
+    .forEach(([id, dn, hi]) => { const e = run86(id, dn, hi); ok(e.length === 0, "T86 " + id + ": every set line in the rewritten hints is accepted as typed: " + e.join(" | ")); });
+  wipeLab(); scen("colo-named-accounts").setup(); rebuildAllDerived();
+  const c86 = byName("colo-core").id; cli(c86, "configure"); cli(c86, "set system login user noc-admin class super-user");
+  ok(/New password/.test(cli(c86, "set system login user noc-admin authentication plain-text-password")), "T86 a user password is asked for, like the real box");
+  ok(/Retype/.test(cli(c86, "Colo!2026")), "T86 and asked for twice");
+  cli(c86, "Colo!2026"); cli(c86, "set system services ssh"); cli(c86, "commit");
+  ok(!!cfgGet(byName("colo-core").config, ["system", "login", "user", "noc-admin", "authentication", "encrypted-password"]), "T86 the prompted password is stored as a hash on the user");
+  ok(!/dhclient/.test(scen("site-pool-dry").checks.map(c => c.why).join(" ")), "T86 29 talks about the Windows command for a Windows PC");
+  ok(/If you chose Brand new/.test(scen("basic-connect").hints[0]) && /Brand new, in the box/.test(scen("rename-switch").desc), "T86 1 and 2 are honest about racked versus brand-new switches");
+  wipeLab();
+}
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 

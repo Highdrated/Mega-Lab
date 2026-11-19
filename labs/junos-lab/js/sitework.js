@@ -516,7 +516,7 @@ const SITE_SCENARIOS = [
         why: "The range is the number of machines the VLAN can serve. Without enough addresses every new device is refused, however perfect its cabling is.",
         test: () => sitePoolSize("core-sw", "10.10.10.0") >= 50 },
       { desc: "new-pc holds a DHCP lease in 10.10.10.0/24",
-        why: "This confirms the fix reached the client. Without re-running dhclient the PC keeps waiting with no address.",
+        why: "This confirms the fix reached the client. Without running ipconfig /renew again the PC keeps waiting with no address.",
         test: () => siteLeased("new-pc", "10.10.10.0") },
       { desc: "pc-1 and pc-2 still reach their gateway",
         why: "You changed a live service. Without checking the existing users you cannot know whether your fix broke them.",
@@ -637,8 +637,8 @@ const SITE_SCENARIOS = [
     hints: [
       "Work outside-in: WAN first, then routing, then the LAN, then NAT. Cable acme-rtr ge-0/0/0 to the Carrier, then set interfaces ge-0/0/0 unit 0 family inet address 198.51.100.2/30, commit, and run ping 198.51.100.1.",
       "Routing and LAN: set routing-options static route 0.0.0.0/0 next-hop 198.51.100.1 and set interfaces ge-0/0/1 unit 0 family inet address 192.168.50.1/24.",
-      "DHCP on a router is the same as on a switch, bound to the LAN interface: a pool ACME with network 192.168.50.0/24, a range, dhcp-attributes router 192.168.50.1, then set system services dhcp-local-server group ACME interface ge-0/0/1.0.",
-      "NAT: set security nat source rule-set ACME from interface ge-0/0/1.0, to interface ge-0/0/0.0, rule R1 match source-address 192.168.50.0/24, rule R1 then source-nat interface. Commit, ipconfig /renew on acme-pc, ping 8.8.8.8.",
+      "DHCP on a router is the same as on a switch, bound to the LAN interface: set access address-assignment pool ACME family inet network 192.168.50.0/24. The range: set access address-assignment pool ACME family inet range r1 low 192.168.50.100. Its end: set access address-assignment pool ACME family inet range r1 high 192.168.50.199. The gateway clients learn: set access address-assignment pool ACME family inet dhcp-attributes router 192.168.50.1. Switch it on: set system services dhcp-local-server group ACME interface ge-0/0/1.0.",
+      "NAT is four lines, as in scenario 5. Inside: set security nat source rule-set ACME from interface ge-0/0/1.0. Outside: set security nat source rule-set ACME to interface ge-0/0/0.0. Who: set security nat source rule-set ACME rule R1 match source-address 192.168.50.0/24. What: set security nat source rule-set ACME rule R1 then source-nat interface. Commit, then on acme-pc: ipconfig /renew and ping 8.8.8.8.",
     ],
   },
   {
@@ -716,7 +716,7 @@ const SITE_SCENARIOS = [
     hints: [
       "Draw the path on paper first: lab-pc, lab-rtr, core-sw, edge-rtr, ISP. Every box on that path needs a route there AND a route back.",
       "Transit on core-sw: set vlans lab-transit vlan-id 98, put ge-0/0/5 in it, set interfaces irb unit 98 family inet address 10.10.98.1/30, set vlans lab-transit l3-interface irb.98. On lab-rtr: set interfaces ge-0/0/0 unit 0 family inet address 10.10.98.2/30.",
-      "On lab-rtr: set routing-options static route 0.0.0.0/0 next-hop 10.10.98.1, set interfaces ge-0/0/1 unit 0 family inet address 10.10.40.1/24, then a pool LAB plus set system services dhcp-local-server group LAB interface ge-0/0/1.0.",
+      "On lab-rtr: set routing-options static route 0.0.0.0/0 next-hop 10.10.98.1, set interfaces ge-0/0/1 unit 0 family inet address 10.10.40.1/24, then a pool called LAB for 10.10.40.0/24, built with the same four lines as the ACME pool in scenario 32 (network, range low, range high, dhcp-attributes router 10.10.40.1). Switch it on: set system services dhcp-local-server group LAB interface ge-0/0/1.0.",
       "The road back, on core-sw: set routing-options static route 10.10.40.0/24 next-hop 10.10.98.2. The edge already routes all of 10.10.0.0/16 to core-sw, so nothing is needed there.",
     ],
   },

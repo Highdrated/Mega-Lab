@@ -160,7 +160,7 @@ const COLO_SCENARIOS = [
     ],
     hints: [
       "Click bor-sw and look first: show configuration system. No login section and no services means root-at-the-console only.",
-      "In configure mode: set system login user noc-admin class super-user, then set system login user noc-admin authentication plain-text-password followed by a password.",
+      "In configure mode: set system login user noc-admin class super-user, then set system login user noc-admin authentication plain-text-password. Press Enter and Junos asks for the password twice, as it did for root.",
       "Then set system services ssh and commit.",
       "Prove it from the Windows PC: on noc-pc, ssh noc-admin@10.200.20.2. Refused means SSH is off, timed out means the path is broken.",
     ],
@@ -302,7 +302,7 @@ const COLO_SCENARIOS = [
       "Prove the leak first: from acme-web-1, ping 10.200.20.10. Then compare the three filters on colo-core with show configuration firewall. COB-IN is intact, so it shows what the other two should look like.",
       "ACME-IN lost its term for Borealis: set firewall family inet filter ACME-IN term no-borealis from destination-address 10.200.20.0/24 and set firewall family inet filter ACME-IN term no-borealis then discard.",
       "BOR-IN lost its term for Acme: the same two lines with BOR-IN, no-acme and 10.200.10.0/24.",
-      "Order matters in a filter: terms run top to bottom and the accept term must come last. After commit run show configuration firewall. If your new term landed after ok, use insert firewall family inet filter ACME-IN term no-borealis before term ok.",
+      "Order matters in a filter: terms run top to bottom and the accept term must come last. After commit run show configuration firewall. A new term always lands at the bottom, after ok, so move it up: insert firewall family inet filter ACME-IN term no-borealis before term ok.",
     ],
   },
   {
@@ -381,7 +381,7 @@ const COLO_SCENARIOS = [
     ],
     hints: [
       "See the problem from his side: on contractor-mac, ping 10.200.10.10 and ping 10.99.0.50 both answer. Look at how ACME-IN is built on colo-core for the pattern.",
-      "Block the two internal ranges: set firewall family inet filter CONTRACTOR-IN term no-customers from destination-address 10.200.0.0/16 and then discard. The same again as term no-noc for 10.99.0.0/24.",
+      "Block the two internal ranges: set firewall family inet filter CONTRACTOR-IN term no-customers from destination-address 10.200.0.0/16. Its action: set firewall family inet filter CONTRACTOR-IN term no-customers then discard. Then the same two lines again as term no-noc for 10.99.0.0/24.",
       "Let the rest through: set firewall family inet filter CONTRACTOR-IN term ok then accept.",
       "Attach it where his traffic enters: set interfaces irb unit 98 family inet filter input CONTRACTOR-IN. Commit, then ping again from the Mac.",
     ],
