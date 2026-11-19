@@ -219,6 +219,15 @@ svg text{font-family:var(--mono)}
 @keyframes in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 .foot{font-size:11.5px;color:var(--mute)}
 @media (max-width:1050px){main{grid-template-columns:1fr}.col{overflow:visible}.term{min-height:300px;max-height:50vh}body{display:block}}
+.scene{position:relative;height:190px;overflow:hidden;background:var(--bg);border-bottom:1px solid var(--line);flex:none;transition:height .5s ease}
+.scene.off{height:0;border-bottom:0}
+.scene i{position:absolute;inset:-5%;background:center/cover no-repeat;opacity:0;transition:opacity 1.2s ease;animation:scdrift 40s ease-in-out infinite alternate}
+.scene i.on{opacity:1}
+@keyframes scdrift{from{transform:scale(1.02) translate(-1.2%,.4%)}to{transform:scale(1.09) translate(1.4%,-.8%)}}
+.scap{position:absolute;left:14px;bottom:12px;font:600 10.5px var(--disp);letter-spacing:.14em;text-transform:uppercase;color:#fff;background:rgba(22,28,34,.6);padding:6px 10px;border-left:3px solid var(--warn)}
+@media (max-height:820px){.scene{height:120px}}
+.scene:after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,14,18,0) 55%,rgba(10,14,18,.55));pointer-events:none}
+.scap{z-index:1}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -233,7 +242,8 @@ svg text{font-family:var(--mono)}
 <main>
  <section class="col"><div class="pad" id="left"></div></section>
  <section class="col">
-  <div class="thead"><span id="where"></span><span class="sp"></span><button class="tog on" id="b-explain">Explain on</button><button class="tog" id="b-reset">Restart scenario</button></div>
+  <div class="thead"><span id="where"></span><span class="sp"></span><button class="tog on" id="b-scene">Scene on</button><button class="tog on" id="b-explain">Explain on</button><button class="tog" id="b-reset">Restart scenario</button></div>
+  <div class="scene" id="scene"><i></i><i></i><span class="scap" id="scap"></span></div>
   <div class="wiz" id="wiz" hidden></div>
   <div class="term" id="term"></div>
   <div class="prompt"><span id="ps1"></span><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="Command"></div>
@@ -780,7 +790,27 @@ document.addEventListener('pointerup',e=>{
  }
  else{const t=document.elementFromPoint(e.clientX,e.clientY),pt=t&&t.closest('[data-port]');if(pt&&pt.dataset.port!==d.from)doAct('rk','link:'+d.from+':'+pt.dataset.port)}
 });
-function renderAll(){renderPick();renderLeft();renderRight();$('ps1').textContent=ps1();$('where').textContent=W.inst&&W.inst.where==='room'?'in the server room':W.inst&&W.inst.app!=='term'?'at your desk':W.prompt?'waiting for your answer':W.jssh?'ssh session on the switch':W.host==='laptop'?'terminal on your laptop':`ssh session on ${W.host}`}
+function scenePick(){
+ const I=W.inst,id=cur.id;
+ if(I&&(id==='install'||id==='switch')){
+  if(I.where!=='room')return['desk','Your desk · the scriptorium'];
+  if(id==='switch')return['switch','Server room · the loom of threads'];
+  if(I.rack.box==='sealed')return['box','Server room · a crate has arrived'];
+  return[I.installed?'ready':'room',I.installed?'Server room · a new stone wakes':'Server room · the vault of stones'];
+ }
+ const down=Object.values(W.nodes).some(n=>!n.up);
+ const m={ready:['ready','pve1 · one stone, awake and alone'],create:['cluster','The cluster · stones that answer as one'],join:['join','Joining · threads between the stones'],move:['move','Shared storage · the hall of tablets'],dies:[down?'dies':'cluster',down?'A node is down · one stone has gone dark':'The cluster · all stones lit'],add:['add','A fourth node · raising a new stone'],bka:['bka','Backup A · the reliquary next door'],bkb:['bkb','Backup B · the second copy, far north']};
+ return m[id]||['room','The vault'];
+}
+let sceneOn=true;try{sceneOn=localStorage.getItem('pvelab.scene')!=='off'}catch(e){}
+function renderBanner(){
+ const el=$('scene');if(!el)return;const b=$('b-scene');b.classList.toggle('on',sceneOn);b.textContent=sceneOn?'Scene on':'Scene off';el.classList.toggle('off',!sceneOn);if(!sceneOn)return;
+ const [k,cap]=scenePick();$('scap').textContent=cap;if(el.dataset.k===k)return;el.dataset.k=k;
+ const url='img/proxle/'+k+'.jpg',im=new Image();
+ im.onload=()=>{if(el.dataset.k!==k)return;const L=el.querySelectorAll('i'),cur=L[0].classList.contains('on')?0:1,nx=1-cur;L[nx].style.backgroundImage=`url(${url})`;L[nx].classList.add('on');L[cur].classList.remove('on')};
+ im.src=url;
+}
+function renderAll(){renderBanner();renderPick();renderLeft();renderRight();$('ps1').textContent=ps1();$('where').textContent=W.inst&&W.inst.where==='room'?'in the server room':W.inst&&W.inst.app!=='term'?'at your desk':W.prompt?'waiting for your answer':W.jssh?'ssh session on the switch':W.host==='laptop'?'terminal on your laptop':`ssh session on ${W.host}`}
 function load(id,keep){cur=SC.find(s=>s.id===id)||SC[0];W=cur.setup();hints=0;hist.length=0;hi=null;$('term').innerHTML='';line('sys',cur.id==='install'?'Terminal on your laptop. The new server is not reachable until it is installed.':cur.id==='switch'?'Terminal on your laptop. The new switch has no address yet.':`Scenario: ${esc(cur.t)}. You are at your own laptop. Servers are reached with ssh root@<ip>. Passwords: any root password is accepted on servers that were installed for you.`);renderWiz();renderAll();if(!keep)$('cmd').focus()}
 const DISKS=[['sda','/dev/sda (447.13 GiB, SSD)'],['sdb','/dev/sdb (447.13 GiB, SSD)'],['sdc','/dev/sdc (3.49 TiB, SSD)'],['sdd','/dev/sdd (3.49 TiB, SSD)']];
 const FS=['ext4','xfs','zfs (RAID0)','zfs (RAID1)','zfs (RAID10)'];
@@ -1269,6 +1299,7 @@ document.addEventListener('click',e=>{
  const ev=e.target.closest('[data-ev]');if(ev){const before=objIndex(),E=cur.ev[+ev.dataset.ev];const msgs=E.go(W)||[];line('sys','--- '+esc(E.l)+' ---');msgs.forEach(m=>line('sys',esc(m)));after(before);$('cmd').focus();return}
  if(e.target.id==='b-hint'){const k=objIndex();if(k>=0&&hints<cur.obj[k].h.length){hints++;renderLeft()}return}
  if(e.target.id==='b-explain'){explain=!explain;e.target.classList.toggle('on',explain);e.target.textContent=explain?'Explain on':'Explain off';return}
+ if(e.target.id==='b-scene'){sceneOn=!sceneOn;try{localStorage.setItem('pvelab.scene',sceneOn?'on':'off')}catch(x){}renderBanner();return}
  if(e.target.id==='b-reset'){load(cur.id);return}
  if(e.target.id==='b-skin'){setSkin(skin==='orbital'?'console':'orbital');return}
  if(e.target.closest('.term'))$('cmd').focus();
