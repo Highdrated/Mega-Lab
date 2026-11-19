@@ -44,6 +44,19 @@ async def main():
             k=await pg.evaluate("LAB.objIndex()")
             print(sid,'DONE' if k<0 else f'STUCK at {k}',[t[1] for t in trace] if not sid.startswith('install') else [x[1] for x in trace if isinstance(x[1],str)])
             ok=ok and k<0
+        await pg.evaluate("LAB.load('ready')")
+        async def said(c):
+            n=await pg.evaluate("document.getElementById('term').innerText.length")
+            await pg.evaluate("c=>LAB.run(c)",c)
+            return await pg.evaluate("n=>document.getElementById('term').innerText.slice(n)",n)
+        for c,want in [('/etc/resolv.conf','put cat in front'),('ping <ip>','placeholder'),('SSH root@192.168.0.201','all lowercase'),('kaatje@laptop:~$ ip route','typed the prompt'),('ls','Downloads'),('man ssh','did nothing wrong'),('ping','Destination address required'),('ssh root@192.168.0.50','Connection refused')]:
+            if want not in await said(c): print('VARIANT FAIL laptop',c); ok=False
+        for c in ['ssh root@192.168.0.201','yes','pw']: await said(c)
+        for c,want in [('pvecm status','Nothing is broken'),('ip route','default via 192.168.0.1 dev vmbr0'),('cat /etc/hostname','pve1'),('cat /etc/pve/corosync.conf','No such file'),('ls /etc/pve','storage.cfg'),('sudo pvecm status','already'),('systemctl status corosync','inactive (dead)'),('qm status 101','does not exist'),('pvecm Status','lowercase'),('whoami','root')]:
+            if want not in await said(c): print('VARIANT FAIL node',c); ok=False
+        await pg.evaluate("LAB.load('install')");await pg.evaluate("LAB.act('app','term')")
+        if 'Still to find' not in await said('cat /etc/resolv.conf'): print('VARIANT FAIL partial progress'); ok=False
+        if 'good news' not in await said('ping 192.168.0.201'): print('VARIANT FAIL free ping'); ok=False
         await pg.evaluate("LAB.load('switch')")
         for c in ['go:room','rk:adddev:sw:0','rk:mountdev:d1:2','rk:add:lap','rk:kind:power','rk:link:d1.ac:A3','rk:kind:serial','rk:link:d1.con:lap']:
             q=c.split(':',1);await pg.evaluate("([n,a])=>LAB.act(n,a)",q)
