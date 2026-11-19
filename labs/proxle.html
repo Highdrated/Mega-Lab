@@ -147,6 +147,7 @@ details .in{padding:2px 12px 12px;display:flex;flex-direction:column;gap:8px}
 .dlrow small{color:var(--mute);font-family:var(--mono);font-size:11.5px}
 .row2{display:grid;grid-template-columns:90px 1fr;align-items:center;gap:12px;font-size:13.5px;color:var(--ink2)}
 .row2 select{height:34px;border:1px solid var(--line2);background:var(--bg);color:var(--ink);font:13px var(--mono);padding:0 8px;min-width:0}
+.found{color:var(--acc)}
 .lh{list-style:none;margin:8px 0 0 -18px;font:600 10.5px var(--disp);letter-spacing:.12em;text-transform:uppercase;color:var(--acc)}
 .hit{cursor:pointer;outline:none}
 .hit text{pointer-events:none}
@@ -289,6 +290,19 @@ function storRows(W){
 }
 function vmsHere(W){return Object.values(W.vms).filter(v=>v.node===W.host)}
 function arg(a,k){const i=a.indexOf(k);return i>=0?a[i+1]:null}
+function tabc(W,v){
+ const lap=W.host==='laptop',here=W.nodes[W.host]||{},parts=v.replace(/^\s+/,'').split(/\s+/),last=parts[parts.length-1],c=parts[0];
+ const cmds=(lap?[]:['pveversion','pvecm','pvesm','qm','vzdump','qmrestore','ha-manager','openssl','systemctl']).concat(['ssh','ping','ip','cat','ls','hostname','pwd','whoami','date','clear','help','exit','uname']);
+ const subs={pvecm:['add','create','expected','nodes','status'],pvesm:['add','list','remove','status'],qm:['config','destroy','disk','list','migrate','start','status','stop'],'ha-manager':['add','status'],ip:['addr','route'],systemctl:['status']};
+ const mem=here.in&&W.cluster?W.cluster.members:lap?[]:[W.host];
+ const files=lap?['/etc/hostname','/etc/resolv.conf','Documents/','Downloads/']:['/etc/hostname','/etc/hosts','/etc/network/interfaces','/etc/resolv.conf','/etc/pve/pve-root-ca.pem','/etc/pve/storage.cfg'].concat(here.in?['/etc/pve/corosync.conf']:[],mem.map(n=>`/etc/pve/nodes/${n}/pve-ssl.pem`));
+ const pool=parts.length===1?cmds:parts.length===2&&subs[c]&&(c==='ip'||!lap)?subs[c]:parts.length===3&&c==='systemctl'&&!lap?['corosync','pve-cluster','pvedaemon','pveproxy']:/^[\/~.]/.test(last)||['cat','ls'].includes(c)||parts[parts.length-2]==='-in'?files:[];
+ const m=pool.filter(x=>x.startsWith(last));
+ if(!m.length||!last&&pool===cmds)return{v,none:!!last||parts.length>1};
+ let pre=m[0];m.forEach(x=>{while(!x.startsWith(pre))pre=pre.slice(0,-1)});
+ const one=m.length===1;parts[parts.length-1]=pre+(one&&!pre.endsWith('/')?' ':'');
+ return{v:parts.join(' '),list:!one&&pre===last?m:null};
+}
 function exec(W,line){
  let a=line.trim().split(/\s+/),c=a[0];
  const here=W.nodes[W.host]||{ip:'192.168.0.9',in:false},lap=W.host==='laptop';
@@ -639,9 +653,9 @@ function renderLeft(){
  const k=objIndex(),n=SC.indexOf(cur)+1;
  const evs=(cur.ev||[]).filter(e=>e.when(W));
  const EVBLOCK=evs.length?`<h3>Make it happen</h3><div class="row">${evs.map(e=>`<button class="btn ev" data-ev="${(cur.ev||[]).indexOf(e)}">${e.l}</button>`).join('')}</div>`:'';
- let h=`<p class="kick">Scenario ${pad(n)} of ${SC.length} · ${cur.g}</p><h2>${cur.t}</h2><p>${cur.story}</p>${W.inst&&cur.id==='install'?`<h3>Your planning sheet</h3><table class="cmds">${[['Name','host'],['Address','ip'],['Gateway','gw'],['DNS server','dns']].map(r=>`<tr><td>${r[0]}</td><td>${W.inst.plan[r[1]]?esc(W.inst.plan[r[1]]):'<span class="dim">not found yet</span>'}</td></tr>`).join('')}</table>`:''}
+ let h=`<p class="kick">Scenario ${pad(n)} of ${SC.length} · ${cur.g}</p><h2>${cur.t}</h2><p>${cur.story}</p>
  <details ${k===0&&!hist.length?'open':''} id="learn"><summary>Learn first</summary><div class="in"><ul>${cur.learn.map(x=>x[0]==='§'?`<li class="lh">${x.slice(1)}</li>`:`<li>${x}</li>`).join('')}</ul><table class="cmds">${cur.cmds.map(c=>`<tr><td>${c[0]}</td><td>${c[1]}</td></tr>`).join('')}</table></div></details>
- ${EVBLOCK}<h3>Objectives</h3><ul class="obj">${cur.obj.map((o,i)=>`<li class="${i<k||k<0?'done':i===k?'now':''}"><i></i><span class="t">${o.t}</span>${i===k?`<span class="why"><small>Why, and what if you skip it</small>${o.why}</span>`:''}</li>`).join('')}</ul>`;
+ ${W.inst&&cur.id==='install'?`<h3>Your planning sheet</h3><table class="cmds">${[['Name','host'],['Address','ip'],['Gateway','gw'],['DNS server','dns']].map(r=>`<tr><td>${r[0]}</td><td>${W.inst.plan[r[1]]?'<b class="found">'+esc(W.inst.plan[r[1]])+'</b>':'<span class="dim">not found yet</span>'}</td></tr>`).join('')}</table>`:''}${EVBLOCK}<h3>Objectives</h3><ul class="obj">${cur.obj.map((o,i)=>`<li class="${i<k||k<0?'done':i===k?'now':''}"><i></i><span class="t">${o.t}</span>${i===k?`<span class="why"><small>Why, and what if you skip it</small>${o.why}</span>`:''}</li>`).join('')}</ul>`;
  if(k>=0){const hs=cur.obj[k].h;h+=`<div class="row"><button class="btn" id="b-hint">${hints>=hs.length?'No more hints':hints?'Show the exact command':'Give me a hint'}</button></div>${hs.slice(0,hints).map((x,i)=>`<p class="hint">${i?'<code>'+esc(x)+'</code>':esc(x)}</p>`).join('')}`}
  else{const nx=SC[SC.indexOf(cur)+1];h+=`<div class="donebox"><p class="kick">Scenario complete</p><ul>${cur.take.map(x=>`<li>${x}</li>`).join('')}</ul>${nx?`<div class="row"><button class="btn" data-s="${nx.id}">Next: ${nx.t}</button></div>`:'<p>That was the last one. You have built, run and protected a cluster.</p>'}</div>`}
  h+=`<p class="foot">Output is shortened and error wording can differ a little from a real server. The commands and their order are real.</p>`;
@@ -1241,6 +1255,7 @@ $('cmd').addEventListener('keydown',e=>{
   else{const n=el.selectionStart===v.length?jsw(s,()=>jtab(s.d.j,v)).r:null;if(n){e.preventDefault();el.value=n}else if(e.key==='Tab')e.preventDefault()}
   return;
  }
+ if(e.key==='Tab'){e.preventDefault();if(W.prompt||el.selectionStart!==el.value.length)return;const r=tabc(W,el.value);el.value=r.v;if(r.list){line('in',`<span class="ok">${ps1()}</span> ${esc(r.v)}`);line('',esc(r.list.join('   ')))}else if(r.none&&!W.seen.tabnote&&explain){W.seen.tabnote=1;line('note','<b>Tab</b> finishes command names and file paths, here as on a real server. It cannot guess an address or a name you made up: those you type in full.')}return}
  if(e.key==='Enter'){const v=el.value;el.value='';hi=null;run(v)}
  else if(e.key==='ArrowUp'){e.preventDefault();if(!hist.length)return;hi=hi==null?hist.length-1:Math.max(0,hi-1);el.value=hist[hi]}
  else if(e.key==='ArrowDown'){e.preventDefault();if(hi==null)return;hi++;if(hi>=hist.length){hi=null;el.value=''}else el.value=hist[hi]}

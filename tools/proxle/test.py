@@ -57,6 +57,15 @@ async def main():
         await pg.evaluate("LAB.load('install')");await pg.evaluate("LAB.act('app','term')")
         if 'Still to find' not in await said('cat /etc/resolv.conf'): print('VARIANT FAIL partial progress'); ok=False
         if 'good news' not in await said('ping 192.168.0.201'): print('VARIANT FAIL free ping'); ok=False
+        await pg.evaluate("LAB.load('install')");await pg.evaluate("LAB.act('app','term')")
+        await pg.click('#cmd')
+        for typed,want in [('ca','cat '),('cat /etc/re','cat /etc/resolv.conf '),('ip r','ip route '),('pi','ping '),('ssh root@192','ssh root@192')]:
+            await pg.fill('#cmd',typed);await pg.keyboard.press('Tab')
+            if await pg.input_value('#cmd')!=want: print('TAB FAIL',typed,repr(await pg.input_value('#cmd'))); ok=False
+        await pg.fill('#cmd','cat /etc/resolv.conf');await pg.keyboard.press('Enter');await pg.fill('#cmd','ip route');await pg.keyboard.press('Enter')
+        lt=await pg.inner_text('#left')
+        if lt.index('YOUR PLANNING SHEET')<lt.index('LEARN FIRST') or '192.168.0.10' not in lt.split('YOUR PLANNING SHEET')[1][:200]: print('SHEET FAIL not next to the objectives'); ok=False
+        await pg.fill('#cmd','')
         await pg.evaluate("LAB.load('switch')")
         for c in ['go:room','rk:adddev:sw:0','rk:mountdev:d1:2','rk:add:lap','rk:kind:power','rk:link:d1.ac:A3','rk:kind:serial','rk:link:d1.con:lap']:
             q=c.split(':',1);await pg.evaluate("([n,a])=>LAB.act(n,a)",q)
