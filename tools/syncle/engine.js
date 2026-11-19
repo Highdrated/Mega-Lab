@@ -1280,10 +1280,13 @@ function odataFilter(f, cname) {
 const P = (pos, extra) => Object.assign({ kind: "value" }, pos === null ? {} : { pos }, extra || {});
 const S = (extra) => Object.assign({ kind: "switch" }, extra || {});
 
+const KNOWN_SCOPES = ["Application.Read.All", "Application.ReadWrite.All", "AuditLog.Read.All", "Calendars.Read", "Calendars.ReadWrite", "Device.Read.All", "DeviceManagementManagedDevices.Read.All", "Directory.AccessAsUser.All", "Directory.Read.All", "Directory.ReadWrite.All", "Files.Read.All", "Files.ReadWrite.All", "Group.Read.All", "Group.ReadWrite.All", "GroupMember.Read.All", "GroupMember.ReadWrite.All", "IdentityRiskyUser.Read.All", "LicenseAssignment.Read.All", "LicenseAssignment.ReadWrite.All", "Mail.Read", "Mail.ReadWrite", "Mail.Send", "Organization.Read.All", "Policy.Read.All", "Policy.ReadWrite.ConditionalAccess", "Reports.Read.All", "RoleManagement.Read.Directory", "RoleManagement.ReadWrite.Directory", "SecurityEvents.Read.All", "Sites.Read.All", "Sites.ReadWrite.All", "Team.ReadBasic.All", "TeamMember.ReadWrite.All", "User-PasswordProfile.ReadWrite.All", "User.Read", "User.Read.All", "User.ReadBasic.All", "User.ReadWrite.All", "UserAuthenticationMethod.Read.All", "UserAuthenticationMethod.ReadWrite.All"];
 def("Connect-MgGraph", { module: "Microsoft.Graph.Authentication", ver: "2.25.0", ctype: "Cmdlet", params: { Scopes: P(0, { type: "System.String[]" }), TenantId: P(null), NoWelcome: S(), ClientId: P(null), UseDeviceCode: S(), ContextScope: P(null) },
   run({ ctx, b }) {
-    const add = flat(b.Scopes).flatMap((s) => String(s).split(",")).map((s) => s.trim()).filter(Boolean);
-    const scopes = Array.from(new Set((ctx.mg ? ctx.mg.scopes : ["openid", "profile", "User.Read", "email"]).concat(add)));
+    const canon = (s) => KNOWN_SCOPES.find((k) => k.toLowerCase() === s.toLowerCase()) || s;
+    const add = flat(b.Scopes).flatMap((s) => String(s).split(",")).map((s) => canon(s.trim())).filter(Boolean);
+    const scopes = [];
+    for (const s of (ctx.mg ? ctx.mg.scopes : ["openid", "profile", "User.Read", "email"]).concat(add)) if (!scopes.some((x) => x.toLowerCase() === s.toLowerCase())) scopes.push(s);
     ctx.mg = { scopes, account: "kaatje@" + ctx.t.domain };
     if (!b.NoWelcome) ctx.host.push({ text: "Welcome to Microsoft Graph!\n\nConnected via delegated access using 14d82eec-204b-4c2f-b7e8-296a70dab67e\nReadme: https://aka.ms/graph/sdk/powershell\nSDK Docs: https://aka.ms/graph/sdk/powershell/docs\nAPI Docs: https://aka.ms/graph/docs\n\nNOTE: You can use the -NoWelcome parameter to suppress this message." });
     return [];

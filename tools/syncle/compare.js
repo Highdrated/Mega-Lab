@@ -40,12 +40,13 @@ const CMP = (() => {
         else out.push("Same number of rows, different values. Look at the rows marked on both sides.");
       }
     }
+    if (!out.length && mine.toLowerCase().replace(/\s+/g, " ") === exp.toLowerCase().replace(/\s+/g, " ")) out.push("Only upper and lower case differ. Look at the marked lines: a value you typed is shown exactly as you typed it.");
     if (!out.length) out.push("Close. Compare the marked lines: spelling, spacing or a property name.");
     return out;
   }
   function panel(mine, exp, escf) {
     const ml = mine.split("\n"), el = exp.split("\n");
-    const nm = (l) => l.trim().replace(/\s+/g, " ").toLowerCase();
+    const nm = (l) => l.trim().replace(/\s+/g, " ");
     const mset = new Set(ml.map(nm)), eset = new Set(el.map(nm));
     const col = (lines, other) => lines.map((l) => { const t = l.trim(); const bad = t && !/^-+(\s+-+)*$/.test(t) && !other.has(nm(l)); return '<span class="' + (bad ? "dx" : "") + '">' + escf(l || " ") + "</span>"; }).join("\n");
     return '<div class="cmp"><div class="cmpb"><div><span class="cmpl">YOURS</span><pre>' + col(ml.slice(0, 40), eset) + '</pre></div><div><span class="cmpl">EXPECTED</span><pre>' + col(el.slice(0, 40), mset) + '</pre></div></div><ul class="cmpt">' + tips(mine, exp).map((t) => "<li>" + escf(t) + "</li>").join("") + "</ul></div>";
