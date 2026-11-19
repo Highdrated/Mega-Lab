@@ -20,6 +20,7 @@ Needs your decision:
 - Five of eight cycles went to the switch. Next: more Juniper (an SRX gateway, sw-west-01 with a typed CLI) or more Proxmox (create a cluster and add storage by clicking, troubleshooting tickets)?
 - The other eight scenarios still open straight in a terminal. Do you want the desk and server room there too, or only where hardware is touched?
 - Junos and Proxmox wording was written partly from memory (each cycle lists what was not checked). If a line looks different from your real gear, tell me which one.
+- The two scheduled tasks "Proxle night loop (evening)" and "Proxle night loop (after midnight)" could not be deleted from inside a scheduled run: it needs your approval. They are still switched on and would fire again on 18 November 2027. Delete them in your scheduled tasks, or ask for it in a chat.
 - The web interface is drawn narrow inside the desk browser, so the network list is stacked instead of a wide table. Should the browser be allowed to open large?
 
 ## House rules
