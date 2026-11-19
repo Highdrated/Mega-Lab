@@ -83,6 +83,7 @@ function renderCorridor() {
   });
   $("seqs").innerHTML = h;
   $("seqs").querySelectorAll("[data-seq]").forEach((b) => b.onclick = () => { S.seqSel = +b.dataset.seq; S.selMem = null; save(); renderCorridor(); });
+  const onb = $("seqs").querySelector(".seqb.on"); if (onb && window.innerWidth <= 820) $("seqs").scrollLeft = onb.offsetLeft - 8;
 
   const ms = memsOf(seq);
   const items = ms.map((m) => ({ kind: "mem", m }));
