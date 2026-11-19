@@ -119,21 +119,34 @@ function renderCorridor() {
 
 function crystal(i, x, y, s, st, name, tag, sel, due) {
   const big = st === "gate";
-  const w = Math.round(44 * s * (big ? 1.25 : 1)), h = Math.round(w * 1.6);
-  const col = { done: "#1f5fc4", current: "#1f5fc4", ahead: "#8a96a6", gate: "#5d7fb8" }[st];
-  const op = { done: [.55, .32, .42, .22], current: [.85, .5, .65, .35], ahead: [.1, .04, .07, .02], gate: [.95, .7, .8, .55] }[st];
-  const glow = st === "current" ? "drop-shadow(0 0 10px rgba(31,95,196,.55))" : st === "gate" ? "drop-shadow(0 0 14px rgba(255,255,255,.9)) drop-shadow(0 0 4px rgba(17,22,29,.25))" : st === "done" ? "drop-shadow(0 0 5px rgba(31,95,196,.3))" : "none";
+  const w = Math.round(46 * s * (big ? 1.25 : 1)), h = Math.round(w * 1.6);
+  const col = { done: "#1f5fc4", current: "#1f5fc4", ahead: "#7d8a9c", gate: "#4f74b3" }[st];
+  const f = { done: [.5, .28, .4, .62, .36, .5], current: [.78, .45, .62, .9, .55, .7], ahead: [.2, .08, .14, .28, .12, .2], gate: [.85, .55, .7, .95, .65, .8] }[st];
+  const glow = st === "current" ? "drop-shadow(0 0 12px rgba(31,95,196,.55))" : st === "gate" ? "drop-shadow(0 0 16px rgba(255,255,255,.95)) drop-shadow(0 0 4px rgba(17,22,29,.25))" : st === "done" ? "drop-shadow(0 0 6px rgba(31,95,196,.32))" : "drop-shadow(0 2px 4px rgba(17,22,29,.08))";
   const lit = st !== "ahead";
   const label = st === "done" ? "synced" : st === "current" ? "next memory" : st === "gate" ? "open" : "ahead";
-  return '<button class="node' + (sel ? " sel" : "") + '" type="button" data-i="' + i + '" style="left:' + x + "%;top:" + y + '%" aria-label="' + esc(name + ", " + label) + '">' +
-    '<div class="mem" style="width:' + Math.round(w * 2.2) + "px;height:" + Math.round(h * 1.5) + "px;color:" + col + '">' +
+  const id = "cr" + i;
+  const fac = [["20,0 1,24 13,28", f[0]], ["20,0 13,28 27,28", f[1]], ["20,0 27,28 39,24", f[2]], ["1,24 13,28 20,64", f[3]], ["13,28 27,28 20,64", f[4]], ["27,28 39,24 20,64", f[5]]];
+  return '<button class="node' + (sel ? " sel" : "") + " st-" + st + '" type="button" data-i="' + i + '" style="left:' + x + "%;top:" + y + '%" aria-label="' + esc(name + ", " + label) + '">' +
+    '<div class="mem" style="width:' + Math.round(w * 2.2) + "px;height:" + Math.round(h * 1.28) + "px;color:" + col + '">' +
     (due ? '<span class="due">REVIEW</span>' : "") +
-    '<svg class="ring" viewBox="0 0 100 30" aria-hidden="true" style="width:' + Math.round(w * 2.1) + "px;height:" + Math.round(w * .63) + "px;opacity:" + (lit ? .8 : .4) + '"><ellipse cx="50" cy="15" rx="46" ry="11" fill="none" stroke="currentColor" stroke-width="1.2" stroke-dasharray="10 6" style="animation-duration:' + (16 + i * 3) + 's"/></svg>' +
-    (lit ? '<div class="beam" style="width:' + Math.round(w * .55) + "px;height:" + Math.round(h * 1.15) + 'px"></div>' : "") +
+    '<svg class="plinth" viewBox="0 0 100 34" aria-hidden="true" style="width:' + Math.round(w * 1.9) + "px;height:" + Math.round(w * .65) + 'px">' +
+    (lit ? '<ellipse cx="50" cy="15" rx="44" ry="13" fill="currentColor" opacity=".12"/>' : "") +
+    '<polygon points="8,15 50,24 50,30 8,21" fill="#dfe5ee"/><polygon points="92,15 50,24 50,30 92,21" fill="#cdd5e1"/><polygon points="50,6 92,15 50,24 8,15" fill="#f8fafc" stroke="currentColor" stroke-opacity="' + (lit ? .55 : .25) + '" stroke-width=".8"/>' +
+    '<polygon points="50,10 74,15 50,20 26,15" fill="currentColor" opacity="' + (lit ? .18 : .06) + '"/>' +
+    (st === "current" || st === "gate" ? '<ellipse class="orb" cx="50" cy="15" rx="47" ry="12" fill="none" stroke="currentColor" stroke-width="1" stroke-dasharray="8 7" opacity=".6" style="animation-duration:' + (16 + i * 3) + 's"/>' : "") + "</svg>" +
+    (lit ? '<div class="beam" style="width:' + Math.round(w * .5) + "px;height:" + Math.round(h * .95) + 'px"></div>' : "") +
     (st === "current" ? '<div class="halo"></div><div class="spark" style="left:20%;top:40%"></div><div class="spark" style="left:78%;top:30%;animation-delay:1.7s"></div><div class="spark" style="left:55%;top:70%;animation-delay:3.3s"></div>' : "") +
-    '<div class="bob" style="animation-delay:-' + (i * .9).toFixed(1) + 's"><svg class="turn" viewBox="0 0 40 64" aria-hidden="true" style="width:' + w + "px;height:" + h + "px;filter:" + glow + ";animation-duration:" + (14 + i * 2) + "s;animation-delay:-" + (i * 1.7).toFixed(1) + 's">' +
-    '<polygon points="20,0 0,26 20,26" fill="currentColor" fill-opacity="' + op[0] + '"/><polygon points="20,0 40,26 20,26" fill="currentColor" fill-opacity="' + op[1] + '"/><polygon points="0,26 20,64 20,26" fill="currentColor" fill-opacity="' + op[2] + '"/><polygon points="40,26 20,64 20,26" fill="currentColor" fill-opacity="' + op[3] + '"/><polygon points="20,0 0,26 20,64 40,26" fill="none" stroke="currentColor" stroke-width="1.2"/>' +
-    (lit ? '<polygon points="20,10 10,26 20,46 30,26" fill="none" stroke="#ffffff" stroke-width=".8" opacity=".7"/>' : "") + "</svg></div></div>" +
+    '<div class="bob" style="animation-delay:-' + (i * .9).toFixed(1) + 's"><svg class="turn" viewBox="0 0 40 64" aria-hidden="true" style="width:' + w + "px;height:" + h + "px;filter:" + glow + ";animation-duration:" + (9 + (i % 4) * 2) + "s;animation-delay:-" + (i * 1.7).toFixed(1) + 's">' +
+    '<defs><clipPath id="' + id + '"><polygon points="20,0 1,24 20,64 39,24"/></clipPath><linearGradient id="' + id + 'g" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".5" stop-color="#fff" stop-opacity=".85"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient></defs>' +
+    '<polygon points="20,0 1,24 20,64 39,24" fill="#ffffff" fill-opacity="' + (lit ? .55 : .7) + '"/>' +
+    fac.map(([p, o]) => '<polygon points="' + p + '" fill="currentColor" fill-opacity="' + o + '"/>').join("") +
+    '<path d="M1 24L13 28L27 28L39 24M13 28L20 0L27 28M13 28L20 64L27 28" fill="none" stroke="#ffffff" stroke-width=".7" stroke-opacity=".85"/>' +
+    '<polygon points="20,0 1,24 20,64 39,24" fill="none" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>' +
+    '<polygon points="20,3 8,22 14,25" fill="#ffffff" fill-opacity=".55"/>' +
+    (lit ? '<ellipse class="core" cx="20" cy="30" rx="5" ry="7" fill="#ffffff"/>' : "") +
+    '<g clip-path="url(#' + id + ')"><rect class="sheen" x="-30" y="-10" width="14" height="90" fill="url(#' + id + 'g)" transform="rotate(18 20 32)" style="animation-delay:-' + (i * 1.3).toFixed(1) + 's"/></g>' +
+    "</svg></div></div>" +
     '<div class="nlabel" style="font-size:' + Math.max(11, Math.round(14 * s)) + 'px"><b>' + esc(name) + "</b><small>" + esc(tag) + "</small></div></button>";
 }
 
