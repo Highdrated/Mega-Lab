@@ -122,7 +122,8 @@ body.alarm .beacon { animation: beacon 2.4s ease-in-out infinite; }
 .vdlg.noimg.on { transform: translateX(-50%); }
 .vdim { position: fixed; inset: 0; z-index: 34; background: radial-gradient(ellipse at 20% 80%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .25)); opacity: 0; transition: opacity .6s; pointer-events: none; }
 .vdim.on { opacity: 1; }
-#junie { position: absolute; left: 72%; top: 72.5%; width: 4.2%; aspect-ratio: 1; pointer-events: auto; z-index: 4; }
+#junie { position: absolute; left: 71.2%; top: 69.6%; width: 5.8%; aspect-ratio: 1; pointer-events: auto; z-index: 4; }
+#junie.dozing img { opacity: .8; }
 #junie img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; filter: brightness(.82) saturate(.85) sepia(.08) drop-shadow(0 .35vw .45vw rgba(0, 0, 0, .55)); animation: bob 4.2s ease-in-out infinite; transition: opacity .25s; }
 #junie.still img { animation: none; }
 @keyframes bob { 0%, 100% { transform: translateY(0) rotate(-1.5deg); } 50% { transform: translateY(-7%) rotate(1.5deg); } }
@@ -451,7 +452,7 @@ body.cur, body.cur * { cursor: none !important; }
     <div class="beacon"></div>
     <div class="glow" id="g-main"></div><div class="glow" id="g-left"></div><div class="glow" id="g-right"></div><div class="glow" id="g-small"></div>
     <div class="spill"></div>
-    <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junie/junie-idle.webp" alt=""></div>
+    <div id="junie"><div class="glowj"></div><img id="junie-img" src="img/junle-room/companion-sit.webp" alt=""></div>
     <div id="pile" class="empty" title="Ticket pile"><svg viewBox="0 0 120 80"><g id="pile-sheets"></g></svg><span class="pn" id="pile-n">0</span></div>
     <div class="screen" id="left"><i class="refl"></i><div class="side"><h4><span id="l-host">AMNESIAC</span><span>EX4300-48T</span></h4><svg id="panel" viewBox="0 0 340 170"></svg><div class="evt" id="evt"><b>--:--:--</b>waiting for events</div></div></div>
     <div class="screen" id="main"><i class="refl"></i>
@@ -3867,11 +3868,13 @@ nextAt.dragon = Date.now() + rnd(420000, 900000);
 scheduleFly(5000);
 let jMood = "idle", jUntil = 0, jIdleSince = Date.now();
 const JPOSES = ["idle", "cheer", "worry", "think", "sleep", "wave", "point", "read", "confused", "wrench"];
-JPOSES.forEach((m) => { const i = new Image(); i.src = `img/junie/junie-${m}.webp`; });
+const jImg = (m) => `img/junle-room/companion-${["cheer", "wave", "point"].includes(m) ? "wings" : "sit"}.webp`;
+["sit", "wings"].forEach((m) => { const i = new Image(); i.src = `img/junle-room/companion-${m}.webp`; });
 function junie(m, ms) {
   jMood = m;
   jUntil = ms ? Date.now() + ms : 0;
-  $("#junie-img").src = `img/junie/junie-${m}.webp`;
+  $("#junie-img").src = jImg(m);
+  $("#junie").classList.toggle("dozing", m === "sleep");
   $("#junie").classList.toggle("still", m === "sleep" || m === "think");
 }
 function junieTick() {
