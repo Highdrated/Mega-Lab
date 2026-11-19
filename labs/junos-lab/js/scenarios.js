@@ -1878,7 +1878,7 @@ document.getElementById("hint-btn").onclick = () => {
   if(hintIndex === 0 && SCENARIOS.indexOf(currentScenario) >= 0){
     const note = document.createElement("div");
     note.className = "hint-note";
-    note.textContent = "Hints are fine. This run is logged as a hinted run. The scenario shows as redo on the board, and its topics come up first in Pockle, until you finish it once without hints.";
+    note.textContent = "Hints are fine. This run is logged as a hinted run. The scenario shows as redo on the board, and its topics come up first in Pockle and in Junle's Rehearsal, until you finish it once without hints.";
     document.getElementById("hint-list").appendChild(note);
   }
   document.getElementById("hint-list").appendChild(div);

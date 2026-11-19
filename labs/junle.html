@@ -269,10 +269,11 @@
   }
   .apps {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(4, 1fr);
     gap: 14px;
     margin-top: 20px;
   }
+  @media (max-width: 700px) { .apps { grid-template-columns: repeat(2, 1fr); } }
   .app {
     border: 1px solid var(--line);
     background: rgba(11, 13, 12, 0.72);
@@ -1720,6 +1721,12 @@
         <div class="app-name">DAILY MIX</div>
         <div class="app-desc">~10 min: 3 quiz + 1 drill, interleaved. Keep the streak.</div>
         <div class="app-live" id="mix-live"></div>
+      </div>
+      <div class="app" id="app-rehearse">
+        <div class="app-glyph">&#8635;</div>
+        <div class="app-name">REHEARSAL</div>
+        <div class="app-desc">What you missed, and what you needed hints for in the Junos Lab. Again, until it sticks.</div>
+        <div class="app-live" id="reh-live"></div>
       </div>
       <div class="app" id="app-scenarios">
         <div class="app-glyph">&#9670;</div>
@@ -4492,7 +4499,237 @@
     s.steps.forEach(function(d) { d._m = s.id; });
   });
 
-  const META_CMDS = ["help", "modules", "scenarios", "skip", "score", "clear", "sound", "reset stats", "width wide", "width ultra", "width standard", "save", "load", "weather", "scene bedroom", "scene sleek", "realm", "city", "dragon", "ambience rain", "ambience wind", "ambience auto", "ambience off", "configure", "exit", "cli", "desktop", "blueprint", "export config", "reset blueprint", "review", "review weak", "track", "path", "mix", "tourney", "mistakes", "lab", "shift lacp", "shift vlans", "shift ospf", "learn", "learn lacp", "learn vrrp", "learn ospf", "learn bgp", "learn rstp", "learn vc", "learn irb", "learn storm", "learn commit", "learn dcl2sec", "show configuration", "show | display set", "commit", "commit check", "rollback 1", "start basics", "start dayzero", "start vlans", "start vc", "start rescue", "start irb", "start lacp", "start rstp", "start ospf", "start bgp", "start vrrp", "start storm", "start commit", "start routing", "start loops", "start dcl2sec", "start all", "run ghost", "run deadport", "run safechange"];
+
+  const LAB_LINES = {
+    rtrif: { m: "routing", lines: [
+      { task: "A router port gets its address directly. Give ge-0/0/0 the address 10.0.1.1/24.", answers: ["set interfaces ge-0/0/0 unit 0 family inet address 10.0.1.1/24"], why: "a router joins a network by having an address in it. No address, no gateway for that network." },
+      { task: "Second network on the same router: give ge-0/0/1 the address 10.0.2.1/24.", answers: ["set interfaces ge-0/0/1 unit 0 family inet address 10.0.2.1/24"], why: "one leg per network. The router forwards between the networks it has a leg in." },
+      { task: "Your side of the provider line is 203.0.113.2/30. Put it on ge-0/0/0.", answers: ["set interfaces ge-0/0/0 unit 0 family inet address 203.0.113.2/30"], why: "a /30 has room for exactly two devices: you and the provider." }
+    ] },
+    defroute: { m: "routing", lines: [
+      { task: "Send everything the router does not know to the provider at 203.0.113.1.", answers: ["set routing-options static route 0.0.0.0/0 next-hop 203.0.113.1"], why: "0.0.0.0/0 matches every address. It is the catch-all, used when nothing more specific matches." },
+      { task: "The far side cannot answer: it has no way back. Add a route to 10.200.20.0/24 via 10.255.0.2.", answers: ["set routing-options static route 10.200.20.0/24 next-hop 10.255.0.2"], why: "a ping needs a route there AND a route back. One missing return route looks like a dead network." },
+      { task: "Show the routing table.", answers: ["show route"], why: "look before you add: it lists what the router already knows, and how it learned each route." }
+    ] },
+    nat: { m: "routing", lines: [
+      { task: "NAT rule-set OFFICE: traffic comes in from the LAN interface ge-0/0/1.0.", answers: ["set security nat source rule-set OFFICE from interface ge-0/0/1.0"], why: "a rule-set first says from where to where. This is the from half." },
+      { task: "NAT rule-set OFFICE: traffic leaves through the WAN interface ge-0/0/0.0.", answers: ["set security nat source rule-set OFFICE to interface ge-0/0/0.0"], why: "the to half. Together: LAN to WAN." },
+      { task: "NAT rule-set OFFICE, rule R1: match traffic from 192.168.10.0/24.", answers: ["set security nat source rule-set OFFICE rule R1 match source-address 192.168.10.0/24"], why: "the rule says which traffic gets translated: the private office range." },
+      { task: "NAT rule-set OFFICE, rule R1: translate to the router's own WAN address.", answers: ["set security nat source rule-set OFFICE rule R1 then source-nat interface"], why: "the internet cannot answer a private address. This swaps it for the router's public one on the way out." }
+    ] },
+    filter: { m: "routing", lines: [
+      { task: "Filter GUEST-IN, term no-staff: match traffic going to 10.0.1.0/24.", answers: ["set firewall family inet filter GUEST-IN term no-staff from destination-address 10.0.1.0/24"], why: "a term is: if the packet looks like this (from), then do that (then)." },
+      { task: "Filter GUEST-IN, term no-staff: drop what matched.", answers: ["set firewall family inet filter GUEST-IN term no-staff then discard"], why: "routing decides where traffic can go. A filter decides whether it may." },
+      { task: "Filter GUEST-IN: add a last term called ok that accepts everything else.", answers: ["set firewall family inet filter GUEST-IN term ok then accept"], why: "every Junos filter ends with a hidden rule that drops the rest. Without an accept term you block everything." },
+      { task: "Attach GUEST-IN to traffic entering the router on ge-0/0/1.", answers: ["set interfaces ge-0/0/1 unit 0 family inet filter input GUEST-IN"], why: "a filter does nothing until it is attached to an interface, in a direction." }
+    ] },
+    dhcp: { m: "irb", lines: [
+      { task: "DHCP pool GUEST: it hands out addresses in 10.10.30.0/24.", answers: ["set access address-assignment pool GUEST family inet network 10.10.30.0/24"], why: "the pool is the bag of addresses. The network line says which subnet it serves." },
+      { task: "DHCP pool GUEST: range r1 starts at 10.10.30.100.", answers: ["set access address-assignment pool GUEST family inet range r1 low 10.10.30.100"], why: "low and high mark the part of the subnet DHCP may give away." },
+      { task: "DHCP pool GUEST: range r1 ends at 10.10.30.199.", answers: ["set access address-assignment pool GUEST family inet range r1 high 10.10.30.199"], why: "too small a range and the pool runs dry: the next PC gets no address." },
+      { task: "DHCP pool GUEST: tell clients their gateway is 10.10.30.1.", answers: ["set access address-assignment pool GUEST family inet dhcp-attributes router 10.10.30.1"], why: "without the router option a client gets an address but no way out of its subnet." },
+      { task: "Make the switch listen for DHCP requests on irb.30, as group GUEST.", answers: ["set system services dhcp-local-server group GUEST interface irb.30"], why: "a pool hands out nothing until the server listens on the interface where the clients are." },
+      { task: "Show which clients hold a DHCP lease.", answers: ["show dhcp server binding"], why: "one line per client. Compare the count with the size of the range." }
+    ] },
+    desc: { m: "basics", lines: [
+      { task: "Label port ge-0/0/1: its description is pc-anna.", answers: ["set interfaces ge-0/0/1 description pc-anna"], why: "a description is a label stored on the switch. The next engineer reads it instead of tracing a cable." },
+      { task: "Port ge-0/0/2 was shut in the configuration. Remove the disable statement.", answers: ["delete interfaces ge-0/0/2 disable"], why: "delete removes exactly the statement you name. Admin down means someone configured it off." },
+      { task: "List only the ports that have a description.", answers: ["show interfaces descriptions"], why: "the fastest way to read which machine is on which port." },
+      { task: "Show the configuration of port ge-0/0/2 only.", answers: ["show configuration interfaces ge-0/0/2"], why: "read one branch instead of the whole configuration: less to scan, less to miss." }
+    ] },
+    ops: { m: "basics", lines: [
+      { task: "Let engineers log in over the network: turn on SSH.", answers: ["set system services ssh"], why: "without it the console cable is the only way in." },
+      { task: "Send this switch's log messages to the collector at 10.0.0.50.", answers: ["set system syslog host 10.0.0.50 any any"], why: "logs that live only on the box are gone when the box is. any any means every facility, every level." },
+      { task: "Show which device is cabled to which port.", answers: ["show lldp neighbors"], why: "the cable-tracing tool: each neighbour announces its name and port." },
+      { task: "Show the system log.", answers: ["show log messages"], why: "commits, link flaps and errors, in time order. Read it before guessing." }
+    ] },
+    users: { m: "dayzero", lines: [
+      { task: "Create the user noc-admin with full rights.", answers: ["set system login user noc-admin class super-user"], why: "named accounts mean the log shows who did what. A shared root login shows nothing." },
+      { task: "Give noc-admin a password (Junos will ask for it).", answers: ["set system login user noc-admin authentication plain-text-password"], why: "a user without authentication cannot log in." }
+    ] },
+    bgpexport: { m: "bgp", lines: [
+      { task: "Policy ANNOUNCE, term mine: match exactly your network 192.0.2.0/24.", answers: ["set policy-options policy-statement ANNOUNCE term mine from route-filter 192.0.2.0/24 exact"], why: "exact means this prefix and nothing longer or shorter. You announce only what is yours." },
+      { task: "Policy ANNOUNCE, term mine: accept what matched.", answers: ["set policy-options policy-statement ANNOUNCE term mine then accept"], why: "a policy term is from plus then, like a firewall term." },
+      { task: "Attach policy ANNOUNCE to BGP group TO-A as its export policy.", answers: ["set protocols bgp group TO-A export ANNOUNCE"], why: "a policy does nothing until it is attached. Export is what you tell the neighbour." }
+    ] },
+    lag: { m: "lacp", lines: [
+      { task: "A real EX will not create ae0 until the chassis may have a bundle. Allow one.", answers: ["set chassis aggregated-devices ethernet device-count 1"], why: "without it the ae0 interface never appears and the bundle stays down." }
+    ] }
+  };
+  const LAB_SCEN = {
+    "meet-the-switch": ["1b. Meet the Switch", "basics"], "rename-switch": ["2. Day-Zero Basics", "dayzero"],
+    "vlan-split": ["3. VLAN Isolation", "vlans"], "read-the-switch": ["3b. Read the Switch", "desc"],
+    "access-distribution": ["4. Access to Distribution Uplink", "dayzero"], "first-router": ["4b. Your First Router", "rtrif"],
+    "first-default-route": ["4c. The Default Route", "rtrif", "defroute"], "isp-onboarding": ["5. Onboard a Client via ISP", "rtrif", "defroute", "nat"],
+    "interconnect-recovery": ["6. Site Interconnect Recovery", "vlans"], "access-control-segment": ["7. Access-Control Segment", "vlans"],
+    "first-filter": ["7b. Your First Firewall Filter", "filter"], "multi-tenant-vlans": ["8. Multi-Tenant", "vlans", "rtrif", "filter"],
+    "irb-intervlan": ["9. Inter-VLAN Routing with irb", "irb"], "trunk-span": ["10. Trunking Across Switches", "vlans"],
+    "commit-confirmed": ["11. Commit Confirmed", "commit"], "filtered-segment": ["12. Blocked by Policy", "filter", "irb"],
+    "lacp-bundle": ["13. Link Aggregation", "lag", "lacp"], "rstp-loop": ["14. The Loop and the Tree", "rstp"],
+    "storm-control": ["15. Storm Control", "storm"], "asymmetric-routing": ["16. The Reply That Never Came Back", "defroute"],
+    "nat-edge": ["17. NAT at the Edge", "nat"], "dhcp-serve": ["18. DHCP", "dhcp"], "ospf-backbone": ["19. OSPF", "ospf"],
+    "rogue-switch": ["20. The Rogue Switch", "dcl2sec"], "ops-production": ["24. Run It Like Production", "ops"],
+    "speak-bgp": ["25. Speak BGP to Your Provider", "bgp"],
+    "site-new-desk": ["27. New Desk at the Office", "vlans"], "site-rack-server": ["28. Rack a New Server", "vlans"],
+    "site-pool-dry": ["29. The Pool Ran Dry", "dhcp"], "site-guest-vlan": ["30. Guest VLAN with its own DHCP", "vlans", "irb", "dhcp"],
+    "site-lacp-uplink": ["31. Bundle the Office Uplink", "lag", "lacp"], "site-dia-customer": ["32. Deliver DIA to a Customer", "rtrif", "defroute", "nat"],
+    "site-new-access-switch": ["33. Install a New Access Switch", "dayzero", "vlans"], "site-internal-router": ["34. Internal Router for the Test Lab", "rtrif", "defroute"],
+    "site-rack-extension": ["35. Extend the Server Row", "dayzero", "vlans"], "site-new-floor": ["36. Project: a New Floor", "dayzero", "lag", "vlans", "dhcp"],
+    "site-customer-cage": ["37. Project: Onboard a Customer", "dayzero", "vlans", "nat"], "site-warehouse": ["38. Project: the Warehouse", "rtrif", "defroute", "nat"],
+    "colo-named-accounts": ["45. No Named Accounts", "users"], "colo-mystery-port": ["46. What Is Plugged into Port 7?", "desc", "ops"],
+    "colo-monitoring-gap": ["47. Nothing Shows Up in Monitoring", "ops"], "colo-wrong-handover": ["48. The Handover Note Is Wrong", "desc"],
+    "colo-tenant-leak": ["49. Customer A Can See Customer B", "filter"], "colo-rogue-switch": ["50. An Unapproved Switch", "dcl2sec"],
+    "colo-contractor-filter": ["51. A Contractor on Your Network", "filter"], "colo-onboard-tenant": ["52. Onboard Cobalt", "dayzero", "vlans", "irb", "filter"],
+    "colo-decommission": ["53. Decommission Borealis", "vlans"], "colo-tenant-lag": ["54. Bundled Customer Uplink", "lag", "lacp"],
+    "colo-remote-renumber": ["55. Renumber Without Locking Yourself Out", "commit"], "colo-no-internet": ["56. One Customer Has No Internet", "defroute"],
+    "colo-gateway-gone": ["57. A Gateway Stopped Answering", "irb"],
+    "bgp-local-as": ["59. BGP 1", "bgp"], "bgp-peer-as": ["60. BGP 2", "bgp"], "bgp-neighbor-address": ["61. BGP 3", "bgp"],
+    "bgp-static-wins": ["62. BGP 4", "bgp", "defroute"], "bgp-link-first": ["63. BGP 5", "bgp"], "bgp-second-provider": ["64. BGP 6", "bgp"],
+    "bgp-failover": ["65. BGP 7", "bgp"], "bgp-announce": ["66. BGP 8", "bgpexport", "bgp"], "bgp-over-announce": ["67. BGP 9", "bgpexport"],
+    "bgp-dual-homed": ["68. BGP 10", "bgp", "bgpexport"]
+  };
+  Object.keys(LAB_LINES).forEach(function(k) {
+    LAB_LINES[k].lines.forEach(function(d) { d._m = LAB_LINES[k].m; d._lab = k; });
+  });
+  const REH_CLEAR = 2;
+  let rehearseRun = null;
+  let rehearseSeen = {};
+  try { rehearseSeen = (JSON.parse(localStorage.getItem("junle_rehearse") || "null") || {}).seen || {}; } catch (e) { rehearseSeen = {}; }
+  function saveRehearse() {
+    try { localStorage.setItem("junle_rehearse", JSON.stringify({ seen: rehearseSeen })); } catch (e) {}
+  }
+  function rehearsePool(concept) {
+    if (LAB_LINES[concept]) return LAB_LINES[concept].lines;
+    const m = MODULES.filter(function(x) { return x.id === concept; })[0];
+    return m ? m.drills.filter(reviewable) : [];
+  }
+  function drillByAnswer(key) {
+    const want = normalize(key);
+    let hit = null;
+    const look = function(d) { if (!hit && normalize(d.answers[0]) === want) hit = d; };
+    MODULES.forEach(function(m) { m.drills.forEach(look); });
+    SCENARIOS.forEach(function(sc) { sc.steps.forEach(look); });
+    Object.keys(LAB_LINES).forEach(function(k) { LAB_LINES[k].lines.forEach(look); });
+    return hit;
+  }
+  function rehearseJournal() {
+    const rows = [];
+    Object.keys(mistakes).forEach(function(k) {
+      if (k.indexOf("quiz:") === 0) return;
+      const d = drillByAnswer(k);
+      if (!d || !reviewable(d)) return;
+      rows.push({ key: k, d: d, n: mistakes[k].n || 1, at: mistakes[k].at || 0 });
+    });
+    rows.sort(function(a, b) { return (b.n - a.n) || (b.at - a.at); });
+    return rows;
+  }
+  function rehearseLab() {
+    let log = {};
+    try { log = JSON.parse(localStorage.getItem("junoslab-hintlog") || "{}") || {}; } catch (e) { log = {}; }
+    const rows = [];
+    Object.keys(log).forEach(function(id) {
+      const h = log[id];
+      if (!h || h.clean || !LAB_SCEN[id]) return;
+      if (!((h.hints || 0) > 0 || (h.errs || 0) >= 5)) return;
+      rows.push({ id: id, title: LAB_SCEN[id][0], concepts: LAB_SCEN[id].slice(1), hints: h.hints || 0, errs: h.errs || 0, seen: rehearseSeen[id] || 0, at: h.at || 0 });
+    });
+    rows.sort(function(a, b) { return (a.seen - b.seen) || (b.at - a.at); });
+    return rows;
+  }
+  function paintRehearse() {
+    const live = document.getElementById("reh-live");
+    if (!live) return;
+    const j = rehearseJournal().length, l = rehearseLab().length;
+    live.textContent = (j + l) === 0 ? "" : (j ? j + " missed" : "") + (j && l ? " · " : "") + (l ? l + " from the lab" : "");
+  }
+  function showRehearseList() {
+    const j = rehearseJournal(), l = rehearseLab();
+    if (j.length + l.length === 0) { speak("nothing to rehearse. Miss a drill here, or open a hint in the Junos Lab, and it lands on this list.", "sys"); return; }
+    print("REHEARSAL LIST", "sys");
+    if (j.length) print("  missed in Junle: " + j.length + " command" + (j.length === 1 ? "" : "s"), "sys");
+    j.slice(0, 6).forEach(function(r) { print("    ×" + r.n + "  " + r.key, "warn"); });
+    if (l.length) print("  needed help in the Junos Lab: " + l.length + " scenario" + (l.length === 1 ? "" : "s"), "sys");
+    l.slice(0, 6).forEach(function(r) { print("    " + r.title + "  (" + (r.hints ? r.hints + " hint" + (r.hints === 1 ? "" : "s") : r.errs + " rejected commands") + ")", "warn"); });
+    print("  type 'rehearse' to start.", "sys");
+  }
+  function startRehearsal() {
+    const j = rehearseJournal(), l = rehearseLab();
+    if (j.length + l.length === 0) {
+      speak("nothing to rehearse. Miss a drill here, or open a hint in the Junos Lab, and it lands in rehearsal.", "sys");
+      return;
+    }
+    const picked = [];
+    const used = {};
+    const add = function(d, tag) {
+      const k = normalize(d.answers[0]);
+      if (used[k]) return false;
+      used[k] = true;
+      const copy = {};
+      Object.keys(d).forEach(function(x) { copy[x] = d[x]; });
+      copy.rid = null;
+      copy._reh = tag;
+      picked.push(copy);
+      return true;
+    };
+    j.slice(0, 6).forEach(function(r) { add(r.d, { src: "journal", key: r.key, label: "YOU MISSED THIS ×" + r.n }); });
+    const labUsed = [];
+    l.slice(0, 3).forEach(function(r) {
+      let got = 0;
+      const pools = r.concepts.map(function(c) { return shuffle(rehearsePool(c)); });
+      for (let round = 0; round < 3 && got < 3; round++) {
+        pools.forEach(function(pool) {
+          if (got >= 3 || !pool[round]) return;
+          if (add(pool[round], { src: "lab", scen: r.id, label: "FROM THE LAB · " + r.title.toUpperCase() })) got++;
+        });
+      }
+      if (got) labUsed.push(r.id);
+    });
+    if (picked.length === 0) { speak("nothing to rehearse right now.", "sys"); return; }
+    restoreSession();
+    const lab = picked.filter(function(d) { return d._reh.src === "lab"; });
+    const own = shuffle(picked.filter(function(d) { return d._reh.src !== "lab"; }));
+    queue = [];
+    while (lab.length || own.length) {
+      if (own.length) queue.push(own.shift());
+      if (lab.length) queue.push(lab.shift());
+    }
+    queue.sort(function(a, b) { return (requiredMode(a) === "config" ? 1 : 0) - (requiredMode(b) === "config" ? 1 : 0); });
+    runTotal = queue.length;
+    reviewRun = false;
+    blanksRun = false;
+    moduleName = "REHEARSAL";
+    currentModuleId = null;
+    rehearseRun = { total: queue.length, clean: 0, cleared: 0, missed: 0, lab: labUsed };
+    logEvent("training: rehearsal started", "");
+    speak("REHEARSAL — " + queue.length + " lines you missed or needed help with. A miss comes back in this run until you get it.", "sys");
+    nextDrill();
+  }
+  function rehearseCorrect(d, firstTry) {
+    if (!rehearseRun || !d._reh) return;
+    if (firstTry && !d._rehMissed) rehearseRun.clean++;
+    if (!firstTry && !d._rehMissed) { d._rehMissed = true; rehearseRun.missed++; }
+    if (d._reh.src !== "journal") return;
+    const m = mistakes[d._reh.key];
+    if (!m) return;
+    if (!firstTry) { m.ok = 0; saveMistakes(); return; }
+    m.ok = (m.ok || 0) + 1;
+    if (m.ok >= REH_CLEAR) { delete mistakes[d._reh.key]; rehearseRun.cleared++; print("cleared from your journal.", "sys"); }
+    saveMistakes();
+  }
+  function finishRehearsal() {
+    const r = rehearseRun;
+    rehearseRun = null;
+    r.lab.forEach(function(id) { rehearseSeen[id] = Date.now(); });
+    saveRehearse();
+    paintRehearse();
+    const left = rehearseJournal().length;
+    typeOut("Rehearsal done: " + r.clean + " of " + r.total + " right first time." + (r.cleared ? " " + r.cleared + " cleared from your journal." : ""), function() {
+      typeOut(left ? left + " missed command" + (left === 1 ? "" : "s") + " still on the list. A command leaves after " + REH_CLEAR + " clean answers. Type 'rehearse' for another round."
+        : (r.lab.length ? "Your journal is empty. Lab scenarios leave the list when you finish them in the lab without hints." : "Your journal is empty. Well done, Kaatje."));
+    });
+  }
+
+  const META_CMDS = ["rehearse", "rehearse list", "help", "modules", "scenarios", "skip", "score", "clear", "sound", "reset stats", "width wide", "width ultra", "width standard", "save", "load", "weather", "scene bedroom", "scene sleek", "realm", "city", "dragon", "ambience rain", "ambience wind", "ambience auto", "ambience off", "configure", "exit", "cli", "desktop", "blueprint", "export config", "reset blueprint", "review", "review weak", "track", "path", "mix", "tourney", "mistakes", "lab", "shift lacp", "shift vlans", "shift ospf", "learn", "learn lacp", "learn vrrp", "learn ospf", "learn bgp", "learn rstp", "learn vc", "learn irb", "learn storm", "learn commit", "learn dcl2sec", "show configuration", "show | display set", "commit", "commit check", "rollback 1", "start basics", "start dayzero", "start vlans", "start vc", "start rescue", "start irb", "start lacp", "start rstp", "start ospf", "start bgp", "start vrrp", "start storm", "start commit", "start routing", "start loops", "start dcl2sec", "start all", "run ghost", "run deadport", "run safechange"];
   const ALL_CMDS = (function() {
     const set = {};
     MODULES.forEach(function(m) {
@@ -4504,6 +4741,9 @@
       s.steps.forEach(function(d) {
         d.answers.forEach(function(a) { set[a.toLowerCase()] = true; });
       });
+    });
+    Object.keys(LAB_LINES).forEach(function(k) {
+      LAB_LINES[k].lines.forEach(function(d) { set[d.answers[0].toLowerCase()] = true; });
     });
     META_CMDS.forEach(function(c) { set[c] = true; });
     return Object.keys(set).sort();
@@ -4787,7 +5027,7 @@
     scenlistEl.classList.toggle("hidden", v !== "scenarios");
     document.getElementById("track").classList.toggle("hidden", v !== "track");
     if (v === "track") buildTrack();
-    if (v === "desktop") paintSessionStrip();
+    if (v === "desktop") { paintSessionStrip(); paintRehearse(); }
     dialogueEl.classList.toggle("hidden", v !== "terminal");
     learnEl.classList.toggle("hidden", v !== "manual");
     homeBtn.classList.toggle("hidden", v === "desktop");
@@ -4856,6 +5096,8 @@
     print("  mix              ~10 min: 3 quiz + 1 drill, keeps a daily streak", "sys");
     print("  tourney          10 timed quiz rounds \u2014 ranks + personal best", "sys");
     print("  mistakes         your top 5 recurring errors", "sys");
+    print("  rehearse         replay what you missed here or needed hints for in the Junos Lab", "sys");
+    print("  rehearse list    what is waiting for rehearsal", "sys");
     print("BLUEPRINT", "sys");
     print("  blueprint        status of your planned configuration", "sys");
     print("  export config    download the committed plan as a .set file", "sys");
@@ -5051,6 +5293,8 @@
       logEvent("training: " + moduleName.toLowerCase() + " complete", "ok");
       if (stats.autosave) setTimeout(exportSave, 1200);
       if (shiftRun) { finishShiftRun(); return; }
+      if (rehearseRun && moduleName === "REHEARSAL") { finishRehearsal(); return; }
+      rehearseRun = null;
       typeOut(moduleName + " complete. Well done, Kaatje.", function() {
         typeOut("Type 'modules' or 'scenarios' to pick your next one.");
       });
@@ -5075,6 +5319,7 @@
       print("FILL IN:", "mix-tag");
       typeOut(b.shown);
     } else {
+      if (drill._reh) print(drill._reh.label, "mix-tag");
       typeOut(drill.task);
     }
   }
@@ -5152,6 +5397,7 @@
       exitConfig();
     }
     sfxOk();
+    rehearseCorrect(d, fails === 0);
     if (shiftRun) { shiftRun.total++; if (fails === 0) shiftRun.ok++; }
     speak("accepted. proceeding.", "correct");
     const dw = d.why || whyFor(d.answers[0]);
@@ -5326,6 +5572,14 @@
     }
     if (typed === "blanks" || typed === "fill") {
       startBlanks();
+      return;
+    }
+    if (typed === "rehearse" || typed === "rehearsal") {
+      startRehearsal();
+      return;
+    }
+    if (typed === "rehearse list" || typed === "rehearsal list") {
+      showRehearseList();
       return;
     }
     if (typed === "review") {
@@ -6814,6 +7068,10 @@
     showView("terminal");
     startMix();
   });
+  document.getElementById("app-rehearse").addEventListener("click", function() {
+    showView("terminal");
+    startRehearsal();
+  });
   document.getElementById("app-tourney").addEventListener("click", function() {
     showView("terminal");
     startTourney();
@@ -6844,6 +7102,7 @@
     else if (h.indexOf("shift:") === 0) { showView("terminal"); startShiftRun(h.slice(6)); }
     else if (h === "mix") { showView("terminal"); startMix(); }
     else if (h === "review") { showView("terminal"); startReview(false); }
+    else if (h === "rehearse") { showView("terminal"); startRehearsal(); }
     else if (h === "tourney") { showView("terminal"); startTourney(); }
     else return;
     try { window.history.replaceState(null, "", location.pathname); } catch (e) {}
