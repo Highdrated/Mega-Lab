@@ -343,6 +343,23 @@ svg.dia .dr { font-family: var(--read); }
 .scrbar:hover { opacity: 1; color: var(--amber); border-color: rgba(224, 168, 62, .35); }
 .scrbar[hidden] { display: none; }
 .appwrap { position: absolute; inset: 0; overflow: hidden; }
+.rh { position: absolute; inset: 0; padding: 6.5cqh 5.4cqw 5cqh; display: flex; flex-direction: column; font-size: 1.6cqw; }
+.rh[hidden] { display: none; }
+.rh .hh { display: flex; justify-content: space-between; color: var(--faint); font-size: 1.2cqw; letter-spacing: .35cqw; }
+.rh .hh b { color: var(--dim); font-weight: 400; }
+.rh .rt { font-family: var(--read); font-size: 2.3cqw; color: var(--ink); margin: 4.5cqh 0 1.4cqh; }
+.rh .rw { font-family: var(--read); color: var(--dim); font-size: 1.45cqw; line-height: 1.55; max-width: 72cqw; }
+.rh .rl { margin-top: 3.2cqh; color: var(--faint); font-size: 1.3cqw; letter-spacing: .05cqw; display: flex; flex-direction: column; gap: 1cqh; }
+.rh .rl code { color: var(--dim); }
+.rh .rl .bad code { color: #d98a7a; text-decoration: line-through rgba(217, 138, 122, .5); }
+.rh .rin { margin-top: 2.6cqh; display: flex; gap: 1.2cqw; align-items: baseline; border-top: 1px solid #1c1b18; border-bottom: 1px solid #1c1b18; padding: 1.8cqh .4cqw; }
+.rh .rin span { color: var(--ok); }
+.rh input { flex: 1; background: transparent; border: 0; outline: 0; color: var(--ink); font: inherit; font-size: 1.6cqw; caret-color: var(--amber); }
+.rh .rf { margin-top: 2.2cqh; min-height: 4cqh; font-size: 1.4cqw; font-family: var(--read); }
+.rh .rf.ok { color: var(--ok); }
+.rh .rf.no { color: #d98a7a; }
+.rh .rf code { color: var(--ink); font-family: inherit; }
+.rh .re { margin: auto 0; color: var(--dim); font-family: var(--read); font-size: 1.8cqw; line-height: 1.6; max-width: 70cqw; }
 .appwrap iframe { position: absolute; left: 0; top: 0; border: 0; transform-origin: 0 0; background: #0b0d0d; }
 
 .side { position: absolute; inset: 0; padding: 4.5cqh 4cqw; font-size: 3.3cqw; line-height: 1.45; display: flex; flex-direction: column; cursor: default; }
@@ -461,6 +478,7 @@ body.cur, body.cur * { cursor: none !important; }
         <div class="greet" id="h-greet"></div>
         <div class="list">
           <button class="row con" data-app="console" id="h-conrow"><span class="n">Console</span><span class="d" id="h-con">acc-sw-01 in rack R1</span><span class="m" id="h-conm">no cable</span></button>
+          <button class="row" data-app="rehearse"><span class="n">Rehearse</span><span class="d">your own mistakes, redone</span><span class="m" id="h-rh"></span></button>
           <button class="row" data-app="terminal"><span class="n">Terminal</span><span class="d">command drills, day zero to rescue</span><span class="m" id="h-rev"></span></button>
           <button class="row" data-app="track"><span class="n">Track</span><span class="d">your guided path</span><span class="m"></span></button>
           <button class="row" data-app="mix"><span class="n">Daily mix</span><span class="d">ten minutes, keep the streak</span><span class="m" id="h-mix"></span></button>
@@ -472,6 +490,7 @@ body.cur, body.cur * { cursor: none !important; }
       <div class="nosig" id="nosig" hidden>NO CONSOLE<b>click the rack and plug in a console cable</b></div>
       <div class="appwrap" id="appwrap" hidden></div>
       <div class="brief" id="brief" hidden></div>
+      <div class="rh" id="rh" hidden></div>
       <button class="scrbar" id="scrbar" hidden title="Back to the desktop">DESKTOP</button>
       <div class="term" id="term" hidden>
         <div class="ttabs" id="ttabs" hidden><button data-t="con">CONSOLE<span id="tt-con"></span></button><button data-t="lap">LAPTOP<span id="tt-lap"></span></button><span class="hops" id="thops"></span></div>
@@ -3355,11 +3374,96 @@ function setLearn(m) {
   toast(m === "brief" ? "Briefing mode: learn first, then work with your field manual" : "Guided mode: hints while you work");
 }
 let mainMode = "home";
+const MKEY = SAVE + "-mistakes";
+let MK = {};
+try { MK = JSON.parse(localStorage.getItem(MKEY) || "{}") || {}; } catch (e) {}
+const saveMK = () => { try { localStorage.setItem(MKEY, JSON.stringify(MK)); } catch (e) {} };
+const RH_IV = [0, 1, 3, 7, 14, 30];
+function noteMistake(step, typed) {
+  const nx = nextCmd(step);
+  if (!nx || normc(typed) === normc(nx.c)) return;
+  const k = normc(nx.c), m = MK[k] || { want: nx.c, n: 0 };
+  Object.assign(m, { task: step.t, why: step.why || "", tk: curTicket().id, prev: nx.i > 0 ? step.c[nx.i - 1] : "", typed, lv: 0, due: Date.now() });
+  m.n++;
+  MK[k] = m;
+  saveMK();
+}
+function rhDue() { const now = Date.now(); return Object.keys(MK).filter((k) => MK[k].due <= now); }
+let RH = null;
+function openRehearse() {
+  RH = { q: rhDue().sort(() => Math.random() - .5), i: 0, miss: 0, done: 0, state: "ask" };
+  setView("focus");
+  setMain("rh");
+  paintRH();
+}
+function whenTxt(t) {
+  const d = t - Date.now();
+  if (d < 36e5) return "in " + Math.max(1, Math.round(d / 6e4)) + " minutes";
+  if (d < 864e5) return "in " + Math.round(d / 36e5) + " hours";
+  return "in " + Math.round(d / 864e5) + " days";
+}
+function paintRH() {
+  const el = $("#rh");
+  const head = (r) => `<div class="hh"><span>JUNLE <b>REHEARSE</b>${r ? " · " + r : ""}</span><span>esc to leave</span></div>`;
+  if (RH.i >= RH.q.length) {
+    const keys = Object.keys(MK);
+    const nxt = keys.length ? Math.min(...keys.map((k) => MK[k].due)) : 0;
+    const msg = RH.done || RH.miss ? `Done. ${RH.done} right first time${RH.miss ? `, ${RH.miss} to try again ${whenTxt(Date.now() + 6e5)}` : ""}.` : keys.length ? `Nothing due. The next one opens ${whenTxt(nxt)}.` : "No mistakes logged yet. Every syntax error you make on a ticket lands here, with the command the step needed.";
+    el.innerHTML = head("") + `<div class="re">${esc(msg)}</div>`;
+    return;
+  }
+  const m = MK[RH.q[RH.i]];
+  el.innerHTML = head(`${RH.i + 1} / ${RH.q.length}`) +
+    `<div class="rt">${esc(m.task)}</div><div class="rw">${esc(m.why)}</div>` +
+    `<div class="rl">${m.prev ? `<div>Right after <code>${esc(m.prev)}</code></div>` : ""}<div class="bad">You typed <code>${esc(m.typed)}</code>${m.n > 1 ? ` · missed ${m.n} times` : ""}</div></div>` +
+    `<div class="rin"><span>#</span><input id="rhin" spellcheck="false" autocomplete="off" autocapitalize="off" placeholder="type the command"></div><div class="rf" id="rhf"></div>`;
+  const inp = $("#rhin");
+  inp.addEventListener("keydown", rhKey);
+  setTimeout(() => inp.focus(), 40);
+}
+function rhKey(e) {
+  if (e.key.length === 1 || e.key === "Backspace") keyClick(false);
+  if (e.key === "Escape") { e.preventDefault(); RH = null; setMain("home"); return; }
+  if (e.key !== "Enter") return;
+  e.preventDefault();
+  keyClick(true);
+  const k = RH.q[RH.i], m = MK[k], f = $("#rhf"), inp = e.target;
+  if (!m) { RH.i++; paintRH(); return; }
+  const v = normc(inp.value);
+  if (!v) return;
+  if (RH.state === "ask") {
+    if (v === normc(m.want)) {
+      m.lv = Math.min((m.lv || 0) + 1, RH_IV.length - 1);
+      m.due = Date.now() + RH_IV[m.lv] * 864e5;
+      if (m.lv === RH_IV.length - 1) delete MK[k];
+      saveMK();
+      RH.done++;
+      f.className = "rf ok";
+      f.textContent = m.lv >= RH_IV.length - 1 ? "Correct. That one is retired." : `Correct. Back ${whenTxt(m.due)}.`;
+      roomFx("commit");
+      RH.state = "wait";
+      setTimeout(() => { RH.i++; RH.state = "ask"; paintRH(); }, 900);
+    } else {
+      m.lv = 0; m.due = Date.now() + 6e5; m.n++;
+      saveMK();
+      RH.miss++;
+      f.className = "rf no";
+      f.innerHTML = `Not quite. It is <code>${esc(m.want)}</code>. Type it once to lock it in.`;
+      roomFx("fail");
+      RH.state = "copy";
+      inp.value = "";
+    }
+  } else if (RH.state === "copy") {
+    if (v === normc(m.want)) { RH.i++; RH.state = "ask"; paintRH(); }
+    else { inp.value = ""; f.innerHTML = `Copy it exactly: <code>${esc(m.want)}</code>`; }
+  }
+}
 function setMain(m) {
   mainMode = m;
   renderTerm();
 }
 function openApp(a) {
+  if (a === "rehearse") { openRehearse(); return; }
   if (a === "console") { setMain("console"); if (view === "stand") setView("sit"); focusCmd(); return; }
   const wrap = $("#appwrap");
   let f = wrap.querySelector("iframe");
@@ -3403,6 +3507,9 @@ function paintHome() {
   $("#h-rev").textContent = rev ? rev + " due" : "";
   $("#h-rev").classList.toggle("hot", rev > 0);
   $("#h-mix").textContent = mix;
+  const rd = rhDue().length, rn = Object.keys(MK).length;
+  $("#h-rh").textContent = rd ? rd + " due" : rn ? rn + " logged" : "";
+  $("#h-rh").classList.toggle("hot", rd > 0);
 }
 setInterval(() => { if (mainMode === "home") paintHome(); }, 20000);
 function renderTerm() {
@@ -3417,6 +3524,7 @@ function renderTerm() {
   $("#home").hidden = mainMode !== "home";
   $("#appwrap").hidden = mainMode !== "app";
   $("#brief").hidden = mainMode !== "brief";
+  $("#rh").hidden = mainMode !== "rh";
   $("#scrbar").hidden = mainMode === "home" || mainMode === "brief";
   $("#nosig").hidden = !(mainMode === "console" && !on);
   $("#term").hidden = !(mainMode === "console" && on);
@@ -3546,7 +3654,9 @@ $("#cmd").addEventListener("keydown", (e) => {
     hi = hist.length;
     const before = st.log.length;
     const sessBefore = st.sess;
+    const stepB = curStep();
     run(v);
+    if (stepB && v.trim() && !HIDE.includes(sessBefore) && /syntax error|unknown command|missing argument|^error:/m.test(st.log.slice(before).join("\n"))) noteMistake(stepB, v.trim());
     if (v.trim() && !HIDE.includes(sessBefore)) { st.typed = (st.typed || []).concat([[v.trim(), Date.now()]]).slice(-200); }
     afterChange();
     junieReact(before);
@@ -3591,6 +3701,7 @@ $("#main").addEventListener("click", (e) => {
   const ap = e.target.closest(".row");
   if (ap) { openApp(ap.dataset.app); return; }
   if (e.target.closest("#scrbar")) { setMain("home"); if (view === "focus") setView("sit"); return; }
+  if (mainMode === "rh") { if (view === "stand") setView("sit"); const i = $("#rhin"); if (i) i.focus(); return; }
   if (view === "stand") setView("sit");
   focusCmd();
 });
