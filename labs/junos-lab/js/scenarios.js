@@ -1800,16 +1800,57 @@ function hintLogTouch(){
 }
 function scenStruggled(h){ return !!(h && !h.clean && (h.hints > 0 || (h.errs || 0) >= RUN_ERR_LIMIT)); }
 function scenNeedsRedo(s){ return scenStruggled(HINTLOG[s.id]); }
+const LS_OOPS = "junoslab-oops", OOPS_MAX = 80;
+let OOPS = { items: {} };
+try{ const o = JSON.parse(localStorage.getItem(LS_OOPS) || "null"); if(o && o.items) OOPS = o; }catch(e){}
+let oopsPending = [];
+function oopsDist(a, b){
+  const m = a.length, n = b.length; let prev = Array.from({ length: n + 1 }, (_, j) => j);
+  for(let i = 1; i <= m; i++){
+    const cur = [i];
+    for(let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[n];
+}
+function oopsNote(raw, failed){
+  const c = String(raw || "").trim().replace(/\s+/g, " ");
+  if(!c || c.length < 3) return;
+  if(failed){
+    oopsPending.push({ c, left: 4 });
+    if(oopsPending.length > 4) oopsPending.shift();
+    return;
+  }
+  oopsPending.forEach(p => p.left--);
+  oopsPending = oopsPending.filter(p => p.left > 0);
+  if(!oopsPending.length) return;
+  let best = -1, bestR = 1;
+  oopsPending.forEach((p, i) => {
+    if(p.c === c) return;
+    const r = oopsDist(p.c.toLowerCase(), c.toLowerCase()) / Math.max(p.c.length, c.length);
+    if(r < bestR){ bestR = r; best = i; }
+  });
+  if(best < 0 || bestR > 0.4) return;
+  const typed = oopsPending[best].c;
+  oopsPending.splice(best, 1);
+  const prev = OOPS.items[c] || { n: 0 };
+  OOPS.items[c] = { want: c, typed, task: (currentScenario && currentScenario.title) || "", n: (prev.n || 0) + 1, at: Date.now() };
+  const keys = Object.keys(OOPS.items);
+  if(keys.length > OOPS_MAX) keys.sort((x, y) => OOPS.items[x].at - OOPS.items[y].at).slice(0, keys.length - OOPS_MAX).forEach(k => delete OOPS.items[k]);
+  try{ localStorage.setItem(LS_OOPS, JSON.stringify(OOPS)); }catch(e){}
+}
 (function(){
   if(typeof runCliCommand !== "function") return;
   const orig = runCliCommand;
   runCliCommand = function(dev, raw, masked){
     const r = orig.apply(this, arguments);
     try{
-      if(String(raw || "").trim() && !masked && Array.isArray(r) && r.some(l => l && l.cls === "err" && RUN_ERR_RE.test(String(l.text || "")))){
+      const failed = !!(String(raw || "").trim() && !masked && Array.isArray(r) && r.some(l => l && l.cls === "err" && RUN_ERR_RE.test(String(l.text || ""))));
+      if(failed){
         runErrs++;
         hintLogTouch();
       }
+      if(!masked && Array.isArray(r)) oopsNote(raw, r.some(l => l && l.cls === "err"));
     }catch(e){}
     return r;
   };
