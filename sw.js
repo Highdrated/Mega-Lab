@@ -1,4 +1,4 @@
-const CACHE = "workshop-v88";
+const CACHE = "workshop-v89";
 const PRECACHE = [
   "./",
   "./index.html",
@@ -40,7 +40,8 @@ self.addEventListener("fetch", (e) => {
   e.respondWith(new Promise((resolve) => {
     let done = false;
     const finish = (res) => { if (!done) { done = true; resolve(res); } };
-    const slow = setTimeout(() => { caches.match(req).then((hit) => { if (hit) finish(hit); }); }, NET_WAIT);
+    const wait = req.mode === "navigate" || /\.html$/i.test(url.pathname) ? 12000 : NET_WAIT;
+    const slow = setTimeout(() => { caches.match(req).then((hit) => { if (hit) finish(hit); }); }, wait);
     fetch(req, { cache: "no-cache" })
       .then((res) => {
         clearTimeout(slow);
