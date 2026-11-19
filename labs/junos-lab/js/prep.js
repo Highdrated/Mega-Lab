@@ -1138,8 +1138,6 @@ function renderResume(){
   var h = resumeHost();
   h.innerHTML = "";
   var card = prepEl("div", "resume-card", h);
-  const art = prepEl("img", "resume-art", card, "");
-  art.alt = ""; art.onerror = () => { art.style.display = "none"; }; art.src = "img/scene-noc.webp";
   prepEl("div", "resume-kicker", card, "Junos Lab · JNCIA-Junos prep");
 
   var rp = typeof rankProgress === "function" ? rankProgress() : null;
