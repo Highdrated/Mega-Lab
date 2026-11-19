@@ -1,0 +1,36 @@
+import os
+import asyncio
+from lib import L
+async def main():
+    s=L();await s.start('switch');W=s.pg.wait_for_timeout
+    async def j(line,wait=150):
+        await s.pg.click('#jin');await s.pg.fill('#jin',line);await s.pg.keyboard.press('Enter');await W(wait)
+    async def jt(n=260): return (await s.pg.inner_text('#jt'))[-n:].replace('\n',' | ')
+    await s.click('app:ipam');print('  register',(await s.pg.inner_text('#wiz')).replace('\n',' | ')[:0]);await s.click('app:term');await s.type('ping 192.168.0.3');await s.step('find name+address',1)
+    await s.click('go:room');await s.pg.click('.addm summary');await s.click('rk:adddev:sw:0');await s.drag('[data-drag="d1"] > rect','[data-drop="2"] rect');await s.step('rack the switch',2)
+    await s.click('rk:kind:power');await s.drag('[data-port="d1.ac"] rect','[data-port="A3"] rect');await s.step('power',3)
+    await s.pg.click('.addm summary');await s.click('rk:add:lap');await s.click('rk:kind:serial');await s.drag('[data-port="d1.con"] rect','[data-port="lap"] rect')
+    print('  console present',await s.pg.evaluate("!!document.getElementById('jin')"),'|',await jt(200))
+    await j('root');await j('cli');await s.step('console login',4);print('  ',await jt(120))
+    await j('configure');await j('set system root-authentication plain-text-password');await j('Geheim-2026');await j('Geheim-2026');await j('commit',400);await s.step('root password',5);print('  ',await jt(160))
+    await j('set system host-name sw-west-02');await j('commit',400);await s.step('host-name',6)
+    await j('set interfaces me0 unit 0 family inet address 192.168.0.3/24');await j('show | compare');await j('commit',400);await s.step('me0 address',7)
+    await s.click('rk:kind:hands');await s.click('rk:p:d1.con');await s.click('rk:kind:serial');await s.drag('[data-port="con"] rect','[data-port="lap"] rect');await W(200);print('  on sw-west-01',[x for x in await s.acts('#wiz') if not x.startswith(('app:','go:'))],(await s.pg.inner_text('#wiz'))[-420:].replace(chr(10),' | '))
+    await s.click('swview:vlans');await s.pg.screenshot(path=os.path.join(os.path.dirname(os.path.abspath(__file__)),'last.png'))
+    await s.click('rk:kind:hands');await s.click('rk:p:con');await s.click('rk:kind:serial');await s.drag('[data-port="d1.con"] rect','[data-port="lap"] rect');print('  back',await jt(120))
+    await j('set vlans servers vlan-id 20');await j('commit',400);await s.step('vlan',8);print('  ',await jt(200))
+    await j('set system services ssh');await j('set system login user kaatje class super-user authentication plain-text-password');await j('Geheim-2026');await j('Geheim-2026');await j('commit',400);await s.step('ssh+user',9)
+    await s.click('rk:kind:net');await s.drag('[data-port="d1.me0"] rect','[data-port="P3"] rect');await s.click('go:desk');await s.click('app:term');await s.type('ping 192.168.0.3');await s.step('reach from desk',10)
+    await s.type('ssh kaatje@192.168.0.3');await s.type('yes');await s.type('Geheim-2026');await s.step('ssh as yourself',11)
+    async def tt(n=330): return (await s.pg.inner_text('#term'))[-n:].replace(chr(10),' | ')
+    await s.type('configure');await s.type('delete interfaces me0');await s.type('commit confirmed 1');await W(300);print('  after cc',await tt(420))
+    print('  acts',[x for x in await s.acts('body') if not x.startswith(('app:','go:','rk:'))][:30]);print('  host',await s.pg.evaluate("LAB.W().host+' jssh='+!!LAB.W().jssh"))
+    await s.type('ping 192.168.0.3');print('  ping1',await tt(260))
+    await W(17000);await s.type('ping 192.168.0.3');print('  ping2',await tt(200));await s.step('commit confirmed saves you',12)
+    await s.type('ssh kaatje@192.168.0.3');await s.type('Geheim-2026');await s.type('configure');await s.type('set system time-zone Europe/Brussels');await s.type('commit confirmed');await s.type('run show version');await s.type('commit');await s.step('time zone',13);print('  ',await tt(260))
+    await s.type('set interfaces ge-0/0/0 unit 0 family ethernet-switching vlan members servers');await s.type('set interfaces ge-0/0/1 unit 0 family ethernet-switching vlan members servers');await s.type('commit confirmed');await s.type('run show vlans');await s.type('commit');await s.step('ports in vlan',14);print('  ',await tt(330))
+    await s.click('go:room');await s.click('rk:kind:net');await s.drag('[data-port="d1.p11"] rect','[data-port="P12"] rect');await s.click('go:desk');await s.click('app:term')
+    print('  session after walking',await s.pg.evaluate("LAB.W().host+' jssh='+!!LAB.W().jssh"),await tt(120))
+    await s.type('set interfaces ge-0/0/11 unit 0 family ethernet-switching interface-mode trunk vlan members servers');await s.type('commit confirmed');await s.type('run show ethernet-switching table');await s.type('commit');await s.step('uplink',-1);print('  ',await tt(420))
+    await s.stop()
+asyncio.run(main())
