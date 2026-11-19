@@ -143,7 +143,8 @@ main{flex:1;min-height:0;position:relative}
 
 .term{background:var(--ink);color:#d8dee7;display:flex;flex-direction:column;min-height:0}
 .thead{display:flex;justify-content:space-between;gap:10px;padding:11px 16px;border-bottom:1px solid #263040;font-size:10px;letter-spacing:.22em;color:#8a96a6}
-.tout{flex:1;overflow:auto;padding:14px 16px 6px;font-family:var(--mono);font-size:12.5px;line-height:1.55;white-space:pre;tab-size:4}
+.tscroll{flex:1;overflow:auto;min-height:0;cursor:text;background:radial-gradient(ellipse at 50% 0,rgba(79,140,230,.07),transparent 60%)}
+.tout{padding:16px 18px 2px;font-family:var(--mono);font-size:13.5px;line-height:1.6;white-space:pre;tab-size:4}
 .tout .e{color:var(--red2);white-space:pre-wrap}
 .tout .h{color:#9fb1c8;white-space:pre-wrap}
 .tout .hc{color:#e6edf5;white-space:pre-wrap}
@@ -152,21 +153,25 @@ main{flex:1;min-height:0;position:relative}
 .tout .echo{white-space:pre-wrap;word-break:break-all}
 .tout .p{color:var(--blue2)}
 .tout .n{color:#6f7d90;white-space:pre-wrap;font-family:Inter,sans-serif;font-size:12.5px}
-.tin{display:flex;align-items:center;gap:8px;padding:10px 16px 14px;font-family:var(--mono);font-size:12.5px;border-top:1px solid #1d2633}
+.hc2{color:#f1d36b;font-weight:400}.hp{color:#8f9cb0;font-weight:400}.hs{color:#5fcbd6;font-weight:400}.hv{color:#7fd99a;font-weight:400}.ho{color:#aab6c6;font-weight:400}.hn{color:#e8eef6;font-weight:400}.hm{color:#6f8f6a;font-weight:400}
+.tin{display:flex;align-items:center;gap:8px;padding:0 18px 18px;font-family:var(--mono);font-size:13.5px;line-height:1.6}
+.tin.sent .p{animation:sent .6s ease-out}
+@keyframes sent{0%{color:#fff;text-shadow:0 0 10px rgba(120,170,255,.9)}100%{text-shadow:none}}
 .tin .p{color:var(--blue2);white-space:nowrap}
 .tfield{position:relative;flex:1;min-width:0}
-.tghost{position:absolute;left:0;top:0;right:0;white-space:pre;overflow:hidden;pointer-events:none;color:transparent}
+.tghost{position:absolute;left:0;top:0;right:0;white-space:pre;overflow:hidden;pointer-events:none;color:#e6edf5}
 .tghost i{font-style:normal;color:#56657a}
-.tin input{position:relative;width:100%;padding:0;margin:0;background:none;border:0;color:#fff;font:inherit;caret-color:var(--blue2)}
+.tin input{position:relative;width:100%;padding:0;margin:0;background:none;border:0;color:transparent;font:inherit;line-height:inherit;caret-color:#9cc3ff}
+.tin input::selection{background:rgba(120,170,255,.35);color:transparent}
 .tin.bell{animation:bell .25s}
 @keyframes bell{50%{background:#1f2a3a}}
 .term{position:relative}
-.tmenu{position:absolute;left:16px;right:16px;bottom:78px;max-height:180px;overflow:auto;background:#1a2230;border:1px solid #2c394d;padding:8px;font-family:var(--mono);font-size:12px;display:flex;flex-wrap:wrap;gap:2px 0;z-index:3}
+.tmenu{position:relative;margin:0 18px 14px;max-height:180px;overflow:auto;background:#1a2230;border:1px solid #2c394d;padding:8px;font-family:var(--mono);font-size:12px;display:flex;flex-wrap:wrap;gap:2px 0;z-index:3}
 .tmenu span{padding:2px 6px;color:#c9d3e0;white-space:pre}
 .tmenu span.on{background:#2f4a73;color:#fff}
 .tmtip{flex-basis:100%;border-top:1px solid #2c394d;margin-top:6px;padding-top:6px;color:#8a96a6}
 .tin input:focus{outline:none}
-.tin.busy input{color:#8a96a6}
+.tin.busy .tghost{opacity:.5}
 .thint{padding:0 16px 10px;font-size:11px;color:#6f7d90;font-family:Inter,sans-serif}
 .term.flash{animation:flash 1.2s ease-out}
 @keyframes flash{0%{box-shadow:inset 0 0 0 2px var(--red2)}100%{box-shadow:inset 0 0 0 2px transparent}}
@@ -450,9 +455,9 @@ h5.cmpt0{margin:16px 0 0;font-size:10px;letter-spacing:.22em;color:var(--red,#c0
       </div>
       <div class="term" id="term">
         <div class="thead"><span>CONSOLE · PWSH 7.4 · MACOS</span><span class="grow"></span><span id="tstate">NOT CONNECTED</span><button class="tdesk" id="tDesk" type="button">FILES</button><button class="tdesk" id="tCode" type="button">CODE</button></div>
-        <div class="tout" id="tout" aria-live="polite"></div>
-        <div class="tmenu hide" id="tmenu" aria-hidden="true"></div>
+        <div class="tscroll" id="tscroll"><div class="tout" id="tout" aria-live="polite"></div>
         <div class="tin" id="tin"><span class="p" id="tprompt">PS /Users/kaatje&gt;</span><div class="tfield"><div class="tghost" id="tghost" aria-hidden="true"></div><input id="cmd" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" aria-label="PowerShell command"></div></div>
+        <div class="tmenu hide" id="tmenu" aria-hidden="true"></div></div>
         <div class="thint">Tab completes · Tab Tab lists · Ctrl+Space menu · Right arrow takes the grey suggestion · Ctrl+R searches history · all keys in the cheat sheet</div>
       </div>
       <aside class="side">
@@ -5978,22 +5983,38 @@ function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/
 function setPrompt() { const t = $("tprompt"); if (t) t.textContent = promptStr(); }
 function tstate() {
   setPrompt(); const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : ""); }
-function tline(t, cls) { const o = $("tout"); const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = t; o.appendChild(d); o.scrollTop = o.scrollHeight; }
-function tcols() { const w = $("tout").clientWidth - 32; return Math.max(60, Math.floor(w / 7.55)); }
+function hl(s) {
+  let out = "", cmdNext = true, m;
+  const re = /(\s+)|('(?:[^']|'')*'?|"(?:[^"`]|`.)*"?)|(\$(?:\{[^}]*\}?|[\w:?]+))|(-(?:eq|ne|gt|ge|lt|le|like|notlike|match|notmatch|contains|notcontains|in|notin|and|or|not|is|isnot|replace|split|join)\b)|(-[A-Za-z][\w]*:?)|(\d+(?:\.\d+)?(?:[kmgt]b)?\b)|(#.*$)|([|;({})\[\],=@+*/%<>!.])|([^\s|;({})\[\],='"$#]+)/gi;
+  while ((m = re.exec(s)) !== null) {
+    const t = m[0];
+    if (m[1]) { out += t; continue; }
+    let c = "";
+    if (m[2]) c = "hs"; else if (m[3]) c = "hv"; else if (m[4]) c = "ho"; else if (m[5]) c = "hp"; else if (m[6]) c = "hn"; else if (m[7]) c = "hm";
+    else if (m[8]) c = "ho";
+    else if (m[9]) c = cmdNext ? "hc2" : "";
+    out += c ? '<b class="' + c + '">' + esc(t) + "</b>" : esc(t);
+    if (m[8]) cmdNext = /[|;({]/.test(t) || (t === "=" ) ; else if (!m[1]) cmdNext = false;
+  }
+  return out;
+}
+function scrollCon() { const s = $("tscroll"); if (s) s.scrollTop = s.scrollHeight; }
+function tline(t, cls) { const o = $("tout"); const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = t; o.appendChild(d); scrollCon(); }
+function tcols() { const w = $("tout").clientWidth - 32; return Math.max(60, Math.floor(w / 8.1)); }
 
 function exec(src, opts) {
   opts = opts || {};
   const o = $("tout");
   const echo = document.createElement("div");
   echo.className = "echo";
-  echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(src) + "</span>";
+  echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + hl(src) + "</span>";
   o.appendChild(echo);
   const res = PS.run(src, R.ctx);
   for (const h of res.host) { if (h.clear) { o.innerHTML = ""; continue; } if (h.err) tline(h.err, "e"); else if (h.warn) tline(h.warn, "w"); else if (h.text !== undefined) tline(h.text, h.color ? "hc" : "h"); }
   const txt = PS.formatOut(res.out, tcols());
   if (txt && txt.trim()) tline(txt.replace(/^\n+/, "").replace(/\s+$/, "") + "\n", "");
   if (res.error) tline(res.error.text ? res.error.text() : String(res.error.message), "e");
-  o.scrollTop = o.scrollHeight;
+  scrollCon();
   R.lastRes = res;
   if (R.ctx.ui && !R.ctx.ui.done) { const u = R.ctx.ui; u.done = true; openDesktop(); openCode(u.open); }
   tstate();
@@ -6516,7 +6537,8 @@ function suggestion() {
 function ghost() {
   const g = $("tghost"); if (!g) return;
   const sug = suggestion();
-  g.innerHTML = sug ? "<span>" + esc(inp().value) + "</span><i>" + esc(sug) + "</i>" : "";
+  g.innerHTML = hl(inp().value) + (sug ? "<i>" + esc(sug) + "</i>" : "") + " ";
+  g.scrollLeft = inp().scrollLeft;
 }
 function acceptSuggestion(wordOnly) {
   const sug = suggestion(); if (!sug) return false;
@@ -6533,7 +6555,7 @@ function printList(list) {
   const cols = Math.max(1, Math.floor(tcols() / w));
   let lines = [];
   for (let i = 0; i < list.length; i += cols) lines.push(list.slice(i, i + cols).map((x) => x.padEnd(w)).join("").trimEnd());
-  const echo = document.createElement("div"); echo.className = "echo"; echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(inp().value) + "</span>"; o.appendChild(echo);
+  const echo = document.createElement("div"); echo.className = "echo"; echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + hl(inp().value) + "</span>"; o.appendChild(echo);
   tline(lines.join("\n"), "h");
 }
 function tabComplete() {
@@ -6592,12 +6614,14 @@ function submitLine() {
   const i = inp();
   const src = i.value;
   i.value = ""; ghost(); CON.undo = []; CON.tabState = null;
-  if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span>'; $("tout").appendChild(d); return; }
+  if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span>'; $("tout").appendChild(d); scrollCon(); return; }
   if (R.hist[R.hist.length - 1] !== src) R.hist.push(src);
   R.hpos = R.hist.length; saveHist();
   (R.sessHist = R.sessHist || []).push(src);
   if (/^\s*(cls|clear|clear-host)\s*$/i.test(src)) { $("tout").innerHTML = ""; return; }
+  const tin = $("tin"); tin.classList.remove("sent"); void tin.offsetWidth; tin.classList.add("sent");
   const res = exec(src);
+  scrollCon();
   if (R.gate) { R.gateHist.push(src); checkGate(res); }
   else if (R.phase === "recall") checkRecall(res);
   else if (R.phase === "practice") checkPractice(res);
@@ -6659,7 +6683,7 @@ function conKey(e) {
       case "d": e.preventDefault(); if (!v) tline("(lab) Ctrl+D on an empty line closes pwsh. The lab stays open.", "n"); else if (p < v.length) setVal(v.slice(0, p) + v.slice(p + 1), p); return;
       case "t": e.preventDefault(); if (p > 0 && v.length > 1) { const q = p === v.length ? p - 1 : p; setVal(v.slice(0, q - 1) + v[q] + v[q - 1] + v.slice(q + 1), q + 1); } return;
       case "l": e.preventDefault(); $("tout").innerHTML = ""; return;
-      case "c": e.preventDefault(); { const d = document.createElement("div"); d.className = "echo"; d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(v) + '</span><span class="e">^C</span>'; $("tout").appendChild(d); setVal(""); } return;
+      case "c": e.preventDefault(); { const d = document.createElement("div"); d.className = "echo"; d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + hl(v) + '</span><span class="e">^C</span>'; $("tout").appendChild(d); scrollCon(); setVal(""); } return;
       case "r": e.preventDefault(); searchStart("bck"); return;
       case "s": e.preventDefault(); searchStart("fwd"); return;
       case "g": e.preventDefault(); return;
@@ -6681,6 +6705,8 @@ function conKey(e) {
 inp().addEventListener("keydown", conKey);
 inp().addEventListener("input", () => { CON.undo.push([inp().value, inp().selectionStart]); ghost(); });
 inp().addEventListener("click", ghost);
+inp().addEventListener("keyup", () => { const g = $("tghost"); if (g) g.scrollLeft = inp().scrollLeft; });
+$("tscroll").addEventListener("mousedown", (e) => { if (e.target.closest(".tout") && window.getSelection().toString()) return; if (!e.target.closest("input")) setTimeout(() => { if (!window.getSelection().toString()) inp().focus(); }, 0); });
 inp().addEventListener("blur", () => { if (CON.menu) menuClose(true); });
 
 const DK = { prev: null, finder: "/Users/kaatje/Downloads", sel: null, z: 10, region: "BE", open: {} };

@@ -209,22 +209,38 @@ function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/
 function setPrompt() { const t = $("tprompt"); if (t) t.textContent = promptStr(); }
 function tstate() {
   setPrompt(); const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : ""); }
-function tline(t, cls) { const o = $("tout"); const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = t; o.appendChild(d); o.scrollTop = o.scrollHeight; }
-function tcols() { const w = $("tout").clientWidth - 32; return Math.max(60, Math.floor(w / 7.55)); }
+function hl(s) {
+  let out = "", cmdNext = true, m;
+  const re = /(\s+)|('(?:[^']|'')*'?|"(?:[^"`]|`.)*"?)|(\$(?:\{[^}]*\}?|[\w:?]+))|(-(?:eq|ne|gt|ge|lt|le|like|notlike|match|notmatch|contains|notcontains|in|notin|and|or|not|is|isnot|replace|split|join)\b)|(-[A-Za-z][\w]*:?)|(\d+(?:\.\d+)?(?:[kmgt]b)?\b)|(#.*$)|([|;({})\[\],=@+*/%<>!.])|([^\s|;({})\[\],='"$#]+)/gi;
+  while ((m = re.exec(s)) !== null) {
+    const t = m[0];
+    if (m[1]) { out += t; continue; }
+    let c = "";
+    if (m[2]) c = "hs"; else if (m[3]) c = "hv"; else if (m[4]) c = "ho"; else if (m[5]) c = "hp"; else if (m[6]) c = "hn"; else if (m[7]) c = "hm";
+    else if (m[8]) c = "ho";
+    else if (m[9]) c = cmdNext ? "hc2" : "";
+    out += c ? '<b class="' + c + '">' + esc(t) + "</b>" : esc(t);
+    if (m[8]) cmdNext = /[|;({]/.test(t) || (t === "=" ) ; else if (!m[1]) cmdNext = false;
+  }
+  return out;
+}
+function scrollCon() { const s = $("tscroll"); if (s) s.scrollTop = s.scrollHeight; }
+function tline(t, cls) { const o = $("tout"); const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = t; o.appendChild(d); scrollCon(); }
+function tcols() { const w = $("tout").clientWidth - 32; return Math.max(60, Math.floor(w / 8.1)); }
 
 function exec(src, opts) {
   opts = opts || {};
   const o = $("tout");
   const echo = document.createElement("div");
   echo.className = "echo";
-  echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(src) + "</span>";
+  echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + hl(src) + "</span>";
   o.appendChild(echo);
   const res = PS.run(src, R.ctx);
   for (const h of res.host) { if (h.clear) { o.innerHTML = ""; continue; } if (h.err) tline(h.err, "e"); else if (h.warn) tline(h.warn, "w"); else if (h.text !== undefined) tline(h.text, h.color ? "hc" : "h"); }
   const txt = PS.formatOut(res.out, tcols());
   if (txt && txt.trim()) tline(txt.replace(/^\n+/, "").replace(/\s+$/, "") + "\n", "");
   if (res.error) tline(res.error.text ? res.error.text() : String(res.error.message), "e");
-  o.scrollTop = o.scrollHeight;
+  scrollCon();
   R.lastRes = res;
   if (R.ctx.ui && !R.ctx.ui.done) { const u = R.ctx.ui; u.done = true; openDesktop(); openCode(u.open); }
   tstate();

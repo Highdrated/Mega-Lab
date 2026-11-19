@@ -103,7 +103,8 @@ function suggestion() {
 function ghost() {
   const g = $("tghost"); if (!g) return;
   const sug = suggestion();
-  g.innerHTML = sug ? "<span>" + esc(inp().value) + "</span><i>" + esc(sug) + "</i>" : "";
+  g.innerHTML = hl(inp().value) + (sug ? "<i>" + esc(sug) + "</i>" : "") + " ";
+  g.scrollLeft = inp().scrollLeft;
 }
 function acceptSuggestion(wordOnly) {
   const sug = suggestion(); if (!sug) return false;
@@ -120,7 +121,7 @@ function printList(list) {
   const cols = Math.max(1, Math.floor(tcols() / w));
   let lines = [];
   for (let i = 0; i < list.length; i += cols) lines.push(list.slice(i, i + cols).map((x) => x.padEnd(w)).join("").trimEnd());
-  const echo = document.createElement("div"); echo.className = "echo"; echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(inp().value) + "</span>"; o.appendChild(echo);
+  const echo = document.createElement("div"); echo.className = "echo"; echo.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + hl(inp().value) + "</span>"; o.appendChild(echo);
   tline(lines.join("\n"), "h");
 }
 function tabComplete() {
@@ -179,12 +180,14 @@ function submitLine() {
   const i = inp();
   const src = i.value;
   i.value = ""; ghost(); CON.undo = []; CON.tabState = null;
-  if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span>'; $("tout").appendChild(d); return; }
+  if (!src.trim()) { const d = document.createElement("div"); d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span>'; $("tout").appendChild(d); scrollCon(); return; }
   if (R.hist[R.hist.length - 1] !== src) R.hist.push(src);
   R.hpos = R.hist.length; saveHist();
   (R.sessHist = R.sessHist || []).push(src);
   if (/^\s*(cls|clear|clear-host)\s*$/i.test(src)) { $("tout").innerHTML = ""; return; }
+  const tin = $("tin"); tin.classList.remove("sent"); void tin.offsetWidth; tin.classList.add("sent");
   const res = exec(src);
+  scrollCon();
   if (R.gate) { R.gateHist.push(src); checkGate(res); }
   else if (R.phase === "recall") checkRecall(res);
   else if (R.phase === "practice") checkPractice(res);
@@ -246,7 +249,7 @@ function conKey(e) {
       case "d": e.preventDefault(); if (!v) tline("(lab) Ctrl+D on an empty line closes pwsh. The lab stays open.", "n"); else if (p < v.length) setVal(v.slice(0, p) + v.slice(p + 1), p); return;
       case "t": e.preventDefault(); if (p > 0 && v.length > 1) { const q = p === v.length ? p - 1 : p; setVal(v.slice(0, q - 1) + v[q] + v[q - 1] + v.slice(q + 1), q + 1); } return;
       case "l": e.preventDefault(); $("tout").innerHTML = ""; return;
-      case "c": e.preventDefault(); { const d = document.createElement("div"); d.className = "echo"; d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + esc(v) + '</span><span class="e">^C</span>'; $("tout").appendChild(d); setVal(""); } return;
+      case "c": e.preventDefault(); { const d = document.createElement("div"); d.className = "echo"; d.innerHTML = '<span class="p">' + esc(promptStr()) + ' </span><span class="c">' + hl(v) + '</span><span class="e">^C</span>'; $("tout").appendChild(d); scrollCon(); setVal(""); } return;
       case "r": e.preventDefault(); searchStart("bck"); return;
       case "s": e.preventDefault(); searchStart("fwd"); return;
       case "g": e.preventDefault(); return;
@@ -268,4 +271,6 @@ function conKey(e) {
 inp().addEventListener("keydown", conKey);
 inp().addEventListener("input", () => { CON.undo.push([inp().value, inp().selectionStart]); ghost(); });
 inp().addEventListener("click", ghost);
+inp().addEventListener("keyup", () => { const g = $("tghost"); if (g) g.scrollLeft = inp().scrollLeft; });
+$("tscroll").addEventListener("mousedown", (e) => { if (e.target.closest(".tout") && window.getSelection().toString()) return; if (!e.target.closest("input")) setTimeout(() => { if (!window.getSelection().toString()) inp().focus(); }, 0); });
 inp().addEventListener("blur", () => { if (CON.menu) menuClose(true); });
