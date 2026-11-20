@@ -1060,7 +1060,7 @@ function runSB(sb, ctx, item, extra) {
 }
 
 function getMember(o, name) {
-  if (o === null || o === undefined) return null;
+  if (o === null || o === undefined) return /^(count|length)$/i.test(name) ? 0 : null;
   const l = name.toLowerCase();
   if (Array.isArray(o)) {
     if (l === "count" || l === "length") return o.length;
@@ -2551,9 +2551,304 @@ function seedContractors(ctx, n) {
   ng.members = ids.slice(); ctx.t.groups.push(ng);
   return ids;
 }
-return { makeTenant, Ctx, parse, seedContractors, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
+const T_TEAM = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team";
+const T_TUSER = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamUser";
+const T_CHAN = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel";
+const T_CHUSER = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelUser";
+const T_TCONN = "Microsoft.TeamsCmdlets.Powershell.Connect.Models.PSAzureContext";
+DISPLAY[T_TEAM] = ["GroupId", "DisplayName", "Visibility", "Archived", "MailNickName", "Description"];
+DISPLAY[T_TUSER] = ["UserId", "User", "Name", "Role"];
+DISPLAY[T_CHAN] = ["Id", "DisplayName", "Description", "MembershipType"];
+DISPLAY[T_CHUSER] = ["UserId", "User", "Name", "Role"];
+DISPLAY[T_TCONN] = ["Account", "Environment", "Tenant", "TenantId"];
+const TEAMS_MOD = "MicrosoftTeams", TEAMS_VER = "7.4.0";
+const TEAM_ADMIN = "kaatje@halvardco.onmicrosoft.com";
+
+function seedTeams(ctx) {
+  const t = ctx.t;
+  if (t.teams) return t.teams;
+  const r = rng(9090);
+  const byName = (dn) => t.users.find((u) => u.DisplayName === dn);
+  const upn = (dn) => byName(dn).UserPrincipalName;
+  const chanId = () => "19:" + guid(r).replace(/-/g, "").slice(0, 32) + "@thread.tacv2";
+  const general = () => ({ Id: chanId(), DisplayName: "General", Description: null, MembershipType: "Standard", users: [] });
+  const mk = (name, nick, desc, vis, owners, members, opts) => {
+    opts = opts || {};
+    let grp = t.groups.find((x) => x.g.DisplayName === name);
+    if (!grp) {
+      grp = { g: obj(T_GRP, { Classification: null, CreatedDateTime: new Date(Date.now() - (opts.age || 300) * 864e5), Description: desc, DisplayName: name, GroupTypes: ["Unified"], Id: guid(r), Mail: nick + "@" + t.domain, MailEnabled: true, MailNickname: nick, SecurityEnabled: false, Visibility: vis }), members: [] };
+      t.groups.push(grp);
+    }
+    grp.g.Visibility = vis; grp.g.ResourceProvisioningOptions = ["Team"];
+    const roster = [];
+    for (const o of owners) roster.push({ upn: upn(o), role: "owner" });
+    for (const m of members) if (!roster.some((x) => x.upn === upn(m))) roster.push({ upn: upn(m), role: "member" });
+    for (const g of opts.guests || []) roster.push({ upn: g, role: "guest" });
+    grp.members = roster.map((x) => (userById(t, x.upn) || {}).Id).filter(Boolean);
+    const team = { GroupId: grp.g.Id, DisplayName: name, Description: desc, Visibility: vis, Archived: !!opts.archived, MailNickName: nick, roster, channels: [general()].concat((opts.channels || []).map((c) => ({ Id: chanId(), DisplayName: c[0], Description: c[1] || null, MembershipType: c[2] || "Standard", users: (c[3] || []).map((x) => ({ upn: upn(x[0]), role: x[1] })) }))), _age: opts.age || 300, _lastActivity: opts.idle != null ? opts.idle : 3 };
+    t.teams.push(team);
+    return team;
+  };
+  t.teams = [];
+  const dept = (d) => t.users.filter((u) => u.UserType === "Member" && u.Department === d).map((u) => u.DisplayName);
+  mk("Halvard Leadership", "leadership", "Directors and heads of department", "Private", ["Alaric Strand", "Elowen Thistle"], ["Hollis Reed", "Garrick Penhale", "Caius Mercer", "Juniper Oakes"], { age: 900, channels: [["Board prep", "Papers for the monthly board", "Private", [["Alaric Strand", "owner"], ["Hollis Reed", "member"]]]] });
+  mk("Project Northwind", "northwind", "New warehouse system rollout", "Private", ["Caius Mercer"], ["Lorcan Ivers", "Anwen Frost", "Maelis Grey"], { age: 420, channels: [["Go-live", "Cutover weekend"], ["Vendor", "Shared with the supplier", "Shared", [["Caius Mercer", "owner"]]]] });
+  mk("Sales Hub", "saleshub", "Everything sales: leads, quotes, wins", "Private", ["Garrick Penhale"], dept("Sales"), { age: 700, channels: [["Quotes", "Quote reviews"], ["Key accounts", "Top 20 customers", "Private", [["Garrick Penhale", "owner"], ["Elara Wynn", "member"]]]], guests: t.users.filter((u) => u.UserType === "Guest").slice(0, 1).map((u) => u.UserPrincipalName) });
+  mk("IT Ops", "itops", "Changes, incidents and the on-call rota", "Private", ["Elowen Thistle", "Lorcan Ivers"], dept("IT"), { age: 800, channels: [["Changes", "Change requests and approvals"], ["On-call", "Who has the pager"]] });
+  mk("Finance Close", "financeclose", "Month-end close", "Private", ["Fenna Lowe"], dept("Finance").concat(["Fenna Lowe"]), { age: 650, idle: 12 });
+  mk("Bruges Office", "brugesoffice", "Parking, lunch and building news for Bruges", "Public", [], t.users.filter((u) => u.UserType === "Member" && u.City === "Bruges" && u.AccountEnabled).map((u) => u.DisplayName).slice(0, 9), { age: 1100, idle: 40 });
+  mk("Summer Party 2025", "summerparty2025", "Planning the 2025 summer party", "Public", ["Aldric Moor"], ["Wren Calloway", "Nessa Quill", "Seren Blackwood", "Liora Penn"], { age: 520, idle: 140 });
+  mk("Wellbeing Club", "wellbeing", "Walks, yoga and the step challenge", "Public", ["Juniper Oakes"], ["Seren Blackwood", "Liora Penn", "Saoirse Vane", "Briar Locke", "Wren Calloway", "Ilse Varga"], { age: 380 });
+  mk("Old Intranet Project", "oldintranet", "Retired 2024", "Private", ["Evander Holt"], ["Nessa Quill"], { age: 1400, idle: 400, archived: true });
+  return t.teams;
+}
+function needTeams(ctx, name) { if (!ctx.teams) throw new PSErr("You must call the Connect-MicrosoftTeams cmdlet before calling any other cmdlets.", { cmd: name, term: true, kind: "noteams" }); seedTeams(ctx); }
+function teamErr(name, code, msg) { return new PSErr("Error occurred while executing \nCode: " + code + "\nMessage: " + msg, { cmd: name, term: true, kind: "teams" + code }); }
+function findTeam(ctx, name, gid) {
+  if (gid === undefined || gid === null) throw new PSErr("Cannot bind argument to parameter 'GroupId' because it is null.", { cmd: name, term: true, kind: "bind" });
+  const s = String(isObj(gid) && gid.GroupId ? gid.GroupId : gid).toLowerCase();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)) throw teamErr(name, "BadRequest", "Invalid value for GroupId: '" + gid + "'. GroupId is the team's object id (a GUID), not its name. Get it with (Get-Team -DisplayName '...').GroupId.");
+  const tm = ctx.t.teams.find((x) => x.GroupId.toLowerCase() === s);
+  if (!tm) throw teamErr(name, "NotFound", "No team found with Group Id " + s);
+  return tm;
+}
+function teamOut(tm) { return obj(T_TEAM, { GroupId: tm.GroupId, DisplayName: tm.DisplayName, Visibility: tm.Visibility, Archived: tm.Archived, MailNickName: tm.MailNickName, Description: tm.Description }); }
+function rosterOut(ctx, x, type) {
+  const u = userById(ctx.t, x.upn);
+  const guestName = /#EXT#/.test(x.upn) ? x.upn.split("#EXT#")[0].replace(/_([^_]+)$/, "@$1") : null;
+  const g = !u && guestName ? ctx.t.users.find((z) => z.UserType === "Guest" && z.DisplayName && guestName.toLowerCase().startsWith(z.DisplayName.split(" ")[0].toLowerCase())) : null;
+  const ref = u || g;
+  return obj(type, { UserId: ref ? ref.Id : (x.upn === TEAM_ADMIN ? "0f3a9c2e-1b4d-4e6f-8a7b-9c0d1e2f3a4b" : "00000000-0000-0000-0000-000000000000"), User: x.upn, Name: ref ? ref.DisplayName : x.upn === TEAM_ADMIN ? "Kaatje" : x.upn, Role: x.role });
+}
+function resolveTeamUser(ctx, name, who) {
+  const s = String(who).toLowerCase();
+  if (s === TEAM_ADMIN) return { upn: TEAM_ADMIN, id: null };
+  const u = userById(ctx.t, s);
+  if (!u) throw teamErr(name, "Request_ResourceNotFound", "Resource '" + who + "' does not exist or one of its queried reference-property objects are not present.");
+  return { upn: u.UserPrincipalName, id: u.Id, user: u };
+}
+function syncGroup(ctx, tm) { const grp = ctx.t.groups.find((x) => x.g.Id === tm.GroupId); if (grp) grp.members = tm.roster.map((x) => (userById(ctx.t, x.upn) || {}).Id).filter(Boolean); }
+function roleArg(name, v, allowed) {
+  if (v === undefined) return null;
+  const s = String(v).toLowerCase();
+  if (!allowed.includes(s)) throw new PSErr("Cannot validate argument on parameter 'Role'. The argument \"" + v + "\" does not belong to the set \"" + allowed.map((a) => a[0].toUpperCase() + a.slice(1)).join(",") + "\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" });
+  return s;
+}
+function boolArg(name, pname, v) {
+  if (v === true || v === false) return v;
+  throw new PSErr("Cannot process argument transformation on parameter '" + pname + "'. Cannot convert value \"" + toStr(v) + "\" to type \"System.Boolean\". Boolean parameters accept only Boolean values and numbers, such as $True, $False, 1 or 0.", { cmd: name, term: true, kind: "bind" });
+}
+const gidsFrom = (b, input) => b.GroupId !== undefined ? flat(b.GroupId) : input.map((x) => isObj(x) && x.GroupId !== undefined ? x.GroupId : x);
+
+def("Connect-MicrosoftTeams", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { TenantId: P(null), AccountId: P(null), UseDeviceAuthentication: S() },
+  run({ ctx }) { ctx.teams = true; seedTeams(ctx); return [obj(T_TCONN, { Account: TEAM_ADMIN, Environment: "AzureCloud", Tenant: ctx.t.tenantId, TenantId: ctx.t.tenantId })]; } });
+def("Disconnect-MicrosoftTeams", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { Confirm: S() }, run({ ctx }) { ctx.teams = false; return []; } });
+
+def("Get-Team", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null), DisplayName: P(null), MailNickName: P(null), Visibility: P(null), Archived: P(null, { type: "System.Boolean" }), User: P(null), NumberOfThreads: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    let list = ctx.t.teams.slice();
+    if (b.GroupId !== undefined) list = [findTeam(ctx, name, b.GroupId)];
+    if (b.DisplayName !== undefined) { const s = String(b.DisplayName).toLowerCase(); list = list.filter((x) => x.DisplayName.toLowerCase() === s); }
+    if (b.MailNickName !== undefined) { const s = String(b.MailNickName).toLowerCase(); list = list.filter((x) => x.MailNickName.toLowerCase() === s); }
+    if (b.Visibility !== undefined) { const s = String(b.Visibility).toLowerCase(); if (!["public", "private"].includes(s)) throw new PSErr("Cannot validate argument on parameter 'Visibility'. The argument \"" + b.Visibility + "\" does not belong to the set \"Public,Private\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" }); list = list.filter((x) => x.Visibility.toLowerCase() === s); }
+    if (b.Archived !== undefined) { const v = boolArg(name, "Archived", b.Archived); list = list.filter((x) => x.Archived === v); }
+    if (b.User !== undefined) { const who = resolveTeamUser(ctx, name, b.User); list = list.filter((x) => x.roster.some((r) => r.upn === who.upn)); }
+    return list.map(teamOut);
+  } });
+
+def("Get-TeamUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), Role: P(null) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const ids = gidsFrom(b, input);
+    if (!ids.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: GroupId.", { cmd: name, term: true, kind: "bind" });
+    const role = roleArg(name, b.Role, ["owner", "member", "guest"]);
+    const out = [];
+    for (const id of ids) { const tm = findTeam(ctx, name, id); for (const x of tm.roster) if (!role || x.role === role) out.push(rosterOut(ctx, x, T_TUSER)); }
+    return out;
+  } });
+
+def("Add-TeamUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const role = roleArg(name, b.Role, ["member", "owner"]) || "member";
+    for (const w of flat(b.User)) {
+      const who = resolveTeamUser(ctx, name, w);
+      const guest = !!(who.user && who.user.UserType === "Guest");
+      if (guest && role === "owner") throw teamErr(name, "BadRequest", "A guest can't be made an owner of a team.");
+      const cur = tm.roster.find((x) => x.upn === who.upn);
+      if (cur) { if (role === "owner") cur.role = "owner"; }
+      else tm.roster.push({ upn: who.upn, role: guest ? "guest" : role });
+    }
+    syncGroup(ctx, tm);
+    return [];
+  } });
+
+def("Remove-TeamUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const role = roleArg(name, b.Role, ["owner"]);
+    for (const w of flat(b.User)) {
+      const who = resolveTeamUser(ctx, name, w);
+      const cur = tm.roster.find((x) => x.upn === who.upn);
+      if (!cur) throw teamErr(name, "NotFound", "User " + who.upn + " is not a member of the team.");
+      const owners = tm.roster.filter((x) => x.role === "owner");
+      if (cur.role === "owner" && owners.length === 1) throw teamErr(name, "BadRequest", "Last owner cannot be removed from the team.");
+      if (role === "owner") { if (cur.role === "owner") cur.role = "member"; }
+      else { tm.roster = tm.roster.filter((x) => x !== cur); for (const c of tm.channels) c.users = c.users.filter((u) => u.upn !== who.upn); }
+    }
+    syncGroup(ctx, tm);
+    return [];
+  } });
+
+def("New-Team", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { DisplayName: P(null, { req: true }), Description: P(null), MailNickName: P(null), Visibility: P(null), Owner: P(null), Template: P(null), AllowGuestCreateUpdateChannels: P(null), AllowCreateUpdateChannels: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const dn = String(b.DisplayName);
+    if (dn.length > 256) throw teamErr(name, "BadRequest", "DisplayName cannot exceed 256 characters.");
+    const vis = b.Visibility === undefined ? "Private" : String(b.Visibility).toLowerCase() === "public" ? "Public" : String(b.Visibility).toLowerCase() === "private" ? "Private" : null;
+    if (!vis) throw new PSErr("Cannot validate argument on parameter 'Visibility'. The argument \"" + b.Visibility + "\" does not belong to the set \"Public,Private,HiddenMembership\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" });
+    let nick = b.MailNickName !== undefined ? String(b.MailNickName) : dn.replace(/[^A-Za-z0-9]/g, "") + Math.floor(100 + rng(dn.length * 31)() * 900);
+    if (/[^A-Za-z0-9._-]/.test(nick)) throw teamErr(name, "BadRequest", "Invalid value specified for property 'mailNickname' of resource 'Group'.");
+    if (ctx.t.groups.some((x) => (x.g.MailNickname || "").toLowerCase() === nick.toLowerCase())) throw teamErr(name, "BadRequest", "Another object with the same value for property mailNickname already exists.");
+    const owner = b.Owner !== undefined ? resolveTeamUser(ctx, name, b.Owner).upn : TEAM_ADMIN;
+    const r = rng(ctx.t.teams.length * 7 + dn.length);
+    const g = obj(T_GRP, { Classification: null, CreatedDateTime: new Date(), Description: b.Description === undefined ? null : String(b.Description), DisplayName: dn, GroupTypes: ["Unified"], Id: guid(r), Mail: nick + "@" + ctx.t.domain, MailEnabled: true, MailNickname: nick, SecurityEnabled: false, Visibility: vis, ResourceProvisioningOptions: ["Team"] });
+    ctx.t.groups.push({ g, members: [] });
+    const tm = { GroupId: g.Id, DisplayName: dn, Description: g.Description, Visibility: vis, Archived: false, MailNickName: nick, roster: [{ upn: owner, role: "owner" }], channels: [{ Id: "19:" + guid(r).replace(/-/g, "").slice(0, 32) + "@thread.tacv2", DisplayName: "General", Description: null, MembershipType: "Standard", users: [] }], _age: 0, _lastActivity: 0 };
+    ctx.t.teams.push(tm); syncGroup(ctx, tm);
+    return [teamOut(tm)];
+  } });
+
+def("Set-Team", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), DisplayName: P(null), Description: P(null), Visibility: P(null), MailNickName: P(null) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const out = [];
+    for (const id of gidsFrom(b, input)) {
+      const tm = findTeam(ctx, name, id);
+      if (tm.Archived) throw teamErr(name, "Forbidden", "The team is archived. Unarchive it with Set-TeamArchivedState -Archived:$false before changing its settings.");
+      if (b.DisplayName !== undefined) tm.DisplayName = String(b.DisplayName);
+      if (b.Description !== undefined) tm.Description = String(b.Description);
+      if (b.Visibility !== undefined) { const v = String(b.Visibility).toLowerCase(); if (!["public", "private"].includes(v)) throw new PSErr("Cannot validate argument on parameter 'Visibility'. The argument \"" + b.Visibility + "\" does not belong to the set \"Public,Private\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" }); tm.Visibility = v === "public" ? "Public" : "Private"; }
+      const grp = ctx.t.groups.find((x) => x.g.Id === tm.GroupId); if (grp) { grp.g.DisplayName = tm.DisplayName; grp.g.Description = tm.Description; grp.g.Visibility = tm.Visibility; }
+      out.push(teamOut(tm));
+    }
+    return out;
+  } });
+
+def("Set-TeamArchivedState", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), Archived: P(null, { req: true, type: "System.Boolean" }), SetSpoSiteReadOnlyForMembers: P(null, { type: "System.Boolean" }) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const v = boolArg(name, "Archived", b.Archived);
+    if (b.SetSpoSiteReadOnlyForMembers !== undefined) boolArg(name, "SetSpoSiteReadOnlyForMembers", b.SetSpoSiteReadOnlyForMembers);
+    const ids = gidsFrom(b, input);
+    if (!ids.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: GroupId.", { cmd: name, term: true, kind: "bind" });
+    for (const id of ids) { const tm = findTeam(ctx, name, id); tm.Archived = v; tm._spoRO = v && b.SetSpoSiteReadOnlyForMembers === true; }
+    return [];
+  } });
+
+function findChannel(ctx, name, tm, dn) {
+  const s = String(dn).toLowerCase();
+  const c = tm.channels.find((x) => x.DisplayName.toLowerCase() === s);
+  if (!c) throw teamErr(name, "NotFound", "Channel not found");
+  return c;
+}
+def("Get-TeamChannel", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), MembershipType: P(null) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const ids = gidsFrom(b, input);
+    if (!ids.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: GroupId.", { cmd: name, term: true, kind: "bind" });
+    let mt = null;
+    if (b.MembershipType !== undefined) { mt = String(b.MembershipType).toLowerCase(); if (!["standard", "private", "shared"].includes(mt)) throw new PSErr("Cannot validate argument on parameter 'MembershipType'. The argument \"" + b.MembershipType + "\" does not belong to the set \"Standard,Private,Shared\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" }); }
+    const out = [];
+    for (const id of ids) { const tm = findTeam(ctx, name, id); for (const c of tm.channels) if (!mt || c.MembershipType.toLowerCase() === mt) out.push(obj(T_CHAN, { Id: c.Id, DisplayName: c.DisplayName, Description: c.Description, MembershipType: c.MembershipType })); }
+    return out;
+  } });
+
+def("New-TeamChannel", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), Description: P(null), MembershipType: P(null), Owner: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    if (tm.Archived) throw teamErr(name, "Forbidden", "The team is archived. Channels can't be created in an archived team.");
+    const dn = String(b.DisplayName);
+    if (dn.length > 50) throw teamErr(name, "BadRequest", "Channel name can't be longer than 50 characters.");
+    if (/[~#%&*{}+\/\\:<>?|'"]/.test(dn) || /^\s|\s$/.test(dn)) throw teamErr(name, "BadRequest", "Channel name contains invalid characters: ~ # % & * { } + / \\ : < > ? | ' \" are not allowed.");
+    if (tm.channels.some((c) => c.DisplayName.toLowerCase() === dn.toLowerCase())) throw teamErr(name, "BadRequest", "Channel name already existed, please use other name.");
+    let mt = b.MembershipType === undefined ? "standard" : String(b.MembershipType).toLowerCase();
+    if (!["standard", "private", "shared"].includes(mt)) throw new PSErr("Cannot validate argument on parameter 'MembershipType'. The argument \"" + b.MembershipType + "\" does not belong to the set \"Standard,Private,Shared\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" });
+    const MT = mt[0].toUpperCase() + mt.slice(1);
+    const users = [];
+    if (MT !== "Standard") { const o = b.Owner !== undefined ? resolveTeamUser(ctx, name, b.Owner).upn : TEAM_ADMIN; if (b.Owner !== undefined && !tm.roster.some((x) => x.upn === o)) throw teamErr(name, "BadRequest", "The owner of a private or shared channel must be a member of the team."); users.push({ upn: o, role: "owner" }); }
+    else if (b.Owner !== undefined) throw teamErr(name, "BadRequest", "Owner can only be set for private or shared channels.");
+    const c = { Id: "19:" + guid(rng(tm.channels.length * 13 + dn.length)).replace(/-/g, "").slice(0, 32) + "@thread.tacv2", DisplayName: dn, Description: b.Description === undefined ? null : String(b.Description), MembershipType: MT, users };
+    tm.channels.push(c);
+    return [obj(T_CHAN, { Id: c.Id, DisplayName: c.DisplayName, Description: c.Description, MembershipType: c.MembershipType })];
+  } });
+
+def("Remove-TeamChannel", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    if (c.DisplayName === "General") throw teamErr(name, "BadRequest", "The General channel can't be deleted.");
+    tm.channels = tm.channels.filter((x) => x !== c);
+    return [];
+  } });
+
+def("Get-TeamChannelUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    const role = roleArg(name, b.Role, ["owner", "member", "guest"]);
+    const list = c.MembershipType === "Standard" ? tm.roster : c.users;
+    return list.filter((x) => !role || x.role === role).map((x) => rosterOut(ctx, x, T_CHUSER));
+  } });
+
+def("Add-TeamChannelUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    if (c.MembershipType === "Standard") throw teamErr(name, "BadRequest", "Members can only be added to private or shared channels. Everyone in the team is already in a standard channel.");
+    const role = roleArg(name, b.Role, ["owner"]);
+    const who = resolveTeamUser(ctx, name, b.User);
+    if (c.MembershipType === "Private" && !tm.roster.some((x) => x.upn === who.upn)) throw teamErr(name, "BadRequest", "User " + who.upn + " is not a member of the team. Add them to the team first with Add-TeamUser.");
+    const cur = c.users.find((x) => x.upn === who.upn);
+    if (cur) { if (role === "owner") cur.role = "owner"; } else c.users.push({ upn: who.upn, role: role || "member" });
+    return [];
+  } });
+
+def("Remove-TeamChannelUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    if (c.MembershipType === "Standard") throw teamErr(name, "BadRequest", "Members can only be removed from private or shared channels.");
+    const who = resolveTeamUser(ctx, name, b.User);
+    const cur = c.users.find((x) => x.upn === who.upn);
+    if (!cur) throw teamErr(name, "NotFound", "User " + who.upn + " is not a member of the channel.");
+    if (cur.role === "owner" && c.users.filter((x) => x.role === "owner").length === 1 && b.Role === undefined) throw teamErr(name, "BadRequest", "Last owner cannot be removed from the channel.");
+    if (b.Role !== undefined && String(b.Role).toLowerCase() === "owner") cur.role = "member"; else c.users = c.users.filter((x) => x !== cur);
+    return [];
+  } });
+
+return { makeTenant, Ctx, parse, seedContractors, seedTeams, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
 })();
 const HELP = {
+  "Connect-MicrosoftTeams": { syn: "Connects to Microsoft Teams with an authenticated account.", ex: [["Sign in", "Connect-MicrosoftTeams", "Opens the Teams session. Graph and Exchange sessions don't count."]] },
+  "Get-Team": { syn: "Gets teams with particular properties.", ex: [["All teams", "Get-Team", "Every team in the tenant, archived ones included."], ["One team, kept for later", "$t = Get-Team -DisplayName 'Sales Hub'", "-DisplayName matches the whole name. Use $t.GroupId in the next commands."], ["Teams of one person", "Get-Team -User elara.wynn@halvardco.onmicrosoft.com", "Every team that user is in."]] },
+  "Get-TeamUser": { syn: "Returns users of a team.", ex: [["Owners only", "Get-TeamUser -GroupId $t.GroupId -Role Owner", "Role is Owner, Member or Guest."]] },
+  "Add-TeamUser": { syn: "Adds an owner or member to the team, and to the unified group which backs the team.", ex: [["Add a member", "Add-TeamUser -GroupId $t.GroupId -User tamsin.rook@halvardco.onmicrosoft.com", "-User is the UPN."], ["Promote to owner", "Add-TeamUser -GroupId $t.GroupId -User elara.wynn@halvardco.onmicrosoft.com -Role Owner", "Works on someone who is already a member."]] },
+  "Remove-TeamUser": { syn: "Removes a user from a team.", ex: [["Demote an owner", "Remove-TeamUser -GroupId $t.GroupId -User x -Role Owner", "The person stays a member."], ["Remove from the team", "Remove-TeamUser -GroupId $t.GroupId -User x", "The last owner can't be removed."]] },
+  "New-Team": { syn: "Creates a new team.", ex: [["Private team with an owner", "New-Team -DisplayName 'Legal Desk' -Visibility Private -Owner isolde.fenn@halvardco.onmicrosoft.com", "Without -Owner you become the owner."]] },
+  "Set-Team": { syn: "Updates properties of a team.", ex: [["Rename and change visibility", "Set-Team -GroupId $t.GroupId -DisplayName 'Summer Party' -Visibility Private", "An archived team must be unarchived first."]] },
+  "Set-TeamArchivedState": { syn: "Sets the archived state of a team.", ex: [["Archive", "Set-TeamArchivedState -GroupId $t.GroupId -Archived:$true -SetSpoSiteReadOnlyForMembers:$true", "Read-only, nothing deleted. -Archived:$false brings it back."]] },
+  "Get-TeamChannel": { syn: "Gets the channels of a team.", ex: [["Private channels", "Get-TeamChannel -GroupId $t.GroupId -MembershipType Private", "Standard, Private or Shared."]] },
+  "New-TeamChannel": { syn: "Adds a channel to a team.", ex: [["Private channel", "New-TeamChannel -GroupId $t.GroupId -DisplayName 'Security' -MembershipType Private -Owner elowen.thistle@halvardco.onmicrosoft.com", "The owner must already be in the team."]] },
+  "Add-TeamChannelUser": { syn: "Adds a user to a private or shared channel.", ex: [["Add to a private channel", "Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User cassian.drake@halvardco.onmicrosoft.com", "Team first, then channel."]] },
   "Get-Command": { syn: "Gets all commands.", ex: [
     ["Find commands by a word in their name", "Get-Command *license*", "Wildcards (*) match any characters. This is the fastest way to discover a command when you only know one word."],
     ["List the commands of a module", "Get-Command -Module Microsoft.Graph.Users", "Shows every command that the Microsoft.Graph.Users module exports."],

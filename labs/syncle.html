@@ -106,6 +106,7 @@ main{flex:1;min-height:0;position:relative}
 .fnode.lit .d{background:rgba(31,95,196,.14);box-shadow:0 0 0 7px rgba(31,95,196,.07)}
 .fnode b{font-family:var(--mono);font-size:13px;font-weight:500;margin-top:4px;white-space:nowrap;background:rgba(244,246,248,.85);padding:0 6px}
 .fnode small{font-size:11px;letter-spacing:.06em;color:var(--mute);white-space:nowrap}
+@media (max-width:640px){.fnode{gap:7px}.fnode .d{width:24px;height:24px}.fnode b{font-size:11px;padding:0 4px;max-width:92px;white-space:normal;text-align:center;line-height:1.3}.fnode small{font-size:10px;letter-spacing:.02em;white-space:normal;text-align:center;width:max-content;max-width:88px;line-height:1.3}.fnode.first{transform:none;align-items:flex-start}.fnode.first b,.fnode.first small{text-align:left}.fnode.last{transform:translateX(-100%);align-items:flex-end}.fnode.last b,.fnode.last small{text-align:right}}
 .frag{position:absolute;left:10%;opacity:0;top:83px;width:10px;height:10px;margin:-5px 0 0 -5px;border:1.5px solid var(--blue);background:rgba(31,95,196,.2);transform:rotate(45deg);animation:pass 14s linear infinite;z-index:1}
 @keyframes pass{0%{left:10%;opacity:0}6%{opacity:1}94%{opacity:1}100%{left:90%;opacity:0}}
 .flowlabel{position:absolute;left:28px;top:12px;font-size:10px;letter-spacing:.3em;color:var(--mute)}
@@ -242,6 +243,9 @@ main{flex:1;min-height:0;position:relative}
 .cmpt{margin:0;padding:10px 12px 10px 28px;font-size:13px;line-height:1.5;background:#fff8ec;color:#4a3410}
 .cmpt li{margin:2px 0}
 h5.cmpt0{margin:16px 0 0;font-size:10px;letter-spacing:.22em;color:var(--red,#c0392b)}
+.cmpnote{margin:8px 0 0;font-size:13px;line-height:1.55;color:#5b6573}
+.term.soft{animation:tsoft .7s ease-out}
+@keyframes tsoft{0%{box-shadow:0 0 0 2px rgba(120,170,255,.55)}100%{box-shadow:0 0 0 0 rgba(120,170,255,0)}}
 .dsbody pre{margin:0 0 14px;font-family:var(--mono);font-size:12.5px;background:var(--ink);color:#d8dee7;padding:12px 14px;white-space:pre-wrap;word-break:break-word}
 .dsbody pre.e{color:var(--red2)}
 .dsj{display:flex;gap:6px;align-items:center;border:1px solid var(--line);padding:6px 14px 6px 4px}
@@ -1544,7 +1548,7 @@ function runSB(sb, ctx, item, extra) {
 }
 
 function getMember(o, name) {
-  if (o === null || o === undefined) return null;
+  if (o === null || o === undefined) return /^(count|length)$/i.test(name) ? 0 : null;
   const l = name.toLowerCase();
   if (Array.isArray(o)) {
     if (l === "count" || l === "length") return o.length;
@@ -3035,9 +3039,304 @@ function seedContractors(ctx, n) {
   ng.members = ids.slice(); ctx.t.groups.push(ng);
   return ids;
 }
-return { makeTenant, Ctx, parse, seedContractors, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
+const T_TEAM = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Team";
+const T_TUSER = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.TeamUser";
+const T_CHAN = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.Channel";
+const T_CHUSER = "Microsoft.Teams.PowerShell.TeamsCmdlets.Model.ChannelUser";
+const T_TCONN = "Microsoft.TeamsCmdlets.Powershell.Connect.Models.PSAzureContext";
+DISPLAY[T_TEAM] = ["GroupId", "DisplayName", "Visibility", "Archived", "MailNickName", "Description"];
+DISPLAY[T_TUSER] = ["UserId", "User", "Name", "Role"];
+DISPLAY[T_CHAN] = ["Id", "DisplayName", "Description", "MembershipType"];
+DISPLAY[T_CHUSER] = ["UserId", "User", "Name", "Role"];
+DISPLAY[T_TCONN] = ["Account", "Environment", "Tenant", "TenantId"];
+const TEAMS_MOD = "MicrosoftTeams", TEAMS_VER = "7.4.0";
+const TEAM_ADMIN = "kaatje@halvardco.onmicrosoft.com";
+
+function seedTeams(ctx) {
+  const t = ctx.t;
+  if (t.teams) return t.teams;
+  const r = rng(9090);
+  const byName = (dn) => t.users.find((u) => u.DisplayName === dn);
+  const upn = (dn) => byName(dn).UserPrincipalName;
+  const chanId = () => "19:" + guid(r).replace(/-/g, "").slice(0, 32) + "@thread.tacv2";
+  const general = () => ({ Id: chanId(), DisplayName: "General", Description: null, MembershipType: "Standard", users: [] });
+  const mk = (name, nick, desc, vis, owners, members, opts) => {
+    opts = opts || {};
+    let grp = t.groups.find((x) => x.g.DisplayName === name);
+    if (!grp) {
+      grp = { g: obj(T_GRP, { Classification: null, CreatedDateTime: new Date(Date.now() - (opts.age || 300) * 864e5), Description: desc, DisplayName: name, GroupTypes: ["Unified"], Id: guid(r), Mail: nick + "@" + t.domain, MailEnabled: true, MailNickname: nick, SecurityEnabled: false, Visibility: vis }), members: [] };
+      t.groups.push(grp);
+    }
+    grp.g.Visibility = vis; grp.g.ResourceProvisioningOptions = ["Team"];
+    const roster = [];
+    for (const o of owners) roster.push({ upn: upn(o), role: "owner" });
+    for (const m of members) if (!roster.some((x) => x.upn === upn(m))) roster.push({ upn: upn(m), role: "member" });
+    for (const g of opts.guests || []) roster.push({ upn: g, role: "guest" });
+    grp.members = roster.map((x) => (userById(t, x.upn) || {}).Id).filter(Boolean);
+    const team = { GroupId: grp.g.Id, DisplayName: name, Description: desc, Visibility: vis, Archived: !!opts.archived, MailNickName: nick, roster, channels: [general()].concat((opts.channels || []).map((c) => ({ Id: chanId(), DisplayName: c[0], Description: c[1] || null, MembershipType: c[2] || "Standard", users: (c[3] || []).map((x) => ({ upn: upn(x[0]), role: x[1] })) }))), _age: opts.age || 300, _lastActivity: opts.idle != null ? opts.idle : 3 };
+    t.teams.push(team);
+    return team;
+  };
+  t.teams = [];
+  const dept = (d) => t.users.filter((u) => u.UserType === "Member" && u.Department === d).map((u) => u.DisplayName);
+  mk("Halvard Leadership", "leadership", "Directors and heads of department", "Private", ["Alaric Strand", "Elowen Thistle"], ["Hollis Reed", "Garrick Penhale", "Caius Mercer", "Juniper Oakes"], { age: 900, channels: [["Board prep", "Papers for the monthly board", "Private", [["Alaric Strand", "owner"], ["Hollis Reed", "member"]]]] });
+  mk("Project Northwind", "northwind", "New warehouse system rollout", "Private", ["Caius Mercer"], ["Lorcan Ivers", "Anwen Frost", "Maelis Grey"], { age: 420, channels: [["Go-live", "Cutover weekend"], ["Vendor", "Shared with the supplier", "Shared", [["Caius Mercer", "owner"]]]] });
+  mk("Sales Hub", "saleshub", "Everything sales: leads, quotes, wins", "Private", ["Garrick Penhale"], dept("Sales"), { age: 700, channels: [["Quotes", "Quote reviews"], ["Key accounts", "Top 20 customers", "Private", [["Garrick Penhale", "owner"], ["Elara Wynn", "member"]]]], guests: t.users.filter((u) => u.UserType === "Guest").slice(0, 1).map((u) => u.UserPrincipalName) });
+  mk("IT Ops", "itops", "Changes, incidents and the on-call rota", "Private", ["Elowen Thistle", "Lorcan Ivers"], dept("IT"), { age: 800, channels: [["Changes", "Change requests and approvals"], ["On-call", "Who has the pager"]] });
+  mk("Finance Close", "financeclose", "Month-end close", "Private", ["Fenna Lowe"], dept("Finance").concat(["Fenna Lowe"]), { age: 650, idle: 12 });
+  mk("Bruges Office", "brugesoffice", "Parking, lunch and building news for Bruges", "Public", [], t.users.filter((u) => u.UserType === "Member" && u.City === "Bruges" && u.AccountEnabled).map((u) => u.DisplayName).slice(0, 9), { age: 1100, idle: 40 });
+  mk("Summer Party 2025", "summerparty2025", "Planning the 2025 summer party", "Public", ["Aldric Moor"], ["Wren Calloway", "Nessa Quill", "Seren Blackwood", "Liora Penn"], { age: 520, idle: 140 });
+  mk("Wellbeing Club", "wellbeing", "Walks, yoga and the step challenge", "Public", ["Juniper Oakes"], ["Seren Blackwood", "Liora Penn", "Saoirse Vane", "Briar Locke", "Wren Calloway", "Ilse Varga"], { age: 380 });
+  mk("Old Intranet Project", "oldintranet", "Retired 2024", "Private", ["Evander Holt"], ["Nessa Quill"], { age: 1400, idle: 400, archived: true });
+  return t.teams;
+}
+function needTeams(ctx, name) { if (!ctx.teams) throw new PSErr("You must call the Connect-MicrosoftTeams cmdlet before calling any other cmdlets.", { cmd: name, term: true, kind: "noteams" }); seedTeams(ctx); }
+function teamErr(name, code, msg) { return new PSErr("Error occurred while executing \nCode: " + code + "\nMessage: " + msg, { cmd: name, term: true, kind: "teams" + code }); }
+function findTeam(ctx, name, gid) {
+  if (gid === undefined || gid === null) throw new PSErr("Cannot bind argument to parameter 'GroupId' because it is null.", { cmd: name, term: true, kind: "bind" });
+  const s = String(isObj(gid) && gid.GroupId ? gid.GroupId : gid).toLowerCase();
+  if (!/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/.test(s)) throw teamErr(name, "BadRequest", "Invalid value for GroupId: '" + gid + "'. GroupId is the team's object id (a GUID), not its name. Get it with (Get-Team -DisplayName '...').GroupId.");
+  const tm = ctx.t.teams.find((x) => x.GroupId.toLowerCase() === s);
+  if (!tm) throw teamErr(name, "NotFound", "No team found with Group Id " + s);
+  return tm;
+}
+function teamOut(tm) { return obj(T_TEAM, { GroupId: tm.GroupId, DisplayName: tm.DisplayName, Visibility: tm.Visibility, Archived: tm.Archived, MailNickName: tm.MailNickName, Description: tm.Description }); }
+function rosterOut(ctx, x, type) {
+  const u = userById(ctx.t, x.upn);
+  const guestName = /#EXT#/.test(x.upn) ? x.upn.split("#EXT#")[0].replace(/_([^_]+)$/, "@$1") : null;
+  const g = !u && guestName ? ctx.t.users.find((z) => z.UserType === "Guest" && z.DisplayName && guestName.toLowerCase().startsWith(z.DisplayName.split(" ")[0].toLowerCase())) : null;
+  const ref = u || g;
+  return obj(type, { UserId: ref ? ref.Id : (x.upn === TEAM_ADMIN ? "0f3a9c2e-1b4d-4e6f-8a7b-9c0d1e2f3a4b" : "00000000-0000-0000-0000-000000000000"), User: x.upn, Name: ref ? ref.DisplayName : x.upn === TEAM_ADMIN ? "Kaatje" : x.upn, Role: x.role });
+}
+function resolveTeamUser(ctx, name, who) {
+  const s = String(who).toLowerCase();
+  if (s === TEAM_ADMIN) return { upn: TEAM_ADMIN, id: null };
+  const u = userById(ctx.t, s);
+  if (!u) throw teamErr(name, "Request_ResourceNotFound", "Resource '" + who + "' does not exist or one of its queried reference-property objects are not present.");
+  return { upn: u.UserPrincipalName, id: u.Id, user: u };
+}
+function syncGroup(ctx, tm) { const grp = ctx.t.groups.find((x) => x.g.Id === tm.GroupId); if (grp) grp.members = tm.roster.map((x) => (userById(ctx.t, x.upn) || {}).Id).filter(Boolean); }
+function roleArg(name, v, allowed) {
+  if (v === undefined) return null;
+  const s = String(v).toLowerCase();
+  if (!allowed.includes(s)) throw new PSErr("Cannot validate argument on parameter 'Role'. The argument \"" + v + "\" does not belong to the set \"" + allowed.map((a) => a[0].toUpperCase() + a.slice(1)).join(",") + "\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" });
+  return s;
+}
+function boolArg(name, pname, v) {
+  if (v === true || v === false) return v;
+  throw new PSErr("Cannot process argument transformation on parameter '" + pname + "'. Cannot convert value \"" + toStr(v) + "\" to type \"System.Boolean\". Boolean parameters accept only Boolean values and numbers, such as $True, $False, 1 or 0.", { cmd: name, term: true, kind: "bind" });
+}
+const gidsFrom = (b, input) => b.GroupId !== undefined ? flat(b.GroupId) : input.map((x) => isObj(x) && x.GroupId !== undefined ? x.GroupId : x);
+
+def("Connect-MicrosoftTeams", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { TenantId: P(null), AccountId: P(null), UseDeviceAuthentication: S() },
+  run({ ctx }) { ctx.teams = true; seedTeams(ctx); return [obj(T_TCONN, { Account: TEAM_ADMIN, Environment: "AzureCloud", Tenant: ctx.t.tenantId, TenantId: ctx.t.tenantId })]; } });
+def("Disconnect-MicrosoftTeams", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { Confirm: S() }, run({ ctx }) { ctx.teams = false; return []; } });
+
+def("Get-Team", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null), DisplayName: P(null), MailNickName: P(null), Visibility: P(null), Archived: P(null, { type: "System.Boolean" }), User: P(null), NumberOfThreads: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    let list = ctx.t.teams.slice();
+    if (b.GroupId !== undefined) list = [findTeam(ctx, name, b.GroupId)];
+    if (b.DisplayName !== undefined) { const s = String(b.DisplayName).toLowerCase(); list = list.filter((x) => x.DisplayName.toLowerCase() === s); }
+    if (b.MailNickName !== undefined) { const s = String(b.MailNickName).toLowerCase(); list = list.filter((x) => x.MailNickName.toLowerCase() === s); }
+    if (b.Visibility !== undefined) { const s = String(b.Visibility).toLowerCase(); if (!["public", "private"].includes(s)) throw new PSErr("Cannot validate argument on parameter 'Visibility'. The argument \"" + b.Visibility + "\" does not belong to the set \"Public,Private\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" }); list = list.filter((x) => x.Visibility.toLowerCase() === s); }
+    if (b.Archived !== undefined) { const v = boolArg(name, "Archived", b.Archived); list = list.filter((x) => x.Archived === v); }
+    if (b.User !== undefined) { const who = resolveTeamUser(ctx, name, b.User); list = list.filter((x) => x.roster.some((r) => r.upn === who.upn)); }
+    return list.map(teamOut);
+  } });
+
+def("Get-TeamUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), Role: P(null) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const ids = gidsFrom(b, input);
+    if (!ids.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: GroupId.", { cmd: name, term: true, kind: "bind" });
+    const role = roleArg(name, b.Role, ["owner", "member", "guest"]);
+    const out = [];
+    for (const id of ids) { const tm = findTeam(ctx, name, id); for (const x of tm.roster) if (!role || x.role === role) out.push(rosterOut(ctx, x, T_TUSER)); }
+    return out;
+  } });
+
+def("Add-TeamUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const role = roleArg(name, b.Role, ["member", "owner"]) || "member";
+    for (const w of flat(b.User)) {
+      const who = resolveTeamUser(ctx, name, w);
+      const guest = !!(who.user && who.user.UserType === "Guest");
+      if (guest && role === "owner") throw teamErr(name, "BadRequest", "A guest can't be made an owner of a team.");
+      const cur = tm.roster.find((x) => x.upn === who.upn);
+      if (cur) { if (role === "owner") cur.role = "owner"; }
+      else tm.roster.push({ upn: who.upn, role: guest ? "guest" : role });
+    }
+    syncGroup(ctx, tm);
+    return [];
+  } });
+
+def("Remove-TeamUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const role = roleArg(name, b.Role, ["owner"]);
+    for (const w of flat(b.User)) {
+      const who = resolveTeamUser(ctx, name, w);
+      const cur = tm.roster.find((x) => x.upn === who.upn);
+      if (!cur) throw teamErr(name, "NotFound", "User " + who.upn + " is not a member of the team.");
+      const owners = tm.roster.filter((x) => x.role === "owner");
+      if (cur.role === "owner" && owners.length === 1) throw teamErr(name, "BadRequest", "Last owner cannot be removed from the team.");
+      if (role === "owner") { if (cur.role === "owner") cur.role = "member"; }
+      else { tm.roster = tm.roster.filter((x) => x !== cur); for (const c of tm.channels) c.users = c.users.filter((u) => u.upn !== who.upn); }
+    }
+    syncGroup(ctx, tm);
+    return [];
+  } });
+
+def("New-Team", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { DisplayName: P(null, { req: true }), Description: P(null), MailNickName: P(null), Visibility: P(null), Owner: P(null), Template: P(null), AllowGuestCreateUpdateChannels: P(null), AllowCreateUpdateChannels: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const dn = String(b.DisplayName);
+    if (dn.length > 256) throw teamErr(name, "BadRequest", "DisplayName cannot exceed 256 characters.");
+    const vis = b.Visibility === undefined ? "Private" : String(b.Visibility).toLowerCase() === "public" ? "Public" : String(b.Visibility).toLowerCase() === "private" ? "Private" : null;
+    if (!vis) throw new PSErr("Cannot validate argument on parameter 'Visibility'. The argument \"" + b.Visibility + "\" does not belong to the set \"Public,Private,HiddenMembership\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" });
+    let nick = b.MailNickName !== undefined ? String(b.MailNickName) : dn.replace(/[^A-Za-z0-9]/g, "") + Math.floor(100 + rng(dn.length * 31)() * 900);
+    if (/[^A-Za-z0-9._-]/.test(nick)) throw teamErr(name, "BadRequest", "Invalid value specified for property 'mailNickname' of resource 'Group'.");
+    if (ctx.t.groups.some((x) => (x.g.MailNickname || "").toLowerCase() === nick.toLowerCase())) throw teamErr(name, "BadRequest", "Another object with the same value for property mailNickname already exists.");
+    const owner = b.Owner !== undefined ? resolveTeamUser(ctx, name, b.Owner).upn : TEAM_ADMIN;
+    const r = rng(ctx.t.teams.length * 7 + dn.length);
+    const g = obj(T_GRP, { Classification: null, CreatedDateTime: new Date(), Description: b.Description === undefined ? null : String(b.Description), DisplayName: dn, GroupTypes: ["Unified"], Id: guid(r), Mail: nick + "@" + ctx.t.domain, MailEnabled: true, MailNickname: nick, SecurityEnabled: false, Visibility: vis, ResourceProvisioningOptions: ["Team"] });
+    ctx.t.groups.push({ g, members: [] });
+    const tm = { GroupId: g.Id, DisplayName: dn, Description: g.Description, Visibility: vis, Archived: false, MailNickName: nick, roster: [{ upn: owner, role: "owner" }], channels: [{ Id: "19:" + guid(r).replace(/-/g, "").slice(0, 32) + "@thread.tacv2", DisplayName: "General", Description: null, MembershipType: "Standard", users: [] }], _age: 0, _lastActivity: 0 };
+    ctx.t.teams.push(tm); syncGroup(ctx, tm);
+    return [teamOut(tm)];
+  } });
+
+def("Set-Team", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), DisplayName: P(null), Description: P(null), Visibility: P(null), MailNickName: P(null) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const out = [];
+    for (const id of gidsFrom(b, input)) {
+      const tm = findTeam(ctx, name, id);
+      if (tm.Archived) throw teamErr(name, "Forbidden", "The team is archived. Unarchive it with Set-TeamArchivedState -Archived:$false before changing its settings.");
+      if (b.DisplayName !== undefined) tm.DisplayName = String(b.DisplayName);
+      if (b.Description !== undefined) tm.Description = String(b.Description);
+      if (b.Visibility !== undefined) { const v = String(b.Visibility).toLowerCase(); if (!["public", "private"].includes(v)) throw new PSErr("Cannot validate argument on parameter 'Visibility'. The argument \"" + b.Visibility + "\" does not belong to the set \"Public,Private\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" }); tm.Visibility = v === "public" ? "Public" : "Private"; }
+      const grp = ctx.t.groups.find((x) => x.g.Id === tm.GroupId); if (grp) { grp.g.DisplayName = tm.DisplayName; grp.g.Description = tm.Description; grp.g.Visibility = tm.Visibility; }
+      out.push(teamOut(tm));
+    }
+    return out;
+  } });
+
+def("Set-TeamArchivedState", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), Archived: P(null, { req: true, type: "System.Boolean" }), SetSpoSiteReadOnlyForMembers: P(null, { type: "System.Boolean" }) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const v = boolArg(name, "Archived", b.Archived);
+    if (b.SetSpoSiteReadOnlyForMembers !== undefined) boolArg(name, "SetSpoSiteReadOnlyForMembers", b.SetSpoSiteReadOnlyForMembers);
+    const ids = gidsFrom(b, input);
+    if (!ids.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: GroupId.", { cmd: name, term: true, kind: "bind" });
+    for (const id of ids) { const tm = findTeam(ctx, name, id); tm.Archived = v; tm._spoRO = v && b.SetSpoSiteReadOnlyForMembers === true; }
+    return [];
+  } });
+
+function findChannel(ctx, name, tm, dn) {
+  const s = String(dn).toLowerCase();
+  const c = tm.channels.find((x) => x.DisplayName.toLowerCase() === s);
+  if (!c) throw teamErr(name, "NotFound", "Channel not found");
+  return c;
+}
+def("Get-TeamChannel", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", pipe: true, params: { GroupId: P(null, { pipe: true }), MembershipType: P(null) },
+  run({ ctx, b, name, input }) {
+    needTeams(ctx, name);
+    const ids = gidsFrom(b, input);
+    if (!ids.length) throw new PSErr("Cannot process command because of one or more missing mandatory parameters: GroupId.", { cmd: name, term: true, kind: "bind" });
+    let mt = null;
+    if (b.MembershipType !== undefined) { mt = String(b.MembershipType).toLowerCase(); if (!["standard", "private", "shared"].includes(mt)) throw new PSErr("Cannot validate argument on parameter 'MembershipType'. The argument \"" + b.MembershipType + "\" does not belong to the set \"Standard,Private,Shared\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" }); }
+    const out = [];
+    for (const id of ids) { const tm = findTeam(ctx, name, id); for (const c of tm.channels) if (!mt || c.MembershipType.toLowerCase() === mt) out.push(obj(T_CHAN, { Id: c.Id, DisplayName: c.DisplayName, Description: c.Description, MembershipType: c.MembershipType })); }
+    return out;
+  } });
+
+def("New-TeamChannel", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), Description: P(null), MembershipType: P(null), Owner: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    if (tm.Archived) throw teamErr(name, "Forbidden", "The team is archived. Channels can't be created in an archived team.");
+    const dn = String(b.DisplayName);
+    if (dn.length > 50) throw teamErr(name, "BadRequest", "Channel name can't be longer than 50 characters.");
+    if (/[~#%&*{}+\/\\:<>?|'"]/.test(dn) || /^\s|\s$/.test(dn)) throw teamErr(name, "BadRequest", "Channel name contains invalid characters: ~ # % & * { } + / \\ : < > ? | ' \" are not allowed.");
+    if (tm.channels.some((c) => c.DisplayName.toLowerCase() === dn.toLowerCase())) throw teamErr(name, "BadRequest", "Channel name already existed, please use other name.");
+    let mt = b.MembershipType === undefined ? "standard" : String(b.MembershipType).toLowerCase();
+    if (!["standard", "private", "shared"].includes(mt)) throw new PSErr("Cannot validate argument on parameter 'MembershipType'. The argument \"" + b.MembershipType + "\" does not belong to the set \"Standard,Private,Shared\" specified by the ValidateSet attribute. Supply an argument that is in the set and then try the command again.", { cmd: name, term: true, kind: "bind" });
+    const MT = mt[0].toUpperCase() + mt.slice(1);
+    const users = [];
+    if (MT !== "Standard") { const o = b.Owner !== undefined ? resolveTeamUser(ctx, name, b.Owner).upn : TEAM_ADMIN; if (b.Owner !== undefined && !tm.roster.some((x) => x.upn === o)) throw teamErr(name, "BadRequest", "The owner of a private or shared channel must be a member of the team."); users.push({ upn: o, role: "owner" }); }
+    else if (b.Owner !== undefined) throw teamErr(name, "BadRequest", "Owner can only be set for private or shared channels.");
+    const c = { Id: "19:" + guid(rng(tm.channels.length * 13 + dn.length)).replace(/-/g, "").slice(0, 32) + "@thread.tacv2", DisplayName: dn, Description: b.Description === undefined ? null : String(b.Description), MembershipType: MT, users };
+    tm.channels.push(c);
+    return [obj(T_CHAN, { Id: c.Id, DisplayName: c.DisplayName, Description: c.Description, MembershipType: c.MembershipType })];
+  } });
+
+def("Remove-TeamChannel", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    if (c.DisplayName === "General") throw teamErr(name, "BadRequest", "The General channel can't be deleted.");
+    tm.channels = tm.channels.filter((x) => x !== c);
+    return [];
+  } });
+
+def("Get-TeamChannelUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    const role = roleArg(name, b.Role, ["owner", "member", "guest"]);
+    const list = c.MembershipType === "Standard" ? tm.roster : c.users;
+    return list.filter((x) => !role || x.role === role).map((x) => rosterOut(ctx, x, T_CHUSER));
+  } });
+
+def("Add-TeamChannelUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    if (c.MembershipType === "Standard") throw teamErr(name, "BadRequest", "Members can only be added to private or shared channels. Everyone in the team is already in a standard channel.");
+    const role = roleArg(name, b.Role, ["owner"]);
+    const who = resolveTeamUser(ctx, name, b.User);
+    if (c.MembershipType === "Private" && !tm.roster.some((x) => x.upn === who.upn)) throw teamErr(name, "BadRequest", "User " + who.upn + " is not a member of the team. Add them to the team first with Add-TeamUser.");
+    const cur = c.users.find((x) => x.upn === who.upn);
+    if (cur) { if (role === "owner") cur.role = "owner"; } else c.users.push({ upn: who.upn, role: role || "member" });
+    return [];
+  } });
+
+def("Remove-TeamChannelUser", { module: TEAMS_MOD, ver: TEAMS_VER, ctype: "Cmdlet", params: { GroupId: P(null, { req: true }), DisplayName: P(null, { req: true }), User: P(null, { req: true }), Role: P(null) },
+  run({ ctx, b, name }) {
+    needTeams(ctx, name);
+    const tm = findTeam(ctx, name, b.GroupId);
+    const c = findChannel(ctx, name, tm, b.DisplayName);
+    if (c.MembershipType === "Standard") throw teamErr(name, "BadRequest", "Members can only be removed from private or shared channels.");
+    const who = resolveTeamUser(ctx, name, b.User);
+    const cur = c.users.find((x) => x.upn === who.upn);
+    if (!cur) throw teamErr(name, "NotFound", "User " + who.upn + " is not a member of the channel.");
+    if (cur.role === "owner" && c.users.filter((x) => x.role === "owner").length === 1 && b.Role === undefined) throw teamErr(name, "BadRequest", "Last owner cannot be removed from the channel.");
+    if (b.Role !== undefined && String(b.Role).toLowerCase() === "owner") cur.role = "member"; else c.users = c.users.filter((x) => x !== cur);
+    return [];
+  } });
+
+return { makeTenant, Ctx, parse, seedContractors, seedTeams, run, formatOut, toStr, typeName, shortType, getMember, memberRows, PROPTYPES, DISPLAY, CMDS, ALIASES, setHelp: (h) => { HELP = h; }, isObj, isHT, SB, PSErr, flat, unwrap, eqVals, cmpVals, dateShort, visibleProps, NOW, TYPE };
 })();
 const HELP = {
+  "Connect-MicrosoftTeams": { syn: "Connects to Microsoft Teams with an authenticated account.", ex: [["Sign in", "Connect-MicrosoftTeams", "Opens the Teams session. Graph and Exchange sessions don't count."]] },
+  "Get-Team": { syn: "Gets teams with particular properties.", ex: [["All teams", "Get-Team", "Every team in the tenant, archived ones included."], ["One team, kept for later", "$t = Get-Team -DisplayName 'Sales Hub'", "-DisplayName matches the whole name. Use $t.GroupId in the next commands."], ["Teams of one person", "Get-Team -User elara.wynn@halvardco.onmicrosoft.com", "Every team that user is in."]] },
+  "Get-TeamUser": { syn: "Returns users of a team.", ex: [["Owners only", "Get-TeamUser -GroupId $t.GroupId -Role Owner", "Role is Owner, Member or Guest."]] },
+  "Add-TeamUser": { syn: "Adds an owner or member to the team, and to the unified group which backs the team.", ex: [["Add a member", "Add-TeamUser -GroupId $t.GroupId -User tamsin.rook@halvardco.onmicrosoft.com", "-User is the UPN."], ["Promote to owner", "Add-TeamUser -GroupId $t.GroupId -User elara.wynn@halvardco.onmicrosoft.com -Role Owner", "Works on someone who is already a member."]] },
+  "Remove-TeamUser": { syn: "Removes a user from a team.", ex: [["Demote an owner", "Remove-TeamUser -GroupId $t.GroupId -User x -Role Owner", "The person stays a member."], ["Remove from the team", "Remove-TeamUser -GroupId $t.GroupId -User x", "The last owner can't be removed."]] },
+  "New-Team": { syn: "Creates a new team.", ex: [["Private team with an owner", "New-Team -DisplayName 'Legal Desk' -Visibility Private -Owner isolde.fenn@halvardco.onmicrosoft.com", "Without -Owner you become the owner."]] },
+  "Set-Team": { syn: "Updates properties of a team.", ex: [["Rename and change visibility", "Set-Team -GroupId $t.GroupId -DisplayName 'Summer Party' -Visibility Private", "An archived team must be unarchived first."]] },
+  "Set-TeamArchivedState": { syn: "Sets the archived state of a team.", ex: [["Archive", "Set-TeamArchivedState -GroupId $t.GroupId -Archived:$true -SetSpoSiteReadOnlyForMembers:$true", "Read-only, nothing deleted. -Archived:$false brings it back."]] },
+  "Get-TeamChannel": { syn: "Gets the channels of a team.", ex: [["Private channels", "Get-TeamChannel -GroupId $t.GroupId -MembershipType Private", "Standard, Private or Shared."]] },
+  "New-TeamChannel": { syn: "Adds a channel to a team.", ex: [["Private channel", "New-TeamChannel -GroupId $t.GroupId -DisplayName 'Security' -MembershipType Private -Owner elowen.thistle@halvardco.onmicrosoft.com", "The owner must already be in the team."]] },
+  "Add-TeamChannelUser": { syn: "Adds a user to a private or shared channel.", ex: [["Add to a private channel", "Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User cassian.drake@halvardco.onmicrosoft.com", "Team first, then channel."]] },
   "Get-Command": { syn: "Gets all commands.", ex: [
     ["Find commands by a word in their name", "Get-Command *license*", "Wildcards (*) match any characters. This is the fastest way to discover a command when you only know one word."],
     ["List the commands of a module", "Get-Command -Module Microsoft.Graph.Users", "Shows every command that the Microsoft.Graph.Users module exports."],
@@ -3143,22 +3442,23 @@ const GRADER = (() => {
     if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
     if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
     if (s.contractors) E.seedContractors(ctx, s.contractors);
+    if (s.teams) { E.seedTeams(ctx); if (s.teams === "on") E.run("Connect-MicrosoftTeams", ctx); }
     if (s.quirks) ctx.quirks = JSON.parse(JSON.stringify(s.quirks));
     if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
-      const ex = ctx.exo; ctx.exo = true;
+      const ex = ctx.exo, tc = ctx.teams; ctx.exo = true; ctx.teams = !!ctx.t.teams;
       for (const p of pre) E.run(p, ctx);
-      ctx.mg = saved; ctx.exo = ex;
+      ctx.mg = saved; ctx.exo = ex; ctx.teams = tc;
     }
     ctx.host = []; ctx.errors = [];
     return ctx;
   }
   function describe(setup) {
     const s = SETUPS[setup] || SETUPS.none;
-    if (!s.scopes.length && !s.exo) return "Fresh window, nothing connected.";
-    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
+    if (!s.scopes.length && !s.exo && s.teams !== "on") return "Fresh window, nothing connected.";
+    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online" : "") + (s.teams === "on" ? ", and to Microsoft Teams." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
   }
   function text(res) { return E.formatOut(res.out, 120).replace(/[ \t]+$/gm, "").trim(); }
   const cache = {};
@@ -5772,6 +6072,245 @@ const POLDER = {
 };
 GATES.push(POLDER);
 
+SEQUENCES.push({ id: 11, name: "Teams", short: "TEAMS", open: true, blurb: "Teams is its own door: who owns what, new teams done right, private channels, and the teams nobody looks after any more." });
+const TW_SCOPES = ["User.ReadWrite.All", "Group.ReadWrite.All"];
+Object.assign(GRADER.SETUPS, {
+  teamsOff: { scopes: ["User.Read.All", "Group.Read.All"], exo: false, teams: "seed" },
+  teamsR: { scopes: ["User.Read.All", "Group.Read.All"], exo: false, teams: "on" },
+  teamsW: { scopes: TW_SCOPES, exo: false, teams: "on" },
+  teamsCap: { scopes: TW_SCOPES, exo: false, teams: "on", cwd: "/Users/kaatje/Desktop" }
+});
+const TQ = (n) => "$t = Get-Team -DisplayName '" + n + "'";
+const ADMIN_UPN = "kaatje@" + DOMAIN;
+const teamOf = (ctx, n) => (ctx.t.teams || []).find((x) => x.DisplayName === n);
+const rosterOf = (ctx, n) => { const t = teamOf(ctx, n); return t ? t.roster : []; };
+const roleOf = (ctx, n, nick) => { const x = rosterOf(ctx, n).find((r) => r.upn === U(nick)); return x ? x.role : null; };
+const ownersOf = (ctx, n) => rosterOf(ctx, n).filter((r) => r.role === "owner").map((r) => r.upn).sort();
+const chanOf = (ctx, n, c) => { const t = teamOf(ctx, n); return t ? t.channels.find((x) => x.DisplayName === c) : null; };
+const namesOut = (res) => res.out.map((o) => typeof o === "string" ? o : o && o.DisplayName).filter((x) => typeof x === "string").sort();
+const deptUsers = (ctx, d, extra) => ctx.t.users.filter((u) => u.UserType === "Member" && u.Department === d && (!extra || extra(u)));
+const noEnabledOwner = (ctx, archived) => ctx.t.teams.filter((tm) => tm.Archived === archived && !tm.roster.some((r) => r.role === "owner" && ctx.t.users.some((u) => u.UserPrincipalName === r.upn && u.AccountEnabled))).map((t) => t.DisplayName).sort();
+const STORY11 = "Halvard has nine teams. Some were made in a hurry, one has nobody in charge, and the summer party ended months ago. Teams sits on top of everything you know: every team is a Microsoft 365 group, with a mailbox and a SharePoint site behind it.";
+
+MEMORIES.push(
+{
+  id: "teamsconnect", seq: 11, name: "Connect-MicrosoftTeams", tag: "THIRD DOOR", title: "Teams has its own door, and every team is a group",
+  summary: "Teams commands live in the MicrosoftTeams module and need their own sign-in. A team is a Microsoft 365 group with Teams switched on; its GroupId is the group's Id.",
+  setup: "teamsOff",
+  brief: {
+    what: [
+      STORY11,
+      "Like Exchange, Teams is a <b>separate door</b>: the <b>MicrosoftTeams</b> module and <b>Connect-MicrosoftTeams</b>. Your Graph session does not count. Without it every Teams command answers 'You must call the Connect-MicrosoftTeams cmdlet'.",
+      "<b>Get-Team</b> lists teams. Almost every other Teams command wants <b>-GroupId</b>, the team's GUID, and refuses the name. The habit: <code>$t = Get-Team -DisplayName 'Sales Hub'</code>, then <code>-GroupId $t.GroupId</code>. That GUID is the same Id Get-MgGroup shows: a team is a Microsoft 365 group with Teams on top."
+    ],
+    daily: ["\"Which teams do we even have?\"", "\"Is this team public?\"", "Finding the GroupId for every other Teams command"],
+    parts: [["Connect-MicrosoftTeams", "sign in to Teams"], ["Get-Team", "every team"], ["Get-Team -DisplayName 'Sales Hub'", "one team by its exact name"], ["Get-Team -Visibility Public", "only public teams"], ["Get-Team -User x@y", "teams one person is in"], ["$t.GroupId", "the GUID the other commands need"]],
+    flow: [["Connect", "Connect-MicrosoftTeams"], ["Find", "Get-Team -DisplayName"], ["Keep", "$t = ..."], ["Use", "-GroupId $t.GroupId"]],
+    traps: [["Graph is not enough", "Connect-MgGraph does not sign you in to Teams. Three doors: Graph, Exchange, Teams."], ["Names are not ids", "-GroupId 'Sales Hub' fails. Look the team up first and pass $t.GroupId."], ["Exact names", "-DisplayName matches the whole name, not part of it. 'Sales' does not find 'Sales Hub'."]]
+  },
+  watch: [
+    { code: "Get-Team", say: "Graph is connected, Teams is not. Same message Exchange gives you: third door." },
+    { code: "Connect-MicrosoftTeams", say: "One sign-in. It answers with the account and tenant you landed in." },
+    { code: "Get-Team | Select-Object DisplayName,Visibility,Archived", say: "Nine teams. Two public, one archived." },
+    { code: TQ("Sales Hub") + "; $t.GroupId", say: "Keep the team in $t. Every Teams command after this wants this GUID." },
+    { code: "Get-MgGroup -Filter \"displayName eq 'Sales Hub'\" | Select-Object DisplayName,Id,GroupTypes", say: "Same Id in Graph. A team is a Unified group with Teams switched on." }
+  ],
+  trace: { ask: "Open the Teams door, then count the teams.", tpl: "Connect-[[MicrosoftTeams]]; (Get-Team).Count", check: { fn: (ctx) => ctx.teams === true }, wrong: "The module is called MicrosoftTeams." },
+  traceHints: ["Not Graph, not Exchange.", "The product name, as one word, with the company in front.", "Microsoft_____", "Answer: MicrosoftTeams"],
+  recall: { ask: "Which teams are public? Show DisplayName and Visibility only.", setup: "teamsR", check: { out: "Get-Team -Visibility Public | Select-Object DisplayName,Visibility" }, wrong: "Only the public teams, and only those two columns." },
+  recallHints: ["Get-Team can filter on visibility itself.", "-Visibility Public", "Get-Team -Visibility Public | Select-Object ...", "Get-Team -Visibility Public | Select-Object DisplayName,Visibility"],
+  real: ["Install-Module MicrosoftTeams -Scope CurrentUser (once per machine)", "Connect-MicrosoftTeams", "Get-Team | Select-Object DisplayName,Visibility,Archived"],
+  cheat: [["Connect-MicrosoftTeams", "The Teams door"], ["$t = Get-Team -DisplayName 'x'", "Keep a team"], ["-GroupId $t.GroupId", "What every Teams command wants"], ["Get-Team -User x@y", "Teams of one person"]]
+},
+{
+  id: "teamuser", seq: 11, name: "Get-TeamUser", tag: "OWNERS & MEMBERS", title: "Owners run the team. Members live in it.",
+  summary: "Get-TeamUser shows owners, members and guests. Add-TeamUser adds or promotes, Remove-TeamUser removes or demotes. A team can never lose its last owner.",
+  setup: "teamsW",
+  brief: {
+    what: [
+      "Every person in a team has a <b>role</b>: <b>owner</b> (can manage the team, add people, change settings), <b>member</b> or <b>guest</b> (someone from outside). Get-TeamUser prints the role in lower case.",
+      "<b>Add-TeamUser</b> adds someone as a member, or with <b>-Role Owner</b> as an owner. On someone who is already a member, -Role Owner <b>promotes</b> them. <b>Remove-TeamUser</b> takes them out of the team; with <b>-Role Owner</b> it only takes the owner role away and they stay a member.",
+      "The rule Teams enforces: the <b>last owner can't be removed</b>. Add the new owner first, then remove the old one. Two owners per team is the healthy minimum: holidays and leavers happen."
+    ],
+    daily: ["\"Can you add Tamsin to Sales Hub?\"", "\"Garrick is leaving, who takes over his team?\"", "\"Who can I ask to get into this team?\""],
+    parts: [["Get-TeamUser -GroupId $t.GroupId", "everyone, with their role"], ["-Role Owner", "only the owners"], ["Add-TeamUser -GroupId $t.GroupId -User x@y", "add as member"], ["Add-TeamUser ... -Role Owner", "add or promote to owner"], ["Remove-TeamUser ... -Role Owner", "demote, stays a member"], ["Remove-TeamUser -GroupId $t.GroupId -User x@y", "out of the team"]],
+    flow: [["Look", "Get-TeamUser"], ["Add", "Add-TeamUser"], ["Promote", "-Role Owner"], ["Hand over", "new owner first, old one out"]],
+    traps: [["Last owner", "Remove-TeamUser refuses the only owner. Promote someone else first."], ["-Role on Remove", "Remove-TeamUser -Role Owner keeps the person in the team. Without -Role they are gone."], ["UPN, not name", "-User wants the UPN (or the Id), not 'Elara Wynn'."]]
+  },
+  watch: [
+    { code: TQ("Sales Hub") + "; Get-TeamUser -GroupId $t.GroupId", say: "One owner, seven members, one guest from a partner company." },
+    { code: "Get-TeamUser -GroupId $t.GroupId -Role Owner", say: "Only Garrick. If he leaves, nobody can manage this team." },
+    { code: "Add-TeamUser -GroupId $t.GroupId -User " + U("elara.wynn") + " -Role Owner", say: "Elara was a member. -Role Owner promotes her. No output means it worked." },
+    { code: "Add-TeamUser -GroupId $t.GroupId -User " + U("tamsin.rook"), say: "No -Role: a plain member. She is also in the group in Graph now." },
+    { code: "Remove-TeamUser -GroupId $t.GroupId -User " + U("elara.wynn") + " -Role Owner", say: "-Role Owner on Remove only takes the role away. Elara stays a member." },
+    { code: "Remove-TeamUser -GroupId $t.GroupId -User " + U("garrick.penhale"), say: "Refused. Garrick is the only owner again, and a team can't lose its last owner." }
+  ],
+  trace: { ask: "Make Cassian Drake an owner of IT Ops.", tpl: TQ("IT Ops") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("cassian.drake") + " -Role [[Owner]]", check: { fn: (ctx) => roleOf(ctx, "IT Ops", "cassian.drake") === "owner" }, wrong: "The role that can manage the team." },
+  traceHints: ["Not Member.", "The person who runs the team.", "O____", "Answer: Owner"],
+  recall: { ask: "Sales Hub has one owner. Make Elara Wynn a second owner.", setup: "teamsW", check: { fn: (ctx) => roleOf(ctx, "Sales Hub", "elara.wynn") === "owner" && roleOf(ctx, "Sales Hub", "garrick.penhale") === "owner" }, wrong: "Both Garrick and Elara must be owners afterwards." },
+  recallHints: ["Find the team first and keep it in $t.", "Add-TeamUser promotes an existing member with -Role Owner.", TQ("Sales Hub") + "; Add-TeamUser -GroupId $t.GroupId -User ... -Role Owner", TQ("Sales Hub") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("elara.wynn") + " -Role Owner"],
+  real: ["$t = Get-Team -DisplayName '<a team you own>'", "Get-TeamUser -GroupId $t.GroupId -Role Owner", "If that shows only one name, you found your first task for Monday."],
+  cheat: [["Get-TeamUser -GroupId $t.GroupId -Role Owner", "The owners"], ["Add-TeamUser -GroupId $t.GroupId -User x -Role Owner", "Add or promote"], ["Remove-TeamUser -GroupId $t.GroupId -User x -Role Owner", "Demote only"], ["Remove-TeamUser -GroupId $t.GroupId -User x", "Out of the team"]]
+},
+{
+  id: "newteam", seq: 11, name: "New-Team", tag: "CREATE", title: "One command, four things: group, team, mailbox, site",
+  summary: "New-Team creates a Microsoft 365 group, the team, a group mailbox and a SharePoint site. Say who owns it with -Owner, or it will be you.",
+  setup: "teamsW",
+  brief: {
+    what: [
+      "<b>New-Team -DisplayName 'x'</b> builds a lot at once: a Microsoft 365 group, the team on top of it, a group mailbox and a SharePoint site for the files. Visibility is <b>Private</b> unless you say <b>-Visibility Public</b>.",
+      "<b>-Owner</b> sets the first owner. Leave it out and <b>you</b> become the owner: admins who script teams without -Owner end up owning dozens of teams they never open. If that happened, add the real owner first, then remove yourself.",
+      "<b>-MailNickName</b> is the group's mail alias. It must be unique in the whole tenant, so 'saleshub' or 'itops' are already taken. Leave it out and Teams makes one from the name plus a few digits."
+    ],
+    daily: ["\"We need a team for the new depot\"", "Project teams for every new customer", "Rebuilding a team that was made by hand"],
+    parts: [["New-Team -DisplayName 'x' -Visibility Private", "create"], ["-Owner x@y", "the first owner (otherwise you)"], ["-MailNickName x", "the unique alias"], ["Set-Team -GroupId $t.GroupId -DisplayName 'y'", "rename later"], ["Get-MgUser -Filter ... | ForEach-Object { Add-TeamUser ... }", "fill it from Graph"]],
+    flow: [["Create", "New-Team -Owner"], ["Find", "$t = Get-Team"], ["Fill", "Graph picks, Add-TeamUser adds"], ["Check", "Get-TeamUser"]],
+    traps: [["You as owner", "No -Owner means the account running the script owns the team."], ["Taken alias", "'Another object with the same value for property mailNickname already exists': pick another -MailNickName."], ["Filter in Graph", "City and Department are not in Get-MgUser's default output, so filter with -Filter on the server instead of Where-Object afterwards."]]
+  },
+  watch: [
+    { code: "New-Team -DisplayName 'Zeebrugge Depot' -Description 'Depot crew and shift handover' -Visibility Private -MailNickName zeebruggedepot -Owner " + U("caius.mercer"), say: "One command: group, team, mailbox and SharePoint site. Caius owns it." },
+    { code: TQ("Zeebrugge Depot") + "; Get-TeamUser -GroupId $t.GroupId", say: "Only Caius so far. Without -Owner, this line would show you." },
+    { code: "Get-MgUser -All -Filter \"department eq 'Operations' and city eq 'Ghent'\" | ForEach-Object { Add-TeamUser -GroupId $t.GroupId -User $_.UserPrincipalName }", say: "Graph picks the people, Teams adds them. Caius is already owner and stays owner." },
+    { code: "(Get-TeamUser -GroupId $t.GroupId).Count", say: "Caius plus five colleagues from the Ghent operations floor." },
+    { code: "New-Team -DisplayName 'Sales' -MailNickName saleshub", say: "Refused: saleshub belongs to Sales Hub. Aliases are unique in the tenant." }
+  ],
+  trace: { ask: "Create Legal Desk with Isolde Fenn as owner, not you.", tpl: "New-Team -DisplayName 'Legal Desk' -Visibility Private -[[Owner]] " + U("isolde.fenn"), check: { fn: (ctx) => { const o = ownersOf(ctx, "Legal Desk"); return o.length === 1 && o[0] === U("isolde.fenn"); } }, wrong: "The parameter that names who runs the team." },
+  traceHints: ["Who runs the team?", "Same word as the role.", "-O____", "Answer: Owner"],
+  recall: { ask: "Create a private team 'Legal Desk' owned by Isolde Fenn (not you), and add every other Legal colleague as a member.", setup: "teamsW", check: { fn: (ctx) => { const t = teamOf(ctx, "Legal Desk"); if (!t || t.Visibility !== "Private") return false; const o = ownersOf(ctx, "Legal Desk"); if (o.length !== 1 || o[0] !== U("isolde.fenn")) return false; if (t.roster.some((r) => r.upn === ADMIN_UPN)) return false; return deptUsers(ctx, "Legal").every((u) => t.roster.some((r) => r.upn === u.UserPrincipalName)); } }, wrong: "Private, Isolde the only owner, you not in it, and every Legal user inside." },
+  recallHints: ["New-Team with -Visibility Private and -Owner.", "Then $t = Get-Team -DisplayName 'Legal Desk'.", "Get-MgUser -All -Filter \"department eq 'Legal'\" | ForEach-Object { Add-TeamUser -GroupId $t.GroupId -User $_.UserPrincipalName }", "New-Team -DisplayName 'Legal Desk' -Visibility Private -Owner " + U("isolde.fenn") + "; " + TQ("Legal Desk") + "; Get-MgUser -All -Filter \"department eq 'Legal'\" | ForEach-Object { Add-TeamUser -GroupId $t.GroupId -User $_.UserPrincipalName }"],
+  real: ["Get-Team | Where-Object { Get-TeamUser -GroupId $_.GroupId -Role Owner | Where-Object User -eq '<your UPN>' } | Select-Object DisplayName", "Every team in that list is one you own. Are you supposed to?"],
+  cheat: [["New-Team -DisplayName 'x' -Visibility Private -Owner y", "Create with a real owner"], ["-MailNickName x", "Unique alias"], ["Set-Team -GroupId $t.GroupId -DisplayName 'y' -Visibility Public", "Change later"]]
+},
+{
+  id: "teamchannel", seq: 11, name: "New-TeamChannel", tag: "CHANNELS", title: "Standard, private, shared: who sees what",
+  summary: "Standard channels are open to the whole team. Private and shared channels have their own members and owner, and only take people who are already in the team (private).",
+  setup: "teamsW",
+  brief: {
+    what: [
+      "<b>Get-TeamChannel</b> lists a team's channels. <b>General</b> is always there and can't be deleted.",
+      "<b>New-TeamChannel</b> makes a <b>Standard</b> channel by default: everyone in the team sees it. <b>-MembershipType Private</b> makes a channel only the people you add can see, with its own <b>-Owner</b>. <b>Shared</b> works the same way but can include people from other teams.",
+      "<b>Add-TeamChannelUser</b> adds someone to a private or shared channel. For a private channel they must already be <b>in the team</b>: team first, then channel. Standard channels have no members of their own, so you can't add anyone to them."
+    ],
+    daily: ["\"Can we have a channel just for the managers?\"", "\"Why can't Hollis see the Security channel?\"", "Cleaning up channels nobody uses"],
+    parts: [["Get-TeamChannel -GroupId $t.GroupId", "all channels"], ["-MembershipType Private", "only private ones"], ["New-TeamChannel -GroupId $t.GroupId -DisplayName 'x'", "standard channel"], ["New-TeamChannel ... -MembershipType Private -Owner x@y", "private channel"], ["Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'x' -User y", "into a private channel"], ["Get-TeamChannelUser -GroupId $t.GroupId -DisplayName 'x'", "who is in it"]],
+    flow: [["Team", "Add-TeamUser first"], ["Channel", "New-TeamChannel -Private"], ["People", "Add-TeamChannelUser"], ["Check", "Get-TeamChannelUser"]],
+    traps: [["Not in the team", "Add-TeamChannelUser on a private channel refuses anyone who isn't a team member yet."], ["Standard has no members", "Adding someone to a standard channel fails: they get it by being in the team."], ["Forbidden characters", "~ # % & * { } + / \\ : < > ? | ' \" are not allowed in channel names."]]
+  },
+  watch: [
+    { code: TQ("IT Ops") + "; Get-TeamChannel -GroupId $t.GroupId", say: "General, Changes, On-call. All standard: everyone in IT Ops sees them." },
+    { code: "New-TeamChannel -GroupId $t.GroupId -DisplayName 'Patching' -Description 'Monthly patch night'", say: "Standard by default." },
+    { code: "New-TeamChannel -GroupId $t.GroupId -DisplayName 'Security' -MembershipType Private -Owner " + U("elowen.thistle"), say: "Private, with Elowen as its owner. She is already in IT Ops, which is required." },
+    { code: "Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User " + U("cassian.drake"), say: "Cassian is in the team, so he can join the private channel." },
+    { code: "Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User " + U("hollis.reed"), say: "Refused: Hollis isn't in IT Ops. Team first, then channel." },
+    { code: "Get-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security'", say: "Two people can see Security. The rest of IT Ops doesn't even see it exists." }
+  ],
+  trace: { ask: "Make the Security channel in IT Ops private.", tpl: TQ("IT Ops") + "; New-TeamChannel -GroupId $t.GroupId -DisplayName 'Security' -MembershipType [[Private]] -Owner " + U("elowen.thistle"), check: { fn: (ctx) => { const c = chanOf(ctx, "IT Ops", "Security"); return !!c && c.MembershipType === "Private"; } }, wrong: "Only the people you add can see it." },
+  traceHints: ["Not Standard.", "Not Shared either.", "P______", "Answer: Private"],
+  recall: { ask: "In IT Ops, create a private channel 'Security' owned by Elowen Thistle, then add Cassian Drake and Ondine Shaw to it.", setup: "teamsW", check: { fn: (ctx) => { const c = chanOf(ctx, "IT Ops", "Security"); if (!c || c.MembershipType !== "Private") return false; const has = (n, r) => c.users.some((x) => x.upn === U(n) && (!r || x.role === r)); return has("elowen.thistle", "owner") && has("cassian.drake") && has("ondine.shaw"); } }, wrong: "A private Security channel, Elowen owner, Cassian and Ondine in it." },
+  recallHints: ["New-TeamChannel with -MembershipType Private and -Owner.", "Then Add-TeamChannelUser, once per person.", TQ("IT Ops") + "; New-TeamChannel -GroupId $t.GroupId -DisplayName 'Security' -MembershipType Private -Owner ...; Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User ...", TQ("IT Ops") + "; New-TeamChannel -GroupId $t.GroupId -DisplayName 'Security' -MembershipType Private -Owner " + U("elowen.thistle") + "; Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User " + U("cassian.drake") + "; Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Security' -User " + U("ondine.shaw")],
+  real: ["$t = Get-Team -DisplayName '<a team you own>'", "Get-TeamChannel -GroupId $t.GroupId -MembershipType Private", "Then Get-TeamChannelUser on each: who can see what?"],
+  cheat: [["Get-TeamChannel -GroupId $t.GroupId", "Channels"], ["New-TeamChannel -GroupId $t.GroupId -DisplayName 'x' -MembershipType Private -Owner y", "Private channel"], ["Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'x' -User y", "Into a private channel"], ["Remove-TeamChannel -GroupId $t.GroupId -DisplayName 'x'", "Delete a channel"]]
+},
+{
+  id: "teamhygiene", seq: 11, name: "Ownerless", tag: "LIFECYCLE", title: "Teams outlive the people who made them",
+  summary: "Find teams with no owner or only disabled owners, give them a living owner, and archive the ones that are finished: reversible, read-only, nothing deleted.",
+  setup: "teamsW",
+  brief: {
+    what: [
+      "People leave, teams stay. A team whose only owner left has <b>nobody</b> who can add people, approve guests or clean it up. A disabled owner still shows up in Get-TeamUser, so count owners <b>and</b> check their account with Get-MgUser.",
+      "The audit pattern: loop over <b>Get-Team</b>, ask <b>Get-TeamUser -Role Owner</b> per team, and keep the teams where that list is empty or every owner is disabled. A calculated property gives you an Owners column for a report.",
+      "Finished teams don't need deleting. <b>Set-TeamArchivedState -Archived:$true</b> makes the team read-only and keeps every message and file; add <b>-SetSpoSiteReadOnlyForMembers:$true</b> to freeze the files for members too. <b>-Archived:$false</b> brings it back."
+    ],
+    daily: ["Quarterly governance check", "\"Fenna left, what did she own?\"", "Cleaning up event and project teams"],
+    parts: [["Get-Team | Where-Object { -not (Get-TeamUser -GroupId $_.GroupId -Role Owner) }", "no owner at all"], ["@{n='Owners';e={(Get-TeamUser -GroupId $_.GroupId -Role Owner).Count}}", "owner count as a column"], ["Get-MgUser -UserId $o.User -Property AccountEnabled", "is that owner still here?"], ["Set-TeamArchivedState -GroupId $t.GroupId -Archived:$true", "archive"], ["Get-Team -Archived $true", "what is archived"]],
+    flow: [["List", "Get-Team"], ["Owners", "Get-TeamUser -Role Owner"], ["Alive?", "Get-MgUser AccountEnabled"], ["Fix", "new owner or archive"]],
+    traps: [["Disabled is not gone", "A disabled owner still counts as an owner. Check AccountEnabled in Graph."], ["Archive, don't delete", "Deleting a team deletes its group, mailbox and files. Archiving is reversible."], ["Boolean, not switch", "-Archived wants a value: -Archived:$true or -Archived $true."]]
+  },
+  watch: [
+    { code: "Get-Team | ForEach-Object { [pscustomobject]@{ Team = $_.DisplayName; Owners = (Get-TeamUser -GroupId $_.GroupId -Role Owner).Count } }", say: "Bruges Office: 0. Nobody can manage it." },
+    { code: TQ("Finance Close") + "; Get-TeamUser -GroupId $t.GroupId -Role Owner | ForEach-Object { Get-MgUser -UserId $_.User -Property DisplayName,AccountEnabled } | Select-Object DisplayName,AccountEnabled", say: "One owner, but Fenna's account is disabled. Ownerless in practice." },
+    { code: "Get-Team -DisplayName 'Summer Party 2025' | Set-TeamArchivedState -Archived:$true -SetSpoSiteReadOnlyForMembers:$true", say: "Archived: messages and files kept, everything read-only. Reversible." },
+    { code: "Get-Team -Archived $true | Select-Object DisplayName", say: "Two archived teams now." }
+  ],
+  trace: { ask: "Archive Summer Party 2025.", tpl: "Get-Team -DisplayName 'Summer Party 2025' | Set-TeamArchivedState -Archived:[[$true]]", check: { fn: (ctx) => { const t = teamOf(ctx, "Summer Party 2025"); return !!t && t.Archived === true; } }, wrong: "A Boolean value after the colon." },
+  traceHints: ["It wants a yes.", "PowerShell's yes has a $.", "$t___", "Answer: $true"],
+  recall: { ask: "Which active (not archived) teams have no enabled owner? Output their DisplayName only.", setup: "teamsW", check: { fn: (ctx, res) => { const want = noEnabledOwner(ctx, false); const got = namesOut(res); return got.length === want.length && got.every((x, i) => x === want[i]); } }, wrong: "Three teams: one with no owner, two whose owner's account is disabled." },
+  recallHints: ["Get-Team -Archived $false, then Where-Object per team.", "Inside: the owners, filtered on (Get-MgUser -UserId $_.User -Property AccountEnabled).AccountEnabled.", "Keep the team when that filtered list is empty: -not $o.", "Get-Team -Archived $false | Where-Object { $o = Get-TeamUser -GroupId $_.GroupId -Role Owner | Where-Object { (Get-MgUser -UserId $_.User -Property AccountEnabled).AccountEnabled }; -not $o } | Select-Object DisplayName"],
+  real: ["Get-Team | Select-Object DisplayName,@{n='Owners';e={(Get-TeamUser -GroupId $_.GroupId -Role Owner).Count}} | Sort-Object Owners", "Every 0 or 1 at the top is a team at risk."],
+  cheat: [["(Get-TeamUser -GroupId $t.GroupId -Role Owner).Count", "Owner count"], ["Set-TeamArchivedState -GroupId $t.GroupId -Archived:$true", "Archive"], ["-SetSpoSiteReadOnlyForMembers:$true", "Freeze the files too"], ["-Archived:$false", "Bring it back"]]
+}
+);
+
+Object.assign(DRILLS, {
+  teamsconnect: [
+    { q: "How many teams are there? One number.", fn: (ctx, res) => res.out.length === 1 && res.out[0] === ctx.t.teams.length, sol: ["(Get-Team).Count"], hint: "(Get-Team).Count" },
+    { q: "Which teams are archived? DisplayName only.", out: "Get-Team -Archived $true | Select-Object DisplayName", hint: "-Archived $true" },
+    { q: "What is the GroupId of IT Ops? Only the GUID.", fn: (ctx, res) => res.out.length === 1 && res.out[0] === teamOf(ctx, "IT Ops").GroupId, sol: ["(Get-Team -DisplayName 'IT Ops').GroupId"], hint: "(Get-Team -DisplayName ...).GroupId" },
+    { q: "Which teams is Seren Blackwood in? DisplayName only.", out: "Get-Team -User " + U("seren.blackwood") + " | Select-Object DisplayName", hint: "-User with her UPN" },
+    { q: "Prove a team is a group: get the Id of the Microsoft 365 group 'Wellbeing Club' through Graph, not Teams.", fn: (ctx, res, hist) => res.out.length === 1 && res.out[0] === teamOf(ctx, "Wellbeing Club").GroupId && hist.some((h) => /Get-MgGroup/i.test(h)), sol: ["(Get-MgGroup -Filter \"displayName eq 'Wellbeing Club'\").Id"], hint: "Get-MgGroup -Filter \"displayName eq '...'\"" },
+    { q: "Done for today: sign out of Teams.", fn: (ctx) => ctx.teams === false, sol: ["Disconnect-MicrosoftTeams"], hint: "The opposite of Connect." }
+  ],
+  teamuser: [
+    { q: "Who owns Project Northwind? Name only.", out: TQ("Project Northwind") + "; Get-TeamUser -GroupId $t.GroupId -Role Owner | Select-Object Name", hint: "-Role Owner, then Select-Object Name" },
+    { q: "Add Nessa Quill to Wellbeing Club as a member.", fn: (ctx) => roleOf(ctx, "Wellbeing Club", "nessa.quill") === "member", sol: [TQ("Wellbeing Club") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("nessa.quill")], hint: "Add-TeamUser without -Role" },
+    { q: "Dorian Pike moved away from sales. Take him out of Sales Hub.", fn: (ctx) => !!teamOf(ctx, "Sales Hub") && roleOf(ctx, "Sales Hub", "dorian.pike") === null, sol: [TQ("Sales Hub") + "; Remove-TeamUser -GroupId $t.GroupId -User " + U("dorian.pike")], hint: "Remove-TeamUser without -Role" },
+    { q: "Hand over Wellbeing Club: Wren Calloway becomes owner, Juniper Oakes stays in the team but is no longer owner.", fn: (ctx) => roleOf(ctx, "Wellbeing Club", "wren.calloway") === "owner" && roleOf(ctx, "Wellbeing Club", "juniper.oakes") === "member", sol: [TQ("Wellbeing Club") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("wren.calloway") + " -Role Owner; Remove-TeamUser -GroupId $t.GroupId -User " + U("juniper.oakes") + " -Role Owner"], hint: "New owner first, then demote with -Role Owner." },
+    { q: "How many people are in IT Ops, owners included? One number.", fn: (ctx, res) => res.out.length === 1 && res.out[0] === rosterOf(ctx, "IT Ops").length, sol: ["(Get-Team -DisplayName 'IT Ops' | Get-TeamUser).Count"], hint: "Get-Team pipes its GroupId into Get-TeamUser." },
+    { q: "Try to remove the only owner of Project Northwind, and read why it's refused.", fn: (ctx, res) => !!res.error && /Last owner/.test(res.error.text()), sol: [TQ("Project Northwind") + "; Remove-TeamUser -GroupId $t.GroupId -User " + U("caius.mercer")], hint: "Caius is the only owner." },
+    { q: "Add every Marketing colleague to Wellbeing Club.", fn: (ctx) => deptUsers(ctx, "Marketing").every((u) => rosterOf(ctx, "Wellbeing Club").some((r) => r.upn === u.UserPrincipalName)), sol: [TQ("Wellbeing Club") + "; Get-MgUser -All -Filter \"department eq 'Marketing'\" | ForEach-Object { Add-TeamUser -GroupId $t.GroupId -User $_.UserPrincipalName }"], hint: "Graph picks with -Filter, ForEach-Object adds." }
+  ],
+  newteam: [
+    { q: "Create a public team 'Book Club' owned by Briar Locke.", fn: (ctx) => { const t = teamOf(ctx, "Book Club"); return !!t && t.Visibility === "Public" && ownersOf(ctx, "Book Club").join() === U("briar.locke"); }, sol: ["New-Team -DisplayName 'Book Club' -Visibility Public -Owner " + U("briar.locke")], hint: "-Visibility Public -Owner" },
+    { q: "Create 'Antwerp Office' (private, alias antwerpoffice), owned by Seren Blackwood, with every enabled colleague in Antwerp as a member.", fn: (ctx) => { const t = teamOf(ctx, "Antwerp Office"); if (!t || t.MailNickName !== "antwerpoffice" || t.Visibility !== "Private") return false; return ctx.t.users.filter((u) => u.UserType === "Member" && u.City === "Antwerp" && u.AccountEnabled).every((u) => t.roster.some((r) => r.upn === u.UserPrincipalName)) && ownersOf(ctx, "Antwerp Office").join() === U("seren.blackwood"); }, sol: ["New-Team -DisplayName 'Antwerp Office' -Visibility Private -MailNickName antwerpoffice -Owner " + U("seren.blackwood") + "; " + TQ("Antwerp Office") + "; Get-MgUser -All -Filter \"city eq 'Antwerp'\" -Property UserPrincipalName,AccountEnabled,UserType | Where-Object { $_.AccountEnabled -and $_.UserType -eq 'Member' } | ForEach-Object { Add-TeamUser -GroupId $t.GroupId -User $_.UserPrincipalName }"], hint: "-Filter on city, -Property AccountEnabled, then Where-Object." },
+    { q: "Try to create a team with the alias 'itops' and read the error.", fn: (ctx, res) => !!res.error && /mailNickname already exists/.test(res.error.text()), sol: ["New-Team -DisplayName 'IT Ops 2' -MailNickName itops"], hint: "-MailNickName itops" },
+    { q: "Someone created 'Test team' without -Owner, so you own it. Hand it to Lorcan Ivers and take yourself out.", pre: ["New-Team -DisplayName 'Test team' -MailNickName testteam"], fn: (ctx) => { const t = teamOf(ctx, "Test team"); return !!t && ownersOf(ctx, "Test team").join() === U("lorcan.ivers") && !t.roster.some((r) => r.upn === ADMIN_UPN); }, sol: [TQ("Test team") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("lorcan.ivers") + " -Role Owner; Remove-TeamUser -GroupId $t.GroupId -User " + ADMIN_UPN], hint: "New owner first, then remove " + ADMIN_UPN + "." },
+    { q: "Rename 'Summer Party 2025' to 'Summer Party' and make it private.", fn: (ctx) => { const t = ctx.t.teams.find((x) => x.MailNickName === "summerparty2025"); return !!t && t.DisplayName === "Summer Party" && t.Visibility === "Private"; }, sol: [TQ("Summer Party 2025") + "; Set-Team -GroupId $t.GroupId -DisplayName 'Summer Party' -Visibility Private"], hint: "Set-Team -GroupId ... -DisplayName ... -Visibility ..." }
+  ],
+  teamchannel: [
+    { q: "List only the private channels of Sales Hub: DisplayName.", out: TQ("Sales Hub") + "; Get-TeamChannel -GroupId $t.GroupId -MembershipType Private | Select-Object DisplayName", hint: "-MembershipType Private" },
+    { q: "Add a standard channel 'Wins' with the description 'Closed deals' to Sales Hub.", fn: (ctx) => { const c = chanOf(ctx, "Sales Hub", "Wins"); return !!c && c.MembershipType === "Standard" && c.Description === "Closed deals"; }, sol: [TQ("Sales Hub") + "; New-TeamChannel -GroupId $t.GroupId -DisplayName 'Wins' -Description 'Closed deals'"], hint: "New-TeamChannel with -Description" },
+    { q: "Who is in the private channel 'Key accounts' of Sales Hub? Name and Role.", out: TQ("Sales Hub") + "; Get-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Key accounts' | Select-Object Name,Role", hint: "Get-TeamChannelUser" },
+    { q: "Corvin Ashby needs the private channel 'Key accounts' in Sales Hub.", fn: (ctx) => { const c = chanOf(ctx, "Sales Hub", "Key accounts"); return !!c && c.users.some((x) => x.upn === U("corvin.ashby")); }, sol: [TQ("Sales Hub") + "; Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Key accounts' -User " + U("corvin.ashby")], hint: "He is already in the team." },
+    { q: "Thea Gallow needs the private channel 'Board prep' in Halvard Leadership. She isn't in that team yet.", fn: (ctx) => { const c = chanOf(ctx, "Halvard Leadership", "Board prep"); return !!c && c.users.some((x) => x.upn === U("thea.gallow")); }, sol: [TQ("Halvard Leadership") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("thea.gallow") + "; Add-TeamChannelUser -GroupId $t.GroupId -DisplayName 'Board prep' -User " + U("thea.gallow")], hint: "Team first, then channel." },
+    { q: "Try to name a channel 'Q4/Q1 plans' in Sales Hub, and read why it's refused.", fn: (ctx, res) => !!res.error && /invalid characters/.test(res.error.text()), sol: [TQ("Sales Hub") + "; New-TeamChannel -GroupId $t.GroupId -DisplayName 'Q4/Q1 plans'"], hint: "The slash." },
+    { q: "Nobody uses 'Quotes' in Sales Hub any more. Remove the channel.", fn: (ctx) => !!teamOf(ctx, "Sales Hub") && !chanOf(ctx, "Sales Hub", "Quotes"), sol: [TQ("Sales Hub") + "; Remove-TeamChannel -GroupId $t.GroupId -DisplayName 'Quotes'"], hint: "Remove-TeamChannel" }
+  ],
+  teamhygiene: [
+    { q: "Owner count per team: DisplayName and a column called Owners.", fn: (ctx, res) => res.out.length === ctx.t.teams.length && res.out.every((o) => o && o.DisplayName && o.Owners === ctx.t.teams.find((t) => t.DisplayName === o.DisplayName).roster.filter((r) => r.role === "owner").length), sol: ["Get-Team | Select-Object DisplayName,@{n='Owners';e={(Get-TeamUser -GroupId $_.GroupId -Role Owner).Count}}"], hint: "A calculated property: @{n='Owners';e={...}}" },
+    { q: "Which teams have no owner at all? DisplayName only.", fn: (ctx, res) => namesOut(res).join() === ctx.t.teams.filter((t) => !t.roster.some((r) => r.role === "owner")).map((t) => t.DisplayName).sort().join() && res.out.length > 0, sol: ["Get-Team | Where-Object { -not (Get-TeamUser -GroupId $_.GroupId -Role Owner) } | Select-Object DisplayName"], hint: "-not (Get-TeamUser ... -Role Owner)" },
+    { q: "Bruges Office has nobody in charge. Make Elowen Thistle its owner.", fn: (ctx) => roleOf(ctx, "Bruges Office", "elowen.thistle") === "owner", sol: [TQ("Bruges Office") + "; Add-TeamUser -GroupId $t.GroupId -User " + U("elowen.thistle") + " -Role Owner"], hint: "Add-TeamUser -Role Owner" },
+    { q: "The summer party is over. Archive Summer Party 2025 and make its files read-only for members.", fn: (ctx) => { const t = teamOf(ctx, "Summer Party 2025"); return !!t && t.Archived && t._spoRO; }, sol: ["Get-Team -DisplayName 'Summer Party 2025' | Set-TeamArchivedState -Archived:$true -SetSpoSiteReadOnlyForMembers:$true"], hint: "-SetSpoSiteReadOnlyForMembers:$true" },
+    { q: "Someone needs an old file: bring Old Intranet Project back out of the archive.", fn: (ctx) => { const t = teamOf(ctx, "Old Intranet Project"); return !!t && t.Archived === false; }, sol: ["Get-Team -DisplayName 'Old Intranet Project' | Set-TeamArchivedState -Archived:$false"], hint: "-Archived:$false" },
+    { q: "Which teams have a guest in them? DisplayName only.", fn: (ctx, res) => namesOut(res).join() === ctx.t.teams.filter((t) => t.roster.some((r) => r.role === "guest")).map((t) => t.DisplayName).sort().join() && res.out.length > 0, sol: ["Get-Team | Where-Object { Get-TeamUser -GroupId $_.GroupId -Role Guest } | Select-Object DisplayName"], hint: "-Role Guest inside Where-Object" }
+  ]
+});
+
+const SPRING = {
+  id: "spring", type: "capstone", name: "Spring clean", seq: 11, kind: "CAPSTONE · TEAMS SPRING CLEAN", allow: /./, hero: "gate", setup: "teamsCap",
+  need: (m) => m.seq === 11,
+  story: "Friday, governance day. Elowen wants the Teams mess sorted before the quarter closes: a finished party team, a finance team whose owner left, a new depot team that must be done right this time, and a report she can show the directors.",
+  doneMsg: "Every team has a living owner, the old ones are archived and nothing was deleted. That report is the first thing the directors will ask for next quarter.",
+  text: { crumb: "Capstone · ", done: "Teams in order", flow: [["Archive", "what is finished"], ["Owners", "living ones, two if you can"], ["Create", "-Owner, then fill"], ["Report", "Owners per team"]], flowT: "CAPSTONE · OWNERS, CHANNELS, ARCHIVE", rules: "<h6>CAPSTONE RULES</h6>Connected to Graph and Teams. You are in ~/Desktop. Nothing may be deleted: archive instead. Scripts in Code are welcome.", junie: "Find the team, keep it in $t, use $t.GroupId. New owner first, old owner out." },
+  tickets: [
+    { id: "s1", from: "Juniper Oakes", title: "The party is over", body: "Summer Party 2025 is finished. Keep it for the photos, but archive it and make the files read-only for members.", hint: "Set-TeamArchivedState -Archived:$true -SetSpoSiteReadOnlyForMembers:$true",
+      check: (ctx) => { const t = ctx.t.teams.find((x) => x.MailNickName === "summerparty2025"); return !!t && t.Archived && t._spoRO; } },
+    { id: "s2", from: "Hollis Reed", title: "Finance Close has no working owner", body: "Fenna left and her account is disabled. Make me and Ysolde Marrow owners of Finance Close, then take Fenna out of the team.", hint: "Two Add-TeamUser -Role Owner, then Remove-TeamUser for Fenna.",
+      check: (ctx) => { const o = ownersOf(ctx, "Finance Close"); return o.includes(U("hollis.reed")) && o.includes(U("ysolde.marrow")) && !rosterOf(ctx, "Finance Close").some((r) => r.upn === U("fenna.lowe")); } },
+    { id: "s3", from: "Caius Mercer", title: "A depot team, done right", body: "New private team 'Zeebrugge Depot', I'm the owner (you are not in it), with every enabled Operations colleague in Ghent. Plus a private channel 'Shift leads' for just me and Torin Ash.", hint: "New-Team -Owner, fill from Graph with a -Filter, New-TeamChannel -MembershipType Private -Owner, Add-TeamChannelUser.",
+      check: (ctx) => { const t = teamOf(ctx, "Zeebrugge Depot"); if (!t || t.Visibility !== "Private" || t.roster.some((r) => r.upn === ADMIN_UPN)) return false; if (ownersOf(ctx, "Zeebrugge Depot").join() !== U("caius.mercer")) return false; const ops = deptUsers(ctx, "Operations", (u) => u.City === "Ghent" && u.AccountEnabled); if (!ops.every((u) => t.roster.some((r) => r.upn === u.UserPrincipalName))) return false; const c = t.channels.find((x) => x.DisplayName === "Shift leads"); return !!c && c.MembershipType === "Private" && c.users.length === 2 && c.users.some((x) => x.upn === U("caius.mercer") && x.role === "owner") && c.users.some((x) => x.upn === U("torin.ash")); } },
+    { id: "s4", from: "Elowen Thistle", title: "The report for the directors", body: "Export every team with its owner count to ~/Desktop/teams-owners.csv for Belgian Excel: columns DisplayName, Archived and Owners.", hint: "Get-Team | Select-Object DisplayName,Archived,@{n='Owners';e={...}} | Export-Csv -Delimiter ';' -NoTypeInformation",
+      check: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/teams-owners.csv"); return !!c && c.rows.length === ctx.t.teams.length && c.head.includes(";") && /DisplayName/.test(c.head) && /Owners/.test(c.head) && /Archived/.test(c.head); } }
+  ]
+};
+GATES.push(SPRING);
+ERR_HELP.unshift(
+  [/You must call the Connect-MicrosoftTeams/i, "Teams is its own door too. Run Connect-MicrosoftTeams first."],
+  [/Invalid value for GroupId/i, "Teams commands want the GroupId, a GUID, not the team's name. $t = Get-Team -DisplayName 'Name', then -GroupId $t.GroupId."],
+  [/Last owner cannot be removed/i, "A team always needs an owner. Add the new owner first, then remove the old one."],
+  [/is not a member of the team/i, "Private channels only take people who are already in the team. Add-TeamUser first, then Add-TeamChannelUser."],
+  [/mailNickname already exists/i, "That mail alias is taken somewhere in the tenant. Pick another -MailNickName."]
+);
+
 const KEY = "syncle.v1";
 const KEYS = [["Tab", "Complete: unique match, or the longest common part"], ["Tab Tab", "No progress? The second Tab lists every possibility"], ["Ctrl+Space", "Menu of completions, pick with arrows, Enter accepts"], ["Alt+=", "List possible completions without changing the line"], ["Right arrow / Ctrl+F / End", "At the end of the line: accept the grey suggestion from history"], ["Alt+F", "At the end of the line: accept the next word of the suggestion"], ["Up / Down, Ctrl+P / Ctrl+N", "Previous / next command in history"], ["Ctrl+R / Ctrl+S", "Search history backwards / forwards, Enter runs it"], ["Ctrl+A / Ctrl+E", "Start / end of the line"], ["Ctrl+B / Ctrl+F, Alt+B / Alt+F", "Back / forward a character, a word"], ["Ctrl+U / Ctrl+K", "Cut everything before / after the cursor"], ["Ctrl+W / Alt+D", "Cut the word before / after the cursor"], ["Ctrl+Y", "Paste what you cut"], ["Alt+.", "Insert the last argument of the previous command"], ["Ctrl+T", "Swap two characters"], ["Ctrl+_", "Undo"], ["Ctrl+C", "Cancel the line"], ["Ctrl+L", "Clear the screen"], ["Ctrl+D", "Delete character (on an empty line: exit pwsh)"]];
 const DAYMS = 864e5;
@@ -5816,7 +6355,7 @@ function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
 function gateOpen(g) { return gateNeed(g || GATE).every((m) => synced(m.id)); }
-function heroImg(g) { if (!g) return ""; const f = g.type === "break" ? "desync" : ({ halvard: "gate-halvard", incident: "gate-voicemail", automate: "gate-handover", polder: "gate-polder" })[g.id] || "gate-halvard"; return "img/syncle/" + f + ".jpg"; }
+function heroImg(g) { if (!g) return ""; const f = g.type === "break" ? "desync" : ({ halvard: "gate-halvard", incident: "gate-voicemail", automate: "gate-handover", polder: "gate-polder", spring: "gate-handover" })[g.id] || "gate-halvard"; return "img/syncle/" + f + ".jpg"; }
 function gateHero(g) { return ' style="background-image:url(' + heroImg(g) + ')"'; }
 function setSeqBg(seq) { const src = "img/syncle/corridor.jpg"; const bgs = document.querySelectorAll("#corridor .bg"); const top = bgs[bgs.length - 1]; if (top.dataset.src === src) return; const n = top.cloneNode(); n.dataset.src = src; n.style.backgroundImage = "url(" + src + ")"; n.style.opacity = "0"; top.after(n); requestAnimationFrame(() => requestAnimationFrame(() => { n.style.opacity = "1"; })); setTimeout(() => { document.querySelectorAll("#corridor .bg").forEach((b) => { if (b !== n) b.remove(); }); }, 1300); }
 const JUNIE = '<svg class="jsvg" viewBox="0 0 200 200" aria-hidden="true"><ellipse class="jsh" cx="100" cy="188" rx="34" ry="4.5" fill="rgba(31,95,196,.12)"/><g class="jw"><g class="st s-success jsp"><path d="M40 70l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#1f5fc4" opacity=".55"/><path d="M162 58l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#1f5fc4" opacity=".45"/><path d="M168 132l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ef9f8e" opacity=".7"/><path d="M30 138l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#ef9f8e" opacity=".6"/></g><g class="st s-desync jsd"><path d="M36 74l9-4-3 10z" fill="#c2412f" opacity=".7"/><path d="M164 70l8 6-10 2z" fill="#c2412f" opacity=".6"/><path d="M170 140l-6 8-2-9z" fill="#c2412f" opacity=".55"/><path d="M28 132l9 2-6 6z" fill="#c2412f" opacity=".5"/></g><path d="M124 150c22 6 40-2 48-22-12 10-30 14-46 10z" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="100" cy="144" rx="31" ry="32" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="100" cy="150" rx="18" ry="20" fill="#f7f1ec"/><ellipse cx="84" cy="174" rx="9" ry="6" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="116" cy="174" rx="9" ry="6" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="70" cy="142" rx="7" ry="12" transform="rotate(25 70 142)" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse class="st s-idle s-success s-desync" cx="130" cy="142" rx="7" ry="12" transform="rotate(-25 130 142)" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><g class="st s-hint"><path d="M124 140c10-6 20-14 28-24" stroke="#cfd9e8" stroke-width="15" stroke-linecap="round" fill="none"/><path d="M124 140c10-6 20-14 28-24" stroke="#fbfcfe" stroke-width="12" stroke-linecap="round" fill="none"/><g class="jcr"><path d="M166 88l7 11-7 13-7-13z" fill="rgba(31,95,196,.18)" stroke="#1f5fc4" stroke-width="1.5"/><path d="M159 99h14" stroke="#1f5fc4" stroke-width="1" opacity=".6"/></g></g><g class="jgill jgl-l"><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#ef9f8e" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M50 71l-1-8M41 65l-2-7M50 71l-8 2M41 65l-8 1M46 91l-1-7M34 91l-1-7M46 91l-1 7M34 90l-1 7M50 109l-7-3M40 115l-7-2M50 109l2 7M40 115l1 7" stroke="#f4b4a6" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#fbd9d0" stroke-width="2" stroke-linecap="round" fill="none"/></g><g class="jgill jgl-r"><g transform="matrix(-1 0 0 1 200 0)"><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#ef9f8e" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M50 71l-1-8M41 65l-2-7M50 71l-8 2M41 65l-8 1M46 91l-1-7M34 91l-1-7M46 91l-1 7M34 90l-1 7M50 109l-7-3M40 115l-7-2M50 109l2 7M40 115l1 7" stroke="#f4b4a6" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#fbd9d0" stroke-width="2" stroke-linecap="round" fill="none"/></g></g><ellipse cx="100" cy="92" rx="47" ry="39" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><path d="M88 62l8-4 8 4v9l-8 4-8-4zM104 66l8-4 8 4v9l-8 4-8-4z" fill="none" stroke="rgba(31,95,196,.12)" stroke-width="1"/><ellipse cx="73" cy="104" rx="7" ry="4" fill="#f6b9ad" opacity=".55"/><ellipse cx="127" cy="104" rx="7" ry="4" fill="#f6b9ad" opacity=".55"/><g class="st s-idle s-hint s-desync jeyes"><circle cx="82" cy="92" r="6" fill="#1d232b"/><circle cx="118" cy="92" r="6" fill="#1d232b"/><circle cx="84.5" cy="89.5" r="2" fill="#fff"/><circle cx="120.5" cy="89.5" r="2" fill="#fff"/></g><g class="st s-success"><path d="M75 94q7-9 14 0M111 94q7-9 14 0" stroke="#1d232b" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M90 103q10 13 20 0z" fill="#e98c7c" stroke="#1d232b" stroke-width="2" stroke-linejoin="round"/></g><path class="st s-idle s-hint" d="M93 104q7 6 14 0" stroke="#1d232b" stroke-width="2.2" stroke-linecap="round" fill="none"/><g class="st s-desync"><path d="M75 85l12-5M125 85l-12-5" stroke="#1d232b" stroke-width="2.2" stroke-linecap="round"/><path d="M93 107q3.5-4 7 0t7 0" stroke="#1d232b" stroke-width="2.2" stroke-linecap="round" fill="none"/></g></g></svg>';
@@ -5850,10 +6389,10 @@ function renderCorridor() {
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
   setSeqBg(seq);
-  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : "REAL WORLD");
+  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : seq === 10 ? "REAL WORLD" : "WORKLOADS");
   $("stName").textContent = sq.name; $("stBlurb").textContent = sq.blurb;
   let h = "<h4>THE CURVE</h4>";
-  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE", 10: "REAL WORLD" };
+  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE", 10: "REAL WORLD", 11: "WORKLOADS · BEYOND USERS AND MAIL" };
   SEQUENCES.forEach((q) => {
     if (tiers[q.id]) h += '<div class="tier">' + tiers[q.id] + "</div>";
     const pr = q.open ? seqProgress(q.id) : null;
@@ -6047,7 +6586,7 @@ function flowband(flow, label) {
   let h = '<div class="fbg" aria-hidden="true"></div><div class="fline" aria-hidden="true"></div><span class="flowlabel">' + esc(label) + '</span><span class="lastrun" id="lastrun"></span>';
   flow.forEach((f, i) => {
     const x = 10 + (80 / (n - 1)) * i;
-    h += '<div class="fnode' + (i === n - 1 ? " lit" : "") + '" style="left:' + x + '%"><div class="d"></div><b>' + esc(f[0]) + "</b><small>" + esc(f[1]) + "</small></div>";
+    h += '<div class="fnode' + (i === n - 1 ? " lit last" : "") + (i === 0 ? " first" : "") + '" style="left:' + x + '%"><div class="d"></div><b>' + esc(f[0]) + "</b><small>" + esc(f[1]) + "</small></div>";
   });
   for (let i = 0; i < 6; i++) h += '<div class="frag" aria-hidden="true" style="animation-delay:' + (i * 2.3).toFixed(1) + 's"></div>';
   $("flowband").innerHTML = h;
@@ -6233,7 +6772,14 @@ function checkPractice(res) {
     R.jlineOverride = help ? help : "Read the red text slowly: the first line usually names the problem."; R.jstate = "desync"; junie();
   }
   const ok = GRADER.verdict(GRADER.drillCheck(d), setup, R.ctx, res, R.sessHist, d.pre);
-  showCompare(ok ? "" : cmpHTML(GRADER.drillCheck(d), setup, d.pre, R.sessHist[R.sessHist.length - 1], res));
+  const cmp = ok ? "" : cmpHTML(GRADER.drillCheck(d), setup, d.pre, R.sessHist[R.sessHist.length - 1], res);
+  if (!ok && !res.error && !cmp) {
+    showCompare('<p class="cmpnote">' + (res.out.length ? "It ran without errors, but this output isn't what the ticket asks for." : "It ran without errors, but nothing came back and the tenant didn't change the way the ticket asks.") + " Read the ticket once more. Hint is there if you need it.</p>");
+    $("term").classList.remove("soft"); void $("term").offsetWidth; $("term").classList.add("soft");
+    R.jlineOverride = "Ran clean, not synced yet. Compare what you got with what the ticket asks."; R.jstate = "hint"; junie();
+    return;
+  }
+  showCompare(cmp);
   if (!ok) return;
   const k = drillKey(m, i), first = !S.drills[k];
   S.drills[k] = true; if (R.mix) R.mixScore++;
@@ -6263,7 +6809,7 @@ function junie() {
   if (R.gate) line = gtext().junie;
   else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", practice: "Different ticket, same skill. If you blank, one hint, then the answer.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
   if (R.hint > 0) { cls = "j-hint"; step = "HINT " + R.hint + " OF " + max; line = hs[R.hint - 1]; }
-  if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : step; R.jlineOverride = null; R.jstate = null; }
+  if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : R.jstate === "hint" ? "j-hint" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : R.jstate === "hint" ? "NOT SYNCED YET" : step; R.jlineOverride = null; R.jstate = null; }
   if (!$("jimg").firstChild) $("jimg").innerHTML = JUNIE;
   $("jimg").className = "jimg " + cls;
   $("jstep").textContent = "JUNIE · " + step;

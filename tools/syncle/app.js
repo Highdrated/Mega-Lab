@@ -42,7 +42,7 @@ function gateFor(seq) { return GATES.find((g) => g.seq === seq) || null; }
 function curGate() { return R.gateObj || GATE; }
 function gateNeed(g) { return MEMORIES.filter(g.need); }
 function gateOpen(g) { return gateNeed(g || GATE).every((m) => synced(m.id)); }
-function heroImg(g) { if (!g) return ""; const f = g.type === "break" ? "desync" : ({ halvard: "gate-halvard", incident: "gate-voicemail", automate: "gate-handover", polder: "gate-polder" })[g.id] || "gate-halvard"; return "img/syncle/" + f + ".jpg"; }
+function heroImg(g) { if (!g) return ""; const f = g.type === "break" ? "desync" : ({ halvard: "gate-halvard", incident: "gate-voicemail", automate: "gate-handover", polder: "gate-polder", spring: "gate-handover" })[g.id] || "gate-halvard"; return "img/syncle/" + f + ".jpg"; }
 function gateHero(g) { return ' style="background-image:url(' + heroImg(g) + ')"'; }
 function setSeqBg(seq) { const src = "img/syncle/corridor.jpg"; const bgs = document.querySelectorAll("#corridor .bg"); const top = bgs[bgs.length - 1]; if (top.dataset.src === src) return; const n = top.cloneNode(); n.dataset.src = src; n.style.backgroundImage = "url(" + src + ")"; n.style.opacity = "0"; top.after(n); requestAnimationFrame(() => requestAnimationFrame(() => { n.style.opacity = "1"; })); setTimeout(() => { document.querySelectorAll("#corridor .bg").forEach((b) => { if (b !== n) b.remove(); }); }, 1300); }
 const JUNIE = '<svg class="jsvg" viewBox="0 0 200 200" aria-hidden="true"><ellipse class="jsh" cx="100" cy="188" rx="34" ry="4.5" fill="rgba(31,95,196,.12)"/><g class="jw"><g class="st s-success jsp"><path d="M40 70l3 7 7 3-7 3-3 7-3-7-7-3 7-3z" fill="#1f5fc4" opacity=".55"/><path d="M162 58l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#1f5fc4" opacity=".45"/><path d="M168 132l2.5 6 6 2.5-6 2.5-2.5 6-2.5-6-6-2.5 6-2.5z" fill="#ef9f8e" opacity=".7"/><path d="M30 138l2 5 5 2-5 2-2 5-2-5-5-2 5-2z" fill="#ef9f8e" opacity=".6"/></g><g class="st s-desync jsd"><path d="M36 74l9-4-3 10z" fill="#c2412f" opacity=".7"/><path d="M164 70l8 6-10 2z" fill="#c2412f" opacity=".6"/><path d="M170 140l-6 8-2-9z" fill="#c2412f" opacity=".55"/><path d="M28 132l9 2-6 6z" fill="#c2412f" opacity=".5"/></g><path d="M124 150c22 6 40-2 48-22-12 10-30 14-46 10z" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="100" cy="144" rx="31" ry="32" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="100" cy="150" rx="18" ry="20" fill="#f7f1ec"/><ellipse cx="84" cy="174" rx="9" ry="6" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="116" cy="174" rx="9" ry="6" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse cx="70" cy="142" rx="7" ry="12" transform="rotate(25 70 142)" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><ellipse class="st s-idle s-success s-desync" cx="130" cy="142" rx="7" ry="12" transform="rotate(-25 130 142)" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><g class="st s-hint"><path d="M124 140c10-6 20-14 28-24" stroke="#cfd9e8" stroke-width="15" stroke-linecap="round" fill="none"/><path d="M124 140c10-6 20-14 28-24" stroke="#fbfcfe" stroke-width="12" stroke-linecap="round" fill="none"/><g class="jcr"><path d="M166 88l7 11-7 13-7-13z" fill="rgba(31,95,196,.18)" stroke="#1f5fc4" stroke-width="1.5"/><path d="M159 99h14" stroke="#1f5fc4" stroke-width="1" opacity=".6"/></g></g><g class="jgill jgl-l"><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#ef9f8e" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M50 71l-1-8M41 65l-2-7M50 71l-8 2M41 65l-8 1M46 91l-1-7M34 91l-1-7M46 91l-1 7M34 90l-1 7M50 109l-7-3M40 115l-7-2M50 109l2 7M40 115l1 7" stroke="#f4b4a6" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#fbd9d0" stroke-width="2" stroke-linecap="round" fill="none"/></g><g class="jgill jgl-r"><g transform="matrix(-1 0 0 1 200 0)"><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#ef9f8e" stroke-width="6" stroke-linecap="round" fill="none"/><path d="M50 71l-1-8M41 65l-2-7M50 71l-8 2M41 65l-8 1M46 91l-1-7M34 91l-1-7M46 91l-1 7M34 90l-1 7M50 109l-7-3M40 115l-7-2M50 109l2 7M40 115l1 7" stroke="#f4b4a6" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M62 80Q46 68 30 58M58 92Q40 91 21 90M62 103Q46 113 31 123" stroke="#fbd9d0" stroke-width="2" stroke-linecap="round" fill="none"/></g></g><ellipse cx="100" cy="92" rx="47" ry="39" fill="#f9fbfe" stroke="#cfd9e8" stroke-width="1.5"/><path d="M88 62l8-4 8 4v9l-8 4-8-4zM104 66l8-4 8 4v9l-8 4-8-4z" fill="none" stroke="rgba(31,95,196,.12)" stroke-width="1"/><ellipse cx="73" cy="104" rx="7" ry="4" fill="#f6b9ad" opacity=".55"/><ellipse cx="127" cy="104" rx="7" ry="4" fill="#f6b9ad" opacity=".55"/><g class="st s-idle s-hint s-desync jeyes"><circle cx="82" cy="92" r="6" fill="#1d232b"/><circle cx="118" cy="92" r="6" fill="#1d232b"/><circle cx="84.5" cy="89.5" r="2" fill="#fff"/><circle cx="120.5" cy="89.5" r="2" fill="#fff"/></g><g class="st s-success"><path d="M75 94q7-9 14 0M111 94q7-9 14 0" stroke="#1d232b" stroke-width="3" stroke-linecap="round" fill="none"/><path d="M90 103q10 13 20 0z" fill="#e98c7c" stroke="#1d232b" stroke-width="2" stroke-linejoin="round"/></g><path class="st s-idle s-hint" d="M93 104q7 6 14 0" stroke="#1d232b" stroke-width="2.2" stroke-linecap="round" fill="none"/><g class="st s-desync"><path d="M75 85l12-5M125 85l-12-5" stroke="#1d232b" stroke-width="2.2" stroke-linecap="round"/><path d="M93 107q3.5-4 7 0t7 0" stroke="#1d232b" stroke-width="2.2" stroke-linecap="round" fill="none"/></g></g></svg>';
@@ -76,10 +76,10 @@ function renderCorridor() {
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
   setSeqBg(seq);
-  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : "REAL WORLD");
+  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : seq === 10 ? "REAL WORLD" : "WORKLOADS");
   $("stName").textContent = sq.name; $("stBlurb").textContent = sq.blurb;
   let h = "<h4>THE CURVE</h4>";
-  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE", 10: "REAL WORLD" };
+  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE", 10: "REAL WORLD", 11: "WORKLOADS · BEYOND USERS AND MAIL" };
   SEQUENCES.forEach((q) => {
     if (tiers[q.id]) h += '<div class="tier">' + tiers[q.id] + "</div>";
     const pr = q.open ? seqProgress(q.id) : null;
@@ -273,7 +273,7 @@ function flowband(flow, label) {
   let h = '<div class="fbg" aria-hidden="true"></div><div class="fline" aria-hidden="true"></div><span class="flowlabel">' + esc(label) + '</span><span class="lastrun" id="lastrun"></span>';
   flow.forEach((f, i) => {
     const x = 10 + (80 / (n - 1)) * i;
-    h += '<div class="fnode' + (i === n - 1 ? " lit" : "") + '" style="left:' + x + '%"><div class="d"></div><b>' + esc(f[0]) + "</b><small>" + esc(f[1]) + "</small></div>";
+    h += '<div class="fnode' + (i === n - 1 ? " lit last" : "") + (i === 0 ? " first" : "") + '" style="left:' + x + '%"><div class="d"></div><b>' + esc(f[0]) + "</b><small>" + esc(f[1]) + "</small></div>";
   });
   for (let i = 0; i < 6; i++) h += '<div class="frag" aria-hidden="true" style="animation-delay:' + (i * 2.3).toFixed(1) + 's"></div>';
   $("flowband").innerHTML = h;
@@ -459,7 +459,14 @@ function checkPractice(res) {
     R.jlineOverride = help ? help : "Read the red text slowly: the first line usually names the problem."; R.jstate = "desync"; junie();
   }
   const ok = GRADER.verdict(GRADER.drillCheck(d), setup, R.ctx, res, R.sessHist, d.pre);
-  showCompare(ok ? "" : cmpHTML(GRADER.drillCheck(d), setup, d.pre, R.sessHist[R.sessHist.length - 1], res));
+  const cmp = ok ? "" : cmpHTML(GRADER.drillCheck(d), setup, d.pre, R.sessHist[R.sessHist.length - 1], res);
+  if (!ok && !res.error && !cmp) {
+    showCompare('<p class="cmpnote">' + (res.out.length ? "It ran without errors, but this output isn't what the ticket asks for." : "It ran without errors, but nothing came back and the tenant didn't change the way the ticket asks.") + " Read the ticket once more. Hint is there if you need it.</p>");
+    $("term").classList.remove("soft"); void $("term").offsetWidth; $("term").classList.add("soft");
+    R.jlineOverride = "Ran clean, not synced yet. Compare what you got with what the ticket asks."; R.jstate = "hint"; junie();
+    return;
+  }
+  showCompare(cmp);
   if (!ok) return;
   const k = drillKey(m, i), first = !S.drills[k];
   S.drills[k] = true; if (R.mix) R.mixScore++;
@@ -489,7 +496,7 @@ function junie() {
   if (R.gate) line = gtext().junie;
   else line = { brief: "Read this first. Everything after it builds on these few ideas, and the traps box is where real tenants bite.", watch: R.watchStep >= (m ? m.watch.length : 0) ? "Seen it all. Ready to try with gaps?" : "Watch what changes between the steps, not just the result.", trace: "Fill the gaps and run. I am here if you get stuck.", recall: "Your turn, no gaps. Ask me if you need a nudge.", practice: "Different ticket, same skill. If you blank, one hint, then the answer.", real: "Lab and reality should match exactly. This is where you check." }[R.phase];
   if (R.hint > 0) { cls = "j-hint"; step = "HINT " + R.hint + " OF " + max; line = hs[R.hint - 1]; }
-  if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : step; R.jlineOverride = null; R.jstate = null; }
+  if (R.jlineOverride) { line = R.jlineOverride; cls = R.jstate === "desync" ? "j-desync" : R.jstate === "ok" ? "j-success" : R.jstate === "hint" ? "j-hint" : cls; step = R.jstate === "desync" ? "SOMETHING WENT WRONG" : R.jstate === "ok" ? "SYNCHRONIZED" : R.jstate === "hint" ? "NOT SYNCED YET" : step; R.jlineOverride = null; R.jstate = null; }
   if (!$("jimg").firstChild) $("jimg").innerHTML = JUNIE;
   $("jimg").className = "jimg " + cls;
   $("jstep").textContent = "JUNIE · " + step;

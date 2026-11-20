@@ -21,22 +21,23 @@ const GRADER = (() => {
     if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
     if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
     if (s.contractors) E.seedContractors(ctx, s.contractors);
+    if (s.teams) { E.seedTeams(ctx); if (s.teams === "on") E.run("Connect-MicrosoftTeams", ctx); }
     if (s.quirks) ctx.quirks = JSON.parse(JSON.stringify(s.quirks));
     if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
-      const ex = ctx.exo; ctx.exo = true;
+      const ex = ctx.exo, tc = ctx.teams; ctx.exo = true; ctx.teams = !!ctx.t.teams;
       for (const p of pre) E.run(p, ctx);
-      ctx.mg = saved; ctx.exo = ex;
+      ctx.mg = saved; ctx.exo = ex; ctx.teams = tc;
     }
     ctx.host = []; ctx.errors = [];
     return ctx;
   }
   function describe(setup) {
     const s = SETUPS[setup] || SETUPS.none;
-    if (!s.scopes.length && !s.exo) return "Fresh window, nothing connected.";
-    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
+    if (!s.scopes.length && !s.exo && s.teams !== "on") return "Fresh window, nothing connected.";
+    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online" : "") + (s.teams === "on" ? ", and to Microsoft Teams." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
   }
   function text(res) { return E.formatOut(res.out, 120).replace(/[ \t]+$/gm, "").trim(); }
   const cache = {};
