@@ -5,6 +5,8 @@ POCKET.register({
   href: "meridian.html",
   keys: ["meridian.v1"],
   units: [
+    {"id":"l0-team","title":"The infra team and its tickets"},
+    {"id":"l0-stack","title":"The stack and the console"},
     {"id":"l1-hyper","title":"Hosts, VMs and the hypervisor"},
     {"id":"l1-move","title":"vMotion, DRS and HA"},
     {"id":"l1-snap","title":"Snapshots and thin disks"},
@@ -13,7 +15,7 @@ POCKET.register({
     {"id":"l2-patch","title":"Updates, reboots and time"}
   ],
   done: function (get) {
-try { var s = get("meridian.v1"); if (!s || typeof s !== "object" || !s.les || typeof s.les !== "object") return []; return ["l1-hyper","l1-move","l1-snap","l2-roles","l2-logs","l2-patch"].filter(function (id) { return s.les[id] === true; }); } catch (e) { return []; }
+try { var s = get("meridian.v1"); if (!s || typeof s !== "object" || !s.les || typeof s.les !== "object") return []; return ["l0-team","l0-stack","l1-hyper","l1-move","l1-snap","l2-roles","l2-logs","l2-patch"].filter(function (id) { return s.les[id] === true; }); } catch (e) { return []; }
 },
   sample: {
     "meridian.v1": "{\"les\":{\"l0-orient\":true,\"l1-hyper\":true,\"l1-move\":true},\"done\":{}}"
@@ -51,6 +53,23 @@ try { var s = get("meridian.v1"); if (!s || typeof s !== "object" || !s.les || t
     {"u":"l2-logs","q":"Which event ID says an account was locked out?","o":["4740","4625","7000","2013"],"a":0,"why":"4740 is a lockout, logged on a domain controller. 4625 is one failed logon."},
     {"u":"l2-logs","q":"Event 2013 is a warning worth acting on. What does it say?","o":["a service crashed","someone asked for a restart","an account was locked out","a disk is at or near capacity"],"a":3,"why":"2013 warns hours before a full disk starts breaking services."},
     {"u":"l2-patch","q":"When does Microsoft ship its monthly security updates?","o":["the first Monday","the second Tuesday","the last Friday","every Sunday night"],"a":1,"why":"Patch Tuesday is the second Tuesday of each month."},
-    {"u":"l2-patch","q":"A server is in pending reboot. What does that mean?","o":["it will reboot within a minute","it is broken","updates are installed but only finish at the next restart","it is waiting for a licence"],"a":2,"why":"Until the restart, the server runs a mix of old and new files."}
+    {"u":"l2-patch","q":"A server is in pending reboot. What does that mean?","o":["it will reboot within a minute","it is broken","updates are installed but only finish at the next restart","it is waiting for a licence"],"a":2,"why":"Until the restart, the server runs a mix of old and new files."},
+    {"u":"l0-team","q":"The galley screens are black. In which layer does the cause usually live?","o":["always in the screens","lower down: VM, host, storage or network","always in the app","in the ticket system"],"a":1,"why":"Symptoms show up at the top. Start where the symptom is and walk down until a layer looks unhealthy."},
+    {"u":"l0-team","q":"The VM behind the screens is running again. Who asks why it was off at all?","o":["first line","second line","third line","nobody, it works"],"a":2,"why":"Third line is not about more commands. It is about not stopping at 'it works again'."},
+    {"u":"l0-team","q":"Get the service back, fast. Which kind of record is that?","o":["an incident","a problem","a change","a CI"],"a":0,"why":"Incident: restore the service. Problem: find the root cause. Change: alter something on purpose, safely."},
+    {"u":"l0-team","q":"Why did the host stay in maintenance? Which record investigates that?","o":["an incident","a problem","a change","a CMDB entry"],"a":1,"why":"A problem record hunts the root cause so the incident does not come back."},
+    {"u":"l0-team","q":"What does every change need?","o":["a plan, an approval and a rollback","only a ticket number","a reboot","a second engineer typing"],"a":0,"why":"A change is planned. If it goes wrong, the rollback says how you get back."},
+    {"u":"l0-team","q":"Priority is two questions. Which two?","o":["cost and time","who asked and how loud","impact and urgency","layer and owner"],"a":2,"why":"Impact: how many people or services are hit. Urgency: how fast it hurts if nobody acts."},
+    {"u":"l0-team","q":"High impact, high urgency. Which priority?","o":["P1","P2","P3","P4"],"a":0,"why":"All galley screens at breakfast: high and high, so P1. One screen at 3am is low and low, P4."},
+    {"u":"l0-stack","q":"A host fails. What else goes down?","o":["only the host","only the datastore","everything that hangs on it: its VMs and their services","the backups"],"a":2,"why":"A fault low in the chain breaks everything above it. Check one layer at a time, top to bottom."},
+    {"u":"l0-stack","q":"What is a LUN?","o":["a virtual CPU","a slice of the storage array handed to the hosts","a backup copy","a VM template"],"a":1,"why":"Datastores sit on LUNs carved out of the array."},
+    {"u":"l0-stack","q":"The patch is done. What is the step that gets forgotten?","o":["the reboot","exit maintenance mode and start the VMs that were shut down","delete the snapshot","close the ticket"],"a":1,"why":"While a host is in maintenance, vSphere runs no VM on it. VMs that were shut down stay down until someone starts them."},
+    {"u":"l0-stack","q":"Which PowerCLI verbs only read and are always safe?","o":["Set-","Start-","Restart-","Get-"],"a":3,"why":"Get- reads. Set-, Start- and Restart- change things, so they need a rollback plan first."},
+    {"u":"l0-stack","q":"How do you start every VM on esx-02 in one line?","o":["Start-VM esx-02","Get-VM -Location esx-02 | Start-VM","Get-VMHost esx-02 | Restart-VM","Start-VMHost esx-02"],"a":1,"why":"The pipe hands every VM that Get-VM found to Start-VM."},
+    {"u":"l0-stack","q":"Every PowerCLI command fails. What did you forget?","o":["Connect-VIServer","Import-Csv","ssh root@esx-02","Get-Cluster"],"a":0,"why":"Connect to vCenter first: `Connect-VIServer vcenter.meridian.local`."},
+    {"u":"l0-stack","q":"vCenter is down. How do you still see what a host thinks?","o":["wait for vCenter","ssh root@ to the ESXi host","reboot the host","ping a VM"],"a":1,"why":"Each door sees from a different height. The host over SSH still works without vCenter, logs in /var/log."},
+    {"u":"l0-stack","q":"Is `Get-VM -Loc esx-02` valid PowerShell?","o":["no, parameters must be typed in full","only in PowerShell 5","yes, any unique start of a parameter name works","only with Tab"],"a":2,"why":"`-Loc` is enough for `-Location`. Names are not case sensitive either."},
+    {"u":"l0-stack","q":"The CMDB and vCenter disagree. What is that?","o":["a typo, ignore it","a clue, and often a follow-up of its own","proof vCenter is wrong","proof the CMDB is wrong"],"a":1,"why":"The CMDB says what should be. The live system says what is. The gap is worth recording."},
+    {"u":"l0-stack","q":"Why look in the CMDB before you touch anything?","o":["it is faster than vCenter","it fixes things","it shows who else is hit and who owns it","it holds the backups"],"a":2,"why":"It tells you the scope, the owner to inform, and the exact names to query."}
   ]
 });

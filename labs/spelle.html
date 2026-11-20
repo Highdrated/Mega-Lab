@@ -460,7 +460,7 @@
    D door (opens if the hero holds the key)
 ================================================================ */
 
-const R = (label, re) => ({ label, test: (code, res) => re.test(code) });
+const R = (label, re) => ({ label, test: (code, res) => re.test(code.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "")) });
 const G = (label, fn) => ({ label, test: (code, res) => fn(res, code) });
 
 /* ---------------- SIMULATION (pure, testable) ---------------- */
@@ -728,8 +728,13 @@ move("dir", 3);   ← "dir" in quotes: the TEXT dir. Nonsense!</div>
       reqs: [
         R("uses a for loop", /for\s*\(/),
         G("both moves live inside the loop", (res, code) => {
-          const body = code.match(/for\s*\([^)]*\)\s*\{([\s\S]*?)\}/);
-          return body && /move\(\s*["'`]right["'`]/.test(body[1]) && /move\(\s*["'`]down["'`]/.test(body[1]);
+          const m = code.match(/for\s*\([^)]*\)\s*\{/);
+          if (!m) return false;
+          let d = 1, i = m.index + m[0].length;
+          const from = i;
+          while (i < code.length && d) { if (code[i] === "{") d++; else if (code[i] === "}") d--; i++; }
+          const body = code.slice(from, i - 1);
+          return /move\(\s*["'`]right["'`]/.test(body) && /move\(\s*["'`]down["'`]/.test(body);
         }),
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
@@ -796,7 +801,7 @@ move("dir", 3);   ← "dir" in quotes: the TEXT dir. Nonsense!</div>
     {
       brief: `<h2>LOOP + IF = A BRAIN</h2>
 <div class="teach">Combine repetition with decision and the hero starts to <b>navigate</b>: every pass, check ahead and choose. This is the seed of every game AI ever written.</div>
-<p><em>Quest:</em> the zigzag descent. Loop 6 times; each pass, IF the right is a wall, step down — ELSE step right.</p>`,
+<p><em>Quest:</em> the zigzag descent. Loop 6 times; each pass, IF the right is a wall, step down — ELSE step right. Then one last step right.</p>`,
       starter: "",
       level: ["######", "#@.#.#", "##.###", "##..##", "###.##", "###.E#", "######"],
       reqs: [

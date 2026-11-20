@@ -3008,10 +3008,8 @@ function renderProtoGuide(box, g){
           if(typeof renderCourseBar === "function") renderCourseBar();
         }
         if(typeof SFX !== "undefined") (correct ? SFX.ding : SFX.womp)();
-        if(!why){
-          why = protoEl("div", "pg-q-why", qbox, "");
-          why.innerHTML = (correct ? svgMark("check") + " " : "Not quite \u2014 ") + q.why;
-        }
+        if(!why) why = protoEl("div", "pg-q-why", qbox, "");
+        why.innerHTML = (correct ? svgMark("check") + " " : "Not quite \u2014 ") + q.why;
         if(correct){
           qbox.querySelectorAll(".pg-q-opt").forEach(function(x){ x.disabled = true; });
         }

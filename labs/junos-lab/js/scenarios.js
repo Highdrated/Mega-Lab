@@ -1985,7 +1985,7 @@ function boot(){
     modalConfirm("Resume previous lab?", "An autosaved lab from your last session is available. Resume it, or start fresh?", "Resume")
       .then(yes => {
         if(yes) loadLab(saved);
-        else { try{ localStorage.removeItem(LS_AUTOSAVE); }catch(e){} }
+        else if(yes === false){ try{ localStorage.removeItem(LS_AUTOSAVE); }catch(e){} }
       });
   }
 }

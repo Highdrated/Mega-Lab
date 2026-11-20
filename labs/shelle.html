@@ -331,12 +331,14 @@ const CASES = [
   {id:"which", t:"PID 4312 is php -S localhost:8080 -t public, a dev server started from the Passle project three days ago."}
  ],
  map:[
-  {cmd:["docker run -d -p 8080:80 station-app", "docker run -d --name web -p 8080:80 station-app"], out:"docker: Error response from daemon: driver failed programming external connectivity on endpoint quirky_hopper: Bind for 0.0.0.0:8080 failed: port is already allocated.\n", err:true, clue:"error"},
+  {cmd:["docker run -d -p 8080:80 station-app", "docker run -d --name web -p 8080:80 station-app"], out:"docker: Error response from daemon: driver failed programming external connectivity on endpoint quirky_hopper: Bind for 0.0.0.0:8080 failed: port is already allocated.\n", err:true, clue:"error", needs:"!killed"},
   {cmd:["docker ps", "docker ps -a"], out:"CONTAINER ID   IMAGE          COMMAND                  CREATED      STATUS      PORTS                    NAMES\n7a2d9c4e1b03   mariadb:11.4   \"docker-entrypoint.s…\"   3 days ago   Up 3 days   0.0.0.0:3306->3306/tcp   db\n", clue:"nodocker"},
-  {cmd:["lsof -i :8080", "sudo lsof -i :8080", "lsof -i tcp:8080", "lsof -nP -i :8080"], out:"COMMAND  PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nphp     4312 user      4u  IPv4 0x8f3c2b1e7d0a4c11      0t0  TCP localhost:http-alt (LISTEN)\n", clue:"lsof"},
+  {cmd:["lsof -i :8080", "sudo lsof -i :8080", "lsof -i tcp:8080", "lsof -nP -i :8080"], out:"COMMAND  PID   USER   FD   TYPE             DEVICE SIZE/OFF NODE NAME\nphp     4312 user      4u  IPv4 0x8f3c2b1e7d0a4c11      0t0  TCP localhost:http-alt (LISTEN)\n", clue:"lsof", needs:"!killed"},
   {cmd:["ps -p 4312 -o pid,lstart,command", "ps -p 4312 -o command", "ps -p 4312", "ps aux | grep 4312", "ps aux | grep php"], out:"  PID STARTED                      COMMAND\n 4312 Thu Oct 16 20:11:37 2026     php -S localhost:8080 -t public\n", clue:"which"},
   {cmd:["lsof -p 4312 | grep cwd", "lsof -a -p 4312 -d cwd"], out:"php     4312 user    cwd    DIR   1,16      192 9123847 /Users/user/Projects/passle-kitchen\n", clue:"which"},
-  {cmd:["kill 4312"], out:"", note:"stopped. docker run on 8080 works now."},
+  {cmd:["kill 4312"], out:"", sets:"killed", note:"stopped. docker run on 8080 works now."},
+  {cmd:["lsof -i :8080", "sudo lsof -i :8080", "lsof -i tcp:8080", "lsof -nP -i :8080"], out:"", needs:"killed"},
+  {cmd:["docker run -d -p 8080:80 station-app", "docker run -d --name web -p 8080:80 station-app"], out:"e4b8d2f6a0c4e8b2d6f0a4c8e2b6d0f4a8c2e6b0d4f8a2c6e0b4d8f2a6c0e4b8\n", needs:"killed"},
   {cmd:["docker run -d -p 8081:80 station-app"], out:"c5e1f3a7b9d2e4f6a8c0b2d4e6f8a1c3e5b7d9f1a3c5e7b9d1f3a5c7e9b1d3f5\n", note:"another port works too, but the old dev server is still running in the background."}
  ],
  hints:[
@@ -467,8 +469,10 @@ const CASES = [
   {cmd:["docker compose ps", "docker ps"], out:"NAME                 IMAGE          SERVICE   STATUS         PORTS\nstation-site-app-1   station-app    app       Up 8 seconds   0.0.0.0:8080->80/tcp\nstation-site-db-1    mariadb:11.4   db        Up 3 minutes   3306/tcp\n", needs:"fixed"},
   {cmd:["docker compose logs app", "docker compose logs --tail 20 app", "docker logs station-site-app-1", "docker logs --tail 20 station-site-app-1", "docker compose logs --tail 50 app"], out:"app-1  | Starting station API on :80\napp-1  | Error: connect ECONNREFUSED 127.0.0.1:3306\napp-1  |     at TCPConnectWrap.afterConnect [as oncomplete] (node:net:1607:16)\napp-1  | exited with code 1\napp-1  | Starting station API on :80\napp-1  | Error: connect ECONNREFUSED 127.0.0.1:3306\n", clue:"refused"},
   {cmd:["docker compose logs db", "docker compose logs --tail 20 db"], out:"db-1  | 2026-10-19 16:58:02 0 [Note] mariadbd: ready for connections.\ndb-1  | Version: '11.4.3-MariaDB'  socket: '/run/mysqld/mysqld.sock'  port: 3306  mariadb.org binary distribution\n"},
-  {cmd:["cat docker-compose.yml", "docker compose config"], out:"services:\n  app:\n    build: .\n    ports:\n      - \"8080:80\"\n    environment:\n      DB_HOST: localhost\n      DB_PORT: 3306\n    depends_on:\n      - db\n    restart: unless-stopped\n  db:\n    image: mariadb:11.4\n    environment:\n      MARIADB_ROOT_PASSWORD: example\n    volumes:\n      - dbdata:/var/lib/mysql\nvolumes:\n  dbdata:\n", clue:["localhost", "service"], needs:"!fixed"},
-  {cmd:["grep -n DB_HOST docker-compose.yml", "grep DB_HOST docker-compose.yml"], out:"7:      DB_HOST: localhost\n", clue:"localhost", needs:"!fixed"},
+  {cmd:["cat docker-compose.yml", "docker compose config"], out:"services:\n  app:\n    build: .\n    ports:\n      - \"8080:80\"\n    environment:\n      DB_HOST: localhost\n      DB_PORT: 3306\n    depends_on:\n      - db\n    restart: unless-stopped\n  db:\n    image: mariadb:11.4\n    environment:\n      MARIADB_ROOT_PASSWORD: example\n    volumes:\n      - dbdata:/var/lib/mysql\nvolumes:\n  dbdata:\n", clue:["localhost", "service"], needs:"!edited"},
+  {cmd:["cat docker-compose.yml", "docker compose config"], out:"services:\n  app:\n    build: .\n    ports:\n      - \"8080:80\"\n    environment:\n      DB_HOST: db\n      DB_PORT: 3306\n    depends_on:\n      - db\n    restart: unless-stopped\n  db:\n    image: mariadb:11.4\n    environment:\n      MARIADB_ROOT_PASSWORD: example\n    volumes:\n      - dbdata:/var/lib/mysql\nvolumes:\n  dbdata:\n", needs:"edited"},
+  {cmd:["grep -n DB_HOST docker-compose.yml", "grep DB_HOST docker-compose.yml"], out:"7:      DB_HOST: localhost\n", clue:"localhost", needs:"!edited"},
+  {cmd:["grep -n DB_HOST docker-compose.yml", "grep DB_HOST docker-compose.yml"], out:"7:      DB_HOST: db\n", needs:"edited"},
   {cmd:["docker compose exec db mariadb -uroot -pexample -e \"select 1\""], out:"1\n1\n", note:"the database itself answers fine."},
   {cmd:["sed -i '' 's/DB_HOST: localhost/DB_HOST: db/' docker-compose.yml"], out:"", sets:"edited", note:"changed. Now apply it with docker compose up -d."},
   {cmd:["docker compose up -d"], out:"[+] Running 2/2\n ✔ Container station-site-db-1   Running\n ✔ Container station-site-app-1  Started\n", sets:"fixed", needs:"edited"},
@@ -997,7 +1001,7 @@ function renderCaseBrief(el){
       h += '<div class="verdict' + (o.ok ? "" : " bad") + '"><b>' + (o.ok ? "Correct." : "Not this one.") + "</b> " + esc(o.why) + (o.ok ? '<p class="lesson">' + esc(c.lesson) + "</p>" : "") + "</div>";
     }
   } else {
-    h += '<p class="cnote">Type your own commands in the terminal. Scripted commands answer like the real tenant, other known cmdlets say (no results), unknown names give the real error. Press <b>Solve</b> when you know.</p>';
+    h += '<p class="cnote">Type your own commands in the terminal. Scripted commands answer like a real Mac, other known commands say (no results), unknown names give the real error. Press <b>Solve</b> when you know.</p>';
   }
   el.innerHTML = h;
   const bind = (id, fn) => { const b = $(id); if (b) b.addEventListener("click", () => { fn(); ta.focus({preventScroll: true}); }); };
@@ -1206,7 +1210,7 @@ function run(line){
   if (bad){ notRecognized(bad); return; }
   if (m) S.vars.add("$" + m[1]);
   for (const sc of SCEN) for (const s2 of sc.steps){
-    if (norm(s2.cmd) === norm(t)){ const out = typeof s2.out === "function" ? s2.out() : s2.out; if (out) printText(out); return; }
+    if ([s2.cmd].concat(s2.alt || []).some(w => norm(w) === norm(t))){ const out = typeof s2.out === "function" ? s2.out() : s2.out; if (out) printText(out); return; }
   }
 }
 

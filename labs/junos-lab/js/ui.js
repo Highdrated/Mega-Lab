@@ -1184,11 +1184,11 @@ function showModal(build){
     modalRoot.classList.add("open");
     const box = document.createElement("div");
     box.className = "modal";
-    const done = (v) => { modalRoot.classList.remove("open"); modalRoot.innerHTML = ""; resolve(v); };
+    const esc = (e) => { if(e.key === "Escape") done(null); };
+    const done = (v) => { document.removeEventListener("keydown", esc); modalRoot.classList.remove("open"); modalRoot.innerHTML = ""; resolve(v); };
     build(box, done);
     modalRoot.appendChild(box);
     modalRoot.onclick = (e) => { if(e.target === modalRoot) done(null); };
-    const esc = (e) => { if(e.key === "Escape"){ done(null); document.removeEventListener("keydown", esc); } };
     document.addEventListener("keydown", esc);
   });
 }
@@ -1788,7 +1788,7 @@ function loadLab(data){
       if(s.type === "switch" || s.type === "router"){
         dev = {
           id: s.id, type: s.type, x: s.x, y: s.y, name: s.name, model: s.model || null,
-          ports: Array.from({ length: s.portCount || 4 }, (_, i) => ({ id: `ge-0/0/${i}` })),
+          ports: (s.model && profileFor(s.model) && buildPorts(s.model).length === (s.portCount || 0)) ? buildPorts(s.model) : Array.from({ length: s.portCount || 4 }, (_, i) => ({ id: `ge-0/0/${i}` })),
           config: s.config || {}, candidate: s.candidate || deepClone(s.config || {}),
           cfgHistory: [], errDisabled: {}, macTable: [], arp: {}, stats: s.stats || {},
           commitPending: null, cli: freshCli(),

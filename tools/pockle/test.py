@@ -64,6 +64,11 @@ try:
             if lid not in ("junos-oops", "junle", "junos-lab") and got != want:
                 errs.append("unlock mismatch " + lid)
 
+        for key, val, lid, unit in (("meridian.v1", '{"les":{"l0-team":true,"l0-stack":true},"done":{}}', "meridian", "l0-stack"), ("syncle.v1", '{"v":1,"done":{"teamuser":{"recall":1},"paging":{"recall":1},"params":{"recall":1}}}', "syncle", "teams")):
+            pg.evaluate("([k,v])=>localStorage.setItem(k,v)", [key, val])
+            pg.reload()
+            if unit not in pg.evaluate("id=>LABSTATE.find(l=>l.b.id===id).units.map(u=>u.id)", lid):
+                errs.append("progress in " + key + " does not unlock " + unit)
         pg.evaluate("OPEN_LABS.push(...BANKS.map(b=>b.id)); paintHome()")
         labs = pg.evaluate("LABSTATE.map(l=>[l.b.id,l.cards.length,l.b.cards.length])")
         seen = {}

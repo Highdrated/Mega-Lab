@@ -23,7 +23,7 @@ const GRADER = (() => {
     if (s.contractors) E.seedContractors(ctx, s.contractors);
     if (s.teams) { E.seedTeams(ctx); if (s.teams === "on") E.run("Connect-MicrosoftTeams", ctx); }
     if (s.quirks) ctx.quirks = JSON.parse(JSON.stringify(s.quirks));
-    if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
+    if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(E.NOW.getTime() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);

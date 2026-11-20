@@ -2,6 +2,36 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-20-12 · Junos Lab · front door backdrop (needs her yes first)
+- file: `labs/junos-lab/img/front-door.webp`
+- why: the first screen of the Junos Lab is a dark card on plain black; the lab she spends most time in has no world behind it, while Junle's room is fully painted.
+- size: 1920x1080, no transparency
+- existing art to match: none in this folder. The interface is near-black with thin grey lines, green accents for the start buttons and amber for the rank title, monospaced text. Junle's room (`labs/img/junle-room/`) is the sibling: a warm, painted fantasy tower room with a rack and candle light.
+- positive: a quiet night watch room at the top of a stone tower, rows of softly glowing network racks built into carved alcoves like bookshelves, thin green status lights and a few amber ones, cables running in neat bundles along the vaulted ceiling, a large dark empty area in the centre for a card, moonlight through one narrow window, painterly fantasy illustration, soft brushwork, semi-realistic, near-black and deep teal palette with green and amber accents, very low contrast
+- negative: text, letters, logo, watermark, people, faces, real brand marks, neon, harsh contrast, photo, clutter, bright centre
+- placing: would sit under the front door card as the background of `#resume` in `labs/junos-lab/css/` (line with `#resume{position:fixed;inset:0;...}`), darkened so the card stays readable; not wired, look change.
+- status: todo
+
+## 2026-11-20-10 · Codex · volume header strips (set of 10, needs her yes first)
+- file: `labs/img/codex/vol-junos.webp`, `vol-python.webp`, `vol-web.webp`, `vol-js.webp`, `vol-php.webp`, `vol-git.webp`, `vol-shell.webp`, `vol-sql.webp`, `vol-hexle.webp`, `vol-passle.webp`
+- why: the Codex is the one page in the Workshop with no art at all: grey panels, a white rail and text, which reads as an office manual next to labs that each have a world.
+- size: 1600x280 each, no transparency
+- existing art to match: none on this page. The interface is a pale blue-grey paper look with a serif title, thin rules and one accent colour per volume (rust for Junos, green for Python, violet for HTML and CSS, amber for JavaScript).
+- positive: a wide shelf in an old wizard's library seen straight on, one large leather-bound book standing open in the middle with a single glowing emblem on its page (swap per volume: a small castle switch rack, a coiled garden snake, a stained glass window, a lightning rune, a copper cooking pot, a branching tree, a seashell, a stack of wooden drawers, a witch's hut, a bistro table), dust in a beam of light, painterly fantasy illustration, soft brushwork, semi-realistic, muted blue-grey palette with one warm accent colour, calm empty space on the right third, low contrast so text can sit above it
+- negative: text, letters, readable runes, logo, watermark, people, cartoon outlines, anime, photo, neon, harsh contrast, clutter
+- placing: would sit behind the title block of each volume (`.vol-head` in `labs/codex.html`), faded toward the text; not wired, look change.
+- status: todo
+
+## 2026-11-20-11 · Codex Microsoft · volume header strips (set of 10, needs her yes first)
+- file: `labs/img/mscodex/vol-connect.webp`, `vol-pipeline.webp`, `vol-entra.webp`, `vol-tap.webp`, `vol-exchange.webp`, `vol-script.webp`, `vol-sharepoint.webp`, `vol-incident.webp`, `vol-ircmd.webp`, `vol-formulas.webp`
+- why: same page shell as the Codex and just as bare; it is the PowerShell companion to Syncle but shares none of its Memory Corridor look.
+- size: 1600x280 each, no transparency
+- existing art to match: Syncle's backdrop, a white cave of hexagonal cells with thin grey wireframe lines and pale blue light (`labs/img/syncle/`), clean and geometric.
+- positive: a bright white corridor built from hexagonal cells, thin grey wireframe edges, pale blue glow from the far end, one floating geometric object in the middle distance (swap per volume: three doors, a glass pipe, a ring of small figures as plain pawns, an hourglass, an envelope, a scroll of lines, a folder stack, a cracked hexagon in red, a toolbox, a set of measuring rods), clean geometric 3D illustration, soft shadows, white and pale grey palette with a single blue accent, calm empty space on the right third
+- negative: text, letters, logo, watermark, real brand marks, people, faces, dark background, fantasy forest, clutter, photo, harsh contrast
+- placing: would sit behind the title block of each volume (`.vol-head` in `labs/mscodex.html`), faded toward the text; not wired, look change.
+- status: todo
+
 ## 2026-11-20-7 · Git Lab · hangar backdrop (needs her yes first)
 - file: `labs/img/git-lab/hangar.webp`
 - why: Git Lab has no art at all; the Flight Path panel is an empty dark box until the first commit, and the whole lab reads as a plain console.

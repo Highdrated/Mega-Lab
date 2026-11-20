@@ -2806,6 +2806,7 @@ function enterConfigAlone(dev){
 const SHARED_OP_SPECS = [
   ["show interfaces <interface:physport>", { help: "One interface in full: state, speed, counters, logical unit", fn: showIfExtensive }],
   ["show interfaces <interface:physport> terse", { help: "The one-line summary for one interface", fn: showIfOneTerse }],
+  ["show interfaces terse <interface:physport>", { help: "The one-line summary for one interface", fn: (dev, keys) => showIfOneTerse(dev, ["show", "interfaces", keys[3]]) }],
   ["show route <destination:prefix>", { help: "Every route inside this prefix", fn: showRoutePrefixCmd }],
   ["quit", { help: "Same as exit", fn: () => "(this is the operational prompt — close the session from the tab bar or ✕)" }],
   ["set cli screen-length <lines:num>", { help: "Lines per page before --(more)-- (0 = never pause)", fn: (dev, keys) => "Screen length set to " + keys[keys.length - 1] }],

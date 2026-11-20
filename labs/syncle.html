@@ -1221,10 +1221,10 @@ class Ctx {
     this.cwd = "/Users/kaatje";
     this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Documents/scripts", "/Users/kaatje/Downloads"]);
     this.fs = {
-      "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hollis (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowan is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(Date.now() - 30 * 864e5) },
-      "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(Date.now() - 36e5) },
-      "/Users/kaatje/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetra.lind@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(Date.now() - 72e5) },
-      "/Users/kaatje/Downloads/leavers.csv": { text: "UPN,LastDay\nludo.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.crane@halvardco.onmicrosoft.com,2026-11-15\nines.corrigan@halvardco.onmicrosoft.com,2026-11-17", at: new Date(Date.now() - 18e5) }
+      "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hollis (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowan is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(NOW.getTime() - 30 * 864e5) },
+      "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(NOW.getTime() - 36e5) },
+      "/Users/kaatje/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetra.lind@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(NOW.getTime() - 72e5) },
+      "/Users/kaatje/Downloads/leavers.csv": { text: "UPN,LastDay\nludo.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.crane@halvardco.onmicrosoft.com,2026-11-15\nines.corrigan@halvardco.onmicrosoft.com,2026-11-17", at: new Date(NOW.getTime() - 18e5) }
     };
     this.host = [];
     this.errors = [];
@@ -2065,7 +2065,7 @@ def("Get-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", 
   run({ ctx, b, name }) { const p = ctx.path(b.Path); const f = ctx.fs[p]; if (!f) throw new PSErr("Cannot find path '" + p + "' because it does not exist.", { cmd: name, term: false, kind: "nofile" }); let l = f.text.split("\n"); if (b.TotalCount !== undefined) l = l.slice(0, +b.TotalCount); if (b.Tail !== undefined) l = l.slice(-(+b.Tail)); return l; } });
 function parentOf(p) { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); }
 function fileObj(ctx, p) { return obj("FileInfo", { UnixMode: "-rw-r--r--", User: "kaatje", Group: "staff", LastWriteTime: ctx.fs[p].at, Size: ctx.fs[p].text.length, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p, PSIsContainer: false }); }
-function dirObj2(ctx, p) { return obj("FileInfo", { UnixMode: "drwxr-xr-x", User: "kaatje", Group: "staff", LastWriteTime: new Date(Date.now() - 86400000 * 3), Size: 96, Name: p.split("/").pop(), FullName: p, PSIsContainer: true }); }
+function dirObj2(ctx, p) { return obj("FileInfo", { UnixMode: "drwxr-xr-x", User: "kaatje", Group: "staff", LastWriteTime: new Date(NOW.getTime() - 86400000 * 3), Size: 96, Name: p.split("/").pop(), FullName: p, PSIsContainer: true }); }
 function notFoundPath(p) { return "Cannot find path '" + p + "' because it does not exist."; }
 def("Get-ChildItem", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Filter: P(null), File: S(), Directory: S(), Name: S() },
   run({ ctx, b, name }) {
@@ -2678,7 +2678,7 @@ def("ls", { module: null, ver: "", ctype: "Application", native: true, params: {
     if (ctx.fs[dir]) return [paths[0]];
     if (!ctx.dirs.has(dir)) { ctx.host.push({ err: "ls: " + (paths[0] || dir) + ": No such file or directory" }); return []; }
     const names = Array.from(ctx.dirs).filter((d) => d !== dir && parentOf(d) === dir).map((d) => ({ n: d.split("/").pop(), d: true })).concat(Object.keys(ctx.fs).filter((p) => parentOf(p) === dir).map((p) => ({ n: p.split("/").pop(), d: false, p }))).sort((a, b) => a.n.localeCompare(b.n));
-    if (/l/.test(flags)) { const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; const lines = ["total " + names.length * 8]; for (const x of names) { const at = x.d ? new Date(Date.now() - 3 * 864e5) : ctx.fs[x.p].at; const sz = x.d ? 96 : ctx.fs[x.p].text.length; lines.push((x.d ? "drwxr-xr-x  4" : "-rw-r--r--  1") + " kaatje  staff  " + String(sz).padStart(5) + " " + mon[at.getMonth()] + " " + String(at.getDate()).padStart(2) + " " + String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0") + " " + x.n); } return lines; }
+    if (/l/.test(flags)) { const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; const lines = ["total " + names.length * 8]; for (const x of names) { const at = x.d ? new Date(NOW.getTime() - 3 * 864e5) : ctx.fs[x.p].at; const sz = x.d ? 96 : ctx.fs[x.p].text.length; lines.push((x.d ? "drwxr-xr-x  4" : "-rw-r--r--  1") + " kaatje  staff  " + String(sz).padStart(5) + " " + mon[at.getMonth()] + " " + String(at.getDate()).padStart(2) + " " + String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0") + " " + x.n); } return lines; }
     return [names.map((x) => x.n).join("\t")];
   } });
 def("cat", { module: null, ver: "", ctype: "Application", native: true, params: {},
@@ -3444,7 +3444,7 @@ const GRADER = (() => {
     if (s.contractors) E.seedContractors(ctx, s.contractors);
     if (s.teams) { E.seedTeams(ctx); if (s.teams === "on") E.run("Connect-MicrosoftTeams", ctx); }
     if (s.quirks) ctx.quirks = JSON.parse(JSON.stringify(s.quirks));
-    if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(Date.now() - 86400000 * 40) };
+    if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(E.NOW.getTime() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);

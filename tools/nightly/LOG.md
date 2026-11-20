@@ -11,24 +11,24 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. codex
-7. mscodex
-8. junle (19 Nov)
-9. spelle (19 Nov)
-10. shelle (19 Nov)
-11. junos-lab (19 Nov, evening)
-12. meridian (19 Nov, evening)
-13. proxle (19 Nov, evening)
-14. hexle (20 Nov)
-15. webble (20 Nov)
-16. syncle (20 Nov)
-17. git-lab (20 Nov, morning)
-18. modle (20 Nov, morning)
-19. opsle (20 Nov, morning)
+6. meridian (19 Nov, evening)
+7. proxle (19 Nov, evening)
+8. hexle (20 Nov)
+9. webble (20 Nov)
+10. syncle (20 Nov)
+11. git-lab (20 Nov, morning)
+12. modle (20 Nov, morning)
+13. opsle (20 Nov, morning)
+14. codex (20 Nov, afternoon)
+15. mscodex (20 Nov, afternoon)
+16. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
+17. spelle (20 Nov, evening)
+18. shelle (20 Nov, evening)
+19. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
 
-Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 20 Nov, morning: still blocked); the next labs that can run are taken instead.
+Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 20 Nov, evening: still blocked); the next labs that can run are taken instead.
 
-## Pockle numbers (20 Nov morning, 390x844, touch)
+## Pockle numbers (20 Nov evening, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
@@ -36,7 +36,7 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Junle | 73 | 73 | 73 |
 | Junos Lab | 155 | 155 | 155 |
 | Proxle | 34 | 0 | 10 |
-| Meridian | 32 | 0 | 14 |
+| Meridian | 49 (17 added 20 Nov evening) | 0 | 14 |
 | Subnle Pocket | 66 | 0 | 25 |
 | Pyle | 143 | 0 | 29 |
 | Pyle Pocket | 694 | 0 | 226 |
@@ -49,18 +49,17 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Rebble | 116 | 0 | 26 |
 | Git Lab | 75 | 0 | 29 |
 | Shelle | 81 | 0 | 21 |
-| Syncle | 56 (30 added 20 Nov morning) | 0 | 11 |
+| Syncle | 87 (31 added 20 Nov afternoon) | 0 | 11 |
 | Modle | 90 | 0 | 30 |
 
-- Total 2254 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 816 are open. The other 2004 are locked until that lab has progress on the same device, and lab progress lives per device. This is why it feels empty on the go.
-- Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available.
+- Total 2302 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 816 are open. The other 2052 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
+- Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
-- No blank or dead-end states found. No horizontal scroll. No console errors.
-- The OPEN button on a locked lab row is a link to that lab, not a way to unlock its cards. Sixteen of nineteen rows are greyed out on a first visit.
-- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Meridian 32, Proxle 34, Syncle 56.
-- Syncle covers its sequences up to incident response. Sequences 9 (scripts), 10 (real world) and 11 (Teams, added 20 Nov midday) have no cards yet.
-- Already true from her earlier wishes: per-lab Today's reviews, Juniper rehearsals open without lab progress, Juniper Oopsies shown first, recall-first with hidden options, fluency labels (shaky, slow, fluent), one dragon per lab group. The Math group shows no Python code any more (one code card in the Modle bank, to recheck).
-- `tools/pockle/test_pockle.py` is flaky: it expects a "think first" button on every card, and build, order, bug and trace cards have none. `tools/pockle/test.py` plays every lab and every card kind and ends with ALL OK.
+- No blank or dead-end states found. No horizontal scroll. No console errors. Sixteen of nineteen lab rows are greyed out on a first visit; their OPEN button links to the lab.
+- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 34, Meridian 49, Sleeple 63, Subnle Pocket 66.
+- Meridian now has cards for its Basics module too (team and tickets: lines, incident, problem, change, priority; stack and console: layers, maintenance mode, PowerCLI, the ways in, CMDB). They unlock from `meridian.v1` when those lessons are read.
+- Already true from her earlier wishes: per-lab Today's reviews, Juniper rehearsals open without lab progress, Juniper Oopsies shown first, recall-first with hidden options, fluency labels (shaky, slow, fluent), one dragon per lab group.
+- `tools/pockle/test_pockle.py` is flaky (expects a "think first" button on every card kind). `tools/pockle/test.py` is the one to trust; it now also checks that Meridian Basics and the new Syncle units unlock from lab progress.
 
 ## Pockle ideas (max five, waiting for her yes or no)
 
@@ -72,7 +71,23 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 
 ## Open findings (listed, not done)
 
-- Push access: the runs of 19 and 20 November could not push. Their work (the patch `claude/mega-lab-nightly-2026-11-20b.patch` in the Mega Lab project) was applied by hand on top of main on 20 Nov midday and pushed, so it is live now; do not re-apply that patch. If a run still cannot push, write the exact git error into this log and the report.
+- Push access: the afternoon run of 20 Nov could not push (no repository access for that task). Its commit (`claude/mega-lab-nightly-2026-11-20c.patch`) was re-created on top of main by the evening run of 20 Nov and pushed with it; never re-apply it or any older patch in the project.
+- Spelle: after a reload you always land on Lesson 0, quest 1, and choosing a chapter always opens its first quest; "next" only shows after a pass, so reaching quest 3 means redoing 1 and 2. Opening a chapter at its first unsolved quest would save clicks: her call (changes navigation).
+- Spelle: the checks want exact names and shapes: `forEach(d => move(d))`, `function dash(d)`, `blocked(direction)`, the counter `i`, `.repeat(n)`, `look("right") === "wall"` in that order, object properties in the quest's order, one `push` per item, `let` (not `const`). Real JavaScript accepts the other forms. Arrays quest 1 done literally (3 moves) ends one tile short; the extra step is only in the hint. Writing Spells 1 wants a `;` after each `stride()` call. Each is a choice about how strict a drill is.
+- Shelle: real equivalents still answered "not quite": `cut -d ' ' -f6`, `df -h` (the step wants `df -h /`), `docker logs --tail=5 web`, `docker compose logs --tail=20 app`, `curl --head`, `ping -c4`, `rsync -anvz`, `lsof -i tcp:8000`, `kill %1`, and `ssh station` in the sshkey case (its own `~/.ssh/config` defines that alias). Adding them to `alt` is safe but long; next Shelle pass.
+- Shelle: "list what is there, one name per line" accepts only `ls`; `ls -1` is the real one-per-line flag. A GNU-style `sed -i 's/...'` in the restart case gives "(no results)" where a Mac errors ("extra characters at the end of d command"): that error would be the lesson. Solve opens after one command and one of five clues. Mid-scenario position is lost on reload.
+- Shelle accuracy, not verified on a Mac so not changed: `ssh` warns "UNPROTECTED PRIVATE KEY FILE" without `-v` too; `ps -p 4312` prints the custom `pid,lstart,command` layout instead of `PID TTY TIME CMD`; `df -h /` on macOS also prints inode columns and `/` is the sealed system volume.
+- Shelle: `S.vars` and `k.vars` are written but never read, and the `$x =` pattern is a PowerShell leftover. Dead code, harmless.
+- Junos Lab: in real-junos mode a command typed right after `commit` runs before "commit complete" (`dev.cli.busy` is set but never read); the predict modal leaves focus in the CLI the same way. Fix touches the CLI input loop: next Junos pass, with a test.
+- Junos Lab: the field-guide timer re-runs every prerequisite check every 1.2 s even with the tablet closed (`js/protocols.js`, around line 2849). Autosave waits 800 ms and nothing saves on page close, so a fast reload can lose the last change. Both small; not done tonight to keep the change set checkable.
+- Junos Lab: 90 of 92 field-guide quiz answers are the middle option and the options are not shuffled (the prep quiz does shuffle), so guessing pays XP. Design choice.
+- Junos Lab accuracy, needs a Juniper check before changing: `show spanning-tree interface` never shows a ROOT port (every forwarding port is DESG); `show vlans` uses its own Name/ID layout instead of the ELS Routing instance / VLAN name / Tag / Interfaces layout; `set vlans guest interface ge-0/0/3.0` is refused; the RSTP guide says both "do not assume RSTP is on" and "runs RSTP out of the box"; `vlan-id 4095` gives no range hint.
+- Junos Lab: after Resume the tablet shows scenario 1 instead of the one being worked on; at 390 px the tablet covers half the CLI and the toolbar's second row; new hosts spawn on top of each other. `js/course.js` `renderResume` is overridden by the one in `js/prep.js` (dead code).
+- Codex Microsoft: the examples use the domain `datacenterunited.com` (15 addresses, 26 mentions) and two full names in addresses, on a public page. Her rule is no real company names and no real colleagues' names. The rest of the page already uses `contoso.com`. Her call, but worth a quick yes.
+- Junle: the scenario "split VC" and two sample outputs show the second member of a two-member Virtual Chassis as `Linecard`. Without preprovisioning a second member with priority 128 is normally `Backup`. Not checked against Juniper yet, so not changed.
+- Junle classic (`junle.html?classic=1`) has no phone layout: at 390 px the terminal text is cut off on the left and the drill panel squeezes it. The launcher opens the room instead. Layout decision.
+- Junle: the first wrong answer only says "rejected. retry."; the hint starts at the second miss. Design choice.
+- Codex: the Python, JavaScript, PHP, Hexle and Passle volumes were not yet read line by line for accuracy. Next time the Codex comes round, start there.
 - Git Lab: a mission step wants the exact commit message from the briefing; your own wording commits but the step stays put. `git branch <name>`, `git restore .`, `git restore --staged <file>`, `git merge --no-ff` and options after the ref (`git reset HEAD~1 --soft`) are answered with "unknown command" or a pathspec error although they are real. Adding commands to the simulator is a feature: her call.
 - Git Lab: after `git init` the lab always says branch `main`. Real git names the first branch `master` unless `init.defaultBranch` is set or you type `git init -b main`. One line in mission 0 could say so: her call.
 - Git Lab: `write <file> <text>` and `pr open` are lab-only commands (no real equivalents typed that way). On a phone the console shows only two lines. Detective mode was not played this run.
@@ -81,7 +96,6 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Opsle: on a first visit all four missions are locked and there is nothing to do on the page.
 - Shelle: the prompt always reads `user@mbp ~ %`, also after `cd ~/Projects` and `cd station-site`. A real zsh prompt shows the folder. Fixing it means tracking the folder across steps: engine change, needs her yes.
 - Spelle: 22 of 25 example boxes in the brief are wider than the 290 px brief column and scroll sideways, so the first lesson's "name, argument" diagram is cut off. Widening the brief column changes the layout: her decision.
-- Spelle: the four Delve drills have prose hints, not runnable ones. Looks intended for a final challenge; left alone.
 - Webble: 69 emoji of 27 kinds (header buttons, console hints, brief, path cards, easing lab, gym, four lesson texts). She hates emoji; replacing them changes the look, so it waits for her yes.
 - Hexle: at 1440 px several labels are cut with an ellipsis ("Target 1 / 43" shows as "TARGE…", plot titles 04, 07, 12, Project VI, the "From memory" button). Fixing it means resizing the bar: look change.
 - Hexle: target 1 step 9 "Close every tag" is already green on the starter and on empty input. Two drills show the answer as placeholder text (`function tick() {}`, `function render() {}`). Tourney (flexbox and grid) is open on a first visit, before any CSS is taught. Design choices, her call.
@@ -96,8 +110,45 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Pockle bank for Modle holds one Python card (`print("code"[-1])`). Modle has its own Python section, so it was left; say so if Math should stay code-free.
 - Repo weight: `labs/img/junle-room/rack-front.png` (4.9 MB), `labs/img/pyle/office-car.png` (1.8 MB) and `labs/img/junle-room/room.png` (1.5 MB) are not referenced by any lab (the labs use the .webp versions). Not deleted; her call.
 - `LOOP_LOG.md` and `tools/proxle/LOG.md` still mention old scheduled tasks ("Proxle night loop") that could not be deleted from inside a run. They are disabled; she can delete them by hand.
+- Spelle: the four Delve drills have prose hints, not runnable ones; on Delve III the wall follower runs past the 600-step limit without the key. Looks intended for a final challenge; left alone.
 
 ## Entries
+
+### 2026-11-20, evening run
+
+Checked
+- Setup: push access works from this task (dry run accepted). The afternoon patch (Syncle clock, Junle BPDU drill, Codex phone wrap and Ctrl+U, 31 Syncle Pockle cards, two Codex art items) was re-created on top of main and goes out with this run. That catch-up is now done; later runs skip it.
+- Pockle: first visit and seeded visit at 390x844, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
+- Quick pass: 26 pages at 1440x900 and 390x844 (52 loads). No page errors. Only the two known Meridian 404s, the Junle mist width (clipped), and Junle classic on a phone (listed).
+- Service worker: 12 precache entries exist and match index.html. CACHE workshop-v96. Junos Lab CACHE junoslab-v53, APP_VERSION 3.30.4.
+- Suites: proxle ALL OK, junos-lab 6465 passed (2 new), no-emoji clean, soak 8000 clean, opsle, pockle test, sync and typed clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
+- Deep pass: spelle (about 77 interactions, all 37 quests run with hint, empty input and starter code, about 70 extra answers), shelle (about 80 interactions, five detective cases, Search, Docker, Ship, gym, recall, weak spots, free terminal, 40 real-world variants), junos-lab (about 190 interactions: LACP, RSTP and VLAN Isolation scenarios end to end, three field guides with quiz, abbreviations, run, commit check, rollback, compare, legacy syntax refused correctly).
+
+Fixed
+- Spelle: a code comment could tick a check: `move("right", 4); //move("right", steps)` passed "uses the variable". Checks now ignore comments. Every hint still passes, empty and starter code still fail.
+- Spelle: Loops quest 2 refused a correct loop that had an `if { }` inside, because the check stopped at the first `}`. It now finds the loop's real closing brace.
+- Spelle: Conditions quest 3 ("loop 6 times") ends one tile short of the stairs; the hint quietly added a last step. The quest text now says "then one last step right".
+- Shelle: in the "port is already allocated" case, `kill 4312` said "docker run on 8080 works now", but docker run still failed and lsof still showed php. After the kill, lsof is empty and docker run starts the container.
+- Shelle: in the restart case, `cat docker-compose.yml` and `grep DB_HOST` still showed `localhost` after the `sed` that changed it to `db`.
+- Shelle: the free terminal ignored the real-world equivalents (`ls -al`, `docker logs -n 5 web` printed nothing). The case intro said "answer like the real tenant, other known cmdlets" (pasted from Syncle); it now says a real Mac and commands.
+- Junos Lab: after a reload or an Undo, an EX4300's uplink ports (xe-0/1/0 and so on) came back as ge-0/0/48 to 51, so cables on them broke. They keep their names now (new test).
+- Junos Lab: pressing Esc on the front door also closed the hidden "Resume previous lab?" question and deleted the autosave. Esc now keeps the save; only Cancel deletes it.
+- Junos Lab: `show interfaces terse ge-0/0/0` was a syntax error; real Junos takes it, like `show interfaces ge-0/0/0 terse`. Both work now (new test).
+- Junos Lab: a field-guide quiz kept saying "Not quite" after you then picked the right answer. Every pick updates the text now. Modal Esc listeners no longer pile up when a modal is closed with a button.
+- Pockle: 17 Meridian cards for the Basics module (team and tickets, stack and console), two new units. Test extended.
+
+Listed
+- One art item added to the ComfyUI queue (Junos Lab front door), plus the two Codex items from the afternoon patch. 24 open.
+- New open findings for Spelle, Shelle and Junos Lab above.
+
+Needs her decision
+- Pockle ideas 1 and 5 (or 1 and 2).
+- Spelle: open a chapter at its first unsolved quest, yes or no.
+- Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
+
+### 2026-11-20, afternoon run
+
+- Could not push (no repository access for that task); its commit was saved as a patch and pushed by the evening run. Fixed: Syncle file-listing drills failed when typed in a later minute than the ticket opened (file dates now hang on the lab's frozen clock, new test `t_clock.js`); Junle BPDU drill now wants `clear error bpdu interface ge-0/0/47` (ELS); Codex and Codex Microsoft recipes wrap on a phone; Codex Ctrl+U says zsh wipes the whole line, bash only before the cursor; 31 Syncle Pockle cards (scripts, real-world Graph, Teams). Checked and right: `show system rollback 1 compare 0`, speed under `ether-options` on EX4300. Deep pass: codex, mscodex, junle classic.
 
 ### 2026-11-20, midday (by hand, daytime session)
 

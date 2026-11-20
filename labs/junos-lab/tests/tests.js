@@ -4789,6 +4789,15 @@ PROTO_GUIDES.filter(g => g.ready && !g.conceptual && !g.noTopology).forEach(g =>
   wipeLab();
 }
 
+/* ---------- T-nightly: one-interface terse in both orders, uplink ports survive save and load ---------- */
+wipeLab();
+let swn = makeSwitch(0, 0, 48, "EX4300-48T");
+ok(cli(swn, "show interfaces terse ge-0/0/3").includes("ge-0/0/3") && cli(swn, "show interfaces terse ge-0/0/3") === cli(swn, "show interfaces ge-0/0/3 terse"), "Tn show interfaces terse <if> matches <if> terse");
+const upl = devices[swn].ports.filter(p => p.role === "uplink").map(p => p.id);
+loadLab(JSON.parse(JSON.stringify(serializeLab())));
+const swl = Object.values(devices).find(d => d.type === "switch");
+ok(upl.length > 0 && upl.every(id => swl.ports.some(p => p.id === id)), "Tn uplink port names survive save and load");
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 
