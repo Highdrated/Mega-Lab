@@ -1680,7 +1680,7 @@ function memberRows(x) {
   }
   return rows;
 }
-def("Get-Member", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Name: P(0), MemberType: P(null), InputObject: P(null), Force: S(), Static: S() },
+def("Get-Member", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctype: "Cmdlet", pipe: true, params: { Name: P(0), MemberType: P(null, { alias: ["Type"] }), InputObject: P(null), Force: S(), Static: S() },
   run({ b, input, hadInput, name }) {
     const src = b.InputObject !== undefined ? [b.InputObject] : input;
     if (!src.length) throw new PSErr("You must specify an object for the Get-Member cmdlet.", { cmd: name, term: true });

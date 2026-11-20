@@ -307,7 +307,7 @@ select{font:inherit;font-weight:600;border:1px solid var(--line);background:var(
 .chsay{margin:10px 0 8px;font-size:13.5px;color:var(--ink)}
 .chcode{margin:0;font-size:12px;line-height:1.55;padding:10px 12px;border-radius:10px;background:var(--codebg);border:1px solid var(--line);overflow-x:auto;cursor:copy;white-space:pre}
 .chnote{margin:8px 0 0;font-size:12.5px;color:var(--ink2);line-height:1.5}
-.chmore{display:grid;gap:10px}
+.chmore{display:grid;grid-template-columns:minmax(0,1fr);gap:10px}
 .chmore>div{background:var(--sheet);border:1px solid var(--line);border-radius:14px;padding:12px 14px}
 .chmore b{font-size:13.5px}.chmore small{display:block;font-size:12px;color:var(--ink3);margin:2px 0 8px}
 .chp{font-size:13px;color:var(--ink2);margin:-4px 0 10px}
@@ -551,6 +551,7 @@ pre.gcode{font:12px/1.6 var(--mono);background:var(--card);border:1px solid var(
   .main{grid-template-columns:minmax(0,1fr) minmax(0,1fr);grid-template-rows:minmax(0,30%) minmax(0,70%)}
   .brief{grid-column:1/-1;border-right:0;border-bottom:1px solid var(--line)}
   .schoolwrap{grid-template-columns:1fr;grid-row:1/-1}
+  .homewrap{grid-row:1/-1}
   .top .logo small{display:none}
 }
 @media (max-width:1360px){
@@ -4572,7 +4573,7 @@ function expertChecks(rep){
 }
 
 async function check(){
-  if (busy) return; busy = true; $('#checkBtn').disabled = true;
+  if (busy) return; busy = true; $('#checkBtn').disabled = true; clearTimeout(liveT);
   const t = tgt(), res = [];
   const cssTests = t.tests.filter((x) => x.k === 'css');
   const motion = t.tests.filter((x) => x.k === 'motion');
@@ -4720,7 +4721,7 @@ let liveT = null;
 ta.addEventListener('input', () => {
   if (ta.readOnly) return;
   files()[curFile] = ta.value; save(); paint();
-  clearTimeout(liveT); liveT = setTimeout(showUser, 800);
+  clearTimeout(liveT); liveT = setTimeout(() => { if (!busy) showUser(); }, 800);
 });
 function insert(txt, selStart, selEnd){
   ta.setRangeText(txt, selStart, selEnd, 'end');
@@ -4883,7 +4884,7 @@ function showToolbox(){
   h += `<div class="row"><button class="btn" id="mClose">Close</button></div>`;
   modal(h); $('#mbox').classList.add('wide'); $('#mClose').onclick = closeModal;
 }
-function patNorm(s, css){ s = s.replace(/\s+/g, '').replace(/["`]/g, "'"); return css ? s.toLowerCase() : s; }
+function patNorm(s, css){ s = s.replace(/\s+/g, '').replace(/"/g, "'").replace(/`([^`]*)`/g, (m, a) => a.includes('${') ? m : "'" + a + "'"); return css ? s.toLowerCase() : s; }
 function patCheck(d, raw){
   const src = patNorm(raw, d.css), low = src.toLowerCase();
   let pos = 0;
@@ -4947,6 +4948,7 @@ function showView(v){
   ['work','school','home','gym'].forEach((x) => $('#' + x + 'View').classList.toggle('on', x === v));
   document.body.classList.toggle('home-on', v === 'home'); hcur.classList.remove('big');
   const u = $('#used'); u.innerHTML = USED[v]; u.hidden = v === 'work' || v === 'gym';
+  if (v !== 'work' && !busy) { $('#frT').srcdoc = ''; $('#frU').srcdoc = ''; }
 }
 const DEMOS = {
   c1:'<div class="demo d1"><span class="b">Hover me</span><i class="pd"></i></div>',
@@ -5193,7 +5195,7 @@ function renderLab(box){
   $('#lDur').oninput = (e) => { dur = +e.target.value; draw(); };
   $('#lDur').onchange = play;
   $('#lPlay').onclick = play;
-  $('#lLoop').onclick = () => { if (loop) { clearInterval(loop); loop = null; $('#lLoop').classList.remove('acc'); return; } play(); loop = setInterval(() => { if (!document.body.contains(svg)) { clearInterval(loop); loop = null; return; } play(); }, dur + 700); $('#lLoop').classList.add('acc'); };
+  $('#lLoop').onclick = () => { if (loop) { clearInterval(loop); loop = null; $('#lLoop').classList.remove('acc'); return; } play(); loop = setInterval(() => { if (S.view !== 'gym' || !document.body.contains(svg)) { clearInterval(loop); loop = null; return; } if (!document.hidden) play(); }, dur + 700); $('#lLoop').classList.add('acc'); };
   $('#lCopy').onclick = () => { try { navigator.clipboard.writeText($('#lOut').textContent); $('#lCopy').textContent = 'Copied ✓'; } catch (x) {} };
   $('#gBack').onclick = () => { if (loop) clearInterval(loop); renderGym('hub'); };
   draw(); setTimeout(play, 300);

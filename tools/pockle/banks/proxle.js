@@ -1,0 +1,62 @@
+POCKET.register({
+  id: "proxle",
+  name: "Proxle",
+  topic: "Proxmox",
+  href: "proxle.html",
+  keys: ["pvelab.done"],
+  units: [
+    {"id":"install","title":"Install a new server"},
+    {"id":"switch","title":"Set up a new switch"},
+    {"id":"ready","title":"Is this server ready?"},
+    {"id":"create","title":"Create the cluster"},
+    {"id":"join","title":"Join pve2 and pve3"},
+    {"id":"move","title":"Shared storage and a live move"},
+    {"id":"dies","title":"A node dies"},
+    {"id":"add","title":"Add a fourth node"},
+    {"id":"bka","title":"Backup A"},
+    {"id":"bkb","title":"A restore, and Backup B"}
+  ],
+  done: function (get) {
+try { var s = get("pvelab.done"); if (!s || typeof s !== "object") return []; return ["install","switch","ready","create","join","move","dies","add","bka","bkb"].filter(function (id) { return !!s[id]; }); } catch (e) { return []; }
+},
+  sample: {
+    "pvelab.done": "{\"install\":1,\"ready\":1,\"create\":1}"
+  },
+  sampleDone: ["install","ready","create"],
+  cards: [
+    {"u":"install","q":"On which port does the Proxmox web interface listen?","o":["443","8006","8443","3389"],"a":1,"why":"You open `https://<address>:8006` in a browser."},
+    {"u":"install","q":"Root logs in to the web interface. Which realm do you pick?","o":["Proxmox VE authentication server","Active Directory","Linux PAM","LDAP"],"a":2,"why":"root is a Linux account on the node itself, so its realm is Linux PAM."},
+    {"u":"install","q":"After the install, where does the address of the node live?","o":["on the bridge vmbr0","on eno1","on the loopback lo","on the first VM"],"a":0,"why":"The physical port is a member of the bridge `vmbr0`. The bridge holds the address and VMs plug into it."},
+    {"u":"switch","q":"A factory-fresh Juniper switch has no address. How do you reach it the first time?","o":["ssh to its default address","the web interface","a console cable in the CON port","ping it until it answers"],"a":2,"why":"No address means no network login. The first visit is always over the console cable."},
+    {"u":"switch","q":"You change a far-away switch and fear locking yourself out. Which commit do you use?","o":["commit check","commit and-quit","commit confirmed","commit synchronize"],"a":2,"why":"`commit confirmed` rolls back by itself unless you commit again in time, so a mistake undoes itself."},
+    {"u":"ready","q":"Which command shows the Proxmox version on a node?","o":["pveversion","pvecm status","qm list","uname -a"],"a":0,"why":"`pveversion` prints the installed Proxmox VE version."},
+    {"u":"create","q":"Where do you run pvecm create?","o":["on every node","once, on the first node","on the node that joins","on your laptop"],"a":1,"why":"One node creates the cluster. The others join it later with `pvecm add`."},
+    {"u":"join","q":"pve2 must join the cluster that pve1 created. Where do you type pvecm add, and which address do you give?","o":["on pve1, with the address of pve2","on pve2, with the address of pve1","on pve2, with its own address","on both, with the cluster name"],"a":1,"why":"You join from the new node and point at a node that is already a member."},
+    {"u":"join","q":"What must be true of a node before it joins a cluster?","o":["it runs at least one VM","it has shared storage","it holds no VMs","it has two network bridges"],"a":2,"why":"A joining node must be empty, so its VM numbers cannot clash with the cluster."},
+    {"u":"move","q":"What does a VM need before it can move live to another node?","o":["a disk the target node can reach","a backup from last night","a stopped state","a second network card"],"a":0,"why":"Shared storage first, then live migration. A disk on `local-lvm` exists on one node only."},
+    {"u":"move","q":"Which command moves a running VM 101 to pve2?","o":["qm move 101 pve2","qm start 101 --node pve2","pvecm add pve2","qm migrate 101 pve2 --online"],"a":3,"why":"`qm migrate <vmid> <node> --online` moves it while it keeps running."},
+    {"u":"dies","q":"A cluster of 3 nodes loses one. Is it still quorate?","o":["no, all three must be up","yes, 2 of 3 is a majority","only if HA is on","only after a reboot"],"a":1,"why":"More than half of the votes must see each other. With 3 nodes, 2 are enough."},
+    {"u":"dies","q":"HA should restart a VM on another node. What does that need?","o":["only the VM under HA","only a disk on shared storage","the VM under HA and its disk on shared storage","a backup on the NAS"],"a":2,"why":"HA needs both. A disk on a dead node cannot be started anywhere else."},
+    {"u":"add","q":"A cluster grows to 4 nodes. How many votes are a majority?","o":["2","3","4","1"],"a":1,"why":"More than half of 4 is 3."},
+    {"u":"bka","q":"A NAS share must hold backups. Which option tells Proxmox it may?","o":["--content backup","--content images","--mode snapshot","--shared 1"],"a":0,"why":"Storage only holds the content types you allow. Backups need `--content backup`."},
+    {"u":"bka","q":"Which vzdump mode backs up a VM while it keeps running?","o":["stop","suspend","snapshot","online"],"a":2,"why":"`--mode snapshot` backs up a running VM with the least downtime."},
+    {"u":"bkb","q":"You restore a VM with qmrestore. In which state does it come back?","o":["running","stopped","paused","migrating"],"a":1,"why":"A restored VM comes back stopped. You start it yourself with `qm start`."},
+    {"u":"bkb","q":"What does the 3-2-1 backup rule mean?","o":["3 nodes, 2 switches, 1 NAS","3 backups a day, 2 a week, 1 a month","3 admins, 2 passwords, 1 key","3 copies, 2 kinds of storage, 1 offsite"],"a":3,"why":"Three copies of the data, on two kinds of storage, one of them at another site."},
+    {"u":"install","q":"On a fresh node, which storage holds the disks of your VMs?","o":["local","local-lvm","vmbr0","/etc/pve"],"a":1,"why":"`local-lvm` holds VM disks. `local` is a folder for ISO files, templates and backups."},
+    {"u":"ready","q":"Which command lists the VMs on this node?","o":["pvecm nodes","pvesm status","qm list","pveversion"],"a":2,"why":"`qm list` shows the VMs of the node you are on, with their state."},
+    {"u":"ready","q":"pvecm status says the corosync config does not exist. What does that tell you?","o":["this node is not in a cluster yet","the node is broken","the network is down","the cluster lost quorum"],"a":0,"why":"A standalone node has no cluster config. That is the answer you want before `pvecm create` or `pvecm add`."},
+    {"u":"create","q":"In pvecm create west, what is west?","o":["the name of the node","the name of the storage","the name of the bridge","the name of the new cluster"],"a":3,"why":"`pvecm create <clustername>` makes a new cluster with that name on the first node."},
+    {"u":"create","q":"Which command gives the short list of cluster members?","o":["pvecm nodes","qm list","pvesm list","ha-manager status"],"a":0,"why":"`pvecm nodes` lists the members. `pvecm status` adds the votes and quorum."},
+    {"u":"join","q":"pvecm add asks for a password. Whose is it?","o":["your laptop user","root on the member you point at","the switch","the NAS"],"a":1,"why":"The new node logs in to an existing member as root to fetch the cluster config."},
+    {"u":"join","q":"The node that must join still holds a stopped test VM 900. What do you do first?","o":["qm start 900","qm migrate 900 pve1","qm destroy 900","nothing, it joins anyway"],"a":2,"why":"A joining node must be empty. `qm destroy <vmid>` deletes a stopped VM."},
+    {"u":"move","q":"Which command attaches a NAS share to the cluster?","o":["qm disk move","pvecm add","vzdump --storage","pvesm add nfs"],"a":3,"why":"`pvesm add nfs <id> --server <ip> --export <path> --content <types>` adds the share as storage."},
+    {"u":"move","q":"The disk of VM 101 sits on local-lvm. Which command moves it to the NAS storage nas-west?","o":["qm disk move 101 scsi0 nas-west","qm migrate 101 nas-west","pvesm add nfs nas-west","qm move 101 nas-west"],"a":0,"why":"`qm disk move <vmid> <disk> <storage>` moves one disk. `qm migrate` moves the VM to another node."},
+    {"u":"move","q":"Who can reach a storage of type nfs?","o":["only the node that added it","every node in the cluster","only the first node","only the VM that uses it"],"a":1,"why":"The share lives on the NAS, so every node sees it. That is what makes a live move possible."},
+    {"u":"dies","q":"Which command puts VM 101 under HA?","o":["qm start 101 --ha","pvecm add vm:101","ha-manager add vm:101","qm migrate 101 --ha"],"a":2,"why":"`ha-manager add vm:<vmid>` makes the VM an HA resource."},
+    {"u":"add","q":"In a cluster of 4, two nodes are down. Is it quorate?","o":["yes, half is enough","yes, if HA is on","only on the first node","no, 2 is not more than half"],"a":3,"why":"A majority means more than half. With 4 votes you need 3."},
+    {"u":"add","q":"Which command shows what HA is doing with your VMs?","o":["ha-manager status","pvesm status","qm list","pvecm nodes"],"a":0,"why":"`ha-manager status` shows the HA resources and on which node they run."},
+    {"u":"bka","q":"Pick the command that backs up VM 101 to backup-a while it keeps running.","o":["qmrestore 101 backup-a","vzdump 101 --storage backup-a --mode snapshot","qm migrate 101 backup-a --online","pvesm add backup-a 101"],"a":1,"why":"`vzdump <vmid> --storage <id> --mode snapshot` writes the backup without stopping the VM."},
+    {"u":"bkb","q":"Which command shows the backups stored on backup-a?","o":["qm list backup-a","pvecm status","pvesm list backup-a","vzdump --list"],"a":2,"why":"`pvesm list <storage>` shows what is on it. `qmrestore` needs the exact name from that list."},
+    {"u":"bkb","q":"qmrestore needs two things. Which?","o":["the node and the storage","the VM name and a date","the cluster name and a password","the backup archive and a VM number"],"a":3,"why":"`qmrestore <archive> <vmid>`: which backup, and which VM number it becomes."}
+  ]
+});

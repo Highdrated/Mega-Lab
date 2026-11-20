@@ -426,6 +426,7 @@ function renderPractice() {
   const { m, d, i } = cd;
   if (R.mix && R.mem !== m) { R.mem = m; $("crumb").textContent = "Practice mix · " + m.name; flowband(m.brief.flow, "HOW " + m.name.toUpperCase() + " WORKS"); sidecard(m); }
   const setup = d.setup || m.recall.setup;
+  clearTimeout(R.advT);
   resetConsole(setup, d.pre);
   const list = R.mix ? R.mix.map((p) => ({ done: !!S.drills[drillKey(p.m, p.i)], label: p.m.name })) : (DRILLS[m.id] || []).map((_, k) => ({ done: !!S.drills[drillKey(m, k)], label: "#" + (k + 1) }));
   const done = !!S.drills[drillKey(m, i)];
@@ -473,7 +474,7 @@ function checkPractice(res) {
   save();
   if (first) earn(R.hint ? 4 : 8, "practice: " + m.name); else toast("Solved again");
   R.jlineOverride = "Synchronized. Next ticket in a moment."; R.jstate = "ok"; junie();
-  clearTimeout(R.advT); R.advT = setTimeout(() => { if (R.phase === "practice") advanceDrill(); }, 1400);
+  clearTimeout(R.advT); R.advT = setTimeout(() => { if (R.view === "memory" && R.phase === "practice") advanceDrill(); }, 1400);
 }
 function sidecard(m) {
   if (R.gate) { $("sidecard").innerHTML = gtext().rules; return; }

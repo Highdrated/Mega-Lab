@@ -454,8 +454,12 @@ body[data-theme=grove] .tab{font-family:var(--mono);font-weight:400;letter-spaci
   #comms{grid-column:1/3}
   main{height:auto}
   .view.on{height:auto}
-  #v-school,#v-target,#v-village,#v-rules{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(320px,auto)}
+  #v-school,#v-target,#v-village,#v-grimoire,#v-rules{grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:minmax(320px,auto)}
   #v-target .left,#v-target .edp{grid-row:auto;grid-column:auto}
+  #v-target .edp>.ph{height:auto;min-height:40px;flex-wrap:wrap;row-gap:6px;padding:6px 14px}
+  #v-target .edp>.ph .sp{overflow:visible;flex-wrap:wrap;justify-content:flex-end}
+  .dash .dbody{grid-template-columns:minmax(0,1fr);grid-template-rows:none}
+  .dash .dstats{grid-row:auto;border-right:0;border-bottom:1px solid var(--line)}
 }
 #notes.has{color:var(--amb);border-color:var(--amb)}
 @media (max-width:1560px) and (min-width:901px){body{grid-template-columns:minmax(0,1fr)}#bar{display:flex;gap:10px;padding:0 12px;min-width:0}#bar .stg{padding:0 6px}.stages{flex:none}#tsel{flex:0 1 150px;min-width:96px}.snd{gap:6px;margin-left:auto}#comms,#vol{display:none}}
@@ -2524,7 +2528,7 @@ function renderDrill(d,i,n,list){
   }else if(d.k==='gap'){
     din.className='gap';din.innerHTML='<span>'+esc(d.pre)+'</span><input id="dval" aria-label="Your answer" placeholder="?"><span>'+esc(d.post)+'</span>';
   }else{
-    din.innerHTML='<input id="dval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'')+'">';
+    din.innerHTML='<input id="dval" class="line" aria-label="Your answer" placeholder="'+esc(d.ph||'').replace(/"/g,'&quot;')+'">';
     if(d.k==='fix')$('dval').value=d.bug;
   }
   const inp=$('dval');
@@ -2547,7 +2551,7 @@ function checkDrill(d){
     const li=$('pans').children[bad];if(li)li.classList.add('bad');failDrill(d);fb.innerHTML+=' The first wrong line is number '+(bad+1)+'.';return}
   const v=$('dval').value.trim(),fb=$('fb');
   if(!v){fb.className='fb err';fb.textContent='Type an answer first.';sfx.bad();return}
-  const ok=d.k==='gap'?d.a.includes(v.toLowerCase()):d.test.test(v.replace(/\s+/g,' '));
+  const ok=d.k==='gap'?d.a.includes(v.toLowerCase()):(d.test.test(v.replace(/\s+/g,' '))||d.test.test(hxBorder(v.replace(/\s+/g,' ').replace(/^<[^]*$/,m=>m.replace(/=\s*'([^'"<>]*)'/g,'="$1"')))));
   ok?passDrill():failDrill(d);
 }
 function passDrill(){

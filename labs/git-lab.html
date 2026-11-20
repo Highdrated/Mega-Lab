@@ -1141,7 +1141,7 @@ function checkMission(cmd){
   const want=MISSIONS[missionIdx].steps[stepIdx].c;
   const ok = want.includes('LAST')
     ? new RegExp('^'+want.replace('LAST','c\\d+').replace(/\s+/g,'\\s+')+'$','i').test(cmd.trim())
-    : norm(cmd)===norm(want);
+    : norm(cmd)===norm(want)||norm(mcanon(cmd))===norm(want);
   if(ok){
     stepIdx++;
     if(stepIdx>=MISSIONS[missionIdx].steps.length){
@@ -1155,6 +1155,16 @@ function checkMission(cmd){
   }
 }
 function norm(s){ return s.trim().replace(/\s+/g,' ').replace(/["']/g,'"').toLowerCase(); }
+function mcanon(s){
+  return s.trim().replace(/\s+/g,' ')
+    .replace(/^git switch -c /,'git checkout -b ').replace(/^git switch (?!-)/,'git checkout ')
+    .replace(/^git add (-A|--all)$/,'git add .')
+    .replace(/^git (restore --staged \.|reset HEAD)$/,'git reset')
+    .replace(/^git checkout -- /,'git restore ')
+    .replace(/^git push --set-upstream /,'git push -u ')
+    .replace(/^(git reset --(?:soft|mixed|hard)) HEAD(?:~|\^)$/,'$1 HEAD~1')
+    .replace(/^(cd .*[^\/])\/+$/,'$1');
+}
 
 function addCommit(label,type,extra){
   const br=S.branches[S.head], parents=[];
@@ -1192,16 +1202,22 @@ function run(raw){
 
   let m=c.match(/^cd\s+(.+)$/);
   if(m){
-    const t=m[1].trim();
+    const t=m[1].trim().replace(/(.)\/+$/,'$1');
     if(t==='..'){
       if(!S.cwd.length){ w('already at home','warn'); return; }
       S.cwd.pop(); w(pathStr(S.cwd),'dim'); return after(c);
     }
     if(t==='~'||t==='/'){ S.cwd=[]; w(pathStr(S.cwd),'dim'); return after(c); }
-    const n=cwdNode();
-    if(!n.children[t]){ w('cd: no such folder: '+esc(t),'err'); return; }
-    if(n.children[t].type!=='dir'){ w('cd: not a folder: '+esc(t),'err'); return; }
-    S.cwd.push(t); w(pathStr(S.cwd),'dim'); return after(c);
+    const segs=t.replace(/^~\//,'').split('/').filter(x=>x&&x!=='.');
+    const dest=/^~\//.test(t)?[]:S.cwd.slice();
+    for(const g of segs){
+      if(g==='..'){ if(!dest.length){ w('already at home','warn'); return; } dest.pop(); continue; }
+      const n=nodeAt(dest);
+      if(!n.children[g]){ w('cd: no such folder: '+esc(t),'err'); return; }
+      if(n.children[g].type!=='dir'){ w('cd: not a folder: '+esc(t),'err'); return; }
+      dest.push(g);
+    }
+    S.cwd=dest; w(pathStr(S.cwd),'dim'); return after(c);
   }
   if(c==='cd'){ S.cwd=[]; w(pathStr(S.cwd),'dim'); return after(c); }
 
@@ -1414,7 +1430,7 @@ function run(raw){
     return after(c);
   }
 
-  m=c.match(/^git push(?:\s+-u)?(?:\s+origin\s+([\w\-\/]+))?$/i);
+  m=c.match(/^git push(?:\s+(?:-u|--set-upstream))?(?:\s+origin\s+([\w\-\/]+))?$/i);
   if(m){
     if(!S.remote){ w('fatal: no remote linked — run <b>git remote add origin &lt;url&gt;</b>','err'); return; }
     const b=m[1]||S.head;
@@ -1451,14 +1467,14 @@ function run(raw){
     return after(c);
   }
 
-  if(c==='git reset'||c==='git restore --staged .'){
+  if(c==='git reset'||c==='git reset HEAD'||c==='git restore --staged .'){
     if(!S.staged){ w('nothing staged','dim'); return; }
     S.staged=false;
     w('unstaged everything — your edits are still there, just not queued for commit','ok');
     return after(c);
   }
 
-  m=c.match(/^git reset\s+(--soft|--hard|--mixed)\s+HEAD~1$/i);
+  m=c.match(/^git reset\s+(--soft|--hard|--mixed)\s+HEAD(?:~1|~|\^)$/i);
   if(m){
     const mode=m[1].toLowerCase();
     const tipId=S.branches[S.head].tip;
