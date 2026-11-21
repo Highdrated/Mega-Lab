@@ -2,6 +2,16 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-21-1 · Meridian · ticket queue banner (needs her yes first)
+- file: `labs/img/meridian/banner-tickets.webp`
+- why: the Tickets tab is two text rows on a plain cream page; it is where she spends her working time in Meridian and has no sense of the ship at all.
+- size: 1800x360, no transparency
+- existing art to match: no Meridian images exist yet; follow the style line in `labs/img/meridian/PROMPTS.md` and items 2026-11-19-3 and -4 (calm painterly science fiction, cream, brass and muted teal). The interface is cream (#f1f0eb) with dark teal buttons and thin grey rules.
+- positive: the operations deck below the bridge of a long-haul starship seen in a wide low view, a long curved desk with soft teal status screens, brass rails, warm cream panels, a slow star field through a long window, ticket slips glowing faintly on a board, quiet early-shift light, wide empty calm area on the right for text, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette of cream, brass and teal, high detail
+- negative: text, letters, numbers, logo, watermark, people, faces, crowd, neon, harsh contrast, clutter, photo, dark gloomy mood
+- placing: not wired; would sit above `TICKET QUEUE` on the Tickets tab of `labs/meridian.html`, full width of the 900 px list column, about 180 px tall with `object-fit:cover`. Needs a small wiring change, so her yes first.
+- status: todo
+
 ## 2026-11-20-12 · Junos Lab · front door backdrop (needs her yes first)
 - file: `labs/junos-lab/img/front-door.webp`
 - why: the first screen of the Junos Lab is a dark card on plain black; the lab she spends most time in has no world behind it, while Junle's room is fully painted.

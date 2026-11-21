@@ -2551,7 +2551,7 @@ function checkDrill(d){
     const li=$('pans').children[bad];if(li)li.classList.add('bad');failDrill(d);fb.innerHTML+=' The first wrong line is number '+(bad+1)+'.';return}
   const v=$('dval').value.trim(),fb=$('fb');
   if(!v){fb.className='fb err';fb.textContent='Type an answer first.';sfx.bad();return}
-  const ok=d.k==='gap'?d.a.includes(v.toLowerCase()):(d.test.test(v.replace(/\s+/g,' '))||d.test.test(hxBorder(v.replace(/\s+/g,' ').replace(/^<[^]*$/,m=>m.replace(/=\s*'([^'"<>]*)'/g,'="$1"')))));
+  const ok=d.k==='gap'?d.a.includes(v.toLowerCase()):(d.test.test(v.replace(/\s+/g,' '))||hxTag(v.replace(/\s+/g,' ').replace(/^<[^]*$/,m=>m.replace(/=\s*'([^'"<>]*)'/g,'="$1"'))).some(x=>d.test.test(hxBorder(x))));
   ok?passDrill():failDrill(d);
 }
 function passDrill(){
@@ -2603,6 +2603,7 @@ function run(){
   const code=S.code[S.t],css=T().css!=null?S.css[S.t]:null,js=T().js!=null?S.js[S.t]:null;
   const f=$('bframe'),tok=++runTok;f.onload=()=>{if(T().js!=null)setTimeout(()=>{if(tok===runTok)evaluate(code,css,js)},350);else evaluate(code,css,js)};f.srcdoc=wrap(code,css,js);
 }
+function hxTag(v){const m=v.match(/^<([a-z][a-z0-9]*)((?: [a-z-]+="[^"]*")+) ?(\/?)>([^]*)$/i);if(!m||(m[3]&&!/^(img|input|br|hr|meta|link|source|area|col|embed|wbr|track|base)$/i.test(m[1])))return[v];const at=m[2].trim().match(/[a-z-]+="[^"]*"/gi);if(at.length>4)return[v];const perm=a=>a.length<2?[a]:a.flatMap((x,i)=>perm(a.filter((_,j)=>j!==i)).map(r=>[x,...r]));return perm(at).map(q=>'<'+m[1]+' '+q.join(' ')+'>'+m[4])}
 function hxBorder(css){return String(css).replace(/((?:border|outline)(?:-(?:top|right|bottom|left))?\s*:\s*)([^;}"]+)/gi,(m,k,v)=>{if(/var\(/i.test(v))return m;const imp=/!important/i.test(v);const t=v.replace(/!important/i,'').trim().split(/\s+(?![^(]*\))/).filter(Boolean);const W=/^(\d*\.?\d+(px|em|rem|%)?|thin|medium|thick)$/i,ST=/^(none|hidden|dotted|dashed|solid|double|groove|ridge|inset|outset)$/i;const w=t.filter(x=>W.test(x)),st=t.filter(x=>ST.test(x)),c=t.filter(x=>!W.test(x)&&!ST.test(x));return k+[...w,...st,...c].join(' ')+(imp?' !important':'')})}
 function hxNorm(code){return hxBorder(String(code).replace(/<style\b[^>]*>/gi,'<style>').replace(/(\s(?:src|href)\s*=\s*["'])\.\//gi,'$1'))}
 async function evaluate(code,css,js){

@@ -52,7 +52,7 @@ async def main():
         for c,want in [('/etc/resolv.conf','put cat in front'),('ping <ip>','placeholder'),('SSH root@192.168.0.201','all lowercase'),('kaatje@laptop:~$ ip route','typed the prompt'),('ls','Downloads'),('man ssh','did nothing wrong'),('ping','Destination address required'),('ssh root@192.168.0.50','Connection refused')]:
             if want not in await said(c): print('VARIANT FAIL laptop',c); ok=False
         for c in ['ssh root@192.168.0.201','yes','pw']: await said(c)
-        for c,want in [('pvecm status','Nothing is broken'),('ip route','default via 192.168.0.1 dev vmbr0'),('cat /etc/hostname','pve1'),('cat /etc/pve/corosync.conf','No such file'),('ls /etc/pve','storage.cfg'),('sudo pvecm status','already'),('systemctl status corosync','inactive (dead)'),('qm status 101','does not exist'),('pvecm Status','lowercase'),('whoami','root')]:
+        for c,want in [('pvecm status','Nothing is broken'),('ip route','default via 192.168.0.1 dev vmbr0'),('cat /etc/hostname','pve1'),('cat /etc/pve/corosync.conf','No such file'),('ls /etc/pve','storage.cfg'),('sudo pvecm status','already'),('systemctl status corosync','inactive (dead)'),('qm status 101','does not exist'),('pvecm Status','lowercase'),('whoami','root'),('pvesh get /cluster/resources','did nothing wrong')]:
             if want not in await said(c): print('VARIANT FAIL node',c); ok=False
         await pg.evaluate("LAB.load('install')");await pg.evaluate("LAB.act('app','term')")
         if 'Still to find' not in await said('cat /etc/resolv.conf'): print('VARIANT FAIL partial progress'); ok=False

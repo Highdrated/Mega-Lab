@@ -11,32 +11,32 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. meridian (19 Nov, evening)
-7. proxle (19 Nov, evening)
-8. hexle (20 Nov)
-9. webble (20 Nov)
-10. syncle (20 Nov)
-11. git-lab (20 Nov, morning)
-12. modle (20 Nov, morning)
-13. opsle (20 Nov, morning)
-14. codex (20 Nov, afternoon)
-15. mscodex (20 Nov, afternoon)
-16. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
-17. spelle (20 Nov, evening)
-18. shelle (20 Nov, evening)
-19. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
+6. webble (20 Nov)
+7. syncle (20 Nov)
+8. git-lab (20 Nov, morning)
+9. modle (20 Nov, morning)
+10. opsle (20 Nov, morning)
+11. codex (20 Nov, afternoon)
+12. mscodex (20 Nov, afternoon)
+13. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
+14. spelle (20 Nov, evening)
+15. shelle (20 Nov, evening)
+16. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
+17. proxle (21 Nov; walk scripts, 30 real-world variants in five scenarios)
+18. meridian (21 Nov; Windows Server module, the time ticket console)
+19. hexle (21 Nov; 144 typed drills against their hints and real-world variants)
 
-Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 20 Nov, evening: still blocked); the next labs that can run are taken instead.
+Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 21 Nov: still blocked, 403 from the proxy); the next labs that can run are taken instead.
 
-## Pockle numbers (20 Nov evening, 390x844, touch)
+## Pockle numbers (21 Nov, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
 | Juniper Oopsies | 22 (+ live mistakes) | 22 | 22 |
 | Junle | 73 | 73 | 73 |
 | Junos Lab | 155 | 155 | 155 |
-| Proxle | 34 | 0 | 10 |
-| Meridian | 49 (17 added 20 Nov evening) | 0 | 14 |
+| Proxle | 49 (15 added 21 Nov) | 0 | 15 |
+| Meridian | 63 (14 added 21 Nov) | 0 | 14 |
 | Subnle Pocket | 66 | 0 | 25 |
 | Pyle | 143 | 0 | 29 |
 | Pyle Pocket | 694 | 0 | 226 |
@@ -52,11 +52,12 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Syncle | 87 (31 added 20 Nov afternoon) | 0 | 11 |
 | Modle | 90 | 0 | 30 |
 
-- Total 2302 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 816 are open. The other 2052 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
+- Total 2331 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 821 are open. The other 2081 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
 - Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
 - No blank or dead-end states found. No horizontal scroll. No console errors. Sixteen of nineteen lab rows are greyed out on a first visit; their OPEN button links to the lab.
-- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 34, Meridian 49, Sleeple 63, Subnle Pocket 66.
+- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 49, Sleeple 63, Meridian 63, Subnle Pocket 66. Next run: Sleeple and Subnle Pocket (both need reading only; Sleeple's runtime is on the CDN).
+- Proxle now has cards for the switch scenario (commit, root password, /32, default VLAN, trunk, MAC table, ssh) and the install basics (certificate warning, local-zfs, BIOS virtualization, ip route, resolv.conf). Meridian now covers Updates, reboots and time (Get-HotFix, RebootPending, the pair restart, the time hierarchy, VMware time sync, w32tm) and more of Roles (Spooler, Manual, WinRM, 3389, SoftwareDistribution, Get-Volume).
 - Meridian now has cards for its Basics module too (team and tickets: lines, incident, problem, change, priority; stack and console: layers, maintenance mode, PowerCLI, the ways in, CMDB). They unlock from `meridian.v1` when those lessons are read.
 - Already true from her earlier wishes: per-lab Today's reviews, Juniper rehearsals open without lab progress, Juniper Oopsies shown first, recall-first with hidden options, fluency labels (shaky, slow, fluent), one dragon per lab group.
 - `tools/pockle/test_pockle.py` is flaky (expects a "think first" button on every card kind). `tools/pockle/test.py` is the one to trust; it now also checks that Meridian Basics and the new Syncle units unlock from lab progress.
@@ -105,14 +106,40 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Syncle: several Graph commands take the user as a bare first word (`Update-MgUser x`); the real module wants `-UserId`. Not changed.
 - Junle room: the first ticket visitor (Veylin) slides in a second or two after sitting down and covers an app that was just opened (seen with Rehearse and Terminal on a first visit). Not sure it is a bug; the story may want this.
 - Junle room: `#wx-mist` is a 400% wide layer that keeps animating at opacity 0. Page scroll is clipped so nothing shows, but it holds a large layer in memory. Not changed (weather design).
+- Meridian: event 7040 in the time ticket reads "changed from auto start to auto start"; the real message names two different start types. Story text, left alone.
 - Meridian: `backdrop-promenade.webp` and `hero-school.webp` give a 404 on every load; portraits and two more backdrops are missing too. All in the ComfyUI queue (items 2026-11-19-3, 4, 7 to 12).
-- Proxle, small realism gaps, not changed: `ping` without `-c` stops by itself after three replies (a real ping runs until Ctrl+C); `pveversion -v` prints the same single line as `pveversion` (the real one lists every package); `cat /etc/hosts` on the laptop says the file does not exist.
+- Proxle, small realism gaps, not changed: `ip -br a` and `ip addr show vmbr0` print the full `ip a` (the real `-br` is a one-line-per-interface table); `vzdump ... --compress zstd` echoes the job line without `--compress zstd`; `ping` without `-c` stops by itself after three replies (a real ping runs until Ctrl+C); `pveversion -v` prints the same single line as `pveversion` (the real one lists every package); `cat /etc/hosts` on the laptop says the file does not exist.
 - Pockle bank for Modle holds one Python card (`print("code"[-1])`). Modle has its own Python section, so it was left; say so if Math should stay code-free.
 - Repo weight: `labs/img/junle-room/rack-front.png` (4.9 MB), `labs/img/pyle/office-car.png` (1.8 MB) and `labs/img/junle-room/room.png` (1.5 MB) are not referenced by any lab (the labs use the .webp versions). Not deleted; her call.
 - `LOOP_LOG.md` and `tools/proxle/LOG.md` still mention old scheduled tasks ("Proxle night loop") that could not be deleted from inside a run. They are disabled; she can delete them by hand.
 - Spelle: the four Delve drills have prose hints, not runnable ones; on Delve III the wall follower runs past the 600-step limit without the key. Looks intended for a final challenge; left alone.
 
 ## Entries
+
+### 2026-11-21
+
+Checked
+- Setup: push access works (dry run accepted). The afternoon patch of 20 Nov is on main (commit 7ee3a0c); nothing to catch up. LOG first line not HOLD.
+- Pockle: first visit and seeded visit at 390x844 with touch, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
+- Quick pass: 25 pages at 1440x900 and 390x844. No page errors. Only the two known Meridian 404s and the clipped Junle mist; one stray `/favicon.ico` 404 (the browser asks for it at the server root, not a lab fault).
+- Service worker: 12 precache entries exist. CACHE now workshop-v97. 20 launcher paths exist.
+- Suites: proxle ALL OK (one new variant), pockle test, sync and typed clean, opsle clean, junos-lab 6465 passed, no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
+- Deep pass: proxle (three walk scripts green, about 30 real-world commands typed in Is this server ready, Create, Shared storage, A node dies and Backup A), meridian (Windows Server lessons read, time ticket console played with real `w32tm` variants, Tickets, Missions and Journal screens), hexle (144 typed drills checked against their own hints, attribute order and `/>` variants, wrong values still fail).
+
+Fixed
+- Proxle: `pvesh` (and `pveum`, `pveam`, `pvenode`, `pveperf`, `pvereport`, `pvesubscription`, `lscpu`, `lspci`) on a node answered "command not found". They exist on every Proxmox node; the lab now says it is a real command it does not imitate, like it does for sixty other commands. New check in `tools/proxle/test.py`.
+- Meridian: the time console refused real `w32tm` forms: `w32tm /query /status /verbose`, `w32tm /resync /nowait`, `/stripchart` with its options in another order, and `w32tm /config /update /syncfromflags:domhier`. All four work now.
+- Hexle: typed drills refused valid HTML with the attributes in another order (`<img alt="An owl" src="img/owl.png">`) or a self-closing void tag (`<img ... />`, `<meta charset="UTF-8" />`, `<link ... />`). Both are accepted now; `/>` only on void elements, so `<p/>` still fails.
+- Pockle: 15 Proxle cards and 14 Meridian cards, from material in those labs.
+
+Listed
+- One art item added to the ComfyUI queue (Meridian ticket queue banner). 25 open.
+- Proxle `ip -br a`, the vzdump echo, Meridian event 7040 wording: see Open findings.
+
+Needs her decision
+- Pockle ideas 1 and 5 (try any lab, bring my progress).
+- Spelle: open a chapter at its first unsolved quest, yes or no.
+- Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
 
 ### 2026-11-20, evening run
 

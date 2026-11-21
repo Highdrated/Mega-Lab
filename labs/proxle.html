@@ -280,6 +280,7 @@ function resolve(W,x){x=String(x||'').replace(/^root@/,'');const n=Object.keys(W
 const isIp=x=>/^\d+\.\d+\.\d+\.\d+$/.test(String(x||'').replace(/^root@/,''));
 const NODNS='There is no DNS entry for that name on this network. Use the IP address instead.';
 const UNSIM=['man','history','nano','vi','vim','top','htop','df','free','uptime','apt','apt-get','systemctl','journalctl','grep','less','more','echo','touch','mkdir','rm','cp','mv','curl','wget','traceroute','ifconfig','nslookup','dig','host','arp','netstat','ss','scp','which','id','ps','kill','reboot','shutdown','poweroff','su','passwd','tail','head','find','chmod','chown','lsblk','zpool','zfs','pct','pveceph','ceph','corosync-cfgtool','dmesg','w','env','export','alias','tar','ssh-keygen'];
+const UNSIMPVE=['pvesh','pveum','pveam','pvenode','pveperf','pvereport','pvesubscription','lscpu','lspci'];
 const KNOWNC=['ssh','ping','ip','cat','ls','hostname','pvecm','pvesm','qm','vzdump','qmrestore','ha-manager','pveversion','openssl','date','clear','exit','help','pwd','whoami','uname','cd'];
 const alive=(W,n)=>W.nodes[n].up&&W.nodes[n].reach!==false;
 function enter(W,n){W.stack.push(W.host);W.host=n;W.seen['ssh:'+n]=1;return{out:`Linux ${n} 6.14.8-2-pve #1 SMP PREEMPT_DYNAMIC PMX x86_64\nLast login: Wed Nov 18 14:02:11 2026 from 192.168.0.9`}}
@@ -331,7 +332,7 @@ function exec(W,line){
  if(lap&&c==='ls'){const d=a.filter(x=>!/^-/.test(x))[1]||'';if(!d||d==='~'||d==='.')return{out:'Documents  Downloads'};if(/^(~\/)?Downloads\/?$/.test(d))return{out:W.inst?W.inst.files.join('  '):''};if(/^(~\/)?Documents\/?$/.test(d))return{out:''};return{err:`ls: cannot access '${d}': No such file or directory`}}
  if(lap&&c==='cat'&&a[1]==='/etc/hostname')return{out:'laptop'};
  if(c==='cat'&&!a[1])return{err:'cat: missing file name',note:'<code>cat</code> prints a file. Give it the path of the file: <code>cat /etc/resolv.conf</code>.'};
- if(UNSIM.includes(c)&&!(c==='systemctl'&&!lap))return{err:`${c}: not simulated in this lab`,note:'<b>'+c+'</b> is a real Linux command and you did nothing wrong. This lab only imitates the commands a scenario needs. They are in the Learn first table, or type <code>help</code>.'};
+ if((UNSIM.includes(c)||(!lap&&UNSIMPVE.includes(c)))&&!(c==='systemctl'&&!lap))return{err:`${c}: not simulated in this lab`,note:'<b>'+c+'</b> is a real Linux command and you did nothing wrong. This lab only imitates the commands a scenario needs. They are in the Learn first table, or type <code>help</code>.'};
  if(!lap&&c==='ip'&&/^r/.test(a[1]||''))return{out:`default via ${W.inst&&W.inst.cfg&&W.inst.node===W.host?W.inst.cfg.gw:'192.168.0.1'} dev vmbr0 proto kernel onlink\n192.168.0.0/24 dev vmbr0 proto kernel scope link src ${here.ip}`,note:'On a Proxmox server the address and the default route sit on the bridge <b>vmbr0</b>, not on the network card itself.'};
  if(!lap&&c==='cat'){
   const f=a[1],ifc=`auto lo\niface lo inet loopback\n\niface eno1 inet manual\n\nauto vmbr0\niface vmbr0 inet static\n        address ${here.ip}/24\n        gateway 192.168.0.1\n        bridge-ports eno1\n        bridge-stp off\n        bridge-fd 0`;
