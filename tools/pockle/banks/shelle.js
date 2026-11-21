@@ -111,6 +111,22 @@ try { var s = get("shelle.v1"); if (!s || typeof s !== "object") return []; var 
     {"u":"cases","q":"./deploy.sh says Permission denied. Fix it for every clone?","o":["git update-index --chmod=+x deploy.sh","rm deploy.sh","chmod 600 deploy.sh","sudo ./deploy.sh"],"a":0,"why":"Git only remembers executable or not."},
     {"u":"cases","q":"ssh ignores your key after copying the folder. Fix?","o":["ssh-keygen again","Delete known_hosts","chmod 600 ~/.ssh/id_ed25519","chmod 777 ~/.ssh"],"a":2,"why":"A key readable by others is refused."},
     {"u":"cases","q":"Which shows why ssh fails?","o":["ssh -h","ssh -q","ssh --why","ssh -v"],"a":3,"why":"The reason is usually in the first 20 lines."},
-    {"u":"cases","q":"Inside a Compose container, localhost means...","o":["The db service","The internet","That container itself","Your Mac"],"a":2,"why":"Reach other services by their service name, like db."}
+    {"u":"cases","q":"Inside a Compose container, localhost means...","o":["The db service","The internet","That container itself","Your Mac"],"a":2,"why":"Reach other services by their service name, like db."},
+    {"u":"nav","q":"Which flag lists one name per line?","code":"ls ___","o":["-a","-1","-l","-h"],"a":1,"why":"The digit one, not the letter l."},
+    {"u":"files","q":"Rename notes.txt to notes-old.txt.","o":["cp notes.txt notes-old.txt","rn notes.txt notes-old.txt","mv notes.txt notes-old.txt","rename notes.txt"],"a":2,"why":"Moving to a new name in the same folder is a rename."},
+    {"u":"files","q":"Which shows a file's permissions?","o":["ls -l deploy.sh","cat deploy.sh","chmod deploy.sh","which deploy.sh"],"a":0,"why":"The first column reads like -rwxr-xr-x."},
+    {"u":"files","q":"In -rwxr-xr-x, who may write?","o":["Everyone","The group","Nobody","Only the owner"],"a":3,"why":"rwx owner, r-x group, r-x others."},
+    {"u":"search","q":"Look before you delete. Run which first?","o":["rm logs/*.log","find logs -name \"*.log\" -mtime +7","find logs -name \"*.log\" -mtime +7 -delete","rm -rf logs"],"a":1,"why":"The same search without -delete only lists."},
+    {"u":"search","q":"What does -i do in grep -i error?","o":["Shows line numbers","Inverts the match","Ignores upper and lower case","Counts lines"],"a":2,"why":"-v inverts, -n numbers, -c counts."},
+    {"u":"procs","q":"Show every process with php in its name.","o":["ps aux | grep php","jobs php","lsof php","which php"],"a":0,"why":"The grep line itself shows up too."},
+    {"u":"net","q":"Without -c, how long does ping run?","o":["4 pings","10 pings","One minute","Until Ctrl+C"],"a":3,"why":"On a Mac and on Linux it keeps going."},
+    {"u":"net","q":"What does -z do in nc -zv?","o":["Checks the port without sending data","Compresses the traffic","Waits forever","Uses UDP"],"a":0,"why":"-v adds the line that says whether it worked."},
+    {"u":"remote","q":"Copy backup.tar.gz to /tmp on the server.","o":["scp admin@203.0.113.20:/tmp/ backup.tar.gz","scp backup.tar.gz admin@203.0.113.20:/tmp/","ssh backup.tar.gz admin@203.0.113.20","cp backup.tar.gz admin@203.0.113.20"],"a":1,"why":"Source first, destination second; the colon marks the server side."},
+    {"u":"remote","q":"What does -C add to ssh-keygen?","o":["Copies it to the server","Compresses the key","A comment, so you know whose key it is","Picks the cipher"],"a":2,"why":"-t picks the key type."},
+    {"u":"docker","q":"Stop the container named web.","o":["docker rm web","docker down web","docker exit web","docker stop web"],"a":3,"why":"stop ends it; rm removes it afterwards."},
+    {"u":"docker","q":"Which nginx version runs in web?","code":"docker exec web nginx ___","o":["-v","-t","-s stop","-c"],"a":0,"why":"-t tests the config, -s stop stops it."},
+    {"u":"compose","q":"Show this project's services and their state.","o":["docker compose ls","docker compose ps","docker ps compose","docker compose logs"],"a":1,"why":"compose ls lists projects, not services."},
+    {"u":"compose","q":"Remove the services AND their volumes.","o":["docker compose down","docker compose stop","docker compose down -v","docker compose rm"],"a":2,"why":"Without -v your database data stays."},
+    {"u":"ship","q":"Tag the image while building.","code":"docker build ___ it-dashboard .","o":["-n","--name","-p","-t"],"a":3,"why":"--name belongs to docker run."}
   ]
 });

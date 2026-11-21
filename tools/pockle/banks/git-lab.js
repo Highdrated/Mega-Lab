@@ -22,10 +22,11 @@ POCKET.register({
     {"id":"m09","title":"M-09 · Inbound"},
     {"id":"m10","title":"M-10 · File a flight plan"},
     {"id":"m11","title":"M-11 · Clone someone else's"},
+    {"id":"gd","title":"GitHub Desktop tours"},
     {"id":"cases","title":"Detective cases"}
   ],
   done: function (get) {
-try { var out = []; var ids = ["m00","m01","m02","m03","m04","m05","m06","m07","m08","m09","m10","m11"]; var s = get("gitlab.v1"); var n = s && typeof s === "object" ? Number(s.missionIdx) || 0 : 0; for (var i = 0; i < ids.length; i++) if (n > i) out.push(ids[i]); var c = get("gitlab.cases"); if (c && typeof c === "object" && ["detached","secret","rejected","ignored","markers"].every(function (k) { return c[k] && c[k].solved > 0; })) out.push("cases"); return out; } catch (e) { return []; }
+try { var out = []; var ids = ["m00","m01","m02","m03","m04","m05","m06","m07","m08","m09","m10","m11"]; var s = get("gitlab.v1"); var n = s && typeof s === "object" ? Number(s.missionIdx) || 0 : 0; for (var i = 0; i < ids.length; i++) if (n > i) out.push(ids[i]); if (s && s.toursDone && typeof s.toursDone === "object" && Object.keys(s.toursDone).some(function (k) { return s.toursDone[k]; })) out.push("gd"); var c = get("gitlab.cases"); if (c && typeof c === "object" && ["detached","secret","rejected","ignored","markers"].every(function (k) { return c[k] && c[k].solved > 0; })) out.push("cases"); return out; } catch (e) { return []; }
 },
   sample: {
     "gitlab.v1": "{\"v\":1,\"S\":{\"cwd\":\"~/Desktop/starfarer\",\"branch\":\"main\"},\"guided\":true,\"missionIdx\":5,\"stepIdx\":1,\"history\":[\"git checkout main\",\"cat manifest.txt\",\"git merge scenic-route\"],\"log\":[],\"day\":false,\"gd\":false,\"toursDone\":{},\"detective\":false,\"caseId\":null,\"K\":null,\"missions\":12,\"savedAt\":1761730000000}",
@@ -107,6 +108,21 @@ try { var out = []; var ids = ["m00","m01","m02","m03","m04","m05","m06","m07","
     {"u":"cases","q":"Push rejected with 'fetch first'. Safe fix?","o":["git pull --rebase, then git push","git reset --hard","Delete the remote","git push --force"],"a":0,"why":"--force would erase their commit."},
     {"u":"cases","q":"A file is in .gitignore but still shows as modified. Why?","o":["It was already tracked","Git is broken","The rule is wrong",".gitignore is hidden"],"a":0,"why":".gitignore only filters files git does not know yet."},
     {"u":"cases","q":"Stop tracking a file but keep it on disk.","o":["git restore secrets.env","git rm --cached secrets.env","rm secrets.env","git rm secrets.env"],"a":1,"why":"Then commit; the rule works from then on."},
-    {"u":"cases","q":"Does git add refuse a file full of conflict markers?","o":["Only when pushed","Only on main","No, it stages it without complaint","Yes, always"],"a":2,"why":"Check with git diff --check before committing a merge."}
+    {"u":"cases","q":"Does git add refuse a file full of conflict markers?","o":["Only when pushed","Only on main","No, it stages it without complaint","Yes, always"],"a":2,"why":"Check with git diff --check before committing a merge."},
+    {"u":"gd","q":"A brand-new repo in GitHub Desktop looks empty. Why?","o":["Your repos were deleted","It has no commits yet","The sync failed","You are signed out"],"a":1,"why":"Creating one switches you into it. The others are still in the repository list."},
+    {"u":"gd","q":"Which repositories does Desktop's list show?","o":["Every repo you own on GitHub","Only public ones","Ones added or cloned on this computer","Only starred ones"],"a":2,"why":"A repo that was never cloned here does not appear."},
+    {"u":"gd","q":"A repo you made in Desktop offers which button first?","o":["Push origin","Publish repository","Pull origin","Fetch origin"],"a":1,"why":"It is local only; GitHub does not know it exists yet."},
+    {"u":"gd","q":"You switch branch in Desktop. Your folder...","o":["Stays the same","Gets a copy of the other branch","Changes to that branch's files","Loses the other branch"],"a":2,"why":"Nothing is deleted; switching back brings the files back."},
+    {"u":"gd","q":"The Changes tab shows 0. The Commit button...","o":["Pushes instead","Needs a sign-in","Is broken","Has nothing to commit"],"a":3,"why":"The most common reason it looks dead."},
+    {"u":"gd","q":"A ticked file box in Desktop is the same as...","o":["git add","git push","git commit","git rm"],"a":0,"why":"Ticking is staging, made visual."},
+    {"u":"gd","q":"Six files edited, three belong in this commit. You...","o":["Make three branches","Commit all, then revert","Untick the other three","Delete the other three"],"a":2,"why":"Unticked files wait for a later commit."},
+    {"u":"gd","q":"In the diff pane, green lines were...","o":["Removed","Added","In conflict","Ignored"],"a":1,"why":"Red is removed. A changed line shows as both."},
+    {"u":"gd","q":"Why read the diff before committing?","o":["It catches the accidental edit or a password","Git requires it","It speeds up the push","It makes the commit smaller"],"a":0,"why":"Ten seconds before is cheaper than undoing a push."},
+    {"u":"gd","q":"The Summary box is the same as...","o":["The branch name","git log","git tag","-m \"...\" in git commit"],"a":3,"why":"Same field, friendlier packaging."},
+    {"u":"gd","q":"After Commit to main, does GitHub have it?","o":["Yes, straight away","After a minute","No, only this computer until you push","Only if main is protected"],"a":2,"why":"Commit saves locally; push sends it."},
+    {"u":"gd","q":"The sync button reads Pull origin. Meaning?","o":["You have commits to send","Someone pushed; download them","It was never published","Everything matches"],"a":1,"why":"Pull downloads and merges into your copy."},
+    {"u":"gd","q":"The sync button reads Fetch origin. Meaning?","o":["A merge conflict","Unpushed commits","Never published","Nothing to send; it checks for news"],"a":3,"why":"Fetch looks without changing your files."},
+    {"u":"gd","q":"Which habit keeps merge conflicts small?","o":["Pull before you start, push when you finish","Push once a week","Never pull","Work on main only"],"a":0,"why":"A small gap between copies means small conflicts."},
+    {"u":"gd","q":"The History tab lists commits...","o":["Oldest first","Newest at the top","By author","Only unpushed ones"],"a":1,"why":"Click one to see what it changed."}
   ]
 });

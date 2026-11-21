@@ -2,6 +2,16 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-21-3 · Modle · networking hub card icons (set of 4, needs her yes first)
+- file: `labs/img/modle/net-terminal.webp`, `net-hardware.webp`, `net-exam.webp`, `net-scenarios.webp`
+- why: the Modle networking hub is four dark text cards whose only pictures are typed symbols (`>_`, a box, a diamond, a warning sign); it reads as a placeholder next to the painted labs.
+- size: 320x320 each, transparent background
+- existing art to match: Modle has no painted art yet; its only character is the small golden-yellow cat drawn in simple shapes. The networking page is near-black (#14161b) with thin grey card borders, amber headings and mono type. Keep the set in the same painterly style as the queued Modle home hero (item 2026-11-20-9) so both fit.
+- positive: a single small object as a painterly fantasy icon, centred, slight three-quarter view (swap per file: a brass-framed glowing terminal slate with amber runes, a small rack-mounted network switch with softly glowing port lights and one patch cable, a wax-sealed scroll with an amber diamond seal, a cracked server rack lantern giving off a thin wisp of red smoke), soft brushwork, semi-realistic, warm amber glow against deep navy shadows, gold and violet accents, clean silhouette that reads at 48 px
+- negative: text, letters, numbers, logo, brand names, watermark, emoji style, flat vector, cartoon outlines, chibi, photo, background scenery, frame, border, drop shadow box
+- placing: would replace the `.app-glyph` div in each `a.app` card in `labs/modle/network/index.html`, styled in `labs/modle/network/net.css`; needs an `<img>` at about 40 px per card, so her yes first.
+- status: todo
+
 ## 2026-11-21-2 · Webble · path step icons (set of 5, needs her yes first)
 - file: `labs/img/junie/step-school.webp`, `step-target.webp`, `step-seal.webp`, `step-replay.webp`, `step-toolbox.webp`
 - why: the four "Your path" cards on Home and the Toolbox button use emoji (book, dartboard, arrows, toolbox) where the rest of the page has Junie, the painted axolotl; she dislikes emoji and these are the first thing under the title.

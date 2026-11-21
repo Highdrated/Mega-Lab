@@ -64,7 +64,7 @@ try:
             if lid not in ("junos-oops", "junle", "junos-lab") and got != want:
                 errs.append("unlock mismatch " + lid)
 
-        for key, val, lid, unit in (("meridian.v1", '{"les":{"l0-team":true,"l0-stack":true},"done":{}}', "meridian", "l0-stack"), ("syncle.v1", '{"v":1,"done":{"teamuser":{"recall":1},"paging":{"recall":1},"params":{"recall":1}}}', "syncle", "teams"), ("sleeple.v1", '{"done":{"fuel":true},"les":{}}', "sleeple", "fuel"), ("subnle-pocket-v1", '{"read":[6],"pathDone":[6]}', "subnle-pocket", "summary")):
+        for key, val, lid, unit in (("meridian.v1", '{"les":{"l0-team":true,"l0-stack":true},"done":{}}', "meridian", "l0-stack"), ("syncle.v1", '{"v":1,"done":{"teamuser":{"recall":1},"paging":{"recall":1},"params":{"recall":1}}}', "syncle", "teams"), ("sleeple.v1", '{"done":{"fuel":true},"les":{}}', "sleeple", "fuel"), ("subnle-pocket-v1", '{"read":[6],"pathDone":[6]}', "subnle-pocket", "summary"), ("gitlab.v1", '{"v":1,"missionIdx":0,"toursDone":{"diff":true}}', "git-lab", "gd")):
             pg.evaluate("([k,v])=>localStorage.setItem(k,v)", [key, val])
             pg.reload()
             if unit not in pg.evaluate("id=>LABSTATE.find(l=>l.b.id===id).units.map(u=>u.id)", lid):

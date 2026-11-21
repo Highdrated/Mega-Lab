@@ -11,24 +11,24 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. modle (20 Nov, morning)
-7. opsle (20 Nov, morning)
-8. codex (20 Nov, afternoon)
-9. mscodex (20 Nov, afternoon)
-10. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
-11. spelle (20 Nov, evening)
-12. shelle (20 Nov, evening)
-13. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
-14. proxle (21 Nov; walk scripts, 30 real-world variants in five scenarios)
-15. meridian (21 Nov; Windows Server module, the time ticket console)
-16. hexle (21 Nov; 144 typed drills against their hints and real-world variants)
-17. webble (21 Nov, second run; warm-up resume, motion checker messages)
-18. syncle (21 Nov, second run; all suites, Memory Corridor screens)
-19. git-lab (21 Nov, second run; all 91 mission steps, 40 real-world commands in free flight)
+6. mscodex (20 Nov, afternoon)
+7. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
+8. spelle (20 Nov, evening)
+9. shelle (20 Nov, evening)
+10. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
+11. proxle (21 Nov; walk scripts, 30 real-world variants in five scenarios)
+12. meridian (21 Nov; Windows Server module, the time ticket console)
+13. hexle (21 Nov; 144 typed drills against their hints and real-world variants)
+14. webble (21 Nov, second run; warm-up resume, motion checker messages)
+15. syncle (21 Nov, second run; all suites, Memory Corridor screens)
+16. git-lab (21 Nov, second run; all 91 mission steps, 40 real-world commands in free flight)
+17. modle (21 Nov, third run; 5465 generated puzzles run through real Python, networking hub)
+18. opsle (21 Nov, third run; all 18 mission stages checked by hand against real tools, rebuilt)
+19. codex (21 Nov, third run; Python, JavaScript, PHP, Git and Shell volumes read line by line)
 
-Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 21 Nov, both runs: still blocked, 403 from the proxy); the next labs that can run are taken instead.
+Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 21 Nov, all three runs: still blocked, 403 from the proxy); the next labs that can run are taken instead.
 
-## Pockle numbers (21 Nov, second run, 390x844, touch)
+## Pockle numbers (21 Nov, third run, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
@@ -47,19 +47,20 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Webble | 116 | 0 | 22 |
 | Spelle | 85 | 0 | 20 |
 | Rebble | 116 | 0 | 26 |
-| Git Lab | 75 | 0 | 29 |
-| Shelle | 81 | 0 | 21 |
+| Git Lab | 90 (15 added 21 Nov, third run) | 0 | 29 |
+| Shelle | 97 (16 added 21 Nov, third run) | 0 | 24 |
 | Syncle | 87 (31 added 20 Nov afternoon) | 0 | 11 |
 | Modle | 90 | 0 | 30 |
 
-- Total 2361 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 834 are open. The other 2111 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
+- Total 2392 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 837 are open. The other 2142 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
 - Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
 - No blank or dead-end states found. No horizontal scroll. No console errors. Sixteen of nineteen lab rows are greyed out on a first visit; their OPEN button links to the lab.
-- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 49, Meridian 63, Git Lab 75, Sleeple 78. Next run: Git Lab and Shelle (81), since Proxle and Meridian were filled this morning.
+- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 49, Meridian 63, Sleeple 78, Subnle Pocket 81, Spelle 85, Syncle 87. Next run: Proxle and Meridian again (their labs still have unused material: Proxle backup and cluster scenarios, Meridian Missions and Journal).
 - Proxle now has cards for the switch scenario (commit, root password, /32, default VLAN, trunk, MAC table, ssh) and the install basics (certificate warning, local-zfs, BIOS virtualization, ip route, resolv.conf). Meridian now covers Updates, reboots and time (Get-HotFix, RebootPending, the pair restart, the time hierarchy, VMware time sync, w32tm) and more of Roles (Spooler, Manual, WinRM, 3389, SoftwareDistribution, Get-Volume).
 - Meridian now has cards for its Basics module too (team and tickets: lines, incident, problem, change, priority; stack and console: layers, maintenance mode, PowerCLI, the ways in, CMDB). They unlock from `meridian.v1` when those lessons are read.
 - Already true from her earlier wishes: per-lab Today's reviews, Juniper rehearsals open without lab progress, Juniper Oopsies shown first, recall-first with hidden options, fluency labels (shaky, slow, fluent), one dragon per lab group.
+- Git Lab now has a GitHub Desktop unit (15 cards from the eight Desktop tours: empty new repo, the repo list, Publish, switching rewrites the folder, tick boxes are staging, reading the diff, Summary is -m, commit is not push, the four sync button labels, pull first push last, History). It unlocks as soon as one tour is finished. Shelle got 16 cards for steps that had none (ls -1, mv rename, reading -rwxr-xr-x, look before -delete, grep -i, ps aux | grep, ping without -c, nc -z, scp direction, ssh-keygen -C, docker stop, nginx -v, compose ps versus ls, down -v, docker build -t).
 - `tools/pockle/test_pockle.py` is flaky (expects a "think first" button on every card kind). `tools/pockle/test.py` is the one to trust; it now also checks that Meridian Basics and the new Syncle units unlock from lab progress.
 
 ## Pockle ideas (max five, waiting for her yes or no)
@@ -88,13 +89,15 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Junle: the scenario "split VC" and two sample outputs show the second member of a two-member Virtual Chassis as `Linecard`. Without preprovisioning a second member with priority 128 is normally `Backup`. Not checked against Juniper yet, so not changed.
 - Junle classic (`junle.html?classic=1`) has no phone layout: at 390 px the terminal text is cut off on the left and the drill panel squeezes it. The launcher opens the room instead. Layout decision.
 - Junle: the first wrong answer only says "rejected. retry."; the hint starts at the second miss. Design choice.
-- Codex: the Python, JavaScript, PHP, Hexle and Passle volumes were not yet read line by line for accuracy. Next time the Codex comes round, start there.
+- Codex: Python, JavaScript, PHP, Git and Shell volumes now read line by line (21 Nov, third run). Still to read: SQL, the Hexle and Passle rulebooks, Recipes and the Glossary. Small note left alone: Shell says `ssh -v` shows UNPROTECTED PRIVATE KEY FILE, which appears without -v too.
 - Git Lab: a mission step wants the exact commit message from the briefing; your own wording commits but the step stays put. `git branch <name>`, `git restore .`, `git restore --staged <file>`, `git merge --no-ff` and options after the ref (`git reset HEAD~1 --soft`) are answered with "unknown command" or a pathspec error although they are real. Adding commands to the simulator is a feature: her call.
 - Git Lab: after `git init` the lab always says branch `main`. Real git names the first branch `master` unless `init.defaultBranch` is set or you type `git init -b main`. One line in mission 0 could say so: her call.
 - Git Lab: `git add <file>` stages every change, not just that file (the simulator has one staged flag, no per-file index). Real commands still answered "unknown command" in free flight: `git status -s`, `git diff --staged`, `git commit -am`, `git branch -a`, `-v`, `-d`, `git tag`, `git show`, `git stash`, `git rm --cached`, `ls -la`, `git --version`, `git config`, `git help`. `pwd` prints `~/shop` where a real shell prints the full path. Simulator scope: her call.
 - Git Lab: `write <file> <text>` and `pr open` are lab-only commands (no real equivalents typed that way). On a phone the console shows only two lines. Detective mode was not played this run.
 - Modle: the Web, PHP and C++ buttons can be selected but hold no content yet (only a tooltip says so). The home shows "4 due" on a first visit before anything was practised. The subnet puzzle asks for the "smallest prefix" where it means the longest prefix that still fits.
-- Opsle: `labs/opsle.html` is out of step with its sources. A plain rebuild with `tools/opsle/build.js` changes about 250 lines, because the Pockle banks it bundles (junle, junos-lab, pyle-pocket) were edited after the last Opsle build. Not rebuilt, since the change is too large to check by eye. Its bank list also lacks proxle, meridian and syncle.
+- Opsle: its bank list lacks proxle, meridian and syncle. No mission needs them yet, so nothing is broken.
+- Modle networking: Terminal and Exam open a page that says "Not built yet ... next session's work", while the hub says "5 topics, 1 mastered" and the footer "MASTERED 01 / 05" on a first visit (both are fixed text, not progress). Building them is a feature; changing the fake numbers changes her mock-up. Her call.
+- Modle: the "4 due" badge on a first visit counts up to four new puzzles as due (`hud.js`, due + min(4, fresh)). Reads as reviews waiting when nothing was practised; wording choice.
 - Opsle: on a first visit all four missions are locked and there is nothing to do on the page.
 - Shelle: the prompt always reads `user@mbp ~ %`, also after `cd ~/Projects` and `cd station-site`. A real zsh prompt shows the folder. Fixing it means tracking the folder across steps: engine change, needs her yes.
 - Spelle: 22 of 25 example boxes in the brief are wider than the 290 px brief column and scroll sideways, so the first lesson's "name, argument" diagram is cut off. Widening the brief column changes the layout: her decision.
@@ -115,6 +118,30 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Spelle: the four Delve drills have prose hints, not runnable ones; on Delve III the wall follower runs past the 600-step limit without the key. Looks intended for a final challenge; left alone.
 
 ## Entries
+
+### 2026-11-21, third run
+
+Checked
+- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. Catch-up already done. LOG first line not HOLD. CDN still blocked (403), so pyle, sleeple, passle, seqle and rebble stay skipped; modle, opsle and codex taken instead.
+- Pockle: first visit and seeded visit at 390x844 with touch, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
+- Quick pass: 25 pages at 1440x900 and 390x844, plus the four Modle networking pages. No page errors, no sideways scroll. Only the two known Meridian 404s.
+- Service worker: 12 precache entries exist; 20 launcher paths exist. CACHE now workshop-v99.
+- Suites: proxle ALL OK, pockle test, sync and typed clean, opsle clean, junos-lab 6465 passed, no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
+- Deep pass: modle (5465 generated practice puzzles from all 13 categories evaluated by real Python 3 and compared with the lab's answers: all match; the answer checker; the networking hub and its four pages), opsle (all four missions, 18 stages, every expected output recomputed by hand, git pull and git init -b checked on git 2.43, seeded progress at both sizes), codex (five volumes read line by line, two claims tested on the command line).
+
+Fixed
+- Codex Git: `git pull` was said to make a merge commit when both sides committed. Current Git (2.33 and later, tested on 2.43) stops with "Need to specify how to reconcile divergent branches" unless you say `--no-rebase` or `--rebase`. The entry now says so, which also matches what Git Lab teaches.
+- Codex Python: "Four spaces, consistently, or Python refuses to run the file" read as if two spaces were an error. Four is the convention; what Python insists on is the same indentation for every line of a block (IndentationError otherwise). Checked with python3.
+- Opsle: the built page was out of step with its sources. Rebuilt; before and after give the same lock state for every stage, empty and seeded. Two hints added where a beginner gets stuck: `mkdir -p` for the first step of Ticket triage (plain mkdir fails when ~/megalab/ops does not exist yet), and that `await` needs an async function in a script loaded with defer (Site status board, Fill it with fetch).
+- Pockle: 15 Git Lab cards in a new GitHub Desktop unit (unlocks when a Desktop tour is finished) and 16 Shelle cards. Test now also checks that a finished Desktop tour unlocks that unit.
+
+Listed
+- One art item added to the ComfyUI queue (Modle networking hub icons, to replace typed symbols). 27 open.
+- Modle networking placeholders and fixed "1 mastered" text, the Modle "4 due" badge: see Open findings.
+
+Needs her decision
+- Pockle ideas 1 and 5 (try any lab, bring my progress).
+- Modle networking: build Terminal and Exam, or hide those two cards until they exist.
 
 ### 2026-11-21, second run
 
