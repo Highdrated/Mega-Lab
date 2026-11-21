@@ -96,6 +96,21 @@ POCKET.register({
     { u: 'roster', q: 'What does this print?', code: 'def bag_fee(bags, rate):\n    bags * rate\n\nprint(bag_fee(12, 3))', o: ['None', '36', '0'], a: 0, why: 'The result was never sent back with return.' },
     { u: 'roster', q: 'Calling a function before its def line gives...', o: ['None', 'NameError', 'It works anyway'], a: 1, why: 'Python reads top to bottom. The name does not exist yet.' },
     { u: 'roster', q: 'In def announce(platform):, what is platform?', o: ['The function name', 'A parameter, filled in at each call', 'A constant'], a: 1, why: 'Each call fills the parameter with a new value.' },
-    { u: 'roster', q: 'Code written after return inside a function...', o: ['never runs', 'runs last', 'runs first'], a: 0, why: 'The function stops at return.' }
+    { u: 'roster', q: 'Code written after return inside a function...', o: ['never runs', 'runs last', 'runs first'], a: 0, why: 'The function stops at return.' },
+    { u: 'arrivals', q: 'What happens when one line reads print("Hi" with no closing bracket?', o: ['Only that line is skipped', 'The whole file stops with a SyntaxError', 'It prints Hi anyway'], a: 1, why: 'Python checks the whole file first. One missing ) and nothing runs.' },
+    { u: 'tag', q: 'What does this print?', code: 'train = "Comet"\nprint("train")', o: ['Comet', 'train', 'NameError'], a: 1, why: 'Quotes make it text. Drop them to get the value.' },
+    { u: 'tag', q: 'Why does bag weight = 3 fail?', o: ['Names cannot hold a space', '3 needs quotes', 'weight is a reserved word'], a: 0, why: 'One name, no spaces: bag_weight = 3.' },
+    { u: 'tag', q: 'What does this print?', code: 'print("Train: ", "Comet")', o: ['Train: Comet', 'Train:  Comet, with two spaces', 'Train:Comet'], a: 1, why: 'Your space plus the one print() adds between values.' },
+    { u: 'loadsheet', q: 'Which symbol multiplies in Python?', o: ['x', '*', '·'], a: 1, why: 'Only * multiplies. x is just a letter.' },
+    { u: 'loadsheet', q: 'What does this print?', code: 'print(7 // 2)', o: ['3.5', '3', '1'], a: 1, why: '// keeps the whole groups only.' },
+    { u: 'clearance', q: 'Why does if weight = 40: fail?', o: ['= stores, the test needs ==', '40 needs quotes', 'if needs brackets'], a: 0, why: 'A test compares with ==. A single = is a SyntaxError there.' },
+    { u: 'clearance', q: 'Which is a real Python bool?', o: ['true', 'TRUE', 'True'], a: 2, why: 'Capital T, the rest lowercase: True and False.' },
+    { u: 'hold', q: 'A list has 3 items. What is its last index?', o: ['3', '2', '-3'], a: 1, why: 'Counting starts at 0, so the last is len - 1.' },
+    { u: 'hold', q: 'What goes wrong here?', code: 'for berth in ["A1", "A2"]:\nprint(berth)', o: ['IndentationError', 'It prints A1, A2', 'NameError'], a: 0, why: 'The block under for: must be indented.' },
+    { u: 'fuel', q: 'Which numbers does range(4) give?', o: ['1, 2, 3, 4', '0, 1, 2, 3', '0, 1, 2, 3, 4'], a: 1, why: 'Starts at 0, stops before 4. For 1 to 4 use range(1, 5).' },
+    { u: 'fuel', q: 'How many lines does this print?', code: 'total = 0\nfor leg in [4, 6, 2]:\n    total += leg\n    print(total)', o: ['1', '3', '12'], a: 1, why: 'The print is indented, so it runs every round: 4, 10, 12.' },
+    { u: 'trade', q: 'What happens with menu[tea], no quotes?', o: ['It gives the price', 'KeyError', 'NameError'], a: 2, why: 'Without quotes Python looks for a variable called tea.' },
+    { u: 'roster', q: 'What goes wrong here?', code: 'def fee():\n    print(2)\n\ntotal = fee() + 1', o: ['TypeError: None + 1', 'total is 3', 'total is 2'], a: 0, why: 'print shows the 2 but hands back None. Use return to calculate.' },
+    { u: 'roster', q: 'The last line is greet with no brackets. What happens?', o: ['greet runs', 'Nothing', 'NameError'], a: 1, why: 'Without () you only name the function, you do not call it.' }
   ]
 });

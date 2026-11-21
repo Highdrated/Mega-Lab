@@ -2,6 +2,16 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-21-2 · Webble · path step icons (set of 5, needs her yes first)
+- file: `labs/img/junie/step-school.webp`, `step-target.webp`, `step-seal.webp`, `step-replay.webp`, `step-toolbox.webp`
+- why: the four "Your path" cards on Home and the Toolbox button use emoji (book, dartboard, arrows, toolbox) where the rest of the page has Junie, the painted axolotl; she dislikes emoji and these are the first thing under the title.
+- size: 256x256 each, transparent background
+- existing art to match: Junie in `labs/img/junie/` (soft sage-green axolotl with pink gills, gentle painted shading, no hard outlines, cream page #f4f2ee, accent orange-red #ff4d1c).
+- positive: a single small object as a soft painted sticker, centred, slight three-quarter view (swap per file: an open book with a ribbon bookmark, a small round archery target with one arrow, a wax seal stamp pressing an orange-red seal, a looping ribbon arrow, a little wooden toolbox with brass corners), gentle storybook illustration, soft brush shading, warm light from the upper left, palette of sage green, cream and orange-red, clean silhouette that reads at 24 px
+- negative: text, letters, numbers, logo, watermark, emoji style, flat vector, thick black outlines, photo, background scenery, drop shadow box, clutter
+- placing: would replace the emoji in the `.how` cards (`labs/webble.html`, the `['📖','School',...]` list near "Your path", shown in `.how em`, font-size 20px) and the Toolbox button; needs a small wiring change to use `<img>` at about 28 px, so her yes first.
+- status: todo
+
 ## 2026-11-21-1 · Meridian · ticket queue banner (needs her yes first)
 - file: `labs/img/meridian/banner-tickets.webp`
 - why: the Tickets tab is two text rows on a plain cream page; it is where she spends her working time in Meridian and has no sense of the ship at all.

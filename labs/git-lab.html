@@ -1324,7 +1324,9 @@ function run(raw){
 
   if(/^git add( |$)/.test(c)){
     if(S.conflict){ S.conflict=null; S.staged=true; w('conflict marked resolved and staged','ok'); return after(c); }
-    const now=repoFiles(), snap=S.snapshots[S.head]||{};
+    const now=repoFiles(), snap=S.snapshots[S.head]||{}, rn=repoNode();
+    const miss=c.split(/\s+/).slice(2).map(x=>x.replace(/^["']|["']$/g,'').replace(/^\.\//,'').replace(/\/$/,'')).find(x=>x&&x!=='.'&&x!=='*'&&x[0]!=='-'&&!(rn&&rn.children[x])&&!(x in snap));
+    if(miss){ w("fatal: pathspec '"+esc(miss)+"' did not match any files",'err'); return; }
     if(sameMap(now,snap)){ w('nothing to add, working tree clean','dim'); return; }
     S.staged=true;
     const list=Object.keys(now).filter(k=>snap[k]!==now[k]&&!isIgnored(k));

@@ -4540,7 +4540,7 @@ function compare(test, T, U){
       const [y0, y1] = range(b);
       const still = Array.isArray(b[0][1]) ? b.every((p) => vdiff(p[1], b[0][1], m, 255) < .02) : (y1 - y0) / norm < .03;
       const pk = a.reduce((p, q) => vdiff(q[1], a[0][1], m, norm) > vdiff(p[1], a[0][1], m, norm) ? q : p, a[0])[1];
-      if (still) return {ok:false, why:`Your ${MLABEL[m]}${who} doesn't change at all. The target reaches ${fmt(pk, m)}.`};
+      if (still) return {ok:false, why: vdiff(b[0][1], xe, m, norm) <= tol ? `Your ${MLABEL[m]}${who} sits at ${fmt(b[0][1], m)} the whole time: it jumps there with no transition. The target moves there over time.` : `Your ${MLABEL[m]}${who} doesn't change at all. The target reaches ${fmt(pk, m)}.`};
       if (vdiff(xe, ye, m, norm) > tol) return {ok:false, why:`Your ${MLABEL[m]}${who} ends at ${fmt(ye, m)}. The target ends at ${fmt(xe, m)}.`};
       return {ok:false, why:`The ${MLABEL[m]}${who} gets there, but the in-between motion differs (${bestAt < 8 ? 'early part' : bestAt < 15 ? 'middle' : 'late part'}). Check the duration, delay and easing.`};
     }
@@ -4867,8 +4867,9 @@ let di = 0, dMiss = 0, dTimer = null;
 function goSchool(){
   S.view = 'school'; save(); renderChap();
   showView('school');
-  renderPills(); di = 0; dMiss = 0; clearTimeout(dTimer);
+  renderPills(); dMiss = 0; clearTimeout(dTimer);
   const c = chap();
+  di = S.school[c.id] ? drillsOf(c).length : 0;
   $('#school').innerHTML = `<div class="teach">${c.teach}<h3>🧰 Toolbox · this chapter</h3><p>Built-in tools you <b>call</b>, you don't build them. Learn the name, the shape and <b>when to reach for it</b>.</p>${toolCards(TOOLS[c.id] || [])}</div><div class="drills" id="drills"></div>`;
   $('#drills').addEventListener('click', (e) => { if (e.target.closest('.plink')) goStep(curStep()); });
   revealSchool();
@@ -4916,7 +4917,7 @@ function renderDrill(){
   const prog = pathBar() + `<div class="eyebrow">Warm-up · ${Math.min(di + 1, list.length)} / ${list.length}</div><div class="dprog">${list.map((_, i) => `<i class="${i < di ? 'ok' : i === di ? 'on' : ''}"></i>`).join('')}</div>`;
   if (di < list.length && list[di].kind === 'pattern') { renderPattern(list[di], prog); return; }
   if (di >= list.length) {
-    S.school[c.id] = true; save(); renderPills(); sound('seal');
+    if (!S.school[c.id]) { S.school[c.id] = true; save(); renderPills(); sound('seal'); }
     box.innerHTML = prog + `<div class="dcard"><div class="eyebrow">Warm-up done</div><div class="q" style="font-family:var(--serif);font-size:34px;line-height:1.1">Ready to build. ✦</div><p style="color:var(--ink2);line-height:1.6">${c.targets.length} targets wait in this chapter. Start in <b>Normal</b>, then come back for <b>Hard</b> and <b>Expert</b>.</p><div class="row"><button class="btn acc" id="goT">Start target 1 →</button><button class="btn ghost" id="again">Warm up again</button></div></div>`;
     $('#goT').onclick = () => goTarget(0); $('#again').onclick = () => { di = 0; renderDrill(); };
     return;

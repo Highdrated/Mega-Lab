@@ -11,24 +11,24 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. webble (20 Nov)
-7. syncle (20 Nov)
-8. git-lab (20 Nov, morning)
-9. modle (20 Nov, morning)
-10. opsle (20 Nov, morning)
-11. codex (20 Nov, afternoon)
-12. mscodex (20 Nov, afternoon)
-13. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
-14. spelle (20 Nov, evening)
-15. shelle (20 Nov, evening)
-16. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
-17. proxle (21 Nov; walk scripts, 30 real-world variants in five scenarios)
-18. meridian (21 Nov; Windows Server module, the time ticket console)
-19. hexle (21 Nov; 144 typed drills against their hints and real-world variants)
+6. modle (20 Nov, morning)
+7. opsle (20 Nov, morning)
+8. codex (20 Nov, afternoon)
+9. mscodex (20 Nov, afternoon)
+10. junle (20 Nov, afternoon; the classic terminal this time, the room was 19 Nov)
+11. spelle (20 Nov, evening)
+12. shelle (20 Nov, evening)
+13. junos-lab (20 Nov, evening; LACP, RSTP and VLAN scenarios, three field guides)
+14. proxle (21 Nov; walk scripts, 30 real-world variants in five scenarios)
+15. meridian (21 Nov; Windows Server module, the time ticket console)
+16. hexle (21 Nov; 144 typed drills against their hints and real-world variants)
+17. webble (21 Nov, second run; warm-up resume, motion checker messages)
+18. syncle (21 Nov, second run; all suites, Memory Corridor screens)
+19. git-lab (21 Nov, second run; all 91 mission steps, 40 real-world commands in free flight)
 
-Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 21 Nov: still blocked, 403 from the proxy); the next labs that can run are taken instead.
+Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 21 Nov, both runs: still blocked, 403 from the proxy); the next labs that can run are taken instead.
 
-## Pockle numbers (21 Nov, 390x844, touch)
+## Pockle numbers (21 Nov, second run, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
@@ -37,10 +37,10 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Junos Lab | 155 | 155 | 155 |
 | Proxle | 49 (15 added 21 Nov) | 0 | 15 |
 | Meridian | 63 (14 added 21 Nov) | 0 | 14 |
-| Subnle Pocket | 66 | 0 | 25 |
+| Subnle Pocket | 81 (15 added 21 Nov, second run) | 0 | 32 |
 | Pyle | 143 | 0 | 29 |
 | Pyle Pocket | 694 | 0 | 226 |
-| Sleeple | 63 | 0 | 24 |
+| Sleeple | 78 (15 added 21 Nov, second run) | 0 | 30 |
 | Passle | 155 | 0 | 40 |
 | Seqle | 88 | 0 | 29 |
 | Hexle | 110 | 0 | 10 |
@@ -52,11 +52,11 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Syncle | 87 (31 added 20 Nov afternoon) | 0 | 11 |
 | Modle | 90 | 0 | 30 |
 
-- Total 2331 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 821 are open. The other 2081 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
+- Total 2361 cards. A first visit on a phone reaches 250, all Juniper; with sample progress in every lab 834 are open. The other 2111 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
 - Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
 - No blank or dead-end states found. No horizontal scroll. No console errors. Sixteen of nineteen lab rows are greyed out on a first visit; their OPEN button links to the lab.
-- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 49, Sleeple 63, Meridian 63, Subnle Pocket 66. Next run: Sleeple and Subnle Pocket (both need reading only; Sleeple's runtime is on the CDN).
+- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 49, Meridian 63, Git Lab 75, Sleeple 78. Next run: Git Lab and Shelle (81), since Proxle and Meridian were filled this morning.
 - Proxle now has cards for the switch scenario (commit, root password, /32, default VLAN, trunk, MAC table, ssh) and the install basics (certificate warning, local-zfs, BIOS virtualization, ip route, resolv.conf). Meridian now covers Updates, reboots and time (Get-HotFix, RebootPending, the pair restart, the time hierarchy, VMware time sync, w32tm) and more of Roles (Spooler, Manual, WinRM, 3389, SoftwareDistribution, Get-Volume).
 - Meridian now has cards for its Basics module too (team and tickets: lines, incident, problem, change, priority; stack and console: layers, maintenance mode, PowerCLI, the ways in, CMDB). They unlock from `meridian.v1` when those lessons are read.
 - Already true from her earlier wishes: per-lab Today's reviews, Juniper rehearsals open without lab progress, Juniper Oopsies shown first, recall-first with hidden options, fluency labels (shaky, slow, fluent), one dragon per lab group.
@@ -91,6 +91,7 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Codex: the Python, JavaScript, PHP, Hexle and Passle volumes were not yet read line by line for accuracy. Next time the Codex comes round, start there.
 - Git Lab: a mission step wants the exact commit message from the briefing; your own wording commits but the step stays put. `git branch <name>`, `git restore .`, `git restore --staged <file>`, `git merge --no-ff` and options after the ref (`git reset HEAD~1 --soft`) are answered with "unknown command" or a pathspec error although they are real. Adding commands to the simulator is a feature: her call.
 - Git Lab: after `git init` the lab always says branch `main`. Real git names the first branch `master` unless `init.defaultBranch` is set or you type `git init -b main`. One line in mission 0 could say so: her call.
+- Git Lab: `git add <file>` stages every change, not just that file (the simulator has one staged flag, no per-file index). Real commands still answered "unknown command" in free flight: `git status -s`, `git diff --staged`, `git commit -am`, `git branch -a`, `-v`, `-d`, `git tag`, `git show`, `git stash`, `git rm --cached`, `ls -la`, `git --version`, `git config`, `git help`. `pwd` prints `~/shop` where a real shell prints the full path. Simulator scope: her call.
 - Git Lab: `write <file> <text>` and `pr open` are lab-only commands (no real equivalents typed that way). On a phone the console shows only two lines. Detective mode was not played this run.
 - Modle: the Web, PHP and C++ buttons can be selected but hold no content yet (only a tooltip says so). The home shows "4 due" on a first visit before anything was practised. The subnet puzzle asks for the "smallest prefix" where it means the longest prefix that still fits.
 - Opsle: `labs/opsle.html` is out of step with its sources. A plain rebuild with `tools/opsle/build.js` changes about 250 lines, because the Pockle banks it bundles (junle, junos-lab, pyle-pocket) were edited after the last Opsle build. Not rebuilt, since the change is too large to check by eye. Its bank list also lacks proxle, meridian and syncle.
@@ -101,7 +102,6 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Hexle: at 1440 px several labels are cut with an ellipsis ("Target 1 / 43" shows as "TARGE…", plot titles 04, 07, 12, Project VI, the "From memory" button). Fixing it means resizing the bar: look change.
 - Hexle: target 1 step 9 "Close every tag" is already green on the starter and on empty input. Two drills show the answer as placeholder text (`function tick() {}`, `function render() {}`). Tourney (flexbox and grid) is open on a first visit, before any CSS is taught. Design choices, her call.
 - Webble: between about 760 and 1217 px wide the header runs off the right edge (toolbox, sound and export buttons). The Work screen at phone width is cramped. Both need a layout decision.
-- Webble: the warm-up restarts at 1/10 after a reload even when it was finished. A snap with no transition is reported as "opacity doesn't change at all", which misleads.
 - Syncle: the "count" recall accepts a bare `3` (this is the one failing case in `tools/syncle/test.js`). The "connect" recall asks for "without the welcome text" but passes without `-NoWelcome`. Tightening either changes what the drill demands: her call.
 - Syncle: several Graph commands take the user as a bare first word (`Update-MgUser x`); the real module wants `-UserId`. Not changed.
 - Junle room: the first ticket visitor (Veylin) slides in a second or two after sitting down and covers an app that was just opened (seen with Rehearse and Terminal on a first visit). Not sure it is a bug; the story may want this.
@@ -115,6 +115,31 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Spelle: the four Delve drills have prose hints, not runnable ones; on Delve III the wall follower runs past the 600-step limit without the key. Looks intended for a final challenge; left alone.
 
 ## Entries
+
+### 2026-11-21, second run
+
+Checked
+- Setup: push access works (dry run accepted); remote renamed to Highdrated/Mega-Lab. Catch-up already done. LOG first line not HOLD. CDN still blocked (403), so pyle, sleeple, passle, seqle and rebble stay skipped.
+- Pockle: first visit and seeded visit at 390x844 with touch, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
+- Quick pass: 25 pages at 1440x900 and 390x844. No page errors, no sideways scroll. Only the two known Meridian 404s.
+- Service worker: 12 precache entries exist; 20 launcher paths exist. CACHE now workshop-v98.
+- Suites: proxle ALL OK, pockle test, sync and typed clean, opsle clean, junos-lab 6465 passed, no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
+- Deep pass: webble (School, warm-up across a reload, the motion checker with a snapped and a still answer), syncle (screens and every suite; no new findings), git-lab (all 12 missions, 91 steps walked by script after the fix; 40 real-world commands in free flight).
+
+Fixed
+- Webble: a finished warm-up started again at 1 / 10 after a reload or when coming back to School. It now opens on "Warm-up done", with "Warm up again" for another round, and the seal sound only plays the first time.
+- Webble: a target answered with no transition (the value jumps straight to the end) was told "doesn't change at all". It now says the value sits at the end the whole time and jumps there with no transition.
+- Git Lab: `git add a.txt` for a file that does not exist answered "staged: b.txt" and staged the other file. It now gives git's real error, `fatal: pathspec 'a.txt' did not match any files`, and stages nothing. `git add .`, `-A`, existing files and folders work as before.
+- Pockle: 15 Sleeple cards (the "common mistakes" from each journey's lessons) and 15 Subnle Pocket cards (masks, block sizes, broadcast, sizing, splitting, a summary, the 10/8 range). Test now also checks that Sleeple and Subnle Pocket progress unlock their units.
+
+Listed
+- One art item added to the ComfyUI queue (Webble path step icons, to replace emoji). 26 open.
+- Git Lab simulator gaps and per-file staging: see Open findings.
+- Syncle Graph `-UserId`: still not verified against Microsoft Learn (search did not settle whether the parameter is positional), left as is.
+
+Needs her decision
+- Pockle ideas 1 and 5 (try any lab, bring my progress).
+- Git Lab: add the common real commands above to the simulator, yes or no.
 
 ### 2026-11-21
 

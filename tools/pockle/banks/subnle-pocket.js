@@ -100,6 +100,21 @@ POCKET.register({
     { u: "ranges", q: "Wildcard mask for /26?", o: ["0.0.0.63", "255.255.255.192", "0.0.0.64", "0.0.0.192"], a: 0, why: "255 - 192 = 63." },
     { u: "ranges", q: "Who uses wildcard masks?", o: ["Junos static routes", "LLDP", "DHCP", "Cisco ACLs and OSPF"], a: 3, why: "Junos just uses the /prefix." },
     { u: "ranges", q: "Is 192.168.200.5 private?", o: ["Only with NAT", "No", "Only on Wi-Fi", "Yes"], a: 3, why: "192.168/16 is RFC 1918." },
-    { u: "ranges", q: "Wildcard mask for /24?", o: ["255.255.255.0", "0.0.255.255", "0.0.0.255", "0.0.0.254"], a: 2, why: "255 - each mask octet." }
+    { u: "ranges", q: "Wildcard mask for /24?", o: ["255.255.255.0", "0.0.255.255", "0.0.0.255", "0.0.0.254"], a: 2, why: "255 - each mask octet." },
+    { u: "bits", q: "Convert this octet to decimal.", code: "01111111", o: ["127", "254", "128", "63"], a: 0, why: "Everything but the 128: 255 - 128 = 127." },
+    { u: "bits", q: "Write 64 in binary.", o: ["01000000", "00100000", "10000000", "01100100"], a: 0, why: "64 is the second switch from the left." },
+    { u: "prefix", q: "What is the mask for /25?", o: ["255.255.255.0", "255.255.255.128", "255.255.255.192", "255.255.255.25"], a: 1, why: "1 one in the 4th octet: 128." },
+    { u: "prefix", q: "What is the mask for /30?", o: ["255.255.255.252", "255.255.255.248", "255.255.255.254", "255.255.255.240"], a: 0, why: "6 ones in the 4th octet: 252." },
+    { u: "prefix", q: "What is the mask for /16?", o: ["255.0.0.0", "255.255.255.0", "255.255.0.0", "255.255.16.0"], a: 2, why: "Two full octets of ones." },
+    { u: "block", q: "Block size for /29?", o: ["4", "29", "16", "8"], a: 3, why: "Mask 248: 256 - 248 = 8." },
+    { u: "block", q: "Address .200 on a /26 sits in which block?", o: ["128 - 191", "192 - 255", "200 - 263", "160 - 223"], a: 1, why: "Block 64: 0, 64, 128, 192. 200 is in 192 - 255." },
+    { u: "netbc", q: "Broadcast of 10.0.0.37/29?", o: ["10.0.0.40", "10.0.0.255", "10.0.0.39", "10.0.0.38"], a: 2, why: "Block 8: 37 sits in 32 - 39." },
+    { u: "netbc", q: "Network address of 172.16.9.200/22?", o: ["172.16.9.0", "172.16.8.0", "172.16.0.0", "172.16.4.0"], a: 1, why: "Block 4 in the 3rd octet: 9 sits in 8 - 11." },
+    { u: "sizing", q: "25 devices. Smallest prefix?", o: ["/28", "/26", "/27", "/25"], a: 2, why: "/28 = 14, too few. /27 = 30." },
+    { u: "sizing", q: "500 devices. Smallest prefix?", o: ["/23", "/22", "/24", "/21"], a: 0, why: "/24 = 254, too few. /23 = 510." },
+    { u: "split", q: "A /24 split into /26s. How many?", o: ["2", "4", "6", "26"], a: 1, why: "2 borrowed bits: 2^2 = 4." },
+    { u: "split", q: "A /24 split into /30s. How many?", o: ["30", "32", "64", "128"], a: 2, why: "6 borrowed bits: 2^6 = 64." },
+    { u: "summary", q: "Summary for 10.2.0.0/24 and 10.2.1.0/24?", o: ["10.2.0.0/23", "10.2.1.0/23", "10.2.0.0/22", "10.2.0.0/16"], a: 0, why: "2 networks: /24 - 1 = /23, and 0 is even." },
+    { u: "ranges", q: "Is 10.250.1.1 private?", o: ["No, only 10.0 to 10.10 is", "Only with NAT", "Yes, all of 10.0.0.0/8 is", "No, it is CGNAT"], a: 2, why: "10/8 is the biggest RFC 1918 range." }
   ]
 });
