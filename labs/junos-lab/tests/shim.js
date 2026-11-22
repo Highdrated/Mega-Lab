@@ -134,7 +134,7 @@ var document = {
   addEventListener(){}, removeEventListener(){},
   body: __makeEl("body"),
 };
-var window = { innerWidth: 1200, innerHeight: 800 };
+var window = { innerWidth: 1200, innerHeight: 800, _l: {}, addEventListener(t, f){ (this._l[t] = this._l[t] || []).push(f); }, removeEventListener(){} };
 var localStorage = {
   _m: {},
   getItem(k){ return this._m[k] === undefined ? null : this._m[k]; },

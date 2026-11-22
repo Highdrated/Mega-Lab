@@ -2849,6 +2849,7 @@ function renderProtoGuide(box, g){
   protoTimer = setInterval(function(){
     var tp = document.getElementById("tab-proto");
     if(!tp || tp.style.display === "none"){ protoStopTimer(); return; }
+    if(document.hidden || (typeof tabletEl !== "undefined" && tabletEl && !tabletEl.classList.contains("open"))) return;
     refresh(false);
   }, 1200);
   }

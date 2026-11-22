@@ -156,6 +156,11 @@ async def main():
         if not await pg.evaluate("!!LAB.W().seen.guinet") or '192.168.0.201/24' not in await pg.evaluate("document.querySelectorAll('.pvenet')[2].innerText"): print('GUI FAIL Network tab shows the address on vmbr0'); ok=False
         if await pg.evaluate("(e=>e.scrollWidth>e.clientWidth+1)(document.querySelector('.page'))"): print('GUI FAIL network table overflows the browser window'); ok=False
         if os.environ.get('SHOT4'): await pg.screenshot(path=os.environ['SHOT4']+'-6.png')
+        await pg.evaluate("LAB.load('bkb')")
+        for c in ['ssh root@192.168.0.201','yes','pw']: await said(c)
+        if 'vzdump-qemu-101-2026_11_18-02_00_04.vma.zst' not in await said('ls /mnt/pve/backup-a/dump'): print('VARIANT FAIL the dump folder vzdump names shows the backup'); ok=False
+        if 'dump' not in await said('ls /mnt/pve/backup-a'): print('VARIANT FAIL backup storage mount shows dump'); ok=False
+        if 'No such file' not in await said('ls /mnt/pve/nas-west/dump'): print('VARIANT FAIL images-only storage has no dump folder'); ok=False
         txt=await pg.evaluate("document.getElementById('term').innerText")
         print(txt[-900:])
         print('errors',errs,'ALL OK' if ok and not errs else 'FAIL');await b.close()

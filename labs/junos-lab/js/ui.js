@@ -1877,9 +1877,16 @@ let autosaveTimer = null;
 function scheduleAutosave(){
   if(autosaveTimer) clearTimeout(autosaveTimer);
   autosaveTimer = setTimeout(() => {
+    autosaveTimer = null;
     try{ localStorage.setItem(LS_AUTOSAVE, JSON.stringify(serializeLab())); }catch(e){}
   }, 800);
 }
+window.addEventListener("pagehide", () => {
+  if(!autosaveTimer) return;
+  clearTimeout(autosaveTimer);
+  autosaveTimer = null;
+  try{ localStorage.setItem(LS_AUTOSAVE, JSON.stringify(serializeLab())); }catch(e){}
+});
 document.getElementById("save").onclick = () => {
   const blob = new Blob([JSON.stringify(serializeLab(), null, 2)], { type: "application/json" });
   const a = document.createElement("a");
@@ -2252,6 +2259,7 @@ cliInput.addEventListener("keydown", (e) => {
     refreshCliView();
   }
   if(e.key === "Enter"){
+    if(dev.cli.busy){ e.preventDefault(); return; }
     const raw = cliInput.value;
     cliInput.value = "";
     const masked = dev.cli.stage === "newpass" || dev.cli.stage === "retype";

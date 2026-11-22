@@ -2,6 +2,16 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-22-1 · Proxle · Create the cluster scene
+- file: `labs/img/proxle/create.jpg`
+- why: Create the cluster shows `cluster.jpg`, a hall where every stone is lit, while the story is a cluster of one node; the scene says the opposite of the lesson.
+- size: 1400x583, no transparency (JPEG like the other Proxle scenes)
+- existing art to match: Proxle's scenes are painted interiors of an ancient temple-like hall: tall dark teal stone pillars with carved knotwork, each with a glowing cyan crystal slot at its heart, warm amber sunlight and candle glow, a sandstone domed ceiling, reflective stone floor, cinematic low camera, soft volumetric light. `ready.jpg` shows one stone awake; `cluster.jpg` shows a ring of them all lit.
+- positive: wide painted fantasy interior, a circular stone hall with a ring of tall dark teal carved pillars, only ONE pillar in front glows bright cyan from a crystal slot, with thin faint threads of cyan light reaching from it toward two dark unlit pillars waiting beside it, the rest of the ring in shadow, warm amber light from a high window, candle flames, sandstone dome, polished stone floor reflecting the single glow, low cinematic camera, soft volumetric haze, rich detail, semi-realistic painterly style
+- negative: text, letters, runes that read as words, logo, people, characters, modern computers, cables, cartoon, flat vector, emoji, blurry, oversaturated, every pillar lit, watermark, frame
+- placing: in `labs/proxle.html`, function `scenePick`, the map entry `create:['cluster', ...]` would become `create:['create', ...]` so the banner (`#scene`, layers `i` with `backgroundImage`) loads `img/proxle/create.jpg`. One-word code change when the image is placed.
+- status: todo
+
 ## 2026-11-21-3 · Modle · networking hub card icons (set of 4, needs her yes first)
 - file: `labs/img/modle/net-terminal.webp`, `net-hardware.webp`, `net-exam.webp`, `net-scenarios.webp`
 - why: the Modle networking hub is four dark text cards whose only pictures are typed symbols (`>_`, a box, a diamond, a warning sign); it reads as a placeholder next to the painted labs.

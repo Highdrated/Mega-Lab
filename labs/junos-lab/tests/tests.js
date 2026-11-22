@@ -4798,6 +4798,38 @@ loadLab(JSON.parse(JSON.stringify(serializeLab())));
 const swl = Object.values(devices).find(d => d.type === "switch");
 ok(upl.length > 0 && upl.every(id => swl.ports.some(p => p.id === id)), "Tn uplink port names survive save and load");
 
+/* ---------- T-nightly 22 Nov: no command runs while a real-mode commit is busy, a pending autosave is written on page close ---------- */
+wipeLab();
+let swb = makeSwitch(0, 0, 48, "EX4300-48T");
+openCli(swb);
+setRealMode(true);
+cli(swb, "configure");
+cli(swb, "set system host-name busy-test");
+const kd = cliInput.listeners.keydown[0];
+cliInput.value = "commit";
+kd({ key: "Enter", preventDefault(){} });
+ok(devices[swb].cli.busy === true, "Tn real-mode commit keeps the CLI busy until commit complete");
+const logLen = devices[swb].cli.log.length;
+cliInput.value = "show | compare";
+kd({ key: "Enter", preventDefault(){} });
+ok(devices[swb].cli.log.length === logLen && cliInput.value === "show | compare", "Tn Enter while the commit is busy runs nothing and keeps the typed line");
+__fireTimers();
+ok(devices[swb].cli.busy === false && devices[swb].cli.log.some(l => /commit complete/.test(l.text)), "Tn the commit finishes with commit complete");
+kd({ key: "Enter", preventDefault(){} });
+ok(devices[swb].cli.log.length > logLen + 1, "Tn after commit complete the typed line runs");
+setRealMode(false);
+cliInput.value = "";
+localStorage.removeItem(LS_AUTOSAVE);
+__timers.length = 0;
+scheduleAutosave();
+ok(localStorage.getItem(LS_AUTOSAVE) === null, "Tn autosave waits before writing");
+(window._l.pagehide || []).forEach(f => f());
+ok(!!localStorage.getItem(LS_AUTOSAVE), "Tn a pending autosave is written when the page closes");
+localStorage.removeItem(LS_AUTOSAVE);
+(window._l.pagehide || []).forEach(f => f());
+ok(localStorage.getItem(LS_AUTOSAVE) === null, "Tn page close writes nothing when no autosave is pending");
+wipeLab();
+
 console.log("\n==== RESULTS: " + __PASS + " passed, " + __FAIL + " failed ====");
 
 
