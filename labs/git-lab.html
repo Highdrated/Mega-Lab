@@ -1178,7 +1178,7 @@ function addCommit(label,type,extra){
 }
 
 function run(raw){
-  const c=raw.trim(); if(!c) return;
+  const c=raw.trim().replace(/("[^"]*"|'[^']*')|\s+/g,(m,q)=>q||' '); if(!c) return;
   history.push(c); histPos=history.length;
   if(detective){
     w('<span class="cmd">'+esc(CASE_DIRS[curCase.id]||'~')+' &#9656; '+esc(c)+'</span>');
@@ -1288,6 +1288,7 @@ function run(raw){
 
   if(c==='git status'){
     w('On branch <b>'+S.head+'</b>','dim');
+    if(!S.commits.length) w('No commits yet','dim');
     if(S.conflict){
       w('You have unmerged paths.','err');
       w('  both modified:   '+esc(S.conflict.file),'err');
@@ -1297,7 +1298,7 @@ function run(raw){
       const changed=Object.keys(now).filter(k=>snap[k]!==now[k]&&!isIgnored(k));
       const deleted=Object.keys(snap).filter(k=>!(k in now));
       const ignoredNow=Object.keys(now).filter(k=>isIgnored(k));
-      if(!changed.length&&!deleted.length){ w('nothing to commit, working tree clean','dim'); }
+      if(!changed.length&&!deleted.length){ w(S.commits.length?'nothing to commit, working tree clean':'nothing to commit (create/copy files and use "git add" to track)','dim'); }
       else if(S.staged){
         w('Changes to be committed:','ok');
         changed.forEach(k=>w('  '+(k in snap?'modified:   ':'new file:   ')+esc(k),'ok'));

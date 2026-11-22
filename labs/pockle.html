@@ -1272,7 +1272,22 @@ POCKET.register({
     { u: "split", q: "A /24 split into /26s. How many?", o: ["2", "4", "6", "26"], a: 1, why: "2 borrowed bits: 2^2 = 4." },
     { u: "split", q: "A /24 split into /30s. How many?", o: ["30", "32", "64", "128"], a: 2, why: "6 borrowed bits: 2^6 = 64." },
     { u: "summary", q: "Summary for 10.2.0.0/24 and 10.2.1.0/24?", o: ["10.2.0.0/23", "10.2.1.0/23", "10.2.0.0/22", "10.2.0.0/16"], a: 0, why: "2 networks: /24 - 1 = /23, and 0 is even." },
-    { u: "ranges", q: "Is 10.250.1.1 private?", o: ["No, only 10.0 to 10.10 is", "Only with NAT", "Yes, all of 10.0.0.0/8 is", "No, it is CGNAT"], a: 2, why: "10/8 is the biggest RFC 1918 range." }
+    { u: "ranges", q: "Is 10.250.1.1 private?", o: ["No, only 10.0 to 10.10 is", "Only with NAT", "Yes, all of 10.0.0.0/8 is", "No, it is CGNAT"], a: 2, why: "10/8 is the biggest RFC 1918 range." },
+    {"u": "bits", "q": "Convert 172 to binary.", "o": ["10110100", "10101100", "10101010", "11001100"], "a": 1, "why": "128 + 32 + 8 + 4 = 172."},
+    {"u": "bits", "q": "Convert this octet to decimal.", "code": "11111100", "o": ["248", "254", "252", "240"], "a": 2, "why": "255 minus the last two bits (2 + 1) = 252."},
+    {"u": "prefix", "q": "What prefix is 255.255.255.248?", "o": ["/29", "/28", "/30", "/27"], "a": 0, "why": "24 + 5 ones (248 = 11111000) = /29."},
+    {"u": "prefix", "q": "What prefix is 255.255.240.0?", "o": ["/16", "/24", "/22", "/20"], "a": 3, "why": "16 + 4 ones (240 = 11110000) = /20."},
+    {"u": "block", "q": "Address .100 on a /28 sits in which block?", "o": ["96 - 111", "100 - 115", "80 - 95", "96 - 127"], "a": 0, "why": "Block 16: 96 is the last multiple of 16 below 100."},
+    {"u": "block", "q": "Block size in the 3rd octet for /21 (mask 248)?", "o": ["4", "16", "8", "21"], "a": 2, "why": "256 - 248 = 8."},
+    {"u": "netbc", "q": "Broadcast of 192.168.50.130/25?", "o": ["192.168.50.127", "192.168.50.255", "192.168.50.131", "192.168.51.0"], "a": 1, "why": "Block 128: 130 sits in 128 - 255."},
+    {"u": "netbc", "q": "Network address of 10.10.10.77/28?", "o": ["10.10.10.64", "10.10.10.72", "10.10.10.0", "10.10.10.76"], "a": 0, "why": "Block 16: 77 sits in 64 - 79."},
+    {"u": "netbc", "q": "Last usable host in 172.16.0.0/22?", "o": ["172.16.0.254", "172.16.3.255", "172.16.4.254", "172.16.3.254"], "a": 3, "why": "Block 4 in the 3rd octet: 0 to 3. Broadcast .3.255, so .3.254."},
+    {"u": "sizing", "q": "1000 devices. Smallest prefix?", "o": ["/23", "/22", "/21", "/24"], "a": 1, "why": "/23 = 510, too few. /22 = 1022."},
+    {"u": "split", "q": "A /16 split into /24s. How many?", "o": ["16", "24", "128", "256"], "a": 3, "why": "8 borrowed bits: 2^8 = 256."},
+    {"u": "split", "q": "10.0.0.0/24 cut into /27s. Network of subnet #4?", "o": ["10.0.0.128", "10.0.0.96", "10.0.0.64", "10.0.0.4"], "a": 1, "why": "Block 32: #1 .0, #2 .32, #3 .64, #4 .96."},
+    {"u": "summary", "q": "Summary for 10.4.4.0/24 to 10.4.7.0/24?", "o": ["10.4.0.0/21", "10.4.4.0/23", "10.4.4.0/22", "10.4.7.0/22"], "a": 2, "why": "4 networks: /24 - 2 = /22, and 4 is a multiple of 4."},
+    {"u": "ranges", "q": "Is 172.32.0.1 private?", "o": ["Yes, all of 172 is", "No, private is 172.16 to 172.31", "Only behind NAT", "Yes, it is CGNAT"], "a": 1, "why": "The RFC 1918 range is 172.16.0.0/12: 172.16 up to 172.31."},
+    {"u": "ranges", "q": "Wildcard mask for /28?", "o": ["0.0.0.15", "0.0.0.16", "255.255.255.240", "0.0.0.31"], "a": 0, "why": "255 - 240 = 15: the wildcard is the mask flipped."}
   ]
 });
 
@@ -1923,7 +1938,24 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u":"winter","q":"How many rows?","code":"SELECT 1 UNION ALL SELECT 1;","o":["1","An error","0","2"],"a":3,"why":"UNION ALL keeps every row."},
     {"u":"winter","q":"How many rows?","code":"SELECT 1 UNION SELECT 1;","o":["0","1","2","An error"],"a":1,"why":"UNION removes duplicates."},
     {"u":"winter","q":"What must both SELECTs in a UNION have?","o":["The same table","An ORDER BY each","The same number of columns","The same WHERE"],"a":2,"why":"Columns line up by position."},
-    {"u":"winter","q":"Where does ORDER BY go in a UNION ALL?","o":["Once, at the very end","Before the first SELECT","After each SELECT","It is not allowed"],"a":0,"why":"One ORDER BY sorts the whole stack."}
+    {"u":"winter","q":"Where does ORDER BY go in a UNION ALL?","o":["Once, at the very end","Before the first SELECT","After each SELECT","It is not allowed"],"a":0,"why":"One ORDER BY sorts the whole stack."},
+    {"u": "board", "q": "Spot the bug.", "code": "SELECT * menu;", "o": ["The star is wrong", "FROM is missing", "menu needs quotes", "The semicolon is wrong"], "a": 1, "why": "SELECT * menu does not say where to look: syntax error near menu."},
+    {"u": "board", "q": "What does SQLite say here?", "code": "SELECT prise FROM menu;", "o": ["no such table: menu", "0 rows", "syntax error", "no such column: prise"], "a": 3, "why": "The column is called price. A typo in a column name gives no such column."},
+    {"u": "mains", "q": "Spot the bug.", "code": "SELECT name FROM menu\nWHERE course = main;", "o": ["main needs single quotes", "= should be ==", "WHERE comes first", "course needs quotes"], "a": 0, "why": "Without quotes SQL looks for a column called main: no such column: main."},
+    {"u": "mains", "q": "In SQL, double quotes are meant for...", "o": ["Text values", "Numbers", "Names, like columns", "Comments"], "a": 2, "why": "Text goes in single quotes. Double quotes are for names."},
+    {"u": "trolley", "q": "Courses grouped together, cheapest first in each?", "o": ["ORDER BY price, course", "ORDER BY course, price", "ORDER BY course AND price", "SORT BY course, price"], "a": 1, "why": "The first column sorts first; the second breaks ties inside it."},
+    {"u": "trolley", "q": "What does this keep?", "code": "WHERE veg = 1\n  AND (course = 'main'\n   OR course = 'starter')", "o": ["Every main and starter", "Only veg mains", "Veg mains and veg starters", "Every veg dish"], "a": 2, "why": "The brackets join the two courses; AND then demands veg on both."},
+    {"u": "tags", "q": "After SELECT price * 2 FROM menu, the stored prices are...", "o": ["Doubled", "Unchanged", "Rounded", "Gone"], "a": 1, "why": "Calculations only appear in the result. The table keeps its prices."},
+    {"u": "floor", "q": "Spot the bug.", "code": "SELECT day, SUM(total)\nFROM bills\nGROUP BY day\nWHERE tip > 5;", "o": ["SUM needs AS", "day must be in quotes", "GROUP BY needs HAVING", "WHERE must come before GROUP BY"], "a": 3, "why": "The order is WHERE, GROUP BY, HAVING, ORDER BY. Here: syntax error near WHERE."},
+    {"u": "tickets", "q": "A plain JOIN finds no match for a row. That row...", "o": ["Is dropped", "Gets NULLs", "Causes an error", "Is shown twice"], "a": 0, "why": "JOIN keeps only rows with a match. LEFT JOIN keeps them with NULLs."},
+    {"u": "unsold", "q": "After the LEFT JOIN, how many rows?", "code": "WHERE o.id = NULL", "o": ["Every guest without orders", "Every guest", "0", "1"], "a": 2, "why": "NULL is never equal to anything, not even NULL. Use IS NULL."},
+    {"u": "unsold", "q": "Which finds names that start with Moon?", "o": ["LIKE '%Moon%'", "LIKE 'Moon%'", "= 'Moon%'", "LIKE '%Moon'"], "a": 1, "why": "% after Moon means anything may follow. = treats % as a normal character."},
+    {"u": "larder", "q": "What does this do?", "code": "DELETE FROM stock;", "o": ["Removes every row", "Removes the table", "Nothing without WHERE", "Asks for confirmation"], "a": 0, "why": "Without WHERE, DELETE hits every row. The empty table stays."},
+    {"u": "larder", "q": "What does SQLite say here?", "code": "INSERT INTO stock (item, qty)\nVALUES ('basil');", "o": ["qty becomes 0", "1 values for 2 columns", "no such column: basil", "Row added"], "a": 1, "why": "Two columns named, one value given. They must match."},
+    {"u": "chalk", "q": "What does this return?", "code": "SELECT 'Solar' || 'Curry';", "o": ["Solar Curry", "0", "SolarCurry", "Solar||Curry"], "a": 2, "why": "|| glues exactly what you give it. Add ' ' for the space."},
+    {"u": "regulars", "q": "Spot the bug.", "code": "WHERE price >\n  SELECT AVG(price) FROM menu", "o": ["AVG needs ROUND", "Brackets are missing", "> should be IN", "menu needs an alias"], "a": 1, "why": "An inner query goes in brackets: WHERE price > (SELECT AVG(price) FROM menu)."},
+    {"u": "regulars", "q": "COUNT(*) after a LEFT JOIN. A guest with no orders counts as...", "o": ["0", "NULL", "1", "An error"], "a": 2, "why": "The guest's own row still exists. COUNT(o.id) gives 0."},
+    {"u": "winter", "q": "What does SQLite say here?", "code": "SELECT name FROM a ORDER BY name\nUNION ALL\nSELECT name FROM b;", "o": ["Both halves are sorted", "Only a is sorted", "It runs fine", "ORDER BY must come after UNION ALL"], "a": 3, "why": "Only the last SELECT may sort, and it sorts the whole stack."}
   ]
 });
 

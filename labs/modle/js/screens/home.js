@@ -12,7 +12,7 @@ let ticker = null;
 
 function cycleDemo() {
   const node = el("demo");
-  if (!node) return;
+  if (!node || document.hidden || !node.offsetParent) return;
   const line = demoLines[demoIdx % demoLines.length];
   node.classList.remove("swap"); void node.offsetWidth; node.classList.add("swap");
   node.innerHTML = '<span class="arrows">&gt;&gt;&gt; </span>' + line + '<br><span class="val">' + demoVals[line] + "</span>";

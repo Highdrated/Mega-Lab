@@ -115,6 +115,21 @@ POCKET.register({
     { u: "split", q: "A /24 split into /26s. How many?", o: ["2", "4", "6", "26"], a: 1, why: "2 borrowed bits: 2^2 = 4." },
     { u: "split", q: "A /24 split into /30s. How many?", o: ["30", "32", "64", "128"], a: 2, why: "6 borrowed bits: 2^6 = 64." },
     { u: "summary", q: "Summary for 10.2.0.0/24 and 10.2.1.0/24?", o: ["10.2.0.0/23", "10.2.1.0/23", "10.2.0.0/22", "10.2.0.0/16"], a: 0, why: "2 networks: /24 - 1 = /23, and 0 is even." },
-    { u: "ranges", q: "Is 10.250.1.1 private?", o: ["No, only 10.0 to 10.10 is", "Only with NAT", "Yes, all of 10.0.0.0/8 is", "No, it is CGNAT"], a: 2, why: "10/8 is the biggest RFC 1918 range." }
+    { u: "ranges", q: "Is 10.250.1.1 private?", o: ["No, only 10.0 to 10.10 is", "Only with NAT", "Yes, all of 10.0.0.0/8 is", "No, it is CGNAT"], a: 2, why: "10/8 is the biggest RFC 1918 range." },
+    {"u": "bits", "q": "Convert 172 to binary.", "o": ["10110100", "10101100", "10101010", "11001100"], "a": 1, "why": "128 + 32 + 8 + 4 = 172."},
+    {"u": "bits", "q": "Convert this octet to decimal.", "code": "11111100", "o": ["248", "254", "252", "240"], "a": 2, "why": "255 minus the last two bits (2 + 1) = 252."},
+    {"u": "prefix", "q": "What prefix is 255.255.255.248?", "o": ["/29", "/28", "/30", "/27"], "a": 0, "why": "24 + 5 ones (248 = 11111000) = /29."},
+    {"u": "prefix", "q": "What prefix is 255.255.240.0?", "o": ["/16", "/24", "/22", "/20"], "a": 3, "why": "16 + 4 ones (240 = 11110000) = /20."},
+    {"u": "block", "q": "Address .100 on a /28 sits in which block?", "o": ["96 - 111", "100 - 115", "80 - 95", "96 - 127"], "a": 0, "why": "Block 16: 96 is the last multiple of 16 below 100."},
+    {"u": "block", "q": "Block size in the 3rd octet for /21 (mask 248)?", "o": ["4", "16", "8", "21"], "a": 2, "why": "256 - 248 = 8."},
+    {"u": "netbc", "q": "Broadcast of 192.168.50.130/25?", "o": ["192.168.50.127", "192.168.50.255", "192.168.50.131", "192.168.51.0"], "a": 1, "why": "Block 128: 130 sits in 128 - 255."},
+    {"u": "netbc", "q": "Network address of 10.10.10.77/28?", "o": ["10.10.10.64", "10.10.10.72", "10.10.10.0", "10.10.10.76"], "a": 0, "why": "Block 16: 77 sits in 64 - 79."},
+    {"u": "netbc", "q": "Last usable host in 172.16.0.0/22?", "o": ["172.16.0.254", "172.16.3.255", "172.16.4.254", "172.16.3.254"], "a": 3, "why": "Block 4 in the 3rd octet: 0 to 3. Broadcast .3.255, so .3.254."},
+    {"u": "sizing", "q": "1000 devices. Smallest prefix?", "o": ["/23", "/22", "/21", "/24"], "a": 1, "why": "/23 = 510, too few. /22 = 1022."},
+    {"u": "split", "q": "A /16 split into /24s. How many?", "o": ["16", "24", "128", "256"], "a": 3, "why": "8 borrowed bits: 2^8 = 256."},
+    {"u": "split", "q": "10.0.0.0/24 cut into /27s. Network of subnet #4?", "o": ["10.0.0.128", "10.0.0.96", "10.0.0.64", "10.0.0.4"], "a": 1, "why": "Block 32: #1 .0, #2 .32, #3 .64, #4 .96."},
+    {"u": "summary", "q": "Summary for 10.4.4.0/24 to 10.4.7.0/24?", "o": ["10.4.0.0/21", "10.4.4.0/23", "10.4.4.0/22", "10.4.7.0/22"], "a": 2, "why": "4 networks: /24 - 2 = /22, and 4 is a multiple of 4."},
+    {"u": "ranges", "q": "Is 172.32.0.1 private?", "o": ["Yes, all of 172 is", "No, private is 172.16 to 172.31", "Only behind NAT", "Yes, it is CGNAT"], "a": 1, "why": "The RFC 1918 range is 172.16.0.0/12: 172.16 up to 172.31."},
+    {"u": "ranges", "q": "Wildcard mask for /28?", "o": ["0.0.0.15", "0.0.0.16", "255.255.255.240", "0.0.0.31"], "a": 0, "why": "255 - 240 = 15: the wildcard is the mask flipped."}
   ]
 });
