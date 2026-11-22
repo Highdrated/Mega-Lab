@@ -11,32 +11,32 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. opsle (21 Nov, third run; all 18 mission stages checked by hand against real tools, rebuilt)
-7. codex (21 Nov, third run; Python, JavaScript, PHP, Git and Shell volumes read line by line)
-8. mscodex (21 Nov, fourth run; cmdlet list against the modules, search, read marks, theme, both sizes)
-9. junle (21 Nov, fourth run; Virtual Chassis outputs checked against Juniper, room and classic screens)
-10. spelle (21 Nov, fourth run; spellbook bar and layout from 360 to 1440 px, first quest)
-11. shelle (22 Nov; all scenarios walked with real-world variants)
-12. junos-lab (22 Nov; real-mode commit, autosave on close, field-guide timer)
-13. proxle (22 Nov; 45 commands in Ready, Create, Join and Backup A)
-14. meridian (22 Nov, second run; vCenter ticket and DNS ticket with real PowerCLI and Windows variants)
-15. hexle (22 Nov, second run; lesson texts r1 to r73 read for accuracy, phone layout)
-16. webble (22 Nov, second run; home screen on desktop and phone, timers and animation loops)
-17. syncle (22 Nov, third run; 1826 real-world variants of the drill answers: aliases, lower case, spacing, $PSItem)
-18. git-lab (22 Nov, third run; 45 commands in free flight, spacing and a fresh repo's status)
-19. modle (22 Nov, third run; timers and intervals, home and networking screens)
+6. junle (21 Nov, fourth run; Virtual Chassis outputs checked against Juniper, room and classic screens)
+7. spelle (21 Nov, fourth run; spellbook bar and layout from 360 to 1440 px, first quest)
+8. shelle (22 Nov; all scenarios walked with real-world variants)
+9. junos-lab (22 Nov; real-mode commit, autosave on close, field-guide timer)
+10. proxle (22 Nov; 45 commands in Ready, Create, Join and Backup A)
+11. meridian (22 Nov, second run; vCenter ticket and DNS ticket with real PowerCLI and Windows variants)
+12. hexle (22 Nov, second run; lesson texts r1 to r73 read for accuracy, phone layout)
+13. webble (22 Nov, second run; home screen on desktop and phone, timers and animation loops)
+14. syncle (22 Nov, third run; 1826 real-world variants of the drill answers: aliases, lower case, spacing, $PSItem)
+15. git-lab (22 Nov, third run; 45 commands in free flight, spacing and a fresh repo's status)
+16. modle (22 Nov, third run; timers and intervals, home and networking screens)
+17. opsle (22 Nov, fourth run; first visit and seeded progress at both sizes, Ticket triage stage view)
+18. codex (22 Nov, fourth run; SQL volume, Recipes and Glossary read line by line; search, read marks and reload at both sizes)
+19. mscodex (22 Nov, fourth run; search, read marks across a reload, both sizes)
 
-Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 22 Nov, third run: still blocked, 403 from the proxy); the next labs that can run are taken instead.
+Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 22 Nov, fourth run: still blocked); the next labs that can run are taken instead.
 
-## Pockle numbers (22 Nov, third run, 390x844, touch)
+## Pockle numbers (22 Nov, fourth run, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
 | Juniper Oopsies | 22 (+ live mistakes) | 22 | 22 |
-| Junle | 88 (15 added 22 Nov) | 88 | 88 |
+| Junle | 103 (15 added 22 Nov, fourth run) | 103 | 103 |
 | Junos Lab | 155 | 155 | 155 |
 | Proxle | 79 (15 added 22 Nov) | 0 | 28 |
-| Meridian | 79 (16 added 21 Nov, fourth run) | 0 | 22 |
+| Meridian | 94 (15 added 22 Nov, fourth run) | 0 | 33 |
 | Subnle Pocket | 96 (15 added 22 Nov, third run) | 0 | 38 |
 | Pyle | 143 | 0 | 29 |
 | Pyle Pocket | 694 | 0 | 226 |
@@ -52,11 +52,12 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Syncle | 106 (19 added 22 Nov, second run) | 0 | 11 |
 | Modle | 90 | 0 | 30 |
 
-- Total 2513 cards. A first visit on a phone reaches 265, all Juniper; with sample progress in every lab 889 are open. The other 2248 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
+- Total 2543 cards. A first visit on a phone reaches 280, all Juniper; with sample progress in every lab 915 are open. The other 2263 are locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
 - Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
 - No blank or dead-end states found. No horizontal scroll. No console errors. Sixteen of nineteen lab rows are greyed out on a first visit; their OPEN button links to the lab.
-- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Meridian 79, Proxle 79, Spelle 85, Sleeple 87, Junle 88, Modle 90, Git Lab 90. Spelle already has two or more cards for every one of its 37 quests. Syncle's mailboxes, groups and licenses units now have 13, 8 and 8 cards. Next run: Meridian and Proxle again, or Junle (its cards are open on a first visit, so they count most on the train).
+- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 79, Spelle 85, Sleeple 87, Modle 90, Git Lab 90, Meridian 94. Next run: Proxle and Spelle. Spelle already has two or more cards for every one of its 37 quests. Syncle's mailboxes, groups and licenses units now have 13, 8 and 8 cards.
+- 22 Nov, fourth run: Junle got 15 cards for drills that had none (chassis device-count before any ae, delete unit 0 on a member, lacp periodic fast, minimum-links, Defaulted in show lacp interfaces, show poe interface, show arp interface, ping count, backup root 8192, rstp cost, bpdu-block disable-timeout, show spanning-tree bridge, OSPF reference-bandwidth, show ospf interface, clear ospf neighbor); they are open on a first visit. Meridian got 15 cards from the Virtualization lessons (Type 2 hypervisor, vmware.log, local disk ties a VM to a host, overcommit, swapping, losing vcsa-01, Get-Cluster, Storage vMotion, affinity, HA takes minutes, N+1 for three hosts, revert throws the delta away, snapshot names, thick disks, esxcli storage filesystem list).
 - 22 Nov, third run: Subnle Pocket got 15 cards (172 and 252 in binary, /29 and /20 masks, blocks for .100/28 and /21, broadcast and network for /25 and /28, last host of a /22, 1000 hosts, /16 into /24s, subnet #4 of /27s, a /22 summary, 172.32 is public, the /28 wildcard; every answer checked with Python's ipaddress). Seqle got 17 cards from its own lesson mistakes (FROM missing, no such column, text without quotes, double quotes are names, two-column ORDER BY, brackets with AND and OR, calculations change nothing, WHERE before GROUP BY, a plain JOIN drops rows, = NULL finds nothing, LIKE 'Moon%', DELETE without WHERE, 1 values for 2 columns, || adds no space, brackets around a subquery, COUNT(*) after LEFT JOIN, ORDER BY only at the end; every one run in SQLite).
 - 22 Nov, second run: Syncle got cards for mailboxes (ResultSize Unlimited, -Properties for forwarding, FullAccess, Send As is a recipient permission with -Trustee, the confirmation prompt, clearing forwarding with $null, AutoReplyState, the 50 GB shared limit, @{add=...} for aliases, SMTP versus smtp), groups (already a member, AdditionalProperties.displayName, Get-MgUserMemberOf, the write scope) and licenses (free seats, -RemoveLicenses @(), SPE_E3, restore by Id). Sleeple got cards for print with commas, f-string maths, a missing f, the first true elif, !=, the missing colon, not in, append, and a missing argument; every Python output was checked with python3.
 - 22 Nov: Proxle got cards for its thinnest scenarios (Is this server ready, Create, Join, Backup A: log in first, hostname, network before Proxmox, a cluster of one, the fingerprint yes, the shared certificate authority, content backup, HA is not a backup, look at the file). Junle got cards for the drills that had none (show version, show route, exit, description, show vlans, ether-options speed, extensive, router-id, peer-as, advertising-protocol, show ospf neighbor, virtual-address, storage cleanup, monitor traffic, request system snapshot). Junle cards are open on a first visit, so this adds to what she can do on the train today.
@@ -91,7 +92,7 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Proxle: the Create scenario says `pvecm create` makes the cluster's certificate authority. On a real node `pve-root-ca` already exists from the install, and a joining node takes over the cluster's CA. Not verified against pve.proxmox.com yet, so not changed and no Pockle card written for it.
 - Junle classic (`junle.html?classic=1`) has no phone layout: at 390 px the terminal text is cut off on the left and the drill panel squeezes it. The launcher opens the room instead. Layout decision.
 - Junle: the first wrong answer only says "rejected. retry."; the hint starts at the second miss. Design choice.
-- Codex: Python, JavaScript, PHP, Git and Shell volumes now read line by line (21 Nov, third run). Still to read: SQL, the Hexle and Passle rulebooks, Recipes and the Glossary. Small note left alone: Shell says `ssh -v` shows UNPROTECTED PRIVATE KEY FILE, which appears without -v too.
+- Codex: Python, JavaScript, PHP, Git, Shell and SQL volumes, Recipes and the Glossary now read line by line (SQL, Recipes and Glossary on 22 Nov, fourth run: nothing wrong found). Still to read: the Hexle and Passle rulebooks. Small note left alone: Shell says `ssh -v` shows UNPROTECTED PRIVATE KEY FILE, which appears without -v too.
 - Git Lab: a mission step wants the exact commit message from the briefing; your own wording commits but the step stays put. `git branch <name>`, `git restore .`, `git restore --staged <file>`, `git merge --no-ff` and options after the ref (`git reset HEAD~1 --soft`) are answered with "unknown command" or a pathspec error although they are real. Adding commands to the simulator is a feature: her call.
 - Git Lab: after `git init` the lab always says branch `main`. Real git names the first branch `master` unless `init.defaultBranch` is set or you type `git init -b main`. One line in mission 0 could say so: her call.
 - Git Lab: `git add <file>` stages every change, not just that file (the simulator has one staged flag, no per-file index). Real commands still answered "unknown command" in free flight: `git status -s`, `git diff --staged`, `git commit -am`, `git branch -a`, `-v`, `-d`, `git tag`, `git show`, `git stash`, `git rm --cached`, `ls -la`, `git --version`, `git config`, `git help`. `pwd` prints `~/shop` where a real shell prints the full path. Simulator scope: her call.
@@ -125,6 +126,27 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Git Lab, still answered "unknown command" although real (simulator scope, her call): `git diff`, `git fetch`, `git revert HEAD` (the revert quest wants a commit id), `git mv`, `git rm`, `git commit --amend`, `mkdir -p`, `ls -a`, `echo ... > file`. `cd ..` and `cd` print the new path; a real shell prints nothing. `cd /` goes home instead of to the root.
 - Syncle: script files are found case-sensitively (`./get-staleusers.ps1` for `Get-StaleUsers.ps1` is "not recognized"). A Mac's disk is case-insensitive by default, so a real Mac would run it. Small; engine change.
 ## Entries
+
+### 2026-11-22, fourth run
+
+Checked
+- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. Catch-up already done. LOG first line not HOLD. CDN still blocked, so pyle, sleeple, passle, seqle and rebble stay skipped; opsle, codex and mscodex taken.
+- Pockle: first visit and seeded visit at 390x844 with touch, every tab, a 10-card mix, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
+- Quick pass: 27 pages at 1440x900 and 390x844. No page errors, no sideways scroll. Only the two known Meridian 404s (and CDN or font requests the sandbox cannot reach).
+- Service worker: precache entries exist. CACHE now workshop-v104 (Pockle rebuilt, no js/ or css/ change).
+- Suites (after the changes): proxle ALL OK, pockle test, sync and typed clean, opsle clean, junos-lab 6472 passed, no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
+- Deep pass: opsle (first visit and every lab's sample progress at both sizes, the Ticket triage stage view, overflow scan), codex (SQL volume, 17 recipes and 72 glossary terms read for accuracy; search, Mark read across a reload, both sizes, timers), mscodex (search, read marks across a reload, both sizes). No bugs, no wrong facts, no overflow, no stray timers.
+
+Fixed
+- No lab bugs found tonight.
+- Pockle: 15 Junle cards and 15 Meridian cards (see Pockle numbers).
+
+Listed
+- No new art items: Opsle and both Codex pages already have items in the queue (2026-11-20-8, -10, -11). 28 open.
+
+Needs her decision
+- Pockle ideas 1 and 5 (try any lab, bring my progress).
+- Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
 
 ### 2026-11-22, third run
 
@@ -408,18 +430,6 @@ Listed
 - Six Meridian art items added to the ComfyUI queue (four crew portraits, two theme backdrops).
 - Proxle realism gaps and the Modle Python card, see Open findings.
 
-### 2026-11-19 (first night)
+### Older (folded)
 
-Checked
-- Quick pass: 31 pages at 1440x900 and 390x844. No page errors. Only failures: the two Meridian images above, and CDN or font requests the sandbox cannot reach (not a lab fault).
-- Launcher: all 20 config paths exist. Not in the launcher by design: dockle (redirect to Sleeple), junle.html, pyle-pocket and subnle-pocket (inside Pockle).
-- Service worker: all 12 precache entries exist and match the `?v=` numbers in index.html.
-- Suites: proxle ALL OK, junos-lab 6463 passed, no-emoji clean, soak 8000 clean, opsle, pockle sync and typed tests clean.
-- Deep pass: junle (room, briefing, every desktop app opened; the ticket itself was not played to the end), spelle (all 37 drills checked by machine: every runnable hint passes its own checks, no empty or starter code passes), shelle (first scenarios played, modes, theme, save and load, weak-spot review, a detective case).
-
-Fixed
-- Pockle: new Proxle bank (18 cards, 10 scenarios) and Syncle bank (13 cards: connect, users, mailboxes). Unlock rules read `pvelab.done` and `syncle.v1`.
-- Pockle: `tools/pockle/test.py` added.
-- Shelle: 25 steps now accept the real-world equivalents (`ls -al`, `head -5`, `tail -3`, `cd ../`, unquoted or single-quoted grep patterns, `cp -R`, `docker logs -n 5`, `nc -vz`, `dig +short name`, `rsync -avzn`, `http://localhost...`). Uses the lab's own `alt` list; nothing was loosened for wrong answers.
-- Spelle: checks accept backtick strings (``move(`right`)``) next to single and double quotes.
-- Spelle: the two emoji on the header buttons are now the words "map" and "save".
+- 2026-11-19, first night: quick pass of 31 pages clean apart from the Meridian 404s; new Proxle and Syncle Pockle banks and `tools/pockle/test.py`; Shelle took 25 real-world equivalents; Spelle accepted backtick strings and lost its two header emoji.
