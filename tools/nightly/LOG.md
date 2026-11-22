@@ -141,6 +141,9 @@ Fixed
 - No lab bugs found tonight.
 - Pockle: 15 Junle cards and 15 Meridian cards (see Pockle numbers).
 
+Added after the run (her new rule: a clean lab gets content or visual aids)
+- Codex SQL: two drawn diagrams replace the text sketches. "Summing up" shows the order SQL runs a query in as a flowchart (WHERE and HAVING outlined). "Joining tables" shows menu and orders with the matching lines and the JOIN and LEFT JOIN results side by side, Crater Pie ending in NULL. Codex concept blocks now take an `svg` field drawn in the page's own muted colours; it follows day and night. CACHE workshop-v105.
+
 Listed
 - No new art items: Opsle and both Codex pages already have items in the queue (2026-11-20-8, -10, -11). 28 open.
 
