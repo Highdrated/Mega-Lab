@@ -553,7 +553,7 @@ function svcUp(w,s){const ok=n=>{const v=w.vms[n];return v&&v.on&&!v.paused&&w.h
 const CMDLETS={
  'Connect-VIServer':{params:{'-Server':'vc'},pos:'-Server'},
  'Disconnect-VIServer':{params:{'-Confirm':'switch'},pos:null},
- 'Get-VM':{params:{'-Name':'vm','-Location':'loc'},pos:'-Name'},
+ 'Get-VM':{params:{'-Name':'vm','-Location':'loc','-Datastore':'ds'},pos:'-Name'},
  'Get-VMHost':{params:{'-Name':'host','-Location':'cluster'},pos:'-Name'},
  'Get-Cluster':{params:{'-Name':'cluster'},pos:'-Name'},
  'Get-Datastore':{params:{'-Name':'ds'},pos:'-Name'},
@@ -959,6 +959,8 @@ function psExec(nl,c,w,gate){
    let pool=Object.keys(w.vms);
    if(!first&&type==='host')pool=pool.filter(v=>data.some(h=>h.Name===w.vms[v].host));
    else if(!first&&type==='cluster')pool=pool.filter(v=>data.some(cl=>w.hosts[w.vms[v].host].cluster===cl.Name));
+   else if(!first&&type==='ds')pool=pool.filter(v=>data.some(d=>d.Name===w.vms[v].ds));
+   if(a.named['-datastore']){const D=a.named['-datastore'];const dk=Object.keys(w.ds).find(x=>x.toLowerCase()===D.toLowerCase());if(!dk)return{err:`Get-VM: Could not find Datastore with name '${D}'.`};pool=pool.filter(v=>w.vms[v].ds===dk)}
    if(a.named['-location']){const L=a.named['-location'];const hk=Object.keys(w.hosts).find(h=>h.toLowerCase()===L.toLowerCase());const ck=['AFT','FWD'].find(x=>x.toLowerCase()===L.toLowerCase());if(!hk&&!ck)return{err:`Get-VM: Could not find VIContainer with name '${L}'.`};pool=pool.filter(v=>hk?w.vms[v].host===hk:w.hosts[w.vms[v].host].cluster===ck);c.saw=c.saw||{};see(c,{});c.saw.hostVms[hk||ck]=true}
    else if(!first&&type==='host')data.forEach(h=>{see(c,{});c.saw.hostVms[h.Name]=true});
    const r=pickNames(pool,a.pos,'VM','Get-VM');if(r.err)return{err:r.err};
@@ -966,7 +968,7 @@ function psExec(nl,c,w,gate){
   }
   if(n==='Get-VMHost'){let pool=Object.keys(w.hosts);if(a.named['-location'])pool=pool.filter(h=>w.hosts[h].cluster.toLowerCase()===a.named['-location'].toLowerCase());if(!first&&type==='vm')pool=pool.filter(h=>data.some(v=>v.VMHost===h));const r=pickNames(pool,a.pos,'VMHost','Get-VMHost');if(r.err)return{err:r.err};data=r.items.map(x=>hostObj(w,x));type='host';data.forEach(o=>see(c,o));continue}
   if(n==='Get-Cluster'){const r=pickNames(['AFT','FWD'],a.pos,'Cluster','Get-Cluster');if(r.err)return{err:r.err};data=r.items.map(x=>clObj(w,x));type='cluster';continue}
-  if(n==='Get-Datastore'){const r=pickNames(Object.keys(w.ds),a.pos,'Datastore','Get-Datastore');if(r.err)return{err:r.err};data=r.items.map(x=>dsObj(w,x));type='ds';data.forEach(d=>{c.seen[d.Name]=1});continue}
+  if(n==='Get-Datastore'){let dpool=Object.keys(w.ds);if(!first&&type==='vm')dpool=dpool.filter(k=>data.some(v=>w.vms[v.Name]&&w.vms[v.Name].ds===k));const r=pickNames(dpool,a.pos,'Datastore','Get-Datastore');if(r.err)return{err:r.err};data=r.items.map(x=>dsObj(w,x));type='ds';data.forEach(d=>{c.seen[d.Name]=1});continue}
   if(n==='Get-VIEvent'){
    const ent=a.pos||a.named['-entity'];let ev=w.events.slice();
    if(ent){const e=ent.toLowerCase();if(!w.hosts[e]&&!w.vms[e])return{err:`Get-VIEvent: Could not find VIObject with name '${ent}'.`};ev=ev.filter(x=>x.e===e||(w.hosts[e]&&w.vms[x.e]&&w.vms[x.e].reg===e));see(c,{});c.saw.events[e]=true}

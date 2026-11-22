@@ -111,6 +111,15 @@ POCKET.register({
     { u: 'fuel', q: 'How many lines does this print?', code: 'total = 0\nfor leg in [4, 6, 2]:\n    total += leg\n    print(total)', o: ['1', '3', '12'], a: 1, why: 'The print is indented, so it runs every round: 4, 10, 12.' },
     { u: 'trade', q: 'What happens with menu[tea], no quotes?', o: ['It gives the price', 'KeyError', 'NameError'], a: 2, why: 'Without quotes Python looks for a variable called tea.' },
     { u: 'roster', q: 'What goes wrong here?', code: 'def fee():\n    print(2)\n\ntotal = fee() + 1', o: ['TypeError: None + 1', 'total is 3', 'total is 2'], a: 0, why: 'print shows the 2 but hands back None. Use return to calculate.' },
-    { u: 'roster', q: 'The last line is greet with no brackets. What happens?', o: ['greet runs', 'Nothing', 'NameError'], a: 1, why: 'Without () you only name the function, you do not call it.' }
+    { u: 'roster', q: 'The last line is greet with no brackets. What happens?', o: ['greet runs', 'Nothing', 'NameError'], a: 1, why: 'Without () you only name the function, you do not call it.' },
+    { u: 'tag', q: 'What does this print?', code: 'print("Bags:", 12)', o: ['Bags: 12', 'Bags:12', 'Bags: , 12'], a: 0, why: 'print() puts one space between the values you separate with commas.' },
+    { u: 'loadsheet', q: 'What does this print?', code: 'print(f"Total: {12 * 3} kg")', o: ['Total: {12 * 3} kg', 'Total: 36 kg', 'Total: 12 * 3 kg'], a: 1, why: 'You can calculate inside the braces of an f-string.' },
+    { u: 'loadsheet', q: 'What does this print?', code: 'total = 36\nprint("Total: {total} kg")', o: ['Total: 36 kg', 'Total: {total} kg', 'NameError'], a: 1, why: 'No f before the quotes, so the braces are plain text.' },
+    { u: 'clearance', q: 'What does this print?', code: 'weight = 45\nif weight > 40:\n    print("Heavy")\nelif weight > 20:\n    print("Medium")', o: ['Heavy, then Medium', 'Medium', 'Heavy'], a: 2, why: 'The first True test wins and the rest is skipped.' },
+    { u: 'clearance', q: 'What does this print?', code: 'print(3 != 4)', o: ['True', 'False', 'SyntaxError'], a: 0, why: '!= asks: are they different? 3 and 4 are.' },
+    { u: 'clearance', q: 'This line has no colon at the end. What happens?', code: 'if weight > 40\n    print("Heavy")', o: ['it runs anyway', 'SyntaxError: expected \':\'', 'it prints nothing'], a: 1, why: 'if, elif, else, for and def lines all end with a colon.' },
+    { u: 'trade', q: 'What does this print?', code: 'menu = {"tea": 4}\nprint("coffee" not in menu)', o: ['True', 'False', 'KeyError'], a: 0, why: 'not in asks whether the key is missing. It is.' },
+    { u: 'hold', q: 'What does this print?', code: 'supplies = ["blankets"]\nsupplies.append("postcards")\nprint(supplies)', o: ['[\'postcards\', \'blankets\']', '[\'blankets\', \'postcards\']', '[\'blankets\']'], a: 1, why: 'append adds at the end and changes the list itself.' },
+    { u: 'roster', q: 'What happens here?', code: 'def bag_fee(bags, rate):\n    return bags * rate\n\nbag_fee(12)', o: ['it returns 12', 'it returns None', 'TypeError: missing argument rate'], a: 2, why: 'Every parameter needs a value at the call, unless it has a default.' }
   ]
 });
