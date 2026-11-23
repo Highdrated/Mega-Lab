@@ -88,7 +88,6 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Junos Lab: 90 of 92 field-guide quiz answers are the middle option and the options are not shuffled (the prep quiz does shuffle), so guessing pays XP. Design choice.
 - Junos Lab accuracy, needs a Juniper check before changing: `show spanning-tree interface` never shows a ROOT port (every forwarding port is DESG); `show vlans` uses its own Name/ID layout instead of the ELS Routing instance / VLAN name / Tag / Interfaces layout; `set vlans guest interface ge-0/0/3.0` is refused; the RSTP guide says both "do not assume RSTP is on" and "runs RSTP out of the box"; `vlan-id 4095` gives no range hint.
 - Junos Lab: after Resume the tablet shows scenario 1 instead of the one being worked on; at 390 px the tablet covers half the CLI and the toolbar's second row; new hosts spawn on top of each other. `js/course.js` `renderResume` is overridden by the one in `js/prep.js` (dead code).
-- Codex Microsoft: the examples use the domain `datacenterunited.com` (15 addresses, 26 mentions) and two full names in addresses, on a public page. Her rule is no real company names and no real colleagues' names. The rest of the page already uses `contoso.com`. Her call, but worth a quick yes.
 - Codex Microsoft: search takes the spelling literally: "licence" finds 16 entries, "license" 8. Matching both spellings would be a small search change; her call.
 - Proxle: the Create scenario says `pvecm create` makes the cluster's certificate authority. On a real node `pve-root-ca` already exists from the install, and a joining node takes over the cluster's CA. Not verified against pve.proxmox.com yet, so not changed and no Pockle card written for it.
 - Junle classic (`junle.html?classic=1`) has no phone layout: at 390 px the terminal text is cut off on the left and the drill panel squeezes it. The launcher opens the room instead. Layout decision.
@@ -129,6 +128,11 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Syncle: script files are found case-sensitively (`./get-staleusers.ps1` for `Get-StaleUsers.ps1` is "not recognized"). A Mac's disk is case-insensitive by default, so a real Mac would run it. Small; engine change.
 ## Entries
 
+### 2026-11-23, daytime (asked by Kaatje)
+
+- Codex Microsoft: `datacenterunited.com` and `contoso.com` became the fantasy domain `ashvale.com`, and every real-looking person (Jan Peeters, Stijn Raes, Geoffrey Vanderhaegen, Inge Collet, Pascal Paquay, Adelheid Vermeyen, Noor Haddad, Sara Jacobs, Van Laer, johan.security) got a fantasy name with the same initials, so every address formula still gives the same alias. CACHE workshop-v107.
+- Still open: Syncle uses Belgian-looking names in its drills (Noor Claes, Tom Jacobs, Sara Wouters, Lien Maes, Jonas Peeters); other labs use `contoso.com`. Her call.
+
 ### 2026-11-23
 
 Checked
@@ -151,8 +155,6 @@ Listed
 
 Needs her decision
 - Pockle ideas 1 and 5 (try any lab, bring my progress).
-- Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
-
 ### 2026-11-22, fourth run
 
 Checked
