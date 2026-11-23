@@ -493,7 +493,15 @@ body.v-focus .flame, body.v-manual .flame { opacity: .22; animation: none; }
 #main .term { animation: none; }
 body.fx-enter #g-main, body.fx-enter .spill { opacity: var(--lum, .8); filter: blur(14px); }
 body.fx-enter .spill { filter: none; }
-.mote { mix-blend-mode: normal; filter: none; }
+.mote { mix-blend-mode: normal; filter: none; width: .34%; background: radial-gradient(closest-side, rgba(225, 215, 190, .32), rgba(225, 215, 190, .1) 55%, transparent); }
+body.v-sit #left .side { left: calc(var(--cropl, 0) * 100%); }
+body.v-sit #right .side { right: calc(var(--cropr, 0) * 100%); }
+body.v-manual .dof { -webkit-mask: linear-gradient(90deg, #000 35%, transparent 37%, transparent 79.6%, #000 81.6%), linear-gradient(180deg, #000 28.5%, transparent 30.5%, transparent 75%, #000 77.5%);
+  mask: linear-gradient(90deg, #000 35%, transparent 37%, transparent 79.6%, #000 81.6%), linear-gradient(180deg, #000 28.5%, transparent 30.5%, transparent 75%, #000 77.5%); }
+body.v-manual .shade { background: radial-gradient(ellipse 60% 34% at 58% 62%, transparent 60%, rgba(3, 4, 5, .55) 100%); }
+.cu-status { background: rgba(8, 9, 10, .74); padding: 9px 16px; border-radius: 6px; min-height: 0; }
+.cu-status:empty { display: none; }
+#tside { padding-top: 2.6cqh; }
 @media (max-width: 900px), (max-aspect-ratio: 1/1) {
   .visitor { height: 34vh; }
   .vdlg { left: 12px; right: 12px; width: auto; bottom: 14px; }
@@ -2782,13 +2790,24 @@ function camFor(v) {
   const sw = Math.max(vw, vh * IW / IH), sh = sw * IH / IW;
   const sl = (vw - sw) / 2, stp = (vh - sh) / 2;
   if (v === "stand") return "translate(0px, 0px) scale(1)";
-  const box = v === "sit" ? [270 / IW, 290 / IH, 1170 / IW, 705 / IH] : v === "manual" ? [520 / IW, 330 / IH, 1120 / IW, 585 / IH] : [522 / IW, 360 / IH, 894 / IW, 545 / IH];
+  const box = v === "sit" ? [344 / IW, 352 / IH, 1069 / IW, 690 / IH] : v === "manual" ? [520 / IW, 330 / IH, 1120 / IW, 585 / IH] : [522 / IW, 360 / IH, 894 / IW, 545 / IH];
   const bw = (box[2] - box[0]) * sw, bh = (box[3] - box[1]) * sh;
-  const s = v === "sit" ? Math.min(vw * .97 / bw, vh * .8 / bh, 1.35) : v === "manual" ? Math.min(vw * .95 / bw, vh * .78 / bh, 2.2) : Math.min(vw * .94 / bw, vh * .88 / bh, 3);
+  const s = v === "sit" ? Math.min(vw / bw, vh * .9 / bh, 2.2) : v === "manual" ? Math.min(vw * .95 / bw, vh * .78 / bh, 2.2) : Math.min(vw * .94 / bw, vh * .88 / bh, 3);
   const cx = (box[0] + box[2]) / 2 * sw, cy = (box[1] + box[3]) / 2 * sh;
-  let tx = vw / 2 - sl - cx * s, ty = vh * (v === "sit" ? .53 : .5) - stp - cy * s;
+  let tx = vw / 2 - sl - cx * s, ty = vh * (v === "sit" ? .58 : .5) - stp - cy * s;
   tx = Math.min(-sl, Math.max(vw - sl - sw * s, tx));
   ty = Math.min(-stp, Math.max(vh - stp - sh * s, ty));
+  if (v === "sit") {
+    let cl = 0, cr = 0;
+    try {
+      const a0 = (-sl - tx) / s / sw * IW, a1 = (vw - sl - tx) / s / sw * IW;
+      const L = QUADS.left, R = QUADS.right;
+      cl = Math.max(0, Math.min(.45, (a0 - L[0][0] + 8) / (L[1][0] - L[0][0])));
+      cr = Math.max(0, Math.min(.45, (R[1][0] - a1 + 8) / (R[1][0] - R[0][0])));
+    } catch (e) {}
+    document.documentElement.style.setProperty("--cropl", cl.toFixed(3));
+    document.documentElement.style.setProperty("--cropr", cr.toFixed(3));
+  }
   return `translate(${tx}px, ${ty}px) scale(${s})`;
 }
 function setView(v) {
@@ -2901,11 +2920,11 @@ function paintInput() {
 }
 ["input", "keyup", "focus", "blur", "select", "click"].forEach((ev) => $("#cmd").addEventListener(ev, () => requestAnimationFrame(paintInput)));
 let fs = 1.75;
-try { fs = +localStorage.getItem(SAVE + "-fs3") || 1.2; } catch (e) {}
+try { fs = +localStorage.getItem(SAVE + "-fs4") || 1.7; } catch (e) {}
 function setFs(v) {
   fs = Math.round(Math.min(3.2, Math.max(.9, v)) * 10) / 10;
   $("#main").style.setProperty("--fs", fs);
-  try { localStorage.setItem(SAVE + "-fs3", fs); } catch (e) {}
+  try { localStorage.setItem(SAVE + "-fs4", fs); } catch (e) {}
   if (typeof sizeApp === "function") sizeApp();
   const log = $("#log"); log.scrollTop = log.scrollHeight;
 }
