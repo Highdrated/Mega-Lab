@@ -168,7 +168,7 @@ row * width + col     the reverse: row, col back into one index</code></pre>`
 <pre><code>round(1.5)  ->  2
 round(2.5)  ->  2      not 3!
 round(3.5)  ->  4</code></pre>
-<p>Exact halves go to the nearest <strong>even</strong> number ("banker's rounding"), so rounding lots of .5 values does not drift your totals upward.</p>
+<p>Exact halves go to the nearest <strong>even</strong> number. This is called "banker's rounding". It keeps your totals from drifting upward when you round lots of .5 values.</p>
 <h4>Decimal places</h4>
 <pre><code>round(3.14159, 2)   ->  3.14
 round(1234, -2)     ->  1200      negative = left of the dot</code></pre>
@@ -253,7 +253,7 @@ word[:]    the whole thing</code></pre>`
 <p><code>range(start, stop, step)</code> produces numbers, counting from <code>start</code>, jumping by <code>step</code>, stopping <strong>before</strong> <code>stop</code>.</p>
 <pre><code>range(0, 10, 2)  ->  0, 2, 4, 6, 8</code></pre>
 <p>Notice 10 is missing. Same rule as slicing — stop is a boundary you never reach.</p>
-<p>With one argument, it counts from zero: <code>range(5)</code> gives <code>0 1 2 3 4</code> — exactly five numbers, and exactly the valid indexes of a five-item list. That's not a coincidence, it's the whole design.</p>
+<p>With one argument, it counts from zero. <code>range(5)</code> gives <code>0 1 2 3 4</code>: exactly five numbers. Those are also exactly the valid indexes of a five-item list. That's not a coincidence, it's the whole design.</p>
 <h4>Working out how many</h4>
 <p>The count is <code>(stop - start) / step</code>, rounded up. For <code>range(2, 20, 3)</code>: <code>(20-2)/3 = 6</code> numbers.</p>`
   },
@@ -291,7 +291,7 @@ word[:]    the whole thing</code></pre>`
 <pre><code>2 ** 10  ->  1024
 2 ** 20  ->  1048576
 2 ** 30  ->  1073741824</code></pre>
-<p>Ten doublings gets you past a thousand, twenty past a million, thirty past a billion. This is why an algorithm that doubles its work each step is a problem, and why one that halves it is a gift.</p>`
+<p>Ten doublings gets you past a thousand, twenty past a million, thirty past a billion. That is why an algorithm (a step-by-step recipe in code) that doubles its work each step is a problem. One that halves its work is a gift.</p>`
   },
   {
     slug: "aggregates",
@@ -322,7 +322,7 @@ len(nums)  ->  4</code></pre>
 <p><code>ceil()</code> rounds <em>up</em> to the next whole number, always — even for 2.01.</p>
 <pre><code>ceil(53 / 8)  ->  7</code></pre>
 <p>53 items at 8 per page is 6.625 pages. But you cannot have 0.625 of a page, and the leftover items still need somewhere to go — so it's 7.</p>
-<p>This is the single most common place beginners ship a bug: use normal rounding and 53 items becomes 7 pages, but 51 items becomes 6 pages and three items vanish off the end of your site.</p>
+<p>Beginners ship this bug more than any other. Use normal rounding and 53 items gives 7 pages, which is right. But 51 items gives 6 pages, and three items vanish off the end of your site.</p>
 <h4>Percentages off</h4>
 <pre><code>price * (1 - 25/100)</code></pre>
 <p>A 25% discount means keeping 75%. Rather than working out the discount and subtracting it, multiply by what's left. One step instead of two.</p>`

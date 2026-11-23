@@ -130,6 +130,16 @@ POCKET.register({
     {"u": "split", "q": "10.0.0.0/24 cut into /27s. Network of subnet #4?", "o": ["10.0.0.128", "10.0.0.96", "10.0.0.64", "10.0.0.4"], "a": 1, "why": "Block 32: #1 .0, #2 .32, #3 .64, #4 .96."},
     {"u": "summary", "q": "Summary for 10.4.4.0/24 to 10.4.7.0/24?", "o": ["10.4.0.0/21", "10.4.4.0/23", "10.4.4.0/22", "10.4.7.0/22"], "a": 2, "why": "4 networks: /24 - 2 = /22, and 4 is a multiple of 4."},
     {"u": "ranges", "q": "Is 172.32.0.1 private?", "o": ["Yes, all of 172 is", "No, private is 172.16 to 172.31", "Only behind NAT", "Yes, it is CGNAT"], "a": 1, "why": "The RFC 1918 range is 172.16.0.0/12: 172.16 up to 172.31."},
-    {"u": "ranges", "q": "Wildcard mask for /28?", "o": ["0.0.0.15", "0.0.0.16", "255.255.255.240", "0.0.0.31"], "a": 0, "why": "255 - 240 = 15: the wildcard is the mask flipped."}
+    {"u": "ranges", "q": "Wildcard mask for /28?", "o": ["0.0.0.15", "0.0.0.16", "255.255.255.240", "0.0.0.31"], "a": 0, "why": "255 - 240 = 15: the wildcard is the mask flipped."},
+    { u: "summary", q: "Summary for 192.168.16.0/24 to 192.168.31.0/24 (16 networks)?", o: ["192.168.16.0/21", "192.168.16.0/20", "192.168.0.0/20", "192.168.16.0/22"], a: 1, why: "16 = 2^4: /24 - 4 = /20, and 16 is a multiple of 16." },
+    { u: "summary", q: "Summary for 10.5.6.0/24 and 10.5.7.0/24?", o: ["10.5.6.0/22", "10.5.7.0/23", "10.5.6.0/23", "10.5.0.0/21"], a: 2, why: "2 networks: /23, and 6 is even." },
+    { u: "summary", q: "Can 10.5.5.0/24 and 10.5.6.0/24 become one /23?", o: ["Yes, they are next to each other", "Only on Junos", "Yes, as 10.5.5.0/23", "No, 5 is odd"], a: 3, why: "A /23 starts on an even number. 5 and 6 sit in two different /23s." },
+    { u: "summary", q: "Which /24s does 172.16.40.0/22 cover?", o: ["172.16.40.0 to 172.16.43.0", "172.16.40.0 to 172.16.47.0", "172.16.36.0 to 172.16.40.0", "Only 172.16.40.0"], a: 0, why: "A /22 is 4 networks of /24, starting at 40." },
+    { u: "summary", q: "How many /24 networks fit in one /21?", o: ["3", "4", "8", "21"], a: 2, why: "24 - 21 = 3 bits, and 2^3 = 8." },
+    { u: "ranges", q: "Where does 172.16.0.0/12 end?", o: ["172.16.255.255", "172.31.255.255", "172.32.255.255", "172.255.255.255"], a: 1, why: "It runs from 172.16 to 172.31." },
+    { u: "ranges", q: "Is 100.100.1.1 a normal public address?", o: ["Yes", "No, it is loopback", "No, it is RFC 1918", "No, it is CGNAT"], a: 3, why: "100.64 to 100.127 is the shared ISP range." },
+    { u: "ranges", q: "Wildcard mask for /30?", o: ["0.0.0.3", "255.255.255.252", "0.0.0.4", "0.0.0.252"], a: 0, why: "255 - 252 = 3." },
+    { u: "ranges", q: "Wildcard mask for 255.255.240.0?", o: ["0.0.16.255", "0.0.15.255", "0.0.240.255", "0.0.15.0"], a: 1, why: "255 - 240 = 15, and 255 - 0 = 255." },
+    { u: "ranges", q: "Will a router forward traffic from 169.254.3.7?", o: ["Yes, like any address", "Only over VPN", "No, link-local stays on its own segment", "Only with NAT"], a: 2, why: "That is why an APIPA laptop cannot reach the internet." }
   ]
 });

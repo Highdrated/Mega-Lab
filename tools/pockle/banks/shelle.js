@@ -127,6 +127,17 @@ try { var s = get("shelle.v1"); if (!s || typeof s !== "object") return []; var 
     {"u":"docker","q":"Which nginx version runs in web?","code":"docker exec web nginx ___","o":["-v","-t","-s stop","-c"],"a":0,"why":"-t tests the config, -s stop stops it."},
     {"u":"compose","q":"Show this project's services and their state.","o":["docker compose ls","docker compose ps","docker ps compose","docker compose logs"],"a":1,"why":"compose ls lists projects, not services."},
     {"u":"compose","q":"Remove the services AND their volumes.","o":["docker compose down","docker compose stop","docker compose down -v","docker compose rm"],"a":2,"why":"Without -v your database data stays."},
-    {"u":"ship","q":"Tag the image while building.","code":"docker build ___ it-dashboard .","o":["-n","--name","-p","-t"],"a":3,"why":"--name belongs to docker run."}
+    {"u":"ship","q":"Tag the image while building.","code":"docker build ___ it-dashboard .","o":["-n","--name","-p","-t"],"a":3,"why":"--name belongs to docker run."},
+    {"u":"procs","q":"After the & you see [1] 4312. What is 4312?","o":["The job number","The port","The PID of the new process","Seconds until it starts"],"a":2,"why":"[1] is the job number; 4312 is the process ID."},
+    {"u":"procs","q":"Stop background job 1 of this terminal.","o":["kill 1","kill %1","jobs -k 1","stop 1"],"a":1,"why":"%1 means job 1. Plain kill 1 would aim at PID 1."},
+    {"u":"procs","q":"lsof prints localhost:irdmi. What is irdmi?","o":["An error code","A user name","The name your Mac gives port 8000","A hidden process"],"a":2,"why":"lsof shows port names. Add -nP to see plain numbers."},
+    {"u":"cases","q":"lsof gave PID 5120 on port 8080. What does this show?","code":"ps -p 5120 -o command","o":["Who logged in","The command that started 5120","How much memory it uses","Its open ports"],"a":1,"why":"Now you know which forgotten dev server owns the port."},
+    {"u":"cases","q":"deploy.sh is -rw-r--r--. Why does sudo ./deploy.sh fail too?","o":["sudo is off","Nobody has the x bit, not even root","The file is empty","Root cannot read it"],"a":1,"why":"Running a file needs an x bit. chmod +x adds it."},
+    {"u":"cases","q":"Git stores deploy.sh as 100644. What does that mean?","o":["Not executable","Executable","Deleted","Read-only for git"],"a":0,"why":"100755 is executable. That is the only permission git remembers."},
+    {"u":"cases","q":"docker images lists many <none>:<none>. What are they?","o":["Broken downloads","Running containers","Old builds whose tag moved on","Volumes"],"a":2,"why":"These dangling images pile up. docker image prune -f removes them."},
+    {"u":"cases","q":"Which permission fits the ~/.ssh folder?","o":["chmod 777","chmod 755","chmod 600","chmod 700"],"a":3,"why":"700: only you get in. Keys inside get 600."},
+    {"u":"cases","q":"A Compose service keeps restarting. Look where first?","o":["docker compose logs <service>","docker compose ps -a","df -h","ssh -v"],"a":0,"why":"The crash reason is almost always in the last lines."},
+    {"u":"cases","q":"In Compose, when do you need ports:?","o":["For every service","Only to reach it from your Mac","Only for the database","Never"],"a":1,"why":"Services reach each other by name, like db, without it."},
+    {"u":"search","q":"Why sort -h after du -sh?","o":["It hides small files","It sorts sizes like 4.0K and 46M correctly","It sorts by name","It shows hidden files"],"a":1,"why":"Plain sort compares text, so 1.8M would land before 4.0K."}
   ]
 });

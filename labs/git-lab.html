@@ -978,7 +978,7 @@ const MISSIONS=[
   ]},
 { name:'M-03 // THE IGNORE LIST',
   steps:[
-    {t:'Some files should never go into git — passwords, huge build folders, temporary junk your editor makes. A file called <b>.gitignore</b> is the list of what git should pretend it cannot see.',
+    {t:'Some files should never go into git: passwords, huge build folders, the temporary junk your editor makes. A file called <b>.gitignore</b> lists them, and git then acts as if they are not there.',
      c:'touch .gitignore', m:'The leading dot means it is a hidden file. Git still reads it.'},
     {t:'Make a junk file first, so you can watch it disappear from view.',
      c:'write secrets.txt password: hunter2', m:'Never commit real credentials. This is the whole reason .gitignore exists.'},
@@ -1024,7 +1024,7 @@ const MISSIONS=[
     {t:'Stage.', c:'git add .', m:''},
     {t:'Commit.', c:'git commit -m "alternate main route"', m:''},
     {t:'Now merge. This WILL fail — that is the point.', c:'git merge cargo-run', m:'Read the error slowly. Git names the exact file that needs a decision.'},
-    {t:'Git will not guess for you, so it stops and writes BOTH versions into the file with <b>&lt;&lt;&lt;</b> markers around them. Open the FILES tab and look at it.<br><br>Real resolving means editing that file by hand: delete the markers, leave the text you want. Do that now.',
+    {t:'Git will not guess for you. It stops and writes BOTH versions into the file, with <b>&lt;&lt;&lt;</b> markers around them. Open the FILES tab and look.<br><br>To resolve it, edit the file by hand. Delete the markers and keep the text you want. Do that now.',
      c:'write manifest.txt route: Lorville direct',
      m:'You just typed the version you wanted, which wipes the markers. That is genuinely all "resolving a conflict" means.'},
     {t:'Choosing is only the decision. You still stage the fixed file.', c:'git add .', m:''},
@@ -1033,7 +1033,7 @@ const MISSIONS=[
   ]},
 { name:'M-07 // UNDO',
   steps:[
-    {t:'Everyone breaks something eventually. Git has an undo for every stage of the process — this mission covers all four. Start by making a bad edit.',
+    {t:'Everyone breaks something eventually. Git has an undo for each of its four stages, and this mission covers all four. Start by making a bad edit.',
      c:'write crew.txt DELETED EVERYTHING OOPS', m:'Not committed yet, just edited.'},
     {t:'<b>git restore</b> throws away uncommitted edits to a file and puts back the last committed version.',
      c:'git restore crew.txt', m:'Undo level 1: edited but not staged. Cheapest to fix.'},
@@ -1050,11 +1050,11 @@ const MISSIONS=[
     {t:'Commit it.', c:'git commit -m "regrettable"', m:'Now it is in history. Two ways out.'},
     {t:'<b>git reset --soft HEAD~1</b> removes the last commit but keeps your file changes. Use this when you committed too early or wrote a bad message.',
      c:'git reset --soft HEAD~1', m:'HEAD~1 means "one commit before where I am". The commit vanished from the graph.'},
-    {t:'Your changes survived, and --soft left them staged. git restore copies the staged version back, so unstage first.',
+    {t:'Your changes survived, and --soft left them staged. git restore puts back the staged version, so right now it would change nothing. Unstage first.',
      c:'git reset', m:''},
     {t:'Now throw the change away.',
      c:'git restore crew.txt', m:'There is also --hard, which deletes the commit AND your changes. It is the one truly dangerous git command. Nothing survives it.'},
-    {t:'One more. Reset only works on commits nobody else has seen. If a bad commit is already pushed, you use <b>revert</b> instead. Make one to practise on.',
+    {t:'One more. Only use reset on commits nobody else has seen. Is the bad commit already pushed? Then use <b>revert</b> instead. Make a commit to practise on.',
      c:'write crew.txt something to undo later', m:''},
     {t:'Stage.', c:'git add .', m:''},
     {t:'Commit.', c:'git commit -m "to be reverted"', m:'Look at the commit id in the graph — you need it next.'},
@@ -1140,8 +1140,9 @@ function checkMission(cmd){
   if(!guided||missionIdx>=MISSIONS.length) return;
   const want=MISSIONS[missionIdx].steps[stepIdx].c;
   const ok = want.includes('LAST')
-    ? new RegExp('^'+want.replace('LAST','c\\d+').replace(/\s+/g,'\\s+')+'$','i').test(cmd.trim())
+    ? new RegExp('^'+want.replace('LAST','c\\d+').replace(/\s+/g,'\\s+')+'$','i').test(cmd.trim()) && lastRevertOk(cmd)
     : norm(cmd)===norm(want)||norm(mcanon(cmd))===norm(want);
+  if(!ok && want.includes('LAST') && /^git revert\s+c\d+$/i.test(cmd.trim()) && S.commits.some(x=>x.label==='revert '+cmd.trim().split(/\s+/)[2].toLowerCase())) w('that undid a different commit. Run git log and revert the top one.','warn');
   if(ok){
     stepIdx++;
     if(stepIdx>=MISSIONS[missionIdx].steps.length){
@@ -1153,6 +1154,11 @@ function checkMission(cmd){
     }
     renderMission();
   }
+}
+function lastRevertOk(cmd){
+  const id=(cmd.match(/c\d+/i)||[''])[0].toLowerCase();
+  const last=S.commits.filter(x=>!x.label.startsWith('revert ')).pop();
+  return !!last && last.id===id && S.commits.some(x=>x.label==='revert '+id);
 }
 function norm(s){ return s.trim().replace(/\s+/g,' ').replace(/["']/g,'"').toLowerCase(); }
 function mcanon(s){

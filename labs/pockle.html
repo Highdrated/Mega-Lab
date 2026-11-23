@@ -911,7 +911,7 @@ POCKET.register({
     { u: "cfgedit", q: "In show | compare, a deactivate shows with which mark?", o: ["+", "!", "-", "*"], a: 1, why: "The statement is unchanged, only its effect." },
     { u: "cfgload", q: "Ten VLANs in service. You load override one new VLAN and commit. Result?", o: ["Only the new VLAN remains", "Eleven VLANs", "Error", "Nothing changes"], a: 0, why: "Override replaces the whole candidate." },
     { u: "cfgload", q: "Port has members staff. You load merge members guest. Result?", o: ["staff and guest", "staff only", "guest only", "Error"], a: 0, why: "Merge combines lists." },
-    { u: "cfgload", q: "Fastest safe way to clone a good switch?", o: ["Retype everything", "rollback 1", "load patch", "save golden.conf, then load override golden.conf on the new one"], a: 3, why: "A saved file is complete by construction." },
+    { u: "cfgload", q: "Fastest safe way to clone a good switch?", o: ["Retype everything", "rollback 1", "load patch", "save golden.conf, then load override golden.conf on the new one"], a: 3, why: "A saved file holds the whole config, so nothing gets left out." },
     { u: "cfgload", q: "You just ran load merge golden.conf. Next command?", o: ["commit", "rollback 0", "show | compare", "save"], a: 2, why: "Read the diff before committing." },
     { u: "cfgload", q: "What does the replace: tag do?", o: ["Deletes the whole config", "Empties that level before loading into it", "Renames a statement", "Nothing ever"], a: 1, why: "Only load replace reads it." },
     { u: "cfgload", q: "Which loader reads show | compare output?", o: ["load merge", "load patch", "load set", "load override"], a: 1, why: "+ lines are set, - lines are deleted." },
@@ -1339,7 +1339,17 @@ POCKET.register({
     {"u": "split", "q": "10.0.0.0/24 cut into /27s. Network of subnet #4?", "o": ["10.0.0.128", "10.0.0.96", "10.0.0.64", "10.0.0.4"], "a": 1, "why": "Block 32: #1 .0, #2 .32, #3 .64, #4 .96."},
     {"u": "summary", "q": "Summary for 10.4.4.0/24 to 10.4.7.0/24?", "o": ["10.4.0.0/21", "10.4.4.0/23", "10.4.4.0/22", "10.4.7.0/22"], "a": 2, "why": "4 networks: /24 - 2 = /22, and 4 is a multiple of 4."},
     {"u": "ranges", "q": "Is 172.32.0.1 private?", "o": ["Yes, all of 172 is", "No, private is 172.16 to 172.31", "Only behind NAT", "Yes, it is CGNAT"], "a": 1, "why": "The RFC 1918 range is 172.16.0.0/12: 172.16 up to 172.31."},
-    {"u": "ranges", "q": "Wildcard mask for /28?", "o": ["0.0.0.15", "0.0.0.16", "255.255.255.240", "0.0.0.31"], "a": 0, "why": "255 - 240 = 15: the wildcard is the mask flipped."}
+    {"u": "ranges", "q": "Wildcard mask for /28?", "o": ["0.0.0.15", "0.0.0.16", "255.255.255.240", "0.0.0.31"], "a": 0, "why": "255 - 240 = 15: the wildcard is the mask flipped."},
+    { u: "summary", q: "Summary for 192.168.16.0/24 to 192.168.31.0/24 (16 networks)?", o: ["192.168.16.0/21", "192.168.16.0/20", "192.168.0.0/20", "192.168.16.0/22"], a: 1, why: "16 = 2^4: /24 - 4 = /20, and 16 is a multiple of 16." },
+    { u: "summary", q: "Summary for 10.5.6.0/24 and 10.5.7.0/24?", o: ["10.5.6.0/22", "10.5.7.0/23", "10.5.6.0/23", "10.5.0.0/21"], a: 2, why: "2 networks: /23, and 6 is even." },
+    { u: "summary", q: "Can 10.5.5.0/24 and 10.5.6.0/24 become one /23?", o: ["Yes, they are next to each other", "Only on Junos", "Yes, as 10.5.5.0/23", "No, 5 is odd"], a: 3, why: "A /23 starts on an even number. 5 and 6 sit in two different /23s." },
+    { u: "summary", q: "Which /24s does 172.16.40.0/22 cover?", o: ["172.16.40.0 to 172.16.43.0", "172.16.40.0 to 172.16.47.0", "172.16.36.0 to 172.16.40.0", "Only 172.16.40.0"], a: 0, why: "A /22 is 4 networks of /24, starting at 40." },
+    { u: "summary", q: "How many /24 networks fit in one /21?", o: ["3", "4", "8", "21"], a: 2, why: "24 - 21 = 3 bits, and 2^3 = 8." },
+    { u: "ranges", q: "Where does 172.16.0.0/12 end?", o: ["172.16.255.255", "172.31.255.255", "172.32.255.255", "172.255.255.255"], a: 1, why: "It runs from 172.16 to 172.31." },
+    { u: "ranges", q: "Is 100.100.1.1 a normal public address?", o: ["Yes", "No, it is loopback", "No, it is RFC 1918", "No, it is CGNAT"], a: 3, why: "100.64 to 100.127 is the shared ISP range." },
+    { u: "ranges", q: "Wildcard mask for /30?", o: ["0.0.0.3", "255.255.255.252", "0.0.0.4", "0.0.0.252"], a: 0, why: "255 - 252 = 3." },
+    { u: "ranges", q: "Wildcard mask for 255.255.240.0?", o: ["0.0.16.255", "0.0.15.255", "0.0.240.255", "0.0.15.0"], a: 1, why: "255 - 240 = 15, and 255 - 0 = 255." },
+    { u: "ranges", q: "Will a router forward traffic from 169.254.3.7?", o: ["Yes, like any address", "Only over VPN", "No, link-local stays on its own segment", "Only with NAT"], a: 2, why: "That is why an APIPA laptop cannot reach the internet." }
   ]
 });
 
@@ -1660,7 +1670,7 @@ POCKET.register({
     { u: 'fuel', q: 'Which numbers does range(4) give?', o: ['1, 2, 3, 4', '0, 1, 2, 3', '0, 1, 2, 3, 4'], a: 1, why: 'Starts at 0, stops before 4. For 1 to 4 use range(1, 5).' },
     { u: 'fuel', q: 'How many lines does this print?', code: 'total = 0\nfor leg in [4, 6, 2]:\n    total += leg\n    print(total)', o: ['1', '3', '12'], a: 1, why: 'The print is indented, so it runs every round: 4, 10, 12.' },
     { u: 'trade', q: 'What happens with menu[tea], no quotes?', o: ['It gives the price', 'KeyError', 'NameError'], a: 2, why: 'Without quotes Python looks for a variable called tea.' },
-    { u: 'roster', q: 'What goes wrong here?', code: 'def fee():\n    print(2)\n\ntotal = fee() + 1', o: ['TypeError: None + 1', 'total is 3', 'total is 2'], a: 0, why: 'print shows the 2 but hands back None. Use return to calculate.' },
+    { u: 'roster', q: 'What goes wrong here?', code: 'def fee():\n    print(2)\n\ntotal = fee() + 1', o: ['TypeError: None + 1', 'total is 3', 'total is 2'], a: 0, why: 'print shows the 2 on screen, but the function gives back None. Use return to hand a value back.' },
     { u: 'roster', q: 'The last line is greet with no brackets. What happens?', o: ['greet runs', 'Nothing', 'NameError'], a: 1, why: 'Without () you only name the function, you do not call it.' },
     { u: 'tag', q: 'What does this print?', code: 'print("Bags:", 12)', o: ['Bags: 12', 'Bags:12', 'Bags: , 12'], a: 0, why: 'print() puts one space between the values you separate with commas.' },
     { u: 'loadsheet', q: 'What does this print?', code: 'print(f"Total: {12 * 3} kg")', o: ['Total: {12 * 3} kg', 'Total: 36 kg', 'Total: 12 * 3 kg'], a: 1, why: 'You can calculate inside the braces of an f-string.' },
@@ -1792,7 +1802,7 @@ try { var s = get("passle.v2"); if (!s || typeof s !== "object" || !s.done || ty
     {"u":"recipe-book","q":"What does this print?","code":"echo 2 <=> 5;","o":["-1","0","1","3"],"a":0,"why":"<=> gives negative, 0 or positive."},
     {"u":"recipe-book","q":"Fill the blank to sort by minutes.","code":"usort($r, fn ($a, $b) =>\n    $a['min'] ___ $b['min']);","o":["<=>","-=","==","<"],"a":0,"why":"The rule returns <0, 0 or >0, which is what <=> gives."},
     {"u":"cellar","q":"Which DSN opens an SQLite file?","o":["'mysql:' . $path","'file:' . $path","'sqlite:' . $path","$path"],"a":2,"why":"The DSN names the driver, then the file."},
-    {"u":"cellar","q":"Why set PDO::ERRMODE_EXCEPTION?","o":["Rows come back as arrays","A broken query throws","Queries run faster","It closes the connection"],"a":1,"why":"So failures never pass silently."},
+    {"u":"cellar","q":"Why set PDO::ERRMODE_EXCEPTION?","o":["Rows come back as arrays","A broken query throws","Queries run faster","It closes the connection"],"a":1,"why":"Then a broken query throws an exception instead of failing silently."},
     {"u":"cellar","q":"What does FETCH_ASSOC as default fetch mode give?","o":["Rows as objects","Only the first column","Numbered arrays only","Rows as keyed arrays"],"a":3,"why":"Each row looks like ['name' => ...]."},
     {"u":"cellar","q":"Spot the bug.","code":"$pdo->query(\"SELECT * FROM w\n  WHERE name = '$name'\");","o":["query needs two arguments","User input glued into SQL","SELECT * is not allowed","Missing semicolon in SQL"],"a":1,"why":"Use prepare() and execute() with a placeholder."},
     {"u":"cellar","q":"Fill the blank.","code":"$st = $pdo->prepare(\n  'SELECT * FROM w WHERE id = :id');\n$st->___(['id' => $id]);","o":["query","bind","run","execute"],"a":3,"why":"execute() sends the values separately from the query."},
@@ -1840,7 +1850,7 @@ try { var s = get("passle.v2"); if (!s || typeof s !== "object" || !s.done || ty
     {"u":"sp-2","q":"Which catch also catches DivisionByZeroError?","o":["catch (Throwable $e)","catch (Exception $e)","catch (Warning $e)","catch ($e)"],"a":0,"why":"Throwable covers exceptions and engine errors."},
     {"u":"sp-2","q":"In production, display_errors should be...","o":["Off, details go to a log","Removed","On","On for admins only"],"a":0,"why":"Visitors get a calm 500 page."},
     {"u":"sp-3","q":"Read the colour attribute of $wine in SimpleXML.","o":["$wine{'colour'}","$wine['colour']","$wine->attr(colour)","$wine->colour"],"a":1,"why":"Attributes use array syntax."},
-    {"u":"sp-3","q":"Why write (string) $wine->name?","o":["XML has no strings","It trims it","Each value is an element object","To escape it"],"a":2,"why":"Cast to get a plain value."},
+    {"u":"sp-3","q":"Why write (string) $wine->name?","o":["XML has no strings","It trims it","Each value is an element object","To escape it"],"a":2,"why":"The cast turns the element object into its plain text."},
     {"u":"sp-3","q":"What does //wine[@colour=\"red\"] find?","o":["Only top-level wines","Nothing","The colour attribute","Red wines anywhere"],"a":3,"why":"// means anywhere; [@...] filters."},
     {"u":"sp-3","q":"Which interface makes count($obj) work?","o":["Stringable","IteratorAggregate","Countable","ArrayAccess"],"a":2,"why":"count() calls your count() method."},
     {"u":"sp-3","q":"In offsetSet, what is the offset for $obj[] = $x?","o":["The next number","-1","0","null"],"a":3,"why":"Appending passes null as the offset."},
@@ -1950,7 +1960,7 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u":"closing","q":"Which gives the average tip?","o":["AVG(tip)","AVERAGE(tip)","SUM(tip) / *","MEAN(tip)"],"a":0,"why":"SQL calls it AVG."},
     {"u":"closing","q":"Spot the bug.","code":"SELECT AVG(tip, 2) FROM bills;","o":["tip is not a column","Rounding goes outside: ROUND(AVG(tip), 2)","Nothing","AVG needs a star"],"a":1,"why":"AVG takes one argument."},
     {"u":"closing","q":"Which gives the cheapest price?","o":["LOW(price)","FIRST(price)","MIN(price)","MAX(price)"],"a":2,"why":"MIN and MAX give the extremes."},
-    {"u":"closing","q":"How many rows does this return?","code":"SELECT SUM(total), MAX(total)\nFROM bills;","o":["13","0","2","1"],"a":3,"why":"Aggregates fold many rows into one."},
+    {"u":"closing","q":"How many rows does this return?","code":"SELECT SUM(total), MAX(total)\nFROM bills;","o":["13","0","2","1"],"a":3,"why":"SUM and MAX are aggregates: they fold many rows into one."},
     {"u":"floor","q":"What does GROUP BY day give?","code":"SELECT day, SUM(total)\nFROM bills GROUP BY day;","o":["One row per day","An error","One row per bill","One row in total"],"a":0,"why":"The aggregate runs once per group."},
     {"u":"floor","q":"Bills exist on Fri, Sat and Sun. How many rows?","code":"SELECT day, COUNT(*)\nFROM bills GROUP BY day;","o":["7","3","1","13"],"a":1,"why":"One row per group."},
     {"u":"floor","q":"Spot the bug.","code":"SELECT day, SUM(total)\nFROM bills\nWHERE SUM(total) > 400\nGROUP BY day;","o":["Nothing","SUM needs AS","SUM in WHERE: use HAVING","GROUP BY must come first"],"a":2,"why":"WHERE runs before the groups exist."},
@@ -2429,7 +2439,7 @@ POCKET.register({
     {"u":"loops","q":"What does !== mean?","o":["Is equal to","Store this value","Is greater than or equal to","Is not equal to"],"a":3,"why":"Its twin === means is equal to."},
     {"u":"loops","q":"Fill the blank: walk right until the wall.","code":"while (look(\"right\") ___ \"wall\") {\n  move(\"right\");\n}","o":["===","=","!==","<"],"a":2,"why":"Keep going while what is ahead is NOT a wall."},
     {"u":"loops","q":"A while condition never turns false. What happens in Spelle?","o":["The hero teleports to the stairs","It runs once and stops","Nothing, while is always safe","The spell fizzles at 600 steps"],"a":3,"why":"A loop that never ends is the classic while danger."},
-    {"u":"conditions","q":"When does the block of an if run?","o":["Always","Only when it is false","Only when its condition is true","Twice"],"a":2,"why":"if is a decision."},
+    {"u":"conditions","q":"When does the block of an if run?","o":["Always","Only when it is false","Only when its condition is true","Twice"],"a":2,"why":"The block runs only when the condition is true. Otherwise it is skipped."},
     {"u":"conditions","q":"The tile to the right is floor. What happens?","code":"if (look(\"right\") === \"wall\") {\n  move(\"down\");\n} else {\n  move(\"right\");\n}","o":["The hero moves down","Both moves happen","The hero moves right","Nothing happens"],"a":2,"why":"The condition is false, so the else branch runs."},
     {"u":"conditions","q":"Spot the bug.","code":"if (look(\"right\") = \"wall\") {\n  move(\"down\");\n}","o":["look needs no argument","if needs else","Nothing is wrong","= assigns; compare with ==="],"a":3,"why":"A single = is assignment, not comparison."},
     {"u":"conditions","q":"When does else run?","o":["After the if block, always","When the if condition is false","Before the if","Only inside loops"],"a":1,"why":"else is the other fork in the road."},
@@ -2933,7 +2943,18 @@ try { var s = get("shelle.v1"); if (!s || typeof s !== "object") return []; var 
     {"u":"docker","q":"Which nginx version runs in web?","code":"docker exec web nginx ___","o":["-v","-t","-s stop","-c"],"a":0,"why":"-t tests the config, -s stop stops it."},
     {"u":"compose","q":"Show this project's services and their state.","o":["docker compose ls","docker compose ps","docker ps compose","docker compose logs"],"a":1,"why":"compose ls lists projects, not services."},
     {"u":"compose","q":"Remove the services AND their volumes.","o":["docker compose down","docker compose stop","docker compose down -v","docker compose rm"],"a":2,"why":"Without -v your database data stays."},
-    {"u":"ship","q":"Tag the image while building.","code":"docker build ___ it-dashboard .","o":["-n","--name","-p","-t"],"a":3,"why":"--name belongs to docker run."}
+    {"u":"ship","q":"Tag the image while building.","code":"docker build ___ it-dashboard .","o":["-n","--name","-p","-t"],"a":3,"why":"--name belongs to docker run."},
+    {"u":"procs","q":"After the & you see [1] 4312. What is 4312?","o":["The job number","The port","The PID of the new process","Seconds until it starts"],"a":2,"why":"[1] is the job number; 4312 is the process ID."},
+    {"u":"procs","q":"Stop background job 1 of this terminal.","o":["kill 1","kill %1","jobs -k 1","stop 1"],"a":1,"why":"%1 means job 1. Plain kill 1 would aim at PID 1."},
+    {"u":"procs","q":"lsof prints localhost:irdmi. What is irdmi?","o":["An error code","A user name","The name your Mac gives port 8000","A hidden process"],"a":2,"why":"lsof shows port names. Add -nP to see plain numbers."},
+    {"u":"cases","q":"lsof gave PID 5120 on port 8080. What does this show?","code":"ps -p 5120 -o command","o":["Who logged in","The command that started 5120","How much memory it uses","Its open ports"],"a":1,"why":"Now you know which forgotten dev server owns the port."},
+    {"u":"cases","q":"deploy.sh is -rw-r--r--. Why does sudo ./deploy.sh fail too?","o":["sudo is off","Nobody has the x bit, not even root","The file is empty","Root cannot read it"],"a":1,"why":"Running a file needs an x bit. chmod +x adds it."},
+    {"u":"cases","q":"Git stores deploy.sh as 100644. What does that mean?","o":["Not executable","Executable","Deleted","Read-only for git"],"a":0,"why":"100755 is executable. That is the only permission git remembers."},
+    {"u":"cases","q":"docker images lists many <none>:<none>. What are they?","o":["Broken downloads","Running containers","Old builds whose tag moved on","Volumes"],"a":2,"why":"These dangling images pile up. docker image prune -f removes them."},
+    {"u":"cases","q":"Which permission fits the ~/.ssh folder?","o":["chmod 777","chmod 755","chmod 600","chmod 700"],"a":3,"why":"700: only you get in. Keys inside get 600."},
+    {"u":"cases","q":"A Compose service keeps restarting. Look where first?","o":["docker compose logs <service>","docker compose ps -a","df -h","ssh -v"],"a":0,"why":"The crash reason is almost always in the last lines."},
+    {"u":"cases","q":"In Compose, when do you need ports:?","o":["For every service","Only to reach it from your Mac","Only for the database","Never"],"a":1,"why":"Services reach each other by name, like db, without it."},
+    {"u":"search","q":"Why sort -h after du -sh?","o":["It hides small files","It sorts sizes like 4.0K and 46M correctly","It sorts by name","It shows hidden files"],"a":1,"why":"Plain sort compares text, so 1.8M would land before 4.0K."}
   ]
 });
 
