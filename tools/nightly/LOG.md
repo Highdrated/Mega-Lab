@@ -105,8 +105,7 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Shelle: the prompt always reads `user@mbp ~ %`, also after `cd ~/Projects` and `cd station-site`. A real zsh prompt shows the folder. Fixing it means tracking the folder across steps: engine change, needs her yes.
 - Spelle: 22 of 25 example boxes in the brief are wider than the 290 px brief column and scroll sideways, so the first lesson's "name, argument" diagram is cut off. Widening the brief column changes the layout: her decision.
 - Webble: 69 emoji of 27 kinds (header buttons, console hints, brief, path cards, easing lab, gym, four lesson texts). She hates emoji; replacing them changes the look, so it waits for her yes.
-- Hexle: at 1440 px several labels are cut with an ellipsis ("Target 1 / 43" shows as "TARGE…", plot titles 04, 07, 12, Project VI, the "From memory" button). Fixing it means resizing the bar: look change.
-- Hexle: target 1 step 9 "Close every tag" is already green on the starter and on empty input. Two drills show the answer as placeholder text (`function tick() {}`, `function render() {}`). Tourney (flexbox and grid) is open on a first visit, before any CSS is taught. Design choices, her call.
+- Hexle: two drills show the answer as placeholder text (`function tick() {}`, `function render() {}`). Tourney (flexbox and grid) is open on a first visit, before any CSS is taught. Design choices, her call (she did not pick these on 23 Nov).
 - Webble: between about 760 and 1217 px wide the header runs off the right edge (toolbox, sound and export buttons). The Work screen at phone width is cramped. Both need a layout decision.
 - Syncle: the "count" recall accepts a bare `3` (this is the one failing case in `tools/syncle/test.js`). The "connect" recall asks for "without the welcome text" but passes without `-NoWelcome`. Tightening either changes what the drill demands: her call.
 - Syncle: several Graph commands take the user as a bare first word (`Update-MgUser x`); the real module wants `-UserId`. Not changed.
@@ -154,6 +153,7 @@ Needs her decision
 
 ### 2026-11-23, daytime (asked by Kaatje)
 
+- Hexle review: the page scrolled sideways between 1561 and 1786 px and at 1366 and about 1000 px wide (the top bar was wider than the screen); the compact bar now starts at 1800 px, the small-font step at 1400 and the tightest at 1030. Checked every 17 px from 360 to 2600: no sideways scroll. Plot and Grimoire titles no longer end in an ellipsis: below 1560 px the 'Plot 04 ·' prefix hides (the plate numeral already says it) and titles may take two lines in equal-height headers. The target picker shows the target name first, with the full name as a tooltip. Target 1 step 9 'Close every tag' was green on the empty starter; it now needs a p and an h2 first. CACHE workshop-v108.
 - Codex Microsoft: `datacenterunited.com` and `contoso.com` became the fantasy domain `ashvale.com`, and every real-looking person (Jan Peeters, Stijn Raes, Geoffrey Vanderhaegen, Inge Collet, Pascal Paquay, Adelheid Vermeyen, Noor Haddad, Sara Jacobs, Van Laer, johan.security) got a fantasy name with the same initials, so every address formula still gives the same alias. CACHE workshop-v107.
 - Still open: Syncle uses Belgian-looking names in its drills (Noor Claes, Tom Jacobs, Sara Wouters, Lien Maes, Jonas Peeters); other labs use `contoso.com`. Her call.
 
