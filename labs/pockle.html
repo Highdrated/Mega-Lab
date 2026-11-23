@@ -1059,8 +1059,15 @@ try { var s = get("pvelab.done"); if (!s || typeof s !== "object") return []; re
     {"u":"bka","q":"Why not keep the backup on the server the VM runs on?","o":["if that server dies, the backup dies with it","it is slower","Proxmox forbids it","backups need a VM to be stopped"],"a":0,"why":"A backup must live somewhere other than the thing it protects."},
     {"u":"bka","q":"nas-west only allows VM disks (content images). Can vzdump write a backup to it?","o":["yes, any storage works","only in stop mode","no, the storage must allow content backup","only with compression"],"a":2,"why":"Storage only holds what its content list allows. Backups need `--content backup`."},
     {"u":"bka","q":"VM 101 runs under HA. Why does it still need a backup?","o":["HA is already a backup","HA cannot bring back a deleted or broken VM","backups make HA faster","HA needs a backup to start"],"a":1,"why":"HA would faithfully restart the broken VM. Only a backup brings the old one back."},
-    {"u":"bka","q":"vzdump says the job is finished. What do you do before calling it done?","o":["nothing, it said finished","qm start 101","reboot the NAS","pvesm list backup-a, and see the file"],"a":3,"why":"A backup you have not seen is a hope, not a backup."}
-  ]
+    {"u":"bka","q":"vzdump says the job is finished. What do you do before calling it done?","o":["nothing, it said finished","qm start 101","reboot the NAS","pvesm list backup-a, and see the file"],"a":3,"why":"A backup you have not seen is a hope, not a backup."},
+    {"u":"ready","q":"Which command shows every storage with its type, whether it is active, and how full it is?","o":["pvesm list","pvesm status","qm list","df -h /etc/pve"],"a":1,"why":"pvesm status gives one line per storage: name, type, status, total, used, available."},
+    {"u":"join","q":"On a cluster member, what does ls /etc/pve/nodes show?","o":["one folder per node in the cluster","the VMs of this node only","the NAS shares","the log files of corosync"],"a":0,"why":"/etc/pve is shared by the whole cluster, so every member sees a folder for every node."},
+    {"u":"create","q":"Why is /etc/pve not an ordinary folder?","o":["it lives on the NAS","it only exists on the first node","it is the cluster file system, the same on every node","it is wiped at every reboot"],"a":2,"why":"pmxcfs keeps /etc/pve in sync across all nodes. A change on one shows up on all."},
+    {"u":"join","q":"Which command shows who issued a certificate file?","o":["cat <file> | grep issuer","pvecm status --cert","openssl x509 -in <file> -noout -issuer","ssh-keygen -l -f <file>"],"a":2,"why":"openssl x509 reads the certificate; -noout skips the encoded blob, -issuer prints who signed it."},
+    {"u":"ready","q":"What does qm stop 101 do to a running VM?","o":["asks the guest to shut down nicely","pauses it in memory","moves it to another node","ends it at once, like pulling the power plug"],"a":3,"why":"qm stop kills the VM process. qm shutdown is the polite one that asks the guest OS."},
+    {"u":"move","q":"VM 101 is running. You type qm migrate 101 pve2 without --online. What happens?","o":["it is refused: a running VM needs --online","it migrates offline after a stop","it migrates live anyway","it copies the VM and leaves both running"],"a":0,"why":"Proxmox answers: can't migrate running VM without --online."},
+    {"u":"add","q":"Where does the corosync configuration of a cluster live?","o":["/etc/corosync/local.conf on node 1 only","/etc/pve/corosync.conf, shared by every node","/var/lib/pve/cluster.db on the NAS","in the web interface only"],"a":1,"why":"It sits in /etc/pve, so every member reads the same file. Not in a cluster yet: the file does not exist."}
+]
 });
 
 </script>
@@ -2436,8 +2443,23 @@ POCKET.register({
     {"u":"delve","q":"Corridors of unknown length want which tool?","o":["A while loop with look","A for loop with a fixed count","One long move","An object"],"a":0,"why":"while stops when the corridor ends, whatever its length."},
     {"u":"delve","q":"What does this do?","code":"while (look(\"right\") !== \"wall\") {\n  move(\"right\");\n}\nmove(\"down\");","o":["One step right, then down","Walks right to the wall, then one step down","Walks down until a wall","Loops forever"],"a":1,"why":"This is the serpent pattern of Delve III."},
     {"u":"delve","q":"Which spell can solve a maze you have never seen?","o":["A list of fixed moves","The wall follower","say(look(\"right\"))","Math.random() moves"],"a":1,"why":"It needs no route, only the right-hand rule."},
-    {"u":"delve","q":"How do you pick up the chest in the treasury?","o":["look(\"chest\")","Stand on it and call grab()","move(\"chest\")","Walk past it"],"a":1,"why":"grab() takes what is on the hero's tile."}
-  ]
+    {"u":"delve","q":"How do you pick up the chest in the treasury?","o":["look(\"chest\")","Stand on it and call grab()","move(\"chest\")","Walk past it"],"a":1,"why":"grab() takes what is on the hero's tile."},
+    {"u":"lesson0","q":"What happens with this spell?","code":"move(\"right\", \"5\");","o":["5 steps right","1 step right","The spell misfires: the steps must be a number","The hero says 5"],"a":2,"why":"\"5\" in quotes is text. Spelle wants the number 5, no quotes."},
+    {"u":"motion","q":"What happens with this spell?","code":"move(\"north\");","o":["One step up","The spell misfires: unknown direction","The hero turns around","Nothing at all"],"a":1,"why":"Spelle knows \"up\", \"down\", \"left\" and \"right\" only."},
+    {"u":"variables","q":"What does steps hold at the end?","code":"let steps = 3;\nsteps = 4;","o":["4","3","7","An error"],"a":0,"why":"A let jar can be filled again. Only const refuses."},
+    {"u":"loops","q":"Which counts up by one, just like i++?","o":["i + 1","i =+ 1","i += 1","i == i + 1"],"a":2,"why":"i += 1 is short for i = i + 1. i + 1 alone computes a value and throws it away."},
+    {"u":"loops","q":"How many steps does this take?","code":"for (let i = 0; i <= 7; i++) {\n  move(\"right\");\n}","o":["7","8","9","6"],"a":1,"why":"i runs 0 to 7: eight passes, the same as i < 8."},
+    {"u":"functions","q":"A line reads stride() with no semicolon. What happens?","o":["The spell misfires","stride is defined again","Nothing: it is skipped","It still calls stride: JavaScript adds the ; for you"],"a":3,"why":"Semicolons are a good habit, but at the end of a line JavaScript inserts them itself."},
+    {"u":"arrays","q":"What is path[3]?","code":"let path = [\"up\", \"right\", \"down\"];","o":["\"down\"","\"up\"","undefined","An error"],"a":2,"why":"Three items have indexes 0, 1 and 2. Past the end there is nothing: undefined."},
+    {"u":"arrays","q":"Which gives the last item of path, whatever its length?","o":["path[path.length - 1]","path[path.length]","path[-1]","path.last"],"a":0,"why":"length is one more than the last index, so subtract 1."},
+    {"u":"objects","q":"What does plan.steps give?","code":"let plan = { dir: \"right\" };","o":["0","\"steps\"","An error","undefined"],"a":3,"why":"A property that was never set reads as undefined. No error, so check your spelling."},
+    {"u":"modern","q":"Does this work?","code":"const path = [];\npath.push(\"right\");","o":["No: const cannot change","Yes: const stops re-filling the name, not changing the array","Only with let","Only if path is not empty"],"a":1,"why":"path still points to the same array; push only adds to it. path = [] again would fail."},
+    {"u":"modern","q":"Which is the same as (dir) => move(dir)?","o":["dir => move(dir)","=> dir move(dir)","dir -> move(dir)","(dir) => { move }"],"a":0,"why":"With exactly one parameter, the brackets around it may go."},
+    {"u":"runes","q":"Which values can this roll give?","code":"Math.floor(Math.random() * 6) + 1","o":["0 to 6","1 to 6","0 to 5","1 to 7"],"a":1,"why":"Chop to 0..5, then shift up by one: a six-sided die."},
+    {"u":"runes","q":"What does the hero say?","code":"say(\"3\" + 4);","o":["7","\"3\" + 4","34","An error"],"a":2,"why":"With text on one side, + glues instead of adding."},
+    {"u":"algorithms","q":"Facing f, which index points the opposite way?","code":"const dirs = [\"up\", \"right\",\n  \"down\", \"left\"];","o":["(f + 1) % 4","(f + 2) % 4","f - 1","(f * 2) % 4"],"a":1,"why":"Two right turns make a U-turn: right (1) becomes left (3)."},
+    {"u":"nested","q":"How many times does the hero grab?","code":"for (let r = 0; r < 2; r++) {\n  for (let c = 0; c < 5; c++) {\n    grab();\n  }\n}","o":["7","5","2","10"],"a":3,"why":"2 rows times 5 columns: 10."}
+]
 });
 
 </script>

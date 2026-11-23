@@ -2,6 +2,16 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-23-1 · Spelle · dungeon panel backdrop
+- file: `labs/img/spelle/dungeon-depths.webp`
+- why: on the quest screen the small painted map floats in a flat black box (`#dungeon-sheet`, #0d0b09); most of the panel is empty void, so the first quests feel like a tiny strip in the dark.
+- size: 1200x1400, no transparency (it sits behind the tiles, which cover the middle)
+- existing art to match: top-down painted dungeon tiles in grey stone blocks with moss and cracks, iron rings in the walls, a small green-hooded hero with a staff, a swirling blue portal in a brass ring, warm brazier light; muted, semi-realistic painterly game-tile style.
+- positive: top-down view into a deep dark dungeon chamber, rough grey stone walls with moss fading into shadow at every edge, a few distant braziers casting small warm pools of orange light near the corners, scattered rubble and old bones at the margins, faint blue magical haze drifting low, the centre an even calm dark stone floor with no objects, strong vignette to near black at the borders, painterly fantasy game art, soft brushwork, muted grey, moss green and ember orange palette, low contrast so tiles on top stay readable
+- negative: text, letters, runes that read as words, logo, watermark, characters, hero, monsters, doors, stairs, bright light in the centre, cartoon, anime, photo, high contrast, saturated colours, perspective side view, frame
+- placing: `#dungeon-sheet` in `labs/spelle.html`: keep `background: #0d0b09` as the fallback colour and add `url(img/spelle/dungeon-depths.webp) center / cover`. The grid (`#grid`) stays on top unchanged.
+- status: todo
+
 ## 2026-11-22-1 · Proxle · Create the cluster scene
 - file: `labs/img/proxle/create.jpg`
 - why: Create the cluster shows `cluster.jpg`, a hall where every stone is lit, while the story is a cluster of one node; the scene says the opposite of the lesson.

@@ -716,7 +716,7 @@ move("dir", 3);   ← "dir" in quotes: the TEXT dir. Nonsense!</div>
       starter: "",
       level: ["############", "#@.......E.#", "############"],
       reqs: [
-        R("uses a for loop", /for\s*\(\s*let\s+i\s*=\s*0\s*;\s*i\s*<\s*8\s*;\s*i\+\+\s*\)/),
+        R("uses a for loop", /for\s*\(\s*let\s+i\s*=\s*0\s*;\s*i\s*<\s*8\s*;\s*(i\+\+|\+\+i|i\s*\+=\s*1|i\s*=\s*i\s*\+\s*1)\s*\)/),
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
       hint: 'for (let i = 0; i < 8; i++) {\n  move("right");\n}'
@@ -834,7 +834,7 @@ stride();</div>
       level: ["########", "#@...E.#", "########"],
       reqs: [
         R("defines function stride", /function\s+stride\s*\(\s*\)\s*\{/),
-        G("calls it at least twice", (res, code) => (code.match(/stride\s*\(\s*\)\s*;/g) || []).length >= 2),
+        G("calls it at least twice", (res, code) => (code.replace(/\/\*[\s\S]*?\*\/|\/\/.*$/gm, "").match(/stride\s*\(\s*\)(?!\s*\{)/g) || []).length >= 2),
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
       hint: 'function stride() {\n  move("right");\n  move("right");\n}\nstride();\nstride();'
@@ -1095,7 +1095,7 @@ const dash = (dir) => move(dir, 3);    ← the arrow way
       starter: "",
       level: ["#####", "#@E.#", "#####"],
       reqs: [
-        R("the d20 incantation", /Math\.floor\(\s*Math\.random\(\)\s*\*\s*20\s*\)\s*\+\s*1/),
+        R("the d20 incantation", /Math\.floor\(\s*Math\.random\(\s*\)\s*\*\s*20\s*\)\s*\+\s*1/),
         G('announces "rolled <n>"', res => res.actions.some(a => a.type === "say" && /^rolled \d+$/.test(a.text))),
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
@@ -1136,7 +1136,7 @@ say(\`hp: \${hero.hp}\`);      ← template literal
       starter: "",
       level: ["########", "#@.#####", "##.#####", "##..####", "###.####", "###..###", "####.###", "####E###", "########"],
       reqs: [
-        R("a sentinel while on here()", /while\s*\(\s*here\(\)\s*!==?\s*["'`]stairs["'`]\s*\)/),
+        R("a sentinel while on here()", /while\s*\(\s*here\(\s*\)\s*!==?\s*["'`]stairs["'`]\s*\)/),
         R("chooses with look inside", /if\s*\(\s*look\(/),
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
@@ -1156,7 +1156,7 @@ let f = 1;                       ← facing right
       level: ["##########", "#@.......#", "########.#", "#........#", "#.########", "#......E.#", "##########"],
       reqs: [
         R("turns with modular arithmetic (% 4)", /%\s*4/),
-        R("a sentinel while on here()", /while\s*\(\s*here\(\)\s*!==?\s*["'`]stairs["'`]\s*\)/),
+        R("a sentinel while on here()", /while\s*\(\s*here\(\s*\)\s*!==?\s*["'`]stairs["'`]\s*\)/),
         G("the hero reaches the stairs", res => res.reachedExit)
       ],
       hint: 'const dirs = ["up", "right", "down", "left"];\nlet f = 1;\nwhile (here() !== "stairs") {\n  if (look(dirs[(f + 1) % 4]) !== "wall") {\n    f = (f + 1) % 4;\n    move(dirs[f]);\n  } else if (look(dirs[f]) !== "wall") {\n    move(dirs[f]);\n  } else {\n    f = (f + 3) % 4;\n  }\n}'
