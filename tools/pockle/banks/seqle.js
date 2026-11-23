@@ -64,7 +64,7 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u":"closing","q":"Which gives the average tip?","o":["AVG(tip)","AVERAGE(tip)","SUM(tip) / *","MEAN(tip)"],"a":0,"why":"SQL calls it AVG."},
     {"u":"closing","q":"Spot the bug.","code":"SELECT AVG(tip, 2) FROM bills;","o":["tip is not a column","Rounding goes outside: ROUND(AVG(tip), 2)","Nothing","AVG needs a star"],"a":1,"why":"AVG takes one argument."},
     {"u":"closing","q":"Which gives the cheapest price?","o":["LOW(price)","FIRST(price)","MIN(price)","MAX(price)"],"a":2,"why":"MIN and MAX give the extremes."},
-    {"u":"closing","q":"How many rows does this return?","code":"SELECT SUM(total), MAX(total)\nFROM bills;","o":["13","0","2","1"],"a":3,"why":"Aggregates fold many rows into one."},
+    {"u":"closing","q":"How many rows does this return?","code":"SELECT SUM(total), MAX(total)\nFROM bills;","o":["13","0","2","1"],"a":3,"why":"SUM and MAX are aggregates: they fold many rows into one."},
     {"u":"floor","q":"What does GROUP BY day give?","code":"SELECT day, SUM(total)\nFROM bills GROUP BY day;","o":["One row per day","An error","One row per bill","One row in total"],"a":0,"why":"The aggregate runs once per group."},
     {"u":"floor","q":"Bills exist on Fri, Sat and Sun. How many rows?","code":"SELECT day, COUNT(*)\nFROM bills GROUP BY day;","o":["7","3","1","13"],"a":1,"why":"One row per group."},
     {"u":"floor","q":"Spot the bug.","code":"SELECT day, SUM(total)\nFROM bills\nWHERE SUM(total) > 400\nGROUP BY day;","o":["Nothing","SUM needs AS","SUM in WHERE: use HAVING","GROUP BY must come first"],"a":2,"why":"WHERE runs before the groups exist."},

@@ -235,7 +235,7 @@ POCKET.register({
     { u: "cfgedit", q: "In show | compare, a deactivate shows with which mark?", o: ["+", "!", "-", "*"], a: 1, why: "The statement is unchanged, only its effect." },
     { u: "cfgload", q: "Ten VLANs in service. You load override one new VLAN and commit. Result?", o: ["Only the new VLAN remains", "Eleven VLANs", "Error", "Nothing changes"], a: 0, why: "Override replaces the whole candidate." },
     { u: "cfgload", q: "Port has members staff. You load merge members guest. Result?", o: ["staff and guest", "staff only", "guest only", "Error"], a: 0, why: "Merge combines lists." },
-    { u: "cfgload", q: "Fastest safe way to clone a good switch?", o: ["Retype everything", "rollback 1", "load patch", "save golden.conf, then load override golden.conf on the new one"], a: 3, why: "A saved file is complete by construction." },
+    { u: "cfgload", q: "Fastest safe way to clone a good switch?", o: ["Retype everything", "rollback 1", "load patch", "save golden.conf, then load override golden.conf on the new one"], a: 3, why: "A saved file holds the whole config, so nothing gets left out." },
     { u: "cfgload", q: "You just ran load merge golden.conf. Next command?", o: ["commit", "rollback 0", "show | compare", "save"], a: 2, why: "Read the diff before committing." },
     { u: "cfgload", q: "What does the replace: tag do?", o: ["Deletes the whole config", "Empties that level before loading into it", "Renames a statement", "Nothing ever"], a: 1, why: "Only load replace reads it." },
     { u: "cfgload", q: "Which loader reads show | compare output?", o: ["load merge", "load patch", "load set", "load override"], a: 1, why: "+ lines are set, - lines are deleted." },

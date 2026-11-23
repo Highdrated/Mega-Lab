@@ -110,7 +110,7 @@ POCKET.register({
     { u: 'fuel', q: 'Which numbers does range(4) give?', o: ['1, 2, 3, 4', '0, 1, 2, 3', '0, 1, 2, 3, 4'], a: 1, why: 'Starts at 0, stops before 4. For 1 to 4 use range(1, 5).' },
     { u: 'fuel', q: 'How many lines does this print?', code: 'total = 0\nfor leg in [4, 6, 2]:\n    total += leg\n    print(total)', o: ['1', '3', '12'], a: 1, why: 'The print is indented, so it runs every round: 4, 10, 12.' },
     { u: 'trade', q: 'What happens with menu[tea], no quotes?', o: ['It gives the price', 'KeyError', 'NameError'], a: 2, why: 'Without quotes Python looks for a variable called tea.' },
-    { u: 'roster', q: 'What goes wrong here?', code: 'def fee():\n    print(2)\n\ntotal = fee() + 1', o: ['TypeError: None + 1', 'total is 3', 'total is 2'], a: 0, why: 'print shows the 2 but hands back None. Use return to calculate.' },
+    { u: 'roster', q: 'What goes wrong here?', code: 'def fee():\n    print(2)\n\ntotal = fee() + 1', o: ['TypeError: None + 1', 'total is 3', 'total is 2'], a: 0, why: 'print shows the 2 on screen, but the function gives back None. Use return to hand a value back.' },
     { u: 'roster', q: 'The last line is greet with no brackets. What happens?', o: ['greet runs', 'Nothing', 'NameError'], a: 1, why: 'Without () you only name the function, you do not call it.' },
     { u: 'tag', q: 'What does this print?', code: 'print("Bags:", 12)', o: ['Bags: 12', 'Bags:12', 'Bags: , 12'], a: 0, why: 'print() puts one space between the values you separate with commas.' },
     { u: 'loadsheet', q: 'What does this print?', code: 'print(f"Total: {12 * 3} kg")', o: ['Total: {12 * 3} kg', 'Total: 36 kg', 'Total: 12 * 3 kg'], a: 1, why: 'You can calculate inside the braces of an f-string.' },

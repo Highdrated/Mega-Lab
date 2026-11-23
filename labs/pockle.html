@@ -1189,7 +1189,22 @@ try { var s = get("meridian.v1"); if (!s || typeof s !== "object" || !s.les || t
     {"u": "l1-snap", "q": "You revert to a snapshot. What happens to the delta?", "o": ["it is merged into the base", "it is thrown away", "it becomes a backup", "it is copied to another host"], "a": 1, "why": "Revert: back to the frozen moment. Delete: the delta merges into the base."},
     {"u": "l1-snap", "q": "Which snapshot name follows the rule?", "o": ["test", "snap1", "pre-patch 2026-11 kaatje", "new"], "a": 2, "why": "Who, why and when. Then nobody has to guess in three months."},
     {"u": "l1-snap", "q": "A thick 500 GB disk holds 120 GB of data. How much does it take?", "o": ["120 GB", "500 GB", "620 GB", "0 GB"], "a": 1, "why": "Thick claims everything on day one. Thin grows with the data."},
-    {"u": "l1-snap", "q": "Which command shows the datastores, right on an ESXi host?", "o": ["show datastores", "esxcli storage filesystem list", "Get-Datastore -Host", "vim-cmd storage list"], "a": 1, "why": "esxcli works on the host itself, also when vCenter is down."}
+    {"u": "l1-snap", "q": "Which command shows the datastores, right on an ESXi host?", "o": ["show datastores", "esxcli storage filesystem list", "Get-Datastore -Host", "vim-cmd storage list"], "a": 1, "why": "esxcli works on the host itself, also when vCenter is down."},
+    {"u":"l2-logs","q":"Which event ID is a normal service start or stop?","o":["7034","1074","7036","4740"],"a":2,"why":"7036 is a service changing state. 7034 is a crash."},
+    {"u":"l2-logs","q":"Event 7000 in the System log. What happened?","o":["a logon failed","a service failed to start","a disk is nearly full","someone asked for a restart"],"a":1,"why":"7000 is a failed start. 7009 is a start that timed out."},
+    {"u":"l2-logs","q":"Which log holds logons and permission changes?","o":["Security","System","Application","Setup"],"a":0,"why":"On a domain controller, lockouts land here too."},
+    {"u":"l2-logs","q":"Show the newest 20 System events. Fill the blank.","code":"Get-WinEvent -LogName System ___ 20","o":["-Newest","-First","-Count","-MaxEvents"],"a":3,"why":"Get-WinEvent uses -MaxEvents. -Newest belongs to the older Get-EventLog."},
+    {"u":"l2-logs","q":"In -FilterHashtable, what does Level 3 mean?","o":["Critical","Error","Warning","Information"],"a":2,"why":"1 is Critical, 2 Error, 3 Warning."},
+    {"u":"l2-logs","q":"The log shows a hundred errors. Which one matters most?","o":["the first one","the newest one","the longest one","the one with the highest ID"],"a":0,"why":"The first error is closest to the cause. The rest often follow from it."},
+    {"u":"l2-logs","q":"Test-NetConnection to dns-02 gets no answer at all. Where do you look?","o":["the DNS service","the VM or the network","the Security log","Get-HotFix"],"a":1,"why":"No answer at all points below Windows: the VM is off or the network is broken."},
+    {"u":"l2-logs","q":"What changed lately? Which line shows the newest updates?","o":["Get-Service | Sort-Object Status","Get-Volume","Get-HotFix | Sort-Object InstalledOn -Descending","Test-Path HKLM:\\"],"a":2,"why":"Updates are a common answer to 'what changed?'. Event 1074 shows restarts."},
+    {"u":"l0-team","q":"Who owns the machines, the storage and the network between them?","o":["the developers","the infra team","facilities","first line"],"a":1,"why":"Apps belong to developers, the building to facilities. The middle is infra."},
+    {"u":"l0-team","q":"First line hears 'the galley screens are black'. What do they do?","o":["rebuild the host","rewrite the patch process","log it, try the known fix, escalate","close the ticket"],"a":2,"why":"Easy things get fixed fast. Hard things go up a line."},
+    {"u":"l0-team","q":"Same black screen: one VM, or fourteen services. What sets the priority?","o":["who called first","the time of day","the ticket number","the scope: how much is hit"],"a":3,"why":"Priority is impact times urgency. You only know the impact after you scope."},
+    {"u":"l0-stack","q":"A host is in maintenance mode. What does vSphere refuse?","o":["to run or start any VM on it","to patch it","to show it in the list","to log you on"],"a":0,"why":"That is the point: no VMs, so you can patch safely."},
+    {"u":"l0-stack","q":"What does the pipe | do in PowerShell?","o":["runs two commands at once","hands the results to the next command","saves the output to a file","turns the line into a comment"],"a":1,"why":"Get-VM -Location esx-02 | Start-VM starts every VM on that host."},
+    {"u":"l0-stack","q":"Which key completes VM and host names in the console?","o":["Enter","Esc","Tab","F1"],"a":2,"why":"No typos in server names. A typo can hit the wrong server."},
+    {"u":"l0-stack","q":"Set-, Start- and Restart- change things. What do they need first?","o":["a rollback plan","a reboot","a new ticket number","nothing, they are safe"],"a":0,"why":"Changes need a way back. Get- only reads."}
   ]
 });
 
@@ -2772,7 +2787,22 @@ try { var out = []; var ids = ["m00","m01","m02","m03","m04","m05","m06","m07","
     {"u":"gd","q":"The sync button reads Pull origin. Meaning?","o":["You have commits to send","Someone pushed; download them","It was never published","Everything matches"],"a":1,"why":"Pull downloads and merges into your copy."},
     {"u":"gd","q":"The sync button reads Fetch origin. Meaning?","o":["A merge conflict","Unpushed commits","Never published","Nothing to send; it checks for news"],"a":3,"why":"Fetch looks without changing your files."},
     {"u":"gd","q":"Which habit keeps merge conflicts small?","o":["Pull before you start, push when you finish","Push once a week","Never pull","Work on main only"],"a":0,"why":"A small gap between copies means small conflicts."},
-    {"u":"gd","q":"The History tab lists commits...","o":["Oldest first","Newest at the top","By author","Only unpushed ones"],"a":1,"why":"Click one to see what it changed."}
+    {"u":"gd","q":"The History tab lists commits...","o":["Oldest first","Newest at the top","By author","Only unpushed ones"],"a":1,"why":"Click one to see what it changed."},
+    {"u":"m02","q":"Two files changed. You want both in the next commit. Fill the blank.","code":"git add ___","o":[".","-m","crew.txt","--soft"],"a":0,"why":"The dot stages every change in this folder."},
+    {"u":"m02","q":"git status lists crew.txt as untracked. What is crew.txt?","o":["A file git saw changing","A file git has never tracked","A deleted file","An ignored file"],"a":1,"why":"Untracked means new to git. Stage it to track it."},
+    {"u":"m04","q":"Which newer command also creates a branch and switches to it?","o":["git branch -m scenic-route","git new scenic-route","git switch -c scenic-route","git checkout scenic-route -n"],"a":2,"why":"git switch -c does the same job as git checkout -b."},
+    {"u":"m04","q":"Which newer command switches to an existing branch?","o":["git move main","git switch main","git go main","git branch main"],"a":1,"why":"git switch main works like git checkout main."},
+    {"u":"m05","q":"Main did not move since you branched. You merge. What happens?","o":["A conflict","A merge commit with two parents","Main slides forward to the branch tip","Nothing"],"a":2,"why":"That is a fast-forward. No merge commit is needed."},
+    {"u":"m05","q":"After that fast-forward, main and scenic-route point at...","o":["Different commits","The first commit","Nothing","The same commit"],"a":3,"why":"Main simply caught up with the branch."},
+    {"u":"m08","q":"What does git push do?","o":["Uploads your commits to the remote","Downloads new commits","Stages your files","Makes a branch"],"a":0,"why":"push sends up, pull brings down."},
+    {"u":"m08","q":"git remote -v shows origin twice. Why?","o":["Two servers","A typo in the URL","Once for fetch, once for push","Two branches"],"a":2,"why":"The lines end in (fetch) and (push). They can point to different URLs."},
+    {"u":"m10","q":"Which order is the everyday team loop?","o":["commit, PR, branch, push, merge","branch, commit, push, PR, merge","push, branch, merge, PR, commit","PR, branch, commit, merge, push"],"a":1,"why":"Branch, commit, push the branch, open a PR, merge after review."},
+    {"u":"m10","q":"Review passed. Who merges the pull request into main?","o":["GitHub, on the website","git push on your laptop","Nobody, it merges itself","git clone"],"a":0,"why":"The server merges it. Then you pull main back down."},
+    {"u":"m10","q":"Fill the blank: start a branch for your change.","code":"git checkout ___ hull-upgrade","o":["-u","-m","-v","-b"],"a":3,"why":"-b creates the branch and switches to it."},
+    {"u":"m10","q":"Why push the branch before opening a pull request?","o":["To delete it locally","So GitHub has the branch to review","To merge it into main","Git needs it for commit"],"a":1,"why":"A pull request compares a branch that is already on GitHub."},
+    {"u":"m11","q":"After a clone, what is the remote called?","o":["main","handbook","origin","upstream"],"a":2,"why":"Clone sets up origin for you."},
+    {"u":"m11","q":"Classic slip right after a clone?","o":["Running git in the parent folder","Running cd handbook","Running pwd","Running ls"],"a":0,"why":"Clone makes a new folder, but you still stand outside it. cd in first."},
+    {"u":"m11","q":"You committed in the cloned repo. Which sends it up?","o":["git clone again","git remote add origin","git pull","git push"],"a":3,"why":"Same workflow as always: origin is already set."}
   ]
 });
 

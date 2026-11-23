@@ -123,6 +123,21 @@ try { var out = []; var ids = ["m00","m01","m02","m03","m04","m05","m06","m07","
     {"u":"gd","q":"The sync button reads Pull origin. Meaning?","o":["You have commits to send","Someone pushed; download them","It was never published","Everything matches"],"a":1,"why":"Pull downloads and merges into your copy."},
     {"u":"gd","q":"The sync button reads Fetch origin. Meaning?","o":["A merge conflict","Unpushed commits","Never published","Nothing to send; it checks for news"],"a":3,"why":"Fetch looks without changing your files."},
     {"u":"gd","q":"Which habit keeps merge conflicts small?","o":["Pull before you start, push when you finish","Push once a week","Never pull","Work on main only"],"a":0,"why":"A small gap between copies means small conflicts."},
-    {"u":"gd","q":"The History tab lists commits...","o":["Oldest first","Newest at the top","By author","Only unpushed ones"],"a":1,"why":"Click one to see what it changed."}
+    {"u":"gd","q":"The History tab lists commits...","o":["Oldest first","Newest at the top","By author","Only unpushed ones"],"a":1,"why":"Click one to see what it changed."},
+    {"u":"m02","q":"Two files changed. You want both in the next commit. Fill the blank.","code":"git add ___","o":[".","-m","crew.txt","--soft"],"a":0,"why":"The dot stages every change in this folder."},
+    {"u":"m02","q":"git status lists crew.txt as untracked. What is crew.txt?","o":["A file git saw changing","A file git has never tracked","A deleted file","An ignored file"],"a":1,"why":"Untracked means new to git. Stage it to track it."},
+    {"u":"m04","q":"Which newer command also creates a branch and switches to it?","o":["git branch -m scenic-route","git new scenic-route","git switch -c scenic-route","git checkout scenic-route -n"],"a":2,"why":"git switch -c does the same job as git checkout -b."},
+    {"u":"m04","q":"Which newer command switches to an existing branch?","o":["git move main","git switch main","git go main","git branch main"],"a":1,"why":"git switch main works like git checkout main."},
+    {"u":"m05","q":"Main did not move since you branched. You merge. What happens?","o":["A conflict","A merge commit with two parents","Main slides forward to the branch tip","Nothing"],"a":2,"why":"That is a fast-forward. No merge commit is needed."},
+    {"u":"m05","q":"After that fast-forward, main and scenic-route point at...","o":["Different commits","The first commit","Nothing","The same commit"],"a":3,"why":"Main simply caught up with the branch."},
+    {"u":"m08","q":"What does git push do?","o":["Uploads your commits to the remote","Downloads new commits","Stages your files","Makes a branch"],"a":0,"why":"push sends up, pull brings down."},
+    {"u":"m08","q":"git remote -v shows origin twice. Why?","o":["Two servers","A typo in the URL","Once for fetch, once for push","Two branches"],"a":2,"why":"The lines end in (fetch) and (push). They can point to different URLs."},
+    {"u":"m10","q":"Which order is the everyday team loop?","o":["commit, PR, branch, push, merge","branch, commit, push, PR, merge","push, branch, merge, PR, commit","PR, branch, commit, merge, push"],"a":1,"why":"Branch, commit, push the branch, open a PR, merge after review."},
+    {"u":"m10","q":"Review passed. Who merges the pull request into main?","o":["GitHub, on the website","git push on your laptop","Nobody, it merges itself","git clone"],"a":0,"why":"The server merges it. Then you pull main back down."},
+    {"u":"m10","q":"Fill the blank: start a branch for your change.","code":"git checkout ___ hull-upgrade","o":["-u","-m","-v","-b"],"a":3,"why":"-b creates the branch and switches to it."},
+    {"u":"m10","q":"Why push the branch before opening a pull request?","o":["To delete it locally","So GitHub has the branch to review","To merge it into main","Git needs it for commit"],"a":1,"why":"A pull request compares a branch that is already on GitHub."},
+    {"u":"m11","q":"After a clone, what is the remote called?","o":["main","handbook","origin","upstream"],"a":2,"why":"Clone sets up origin for you."},
+    {"u":"m11","q":"Classic slip right after a clone?","o":["Running git in the parent folder","Running cd handbook","Running pwd","Running ls"],"a":0,"why":"Clone makes a new folder, but you still stand outside it. cd in first."},
+    {"u":"m11","q":"You committed in the cloned repo. Which sends it up?","o":["git clone again","git remote add origin","git pull","git push"],"a":3,"why":"Same workflow as always: origin is already set."}
   ]
 });
