@@ -3555,7 +3555,7 @@ const userOf = (ctx, n) => ctx.t.users.find((x) => x.UserPrincipalName.toLowerCa
 const hasScope = (ctx, s) => !!ctx.mg && ctx.mg.scopes.some((x) => x.toLowerCase() === s.toLowerCase());
 
 const SEQUENCES = [
-  { id: 0, name: "Connect & look around", short: "CONNECT", open: true, blurb: "Before you touch a tenant you sign in with the right permissions, check where you are, and learn how to find any command on your own." },
+  { id: 0, name: "Connect & look around", short: "CONNECT", open: true, blurb: "Before you touch a tenant, sign in with the right permissions and check where you are. Then learn how to find any command on your own." },
   { id: 1, name: "Users", short: "USERS", open: true, blurb: "The work you do every single day: look people up, read what you need, fix their details, and lock out someone who just left." },
   { id: 2, name: "Mailboxes", short: "MAILBOXES", blurb: "Shared mailboxes, permissions, forwarding, aliases, out-of-office." },
   { id: 3, name: "Groups & lists", short: "GROUPS", blurb: "Who is in what. Distribution lists, Microsoft 365 groups, membership fixes." },
@@ -5837,7 +5837,7 @@ Object.assign(DRILLS, {
     { q: "Run Get-DeptUsers.ps1 for Sales with the default Top.", out: "./Get-DeptUsers.ps1 -Department Sales", hint: "Only -Department." },
     { q: "Run it with -Top abc and read the error.", fn: (ctx, res) => !!res.error && /Int32/.test(res.error.text()), sol: ["./Get-DeptUsers.ps1 -Department Sales -Top abc"], hint: "A word where a number belongs." },
     { q: "Run it with a splat: $p = @{ Department = 'Operations'; Top = 2 }", out: "$p = @{ Department = 'Operations'; Top = 2 }; ./Get-DeptUsers.ps1 @p", hint: "@p, not $p" },
-    { q: "Write Get-JobTitle.ps1 with a mandatory -Title and a [switch]$Count: without the switch it lists DisplayName of users with that JobTitle, with it only the number. Run it for 'Account Manager' -Count.", fn: (ctx) => { const t = scFile(ctx, "Get-JobTitle.ps1"); if (!t || !/\[switch\]/i.test(t)) return false; const a = scClone(ctx, "./Get-JobTitle.ps1 -Title 'Account Manager'").txt === scRef("Get-MgUser -All -Filter \"jobTitle eq 'Account Manager'\" -Property DisplayName | Select-Object DisplayName"); const b = scClone(ctx, "./Get-JobTitle.ps1 -Title 'Account Manager' -Count").res; const n = scClone(ctx, "(Get-MgUser -All -Filter \"jobTitle eq 'Account Manager'\").Count").res.out[0]; return a && b.out.length === 1 && b.out[0] === n; }, sol: ["Set-Content ./Get-JobTitle.ps1 -Value \"param([Parameter(Mandatory)][string]`$Title, [switch]`$Count)`n`$u = Get-MgUser -All -Filter `\"jobTitle eq '`$Title'`\" -Property DisplayName`nif (`$Count) { `$u.Count } else { `$u | Select-Object DisplayName }\""], hint: "if ($Count) { ... } else { ... }" },
+    { q: "Write Get-JobTitle.ps1 with a mandatory -Title and a [switch]$Count. Without the switch, it lists the DisplayName of users with that JobTitle. With the switch, it shows only the number. Run it for 'Account Manager' -Count.", fn: (ctx) => { const t = scFile(ctx, "Get-JobTitle.ps1"); if (!t || !/\[switch\]/i.test(t)) return false; const a = scClone(ctx, "./Get-JobTitle.ps1 -Title 'Account Manager'").txt === scRef("Get-MgUser -All -Filter \"jobTitle eq 'Account Manager'\" -Property DisplayName | Select-Object DisplayName"); const b = scClone(ctx, "./Get-JobTitle.ps1 -Title 'Account Manager' -Count").res; const n = scClone(ctx, "(Get-MgUser -All -Filter \"jobTitle eq 'Account Manager'\").Count").res.out[0]; return a && b.out.length === 1 && b.out[0] === n; }, sol: ["Set-Content ./Get-JobTitle.ps1 -Value \"param([Parameter(Mandatory)][string]`$Title, [switch]`$Count)`n`$u = Get-MgUser -All -Filter `\"jobTitle eq '`$Title'`\" -Property DisplayName`nif (`$Count) { `$u.Count } else { `$u | Select-Object DisplayName }\""], hint: "if ($Count) { ... } else { ... }" },
     { q: "Add [ValidateSet('Bruges','Ghent','Antwerp')] to -City in Get-CityUsers.ps1, then try -City Paris.", pre: ["Set-Content ./Get-CityUsers.ps1 -Value \"param([Parameter(Mandatory)][string]`$City)`nGet-MgUser -All -Filter `\"city eq '`$City'`\" -Property DisplayName,Department | Select-Object DisplayName,Department\""], fn: (ctx, res) => { const t = scFile(ctx, "Get-CityUsers.ps1"); return !!t && /ValidateSet/i.test(t) && !!res.error && /ValidateSet/.test(res.error.text()); }, sol: ["Set-Content ./Get-CityUsers.ps1 -Value \"param([Parameter(Mandatory)][ValidateSet('Bruges','Ghent','Antwerp')][string]`$City)`nGet-MgUser -All -Filter `\"city eq '`$City'`\" -Property DisplayName,Department | Select-Object DisplayName,Department\"", "./Get-CityUsers.ps1 -City Paris"], hint: "The attribute goes right before [string]$City." }
   ],
   functions: [
@@ -6213,7 +6213,7 @@ MEMORIES.push(
 },
 {
   id: "teamhygiene", seq: 11, name: "Ownerless", tag: "LIFECYCLE", title: "Teams outlive the people who made them",
-  summary: "Find teams with no owner or only disabled owners, give them a living owner, and archive the ones that are finished: reversible, read-only, nothing deleted.",
+  summary: "Find teams with no owner, or only disabled owners, and give them a living owner. Archive the finished ones. Archiving is reversible and read-only: nothing is deleted.",
   setup: "teamsW",
   brief: {
     what: [
@@ -6288,7 +6288,7 @@ Object.assign(DRILLS, {
 const SPRING = {
   id: "spring", type: "capstone", name: "Spring clean", seq: 11, kind: "CAPSTONE · TEAMS SPRING CLEAN", allow: /./, hero: "gate", setup: "teamsCap",
   need: (m) => m.seq === 11,
-  story: "Friday, governance day. Elowen wants the Teams mess sorted before the quarter closes: a finished party team, a finance team whose owner left, a new depot team that must be done right this time, and a report she can show the directors.",
+  story: "Friday, governance day. Elowen wants the Teams mess sorted before the quarter closes. A party team is finished, and a finance team lost its owner. A new depot team must be done right this time. And she wants a report she can show the directors.",
   doneMsg: "Every team has a living owner, the old ones are archived and nothing was deleted. That report is the first thing the directors will ask for next quarter.",
   text: { crumb: "Capstone · ", done: "Teams in order", flow: [["Archive", "what is finished"], ["Owners", "living ones, two if you can"], ["Create", "-Owner, then fill"], ["Report", "Owners per team"]], flowT: "CAPSTONE · OWNERS, CHANNELS, ARCHIVE", rules: "<h6>CAPSTONE RULES</h6>Connected to Graph and Teams. You are in ~/Desktop. Nothing may be deleted: archive instead. Scripts in Code are welcome.", junie: "Find the team, keep it in $t, use $t.GroupId. New owner first, old owner out." },
   tickets: [

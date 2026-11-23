@@ -139,7 +139,7 @@ MEMORIES.push(
 },
 {
   id: "teamhygiene", seq: 11, name: "Ownerless", tag: "LIFECYCLE", title: "Teams outlive the people who made them",
-  summary: "Find teams with no owner or only disabled owners, give them a living owner, and archive the ones that are finished: reversible, read-only, nothing deleted.",
+  summary: "Find teams with no owner, or only disabled owners, and give them a living owner. Archive the finished ones. Archiving is reversible and read-only: nothing is deleted.",
   setup: "teamsW",
   brief: {
     what: [
@@ -214,7 +214,7 @@ Object.assign(DRILLS, {
 const SPRING = {
   id: "spring", type: "capstone", name: "Spring clean", seq: 11, kind: "CAPSTONE · TEAMS SPRING CLEAN", allow: /./, hero: "gate", setup: "teamsCap",
   need: (m) => m.seq === 11,
-  story: "Friday, governance day. Elowen wants the Teams mess sorted before the quarter closes: a finished party team, a finance team whose owner left, a new depot team that must be done right this time, and a report she can show the directors.",
+  story: "Friday, governance day. Elowen wants the Teams mess sorted before the quarter closes. A party team is finished, and a finance team lost its owner. A new depot team must be done right this time. And she wants a report she can show the directors.",
   doneMsg: "Every team has a living owner, the old ones are archived and nothing was deleted. That report is the first thing the directors will ask for next quarter.",
   text: { crumb: "Capstone · ", done: "Teams in order", flow: [["Archive", "what is finished"], ["Owners", "living ones, two if you can"], ["Create", "-Owner, then fill"], ["Report", "Owners per team"]], flowT: "CAPSTONE · OWNERS, CHANNELS, ARCHIVE", rules: "<h6>CAPSTONE RULES</h6>Connected to Graph and Teams. You are in ~/Desktop. Nothing may be deleted: archive instead. Scripts in Code are welcome.", junie: "Find the team, keep it in $t, use $t.GroupId. New owner first, old owner out." },
   tickets: [

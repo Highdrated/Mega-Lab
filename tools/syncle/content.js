@@ -4,7 +4,7 @@ const userOf = (ctx, n) => ctx.t.users.find((x) => x.UserPrincipalName.toLowerCa
 const hasScope = (ctx, s) => !!ctx.mg && ctx.mg.scopes.some((x) => x.toLowerCase() === s.toLowerCase());
 
 const SEQUENCES = [
-  { id: 0, name: "Connect & look around", short: "CONNECT", open: true, blurb: "Before you touch a tenant you sign in with the right permissions, check where you are, and learn how to find any command on your own." },
+  { id: 0, name: "Connect & look around", short: "CONNECT", open: true, blurb: "Before you touch a tenant, sign in with the right permissions and check where you are. Then learn how to find any command on your own." },
   { id: 1, name: "Users", short: "USERS", open: true, blurb: "The work you do every single day: look people up, read what you need, fix their details, and lock out someone who just left." },
   { id: 2, name: "Mailboxes", short: "MAILBOXES", blurb: "Shared mailboxes, permissions, forwarding, aliases, out-of-office." },
   { id: 3, name: "Groups & lists", short: "GROUPS", blurb: "Who is in what. Distribution lists, Microsoft 365 groups, membership fixes." },
