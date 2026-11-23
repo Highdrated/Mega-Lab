@@ -1184,10 +1184,14 @@ function showModal(build){
     modalRoot.classList.add("open");
     const box = document.createElement("div");
     box.className = "modal";
+    box.tabIndex = -1;
+    box.style.outline = "none";
+    const back = document.activeElement;
     const esc = (e) => { if(e.key === "Escape") done(null); };
-    const done = (v) => { document.removeEventListener("keydown", esc); modalRoot.classList.remove("open"); modalRoot.innerHTML = ""; resolve(v); };
+    const done = (v) => { document.removeEventListener("keydown", esc); modalRoot.classList.remove("open"); modalRoot.innerHTML = ""; if(back && back.isConnected && typeof back.focus === "function") back.focus(); resolve(v); };
     build(box, done);
     modalRoot.appendChild(box);
+    if(!box.contains(document.activeElement)) box.focus();
     modalRoot.onclick = (e) => { if(e.target === modalRoot) done(null); };
     document.addEventListener("keydown", esc);
   });

@@ -124,6 +124,22 @@ POCKET.register({
     { u: 'coordinates', q: '5 steps per row. Which row and column is step 13?', code: 'print(13 // 5, 13 % 5)', o: ['3 2', '2 3', '2 2'], a: 1, why: '// gives full rows, % the column inside the row.' },
     { u: 'coordinates', q: 'Grid 8 wide (columns 0 to 7). Mirror of column 2?', code: 'print(7 - 2)', o: ['5', '6', '2'], a: 0, why: 'Same distance from the other edge.' },
     { u: 'coordinates', q: 'A 6-wide grid wraps. x = 4, then x += 5. New x?', code: 'print((4 + 5) % 6)', o: ['9', '3', '1'], a: 1, why: 'Walk off the right edge and % brings you back.' },
-    { u: 'coordinates', q: 'x and y both start at 0. Four times: x += 1 and y += 1. Result?', o: ['(4, 0)', '(1, 1)', '(4, 4)'], a: 2, why: 'They climb together: a perfect diagonal.' }
+    { u: 'coordinates', q: 'x and y both start at 0. Four times: x += 1 and y += 1. Result?', o: ['(4, 0)', '(1, 1)', '(4, 4)'], a: 2, why: 'They climb together: a perfect diagonal.' },
+    { u: 'binary', q: 'What does this print?', code: 'print(bin(13).count("1"))', o: ['2', '13', '3'], a: 2, why: '13 is 1101 in binary: three ones.' },
+    { u: 'binary', q: 'What does this print?', code: 'print(0b101 + 0b11)', o: ['8', '1000', '5'], a: 0, why: '5 + 3. Python shows the sum as a normal number.' },
+    { u: 'binary', q: 'What does this print?', code: 'print(5 << 1)', o: ['51', '10', '6'], a: 1, why: 'Shifting every bit one slot left doubles the number.' },
+    { u: 'powers', q: 'What does this print?', code: 'print(2 ** 3 * 2 ** 2)', o: ['64', '12', '32'], a: 2, why: 'Same base: add the exponents. 2 ** 5.' },
+    { u: 'powers', q: 'How many digits does 10 ** 6 have?', code: 'print(len(str(10 ** 6)))', o: ['6', '7', '10'], a: 1, why: '10 ** n is a 1 followed by n zeros.' },
+    { u: 'powers', q: 'What does this print?', code: 'print(4 ** 3)', o: ['64', '12', '81'], a: 0, why: '4 x 4 x 4.' },
+    { u: 'stats', q: 'What does this print?', code: 'nums = [3, 1, 3, 2, 3]\nprint(nums.count(3))', o: ['1', '3', '12'], a: 1, why: '.count() says how often a value appears.' },
+    { u: 'stats', q: 'What does this print?', code: 'nums = sorted([7, 1, 5])\nprint(nums[len(nums) // 2])', o: ['1', '7', '5'], a: 2, why: 'Sorted: 1, 5, 7. The middle one is the median.' },
+    { u: 'stats', q: 'What does this print?', code: 'nums = [4, 9, 2, 7]\nprint(sum(nums[1:3]))', o: ['11', '13', '18'], a: 0, why: 'nums[1:3] is [9, 2]. The stop index is left out.' },
+    { u: 'stats', q: 'What does this print?', code: 'nums = [4, 9, 2, 7]\nprint(sum(nums) // len(nums))', o: ['5.5', '5', '6'], a: 1, why: '22 // 4 throws the .5 away.' },
+    { u: 'coordinates', q: 'Grid steps from (1, 2) to (4, 6)?', code: 'print(abs(4 - 1) + abs(6 - 2))', o: ['5', '3', '7'], a: 2, why: '3 across plus 4 down.' },
+    { u: 'coordinates', q: '3 steps per row. Which row and column is step 7?', code: 'print(7 // 3, 7 % 3)', o: ['2 1', '1 2', '2 2'], a: 0, why: '// gives full rows, % the column inside the row.' },
+    { u: 'coordinates', q: 'A 5-wide grid wraps. x = 1, then x -= 3. New x?', code: 'print((1 - 3) % 5)', o: ['-2', '3', '2'], a: 1, why: 'Off the left edge, % brings you back on the right.' },
+    { u: 'indexing', q: 'What does this print?', code: 'arr = [10, 20, 30, 40]\nprint(arr[len(arr) - 1])', o: ['IndexError', '30', '40'], a: 2, why: 'len - 1 is always the last index.' },
+    { u: 'indexing', q: 'What does this print?', code: 'arr = [10, 20, 30, 40]\nprint(arr[1] + arr[-1])', o: ['60', '50', '30'], a: 0, why: '20 + 40.' },
+    { u: 'ranges', q: 'What does this print?', code: 'print(list(range(5, 0, -1)))', o: ['[5, 4, 3, 2, 1, 0]', '[5, 4, 3, 2, 1]', '[]'], a: 1, why: 'A negative step counts down, and it still stops before 0.' }
   ]
 });
