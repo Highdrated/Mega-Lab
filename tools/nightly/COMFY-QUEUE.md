@@ -2,6 +2,46 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-23-h4 · Hexle · harbour plot: Fishmonger stall
+- file: `labs/img/hexle/fishmonger.webp`
+- why: chapter II (the Harbour) has four new plots with no art yet; the scene is an empty fog pool while every other plot has a building.
+- size: 480x480, transparent background (WEBP with alpha, like `hut.webp`)
+- existing art to match: Hexle's village plots are single buildings painted on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art: weathered stone and dark timber, moss and ivy on roofs, warm amber window light, cool grey-green night palette, a soft fog pool at the base, about 480x480 with the building filling the middle 80%.
+- positive: a small wooden fishmonger's stall on a stone quay, striped canvas awning faded teal and cream, crates of silver fish on ice, hanging nets and a brass scale, a lantern on a hook, a few gulls on the awning, wet cobbles, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
+- negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
+- placing: add `"fishmonger": "img/hexle/fishmonger.webp"` to `ART` in `labs/hexle.html` (Harbour IV, plot 16; `PLOTS` already uses art key `fishmonger`). For the finale card, also add `art:'fishmonger'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
+- status: todo
+
+## 2026-11-23-h3 · Hexle · harbour plot: Salt Lantern tavern
+- file: `labs/img/hexle/tavern.webp`
+- why: chapter II (the Harbour) has four new plots with no art yet; the scene is an empty fog pool while every other plot has a building.
+- size: 480x480, transparent background (WEBP with alpha, like `hut.webp`)
+- existing art to match: Hexle's village plots are single buildings painted on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art: weathered stone and dark timber, moss and ivy on roofs, warm amber window light, cool grey-green night palette, a soft fog pool at the base, about 480x480 with the building filling the middle 80%.
+- positive: a crooked two-storey harbour tavern of dark timber and stone, a hanging sign shaped like a lantern with no lettering, glowing round windows, barrels stacked by the door, a small rowing boat tied below on dark water, smoke from the chimney, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
+- negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
+- placing: add `"tavern": "img/hexle/tavern.webp"` to `ART` in `labs/hexle.html` (Harbour III, plot 15; `PLOTS` already uses art key `tavern`). For the finale card, also add `art:'tavern'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
+- status: todo
+
+## 2026-11-23-h2 · Hexle · harbour plot: Ferry office
+- file: `labs/img/hexle/ferry.webp`
+- why: chapter II (the Harbour) has four new plots with no art yet; the scene is an empty fog pool while every other plot has a building.
+- size: 480x480, transparent background (WEBP with alpha, like `hut.webp`)
+- existing art to match: Hexle's village plots are single buildings painted on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art: weathered stone and dark timber, moss and ivy on roofs, warm amber window light, cool grey-green night palette, a soft fog pool at the base, about 480x480 with the building filling the middle 80%.
+- positive: a small stone ferry office at the end of a wooden pier, a ticket window with warm light, a timetable board with blank slates, coiled ropes and a bollard, a moored ferry boat's bow just visible, lantern posts along the pier, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
+- negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
+- placing: add `"ferry": "img/hexle/ferry.webp"` to `ART` in `labs/hexle.html` (Harbour II, plot 14; `PLOTS` already uses art key `ferry`). For the finale card, also add `art:'ferry'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
+- status: todo
+
+## 2026-11-23-h1 · Hexle · harbour plot: Lighthouse
+- file: `labs/img/hexle/lighthouse.webp`
+- why: chapter II (the Harbour) has four new plots with no art yet; the scene is an empty fog pool while every other plot has a building.
+- size: 480x480, transparent background (WEBP with alpha, like `hut.webp`)
+- existing art to match: Hexle's village plots are single buildings painted on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art: weathered stone and dark timber, moss and ivy on roofs, warm amber window light, cool grey-green night palette, a soft fog pool at the base, about 480x480 with the building filling the middle 80%.
+- positive: a tall slim stone lighthouse on a rocky outcrop, white and weathered grey bands, a glowing amber lamp room with a soft beam, a small keeper's cottage with ivy at its foot, waves breaking gently on dark rocks, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
+- negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
+- placing: add `"lighthouse": "img/hexle/lighthouse.webp"` to `ART` in `labs/hexle.html` (Harbour I, plot 13; `PLOTS` already uses art key `lighthouse`). For the finale card, also add `art:'lighthouse'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
+- status: todo
+
 ## 2026-11-23-1 · Spelle · dungeon panel backdrop
 - file: `labs/img/spelle/dungeon-depths.webp`
 - why: on the quest screen the small painted map floats in a flat black box (`#dungeon-sheet`, #0d0b09); most of the panel is empty void, so the first quests feel like a tiny strip in the dark.

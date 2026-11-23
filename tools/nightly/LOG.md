@@ -43,7 +43,7 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Sleeple | 99 (12 added 23 Nov, second run) | 0 | 36 |
 | Passle | 155 | 0 | 40 |
 | Seqle | 105 (17 added 22 Nov, third run) | 0 | 36 |
-| Hexle | 110 | 0 | 10 |
+| Hexle | 124 (14 harbour cards added 23 Nov) | 0 | 10 |
 | Webble | 116 | 0 | 22 |
 | Spelle | 100 (15 added 23 Nov) | 0 | 23 |
 | Rebble | 116 | 0 | 26 |
@@ -153,6 +153,10 @@ Needs her decision
 
 ### 2026-11-23, daytime (asked by Kaatje)
 
+- Hexle chapter II, the Harbour (her choice): four new plots in a fourth village row (Lighthouse, Ferry office, Salt Lantern tavern, Fishmonger stall), open once target 13 (the notice boards) is done, also from the target picker. Targets 44 to 47, appended so old saves load unchanged. Eight new rules with lessons, drills and a review each: r89 strong and em, r90 blockquote and pre, r91 radios with fieldset and legend, r92 checkboxes and :checked, r93 details and summary, r94 max-height and overflow, r95 box-sizing: border-box, r96 text-transform and letter-spacing. Every starter is red on every step and every solution green on every step (checked in the browser). The Codex Hexle rulebook has the eight new entries.
+- Hexle good-habit training (her choice: both): each harbour target starts with one bad habit (inline style, a field with only a placeholder, two h1, !important) and ends with the step 'the code review shows no Fix notes'. 31 habit drills joined the Review practice, one or two per habit the code review checks, each tied to the rule it belongs to so it appears once that rule is learned.
+- Pockle: Hexle bank has two harbour units (targets 44-45 and 46-47) and 14 cards for the new rules (124 Hexle cards).
+- ComfyUI: four harbour plot pictures queued (2026-11-23-h1 to h4); until then the harbour plots show the empty fog pool. 33 open. CACHE workshop-v110.
 - Hexle review: the page scrolled sideways between 1561 and 1786 px and at 1366 and about 1000 px wide (the top bar was wider than the screen); the compact bar now starts at 1800 px, the small-font step at 1400 and the tightest at 1030. Checked every 17 px from 360 to 2600: no sideways scroll. Plot and Grimoire titles no longer end in an ellipsis: below 1560 px the 'Plot 04 ·' prefix hides (the plate numeral already says it) and titles may take two lines in equal-height headers. The target picker shows the target name first, with the full name as a tooltip. Target 1 step 9 'Close every tag' was green on the empty starter; it now needs a p and an h2 first. CACHE workshop-v109.
 - Codex Microsoft: `datacenterunited.com` and `contoso.com` became the fantasy domain `ashvale.com`, and every real-looking person (Jan Peeters, Stijn Raes, Geoffrey Vanderhaegen, Inge Collet, Pascal Paquay, Adelheid Vermeyen, Noor Haddad, Sara Jacobs, Van Laer, johan.security) got a fantasy name with the same initials, so every address formula still gives the same alias. CACHE workshop-v107.
 - Still open: Syncle uses Belgian-looking names in its drills (Noor Claes, Tom Jacobs, Sara Wouters, Lien Maes, Jonas Peeters); other labs use `contoso.com`. Her call.
