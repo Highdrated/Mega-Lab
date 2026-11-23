@@ -258,7 +258,7 @@ const SCEN = [
  {task:"Check nothing is on 8000 any more. No output means free.", cmd:"lsof -i :8000", alt:["lsof -i tcp:8000","lsof -nP -i :8000"]}
 ]},
 {id:"remote", name:"SSH & copying", sub:"ssh-keygen, ssh, scp, rsync", steps:[
- {task:"Make a modern SSH key pair. <b>-t ed25519</b> is the key type, <b>-C</b> a label so you know whose key it is.", cmd:"ssh-keygen -t ed25519 -C \"user@contoso.com\"", alt:["ssh-keygen -t ed25519 -C user@contoso.com","ssh-keygen -t ed25519 -C 'user@contoso.com'"], out:"Generating public/private ed25519 key pair.\nYour identification has been saved in /Users/user/.ssh/id_ed25519\nYour public key has been saved in /Users/user/.ssh/id_ed25519.pub\nThe key fingerprint is:\nSHA256:q2Kx7fD9Ln4tR1vZ0cW8eYb3mPj6sHa5uGi2oNk7XyE user@contoso.com\n"},
+ {task:"Make a modern SSH key pair. <b>-t ed25519</b> is the key type, <b>-C</b> a label so you know whose key it is.", cmd:"ssh-keygen -t ed25519 -C \"user@ashvale.com\"", alt:["ssh-keygen -t ed25519 -C user@ashvale.com","ssh-keygen -t ed25519 -C 'user@ashvale.com'"], out:"Generating public/private ed25519 key pair.\nYour identification has been saved in /Users/user/.ssh/id_ed25519\nYour public key has been saved in /Users/user/.ssh/id_ed25519.pub\nThe key fingerprint is:\nSHA256:q2Kx7fD9Ln4tR1vZ0cW8eYb3mPj6sHa5uGi2oNk7XyE user@ashvale.com\n"},
  {task:"Put your public key on the server, so it lets you in without a password.", cmd:"ssh-copy-id admin@203.0.113.20", out:"/usr/bin/ssh-copy-id: INFO: 1 key(s) remain to be installed\nadmin@203.0.113.20's password:\n\nNumber of key(s) added:        1\n\nNow try logging into the machine, with:   \"ssh 'admin@203.0.113.20'\"\n"},
  {task:"Copy the backup archive to the server's /tmp folder. <b>scp</b> is cp over SSH: <b>user@host:path</b> is the remote side.", cmd:"scp backup.tar.gz admin@203.0.113.20:/tmp/", alt:["scp backup.tar.gz admin@203.0.113.20:/tmp"], out:"backup.tar.gz                              100%   18MB  21.4MB/s   00:00\n"},
  {task:"Preview a sync of the site folder to the server: <b>-a</b> keep everything, <b>-v</b> show files, <b>-z</b> compress, <b>--dry-run</b> change nothing.", cmd:"rsync -avz --dry-run src/ admin@203.0.113.20:/var/www/station/", alt:["rsync -avzn src/ admin@203.0.113.20:/var/www/station/","rsync -anvz src/ admin@203.0.113.20:/var/www/station/","rsync -avz src/ admin@203.0.113.20:/var/www/station/ --dry-run","rsync -avz -n src/ admin@203.0.113.20:/var/www/station/"], out:"sending incremental file list\napi/menu.php\napi/order.php\njs/app.js\n\nsent 412 bytes  received 38 bytes  900.00 bytes/sec\ntotal size is 1,843,210  speedup is 4,096.02 (DRY RUN)\n"},
@@ -266,9 +266,9 @@ const SCEN = [
 ]},
 {id:"net", name:"Network checks", sub:"ping, curl, dig, nc", steps:[
  {task:"Is the server reachable? Send exactly 4 pings with <b>-c 4</b> (without it, ping runs until Ctrl+C).", cmd:"ping -c 4 203.0.113.20", alt:["ping -c4 203.0.113.20"], out:PING},
- {task:"Ask the website for its headers only. <b>-I</b> shows the response status without downloading the page.", cmd:"curl -I https://contoso.com", alt:["curl --head https://contoso.com"], out:"HTTP/2 200\ncontent-type: text/html; charset=utf-8\nserver: nginx\nstrict-transport-security: max-age=31536000\ncache-control: max-age=600\n"},
- {task:"Call the health API quietly (<b>-s</b> hides the progress bar).", cmd:"curl -s https://contoso.com/api/health", out:"{\"status\":\"ok\",\"db\":\"up\",\"version\":\"1.8.2\"}\n"},
- {task:"Which IP does the name point to? <b>+short</b> gives just the answer.", cmd:"dig contoso.com +short", alt:["dig +short contoso.com"], out:"203.0.113.20\n"},
+ {task:"Ask the website for its headers only. <b>-I</b> shows the response status without downloading the page.", cmd:"curl -I https://ashvale.com", alt:["curl --head https://ashvale.com"], out:"HTTP/2 200\ncontent-type: text/html; charset=utf-8\nserver: nginx\nstrict-transport-security: max-age=31536000\ncache-control: max-age=600\n"},
+ {task:"Call the health API quietly (<b>-s</b> hides the progress bar).", cmd:"curl -s https://ashvale.com/api/health", out:"{\"status\":\"ok\",\"db\":\"up\",\"version\":\"1.8.2\"}\n"},
+ {task:"Which IP does the name point to? <b>+short</b> gives just the answer.", cmd:"dig ashvale.com +short", alt:["dig +short ashvale.com"], out:"203.0.113.20\n"},
  {task:"Is port 443 open on the server? <b>nc -zv</b> tests a TCP port without sending data.", cmd:"nc -zv 203.0.113.20 443", alt:["nc -vz 203.0.113.20 443"], out:"Connection to 203.0.113.20 port 443 [tcp/https] succeeded!\n"},
  {task:"Which network interfaces have an IPv4 address? Filter the long output with grep.", cmd:"ifconfig | grep \"inet \"", alt:["ifconfig | grep 'inet '"], out:"\tinet 127.0.0.1 netmask 0xff000000\n\tinet 192.168.1.42 netmask 0xffffff00 broadcast 192.168.1.255\n"}
 ]},
@@ -440,7 +440,7 @@ const CASES = [
   {cmd:["ls -l ~/.ssh", "ls -la ~/.ssh"], out:"total 32\n-rw-r--r--  1 user    staff   419 Oct 19 08:12 config\n-rw-r--r--  1 user    staff   411 Oct 19 08:12 id_ed25519\n-rw-r--r--  1 user    staff    99 Oct 19 08:12 id_ed25519.pub\n-rw-r--r--  1 user    staff  1834 Oct 19 08:12 known_hosts\n", clue:"perms", needs:"!fixed"},
   {cmd:["ls -l ~/.ssh", "ls -la ~/.ssh"], out:"total 32\n-rw-r--r--  1 user    staff   419 Oct 19 08:12 config\n-rw-------  1 user    staff   411 Oct 19 08:12 id_ed25519\n-rw-r--r--  1 user    staff    99 Oct 19 08:12 id_ed25519.pub\n-rw-r--r--  1 user    staff  1834 Oct 19 08:12 known_hosts\n", needs:"fixed"},
   {cmd:["cat ~/.ssh/config"], out:"Host station\n  HostName 203.0.113.20\n  User admin\n  IdentityFile ~/.ssh/id_ed25519\n"},
-  {cmd:["cat ~/.ssh/id_ed25519.pub"], out:"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8xq2Kx7fD9Ln4tR1vZ0cW8eYb3mPj6sHa5uGi2oNk7 user@contoso.com\n"},
+  {cmd:["cat ~/.ssh/id_ed25519.pub"], out:"ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIK8xq2Kx7fD9Ln4tR1vZ0cW8eYb3mPj6sHa5uGi2oNk7 user@ashvale.com\n"},
   {cmd:["chmod 600 ~/.ssh/id_ed25519", "chmod 400 ~/.ssh/id_ed25519", "chmod go-rwx ~/.ssh/id_ed25519"], out:"", sets:"fixed", note:"only you can read the private key now. Try ssh again."},
   {cmd:["chmod 700 ~/.ssh"], out:""}
  ],

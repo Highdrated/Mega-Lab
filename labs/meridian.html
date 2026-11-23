@@ -362,7 +362,7 @@ const RANKS=[[0,'First line'],[400,'Second line'],[1200,'Third line'],[2500,'Inf
 const CREW={
  seraphine:{name:'Seraphine Ashby',role:'Captain',mono:'SA'},
  odran:{name:'Odran Hale',role:'Chief engineer',mono:'OH'},
- linnea:{name:'Linnea Morrow',role:'Purser',mono:'LM'},
+ linnea:{name:'Lunelle Morrow',role:'Purser',mono:'LM'},
  tamsin:{name:'Tamsin Vell',role:'Comms officer',mono:'TV'}
 };
 
@@ -449,7 +449,7 @@ const LESSONS={
 <tr><td><kbd>Ctrl</kbd><kbd>Backspace</kbd></td><td>Deletes a whole word</td><td>Fix a parameter quickly</td></tr>
 </tbody></table></div><h2>Parameters</h2><p>PowerShell accepts any unique start of a parameter name: <code>-Loc</code> works for <code>-Location</code>. Names are not case sensitive. The first value can usually go without its name: <code>Get-VM galley-disp-01</code> is the same as <code>Get-VM -Name galley-disp-01</code>.</p><p>Habit to build: type three letters, press Tab, check what appeared, then continue. That is how seniors type fast without mistakes.</p>`,
   `<p class="kick">Basics</p><h1>Ways into a system</h1><p>In real life nobody hands you the facts. You go and get them, and there is usually more than one door.</p>${fig(`<svg viewBox="0 0 760 190" role="img" aria-label="Ways in">${svgB(10,70,150,48,'var(--acc)')}${svgT(85,99,'your console')}${svgA(162,94,250,40)}${svgA(162,94,250,94)}${svgA(162,94,250,150)}${svgB(252,18,200,44)}${svgT(352,45,'vCenter',{s:13})}${svgB(252,72,200,44)}${svgT(352,99,'ESXi host',{s:13})}${svgB(252,128,200,44)}${svgT(352,155,'the VM itself',{s:13})}${svgT(470,45,'Connect-VIServer, then PowerCLI',{a:'start',c:'var(--ink2)',s:12,f:'var(--mono)'})}${svgT(470,99,'ssh root@esx-02, esxcli, vim-cmd, logs',{a:'start',c:'var(--ink2)',s:12,f:'var(--mono)'})}${svgT(470,155,'ssh you@vm, systemctl, journalctl, curl',{a:'start',c:'var(--ink2)',s:12,f:'var(--mono)'})}</svg>`,'Each door sees the problem from a different height.')}<ul><li><b>vCenter</b> sees everything at once: all hosts, all VMs, all events. You must connect first: <code>Connect-VIServer vcenter.meridian.local</code>. Until you do, every PowerCLI command fails.</li><li><b>The ESXi host</b> over SSH shows what the host itself thinks, and its logs in <code>/var/log</code>. ESXi wants <code>root</code>.</li><li><b>The VM</b> over SSH shows whether the service inside actually works. Only possible once it is running.</li></ul><h2>Shell basics you will need</h2><ul><li><code>ls /var/log</code> lists the logs</li><li><code>tail -n 20 file</code> shows the last 20 lines</li><li><code>grep -i word file</code> shows only lines containing a word, ignoring case</li><li><code>exit</code> takes you back to where you came from</li></ul><p>The prompt always tells you where you are. Read it before you type.</p>`,
-  `<p class="kick">Basics</p><h1>CMDB versus the live system</h1><p>The CMDB is the ship's register: every configuration item (CI), what it does, what it depends on and who owns it. It tells you what <i>should</i> be.</p><p>The live system (vCenter, the console) tells you what <i>is</i>. When the two disagree, that difference is a clue, and often a follow-up of its own.</p><h2>Why CMDB first</h2><ul><li>It tells you who else is hit before you touch anything</li><li>It tells you who owns it, so you know who to inform</li><li>It gives you the names to query, so you are not guessing</li></ul><p>That is everything you need for the first ticket. Linnea is waiting in the galley.</p>`
+  `<p class="kick">Basics</p><h1>CMDB versus the live system</h1><p>The CMDB is the ship's register: every configuration item (CI), what it does, what it depends on and who owns it. It tells you what <i>should</i> be.</p><p>The live system (vCenter, the console) tells you what <i>is</i>. When the two disagree, that difference is a clue, and often a follow-up of its own.</p><h2>Why CMDB first</h2><ul><li>It tells you who else is hit before you touch anything</li><li>It tells you who owns it, so you know who to inform</li><li>It gives you the names to query, so you are not guessing</li></ul><p>That is everything you need for the first ticket. Lunelle is waiting in the galley.</p>`
  ]}
 };
 
@@ -1166,7 +1166,7 @@ const TICKETS={
  },
  't1-snap':{module:'m1',type:'incident',npc:'odran',reward:150,
   title:'The cargo system has frozen',
-  brief:'"Cargo screens froze mid-shift and the hold crew are back on clipboards. Mail is stuck too, and Linnea says the lounge tills just hang. Nothing crashed, everything is just... stopped. Can you look?"',
+  brief:'"Cargo screens froze mid-shift and the hold crew are back on clipboards. Mail is stuck too, and Lunelle says the lounge tills just hang. Nothing crashed, everything is just... stopped. Can you look?"',
   ci:['cargo-db-01','DS-HULL-01'],
   watch:['cargo','mail','pos'],
   upLine:{cargo:'Cargo screens are moving again. The hold crew owe you a drink.',mail:'Mail is flowing again, thanks.',pos:'The tills are working again! Guests can pay.'},
@@ -1309,7 +1309,7 @@ const TICKETS={
   on(ev,c,w){
    if(ev.k==='move'){if(c.saw)c.saw.svc={}}
    const local=n=>w.vms[n].local;
-   if(ev.k==='hardstop'&&ev.vms.length)return{fail:['graceful',`Pulled the plug on ${ev.vms.join(', ')} with Stop-VM.`],why:'Stop-VM is a hard power-off: the guest gets no chance to close files. Linnea even asked to shut them down properly. Shutdown-VMGuest asks the OS to stop cleanly.'};
+   if(ev.k==='hardstop'&&ev.vms.length)return{fail:['graceful',`Pulled the plug on ${ev.vms.join(', ')} with Stop-VM.`],why:'Stop-VM is a hard power-off: the guest gets no chance to close files. Lunelle even asked to shut them down properly. Shutdown-VMGuest asks the OS to stop cleanly.'};
    if(ev.k==='guestdown'&&ev.vms.some(n=>!local(n)))return{fail:['smallest-fix',`Shut down ${ev.vms.filter(n=>!local(n)).join(', ')}, which could have moved live.`],why:'Only VMs on local disks have to go down. Everything on shared storage can move with vMotion while it keeps running. Downtime nobody needed is still downtime.'};
   },
   steps:[
@@ -1322,7 +1322,7 @@ const TICKETS={
    ['record','Document',(w,c)=>!!c.recordOk,'']
   ],
   help:SHIP_HELP,
-  hints:['Look at what runs on the host: Get-VM -Location esx-02. Read the host log (ssh root@esx-02, then cat /var/log/vmkernel.log) to confirm the DIMM. The CMDB and Linnea\'s message tell you what may go down.','Try to move everything: Get-VM -Location esx-02 | Move-VM -Destination esx-01. Read every error. One VM is pinned by a mounted ISO, three live on local disks.','Write the rollback. Get-CDDrive -VM print-01 | Set-CDDrive -NoMedia, then move it. Shutdown-VMGuest galley-disp-01,cabin-tv-02,crew-wiki-01. Then Set-VMHost esx-02 -State Maintenance, and test a moved service.'],
+  hints:['Look at what runs on the host: Get-VM -Location esx-02. Read the host log (ssh root@esx-02, then cat /var/log/vmkernel.log) to confirm the DIMM. The CMDB and Lunelle\'s message tell you what may go down.','Try to move everything: Get-VM -Location esx-02 | Move-VM -Destination esx-01. Read every error. One VM is pinned by a mounted ISO, three live on local disks.','Write the rollback. Get-CDDrive -VM print-01 | Set-CDDrive -NoMedia, then move it. Shutdown-VMGuest galley-disp-01,cabin-tv-02,crew-wiki-01. Then Set-VMHost esx-02 -State Maintenance, and test a moved service.'],
   checks:[
    ['Names the host','what',/esx-02/i],
    ['Says why: the DIMM','why',/dimm|memory|ecc|hardware/i],
@@ -1345,7 +1345,7 @@ const TICKETS={
    senior:['Before the vendor touches anything, check the host is really in maintenance mode, with your own eyes.','The three local-disk VMs have now caused two incidents. Raise a change to move them to DS-HULL-01 with Storage vMotion.','esx-01 now carries the whole AFT cluster. Watch its CPU and memory until esx-02 is back.','After the swap, watch the vmkernel log for an hour. If errors continue, it was not the DIMM.'],
    take:['Get-VM -Location host | Move-VM -Destination other evacuates a host in one line, and every error tells you why a VM stayed.','Mounted ISOs pin VMs. Get-VM | Get-CDDrive | Where-Object IsoPath finds them all.','Shutdown-VMGuest is a clean shutdown. Stop-VM is the plug.','Maintenance mode is the safety catch: the host refuses to run VMs.']
   },
-  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>Linnea agreed: galley display and cabin TV decks 4-6 may be down between 10:00 and 11:00. Odran agreed the crew wiki may be down. Nothing else.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>galley-disp-01, cabin-tv-02 and crew-wiki-01 still run from local template disks on esx-02.</p>'
+  docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Agreed window</p><p>Lunelle agreed: galley display and cabin TV decks 4-6 may be down between 10:00 and 11:00. Odran agreed the crew wiki may be down. Nothing else.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>galley-disp-01, cabin-tv-02 and crew-wiki-01 still run from local template disks on esx-02.</p>'
  },
  't1-ready':{module:'m1',type:'incident',npc:'odran',reward:160,
   title:'The cargo app is crawling',
@@ -1574,7 +1574,7 @@ const TICKETS={
   ],
   debrief:{
    path:[
-    ['CMDB','cmdb print-01','The only print server, owned by Linnea.'],
+    ['CMDB','cmdb print-01','The only print server, owned by Lunelle.'],
     ['Scope','Enter-PSSession print-01; Get-Service Spooler; Start-Service Spooler','Stopped, and it refuses to start.'],
     ['Hypothesis','"print-01, the spooler cannot run because the disk is full"','The VM itself, not the printers.'],
     ['Isolate','Get-WinEvent -LogName System -MaxEvents 6; Get-Volume; Get-ChildItem C:\\Windows\\System32\\spool\\PRINTERS','2013 disk at capacity, 7034 and 7023 not enough space, a 41 GB job.'],
@@ -1583,14 +1583,14 @@ const TICKETS={
     ['Record','what, why, rollback, verification, follow-up','The cargo system must not be able to send a 41 GB print job again.']
    ],
    readings:[['Start-Service Spooler','Fails: there is not enough space on the disk. The error tells you the cause.'],['Event 2013 at 03:41','The disk warned before it failed. Nobody was watching.'],['Get-Volume','0.3 GB free on a 60 GB disk.'],['Event 307 in Application','svc-cargo on cargo-app-01 sent a 44 GB "Manifest_2026_full" to the A3 printer at 22:14.']],
-   senior:['Turning the printer off and on is what everyone tries first. The printer was never the problem.','Deleting spool files throws away every waiting job, including the small ones. Tell Linnea which jobs to send again.','Ask Odran why the cargo export prints at all. A full-year manifest belongs in a file, not on paper.','Put an alert on disk space for every server. Event 2013 fired five hours before anything broke.'],
+   senior:['Turning the printer off and on is what everyone tries first. The printer was never the problem.','Deleting spool files throws away every waiting job, including the small ones. Tell Lunelle which jobs to send again.','Ask Odran why the cargo export prints at all. A full-year manifest belongs in a file, not on paper.','Put an alert on disk space for every server. Event 2013 fired five hours before anything broke.'],
    take:['A service that will not start usually says why: read the System log.','Get-ChildItem folder | Measure-Object Length -Sum finds where the space went.','Stop the service, clear the spool, start the service.','Free space is a dependency of almost everything on Windows.']
   },
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: printing</p><p>All printers on the ship print through print-01 (Windows Server, Print Spooler service, port 445). Jobs wait as files in C:\\Windows\\System32\\spool\\PRINTERS until the printer takes them.</p>'
  },
  't2-time':{module:'m2',type:'incident',npc:'linnea',reward:180,
   title:'"Wrong password", they say',
-  brief:'"Since this morning about half the crew cannot log on to the portal. It says wrong password, but they swear they did not change it, and if they try again later it sometimes works. I reset Mara\'s password and she still could not log on."',
+  brief:'"Since this morning about half the crew cannot log on to the portal. It says wrong password, but they swear they did not change it, and if they try again later it sometimes works. I reset Morwyn\'s password and she still could not log on."',
   ci:['ad-dc-01','ad-dc-02'],
   watch:['dir'],
   stack:[['svc','service','Crew logons'],['ad-dc-02','vm','ad-dc-02'],['esx-02','host','esx-02'],['ad-dc-01','vm','ad-dc-01']],
@@ -1603,7 +1603,7 @@ const TICKETS={
    ['mara.quill','tobin.hart','ines.fallow','mara.quill','oren.vale'].forEach((u,i)=>W.ev.Security.push([`10/11/2026 07:${String(12+i*6).padStart(2,'0')}:40`,4771,'Information','Microsoft-Windows-Security-Auditing',`Kerberos pre-authentication failed. Account Name: ${u}. Service Name: krbtgt/MERIDIAN.LOCAL. Client Address: ::ffff:10.4.9.${40+i}. Failure Code: 0x25. Pre-Authentication Type: 2.`]));
    const W1=winInit(w,'ad-dc-01');W1.ev.Security.push(['10/11/2026 07:20:02',4624,'Information','Microsoft-Windows-Security-Auditing','An account was successfully logged on. Account Name: linnea.morrow. Logon Type: 3.']);
    w.events.push({t:'08:11',e:'ad-dc-02',u:'MERIDIAN\\odran',m:'Task: Upgrade VMware Tools completed (12.4)'});
-   w.comms.push({t:'07:52',who:'linnea',text:'Mara tried again from the galley terminal and it worked. From her cabin it does not. Same password.'});
+   w.comms.push({t:'07:52',who:'linnea',text:'Morwyn tried again from the galley terminal and it worked. From her cabin it does not. Same password.'});
    SVCS.forEach(s=>w.svcLast[s.id]=svcUp(w,s));
   },
   on(ev,c,w){
@@ -1642,7 +1642,7 @@ const TICKETS={
     ['Record','what, why, rollback, verification, follow-up','Fix the host clock on esx-02 and check every VM the Tools upgrade touched.']
    ],
    readings:[['Get-Date on both DCs','ad-dc-02 is 421 seconds ahead. Kerberos allows 300.'],['Event 4771, Failure Code 0x25','"Clock skew too great". Windows calls it a failed pre-authentication, users see "wrong password".'],['w32tm /query /status','Source: Local CMOS Clock, Leap Indicator 3: the time service is not syncing from anywhere.'],['VMwareToolboxCmd timesync status','Enabled. Since the Tools upgrade on 8 November, the VM copies esx-02\'s fast clock.'],['A plain w32tm /resync','Fixes it for a minute, then Tools sets it back. Two things were setting one clock.']],
-   senior:['"Wrong password" for many users at once is almost never passwords. Resetting Mara\'s did nothing but give her a new password to remember.','Intermittent symptoms that depend on where you are usually depend on which server answers.','The real root is esx-02\'s own clock. Hosts should take time from NTP too; check it with the ESXi shell.','A Tools upgrade quietly changed a setting on every VM it touched. Check the other DCs and domain members, not just this one.'],
+   senior:['"Wrong password" for many users at once is almost never passwords. Resetting Morwyn\'s did nothing but give her a new password to remember.','Intermittent symptoms that depend on where you are usually depend on which server answers.','The real root is esx-02\'s own clock. Hosts should take time from NTP too; check it with the ESXi shell.','A Tools upgrade quietly changed a setting on every VM it touched. Check the other DCs and domain members, not just this one.'],
    take:['Invoke-Command -ComputerName a,b -ScriptBlock { Get-Date } compares clocks in one line.','4771 with 0x25 means clock skew. Kerberos allows 5 minutes.','On domain members, only the domain sets the time: VMware Tools time sync off.','w32tm /stripchart measures the difference; trust the measurement.']
   },
   docs:WAYS_IN+'<p class="lbl" style="margin-top:18px">Design: time</p><p>ad-dc-01 holds the PDC emulator role and takes its time from ntp1. Every other Windows server follows the domain. VMware Tools time sync must be off on all of them.</p><p class="lbl" style="margin-top:18px">Useful to know</p><p>On a Windows VM, VMware Tools has a command line: VMwareToolboxCmd timesync status | enable | disable.</p>'

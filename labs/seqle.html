@@ -393,7 +393,7 @@ button.deeper{height:30px;border:1px solid var(--line);background:transparent;pa
 const SEED=`CREATE TABLE menu (id INTEGER PRIMARY KEY, name TEXT NOT NULL, course TEXT, price REAL, veg INTEGER, spicy INTEGER);
 INSERT INTO menu VALUES (1,'Nebula Soup','starter',9.5,1,0),(2,'Comet Dumplings','starter',11.0,0,1),(3,'Hydro Salad','starter',8.0,1,0),(4,'Ring Bread','starter',4.5,1,0),(5,'Orbit Burger','main',18.0,0,0),(6,'Moonroot Risotto','main',21.5,1,0),(7,'Solar Curry','main',19.0,1,1),(8,'Void Steak','main',34.0,0,0),(9,'Algae Noodles','main',16.5,1,1),(10,'Crater Pie','dessert',8.5,1,0),(11,'Stardust Sorbet','dessert',7.0,1,0),(12,'Eclipse Cake','dessert',12.0,1,0),(13,'Ice Moon Float','drink',6.0,1,0),(14,'Red Giant Tea','drink',4.0,1,0),(15,'Ion Cola','drink',3.5,1,0);
 CREATE TABLE guests (id INTEGER PRIMARY KEY, name TEXT, deck INTEGER, vip INTEGER);
-INSERT INTO guests VALUES (1,'Ava Lund',3,1),(2,'Teo Marsh',5,0),(3,'Noor Halabi',2,0),(4,'Bram Keller',3,0),(5,'Mei Tanaka',7,1),(6,'Luca Ferro',5,0),(7,'Ines Duval',2,1),(8,'Oskar Vale',4,0);
+INSERT INTO guests VALUES (1,'Avalon Lundmere',3,1),(2,'Teodric Marshwick',5,0),(3,'Nuala Halfmoon',2,0),(4,'Brambel Kettlewick',3,0),(5,'Meliora Tanglewood',7,1),(6,'Lucan Ferrowyn',5,0),(7,'Iselde Duskvale',2,1),(8,'Osric Valewind',4,0);
 CREATE TABLE orders (id INTEGER PRIMARY KEY, guest_id INTEGER, menu_id INTEGER, qty INTEGER, day TEXT);
 INSERT INTO orders VALUES (1,1,1,1,'Fri'),(2,1,8,1,'Fri'),(3,1,12,1,'Fri'),(4,2,5,2,'Fri'),(5,2,15,2,'Fri'),(6,3,3,1,'Fri'),(7,3,6,1,'Fri'),(8,4,2,2,'Sat'),(9,4,7,1,'Sat'),(10,4,13,1,'Sat'),(11,5,1,1,'Sat'),(12,5,8,2,'Sat'),(13,5,11,2,'Sat'),(14,6,9,1,'Sat'),(15,6,5,1,'Sat'),(16,7,6,1,'Sun'),(17,7,10,1,'Sun'),(18,7,13,1,'Sun'),(19,3,12,2,'Sun'),(20,2,9,1,'Sun');
 CREATE TABLE bills (id INTEGER PRIMARY KEY, table_no INTEGER, covers INTEGER, total REAL, tip REAL, day TEXT);
@@ -432,7 +432,7 @@ const RULES={
  s23:{n:'23',title:'A subquery builds the list for IN',syn:'<span class="k">WHERE</span> id <span class="k">IN</span> (<span class="k">SELECT</span> guest_id <span class="k">FROM</span> orders)',note:'A query in brackets runs first. Its single column becomes the list that IN checks against.',ex:"SELECT name FROM guests WHERE id IN (SELECT guest_id FROM orders WHERE day = 'Sun');",cat:'Subqueries',t:10},
  s24:{n:'24',title:'Compare with a calculated value',syn:'<span class="k">WHERE</span> price &gt; (<span class="k">SELECT AVG</span>(price) <span class="k">FROM</span> menu)',note:'When the comparison value must be worked out first, put that query in brackets. It must return exactly one value.',ex:'SELECT name, price FROM menu WHERE price > (SELECT AVG(price) FROM menu);',cat:'Subqueries',t:10},
  s25:{n:'25',title:'NULL, COALESCE and COUNT(column)',syn:'<span class="k">COALESCE</span>(<span class="k">SUM</span>(o.qty), <span class="v">0</span>)',note:'COALESCE returns its first value that is not NULL, so missing numbers become 0. COUNT(column) skips NULLs, COUNT(*) counts every row.',ex:'SELECT g.name, COUNT(o.id) AS lines, COALESCE(SUM(o.qty), 0) AS portions FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;',cat:'Summing up',t:10},
- s26:{n:'26',title:'CREATE TABLE makes a new table',syn:'<span class="k">CREATE TABLE</span> winter (name <span class="k">TEXT</span>, price <span class="k">REAL</span>);',note:'Name the table, then each column with its type: TEXT, INTEGER or REAL. INSERT can then add several rows at once, one bracket per row.',ex:"CREATE TABLE staff (name TEXT, role TEXT);\nINSERT INTO staff VALUES ('Pia', 'cook'), ('Elio', 'waiter');\nSELECT * FROM staff;",cat:'Changing data',t:11},
+ s26:{n:'26',title:'CREATE TABLE makes a new table',syn:'<span class="k">CREATE TABLE</span> winter (name <span class="k">TEXT</span>, price <span class="k">REAL</span>);',note:'Name the table, then each column with its type: TEXT, INTEGER or REAL. INSERT can then add several rows at once, one bracket per row.',ex:"CREATE TABLE staff (name TEXT, role TEXT);\nINSERT INTO staff VALUES ('Pipwen', 'cook'), ('Eliandor', 'waiter');\nSELECT * FROM staff;",cat:'Changing data',t:11},
  s27:{n:'27',title:'UNION ALL stacks two results',syn:'<span class="k">SELECT</span> name <span class="k">FROM</span> a <span class="k">UNION ALL SELECT</span> name <span class="k">FROM</span> b',note:'Both SELECTs must return the same number of columns. UNION ALL keeps every row, UNION removes duplicates. One ORDER BY at the very end sorts the whole stack.',ex:"SELECT name, course FROM menu WHERE course = 'drink' UNION ALL SELECT name, course FROM menu WHERE course = 'dessert' ORDER BY name;",cat:'Changing data',t:11}
 };
 const LESSONS={
@@ -456,7 +456,7 @@ const LESSONS={
  s18:{why:'DISTINCT removes repeats from the result: three order days instead of twenty rows. BETWEEN a AND b is a range test that includes both ends, shorter than >= a AND <= b.',parts:[['SELECT DISTINCT day','each day once'],['BETWEEN 8 AND 12','8, 12 and everything in between']],mistakes:['DISTINCT in the wrong place: it comes right after SELECT.','Expecting BETWEEN to exclude the ends. It includes them.'],ex2:'SELECT DISTINCT course FROM menu WHERE price BETWEEN 5 AND 10;'},
  s19:{why:'INSERT INTO adds a row. Name the columns, then the values in the same order. In Seqle every run starts from a fresh larder, so experiment freely. A real database keeps what you insert.',parts:[['INSERT INTO stock','add to this table'],['(item, qty, unit, min_qty)','these columns'],["VALUES ('basil', 3, 'kg', 1)",'these values, same order']],mistakes:['Text without quotes: VALUES (basil, ...) looks for a column called basil.','A different number of columns and values.','Adding a row twice when the key must be unique: UNIQUE constraint failed.'],ex2:"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('mint', 2, 'kg', 1);\nSELECT * FROM stock ORDER BY item;"},
  s20:{why:'UPDATE changes values in rows that already exist, DELETE removes rows. Both take a WHERE, and both hit every row without one. Professionals write the WHERE first, or run it as a SELECT to see which rows will change.',parts:[['UPDATE stock','change this table'],['SET qty = qty + 10','the new value, can use the old one'],["WHERE item = 'rice'",'only these rows']],mistakes:['Forgetting WHERE: every row changes.','DELETE * FROM: DELETE never takes a column list.','Checking the change without a SELECT afterwards.'],ex2:"UPDATE stock SET qty = 0 WHERE item = 'flour';\nSELECT * FROM stock;"},
- s21:{why:'Reports often need text shaped a certain way: names in capitals on a chalkboard, a label like Solar Curry (main). SQL can do that per row. || glues pieces together, and the text functions reshape one value at a time.',parts:[['UPPER(name)','the name in capitals'],["name || ' (' || course || ')'",'three pieces of text glued into one'],['LENGTH(name)','how many characters']],mistakes:['Using + to join text. In SQLite + is only maths, so text turns into 0.','Forgetting the spaces: name || course gives SolarCurrymain.'],ex2:"SELECT LOWER(name) || '@contoso.com' AS mailbox FROM guests;"},
+ s21:{why:'Reports often need text shaped a certain way: names in capitals on a chalkboard, a label like Solar Curry (main). SQL can do that per row. || glues pieces together, and the text functions reshape one value at a time.',parts:[['UPPER(name)','the name in capitals'],["name || ' (' || course || ')'",'three pieces of text glued into one'],['LENGTH(name)','how many characters']],mistakes:['Using + to join text. In SQLite + is only maths, so text turns into 0.','Forgetting the spaces: name || course gives SolarCurrymain.'],ex2:"SELECT LOWER(name) || '@ashvale.com' AS mailbox FROM guests;"},
  s22:{why:'CASE is SQL\'s if. It looks at each row and gives back a label: a price band, a yes or no, a warning. The WHENs are checked from the top, and the first one that is true wins, so put the narrowest test first.',parts:[['CASE','start of the choice'],["WHEN price < 20 THEN 'classic'",'a test and the value if it is true'],["ELSE 'treat'",'the value when no test matched'],['END AS band','close it and name the column']],mistakes:['Forgetting END: the query stops with a syntax error.','Leaving out ELSE and getting NULL in unexpected rows.','Putting a wide test first: WHEN price < 30 swallows everything WHEN price < 10 was meant for.'],ex2:"SELECT name, CASE WHEN veg = 1 THEN 'veg' ELSE 'meat or fish' END AS kind FROM menu;"},
  s23:{why:'Sometimes the list you filter on lives in another table. Which guests ordered on Sunday? The ids are in orders, the names in guests. A subquery builds the list of ids, and IN keeps the guests whose id is on it.',parts:[['WHERE id IN','keep rows whose id is in the list'],['(SELECT guest_id','the inner query returns one column'],["FROM orders WHERE day = 'Sun')",'built from another table']],mistakes:['An inner SELECT with two columns: IN needs exactly one.','NOT IN with a list that contains a NULL returns no rows at all.'],ex2:"SELECT name FROM menu WHERE id IN (SELECT menu_id FROM orders WHERE qty = 2);"},
  s24:{why:'Which dishes cost more than average? You do not know the average yet, so let SQL work it out inside brackets. The inner query returns one number and the outer WHERE compares every row with it.',parts:[['WHERE price >','compare each row'],['(SELECT AVG(price) FROM menu)','with one calculated value']],mistakes:['Leaving out the brackets around the inner SELECT.','An inner query that returns several rows where one value is needed.'],ex2:'SELECT id, total FROM bills WHERE total > (SELECT AVG(total) FROM bills);'},
@@ -481,7 +481,7 @@ const DRILLS=[
  {k:'type',r:'s4',q:'Show the names of every drink',ph:"SELECT … WHERE course = '…'",ans:"SELECT name FROM menu WHERE course = 'drink';",h:"course = 'drink', in single quotes."},
  {k:'type',r:'s4',q:'Show name and course of every dish that is not a main, using <>',ph:'SELECT … WHERE course <> …',ans:"SELECT name, course FROM menu WHERE course <> 'main';",test:/<>|!=/,h:"course <> 'main'"},
  {k:'predict',r:'s4',q:"The data says main in lower case. How many rows does this return?",code:"SELECT * FROM menu WHERE course = 'Main';",pa:'rows',a:'0',h:"'Main' with a capital does not equal 'main'."},
- {k:'fix',r:'s4',q:'Fix: show the guest called Mei Tanaka',bug:'SELECT * FROM guests WHERE name = Mei Tanaka;',ans:"SELECT * FROM guests WHERE name = 'Mei Tanaka';",h:'The name is text, so it needs quotes.'},
+ {k:'fix',r:'s4',q:'Fix: show the guest called Meliora Tanglewood',bug:'SELECT * FROM guests WHERE name = Meliora Tanglewood;',ans:"SELECT * FROM guests WHERE name = 'Meliora Tanglewood';",h:'The name is text, so it needs quotes.'},
  {k:'pick',r:'s5',q:'Which puts the most expensive dish first?',o:['ORDER BY price','ORDER BY price DESC','SORT BY price DOWN','ORDER price DESC'],a:1,h:'DESC means descending: biggest first.'},
  {k:'type',r:'s5',q:'Show the guest names in alphabetical order',ph:'SELECT … ORDER BY …',ans:'SELECT name FROM guests ORDER BY name;',test:/order\s+by\s+name/i,h:'ORDER BY name. Ascending is the default.'},
  {k:'predict',r:'s5',q:'Desserts: Crater Pie 8.5, Stardust Sorbet 7, Eclipse Cake 12. Which name comes first?',code:"SELECT name FROM menu WHERE course = 'dessert' ORDER BY price DESC;",pa:'value',a:'Eclipse Cake',h:'DESC: the highest price first.'},
@@ -533,7 +533,7 @@ const DRILLS=[
  {k:'pick',r:'s16',q:'LEFT JOIN keeps',o:['only the matching rows','every row of the left table, matched or not','every row of the right table','no rows'],a:1,h:'Left means the first table.'},
  {k:'type',r:'s16',q:'Every guest with the ids of their orders, also guests with none: name and order id',ph:'SELECT g.name, o.id FROM guests g LEFT JOIN …',ans:'SELECT g.name, o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id;',h:'LEFT JOIN orders o ON o.guest_id = g.id'},
  {k:'type',r:'s16',q:'The guests who never ordered: name only',ph:'… LEFT JOIN … WHERE o.id IS NULL',ans:'SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;',h:'WHERE o.id IS NULL'},
- {k:'predict',r:'s16',q:'Oskar never ordered. What is o.id on his row?',code:"SELECT o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Oskar Vale';",pa:'value',a:'NULL',h:'No match means NULL.'},
+ {k:'predict',r:'s16',q:'Osric never ordered. What is o.id on his row?',code:"SELECT o.id FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Osric Valewind';",pa:'value',a:'NULL',h:'No match means NULL.'},
  {k:'fix',r:'s16',q:'Fix: = NULL never matches anything',bug:'SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id = NULL;',ans:'SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;',h:'Use IS NULL.'},
  {k:'pick',r:'s17',q:"Which dish matches LIKE 'Moon%'?",o:['Moonroot Risotto','Ice Moon Float','both','neither'],a:0,h:"'Moon%' means starts with Moon."},
  {k:'type',r:'s17',q:'The dishes with Moon anywhere in the name',ph:"SELECT name FROM menu WHERE name LIKE '…'",ans:"SELECT name FROM menu WHERE name LIKE '%Moon%';",test:/like/i,h:"'%Moon%'"},
@@ -574,11 +574,11 @@ const DRILLS=[
  {k:'fix',r:'s24',q:'Fix: the subquery needs brackets',bug:'SELECT name FROM menu WHERE price > SELECT AVG(price) FROM menu;',ans:'SELECT name FROM menu WHERE price > (SELECT AVG(price) FROM menu);',h:'Brackets around the inner SELECT.'},
  {k:'pick',r:'s25',q:'COALESCE(NULL, 0) returns',o:['NULL','0','an error','empty text'],a:1,h:'The first value that is not NULL.'},
  {k:'type',r:'s25',q:'Every guest with the number of their order lines as lines, 0 for none',ph:'SELECT g.name, COUNT(o.id) AS lines FROM guests g LEFT JOIN …',ans:'SELECT g.name, COUNT(o.id) AS lines FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;',h:'COUNT(o.id) skips the NULL row, so the guest without orders gets 0.'},
- {k:'predict',r:'s25',q:'Oskar has no orders. What comes back?',code:"SELECT COUNT(o.id) FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Oskar Vale';",pa:'value',a:'0',h:'COUNT(column) skips NULL.'},
- {k:'predict',r:'s25',q:'Without COALESCE this sum would be NULL. What comes back now?',code:"SELECT COALESCE(SUM(o.qty), 0) FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Oskar Vale';",pa:'value',a:'0',h:'COALESCE swaps NULL for 0.'},
+ {k:'predict',r:'s25',q:'Osric has no orders. What comes back?',code:"SELECT COUNT(o.id) FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Osric Valewind';",pa:'value',a:'0',h:'COUNT(column) skips NULL.'},
+ {k:'predict',r:'s25',q:'Without COALESCE this sum would be NULL. What comes back now?',code:"SELECT COALESCE(SUM(o.qty), 0) FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE g.name = 'Osric Valewind';",pa:'value',a:'0',h:'COALESCE swaps NULL for 0.'},
  {k:'fix',r:'s25',q:'Fix: show 0 instead of NULL for guests without portions',bug:'SELECT g.name, SUM(o.qty) AS portions FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;',ans:'SELECT g.name, COALESCE(SUM(o.qty), 0) AS portions FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;',h:'Wrap the SUM in COALESCE(…, 0).'},
  {k:'pick',r:'s26',q:'Which creates a table?',o:['NEW TABLE tips (day TEXT);','CREATE TABLE tips (day TEXT, amount REAL);','MAKE tips (day, amount);','INSERT TABLE tips;'],a:1,h:'CREATE TABLE name (columns).'},
- {k:'type',r:'s26',q:'Create a table staff with name TEXT and role TEXT, add Pia as cook, then show the table',ph:"CREATE TABLE staff (…);\nINSERT INTO staff VALUES (…);\nSELECT * FROM staff;",ans:"CREATE TABLE staff (name TEXT, role TEXT);\nINSERT INTO staff VALUES ('Pia', 'cook');\nSELECT * FROM staff;",multi:true,h:'Three statements, each ending with a semicolon.'},
+ {k:'type',r:'s26',q:'Create a table staff with name TEXT and role TEXT, add Pipwen as cook, then show the table',ph:"CREATE TABLE staff (…);\nINSERT INTO staff VALUES (…);\nSELECT * FROM staff;",ans:"CREATE TABLE staff (name TEXT, role TEXT);\nINSERT INTO staff VALUES ('Pipwen', 'cook');\nSELECT * FROM staff;",multi:true,h:'Three statements, each ending with a semicolon.'},
  {k:'predict',r:'s26',q:'How many rows does this return?',code:"CREATE TABLE tips (day TEXT, amount REAL);\nINSERT INTO tips VALUES ('Fri', 5), ('Sat', 8), ('Sun', 3);\nSELECT * FROM tips;",pa:'rows',a:'3',h:'One INSERT, three rows.'},
  {k:'fix',r:'s26',q:'Fix: separate the columns with commas',bug:"CREATE TABLE tips (day TEXT amount REAL);\nINSERT INTO tips VALUES ('Fri', 5);\nSELECT * FROM tips;",ans:"CREATE TABLE tips (day TEXT, amount REAL);\nINSERT INTO tips VALUES ('Fri', 5);\nSELECT * FROM tips;",h:'Without the comma, SQLite reads one column with a long type name.'},
  {k:'pick',r:'s27',q:'UNION ALL needs both SELECTs to have',o:['the same table','the same number of columns','a WHERE','an ORDER BY'],a:1,h:'The columns line up by position.'},
@@ -587,7 +587,7 @@ const DRILLS=[
  {k:'fix',r:'s27',q:'Fix: both sides need the same number of columns',bug:"SELECT name, price FROM menu WHERE course = 'drink' UNION ALL SELECT name FROM menu WHERE course = 'dessert';",ans:"SELECT name, price FROM menu WHERE course = 'drink' UNION ALL SELECT name, price FROM menu WHERE course = 'dessert';",h:'Add price to the second SELECT.'}
 ];
 const TARGETS=[
-{id:'board',name:'Menu screen',client:'Chef Ottilie Brand',time:'16:30',
+{id:'board',name:'Menu screen',client:'Chef Ottaline Brightspoon',time:'16:30',
  order:'The menu screen above the bar went blank an hour before service. Get it back: every dish with its course and price, in the order the kitchen keeps them.',
  reward:{name:'Menu screen',kind:'screen',line:'The menu glows above the bar again.'},
  rules:['s1','s2'],
@@ -599,7 +599,7 @@ const TARGETS=[
   {t:'Show only three columns: `name`, `course` and `price`',c:(q,r)=>cols(r)==='name,course,price',help:['Swap the star for the columns the screen needs.','Separate the names with commas, in the order of the screen.','SELECT name, deck FROM guests;','SELECT name, course, price FROM menu;']},
   {t:'All 15 dishes, no filter',c:(q,r)=>nrow(r)===15&&cols(r)==='name,course,price',help:['Count the rows on the ticket.','No WHERE: the screen shows the whole card.','SELECT name FROM menu;','SELECT name, course, price FROM menu;']}
  ]},
-{id:'mains',name:'Mains card',client:'Sous-chef Ravi Anand',time:'16:50',
+{id:'mains',name:'Mains card',client:'Sous-chef Ravenel Anwyr',time:'16:50',
  order:'Tonight the mains get their own card on every table: the name and price of each main course, nothing else. Try a number filter first, so you know how WHERE feels.',
  reward:{name:'Table cards',kind:'card',line:'Every table has a mains card.'},
  rules:['s3','s4'],
@@ -611,7 +611,7 @@ const TARGETS=[
   {t:"Now filter on text: only the rows where `course` is `'main'`",c:(q,r)=>/course\s*=\s*'main'/i.test(q)&&nrow(r)===5,help:['Text values need single quotes.','Replace the number test with a test on course.',"SELECT name FROM menu WHERE course = 'dessert';","SELECT * FROM menu WHERE course = 'main';"]},
   {t:'Two columns: `name` and `price`',c:(q,r)=>cols(r)==='name,price',help:['Swap the star for two column names.','name first, then price.',"SELECT name, course FROM menu WHERE course = 'drink';","SELECT name, price FROM menu WHERE course = 'main';"]}
  ]},
-{id:'trolley',name:'Dessert trolley',client:'Pastry chef Juno Sato',time:'19:10',
+{id:'trolley',name:'Dessert trolley',client:'Pastry chef Junora Saltmarsh',time:'19:10',
  order:'The trolley carries desserts and drinks. Put the four cheapest of them that cost under 9 on the trolley card: name, course and price, cheapest first.',
  reward:{name:'Dessert trolley',kind:'trolley',line:'The trolley rolls out with its card.'},
  rules:['s5','s6','s7'],
@@ -623,7 +623,7 @@ const TARGETS=[
   {t:'Cheapest first: `ORDER BY price`',c:(q,r)=>/order\s+by\s+price\b(?!\s+desc)/i.test(q),help:['ORDER BY goes after WHERE.','Ascending is the default, so no DESC.','SELECT name FROM menu ORDER BY name;',"SELECT name, course, price FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 9 ORDER BY price;"]},
   {t:'Only the first four: `LIMIT 4`',c:(q,r)=>/limit\s+4\b/i.test(q)&&nrow(r)===4,help:['LIMIT is the very last part.','LIMIT 4 after ORDER BY price.','SELECT name FROM menu ORDER BY price LIMIT 2;',"SELECT name, course, price FROM menu WHERE (course = 'dessert' OR course = 'drink') AND price < 9 ORDER BY price LIMIT 4;"]}
  ]},
-{id:'tags',name:'Price tags',client:'Manager Sol Petrov',time:'11:00',
+{id:'tags',name:'Price tags',client:'Manager Solace Pewterby',time:'11:00',
  order:'The station adds a 12% levy on every main from Monday. New price tags please: name, price, and the price with the levy as with_levy, rounded to 2 decimals.',
  reward:{name:'Price tags',kind:'tag',line:'New tags hang on the pass.'},
  rules:['s8','s9'],
@@ -635,7 +635,7 @@ const TARGETS=[
   {t:'Round it to 2 decimals with `ROUND(…, 2)`',c:q=>/round\s*\(\s*(price\s*\*\s*1\.12|1\.12\s*\*\s*price)\s*,\s*2\s*\)/i.test(q),help:['Some values have a long tail of digits.','Wrap the calculation: ROUND(price * 1.12, 2).','SELECT ROUND(price / 3, 2) AS per_person FROM menu;',"SELECT name, price, ROUND(price * 1.12, 2) AS with_levy FROM menu WHERE course = 'main';"]},
   {t:'Exactly three columns: `name`, `price`, `with_levy`',c:(q,r)=>cols(r)==='name,price,with_levy',help:['Compare your header row with the ticket.','name, then price, then the levy column.','SELECT a, b, c FROM t;',"SELECT name, price, ROUND(price * 1.12, 2) AS with_levy FROM menu WHERE course = 'main';"]}
  ]},
-{id:'closing',name:'Till tape',client:'Owner Mara Quist',time:'23:40',
+{id:'closing',name:'Till tape',client:'Owner Marwen Quillfeather',time:'23:40',
  order:"Saturday is done. One row for the owner's log: how many bills, the total takings, and the average tip rounded to 2 decimals. Columns bills, takings, avg_tip.",
  reward:{name:'Till tape',kind:'till',line:'The till prints its first clean tape.'},
  rules:['s10','s11'],
@@ -647,7 +647,7 @@ const TARGETS=[
   {t:'Add the average tip, rounded: `ROUND(AVG(tip), 2) AS avg_tip`',c:q=>/round\s*\(\s*avg\s*\(\s*tip\s*\)\s*,\s*2\s*\)\s+as\s+avg_tip\b/i.test(q),help:['AVG gives the average, ROUND tidies it.','AVG goes inside ROUND.','SELECT ROUND(AVG(price), 2) AS avg_price FROM menu;',"SELECT COUNT(*) AS bills, SUM(total) AS takings, ROUND(AVG(tip), 2) AS avg_tip FROM bills WHERE day = 'Sat';"]},
   {t:'One row, Saturday only',c:(q,r)=>nrow(r)===1&&/day\s*=\s*'sat'/i.test(q),help:['Aggregates fold the rows into one.',"Keep WHERE day = 'Sat'.","SELECT COUNT(*) FROM bills WHERE day = 'Fri';","SELECT COUNT(*) AS bills, SUM(total) AS takings, ROUND(AVG(tip), 2) AS avg_tip FROM bills WHERE day = 'Sat';"]}
  ]},
-{id:'floor',name:'Floor plan',client:'Head waiter Elio Varga',time:'10:15',
+{id:'floor',name:'Floor plan',client:'Head waiter Eliandor Vex',time:'10:15',
  order:'Which tables need an extra server? Per table, over the whole weekend: total covers and takings. Only the tables with at least 7 covers, busiest first.',
  reward:{name:'Floor plan',kind:'floor',line:'The floor plan shows who serves where.'},
  rules:['s12','s13'],
@@ -659,7 +659,7 @@ const TARGETS=[
   {t:'Only tables with at least 7 covers: `HAVING SUM(covers) >= 7`',c:(q,r)=>/having\b/i.test(q)&&nrow(r)===3,help:['Testing a group needs HAVING, after GROUP BY.','HAVING SUM(covers) >= 7','SELECT day FROM bills GROUP BY day HAVING SUM(total) > 400;','SELECT table_no, SUM(covers) AS covers, SUM(total) AS takings FROM bills GROUP BY table_no HAVING SUM(covers) >= 7;']},
   {t:'Busiest first: `ORDER BY covers DESC`',c:q=>/order\s+by\s+(sum\s*\(\s*covers\s*\)|covers)\s+desc\b/i.test(q),help:['ORDER BY comes after HAVING.','DESC for the biggest first.','SELECT name, price FROM menu ORDER BY price DESC;','SELECT table_no, SUM(covers) AS covers, SUM(total) AS takings FROM bills GROUP BY table_no HAVING SUM(covers) >= 7 ORDER BY covers DESC;']}
  ]},
-{id:'tickets',name:'Ticket rail',client:'Line cook Pia Novak',time:'12:05',
+{id:'tickets',name:'Ticket rail',client:'Line cook Pipwen Novastar',time:'12:05',
  order:'Sunday lunch prep: the ticket rail needs every Sunday order with the guest name, the dish and the quantity. Columns guest, dish, qty, sorted by guest and then dish.',
  reward:{name:'Ticket rail',kind:'rail',line:'Tickets clip onto the rail by the pass.'},
  rules:['s14','s15'],
@@ -671,7 +671,7 @@ const TARGETS=[
   {t:'Columns `guest`, `dish` and `qty`',c:(q,r)=>cols(r)==='guest,dish,qty',help:['Both tables have a name column: rename them.','g.name AS guest, m.name AS dish, o.qty','SELECT m.name AS dish FROM menu m;',"SELECT g.name AS guest, m.name AS dish, o.qty FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Sun';"]},
   {t:'Sunday only, sorted by guest and then dish',c:(q,r)=>nrow(r)===5&&/order\s+by\s+(guest|g\.name)\s*,\s*(dish|m\.name)\b/i.test(q),help:['Two sort columns, separated by a comma.','ORDER BY guest, dish','SELECT name, course FROM menu ORDER BY course, name;',"SELECT g.name AS guest, m.name AS dish, o.qty FROM orders o JOIN guests g ON g.id = o.guest_id JOIN menu m ON m.id = o.menu_id WHERE o.day = 'Sun' ORDER BY guest, dish;"]}
  ]},
-{id:'unsold',name:'Cut list',client:'Chef Ottilie Brand',time:'09:30',
+{id:'unsold',name:'Cut list',client:'Chef Ottaline Brightspoon',time:'09:30',
  order:'The menu is too long. Which dishes did nobody order all weekend? Name and course. Two warm-ups first, so the new keywords feel familiar.',
  reward:{name:'Short menu',kind:'knife',line:'The card is shorter and sharper.'},
  rules:['s16','s17','s18'],
@@ -685,7 +685,7 @@ const TARGETS=[
   {t:'Keep the dishes without an order: `WHERE o.id IS NULL`',c:(q,r)=>/is\s+null/i.test(q)&&nrow(r)===2,help:['No match fills the order columns with NULL.','IS NULL, never = NULL.','SELECT g.name FROM guests g LEFT JOIN orders o ON o.guest_id = g.id WHERE o.id IS NULL;','SELECT m.name FROM menu m LEFT JOIN orders o ON o.menu_id = m.id WHERE o.id IS NULL;']},
   {t:'Two columns: `name` and `course`',c:(q,r)=>cols(r)==='name,course',help:['Take both from the menu side.','m.name, m.course','SELECT m.name, m.price FROM menu m;','SELECT m.name, m.course FROM menu m LEFT JOIN orders o ON o.menu_id = m.id WHERE o.id IS NULL;']}
  ]},
-{id:'larder',name:'Larder',client:'Quartermaster Dax Holm',time:'08:00',
+{id:'larder',name:'Larder',client:'Quartermaster Daxian Holmwyrm',time:'08:00',
  order:'A delivery docked. Add saffron (50 g, minimum 20), add 10 kg to the moonroot, and strike cola syrup off the list: the supplier stopped making it. Then show item, qty and unit for everything, sorted by item.',
  reward:{name:'Full larder',kind:'crate',line:'The larder is stocked and labelled.'},
  rules:['s19','s20'],
@@ -697,7 +697,7 @@ const TARGETS=[
   {t:'Remove the cola syrup with `DELETE FROM … WHERE`',c:(q,r)=>/delete\s+from\s+stock\s+where/i.test(q)&&nrow(r)>0&&!rowBy(r,'item','cola syrup'),help:['DELETE removes whole rows.','The item name has a space: keep it inside the quotes.',"DELETE FROM stock WHERE item = 'chili';","DELETE FROM stock WHERE item = 'cola syrup';"]},
   {t:'Finish with `item`, `qty` and `unit`, sorted by item',c:(q,r)=>cols(r)==='item,qty,unit'&&/order\s+by\s+item\b/i.test(q),help:['The last SELECT decides what you see.','SELECT item, qty, unit FROM stock ORDER BY item;','SELECT name, price FROM menu ORDER BY name;',"INSERT INTO stock (item, qty, unit, min_qty) VALUES ('saffron', 50, 'g', 20);\nUPDATE stock SET qty = qty + 10 WHERE item = 'moonroot';\nDELETE FROM stock WHERE item = 'cola syrup';\nSELECT item, qty, unit FROM stock ORDER BY item;"]}
  ]},
-{id:'chalk',name:'Chalkboard',client:'Night chef Sami Rook',time:'17:20',
+{id:'chalk',name:'Chalkboard',client:'Night chef Samwyn Rookfeather',time:'17:20',
  order:"The chalkboard by the door lists tonight's mains: the dish in capitals, its price, and a band. Under 20 is classic, the rest is a treat. Most expensive first.",
  reward:{name:'Chalkboard',kind:'chalk',line:'The chalkboard by the door lists the mains.'},
  rules:['s21','s22'],
@@ -709,7 +709,7 @@ const TARGETS=[
   {t:"Under 20 is `classic`, the rest is `treat`",c:(q,r)=>{const p=col(r,'price'),b=col(r,'band');return nrow(r)===5&&b.length===5&&p.every((v,i)=>(v<20)===(b[i]==='classic')&&(b[i]==='classic'||b[i]==='treat'))},help:['Look at Solar Curry (19) and Moonroot Risotto (21.5).',"WHEN price < 20 THEN 'classic' ELSE 'treat'",'CASE WHEN price < 10 THEN \'budget\' ELSE \'treat\' END',"SELECT UPPER(name) AS dish, price, CASE WHEN price < 20 THEN 'classic' ELSE 'treat' END AS band FROM menu WHERE course = 'main';"]},
   {t:'Most expensive first',c:q=>/order\s+by\s+price\s+desc\b/i.test(q),help:['ORDER BY goes after WHERE.','DESC for the biggest first.','SELECT name FROM menu ORDER BY price DESC;',"SELECT UPPER(name) AS dish, price,\n  CASE WHEN price < 20 THEN 'classic' ELSE 'treat' END AS band\nFROM menu\nWHERE course = 'main'\nORDER BY price DESC;"]}
  ]},
-{id:'regulars',name:'Loyalty cards',client:'Owner Mara Quist',time:'14:00',
+{id:'regulars',name:'Loyalty cards',client:'Owner Marwen Quillfeather',time:'14:00',
  order:'A loyalty card for every guest: their name and how many portions they ordered this weekend, with 0 for anyone who never ordered. Most portions first, ties by name. Two subquery warm-ups first.',
  reward:{name:'Loyalty cards',kind:'book',line:'Every regular has a stamped card.'},
  rules:['s23','s24','s25'],
@@ -720,10 +720,10 @@ const TARGETS=[
   {t:'Warm-up: the dishes above the average price, with `(SELECT AVG(price) FROM menu)`',c:(q,r,x)=>!!x.above,help:['The inner query works out the average first.','WHERE price > (SELECT AVG(price) FROM menu)','SELECT id FROM bills WHERE total > (SELECT AVG(total) FROM bills);','SELECT name, price FROM menu WHERE price > (SELECT AVG(price) FROM menu);']},
   {t:"Warm-up: the guests who ordered on Saturday, with `IN (SELECT guest_id FROM orders …)`",c:(q,r,x)=>!!x.sat,help:['The ids come from orders, the names from guests.',"WHERE id IN (SELECT guest_id FROM orders WHERE day = 'Sat')","SELECT name FROM menu WHERE id IN (SELECT menu_id FROM orders WHERE qty = 2);","SELECT name FROM guests WHERE id IN (SELECT guest_id FROM orders WHERE day = 'Sat');"]},
   {t:'Every guest once: `LEFT JOIN orders` and `GROUP BY` the guest',c:(q,r)=>/from\s+guests\b[\s\S]*left\s+join\s+orders\b/i.test(q)&&/group\s+by/i.test(q)&&nrow(r)===8,help:['A plain JOIN would drop the guest without orders.','FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id','SELECT g.name, COUNT(o.id) FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;','SELECT g.name, SUM(o.qty) FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;']},
-  {t:'Columns `name` and `portions`, with 0 instead of NULL',c:(q,r)=>{const o=rowBy(r,'name','Oskar Vale');return cols(r)==='name,portions'&&!!o&&o.portions===0},help:['A sum over nothing is NULL.','COALESCE(SUM(o.qty), 0) AS portions','SELECT COALESCE(SUM(qty), 0) FROM orders WHERE guest_id = 8;','SELECT g.name, COALESCE(SUM(o.qty), 0) AS portions FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;']},
+  {t:'Columns `name` and `portions`, with 0 instead of NULL',c:(q,r)=>{const o=rowBy(r,'name','Osric Valewind');return cols(r)==='name,portions'&&!!o&&o.portions===0},help:['A sum over nothing is NULL.','COALESCE(SUM(o.qty), 0) AS portions','SELECT COALESCE(SUM(qty), 0) FROM orders WHERE guest_id = 8;','SELECT g.name, COALESCE(SUM(o.qty), 0) AS portions FROM guests g LEFT JOIN orders o ON o.guest_id = g.id GROUP BY g.id;']},
   {t:'Most portions first, ties sorted by name',c:q=>/order\s+by\s[\s\S]*?\bdesc\s*,\s*(g\.)?name\b/i.test(q),help:['Two sort columns, separated by a comma.','ORDER BY portions DESC, g.name','SELECT name, course FROM menu ORDER BY course, name;','SELECT g.name, COALESCE(SUM(o.qty), 0) AS portions\nFROM guests g\nLEFT JOIN orders o ON o.guest_id = g.id\nGROUP BY g.id\nORDER BY portions DESC, g.name;']}
  ]},
-{id:'winter',name:'Winter card',client:'Pastry chef Juno Sato',time:'15:45',
+{id:'winter',name:'Winter card',client:'Pastry chef Junora Saltmarsh',time:'15:45',
  order:'Winter reaches the ring next week. Make a table winter with name, course and price, and add Frost Ramen (main, 17.5), Glacier Tart (dessert, 9) and Comet Cocoa (drink, 5). Then the winter card: every winter dish plus the current desserts, cheapest first.',
  reward:{name:'Winter jars',kind:'snow',line:'The winter jars line the counter.'},
  rules:['s26','s27'],
@@ -849,7 +849,7 @@ const sfx=(()=>{let ctx=null;const ac=()=>{if(!ctx){try{ctx=new(window.AudioCont
 
 const IMG='img/seqle/';
 function bixSvg(mood){const f={happy:'cheer',worry:'think',serve:'serve',stern:'stern',sleep:'sleep'}[mood]||'idle';return'<img src="'+IMG+'bix-'+f+'.webp" alt="Bix">'}
-const FACES={'Ottilie Brand':'ottilie','Ravi Anand':'ravi','Juno Sato':'juno','Sol Petrov':'sol','Mara Quist':'mara','Elio Varga':'elio','Pia Novak':'pia','Dax Holm':'dax','Sami Rook':'sami'};
+const FACES={'Ottaline Brightspoon':'ottilie','Ravenel Anwyr':'ravi','Junora Saltmarsh':'juno','Solace Pewterby':'sol','Marwen Quillfeather':'mara','Eliandor Vex':'elio','Pipwen Novastar':'pia','Daxian Holmwyrm':'dax','Samwyn Rookfeather':'sami'};
 function face(who,cls){const k=Object.keys(FACES).find(n=>who&&who.includes(n));return k?'<img class="'+(cls||'face')+'" src="'+IMG+'p-'+FACES[k]+'.webp" alt="">':''}
 const ART={screen:'menu',card:'mains',trolley:'trolley',tag:'tags',till:'till',floor:'floorplan',rail:'rail',knife:'cutlist',crate:'larder',chalk:'chalk',book:'loyalty',snow:'winter'};
 function rewardSvg(t,ghost){return'<img'+(ghost?' class="sil"':'')+' src="'+IMG+'st-'+ART[t.reward.kind]+'.webp" alt="'+esc(ghost?'Not yet restored':t.reward.name)+'">'}

@@ -35,19 +35,19 @@ const ROLES = [
 ];
 const PEOPLE = [
   ["Ysolde", "Marrow", "Finance", "Controller"], ["Brannoc", "Vale", "Sales", "Account Manager"], ["Corvin", "Ashby", "Sales", "Account Manager"],
-  ["Elowen", "Thistle", "IT", "IT Lead"], ["Maelis", "Grey", "Operations", "Planner"], ["Tamsin", "Rook", "Finance", "Accountant"],
-  ["Oren", "Halloway", "Operations", "Site Coordinator"], ["Isolde", "Fenn", "Legal", "Counsel"], ["Garrick", "Penhale", "Sales", "Sales Director"],
-  ["Wren", "Calloway", "Marketing", "Content Lead"], ["Aldric", "Moor", "Operations", "Technician"], ["Seren", "Blackwood", "HR", "HR Partner"],
-  ["Lorcan", "Ivers", "IT", "Systems Engineer"], ["Nessa", "Quill", "Marketing", "Designer"], ["Rowan", "Hart", "Operations", "Technician"],
-  ["Ilse", "Varga", "Finance", "Payroll"], ["Dorian", "Pike", "Sales", "Account Manager"], ["Fenna", "Lowe", "Operations", "Technician"],
-  ["Cassian", "Drake", "IT", "Service Desk"], ["Mirelle", "Stone", "Legal", "Paralegal"], ["Bastian", "Crane", "Operations", "Shift Lead"],
-  ["Elara", "Wynn", "Sales", "Inside Sales"], ["Torin", "Ash", "Operations", "Technician"], ["Liora", "Penn", "HR", "Recruiter"],
-  ["Hollis", "Reed", "Finance", "CFO"], ["Saoirse", "Vane", "Marketing", "Marketing Manager"], ["Emrys", "Cole", "Operations", "Technician"],
-  ["Petra", "Lind", "Sales", "Inside Sales"], ["Caius", "Mercer", "Operations", "Operations Manager"], ["Ondine", "Shaw", "IT", "Service Desk"],
-  ["Rhydian", "Bell", "Operations", "Technician"], ["Thea", "Gallow", "Finance", "Accountant"], ["Quillon", "Dunne", "Sales", "Account Manager"],
-  ["Anwen", "Frost", "Operations", "Planner"], ["Ludo", "Kerr", "Operations", "Technician"], ["Marisol", "Teague", "Legal", "Counsel"],
-  ["Evander", "Holt", "Operations", "Technician"], ["Briar", "Locke", "Marketing", "Social Media"], ["Soren", "Achterberg", "IT", "Network Engineer"],
-  ["Ines", "Corrigan", "Sales", "Account Manager"], ["Kestrel", "Wade", "Operations", "Technician"], ["Juniper", "Oakes", "HR", "HR Manager"],
+  ["Elowen", "Thistle", "IT", "IT Lead"], ["Maelis", "Grey", "Operations", "Planner"], ["Tamsin", "Rookwood", "Finance", "Accountant"],
+  ["Orrin", "Hallowmere", "Operations", "Site Coordinator"], ["Isolde", "Fenn", "Legal", "Counsel"], ["Garrion", "Penhale", "Sales", "Sales Director"],
+  ["Wren", "Callowmere", "Marketing", "Content Lead"], ["Aldric", "Moor", "Operations", "Technician"], ["Seren", "Blackwood", "HR", "HR Partner"],
+  ["Lorcan", "Ivers", "IT", "Systems Engineer"], ["Nessa", "Quill", "Marketing", "Designer"], ["Rowenna", "Harthorn", "Operations", "Technician"],
+  ["Ilsabet", "Varrow", "Finance", "Payroll"], ["Dorian", "Pikeholm", "Sales", "Account Manager"], ["Fenna", "Lowmere", "Operations", "Technician"],
+  ["Cassian", "Drake", "IT", "Service Desk"], ["Mirethe", "Stonewyrm", "Legal", "Paralegal"], ["Bastian", "Cranefeather", "Operations", "Shift Lead"],
+  ["Elara", "Wynn", "Sales", "Inside Sales"], ["Torin", "Ash", "Operations", "Technician"], ["Liora", "Pennywhistle", "HR", "Recruiter"],
+  ["Hesper", "Reedmire", "Finance", "CFO"], ["Seraphel", "Vane", "Marketing", "Marketing Manager"], ["Emberlyn", "Colwyn", "Operations", "Technician"],
+  ["Petrel", "Lindgrove", "Sales", "Inside Sales"], ["Caius", "Merrowind", "Operations", "Operations Manager"], ["Ondine", "Shadewell", "IT", "Service Desk"],
+  ["Rhydian", "Bellweather", "Operations", "Technician"], ["Theodwyn", "Gallow", "Finance", "Accountant"], ["Quillon", "Dunne", "Sales", "Account Manager"],
+  ["Anwen", "Frostmere", "Operations", "Planner"], ["Ludovar", "Kerr", "Operations", "Technician"], ["Marivelle", "Teague", "Legal", "Counsel"],
+  ["Evander", "Holtwyrm", "Operations", "Technician"], ["Briar", "Locke", "Marketing", "Social Media"], ["Sorrel", "Achterwyn", "IT", "Network Engineer"],
+  ["Isra", "Corvane", "Sales", "Account Manager"], ["Kestrel", "Wade", "Operations", "Technician"], ["Juniper", "Oakes", "HR", "HR Manager"],
   ["Alaric", "Strand", "Executive", "Managing Director"],
 ];
 const STALE = { 1: 161, 4: 340, 6: 200, 10: 120, 14: 95, 21: 410, 27: 133, 33: 260, 40: 102 };
@@ -74,7 +74,7 @@ function makeTenant() {
       Surname: s, UsageLocation: "BE", UserPrincipalName: upn, UserType: "Member",
     });
   });
-  [["Pieter Draaisma", "pdraaisma_partner.example#EXT#@" + domain], ["Nora Bekaert", "nbekaert_audit.example#EXT#@" + domain], ["Sam Okafor", "sokafor_vendor.example#EXT#@" + domain]].forEach(([n, u], k) => {
+  [["Pieter Draaisma", "pdraaisma_partner.example#EXT#@" + domain], ["Nyssa Bexwyn", "nbekaert_audit.example#EXT#@" + domain], ["Sam Okafor", "sokafor_vendor.example#EXT#@" + domain]].forEach(([n, u], k) => {
     const [g, s] = n.split(" ");
     users.push(obj(GM + "MicrosoftGraphUser", {
       AccountEnabled: true, AssignedLicenses: [], BusinessPhones: [], City: null, CompanyName: null, Country: null, CreatedDateTime: ago(300 + k * 90), Department: null,
@@ -733,10 +733,10 @@ class Ctx {
     this.cwd = "/Users/kaatje";
     this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Documents/scripts", "/Users/kaatje/Downloads"]);
     this.fs = {
-      "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hollis (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowan is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(NOW.getTime() - 30 * 864e5) },
-      "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNoor Claes,noor.claes@halvardco.onmicrosoft.com,noor.claes,Sales,Inside Sales\nTom Jacobs,tom.jacobs@halvardco.onmicrosoft.com,tom.jacobs,Operations,Technician\nLien Maes,lien.maes@halvardco.onmicrosoft.com,lien.maes,Marketing,Content Writer", at: new Date(NOW.getTime() - 36e5) },
-      "/Users/kaatje/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetra.lind@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(NOW.getTime() - 72e5) },
-      "/Users/kaatje/Downloads/leavers.csv": { text: "UPN,LastDay\nludo.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.crane@halvardco.onmicrosoft.com,2026-11-15\nines.corrigan@halvardco.onmicrosoft.com,2026-11-17", at: new Date(NOW.getTime() - 18e5) }
+      "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hesper (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowenna is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(NOW.getTime() - 30 * 864e5) },
+      "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNimue Clarthorn,nimue.clarthorn@halvardco.onmicrosoft.com,nimue.clarthorn,Sales,Inside Sales\nTamlin Jaspermoor,tamlin.jaspermoor@halvardco.onmicrosoft.com,tamlin.jaspermoor,Operations,Technician\nLiriel Maewood,liriel.maewood@halvardco.onmicrosoft.com,liriel.maewood,Marketing,Content Writer", at: new Date(NOW.getTime() - 36e5) },
+      "/Users/kaatje/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetrel.lindgrove@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(NOW.getTime() - 72e5) },
+      "/Users/kaatje/Downloads/leavers.csv": { text: "UPN,LastDay\nludovar.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.cranefeather@halvardco.onmicrosoft.com,2026-11-15\nisra.corvane@halvardco.onmicrosoft.com,2026-11-17", at: new Date(NOW.getTime() - 18e5) }
     };
     this.host = [];
     this.errors = [];
@@ -1849,20 +1849,20 @@ function extendTenant(t) {
     m._arc = { AutoReplyState: "Disabled", InternalMessage: null, ExternalMessage: null, StartTime: null, EndTime: null };
     m._stat = { ItemCount: 800 + Math.floor(r() * 24000), MB: 120 + r() * 18000 };
   });
-  const dor = t.mailboxes.find((m) => m.DisplayName === "Dorian Pike"); if (dor) { dor.ForwardingSmtpAddress = "smtp:dorian.pike.private@outlook.example"; dor.DeliverToMailboxAndForward = true; }
-  const big = t.mailboxes.find((m) => m.DisplayName === "Garrick Penhale"); if (big) big._stat = { ItemCount: 61240, MB: 47600 };
+  const dor = t.mailboxes.find((m) => m.DisplayName === "Dorian Pikeholm"); if (dor) { dor.ForwardingSmtpAddress = "smtp:dorian.pikeholm.private@outlook.example"; dor.DeliverToMailboxAndForward = true; }
+  const big = t.mailboxes.find((m) => m.DisplayName === "Garrion Penhale"); if (big) big._stat = { ItemCount: 61240, MB: 47600 };
   t.perms = [];
   const give = (mb, dn) => { const u = byName(dn); t.perms.push({ mb, upn: u.UserPrincipalName, rights: ["FullAccess"] }); };
   give("Info", "Elowen Thistle"); give("Info", "Cassian Drake");
-  give("Sales Desk", "Brannoc Vale"); give("Sales Desk", "Garrick Penhale"); give("Sales Desk", "Elara Wynn");
-  give("Finance Inbox", "Ysolde Marrow"); give("Finance Inbox", "Tamsin Rook"); give("Finance Inbox", "Hollis Reed");
-  give("Support", "Cassian Drake"); give("Support", "Ondine Shaw");
+  give("Sales Desk", "Brannoc Vale"); give("Sales Desk", "Garrion Penhale"); give("Sales Desk", "Elara Wynn");
+  give("Finance Inbox", "Ysolde Marrow"); give("Finance Inbox", "Tamsin Rookwood"); give("Finance Inbox", "Hesper Reedmire");
+  give("Support", "Cassian Drake"); give("Support", "Ondine Shadewell");
   give("Careers", "Juniper Oakes");
-  t.sendAs = [{ mb: "Sales Desk", upn: byName("Garrick Penhale").UserPrincipalName }, { mb: "Info", upn: byName("Elowen Thistle").UserPrincipalName }];
+  t.sendAs = [{ mb: "Sales Desk", upn: byName("Garrion Penhale").UserPrincipalName }, { mb: "Info", upn: byName("Elowen Thistle").UserPrincipalName }];
   const members = t.users.filter((u) => u.UserType === "Member");
   const dl = (name, alias, list) => ({ Name: name, DisplayName: name, Alias: alias, PrimarySmtpAddress: alias + "@" + t.domain, GroupType: "Universal", ManagedBy: ["Elowen Thistle"], members: list.map((u) => u.UserPrincipalName) });
   t.dls = [
-    dl("All Staff", "all", members.filter((u) => u.AccountEnabled && u.DisplayName !== "Rowan Hart")),
+    dl("All Staff", "all", members.filter((u) => u.AccountEnabled && u.DisplayName !== "Rowenna Harthorn")),
     dl("Sales Team", "sales-team", members.filter((u) => u.Department === "Sales")),
     dl("Finance Team", "finance-team", members.filter((u) => u.Department === "Finance")),
     dl("Operations Bruges", "ops-bruges", members.filter((u) => u.Department === "Operations" && u.City === "Bruges")),
@@ -1870,11 +1870,11 @@ function extendTenant(t) {
   ];
   const grp = (name, nick, desc, types, sec, list) => ({ g: obj(T_GRP, { Classification: null, CreatedDateTime: new Date(Date.now() - (200 + Math.floor(r() * 900)) * 864e5), Description: desc, DisplayName: name, GroupTypes: types, Id: guid(r), Mail: types.includes("Unified") ? nick + "@" + t.domain : null, MailEnabled: types.includes("Unified"), MailNickname: nick, SecurityEnabled: sec, Visibility: types.includes("Unified") ? "Private" : null }), members: list.map((u) => u.Id) });
   t.groups = [
-    grp("Halvard Leadership", "leadership", "Directors and heads of department", ["Unified"], false, ["Alaric Strand", "Hollis Reed", "Garrick Penhale", "Caius Mercer", "Elowen Thistle", "Juniper Oakes"].map(byName)),
-    grp("Project Northwind", "northwind", "New warehouse system rollout", ["Unified"], false, ["Caius Mercer", "Lorcan Ivers", "Anwen Frost", "Maelis Grey"].map(byName)),
+    grp("Halvard Leadership", "leadership", "Directors and heads of department", ["Unified"], false, ["Alaric Strand", "Hesper Reedmire", "Garrion Penhale", "Caius Merrowind", "Elowen Thistle", "Juniper Oakes"].map(byName)),
+    grp("Project Northwyrm", "northwind", "New warehouse system rollout", ["Unified"], false, ["Caius Merrowind", "Lorcan Ivers", "Anwen Frostmere", "Maelis Grey"].map(byName)),
     grp("SG-VPN-Users", "SG-VPN-Users", "Allowed to use the VPN", [], true, members.filter((u) => ["IT", "Executive", "Finance"].includes(u.Department))),
     grp("SG-Finance-Share", "SG-Finance-Share", "Read/write on the finance file share", [], true, members.filter((u) => u.Department === "Finance")),
-    grp("SG-MFA-Exclusion", "SG-MFA-Exclusion", "Temporary: excluded from MFA policy", [], true, ["Scan Station"].map(() => byName("Rowan Hart")))
+    grp("SG-MFA-Exclusion", "SG-MFA-Exclusion", "Temporary: excluded from MFA policy", [], true, ["Scan Station"].map(() => byName("Rowenna Harthorn")))
   ];
   t.revoked = {};
   incident(t);
@@ -2273,47 +2273,47 @@ function incident(t) {
     Status: obj(T_SIGSTAT, { AdditionalDetails: code === 0 ? null : "The user didn't enter the right credentials.", ErrorCode: code, FailureReason: FAIL[code] }),
     UserDisplayName: u.DisplayName, UserId: u.Id, UserPrincipalName: u.UserPrincipalName
   }));
-  const rowan = byName("Rowan Hart"), thea = byName("Thea Gallow");
-  t.users.filter((u) => u.UserType === "Member" && u.AccountEnabled && u !== rowan).forEach((u, i) => {
+  const rowenna = byName("Rowenna Harthorn"), theodwyn = byName("Theodwyn Gallow");
+  t.users.filter((u) => u.UserType === "Member" && u.AccountEnabled && u !== rowenna).forEach((u, i) => {
     const c = cities[u.City] || cities.Bruges;
     const ip = c[0] + (10 + (i * 7) % 200) + "." + (20 + (i * 13) % 200);
     for (let k = 0; k < 2; k++) sig(u, atClock(k * 2 + (i % 3), 8 + (i % 3), (i * 11 + k * 17) % 60), ip, c[1], c[2], "BE", 0);
   });
-  const sprayed = ["Brannoc Vale", "Maelis Grey", "Oren Halloway", "Aldric Moor", "Fenna Lowe", "Rowan Hart", "Emrys Cole", "Anwen Frost", "Evander Holt"].map(byName);
-  sprayed.forEach((u, i) => sig(u, atClock(4, 3, 10 + i * 4), ATT_IP, "Frankfurt am Main", "Hessen", "DE", u === rowan ? 50126 : (i % 4 === 3 ? 50053 : 50126), "OfficeHome", "Browser", ["Chrome 124.0.0", "Linux"]));
-  sig(rowan, atClock(4, 3, 47), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "OfficeHome", "Browser", ["Chrome 124.0.0", "Linux"]);
-  sig(rowan, atClock(4, 4, 2), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "Office 365 Exchange Online", "Browser", ["Chrome 124.0.0", "Linux"]);
-  sig(rowan, atClock(3, 9, 12), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "Office 365 Exchange Online", "Browser", ["Chrome 124.0.0", "Linux"]);
-  sig(thea, atClock(1, 8, 4), GATE_IP, "Dallas", "Texas", "US", 0, "OfficeHome", "Browser", ["Edge 126.0.0", "Windows10"]);
-  sig(thea, atClock(1, 8, 31), GATE_IP, "Dallas", "Texas", "US", 0, "Office 365 Exchange Online", "Browser", ["Edge 126.0.0", "Windows10"]);
+  const sprayed = ["Brannoc Vale", "Maelis Grey", "Orrin Hallowmere", "Aldric Moor", "Fenna Lowmere", "Rowenna Harthorn", "Emberlyn Colwyn", "Anwen Frostmere", "Evander Holtwyrm"].map(byName);
+  sprayed.forEach((u, i) => sig(u, atClock(4, 3, 10 + i * 4), ATT_IP, "Frankfurt am Main", "Hessen", "DE", u === rowenna ? 50126 : (i % 4 === 3 ? 50053 : 50126), "OfficeHome", "Browser", ["Chrome 124.0.0", "Linux"]));
+  sig(rowenna, atClock(4, 3, 47), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "OfficeHome", "Browser", ["Chrome 124.0.0", "Linux"]);
+  sig(rowenna, atClock(4, 4, 2), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "Office 365 Exchange Online", "Browser", ["Chrome 124.0.0", "Linux"]);
+  sig(rowenna, atClock(3, 9, 12), ATT_IP, "Frankfurt am Main", "Hessen", "DE", 0, "Office 365 Exchange Online", "Browser", ["Chrome 124.0.0", "Linux"]);
+  sig(theodwyn, atClock(1, 8, 4), GATE_IP, "Dallas", "Texas", "US", 0, "OfficeHome", "Browser", ["Edge 126.0.0", "Windows10"]);
+  sig(theodwyn, atClock(1, 8, 31), GATE_IP, "Dallas", "Texas", "US", 0, "Office 365 Exchange Online", "Browser", ["Edge 126.0.0", "Windows10"]);
   sigs.sort((a, b) => b.CreatedDateTime - a.CreatedDateTime);
   t.signins = sigs;
   const last = (u) => sigs.filter((s) => s.UserId === u.Id && s.Status.ErrorCode === 0)[0];
-  [rowan, thea].forEach((u) => { const s = last(u); if (s) { u.SignInActivity.LastSignInDateTime = s.CreatedDateTime; u.SignInActivity.LastSuccessfulSignInDateTime = s.CreatedDateTime; u.SignInActivity.LastNonInteractiveSignInDateTime = s.CreatedDateTime; } });
+  [rowenna, theodwyn].forEach((u) => { const s = last(u); if (s) { u.SignInActivity.LastSignInDateTime = s.CreatedDateTime; u.SignInActivity.LastSuccessfulSignInDateTime = s.CreatedDateTime; u.SignInActivity.LastNonInteractiveSignInDateTime = s.CreatedDateTime; } });
 
   const rid = () => String(Math.floor(r() * 9e17) + 1e17).slice(0, 18) + "4";
   const rule = (mbx, name, pri, extra) => { const id = rid(); return Object.assign({ mb: mbx, Name: name, Enabled: true, Priority: pri, RuleIdentity: id, Identity: mbx + "\\" + id, MailboxOwnerId: mbx, From: null, SubjectContainsWords: null, SubjectOrBodyContainsWords: null, MoveToFolder: null, DeleteMessage: false, MarkAsRead: false, ForwardTo: null, RedirectTo: null, StopProcessingRules: false }, extra); };
   t.rules = [
-    rule("Rowan Hart", "Shift roster", 1, { From: ["Caius Mercer"], MoveToFolder: "Rowan Hart:\\Roster", Description: "If the message:\r\n\tthe message was received from 'Caius Mercer'\r\nTake the following actions:\r\n\tmove the message to folder 'Roster'\r\n" }),
-    rule("Rowan Hart", "..", 2, { SubjectOrBodyContainsWords: ["invoice", "payment", "bank", "IBAN"], MoveToFolder: "Rowan Hart:\\RSS Subscriptions", MarkAsRead: true, StopProcessingRules: true, Description: "If the message:\r\n\tincludes 'invoice' or 'payment' or 'bank' or 'IBAN' in the subject or body\r\nTake the following actions:\r\n\tmove the message to folder 'RSS Subscriptions'\r\n\tand mark the message as read\r\n\tand stop processing more rules on this message\r\n" }),
-    rule("Thea Gallow", "Bank statements", 1, { From: ["statements@kbc.example"], MoveToFolder: "Thea Gallow:\\Bank", Description: "If the message:\r\n\tthe message was received from 'statements@kbc.example'\r\nTake the following actions:\r\n\tmove the message to folder 'Bank'\r\n" }),
-    rule("Thea Gallow", ".", 2, { SubjectContainsWords: ["voicemail", "security", "password", "suspicious"], DeleteMessage: true, StopProcessingRules: true, Description: "If the message:\r\n\tincludes 'voicemail' or 'security' or 'password' or 'suspicious' in the subject\r\nTake the following actions:\r\n\tdelete the message\r\n\tand stop processing more rules on this message\r\n" }),
-    rule("Garrick Penhale", "Clients to folder", 1, { From: ["orders@brightline.example"], MoveToFolder: "Garrick Penhale:\\Clients", Description: "If the message:\r\n\tthe message was received from 'orders@brightline.example'\r\nTake the following actions:\r\n\tmove the message to folder 'Clients'\r\n" }),
+    rule("Rowenna Harthorn", "Shift roster", 1, { From: ["Caius Merrowind"], MoveToFolder: "Rowenna Harthorn:\\Roster", Description: "If the message:\r\n\tthe message was received from 'Caius Merrowind'\r\nTake the following actions:\r\n\tmove the message to folder 'Roster'\r\n" }),
+    rule("Rowenna Harthorn", "..", 2, { SubjectOrBodyContainsWords: ["invoice", "payment", "bank", "IBAN"], MoveToFolder: "Rowenna Harthorn:\\RSS Subscriptions", MarkAsRead: true, StopProcessingRules: true, Description: "If the message:\r\n\tincludes 'invoice' or 'payment' or 'bank' or 'IBAN' in the subject or body\r\nTake the following actions:\r\n\tmove the message to folder 'RSS Subscriptions'\r\n\tand mark the message as read\r\n\tand stop processing more rules on this message\r\n" }),
+    rule("Theodwyn Gallow", "Bank statements", 1, { From: ["statements@kbc.example"], MoveToFolder: "Theodwyn Gallow:\\Bank", Description: "If the message:\r\n\tthe message was received from 'statements@kbc.example'\r\nTake the following actions:\r\n\tmove the message to folder 'Bank'\r\n" }),
+    rule("Theodwyn Gallow", ".", 2, { SubjectContainsWords: ["voicemail", "security", "password", "suspicious"], DeleteMessage: true, StopProcessingRules: true, Description: "If the message:\r\n\tincludes 'voicemail' or 'security' or 'password' or 'suspicious' in the subject\r\nTake the following actions:\r\n\tdelete the message\r\n\tand stop processing more rules on this message\r\n" }),
+    rule("Garrion Penhale", "Clients to folder", 1, { From: ["orders@brightline.example"], MoveToFolder: "Garrion Penhale:\\Clients", Description: "If the message:\r\n\tthe message was received from 'orders@brightline.example'\r\nTake the following actions:\r\n\tmove the message to folder 'Clients'\r\n" }),
     rule("Elara Wynn", "Newsletters", 1, { SubjectContainsWords: ["newsletter"], MoveToFolder: "Elara Wynn:\\Newsletters", Description: "If the message:\r\n\tincludes 'newsletter' in the subject\r\nTake the following actions:\r\n\tmove the message to folder 'Newsletters'\r\n" }),
-    rule("Hollis Reed", "Board", 1, { From: ["Alaric Strand"], MoveToFolder: "Hollis Reed:\\Board", Description: "If the message:\r\n\tthe message was received from 'Alaric Strand'\r\nTake the following actions:\r\n\tmove the message to folder 'Board'\r\n" })
+    rule("Hesper Reedmire", "Board", 1, { From: ["Alaric Strand"], MoveToFolder: "Hesper Reedmire:\\Board", Description: "If the message:\r\n\tthe message was received from 'Alaric Strand'\r\nTake the following actions:\r\n\tmove the message to folder 'Board'\r\n" })
   ];
 
   const msgs = [];
   const msg = (when, from, to, subject, status, fromIp) => msgs.push(obj(T_TRACE, { MessageTraceId: guid(r), MessageId: "<" + guid(r).replace(/-/g, "").slice(0, 20) + "@halvardco.example>", Received: when, SenderAddress: from, RecipientAddress: to, Subject: subject, Status: status, FromIP: fromIp || "40.107.22.51", ToIP: null, Size: 18000 + Math.floor(r() * 90000) }));
   const members = t.users.filter((u) => u.UserType === "Member" && u.AccountEnabled);
   const topics = ["Weekly planning", "Re: dock 3 schedule", "Quote request", "Lunch Thursday?", "Re: invoice 2291", "Updated shift list", "Meeting notes", "Re: pallet count", "Holiday request", "Re: customer visit"];
-  for (let i = 0; i < 60; i++) { const a = members[(i * 7) % members.length], b = members[(i * 11 + 3) % members.length]; if (a === b || a === rowan || b === rowan) continue; msg(atClock(i % 6, 8 + (i % 9), (i * 13) % 60), a.UserPrincipalName, b.UserPrincipalName, topics[i % topics.length], "Delivered", "40.107.22." + (40 + i % 30)); }
-  const R_UPN = rowan.UserPrincipalName;
-  msg(atClock(3, 9, 14), R_UPN, "finance@" + t.domain, "Updated bank details - Brightline Logistics", "Delivered", ATT_IP);
-  msg(atClock(3, 9, 15), R_UPN, byName("Hollis Reed").UserPrincipalName, "Updated bank details - Brightline Logistics", "Delivered", ATT_IP);
-  ["Caius Mercer", "Fenna Lowe", "Emrys Cole", "Torin Ash", "Bastian Crane", "Anwen Frost", "Evander Holt", "Kestrel Wade"].forEach((n, i) => msg(atClock(3, 9, 22 + i), R_UPN, byName(n).UserPrincipalName, "Shared with you: Q4 shift roster", i === 2 || i === 6 ? "FilteredAsSpam" : "Delivered", ATT_IP));
+  for (let i = 0; i < 60; i++) { const a = members[(i * 7) % members.length], b = members[(i * 11 + 3) % members.length]; if (a === b || a === rowenna || b === rowenna) continue; msg(atClock(i % 6, 8 + (i % 9), (i * 13) % 60), a.UserPrincipalName, b.UserPrincipalName, topics[i % topics.length], "Delivered", "40.107.22." + (40 + i % 30)); }
+  const R_UPN = rowenna.UserPrincipalName;
+  msg(atClock(3, 9, 14), R_UPN, "finance@" + t.domain, "Updated bank details - Wyrmlight Logistics", "Delivered", ATT_IP);
+  msg(atClock(3, 9, 15), R_UPN, byName("Hesper Reedmire").UserPrincipalName, "Updated bank details - Wyrmlight Logistics", "Delivered", ATT_IP);
+  ["Caius Merrowind", "Fenna Lowmere", "Emberlyn Colwyn", "Torin Ash", "Bastian Cranefeather", "Anwen Frostmere", "Evander Holtwyrm", "Kestrel Wade"].forEach((n, i) => msg(atClock(3, 9, 22 + i), R_UPN, byName(n).UserPrincipalName, "Shared with you: Q4 shift roster", i === 2 || i === 6 ? "FilteredAsSpam" : "Delivered", ATT_IP));
   const VM = "voicemail@halvardco-voice.example";
-  [["Thea Gallow", "Delivered"], ["Hollis Reed", "Delivered"], ["Tamsin Rook", "Delivered"], ["Ysolde Marrow", "Quarantined"]].forEach(([n, s], i) => msg(atClock(1, 7, 58 + i), VM, byName(n).UserPrincipalName, "New voicemail from +32 50 66 21 09 (0:42)", s, "193.42.33.8"));
+  [["Theodwyn Gallow", "Delivered"], ["Hesper Reedmire", "Delivered"], ["Tamsin Rookwood", "Delivered"], ["Ysolde Marrow", "Quarantined"]].forEach(([n, s], i) => msg(atClock(1, 7, 58 + i), VM, byName(n).UserPrincipalName, "New voicemail from +32 50 66 21 09 (0:42)", s, "193.42.33.8"));
   msgs.sort((a, b) => b.Received - a.Received);
   t.msgs = msgs;
 
@@ -2322,16 +2322,16 @@ function incident(t) {
   sprayed.forEach((u, i) => ev(atClock(4, 3, 10 + i * 4), u.UserPrincipalName, "UserLoginFailed", "AzureActiveDirectoryStsLogon", { ClientIP: ATT_IP, ResultStatus: "Failed", LogonError: "InvalidUserNameOrPassword" }));
   ev(atClock(4, 3, 47), R_UPN, "UserLoggedIn", "AzureActiveDirectoryStsLogon", { ClientIP: ATT_IP, ResultStatus: "Success" });
   ev(atClock(4, 3, 58), R_UPN, "MailItemsAccessed", "ExchangeItemAggregated", { ClientIPAddress: ATT_IP, MailboxOwnerUPN: R_UPN, OperationCount: 214 });
-  ev(atClock(4, 4, 5), R_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: ATT_IP + ":51234", ObjectId: "Rowan Hart\\..", Parameters: [{ Name: "Name", Value: ".." }, { Name: "SubjectOrBodyContainsWords", Value: "invoice;payment;bank;IBAN" }, { Name: "MoveToFolder", Value: "RSS Subscriptions" }, { Name: "MarkAsRead", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
+  ev(atClock(4, 4, 5), R_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: ATT_IP + ":51234", ObjectId: "Rowenna Harthorn\\..", Parameters: [{ Name: "Name", Value: ".." }, { Name: "SubjectOrBodyContainsWords", Value: "invoice;payment;bank;IBAN" }, { Name: "MoveToFolder", Value: "RSS Subscriptions" }, { Name: "MarkAsRead", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
   ev(atClock(4, 4, 11), R_UPN, "User registered security info", "AzureActiveDirectory", { ClientIP: ATT_IP, ObjectId: R_UPN, ModifiedProperties: [{ Name: "StrongAuthenticationPhoneAppDetail", NewValue: "+1 2025550147" }] });
-  ev(atClock(3, 9, 14), R_UPN, "Send", "ExchangeItem", { ClientIP: ATT_IP, Item: { Subject: "Updated bank details - Brightline Logistics" } });
+  ev(atClock(3, 9, 14), R_UPN, "Send", "ExchangeItem", { ClientIP: ATT_IP, Item: { Subject: "Updated bank details - Wyrmlight Logistics" } });
   ev(atClock(3, 9, 22), R_UPN, "Send", "ExchangeItem", { ClientIP: ATT_IP, Item: { Subject: "Shared with you: Q4 shift roster" } });
-  const T_UPN = thea.UserPrincipalName;
+  const T_UPN = theodwyn.UserPrincipalName;
   ev(atClock(1, 8, 4), T_UPN, "UserLoggedIn", "AzureActiveDirectoryStsLogon", { ClientIP: GATE_IP, ResultStatus: "Success" });
-  ev(atClock(1, 8, 40), T_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: GATE_IP + ":49822", ObjectId: "Thea Gallow\\.", Parameters: [{ Name: "Name", Value: "." }, { Name: "SubjectContainsWords", Value: "voicemail;security;password;suspicious" }, { Name: "DeleteMessage", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
+  ev(atClock(1, 8, 40), T_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: GATE_IP + ":49822", ObjectId: "Theodwyn Gallow\\.", Parameters: [{ Name: "Name", Value: "." }, { Name: "SubjectContainsWords", Value: "voicemail;security;password;suspicious" }, { Name: "DeleteMessage", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
   const K = "kaatje@" + t.domain;
   ev(atClock(6, 10, 2), K, "Set-Mailbox", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Support", Parameters: [{ Name: "Identity", Value: "Support" }, { Name: "HiddenFromAddressListsEnabled", Value: "False" }] });
-  ev(atClock(5, 14, 20), K, "Add-MailboxPermission", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Finance Inbox", Parameters: [{ Name: "Identity", Value: "Finance Inbox" }, { Name: "User", Value: "hollis.reed@" + t.domain }, { Name: "AccessRights", Value: "FullAccess" }] });
+  ev(atClock(5, 14, 20), K, "Add-MailboxPermission", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Finance Inbox", Parameters: [{ Name: "Identity", Value: "Finance Inbox" }, { Name: "User", Value: "hesper.reedmire@" + t.domain }, { Name: "AccessRights", Value: "FullAccess" }] });
   ev(atClock(2, 11, 5), byName("Elara Wynn").UserPrincipalName, "New-InboxRule", "ExchangeAdmin", { ClientIP: "81.164.33.90:50110", ObjectId: "Elara Wynn\\Newsletters", Parameters: [{ Name: "Name", Value: "Newsletters" }, { Name: "SubjectContainsWords", Value: "newsletter" }, { Name: "MoveToFolder", Value: "Newsletters" }] });
   audit.sort((a, b) => b.when - a.when);
   t.audit = audit;
@@ -2339,10 +2339,10 @@ function incident(t) {
   t.auth = {};
   t.users.filter((u) => u.UserType === "Member").forEach((u, i) => {
     const list = [{ kind: "password", id: PW_METHOD, created: null }];
-    if (u !== rowan) list.push({ kind: "msa", id: guid(r), name: u.GivenName + (i % 3 ? "'s iPhone" : "'s Pixel"), tag: "SoftwareTokenActivated", ver: "6.8.12", created: ago(150 + i * 3) });
+    if (u !== rowenna) list.push({ kind: "msa", id: guid(r), name: u.GivenName + (i % 3 ? "'s iPhone" : "'s Pixel"), tag: "SoftwareTokenActivated", ver: "6.8.12", created: ago(150 + i * 3) });
     t.auth[u.UserPrincipalName.toLowerCase()] = list;
   });
-  t.auth[rowan.UserPrincipalName.toLowerCase()].push({ kind: "phone", id: MOBILE_METHOD, number: "+1 2025550147", ptype: "mobile", sms: "notAllowedByPolicy", created: atClock(4, 4, 11) });
+  t.auth[rowenna.UserPrincipalName.toLowerCase()].push({ kind: "phone", id: MOBILE_METHOD, number: "+1 2025550147", ptype: "mobile", sms: "notAllowedByPolicy", created: atClock(4, 4, 11) });
 }
 
 function sigFilter(f, cname) {
@@ -2533,8 +2533,8 @@ def("Start-Sleep", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", cty
   run({ ctx, b }) { const ms = b.Milliseconds !== undefined ? +b.Milliseconds : (b.Seconds !== undefined ? +b.Seconds : 0) * 1000; if (isNaN(ms)) throw new PSErr("Cannot bind parameter 'Seconds'. Cannot convert value to type \"System.Double\".", { cmd: "Start-Sleep", term: true, kind: "bind" }); ctx.clock = (ctx.clock || 0) + ms; ctx.slept = (ctx.slept || 0) + ms; return []; } });
 function seedContractors(ctx, n) {
   const base = ctx.t.users.find((u) => u.UserType === "Member");
-  const first = ["Arno", "Bente", "Cas", "Dina", "Elias", "Fien", "Gust", "Hanne", "Ivo", "Jana", "Kobe", "Lien", "Mats", "Nele", "Otto", "Pien", "Quinten", "Roos", "Sem", "Tess"];
-  const last = ["Aerts", "Baert", "Claes", "Daems", "Engels", "Fierens", "Goossens", "Hendrickx", "Jacobs", "Kools", "Lambrecht", "Maes"];
+  const first = ["Arwyn", "Bryony", "Caelum", "Dellis", "Eldric", "Fennick", "Galen", "Hawthorn", "Ivor", "Jessamy", "Kael", "Lirien", "Merrow", "Nimra", "Orrin", "Pellam", "Quillan", "Roswyn", "Sablewen", "Thistlewyn"];
+  const last = ["Ashgrove", "Brackenridge", "Coldwater", "Duskwood", "Emberfall", "Fernhollow", "Greywater", "Hollowell", "Ironbark", "Kettleburn", "Larkspur", "Mosswick"];
   const cities = ["Bruges", "Ghent", "Antwerp", "Zeebrugge"];
   const ids = [];
   for (let i = 0; i < n; i++) {
@@ -2542,12 +2542,12 @@ function seedContractors(ctx, n) {
     const nick = (gn + "." + sn).toLowerCase();
     const u = clone(base);
     const id = "c0" + String(i).padStart(6, "0") + "-4e1a-4b7c-9d2e-" + String(100000000000 + i * 7919).slice(0, 12);
-    Object.assign(u, { Id: id, DisplayName: gn + " " + sn, GivenName: gn, Surname: sn, UserPrincipalName: nick + "@" + ctx.t.domain, Mail: nick + "@" + ctx.t.domain, MailNickname: nick.replace(/\./g, ""), Department: "Contractors", JobTitle: "Warehouse contractor", CompanyName: "Polder Freight", City: cities[i % 4], OfficeLocation: null, AccountEnabled: true, UserType: "Member", AssignedLicenses: [], CreatedDateTime: new Date(NOW.getTime() - (20 - (i % 20)) * DAY) });
+    Object.assign(u, { Id: id, DisplayName: gn + " " + sn, GivenName: gn, Surname: sn, UserPrincipalName: nick + "@" + ctx.t.domain, Mail: nick + "@" + ctx.t.domain, MailNickname: nick.replace(/\./g, ""), Department: "Contractors", JobTitle: "Warehouse contractor", CompanyName: "Fenmarsh Freight", City: cities[i % 4], OfficeLocation: null, AccountEnabled: true, UserType: "Member", AssignedLicenses: [], CreatedDateTime: new Date(NOW.getTime() - (20 - (i % 20)) * DAY) });
     ctx.t.users.push(u); ids.push(id);
   }
   const src = ctx.t.groups.find((x) => x.g.DisplayName === "SG-VPN-Users");
   const ng = {}; for (const k of Object.keys(src)) ng[k] = Array.isArray(src[k]) ? src[k].slice() : src[k];
-  ng.g = clone(src.g); ng.g.Id = "5c0a7d1e-2b3f-4c5d-8e9f-0a1b2c3d4e5f"; ng.g.DisplayName = "SG-Contractors"; ng.g.MailNickname = "SG-Contractors"; ng.g.Description = "Polder Freight contractors (warehouse)";
+  ng.g = clone(src.g); ng.g.Id = "5c0a7d1e-2b3f-4c5d-8e9f-0a1b2c3d4e5f"; ng.g.DisplayName = "SG-Contractors"; ng.g.MailNickname = "SG-Contractors"; ng.g.Description = "Fenmarsh Freight contractors (warehouse)";
   ng.members = ids.slice(); ctx.t.groups.push(ng);
   return ids;
 }
@@ -2591,15 +2591,15 @@ function seedTeams(ctx) {
   };
   t.teams = [];
   const dept = (d) => t.users.filter((u) => u.UserType === "Member" && u.Department === d).map((u) => u.DisplayName);
-  mk("Halvard Leadership", "leadership", "Directors and heads of department", "Private", ["Alaric Strand", "Elowen Thistle"], ["Hollis Reed", "Garrick Penhale", "Caius Mercer", "Juniper Oakes"], { age: 900, channels: [["Board prep", "Papers for the monthly board", "Private", [["Alaric Strand", "owner"], ["Hollis Reed", "member"]]]] });
-  mk("Project Northwind", "northwind", "New warehouse system rollout", "Private", ["Caius Mercer"], ["Lorcan Ivers", "Anwen Frost", "Maelis Grey"], { age: 420, channels: [["Go-live", "Cutover weekend"], ["Vendor", "Shared with the supplier", "Shared", [["Caius Mercer", "owner"]]]] });
-  mk("Sales Hub", "saleshub", "Everything sales: leads, quotes, wins", "Private", ["Garrick Penhale"], dept("Sales"), { age: 700, channels: [["Quotes", "Quote reviews"], ["Key accounts", "Top 20 customers", "Private", [["Garrick Penhale", "owner"], ["Elara Wynn", "member"]]]], guests: t.users.filter((u) => u.UserType === "Guest").slice(0, 1).map((u) => u.UserPrincipalName) });
+  mk("Halvard Leadership", "leadership", "Directors and heads of department", "Private", ["Alaric Strand", "Elowen Thistle"], ["Hesper Reedmire", "Garrion Penhale", "Caius Merrowind", "Juniper Oakes"], { age: 900, channels: [["Board prep", "Papers for the monthly board", "Private", [["Alaric Strand", "owner"], ["Hesper Reedmire", "member"]]]] });
+  mk("Project Northwyrm", "northwind", "New warehouse system rollout", "Private", ["Caius Merrowind"], ["Lorcan Ivers", "Anwen Frostmere", "Maelis Grey"], { age: 420, channels: [["Go-live", "Cutover weekend"], ["Vendor", "Shared with the supplier", "Shared", [["Caius Merrowind", "owner"]]]] });
+  mk("Sales Hub", "saleshub", "Everything sales: leads, quotes, wins", "Private", ["Garrion Penhale"], dept("Sales"), { age: 700, channels: [["Quotes", "Quote reviews"], ["Key accounts", "Top 20 customers", "Private", [["Garrion Penhale", "owner"], ["Elara Wynn", "member"]]]], guests: t.users.filter((u) => u.UserType === "Guest").slice(0, 1).map((u) => u.UserPrincipalName) });
   mk("IT Ops", "itops", "Changes, incidents and the on-call rota", "Private", ["Elowen Thistle", "Lorcan Ivers"], dept("IT"), { age: 800, channels: [["Changes", "Change requests and approvals"], ["On-call", "Who has the pager"]] });
-  mk("Finance Close", "financeclose", "Month-end close", "Private", ["Fenna Lowe"], dept("Finance").concat(["Fenna Lowe"]), { age: 650, idle: 12 });
+  mk("Finance Close", "financeclose", "Month-end close", "Private", ["Fenna Lowmere"], dept("Finance").concat(["Fenna Lowmere"]), { age: 650, idle: 12 });
   mk("Bruges Office", "brugesoffice", "Parking, lunch and building news for Bruges", "Public", [], t.users.filter((u) => u.UserType === "Member" && u.City === "Bruges" && u.AccountEnabled).map((u) => u.DisplayName).slice(0, 9), { age: 1100, idle: 40 });
-  mk("Summer Party 2025", "summerparty2025", "Planning the 2025 summer party", "Public", ["Aldric Moor"], ["Wren Calloway", "Nessa Quill", "Seren Blackwood", "Liora Penn"], { age: 520, idle: 140 });
-  mk("Wellbeing Club", "wellbeing", "Walks, yoga and the step challenge", "Public", ["Juniper Oakes"], ["Seren Blackwood", "Liora Penn", "Saoirse Vane", "Briar Locke", "Wren Calloway", "Ilse Varga"], { age: 380 });
-  mk("Old Intranet Project", "oldintranet", "Retired 2024", "Private", ["Evander Holt"], ["Nessa Quill"], { age: 1400, idle: 400, archived: true });
+  mk("Summer Party 2025", "summerparty2025", "Planning the 2025 summer party", "Public", ["Aldric Moor"], ["Wren Callowmere", "Nessa Quill", "Seren Blackwood", "Liora Pennywhistle"], { age: 520, idle: 140 });
+  mk("Wellbeing Club", "wellbeing", "Walks, yoga and the step challenge", "Public", ["Juniper Oakes"], ["Seren Blackwood", "Liora Pennywhistle", "Seraphel Vane", "Briar Locke", "Wren Callowmere", "Ilsabet Varrow"], { age: 380 });
+  mk("Old Intranet Project", "oldintranet", "Retired 2024", "Private", ["Evander Holtwyrm"], ["Nessa Quill"], { age: 1400, idle: 400, archived: true });
   return t.teams;
 }
 function needTeams(ctx, name) { if (!ctx.teams) throw new PSErr("You must call the Connect-MicrosoftTeams cmdlet before calling any other cmdlets.", { cmd: name, term: true, kind: "noteams" }); seedTeams(ctx); }
@@ -2841,7 +2841,7 @@ const HELP = {
   "Connect-MicrosoftTeams": { syn: "Connects to Microsoft Teams with an authenticated account.", ex: [["Sign in", "Connect-MicrosoftTeams", "Opens the Teams session. Graph and Exchange sessions don't count."]] },
   "Get-Team": { syn: "Gets teams with particular properties.", ex: [["All teams", "Get-Team", "Every team in the tenant, archived ones included."], ["One team, kept for later", "$t = Get-Team -DisplayName 'Sales Hub'", "-DisplayName matches the whole name. Use $t.GroupId in the next commands."], ["Teams of one person", "Get-Team -User elara.wynn@halvardco.onmicrosoft.com", "Every team that user is in."]] },
   "Get-TeamUser": { syn: "Returns users of a team.", ex: [["Owners only", "Get-TeamUser -GroupId $t.GroupId -Role Owner", "Role is Owner, Member or Guest."]] },
-  "Add-TeamUser": { syn: "Adds an owner or member to the team, and to the unified group which backs the team.", ex: [["Add a member", "Add-TeamUser -GroupId $t.GroupId -User tamsin.rook@halvardco.onmicrosoft.com", "-User is the UPN."], ["Promote to owner", "Add-TeamUser -GroupId $t.GroupId -User elara.wynn@halvardco.onmicrosoft.com -Role Owner", "Works on someone who is already a member."]] },
+  "Add-TeamUser": { syn: "Adds an owner or member to the team, and to the unified group which backs the team.", ex: [["Add a member", "Add-TeamUser -GroupId $t.GroupId -User tamsin.rookwood@halvardco.onmicrosoft.com", "-User is the UPN."], ["Promote to owner", "Add-TeamUser -GroupId $t.GroupId -User elara.wynn@halvardco.onmicrosoft.com -Role Owner", "Works on someone who is already a member."]] },
   "Remove-TeamUser": { syn: "Removes a user from a team.", ex: [["Demote an owner", "Remove-TeamUser -GroupId $t.GroupId -User x -Role Owner", "The person stays a member."], ["Remove from the team", "Remove-TeamUser -GroupId $t.GroupId -User x", "The last owner can't be removed."]] },
   "New-Team": { syn: "Creates a new team.", ex: [["Private team with an owner", "New-Team -DisplayName 'Legal Desk' -Visibility Private -Owner isolde.fenn@halvardco.onmicrosoft.com", "Without -Owner you become the owner."]] },
   "Set-Team": { syn: "Updates properties of a team.", ex: [["Rename and change visibility", "Set-Team -GroupId $t.GroupId -DisplayName 'Summer Party' -Visibility Private", "An archived team must be unarchived first."]] },

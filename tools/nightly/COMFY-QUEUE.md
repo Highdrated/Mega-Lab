@@ -212,7 +212,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - placing: `.jnhero` image in `labs/webble.html` (line 81); swap the file name only.
 - status: todo
 
-## 2026-11-19-7 · Meridian · portrait of Linnea
+## 2026-11-19-7 · Meridian · portrait of Lunelle
 - file: `labs/img/meridian/npc-linnea.webp`
 - why: the ticket queue shows the initials LM instead of a face; she is the first crew member a new player meets.
 - size: 512x512, no transparency

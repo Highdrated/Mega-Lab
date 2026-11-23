@@ -90,7 +90,7 @@ POCKET.register({
     { u: 'trade', q: 'Fill the blank to get key and value together.', code: 'for dish, price in menu.___:\n    print(dish, price)', o: ['keys()', 'items()', 'values()', 'pairs()'], a: 1, why: 'items() hands out key and value in pairs.' },
     { u: 'trade', q: 'What does this print?', code: 'menu = {"tea": 4}\nprint(4 in menu)', o: ['True', 'False', 'KeyError'], a: 1, why: 'in looks at keys, not values.' },
     { u: 'roster', q: 'What does this print?', code: 'def greet(name):\n    print("Hi", name)\n\nprint("Done")', o: ['Hi name, then Done', 'Done', 'Nothing'], a: 1, why: 'Defining a function does not run it.' },
-    { u: 'roster', q: 'What does this print?', code: 'def greet(name):\n    print("Hi", name)\n\ngreet("Bo")\ngreet("Ilsa")', o: ['Hi Ilsa', 'Hi name twice', 'Hi Bo, then Hi Ilsa'], a: 2, why: 'Two calls, two lines, each with its own value.' },
+    { u: 'roster', q: 'What does this print?', code: 'def greet(name):\n    print("Hi", name)\n\ngreet("Brix")\ngreet("Isolwen")', o: ['Hi Isolwen', 'Hi name twice', 'Hi Brix, then Hi Isolwen'], a: 2, why: 'Two calls, two lines, each with its own value.' },
     { u: 'roster', q: 'What does this print?', code: 'def double(n):\n    return n * 2\n\nprint(double(4) + 1)', o: ['8', '9', '10'], a: 1, why: 'double(4) becomes 8, then + 1.' },
     { u: 'roster', q: 'A function has no return. What does a call give back?', o: ['None', '0', 'An empty string'], a: 0, why: 'No return means None.' },
     { u: 'roster', q: 'What does this print?', code: 'def bag_fee(bags, rate):\n    bags * rate\n\nprint(bag_fee(12, 3))', o: ['None', '36', '0'], a: 0, why: 'The result was never sent back with return.' },

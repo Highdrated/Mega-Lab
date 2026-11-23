@@ -23,8 +23,8 @@ MEMORIES.push(
   },
   watch: [
     { code: "Get-EXOMailbox -RecipientTypeDetails SharedMailbox", say: "Only the shared mailboxes. These are the team addresses like info@ and sales@." },
-    { code: "Get-EXOMailbox -Identity " + U("dorian.pike") + " | Select-Object DisplayName,ForwardingSmtpAddress", say: "Forwarding looks empty..." },
-    { code: "Get-EXOMailbox -Identity " + U("dorian.pike") + " -Properties ForwardingSmtpAddress | Select-Object DisplayName,ForwardingSmtpAddress", say: "...until you ask for it. Dorian forwards his mail to an outside address. Remember this one." }
+    { code: "Get-EXOMailbox -Identity " + U("dorian.pikeholm") + " | Select-Object DisplayName,ForwardingSmtpAddress", say: "Forwarding looks empty..." },
+    { code: "Get-EXOMailbox -Identity " + U("dorian.pikeholm") + " -Properties ForwardingSmtpAddress | Select-Object DisplayName,ForwardingSmtpAddress", say: "...until you ask for it. Dorian forwards his mail to an outside address. Remember this one." }
   ],
   trace: { ask: "List only the room mailboxes.", tpl: "Get-EXOMailbox -RecipientTypeDetails [[RoomMailbox]]", check: { out: "Get-EXOMailbox -RecipientTypeDetails RoomMailbox" }, wrong: "Pick the room kind." },
   traceHints: ["Kinds are written as one word: UserMailbox, SharedMailbox...", "Meeting rooms.", "R___Mailbox", "Answer: RoomMailbox"],
@@ -53,10 +53,10 @@ MEMORIES.push(
   },
   watch: [
     { code: "Get-MailboxPermission -Identity \"Finance Inbox\"", say: "Who can open the Finance Inbox. SELF is the mailbox itself, the rest are people." },
-    { code: "Add-MailboxPermission -Identity \"Finance Inbox\" -User " + U("thea.gallow") + " -AccessRights FullAccess", say: "Grant Thea FullAccess. Exchange answers with the new permission entry." },
-    { code: "Get-MailboxPermission -Identity \"Finance Inbox\" -User " + U("thea.gallow"), say: "Check one person's access with -User." }
+    { code: "Add-MailboxPermission -Identity \"Finance Inbox\" -User " + U("theodwyn.gallow") + " -AccessRights FullAccess", say: "Grant Theodwyn FullAccess. Exchange answers with the new permission entry." },
+    { code: "Get-MailboxPermission -Identity \"Finance Inbox\" -User " + U("theodwyn.gallow"), say: "Check one person's access with -User." }
   ],
-  trace: { ask: "Give Ilse Varga FullAccess to the Finance Inbox.", tpl: "Add-MailboxPermission -Identity \"Finance Inbox\" -User " + U("ilse.varga") + " -AccessRights [[FullAccess]]", check: { fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Finance Inbox" && p.upn === U("ilse.varga")) }, wrong: "Grant the full mailbox access right." },
+  trace: { ask: "Give Ilsabet Varrow FullAccess to the Finance Inbox.", tpl: "Add-MailboxPermission -Identity \"Finance Inbox\" -User " + U("ilsabet.varrow") + " -AccessRights [[FullAccess]]", check: { fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Finance Inbox" && p.upn === U("ilsabet.varrow")) }, wrong: "Grant the full mailbox access right." },
   traceHints: ["Which right lets someone open everything?", "Two words glued together.", "F___A_____", "Answer: FullAccess"],
   recall: { ask: "Nessa Quill joins Support. Give her FullAccess to the Support mailbox, without auto-mapping it in Outlook.", setup: "exo", check: { fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Support" && p.upn === U("nessa.quill") && p.automap === false) }, wrong: "FullAccess on Support, AutoMapping off." },
   recallHints: ["Same command as the trace.", "Add the switch with a glued value.", "... -AccessRights FullAccess -AutoMapping:$_____", "Add-MailboxPermission -Identity Support -User " + U("nessa.quill") + " -AccessRights FullAccess -AutoMapping:$false"],
@@ -82,14 +82,14 @@ MEMORIES.push(
     ]
   },
   watch: [
-    { code: "Get-RecipientPermission -Identity \"Sales Desk\"", say: "Garrick can send as the Sales Desk. SELF is the mailbox itself." },
+    { code: "Get-RecipientPermission -Identity \"Sales Desk\"", say: "Garrion can send as the Sales Desk. SELF is the mailbox itself." },
     { code: "Add-RecipientPermission -Identity \"Sales Desk\" -Trustee " + U("elara.wynn") + " -AccessRights SendAs", say: "No -Confirm:$false, so it stops and asks. Nothing changed yet." },
     { code: "Add-RecipientPermission -Identity \"Sales Desk\" -Trustee " + U("elara.wynn") + " -AccessRights SendAs -Confirm:$false", say: "With -Confirm:$false it goes straight through." }
   ],
   trace: { ask: "Give Cassian Drake Send As on Support, without the prompt.", tpl: "Add-RecipientPermission -Identity Support -Trustee " + U("cassian.drake") + " -AccessRights SendAs -Confirm:[[$false]]", check: { fn: (ctx) => ctx.t.sendAs.some((p) => p.mb === "Support" && p.upn === U("cassian.drake")) }, wrong: "Answer the confirmation in advance." },
   traceHints: ["-Confirm is a switch with a glued value.", "Which value means: do not ask me?", "-Confirm:$_____", "Answer: -Confirm:$false"],
-  recall: { ask: "Tamsin Rook should be able to send as the Finance Inbox. Make it so, without a prompt.", setup: "exo", check: { fn: (ctx) => ctx.t.sendAs.some((p) => p.mb === "Finance Inbox" && p.upn === U("tamsin.rook")) }, wrong: "SendAs on the Finance Inbox for Tamsin." },
-  recallHints: ["Recipient permission, not mailbox permission.", "-Trustee for the person.", "Add-RecipientPermission -Identity \"Finance Inbox\" -Trustee ... -AccessRights SendAs -Confirm:$false", "Add-RecipientPermission -Identity \"Finance Inbox\" -Trustee " + U("tamsin.rook") + " -AccessRights SendAs -Confirm:$false"],
+  recall: { ask: "Tamsin Rookwood should be able to send as the Finance Inbox. Make it so, without a prompt.", setup: "exo", check: { fn: (ctx) => ctx.t.sendAs.some((p) => p.mb === "Finance Inbox" && p.upn === U("tamsin.rookwood")) }, wrong: "SendAs on the Finance Inbox for Tamsin." },
+  recallHints: ["Recipient permission, not mailbox permission.", "-Trustee for the person.", "Add-RecipientPermission -Identity \"Finance Inbox\" -Trustee ... -AccessRights SendAs -Confirm:$false", "Add-RecipientPermission -Identity \"Finance Inbox\" -Trustee " + U("tamsin.rookwood") + " -AccessRights SendAs -Confirm:$false"],
   real: ["Get-RecipientPermission -Identity <a shared mailbox>", "Compare it with Get-MailboxPermission for the same mailbox"],
   cheat: [["Get-RecipientPermission -Identity \"Sales Desk\"", "Who can send as"], ["Add-RecipientPermission -Identity x -Trustee y -AccessRights SendAs -Confirm:$false", "Grant Send As"]]
 },
@@ -113,13 +113,13 @@ MEMORIES.push(
   },
   watch: [
     { code: "Get-EXOMailbox -ResultSize Unlimited -Properties ForwardingSmtpAddress | Where-Object { $_.ForwardingSmtpAddress } | Select-Object DisplayName,ForwardingSmtpAddress", say: "Every mailbox, ask for forwarding, keep the ones where it is set. Dorian forwards to a private address." },
-    { code: "Set-Mailbox -Identity " + U("dorian.pike") + " -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false", say: "Switch it off. $null clears the value." },
-    { code: "Get-EXOMailbox -Identity " + U("dorian.pike") + " -Properties ForwardingSmtpAddress | Select-Object DisplayName,ForwardingSmtpAddress", say: "Verify: empty now, and this time it is really empty." }
+    { code: "Set-Mailbox -Identity " + U("dorian.pikeholm") + " -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false", say: "Switch it off. $null clears the value." },
+    { code: "Get-EXOMailbox -Identity " + U("dorian.pikeholm") + " -Properties ForwardingSmtpAddress | Select-Object DisplayName,ForwardingSmtpAddress", say: "Verify: empty now, and this time it is really empty." }
   ],
-  trace: { ask: "Stop Dorian Pike's forwarding.", tpl: "Set-Mailbox -Identity " + U("dorian.pike") + " -ForwardingSmtpAddress [[$null]]", check: { fn: (ctx) => findMbxT(ctx, "Dorian Pike").ForwardingSmtpAddress === null }, wrong: "Clear the forwarding address." },
+  trace: { ask: "Stop Dorian Pikeholm's forwarding.", tpl: "Set-Mailbox -Identity " + U("dorian.pikeholm") + " -ForwardingSmtpAddress [[$null]]", check: { fn: (ctx) => findMbxT(ctx, "Dorian Pikeholm").ForwardingSmtpAddress === null }, wrong: "Clear the forwarding address." },
   traceHints: ["Which value means: nothing?", "It starts with a $.", "$____", "Answer: $null"],
-  recall: { ask: "Hollis Reed is on sick leave. Forward his mail to Ysolde Marrow (ysolde.marrow@" + DOMAIN + ") and keep a copy in his own mailbox.", setup: "exo", check: { fn: (ctx) => { const m = findMbxT(ctx, "Hollis Reed"); return /ysolde\.marrow@/i.test(m.ForwardingSmtpAddress || "") && m.DeliverToMailboxAndForward === true; } }, wrong: "Set the forwarding address and keep a copy." },
-  recallHints: ["One Set-Mailbox with two parameters.", "-ForwardingSmtpAddress and -DeliverToMailboxAndForward", "Set-Mailbox -Identity hollis.reed@... -ForwardingSmtpAddress ysolde.marrow@... -DeliverToMailboxAndForward $true", "Set-Mailbox -Identity " + U("hollis.reed") + " -ForwardingSmtpAddress " + U("ysolde.marrow") + " -DeliverToMailboxAndForward $true"],
+  recall: { ask: "Hesper Reedmire is on sick leave. Forward his mail to Ysolde Marrow (ysolde.marrow@" + DOMAIN + ") and keep a copy in his own mailbox.", setup: "exo", check: { fn: (ctx) => { const m = findMbxT(ctx, "Hesper Reedmire"); return /ysolde\.marrow@/i.test(m.ForwardingSmtpAddress || "") && m.DeliverToMailboxAndForward === true; } }, wrong: "Set the forwarding address and keep a copy." },
+  recallHints: ["One Set-Mailbox with two parameters.", "-ForwardingSmtpAddress and -DeliverToMailboxAndForward", "Set-Mailbox -Identity hesper.reedmire@... -ForwardingSmtpAddress ysolde.marrow@... -DeliverToMailboxAndForward $true", "Set-Mailbox -Identity " + U("hesper.reedmire") + " -ForwardingSmtpAddress " + U("ysolde.marrow") + " -DeliverToMailboxAndForward $true"],
   real: ["Get-EXOMailbox -ResultSize Unlimited -Properties ForwardingSmtpAddress | Where-Object { $_.ForwardingSmtpAddress } | Select-Object DisplayName,ForwardingSmtpAddress", "Every hit should have a reason"],
   cheat: [["Get-EXOMailbox -ResultSize Unlimited -Properties ForwardingSmtpAddress | Where-Object { $_.ForwardingSmtpAddress }", "Who forwards mail"], ["Set-Mailbox -Identity x -ForwardingSmtpAddress $null", "Stop forwarding"], ["Set-Mailbox -Identity x -ForwardingSmtpAddress y -DeliverToMailboxAndForward $true", "Forward and keep a copy"]]
 },
@@ -142,9 +142,9 @@ MEMORIES.push(
     ]
   },
   watch: [
-    { code: "Get-MailboxAutoReplyConfiguration -Identity " + U("hollis.reed"), say: "Currently disabled." },
-    { code: "Set-MailboxAutoReplyConfiguration -Identity " + U("hollis.reed") + " -AutoReplyState Enabled -InternalMessage \"Hollis is out, contact Ysolde.\" -ExternalMessage \"Hollis is out of office. Please contact finance@halvardco.onmicrosoft.com.\"", say: "Switch it on with two messages. Silence means success." },
-    { code: "Get-MailboxAutoReplyConfiguration -Identity " + U("hollis.reed") + " | Select-Object AutoReplyState,InternalMessage", say: "Verify." }
+    { code: "Get-MailboxAutoReplyConfiguration -Identity " + U("hesper.reedmire"), say: "Currently disabled." },
+    { code: "Set-MailboxAutoReplyConfiguration -Identity " + U("hesper.reedmire") + " -AutoReplyState Enabled -InternalMessage \"Hesper is out, contact Ysolde.\" -ExternalMessage \"Hesper is out of office. Please contact finance@halvardco.onmicrosoft.com.\"", say: "Switch it on with two messages. Silence means success." },
+    { code: "Get-MailboxAutoReplyConfiguration -Identity " + U("hesper.reedmire") + " | Select-Object AutoReplyState,InternalMessage", say: "Verify." }
   ],
   trace: { ask: "Turn on Corvin Ashby's auto-reply (messages already filled in).", tpl: "Set-MailboxAutoReplyConfiguration -Identity " + U("corvin.ashby") + " -AutoReplyState [[Enabled]] -InternalMessage \"Back Monday\" -ExternalMessage \"Back Monday\"", check: { fn: (ctx) => findMbxT(ctx, "Corvin Ashby")._arc.AutoReplyState === "Enabled" }, wrong: "Pick the state that switches it on." },
   traceHints: ["Three possible states.", "Not Disabled, not Scheduled.", "E______", "Answer: Enabled"],
@@ -172,13 +172,13 @@ MEMORIES.push(
     ]
   },
   watch: [
-    { code: "Get-EXOMailboxStatistics -Identity " + U("garrick.penhale"), say: "Garrick's mailbox is 46 GB: under the 50 GB limit, but close." },
-    { code: "Set-Mailbox -Identity " + U("garrick.penhale") + " -Type Shared", say: "Convert. Silence again." },
-    { code: "Get-EXOMailbox -Identity " + U("garrick.penhale") + " | Select-Object DisplayName,RecipientTypeDetails", say: "Now a SharedMailbox." },
-    { code: "Set-Mailbox -Identity " + U("hollis.reed") + " -EmailAddresses @{add='smtp:cfo@" + DOMAIN + "'}", say: "Separate task: give Hollis an extra address." },
-    { code: "Get-EXOMailbox -Identity " + U("hollis.reed") + " | Select-Object -ExpandProperty EmailAddresses", say: "Primary in capitals, the new alias in lowercase." }
+    { code: "Get-EXOMailboxStatistics -Identity " + U("garrion.penhale"), say: "Garrion's mailbox is 46 GB: under the 50 GB limit, but close." },
+    { code: "Set-Mailbox -Identity " + U("garrion.penhale") + " -Type Shared", say: "Convert. Silence again." },
+    { code: "Get-EXOMailbox -Identity " + U("garrion.penhale") + " | Select-Object DisplayName,RecipientTypeDetails", say: "Now a SharedMailbox." },
+    { code: "Set-Mailbox -Identity " + U("hesper.reedmire") + " -EmailAddresses @{add='smtp:cfo@" + DOMAIN + "'}", say: "Separate task: give Hesper an extra address." },
+    { code: "Get-EXOMailbox -Identity " + U("hesper.reedmire") + " | Select-Object -ExpandProperty EmailAddresses", say: "Primary in capitals, the new alias in lowercase." }
   ],
-  trace: { ask: "Convert Liora Penn's mailbox to shared.", tpl: "Set-Mailbox -Identity " + U("liora.penn") + " -Type [[Shared]]", check: { fn: (ctx) => findMbxT(ctx, "Liora Penn").RecipientTypeDetails === "SharedMailbox" }, wrong: "Pick the shared type." },
+  trace: { ask: "Convert Liora Pennywhistle's mailbox to shared.", tpl: "Set-Mailbox -Identity " + U("liora.pennywhistle") + " -Type [[Shared]]", check: { fn: (ctx) => findMbxT(ctx, "Liora Pennywhistle").RecipientTypeDetails === "SharedMailbox" }, wrong: "Pick the shared type." },
   traceHints: ["The -Type values are Regular, Room, Equipment, Shared.", "Not SharedMailbox here, just the short word.", "S_____", "Answer: Shared"],
   recall: { ask: "Give the Support mailbox an extra address: helpdesk@" + DOMAIN + ".", setup: "exo", check: { fn: (ctx) => findMbxT(ctx, "Support").EmailAddresses.some((e) => e.toLowerCase() === "smtp:helpdesk@" + DOMAIN) }, wrong: "Add, don't replace." },
   recallHints: ["EmailAddresses with a hashtable.", "@{add='smtp:...'}", "Set-Mailbox -Identity Support -EmailAddresses @{add='smtp:helpdesk@...'}", "Set-Mailbox -Identity Support -EmailAddresses @{add='smtp:helpdesk@" + DOMAIN + "'}"],
@@ -209,7 +209,7 @@ MEMORIES.push(
   ],
   trace: { ask: "Show who is on the IT Alerts list.", tpl: "Get-DistributionGroupMember -Identity \"[[IT Alerts]]\"", check: { out: "Get-DistributionGroupMember -Identity \"IT Alerts\"" }, wrong: "Use the list's name." },
   traceHints: ["The name of the list.", "Two words, in quotes.", "IT ______", "Answer: IT Alerts"],
-  recall: { ask: "Rowan Hart says he never receives all@ mails. Show the DisplayName and PrimarySmtpAddress of everyone on All Staff, sorted by DisplayName, and see for yourself.", setup: "exo", check: { out: "Get-DistributionGroupMember -Identity \"All Staff\" | Sort-Object DisplayName | Select-Object DisplayName,PrimarySmtpAddress" }, wrong: "Members of All Staff, sorted, two columns." },
+  recall: { ask: "Rowenna Harthorn says he never receives all@ mails. Show the DisplayName and PrimarySmtpAddress of everyone on All Staff, sorted by DisplayName, and see for yourself.", setup: "exo", check: { out: "Get-DistributionGroupMember -Identity \"All Staff\" | Sort-Object DisplayName | Select-Object DisplayName,PrimarySmtpAddress" }, wrong: "Members of All Staff, sorted, two columns." },
   recallHints: ["Members of the list first.", "Then Sort-Object, then Select-Object.", "Get-DistributionGroupMember -Identity \"All Staff\" | Sort-Object DisplayName | Select-Object ...", "Get-DistributionGroupMember -Identity \"All Staff\" | Sort-Object DisplayName | Select-Object DisplayName,PrimarySmtpAddress"],
   real: ["Get-DistributionGroup -ResultSize Unlimited", "Get-DistributionGroupMember -Identity <a list you know>"],
   cheat: [["Get-DistributionGroup", "All lists"], ["Get-DistributionGroupMember -Identity \"All Staff\"", "Members of a list"]]
@@ -233,10 +233,10 @@ MEMORIES.push(
     ]
   },
   watch: [
-    { code: "Add-DistributionGroupMember -Identity \"All Staff\" -Member " + U("rowan.hart"), say: "Rowan was missing from All Staff. Add him." },
-    { code: "Add-DistributionGroupMember -Identity \"All Staff\" -Member " + U("rowan.hart"), say: "Run it twice and Exchange tells you he is already a member." },
-    { code: "Remove-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("thea.gallow"), say: "Remove asks first. Nothing happens until you answer." },
-    { code: "Remove-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("thea.gallow") + " -Confirm:$false", say: "With -Confirm:$false it goes through." }
+    { code: "Add-DistributionGroupMember -Identity \"All Staff\" -Member " + U("rowenna.harthorn"), say: "Rowenna was missing from All Staff. Add him." },
+    { code: "Add-DistributionGroupMember -Identity \"All Staff\" -Member " + U("rowenna.harthorn"), say: "Run it twice and Exchange tells you he is already a member." },
+    { code: "Remove-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("theodwyn.gallow"), say: "Remove asks first. Nothing happens until you answer." },
+    { code: "Remove-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("theodwyn.gallow") + " -Confirm:$false", say: "With -Confirm:$false it goes through." }
   ],
   trace: { ask: "Add Nessa Quill to the Sales Team list.", tpl: "Add-DistributionGroupMember -Identity \"Sales Team\" -[[Member]] " + U("nessa.quill"), check: { fn: (ctx) => dlHas(ctx, "Sales Team", "nessa.quill") }, wrong: "Which parameter names the person?" },
   traceHints: ["Identity is the list. The person is the...", "Singular.", "-M_____", "Answer: -Member"],
@@ -260,13 +260,13 @@ MEMORIES.push(
     traps: [["Name taken", "The name ... is being used by another recipient object."], ["Members must exist", "A typo in -Members stops the whole command."]]
   },
   watch: [
-    { code: "New-DistributionGroup -Name \"Legal Team\" -PrimarySmtpAddress legal-team@" + DOMAIN + " -Members " + U("isolde.fenn") + "," + U("mirelle.stone"), say: "A new list with an address and two members." },
+    { code: "New-DistributionGroup -Name \"Legal Team\" -PrimarySmtpAddress legal-team@" + DOMAIN + " -Members " + U("isolde.fenn") + "," + U("mirethe.stonewyrm"), say: "A new list with an address and two members." },
     { code: "Get-DistributionGroupMember -Identity \"Legal Team\"", say: "Check it." }
   ],
   trace: { ask: "Create a list called Marketing Team.", tpl: "New-DistributionGroup -[[Name]] \"Marketing Team\" -PrimarySmtpAddress marketing-team@" + DOMAIN, check: { fn: (ctx) => !!ctx.t.dls.find((d) => d.Name === "Marketing Team") }, wrong: "Which parameter gives the list its name?" },
   traceHints: ["The first parameter.", "-N___", "-Name", "Answer: -Name"],
-  recall: { ask: "Create a list HR Team with address hr-team@" + DOMAIN + " and members Seren Blackwood, Liora Penn and Juniper Oakes.", setup: "exo", check: { fn: (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "HR Team"); return d && d.PrimarySmtpAddress === "hr-team@" + DOMAIN && ["seren.blackwood", "liora.penn", "juniper.oakes"].every((n) => d.members.includes(U(n))); } }, wrong: "Name, address and the three members." },
-  recallHints: ["One New-DistributionGroup.", "-Members takes a comma-separated list of addresses.", "New-DistributionGroup -Name \"HR Team\" -PrimarySmtpAddress hr-team@... -Members a,b,c", "New-DistributionGroup -Name \"HR Team\" -PrimarySmtpAddress hr-team@" + DOMAIN + " -Members " + U("seren.blackwood") + "," + U("liora.penn") + "," + U("juniper.oakes")],
+  recall: { ask: "Create a list HR Team with address hr-team@" + DOMAIN + " and members Seren Blackwood, Liora Pennywhistle and Juniper Oakes.", setup: "exo", check: { fn: (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "HR Team"); return d && d.PrimarySmtpAddress === "hr-team@" + DOMAIN && ["seren.blackwood", "liora.pennywhistle", "juniper.oakes"].every((n) => d.members.includes(U(n))); } }, wrong: "Name, address and the three members." },
+  recallHints: ["One New-DistributionGroup.", "-Members takes a comma-separated list of addresses.", "New-DistributionGroup -Name \"HR Team\" -PrimarySmtpAddress hr-team@... -Members a,b,c", "New-DistributionGroup -Name \"HR Team\" -PrimarySmtpAddress hr-team@" + DOMAIN + " -Members " + U("seren.blackwood") + "," + U("liora.pennywhistle") + "," + U("juniper.oakes")],
   real: ["Only in a test tenant or with approval: New-DistributionGroup -Name \"Test List\" -WhatIf"],
   cheat: [["New-DistributionGroup -Name x -PrimarySmtpAddress y -Members a,b", "Create a list"]]
 },
@@ -305,22 +305,22 @@ MEMORIES.push(
       "<b>Get-MgGroupMember</b> returns directory objects: you see only an Id. The names are there, but tucked inside <b>AdditionalProperties</b>. Read them with <b>$_.AdditionalProperties.displayName</b> (lowercase d: it is raw Graph data).",
       "Easier: <b>Get-MgGroupMemberAsUser</b> returns proper user objects you can -Property and Select-Object. And the other direction, every group one person is in: <b>Get-MgUserMemberOf</b>."
     ],
-    daily: ["\"Who has VPN access?\"", "\"Why can Rowan skip MFA?\" (what is he a member of)", "Access reviews"],
+    daily: ["\"Who has VPN access?\"", "\"Why can Rowenna skip MFA?\" (what is he a member of)", "Access reviews"],
     parts: [["$g = Get-MgGroup -Filter ...", "store the group, you need its Id"], ["Get-MgGroupMember -GroupId $g.Id", "members as Ids"], ["$_.AdditionalProperties.displayName", "the hidden name"], ["Get-MgGroupMemberAsUser", "members as real users"], ["Get-MgUserMemberOf -UserId x", "every group x is in"]],
     flow: [["Group name", "-Filter"], ["$g.Id", "the key"], ["Members", "Ids + AdditionalProperties"], ["Names", "readable"]],
     traps: [["Id only", "The member list looks like a column of GUIDs. Nothing is wrong; the name is in AdditionalProperties."], ["GroupId, not name", "-GroupId wants the Id. Store the group in a variable first."]]
   },
   watch: [
-    { code: "$g = Get-MgGroup -Filter \"displayName eq 'Project Northwind'\"", say: "Store the group. You need its Id for everything that follows." },
+    { code: "$g = Get-MgGroup -Filter \"displayName eq 'Project Northwyrm'\"", say: "Store the group. You need its Id for everything that follows." },
     { code: "Get-MgGroupMember -GroupId $g.Id", say: "Just Ids. The names are hidden one level down." },
     { code: "Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.AdditionalProperties.displayName }", say: "Reach into AdditionalProperties for each member." },
     { code: "Get-MgGroupMemberAsUser -GroupId $g.Id -Property DisplayName,JobTitle | Select-Object DisplayName,JobTitle", say: "Or ask for them as real users straight away." },
-    { code: "Get-MgUserMemberOf -UserId " + U("rowan.hart") + " | ForEach-Object { $_.AdditionalProperties.displayName }", say: "The other direction: everything Rowan is in. An MFA exclusion. Interesting." }
+    { code: "Get-MgUserMemberOf -UserId " + U("rowenna.harthorn") + " | ForEach-Object { $_.AdditionalProperties.displayName }", say: "The other direction: everything Rowenna is in. An MFA exclusion. Interesting." }
   ],
   trace: { ask: "Show the names of everyone in Halvard Leadership.", tpl: "$g = Get-MgGroup -Filter \"displayName eq 'Halvard Leadership'\"; Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.[[AdditionalProperties]].displayName }", check: { out: "$g = Get-MgGroup -Filter \"displayName eq 'Halvard Leadership'\"; Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.AdditionalProperties.displayName }" }, wrong: "Where does Graph hide the name?" },
   traceHints: ["The name is not a normal property here.", "It sits in a bag of extra properties.", "A__________P_________", "Answer: AdditionalProperties"],
-  recall: { ask: "Which groups is Caius Mercer a member of? Show just the names.", setup: "groups", check: { out: "Get-MgUserMemberOf -UserId " + U("caius.mercer") + " | ForEach-Object { $_.AdditionalProperties.displayName }" }, wrong: "Every group for one user, names only." },
-  recallHints: ["The user-to-groups direction.", "Get-MgUserMemberOf, then the same AdditionalProperties trick.", "Get-MgUserMemberOf -UserId caius.mercer@... | ForEach-Object { ... }", "Get-MgUserMemberOf -UserId " + U("caius.mercer") + " | ForEach-Object { $_.AdditionalProperties.displayName }"],
+  recall: { ask: "Which groups is Caius Merrowind a member of? Show just the names.", setup: "groups", check: { out: "Get-MgUserMemberOf -UserId " + U("caius.merrowind") + " | ForEach-Object { $_.AdditionalProperties.displayName }" }, wrong: "Every group for one user, names only." },
+  recallHints: ["The user-to-groups direction.", "Get-MgUserMemberOf, then the same AdditionalProperties trick.", "Get-MgUserMemberOf -UserId caius.merrowind@... | ForEach-Object { ... }", "Get-MgUserMemberOf -UserId " + U("caius.merrowind") + " | ForEach-Object { $_.AdditionalProperties.displayName }"],
   real: ["$g = Get-MgGroup -Filter \"displayName eq '<a group you know>'\"", "Get-MgGroupMemberAsUser -GroupId $g.Id | Select-Object DisplayName"],
   cheat: [["$g = Get-MgGroup -Filter \"displayName eq 'x'\"", "Store a group"], ["Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.AdditionalProperties.displayName }", "Member names"], ["Get-MgGroupMemberAsUser -GroupId $g.Id", "Members as users"], ["Get-MgUserMemberOf -UserId x | ForEach-Object { $_.AdditionalProperties.displayName }", "Groups a user is in"]]
 },
@@ -339,15 +339,15 @@ MEMORIES.push(
     traps: [["Write scope", "403 Forbidden with only Group.Read.All."], ["Ids, not names", "DirectoryObjectId must be the user's Id, not their UPN."], ["Already exists", "Means the person is already in the group."]]
   },
   watch: [
-    { code: "$g = Get-MgGroup -Filter \"displayName eq 'SG-VPN-Users'\"; $u = Get-MgUser -UserId " + U("bastian.crane"), say: "Look up both and store them." },
+    { code: "$g = Get-MgGroup -Filter \"displayName eq 'SG-VPN-Users'\"; $u = Get-MgUser -UserId " + U("bastian.cranefeather"), say: "Look up both and store them." },
     { code: "New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id", say: "Add Bastian (night shift lead) to VPN users." },
     { code: "New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id", say: "Twice: already exists." },
-    { code: "$m = Get-MgGroup -Filter \"displayName eq 'SG-MFA-Exclusion'\"; $r = Get-MgUser -UserId " + U("rowan.hart") + "; Remove-MgGroupMemberByRef -GroupId $m.Id -DirectoryObjectId $r.Id", say: "And clean up: Rowan out of the MFA exclusion." }
+    { code: "$m = Get-MgGroup -Filter \"displayName eq 'SG-MFA-Exclusion'\"; $r = Get-MgUser -UserId " + U("rowenna.harthorn") + "; Remove-MgGroupMemberByRef -GroupId $m.Id -DirectoryObjectId $r.Id", say: "And clean up: Rowenna out of the MFA exclusion." }
   ],
-  trace: { ask: "Add Petra Lind to Project Northwind ($g and $u are prepared in the same line).", tpl: "$g = Get-MgGroup -Filter \"displayName eq 'Project Northwind'\"; $u = Get-MgUser -UserId " + U("petra.lind") + "; New-MgGroupMember -GroupId $g.Id -DirectoryObjectId [[$u.Id]]", check: { fn: (ctx) => grpHas(ctx, "Project Northwind", "petra.lind") }, wrong: "The user's Id, from the variable." },
+  trace: { ask: "Add Petrel Lindgrove to Project Northwyrm ($g and $u are prepared in the same line).", tpl: "$g = Get-MgGroup -Filter \"displayName eq 'Project Northwyrm'\"; $u = Get-MgUser -UserId " + U("petrel.lindgrove") + "; New-MgGroupMember -GroupId $g.Id -DirectoryObjectId [[$u.Id]]", check: { fn: (ctx) => grpHas(ctx, "Project Northwyrm", "petrel.lindgrove") }, wrong: "The user's Id, from the variable." },
   traceHints: ["Not the UPN: the Id.", "It is stored in $u.", "$u.__", "Answer: $u.Id"],
-  recall: { ask: "Lorcan Ivers no longer needs access to the finance share. Remove him from SG-Finance-Share... wait, check first: is he even in it? If not, remove Ilse Varga instead, who moved to Operations.", setup: "groupsW", check: { fn: (ctx) => !grpHas(ctx, "SG-Finance-Share", "ilse.varga") && grpCount(ctx, "SG-Finance-Share") === 4 }, wrong: "Ilse out of SG-Finance-Share, nobody else touched." },
-  recallHints: ["List the members first.", "Lorcan is not there. Ilse is.", "Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id", "$g = Get-MgGroup -Filter \"displayName eq 'SG-Finance-Share'\"; $u = Get-MgUser -UserId " + U("ilse.varga") + "; Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id"],
+  recall: { ask: "Lorcan Ivers no longer needs access to the finance share. Remove him from SG-Finance-Share... wait, check first: is he even in it? If not, remove Ilsabet Varrow instead, who moved to Operations.", setup: "groupsW", check: { fn: (ctx) => !grpHas(ctx, "SG-Finance-Share", "ilsabet.varrow") && grpCount(ctx, "SG-Finance-Share") === 4 }, wrong: "Ilsabet out of SG-Finance-Share, nobody else touched." },
+  recallHints: ["List the members first.", "Lorcan is not there. Ilsabet is.", "Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id", "$g = Get-MgGroup -Filter \"displayName eq 'SG-Finance-Share'\"; $u = Get-MgUser -UserId " + U("ilsabet.varrow") + "; Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id"],
   real: ["Only on a test group: New-MgGroupMember ... -WhatIf"],
   cheat: [["New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id", "Add to a group"], ["Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id", "Remove from a group"]]
 },
@@ -385,13 +385,13 @@ MEMORIES.push(
       "<b>Get-MgUserLicenseDetail -UserId x</b> shows one person's licenses with readable SkuPartNumbers.",
       "For the other direction (who holds Power BI Pro?) you filter users on <b>AssignedLicenses</b>, a list of objects with a SkuId each: <b>Where-Object { $_.AssignedLicenses.SkuId -contains $sku.SkuId }</b>."
     ],
-    daily: ["\"Does Petra have Power BI?\"", "\"Who has E3 but left months ago?\"", "Before removing a license: check what else they have"],
+    daily: ["\"Does Petrel have Power BI?\"", "\"Who has E3 but left months ago?\"", "Before removing a license: check what else they have"],
     parts: [["Get-MgUserLicenseDetail -UserId x", "one person's licenses"], ["$sku = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'", "store one SKU"], ["$_.AssignedLicenses.SkuId -contains $sku.SkuId", "has this user got it?"]],
     flow: [["Person", "UserId"], ["LicenseDetail", "readable names"], ["Or a SKU", "SkuId"], ["Everyone with it", "AssignedLicenses"]],
     traps: [["AssignedLicenses needs -Property", "It is not in the default set: -Property DisplayName,AssignedLicenses."], ["Guests", "Guests usually have no licenses: empty is normal."]]
   },
   watch: [
-    { code: "Get-MgUserLicenseDetail -UserId " + U("hollis.reed"), say: "Hollis has Exchange Online Plan 1 (EXCHANGESTANDARD), Power BI Pro and Power Automate Free." },
+    { code: "Get-MgUserLicenseDetail -UserId " + U("hesper.reedmire"), say: "Hesper has Exchange Online Plan 1 (EXCHANGESTANDARD), Power BI Pro and Power Automate Free." },
     { code: "$sku = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'; Get-MgUser -All -Property DisplayName,AssignedLicenses | Where-Object { $_.AssignedLicenses.SkuId -contains $sku.SkuId } | Select-Object DisplayName", say: "Everyone who holds Power BI Pro." }
   ],
   trace: { ask: "Show Lorcan Ivers' licenses.", tpl: "Get-MgUserLicenseDetail -[[UserId]] " + U("lorcan.ivers"), check: { out: "Get-MgUserLicenseDetail -UserId " + U("lorcan.ivers") }, wrong: "Which parameter names the user?" },
@@ -417,15 +417,15 @@ MEMORIES.push(
   },
   watch: [
     { code: "$pbi = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'", say: "Store the Power BI SKU." },
-    { code: "Set-MgUserLicense -UserId " + U("petra.lind") + " -AddLicenses @{SkuId = $pbi.SkuId}", say: "Only -AddLicenses: Graph complains removeLicenses is missing." },
-    { code: "Set-MgUserLicense -UserId " + U("petra.lind") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()", say: "Both lists now, but no seats free." },
+    { code: "Set-MgUserLicense -UserId " + U("petrel.lindgrove") + " -AddLicenses @{SkuId = $pbi.SkuId}", say: "Only -AddLicenses: Graph complains removeLicenses is missing." },
+    { code: "Set-MgUserLicense -UserId " + U("petrel.lindgrove") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()", say: "Both lists now, but no seats free." },
     { code: "Set-MgUserLicense -UserId " + U("lorcan.ivers") + " -AddLicenses @() -RemoveLicenses @($pbi.SkuId)", say: "Lorcan no longer uses Power BI: free his seat." },
-    { code: "Set-MgUserLicense -UserId " + U("petra.lind") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()", say: "Now Petra gets it." }
+    { code: "Set-MgUserLicense -UserId " + U("petrel.lindgrove") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()", say: "Now Petrel gets it." }
   ],
-  trace: { ask: "Give Thea Gallow an E3 license ($e3 is looked up for you).", tpl: "$e3 = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId " + U("thea.gallow") + " -AddLicenses @{SkuId = $e3.SkuId} -RemoveLicenses [[@()]]", check: { fn: (ctx) => hasSku(ctx, "thea.gallow", "SPE_E3") }, wrong: "Nothing to remove, but the parameter still needs a value." },
+  trace: { ask: "Give Theodwyn Gallow an E3 license ($e3 is looked up for you).", tpl: "$e3 = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId " + U("theodwyn.gallow") + " -AddLicenses @{SkuId = $e3.SkuId} -RemoveLicenses [[@()]]", check: { fn: (ctx) => hasSku(ctx, "theodwyn.gallow", "SPE_E3") }, wrong: "Nothing to remove, but the parameter still needs a value." },
   traceHints: ["An empty list.", "@ and brackets.", "@_", "Answer: @()"],
-  recall: { ask: "Ysolde Marrow no longer uses Power BI. Move her Power BI Pro seat to Wren Calloway.", setup: "licW", check: { fn: (ctx) => !hasSku(ctx, "ysolde.marrow", "POWER_BI_PRO") && hasSku(ctx, "wren.calloway", "POWER_BI_PRO") }, wrong: "Remove from Ysolde first, then add to Wren." },
-  recallHints: ["No seats are free, so the order matters.", "Remove from Ysolde with -AddLicenses @(), then add to Wren with -RemoveLicenses @().", "Set-MgUserLicense -UserId ysolde... -AddLicenses @() -RemoveLicenses @($pbi.SkuId)", "$pbi = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'; Set-MgUserLicense -UserId " + U("ysolde.marrow") + " -AddLicenses @() -RemoveLicenses @($pbi.SkuId); Set-MgUserLicense -UserId " + U("wren.calloway") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()"],
+  recall: { ask: "Ysolde Marrow no longer uses Power BI. Move her Power BI Pro seat to Wren Callowmere.", setup: "licW", check: { fn: (ctx) => !hasSku(ctx, "ysolde.marrow", "POWER_BI_PRO") && hasSku(ctx, "wren.callowmere", "POWER_BI_PRO") }, wrong: "Remove from Ysolde first, then add to Wren." },
+  recallHints: ["No seats are free, so the order matters.", "Remove from Ysolde with -AddLicenses @(), then add to Wren with -RemoveLicenses @().", "Set-MgUserLicense -UserId ysolde... -AddLicenses @() -RemoveLicenses @($pbi.SkuId)", "$pbi = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'; Set-MgUserLicense -UserId " + U("ysolde.marrow") + " -AddLicenses @() -RemoveLicenses @($pbi.SkuId); Set-MgUserLicense -UserId " + U("wren.callowmere") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()"],
   real: ["Only on a test account: Set-MgUserLicense ... -WhatIf"],
   cheat: [["Set-MgUserLicense -UserId x -AddLicenses @{SkuId = $sku.SkuId} -RemoveLicenses @()", "Add a license"], ["Set-MgUserLicense -UserId x -AddLicenses @() -RemoveLicenses @($sku.SkuId)", "Remove a license"], ["Update-MgUser -UserId x -UsageLocation BE", "Fix 'invalid usage location'"]]
 },
@@ -439,19 +439,19 @@ MEMORIES.push(
       "Set <b>ForceChangePasswordNextSignIn = $true</b> so the person picks their own password, and add <b>-UsageLocation BE</b> now so licensing works straight after."
     ],
     daily: ["Every new hire", "Service accounts", "Bulk onboarding from a CSV (Bulk sequence)"],
-    parts: [["$pw = @{Password = '...'; ForceChangePasswordNextSignIn = $true}", "the password profile"], ["-DisplayName \"Noor Claes\"", "the name people see"], ["-UserPrincipalName noor.claes@...", "the sign-in name"], ["-MailNickname noor.claes", "before the @"], ["-AccountEnabled", "switch: allowed to sign in"]],
+    parts: [["$pw = @{Password = '...'; ForceChangePasswordNextSignIn = $true}", "the password profile"], ["-DisplayName \"Nimue Clarthorn\"", "the name people see"], ["-UserPrincipalName nimue.clarthorn@...", "the sign-in name"], ["-MailNickname nimue.clarthorn", "before the @"], ["-AccountEnabled", "switch: allowed to sign in"]],
     flow: [["Password profile", "hashtable"], ["New-MgUser", "five required"], ["Usage location", "BE"], ["License", "next memory"]],
     traps: [["Missing property", "Invalid value specified for property 'mailNickname' ... means a required one is missing."], ["Duplicate", "Another object with the same value for property userPrincipalName already exists."], ["Domain", "The UPN must end in a verified domain of the tenant."], ["Weak password", "Fails complexity: at least 8 characters, mixed."]]
   },
   watch: [
-    { code: "New-MgUser -DisplayName \"Noor Claes\" -UserPrincipalName " + U("noor.claes") + " -AccountEnabled", say: "Missing pieces: Graph names the first one it trips over." },
+    { code: "New-MgUser -DisplayName \"Nimue Clarthorn\" -UserPrincipalName " + U("nimue.clarthorn") + " -AccountEnabled", say: "Missing pieces: Graph names the first one it trips over." },
     { code: "$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}", say: "Build the password profile." },
-    { code: "New-MgUser -DisplayName \"Noor Claes\" -UserPrincipalName " + U("noor.claes") + " -MailNickname noor.claes -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Sales", say: "All five, plus usage location and department." }
+    { code: "New-MgUser -DisplayName \"Nimue Clarthorn\" -UserPrincipalName " + U("nimue.clarthorn") + " -MailNickname nimue.clarthorn -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Sales", say: "All five, plus usage location and department." }
   ],
-  trace: { ask: "Create Jonas Peeters (jonas.peeters@...). The password profile is ready in $pw.", tpl: "$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Jonas Peeters\" -UserPrincipalName " + U("jonas.peeters") + " -MailNickname [[jonas.peeters]] -AccountEnabled -PasswordProfile $pw", check: { fn: (ctx) => !!userOf(ctx, "jonas.peeters") }, wrong: "MailNickname is the part before the @." },
-  traceHints: ["Look at the UPN.", "Everything before the @.", "_____.______", "Answer: jonas.peeters"],
-  recall: { ask: "New hire: Lien Maes, Marketing, Content Writer. Create her with a temporary password she must change, usage location BE.", setup: "write", check: { fn: (ctx) => { const u = userOf(ctx, "lien.maes"); return u && u.DisplayName === "Lien Maes" && u.Department === "Marketing" && u.JobTitle === "Content Writer" && u.UsageLocation === "BE" && u.AccountEnabled && u._pwChange; } }, wrong: "All required properties plus department, title and usage location." },
-  recallHints: ["Password profile first.", "Then New-MgUser with the five required plus -Department, -JobTitle, -UsageLocation.", "New-MgUser -DisplayName ... -UserPrincipalName ... -MailNickname ... -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Marketing -JobTitle \"Content Writer\"", "$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Lien Maes\" -UserPrincipalName " + U("lien.maes") + " -MailNickname lien.maes -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Marketing -JobTitle \"Content Writer\""],
+  trace: { ask: "Create Jorin Pellam (jorin.pellam@...). The password profile is ready in $pw.", tpl: "$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Jorin Pellam\" -UserPrincipalName " + U("jorin.pellam") + " -MailNickname [[jorin.pellam]] -AccountEnabled -PasswordProfile $pw", check: { fn: (ctx) => !!userOf(ctx, "jorin.pellam") }, wrong: "MailNickname is the part before the @." },
+  traceHints: ["Look at the UPN.", "Everything before the @.", "_____.______", "Answer: jorin.pellam"],
+  recall: { ask: "New hire: Liriel Maewood, Marketing, Content Writer. Create her with a temporary password she must change, usage location BE.", setup: "write", check: { fn: (ctx) => { const u = userOf(ctx, "liriel.maewood"); return u && u.DisplayName === "Liriel Maewood" && u.Department === "Marketing" && u.JobTitle === "Content Writer" && u.UsageLocation === "BE" && u.AccountEnabled && u._pwChange; } }, wrong: "All required properties plus department, title and usage location." },
+  recallHints: ["Password profile first.", "Then New-MgUser with the five required plus -Department, -JobTitle, -UsageLocation.", "New-MgUser -DisplayName ... -UserPrincipalName ... -MailNickname ... -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Marketing -JobTitle \"Content Writer\"", "$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Liriel Maewood\" -UserPrincipalName " + U("liriel.maewood") + " -MailNickname liriel.maewood -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Marketing -JobTitle \"Content Writer\""],
   real: ["Only in a test tenant: New-MgUser ... -WhatIf"],
   cheat: [["$pw = @{Password = '...'; ForceChangePasswordNextSignIn = $true}", "Password profile"], ["New-MgUser -DisplayName x -UserPrincipalName x@d -MailNickname x -AccountEnabled -PasswordProfile $pw -UsageLocation BE", "Create a user"]]
 },
@@ -470,14 +470,14 @@ MEMORIES.push(
     traps: [["Restore needs the Id", "The UPN is not enough; take the Id from the deleted items list."], ["Delete last", "Deleting first loses the mailbox handover window. Block first."]]
   },
   watch: [
-    { code: "Remove-MgUser -UserId " + U("evander.holt"), say: "Evander left months ago. Delete." },
+    { code: "Remove-MgUser -UserId " + U("evander.holtwyrm"), say: "Evander left months ago. Delete." },
     { code: "Get-MgDirectoryDeletedItemAsUser", say: "He is in the recycle bin." },
-    { code: "$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("evander.holt") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id", say: "Restore by Id." }
+    { code: "$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("evander.holtwyrm") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id", say: "Restore by Id." }
   ],
-  trace: { ask: "Delete the account of Rhydian Bell.", tpl: "[[Remove-MgUser]] -UserId " + U("rhydian.bell"), check: { fn: (ctx) => !userOf(ctx, "rhydian.bell") }, wrong: "Which command deletes a user?" },
+  trace: { ask: "Delete the account of Rhydian Bellweather.", tpl: "[[Remove-MgUser]] -UserId " + U("rhydian.bellweather"), check: { fn: (ctx) => !userOf(ctx, "rhydian.bellweather") }, wrong: "Which command deletes a user?" },
   traceHints: ["Verb Remove.", "Noun MgUser.", "Remove-______", "Answer: Remove-MgUser"],
-  recall: { ask: "Someone deleted Fenna Lowe by mistake an hour ago. Restore her.", setup: "write", pre: ["Remove-MgUser -UserId " + U("fenna.lowe")], check: { fn: (ctx) => !!userOf(ctx, "fenna.lowe") }, wrong: "Find her in deleted items, restore by Id." },
-  recallHints: ["She is in the recycle bin.", "Get her Id from Get-MgDirectoryDeletedItemAsUser.", "Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id", "$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("fenna.lowe") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id"],
+  recall: { ask: "Someone deleted Fenna Lowmere by mistake an hour ago. Restore her.", setup: "write", pre: ["Remove-MgUser -UserId " + U("fenna.lowmere")], check: { fn: (ctx) => !!userOf(ctx, "fenna.lowmere") }, wrong: "Find her in deleted items, restore by Id." },
+  recallHints: ["She is in the recycle bin.", "Get her Id from Get-MgDirectoryDeletedItemAsUser.", "Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id", "$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("fenna.lowmere") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id"],
   real: ["Get-MgDirectoryDeletedItemAsUser (read-only, just look)"],
   cheat: [["Remove-MgUser -UserId x", "Delete (soft)"], ["Get-MgDirectoryDeletedItemAsUser", "Recycle bin"], ["Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id", "Restore"]]
 }
@@ -496,42 +496,42 @@ Object.assign(DRILLS, {
     { q: "Show the PrimarySmtpAddress of the Careers mailbox.", out: "(Get-EXOMailbox -Identity Careers).PrimarySmtpAddress", hint: "(command).Property" },
     { q: "Show the first 4 mailboxes with the classic Get-Mailbox.", out: "Get-Mailbox -ResultSize 4", hint: "-ResultSize works on both." },
     { q: "How many mailboxes exist in total?", out: "(Get-EXOMailbox -ResultSize Unlimited).Count", hint: "-ResultSize Unlimited, then .Count" },
-    { q: "Does Dorian Pike's mailbox forward anywhere? Show DisplayName and ForwardingSmtpAddress.", out: "Get-EXOMailbox -Identity " + U("dorian.pike") + " -Properties ForwardingSmtpAddress | Select-Object DisplayName,ForwardingSmtpAddress", hint: "Remember -Properties." },
+    { q: "Does Dorian Pikeholm's mailbox forward anywhere? Show DisplayName and ForwardingSmtpAddress.", out: "Get-EXOMailbox -Identity " + U("dorian.pikeholm") + " -Properties ForwardingSmtpAddress | Select-Object DisplayName,ForwardingSmtpAddress", hint: "Remember -Properties." },
     { q: "Count mailboxes per type (one row per RecipientTypeDetails).", out: "Get-EXOMailbox -ResultSize Unlimited | Group-Object RecipientTypeDetails | Select-Object Name,Count", hint: "Group-Object RecipientTypeDetails" }
   ],
   fullaccess: [
     { q: "Who can open the Sales Desk mailbox?", out: "Get-MailboxPermission -Identity \"Sales Desk\"", hint: "Get-MailboxPermission" },
     { q: "Show only the people (not SELF) with access to Info, as a single User column.", out: "Get-MailboxPermission -Identity Info | Where-Object { $_.User -ne 'NT AUTHORITY\\SELF' } | Select-Object User", hint: "Filter out NT AUTHORITY\\SELF." },
-    { q: "Give Soren Achterberg FullAccess to Info.", fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Info" && p.upn === U("soren.achterberg")), sol: ["Add-MailboxPermission -Identity Info -User " + U("soren.achterberg") + " -AccessRights FullAccess"], hint: "Add-MailboxPermission ... -AccessRights FullAccess" },
+    { q: "Give Sorrel Achterwyn FullAccess to Info.", fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Info" && p.upn === U("sorrel.achterwyn")), sol: ["Add-MailboxPermission -Identity Info -User " + U("sorrel.achterwyn") + " -AccessRights FullAccess"], hint: "Add-MailboxPermission ... -AccessRights FullAccess" },
     { q: "Elara Wynn moved out of Sales. Remove her FullAccess on Sales Desk, without a prompt.", fn: (ctx) => !ctx.t.perms.some((p) => p.mb === "Sales Desk" && p.upn === U("elara.wynn")), sol: ["Remove-MailboxPermission -Identity \"Sales Desk\" -User " + U("elara.wynn") + " -AccessRights FullAccess -Confirm:$false"], hint: "Remove-MailboxPermission ... -Confirm:$false" },
     { q: "Does Cassian Drake have access to Support? Check with -User.", out: "Get-MailboxPermission -Identity Support -User " + U("cassian.drake"), hint: "-User narrows it to one person." },
-    { q: "Give Liora Penn FullAccess to Careers without auto-mapping.", fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Careers" && p.upn === U("liora.penn") && p.automap === false), sol: ["Add-MailboxPermission -Identity Careers -User " + U("liora.penn") + " -AccessRights FullAccess -AutoMapping:$false"], hint: "-AutoMapping:$false" }
+    { q: "Give Liora Pennywhistle FullAccess to Careers without auto-mapping.", fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Careers" && p.upn === U("liora.pennywhistle") && p.automap === false), sol: ["Add-MailboxPermission -Identity Careers -User " + U("liora.pennywhistle") + " -AccessRights FullAccess -AutoMapping:$false"], hint: "-AutoMapping:$false" }
   ],
   sendas: [
     { q: "Who can send as Info?", out: "Get-RecipientPermission -Identity Info", hint: "Get-RecipientPermission" },
-    { q: "Let Ondine Shaw send as Support, no prompt.", fn: (ctx) => ctx.t.sendAs.some((p) => p.mb === "Support" && p.upn === U("ondine.shaw")), sol: ["Add-RecipientPermission -Identity Support -Trustee " + U("ondine.shaw") + " -AccessRights SendAs -Confirm:$false"], hint: "-Trustee, -AccessRights SendAs, -Confirm:$false" },
+    { q: "Let Ondine Shadewell send as Support, no prompt.", fn: (ctx) => ctx.t.sendAs.some((p) => p.mb === "Support" && p.upn === U("ondine.shadewell")), sol: ["Add-RecipientPermission -Identity Support -Trustee " + U("ondine.shadewell") + " -AccessRights SendAs -Confirm:$false"], hint: "-Trustee, -AccessRights SendAs, -Confirm:$false" },
     { q: "Try giving Send As with Add-MailboxPermission, read the error, then do it the right way for Brannoc Vale on Sales Desk.", fn: (ctx) => ctx.t.sendAs.some((p) => p.mb === "Sales Desk" && p.upn === U("brannoc.vale")), sol: ["Add-MailboxPermission -Identity \"Sales Desk\" -User " + U("brannoc.vale") + " -AccessRights SendAs", "Add-RecipientPermission -Identity \"Sales Desk\" -Trustee " + U("brannoc.vale") + " -AccessRights SendAs -Confirm:$false"], hint: "The error tells you which command to use." },
     { q: "Give Juniper Oakes both FullAccess and Send As on Careers (no prompts, auto-mapping is fine).", fn: (ctx) => ctx.t.perms.some((p) => p.mb === "Careers" && p.upn === U("juniper.oakes")) && ctx.t.sendAs.some((p) => p.mb === "Careers" && p.upn === U("juniper.oakes")), sol: ["Add-RecipientPermission -Identity Careers -Trustee " + U("juniper.oakes") + " -AccessRights SendAs -Confirm:$false"], hint: "She may already have one of the two. Check first." },
-    { q: "Rehearse giving Petra Lind Send As on Sales Desk with -WhatIf.", fn: (ctx, res) => !ctx.t.sendAs.some((p) => p.upn === U("petra.lind")) && res.host.some((h) => /What if/.test(h.text || "")), sol: ["Add-RecipientPermission -Identity \"Sales Desk\" -Trustee " + U("petra.lind") + " -AccessRights SendAs -WhatIf"], hint: "-WhatIf instead of -Confirm:$false" }
+    { q: "Rehearse giving Petrel Lindgrove Send As on Sales Desk with -WhatIf.", fn: (ctx, res) => !ctx.t.sendAs.some((p) => p.upn === U("petrel.lindgrove")) && res.host.some((h) => /What if/.test(h.text || "")), sol: ["Add-RecipientPermission -Identity \"Sales Desk\" -Trustee " + U("petrel.lindgrove") + " -AccessRights SendAs -WhatIf"], hint: "-WhatIf instead of -Confirm:$false" }
   ],
   forward: [
     { q: "Find every mailbox that forwards mail. Show DisplayName and ForwardingSmtpAddress.", out: "Get-EXOMailbox -ResultSize Unlimited -Properties ForwardingSmtpAddress | Where-Object { $_.ForwardingSmtpAddress } | Select-Object DisplayName,ForwardingSmtpAddress", hint: "-Properties, then Where-Object." },
-    { q: "Switch off Dorian Pike's forwarding and stop keeping a copy.", fn: (ctx) => { const m = findMbxT(ctx, "Dorian Pike"); return m.ForwardingSmtpAddress === null && m.DeliverToMailboxAndForward === false; }, sol: ["Set-Mailbox -Identity " + U("dorian.pike") + " -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false"], hint: "$null and $false" },
+    { q: "Switch off Dorian Pikeholm's forwarding and stop keeping a copy.", fn: (ctx) => { const m = findMbxT(ctx, "Dorian Pikeholm"); return m.ForwardingSmtpAddress === null && m.DeliverToMailboxAndForward === false; }, sol: ["Set-Mailbox -Identity " + U("dorian.pikeholm") + " -ForwardingSmtpAddress $null -DeliverToMailboxAndForward $false"], hint: "$null and $false" },
     { q: "Forward the Careers mailbox to Juniper Oakes, without keeping a copy.", fn: (ctx) => { const m = findMbxT(ctx, "Careers"); return /juniper\.oakes@/i.test(m.ForwardingSmtpAddress || "") && m.DeliverToMailboxAndForward === false; }, sol: ["Set-Mailbox -Identity Careers -ForwardingSmtpAddress " + U("juniper.oakes") + " -DeliverToMailboxAndForward $false"], hint: "-DeliverToMailboxAndForward $false" },
-    { q: "Show DeliverToMailboxAndForward for Dorian Pike.", out: "Get-EXOMailbox -Identity " + U("dorian.pike") + " -Properties DeliverToMailboxAndForward | Select-Object DisplayName,DeliverToMailboxAndForward", hint: "Ask for it with -Properties." },
-    { q: "Rehearse clearing Dorian's forwarding with -WhatIf.", fn: (ctx, res) => !!findMbxT(ctx, "Dorian Pike").ForwardingSmtpAddress && res.host.some((h) => /What if/.test(h.text || "")), sol: ["Set-Mailbox -Identity " + U("dorian.pike") + " -ForwardingSmtpAddress $null -WhatIf"], hint: "-WhatIf" }
+    { q: "Show DeliverToMailboxAndForward for Dorian Pikeholm.", out: "Get-EXOMailbox -Identity " + U("dorian.pikeholm") + " -Properties DeliverToMailboxAndForward | Select-Object DisplayName,DeliverToMailboxAndForward", hint: "Ask for it with -Properties." },
+    { q: "Rehearse clearing Dorian's forwarding with -WhatIf.", fn: (ctx, res) => !!findMbxT(ctx, "Dorian Pikeholm").ForwardingSmtpAddress && res.host.some((h) => /What if/.test(h.text || "")), sol: ["Set-Mailbox -Identity " + U("dorian.pikeholm") + " -ForwardingSmtpAddress $null -WhatIf"], hint: "-WhatIf" }
   ],
   oof: [
-    { q: "Is Hollis Reed's auto-reply on? Show the configuration.", out: "Get-MailboxAutoReplyConfiguration -Identity " + U("hollis.reed"), hint: "Get-MailboxAutoReplyConfiguration" },
+    { q: "Is Hesper Reedmire's auto-reply on? Show the configuration.", out: "Get-MailboxAutoReplyConfiguration -Identity " + U("hesper.reedmire"), hint: "Get-MailboxAutoReplyConfiguration" },
     { q: "Turn on an auto-reply for Info: internal and external both \"We are closed until Monday.\"", fn: (ctx) => { const a = findMbxT(ctx, "Info")._arc; return a.AutoReplyState === "Enabled" && a.InternalMessage === "We are closed until Monday." && a.ExternalMessage === "We are closed until Monday."; }, sol: ["Set-MailboxAutoReplyConfiguration -Identity Info -AutoReplyState Enabled -InternalMessage \"We are closed until Monday.\" -ExternalMessage \"We are closed until Monday.\""], hint: "Both messages, same text." },
     { q: "Try -AutoReplyState On for Info, read the error, then use the right value.", fn: (ctx) => findMbxT(ctx, "Info")._arc.AutoReplyState === "Enabled", sol: ["Set-MailboxAutoReplyConfiguration -Identity Info -AutoReplyState On", "Set-MailboxAutoReplyConfiguration -Identity Info -AutoReplyState Enabled"], hint: "The error lists the valid names." },
-    { q: "Liora Penn left. Set an external auto-reply: \"Liora no longer works at Halvard. Please contact careers@" + DOMAIN + ".\" (internal can be the same).", fn: (ctx) => { const a = findMbxT(ctx, "Liora Penn")._arc; return a.AutoReplyState === "Enabled" && /careers@/.test(a.ExternalMessage || ""); }, sol: ["Set-MailboxAutoReplyConfiguration -Identity " + U("liora.penn") + " -AutoReplyState Enabled -InternalMessage \"Liora no longer works at Halvard. Please contact careers@" + DOMAIN + ".\" -ExternalMessage \"Liora no longer works at Halvard. Please contact careers@" + DOMAIN + ".\""], hint: "Quotes around both messages." },
+    { q: "Liora Pennywhistle left. Set an external auto-reply: \"Liora no longer works at Halvard. Please contact careers@" + DOMAIN + ".\" (internal can be the same).", fn: (ctx) => { const a = findMbxT(ctx, "Liora Pennywhistle")._arc; return a.AutoReplyState === "Enabled" && /careers@/.test(a.ExternalMessage || ""); }, sol: ["Set-MailboxAutoReplyConfiguration -Identity " + U("liora.pennywhistle") + " -AutoReplyState Enabled -InternalMessage \"Liora no longer works at Halvard. Please contact careers@" + DOMAIN + ".\" -ExternalMessage \"Liora no longer works at Halvard. Please contact careers@" + DOMAIN + ".\""], hint: "Quotes around both messages." },
     { q: "Show only the AutoReplyState of Corvin Ashby.", out: "(Get-MailboxAutoReplyConfiguration -Identity " + U("corvin.ashby") + ").AutoReplyState", hint: "(command).AutoReplyState" }
   ],
   shared: [
     { q: "How big is Ysolde Marrow's mailbox?", out: "Get-EXOMailboxStatistics -Identity " + U("ysolde.marrow"), hint: "Get-EXOMailboxStatistics" },
     { q: "Convert Quillon Dunne's mailbox to shared.", fn: (ctx) => findMbxT(ctx, "Quillon Dunne").RecipientTypeDetails === "SharedMailbox", sol: ["Set-Mailbox -Identity " + U("quillon.dunne") + " -Type Shared"], hint: "-Type Shared" },
-    { q: "Give Hollis Reed the extra address finance.director@" + DOMAIN + ".", fn: (ctx) => findMbxT(ctx, "Hollis Reed").EmailAddresses.some((e) => e.toLowerCase() === "smtp:finance.director@" + DOMAIN), sol: ["Set-Mailbox -Identity " + U("hollis.reed") + " -EmailAddresses @{add='smtp:finance.director@" + DOMAIN + "'}"], hint: "@{add='smtp:...'}" },
+    { q: "Give Hesper Reedmire the extra address finance.director@" + DOMAIN + ".", fn: (ctx) => findMbxT(ctx, "Hesper Reedmire").EmailAddresses.some((e) => e.toLowerCase() === "smtp:finance.director@" + DOMAIN), sol: ["Set-Mailbox -Identity " + U("hesper.reedmire") + " -EmailAddresses @{add='smtp:finance.director@" + DOMAIN + "'}"], hint: "@{add='smtp:...'}" },
     { q: "Show every address on the Sales Desk mailbox, one per line.", out: "Get-EXOMailbox -Identity \"Sales Desk\" | Select-Object -ExpandProperty EmailAddresses", hint: "-ExpandProperty EmailAddresses" },
     { q: "Add the alias bookings@ to Info, then remove it again.", fn: (ctx, res, hist) => !findMbxT(ctx, "Info").EmailAddresses.some((e) => /bookings@/i.test(e)) && hist.some((h) => /add\s*=/i.test(h)) && hist.some((h) => /remove\s*=/i.test(h)), sol: ["Set-Mailbox -Identity Info -EmailAddresses @{add='smtp:bookings@" + DOMAIN + "'}", "Set-Mailbox -Identity Info -EmailAddresses @{remove='smtp:bookings@" + DOMAIN + "'}"], hint: "add, then remove." },
     { q: "Info should become a normal mailbox again for a new receptionist. Convert it to a regular user mailbox.", fn: (ctx) => findMbxT(ctx, "Info").RecipientTypeDetails === "UserMailbox", sol: ["Set-Mailbox -Identity Info -Type Regular"], hint: "The value for a normal mailbox is Regular." }
@@ -544,23 +544,23 @@ Object.assign(DRILLS, {
     { q: "List members of All Staff who work in Legal (DisplayName only).", out: "Get-DistributionGroupMember -Identity \"All Staff\" | Where-Object { $_.Department -eq 'Legal' } | Select-Object DisplayName", hint: "Where-Object on Department." }
   ],
   dladd: [
-    { q: "Rowan Hart is not on All Staff. Add him.", fn: (ctx) => dlHas(ctx, "All Staff", "rowan.hart"), sol: ["Add-DistributionGroupMember -Identity \"All Staff\" -Member " + U("rowan.hart")], hint: "Add-DistributionGroupMember" },
-    { q: "Remove Thea Gallow from Finance Team without a prompt.", fn: (ctx) => !dlHas(ctx, "Finance Team", "thea.gallow"), sol: ["Remove-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("thea.gallow") + " -Confirm:$false"], hint: "-Confirm:$false" },
-    { q: "Ilse Varga says she doesn't get finance-team@ mails. Try adding her, and read what Exchange says.", fn: (ctx, res) => !!res.error && /already a member/.test(res.error.text()), sol: ["Add-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("ilse.varga")], hint: "Just run the add. The error is the answer." },
-    { q: "Soren Achterberg says he gets no IT Alerts mails. Check whether he is on the IT Alerts list before you add anything.", fn: (ctx, res) => res.out.some((o) => o && o.DisplayName === "Soren Achterberg"), sol: ["Get-DistributionGroupMember -Identity \"IT Alerts\""], hint: "He may already be on it. Then the ticket is done." },
-    { q: "Petra Lind moved from Sales to Marketing. Take her off Sales Team, no prompt.", fn: (ctx) => !dlHas(ctx, "Sales Team", "petra.lind"), sol: ["Remove-DistributionGroupMember -Identity \"Sales Team\" -Member " + U("petra.lind") + " -Confirm:$false"], hint: "Remove with -Confirm:$false" }
+    { q: "Rowenna Harthorn is not on All Staff. Add him.", fn: (ctx) => dlHas(ctx, "All Staff", "rowenna.harthorn"), sol: ["Add-DistributionGroupMember -Identity \"All Staff\" -Member " + U("rowenna.harthorn")], hint: "Add-DistributionGroupMember" },
+    { q: "Remove Theodwyn Gallow from Finance Team without a prompt.", fn: (ctx) => !dlHas(ctx, "Finance Team", "theodwyn.gallow"), sol: ["Remove-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("theodwyn.gallow") + " -Confirm:$false"], hint: "-Confirm:$false" },
+    { q: "Ilsabet Varrow says she doesn't get finance-team@ mails. Try adding her, and read what Exchange says.", fn: (ctx, res) => !!res.error && /already a member/.test(res.error.text()), sol: ["Add-DistributionGroupMember -Identity \"Finance Team\" -Member " + U("ilsabet.varrow")], hint: "Just run the add. The error is the answer." },
+    { q: "Sorrel Achterwyn says he gets no IT Alerts mails. Check whether he is on the IT Alerts list before you add anything.", fn: (ctx, res) => res.out.some((o) => o && o.DisplayName === "Sorrel Achterwyn"), sol: ["Get-DistributionGroupMember -Identity \"IT Alerts\""], hint: "He may already be on it. Then the ticket is done." },
+    { q: "Petrel Lindgrove moved from Sales to Marketing. Take her off Sales Team, no prompt.", fn: (ctx) => !dlHas(ctx, "Sales Team", "petrel.lindgrove"), sol: ["Remove-DistributionGroupMember -Identity \"Sales Team\" -Member " + U("petrel.lindgrove") + " -Confirm:$false"], hint: "Remove with -Confirm:$false" }
   ],
   newdl: [
     { q: "Create a list Bruges Office with address bruges@" + DOMAIN + ".", fn: (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "Bruges Office"); return d && d.PrimarySmtpAddress === "bruges@" + DOMAIN; }, sol: ["New-DistributionGroup -Name \"Bruges Office\" -PrimarySmtpAddress bruges@" + DOMAIN], hint: "-Name and -PrimarySmtpAddress" },
     { q: "Try creating a list called Sales Team. Read the error.", fn: (ctx, res) => !!res.error && /being used by another recipient/.test(res.error.text()), sol: ["New-DistributionGroup -Name \"Sales Team\""], hint: "That name already exists." },
     { q: "Rehearse a Project Atlas list with -WhatIf.", fn: (ctx, res) => !ctx.t.dls.some((d) => d.Name === "Project Atlas") && res.host.some((h) => /What if/.test(h.text || "")), sol: ["New-DistributionGroup -Name \"Project Atlas\" -WhatIf"], hint: "-WhatIf" },
-    { q: "Create Board with members Alaric Strand and Hollis Reed.", fn: (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "Board"); return d && dlHas(ctx, "Board", "alaric.strand") && dlHas(ctx, "Board", "hollis.reed"); }, sol: ["New-DistributionGroup -Name Board -Members " + U("alaric.strand") + "," + U("hollis.reed")], hint: "-Members a,b" },
+    { q: "Create Board with members Alaric Strand and Hesper Reedmire.", fn: (ctx) => { const d = ctx.t.dls.find((x) => x.Name === "Board"); return d && dlHas(ctx, "Board", "alaric.strand") && dlHas(ctx, "Board", "hesper.reedmire"); }, sol: ["New-DistributionGroup -Name Board -Members " + U("alaric.strand") + "," + U("hesper.reedmire")], hint: "-Members a,b" },
     { q: "Create Night Shift, then add Torin Ash to it with a second command.", fn: (ctx) => dlHas(ctx, "Night Shift", "torin.ash"), sol: ["New-DistributionGroup -Name \"Night Shift\"", "Add-DistributionGroupMember -Identity \"Night Shift\" -Member " + U("torin.ash")], hint: "New, then Add." }
   ],
   mggroup: [
     { q: "List every group.", out: "Get-MgGroup -All", hint: "-All" },
     { q: "List the DisplayName of every Microsoft 365 group.", out: "Get-MgGroup -All | Where-Object { $_.GroupTypes -contains 'Unified' } | Select-Object DisplayName", hint: "-contains 'Unified'" },
-    { q: "Find the group called Project Northwind and show its Description.", out: "(Get-MgGroup -Filter \"displayName eq 'Project Northwind'\").Description", hint: "(command).Description" },
+    { q: "Find the group called Project Northwyrm and show its Description.", out: "(Get-MgGroup -Filter \"displayName eq 'Project Northwyrm'\").Description", hint: "(command).Description" },
     { q: "Find every group whose name starts with SG-.", out: "Get-MgGroup -Filter \"startswith(displayName,'SG-')\"", hint: "startswith(displayName,'SG-')" },
     { q: "Fresh window. Connect with User.Read.All and Group.Read.All, then count all groups.", setup: "none", fn: (ctx, res) => res.out.length === 1 && res.out[0] === 5, sol: ["Connect-MgGraph -Scopes User.Read.All,Group.Read.All -NoWelcome", "(Get-MgGroup -All).Count"], hint: "Group.Read.All is needed." }
   ],
@@ -573,9 +573,9 @@ Object.assign(DRILLS, {
   ],
   mgadd: [
     { q: "Cassian Drake asks for VPN access. Check whether he is already in SG-VPN-Users before you change anything.", fn: (ctx, res) => res.out.includes("Cassian Drake"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'SG-VPN-Users'\"; Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.AdditionalProperties.displayName }"], hint: "He is in IT. Is he already a member?" },
-    { q: "Add Quillon Dunne to Project Northwind.", fn: (ctx) => grpHas(ctx, "Project Northwind", "quillon.dunne"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'Project Northwind'\"; $u = Get-MgUser -UserId " + U("quillon.dunne") + "; New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id"], hint: "$g, $u, New-MgGroupMember" },
-    { q: "Remove Rowan Hart from SG-MFA-Exclusion.", fn: (ctx) => !grpHas(ctx, "SG-MFA-Exclusion", "rowan.hart"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'SG-MFA-Exclusion'\"; $u = Get-MgUser -UserId " + U("rowan.hart") + "; Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id"], hint: "Remove-MgGroupMemberByRef" },
-    { q: "Read-only group scope. Thea Gallow cannot open the finance share. Check whether she is in SG-Finance-Share.", setup: "groups", fn: (ctx, res) => res.out.includes("Thea Gallow"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'SG-Finance-Share'\"; Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.AdditionalProperties.displayName }"], hint: "Check membership first." },
+    { q: "Add Quillon Dunne to Project Northwyrm.", fn: (ctx) => grpHas(ctx, "Project Northwyrm", "quillon.dunne"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'Project Northwyrm'\"; $u = Get-MgUser -UserId " + U("quillon.dunne") + "; New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id"], hint: "$g, $u, New-MgGroupMember" },
+    { q: "Remove Rowenna Harthorn from SG-MFA-Exclusion.", fn: (ctx) => !grpHas(ctx, "SG-MFA-Exclusion", "rowenna.harthorn"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'SG-MFA-Exclusion'\"; $u = Get-MgUser -UserId " + U("rowenna.harthorn") + "; Remove-MgGroupMemberByRef -GroupId $g.Id -DirectoryObjectId $u.Id"], hint: "Remove-MgGroupMemberByRef" },
+    { q: "Read-only group scope. Theodwyn Gallow cannot open the finance share. Check whether she is in SG-Finance-Share.", setup: "groups", fn: (ctx, res) => res.out.includes("Theodwyn Gallow"), sol: ["$g = Get-MgGroup -Filter \"displayName eq 'SG-Finance-Share'\"; Get-MgGroupMember -GroupId $g.Id | ForEach-Object { $_.AdditionalProperties.displayName }"], hint: "Check membership first." },
     { q: "Read-only group scope. Add Maelis Grey to Halvard Leadership (you'll need Group.ReadWrite.All).", setup: "groups", fn: (ctx) => grpHas(ctx, "Halvard Leadership", "maelis.grey"), sol: ["Connect-MgGraph -Scopes Group.ReadWrite.All -NoWelcome", "$g = Get-MgGroup -Filter \"displayName eq 'Halvard Leadership'\"; $u = Get-MgUser -UserId " + U("maelis.grey") + "; New-MgGroupMember -GroupId $g.Id -DirectoryObjectId $u.Id"], hint: "Reconnect with Group.ReadWrite.All first." }
   ],
   skus: [
@@ -586,7 +586,7 @@ Object.assign(DRILLS, {
     { q: "Which SKUs have no free seats? Show their SkuPartNumber.", out: "Get-MgSubscribedSku | Where-Object { $_.PrepaidUnits.Enabled - $_.ConsumedUnits -le 0 } | Select-Object SkuPartNumber", hint: "Where-Object with the same subtraction, -le 0" }
   ],
   userlic: [
-    { q: "Which licenses does Hollis Reed have?", out: "Get-MgUserLicenseDetail -UserId " + U("hollis.reed"), hint: "Get-MgUserLicenseDetail" },
+    { q: "Which licenses does Hesper Reedmire have?", out: "Get-MgUserLicenseDetail -UserId " + U("hesper.reedmire"), hint: "Get-MgUserLicenseDetail" },
     { q: "Show only the SkuPartNumber of Ysolde Marrow's licenses.", out: "Get-MgUserLicenseDetail -UserId " + U("ysolde.marrow") + " | Select-Object SkuPartNumber", hint: "Select-Object SkuPartNumber" },
     { q: "Who holds POWER_BI_PRO? DisplayName only.", out: "$sku = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'; Get-MgUser -All -Property DisplayName,AssignedLicenses | Where-Object { $_.AssignedLicenses.SkuId -contains $sku.SkuId } | Select-Object DisplayName", hint: "Store the SKU, filter on AssignedLicenses." },
     { q: "Which disabled accounts still hold any license? DisplayName only.", out: "Get-MgUser -All -Filter \"accountEnabled eq false\" -Property DisplayName,AssignedLicenses | Where-Object { $_.AssignedLicenses.Count -gt 0 } | Select-Object DisplayName", hint: "Filter disabled, then AssignedLicenses.Count -gt 0" },
@@ -594,23 +594,23 @@ Object.assign(DRILLS, {
   ],
   setlic: [
     { q: "Give Brannoc Vale a POWER_BI_PRO license (check free seats first!).", fn: (ctx) => hasSku(ctx, "brannoc.vale", "POWER_BI_PRO"), sol: ["$pbi = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'POWER_BI_PRO'; Set-MgUserLicense -UserId " + U("lorcan.ivers") + " -AddLicenses @() -RemoveLicenses @($pbi.SkuId); Set-MgUserLicense -UserId " + U("brannoc.vale") + " -AddLicenses @{SkuId = $pbi.SkuId} -RemoveLicenses @()"], hint: "No seats free. Lorcan does not use his." },
-    { q: "Remove the E3 license from Evander Holt (disabled for months).", fn: (ctx) => !hasSku(ctx, "evander.holt", "SPE_E3"), sol: ["$e3 = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId " + U("evander.holt") + " -AddLicenses @() -RemoveLicenses @($e3.SkuId)"], hint: "-AddLicenses @() -RemoveLicenses @($e3.SkuId)" },
-    { q: "Give Petra Lind an EXCHANGESTANDARD license.", fn: (ctx) => hasSku(ctx, "petra.lind", "EXCHANGESTANDARD"), sol: ["$x = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'EXCHANGESTANDARD'; Set-MgUserLicense -UserId " + U("petra.lind") + " -AddLicenses @{SkuId = $x.SkuId} -RemoveLicenses @()"], hint: "Same shape, other SKU." },
-    { q: "A guest, Nora Bekaert, needs TEAMS_EXPLORATORY. She has no usage location. Fix it and assign.", fn: (ctx) => { const u = ctx.t.users.find((x) => x.DisplayName === "Nora Bekaert"); const s = ctx.t.skus.find((x) => x.SkuPartNumber === "TEAMS_EXPLORATORY"); return u.AssignedLicenses.some((l) => l.SkuId === s.SkuId); }, sol: ["$n = Get-MgUser -Filter \"displayName eq 'Nora Bekaert'\"; Update-MgUser -UserId $n.Id -UsageLocation BE; $t = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'TEAMS_EXPLORATORY'; Set-MgUserLicense -UserId $n.Id -AddLicenses @{SkuId = $t.SkuId} -RemoveLicenses @()"], hint: "Guests have awkward UPNs: use her Id. UsageLocation first." },
-    { q: "Rehearse removing EXCHANGESTANDARD from Fenna Lowe with -WhatIf.", fn: (ctx, res) => hasSku(ctx, "fenna.lowe", "EXCHANGESTANDARD") && res.host.some((h) => /What if/.test(h.text || "")), sol: ["$x = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'EXCHANGESTANDARD'; Set-MgUserLicense -UserId " + U("fenna.lowe") + " -AddLicenses @() -RemoveLicenses @($x.SkuId) -WhatIf"], hint: "-WhatIf at the end." }
+    { q: "Remove the E3 license from Evander Holtwyrm (disabled for months).", fn: (ctx) => !hasSku(ctx, "evander.holtwyrm", "SPE_E3"), sol: ["$e3 = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId " + U("evander.holtwyrm") + " -AddLicenses @() -RemoveLicenses @($e3.SkuId)"], hint: "-AddLicenses @() -RemoveLicenses @($e3.SkuId)" },
+    { q: "Give Petrel Lindgrove an EXCHANGESTANDARD license.", fn: (ctx) => hasSku(ctx, "petrel.lindgrove", "EXCHANGESTANDARD"), sol: ["$x = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'EXCHANGESTANDARD'; Set-MgUserLicense -UserId " + U("petrel.lindgrove") + " -AddLicenses @{SkuId = $x.SkuId} -RemoveLicenses @()"], hint: "Same shape, other SKU." },
+    { q: "A guest, Nyssa Bexwyn, needs TEAMS_EXPLORATORY. She has no usage location. Fix it and assign.", fn: (ctx) => { const u = ctx.t.users.find((x) => x.DisplayName === "Nyssa Bexwyn"); const s = ctx.t.skus.find((x) => x.SkuPartNumber === "TEAMS_EXPLORATORY"); return u.AssignedLicenses.some((l) => l.SkuId === s.SkuId); }, sol: ["$n = Get-MgUser -Filter \"displayName eq 'Nyssa Bexwyn'\"; Update-MgUser -UserId $n.Id -UsageLocation BE; $t = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'TEAMS_EXPLORATORY'; Set-MgUserLicense -UserId $n.Id -AddLicenses @{SkuId = $t.SkuId} -RemoveLicenses @()"], hint: "Guests have awkward UPNs: use her Id. UsageLocation first." },
+    { q: "Rehearse removing EXCHANGESTANDARD from Fenna Lowmere with -WhatIf.", fn: (ctx, res) => hasSku(ctx, "fenna.lowmere", "EXCHANGESTANDARD") && res.host.some((h) => /What if/.test(h.text || "")), sol: ["$x = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'EXCHANGESTANDARD'; Set-MgUserLicense -UserId " + U("fenna.lowmere") + " -AddLicenses @() -RemoveLicenses @($x.SkuId) -WhatIf"], hint: "-WhatIf at the end." }
   ],
   newuser: [
-    { q: "Create Tom Jacobs (tom.jacobs@...), enabled, with a password he must change.", fn: (ctx) => { const u = userOf(ctx, "tom.jacobs"); return u && u.AccountEnabled && u._pwChange; }, sol: ["$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Tom Jacobs\" -UserPrincipalName " + U("tom.jacobs") + " -MailNickname tom.jacobs -AccountEnabled -PasswordProfile $pw"], hint: "Five required parts." },
+    { q: "Create Tamlin Jaspermoor (tamlin.jaspermoor@...), enabled, with a password he must change.", fn: (ctx) => { const u = userOf(ctx, "tamlin.jaspermoor"); return u && u.AccountEnabled && u._pwChange; }, sol: ["$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Tamlin Jaspermoor\" -UserPrincipalName " + U("tamlin.jaspermoor") + " -MailNickname tamlin.jaspermoor -AccountEnabled -PasswordProfile $pw"], hint: "Five required parts." },
     { q: "Try creating Elowen Thistle again (same UPN). Read the error.", fn: (ctx, res) => !!res.error && /already exists/.test(res.error.text()), sol: ["$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Elowen Thistle\" -UserPrincipalName " + U("elowen.thistle") + " -MailNickname elowen.thistle -AccountEnabled -PasswordProfile $pw"], hint: "Duplicates are refused." },
     { q: "Create a disabled service account svc-scanner@... (DisplayName Scanner Service). Leave out -AccountEnabled? Read what happens, then fix it so the account exists but is disabled.", fn: (ctx) => { const u = userOf(ctx, "svc-scanner"); return u && u.AccountEnabled === false; }, sol: ["$pw = @{Password = 'Scanner-Service-2026!'; ForceChangePasswordNextSignIn = $false}; New-MgUser -DisplayName \"Scanner Service\" -UserPrincipalName " + U("svc-scanner") + " -MailNickname svc-scanner -AccountEnabled:$false -PasswordProfile $pw"], hint: "-AccountEnabled is required, but it can be :$false." },
     { q: "Try a UPN on gmail.com: new user tim@gmail.com. Read the error.", fn: (ctx, res) => !!res.error && /domain portion/.test(res.error.text()), sol: ["$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Tim\" -UserPrincipalName tim@gmail.com -MailNickname tim -AccountEnabled -PasswordProfile $pw"], hint: "Only verified domains." },
-    { q: "Create Sara Wouters in Finance as Accountant, usage location BE, then give her E3.", setup: "licW", fn: (ctx) => { const u = userOf(ctx, "sara.wouters"); return u && u.Department === "Finance" && hasSku(ctx, "sara.wouters", "SPE_E3"); }, sol: ["$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Sara Wouters\" -UserPrincipalName " + U("sara.wouters") + " -MailNickname sara.wouters -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Finance -JobTitle Accountant", "$e3 = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId " + U("sara.wouters") + " -AddLicenses @{SkuId = $e3.SkuId} -RemoveLicenses @()"], hint: "Create, then Set-MgUserLicense." }
+    { q: "Create Sylvara Woodmere in Finance as Accountant, usage location BE, then give her E3.", setup: "licW", fn: (ctx) => { const u = userOf(ctx, "sylvara.woodmere"); return u && u.Department === "Finance" && hasSku(ctx, "sylvara.woodmere", "SPE_E3"); }, sol: ["$pw = @{Password = 'Halvard-Start-2026!'; ForceChangePasswordNextSignIn = $true}; New-MgUser -DisplayName \"Sylvara Woodmere\" -UserPrincipalName " + U("sylvara.woodmere") + " -MailNickname sylvara.woodmere -AccountEnabled -PasswordProfile $pw -UsageLocation BE -Department Finance -JobTitle Accountant", "$e3 = Get-MgSubscribedSku | Where-Object SkuPartNumber -eq 'SPE_E3'; Set-MgUserLicense -UserId " + U("sylvara.woodmere") + " -AddLicenses @{SkuId = $e3.SkuId} -RemoveLicenses @()"], hint: "Create, then Set-MgUserLicense." }
   ],
   removeuser: [
     { q: "Delete Quillon Dunne.", fn: (ctx) => !userOf(ctx, "quillon.dunne"), sol: ["Remove-MgUser -UserId " + U("quillon.dunne")], hint: "Remove-MgUser" },
-    { q: "Show what is in the recycle bin right now (Evander was deleted earlier today).", pre: ["Remove-MgUser -UserId " + U("evander.holt")], out: "Get-MgDirectoryDeletedItemAsUser", hint: "Get-MgDirectoryDeletedItemAsUser" },
+    { q: "Show what is in the recycle bin right now (Evander was deleted earlier today).", pre: ["Remove-MgUser -UserId " + U("evander.holtwyrm")], out: "Get-MgDirectoryDeletedItemAsUser", hint: "Get-MgDirectoryDeletedItemAsUser" },
     { q: "Restore Aldric Moor (deleted this morning).", pre: ["Remove-MgUser -UserId " + U("aldric.moor")], fn: (ctx) => !!userOf(ctx, "aldric.moor"), sol: ["$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("aldric.moor") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id"], hint: "Id from the recycle bin." },
-    { q: "Rehearse deleting Rhydian Bell with -WhatIf.", fn: (ctx, res) => !!userOf(ctx, "rhydian.bell") && res.host.some((h) => /What if/.test(h.text || "")), sol: ["Remove-MgUser -UserId " + U("rhydian.bell") + " -WhatIf"], hint: "-WhatIf" },
-    { q: "Try restoring Fenna Lowe with her UPN instead of her Id (she was deleted). Read the error, then do it right.", pre: ["Remove-MgUser -UserId " + U("fenna.lowe")], fn: (ctx) => !!userOf(ctx, "fenna.lowe"), sol: ["Restore-MgDirectoryDeletedItem -DirectoryObjectId " + U("fenna.lowe"), "$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("fenna.lowe") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id"], hint: "The restore wants the object Id." }
+    { q: "Rehearse deleting Rhydian Bellweather with -WhatIf.", fn: (ctx, res) => !!userOf(ctx, "rhydian.bellweather") && res.host.some((h) => /What if/.test(h.text || "")), sol: ["Remove-MgUser -UserId " + U("rhydian.bellweather") + " -WhatIf"], hint: "-WhatIf" },
+    { q: "Try restoring Fenna Lowmere with her UPN instead of her Id (she was deleted). Read the error, then do it right.", pre: ["Remove-MgUser -UserId " + U("fenna.lowmere")], fn: (ctx) => !!userOf(ctx, "fenna.lowmere"), sol: ["Restore-MgDirectoryDeletedItem -DirectoryObjectId " + U("fenna.lowmere"), "$d = Get-MgDirectoryDeletedItemAsUser | Where-Object UserPrincipalName -eq '" + U("fenna.lowmere") + "'; Restore-MgDirectoryDeletedItem -DirectoryObjectId $d.Id"], hint: "The restore wants the object Id." }
   ]
 });

@@ -65,7 +65,7 @@ def x_functions(b):
         b.predict(f"def total(nums):\n    t = 0\n    for n in nums:\n        t = t + n\n        return t\n\nprint(total({nums!r}))",
                   [f"print(sum({nums!r}))", f"print(len({nums!r}))"],
                   why="return is inside the loop, so the function leaves on the very first lap.")
-    for g, n in [("Yo", "Ada"), ("Hey", "Kai")]:
+    for g, n in [("Yo", "Aeris"), ("Hey", "Kai")]:
         b.predict(f'def greet(name, greeting="Hi"):\n    return f"{{greeting}}, {{name}}"\n\nprint(greet("{n}", "{g}"))',
                   [f'print("Hi, {n}")', f'print("{n}, {g}")'], why="The second argument replaces the default.")
     for a, c in [(5, 2), (3, 9)]:
@@ -78,8 +78,8 @@ def x_functions(b):
               why="The inner f runs first (prints in, gives 2), then the outer f runs (prints in, gives 4).")
     b.fill("def ___(n):\n    return n * n\n\nprint(square(4))", ["square", "n", "print"], why="The name after def is the name you call it by.")
     b.fill("def area(w, h):\n    return w * h\n\nprint(area(___))", ["3, 4", "3", "12"], why="area needs two values: 3 * 4 = 12.")
-    b.build('def greet(name):\n    return "Hi " + name', ["print(", "greet(", '"Ada"', ")", ")"], ['"greet"'],
-            ask="Print the greeting for Ada.", why="Call greet with Ada inside print.")
+    b.build('def greet(name):\n    return "Hi " + name', ["print(", "greet(", '"Aeris"', ")", ")"], ['"greet"'],
+            ask="Print the greeting for Aeris.", why="Call greet with Aeris inside print.")
     b.order(["def total(nums):", "    t = 0", "    for n in nums:", "        t = t + n", "    return t", "print(total([1, 2]))"],
             why="Box first, loop to add, return after the loop.")
     b.bug(["def total(nums):", "    t = 0", "    for n in nums:", "        t = t + n", "        return t", "print(total([1, 2, 3]))"], 4, "    return t",
@@ -153,7 +153,7 @@ def x_classes(b):
               why="A class attribute is shared by every object made from the class.")
     b.predict('class Cat:\n    def __init__(self, name):\n        self.name = name\n\nc = Cat("Roux")\nprint(c.nme)', ['print("Roux")', "print(None)"],
               why="nme is a typo. The object has no such attribute: AttributeError.")
-    b.predict('class Cat:\n    def __init__(self, name):\n        self.name = name\n\ncats = [Cat("Roux"), Cat("Tom")]\nprint(cats[1].name)', ['print("Roux")', 'print("cats")'],
+    b.predict('class Cat:\n    def __init__(self, name):\n        self.name = name\n\ncats = [Cat("Roux"), Cat("Tamlin")]\nprint(cats[1].name)', ['print("Roux")', 'print("cats")'],
               why="A list can hold objects. [1] is the second cat.")
     b.predict('class Box:\n    def __init__(self, v):\n        self.v = v\n    def double(self):\n        return self.v * 2\n    def quad(self):\n        return self.double() * 2\n\nprint(Box(3).quad())',
               ["print(6)", "print(3)"], why="quad calls double on the same object: 3 * 2 * 2.")

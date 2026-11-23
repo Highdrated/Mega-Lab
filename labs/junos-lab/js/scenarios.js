@@ -1299,8 +1299,8 @@ async function generateTicket(){
    CONTRACT MODE — generated build briefs ("set up an office for…")
    ============================================================ */
 const CONTRACT_COMPANIES = [
-  "Northwind Logistics", "Blue Harbor Media", "Cedar & Sons Accounting", "Skyline Dental",
-  "Ironwood Games", "Bright Path Tutoring", "Marlow Robotics", "Fjord Analytics",
+  "Northwyrm Logistics", "Bluetide Harbour Media", "Cedarhollow Accounting", "Moonfang Dental",
+  "Ironroot Games", "Brightwyrm Tutoring", "Marrowgear Robotics", "Fjordwyrm Analytics",
 ];
 const CONTRACT_DEPTS = [
   { name: "engineering", vlan: 10 }, { name: "sales", vlan: 20 }, { name: "finance", vlan: 30 },

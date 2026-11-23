@@ -1,6 +1,6 @@
 from engine import card, check
 
-NAMES = [("name", "Ada"), ("city", "Ghent"), ("pet", "Roux"), ("drink", "tea"), ("ship", "Verdant"), ("food", "soup")]
+NAMES = [("name", "Aeris"), ("city", "Ghent"), ("pet", "Roux"), ("drink", "tea"), ("ship", "Verdant"), ("food", "soup")]
 WORDS = ["python", "garden", "rocket", "window", "orange", "planet", "lantern", "carpet"]
 
 
@@ -45,7 +45,7 @@ def l1(b):
     for a, m in [(3, 2), (4, 5), (6, 3)]:
         b.order([f"x = {a}", f"x = x * {m}", "print(x)"],
                 why="Make the box, change it, then print. Top to bottom.")
-    b.order(['name = "Ada"', 'greeting = "Hi"', "print(greeting, name)"],
+    b.order(['name = "Aeris"', 'greeting = "Hi"', "print(greeting, name)"],
             why="Both boxes must exist before print uses them.")
     for var, val in NAMES[:4]:
         b.bug([f'{var} = "{val}"', f"print({var.capitalize()})"], 1, f"print({var})",
@@ -278,20 +278,20 @@ def l5(b):
     for parts, sep in [(["a", "b", "c"], "-"), (["x", "y"], ", "), (["night", "train"], " ")]:
         b.predict(f'print("{sep}".join({parts!r}))', [f'print({parts!r})', f'print("".join({parts!r}))'],
                   why="The text before .join is put between every item.")
-    for n, a in [("Ada", 30), ("Roux", 4), ("Junie", 2)]:
+    for n, a in [("Aeris", 30), ("Roux", 4), ("Junie", 2)]:
         b.predict(f'name = "{n}"\nage = {a}\nprint(f"{{name}} is {{age}}")',
                   [f'name = "{n}"\nage = {a}\nprint("{{name}} is {{age}}")', f'print("name is age")'],
                   why="The f before the quotes fills in each {box}.")
     for s, ch in [("banana", "a"), ("letter", "t"), ("mississippi", "s")]:
         b.predict(f'print("{s}".count("{ch}"))', [f'print("{s}".find("{ch}"))', f'print(len("{s}"))'], ["1", "True"],
                   why=".count() tells how many times it appears.")
-    for n in ["Ada", "Roux", "Kai"]:
+    for n in ["Aeris", "Roux", "Kai"]:
         b.fill(f'name = "{n}"\nprint(___"Hi {{name}}")', ["f", "", "r"], why="An f-string needs the f before the quote.")
     for w in ["hello", "night"]:
         b.fill(f'print("{w}".___())', ["upper", "lower", "strip"], why=".upper() gives capitals.")
     for s in ["a,b,c", "1,2,3"]:
         b.fill(f'print("{s}".___(","))', ["split", "strip", "count"], why=".split(\",\") cuts at each comma.")
-    for n in ["Ada", "Roux"]:
+    for n in ["Aeris", "Roux"]:
         b.build(f'name = "{n}"', ["print(", 'f"Hi {name}"', ")"], ['"Hi {name}"', '"Hi name"'],
                 ask="Greet the name using an f-string.", why="Only the f-string fills in {name}.")
         b.build(f'name = "{n}"', ["print(", "name.upper()", ")"], ["name.lower()", "name"],
@@ -300,7 +300,7 @@ def l5(b):
     b.order(['line = "a,b,c"', 'parts = line.split(",")', "print(len(parts))"], why="Split into a list, then count.")
     b.bug(['s = "quiet"', "s.upper()", "print(s)"], 1, "s = s.upper()",
           why="Store the new string: s = s.upper(). Strings never change in place.")
-    b.bug(['name = "Ada"', 'print("Hi {name}")'], 1, 'print(f"Hi {name}")', why="Without the f, {name} is printed as plain text.")
+    b.bug(['name = "Aeris"', 'print("Hi {name}")'], 1, 'print(f"Hi {name}")', why="Without the f, {name} is printed as plain text.")
     return [
         card("Methods are actions on a string",
              ["Write a dot and the action: `s.upper()`.", "They give back a NEW string. The old one stays the same."],
@@ -312,6 +312,6 @@ def l5(b):
              check=check('print("1,2".split(","))', ['print("1,2")'], why="split gives a list of the pieces.")),
         card("f-strings fill in boxes",
              ["Put an `f` before the quotes.", "Write boxes inside `{ }`.", "Python fills in the value."],
-             code='name = "Ada"\nage = 30\nprint(f"{name} is {age}")',
+             code='name = "Aeris"\nage = 30\nprint(f"{name} is {age}")',
              check=check('n = 3\nprint(f"Level {n}")', ['print("Level {n}")'], why="The f fills {n} with 3.")),
     ]

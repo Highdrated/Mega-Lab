@@ -315,7 +315,7 @@ const MEMORIES = [
   setup: "read",
   brief: {
     what: [
-      "Update-MgUser changes properties on a user: job title, department, office, phone, usage location. It is the command behind half of all HR tickets: \"Petra moved to Marketing\", \"Corvin is now Head of Sales\".",
+      "Update-MgUser changes properties on a user: job title, department, office, phone, usage location. It is the command behind half of all HR tickets: \"Petrel moved to Marketing\", \"Corvin is now Head of Sales\".",
       "Two things surprise people. First, your read-only connection is not enough: Graph answers <b>403 Forbidden</b> until you reconnect with <b>User.ReadWrite.All</b>. Second, when it works it prints <b>nothing</b>. Silence is success, so you check the result yourself with Get-MgUser."
     ],
     daily: ["Department or title changes from HR", "Fixing typos in display names", "Setting UsageLocation before giving someone a license"],
@@ -335,8 +335,8 @@ const MEMORIES = [
   ],
   trace: { ask: "You are already allowed to write. Change Elara Wynn's job title to Account Manager.", setup: "write", tpl: "Update-MgUser -UserId " + U("elara.wynn") + " -[[JobTitle]] \"Account Manager\"", check: { fn: (ctx) => userOf(ctx, "elara.wynn").JobTitle === "Account Manager" }, wrong: "Use the parameter for the job title." },
   traceHints: ["The parameter has the same name as the property.", "Get-Member on a user lists it.", "-J_______", "Answer: -JobTitle"],
-  recall: { ask: "HR ticket: Petra Lind moved to Marketing as Marketing Coordinator. Update both. You start with a read-only connection.", setup: "read", check: { fn: (ctx) => { const u = userOf(ctx, "petra.lind"); return u.Department === "Marketing" && u.JobTitle === "Marketing Coordinator"; } }, wrong: "Both the department and the title have to change." },
-  recallHints: ["Your first attempt will answer 403. What do you need first?", "Reconnect with User.ReadWrite.All, then one Update-MgUser can set both.", "Update-MgUser -UserId petra.lind@... -Department ________ -JobTitle \"________ ___________\"", "Connect-MgGraph -Scopes User.ReadWrite.All, then Update-MgUser -UserId " + U("petra.lind") + " -Department Marketing -JobTitle \"Marketing Coordinator\""],
+  recall: { ask: "HR ticket: Petrel Lindgrove moved to Marketing as Marketing Coordinator. Update both. You start with a read-only connection.", setup: "read", check: { fn: (ctx) => { const u = userOf(ctx, "petrel.lindgrove"); return u.Department === "Marketing" && u.JobTitle === "Marketing Coordinator"; } }, wrong: "Both the department and the title have to change." },
+  recallHints: ["Your first attempt will answer 403. What do you need first?", "Reconnect with User.ReadWrite.All, then one Update-MgUser can set both.", "Update-MgUser -UserId petrel.lindgrove@... -Department ________ -JobTitle \"________ ___________\"", "Connect-MgGraph -Scopes User.ReadWrite.All, then Update-MgUser -UserId " + U("petrel.lindgrove") + " -Department Marketing -JobTitle \"Marketing Coordinator\""],
   real: ["Read-only first: Get-MgUser -UserId <test user> -Property JobTitle | Select-Object JobTitle", "Only on a test account: Update-MgUser -UserId <test user> -JobTitle \"Test\" -WhatIf", "Remove -WhatIf only if you are allowed to change that account"],
   cheat: [["Connect-MgGraph -Scopes User.ReadWrite.All", "Permission to change users"], ["Update-MgUser -UserId x -Department Marketing", "Change one property"], ["Update-MgUser -UserId x -JobTitle \"Head of Sales\" -WhatIf", "Rehearse a change"]]
 },
@@ -386,8 +386,8 @@ const GATE = {
       check: (ctx, hist, res) => { const n = ctx.t.users.filter((u) => u.AccountEnabled === false).length; return res && res.out.length === 1 && (res.out[0] === n || (res.out[0] && res.out[0].Count === n)); } },
     { id: "t4", from: "Halvard HR", title: "Corvin moved to Marketing", body: "Corvin Ashby is now in Marketing, same job title. Update his department.", hint: "Write permission first, then Update-MgUser -Department.",
       check: (ctx) => userOf(ctx, "corvin.ashby").Department === "Marketing" },
-    { id: "t5", from: "Halvard HR", title: "Liora left in a hurry", body: "Liora Penn (Recruiter) walked out this morning and still has the company phone. Lock her out properly.", hint: "Block, then revoke.",
-      check: (ctx) => { const r = ctx.t.revoked && ctx.t.revoked[U("liora.penn")]; return userOf(ctx, "liora.penn").AccountEnabled === false && !!r && r.afterBlock; } }
+    { id: "t5", from: "Halvard HR", title: "Liora left in a hurry", body: "Liora Pennywhistle (Recruiter) walked out this morning and still has the company phone. Lock her out properly.", hint: "Block, then revoke.",
+      check: (ctx) => { const r = ctx.t.revoked && ctx.t.revoked[U("liora.pennywhistle")]; return userOf(ctx, "liora.pennywhistle").AccountEnabled === false && !!r && r.afterBlock; } }
   ]
 };
 

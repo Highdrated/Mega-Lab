@@ -25,7 +25,7 @@ Shared style line (paste at the end of every prompt):
 |---|---|
 | `npc-seraphine.webp` | Captain Seraphine Ashby, a composed woman in her fifties, silver hair tied back, dark navy uniform with a single brass pin, calm steady eyes |
 | `npc-odran.webp` | Chief engineer Odran Hale, a broad man in his forties with a short beard, rolled sleeves, grease mark on his cheek, a headset around his neck, friendly but tired |
-| `npc-linnea.webp` | Purser Linnea Morrow, a precise woman in her thirties, neat dark bob, crisp cream uniform jacket, holding a slim tablet, faint polite smile |
+| `npc-linnea.webp` | Purser Lunelle Morrow, a precise woman in her thirties, neat dark bob, crisp cream uniform jacket, holding a slim tablet, faint polite smile |
 | `npc-tamsin.webp` | Comms officer Tamsin Vell, a young person with cropped auburn hair, a slim earpiece glowing softly, focused expression, layered grey uniform |
 
 Tip: generate the four portraits in one Gemini chat so they share the same painting style.

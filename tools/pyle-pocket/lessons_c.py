@@ -96,7 +96,7 @@ def l11(b):
         k = list(d)[1]
         b.build(f"stock = {d!r}", ["print(", f'stock["{k}"]', ")"], [f'"{k}"', "stock[1]"], ask=f"Print how many {k} there are.",
                 why="Look it up by key with square brackets.")
-    b.order(["ages = {}", 'ages["Ada"] = 30', 'ages["Kai"] = 25', 'print(ages["Kai"])'], why="Make the dict, fill it, then look up.")
+    b.order(["ages = {}", 'ages["Aeris"] = 30', 'ages["Kai"] = 25', 'print(ages["Kai"])'], why="Make the dict, fill it, then look up.")
     b.order(['stock = {"tea": 3}', 'stock["tea"] = stock["tea"] + 1', 'print(stock["tea"])'], why="Read the old value, add 1, store it back.")
     b.bug(['stock = {"tea": 3}', 'print(stock["pie"])'], 1, 'print(stock.get("pie", 0))', why="pie is not a key: KeyError. .get with a default is safe.")
     b.bug(['stock = {"tea": 3}', "print(stock[0])"], 1, 'print(stock["tea"])', why="Dicts use keys, not positions. 0 is not a key.")
@@ -105,7 +105,7 @@ def l11(b):
              ["Curly brackets: `{key: value}`.", "Look up with the key: `d[key]`.", "Keys are usually text."],
              code='stock = {"tea": 3, "pie": 5}\nprint(stock["pie"])',
              trace={"cols": ["key", "value"], "rows": [['"tea"', "3"], ['"pie"', "5"]]},
-             check=check('ages = {"Ada": 30}\nprint(ages["Ada"])', ['print("Ada")'], why="The value stored under Ada is 30.")),
+             check=check('ages = {"Aeris": 30}\nprint(ages["Aeris"])', ['print("Aeris")'], why="The value stored under Aeris is 30.")),
         card("Add, change, check",
              ["`d[key] = value` adds or replaces.", "`key in d` checks keys only.", "`d.get(key, default)` never crashes."],
              code='stock = {"tea": 3}\nstock["pie"] = 5\nprint("pie" in stock)\nprint(stock.get("jam", 0))',
@@ -123,7 +123,7 @@ def l12(b):
                   why="return hands the answer back to whoever called the function.")
         b.predict(f"def add(a, b):\n    print(a + b)\n\nx = add({a}, {c})\nprint(x)", [f"print({a + c})", f"print({a + c})\nprint({a + c})"], extra=["None"],
                   why="The function prints, but returns nothing. A function with no return gives None.")
-    for n in ["Ada", "Kai"]:
+    for n in ["Aeris", "Kai"]:
         b.predict(f'def greet(name="friend"):\n    return "Hi " + name\n\nprint(greet())', [f'print("Hi {n}")', 'print("Hi name")'],
                   why='No argument given, so the default "friend" is used.')
         b.predict(f'def greet(name="friend"):\n    return "Hi " + name\n\nprint(greet("{n}"))', ['print("Hi friend")', 'print("Hi name")'],
@@ -136,13 +136,13 @@ def l12(b):
     b.predict("def f(a, b):\n    return a - b\n\nprint(f(b=2, a=10))", ["print(-8)", "print(2)"], why="Named arguments match by name, not by order.")
     for a, c in [(3, 4), (6, 2)]:
         b.fill(f"def mul(a, b):\n    ___ a * b\n\nprint(mul({a}, {c}))", ["return", "print", "pass"], why="return gives the value back so print can show it.")
-    b.fill('def greet(name):\n    return "Hi " + name\n\nprint(___("Ada"))', ["greet", "name", "print"], why="Call the function by its name.")
+    b.fill('def greet(name):\n    return "Hi " + name\n\nprint(___("Aeris"))', ["greet", "name", "print"], why="Call the function by its name.")
     b.build("def add(a, b):\n    return a + b", ["print(", "add(", "2", ",", "3", ")", ")"], ask="Print the result of add with 2 and 3.",
             why="Call it inside print.")
     b.order(["def double(x):", "    return x * 2", "print(double(5))"], why="Define first, call after.")
     b.order(["def area(w, h):", "    a = w * h", "    return a", "print(area(3, 4))"], why="Body lines are indented. The call is not.")
     b.bug(["def add(a, b):", "    a + b", "", "print(add(2, 3))"], 1, "    return a + b", why="Without return, the function gives back None.")
-    b.bug(["def greet(name)", '    return "Hi " + name', 'print(greet("Ada"))'], 0, "def greet(name):", why="def lines end with a colon.")
+    b.bug(["def greet(name)", '    return "Hi " + name', 'print(greet("Aeris"))'], 0, "def greet(name):", why="def lines end with a colon.")
     return [
         card("A function is a reusable recipe",
              ["`def name(inputs):` starts it.", "The indented body is the recipe.", "Call it with `name(values)`."],
@@ -155,7 +155,7 @@ def l12(b):
              check=check("def f():\n    print(1)\n\nprint(f())", ["print(1)"], why="f prints 1, then returns None, which the outer print shows.")),
         card("Defaults and names",
              ["`def greet(name=\"friend\"):` gives a default.", "Boxes made inside a function stay inside it."],
-             code='def greet(name="friend"):\n    return "Hi " + name\n\nprint(greet())\nprint(greet("Ada"))',
+             code='def greet(name="friend"):\n    return "Hi " + name\n\nprint(greet())\nprint(greet("Aeris"))',
              check=check('def f(n=3):\n    return n * 2\n\nprint(f())', ["print(0)", "print(None)"], why="No argument, so n = 3. 3 * 2 = 6.")),
     ]
 
@@ -221,7 +221,7 @@ def l14(b):
     b.predict("a = {1, 2, 3}\nb = {2, 3, 4}\nprint(a - b)", ["a = {1, 2, 3}\nb = {2, 3, 4}\nprint(b - a)", "print({2, 3})"],
               why="a - b: what a has that b does not.")
     b.predict("s = {3, 1}\ns.add(1)\nprint(len(s))", ["print(3)", "print(1)"], why="1 is already in the set, so nothing changes.")
-    b.predict("name, age = (\"Ada\", 30)\nprint(age)", ['print("Ada")', 'print(("Ada", 30))'], why="Unpacking: the first goes to name, the second to age.")
+    b.predict("name, age = (\"Aeris\", 30)\nprint(age)", ['print("Aeris")', 'print(("Aeris", 30))'], why="Unpacking: the first goes to name, the second to age.")
     b.fill("a = {1, 2, 3}\nb = {3, 4}\nprint(a ___ b)", ["&", "|", "-"], why="Only 3 is in both: &.")
     b.fill("x, y = 4, 9\nx, y = ___\nprint(x, y)", ["y, x", "x, y", "y, y"], why="Put them on the right in swapped order.")
     b.order(["nums = [2, 2, 5]", "unique = set(nums)", "print(len(unique))"], why="Make the set, then count it.")

@@ -1905,19 +1905,19 @@ function keysAt(node, toks, lv) {
 
 const GIVERS = {
   veylin: { name: "Veylin", role: "keeper of the change ledger", img: "img/junle-room/visitor-elf.webp" },
-  maren: { name: "Maren", role: "senior network engineer", img: "img/junle-room/visitor-maren.webp" },
+  maren: { name: "Marrowen", role: "senior network engineer", img: "img/junle-room/visitor-maren.webp" },
   brann: { name: "Brann", role: "night watch", img: "img/junle-room/visitor-brann.webp" },
-  odile: { name: "Odile", role: "head archivist", img: "img/junle-room/visitor-odile.webp" },
-  garrick: { name: "Garrick", role: "rune-knight of the gate", img: "img/junle-room/visitor-garrick.webp" }
+  odile: { name: "Ondelle", role: "head archivist", img: "img/junle-room/visitor-odile.webp" },
+  garrick: { name: "Garrion", role: "rune-knight of the gate", img: "img/junle-room/visitor-garrick.webp" }
 };
 const CAST = Object.assign({}, GIVERS, {
   pip: { name: "Pip", role: "apprentice scribe", img: "img/junle-room/visitor-pip.webp" },
   ulric: { name: "Ulric", role: "quartermaster", img: "img/junle-room/visitor-ulric.webp" },
-  mira: { name: "Mira", role: "travelling bard", img: "img/junle-room/visitor-mira.webp" },
+  mira: { name: "Mirawen", role: "travelling bard", img: "img/junle-room/visitor-mira.webp" },
   corvin: { name: "Corvin", role: "keeper of the tower clock", img: "img/junle-room/visitor-corvin.webp" },
   sable: { name: "Sable", role: "court artificer", img: "img/junle-room/visitor-sable.webp" },
   morrow: { name: "Morrow", role: "wizard of the old ways", img: "img/junle-room/visitor-morrow.webp" },
-  ilse: { name: "Captain Ilse", role: "captain of the guard", img: "img/junle-room/visitor-ilse.webp" },
+  ilse: { name: "Captain Ilsemar", role: "captain of the guard", img: "img/junle-room/visitor-ilse.webp" },
   thrain: { name: "Thrain", role: "dwarven runesmith", img: "img/junle-room/visitor-thrain.webp" },
   nyx: { name: "Nyx", role: "fae courier", img: "img/junle-room/visitor-nyx.webp" },
   grukk: { name: "Grukk", role: "orc porter", img: "img/junle-room/visitor-grukk.webp" },
@@ -1928,7 +1928,7 @@ const CAST = Object.assign({}, GIVERS, {
   fen: { name: "Fen", role: "kitchen boy", img: "img/junle-room/visitor-fen.webp" }
 });
 const LORE = [
-  { id: "trunk", who: "pip", q: "Maren keeps saying trunk. Is a trunk just a very big access port?", a: ["Yes, it carries more traffic", "No, it carries several VLANs and tags every frame", "It is a port only the core switch may use"], ok: 1, ex: "Access ports belong to one VLAN, untagged. Trunks carry many VLANs, so each frame needs a tag to say which one." },
+  { id: "trunk", who: "pip", q: "Marrowen keeps saying trunk. Is a trunk just a very big access port?", a: ["Yes, it carries more traffic", "No, it carries several VLANs and tags every frame", "It is a port only the core switch may use"], ok: 1, ex: "Access ports belong to one VLAN, untagged. Trunks carry many VLANs, so each frame needs a tag to say which one." },
   { id: "cand", who: "pip", q: "Why does nothing change on the switch when I type set?", a: ["Junos edits a candidate copy until you commit", "The switch is slow at night", "It needs a reboot first"], ok: 0, ex: "set and delete change the candidate configuration. commit checks it and makes it active." },
   { id: "pct", who: "pip", q: "My prompt ends in a percent sign. Where am I?", a: ["In the Junos CLI", "In the FreeBSD shell", "In configuration mode"], ok: 1, ex: "% is the shell. cli takes you to Junos, where > is operational and # is configuration mode." },
   { id: "qsfp", who: "ulric", q: "Your EX4300 came with four QSFP+ ports on the back. What are they for by default?", a: ["Console access", "Virtual Chassis ports, or uplinks if you convert them", "Power for the fans"], ok: 1, ex: "On the EX4300 the rear QSFP+ ports are Virtual Chassis ports by default and can be turned into network ports." },
@@ -2016,7 +2016,7 @@ const TICKETS = [
     steps: [
       { id: "cv", t: "Create VLAN cameras (30)", why: "Cameras get their own VLAN so a compromised camera cannot reach staff or guests.", c: ["configure", "set vlans cameras vlan-id 30", "commit"], ok: () => vlansOf(st.active).some((v) => v.name === "cameras" && v.id === 30) },
       { id: "cp", t: "Put ge-0/0/20 in cameras", why: "The same two lines as every access port so far. You know these now.", c: ["set interfaces ge-0/0/20 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/20 unit 0 family ethernet-switching vlan members cameras", "commit"], ok: () => { const x = port(20); return x.mode === "access" && x.members.length === 1 && x.members[0] === "cameras"; } },
-      { id: "cd", t: "Label it", why: "Garrick will ask what is on port 20 in a year. The description answers for you.", c: ['set interfaces ge-0/0/20 description "gate camera"', "commit"], ok: () => !!port(20).desc },
+      { id: "cd", t: "Label it", why: "Garrion will ask what is on port 20 in a year. The description answers for you.", c: ['set interfaces ge-0/0/20 description "gate camera"', "commit"], ok: () => !!port(20).desc },
       { id: "cm", t: "Prove the switch learned it", why: "The ethernet-switching table lists every MAC address the switch has seen, with its VLAN and port. Find the camera on ge-0/0/20 in cameras.", c: ["run show ethernet-switching table"], ok: () => ran("show ethernet-switching table") && port(20).members[0] === "cameras" }
     ] },
   { id: "006", title: "BAD CHANGE", giver: "veylin",
@@ -2071,7 +2071,7 @@ const ACT2 = [
       { id: "bye", t: "Log out cleanly", why: "exit closes the SSH session and puts you back on your laptop. Never leave sessions open on a customer's switch.", c: ["exit"], ok: () => ranOn("ssh-close", "hlm1") }
     ] },
   { id: "009", title: "NEW INN", giver: "odile", dev: "ggr",
-    intro: "A letter, sealed with butter. 'To the Network Guild. The Gilded Gryphon reopens at first frost. Your Maren left a humming box in our cellar. Guests want the wireless. My staff want the wireless, but NOT the same one as the guests. The kitchen screen must get the orders, and the door locks must never share a network with anybody. Warmly, Tansy Burrowell, innkeeper.' Maren staged it as ggr-sw1. Your account works. The rest is yours.",
+    intro: "A letter, sealed with butter. 'To the Network Guild. The Gilded Gryphon reopens at first frost. Your Marrowen left a humming box in our cellar. Guests want the wireless. My staff want the wireless, but NOT the same one as the guests. The kitchen screen must get the orders, and the door locks must never share a network with anybody. Warmly, Tansy Burrowell, innkeeper.' Marrowen staged it as ggr-sw1. Your account works. The rest is yours.",
     outro: "Tansy writes that the guests are online, the cook has his orders, and the locks talk only to themselves. She also sent a pie. It is on Brann's desk. It may not last.",
     done: "ggr-sw1 has four VLANs, access ports for the desk, kitchen and locks, a trunk to the hall AP, and a tagged uplink to the guild.",
     steps: [
@@ -2160,11 +2160,11 @@ const JQ = {
 };
 const SITES = [
   { v: "forge", dev: "forge-terminal", who: "thrain", place: "the forge", line: "My rune-press talks to the network now. It wants its own VLAN, away from the scribes and their gossip." },
-  { v: "kitchen", dev: "kitchen-till", who: "fen", place: "the kitchen", line: "Cook bought a talking till. It keeps getting lost among the guests. Maren says it needs its own VLAN." },
+  { v: "kitchen", dev: "kitchen-till", who: "fen", place: "the kitchen", line: "Cook bought a talking till. It keeps getting lost among the guests. Marrowen says it needs its own VLAN." },
   { v: "armory", dev: "armory-lock", who: "ilse", place: "the armory", line: "The armory door lock is networked now. A door lock on the guest network would be a joke nobody laughs at." },
   { v: "tower", dev: "tower-clock", who: "corvin", place: "the clock tower", line: "My tower clock now asks the network for the time. Give it a home of its own." },
   { v: "stables", dev: "stable-cam", who: "grukk", place: "the stables", line: "Grukk put box with eye in stables. Box need network. Not guest network. Own network." },
-  { v: "scribes", dev: "scroll-printer", who: "pip", place: "the scriptorium", line: "We got a printer that copies whole scrolls! It needs the network, but Odile says it gets its own VLAN." },
+  { v: "scribes", dev: "scroll-printer", who: "pip", place: "the scriptorium", line: "We got a printer that copies whole scrolls! It needs the network, but Ondelle says it gets its own VLAN." },
   { v: "workshop", dev: "artificer-bench", who: "sable", place: "the workshop", line: "My test bench speaks Ethernet now. Keep it apart from everything else. My experiments are sometimes loud." },
   { v: "loft", dev: "courier-ap", who: "nyx", place: "the courier loft", line: "The courier loft has a new access point for my messengers. Their own VLAN, please. They gossip." },
   { v: "vault", dev: "vault-sensor", who: "ulric", place: "the vault", line: "The vault has a damp sensor now. The ledgers rot if it gets wet. Its own VLAN, nothing else on it." },
@@ -4399,7 +4399,7 @@ function applyFont() {
   r.setProperty("--mono", f.mono + ", var(--sys)");
   r.setProperty("--read", f.read + ", system-ui, sans-serif");
   r.setProperty("--rs", f.rs);
-  $("#fopts").innerHTML = Object.entries(FONTS).map(([k, o]) => `<button class="fopt${k === font ? " on" : ""}" data-f="${k}"><span class="t">${o.name} · ${o.note}</span><span class="r" style="font-family:${o.read.replace(/"/g, "'")}, system-ui">Maren is on the way with a new ticket.</span><span class="m" style="font-family:${o.mono.replace(/"/g, "'")}, monospace">root@acc-sw-01# commit</span></button>`).join("");
+  $("#fopts").innerHTML = Object.entries(FONTS).map(([k, o]) => `<button class="fopt${k === font ? " on" : ""}" data-f="${k}"><span class="t">${o.name} · ${o.note}</span><span class="r" style="font-family:${o.read.replace(/"/g, "'")}, system-ui">Marrowen is on the way with a new ticket.</span><span class="m" style="font-family:${o.mono.replace(/"/g, "'")}, monospace">root@acc-sw-01# commit</span></button>`).join("");
   embedFont();
 }
 function embedFont() {
