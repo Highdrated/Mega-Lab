@@ -210,7 +210,7 @@ function resetConsole(setup, pre) {
 function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/kaatje") + ">"; }
 function setPrompt() { const t = $("tprompt"); if (t) t.textContent = promptStr(); }
 function tstate() {
-  setPrompt(); const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : "") + (c.teams ? " · TEAMS" : "") + (c.spo ? " · SHAREPOINT" : ""); }
+  setPrompt(); const c = R.ctx; const sc = c.mg ? c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").reverse() : []; $("tstate").title = sc.join(", "); $("tstate").textContent = (c.mg ? "GRAPH · " + sc.join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : "") + (c.teams ? " · TEAMS" : "") + (c.spo ? " · SHAREPOINT" : ""); }
 function hl(s) {
   let out = "", cmdNext = true, m;
   const re = /(\s+)|('(?:[^']|'')*'?|"(?:[^"`]|`.)*"?)|(\$(?:\{[^}]*\}?|[\w:?]+))|(-(?:eq|ne|gt|ge|lt|le|like|notlike|match|notmatch|contains|notcontains|in|notin|and|or|not|is|isnot|replace|split|join)\b)|(-[A-Za-z][\w]*:?)|(\d+(?:\.\d+)?(?:[kmgt]b)?\b)|(#.*$)|([|;({})\[\],=@+*/%<>!.])|([^\s|;({})\[\],='"$#]+)/gi;
@@ -228,7 +228,7 @@ function hl(s) {
 }
 function scrollCon() { const s = $("tscroll"); if (s) s.scrollTop = s.scrollHeight; }
 function tline(t, cls) { const o = $("tout"); const d = document.createElement("div"); if (cls) d.className = cls; d.textContent = t; o.appendChild(d); scrollCon(); }
-function tcols() { const w = $("tout").clientWidth - 32; return Math.max(60, Math.floor(w / 8.1)); }
+function tcols() { const o = $("tout"), w = o.clientWidth - 32; if (!tcols.cw) { const s = document.createElement("div"); s.style.cssText = "position:absolute;visibility:hidden;white-space:pre;width:auto"; s.textContent = "x".repeat(100); o.appendChild(s); tcols.cw = s.scrollWidth / 100 || 8.1; s.remove(); } return Math.max(40, Math.floor(w / tcols.cw)); }
 
 function exec(src, opts) {
   opts = opts || {};
@@ -480,7 +480,7 @@ function checkPractice(res) {
 }
 function sidecard(m) {
   if (R.gate) { $("sidecard").innerHTML = gtext().rules; return; }
-  $("sidecard").innerHTML = "<h6>IN THE CHEAT SHEET</h6>" + m.cheat.map(([c, d]) => '<div style="margin:6px 0"><code style="font-size:12px;word-break:break-word">' + esc(c) + '</code><div class="mutetxt" style="font-size:12px">' + esc(d) + "</div></div>").join("") + '<button class="hbtn" type="button" id="openCheat" style="margin-top:8px">OPEN FULL SHEET</button>';
+  $("sidecard").innerHTML = "<h6>IN THE CHEAT SHEET</h6>" + m.cheat.map(([c, d]) => '<div style="margin:6px 0"><code style="font-size:12px;word-break:break-word">' + esc(c).replace(/([a-z])([A-Z])/g, "$1<wbr>$2") + '</code><div class="mutetxt" style="font-size:12px">' + esc(d) + "</div></div>").join("") + '<button class="hbtn" type="button" id="openCheat" style="margin-top:8px">OPEN FULL SHEET</button>';
   $("openCheat").onclick = () => drawer(true);
 }
 

@@ -1,8 +1,8 @@
 const PS=require('./engine.js'); const G=require('./grader.js'); const C=require('./content.node.js');
 let fail=0; const bad=(m)=>{fail++;console.log('FAIL',m);};
-const ms=C.MEMORIES.filter(m=>m.seq===12);
-if(ms.length!==3) bad('three memories');
-if(!C.SEQUENCES.find(s=>s.id===12&&s.open)) bad('sequence 12 open');
+const ms=C.MEMORIES.filter(m=>m.seq===12||m.seq===13);
+if(ms.length!==5) bad('five AB-650 memories');
+if(!C.SEQUENCES.find(s=>s.id===12&&s.open)||!C.SEQUENCES.find(s=>s.id===13&&s.open)) bad('sequences 12 and 13 open');
 for (const m of ms) {
   const w=G.makeCtx(m.setup); const errs=m.watch.map(s=>{const r=PS.run(s.code,w); return r.error?r.error.text():null;});
   console.log(m.id,'watch errors at',errs.map((e,i)=>e?i:null).filter(x=>x!==null).join(','));
@@ -46,6 +46,26 @@ c=G.makeCtx('contactOn'); r=PS.run("New-MailContact -Name 'Saltmere Audit'",c); 
 r=PS.run("New-MailContact -Name 'Saltmere Audit' -ExternalEmailAddress audit@saltmere.example",c); if(r.error) bad('contact create');
 r=PS.run("Get-MailContact -Identity 'Saltmere Audit' | Select-Object DisplayName,ExternalEmailAddress",c); const tx=PS.formatOut(r.out,120); if(!/Saltmere Audit/.test(tx)||!/SMTP:audit@saltmere\.example/.test(tx)) bad('display name defaults to name, SMTP prefix: '+tx);
 r=PS.run("New-MailContact -Name 'Saltmere Audit' -ExternalEmailAddress audit@saltmere.example",c); if(!r.error||!/^\[Lab\]/.test(r.error.text())) bad('duplicate contact says lab');
+
+const AU="$au = Get-MgDirectoryAdministrativeUnit -Filter \"displayName eq 'Bruges office'\"";
+expectErr('auW',"New-MgDirectoryAdministrativeUnitMemberByRef -AdministrativeUnitId 'Bruges office' -OdataId https://graph.microsoft.com/v1.0/users/x",/^\[Lab\].*GUID/,'AU name instead of Id');
+expectErr('auW',AU+"; New-MgDirectoryAdministrativeUnitMemberByRef -AdministrativeUnitId $au.Id -OdataId https://graph.microsoft.com/v1.0/users/lorcan.ivers@halvardco.onmicrosoft.com",/^\[Lab\].*object Id/,'UPN in member URL');
+expectErr('auW',AU+"; New-MgDirectoryAdministrativeUnitMemberByRef -AdministrativeUnitId $au.Id -OdataId lorcan.ivers",/^\[Lab\].*full Graph URL/,'bare name as member');
+expectErr('auW',AU+"; $u = Get-MgUser -UserId cassian.drake@halvardco.onmicrosoft.com; New-MgDirectoryAdministrativeUnitMemberByRef -AdministrativeUnitId $au.Id -OdataId \"https://graph.microsoft.com/v1.0/users/$($u.Id)\"",/^\[Lab\].*already in Bruges office/,'member twice');
+expectErr('auR',"Get-MgDirectoryAdministrativeUnit",/403/,'AU read needs scope');
+expectErr('auW',"New-MgDirectoryAdministrativeUnit -BodyParameter @{ description = 'x' }",/^\[Lab\].*displayName/,'AU needs a name');
+const PRE="$r = Get-MgRoleManagementDirectoryRoleDefinition -Filter \"displayName eq 'Helpdesk Administrator'\"; $u = Get-MgUser -UserId cassian.drake@halvardco.onmicrosoft.com; ";
+const prm=(a,exp,extra)=>PRE+"$params = @{ Action = '"+a+"'; PrincipalId = "+(extra||"$u.Id")+"; RoleDefinitionId = $r.Id; DirectoryScopeId = '/'; Justification = 'x'; ScheduleInfo = @{ StartDateTime = Get-Date; Expiration = "+exp+" } }; New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -BodyParameter $params";
+const TEN="@{ Type = 'AfterDuration'; Duration = 'PT10H' }";
+let pc=expectErr('pimW',prm('SelfActivate',TEN),/^\[Lab\].*SelfActivate is real/,'SelfActivate says so');
+if(pc.t.elig.length!==2) bad('a refused request changes nothing');
+expectErr('pimW',prm('Assign',TEN),/^\[Lab\].*Action must be one of AdminAssign/,'bad action');
+expectErr('pimW',prm('AdminAssign',"@{ Type = 'AfterDuration'; Duration = '10 hours' }"),/^\[Lab\].*ISO 8601/,'bad duration');
+expectErr('pimW',prm('AdminAssign',TEN,"'cassian.drake@halvardco.onmicrosoft.com'"),/^\[Lab\].*PrincipalId must be/,'UPN as PrincipalId');
+expectErr('pimW',PRE+"New-MgRoleManagementDirectoryRoleEligibilityScheduleRequest -Action AdminAssign -PrincipalId $u.Id",/^\[Lab\].*BodyParameter/,'expanded params say so');
+expectErr('guestW',prm('AdminAssign',TEN),/RoleManagement.*403|403/,'PIM needs scope');
+pc=G.makeCtx('pimW'); r=PS.run(prm('adminAssign',TEN),pc); if(r.error||r.out[0].Status!=='Provisioned') bad('camelCase adminAssign works like Learn example: '+(r.error&&r.error.text()));
+r=PS.run(prm('AdminAssign',TEN),pc); if(!r.error||!/already eligible/.test(r.error.text())) bad('assign twice refused');
 global.localStorage={getItem:(k)=>k==='vigil.v1'?JSON.stringify({miss:[{kind:'ps',t:'Set-SPOSite error',ref:{e:'bool'}},{kind:'ps',t:'Connect-SPOService error',ref:{e:'noconn'}},{kind:'ps',t:'x',ref:{e:'param'}},{kind:'typed',t:'q',ref:{g:'tenant',l:1}},{kind:'ps',t:'Set-SPOSite error',ref:{e:'lock'}}]}):null};
 const vo=C.vigilOops(); if(vo.map(x=>x.vigil).join()!=='connect,set,lock') bad('vigil oopsies map, dedupe and order: '+vo.map(x=>x.vigil).join());
 if(!vo.every(x=>x.m.id==='spo'&&x.d===C.DRILLS.spo[x.i])) bad('vigil oopsies point at spo drills');
