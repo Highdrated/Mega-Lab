@@ -139,6 +139,12 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 
 ## Entries
 
+### 2026-11-24, daytime (asked by Kaatje)
+
+- Hexle editor, Assist (her note: Tab did not complete anything, unlike a real editor): Tab now finishes a tag the way Emmet does in VS Code (`h2`, `h2#log`, `.card`, `ul>li*3`, `p>a`, `!` for the page skeleton). Typing `>` adds the closing tag, `</` finishes the open tag, quotes after `=` and brackets in CSS and JavaScript come in pairs, Enter after an opening tag or `{` indents. Like VS Code, typing a closing tag by hand after the editor already added one leaves two. Switch in the editor bar (Assist on / off); always off in From memory. Works in the Target editor, the School play box and the Tourney.
+- Hexle code review, six new habits: alt text that fits the picture (Fix when it is the alt of another lab picture, Tip when it shares no word with the file name), stray spaces inside a tag, closing tags that do not line up and children that are not indented, outdated tags (Fix), links that go nowhere, a title still called Document, a last CSS declaration without a semicolon. All 47 solutions and starters still review clean for the new notes.
+- Hexle: 11 habit drills for the new habits (627 drills). `tools/hexle/test_assist.py` types 30 cases into the editor and ends with ALL OK. CACHE workshop-v124.
+
 ### 2026-11-24, third run
 
 Checked
