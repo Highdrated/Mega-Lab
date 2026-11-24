@@ -10,6 +10,14 @@ Study guide: https://learn.microsoft.com/en-us/credentials/certifications/resour
 
 Goal in her words: "by the end of the lab i can take the exam and pass". The exam name must stay visible in the lab at all times.
 
+## Ladder rule (her words, 24 Nov 2026)
+"the next lesson is a gradual step from the previous so i should not learn about entra then jump to shell scripts the next ladder step - the user or me should already have a general idea of which direction to go in otherwise the helper nearby"
+- The School follows LADDER in data.js, not the exam's order: 1 tenant, 2 identities, 3 sign-in, 4 Graph PowerShell, 5 workloads, 6 Defender, 7 Purview, 8 Copilot, 9 agents, 10 agent guard, 11 monitoring.
+- Every step has a "builds on" line naming the earlier steps it rests on, and Lumen's new-words box (gloss) for terms it introduces.
+- A new tool (like PowerShell) only comes after the same job was done by hand.
+- Cases say which School steps they build on, and only unlock after those steps.
+- Inside a step, lessons and checks also go from familiar to new, one idea at a time.
+
 ## How she learns best (from Hexle, the Junos lab and Pockle)
 - Taught first, then tried. Never thrown in cold.
 - Strict: if it would not work in real life, it does not work in the lab.
@@ -21,7 +29,7 @@ Goal in her words: "by the end of the lab i can take the exam and pass". The exa
 - No emoji, no code comments, fantasy names only, plain easy sentences.
 
 ## The world
-The Vigil, a sky observatory of the Halcyon tenant. The brass orrery is the tenant: inner, middle and outer rings are domains 1, 2 and 3; 58 stars are the 58 skills in the study guide. Keeper Mirethil runs the observatory. Lumen the moth gives hints. Cases come from the household: Quillon Ashgrove (steward), Magister Thessaly (treasurer) and others with fantasy names.
+The Vigil, a sky observatory of the Halcyon tenant. The brass orrery is the tenant: inner, middle and outer rings are domains 1, 2 and 3; 58 stars are the 58 skills in the study guide. Keeper Mirethil runs the observatory. Lumen the moth gives hints. Stars: orange = studied, teal = mastered, hollow = still dark. Look: Orbital direction (see feedback). Cases come from the household: Quillon Ashgrove (steward), Magister Thessaly (treasurer) and others with fantasy names.
 
 ## Screens
 - Observatory: the orrery, readiness by domain, tonight's watch, rank.
@@ -37,7 +45,8 @@ The Vigil, a sky observatory of the Halcyon tenant. The brass orrery is the tena
 - Published demo: https://claude.ai/artifact/SQanZ4NmczQjzyihJJR7jh
 
 ## Her feedback on the demo
-(add her notes here, dated)
+- 24 Nov 2026: "i like it but it feels heavy theme wise - i love minimal orbital was my favorite because of how minimal it was so could we keep that minimal theme going ... it does not have to match completely but same direction would be nice". DONE 24 Nov: restyled to the Orbital direction (white panels, hairlines, system sans, teal #0f8fa8 and orange #e0701a, charcoal chips with an orange underline, dot-grid background). Keep this direction for everything new.
+- 24 Nov 2026: the ladder rule above. DONE 24 Nov in the School (LADDER, builds on, Lumen words, Graph PowerShell split out into step 4).
 
 ## Build stages (one per daily run, only after STATUS says BUILD)
 - [ ] 1. Make the lab real: labs/vigil.html built from tools/vigil (template + data), progress in localStorage key vigil.v1, register it in js/labs.config.js, track it in js/station.js, bump sw.js. Add tools/vigil/test.py (Playwright, ALL OK).
