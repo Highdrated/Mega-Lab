@@ -1,9 +1,11 @@
-import asyncio, os, subprocess, sys
+import asyncio, os, re, subprocess, sys
 from playwright.async_api import async_playwright
 
 HERE = os.path.dirname(os.path.abspath(__file__))
+ROOT = os.path.dirname(os.path.dirname(HERE))
 subprocess.run(["node", os.path.join(HERE, "build.js")], check=True, stdout=subprocess.DEVNULL)
-F = "file://" + os.path.join(HERE, "out", "vigil-demo.html")
+DEMO_F = "file://" + os.path.join(HERE, "out", "vigil-demo.html")
+LAB_F = "file://" + os.path.join(ROOT, "labs", "vigil.html")
 FAIL = []
 
 
@@ -23,10 +25,57 @@ async def last_lines(pg, n=3):
     return (await pg.inner_text("#psw .psb")).strip().split("\n")[-n:]
 
 
-async def main():
-    async with async_playwright() as p:
-        exe = "/usr/bin/google-chrome"
-        b = await p.chromium.launch(executable_path=exe, args=["--no-sandbox"])
+def registry():
+    cfg = open(os.path.join(ROOT, "js", "labs.config.js")).read()
+    check('id: "vigil"' in cfg and 'path: "labs/vigil.html"' in cfg, "Vigil registered in js/labs.config.js")
+    check(os.path.exists(os.path.join(ROOT, "labs", "vigil.html")), "labs/vigil.html built")
+    st = open(os.path.join(ROOT, "js", "station.js")).read()
+    check('["vigil", /^vigil\\.v1$/]' in st, "station tracks vigil.v1")
+    sw = open(os.path.join(ROOT, "sw.js")).read()
+    idx = open(os.path.join(ROOT, "index.html")).read()
+    for f in ["labs.config.js", "station.js"]:
+        a = re.search(re.escape(f) + r"\?v=(\d+)", sw)
+        c = re.search(re.escape(f) + r"\?v=(\d+)", idx)
+        check(a and c and a.group(1) == c.group(1), f"{f} version matches in sw.js and index.html")
+    lab = open(os.path.join(ROOT, "labs", "vigil.html")).read()
+    check("const DEMO = false;" in lab and 'DEMO ? "vigil.demo.v1" : "vigil.v1"' in lab, "lab build uses the vigil.v1 key")
+
+
+async def fresh_lab(pg):
+    check(await pg.evaluate("S.sl") == 0 and await pg.evaluate("S.lit.length + S.seen.length") == 0, "lab starts empty")
+    check(await pg.inner_text("#cgo") == "LOOK" or (await pg.inner_text("#cgo")).lower() == "look", "observatory says the case is not open yet")
+    await pg.click("nav.tabs button[data-view=case]")
+    check(await pg.locator("#glass .lockscr").count() == 1, "case workstation is locked at the start")
+    check(await pg.locator("#casel .need").count() == 2, "locked case lists the two School steps it needs")
+    check(await pg.evaluate("[...document.querySelectorAll('.appsw button')].every(b => b.disabled)"), "PowerShell and Edge cannot be opened while locked")
+    await pg.click("#casel .need [data-gg=workloads]")
+    check(await pg.evaluate("cur === 'school' && school.g === 'workloads' && school.l === 0"), "Open step jumps to School step 5")
+    await pg.evaluate("school.g='graph';school.l=1;school.qa=null;renderStrip();renderLesson()")
+    await pg.reload()
+    await pg.wait_for_timeout(400)
+    check(await pg.evaluate("school.g === 'graph' && school.l === 1"), "School position remembered after reload")
+    check(await pg.evaluate("!!localStorage.getItem('vigil.v1') && !localStorage.getItem('vigil.demo.v1')"), "lab saves to vigil.v1 only")
+    await pg.click("nav.tabs button[data-view=obs]")
+
+
+async def replay_lab(pg):
+    sl = await pg.evaluate("S.sl")
+    await pg.reload()
+    await pg.wait_for_timeout(400)
+    check(await pg.evaluate("S.caseDone") and await pg.evaluate("S.sl") == sl, "solved case and starlight survive a reload")
+    check((await pg.inner_text("#cgo")).lower() == "replay", "observatory offers a replay")
+    await pg.click("#cgo")
+    check(await pg.locator("#glass .lockscr").count() == 0 and await pg.evaluate("C.done.length") == 0, "replay opens a fresh case")
+    await pg.evaluate("complete('find');complete('contain');complete('fix')")
+    await pg.wait_for_timeout(1200)
+    check(await pg.evaluate("S.sl") == sl, "replay gives no new starlight")
+    gtxt = await pg.inner_text(".closed .gain")
+    check("practice only" in gtxt.lower(), "replay close screen says practice only: " + gtxt)
+    await pg.click("[data-closed]")
+
+
+async def suite(b, F, lab):
+        tag = "lab" if lab else "demo"
         pg = await b.new_page(viewport={"width": 1440, "height": 900})
         errs = []
         pg.on("pageerror", lambda e: errs.append(str(e)))
@@ -35,6 +84,12 @@ async def main():
         await pg.evaluate("localStorage.clear()")
         await pg.reload()
         await pg.wait_for_timeout(600)
+        if lab:
+            await fresh_lab(pg)
+        else:
+            await pg.click("nav.tabs button[data-view=case]")
+            check(await pg.locator("#glass .lockscr").count() == 0, "demo case is open for review")
+            await pg.click("nav.tabs button[data-view=obs]")
 
         check(await pg.inner_text("#ecode") == "EXAM AB-650", "exam code visible in header")
         check("Administering Microsoft 365 and AI Services" in await pg.inner_text("#ename"), "exam name visible in header")
@@ -67,6 +122,7 @@ async def main():
                     await pg.locator("#lesson .where tr").nth(r).click()
                     check(await pg.evaluate("!!document.querySelector('#lens .it.on')"), f"{g} lesson {l + 1} row {r + 1} lights up in the Lens")
         check(await pg.evaluate("S.seen.length+S.lit.length") == 58, "finishing every lesson studies every star")
+        check(await pg.evaluate("caseOpen()"), "case opens once steps 5 and 8 are finished")
 
         await pg.click("nav.tabs button[data-view=case]")
         await pg.click("[data-app=ps]")
@@ -103,10 +159,42 @@ async def main():
         check(await pg.locator(".closed").count() == 1, "case closed screen shows")
 
         await pg.click("[data-closed]")
+        if lab:
+            await replay_lab(pg)
         await pg.click("nav.tabs button[data-view=trial]")
         await pg.click("[data-exam=start]")
         check("AB-650" in await pg.inner_text("#exam"), "exam code on the trial screen")
+        check("demo" not in (await pg.inner_text("#exam")).lower(), "trial screen never says demo")
+        m0 = await pg.evaluate("S.miss.filter(m => m.kind === 'trial').length")
+        await pg.click("[data-exam=next]")
+        await pg.click("[data-exam=next]")
+        await pg.click("[data-exam=next]")
+        await pg.click("[data-exam=next]")
+        await pg.click("[data-exam=finish]")
+        check(await pg.evaluate("S.miss.filter(m => m.kind === 'trial').length") == m0 + 5, "unanswered trial questions go to the oopsies")
         check(not errs, "no console or page errors: " + "; ".join(errs[:3]))
+        await pg.close()
+
+
+async def main():
+    registry()
+    async with async_playwright() as p:
+        b = await p.chromium.launch(executable_path="/usr/bin/google-chrome", args=["--no-sandbox"])
+        for F, lab in [(DEMO_F, False), (LAB_F, True)]:
+            before = len(FAIL)
+            await suite(b, F, lab)
+            print(("lab" if lab else "demo"), "ok" if len(FAIL) == before else "FAILED")
+        for w, h in [(1280, 766), (1280, 800), (1440, 866), (1440, 900), (1920, 1046), (1920, 1080)]:
+            pg = await b.new_page(viewport={"width": w, "height": h})
+            await pg.goto(LAB_F)
+            await pg.evaluate("localStorage.clear()")
+            await pg.reload()
+            await pg.wait_for_timeout(300)
+            sh, ch = await pg.evaluate("(() => { const s = document.querySelector('.side'); return [s.scrollHeight, s.clientHeight]; })()")
+            check(sh <= ch, f"observatory side column fits at {w}x{h} ({sh} > {ch})")
+            hd = await pg.evaluate("(() => { const c = document.querySelector('.examchip').getBoundingClientRect(); return c.top >= 0 && c.bottom <= 58; })()")
+            check(hd, f"exam chip stays inside the header at {w}x{h}")
+            await pg.close()
         await b.close()
 
 

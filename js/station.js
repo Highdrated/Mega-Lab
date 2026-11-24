@@ -23,6 +23,7 @@ const ST_TRACK = [
   ["proxle", /^pvelab\.done$/],
   ["codex", /^codex\.read$/],
   ["mscodex", /^mscodex\.read$/],
+  ["vigil", /^vigil\.v1$/],
 ];
 const ST_RANKS = [[0, "Cadet"], [50, "Deckhand"], [150, "Technician"], [350, "Engineer"], [700, "Specialist"], [1200, "Officer"], [2000, "Commander"], [3200, "Station Chief"]];
 const ST_FEED = 5, ST_CAP = 80, ST_COOLDOWN = 20000;
