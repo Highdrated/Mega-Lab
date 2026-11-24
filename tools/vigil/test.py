@@ -292,6 +292,17 @@ async def syncle(b):
         await pg.evaluate("S.seqSel = 12; S.selMem = 0; renderCorridor()")
         ok = await pg.evaluate("[...document.querySelectorAll('#detail *, #nodes *')].filter(e => !e.children.length && e.scrollWidth > e.clientWidth + 1 && getComputedStyle(e).overflow !== 'hidden').length === 0")
         check(ok, f"Syncle sequence 12 corridor has no overflowing text at {w}x{h}")
+        for mid in ["adminunit", "pimeligible"]:
+            await pg.evaluate(f"openMemory(MEMORIES.find(m => m.id === '{mid}'))")
+            await pg.wait_for_timeout(200)
+            hdr = await pg.evaluate("(() => { const a = document.getElementById('home').getBoundingClientRect(), c = document.getElementById('cheatbtn').getBoundingClientRect(); return Math.abs(a.top + a.height / 2 - (c.top + c.height / 2)) < 6 && c.right <= innerWidth; })()")
+            check(hdr, f"Syncle header stays on one row in {mid} at {w}x{h}")
+            await pg.fill("#cmd", "Connect-MgGraph -Scopes RoleManagement.ReadWrite.Directory,AdministrativeUnit.ReadWrite.All -NoWelcome; Get-MgRoleManagementDirectoryRoleEligibilityScheduleInstance; Get-MgDirectoryAdministrativeUnit")
+            await pg.press("#cmd", "Enter")
+            await pg.wait_for_timeout(400)
+            wide = await pg.evaluate("[...document.querySelectorAll('#tout div')].filter(e => e.scrollWidth > e.clientWidth + 1).length")
+            check(wide == 0, f"Syncle console tables fit the console in {mid} at {w}x{h} ({wide} lines too wide)")
+        await pg.evaluate("renderCorridor()")
     check(not errs, "no page errors in Vigil or Syncle: " + "; ".join(errs))
     await pg.close()
 
