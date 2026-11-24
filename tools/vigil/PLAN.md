@@ -61,6 +61,7 @@ The Vigil, a sky observatory of the Halcyon tenant. The brass orrery is the tena
 - Published demo: https://claude.ai/artifact/SQanZ4NmczQjzyihJJR7jh
 
 ## Her feedback on the demo
+- 24 Nov 2026: "something feels missing" - she picked more life on screen and a daily loop, and asked for both to go into this daily run. Added as stages 2 and 3, right after making the lab real.
 - 24 Nov 2026: tenant page too long, too little typing, observatory too simple, self-review before sending. DONE 24 Nov: short lessons, typed checks, PowerShell window with real errors, typed site search, blueprint observatory with Paper and Night chart, oopsies log, tools/vigil/test.py (ALL OK).
 - 24 Nov 2026: "i like it but it feels heavy theme wise - i love minimal orbital was my favorite because of how minimal it was so could we keep that minimal theme going ... it does not have to match completely but same direction would be nice". DONE 24 Nov: restyled to the Orbital direction (white panels, hairlines, system sans, teal #0f8fa8 and orange #e0701a, charcoal chips with an orange underline, dot-grid background). Keep this direction for everything new.
 - 24 Nov 2026: the ladder rule above. DONE 24 Nov in the School (LADDER, builds on, Lumen words, Graph PowerShell split out into step 4).
@@ -69,14 +70,26 @@ The Vigil, a sky observatory of the Halcyon tenant. The brass orrery is the tena
 - [x] School in short lessons with typed checks, Lumen words beside the Lens, learning ladder (24 Nov 2026).
 - [x] Case "The salary ledger" with a strict SharePoint Online PowerShell window and typed site search (24 Nov 2026).
 - [ ] 1. Make the lab real: labs/vigil.html built from tools/vigil (build.js gets an output argument), progress in localStorage key vigil.v1 (lit, seen, read, miss, sl, skin), register it in js/labs.config.js (tag Practice or a new Microsoft tag, check how the launcher groups tags first), track it in js/station.js, add it to sw.js. tools/vigil/test.py must run against the built lab too. Do NOT merge to main while PLAN says MERGE: WAIT.
-- [ ] 2. Pockle bank tools/pockle/banks/vigil.js: tap-only cards for all 11 School steps (recall first, short), plus "Vigil oopsies" from vigil.v1 miss shown first, like Juniper oopsies. Keep tools/pockle/test.py green.
-- [ ] 3. Syncle: a new sequence for the AB-650 PowerShell that Syncle lacks: guest invitations (New-MgInvitation), administrative units, PIM role eligibility requests, mail contacts (New-MailContact), SharePoint Online (Connect-SPOService, Set-SPOSite -RestrictContentOrgWideSearch). Vigil oopsies of kind "ps" show up there. Verify every cmdlet, parameter and error text on Microsoft Learn first. Change tools/syncle sources and rebuild with build.py; keep every Syncle test green.
-- [ ] 4. Cases for identities and sign-in (the heaviest domain): 6 cases, strict, with typing (forms and PowerShell), each saying which School steps it builds on.
-- [ ] 5. Cases for Defender and Purview: 6 cases.
-- [ ] 6. Cases for Copilot, agents and Agent 365: 8 cases.
-- [ ] 7. Cases for tenant and workloads: 6 cases.
-- [ ] 8. Trial question bank: at least 150 questions spread by the exam weights; 50-question timed mock; readiness from mock results; "book the exam" gate at 80% three days in a row.
-- [ ] 9. Sound (Junle-style, off by default), an exam-day checklist, and ComfyUI queue items where art would add immersion.
+- [ ] 2. More life on screen (her pick, 24 Nov 2026: "something feels missing"). Keep it calm and Orbital, never busy, no mouse-follow or parallax, everything off under prefers-reduced-motion.
+   - Sound: Junle-style soft synth effects made with the Web Audio API (no audio files): tick on a correct typed answer, low thud on a wrong one, a short chime when a star lights, a save click in the admin centers, a soft keyboard tick in the PowerShell window. A sound toggle in the header, off by default, remembered in vigil.v1.
+   - Motion: a star that lights up flares and draws its constellation line; gauge needles sweep to their new value; the readiness number counts up; a lesson's progress dot fills; Save in an admin center shows a real-looking "Saving..." then a green "Changes saved" bar, like the real Microsoft 365 admin centers.
+   - The case world reacts: characters reply in the ledger after real delays (Magister Thessaly answers the access review, Quillon thanks you), sites show state chips that change (Restricted content discovery: On), and a Copilot test panel lets her ask Copilot the steward's question again before and after the fix and see the answer change.
+   - Keeper Mirethil and Lumen react to what she does (a short line after a right streak, after a wrong turn, after a step is finished), plain words, one sentence.
+   - Self-review every effect at 1280, 1440 and 1920 in Paper and Night chart; extend test.py (sound off by default, toggle remembered, reduced motion respected, the Copilot answer changes after the fix).
+- [ ] 3. A daily loop (her pick, 24 Nov 2026): a Tonight screen that is the first thing she sees.
+   - Tonight's watch: oopsies to redo first (her own wrong typed answers, wrong places, wrong case actions and PowerShell errors from vigil.v1 miss), then the next School lesson, then one short case or a 5-question trial round. A clear end: "Watch complete".
+   - Spaced review: an oopsie answered right comes back after 1, 3 and 7 days, then leaves the list. Typed again from memory, not multiple choice.
+   - Grind: a nightly streak, starlight for each finished watch, ranks, and a small reward at 3, 7 and 14 nights (an unlock such as a new chart skin or a Keeper line).
+   - Progress lives in vigil.v1; a missed night breaks the streak but never deletes progress.
+   - Self-review and extend test.py (due items appear, a right answer schedules the next review, the streak counts and resets correctly).
+- [ ] 4. Pockle bank tools/pockle/banks/vigil.js: tap-only cards for all 11 School steps (recall first, short), plus "Vigil oopsies" from vigil.v1 miss shown first, like Juniper oopsies. Keep tools/pockle/test.py green.
+- [ ] 5. Syncle: a new sequence for the AB-650 PowerShell that Syncle lacks: guest invitations (New-MgInvitation), administrative units, PIM role eligibility requests, mail contacts (New-MailContact), SharePoint Online (Connect-SPOService, Set-SPOSite -RestrictContentOrgWideSearch). Vigil oopsies of kind "ps" show up there. Verify every cmdlet, parameter and error text on Microsoft Learn first. Change tools/syncle sources and rebuild with build.py; keep every Syncle test green.
+- [ ] 6. Cases for identities and sign-in (the heaviest domain): 6 cases, strict, with typing (forms and PowerShell), each saying which School steps it builds on.
+- [ ] 7. Cases for Defender and Purview: 6 cases.
+- [ ] 8. Cases for Copilot, agents and Agent 365: 8 cases.
+- [ ] 9. Cases for tenant and workloads: 6 cases.
+- [ ] 10. Trial question bank: at least 150 questions spread by the exam weights; 50-question timed mock; readiness from mock results; "book the exam" gate at 80% three days in a row.
+- [ ] 11. An exam-day checklist, and ComfyUI queue items where art would add immersion.
 
 ## Daily run log
 (newest first)
