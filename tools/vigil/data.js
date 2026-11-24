@@ -1,0 +1,187 @@
+const EXAM = {
+  code: "AB-650",
+  name: "Administering Microsoft 365 and AI Services",
+  cert: "Microsoft 365 Certified: Microsoft 365 and AI Services Administrator Associate",
+  minutes: 100,
+  pass: 700,
+  url: "https://learn.microsoft.com/en-us/credentials/certifications/ai-services-administrator-associate/",
+  guide: "https://learn.microsoft.com/en-us/credentials/certifications/resources/study-guides/ab-650",
+  checked: "24 Nov 2026"
+};
+
+const DOMAINS = [
+  { id: 1, name: "Configure and manage Microsoft 365 tenants and workloads", short: "Tenant and workloads", weight: "20-25%", share: 0.22 },
+  { id: 2, name: "Govern and secure Microsoft 365 tenants and workloads", short: "Govern and secure", weight: "40-45%", share: 0.42 },
+  { id: 3, name: "Manage and secure AI services in Microsoft 365", short: "AI services", weight: "35-40%", share: 0.36 }
+];
+
+const PORTALS = [
+  { id: "m365", name: "Microsoft 365 admin center", url: "admin.microsoft.com", tree: [
+    ["Users", [["users", "Active users", "every user account, with licences and sign-in status"], ["contacts", "Contacts", "mail contacts: outside people listed in the address book"], ["guests", "Guest users", "guest accounts invited from other organisations"], ["deleted", "Deleted users", "users deleted in the last 30 days, ready to restore"]]],
+    ["Teams & groups", [["groups", "Active teams & groups", "Microsoft 365 groups, teams, distribution lists and security groups"], ["shared", "Shared mailboxes", "shared mailboxes and their members"]]],
+    ["Roles", [["roles", "Role assignments", "admin roles and who holds them"], ["au", "Administrative units", "administrative units and the admins scoped to them"]]],
+    ["Billing", [["licenses", "Licenses", "subscriptions, free and assigned licences, per user and per group"], ["products", "Your products", "the subscriptions the organisation pays for"]]],
+    ["Copilot", [["cop.overview", "Overview", "a summary of Copilot health, licences and recommendations"], ["cop.settings", "Settings", "the Copilot settings in four tabs: User access, Data access, Copilot actions, Other settings"], ["cop.connectors", "Connectors", "Copilot connectors that index outside data sources"], ["cop.billing", "Billing & usage", "pay-as-you-go services, billing policies and budgets"], ["cop.cost", "Cost management", "Copilot Credits and usage-based billing for experiences such as Cowork"]]],
+    ["Agents", [["ag.overview", "Overview", "agent activity, agents at risk and agents without an owner"], ["ag.all", "All agents", "the agent registry and the list of publish requests"], ["ag.tools", "Tools", "the tools registry: MCP servers, plugins and connectors that agents use"], ["ag.settings", "Settings", "agent rules, agent and plugin access, sharing, user access, templates and tags"]]],
+    ["Settings", [["domains", "Domains", "the domains of the tenant and their DNS status"], ["org", "Org settings", "three tabs: Services, Security & privacy, Organization profile"], ["search", "Search & intelligence", "Microsoft Search answers such as bookmarks and acronyms"], ["backup", "Microsoft 365 Backup", "backup policies and restores for SharePoint, OneDrive and Exchange"], ["apps", "Integrated apps", "apps deployed to users across Microsoft 365"]]],
+    ["Reports", [["usage", "Usage", "usage reports per service, including the Microsoft 365 Copilot readiness and usage report"]]],
+    ["Health", [["health", "Service health", "incidents and advisories for every service, with email notifications"], ["mc", "Message center", "announcements of planned changes"], ["net", "Network connectivity", "connectivity scores and insights per office location"]]]
+  ] },
+  { id: "entra", name: "Microsoft Entra admin center", url: "entra.microsoft.com", tree: [
+    ["Entra ID", [["users", "Users", "all identities, their properties and sign-in settings"], ["groups", "Groups", "security and Microsoft 365 groups, expiration and naming policy"], ["roles", "Roles & admins", "every Entra role and its assignments"], ["au", "Admin units", "administrative units"], ["agents", "Agents", "agent identities and agent blueprints (Microsoft Entra Agent ID)"], ["ca", "Conditional Access", "Conditional Access policies, the What If tool and authentication strengths"], ["authm", "Authentication methods", "the authentication methods policy and password protection"], ["sspr", "Password reset", "self-service password reset settings"], ["brand", "Custom branding", "the look of the sign-in page"], ["ext", "External Identities", "external collaboration and cross-tenant access settings"], ["signin", "Sign-in logs", "every sign-in with its result, error code and applied policies"]]],
+    ["ID Protection", [["risk", "Risky users and sign-ins", "risk detections for users, sign-ins and agents"]]],
+    ["ID Governance", [["pim", "Privileged Identity Management", "eligible and active role assignments, activation rules"], ["ent", "Entitlement management", "access packages and their policies"], ["lcw", "Lifecycle workflows", "automated joiner, mover and leaver tasks, also for agent sponsors"], ["rev", "Access reviews", "recurring reviews of membership and role assignments"]]]
+  ] },
+  { id: "defender", name: "Microsoft Defender portal", url: "security.microsoft.com", tree: [
+    ["Investigation & response", [["incidents", "Incidents & alerts", "alerts and the incidents that group them"]]],
+    ["Email & collaboration", [["explorer", "Explorer", "search delivered mail and act on it"], ["policies", "Policies & rules", "threat policies, preset security policies and alert policies"], ["attack", "Attack simulation training", "phishing simulations and training campaigns"], ["review", "Review", "quarantined messages"], ["subs", "Submissions", "messages reported to Microsoft for analysis"]]]
+  ] },
+  { id: "purview", name: "Microsoft Purview portal", url: "purview.microsoft.com", tree: [
+    ["Solutions", [["dlp", "Data Loss Prevention", "DLP policies, alerts and activity explorer"], ["ip", "Information Protection", "sensitivity labels, label policies and auto-labelling"], ["dlm", "Data Lifecycle Management", "retention policies and retention labels"], ["dspm", "DSPM for AI", "AI activity, data risk assessments and one-click policies"], ["audit", "Audit", "the audit log search"]]]
+  ] },
+  { id: "teams", name: "Teams admin center", url: "admin.teams.microsoft.com", tree: [
+    ["Teams", [["manage", "Manage teams", "every team with its owners, members and channels"], ["tpol", "Teams policies", "who may create private and shared channels"]]],
+    ["Meetings", [["mpol", "Meeting policies", "recording, transcription and Copilot settings for meetings"]]],
+    ["Users", [["ext", "External access", "chat and calls with people in other organisations"], ["guest", "Guest access", "what guests may do inside teams"]]]
+  ] },
+  { id: "spo", name: "SharePoint admin center", url: "halcyon-admin.sharepoint.com", tree: [
+    ["Sites", [["active", "Active sites", "every site with its owners, sharing and site-level settings"], ["delsites", "Deleted sites", "sites that can still be restored"]]],
+    ["Policies", [["sharing", "Sharing", "the organisation-wide external sharing level"], ["access", "Access control", "unmanaged devices, idle sign-out and network location"]]],
+    ["Reports", [["dag", "Data access governance", "oversharing reports: sharing links, labels and broad access"]]]
+  ] },
+  { id: "exo", name: "Exchange admin center", url: "admin.exchange.microsoft.com", tree: [
+    ["Recipients", [["mailboxes", "Mailboxes", "user and shared mailboxes with their delegation"], ["exgroups", "Groups", "distribution lists and mail-enabled security groups"], ["excontacts", "Contacts", "mail contacts and mail users"]]],
+    ["Mail flow", [["trace", "Message trace", "the path of a message through Exchange Online"]]]
+  ] },
+  { id: "apps", name: "Microsoft 365 Apps admin center", url: "config.office.com", tree: [
+    ["Customization", [["policy", "Policy Management", "the Cloud Policy service: policies for the Microsoft 365 apps, per group"]]]
+  ] },
+  { id: "ppac", name: "Power Platform admin center", url: "admin.powerplatform.microsoft.com", tree: [
+    ["Licensing", [["capacity", "Copilot Studio capacity", "message capacity for Copilot Studio, prepaid and pay-as-you-go"]]],
+    ["Security", [["datapol", "Data policies", "which connectors may be used, and together with which others"]]]
+  ] }
+];
+
+const GROUPS = [
+  { id: "tenant", d: 1, tag: "Tenant", title: "Configure and manage a Microsoft 365 tenant",
+    intro: "The tenant is the organisation's own space in Microsoft 365. This part of the exam asks where the tenant-wide switches live: its look, its domains, its licences, its backup and its health. Most answers start in one place, the Microsoft 365 admin center.",
+    where: [["Logo and colours in the top bar", "m365", "Settings > Org settings > Organization profile > Custom themes"], ["Logo and background on the sign-in page", "entra", "Entra ID > Custom branding"], ["Add or verify a domain", "m365", "Settings > Domains"], ["Password expiry, privacy profile, idle timeout", "m365", "Settings > Org settings > Security & privacy"], ["Assign licences to a group", "m365", "Billing > Licenses"], ["Back up SharePoint, OneDrive, Exchange", "m365", "Settings > Microsoft 365 Backup"], ["Office network quality", "m365", "Health > Network connectivity"], ["Outages and email alerts about them", "m365", "Health > Service health"]],
+    facts: ["A custom theme changes the Microsoft 365 top bar. There is one default theme for everyone and up to four extra themes for chosen Microsoft 365 groups.", "The sign-in page is not a theme. Its logo and background are company branding in Microsoft Entra.", "You prove you own a domain with a `TXT` record at the DNS host. The first `onmicrosoft.com` domain can never be removed.", "A domain cannot be removed while a user, group or mailbox still has an address on it.", "Org settings has three tabs: Services, Security & privacy, Organization profile. Release preferences (Standard or Targeted release) sit under Organization profile.", "Group-based licensing gives every member of a group the licence and takes it away when they leave. It needs Microsoft Entra ID P1.", "Pay-as-you-go services have no seat to assign. A billing policy links them to an Azure subscription, and you pay for what is used.", "Microsoft 365 Copilot is a per-user add-on on top of an eligible base licence. Copilot Studio capacity is managed in the Power Platform admin center.", "Microsoft 365 Backup is pay-as-you-go. It protects SharePoint sites, OneDrive accounts and Exchange mailboxes, each with its own backup policy.", "Service health lists incidents (a service is broken for users) and advisories (limited impact). Email notifications are set under Customize."],
+    watch: ["Theme and sign-in branding are two different places. The exam likes to swap them.", "Message center tells you about planned changes. Service health tells you what is broken now.", "A licence that will not assign often means the user has no usage location."],
+    roles: "Global Reader can look at almost everything. Service Support Administrator reads Service health and opens support tickets. License Administrator assigns licences. Billing Administrator handles subscriptions and billing policies." },
+  { id: "workloads", d: 1, tag: "Workloads", title: "Manage Microsoft 365 workloads",
+    intro: "Workloads are the services people use all day: mail, Teams and SharePoint. The exam checks the everyday admin jobs, and how each workload is prepared for Copilot.",
+    where: [["Create a shared mailbox", "m365", "Teams & groups > Shared mailboxes"], ["Mailbox delegation in detail", "exo", "Recipients > Mailboxes"], ["Owners, members and channels of any team", "teams", "Teams > Manage teams"], ["Copilot and transcription in meetings", "teams", "Meetings > Meeting policies"], ["Create a site, change its owners or sharing", "spo", "Sites > Active sites"], ["Organisation-wide external sharing", "spo", "Policies > Sharing"], ["Find overshared sites", "spo", "Reports > Data access governance"]],
+    facts: ["A shared mailbox needs no licence up to 50 GB. It needs one above 50 GB, or for an archive or litigation hold.", "Full Access lets someone open the mailbox. Send As sends as the mailbox with no trace of the sender. Send on Behalf shows both names.", "To keep a leaver's mail without paying, convert the mailbox to a shared mailbox, then remove the licence.", "A team has owners and members. Keep at least two owners. Standard channels live in the team's SharePoint site. Each private or shared channel gets its own site.", "The Copilot setting in a Teams meeting policy has the values On and On only with retained transcript. The second one means Copilot only works when the transcript is kept.", "A site can never share more openly than the organisation-wide level allows. It can be stricter.", "The three default SharePoint groups are Owners (Full Control), Members (Edit) and Visitors (Read).", "SharePoint Advanced Management comes with the Microsoft 365 Copilot licence. It brings data access governance reports, Restricted Content Discovery, restricted access control and site lifecycle policies.", "Restricted Content Discovery hides a site from Copilot and from organisation-wide search. People who already have access can still open the site.", "Restricted SharePoint Search, the old allow list of at most 100 sites, is being retired. New tenants cannot turn it on after 31 July 2026. Use Restricted Content Discovery instead.", "A data access governance report can start a site access review. The site owners get an email and fix the sharing themselves."],
+    watch: ["Restricted Content Discovery does not change permissions. It only stops discovery.", "External access (chat with other organisations) is not guest access (guests inside a team).", "Copilot respects permissions. An overshared site is the real problem, not Copilot."],
+    roles: "Exchange Administrator for mailboxes, Teams Administrator for teams and meeting policies, SharePoint Administrator for sites and SharePoint Advanced Management." },
+  { id: "identities", d: 2, tag: "Identities", title: "Manage identities in Microsoft Entra",
+    intro: "Every person, guest and admin is an identity in Microsoft Entra. This group covers creating them, grouping them, giving them only the admin rights they need, and doing it in bulk with Microsoft Graph PowerShell.",
+    where: [["Create, block or restore a user", "m365", "Users > Active users, Deleted users"], ["Who may invite guests, from which domains", "entra", "Entra ID > External Identities"], ["Dynamic groups, expiration, naming policy", "entra", "Entra ID > Groups"], ["Just-in-time admin roles", "entra", "ID Governance > Privileged Identity Management"], ["Delegate admin work for one part of the organisation", "entra", "Entra ID > Admin units"], ["Outside people in the address book", "m365", "Users > Contacts"]],
+    facts: ["A deleted user can be restored for 30 days. After that the account is gone.", "A user needs a usage location before most licences can be assigned.", "External collaboration settings decide who may invite guests and which domains are allowed or blocked. Cross-tenant access settings decide whether you trust another tenant's MFA and devices.", "Microsoft 365 groups are for collaboration and come with a mailbox and a site. Security groups give access. Dynamic membership needs Entra ID P1.", "An expiration policy removes Microsoft 365 groups that nobody renews.", "Privileged Identity Management makes a role eligible instead of always active. The admin activates it for a limited time, with MFA, a reason and, if you want, an approval. It needs Entra ID P2.", "AI Administrator is the least-privileged role for Copilot and agent settings.", "An administrative unit holds users, groups or devices. A role scoped to it works only on its members. A restricted management unit also protects its members from tenant-wide admins.", "A mail contact has an outside address and shows in the address book. It has no mailbox and cannot sign in.", "Microsoft Graph PowerShell is the supported module. The old MSOnline and AzureAD modules are retired.", "`Connect-MgGraph -Scopes \"User.ReadWrite.All\"` signs in and asks only for the rights you name. `Get-MgUser` returns one page unless you add `-All`."],
+    watch: ["Eligible is not active. An eligible admin has no rights until they activate.", "A guest can sign in. A mail contact cannot.", "Ask Graph for the smallest scope that does the job."],
+    roles: "User Administrator for users and groups, Privileged Role Administrator for role assignments and PIM, Groups Administrator for group settings, Guest Inviter to invite guests." },
+  { id: "auth", d: 2, tag: "Sign-in", title: "Implement and manage authentication and access",
+    intro: "This group is about how people prove who they are, and what they may reach once they have. It is the heaviest identity topic: authentication methods, password rules, self-service reset, sign-in troubleshooting and Conditional Access.",
+    where: [["Which methods people may use", "entra", "Entra ID > Authentication methods > Policies"], ["Custom banned passwords, smart lockout", "entra", "Entra ID > Authentication methods > Password protection"], ["Self-service password reset", "entra", "Entra ID > Password reset"], ["Why a sign-in failed", "entra", "Entra ID > Sign-in logs"], ["Policies that allow, block or ask for MFA", "entra", "Entra ID > Conditional Access"], ["Risky users and risky sign-ins", "entra", "ID Protection"]],
+    facts: ["The authentication methods policy turns each method on for chosen groups: passkeys (FIDO2), Microsoft Authenticator, Temporary Access Pass, SMS and more.", "Passkeys are phishing-resistant. SMS and voice are the weakest methods.", "A Temporary Access Pass is a time-limited code. Use it to set up a passwordless method or to recover an account.", "The global banned password list protects every tenant by itself. A custom banned list needs Entra ID P1.", "Smart lockout blocks the attacker and tries to leave the real user alone. By default it locks after 10 failed tries for one minute.", "Self-service password reset is set to None, Selected or All. Start with Selected and a pilot group. You choose whether one or two methods are needed.", "In a hybrid setup, password writeback sends the new password back to the on-premises Active Directory.", "The sign-in log shows the result, the error code and the Conditional Access policies that applied. Error 50126 is a wrong user name or password. 53003 is a block by Conditional Access. 50053 is a smart lockout. 50057 is a disabled account.", "Conditional Access needs Entra ID P1. Policies that use user risk or sign-in risk need P2.", "Security defaults and Conditional Access do not go together. Turn security defaults off first.", "Report-only mode shows what a policy would do without enforcing it. The What If tool tests one sign-in against your policies.", "Always leave emergency (break-glass) accounts out of blocking policies."],
+    watch: ["Sign-in risk is answered with MFA. User risk is answered with a secure password change.", "A policy in report-only mode protects nobody yet.", "Admins always have self-service password reset, with two methods, whatever you set for users."],
+    roles: "Authentication Policy Administrator for methods and password protection, Conditional Access Administrator for policies, Security Reader or Reports Reader for sign-in logs." },
+  { id: "defender", d: 2, tag: "Defender", title: "Secure Microsoft 365 workloads",
+    intro: "Microsoft Defender for Office 365 protects mail and collaboration. The exam asks four things: read the alerts, set the threat policies, clean up after an attack, and train people with simulations.",
+    where: [["Alerts and incidents", "defender", "Investigation & response > Incidents & alerts"], ["Preset and custom threat policies", "defender", "Email & collaboration > Policies & rules > Threat policies"], ["Find and remove delivered mail", "defender", "Email & collaboration > Explorer"], ["Phishing simulations and training", "defender", "Email & collaboration > Attack simulation training"], ["Quarantined mail", "defender", "Email & collaboration > Review"]],
+    facts: ["An incident groups related alerts into one story. Work the incident, not each alert on its own.", "Preset security policies come as Standard and Strict. Order of power: Strict first, then Standard, then custom policies, then built-in protection.", "Safe Links checks a link at the moment someone clicks it. Safe Attachments opens an attachment in a sandbox first.", "Dynamic Delivery delivers the mail body at once and adds the attachments after the scan.", "Plan 1 gives protection and real-time detections. Plan 2 adds Threat Explorer, automated investigation and response, and attack simulation training.", "In Explorer you select the bad messages and take an action such as soft delete. Soft-deleted mail can still be recovered.", "Zero-hour auto purge removes mail that was delivered and later found to be bad.", "A simulation picks a technique such as Credential Harvest, a payload, the target users and the training for people who fall for it.", "A training campaign assigns training without sending a simulation."],
+    watch: ["Message trace in Exchange shows the route of a mail. It does not remove anything.", "Strict wins over Standard when a user is in both.", "Explorer is Plan 2. With Plan 1 you get real-time detections instead."],
+    roles: "Security Administrator for policies, Security Operator for alerts and response, Attack Simulation Administrator for simulations." },
+  { id: "purview", d: 2, tag: "Purview", title: "Protect data by using Microsoft Purview",
+    intro: "Purview is where data is labelled, kept, deleted and guarded. For this exam you mostly decide which tool fits a requirement, and you know how each one also covers Copilot.",
+    where: [["Policies that stop data leaving", "purview", "Data Loss Prevention > Policies"], ["DLP alerts and what triggered them", "purview", "Data Loss Prevention > Alerts, Activity explorer"], ["Sensitivity labels and their policies", "purview", "Information Protection"], ["Retention policies and retention labels", "purview", "Data Lifecycle Management"], ["AI activity and oversharing checks", "purview", "DSPM for AI"]],
+    facts: ["A DLP policy has locations, conditions and actions. Locations include Exchange, SharePoint, OneDrive, Teams chat and channel messages, devices and Microsoft 365 Copilot.", "The Microsoft 365 Copilot location stops Copilot from using items that carry the sensitivity labels you pick. It goes in a policy of its own, not mixed with other locations.", "Endpoint DLP only works on devices that are onboarded.", "Run a new DLP policy in simulation mode first.", "A sensitive information type recognises a pattern, such as an IBAN or a credit card number.", "A sensitivity label can encrypt, mark and restrict a file. Users only see a label after a label policy publishes it to them.", "An auto-labelling policy labels existing files and mail in the service, with no user action.", "Copilot can only use an encrypted file when the user has the View and Extract rights. A Copilot answer takes over the highest label of its sources.", "A retention policy covers a whole location. A retention label goes on single items and can mark them as records.", "When rules collide, keeping wins over deleting, and the longest retention period wins.", "DSPM for AI shows how AI is used, finds sensitive data in prompts and answers, and offers one-click policies. Its data risk assessments look for overshared sites."],
+    watch: ["Creating a label is not enough. Without a label policy nobody can use it.", "Retention is about keeping and deleting. DLP is about stopping a leak. Do not mix them up.", "DSPM for AI needs auditing to be on."],
+    roles: "Compliance Administrator, or the Purview role groups for each solution. Information Protection Admins for labels, Data Security Management for DSPM." },
+  { id: "copilot", d: 3, tag: "Copilot", title: "Enable and manage Microsoft 365 Copilot",
+    intro: "Before anyone gets Copilot you check that the tenant and the data are ready. After that you run it from one page: Copilot > Settings in the Microsoft 365 admin center.",
+    where: [["Is the tenant ready for Copilot", "m365", "Reports > Usage > Microsoft 365 Copilot > Readiness"], ["Every Copilot setting", "m365", "Copilot > Settings"], ["Web search for Copilot", "apps", "Customization > Policy Management"], ["Connectors to outside data", "m365", "Copilot > Connectors"], ["Usage-based billing for Cowork", "m365", "Copilot > Cost management"], ["Overshared sites", "spo", "Reports > Data access governance"]],
+    facts: ["The readiness report shows who can get a licence and whether their apps are ready. New data can take up to 72 hours.", "Copilot inside Word, Excel, PowerPoint, Outlook and Teams needs current apps on the Current or Monthly Enterprise channel.", "Copilot only shows a user what that user can already open. So you fix oversharing in the data, not in Copilot.", "Tools for data readiness: data access governance reports, Restricted Content Discovery, sensitivity labels, DLP for the Copilot location and DSPM for AI.", "Copilot > Settings has four tabs: User access, Data access, Copilot actions and Other settings.", "Self-service purchases are under User access, with the choices Allow, Allow trials only and Do not allow.", "Copilot in admin centers is under User access and is on by default. It covers the Microsoft 365, Exchange, SharePoint and Teams admin centers.", "Image generation and video generation are two separate switches under Copilot actions.", "The AI disclaimer is under Other settings. Turning it on also creates a policy in the Microsoft 365 Apps admin center.", "Web search for Copilot and Copilot Chat is one policy, Allow web search in Copilot, in the Cloud Policy service. The entry on the Copilot page is only a shortcut to it.", "Third-party AI providers are under Data access. When you turn a provider on, your data is processed by that provider.", "Copilot connectors, once called Microsoft Graph connectors, index outside data. Results respect the permissions of the source.", "Copilot Cowork is billed by use, in Copilot Credits. It works only after usage-based billing is turned on. The discovery setting controls whether people see it, not whether they may use it.", "Copilot Search needs no setup for licensed users. People without a licence get Microsoft Search."],
+    watch: ["AI Administrator changes Copilot settings. Global Reader can only look.", "Web search is not a switch on the Copilot page. The real control is in config.office.com.", "Hiding Cowork does not block it, and showing it does not pay for it."],
+    roles: "AI Administrator for Copilot settings, Global Reader to view them, Office Apps Administrator for cloud policies, Billing Administrator for billing." },
+  { id: "agents", d: 3, tag: "Agents", title: "Implement and manage agents in Microsoft 365 and Agent 365",
+    intro: "Agents are AI workers that act for people. Agent 365 is the control plane for them, inside the Microsoft 365 admin center under Agents. Microsoft Entra Agent ID gives each agent its own identity.",
+    where: [["Every agent, and publish requests", "m365", "Agents > All agents"], ["Rules, access, sharing, templates", "m365", "Agents > Settings"], ["MCP servers, plugins, connectors", "m365", "Agents > Tools"], ["Agent identities and blueprints", "entra", "Entra ID > Agents"], ["Conditional Access for agents", "entra", "Entra ID > Conditional Access"], ["Access packages for agents", "entra", "ID Governance > Entitlement management"], ["Keep a sponsor on every agent", "entra", "ID Governance > Lifecycle workflows"]],
+    facts: ["An agent blueprint is the template. Each agent identity is made from a blueprint.", "A policy on the blueprint, such as Conditional Access, reaches every agent made from it. Disabling the blueprint stops all of them at once.", "Every agent identity needs at least one sponsor: the person answerable for the agent. An owner is the technical admin and is optional.", "A lifecycle workflow moves sponsorship to someone else when the sponsor changes job or leaves.", "Conditional Access for agents needs Entra ID P1. ID Protection for agents needs P2.", "An access package gives an agent access for a limited time. The sponsor can request it for the agent.", "The agent registry lists Microsoft agents, your own agents and agents from other publishers in one place.", "From the registry an admin can install, publish, block, unblock, delete an agent, give it a new owner, or upload a custom agent.", "Publish requests wait under All agents > Requests. You publish or reject each one.", "The Researcher and Analyst agents cannot be limited to chosen users. You can only block them for everyone.", "Agents > Settings holds agent management rules, agent and plugin access (Microsoft, your organisation, external publishers), sharing, user access and tags.", "User access is set to All users by default. The sharing setting only covers agents made with Agent Builder.", "Tools are what an agent can do, for example through MCP servers. You can block a whole server or one tool. Connectors are shown there but managed in the Power Platform admin center."],
+    watch: ["Sponsor is about accountability. Owner is about technical control.", "A block in the registry counts for the whole organisation.", "The rule Reassign ownerless agents to manager only covers Agent Builder agents."],
+    roles: "AI Administrator for the registry and agent settings, Agent ID Administrator for agent identities, Conditional Access Administrator for policies." },
+  { id: "agentgov", d: 3, tag: "Agent guard", title: "Secure and govern agents by using Agent 365",
+    intro: "Once agents run, you watch what they do, keep sensitive data away from them, and close the gaps. Agent 365 gathers the signals from Entra, Defender and Purview in one view.",
+    where: [["Agent activity, risk, missing owners", "m365", "Agents > Overview"], ["Apply security templates to agents", "m365", "Agents > Settings > Agent management rules"], ["DLP and labels for agents", "purview", "Data Loss Prevention, Information Protection"], ["AI activity and risky use", "purview", "DSPM for AI"], ["Risky agent identities", "entra", "ID Protection"]],
+    facts: ["The Agents overview shows activity, usage trends, agents at risk, agents with exceptions and agents with no owner.", "Agent activity includes the prompts, the tools the agent used and the result.", "Sensitivity labels and DLP from Purview also apply to agents. An agent cannot hand out what the user may not see.", "Agent interactions are recorded for audit and investigation.", "A policy template is a ready set of security policies. The rule action Apply template puts it on many agents at once.", "Apply template is a one-time bulk action. It works on agent instances that have an agent identity, not on blueprints.", "A rule can block ownerless agents that nobody uses, or reject publish requests older than a number of days."],
+    watch: ["Monitoring shows the gap. A rule or a policy closes it.", "Templates are applied when you run the rule. They do not keep running by themselves."],
+    roles: "AI Administrator in the admin center, Security Administrator and Compliance Administrator for the Defender and Purview side." },
+  { id: "monitor", d: 3, tag: "Monitoring", title: "Monitor AI services in Microsoft 365",
+    intro: "The last group is about numbers: what AI costs, who uses it and whether the service is healthy. Microsoft calls the whole set of controls the Copilot Control System.",
+    where: [["Copilot Credits and usage-based billing", "m365", "Copilot > Cost management"], ["Pay-as-you-go billing policies and budgets", "m365", "Copilot > Billing & usage"], ["Copilot Studio message capacity", "ppac", "Licensing > Copilot Studio capacity"], ["Copilot usage per app", "m365", "Reports > Usage > Microsoft 365 Copilot"], ["Copilot incidents", "m365", "Health > Service health"]],
+    facts: ["The Copilot Control System has three pillars: security and governance, management controls, and measurement and reporting.", "Per-user Copilot licences are a fixed cost under Billing. Usage-based experiences are paid in Copilot Credits.", "Pay-as-you-go takes two steps: add a billing policy, then connect it to a service.", "The Copilot usage report breaks adoption down per app and also shows agent usage.", "User names in usage reports are hidden by default. You change that in Org settings > Services > Reports.", "The Copilot dashboard in Viva Insights shows adoption and impact over time.", "Service health lists Microsoft 365 Copilot as its own service. You can get email about its incidents."],
+    watch: ["Reports Reader is enough to read usage reports. Do not hand out Global Administrator for that.", "Budgets and billing policies limit pay-as-you-go spend. Licences do not."],
+    roles: "Reports Reader or AI Administrator for usage reports, Billing Administrator or Global Administrator for billing setup, Service Support Administrator for Service health." }
+];
+
+const SKILLS = [
+  ["s01", "tenant", "Tenant branding: logo, company URL, themes, backgrounds"],
+  ["s02", "tenant", "Implement and manage domains"],
+  ["s03", "tenant", "Org settings: security, privacy, organization profile"],
+  ["s04", "tenant", "Microsoft 365 licences: group-based, pay-as-you-go"],
+  ["s05", "tenant", "Licences for AI services: Copilot, Agent 365, Copilot Studio"],
+  ["s06", "tenant", "Microsoft 365 Backup: set up, restore, monitor"],
+  ["s07", "tenant", "Network connectivity insights"],
+  ["s08", "tenant", "Service health and notifications"],
+  ["s09", "workloads", "Mailboxes, including shared mailboxes"],
+  ["s10", "workloads", "Teams: channels, owners, members"],
+  ["s11", "workloads", "Copilot in Teams meetings, transcription"],
+  ["s12", "workloads", "SharePoint sites and permissions"],
+  ["s13", "workloads", "SharePoint and OneDrive for Copilot"],
+  ["s14", "identities", "Create and manage users"],
+  ["s15", "identities", "Guest users and external access"],
+  ["s16", "identities", "Groups, including Microsoft 365 groups"],
+  ["s17", "identities", "Roles and Privileged Identity Management"],
+  ["s18", "identities", "Administrative units"],
+  ["s19", "identities", "Contacts"],
+  ["s20", "identities", "Bulk management with Microsoft Graph PowerShell"],
+  ["s21", "auth", "Authentication methods"],
+  ["s22", "auth", "Microsoft Entra Password Protection"],
+  ["s23", "auth", "Self-service password reset"],
+  ["s24", "auth", "Investigate and resolve authentication issues"],
+  ["s25", "auth", "Conditional Access, ID Protection and MFA"],
+  ["s26", "defender", "Alerts in Defender for Office 365"],
+  ["s27", "defender", "Threat policies and rules"],
+  ["s28", "defender", "Investigate and respond to threats"],
+  ["s29", "defender", "Attack simulations and training campaigns"],
+  ["s30", "purview", "Requirements for DLP policies"],
+  ["s31", "purview", "Requirements for information protection"],
+  ["s32", "purview", "Requirements for data lifecycle management"],
+  ["s33", "purview", "Review and respond to DLP alerts"],
+  ["s34", "purview", "Monitor and secure AI activity with DSPM"],
+  ["s35", "copilot", "Assess tenant readiness for Copilot"],
+  ["s36", "copilot", "Data readiness: leaks, oversharing, compliance"],
+  ["s37", "copilot", "Web search for Copilot and Copilot Chat"],
+  ["s38", "copilot", "Microsoft 365 Copilot Search"],
+  ["s39", "copilot", "Copilot settings for a tenant"],
+  ["s40", "copilot", "Copilot user experiences"],
+  ["s41", "copilot", "Microsoft 365 Copilot Cowork"],
+  ["s42", "copilot", "Third-party AI providers"],
+  ["s43", "copilot", "Copilot connectors"],
+  ["s44", "agents", "Lifecycle of agent identities with Entra Agent ID"],
+  ["s45", "agents", "Secure agent access: access packages, Conditional Access"],
+  ["s46", "agents", "Agent owners"],
+  ["s47", "agents", "Agent settings: types, sharing, templates, user access"],
+  ["s48", "agents", "Discover agents in the agent registry"],
+  ["s49", "agents", "Review requests: publish or reject"],
+  ["s50", "agents", "Install, block or control access; upload custom agents"],
+  ["s51", "agents", "Tools in Agent 365"],
+  ["s52", "agentgov", "Monitor agent activity"],
+  ["s53", "agentgov", "Protect sensitive data with Agent 365"],
+  ["s54", "agentgov", "Evaluate compliance gaps"],
+  ["s55", "monitor", "Costs for AI services"],
+  ["s56", "monitor", "Copilot usage reports"],
+  ["s57", "monitor", "Usage and adoption with the Copilot Control System"],
+  ["s58", "monitor", "Service health with the Copilot Control System"]
+];
