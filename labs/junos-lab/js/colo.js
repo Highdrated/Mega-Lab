@@ -2,7 +2,7 @@ const COLO_HYGIENE = "Multi-tenant datacenter: hygiene";
 const COLO_ISOLATION = "Multi-tenant datacenter: isolation";
 const COLO_PROVISION = "Multi-tenant datacenter: provisioning";
 const COLO_INCIDENT = "Multi-tenant datacenter: incidents";
-const COLO_INTRO = "You run a colocation hall shared by three customers. Rack M1 is yours: edge-rtr and colo-core. Each customer has a cage with its own switch and server: Acme (VLAN 110, 10.200.10.0/24, acme-sw, acme-web-1), Borealis (VLAN 120, 10.200.20.0/24, bor-sw, bor-db-1) and Cobalt (VLAN 130, 10.200.30.0/24, cob-sw, cob-app-1). Every customer's gateway is .1 on colo-core, their switch answers on .2, and a filter on each gateway keeps the customers apart. Your NOC sits in its own building (VLAN 99, 10.99.0.0/24): noc-pc is a Windows PC at 10.99.0.20 and noc-monitor-1 is the monitoring server at 10.99.0.50. ";
+const COLO_INTRO = "You run a colocation hall shared by three customers. Rack M1 is yours: edge-rtr and colo-core. Each customer has a cage with its own switch and server: Acme (VLAN 110, 10.200.10.0/24, acme-sw, acme-web-1), Borealis (VLAN 120, 10.200.20.0/24, bor-sw, bor-db-1) and Cobalt (VLAN 130, 10.200.30.0/24, cob-sw, cob-app-1). Every customer's gateway is .1 on colo-core, their switch answers on .2, and a filter on each gateway keeps the customers apart. Your NOC sits in its own building (VLAN 99, 10.99.0.0/24). noc-pc is a Windows PC at 10.99.0.20. noc-monitor-1 is the monitoring server at 10.99.0.50. ";
 const COLO_TENANTS = [
   { key: "acme", name: "Acme", vid: 110, net: "10.200.10", sw: "acme-sw", srv: "acme-web-1", srvRole: "Dell server · Acme web", port: "ge-0/0/1", filter: "ACME-IN", rackX: 380 },
   { key: "borealis", name: "Borealis", vid: 120, net: "10.200.20", sw: "bor-sw", srv: "bor-db-1", srvRole: "Dell server · Borealis DB", port: "ge-0/0/2", filter: "BOR-IN", rackX: 670 },
@@ -194,7 +194,7 @@ const COLO_SCENARIOS = [
         test: () => coloOnline("cobalt") },
     ],
     hints: [
-      "Ask the switch what it sees: show ethernet-switching table lists the MAC address learned on ge-0/0/7, and show lldp neighbors tells you what the uplink and server ports connect to. An empty table only means nothing has talked yet: open the unknown device, ping 10.200.30.1 once, and look again.",
+      "Ask the switch what it sees. show ethernet-switching table lists the MAC address learned on ge-0/0/7. show lldp neighbors tells you what the uplink and server ports connect to. An empty table only means nothing has talked yet: open the unknown device, ping 10.200.30.1 once, and look again.",
       "Make the dead-end VLAN: set vlans quarantine vlan-id 999. Give it no l3-interface, so nothing routes out of it.",
       "Move the port: delete interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members cobalt, then set interfaces ge-0/0/7 unit 0 family ethernet-switching vlan members quarantine.",
       "Label as you go: set interfaces ge-0/0/7 description unknown-device-quarantined, set interfaces ge-0/0/0 description uplink-colo-core, set interfaces ge-0/0/1 description cob-app-1. Commit.",
@@ -242,7 +242,7 @@ const COLO_SCENARIOS = [
     group: COLO_HYGIENE,
     title: "48. The Handover Note Is Wrong",
     intro: COLO_INTRO,
-    desc: "TICKET: Borealis is down since last night's cable tidy-up. The handover note says bor-db-1 is on bor-sw port ge-0/0/1, and the switch's own description on that port agrees. Believe the switch's live tables, not the note: find where the server really is, bring Borealis back, and correct the port descriptions so the record matches reality.",
+    desc: "TICKET: Borealis is down since last night's cable tidy-up. The handover note says bor-db-1 is on bor-sw port ge-0/0/1, and the switch's own description on that port agrees. Believe the switch's live tables, not the note. Find where the server really is and bring Borealis back. Then correct the port descriptions so the record matches reality.",
     setup(){
       const C = coloBase();
       const entry = linksOf(C.srv.borealis, "eth0")[0];
@@ -448,7 +448,7 @@ const COLO_SCENARIOS = [
         test: () => coloOnline("acme") && coloOnline("cobalt") && coloApart("acme", "cobalt") && pingOk("noc-pc", "10.200.10.2") },
     ],
     hints: [
-      "List before you delete: on colo-core, show configuration | match borealis and show configuration | match 120 give you the full inventory of what belongs to them.",
+      "List before you delete. On colo-core, show configuration | match borealis and show configuration | match 120 list everything that belongs to them.",
       "Unhook things in the order they depend on each other: first delete interfaces ge-0/0/2 unit 0, then delete vlans borealis, delete interfaces irb unit 120, delete firewall family inet filter BOR-IN.",
       "Shut the door: set interfaces ge-0/0/2 disable. Use show | compare before you commit and read every line: only Borealis should appear.",
       "On edge-rtr: delete routing-options static route 10.200.20.0/24. Then ping from acme-web-1 and cob-app-1 to prove the neighbours are fine.",
@@ -494,7 +494,7 @@ const COLO_SCENARIOS = [
     group: COLO_PROVISION,
     title: "55. Renumber a Switch Without Locking Yourself Out",
     intro: COLO_INTRO,
-    desc: "TICKET: the address plan changes: customer switches move from .2 to .5. Change acme-sw's own address from 10.200.10.2 to 10.200.10.5. You are in the NOC, the cage is locked, and SSH (user noc-admin) is your only way in, so the address you are changing is the one you are connected through.",
+    desc: "TICKET: the address plan changes: customer switches move from .2 to .5. Change acme-sw's own address from 10.200.10.2 to 10.200.10.5. You are in the NOC and the cage is locked. SSH (user noc-admin) is your only way in. So the address you are changing is the one you are connected through.",
     setup(){
       const C = coloBase();
       cfgDo(C.sw.acme, [
@@ -550,7 +550,7 @@ const COLO_SCENARIOS = [
         test: () => coloApart("acme", "borealis") && coloApart("borealis", "cobalt") },
     ],
     hints: [
-      "Narrow it down with what works: bor-db-1 pings 10.200.20.1, so cage and core are fine. Run traceroute 8.8.8.8 on bor-db-1: it gets out as far as the ISP, so the way there works and the reply is what gets lost.",
+      "Narrow it down with what works: bor-db-1 pings 10.200.20.1, so cage and core are fine. Run traceroute 8.8.8.8 on bor-db-1. It gets as far as the ISP, so the way out works. The reply is what gets lost.",
       "A reply needs a route back to the customer. Compare a healthy customer with the broken one on the router that faces the internet: on edge-rtr, show route. Acme and Cobalt each have a line. Borealis does not.",
       "On edge-rtr: set routing-options static route 10.200.20.0/24 next-hop 10.255.0.2. Commit and ping again from bor-db-1.",
     ],
@@ -590,7 +590,7 @@ const COLO_SCENARIOS = [
     group: COLO_INCIDENT,
     title: "58. Power Drill: Will Three Customers Stay Up?",
     intro: COLO_INTRO,
-    desc: "DRILL: the hall has one small UPS in Rack M1, bought when there was one customer. Before the yearly outage test, check whether it can carry everything in the hall. Size the battery for the real load, then run the drill with the hall's grid button and prove all three customers stay online while the grid is out.",
+    desc: "DRILL: the hall has one small UPS in Rack M1, bought when there was one customer. Before the yearly outage test, check whether it can carry everything in the hall. Size the battery for the real load. Then run the drill with the hall's grid button. Prove that all three customers stay online while the grid is out.",
     setup(){
       coloBase();
       makeUps(107, 480, "1U Rack UPS 1000W", 1000);

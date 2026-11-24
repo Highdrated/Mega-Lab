@@ -194,7 +194,7 @@ const INCIDENTS = [
         why: "Restoring the device is not the same as restoring the service. Users care about the second one.",
         test: ids => { const h = devices[ids.pc]; return h && h.cfg && h.cfg.gw && pingOk(h, h.cfg.gw); } },
     ],
-    debrief: "A dead core switch takes everything behind it with it. The lesson is the order you work in: confirm power and presence at the device BEFORE touching configuration. Nothing in the config was wrong here, and an engineer who starts with show commands on a box that is not running wastes the outage window.",
+    debrief: "A dead core switch takes everything behind it with it. The lesson is the order you work in: confirm power and presence at the device BEFORE touching configuration. Nothing in the config was wrong here. An engineer who starts with show commands on a box that is not running wastes the outage window.",
   },
   {
     id: "service-crash",

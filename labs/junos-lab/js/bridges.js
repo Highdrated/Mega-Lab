@@ -54,7 +54,7 @@ const BRIDGE_SCENARIOS = [
     group: BASICS_GROUP, kind: "starter",
     title: "3b. Read the Switch Before You Change It",
     tour: { start: ["floor-sw", "pc-ben"] },
-    desc: "TICKET: pc-ben (a Mac) has no network. pc-anna (Windows) and the engineer's admin-laptop (Linux) on the same switch are fine. Do not guess. Ask floor-sw which port is down and why, repair it, and then label the three PC ports with a description naming the machine on each, so the next engineer can read it straight from the switch.",
+    desc: "TICKET: pc-ben (a Mac) has no network. pc-anna (Windows) and the engineer's admin-laptop (Linux) on the same switch are fine. Do not guess. Ask floor-sw which port is down and why, and repair it. Then give the three PC ports a description that names the machine on each. The next engineer can then read it straight from the switch.",
     setup(){
       siteZone("Office floor", 60, 100, 700, 400, "building", 4);
       makeCrac(90, 420, "AC-Floor", 3500);

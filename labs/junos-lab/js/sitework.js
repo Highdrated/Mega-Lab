@@ -430,7 +430,7 @@ const SITE_L1 = "Site work: Level 1, moves and adds";
 const SITE_L2 = "Site work: Level 2, new services on existing gear";
 const SITE_L3 = "Site work: Level 3, installing new devices";
 const SITE_L4 = "Site work: Level 4, full projects";
-const SITE_INTRO = "The site is already running: a Datacenter with three racks (edge-rtr and core-sw in A1, srv-sw and the file server fileserver-1 in A2), an Office on office-sw, and an ISP. Staff is VLAN 10 (10.10.10.0/24, DHCP from core-sw), servers are VLAN 20 (10.10.20.0/24). Load the setup, then work the ticket. Every PC shows its operating system on its card, and takes that system's commands: to ask DHCP for an address use ipconfig /renew on Windows, sudo ipconfig set en0 DHCP on a Mac, dhclient eth0 on Linux. ";
+const SITE_INTRO = "The site is already running: a Datacenter with three racks (edge-rtr and core-sw in A1, srv-sw and the file server fileserver-1 in A2), an Office on office-sw, and an ISP. Staff is VLAN 10 (10.10.10.0/24, DHCP from core-sw), servers are VLAN 20 (10.10.20.0/24). Load the setup, then work the ticket. Every PC shows its operating system on its card and takes that system's commands. To ask DHCP for an address, use ipconfig /renew on Windows, sudo ipconfig set en0 DHCP on a Mac, or dhclient eth0 on Linux. ";
 
 const SITE_SCENARIOS = [
   {

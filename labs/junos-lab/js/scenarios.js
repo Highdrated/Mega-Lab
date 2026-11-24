@@ -396,7 +396,7 @@ const SCENARIOS = [
     },
     checks: [
       { desc: "A change was committed with commit confirmed",
-        why: "commit confirmed is the specific safety mechanism for changes to a device you can only reach through itself — an ordinary commit gives you no way back if it locks you out.",
+        why: "commit confirmed is the safety net for changes to a device you can only reach through itself. An ordinary commit gives you no way back if it locks you out.",
         test: () => devsBy("switch").some(sw => sw.stats.usedCommitConfirmed) },
       { desc: "…and then actually confirmed (no rollback timer left running)",
         why: "The safety net only protects you if you forget to confirm. If you meant the change to stick, confirming it is what makes it permanent instead of temporary.",
@@ -982,7 +982,7 @@ const SCENARIOS = [
         test: () => { const r2 = byName("edge-r1");
           return !!(r2 && r2.d && (r2.d.bgpPeers || []).some(p => p.state === "Established")); } },
       { desc: "A default route was LEARNED, not typed: show route says [BGP/170], and no static default exists",
-        why: "This is the entire point of running BGP here — a typed static route can't detect the provider going down; a LEARNED one disappears the instant the session does, protecting you from blackholing traffic.",
+        why: "This is the whole point of running BGP here. A typed static route can't tell that the provider went down. A LEARNED route disappears the moment the session does, so you never send traffic into a black hole.",
         test: () => { const r2 = byName("edge-r1");
           if(!r2) return false;
           if((r2.d.routes || []).some(rt => rt.net === "0.0.0.0")) return false;

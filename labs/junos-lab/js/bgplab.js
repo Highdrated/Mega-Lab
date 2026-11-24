@@ -2,9 +2,9 @@ const BGP_L1 = "BGP step by step: Level 1, bring a session up";
 const BGP_L2 = "BGP step by step: Level 2, what a session gives you";
 const BGP_L3 = "BGP step by step: Level 3, two providers";
 const BGP_L4 = "BGP step by step: Level 4, announce your own network";
-const BGP_INTRO = "BGP in one sentence: two routers that know each other's AS number open a session and swap lists of networks they can reach. Here edge-r1 is your edge router, in your own AS 65010. Provider A is AS 65001 and sits at 203.0.113.1 on the other end of ge-0/0/0. When the session is Established, the provider tells you about the default route 0.0.0.0/0, and office-pc (10.0.50.20, NAT already set up) gets internet without you typing a route. show bgp summary on edge-r1 is your main tool: Established is good, and for every other state the last column says why. ";
+const BGP_INTRO = "BGP in one sentence: two routers that know each other's AS number open a session and swap lists of networks they can reach. Here edge-r1 is your edge router, in your own AS 65010. Provider A is AS 65001 and sits at 203.0.113.1 on the other end of ge-0/0/0. Once the session is Established, the provider tells you about the default route 0.0.0.0/0. Then office-pc (10.0.50.20, NAT already set up) gets internet without you typing a route. show bgp summary on edge-r1 is your main tool: Established is good, and for every other state the last column says why. ";
 const BGP_INTRO_2 = BGP_INTRO + "This site also has Provider B: AS 65002 at 198.51.100.1 on ge-0/0/2, with addresses and NAT already in place. ";
-const BGP_INTRO_PUB = "Your company also owns a block of public addresses, 192.0.2.0/24. It lives on edge-r1 ge-0/0/3, and web-server-1 has 192.0.2.10 with no NAT in front of it. A public address only works if the internet knows where it lives, and the only way to tell it is to announce the network to your provider over BGP. By default Junos announces nothing of your own: you choose what to announce with an export policy. ";
+const BGP_INTRO_PUB = "Your company also owns a block of public addresses, 192.0.2.0/24. It lives on edge-r1 ge-0/0/3, and web-server-1 has 192.0.2.10 with no NAT in front of it. A public address only works if the internet knows where it lives. The only way to tell the internet is to announce the network to your provider over BGP. By default Junos announces nothing of your own: you choose what to announce with an export policy. ";
 
 function bgpBase(opts){
   opts = opts || {};
@@ -152,7 +152,7 @@ const BGP_SCENARIOS = [
         test: () => bgpOnline("office-pc") },
     ],
     hints: [
-      "Two commands side by side: show bgp summary shows which address the router is calling, and show interfaces terse shows the address on ge-0/0/0. The neighbour must be in the same small network as that interface.",
+      "Two commands side by side. show bgp summary shows which address the router is calling. show interfaces terse shows the address on ge-0/0/0. The neighbour must be in the same small network as that interface.",
       "ge-0/0/0 is 203.0.113.2/30. A /30 holds exactly two usable addresses, .1 and .2. You are .2, so the provider can only be .1.",
       "A neighbour is a list entry, so setting a new one adds to the list. Remove the wrong one first: delete protocols bgp group TO-A neighbor 203.0.113.11, then set protocols bgp group TO-A neighbor 203.0.113.1, and commit.",
     ],
@@ -238,7 +238,7 @@ const BGP_SCENARIOS = [
     title: "65. BGP 7: Lose a Provider and Stay Online",
     intro: BGP_INTRO_2,
     tour: { touch: ["edge-r1", "office-pc"] },
-    desc: "DRILL: both providers are connected and both sessions are Established. Management wants proof that the office survives losing Provider A. Take the line to Provider A down on purpose by disabling ge-0/0/0 on edge-r1, then show that office-pc is still online and that its traffic now leaves through Provider B. Leave the line down so the result can be checked.",
+    desc: "DRILL: both providers are connected and both sessions are Established. Management wants proof that the office survives losing Provider A. Take the line to Provider A down on purpose: disable ge-0/0/0 on edge-r1. Then show that office-pc is still online, and that its traffic now leaves through Provider B. Leave the line down so the result can be checked.",
     setup(){ bgpBase({ second: true, b: true }); },
     checks: [
       { desc: "The line to Provider A is down and its session is no longer Established",
@@ -255,7 +255,7 @@ const BGP_SCENARIOS = [
         test: () => bgpOnline("office-pc") },
     ],
     hints: [
-      "Record the starting point first: show route on edge-r1 and note which provider the default goes to, and run tracert 8.8.8.8 on office-pc to see the path.",
+      "Record the starting point first. Run show route on edge-r1 and note which provider the default goes to. Then run tracert 8.8.8.8 on office-pc to see the path.",
       "Take the primary line down: in configure mode, set interfaces ge-0/0/0 disable, then commit.",
       "Now watch it heal: show bgp summary shows one session down and one Established, and show route shows the default pointing at 198.51.100.1. Nobody typed that change.",
       "Prove it from the user's side: ping 8.8.8.8 and tracert 8.8.8.8 on office-pc. The path now goes through Provider B.",
@@ -284,7 +284,7 @@ const BGP_SCENARIOS = [
         test: () => bgpOnline("office-pc") },
     ],
     hints: [
-      "See both directions separately. show route receive-protocol bgp 203.0.113.1 is what the provider tells you, and show route advertising-protocol bgp 203.0.113.1 is what you tell the provider: nothing of your own yet. On web-server-1, ping 8.8.8.8 and read the reason.",
+      "See both directions separately. show route receive-protocol bgp 203.0.113.1 shows what the provider tells you. show route advertising-protocol bgp 203.0.113.1 shows what you tell the provider: nothing of your own yet. On web-server-1, ping 8.8.8.8 and read the reason.",
       "A policy is a list of terms: if a route matches the from part, do the then part. Describe your network and accept it: set policy-options policy-statement ANNOUNCE term mine from route-filter 192.0.2.0/24 exact, and set policy-options policy-statement ANNOUNCE term mine then accept.",
       "A policy does nothing until it is attached: set protocols bgp group TO-A export ANNOUNCE. Commit.",
       "Check your work: show route advertising-protocol bgp 203.0.113.1 now lists 192.0.2.0/24 and names the term that accepted it. Click Provider A and run show bgp to see it from their side.",

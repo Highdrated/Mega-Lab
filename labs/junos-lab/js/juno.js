@@ -190,7 +190,7 @@ function junoProposeFix(){
   if(errd){
     const port = Object.keys(errd.errDisabled)[0];
     junoPendingFix = { kind: "errdis", devId: errd.id, port };
-    return `${errd.name} has ${port} error-disabled. If the underlying cause is fixed, I can run clear ethernet-switching error-disable ${port} on it. Say "do it" — but if the loop or rogue device is still there, it will just trip again, and that will be your answer.`;
+    return `${errd.name} has ${port} error-disabled. If the underlying cause is fixed, I can run clear ethernet-switching error-disable ${port} on it. Say "do it". If the loop or rogue device is still there, the port will just trip again. That tells you the cause is not fixed yet.`;
   }
   const privHosts = Object.values(devices).some(x => x.type === "host" && x.cfg.ip && !isPublicIp(x.cfg.ip));
   const hasIsp = Object.values(devices).some(x => x.type === "isp");

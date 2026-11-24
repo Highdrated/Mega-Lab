@@ -3024,7 +3024,7 @@ const REF_EXAMPLES = [
   },
   {
     dev: "switch", title: "A trunk that carries both VLANs",
-    overview: "One side of the hallway between two switches — the far switch needs these exact same lines with the same room names and numbers. Here is the entire difference between an access port and a trunk: an access port belongs to ONE room and removes the tags; a trunk carries MANY rooms and keeps the tags on, so the far switch can tell which room each frame belongs to.",
+    overview: "One side of the hallway between two switches — the far switch needs these exact same lines with the same room names and numbers. Here is the whole difference between an access port and a trunk. An access port belongs to ONE room and removes the tags. A trunk carries MANY rooms and keeps the tags on. That way the far switch can tell which room each frame belongs to.",
     quick: [
       "set vlans staff vlan-id 10",
       "set vlans guest vlan-id 20",
