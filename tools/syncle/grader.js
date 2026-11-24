@@ -14,6 +14,7 @@ const GRADER = (() => {
     inv: { scopes: ["User.Read.All", "AuditLog.Read.All", "UserAuthenticationMethod.Read.All", "Group.Read.All"], exo: true, cwd: "/Users/kaatje/Desktop" },
     resp: { scopes: ["User.ReadWrite.All", "AuditLog.Read.All", "UserAuthenticationMethod.ReadWrite.All", "Group.ReadWrite.All"], exo: true, cwd: "/Users/kaatje/Desktop" }
   };
+  const HOOKS = [];
   function makeCtx(setup, pre) {
     const s = SETUPS[setup] || SETUPS.none;
     const ctx = new E.Ctx();
@@ -22,14 +23,16 @@ const GRADER = (() => {
     if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
     if (s.contractors) E.seedContractors(ctx, s.contractors);
     if (s.teams) { E.seedTeams(ctx); if (s.teams === "on") E.run("Connect-MicrosoftTeams", ctx); }
+    for (const h of HOOKS) h(ctx, s);
+    if (s.spo) ctx.spo = true;
     if (s.quirks) ctx.quirks = JSON.parse(JSON.stringify(s.quirks));
     if (s.files) for (const p of Object.keys(s.files)) ctx.fs[p] = { text: s.files[p], at: new Date(E.NOW.getTime() - 86400000 * 40) };
     if (pre && pre.length) {
       const saved = ctx.mg;
       E.run("Connect-MgGraph -Scopes User.ReadWrite.All,Group.ReadWrite.All,Organization.Read.All -NoWelcome", ctx);
-      const ex = ctx.exo, tc = ctx.teams; ctx.exo = true; ctx.teams = !!ctx.t.teams;
+      const ex = ctx.exo, tc = ctx.teams, sp = ctx.spo; ctx.exo = true; ctx.teams = !!ctx.t.teams; ctx.spo = !!ctx.t.sites;
       for (const p of pre) E.run(p, ctx);
-      ctx.mg = saved; ctx.exo = ex; ctx.teams = tc;
+      ctx.mg = saved; ctx.exo = ex; ctx.teams = tc; ctx.spo = sp;
     }
     ctx.host = []; ctx.errors = [];
     return ctx;
@@ -60,6 +63,6 @@ const GRADER = (() => {
   function fillTpl(tpl, vals) { let i = 0; return tpl.replace(/\[\[([^\[\]]*)\]\]/g, () => (vals[i++] || "")); }
   function gapsOf(tpl) { const out = []; tpl.replace(/\[\[([^\[\]]*)\]\]/g, (m, a) => { out.push(a); return m; }); return out; }
   function drillCheck(d) { return d.fn ? { fn: d.fn } : { out: d.out, refSetup: d.refSetup, needExo: d.needExo, needScopes: d.needScopes }; }
-  return { makeCtx, verdict, text, fillTpl, gapsOf, refText, describe, drillCheck, SETUPS };
+  return { HOOKS, makeCtx, verdict, text, fillTpl, gapsOf, refText, describe, drillCheck, SETUPS };
 })();
 if (typeof module !== "undefined") module.exports = GRADER;
