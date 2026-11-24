@@ -180,6 +180,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="4" y="1.5" width="8" height="13" rx="1.5"/><path d="M6 5.5h4M6 8h4M6 10.5h2"/>'
   },
   {
+    id: "vigil",
+    name: "Vigil",
+    tag: "Practice",
+    sub: "exam AB-650 · microsoft 365 and ai admin",
+    path: "labs/vigil.html",
+    ring: "ring-mid",
+    angle: 77,
+    glyph: '<circle cx="8" cy="8" r="6.5"/><ellipse cx="8" cy="8" rx="6.5" ry="2.4" transform="rotate(-18 8 8)"/><circle cx="8" cy="8" r="1.5"/><circle cx="13.4" cy="6.1" r="1"/>'
+  },
+  {
     id: "codex",
     name: "Codex",
     tag: "Reference",
