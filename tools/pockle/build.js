@@ -1,6 +1,6 @@
 const fs = require("fs"), path = require("path");
 const { bankScripts } = require("./lib.js");
-const order = ["junos-oops", "junle", "junos-lab", "proxle", "meridian", "subnle-pocket", "pyle", "pyle-pocket", "sleeple", "passle", "seqle", "hexle", "webble", "spelle", "rebble", "git-lab", "shelle", "syncle", "modle"];
+const order = ["junos-oops", "vigil", "junle", "junos-lab", "proxle", "meridian", "subnle-pocket", "pyle", "pyle-pocket", "sleeple", "passle", "seqle", "hexle", "webble", "spelle", "rebble", "git-lab", "shelle", "syncle", "modle"];
 const banks = bankScripts(order);
 const sync = fs.readFileSync(path.join(__dirname, "../../js/sync.js"), "utf8");
 const tpl = fs.readFileSync(path.join(__dirname, "pockle.template.html"), "utf8");

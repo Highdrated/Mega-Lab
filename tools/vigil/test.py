@@ -195,6 +195,46 @@ async def tonight(b):
     await pg.close()
 
 
+POCKLE_F = "file://" + os.path.join(ROOT, "labs", "pockle.html")
+
+
+async def pockle(b):
+    subprocess.run(["node", os.path.join(HERE, "pockle.js")], check=True, stdout=subprocess.DEVNULL)
+    subprocess.run(["node", os.path.join(ROOT, "tools", "pockle", "build.js"), os.path.join(ROOT, "labs", "pockle.html")], check=True, stdout=subprocess.DEVNULL, cwd=os.path.join(ROOT, "tools", "pockle"))
+    pg = await b.new_page(viewport={"width": 1440, "height": 900})
+    await pg.goto(LAB_F)
+    await pg.evaluate("localStorage.clear()")
+    await pg.reload()
+    await pg.wait_for_timeout(300)
+    await pg.evaluate("go('school')")
+    await pg.fill("#tyin", "wrong answer")
+    await pg.press("#tyin", "Enter")
+    await pg.click("[data-reveal]")
+    a = await pg.evaluate("school.qa.a")
+    await pg.click(f"#lesson [data-o='{(a + 1) % 4}']")
+    await pg.evaluate("psCatch({ ps: 'Set-SPOSite : Cannot process argument transformation on parameter. Boolean parameters accept only Boolean values and numbers, such as $True, $False, 1 or 0.' }); psCatch({ ps: 'Connect-SPOService : Could not connect to SharePoint Online.' }); psCatch({ ps: 'Set-SPOSite : Cannot bind parameter LockState. SiteLockState' })")
+    await pg.evaluate("Object.keys(CASE_REDO).forEach(id => miss('case', 'workloads', id, { id })); TQ.forEach((q, i) => miss('trial', null, q.q, { i })); miss('where', 'copilot', 'web', { g: 'copilot', web: 1 })")
+    await pg.evaluate("school.qa = null; school.l = 0; school.g = 'tenant'; S.read.push('tenant0', 'tenant1'); save()")
+    state = await pg.evaluate("localStorage.getItem('vigil.v1')")
+    want = await pg.evaluate("[...new Set(S.miss.filter(m => redoOf(m)).map(m => (redoOf(m).cmd || redoOf(m).show || redoOf(m).a[0]).toLowerCase()))].length")
+    await pg.goto(POCKLE_F)
+    await pg.evaluate("s => { localStorage.clear(); localStorage.setItem('vigil.v1', s); }", state)
+    await pg.reload()
+    await pg.wait_for_timeout(500)
+    got = await pg.evaluate("(() => { const l = LABSTATE.find(x => x.b.id === 'vigil'); return [l.cards.filter(c => c.u === 'oops').length, l.units.map(u => u.id).sort().join(), l.cards[0].u, POOL.filter(flagged).filter(c => c.lab === 'vigil').length, l.cards.filter(c => c.u !== 'oops').every(c => ['tenant0', 'tenant1'].includes(c.u))]; })()")
+    check(got[0] >= want - 1 and got[0] > 10, f"every kind of Vigil mistake becomes a Pockle card ({got[0]} cards for {want} answers)")
+    check(got[1] == "tenant0,tenant1", "Pockle unlocks exactly the Vigil lessons she finished: " + got[1])
+    check(got[2] == "oops" and got[3] == got[0], "Vigil oopsies come first in Pockle and sit in its fix list")
+    check(got[4], "Pockle shows no cards from lessons she has not done")
+    texts = await pg.evaluate("LABSTATE.find(x => x.b.id === 'vigil').cards.filter(c => c.u === 'oops').map(c => c.q + ' ' + c.o.join(' '))")
+    check(all("Type" not in t for t in texts), "Pockle oopsie cards are tap only, they never ask her to type")
+    check("Vigil" in await pg.inner_text("#labList"), "Vigil is listed in Pockle")
+    check(await pg.evaluate("document.documentElement.scrollWidth") <= 1440, "Pockle does not scroll sideways")
+    await pg.close()
+    n = subprocess.run(["node", "-e", "global.POCKET={register:b=>global.B=b};require(process.argv[1]);const D={};new Function('D',require('fs').readFileSync(process.argv[2],'utf8').replace(/^const (\\w+) =/gm,'D.$1 ='))(D);const want=D.LADDER.reduce((n,g)=>n+D.LESSONS[g].length,0);console.log(B.units.length===want&&D.LADDER.every(g=>D.LESSONS[g].every((_,l)=>B.cards.filter(c=>c.u===g+l).length>=2))?'ok':'bad')", os.path.join(ROOT, "tools", "pockle", "banks", "vigil.js"), os.path.join(HERE, "data.js")], capture_output=True, text=True)
+    check(n.stdout.strip() == "ok", "Pockle has a unit for every Vigil lesson, each with a recall card and a where card: " + n.stdout + n.stderr)
+
+
 async def demo_tonight(b):
     pg = await b.new_page(viewport={"width": 1440, "height": 900})
     await pg.goto(DEMO_F)
@@ -363,6 +403,7 @@ async def main():
         before = len(FAIL)
         await tonight(b)
         await demo_tonight(b)
+        await pockle(b)
         print("tonight", "ok" if len(FAIL) == before else "FAILED")
         for F, lab in [(DEMO_F, False), (LAB_F, True)]:
             before = len(FAIL)

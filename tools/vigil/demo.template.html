@@ -683,6 +683,7 @@ const GL = LADDER.map(id => GROUPS.find(g => g.id === id));
 const norm = t => String(t).toLowerCase().replace(/[“”"'`]/g, "").replace(/\s+/g, " ").trim().replace(/[.!]$/, "");
 function lessonOf(G, l) { const L = LESSONS[G.id][l]; return { t: L[0], w: L[1], f: L[2], x: L[3], ty: TYPED[G.id][l], n: LESSONS[G.id].length }; }
 function renderStrip() { $("#gstrip").innerHTML = GL.map((g, i) => `<button class="chip${g.id === school.g ? " on" : ""}" data-g="${g.id}"><span class="d">${i + 1}</span>${esc(g.tag)}</button>`).join(""); }
+const lc1 = s => /^(Copilot|Conditional)\b|^.[A-Z]/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1);
 function makeQ(G, L) {
   const rows = L.w.map(i => G.where[i]);
   if (G.id === "copilot" && L.w.includes(2)) return { q: "A manager wants Copilot to stop using the public web. Where do you actually set the policy for web search in Copilot and Copilot Chat?", o: ["A switch on Copilot > Settings in the Microsoft 365 admin center", "The Allow web search in Copilot policy in the Cloud Policy service", "Settings > Search & intelligence in the Microsoft 365 admin center", "An Edge configuration policy"], a: 1, why: "The entry on the Copilot settings page is only a shortcut. The real control is one policy, Allow web search in Copilot, in the Cloud Policy service at config.office.com.", ref: { g: "copilot", web: 1 } };
@@ -690,7 +691,7 @@ function makeQ(G, L) {
   const pool = GROUPS.flatMap(x => x.where).filter(w => w[2] !== r[2] && w[0] !== r[0]);
   const others = []; pool.sort(() => Math.random() - .5).forEach(w => { if (others.length < 3 && !others.some(o => o[2] === w[2])) others.push(w); });
   const opts = [r, ...others].sort(() => Math.random() - .5);
-  return { q: "Where do you go for this: " + r[0].charAt(0).toLowerCase() + r[0].slice(1) + "?", o: opts.map(w => PORT[w[1]].name + " › " + w[2]), a: opts.indexOf(r), why: PORT[r[1]].name + ", under " + r[2] + ".", ref: { g: G.id, w: G.where.indexOf(r) } };
+  return { q: "Where do you go for this: " + lc1(r[0]) + "?", o: opts.map(w => PORT[w[1]].name + " › " + w[2]), a: opts.indexOf(r), why: PORT[r[1]].name + ", under " + r[2] + ".", ref: { g: G.id, w: G.where.indexOf(r) } };
 }
 function mkMiss(kind, g, t, ref, due) { return { id: kind + ":" + (ref ? JSON.stringify(ref) : t), kind, g, t, ref: ref || null, at: nowMs(), st: 0, due }; }
 function miss(kind, gid, t, ref) { S.miss = S.miss || []; const m = mkMiss(kind, gid, t, ref, dayNo() + 1); S.miss = [m, ...S.miss.filter(x => x.id !== m.id)].slice(0, 60); save(); }
@@ -1038,7 +1039,7 @@ function psSame(v, want) { const a = psParse(v), b = psParse(want); if (!a || !b
 function portNames(pid) { const n = PORT[pid].name.toLowerCase(), base = [n, n.replace(/^microsoft /, "")]; return [...new Set(base.flatMap(x => [x, x.replace(/ (admin center|portal)$/, "")]))].filter(x => !/^\d+$/.test(x)); }
 function guessRef(m) {
   if (m.kind === "typed" && m.g && TYPED[m.g]) { const l = TYPED[m.g].findIndex(x => x.q === m.t); return l >= 0 ? { g: m.g, l } : null; }
-  if (m.kind === "where") { if (/^A manager wants Copilot/.test(m.t)) return { g: "copilot", web: 1 }; const G = GROUPS.find(g => g.id === m.g); if (!G) return null; const w = G.where.findIndex(r => m.t === "Where do you go for this: " + r[0].charAt(0).toLowerCase() + r[0].slice(1) + "?"); return w >= 0 ? { g: G.id, w } : null; }
+  if (m.kind === "where") { if (/^A manager wants Copilot/.test(m.t)) return { g: "copilot", web: 1 }; const G = GROUPS.find(g => g.id === m.g); if (!G) return null; const w = G.where.findIndex(r => m.t === "Where do you go for this: " + lc1(r[0]) + "?"); return w >= 0 ? { g: G.id, w } : null; }
   if (m.kind === "trial") { const i = TQ.findIndex(q => q.q === m.t); return i >= 0 ? { i } : null; }
   if (m.kind === "ps") { const c = String(m.t).split(" ")[0]; return c === "Connect-SPOService" ? { e: "connect" } : c === "Get-SPOSite" ? { e: "site" } : c === "Set-SPOSite" ? { e: "param" } : null; }
   if (m.kind === "case") { const t = String(m.t); const id = /report does not show/.test(t) ? "wrongReport" : /wrong site|is now on for/.test(t) ? "wrongSite" : /External sharing/.test(t) ? "sharing" : /Pick the site/.test(t) ? "pick" : /No access|NoAccess|read-only|Read-only|licence|off again/.test(t) ? "rcd" : null; return id ? { id } : null; }
@@ -1051,7 +1052,7 @@ function redoOf(m) {
   if (m.kind === "where") {
     if (r.web) return { lab: "Where it lives", src: stepLab("copilot"), q: "Copilot must stop using the public web. In which service does the real web search policy live?", a: ["cloud policy service", "cloud policy", "config.office.com", "microsoft 365 apps admin center", "365 apps admin center"], show: "The Cloud Policy service", why: "The Cloud Policy service at config.office.com, policy Allow web search in Copilot. The entry on the Copilot page is only a shortcut." };
     const G = GROUPS.find(g => g.id === r.g), w = G && G.where[r.w]; if (!w) return null;
-    return { lab: "Where it lives", src: stepLab(r.g), q: "Where do you go for this: " + w[0].charAt(0).toLowerCase() + w[0].slice(1) + "? Type the admin center.", a: portNames(w[1]), show: PORT[w[1]].name, why: "Under " + w[2] + "." };
+    return { lab: "Where it lives", src: stepLab(r.g), q: "Where do you go for this: " + lc1(w[0]) + "? Type the admin center.", a: portNames(w[1]), show: PORT[w[1]].name, why: "Under " + w[2] + "." };
   }
   if (m.kind === "trial") { const Q = TQ[r.i]; return Q ? { lab: "Trial question", src: "Practice trial", q: Q.q + " Type the answer.", a: Q.ty, show: Q.o[Q.a], why: Q.why } : null; }
   if (m.kind === "case") { const R = CASE_REDO[r.id]; return R ? Object.assign({ lab: "Case action", src: "The salary ledger" }, R) : null; }
@@ -1155,7 +1156,7 @@ function renderWside(k) {
   const nx = REWARDS.find(r => !S.unlocks.includes(r.id));
   $("#wside").innerHTML = `<div class="card"><div class="eyebrow">Nightly streak</div><div class="stk"><div class="big">${k.n}<small>${k.n === 1 ? "night" : "nights"}</small></div><div class="note">Best ${k.best}<br>${k.today ? "Tonight is kept" : k.n ? "Keep it going tonight" : "Finish tonight to start one"}</div></div><div class="nights">${nights}</div><div class="nlab"><span>14 NIGHTS AGO</span><span>TONIGHT</span></div></div>
   <div class="card"><div class="eyebrow">Rewards for nights in a row</div><div style="margin-top:4px">${REWARDS.map(r => { const ok = S.unlocks.includes(r.id); return `<div class="rw${ok ? " ok" : ""}"><div class="n">${r.n}</div><div><b>${esc(r.t)}</b><span>${esc(r.d)}</span></div><div class="st">${ok ? "Unlocked" : Math.min(k.n, r.n) + " / " + r.n}</div></div>`; }).join("")}</div></div>
-  <div class="card"><div class="eyebrow">Spaced review · your oopsies</div><div class="srs"><div class="${due ? "hot" : ""}"><b>${due}</b><span>Due now</span></div><div><b>${soon}</b><span>Soon</span></div><div><b>${later}</b><span>Later</span></div><div><b>${S.cleared}</b><span>Cleared</span></div></div><p class="m">${due > (S.watch ? S.watch.items.filter(x => x.k === "oops" && !S.watch.done.includes(x.id)).length : 0) ? "A watch takes at most three oopsies. The rest wait for the next night. " : ""}A right answer brings it back after 1, 3 and 7 days. Right once more after that, and it leaves the list. A wrong answer starts it again tomorrow.</p></div>`;
+  <div class="card"><div class="eyebrow">Spaced review · your oopsies</div><div class="srs"><div class="${due ? "hot" : ""}"><b>${due}</b><span>Due now</span></div><div><b>${soon}</b><span>Soon</span></div><div><b>${later}</b><span>Later</span></div><div><b>${S.cleared}</b><span>Cleared</span></div></div><p class="m">${due > (S.watch ? S.watch.items.filter(x => x.k === "oops" && !S.watch.done.includes(x.id)).length : 0) ? "A watch takes at most three oopsies. The rest wait for the next night. " : ""}A right answer brings it back after 1, 3 and 7 days. Right once more after that, and it leaves the list. A wrong answer starts it again tomorrow. Your oopsies also wait in Pockle, tap only, for on the go.</p></div>`;
 }
 function renderBadge() { const b = $("#tbadge"); if (!b) return; const n = watchLeft(); b.textContent = n || ""; b.style.display = n ? "" : "none"; const o = $("#obsw"); if (o) { const w = S.watch; o.textContent = "Tonight's watch · " + (w.awarded ? "complete" : (w.items.length - n) + " of " + w.items.length + " done"); } }
 function wSubmit() {
