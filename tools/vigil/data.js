@@ -194,3 +194,103 @@ const SKILLS = [
   ["s57", "monitor", "Usage and adoption with the Copilot Control System"],
   ["s58", "monitor", "Service health with the Copilot Control System"]
 ];
+
+const LESSONS = {
+  tenant: [["Make it look like yours", [0, 1], [0, 1], [0]], ["Domains", [2], [2, 3], []], ["Org settings", [3], [4], []], ["Licences", [4], [5, 6, 7], [2]], ["Backup and the network", [5, 6], [8], []], ["Service health", [7], [9], [1]]],
+  identities: [["Users", [0], [0, 1], []], ["Guests and contacts", [1, 5], [2, 8], [1]], ["Groups", [2], [3, 4], []], ["Admin roles and PIM", [3], [5, 6], [0]], ["Administrative units", [4], [7, 9], []]],
+  auth: [["Sign-in methods", [0], [0, 1, 2], []], ["Password protection", [1], [3, 4], []], ["Self-service password reset", [2], [5, 6], [2]], ["Conditional Access", [4, 5], [8, 9, 10], [0, 1]], ["When a sign-in fails", [3], [7, 11], []]],
+  graph: [["Same jobs, new tool", [0], [0, 1, 2], []], ["Commands and scopes", [1, 2], [3, 4], [0, 1]], ["Everyone, safely", [0], [5, 6], []]],
+  workloads: [["Shared mailboxes", [0, 1], [0, 1, 2], []], ["Teams", [2, 3], [3, 4], [1]], ["SharePoint sites", [4, 5], [5, 6], []], ["SharePoint for Copilot", [6], [7, 8], [0, 2]], ["Cleaning up oversharing", [6], [9, 10], []]],
+  defender: [["Alerts and incidents", [0], [0, 4], [2]], ["Threat policies", [1, 4], [1, 2, 3], [1]], ["Cleaning up after an attack", [2], [5, 6], [0]], ["Simulations and training", [3], [7, 8], []]],
+  purview: [["Stopping data leaks", [0], [0, 2, 3], []], ["Sensitivity labels", [2], [4, 5, 6], [0]], ["Labels, DLP and Copilot", [1], [1, 7], []], ["Keeping and deleting", [3], [8, 9], [1]], ["Watching AI use", [4], [10], [2]]],
+  copilot: [["Is the tenant ready?", [0], [0, 1], []], ["Is the data ready?", [5], [2, 3], []], ["The Copilot settings page", [1], [4, 5, 6], [0]], ["Actions and the AI disclaimer", [1], [7, 8], []], ["The web and other AI models", [2], [9, 10], [1]], ["Search and connectors", [3], [11, 13], []], ["Copilot Cowork", [4], [12], [2]]],
+  agents: [["The agent registry", [0], [6, 7], [1]], ["Publish requests", [0], [8, 9], []], ["Agent settings", [1], [10, 11], [2]], ["Tools", [2], [12], []], ["Agent identities", [3], [0, 1], []], ["Sponsors and owners", [6], [2, 3], [0]], ["Securing agent access", [4, 5], [4, 5], []]],
+  agentgov: [["Watching the agents", [0], [0, 1], []], ["Keeping data safe", [2, 3, 4], [2, 3], [0]], ["Rules and templates", [1], [4, 5, 6], [1]]],
+  monitor: [["Service health", [4], [0, 6], []], ["Usage", [3], [3, 4, 5], [0]], ["Cost", [0, 1, 2], [1, 2], [1]]]
+};
+
+const SYNCLE = {
+  identities: [["Users", "Look people up, fix their details, lock out a leaver"], ["Groups & lists", "Membership of groups and distribution lists"]],
+  graph: [["Connect & look around", "Connect-MgGraph with the right scopes, Get-MgContext, Get-Command"], ["Users", "Get-MgUser, -Filter, -All, Update-MgUser"], ["Safe bulk changes", "CSV in, a loop, -WhatIf, try/catch"]],
+  tenant: [["Licenses", "Who has what, what is free, group licences"]],
+  workloads: [["Mailboxes", "Shared mailboxes, Full Access and Send As"]],
+  auth: [["Investigate", "Sign-in logs and why a sign-in failed"]]
+};
+
+const TYPED = {
+  tenant: [
+    { q: "Which Microsoft Entra feature sets the logo and background on the sign-in page?", a: ["company branding", "custom branding"], why: "The sign-in page is company branding in Microsoft Entra. The top-bar theme is a different setting, in the Microsoft 365 admin center." },
+    { q: "Which DNS record type do you add to prove you own a domain?", a: ["txt", "txt record", "a txt record"], why: "You add a TXT record at your DNS host. Microsoft checks it and marks the domain as verified." },
+    { q: "Org settings has three tabs: Services, Security & privacy, and which third one?", a: ["organization profile", "organisation profile"], why: "Organization profile holds the name, contact details and release preferences." },
+    { q: "A licence will not assign. Which two-word user setting is most often missing?", a: ["usage location"], why: "Microsoft needs a usage location to know which services are allowed in that country." },
+    { q: "Microsoft 365 Backup protects SharePoint sites, OneDrive accounts and what else?", a: ["exchange mailboxes", "mailboxes", "exchange online mailboxes", "exchange"], why: "Backup covers SharePoint, OneDrive and Exchange, each with its own backup policy." },
+    { q: "Users cannot open Teams at all. Service health calls that an incident or an advisory?", a: ["incident", "an incident"], why: "An incident means a service is broken for users. An advisory has limited impact." }
+  ],
+  identities: [
+    { q: "For how many days can you restore a deleted user?", a: ["30", "30 days", "thirty", "thirty days"], why: "Deleted users stay in Deleted users for 30 days. After that they are gone for good." },
+    { q: "A guest can sign in. Which outside recipient in the address book cannot? Two words.", a: ["mail contact", "a mail contact"], why: "A mail contact is only an address in the address book. It has no mailbox and no sign-in." },
+    { q: "Dynamic group membership needs which Microsoft Entra ID licence: P1 or P2?", a: ["p1", "entra id p1", "microsoft entra id p1"], why: "Dynamic membership needs Entra ID P1 for the users in those groups." },
+    { q: "Which feature makes an admin role eligible instead of always active? The full name or its three letters.", a: ["privileged identity management", "pim"], why: "Privileged Identity Management. The admin activates the role for a limited time, with MFA and a reason." },
+    { q: "What do you create so a helpdesk admin manages only one region's users? Two words.", a: ["administrative unit", "administrative units", "admin unit"], why: "A role scoped to an administrative unit only works on the members of that unit." }
+  ],
+  auth: [
+    { q: "Which phishing-resistant sign-in method is built on FIDO2? One word.", a: ["passkey", "passkeys"], why: "Passkeys (FIDO2) cannot be phished: they only work on the real sign-in site." },
+    { q: "After how many failed attempts does smart lockout lock an account by default?", a: ["10", "ten"], why: "By default smart lockout locks after 10 failed attempts, for one minute at first." },
+    { q: "Self-service password reset can be set to None, Selected or what?", a: ["all"], why: "None, Selected or All. Start with Selected and a pilot group." },
+    { q: "Which mode shows what a Conditional Access policy would do, without enforcing it?", a: ["report-only", "report only", "report-only mode", "report only mode"], why: "Report-only mode logs the result in the sign-in log but blocks nobody." },
+    { q: "Which sign-in error code means Conditional Access blocked the sign-in?", a: ["53003"], why: "53003 is a Conditional Access block. 50126 is a wrong user name or password. 50053 is a lockout." }
+  ],
+  graph: [
+    { q: "Which PowerShell module is the supported one for Microsoft 365 identities today? Two words.", a: ["microsoft graph", "microsoft.graph", "microsoft graph powershell"], why: "Microsoft Graph PowerShell. MSOnline and AzureAD are retired." },
+    { q: "Type the command that signs you in with read access to users, and nothing more.", a: ["connect-mggraph -scopes user.read.all"], why: "Connect-MgGraph -Scopes \"User.Read.All\" asks only for reading users. Ask for the smallest scope that does the job.", code: true },
+    { q: "Get-MgUser shows only the first page. Which parameter gets every user?", a: ["-all"], why: "-All follows every page until there are no more.", code: true }
+  ],
+  workloads: [
+    { q: "Up to how many GB is a shared mailbox free?", a: ["50", "50 gb", "50gb"], why: "Up to 50 GB without a licence, as long as it has no archive and no litigation hold." },
+    { q: "How many owners should a team have at least, says Microsoft?", a: ["2", "two"], why: "At least two, so the team is never left without an owner." },
+    { q: "Which default SharePoint group gets Edit rights?", a: ["members", "site members", "the members group"], why: "Owners get Full Control, Members get Edit, Visitors get Read." },
+    { q: "Which feature hides a site from Copilot and search, without changing who can open it?", a: ["restricted content discovery"], why: "Restricted Content Discovery changes what can be found, not who has access." },
+    { q: "Which action on a data access governance report emails the site owners to fix the sharing? Three words.", a: ["site access review", "a site access review", "initiate site access review"], why: "A site access review lets the owners, who know the content, remove the broad access." }
+  ],
+  defender: [
+    { q: "What groups related alerts into one attack story? One word.", a: ["incident", "incidents", "an incident"], why: "Work the incident, not each alert on its own." },
+    { q: "A user is in both the Standard and the Strict preset policy. Which one wins?", a: ["strict"], why: "Strict comes first, then Standard, then custom policies, then built-in protection." },
+    { q: "Which feature removes mail after delivery when it turns out to be bad? Its name or its three letters.", a: ["zero-hour auto purge", "zero hour auto purge", "zap"], why: "Zero-hour auto purge (ZAP) pulls the message out of the mailbox afterwards." },
+    { q: "Attack simulation training needs Defender for Office 365 Plan 1 or Plan 2? Type the number.", a: ["2", "plan 2"], why: "Plan 2 adds Explorer, automated investigation and attack simulation training." }
+  ],
+  purview: [
+    { q: "Which mode should a brand-new DLP policy run in first?", a: ["simulation", "simulation mode"], why: "Simulation mode shows what would match, without blocking anyone." },
+    { q: "Users cannot see your new sensitivity label. What did you forget to publish it with? Two words.", a: ["label policy", "a label policy", "sensitivity label policy"], why: "A label policy publishes labels to users and groups." },
+    { q: "Which two usage rights must a user have before Copilot can use an encrypted file? Type them with 'and'.", a: ["view and extract", "extract and view"], why: "Without View and Extract, Copilot cannot read the encrypted content for that user." },
+    { q: "Retention rules collide. Which wins: keeping or deleting?", a: ["keeping", "keep"], why: "Keeping wins over deleting, and the longest retention period wins." },
+    { q: "DSPM for AI shows nothing. Which Purview feature must be turned on first?", a: ["auditing", "audit", "audit log", "the audit log"], why: "DSPM for AI reads AI activity from the audit log, so auditing must be on." }
+  ],
+  copilot: [
+    { q: "New data in the Copilot readiness report can take up to how many hours?", a: ["72", "72 hours"], why: "Up to 72 hours, so a change you made today may not show yet." },
+    { q: "Copilot showed someone a file. What could that person already do with the file? One word.", a: ["open", "open it", "access", "read", "view"], why: "Copilot only shows what the user can already open. Fix the sharing, not Copilot." },
+    { q: "Copilot > Settings has four tabs: User access, Data access, Copilot actions and which last one?", a: ["other settings"], why: "The AI disclaimer, for example, sits under Other settings." },
+    { q: "Image generation has its own switch. Which other generation has a separate switch? One word.", a: ["video", "video generation"], why: "Image and video generation are two separate switches under Copilot actions." },
+    { q: "Type the exact name of the policy that controls web search for Copilot and Copilot Chat.", a: ["allow web search in copilot"], why: "One policy, Allow web search in Copilot, set in the Cloud Policy service." },
+    { q: "What were Copilot connectors called before? Three words.", a: ["microsoft graph connectors", "graph connectors"], why: "Microsoft Graph connectors became Copilot connectors. They still respect the source's permissions." },
+    { q: "In which two-word currency is Copilot Cowork paid for?", a: ["copilot credits", "copilot credit"], why: "Cowork is usage-based and draws on Copilot Credits." }
+  ],
+  agents: [
+    { q: "Which menu in the Microsoft 365 admin center holds the agent registry? One word.", a: ["agents"], why: "Agents > All agents is the registry, with the publish requests beside it." },
+    { q: "Name one agent that can only be blocked for everyone, never limited to chosen users.", a: ["researcher", "analyst", "the researcher agent", "the analyst agent"], why: "Researcher and Analyst have no Edit users option. You can only block them tenant-wide." },
+    { q: "What is User access in agent settings set to by default? Two words.", a: ["all users"], why: "All users by default. You can change it to No users or Specific users or groups." },
+    { q: "MCP servers are tools for agents. What does MCP stand for?", a: ["model context protocol"], why: "Model Context Protocol: a standard way for an agent to call a tool." },
+    { q: "What is the template that agent identities are made from? Two words.", a: ["agent blueprint", "agent identity blueprint", "blueprint"], why: "A policy on the blueprint reaches every agent made from it." },
+    { q: "Who is answerable for an agent's purpose: the owner or the sponsor?", a: ["sponsor", "the sponsor"], why: "The sponsor carries the accountability. The owner handles the technical side." },
+    { q: "Conditional Access for agents needs which Entra ID licence: P1 or P2?", a: ["p1", "entra id p1"], why: "Conditional Access needs P1. ID Protection for agents needs P2." }
+  ],
+  agentgov: [
+    { q: "Agent activity records the prompts and the result. What else? One word.", a: ["tools", "the tools"], why: "Prompts, the tools the agent used, and the result." },
+    { q: "Which Microsoft solution brings sensitivity labels and DLP to agents? One word.", a: ["purview", "microsoft purview"], why: "Purview's labels and DLP apply to agents too." },
+    { q: "Apply template: a rule that keeps running, or a one-time action?", a: ["one-time", "one time", "one-time action", "a one-time action", "once"], why: "It runs once on the agents you pick. Run it again for new agents." }
+  ],
+  monitor: [
+    { q: "The Copilot Control System has security and governance, management controls, and which third pillar?", a: ["measurement and reporting", "measurement & reporting"], why: "Measurement and reporting: readiness, usage and the Copilot dashboard." },
+    { q: "Which least-privileged role is enough to read usage reports? Two words.", a: ["reports reader"], why: "Reports Reader. No need for Global Administrator to read numbers." },
+    { q: "Pay-as-you-go: first add a billing policy. Then you connect it to what? One word.", a: ["service", "a service", "copilot service"], why: "A billing policy does nothing until you connect it to a service, such as Copilot Chat." }
+  ]
+};
