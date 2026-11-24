@@ -1,4 +1,5 @@
-STATUS: DEMO - waiting for Kaatje's review of the demo. Do not build new stages yet.
+STATUS: BUILD - she said "continue the build" on 24 Nov 2026.
+MERGE: WAIT - build on the vigil branch only. Nothing goes to main until this line says MERGE: GO (her call, after she reviews).
 
 # Vigil - the lab for Exam AB-650
 
@@ -17,6 +18,21 @@ Goal in her words: "by the end of the lab i can take the exam and pass". The exa
 - A new tool (like PowerShell) only comes after the same job was done by hand.
 - Cases say which School steps they build on, and only unlock after those steps.
 - Inside a step, lessons and checks also go from familiar to new, one idea at a time.
+
+## Her quality rule (24 Nov 2026, the most important one)
+"take your time and each time you finish an output review it yourself for those goals and then once you think you are sure i can review - at the moment you are sending me stuff to review when you already know there are mistakes in there or some stuff not immersive"
+- Before anything reaches her: play every path you touched, right and wrong; check every fact against Microsoft Learn; screenshot at 1280x800, 1440x900 and 1920x1080 and actually look; fix overlap, clipping, cut text and anything cheap or plain. Only then report.
+- "if it does not work in real life it should not work here": every console, form and admin page refuses what the real one refuses, with the real error text. Real-but-unsimulated commands and parameters say so plainly instead of pretending.
+
+## Short lessons and typing (24 Nov 2026)
+- "make sure there isnt too much to learn in one go": each School step is split into short lessons (LESSONS in data.js), at most 3 facts each; every fact still appears once.
+- "there is very little typing": every lesson has a typed recall check (TYPED in data.js); cases include typing (search boxes, forms, the PowerShell window). New cases must include typing too.
+- Mistakes (wrong typed answers, wrong places, wrong case actions, PowerShell errors) are saved as oopsies (S.miss). They must feed Pockle and Syncle once Vigil lives in the Mega Lab ("i can practice my mistakes there too as well as here and pockle").
+- Syncle already teaches Graph PowerShell (connect, users, groups, licences, bulk, investigate). Vigil links to it instead of re-teaching it.
+
+## Look (24 Nov 2026)
+- Orbital direction everywhere (see feedback below).
+- The Observatory is an advanced technical blueprint, her reference: the Sinbad scene where Eris enters. Constellation line-work (one constellation per skill group), degree scales, gauges, dimension lines, a title block, ring text with the exam name. Paper skin by default, Night chart skin with glowing lines. Keep new screens in this blueprint spirit where it fits.
 
 ## How she learns best (from Hexle, the Junos lab and Pockle)
 - Taught first, then tried. Never thrown in cold.
@@ -45,20 +61,23 @@ The Vigil, a sky observatory of the Halcyon tenant. The brass orrery is the tena
 - Published demo: https://claude.ai/artifact/SQanZ4NmczQjzyihJJR7jh
 
 ## Her feedback on the demo
+- 24 Nov 2026: tenant page too long, too little typing, observatory too simple, self-review before sending. DONE 24 Nov: short lessons, typed checks, PowerShell window with real errors, typed site search, blueprint observatory with Paper and Night chart, oopsies log, tools/vigil/test.py (ALL OK).
 - 24 Nov 2026: "i like it but it feels heavy theme wise - i love minimal orbital was my favorite because of how minimal it was so could we keep that minimal theme going ... it does not have to match completely but same direction would be nice". DONE 24 Nov: restyled to the Orbital direction (white panels, hairlines, system sans, teal #0f8fa8 and orange #e0701a, charcoal chips with an orange underline, dot-grid background). Keep this direction for everything new.
 - 24 Nov 2026: the ladder rule above. DONE 24 Nov in the School (LADDER, builds on, Lumen words, Graph PowerShell split out into step 4).
 
-## Build stages (one per daily run, only after STATUS says BUILD)
-- [ ] 1. Make the lab real: labs/vigil.html built from tools/vigil (template + data), progress in localStorage key vigil.v1, register it in js/labs.config.js, track it in js/station.js, bump sw.js. Add tools/vigil/test.py (Playwright, ALL OK).
-- [ ] 2. School depth: split each group into 2 to 3 short lessons; 6 hand-written recall-first checks per group; spaced review of missed checks.
-- [ ] 3. Cases for domain 2 identities and sign-in (the heaviest domain): 6 cases, strict, in the scrying glass.
-- [ ] 4. Microsoft Graph PowerShell console for bulk work (Connect-MgGraph with scopes, Get-MgUser -All, New-MgUser, Update-MgUser), real errors for wrong scopes.
+## Build stages (one per daily run, top unchecked first)
+- [x] School in short lessons with typed checks, Lumen words beside the Lens, learning ladder (24 Nov 2026).
+- [x] Case "The salary ledger" with a strict SharePoint Online PowerShell window and typed site search (24 Nov 2026).
+- [ ] 1. Make the lab real: labs/vigil.html built from tools/vigil (build.js gets an output argument), progress in localStorage key vigil.v1 (lit, seen, read, miss, sl, skin), register it in js/labs.config.js (tag Practice or a new Microsoft tag, check how the launcher groups tags first), track it in js/station.js, add it to sw.js. tools/vigil/test.py must run against the built lab too. Do NOT merge to main while PLAN says MERGE: WAIT.
+- [ ] 2. Pockle bank tools/pockle/banks/vigil.js: tap-only cards for all 11 School steps (recall first, short), plus "Vigil oopsies" from vigil.v1 miss shown first, like Juniper oopsies. Keep tools/pockle/test.py green.
+- [ ] 3. Syncle: a new sequence for the AB-650 PowerShell that Syncle lacks: guest invitations (New-MgInvitation), administrative units, PIM role eligibility requests, mail contacts (New-MailContact), SharePoint Online (Connect-SPOService, Set-SPOSite -RestrictContentOrgWideSearch). Vigil oopsies of kind "ps" show up there. Verify every cmdlet, parameter and error text on Microsoft Learn first. Change tools/syncle sources and rebuild with build.py; keep every Syncle test green.
+- [ ] 4. Cases for identities and sign-in (the heaviest domain): 6 cases, strict, with typing (forms and PowerShell), each saying which School steps it builds on.
 - [ ] 5. Cases for Defender and Purview: 6 cases.
 - [ ] 6. Cases for Copilot, agents and Agent 365: 8 cases.
-- [ ] 7. Cases for domain 1 tenant and workloads: 6 cases.
+- [ ] 7. Cases for tenant and workloads: 6 cases.
 - [ ] 8. Trial question bank: at least 150 questions spread by the exam weights; 50-question timed mock; readiness from mock results; "book the exam" gate at 80% three days in a row.
-- [ ] 9. Pockle bank tools/pockle/banks/vigil.js for on the go.
-- [ ] 10. Sound (Junle-style), an exam-day checklist, and ComfyUI queue items for a Keeper portrait and observatory backdrops.
+- [ ] 9. Sound (Junle-style, off by default), an exam-day checklist, and ComfyUI queue items where art would add immersion.
 
 ## Daily run log
 (newest first)
+- 24 Nov 2026 (live session): School split into 53 short lessons (max 3 facts) with a typed check each; blueprint observatory with Paper and Night chart; PowerShell window for Connect-SPOService, Get-SPOSite, Set-SPOSite with real errors (no connection, wrong URL, bad URI, Boolean conversion, ambiguous and unknown parameters, LockState enum); typed site search; oopsies saved; tools/vigil/test.py ALL OK. Checked at 1280, 1440 and 1920.
