@@ -76,10 +76,10 @@ function renderCorridor() {
   const seq = S.seqSel;
   const sq = SEQUENCES[seq];
   setSeqBg(seq);
-  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : seq === 10 ? "REAL WORLD" : "WORKLOADS");
+  $("stEyebrow").textContent = "SEQUENCE " + seq + " · " + (seq <= 4 ? "DAILY" : seq <= 6 ? "BULK" : seq === 7 ? "INVESTIGATE" : seq === 8 ? "RESPOND" : seq === 9 ? "AUTOMATE" : seq === 10 ? "REAL WORLD" : seq === 11 ? "WORKLOADS" : "EXAM AB-650");
   $("stName").textContent = sq.name; $("stBlurb").textContent = sq.blurb;
   let h = "<h4>THE CURVE</h4>";
-  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE", 10: "REAL WORLD", 11: "WORKLOADS · BEYOND USERS AND MAIL" };
+  const tiers = { 0: "DAILY · ONE USER AT A TIME", 5: "BULK · MANY USERS, SAFELY", 7: "INVESTIGATE", 8: "RESPOND", 9: "AUTOMATE", 10: "REAL WORLD", 11: "WORKLOADS · BEYOND USERS AND MAIL", 12: "EXAM AB-650 · WITH VIGIL" };
   SEQUENCES.forEach((q) => {
     if (tiers[q.id]) h += '<div class="tier">' + tiers[q.id] + "</div>";
     const pr = q.open ? seqProgress(q.id) : null;
@@ -180,15 +180,17 @@ function renderDetail(it, ms) {
 }
 
 function mixPool() { const out = []; MEMORIES.filter((m) => synced(m.id)).forEach((m) => (DRILLS[m.id] || []).forEach((d, i) => out.push({ m, d, i }))); return out; }
-function mixPanel() { const n = mixPool().length; return '<div class="minicard" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between"><div><h6>DAILY PRACTICE MIX</h6>' + (n ? "10 random tickets from every memory you have synced (" + n + " in the pool). Builds fluency, not just recognition." : "Sync your first memory to unlock the mix.") + '</div><button class="go blue" type="button" id="goMix"' + (n ? "" : " disabled") + ">START MIX</button></div>"; }
-function bindMix() { const b = $("goMix"); if (b && !b.disabled) b.onclick = () => startMix(); }
+function mixPanel() { const n = mixPool().length; return '<div class="minicard" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between"><div><h6>DAILY PRACTICE MIX</h6>' + (n ? "10 random tickets from every memory you have synced (" + n + " in the pool). Builds fluency, not just recognition." : "Sync your first memory to unlock the mix.") + '</div><button class="go blue" type="button" id="goMix"' + (n ? "" : " disabled") + ">START MIX</button></div>" + vigilPanel(); }
+function vigilPanel() { const v = typeof vigilOops === "function" ? vigilOops() : []; if (!v.length) return ""; return '<div class="minicard" id="vigilCard" style="display:flex;flex-wrap:wrap;align-items:center;gap:14px;justify-content:space-between;border-left:3px solid var(--blue)"><div><h6>FROM VIGIL · EXAM AB-650</h6>' + v.length + " PowerShell " + (v.length === 1 ? "mistake" : "mistakes") + " from the salary ledger case, to redo here on Halvard's SharePoint. Same commands, new tenant.</div><button class=\"go blue\" type=\"button\" id=\"goVigil\">REDO THEM</button></div>"; }
+function bindMix() { const b = $("goMix"); if (b && !b.disabled) b.onclick = () => startMix(); const v = $("goVigil"); if (v) v.onclick = () => startVigil(); }
+function startVigil() { const pick = vigilOops(); if (!pick.length) return; R.mix = pick; R.mixLabel = "Vigil oopsies"; R.pidx = 0; R.mixScore = 0; openMemory(pick[0].m, true); setPhase("practice"); }
 function startMix() {
   const pool = mixPool(); if (!pool.length) return;
   const pick = []; const used = new Set();
   const undone = pool.filter((p) => !S.drills[drillKey(p.m, p.i)]);
   const src = undone.length >= 10 ? undone : pool;
   while (pick.length < Math.min(10, src.length)) { const k = Math.floor(Math.random() * src.length); if (!used.has(k)) { used.add(k); pick.push(src[k]); } }
-  R.mix = pick; R.pidx = 0; R.mixScore = 0;
+  R.mix = pick; R.mixLabel = null; R.pidx = 0; R.mixScore = 0;
   openMemory(pick[0].m, true); setPhase("practice");
 }
 function enterSelected() {
@@ -208,7 +210,7 @@ function resetConsole(setup, pre) {
 function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/kaatje") + ">"; }
 function setPrompt() { const t = $("tprompt"); if (t) t.textContent = promptStr(); }
 function tstate() {
-  setPrompt(); const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : ""); }
+  setPrompt(); const c = R.ctx; $("tstate").textContent = (c.mg ? "GRAPH · " + c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : "") + (c.teams ? " · TEAMS" : "") + (c.spo ? " · SHAREPOINT" : ""); }
 function hl(s) {
   let out = "", cmdNext = true, m;
   const re = /(\s+)|('(?:[^']|'')*'?|"(?:[^"`]|`.)*"?)|(\$(?:\{[^}]*\}?|[\w:?]+))|(-(?:eq|ne|gt|ge|lt|le|like|notlike|match|notmatch|contains|notcontains|in|notin|and|or|not|is|isnot|replace|split|join)\b)|(-[A-Za-z][\w]*:?)|(\d+(?:\.\d+)?(?:[kmgt]b)?\b)|(#.*$)|([|;({})\[\],=@+*/%<>!.])|([^\s|;({})\[\],='"$#]+)/gi;
@@ -424,15 +426,15 @@ function renderPractice() {
   const cd = curDrill();
   if (!cd) { $("pbody").innerHTML = "<p>No practice tickets for this memory yet.</p>"; return; }
   const { m, d, i } = cd;
-  if (R.mix && R.mem !== m) { R.mem = m; $("crumb").textContent = "Practice mix · " + m.name; flowband(m.brief.flow, "HOW " + m.name.toUpperCase() + " WORKS"); sidecard(m); }
+  if (R.mix && R.mem !== m) { R.mem = m; $("crumb").textContent = (R.mixLabel || "Practice mix") + " · " + m.name; flowband(m.brief.flow, "HOW " + m.name.toUpperCase() + " WORKS"); sidecard(m); }
   const setup = d.setup || m.recall.setup;
   clearTimeout(R.advT);
   resetConsole(setup, d.pre);
   const list = R.mix ? R.mix.map((p) => ({ done: !!S.drills[drillKey(p.m, p.i)], label: p.m.name })) : (DRILLS[m.id] || []).map((_, k) => ({ done: !!S.drills[drillKey(m, k)], label: "#" + (k + 1) }));
   const done = !!S.drills[drillKey(m, i)];
   $("pbody").innerHTML = '<div class="steps">' + list.map((x, k) => "<i" + (x.done ? ' class="on"' : "") + (k === R.pidx ? ' style="outline:1px solid var(--ink);outline-offset:2px"' : "") + "></i>").join("") + "</div>" +
-    "<h5>" + (R.mix ? "Practice mix · " + (R.pidx + 1) + " of " + R.mix.length + " · " + esc(m.name) : "Practice ticket " + (R.pidx + 1) + " of " + list.length) + (done ? ' · <span style="color:var(--blue)">DONE BEFORE</span>' : "") + "</h5>" +
-    '<p class="ask">' + esc(d.q) + "</p>" +
+    "<h5>" + (R.mix ? esc(R.mixLabel || "Practice mix") + " · " + (R.pidx + 1) + " of " + R.mix.length + " · " + esc(m.name) : "Practice ticket " + (R.pidx + 1) + " of " + list.length) + (done ? ' · <span style="color:var(--blue)">DONE BEFORE</span>' : "") + "</h5>" +
+    '<p class="ask">' + esc(d.q) + "</p>" + (R.mixLabel === "Vigil oopsies" && R.mix[R.pidx] ? '<p class="mutetxt">You got this one wrong in Vigil\'s PowerShell window (Exam AB-650). Same idea, Halvard\'s tenant.</p>' : "") +
     '<div class="minicard" style="border-style:dashed"><h6>STARTING STATE</h6>' + esc(GRADER.describe(setup)) + (d.pre ? " Something already happened in this tenant today (see the ticket)." : "") + "</div>" +
     '<div class="row"><button class="go ghost" type="button" id="pPrev"' + (R.pidx === 0 ? " disabled" : "") + '>PREVIOUS</button><button class="go ghost" type="button" id="pNext">' + (R.pidx >= list.length - 1 ? (R.mix ? "FINISH MIX" : "BACK TO CORRIDOR") : "SKIP / NEXT") + "</button></div>" +
     '<p class="mutetxt">No gaps, no multiple choice. Junie has one hint and then the answer, which goes to your journal.</p>';
@@ -444,7 +446,7 @@ function renderPractice() {
 function advanceDrill() {
   const n = R.mix ? R.mix.length : (DRILLS[R.mem.id] || []).length;
   if (R.pidx >= n - 1) {
-    if (R.mix) { const sc = R.mixScore; R.mix = null; synced_overlay("Mix complete", sc + " of " + n + " tickets solved. Mistakes went to the journal and come back tomorrow.", () => renderCorridor(), "BACK TO THE CORRIDOR"); }
+    if (R.mix) { const sc = R.mixScore, vg = R.mixLabel === "Vigil oopsies"; R.mix = null; R.mixLabel = null; synced_overlay(vg ? "Vigil oopsies redone" : "Mix complete", sc + " of " + n + " tickets solved." + (vg ? " The same mistakes still wait in Vigil's Tonight watch and in Pockle until you get them right there too." : " Mistakes went to the journal and come back tomorrow."), () => renderCorridor(), "BACK TO THE CORRIDOR"); }
     else renderCorridor();
     return;
   }
