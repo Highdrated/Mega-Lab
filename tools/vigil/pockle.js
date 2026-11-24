@@ -2,7 +2,7 @@ const fs = require("fs"), path = require("path");
 const src = fs.readFileSync(path.join(__dirname, "data.js"), "utf8").replace(/^const (\w+) =/gm, "D.$1 =");
 const D = {};
 new Function("D", src)(D);
-const { GROUPS, LADDER, LESSONS, TYPED, PORTALS } = D;
+const { GROUPS, LADDER, LESSONS, TYPED, PORTALS, ERRANDS, CAST } = D;
 const PORT = Object.fromEntries(PORTALS.map(p => [p.id, p]));
 const G = id => GROUPS.find(g => g.id === id);
 const h = s => { let x = 2166136261; for (let i = 0; i < s.length; i++) { x ^= s.charCodeAt(i); x = Math.imul(x, 16777619); } return x >>> 0; };
@@ -61,6 +61,8 @@ LADDER.forEach((gid, n) => LESSONS[gid].forEach((L, l) => {
   cards.push(recallCard(u, gid, l));
   L[1].forEach(i => cards.push(whereCard(u, gid, i)));
 }));
+const errandCard = (u, e) => mc(u, CAST[e.who][0] + ", " + CAST[e.who][1] + ": " + e.msg, e.show, e.o, e.why);
+ERRANDS.forEach(e => cards.push(errandCard(e.g + (LESSONS[e.g].length - 1), e)));
 LADDER.forEach(gid => { if (RECALL[gid].length !== TYPED[gid].length) throw new Error("RECALL and TYPED differ for " + gid); RECALL[gid].forEach((r, l) => { if (new Set(r).size !== 4) throw new Error("duplicate option " + gid + l); }); });
 
 const OOPS = {
@@ -73,6 +75,7 @@ const OOPS = {
     mc("oops", "Copilot answers keep quoting files from one confidential site. The site's members must keep their access. What is the fastest fix?", "Turn on Restricted Content Discovery for the site", ["Remove the Copilot licence from the users", "Set the site to Read-only", "Turn off web search for Copilot"], "Restricted Content Discovery hides the site from Copilot and organisation-wide search, and leaves the permissions as they are."),
     mc("oops", "Which role is the least-privileged one that can change the settings on Copilot > Settings?", "AI Administrator", ["Global Administrator", "Global Reader", "Office Apps Administrator"], "AI Administrator can change Copilot settings. Global Reader can only look.")
   ],
+  errand: {},
   case: {
     rcd: mc("oops", "Which per-site setting hides a site from Copilot and search, without changing who can open it?", "Restricted Content Discovery", ["Site lock: Read-only", "Remove the Copilot licence", "Turn off web search"], "Locks and licences do not hide a file. Restricted Content Discovery stops discovery and leaves the permissions alone."),
     wrongSite: mc("oops", "In the salary ledger case, which site held the wages ledger?", "Treasury", ["Halcyon Home", "Library Archive", "Council Chamber"], "Change only the site that causes the problem."),
@@ -90,6 +93,7 @@ const OOPS = {
 const WJ = c => Object.assign(c, { o: c.o.map(x => x.replace(/ -(?=[A-Za-z])/g, " -\u2060").replace(/\.com\/(?=\S)/g, ".com/\u200b")) });
 Object.values(OOPS.ps).forEach(WJ);
 cards.forEach(c => { if (c.o.some(x => / -[A-Z]/.test(x))) WJ(c); });
+ERRANDS.forEach(e => { OOPS.errand[e.id] = errandCard("oops", e); });
 LADDER.forEach(gid => { OOPS.typed[gid] = TYPED[gid].map((_, l) => recallCard("oops", gid, l)); OOPS.where[gid] = G(gid).where.map((_, i) => whereCard("oops", gid, i)); });
 const PSK = { noconn: "connect", connect: "connect", tconn: "connect", site: "site", tget: "site", set: "set", bool: "set", param: "set", tset: "set", lock: "lock" };
 
@@ -110,7 +114,7 @@ const bank = `POCKET.register({
   live(get) {
     const s = get("vigil.v1"), O = ${JSON.stringify(OOPS)}, K = ${JSON.stringify(PSK)};
     if (!s || !Array.isArray(s.miss)) return [];
-    const out = [], seen = new Set(), src = { typed: "a School check", where: "a School check", trial: "the Trial", "case": "the salary ledger case", ps: "the PowerShell window" };
+    const out = [], seen = new Set(), src = { typed: "a School check", where: "a School check", trial: "the Trial", "case": "the salary ledger case", ps: "the PowerShell window", errand: "an errand" };
     s.miss.forEach(m => {
       const r = m && m.ref; if (!r) return;
       let c = null;
@@ -119,6 +123,7 @@ const bank = `POCKET.register({
       if (m.kind === "trial") c = O.trial[r.i];
       if (m.kind === "case") c = O["case"][r.id];
       if (m.kind === "ps") c = O.ps[K[r.e]];
+      if (m.kind === "errand") c = O.errand[r.id];
       if (!c || seen.has(c.o[c.a])) return;
       seen.add(c.o[c.a]);
       out.push(Object.assign({}, c, { u: "oops", ut: "Your oopsies", why: c.why + " You got this wrong in " + src[m.kind] + ".", at: Math.max(1, m.st ? 1 : 2) }));
