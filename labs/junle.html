@@ -2548,8 +2548,8 @@
         ["", "set interfaces ae0 unit 0 family ethernet-switching vlan members all", "lets VLANs ride the bundle; tighten to named VLANs in production.", "with no members the trunk carries nothing and hosts go dark."],
       ],
       verify: ["show lacp interfaces", "show interfaces ae0 extensive"],
-      gotcha: "Both members MUST have identical speed/duplex, and any old family ethernet-switching config on the member ports has to be deleted first \u2014 the member carries only the 802.3ad line.",
-      recap: "You bundled two ports into ae0, enabled LACP so both ends agree it is up, and moved all VLAN config onto the bundle. One link can now fail with no outage.",
+      gotcha: "Both members MUST have the same speed and duplex. Delete any old family ethernet-switching config on the member ports first: a member port carries only the 802.3ad line.",
+      recap: "You bundled two ports into ae0 and turned on LACP, so both ends agree the link is up. All VLAN config now lives on the bundle. One link can now fail with no outage.",
       next: "RSTP \u2014 once you trunk bundles between switches you need spanning-tree so a redundant path can't loop. read rstp."
     },
     {
@@ -2592,7 +2592,7 @@
       ],
       verify: ["show ospf neighbor", "show ospf route", "show route protocol ospf"],
       gotcha: "Passive on server VLANs is not optional politeness \u2014 without it anyone on that VLAN could speak OSPF to you. And ExStart forever = check MTU both sides.",
-      recap: "Each router now advertises its subnets into area 0, forms adjacencies only on real uplinks, and keeps server VLANs passive so they can't be spoofed.",
+      recap: "Each router now advertises its subnets into area 0. It forms adjacencies only on real uplinks. Server VLANs stay passive, so they can't be spoofed.",
       next: "BGP \u2014 OSPF handles inside your network; talking to a carrier or another AS needs BGP. read bgp."
     },
     {
@@ -2635,7 +2635,7 @@
       ],
       verify: ["show spanning-tree bridge", "show spanning-tree interface"],
       gotcha: "Default priority is 32768 everywhere \u2014 leave it and the oldest MAC address in the building wins root. Always set it on purpose.",
-      recap: "Spanning-tree is on, the root is pinned to your core on purpose, host ports come up instantly, and a rogue switch on an edge port gets blocked.",
+      recap: "Spanning tree is on and the root is pinned to your core on purpose. Host ports come up instantly, and a rogue switch on an edge port gets blocked.",
       next: "VIRTUAL CHASSIS \u2014 once single switches are solid, stack several into one managed unit. read vc."
     },
     {
@@ -2650,13 +2650,13 @@
       ],
       steps: [
         ["1. convert uplink ports into VC ports (both sides!)", "request virtual-chassis vc-port set pic-slot 1 port 0", "VC ports are the backbone that stitches members into one switch.", "an un-converted port stays a normal uplink and the member never joins."],
-        ["2. make mastership deterministic", "set virtual-chassis member 0 mastership-priority 255", "highest priority always wins, so you pick the brain.", "equal priorities after a reboot can elect two masters = split brain."],
+        ["2. make mastership deterministic", "set virtual-chassis member 0 mastership-priority 255", "highest priority always wins, so you pick the brain.", "leave priorities equal and the tie-breakers pick the master, maybe not the one you wanted."],
         ["3. two-member stack: turn split detection off", "set virtual-chassis no-split-detection", "with only two members, the survivor stays active when its partner dies.", "with split detection on, losing one member of a pair can leave the other inactive."],
         ["4. optional: fix member IDs", "set virtual-chassis preprovisioned", "ties each serial to a fixed member id so slots don't shuffle.", "un-preprovisioned members can renumber themselves after a reboot."],
       ],
       verify: ["show virtual-chassis", "show virtual-chassis vc-port"],
-      gotcha: "Two members with equal priority after a power blip = two masters = split brain. Priority 255 on your chosen master is not optional. no-split-detection is for TWO-member stacks specifically.",
-      recap: "Multiple EX switches now act as one: uplinks became VC ports, member 0 is the deterministic master, and split detection is tuned for a two-member stack.",
+      gotcha: "Equal priorities never make two masters. Tie-breakers still pick one: the last master, then the member in the stack longest, then the lowest MAC. Two masters means the VC links between members broke. Set priority 255 on the master you want. no-split-detection is for TWO-member stacks only.",
+      recap: "Several EX switches now act as one. The uplinks became VC ports, member 0 is always the master, and split detection is tuned for a two-member stack.",
       next: "IRB / INTER-VLAN \u2014 one logical switch still needs to route between its VLANs. read irb."
     },
     {
@@ -2677,7 +2677,7 @@
       ],
       verify: ["show interfaces terse | match irb", "show route"],
       gotcha: "An unbound irb shows admin UP link DOWN forever \u2014 that is the NO MANAGEMENT scenario in this very lab. The irb only comes up when its VLAN exists, is bound, and has at least one live port.",
-      recap: "VLAN 20 now has a gateway (irb.20), it's correctly bound so the interface is actually up, and a default route lets it reach beyond the switch.",
+      recap: "VLAN 20 now has a gateway: irb.20. It is bound to its VLAN, so the interface is really up. A default route lets it reach beyond the switch.",
       next: "STORM CONTROL \u2014 routing between VLANs is live; now protect the switch from broadcast floods. read storm."
     },
     {
@@ -2721,8 +2721,8 @@
         ["6. cap MAC learning on the access port", "set switch-options interface ge-0/0/5 interface-mac-limit 2 packet-action drop", "limits how many MACs the port learns and drops the rest.", "a MAC flood overflows the table and the switch floods every frame \u2014 a passive tap."]
       ],
       verify: ["show dhcp-security binding", "show ethernet-switching table", "show configuration vlans klanten forwarding-options"],
-      gotcha: "This is ELS syntax (EX4300 / vEX, Junos 17.1R1+). Older EX used 'set ethernet-switching-options secure-access-port ...' which fails on ELS. DAI and IP source guard both read the snooping binding table, so DHCP snooping must be on first or they have nothing to check. Verify every command and show output on a real vEX/EX before exam day.",
-      recap: "The klanten VLAN now snoops DHCP into a binding table, trusts only the server uplink, validates ARP and source IP against that table, and caps MAC learning per port \u2014 the JNCIA-DC Layer 2 security stack.",
+      gotcha: "This is ELS syntax (EX4300 / vEX, Junos 17.1R1+). Older EX used 'set ethernet-switching-options secure-access-port ...' which fails on ELS. DAI and IP source guard both read the snooping binding table. Turn on DHCP snooping first, or they have nothing to check. Verify every command and show output on a real vEX/EX before exam day.",
+      recap: "The klanten VLAN now snoops DHCP into a binding table and trusts only the server uplink. ARP and source IPs are checked against that table, and each port may learn only a few MACs. Together, that is the JNCIA-DC Layer 2 security stack.",
       next: "LINK AGGREGATION \u2014 bundle links into one logical pipe for bandwidth and redundancy. read lacp."
     },
     {
@@ -3066,7 +3066,7 @@
       steps: [
         { task: "The stack is behaving strangely after a power blip. Look at the chassis.", answers: ["show virtual-chassis", "show virtual-chassis status"], fx: "p1", chip: "SPLIT SEEN",
           out: ["Member ID  Status  Mastership  Role", "0 (FPC 0)  Prsnt   128         Master*", "1 (FPC 1)  Prsnt   128         Master*"] },
-        { task: "Two masters, equal priority: a split brain. Check whether the VC ports are actually up.", answers: ["show virtual-chassis vc-port"], fx: "p2", chip: "VCP DOWN",
+        { task: "Two masters at once: a split brain. Check whether the VC ports are actually up.", answers: ["show virtual-chassis vc-port"], fx: "p2", chip: "VCP DOWN",
           out: ["fpc0:", "vcp-255/1/0  Configured  Down", "vcp-255/1/1  Configured  Up"] },
         { task: "One VC link is down, so the ring broke. Enter configuration mode to make mastership deterministic.", answers: ["configure", "edit"], fx: "p3", chip: "CONFIG" },
         { task: "Give member 0 the highest mastership priority so it always wins.", answers: ["set virtual-chassis member 0 mastership-priority 255"], fx: "p4", chip: "PRIORITY SET" },
@@ -3709,7 +3709,7 @@
     "set interfaces ae0 aggregated-ether-options lacp active": "active means this side sends LACP packets. At least one side must be active or the bundle never negotiates.",
     "set forwarding-options storm-control-profiles default all": "EX4300 is ELS: storm-control profiles live under forwarding-options and are applied per port under family ethernet-switching. The old ethernet-switching-options syntax fails.",
     "set protocols rstp bridge-priority 4096": "Lower number wins root election. Leave the default 32768 and the oldest MAC in the building becomes root by accident.",
-    "set virtual-chassis member 0 mastership-priority 255": "Highest priority wins mastership. Equal priorities after a reboot = two masters = split brain.",
+    "set virtual-chassis member 0 mastership-priority 255": "Highest priority wins mastership. With equal priorities, tie-breakers choose the master for you.",
     "set vlans servers l3-interface irb.20": "This binding is what everyone forgets. Without it the irb stays link-DOWN forever even with an IP set.",
     "commit confirmed 5": "Auto-rolls back in 5 min unless you confirm with a second commit. Your safety net for remote changes.",
     "rollback 1": "Loads the PREVIOUS committed config. rollback 0 only throws away uncommitted candidate edits."
@@ -3789,7 +3789,7 @@
     { p: "rstp", q: "Which bridge becomes root?", opts: ["highest priority number", "lowest priority number", "oldest uptime"], a: 1 },
     { p: "rstp", q: "An edge port exists so that...", opts: ["it blocks BPDUs", "host ports skip listening/learning", "it becomes root"], a: 1 },
     { p: "vc", q: "What guarantees a deterministic VC master?", opts: ["lowest member id", "mastership-priority 255 on your chosen one", "the first to boot"], a: 1 },
-    { p: "vc", q: "Two members, equal priority, after a power blip risks...", opts: ["split brain", "slower boot", "nothing"], a: 0 },
+    { p: "vc", q: "Both members show Master at the same time. The usual cause?", opts: ["the VC link between them broke", "equal mastership priority", "a slow boot"], a: 0 },
     { p: "irb", q: "An irb shows admin UP / link DOWN forever because...", opts: ["no IP set", "not bound to a VLAN with a live port", "wrong unit number"], a: 1 },
     { p: "irb", q: "What binds a VLAN to its L3 interface?", opts: ["set vlans NAME l3-interface irb.N", "set interfaces irb unit N", "set routing-options irb"], a: 0 },
     { p: "storm", q: "On the EX4300 (ELS), storm-control profiles live under...", opts: ["interfaces X storm-control", "forwarding-options storm-control-profiles", "protocols storm-control"], a: 1 },
@@ -3810,7 +3810,7 @@
     "rstp0": "Lowest bridge-priority number wins the root election.",
     "rstp1": "Edge ports skip listening/learning so hosts get link immediately.",
     "vc0": "mastership-priority 255 pins the master deterministically.",
-    "vc1": "Equal priority after a blip risks two masters \u2014 split brain.",
+    "vc1": "Two masters means the members lost each other over the VC links. Equal priority alone just falls back to tie-breakers.",
     "irb0": "No VLAN binding = irb stays link-DOWN even with an IP.",
     "irb1": "set vlans NAME l3-interface irb.N is the binding that brings it up.",
     "storm0": "ELS defines storm-control profiles under forwarding-options; the legacy ethernet-switching-options syntax fails on EX4300.",

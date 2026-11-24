@@ -2046,7 +2046,7 @@ const TICKETS = [
       { id: "port", t: "Put the server port in staff", why: "The server is patched into ge-0/0/4. ELS syntax: interface-mode, not the legacy port-mode. Watch port 4 on the left screen change colour after commit.", c: ["set interfaces ge-0/0/4 unit 0 family ethernet-switching interface-mode access", "set interfaces ge-0/0/4 unit 0 family ethernet-switching vlan members staff", "commit"], ok: () => { const x = port(4); return x.mode === "access" && x.members.length === 1 && x.members[0] === "staff"; } }
     ] },
   { id: "002", title: "UPLINK", giver: "maren",
-    intro: "Your switch is lonely. ge-0/0/47 runs to core-sw, but right now it only carries the default VLAN. Make it a proper uplink: a guest VLAN on tag 20, then a trunk that carries staff and guest, labelled so the next person knows what it is. And prove who is on the other end before you call it done.",
+    intro: "Your switch is lonely. ge-0/0/47 runs to core-sw, but right now it only carries the default VLAN. Make it a proper uplink. First add a guest VLAN on tag 20. Then build a trunk that carries staff and guest, with a label so the next person knows what it is. And prove who is on the other end before you call it done.",
     outro: "Trunk up, both VLANs tagged, and you checked LLDP instead of guessing. That last part is what separates engineers from button pushers.",
     done: "ge-0/0/47 is a labelled trunk carrying staff and guest to core-sw.",
     steps: [
@@ -2142,7 +2142,7 @@ const ACT2 = [
   { id: "009", title: "NEW INN", giver: "odile", dev: "ggr",
     intro: "A letter, sealed with butter. 'To the Network Guild. The Gilded Gryphon reopens at first frost. Your Marrowen left a humming box in our cellar. Guests want the wireless. My staff want the wireless, but NOT the same one as the guests. The kitchen screen must get the orders, and the door locks must never share a network with anybody. Warmly, Tansy Burrowell, innkeeper.' Marrowen staged it as ggr-sw1. Your account works. The rest is yours.",
     outro: "Tansy writes that the guests are online, the cook has his orders, and the locks talk only to themselves. She also sent a pie. It is on Brann's desk. It may not last.",
-    done: "ggr-sw1 has four VLANs, access ports for the desk, kitchen and locks, a trunk to the hall AP, and a tagged uplink to the guild.",
+    done: "ggr-sw1 now has four VLANs and access ports for the desk, kitchen and locks. It also has a trunk to the hall AP and a tagged uplink to the guild.",
     steps: [
       { id: "g1", t: "Log in to the inn's switch", why: "Same as every job: find it, connect to it.", c: ["ssh ggr-sw1"], ok: () => ranOn("ssh-ok", "ggr") },
       { id: "g2", t: "Create four VLANs", why: "One VLAN per kind of user: guests 110, staff 120, kitchen 130, locks 140. Four lines, one commit.", c: ["configure", "set vlans guests vlan-id 110", "set vlans staff vlan-id 120", "set vlans kitchen vlan-id 130", "set vlans locks vlan-id 140", "commit"], ok: () => [["guests", 110], ["staff", 120], ["kitchen", 130], ["locks", 140]].every(([n, i]) => devVlanId("ggr", n) === i) },
