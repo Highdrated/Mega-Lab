@@ -59,7 +59,7 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u":"tags","q":"Fill the blank.","code":"SELECT ROUND(price / 3___ 2)\nFROM menu;","o":[".",":",",",";"],"a":2,"why":"The two arguments are separated by a comma."},
     {"u":"tags","q":"Which operators can SELECT calculate with?","o":["+ - * /","Only * and /","Only +","None"],"a":0,"why":"You can calculate right in the SELECT."},
     {"u":"closing","q":"What does COUNT(*) return?","o":["Every row","The biggest value","One number: how many rows","The column names"],"a":2,"why":"COUNT folds all rows into one number."},
-    {"u":"closing","q":"Spot the bug.","code":"SELECT COUNT() FROM bills;","o":["COUNT needs AS","bills needs quotes","Nothing","Use COUNT(*)"],"a":3,"why":"COUNT() with empty brackets is an error."},
+    {"u":"closing","q":"Spot the bug.","code":"SELECT COUNT * FROM bills;","o":["COUNT needs AS","bills needs quotes","Nothing","Use COUNT(*)"],"a":3,"why":"The star goes inside brackets. Without them SQLite gives a syntax error."},
     {"u":"closing","q":"Saturday has 5 bills. What comes back?","code":"SELECT COUNT(*) FROM bills\nWHERE day = 'Sat';","o":["13","5","0","1"],"a":1,"why":"COUNT counts the rows that survive WHERE."},
     {"u":"closing","q":"Which gives the average tip?","o":["AVG(tip)","AVERAGE(tip)","SUM(tip) / *","MEAN(tip)"],"a":0,"why":"SQL calls it AVG."},
     {"u":"closing","q":"Spot the bug.","code":"SELECT AVG(tip, 2) FROM bills;","o":["tip is not a column","Rounding goes outside: ROUND(AVG(tip), 2)","Nothing","AVG needs a star"],"a":1,"why":"AVG takes one argument."},
@@ -133,6 +133,11 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u": "chalk", "q": "What does this return?", "code": "SELECT 'Solar' || 'Curry';", "o": ["Solar Curry", "0", "SolarCurry", "Solar||Curry"], "a": 2, "why": "|| glues exactly what you give it. Add ' ' for the space."},
     {"u": "regulars", "q": "Spot the bug.", "code": "WHERE price >\n  SELECT AVG(price) FROM menu", "o": ["AVG needs ROUND", "Brackets are missing", "> should be IN", "menu needs an alias"], "a": 1, "why": "An inner query goes in brackets: WHERE price > (SELECT AVG(price) FROM menu)."},
     {"u": "regulars", "q": "COUNT(*) after a LEFT JOIN. A guest with no orders counts as...", "o": ["0", "NULL", "1", "An error"], "a": 2, "why": "The guest's own row still exists. COUNT(o.id) gives 0."},
-    {"u": "winter", "q": "What does SQLite say here?", "code": "SELECT name FROM a ORDER BY name\nUNION ALL\nSELECT name FROM b;", "o": ["Both halves are sorted", "Only a is sorted", "It runs fine", "ORDER BY must come after UNION ALL"], "a": 3, "why": "Only the last SELECT may sort, and it sorts the whole stack."}
+    {"u": "winter", "q": "What does SQLite say here?", "code": "SELECT name FROM a ORDER BY name\nUNION ALL\nSELECT name FROM b;", "o": ["Both halves are sorted", "Only a is sorted", "It runs fine", "ORDER BY must come after UNION ALL"], "a": 3, "why": "Only the last SELECT may sort, and it sorts the whole stack."},
+    {"u":"closing","q":"How many rows come back?","code":"SELECT COUNT(*) AS bills\nFROM bills\nWHERE day = 'Fri';","o":["one row per Friday bill","one row with one number","none","two"],"a":1,"why":"COUNT folds the matching rows into a single number."},
+    {"u":"closing","q":"Which gives the total of all bills?","o":["COUNT(total)","SUM(total)","ADD(total)","PLUS(total)"],"a":1,"why":"SUM adds a column up. COUNT only counts the rows."},
+    {"u":"closing","q":"Fill the blank.","code":"SELECT MIN(price) AS cheapest,\n       ___(price) AS priciest\nFROM menu;","o":["TOP","MAX","HIGH","BIG"],"a":1,"why":"MIN gives the smallest value, MAX the largest."},
+    {"u":"tags","q":"Fill the blank.","code":"SELECT name, price * 1.12\n  ___ with_levy\nFROM menu;","o":["AS","IS","TO","="],"a":0,"why":"AS gives the result column a readable name."},
+    {"u":"tags","q":"Why wrap a calculation in ROUND?","o":["to save the result","to cut long tails like 24.080000000000002","to make it faster","to sort the rows"],"a":1,"why":"Decimals leave long tails. ROUND(value, 2) keeps two decimals."}
   ]
 });

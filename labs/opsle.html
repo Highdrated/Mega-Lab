@@ -286,7 +286,16 @@ POCKET.register({
     {"u": "loops", "q": "Which command shows the root bridge and the timers?", "o": ["show spanning-tree interface", "show spanning-tree root", "show spanning-tree bridge", "show rstp"], "a": 2, "why": "bridge shows root ID, your own ID, and hello, max-age and forward delay."},
     {"u": "routing", "q": "Junos OSPF uses a 100 Mbps reference bandwidth by default. Why raise it to 100g?", "o": ["every link from 100M up would cost 1", "OSPF would not start", "it is needed for MD5", "it speeds up the hellos"], "a": 0, "why": "With 100M as reference, 1G and 10G both cost 1 and look the same."},
     {"u": "routing", "q": "Which command shows which interfaces run OSPF and their state?", "o": ["show ospf neighbor", "show ospf interface", "show interfaces ospf", "show ospf database"], "a": 1, "why": "interface lists each OSPF interface, its area and DR state. database is the LSDB."},
-    {"u": "routing", "q": "Restart the OSPF adjacency with 10.0.0.9. Which command?", "o": ["restart ospf 10.0.0.9", "clear ospf neighbor 10.0.0.9", "request ospf reset 10.0.0.9", "delete ospf neighbor 10.0.0.9"], "a": 1, "why": "clear ospf neighbor drops the adjacency so it forms again from scratch."}
+    {"u": "routing", "q": "Restart the OSPF adjacency with 10.0.0.9. Which command?", "o": ["restart ospf 10.0.0.9", "clear ospf neighbor 10.0.0.9", "request ospf reset 10.0.0.9", "delete ospf neighbor 10.0.0.9"], "a": 1, "why": "clear ospf neighbor drops the adjacency so it forms again from scratch."},
+    {"u": "vc", "q": "You made the uplink a VC port on member 0 only. What happens?", "o": ["The stack forms anyway", "Member 1 never joins", "Member 1 becomes master", "The port goes err-disabled"], "a": 1, "why": "Both ends of the cable must be VC ports. A port you did not convert stays a normal uplink."},
+    {"u": "vc", "q": "A member has no mastership-priority set. Which value does it have?", "o": ["0", "1", "128", "255"], "a": 2, "why": "The default is 128. Set 255 on the switch you want as master."},
+    {"u": "vc", "q": "Your Virtual Chassis has only two members. Which line keeps the survivor active when its partner dies?", "o": ["set virtual-chassis no-split-detection", "set virtual-chassis preprovisioned", "request virtual-chassis recycle", "set virtual-chassis member 1 role master"], "a": 0, "why": "With split detection on, a lone member of a pair can go inactive. Turn it off for two-member stacks."},
+    {"u": "vc", "q": "Three switches form one Virtual Chassis. Member 0 is master. What are the other two?", "o": ["Two more masters", "Backup and linecard", "Two linecards, no backup", "Standby and spare"], "a": 1, "why": "One master, one backup ready to take over, and the rest are linecards."},
+    {"u": "vc", "q": "How many devices do you log in to and manage in a three-member Virtual Chassis?", "o": ["One", "Two", "Three", "One per VC port"], "a": 0, "why": "The stack acts as one switch with one config. Members just add ports."},
+    {"u": "dcl2sec", "q": "A laptop on an access port runs its own DHCP server. Which feature stops its offers?", "o": ["Storm control", "MAC limiting", "DHCP snooping", "IP source guard"], "a": 2, "why": "Snooping drops server-type DHCP replies on untrusted ports, and access ports are untrusted."},
+    {"u": "dcl2sec", "q": "You made group servers with overrides trusted but named no interface. What happens?", "o": ["Every port is trusted", "Real DHCP replies are still dropped", "Snooping turns itself off", "The commit fails"], "a": 1, "why": "The group trusts no port yet. Add interface ge-0/0/0.0 to the group."},
+    {"u": "dcl2sec", "q": "Which command shows the binding table that snooping built?", "o": ["show dhcp-security binding", "show arp", "show ethernet-switching table", "show dhcp server binding"], "a": 0, "why": "It lists IP, MAC, VLAN and port for every lease the switch saw."},
+    {"u": "dcl2sec", "q": "Nobody caps MAC learning and a host floods fake MACs until the table is full. What does the switch do next?", "o": ["It reboots", "It drops all traffic", "It floods frames out of every port", "It shuts the port"], "a": 2, "why": "With no room to learn, it acts like a hub. Anyone on the VLAN can now read the traffic."}
   ]
 });
 
@@ -1047,7 +1056,14 @@ POCKET.register({
     { u: 'trade', q: 'What does this print?', code: 'menu = {"tea": 4, "soup": 9}\nfor dish, price in menu.items():\n    print(dish, price)', o: ['tea, then soup', 'tea 4, then soup 9', '4, then 9'], a: 1, why: 'items() hands out key and value together.' },
     { u: 'trade', q: 'What goes wrong here?', code: 'menu = {"tea": 4}\nfor dish, price in menu:\n    print(dish, price)', o: ['It prints tea 4', 'KeyError', 'ValueError: too many values to unpack'], a: 2, why: 'Without items() you only get keys. Pairs come from menu.items().' },
     { u: 'trade', q: 'What does this print?', code: 'menu = {"tea": 4}\nmenu["tea"] += 1\nprint(menu["tea"])', o: ['5', '41', 'KeyError'], a: 0, why: '+= works on a value you look up by its key.' },
-    { u: 'trade', q: 'What does this print?', code: 'menu = {"tea": 4}\nprint("Tea" in menu)', o: ['True', 'False', 'KeyError'], a: 1, why: 'Keys are case-sensitive: Tea and tea are two different keys.' }
+    { u: 'trade', q: 'What does this print?', code: 'menu = {"tea": 4}\nprint("Tea" in menu)', o: ['True', 'False', 'KeyError'], a: 1, why: 'Keys are case-sensitive: Tea and tea are two different keys.' },
+    {"u": "hold", "q": "What does this print?", "code": "supplies = [\"blankets\", \"pillows\", \"tea\", \"spare lamps\"]\nprint(f\"Stock: {len(supplies)} items\")", "o": ["Stock: {len(supplies)} items", "Stock: 4 items", "Stock: 3 items"], "a": 1, "why": "Inside an f-string, the part in braces is worked out first."},
+    {"u": "hold", "q": "What does this print?", "code": "for item in [\"blankets\", \"tea\"]:\n    print(\"-\", item)", "o": ["-blankets, then -tea", "- blankets, then - tea", "- blankets tea"], "a": 1, "why": "One line per item. A comma in print puts a space between the parts."},
+    {"u": "hold", "q": "supplies has 4 items. You run supplies.append(\"postcards\"). What is len(supplies) now?", "o": ["4", "5", "1"], "a": 1, "why": "append adds one item at the end."},
+    {"u": "hold", "q": "In for item in supplies:, may you call it berth instead of item?", "o": ["Yes, any name works", "No, it must be item", "Only if berth is a list"], "a": 0, "why": "You pick the loop name. Choose one that reads well, like for berth in berths."},
+    {"u": "roster", "q": "What does this print?", "code": "def greet(name):\n    print(f\"Welcome aboard, {name}.\")\n\ngreet(\"Brix\")", "o": ["Welcome aboard, {name}.", "Welcome aboard, name.", "Welcome aboard, Brix."], "a": 2, "why": "The call fills name with \"Brix\", and the f-string puts it in."},
+    {"u": "roster", "q": "What does this print?", "code": "def bag_fee(bags, rate):\n    return bags * rate\n\nprint(bag_fee(12, 3))", "o": ["36", "None", "123"], "a": 0, "why": "return hands 12 * 3 back, and print shows it."},
+    {"u": "roster", "q": "Is return rate * bags the same as return bags * rate?", "o": ["No, the order flips the answer", "Yes, multiplying works in any order", "Only for whole numbers"], "a": 1, "why": "12 * 3 and 3 * 12 are both 36."}
   ]
 });
 
@@ -1310,7 +1326,7 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u":"tags","q":"Fill the blank.","code":"SELECT ROUND(price / 3___ 2)\nFROM menu;","o":[".",":",",",";"],"a":2,"why":"The two arguments are separated by a comma."},
     {"u":"tags","q":"Which operators can SELECT calculate with?","o":["+ - * /","Only * and /","Only +","None"],"a":0,"why":"You can calculate right in the SELECT."},
     {"u":"closing","q":"What does COUNT(*) return?","o":["Every row","The biggest value","One number: how many rows","The column names"],"a":2,"why":"COUNT folds all rows into one number."},
-    {"u":"closing","q":"Spot the bug.","code":"SELECT COUNT() FROM bills;","o":["COUNT needs AS","bills needs quotes","Nothing","Use COUNT(*)"],"a":3,"why":"COUNT() with empty brackets is an error."},
+    {"u":"closing","q":"Spot the bug.","code":"SELECT COUNT * FROM bills;","o":["COUNT needs AS","bills needs quotes","Nothing","Use COUNT(*)"],"a":3,"why":"The star goes inside brackets. Without them SQLite gives a syntax error."},
     {"u":"closing","q":"Saturday has 5 bills. What comes back?","code":"SELECT COUNT(*) FROM bills\nWHERE day = 'Sat';","o":["13","5","0","1"],"a":1,"why":"COUNT counts the rows that survive WHERE."},
     {"u":"closing","q":"Which gives the average tip?","o":["AVG(tip)","AVERAGE(tip)","SUM(tip) / *","MEAN(tip)"],"a":0,"why":"SQL calls it AVG."},
     {"u":"closing","q":"Spot the bug.","code":"SELECT AVG(tip, 2) FROM bills;","o":["tip is not a column","Rounding goes outside: ROUND(AVG(tip), 2)","Nothing","AVG needs a star"],"a":1,"why":"AVG takes one argument."},
@@ -1384,7 +1400,12 @@ try { var s = get("seqle.v1"); if (!s || typeof s !== "object" || !s.done || typ
     {"u": "chalk", "q": "What does this return?", "code": "SELECT 'Solar' || 'Curry';", "o": ["Solar Curry", "0", "SolarCurry", "Solar||Curry"], "a": 2, "why": "|| glues exactly what you give it. Add ' ' for the space."},
     {"u": "regulars", "q": "Spot the bug.", "code": "WHERE price >\n  SELECT AVG(price) FROM menu", "o": ["AVG needs ROUND", "Brackets are missing", "> should be IN", "menu needs an alias"], "a": 1, "why": "An inner query goes in brackets: WHERE price > (SELECT AVG(price) FROM menu)."},
     {"u": "regulars", "q": "COUNT(*) after a LEFT JOIN. A guest with no orders counts as...", "o": ["0", "NULL", "1", "An error"], "a": 2, "why": "The guest's own row still exists. COUNT(o.id) gives 0."},
-    {"u": "winter", "q": "What does SQLite say here?", "code": "SELECT name FROM a ORDER BY name\nUNION ALL\nSELECT name FROM b;", "o": ["Both halves are sorted", "Only a is sorted", "It runs fine", "ORDER BY must come after UNION ALL"], "a": 3, "why": "Only the last SELECT may sort, and it sorts the whole stack."}
+    {"u": "winter", "q": "What does SQLite say here?", "code": "SELECT name FROM a ORDER BY name\nUNION ALL\nSELECT name FROM b;", "o": ["Both halves are sorted", "Only a is sorted", "It runs fine", "ORDER BY must come after UNION ALL"], "a": 3, "why": "Only the last SELECT may sort, and it sorts the whole stack."},
+    {"u":"closing","q":"How many rows come back?","code":"SELECT COUNT(*) AS bills\nFROM bills\nWHERE day = 'Fri';","o":["one row per Friday bill","one row with one number","none","two"],"a":1,"why":"COUNT folds the matching rows into a single number."},
+    {"u":"closing","q":"Which gives the total of all bills?","o":["COUNT(total)","SUM(total)","ADD(total)","PLUS(total)"],"a":1,"why":"SUM adds a column up. COUNT only counts the rows."},
+    {"u":"closing","q":"Fill the blank.","code":"SELECT MIN(price) AS cheapest,\n       ___(price) AS priciest\nFROM menu;","o":["TOP","MAX","HIGH","BIG"],"a":1,"why":"MIN gives the smallest value, MAX the largest."},
+    {"u":"tags","q":"Fill the blank.","code":"SELECT name, price * 1.12\n  ___ with_levy\nFROM menu;","o":["AS","IS","TO","="],"a":0,"why":"AS gives the result column a readable name."},
+    {"u":"tags","q":"Why wrap a calculation in ROUND?","o":["to save the result","to cut long tails like 24.080000000000002","to make it faster","to sort the rows"],"a":1,"why":"Decimals leave long tails. ROUND(value, 2) keeps two decimals."}
   ]
 });
 
@@ -1866,7 +1887,16 @@ POCKET.register({
     {"u":"runes","q":"Which values can this roll give?","code":"Math.floor(Math.random() * 6) + 1","o":["0 to 6","1 to 6","0 to 5","1 to 7"],"a":1,"why":"Chop to 0..5, then shift up by one: a six-sided die."},
     {"u":"runes","q":"What does the hero say?","code":"say(\"3\" + 4);","o":["7","\"3\" + 4","34","An error"],"a":2,"why":"With text on one side, + glues instead of adding."},
     {"u":"algorithms","q":"Facing f, which index points the opposite way?","code":"const dirs = [\"up\", \"right\",\n  \"down\", \"left\"];","o":["(f + 1) % 4","(f + 2) % 4","f - 1","(f * 2) % 4"],"a":1,"why":"Two right turns make a U-turn: right (1) becomes left (3)."},
-    {"u":"nested","q":"How many times does the hero grab?","code":"for (let r = 0; r < 2; r++) {\n  for (let c = 0; c < 5; c++) {\n    grab();\n  }\n}","o":["7","5","2","10"],"a":3,"why":"2 rows times 5 columns: 10."}
+    {"u":"nested","q":"How many times does the hero grab?","code":"for (let r = 0; r < 2; r++) {\n  for (let c = 0; c < 5; c++) {\n    grab();\n  }\n}","o":["7","5","2","10"],"a":3,"why":"2 rows times 5 columns: 10."},
+    {"u": "conditions", "q": "The tile to the right IS a wall. What does the hero do?", "code": "if (look(\"right\") === \"wall\") {\n  move(\"down\", 2);\n  move(\"right\", 2);\n} else {\n  move(\"right\", 2);\n  move(\"down\", 2);\n}", "o": ["Right 2, then down 2", "Down 2, then right 2", "All four moves", "Nothing"], "a": 1, "why": "The condition is true, so only the if block runs. The else is skipped."},
+    {"u": "conditions", "q": "The tile below is a wall. What happens?", "code": "if (look(\"down\") === \"floor\") {\n  move(\"down\");\n}", "o": ["The hero moves down", "An error", "The hero moves up", "Nothing happens"], "a": 3, "why": "The condition is false and there is no else, so the block is skipped."},
+    {"u": "conditions", "q": "What does \"wall\" === \"Wall\" give?", "o": ["true", "false", "undefined", "An error"], "a": 1, "why": "Strings must match exactly. A capital W makes them different."},
+    {"u": "variables", "q": "How far does the hero go?", "code": "let steps = 2;\nsteps = steps + 1;\nmove(\"right\", steps);", "o": ["2 steps", "1 step", "3 steps", "21 steps"], "a": 2, "why": "Read the old value (2), add 1, store 3 back in the same jar."},
+    {"u": "objects", "q": "What does hero hold afterwards?", "code": "let hero = { hp: 10 };\nhero.gold = 5;", "o": ["{ hp: 10, gold: 5 }", "{ gold: 5 }", "{ hp: 10 }", "An error"], "a": 0, "why": "Writing to a new property adds it. The old ones stay."},
+    {"u": "objects", "q": "What does the hero say?", "code": "let hero = { hp: 10 };\nhero.hp = hero.hp + 5;\nsay(hero.hp);", "o": ["5", "105", "10", "15"], "a": 3, "why": "Read 10, add 5, store 15."},
+    {"u": "modern", "q": "What happens here?", "code": "const steps = 3;\nsteps = 4;", "o": ["steps is 4", "steps is 7", "TypeError: Assignment to constant variable", "steps stays 3, no error"], "a": 2, "why": "A const can never be filled again. JavaScript stops you on purpose."},
+    {"u": "nested", "q": "How many times does move(\"left\", 3) run?", "code": "for (let r = 0; r < 2; r++) {\n  for (let c = 0; c < 3; c++) {\n    move(\"right\");\n  }\n  move(\"left\", 3);\n}", "o": ["6", "2", "3", "1"], "a": 1, "why": "It sits in the outer loop only, so it runs once per row: twice."},
+    {"u": "nested", "q": "What is \"ab\".repeat(2)?", "o": ["\"ab2\"", "\"aabb\"", "\"abab\"", "[\"ab\", \"ab\"]"], "a": 2, "why": "repeat glues the whole string to itself that many times."}
 ]
 });
 
@@ -2167,7 +2197,17 @@ try { var out = []; var ids = ["m00","m01","m02","m03","m04","m05","m06","m07","
     {"u":"m10","q":"Why push the branch before opening a pull request?","o":["To delete it locally","So GitHub has the branch to review","To merge it into main","Git needs it for commit"],"a":1,"why":"A pull request compares a branch that is already on GitHub."},
     {"u":"m11","q":"After a clone, what is the remote called?","o":["main","handbook","origin","upstream"],"a":2,"why":"Clone sets up origin for you."},
     {"u":"m11","q":"Classic slip right after a clone?","o":["Running git in the parent folder","Running cd handbook","Running pwd","Running ls"],"a":0,"why":"Clone makes a new folder, but you still stand outside it. cd in first."},
-    {"u":"m11","q":"You committed in the cloned repo. Which sends it up?","o":["git clone again","git remote add origin","git pull","git push"],"a":3,"why":"Same workflow as always: origin is already set."}
+    {"u":"m11","q":"You committed in the cloned repo. Which sends it up?","o":["git clone again","git remote add origin","git pull","git push"],"a":3,"why":"Same workflow as always: origin is already set."},
+    {"u":"m00","q":"Which command lists what is inside the folder you are in?","o":["pwd","ls","cd","mkdir"],"a":1,"why":"ls means list. pwd only prints where you are."},
+    {"u":"m00","q":"Right after git init, is anything committed yet?","o":["Yes, every file","Yes, a first empty commit","No, the repo is empty until your first commit","Only the README"],"a":2,"why":"Git prints \"Initialized empty Git repository\". Nothing is saved until you commit."},
+    {"u":"m00","q":"You ran git init in the wrong folder. How do you undo it?","o":["Delete the hidden .git folder it made","git uninit","git reset --hard","git init --undo"],"a":0,"why":"Your files stay. Only the history folder goes."},
+    {"u":"m03","q":"secrets.txt was already committed. Then you add it to .gitignore. Is it ignored now?","o":["Yes, right away","Yes, after git push","Only on main","No, git keeps tracking files it already tracks"],"a":3,"why":"Ignore rules only stop new files. `git rm --cached secrets.txt` stops the tracking."},
+    {"u":"m03","q":"Which line ignores the whole build folder?","o":["*.build","build/",".build","#build"],"a":1,"why":"A slash at the end means a folder and everything inside it."},
+    {"u":"m03","q":"A line in .gitignore starts with #. What is it?","o":["A folder","A hidden file","A comment","A wildcard"],"a":2,"why":"Git skips lines that start with #. Use them to explain your rules."},
+    {"u":"m06","q":"In a conflict, which line ends their side?","o":[">>>>>>> cargo-run","<<<<<<< HEAD","=======","### end"],"a":0,"why":"<<<<<<< starts your side, ======= splits the two, >>>>>>> ends theirs."},
+    {"u":"m06","q":"Halfway through a conflict you want to give up and go back. Which command?","o":["git reset --soft","git merge --abort","git push --force","git init"],"a":1,"why":"`git merge --abort` puts everything back the way it was before the merge."},
+    {"u":"m09","q":"After a fetch, git status says your branch is behind by 1 commit. What brings you level?","o":["git push","git commit","git init","git pull"],"a":3,"why":"Behind means the remote has a commit you do not have yet. Pull brings it down."},
+    {"u":"m09","q":"You pull, but you have unsaved edits in the same file. What does git do?","o":["Refuses, and asks you to commit or stash first","Overwrites your edits","Mixes them in silently","Deletes the file"],"a":0,"why":"Git never throws your work away. This is why you check git status before you pull."}
   ]
 });
 
