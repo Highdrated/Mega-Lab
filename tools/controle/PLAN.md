@@ -7,7 +7,7 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 - World: Duskhold, a citadel at dusk. Every lantern on its walls is one exam skill (87).
 - Look (25 Nov, after she found the dark theme heavy): light warm paper, dark ink text, colour only where it means something (gold = lit lantern, ember = action or warning). No dark or blue backgrounds. Content first, theme quiet.
 - Loop: Day (short forge lessons) -> Night (siege: real attack patterns, set real controls) -> Morning (damage report, oopsies).
-- Helper: Wick, the lamplighter.
+- Helper: Wick, the lamplighter, with an Ask Wick hint ladder. Every new lesson must build on an earlier one, and every new term (like VNet) must be explained before a night uses it.
 - No mouse-follow or parallax.
 - SVG only for small icons, never large drawn buildings or scenes (25 Nov). Big scenery only as painted art.
 
@@ -32,7 +32,9 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 - [x] Day 2 and night 2: PIM (eligible vs active, approval, least privilege, emergency keys) against stolen sessions. Outcomes: held, contained, breached
 - [x] Day 3 and night 3: consent phishing, delegated vs application, user consent settings, permission classifications, admin consent workflow, old grants
 - [x] Day 4 and night 4: managed identities (system vs user-assigned), control vs data plane, smallest scope, deleting a leaked client secret. Gatehouse complete (6/6)
-- [ ] Next: the Vault (Key Vault: access, firewall, keys and secrets, Defender for Key Vault)
+- [x] Day 5 and night 5 (Vault, part one): permission models, Key Vault roles, networking and private endpoint, soft delete, purge protection, Delete lock
+- [x] Ask Wick: a hint ladder in every lesson (where to look, first letters, answer) and every night (where to look, what to change, exact fix)
+- [ ] Next: Vault part two (keys, secrets and certificates incl. rotation, Defender for Key Vault, secret scanning with Defender CSPM)
 - [ ] Into the Workshop, oopsies into Pockle
 
 MERGE: WAIT (goes live when Kaatje says "merge Controle")

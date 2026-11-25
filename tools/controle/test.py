@@ -121,7 +121,7 @@ def night4(pg,tag):
     assert 'citadel held' in pg.inner_text('#pane')
     assert pg.locator('#wards .dot.lit').count()==6
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-win.png')
-    pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
+    assert pg.inner_text('#end')=='Start day 5'
     if tag=='1440':
         pg.click('#again');pg.check('input[name=auth][value=sys]');pg.uncheck('#m-del')
         hold(pg);r=results(pg);print('n4 sys off',r);assert 'Blocked work' in r and 'Open door' in r,r
@@ -129,6 +129,47 @@ def night4(pg,tag):
         hold(pg);r=results(pg);print('n4 sys on, secret kept',r);assert r[:2]==['Contained','Contained'] and 'Next month' in r and 'Open door' in r,r
         assert 'leaked secret still works' in pg.inner_text('#pane')
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-warn.png')
+
+CH5={"ch":5,"wing":"vault","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"maxLi":-1,"studied":["ca","mfa","pim","consent","apps","mi","rbac"],"lit":["ca","mfa","pim","consent","apps","mi"],"oops":[],"pol":[],"edit":None,"report":None}
+def night5(pg,tag):
+    import json
+    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH5));pg.reload()
+    assert 'Vault' in pg.inner_text('.kicker')
+    pg.click('#askw');assert 'first fact' in pg.inner_text('#wick'),pg.inner_text('#wick')
+    pg.click('#askw');pg.click('#askw');assert 'Key Vault' in pg.inner_text('#wick') and pg.locator('#askw').is_disabled()
+    for i,ans in enumerate(['Key Vault','Azure RBAC','Key Vault Secrets User','private endpoint','purge protection']):
+        pg.fill('#si',ans);pg.click('#sf button');assert 'Forged' in pg.inner_text('#strikeCard'),('n5 strike',i)
+        if i==1:
+            pg.click('#askw');assert 'hint 1 of 2' in pg.inner_text('#wick')
+        pg.click('.opt[data-i="0"]')
+        if i==3: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-lesson.png')
+        pg.click('#nx')
+    assert 'scouts are back' in pg.inner_text('#pane')
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-brief.png')
+    pg.click('#go');pg.wait_for_timeout(200)
+    pg.click('#askw');pg.click('#askw');pg.select_option('#k-role','none')
+    assert 'hint 2 of 3' in pg.inner_text('#wick'),pg.inner_text('#wick')
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-console.png')
+    hold(pg);r=results(pg);print(tag,'n5 start',r);assert r==['Breached','Breached','Breached'],r
+    pg.click('#again');pg.check('input[name=model][value=rbac]')
+    hold(pg);r=results(pg);print(tag,'n5 rbac no role',r);assert r==['Held','Held','Breached','Blocked work'],r
+    pg.click('#again');pg.select_option('#k-role','reader')
+    hold(pg);r=results(pg);print(tag,'n5 reader',r);assert r==['Held','Held','Breached','Blocked work'],r
+    pg.click('#again');pg.select_option('#k-role','su');pg.check('input[name=net][value=sel]')
+    hold(pg);r=results(pg);print(tag,'n5 firewall no vnet',r);assert r==['Held','Held','Breached','Blocked work'],r
+    pg.click('#again');pg.check('#k-vnet');pg.check('#k-purge')
+    assert pg.locator('#k-purge').is_disabled()
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-console-fixed.png')
+    hold(pg);r=results(pg);print(tag,'n5 win',r);assert r==['Held','Held','Contained'],r
+    assert 'citadel held' in pg.inner_text('#pane')
+    assert pg.locator('#wards .dot.lit').count()==9
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-report-win.png')
+    pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
+    if tag=='1440':
+        pg.click('#again');pg.check('#k-lock');pg.select_option('#k-role','adm');pg.check('input[name=net][value=off]');pg.check('#k-pe')
+        hold(pg);r=results(pg);print('n5 lock+adm+pe',r);assert r[:3]==['Held','Held','Held'] and 'Too much' in r,r
+        pg.click('#again');pg.check('input[name=net][value=all]')
+        hold(pg);r=results(pg);print('n5 pe but public open',r);assert r[1]=='Breached' and 'Risk' in r,r
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
     for tag,(w,h) in {'1440':(1440,900),'1280':(1280,800),'1024':(1024,768),'390':(390,844)}.items():
@@ -182,6 +223,7 @@ with sync_playwright() as p:
         night2(pg,tag)
         night3(pg,tag)
         night4(pg,tag)
+        night5(pg,tag)
         sw=pg.evaluate('document.documentElement.scrollWidth');assert sw<=w,(tag,'overflow',sw)
         pg.close()
     b.close()

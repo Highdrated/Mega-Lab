@@ -114,6 +114,9 @@ input[type=text]:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3p
 .wick svg{flex:none;margin-top:2px}
 .wick p{margin:0;font-size:15px;color:var(--mute)}
 .wick p b{color:var(--ink);font-weight:600}
+.wick p{flex:1}
+.askw{flex:none;min-height:36px;padding:5px 12px;font-size:14px;align-self:center}
+.askw[hidden]{display:none}
 .tenant{display:grid;grid-template-columns:auto 1fr;gap:4px 14px;font-size:15px;margin:0 0 14px}
 .tenant dt{color:var(--mute)}
 .tenant dd{margin:0}
@@ -181,7 +184,7 @@ label.ck input{accent-color:var(--gold);width:17px;height:17px;flex:none}
     <div class="pane" id="pane" aria-live="polite"></div>
     <div class="wick">
       <svg width="30" height="34" viewBox="0 0 30 34" aria-hidden="true"><path d="M10 4h10l3 5H7z" fill="#b9851f"/><rect x="7" y="9" width="16" height="18" rx="3" fill="#fffdf8" stroke="#b9851f" stroke-width="1.5"/><circle cx="15" cy="18" r="4.5" fill="#c25a24"/><path d="M11 27h8v4h-8z" fill="#b9851f"/></svg>
-      <p id="wick"></p>
+      <p id="wick"></p><button class="ghost askw" id="askw" type="button">Ask Wick</button>
     </div>
   </aside>
 </main>
@@ -199,8 +202,8 @@ const SK=[
  {w:'gate',d:1,n:'Configure identity for applications: enterprise apps and app registrations',id:'apps'},
  {w:'gate',d:1,n:'Manage OAuth permission grants and consent settings',id:'consent'},
  {w:'gate',d:1,n:'Configure managed identities for Azure resources',id:'mi'},
- {w:'vault',d:1,n:'Deploy Key Vault'},{w:'vault',d:1,n:'Configure Key Vault settings'},{w:'vault',d:1,n:'Configure access to Key Vault'},{w:'vault',d:1,n:'Configure Key Vault firewall settings'},{w:'vault',d:1,n:'Manage keys, secrets and certificates'},{w:'vault',d:1,n:'Scan for secrets with Defender CSPM'},{w:'vault',d:1,n:'Implement Defender for Key Vault'},
- {w:'keep',d:1,n:'Security controls with Azure Policy (built-in and custom)'},{w:'keep',d:1,n:'Evaluate regulatory compliance in Defender for Cloud'},{w:'keep',d:1,n:'Security standards and recommendations in Defender for Cloud'},{w:'keep',d:1,n:'Implement resource locks'},{w:'keep',d:1,n:'Manage Azure built-in role assignments',id:'rbac'},{w:'keep',d:1,n:'Manage custom Azure and Entra roles'},{w:'keep',d:1,n:'Remediate overprivileged access with Azure RBAC'},{w:'keep',d:1,n:'Azure Backup security features'},{w:'keep',d:1,n:'Security controls with infrastructure as code'},
+ {w:'vault',d:1,n:'Deploy Key Vault'},{w:'vault',d:1,n:'Configure Key Vault settings',id:'kvset'},{w:'vault',d:1,n:'Configure access to Key Vault',id:'kvaccess'},{w:'vault',d:1,n:'Configure Key Vault firewall settings',id:'kvfw'},{w:'vault',d:1,n:'Manage keys, secrets and certificates'},{w:'vault',d:1,n:'Scan for secrets with Defender CSPM'},{w:'vault',d:1,n:'Implement Defender for Key Vault'},
+ {w:'keep',d:1,n:'Security controls with Azure Policy (built-in and custom)'},{w:'keep',d:1,n:'Evaluate regulatory compliance in Defender for Cloud'},{w:'keep',d:1,n:'Security standards and recommendations in Defender for Cloud'},{w:'keep',d:1,n:'Implement resource locks',id:'locks'},{w:'keep',d:1,n:'Manage Azure built-in role assignments',id:'rbac'},{w:'keep',d:1,n:'Manage custom Azure and Entra roles'},{w:'keep',d:1,n:'Remediate overprivileged access with Azure RBAC'},{w:'keep',d:1,n:'Azure Backup security features'},{w:'keep',d:1,n:'Security controls with infrastructure as code'},
  {w:'walls',d:2,n:'Secure storage accounts'},{w:'walls',d:2,n:'Azure Storage firewall rules'},{w:'walls',d:2,n:'Defender for Storage threat protection'},{w:'walls',d:2,n:'Manage storage access and access policies'},
  {w:'walls',d:2,n:'Platform-level security in Azure SQL'},{w:'walls',d:2,n:'Auditing for Azure SQL Database and Managed Instance'},{w:'walls',d:2,n:'Defender for Databases'},
  {w:'walls',d:2,n:'NSGs and application security groups'},{w:'walls',d:2,n:'Network access policies with Azure Virtual Network Manager'},{w:'walls',d:2,n:'Secure an Azure Virtual WAN'},{w:'walls',d:2,n:'Secure VPN connections'},{w:'walls',d:2,n:'Microsoft Entra Private Access'},{w:'walls',d:2,n:'Private endpoints for PaaS resources'},{w:'walls',d:2,n:'Azure Private Link services'},{w:'walls',d:2,n:'Azure Firewall'},{w:'walls',d:2,n:'Effective security rules with Network Watcher'},
@@ -497,13 +500,106 @@ function renderBrief4(p){
   $('go').onclick=()=>{S.stage='console';save();render()};
   wick('<b>Wick:</b> An app with too much access is a raider\'s favourite door. It never gets tired and nobody checks its MFA.');
 }
+
+const L5=[
+ {t:'The vault',b:'Builds on: Control or data.',f:['<b>Key Vault</b> stores secrets, keys and certificates, so apps don\'t keep them in config files.','Like storage, it has two planes: the <b>control plane</b> manages the vault itself, the <b>data plane</b> reads and writes what\'s inside.','Each plane has its own access control. Managing the vault doesn\'t have to mean reading its secrets.'],
+  s:{q:'Which Azure service stores secrets, keys and certificates?',a:['key vault','azure key vault'],show:'Key Vault'},
+  c:{q:'Someone can change the vault\'s network settings. Can they read its secrets?',o:['Not by itself: that\'s the control plane, secrets are the data plane','Yes, the two always go together','Only on weekends'],r:0,why:'Two planes, two permissions. Keep them apart.'}},
+ {t:'Two permission models',b:'Builds on: The vault.',f:['The older model is <b>vault access policy</b>. The recommended one is <b>Azure role-based access control</b> (Azure RBAC).','With access policies, anyone who can edit the vault, such as a Contributor, can add a policy that grants themselves access to the secrets.','With Azure RBAC, only Owner and User Access Administrator can hand out access. A Contributor can manage the vault but can\'t read or grant secrets.'],
+  s:{q:'Which permission model does Microsoft recommend for Key Vault?',a:['azure rbac','rbac','azure role-based access control','role-based access control','azure role based access control'],show:'Azure RBAC'},
+  c:{q:'A vault uses access policies. A developer has Contributor on it. What can they do?',o:['Give themselves access to every secret','Nothing inside the vault, ever','Only read secret names'],r:0,why:'Contributor can write access policies, and an access policy is the key to the data.'}},
+ {t:'Key Vault roles',b:'Builds on: Two permission models.',f:['<b>Key Vault Reader</b> sees names and metadata, not secret values. <b>Key Vault Secrets User</b> reads secret values.','<b>Secrets Officer</b> manages secrets. <b>Key Vault Administrator</b> can do everything on the data plane.','Switching a vault to Azure RBAC means its access policies stop counting. Give the roles first, or apps break.'],
+  s:{q:'Which role lets an app read a secret\'s value and nothing more?',a:['key vault secrets user'],show:'Key Vault Secrets User'},
+  c:{q:'You switch a vault to Azure RBAC. An app had an access policy with Get. What happens?',o:['It loses access until it gets a role','It keeps access, policies still apply','It becomes Key Vault Administrator'],r:0,why:'One model at a time. Under Azure RBAC, only role assignments count.'}},
+ {t:'The vault\'s walls',b:'Builds on: The vault.',f:['Apps in Azure live in a <b>virtual network</b> (VNet), your own private network inside Azure, split into subnets. Under the vault\'s <b>Networking</b> you choose: public access from all networks, only from specific VNets and IP addresses, or none.','A <b>private endpoint</b> gives the vault a private IP inside your VNet, so apps reach it without going over the internet.','The firewall guards the data plane. It adds a wall, it doesn\'t replace access control.'],
+  s:{q:'What gives the vault a private IP inside your virtual network?',a:['private endpoint','a private endpoint','private endpoints'],show:'private endpoint'},
+  c:{q:'Public access is disabled and there is no private endpoint. Can an app in your VNet reach the vault?',o:['No, there\'s no way in left','Yes, VNets always get through','Only with Key Vault Administrator'],r:0,why:'Disabled public access needs a private endpoint, or nothing gets in.'}},
+ {t:'Nothing truly gone',b:'Builds on: Two permission models.',f:['<b>Soft delete</b> is always on: deleted vaults and secrets stay recoverable for 7 to 90 days, 90 by default.','Without <b>purge protection</b>, someone with enough rights can delete and purge at once. With it, nobody can purge before the retention ends, and it can\'t be turned off again.','A <b>Delete lock</b> stops the vault being deleted at all. Only Owner and User Access Administrator can remove locks, not Contributor.'],
+  s:{q:'Which setting stops anyone purging a deleted vault before the retention period ends?',a:['purge protection','enable purge protection'],show:'purge protection'},
+  c:{q:'Soft delete is on, purge protection is off. A raider deletes the vault. Is it safe?',o:['No, he can purge it straight away','Yes, soft delete keeps it 90 days no matter what','Yes, Azure always keeps a backup'],r:0,why:'Soft delete keeps it only until someone purges. Purge protection closes that gap.'}}
+];
+const KROLES={none:'No role',reader:'Key Vault Reader',su:'Key Vault Secrets User',so:'Key Vault Secrets Officer',adm:'Key Vault Administrator'};
+const KNET={all:'Allow public access from all networks',sel:'Allow public access from specific virtual networks and IP addresses',off:'Disable public access'};
+function startKv(){return {model:'policy',role:'none',net:'all',vnet:false,pe:false,purge:false,lock:false}}
+const WAVES5=[
+ {id:'A',name:'Vault looter',icon:'vault',how:'Orrin, a contractor with Contributor on rg-vault, had his account phished. The raider wants the secrets'},
+ {id:'B',name:'Stolen app key',icon:'key',how:'billing-app\'s sign-in credential was copied. The raider tries the vault from the internet'},
+ {id:'C',name:'Scorched vault',icon:'flame',how:'With Orrin\'s account, the raider tries to delete the vault and purge it for good'}
+];
+function evaluate5(){
+  const K=S.kv,checks=[];
+  const authOk=K.model==='policy'||['su','so','adm'].includes(K.role);
+  const netOk=K.net==='all'||(K.net==='sel'&&K.vnet)||K.pe;
+  const appOk=authOk&&netOk;
+  const a=K.model==='policy'?{res:'broke',msg:'Under vault access policies, Contributor can edit access policies. The raider gave himself Get on secrets, added his IP to the firewall and read every secret.'}
+   :{res:'held',msg:'Under Azure RBAC, Contributor has no data actions and can\'t assign roles. He could fiddle with the firewall, but that opens nothing without access.'};
+  const strong=K.model==='rbac'&&(K.role==='so'||K.role==='adm');
+  const b=!authOk?{res:'held',msg:'billing-app has no access to secrets right now, so its stolen credential opened nothing.'}
+   :K.net==='all'?{res:'broke',msg:`The stolen billing-app credential reached the vault from the internet and read billing-db-password${strong?`. With ${KROLES[K.role]} it could change and delete secrets too`:''}.`}
+   :{res:'held',msg:`The firewall only lets in ${K.net==='off'?'the private endpoint':'vnet-app'+(K.pe?' and the private endpoint':'')}. The raider's request from the internet was refused.`};
+  const c=K.lock?{res:'held',msg:'The Delete lock stopped him. Contributor can\'t remove locks.'}
+   :K.purge?{res:'contained',msg:'He deleted the vault, but purge protection blocked the purge. You recovered it in the morning, after a few hours of downtime.'}
+   :{res:'broke',msg:'He deleted the vault and purged it straight away. Soft delete was on, but without purge protection anyone with enough rights can purge. Every secret is gone for good.'};
+  const waves=[{w:WAVES5[0],held:a.res!=='broke',...a},{w:WAVES5[1],held:b.res!=='broke',...b},{w:WAVES5[2],held:c.res!=='broke',...c}];
+  let lock=false;
+  if(!appOk){lock=true;checks.push({k:'broke',t:'Blocked work',m:!authOk?(K.role==='reader'?'Key Vault Reader sees secret names, not their values. billing-app needs Key Vault Secrets User.':'You switched to Azure RBAC, but billing-app has no Key Vault role. Access policies stop counting the moment you switch.'):K.net==='off'?'Public access is disabled and there\'s no private endpoint, so billing-app can\'t reach the vault.':'The firewall doesn\'t let vnet-app in, so billing-app can\'t reach the vault.'})}
+  if(strong&&appOk)checks.push({k:'warnr',t:'Too much',m:`billing-app only reads one secret. Key Vault Secrets User is enough, ${KROLES[K.role]} could change or delete them.`});
+  if(K.pe&&K.net==='all')checks.push({k:'warnr',t:'Risk',m:'You added a private endpoint, but public access is still open to all networks. Close the public side too.'});
+  return {waves,checks,win:waves.every(v=>v.held)&&appOk,lock};
+}
+function renderKv(p){
+  const K=S.kv;
+  const opt=(o,v)=>Object.entries(o).map(([k,n])=>`<option value="${k}" ${k===v?'selected':''}>${n}</option>`).join('');
+  p.innerHTML=`<div class="kicker">Night 5 · Vault console</div><div class="crumb">Azure portal › rg-vault › kv-duskhold</div><h2>kv-duskhold</h2>
+  <form class="form" style="margin-top:14px">
+  <fieldset><legend>Settings › Access configuration · Permission model</legend>
+   <label class="ck"><input type="radio" name="model" value="policy" ${K.model==='policy'?'checked':''}> Vault access policy</label>
+   <label class="ck"><input type="radio" name="model" value="rbac" ${K.model==='rbac'?'checked':''}> Azure role-based access control (recommended)</label>
+   <div class="sub" style="margin-top:6px">Access policies: billing-app · Secret permissions: Get, List${K.model==='rbac'?' · ignored under Azure RBAC':''}</div></fieldset>
+  <fieldset><legend>Access control (IAM) · billing-app</legend>
+   <select id="k-role" class="gsel" aria-label="Key Vault role for billing-app">${opt(KROLES,K.role)}</select>
+   <div class="sub" style="margin-top:6px">Role assignments only count under Azure RBAC.</div></fieldset>
+  <fieldset><legend>Networking › Firewalls and virtual networks</legend>${Object.entries(KNET).map(([k,n])=>`<label class="ck"><input type="radio" name="net" value="${k}" ${K.net===k?'checked':''}> ${n}</label>`+(k==='sel'?`<div style="padding-left:24px;${K.net==='sel'?'':'display:none'}"><label class="ck"><input type="checkbox" id="k-vnet" ${K.vnet?'checked':''}> vnet-app / snet-billing</label></div>`:'')).join('')}
+   <div class="sub" style="margin-top:8px">Private endpoint connections</div>
+   <label class="ck"><input type="checkbox" id="k-pe" ${K.pe?'checked':''}> pe-kv-duskhold in vnet-app</label></fieldset>
+  <fieldset><legend>Settings › Properties</legend>
+   <div class="sub">Soft delete: on, can't be turned off · Days to retain deleted vaults: 90, set at creation</div>
+   <label class="ck"><input type="checkbox" id="k-purge" ${K.purge?'checked disabled':''}> Enable purge protection (enforce a mandatory retention period for deleted vaults and vault objects)</label>
+   ${K.purge?'<div class="sub">Purge protection is on. It can\'t be turned off again.</div>':''}</fieldset>
+  <fieldset><legend>Settings › Locks</legend>
+   <label class="ck"><input type="checkbox" id="k-lock" ${K.lock?'checked':''}> Lock "do-not-delete", lock type Delete</label></fieldset>
+  </form>
+  <div class="saved" id="saved"></div>
+  <div class="next" style="border-top:1px solid var(--line2);padding-top:16px;margin-top:12px"><button class="btn" id="hold">Hold the night</button></div>`;
+  const flash=()=>{const e=$('saved');e.textContent='Changes saved';clearTimeout(flash.t);flash.t=setTimeout(()=>e.textContent='',1400)};
+  const redraw=()=>{save();const y=$('pane').scrollTop;renderKv(p);$('pane').scrollTop=y;flash()};
+  p.querySelectorAll('input[name=model]').forEach(r=>r.onchange=()=>{K.model=r.value;redraw()});
+  p.querySelectorAll('input[name=net]').forEach(r=>r.onchange=()=>{K.net=r.value;redraw()});
+  $('k-role').onchange=e=>{K.role=e.target.value;save();flash()};
+  $('k-vnet').onchange=e=>{K.vnet=e.target.checked;save();flash()};
+  $('k-pe').onchange=e=>{K.pe=e.target.checked;save();flash()};
+  $('k-purge').onchange=e=>{if(e.target.checked){K.purge=true;redraw()}};
+  $('k-lock').onchange=e=>{K.lock=e.target.checked;save();flash()};
+  $('hold').onclick=siege;
+  wick('<b>Wick:</b> Three layers tonight: who may open it, from where, and whether it can vanish.');
+}
+function renderBrief5(p){
+  p.innerHTML=`<div class="kicker">Dusk · Night 5</div><h2>The scouts are back</h2>
+  <p>The Gatehouse holds. So tonight the raiders skip it and go straight for what Duskhold keeps locked away.</p>
+  <div class="bands">${WAVES5.map(w=>`<div class="band"><b>${w.name}</b><span>${w.how}.</span></div>`).join('')}</div>
+  <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">kv-duskhold</h3>
+  <dl class="tenant"><dt>Holds</dt><dd>billing-db-password and 30 other secrets</dd><dt>billing-app</dt><dd>Runs in vnet-app and reads billing-db-password</dd><dt>Orrin</dt><dd>Contractor, Contributor on rg-vault</dd><dt>Permissions</dt><dd>Vault access policy</dd><dt>Networking</dt><dd>Public access from all networks</dd><dt>Purge protection</dt><dd>Off</dd><dt>Locks</dt><dd>None</dd></dl>
+  <div class="next"><button class="btn" id="go">Open kv-duskhold</button></div>`;
+  $('go').onclick=()=>{S.stage='console';save();render()};
+  wick('<b>Wick:</b> A vault is only as strong as the people allowed to rewrite its rules.');
+}
 const startPol=()=>[{id:'p1',name:'Gate - MFA for garrison',inc:'groups',incG:['garrison'],excG:[],res:'all',ca:false,apps:[],grant:'grant',ctrl:['mfa'],mode:'all',state:'report'}];
 
 let S;
 const KEY='controle.demo.v1';
-const fresh=()=>({ch:1,pim:startPim(),con:startCon(),mi:startMi(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,report:null,maxLi:-1,note:false});
+const fresh=()=>({ch:1,pim:startPim(),con:startCon(),mi:startMi(),kv:startKv(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,report:null,maxLi:-1,note:false});
 try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
-if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();if(!S.con)S.con=startCon();if(!S.mi)S.mi=startMi();
+if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();if(!S.con)S.con=startCon();if(!S.mi)S.mi=startMi();if(!S.kv)S.kv=startKv();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 
 const $=id=>document.getElementById(id);
@@ -535,6 +631,8 @@ function drawWards(){
 }
 const RI={A:'road',B:'river',C:'door'};
 IC.key='<circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M16 6l2 2M14 8l2 2"/>';
+IC.flame='<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-3 2-4 2-7 1 1 2 2 2 4 1-2 1-4 1-7z"/>';
+IC.vault=IC.vault||'';
 IC.file='<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/>';
 IC.bug='<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M12 7V5M9 4l1.5 2M15 4l-1.5 2M4 11h4M16 11h4M4 16h4M16 16h4"/>';
 IC.mail='<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>';
@@ -548,20 +646,36 @@ function drawRoads(res){
 function setNight(on){$('stage').classList.toggle('night',!!on)}
 function addOops(where,was,is){const t=new Date().toISOString().slice(0,10);const i=S.oops.findIndex(o=>o.where===where&&o.was===was);let o={where,was,is,t,n:0};if(i>=0)o=S.oops.splice(i,1)[0];o.n=(o.n||1)+(i>=0?1:0);o.t=t;S.oops.unshift(o);$('oopsN').textContent=S.oops.length;if($('drawer').classList.contains('open'))renderOops()}
 
-const phaseText={intro:'Arrival',lesson:'Day 1 · The forge',brief:'Dusk · Scouts report',console:'Night · Gatehouse console',siege:'Night · Siege',report:'Morning · Damage report'};
-const phaseOf=k=>phaseText[k].replace('Night ·','Night '+S.ch+' ·').replace('Day 1','Day '+S.ch);
-function wick(t){$('wick').innerHTML=t}
+const phaseText={intro:'Arrival',lesson:'Day 1 · The forge',brief:'Dusk · Scouts report',console:'Night · console',siege:'Night · Siege',report:'Morning · Damage report'};
+const phaseOf=k=>phaseText[k].replace('Night · console','Night · '+WN[CH[S.ch].ward]+' console').replace('Night ·','Night '+S.ch+' ·').replace('Day 1','Day '+S.ch);
+function hintKey(){return S.stage==='console'?`n${S.ch}`:S.stage==='lesson'?`l${S.ch}.${S.li}.${S.strike?'t':'s'}`:''}
+const ORD=['first','second','third'];
+function hintsNow(){
+  if(S.stage==='console')return CH[S.ch].hints;
+  if(S.stage!=='lesson')return [];
+  const l=CH[S.ch].L[S.li];
+  if(!S.strike){const i=l.f.findIndex(f=>{const t=f.replace(/<[^>]+>/g,'').toLowerCase();return l.s.a.some(a=>t.includes(a))||t.includes(l.s.show.toLowerCase())});
+    return [i>=0?`The answer is in the ${ORD[i]} fact above.`:'Read the three facts above again, slowly.',`It starts with "${l.s.show.slice(0,3)}".`,`It's "${l.s.show}". Type it to forge it.`]}
+  return ['Two of the options go against the facts above. Which one doesn\'t?',`Think about this: ${l.c.why}`];
+}
+let wickBase='';
+function wick(t){wickBase=t;showWick()}
+function showWick(){const k=hintKey(),n=(S.hints||{})[k]||0,h=hintsNow();
+  $('wick').innerHTML=n&&h.length?`<b>Wick, hint ${n} of ${h.length}:</b> ${h[n-1]}`:wickBase;
+  const b=$('askw');const open=(S.stage==='console'||(S.stage==='lesson'&&!(S.strike&&S.temper)))&&h.length;b.hidden=!open;
+  b.textContent=n>=h.length?'That\'s every hint':n?'Another hint':'Ask Wick';b.disabled=n>=h.length;}
+$('askw').onclick=()=>{const k=hintKey();if(!k)return;S.hints=S.hints||{};S.hints[k]=Math.min((S.hints[k]||0)+1,hintsNow().length);save();showWick()};
 
 function render(){
   $('phase').textContent=phaseOf(S.stage);$('oopsN').textContent=S.oops.length;
   drawWards();drawRoads(S.stage==='report'&&S.report?Object.fromEntries(S.report.waves.map(v=>[v.w.id,resOf(v)])):null);
-  const p=$('pane'),C=CH[S.ch];
+  const p=$('pane'),C=CH[S.ch];queueMicrotask(showWick);
   if(S.stage==='intro'){
     setNight(false);
     p.innerHTML=`<div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel on the left to read its skills.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
-    <p style="color:var(--mute);font-size:15px">This demo covers four days and nights at the Gatehouse: Conditional Access and MFA, Privileged Identity Management, consent and app permissions, then managed identities. Duskhold is a fictional tenant.</p>
+    <p style="color:var(--mute);font-size:15px">This demo covers five days and nights: four at the Gatehouse (Conditional Access and MFA, Privileged Identity Management, consent, managed identities), then the first night at the Vault. Duskhold is a fictional tenant.</p>
     <div class="next"><button class="btn" id="go">Start day 1</button></div>`;
     $('go').onclick=()=>startDay(1);
     wick('<b>Wick:</b> I light the lanterns. You keep the raiders out. Unlit lanterns are skills you haven\'t met yet.');
@@ -570,7 +684,7 @@ function render(){
   if(S.stage==='lesson'){
     setNight(false);
     const LL=C.L,l=LL[S.li],locked=!S.strike;
-    p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · Gatehouse</div>
+    p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · ${WN[C.ward]}</div>
     <div class="dots">${LL.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
     <h2>${l.t}</h2><div class="builds">${l.b}</div>
     <ul class="facts">${l.f.map(x=>`<li>${x}</li>`).join('')}</ul>
@@ -603,7 +717,7 @@ function render(){
   if(S.stage==='console'){setNight(true);C.console(p);return}
   if(S.stage==='report'){renderReport(p);return}
 }
-function startDay(n){S.ch=n;S.stage='lesson';S.li=0;S.maxLi=-1;S.strike=S.temper=S.note=false;S.tries=0;S.report=null;S.edit=null;save();render();$('pane').scrollTop=0}
+function startDay(n){S.ch=n;S.wing=CH[n].ward;S.stage='lesson';S.li=0;S.maxLi=-1;S.strike=S.temper=S.note=false;S.tries=0;S.report=null;S.edit=null;save();render();$('pane').scrollTop=0}
 const resOf=v=>v.res||(v.held?'held':'broke');
 function renderBrief1(p){
     p.innerHTML=`<div class="kicker">Dusk · Night ${S.ch}</div><h2>The scouts are back</h2>
@@ -756,7 +870,7 @@ function renderBrief2(p){
   wick('<b>Wick:</b> Five Global Administrators, all standing. Microsoft advises fewer than five. You know what to do.');
 }
 function endPanel(p){p.innerHTML=`<div class="kicker">End of the demo</div><h2>The rest of the citadel</h2>
-    <ul class="facts"><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
+    <ul class="facts"><li><b>Vault, part two</b>: secret rotation, Defender for Key Vault and secret scanning.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
     <div class="next"><button class="ghost" id="bk" type="button">Back to the report</button></div>`;$('bk').onclick=()=>render();wick(`<b>Wick:</b> ${SK.length-S.lit.length} lanterns still unlit. One night at a time.`)}
 
 function renderReport(p){
@@ -777,28 +891,38 @@ function renderReport(p){
   if($('end'))$('end').onclick=()=>CH[S.ch+1]?startDay(S.ch+1):endPanel(p);
   wick(R.win?C.winWick:C.failWick);
 }
-const WICK={1:['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'],2:['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'],3:['<b>Wick:</b> New night, new trick. Nobody guesses or steals anything tonight.','<b>Wick:</b> Delegated is the user\'s reach. Application is the whole castle.','<b>Wick:</b> Verified publisher, selected permissions. Two filters, both matter.','<b>Wick:</b> The low impact list is a promise: anything on it, users may hand out.','<b>Wick:</b> Last one today. Closing the door doesn\'t evict whoever is already inside.'],4:['<b>Wick:</b> Tonight the target isn\'t a person. It\'s an app with a password in its pocket.','<b>Wick:</b> One resource, one identity: system. Shared across many: user-assigned.','<b>Wick:</b> An identity with no role is a key to an empty room.','<b>Wick:</b> Managing the vault and opening the vault are two different keys.','<b>Wick:</b> Last one today. Hand out keys to one room, not the whole castle.']};
+const WICK={5:['<b>Wick:</b> New part of the citadel. The Vault keeps what the Gatehouse protects.','<b>Wick:</b> Watch who can rewrite the rules, not just who can open the door.','<b>Wick:</b> Reader sees the labels. Secrets User reads the letters.','<b>Wick:</b> A wall is a second layer, never the only one.','<b>Wick:</b> Last one today. Deleted isn\'t gone, unless someone purges it.'],1:['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'],2:['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'],3:['<b>Wick:</b> New night, new trick. Nobody guesses or steals anything tonight.','<b>Wick:</b> Delegated is the user\'s reach. Application is the whole castle.','<b>Wick:</b> Verified publisher, selected permissions. Two filters, both matter.','<b>Wick:</b> The low impact list is a promise: anything on it, users may hand out.','<b>Wick:</b> Last one today. Closing the door doesn\'t evict whoever is already inside.'],4:['<b>Wick:</b> Tonight the target isn\'t a person. It\'s an app with a password in its pocket.','<b>Wick:</b> One resource, one identity: system. Shared across many: user-assigned.','<b>Wick:</b> An identity with no role is a key to an empty room.','<b>Wick:</b> Managing the vault and opening the vault are two different keys.','<b>Wick:</b> Last one today. Hand out keys to one room, not the whole castle.']};
 const CH={
- 1:{L:L,waves:WAVES,studied:['ca','mfa'],lit:['ca','mfa'],brief:renderBrief1,console:renderCA,evaluate:evaluate,what:'policies',fixWhere:'the console',backTo:'the console',
+ 1:{L:L,ward:'gate',waves:WAVES,studied:['ca','mfa'],lit:['ca','mfa'],brief:renderBrief1,console:renderCA,evaluate:evaluate,what:'policies',fixWhere:'the console',backTo:'the console',
   fix:'Every user covered by an MFA policy that is On, emergency access excluded',title:()=>'Held, but your own people are locked out',
   winLine:'Two lanterns at the Gatehouse are lit: Conditional Access and MFA. Look for the gold dots on the Gatehouse.',
   fol:R=>['Reset the guessed passwords for 3 Garrison accounts and 1 Envoy. MFA stopped the raiders at the gate, but they still know those passwords.'].concat(R.legacyBlock?[]:['Add a separate "Block legacy authentication" policy for all users (Exchange ActiveSync clients and Other clients, Block access). Then the postern stays shut even if someone narrows the MFA policy later.']).concat(S.pol.some(x=>x.state==='report')?['A policy is still in Report-only. Check its results in the sign-in logs, then switch it On or delete it.']:[]),
   extra:R=>R.legacyBlock?'<div class="res held"><span class="tag">Commended</span><div><b>Postern sealed</b><p>You added a separate legacy block policy. That\'s the baseline real admins use.</p></div></div>':'',
+  hints:['Start with the last warden\'s policy. Read its state and who it includes.','Report-only stops nothing, and the Envoys aren\'t in the Garrison group.','Edit the policy: Users All users, exclude Emergency access, Enable policy On. A second policy that blocks legacy authentication earns a commendation.'],
   winWick:'<b>Wick:</b> Two lanterns lit. That\'s two exam skills you can actually do, not just name.',failWick:'<b>Wick:</b> Breaches happen. What matters is you know exactly why this one did.'},
- 2:{L:L2,waves:WAVES2,studied:['pim'],lit:['pim'],brief:renderBrief2,console:renderPim,evaluate:evaluate2,what:'role assignments',fixWhere:'the PIM console',backTo:'the console',
+ 2:{L:L2,ward:'gate',waves:WAVES2,studied:['pim'],lit:['pim'],brief:renderBrief2,console:renderPim,evaluate:evaluate2,what:'role assignments',fixWhere:'the PIM console',backTo:'the console',
   fix:'Eligible Global Administrator with approval, smallest role for daily work',title:()=>'Held, but your own people are blocked',
   winLine:'The PIM lantern at the Gatehouse is lit.',
   fol:R=>['Revoke Maren\'s and Tobin\'s sessions and reset their passwords. In PowerShell: Revoke-MgUserSignInSession -UserId <their UPN>.','Check the PIM audit history for activations you don\'t recognise.'].concat(R.gaCount>=5?[`You still have ${R.gaCount} Global Administrators. Microsoft advises fewer than five.`]:[]),
+  hints:['Ask of each person: do they need this role all the time, and does it need to be this big?','Eligible alone isn\'t enough against a stolen session. Look at the Global Administrator role settings.','Maren and you: Global Administrator, Eligible. Tobin: Helpdesk Administrator. Tick Require approval to activate. Leave the emergency accounts Active.'],
   winWick:'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.',failWick:'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.'},
- 3:{L:L3,waves:WAVES3,studied:['consent','apps'],lit:['consent','apps'],brief:renderBrief3,console:renderApps,evaluate:evaluate3,what:'consent settings',fixWhere:'Enterprise apps',backTo:'the console',
+ 3:{L:L3,ward:'gate',waves:WAVES3,studied:['consent','apps'],lit:['consent','apps'],brief:renderBrief3,console:renderApps,evaluate:evaluate3,what:'consent settings',fixWhere:'Enterprise apps',backTo:'the console',
   fix:'Verified publishers only, sign-in permissions low impact, old grants revoked',title:()=>'Held, but your own people are blocked',
   winLine:'Two more Gatehouse lanterns are lit: consent and app identity.',
   fol:()=>['Check the audit and sign-in logs for Raven Calendar Sync to see whose mail it read.','In PowerShell, remove a delegated grant with Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId <id>.'],
+  hints:['Two jobs: who may say yes from now on, and the app that already got a yes.','Users should only consent to verified publishers. Quill Signer still needs its sign-in permissions on the low impact list, or a way to ask an admin.','Choose the verified-publishers setting, tick offline_access and User.Read as low impact, and set Raven to Enabled for users to sign-in: No.'],
   winWick:'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.',failWick:'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.'},
- 4:{L:L4,waves:WAVES4,studied:['mi','rbac'],lit:['mi'],brief:renderBrief4,console:renderMi,evaluate:evaluate4,what:'identity and roles',fixWhere:'the portal',backTo:'the portal',
+ 5:{L:L5,ward:'vault',waves:WAVES5,studied:['kvaccess','kvfw','kvset','locks'],lit:['kvaccess','kvfw','kvset'],brief:renderBrief5,console:renderKv,evaluate:evaluate5,what:'vault settings',fixWhere:'the vault',backTo:'the vault',
+  fix:'Azure RBAC with Key Vault Secrets User, firewall limited to vnet-app or a private endpoint, purge protection or a Delete lock',title:()=>'Held, but the billing app is down',
+  winLine:'Three Vault lanterns are lit: access, firewall and settings.',
+  fol:()=>['Revoke Orrin\'s sessions and reset his password, then check the vault\'s logs for every secret read tonight.','Rotate billing-db-password. Assume the raider knows it.','Turn on diagnostic settings for the vault (AuditEvent logs), so next time you can see who read what.'],
+  hints:['Three raids, three layers: who may open the vault, from where, and whether it can vanish.','Access policies let a Contributor rewrite the rules. After switching to Azure RBAC, billing-app needs a role of its own.','Pick Azure RBAC, give billing-app Key Vault Secrets User, allow only vnet-app (or add the private endpoint), and enable purge protection or add the Delete lock.'],
+  winWick:'<b>Wick:</b> Three Vault lanterns lit. Four to go in there: rotation and watching for odd access.',failWick:'<b>Wick:</b> The lock was fine. The problem was who could rewrite the lock.'},
+ 4:{L:L4,ward:'gate',waves:WAVES4,studied:['mi','rbac'],lit:['mi'],brief:renderBrief4,console:renderMi,evaluate:evaluate4,what:'identity and roles',fixWhere:'the portal',backTo:'the portal',
   fix:'Managed identity, Storage Blob Data Reader on the invoices container, leaked secret deleted',title:R=>R.lock?'Held, but the ledger app is down':'Held, but the leaked secret still works',
   winLine:'The last Gatehouse lantern is lit. The whole Gatehouse is yours.',
   fol:()=>['Check the sign-in logs for ledger-app to see what the leaked secret was used for.','Remove appsettings.json from the repo history too. The deleted secret is useless, but nobody should find it.','In PowerShell: New-AzRoleAssignment -ObjectId <identity id> -RoleDefinitionName "Storage Blob Data Reader" -Scope <container scope>.'],
+  hints:['Three questions: who does the app sign in as, what can that identity do, and where?','A managed identity must be switched on or attached. Owner and Contributor can\'t read blobs. Payroll sits next to the invoices.','Tick id-ledger and pick the user-assigned option, give Storage Blob Data Reader on Container invoices, and delete the client secret.'],
   winWick:'<b>Wick:</b> Six of six. The Gatehouse burns bright tonight.',failWick:'<b>Wick:</b> Ask what the app needs, not what\'s easiest to give it.'}
 };
 function renderOops(){$('oopsList').innerHTML=S.oops.length?S.oops.map(o=>`<div class="oops"><small>${esc(o.where)} · ${esc(o.t)}${o.n>1?` · ${o.n} times`:''}</small><div class="was">You: ${esc(o.was)}</div><div class="is">Right: ${esc(o.is)}</div></div>`).join(''):'<p style="color:var(--mute)">No oopsies yet. Wrong answers and breaches land here, ready for practice in Pockle.</p>'}
