@@ -515,6 +515,21 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .fchip{display:inline-flex;align-items:center;gap:7px;font-size:12px;padding:4px 6px 4px 10px;border:1px solid #c9c4bb;border-radius:14px;background:#f5f8fc;color:#333;white-space:nowrap;min-height:30px}
 .fchip b{font-weight:600}
 .fchip .psearch{width:150px;padding:3px 8px;font-size:12.5px}
+.xfil{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+.xfil .psearch{flex:1;min-width:140px;max-width:300px}
+.xconds{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:4px}
+.xconds .fchip{white-space:normal;overflow-wrap:anywhere;max-width:100%}
+.xand{font-size:11px;font-weight:600;color:#555}
+.xrm{font-size:15px;line-height:1;color:#555;padding:0 4px}
+.xrm:hover{color:#0f6cbd}
+.pmain table.t th.xck,.pmain table.t td.xck{width:28px;padding-right:0}
+.pmain table.t td.xd{white-space:nowrap;color:#444}
+.pmain table.t .nw{white-space:nowrap}
+.pmain table.t td.xsj{min-width:116px}
+.pmain:has(> .panel.xpan){overflow:hidden}
+.setting.xoff{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.setting.xoff b{margin:0}
+.panel .ptabs button[disabled]{color:#aaa}
 .fmenu{position:absolute;top:36px;left:0;z-index:3;background:#fff;border:1px solid #d6d2ca;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.14);padding:4px 0;min-width:170px}
 .fmenu button{display:block;width:100%;text-align:left;padding:8px 14px;font-size:12.5px;color:#222}
 .fmenu button:hover{background:#f1f5fa}
@@ -1135,7 +1150,8 @@ const BOOK = [
   { id: "crown", no: CASEX.crown.no, t: CASEX.crown.t, who: "thessaly", needs: CASEX.crown.needs },
   { id: "guest", no: CASEX.guest.no, t: CASEX.guest.t, who: "quillon", needs: CASEX.guest.needs },
   { id: "fence", no: CASEX.fence.no, t: CASEX.fence.t, who: "varenne", needs: CASEX.fence.needs },
-  { id: "ledger", no: "07", t: "The salary ledger", who: "quillon", needs: CASE_NEEDS }
+  { id: "ledger", no: "07", t: "The salary ledger", who: "quillon", needs: CASE_NEEDS },
+  { id: "defend", no: CASEX.defend.no, t: CASEX.defend.t, who: "thessaly", needs: CASEX.defend.needs }
 ];
 const bookOf = id => BOOK.find(b => b.id === id) || BOOK[BOOK.length - 1];
 function stepsTxt(needs) { const n = needs.map(g => LADDER.indexOf(g) + 1); return "School step" + (n.length > 1 ? "s " + n.slice(0, -1).join(", ") + " and " + n[n.length - 1] : " " + n[0]); }
@@ -1774,6 +1790,155 @@ NC.fence = {
     }
     return false;
   }
+};
+const XMAIL = [
+  ["p1", 38, "Action needed: confirm your Goldmere seal today", "corwen@halcyon.guild", "tally@goldmere-ledgers.guild", true],
+  ["p2", 38, "Action needed: confirm your Goldmere seal today", "pell@halcyon.guild", "tally@goldmere-ledgers.guild", true],
+  ["p3", 37, "Action needed: confirm your Goldmere seal today", "wren@halcyon.guild", "tally@goldmere-ledgers.guild", true],
+  ["p4", 37, "Action needed: confirm your Goldmere seal today", "brannoc@halcyon.guild", "tally@goldmere-ledgers.guild", true],
+  ["r1", 95, "Goldmere invoice for October", "thessaly@halcyon.guild", "accounts@goldmere.guild", false],
+  ["o1", 140, "Stalls for the harvest fair", "varenne@halcyon.guild", "fairs@brightmarket.guild", false],
+  ["o2", 210, "Your saddle order has shipped", "brannoc@halcyon.guild", "orders@tanners-row.guild", false],
+  ["o3", 330, "Ink and vellum delivery", "ysolde@halcyon.guild", "sales@quillmakers.guild", false]
+].map(r => ({ id: r[0], m: r[1], subj: r[2], to: r[3], from: r[4], dom: r[4].split("@")[1], bad: r[5] }));
+const XPROP = [["from", "Sender address"], ["dom", "Sender domain"], ["to", "Recipients"], ["subj", "Subject"]];
+const XMOVE = [["junk", "Junk"], ["inbox", "Inbox"], ["deleted", "Deleted items"], ["soft", "Soft deleted items"], ["hard", "Hard deleted items"]];
+const XFAKE = XMAIL.filter(r => r.bad).map(r => r.id);
+const xName = upn => (DIR.find(d => d[2] === upn) || [0, { "thessaly@halcyon.guild": "Magister Thessaly", "ysolde@halcyon.guild": "Sister Ysolde" }[upn] || upn])[1];
+const xWb = s => { const [u, d] = String(s).split("@"); return d == null ? esc(s) : `<span class="nw">${esc(u)}@</span><wbr>` + d.split("-").map(x => `<span class="nw">${esc(x)}</span>`).join("-<wbr>"); };
+function xHit(r, c) { const v = String(r[c.p]).toLowerCase(), any = c.vals.some(x => c.p === "subj" ? v.includes(x) : v === x); return c.op === "none" ? !any : any; }
+NC.defend = {
+  gid: "defender",
+  letter: "Keeper, a letter came this morning that says it is from the Goldmere counting house. It asks our people to confirm their seal through a link. Corwen nearly did. Real Goldmere letters come from goldmere.guild. This one came from tally@goldmere-ledgers.guild. Find every copy and take them out of the mailboxes, in a way we can still undo if we are wrong. Tell me how many of the household received it. Leave the real Goldmere invoice alone: I need it to pay them.",
+  first: "Delivered mail is searched and cleaned up in the Microsoft Defender portal.",
+  nothingT: "Nothing here for the Goldmere letter", nothingP: "This page is real, but it does not find or remove mail that was already delivered.",
+  kline: "The false Goldmere letters are gone from every mailbox, and the real invoice is paid.",
+  closedH: "The false seal is broken", closedP: "You found the four copies by their sender, soft deleted only those, left the real invoice alone, and read the result in the Action center before you reported back.",
+  goals: [
+    { id: "find", t: "Find every copy of the false letter, and tell Thessaly how many people received it.", w: "Email & collaboration > Explorer > All email: Sender address, Equal any of, tally@goldmere-ledgers.guild, Refresh. Four copies: Corwen, Pell, Wren and Brannoc.", s: ["s28"] },
+    { id: "remove", t: "Take every copy out of the mailboxes, in a way that can still be undone.", w: "Select the four copies, Take action > Move or delete > Soft deleted items, Next, a name, Next, Submit. The messages go to Recoverable Items\\Deletions, recoverable by the user and admins.", s: ["s28"] },
+    { id: "check", t: "Check that the removal finished, and tell Thessaly what the Action center says.", w: "Actions & submissions > Action center > History: the remediation shows Completed, and every message Success. Good habit: check after you change.", s: ["s28"] }
+  ],
+  hints: { find: ["Delivered mail is searched in the Defender portal.", "Email & collaboration > Explorer, All email. Filter on the sender, then Refresh.", "Sender address, Equal any of, type tally@goldmere-ledgers.guild and press Enter, then Refresh. Count the rows and reply 4."], remove: ["Select only the false letters, then Take action.", "Move or delete has five values. Only one takes the message out of sight and stays recoverable by the user and admins.", "Soft deleted items, Next, type a name, Next, Submit."], check: ["Actions from Explorer are tracked in one place.", "Actions & submissions > Action center > History.", "Open your remediation. When it says Completed, reply Completed."] },
+  init() { return { pid: "defender", item: "incidents", conds: [], xp: "from", xo: "any", xv: "", shown: null, found: false, xs: [], ta: null, gone: [], rems: [], acTab: "history", hs: null, seenDone: false, cnt: "", st: "" }; },
+  form: {
+    find: () => `<form class="tform" data-kf="find"><label for="kcnt">Reply to Thessaly · how many received it</label><div><input id="kcnt" data-kv="cnt" autocomplete="off" spellcheck="false" placeholder="a number" value="${esc(K.cnt)}"><button class="btn solid">Send</button></div></form>`,
+    check: () => `<form class="tform" data-kf="check"><label for="kst">Reply to Thessaly · the status</label><div><input id="kst" data-kv="st" autocomplete="off" spellcheck="false" placeholder="the status, as it shows it" value="${esc(K.st)}"><button class="btn solid">Send</button></div></form>`
+  },
+  submit(f) {
+    if (f === "xq") { const vals = K.xv.toLowerCase().split(",").map(x => x.trim()).filter(Boolean); if (!vals.length) return; K.conds.push({ p: K.xp, op: K.xo, vals }); K.xv = ""; nGlass(); const i = $("#kxv"); if (i) i.focus(); return; }
+    if (f === "find") {
+      const v = norm(K.cnt); if (!v) return;
+      if (!K.found) { nLog("info", "Vigil: look before you answer. Filter Explorer so it shows only the false letter, then count."); return; }
+      if (["4", "four", "4 people", "four people"].includes(v)) { nLog("info", "Sent to Thessaly: " + K.cnt.trim()); nComplete("find"); nSay("thessaly", "Four. Corwen, Pell, Wren and Brannoc, then. Now take them away, please.", 1200); return; }
+      nBad("That is not how many people received the false letter.", "Each row in the filtered list is one copy in one mailbox. Count the recipients of the letter from tally@goldmere-ledgers.guild.", "d_count");
+      return;
+    }
+    if (f === "check") {
+      const v = norm(K.st); if (!v) return;
+      const last = K.rems[K.rems.length - 1];
+      if (!K.seenDone) { nLog("info", last && last.status !== "Completed" && v === "in progress" ? "It says In progress now. Wait a moment and look again." : "Vigil: open the remediation in the Action center and read it first. Check after you change."); return; }
+      if (v === "completed") { nLog("info", "Sent to Thessaly: " + K.st.trim()); nComplete("check"); nSay("thessaly", "Completed. Then the clerks are safe, and I can pay the real Goldmere. Thank you, Keeper.", 1200); return; }
+      nBad("That is not what the Action center says.", "Your remediation has finished on every message. History shows Completed.", "d_status");
+    }
+  },
+  page(k) {
+    if (k === "defender.explorer" && K.ta || k === "defender.action" && K.hs != null) K.pmKey = null;
+    if (k === "defender.explorer") return this.explorer();
+    if (k === "defender.action") return this.action();
+    return null;
+  },
+  explorer() {
+    const list = K.shown ? XMAIL.filter(r => K.shown.includes(r.id)) : XMAIL, views = ["All email", "Malware", "Phish", "Campaigns", "Content malware", "URL clicks"];
+    const sel = sv => `<select data-k="${sv[0]}">${sv[1].map(o => `<option value="${o[0]}" ${sv[2] === o[0] ? "selected" : ""}>${esc(o[1])}</option>`).join("")}</select>`;
+    const conds = K.conds.length ? `<div class="xconds">${K.conds.map((c, i) => `${i ? `<span class="xand">AND</span>` : ""}<span class="fchip"><b>${esc(XPROP.find(p => p[0] === c.p)[1])}</b>${c.op === "any" ? "Equal any of" : "Equal none of"} ${esc(c.vals.join(", "))}<button class="xrm" data-k="xrm:${i}" title="Remove">×</button></span>`).join("")}</div>` : "";
+    const fil = `<form class="xfil" data-kf="xq">${sel(["xp", XPROP, K.xp])}${sel(["xo", [["any", "Equal any of"], ["none", "Equal none of"]], K.xo])}<input id="kxv" data-kv="xv" class="psearch" placeholder="Type, then press Enter" value="${esc(K.xv)}" autocomplete="off" spellcheck="false"><button type="button" class="pbtn" data-k="xref">Refresh</button></form>`;
+    const rows = list.map(r => `<tr class="${K.xs.includes(r.id) ? "sel" : ""}"><td class="xck"><input type="checkbox" data-k="xs:${r.id}" ${K.xs.includes(r.id) ? "checked" : ""} aria-label="Select"></td><td class="xd">${esc(stamp(r.m).slice(0, 10))}<br>${esc(stamp(r.m).slice(12, 17))}</td><td class="xsj">${esc(r.subj)}</td><td class="xa">${xWb(r.to)}</td><td class="xa">${xWb(r.from)}</td><td>Inbox/<wbr>folder</td></tr>`).join("");
+    const head = `<div class="crumb">Email & collaboration  ›  Explorer</div><h4>Explorer</h4><div class="ptabs" style="margin-bottom:12px;border-bottom:1px solid #e6e3de">${views.map((v, i) => `<button class="${i ? "" : "on"}" data-k="xview:${i}">${v}</button>`).join("")}</div>`;
+    return head + `<div class="tool" style="flex-wrap:wrap"><span class="fchip"><b>Date</b>Yesterday and today</span></div>${fil}${conds}<div class="ptabs" style="margin:14px 0 8px;border-bottom:1px solid #e6e3de"><button class="on">Email</button></div><div class="tool"><button class="pbtn pri" data-k="xta" ${K.xs.length ? "" : "disabled"}>Take action</button><span style="font-size:12px;color:#666">${K.xs.length ? K.xs.length + " selected" : "Select messages with the check boxes"}</span><span style="font-size:12px;color:#666;margin-left:auto">${list.length} messages</span></div><table class="t xt"><tr><th class="xck"></th><th>Date</th><th>Subject</th><th>Recipient</th><th>Sender address</th><th>Latest delivery location</th></tr>${rows || `<tr><td colspan="6" style="color:#666">No messages match the filter.</td></tr>`}</table>${this.wizard()}`;
+  },
+  wizard() {
+    const T = K.ta; if (!T) return ""; K.panel = "ta";
+    const steps = [["act", "Choose response actions"], ["ent", "Choose target entities"], ["rev", "Review and submit"]], si = steps.findIndex(s => s[0] === T.step);
+    const nav = `<div class="ptabs">${steps.map((s, i) => `<button class="${i === si ? "on" : ""}" ${i > si ? "disabled" : ""} data-k="tat:${s[0]}">${i + 1}. ${s[1]}</button>`).join("")}</div>`;
+    const mv = XMOVE.find(m => m[0] === T.move);
+    let body, foot;
+    if (T.step === "act") {
+      body = `<div class="setting"><div class="subopts" style="margin-left:0"><label><input type="checkbox" data-k="taall" ${T.all ? "checked" : ""}>Show all response actions</label></div></div><div class="setting"><b>Move or delete</b>${kRadios("kmove", XMOVE, T.move, "tam")}</div>${["Submit to Microsoft for review", "Initiate automated investigation", "Propose remediation"].map((h, i) => `<div class="setting xoff"><b>${h}</b><button class="lnk" data-k="taoff:${i}">Choose</button></div>`).join("")}`;
+      foot = `<button class="pbtn pri" data-k="tas:ent">Next</button><button class="pbtn" data-k="taclose">Cancel</button>`;
+    } else if (T.step === "ent") {
+      body = `<div class="setting"><b>Name</b><input id="ktan" data-kv="ta.name" class="psearch" style="width:100%" autocomplete="off" spellcheck="false" value="${esc(T.name)}"></div><div class="setting"><b>Description</b><input id="ktad" data-kv="ta.desc" class="psearch" style="width:100%" autocomplete="off" spellcheck="false" placeholder="Optional" value="${esc(T.desc)}"></div><p class="note">${K.xs.length} message${K.xs.length > 1 ? "s" : ""} selected · ${esc(mv ? mv[1] : "")}</p>`;
+      foot = `<button class="pbtn pri" data-k="tas:rev">Next</button><button class="pbtn" data-k="tas:act">Back</button><button class="pbtn" data-k="taclose">Cancel</button>`;
+    } else {
+      const ms = XMAIL.filter(r => K.xs.includes(r.id));
+      body = `<dl class="kv"><dt>Name</dt><dd>${esc(T.name.trim())}</dd><dt>Move or delete</dt><dd>${esc(mv[1])}</dd><dt>Messages</dt><dd>${ms.length}</dd></dl><table class="t"><tr><th>Recipient</th><th>Sender address</th></tr>${ms.map(r => `<tr><td class="xa">${xWb(r.to)}</td><td class="xa">${xWb(r.from)}</td></tr>`).join("")}</table>`;
+      foot = `${kSavebar().replace('class="pbar', 'style="margin:0 8px 0 0" class="pbar')}<button class="pbtn pri" data-k="tago" ${K.saving === "busy" ? "disabled" : ""}>Submit</button><button class="pbtn" data-k="tas:ent">Back</button><button class="pbtn" data-k="taexp">Export</button><button class="pbtn" data-k="taclose">Cancel</button>`;
+    }
+    return `<div class="panel wide xpan${kPanelEnter()}"><div class="ph"><h5>Take action</h5><div class="u">${K.xs.length} selected in Explorer</div>${nav}</div><div class="pb">${body}</div><div class="pf">${foot}</div></div>`;
+  },
+  action() {
+    const tabs = [["pending", "Pending"], ["history", "History"]];
+    const head = `<div class="crumb">Actions & submissions  ›  Action center</div><h4>Action center</h4><div class="ptabs" style="margin-bottom:14px;border-bottom:1px solid #e6e3de">${tabs.map(t => `<button class="${K.acTab === t[0] ? "on" : ""}" data-k="act:${t[0]}">${t[1]}</button>`).join("")}</div>`;
+    if (K.acTab === "pending") return head + `<p class="note">No pending actions.</p>`;
+    if (!K.rems.length) return head + `<p class="note">No actions in the history yet.</p>`;
+    if (this.allDone()) K.seenDone = true;
+    const R = K.hs != null && K.rems[K.hs];
+    let panel = "";
+    if (R) K.panel = "hs";
+    if (R) panel = `<div class="panel xpan${kPanelEnter()}"><div class="ph"><h5>${esc(R.name)}</h5><div class="u">Explorer action · ${esc(R.mv)}</div></div><div class="pb"><dl class="kv"><dt>Status</dt><dd><b>${esc(R.status)}</b></dd><dt>Messages</dt><dd>${R.ids.length}</dd></dl>${R.status === "Completed" ? `<table class="t"><tr><th>Recipient</th><th>Status</th></tr>${R.ids.map(id => `<tr><td class="xa">${xWb(XMAIL.find(r => r.id === id).to)}</td><td>Success</td></tr>`).join("")}</table>` : `<p class="note">Results for each message appear when the remediation finishes.</p>`}</div><div class="pf"><button class="pbtn" data-k="hsref">Refresh</button><button class="pbtn" data-k="hsclose">Close</button></div></div>`;
+    return head + `<table class="t"><tr><th>Remediation name</th><th>Action source</th><th>Status</th></tr>${K.rems.map((r, i) => `<tr class="click${K.hs === i ? " sel" : ""}" data-k="hs:${i}"><td style="color:#0f5ea8;font-weight:500">${esc(r.name)}</td><td>Explorer action</td><td>${esc(r.status)}</td></tr>`).slice().reverse().join("")}</table>${panel}`;
+  },
+  act(a, el) {
+    if (a === "xp" || a === "xo") { K[a] = el.value; return false; }
+    if (a.startsWith("xrm:")) { K.conds.splice(+a.slice(4), 1); return true; }
+    if (a.startsWith("xview:")) { if (a !== "xview:0") nLog("info", "That view is real, but the false letter is plain mail: All email shows every copy."); return true; }
+    if (a === "xref") {
+      const pend = K.xv.toLowerCase().split(",").map(x => x.trim()).filter(Boolean);
+      if (pend.length) { K.conds.push({ p: K.xp, op: K.xo, vals: pend }); K.xv = ""; }
+      K.shown = K.conds.length ? XMAIL.filter(r => K.conds.every(c => xHit(r, c))).map(r => r.id) : null;
+      K.xs = K.xs.filter(id => !K.shown || K.shown.includes(id));
+      const n = K.shown ? K.shown.length : XMAIL.length;
+      if (K.shown && n === XFAKE.length && XFAKE.every(id => K.shown.includes(id))) { if (!K.found) { K.found = true; nLog("info", "Refreshed: " + n + " messages, all from tally@goldmere-ledgers.guild."); } }
+      else nLog("info", "Refreshed: " + n + " message" + (n === 1 ? "" : "s") + ".");
+      return true;
+    }
+    if (a.startsWith("xs:")) { const id = a.slice(3); K.xs = el.checked ? [...new Set([...K.xs, id])] : K.xs.filter(x => x !== id); return true; }
+    if (a === "xta") { if (!K.found) { nLog("info", "Vigil: look before you change. Filter Explorer to find every copy first."); return true; } K.ta = { step: "act", move: null, all: false, name: "", desc: "" }; K.pmKey = null; return true; }
+    if (a === "taclose") { K.ta = null; K.panel = null; K.saving = null; return true; }
+    if (a === "taall") { K.ta.all = el.checked; nLog("info", "Real: some actions are greyed out by default, based on Latest delivery location. Vigil shows every Move or delete value either way."); return true; }
+    if (a.startsWith("tam:")) { K.ta.move = a.slice(4); return false; }
+    if (a.startsWith("taoff:")) { nLog("info", ["Submit to Microsoft for review", "Initiate automated investigation", "Propose remediation"][+a.slice(6)] + " is real, but not simulated here. Thessaly asked you to take the copies out yourself."); return true; }
+    if (a.startsWith("tas:") || a.startsWith("tat:")) {
+      const s = a.slice(4);
+      if (s !== "act" && !K.ta.move) { nLog("info", "Vigil: choose a Move or delete value first."); return true; }
+      if (s === "rev" && !K.ta.name.trim()) { nLog("info", "Vigil: give the action a name, so you can find it in the Action center."); K.focus = "ktan"; return true; }
+      K.ta.step = s; if (s === "ent") K.focus = "ktan"; return true;
+    }
+    if (a === "taexp") { nLog("info", "Export downloads the list as Impacted assets.csv. Real, but not simulated here."); return true; }
+    if (a === "tago") {
+      const T = K.ta, ids = K.xs.slice();
+      if (ids.some(id => !XMAIL.find(r => r.id === id).bad)) { nBad("The real Goldmere invoice is selected too.", "Thessaly needs it to pay Goldmere. Select only the copies from tally@goldmere-ledgers.guild. Nothing was submitted.", "d_real"); return true; }
+      if (T.move === "hard") { nBad("Hard deleted items purges the messages.", "Thessaly asked for a way back. Soft deleted items is recoverable by the user and admins; hard deleted mail only by an admin, with single-item recovery. Nothing was submitted.", "d_hard"); return true; }
+      if (T.move === "junk" || T.move === "deleted") { nBad((T.move === "junk" ? "Junk" : "Deleted items") + " leaves the letter in the user's own folders.", "One click and the link is back. Soft deleted items moves it to Recoverable Items\\Deletions. Nothing was submitted.", "d_junk"); return true; }
+      if (T.move === "inbox") { nLog("info", "The copies are already in the inbox: every message would come back as Already in destination. Nothing was submitted."); return true; }
+      const fresh = ids.filter(id => !K.gone.includes(id));
+      if (!fresh.length) { nLog("info", "Those copies were already soft deleted."); return true; }
+      kSave(() => {
+        const R = { name: T.name.trim(), mv: "Soft deleted items", ids: fresh, status: "In progress" }; K.rems.push(R); K.gone.push(...fresh); K.ta = null; K.panel = null; K.xs = [];
+        const k = K; setTimeout(() => { if (K !== k) return; R.status = "Completed"; if (cur === "case" && K.item === "action") nGlass(); }, 3000);
+        nLog("info", "Submitted: " + fresh.length + " message" + (fresh.length > 1 ? "s" : "") + " to Soft deleted items. Track it in Actions & submissions > Action center > History. Explorer can take a while to show the action.");
+        const left = XFAKE.filter(id => !K.gone.includes(id));
+        if (!left.length) nComplete("remove"); else nLog("info", "Still in a mailbox: the copy for " + left.map(id => xName(XMAIL.find(r => r.id === id).to)).join(", ") + ".");
+      });
+      return false;
+    }
+    if (a.startsWith("act:")) { K.acTab = a.slice(4); K.hs = null; K.panel = null; return true; }
+    if (a.startsWith("hs:")) { K.hs = +a.slice(3); K.pmKey = null; return true; }
+    if (a === "hsref") return true;
+    if (a === "hsclose") { K.hs = null; K.panel = null; return true; }
+    return false;
+  },
+  allDone() { return K.rems.every(r => r.status === "Completed") && XFAKE.every(id => K.gone.includes(id)); }
 };
 function nAct(a, el) { const r = nDef().act(a, el); if (r) nRender(); if (K && K.focus) { const i = $("#" + K.focus); K.focus = null; if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
 document.addEventListener("click", e => {
