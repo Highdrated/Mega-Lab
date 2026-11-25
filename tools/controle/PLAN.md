@@ -25,7 +25,8 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 - [x] Demo 1: Gatehouse day (5 lessons) and night 1 (password spray, Conditional Access). tests: python3 tools/controle/test.py
 - [x] Big drawn citadel replaced by six icon cards with lantern dots, and three road rows for the siege
 - [ ] Optional painted backdrop (ComfyUI, see ART.md) once she wants one
-- [ ] Next nights: PIM / stolen admin session, consent phishing, Key Vault leaked secret
+- [x] Day 2 and night 2: PIM (eligible vs active, approval, least privilege, emergency keys) against stolen sessions. Outcomes: held, contained, breached
+- [ ] Next nights: consent phishing and app registrations (Gatehouse), Key Vault leaked secret (Vault)
 - [ ] Into the Workshop, oopsies into Pockle
 
 MERGE: WAIT (goes live when Kaatje says "merge Controle")

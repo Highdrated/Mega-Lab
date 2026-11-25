@@ -55,7 +55,14 @@ main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(400px,560px);min
 .track .mk{position:absolute;top:-4px;left:0;width:10px;height:10px;border-radius:50%;background:#c25a24;opacity:0}
 .track .gt{position:absolute;right:-2px;top:-6px;width:3px;height:14px;background:var(--gold);border-radius:1px}
 .road .rs{font-size:13px;font-weight:700;text-align:right;color:var(--mute)}
-.road .rs.held{color:var(--gold)}.road .rs.broke{color:var(--red)}
+.road .rs.held{color:var(--gold)}.road .rs.broke{color:var(--red)}.road .rs.contained{color:var(--ember)}
+.res.contained .tag{background:rgba(194,90,36,.12);color:var(--ember)}
+.pim{width:100%;border-collapse:collapse;font-size:14px;margin:8px 0 4px}
+.pim th{text-align:left;font-weight:600;color:var(--mute);font-size:13px;padding:6px 8px 6px 0;border-bottom:1px solid var(--line2)}
+.pim td{padding:8px 8px 8px 0;border-bottom:1px solid var(--line2);vertical-align:middle}
+.pim td small{display:block;color:var(--mute);font-size:12px}
+.pim select,.gs select{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:36px;max-width:100%}
+.saved{font-size:13px;color:var(--gold);min-height:1.2em}
 .roll{overflow:auto;padding:14px 20px 18px;margin-top:14px;border-top:1px solid var(--line2)}
 .roll h3{font-size:16px;color:var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
 .roll h3 small{font-family:"Source Sans 3",sans-serif;font-size:13px;color:var(--mute);font-weight:400;letter-spacing:0}
@@ -143,7 +150,7 @@ label.ck input{accent-color:var(--gold);width:17px;height:17px;flex:none}
 @media (prefers-reduced-motion:reduce){.drawer,.stage{transition:none}}
 @media (max-width:1100px){main{grid-template-columns:minmax(0,1fr) minmax(360px,460px)}.wardgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.exam span{display:none}}
 @media (max-width:860px){.app{height:auto}main{grid-template-columns:1fr}.stage{display:contents}.citadel{order:1}.side{order:3}.roads{order:2;padding-bottom:14px}.roll{order:4;max-height:none}.side{min-height:60vh}.pane{padding:20px}.wick{padding:12px 20px}}
-@media (max-width:600px){.wardgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.road{grid-template-columns:24px minmax(0,1fr) 72px}.road .track{grid-column:1/-1;grid-row:2}.rl{grid-template-columns:1fr}header{flex-wrap:wrap;gap:8px 12px;padding:10px 14px}.exam{order:3;flex-basis:100%}.band{grid-template-columns:1fr}.pane h2{font-size:24px}}
+@media (max-width:600px){.pim thead{display:none}.pim tr{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line2)}.pim td{border:0;padding:0}.pim td:first-child{grid-column:1/-1}.pim select{width:100%}.wardgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.road{grid-template-columns:24px minmax(0,1fr) 72px}.road .track{grid-column:1/-1;grid-row:2}.rl{grid-template-columns:1fr}header{flex-wrap:wrap;gap:8px 12px;padding:10px 14px}.exam{order:3;flex-basis:100%}.band{grid-template-columns:1fr}.pane h2{font-size:24px}}
 </style>
 </head>
 <body>
@@ -183,7 +190,7 @@ label.ck input{accent-color:var(--gold);width:17px;height:17px;flex:none}
 <script>
 {
 const SK=[
- {w:'gate',d:1,n:'Configure Privileged Identity Management (PIM)'},
+ {w:'gate',d:1,n:'Configure Privileged Identity Management (PIM)',id:'pim'},
  {w:'gate',d:1,n:'Implement conditional access policies',id:'ca'},
  {w:'gate',d:1,n:'Configure authentication methods, including MFA and passwordless',id:'mfa'},
  {w:'gate',d:1,n:'Configure identity for applications: enterprise apps and app registrations'},
@@ -240,13 +247,89 @@ const WAVES=[
  {id:'B',name:'River gate',path:'pathB',door:'riverDoor',app:'browser',targets:['e1'],who:'the Envoys',how:'through the sign-in page'},
  {id:'C',name:'Old postern',path:'pathC',door:'posternDoor',app:'legacy',targets:['g3'],who:'everyone',how:'with a legacy client'}
 ];
+
+const L2=[
+ {t:'Standing access',b:'Builds on: The gate rule, The second key.',f:['A <b>standing</b> admin holds the role all the time, even while asleep.','If a raider steals that admin\'s signed-in session, they get the role at once. A stolen session can already carry a finished MFA check, so MFA doesn\'t help after the theft.','<b>Privileged Identity Management</b> (PIM) hands out admin roles just in time: only when needed, only for a few hours.'],
+  s:{q:'Which Entra feature hands out admin roles just in time?',a:['privileged identity management','pim'],show:'Privileged Identity Management'},
+  c:{q:'Why is a permanent Global Administrator risky?',o:['A stolen session gets full control right away','It needs an extra licence','It switches off MFA'],r:0,why:'With standing access there is nothing left to stop a thief once the session is taken.'}},
+ {t:'Eligible or active',b:'Builds on: Standing access.',f:['In PIM a role can be <b>eligible</b>: the user must <b>activate</b> it before using it, for a limited time.','An <b>active</b> assignment works all the time, like before PIM.','PIM needs Microsoft Entra ID <b>P2</b> or Entra ID Governance. Duskhold bought P2 for its admins.'],
+  s:{q:'Which assignment type has to be activated before use?',a:['eligible'],show:'Eligible'},
+  c:{q:'A tenant only has Entra ID P1. Can it use PIM?',o:['No, PIM needs P2 or Entra ID Governance','Yes, P1 includes PIM','Only for Global Administrator'],r:0,why:'P1 covers Conditional Access. PIM is a P2 (or Entra ID Governance) feature.'}},
+ {t:'A second key-holder',b:'Builds on: Eligible or active.',f:['Each role has <b>role settings</b> for activation: maximum duration, MFA, justification and approval.','MFA on activation may not prompt again if the session already did MFA. So you can\'t count on it to stop a stolen session.','<b>Require approval to activate</b> means another person must say yes. Nobody can approve their own request.'],
+  s:{q:'Which role setting makes a second person say yes first?',a:['require approval to activate','require approval'],show:'Require approval to activate'},
+  c:{q:'A raider holds the stolen session of an eligible Global Administrator. Approval is off. What happens?',o:['He can activate the role himself','PIM blocks every activation at night','The role can never be activated'],r:0,why:'Without approval, activation only asks for things the stolen session may already have: MFA and a typed reason.'}},
+ {t:'The smallest key',b:'Builds on: Standing access.',f:['Give the <b>least privileged</b> role that does the job.','Resetting regular users\' passwords needs <b>Helpdesk Administrator</b> or <b>Password Administrator</b>, not Global Administrator.','Microsoft advises fewer than five Global Administrators.'],
+  s:{q:'Name a role that resets regular users\' passwords without being Global Administrator.',a:['helpdesk administrator','password administrator'],show:'Helpdesk Administrator'},
+  c:{q:'A phished helpdesk account holds Helpdesk Administrator. How bad is it?',o:['Contained: the raider can reset regular users\' passwords, not take over the tenant','As bad as a stolen Global Administrator','Harmless, that role can\'t change anything'],r:0,why:'Least privilege doesn\'t stop the theft. It limits what the thief can do.'}},
+ {t:'The emergency keys',b:'Builds on: Test before you lock, Eligible or active.',f:['Emergency access accounts keep a <b>permanent active</b> Global Administrator role.','They are for the day PIM, MFA or Conditional Access breaks. An eligible role would depend on the very system that broke.','Guard them differently: a long secret, a strong sign-in method, and an alert on every sign-in.'],
+  s:{q:'Which assignment type do emergency access accounts keep?',a:['active','permanent active','active permanent'],show:'Active'},
+  c:{q:'Why aren\'t emergency accounts made eligible in PIM?',o:['They must work even when PIM or MFA is down','Eligible roles cost more','PIM can\'t manage Global Administrator'],r:0,why:'Break-glass accounts exist for the day your normal controls fail.'}}
+];
+const ROLES={none:'No role',ga:'Global Administrator',pra:'Privileged Role Administrator',ua:'User Administrator',ha:'Helpdesk Administrator',pa:'Password Administrator'};
+const PEOPLE=[{id:'you',n:'You (warden)',d:'Runs Duskhold'},{id:'maren',n:'Maren',d:'Steward. Tenant changes about once a week'},{id:'tobin',n:'Tobin',d:'Helpdesk. Password resets every day'},{id:'ea1',n:'Emergency access 1',d:'Break-glass'},{id:'ea2',n:'Emergency access 2',d:'Break-glass'}];
+function startPim(){return {asg:{you:{r:'ga',t:'active'},maren:{r:'ga',t:'active'},tobin:{r:'ga',t:'active'},ea1:{r:'ga',t:'active'},ea2:{r:'ga',t:'active'}},gs:{dur:8,mfa:true,just:true,appr:false,apv:'default'}}}
+const WAVES2=[
+ {id:'A',name:'Stolen seal',icon:'key',who:'maren',how:'Maren\'s signed-in session, copied from her laptop'},
+ {id:'B',name:'Fake sign-in page',icon:'mask',who:'tobin',how:'Tobin\'s session, caught by a lookalike sign-in page'}
+];
+const wavesNow=()=>S.ch===2?WAVES2:WAVES;
+function steal(pid){
+  const a=S.pim.asg[pid],gs=S.pim.gs,nm=PEOPLE.find(x=>x.id===pid).n;
+  if(a.r==='none')return {res:'held',msg:`${nm} holds no admin role, so the stolen session opens nothing.`};
+  if(a.r==='ga'||a.r==='pra'){
+    if(a.t==='active')return {res:'broke',msg:`${nm} is a standing ${ROLES[a.r]}. The raider took the whole tenant the moment the session was stolen.`};
+    if(a.r==='ga'&&gs.appr)return {res:'held',msg:`${nm}'s Global Administrator role is eligible and needs approval. The raider asked to activate it, but nobody can approve their own request.`};
+    return {res:'broke',msg:`${nm}'s ${ROLES[a.r]} role is eligible, but ${a.r==='pra'?'that role':'Global Administrator'} activates without approval. The stolen session already had MFA, so the raider activated it himself.`};
+  }
+  return {res:'contained',msg:`${nm} only holds ${ROLES[a.r]}. The raider could misuse that role, but couldn't take over the tenant.`};
+}
+function evaluate2(){
+  const A=S.pim.asg,gs=S.pim.gs;
+  const waves=WAVES2.map(w=>{const r=steal(w.who);return {w,held:r.res!=='broke',res:r.res,msg:r.msg}});
+  const checks=[];let lock=false;
+  if(A.maren.r!=='ga'){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Maren needs Global Administrator for her weekly tenant changes. Give her an eligible role instead of taking it away.'})}
+  if(!['ha','pa','ua','ga','pra'].includes(A.tobin.r)){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Tobin can\'t reset passwords any more. Helpdesk Administrator or Password Administrator is enough.'})}
+  else if(A.tobin.r==='ga'||A.tobin.r==='pra')checks.push({k:'warnr',t:'Too much',m:`Tobin only resets passwords. ${ROLES[A.tobin.r]} is far more than that job needs. Use Helpdesk Administrator.`});
+  const ea=['ea1','ea2'].filter(x=>!(A[x].r==='ga'&&A[x].t==='active'));
+  if(ea.length)checks.push({k:'warnr',t:'Risk',m:'Emergency access accounts must stay permanent active Global Administrators. They are for the day PIM or MFA fails.'});
+  if(A.you.r==='ga'&&A.you.t==='active')checks.push({k:'warnr',t:'Risk',m:'Your own account is still a standing Global Administrator. A stolen session of yours would open everything. Make it eligible too.'});
+  const activeTop=Object.values(A).filter(a=>(a.r==='ga'||a.r==='pra')&&a.t==='active').length;
+  if(gs.appr&&gs.apv==='default'&&activeTop===0){lock=true;checks.push({k:'broke',t:'Locked out',m:'Nobody holds an active Global Administrator or Privileged Role Administrator role, and approval uses the default approvers. Those are exactly the active admins, so nobody can approve anything.'})}
+  const gaCount=Object.values(A).filter(a=>a.r==='ga').length;
+  const win=waves.every(v=>v.held)&&!lock;
+  return {waves,checks,win,lock,gaCount};
+}
+function renderPim(p){
+  const A=S.pim.asg,gs=S.pim.gs;
+  const opt=(o,v)=>Object.entries(o).map(([k,n])=>`<option value="${k}" ${k===v?'selected':''}>${n}</option>`).join('');
+  p.innerHTML=`<div class="kicker">Night ${S.ch} · Gatehouse console</div><div class="crumb">Microsoft Entra admin center › Identity governance › Privileged Identity Management › Microsoft Entra roles</div><h2>Role assignments</h2>
+  <table class="pim"><thead><tr><th>Member</th><th>Role</th><th>Assignment</th></tr></thead><tbody>
+  ${PEOPLE.map(x=>`<tr><td>${x.n}<small>${x.d}</small></td><td><select data-p="${x.id}" data-k="r" aria-label="Role for ${x.n}">${opt(ROLES,A[x.id].r)}</select></td><td><select data-p="${x.id}" data-k="t" aria-label="Assignment type for ${x.n}" ${A[x.id].r==='none'?'disabled':''}>${opt({eligible:'Eligible',active:'Active'},A[x.id].t)}</select><small>Permanent</small></td></tr>`).join('')}
+  </tbody></table>
+  <fieldset class="gs" style="margin-top:16px"><legend>Role settings · Global Administrator</legend>
+   <label class="ck">Activation maximum duration <select id="gs-dur" style="margin-left:8px">${[1,2,4,8].map(h=>`<option value="${h}" ${gs.dur===h?'selected':''}>${h} hour${h>1?'s':''}</option>`).join('')}</select></label>
+   <label class="ck"><input type="checkbox" id="gs-mfa" ${gs.mfa?'checked':''}> On activation, require multifactor authentication</label>
+   <label class="ck"><input type="checkbox" id="gs-just" ${gs.just?'checked':''}> Require justification on activation</label>
+   <label class="ck"><input type="checkbox" id="gs-appr" ${gs.appr?'checked':''}> Require approval to activate</label>
+   <div style="padding-left:24px;${gs.appr?'':'display:none'}"><div class="sub">Approvers</div><select id="gs-apv">${opt({default:'None selected (default approvers)',maren:'Maren',you:'You (warden)',both:'Maren and you'},gs.apv)}</select></div>
+  </fieldset>
+  <div class="saved" id="saved"></div>
+  <div class="next" style="border-top:1px solid var(--line2);padding-top:16px;margin-top:12px"><button class="btn" id="hold">Hold the night</button></div>`;
+  const flash=()=>{const e=$('saved');e.textContent='Changes saved';clearTimeout(flash.t);flash.t=setTimeout(()=>e.textContent='',1400)};
+  p.querySelectorAll('select[data-p]').forEach(sel=>sel.onchange=()=>{const a=A[sel.dataset.p];a[sel.dataset.k]=sel.value;if(a.r!=='none'&&!a.t)a.t='eligible';save();const y=$('pane').scrollTop;renderPim(p);$('pane').scrollTop=y;flash()});
+  $('gs-dur').onchange=e=>{gs.dur=+e.target.value;save();flash()};
+  ['mfa','just','appr'].forEach(k=>$('gs-'+k).onchange=e=>{gs[k]=e.target.checked;save();const y=$('pane').scrollTop;renderPim(p);$('pane').scrollTop=y;flash()});
+  $('gs-apv').onchange=e=>{gs.apv=e.target.value;save();flash()};
+  $('hold').onclick=siege;
+  wick('<b>Wick:</b> Ask two things for every row: does this person need the role all the time, and does it need to be this big?');
+}
 const startPol=()=>[{id:'p1',name:'Gate - MFA for garrison',inc:'groups',incG:['garrison'],excG:[],res:'all',ca:false,apps:[],grant:'grant',ctrl:['mfa'],mode:'all',state:'report'}];
 
 let S;
 const KEY='controle.demo.v1';
-const fresh=()=>({wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
+const fresh=()=>({ch:1,pim:startPim(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
 try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
-if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';
+if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 
 const $=id=>document.getElementById(id);
@@ -277,39 +360,41 @@ function drawWards(){
   $('roll').innerHTML=`<h3><span>${WN[S.wing]} · ${all.length} exam skills</span><small>Unlit: not studied · Ember: studied · Lit: held in a siege</small></h3><ul class="rl">${all.map(x=>`<li class="${stOf(x)}"><i></i><span>${esc(x.n)}</span></li>`).join('')}</ul>`;
 }
 const RI={A:'road',B:'river',C:'door'};
+IC.key='<circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M16 6l2 2M14 8l2 2"/>';
+IC.mask='<path d="M3 9c3-2 6-2 9 0 3-2 6-2 9 0-.5 5-3 7-5.5 7-1.6 0-2.6-1-3.5-2-.9 1-1.9 2-3.5 2C5 16 3.5 14 3 9z"/><path d="M7 11h2M15 11h2"/>';
 function drawRoads(res){
   const show=['console','siege','report'].includes(S.stage);
   if(!show){$('roads').innerHTML='';return}
-  $('roads').innerHTML=WAVES.map(w=>{const r=res&&res[w.id];return `<div class="road" id="r${w.id}">${icon(RI[w.id])}<div><b>${w.name}</b></div><div class="track"><span class="mk"></span><span class="gt"></span></div><span class="rs ${r||''}">${r==='held'?'Held':r==='broke'?'Breached':S.stage==='siege'?'Coming':'Quiet'}</span></div>`}).join('');
+  $('roads').innerHTML=wavesNow().map(w=>{const r=res&&res[w.id];return `<div class="road" id="r${w.id}">${icon(w.icon||RI[w.id])}<div><b>${w.name}</b></div><div class="track"><span class="mk"></span><span class="gt"></span></div><span class="rs ${r||''}">${r==='held'?'Held':r==='broke'?'Breached':r==='contained'?'Contained':S.stage==='siege'?'Coming':'Quiet'}</span></div>`}).join('');
 }
 function setNight(on){$('stage').classList.toggle('night',!!on)}
 function resetDoors(){}
 function addOops(where,was,is){S.oops.unshift({where,was,is,t:new Date().toISOString().slice(0,10)});$('oopsN').textContent=S.oops.length}
 
 const phaseText={intro:'Arrival',lesson:'Day 1 · The forge',brief:'Dusk · Scouts report',console:'Night · Gatehouse console',siege:'Night · Siege',report:'Morning · Damage report'};
-const phaseOf=k=>phaseText[k].replace('Night ·','Night '+S.night+' ·');
+const phaseOf=k=>phaseText[k].replace('Night ·','Night '+S.ch+' ·').replace('Day 1','Day '+S.ch);
 function wick(t){$('wick').innerHTML=t}
 
 function render(){
   $('phase').textContent=phaseOf(S.stage);$('oopsN').textContent=S.oops.length;
-  drawWards();drawRoads(S.stage==='report'&&S.report?Object.fromEntries(S.report.waves.map(v=>[v.w.id,v.held?'held':'broke'])):null);
+  drawWards();drawRoads(S.stage==='report'&&S.report?Object.fromEntries(S.report.waves.map(v=>[v.w.id,v.res||(v.held?'held':'broke')])):null);
   const p=$('pane');
   if(S.stage==='intro'){
     setNight(false);resetDoors();
     p.innerHTML=`<div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel on the left to read its skills.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
-    <p style="color:var(--mute);font-size:15px">This demo covers one day and one night at the Gatehouse: Conditional Access and MFA. Duskhold is a fictional tenant.</p>
+    <p style="color:var(--mute);font-size:15px">This demo covers two days and two nights at the Gatehouse: Conditional Access and MFA, then Privileged Identity Management. Duskhold is a fictional tenant.</p>
     <div class="next"><button class="btn" id="go">Start day 1</button></div>`;
-    $('go').onclick=()=>{S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;save();render()};
+    $('go').onclick=()=>{S.ch=1;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;save();render()};
     wick('<b>Wick:</b> I light the lanterns. You keep the raiders out. Unlit lanterns are skills you haven\'t met yet.');
     return;
   }
   if(S.stage==='lesson'){
     setNight(false);
-    const l=L[S.li];
-    p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${L.length} · Gatehouse</div>
-    <div class="dots">${L.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
+    const LL=S.ch===2?L2:L;const l=LL[S.li];
+    p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · Gatehouse</div>
+    <div class="dots">${LL.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
     <h2>${l.t}</h2><div class="builds">${l.b}</div>
     <ul class="facts">${l.f.map(x=>`<li>${x}</li>`).join('')}</ul>
     <div class="card ${S.strike?'ok':''}" id="strikeCard"><h4>Strike it from memory</h4><p>${l.s.q}</p>
@@ -318,7 +403,7 @@ function render(){
     <div class="card ${S.temper?'ok':''}" id="temperCard" ${S.strike?'':'style="opacity:.45;pointer-events:none"'}><h4>Temper it</h4><p>${l.c.q}</p>
       <div class="opts">${l.c.o.map((o,i)=>`<button class="opt ${S.temper&&i===l.c.r?'right':''}" data-i="${i}" type="button">${o}</button>`).join('')}</div>
       <div class="fb ${S.temper?'good':''}" id="tfb">${S.temper?esc(l.c.why):''}</div></div>
-    <div class="next">${S.li>0?'<button class="ghost" id="back" type="button">Back</button>':''}<button class="btn" id="nx" ${S.strike&&S.temper?'':'disabled'}>${S.li===L.length-1?'Finish the day':'Next lesson'}</button></div>`;
+    <div class="next">${S.li>0?'<button class="ghost" id="back" type="button">Back</button>':''}<button class="btn" id="nx" ${S.strike&&S.temper?'':'disabled'}>${S.li===LL.length-1?'Finish the day':'Next lesson'}</button></div>`;
     const si=$('si');if(!S.strike)setTimeout(()=>si.focus({preventScroll:true}),30);
     $('sf').onsubmit=e=>{e.preventDefault();if(S.strike)return;const v=si.value;
       if(!v.trim()){$('sfb').textContent='Type your answer first.';$('sfb').className='fb bad';return}
@@ -330,16 +415,19 @@ function render(){
       fb.textContent=S.tries===1?`Not quite. It starts with "${l.s.show.slice(0,3)}".`:`It's "${l.s.show}". Type it once to forge it.`;
       si.select();$('oopsN').textContent=S.oops.length;};
     p.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(S.temper)return;const i=+b.dataset.i;
-      if(i===l.c.r){S.temper=true;save();render();wick('<b>Wick:</b> '+(S.li===L.length-1?'That\'s the day done. The scouts are back.':'Good. That one holds.'))}
+      if(i===l.c.r){S.temper=true;save();render();wick('<b>Wick:</b> '+(S.li===LL.length-1?'That\'s the day done. The scouts are back.':'Good. That one holds.'))}
       else{b.classList.add('wrong');addOops(`Lesson ${S.li+1}: ${l.t}`,l.c.o[i],l.c.o[l.c.r]);save();$('oopsN').textContent=S.oops.length;$('tfb').className='fb bad';$('tfb').textContent='Not that one. Read the facts above again and try another.'}});
-    $('nx').onclick=()=>{if(S.li<L.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';['ca','mfa'].forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
+    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';(S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
     if($('back'))$('back').onclick=()=>{S.li--;S.strike=S.temper=true;save();render()};
-    if(!S.strike&&!S.temper)wick(['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'][S.li]);
+    const W1=['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'];
+    const W2=['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'];
+    if(!S.strike&&!S.temper)wick((S.ch===2?W2:W1)[S.li]);
     return;
   }
   if(S.stage==='brief'){
     setNight(false);resetDoors();
-    p.innerHTML=`<div class="kicker">Dusk · Night ${S.night}</div><h2>The scouts are back</h2>
+    if(S.ch===2){renderBrief2(p);return}
+    p.innerHTML=`<div class="kicker">Dusk · Night ${S.ch}</div><h2>The scouts are back</h2>
     <p>Three groups of raiders are moving on Duskhold. They carry lists of common passwords and will spray them at nightfall.</p>
     <div class="bands">${WAVES.map(w=>`<div class="band"><b>${w.name}</b><span>Spraying ${w.who} ${w.how}${w.app==='legacy'?' (Other clients in the sign-in logs)':''}.</span></div>`).join('')}</div>
     <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">Duskhold tenant</h3>
@@ -352,8 +440,9 @@ function render(){
   }
   if(S.stage==='console'){
     setNight(true);resetDoors();
+    if(S.ch===2){renderPim(p);return}
     if(S.edit){renderEditor(p);return}
-    p.innerHTML=`<div class="kicker">Night ${S.night} · Gatehouse console</div><div class="crumb">Microsoft Entra admin center › Conditional Access › Policies</div><h2>Policies</h2>
+    p.innerHTML=`<div class="kicker">Night ${S.ch} · Gatehouse console</div><div class="crumb">Microsoft Entra admin center › Conditional Access › Policies</div><h2>Policies</h2>
     <div style="margin:14px 0">${S.pol.map(x=>`<div class="pol"><div><div class="nm">${esc(x.name)}</div><div style="font-size:13px;color:var(--mute)">${summary(x)}</div></div><div class="row" style="flex-wrap:nowrap"><span class="state ${x.state}">${{report:'Report-only',on:'On',off:'Off'}[x.state]}</span><button class="ghost" data-e="${x.id}" type="button" style="min-height:36px;padding:5px 12px">Edit</button></div></div>`).join('')||'<p style="color:var(--mute)">No policies yet.</p>'}</div>
     <div class="row"><button class="ghost" id="np" type="button">New policy</button></div>
     <div class="next" style="border-top:1px solid var(--line2);padding-top:16px;margin-top:20px"><button class="btn" id="hold">Hold the night</button></div>`;
@@ -363,7 +452,7 @@ function render(){
     wick('<b>Wick:</b> Night\'s here. Nothing is enforced until a policy says <b>On</b>.');
     return;
   }
-  if(S.stage==='report'){renderReport(p);return}
+  if(S.stage==='report'){if(S.ch===2)renderReport2(p);else renderReport(p);return}
 }
 
 function summary(x){
@@ -455,15 +544,16 @@ function evaluate(){
 }
 
 function siege(){
-  const R=evaluate();S.report=R;S.stage='siege';save();
+  const R=S.ch===2?evaluate2():evaluate();if(S.ch===1)R.waves.forEach(v=>v.res=v.held?'held':'broke');S.report=R;S.stage='siege';save();
   $('phase').textContent=phaseOf('siege');
-  $('pane').innerHTML=`<div class="kicker">Night ${S.night}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the three roads on the left. Your policies decide what happens now.</p>`;
+  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${S.ch===2?'role assignments':'policies'} decide what happens now.</p>`;
   wick('<b>Wick:</b> Steady. Your policies are doing the work now, not you.');
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const finish=()=>{S.stage='report';
-    if(R.win){['ca','mfa'].forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
-    if(!R.win||R.eaIn){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night ${S.night}: ${v.w.name}`,v.msg,'Every user covered by an MFA policy that is On'));if(R.eaIn)addOops(`Night ${S.night}: emergency access`,'Emergency access accounts inside a policy','Exclude them from every policy');if(R.lock)addOops(`Night ${S.night}: lockout`,'Own users locked out','Only controls your users can meet')}
+    if(R.win){(S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
+    if(S.ch===2){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 2: ${v.w.name}`,v.msg,'Eligible Global Administrator with approval, smallest role for daily work'));R.checks.forEach(c=>addOops(`Night 2: ${c.t}`,c.m,'See the morning report'))}
+    else if(!R.win||R.eaIn){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 1: ${v.w.name}`,v.msg,'Every user covered by an MFA policy that is On'));if(R.eaIn)addOops(`Night 1: emergency access`,'Emergency access accounts inside a policy','Exclude them from every policy');if(R.lock)addOops(`Night 1: lockout`,'Own users locked out','Only controls your users can meet')}
     save();render();};
   drawRoads(null);
   if(reduce){setTimeout(finish,300);return}
@@ -474,15 +564,46 @@ function siege(){
     const step=now=>{const t=(now-t0)/dur;
       if(t<0){requestAnimationFrame(step);return}
       const k=Math.min(1,t);mk.style.opacity=1;
-      mk.style.left=`calc(${(v.held?Math.min(k,.94):k)*100}% - ${k*10}px)`;
+      mk.style.left=`calc(${(v.res==='held'?Math.min(k,.94):k)*100}% - ${k*10}px)`;
       if(t<1){requestAnimationFrame(step);return}
-      rs.textContent=v.held?'Held':'Breached';rs.className='rs '+(v.held?'held':'broke');
-      if(v.held){mk.style.background='var(--gold)';setTimeout(()=>mk.style.opacity=0,500)}
-      else{mk.style.background='var(--red)'}
-      if(++done===3)setTimeout(finish,900)};
+      rs.textContent={held:'Held',contained:'Contained',broke:'Breached'}[v.res];rs.className='rs '+v.res;
+      if(v.res==='held'){mk.style.background='var(--gold)';setTimeout(()=>mk.style.opacity=0,500)}
+      else mk.style.background=v.res==='contained'?'var(--ember)':'var(--red)';
+      if(++done===R.waves.length)setTimeout(finish,900)};
     requestAnimationFrame(step);
   });
 }
+function renderBrief2(p){
+  p.innerHTML=`<div class="kicker">Dusk · Night 2</div><h2>The scouts are back</h2>
+  <p>No spraying tonight. This crew doesn't guess passwords. It steals sessions that are already signed in, MFA and all.</p>
+  <div class="bands">${WAVES2.map(w=>`<div class="band"><b>${w.name}</b><span>${w.how}.</span></div>`).join('')}</div>
+  <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">Duskhold admins</h3>
+  <dl class="tenant"><dt>Licence</dt><dd>Microsoft Entra ID P2 for the admins</dd><dt>Maren</dt><dd>Steward, needs Global Administrator about once a week</dd><dt>Tobin</dt><dd>Helpdesk, resets passwords every day</dd><dt>You</dt><dd>Warden</dd><dt>Emergency access</dt><dd>2 break-glass accounts</dd></dl>
+  <p style="font-size:15px;color:var(--mute)">The last warden made everyone a permanent Global Administrator. Last night's Conditional Access policies still stand.</p>
+  <div class="next"><button class="btn" id="go">Open the PIM console</button></div>`;
+  $('go').onclick=()=>{S.stage='console';save();render()};
+  wick('<b>Wick:</b> Five Global Administrators, all standing. Microsoft advises fewer than five. You know what to do.');
+}
+function renderReport2(p){
+  setNight(false);
+  const R=S.report;if(!R){S.stage='console';render();return}
+  const fol=['Revoke Maren\'s and Tobin\'s sessions and reset their passwords. In PowerShell: Revoke-MgUserSignInSession -UserId <their UPN>.','Check the PIM audit history for activations you don\'t recognise.'];
+  if(R.gaCount>=5)fol.push(`You still have ${R.gaCount} Global Administrators. Microsoft advises fewer than five.`);
+  const tag={held:'Held',contained:'Contained',broke:'Breached'};
+  p.innerHTML=`<div class="kicker">Morning after night 2</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are blocked':'The walls were breached'}</h2>
+  <p style="color:var(--mute)">${R.win?'The PIM lantern at the Gatehouse is lit.':'Read why below, fix the PIM console and try the night again. Every wrong turn went to your oopsies.'}</p>
+  ${R.waves.map(v=>`<div class="res ${v.res==='broke'?'broke':v.res==='contained'?'contained':'held'}"><span class="tag">${tag[v.res]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
+  ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
+  <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
+  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
+  $('again').onclick=()=>{S.stage='console';save();render()};
+  if($('end'))$('end').onclick=()=>endPanel(p);
+  wick(R.win?'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.':'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.');
+}
+function endPanel(p){p.innerHTML=`<div class="kicker">End of the demo</div><h2>The rest of the citadel</h2>
+    <ul class="facts"><li><b>Gatehouse</b>: app registrations, consent and managed identities. Raider: a malicious consent request.</li><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
+    <div class="next"><button class="ghost" id="bk" type="button">Back to the report</button></div>`;$('bk').onclick=()=>render();wick(`<b>Wick:</b> ${SK.length-S.lit.length} lanterns still unlit. One night at a time.`)}
 function renderReport(p){
   setNight(false);
   const R=S.report;if(!R){S.stage='console';render();return}
@@ -490,18 +611,17 @@ function renderReport(p){
   fol.push('Reset the guessed passwords for 3 Garrison accounts and 1 Envoy. MFA stopped the raiders at the gate, but they still know those passwords.');
   if(!R.legacyBlock)fol.push('Add a separate "Block legacy authentication" policy for all users (Exchange ActiveSync clients and Other clients, Block access). Then the postern stays shut even if someone narrows the MFA policy later.');
   if(S.pol.some(x=>x.state==='report'))fol.push('A policy is still in Report-only. Check its results in the sign-in logs, then switch it On or delete it.');
-  p.innerHTML=`<div class="kicker">Morning after night ${S.night}</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are locked out':'The walls were breached'}</h2>
+  p.innerHTML=`<div class="kicker">Morning after night 1</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are locked out':'The walls were breached'}</h2>
   <p style="color:var(--mute)">${R.win?'Two lanterns at the Gatehouse are lit: Conditional Access and MFA. Look for the gold dots on the Gatehouse.':'Read why below, fix the console and try the night again. Every wrong turn went to your oopsies.'}</p>
   ${R.waves.map(v=>`<div class="res ${v.held?'held':'broke'}"><span class="tag">${v.held?'Held':'Breached'}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
   ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
   ${R.legacyBlock?'<div class="res held"><span class="tag">Commended</span><div><b>Postern sealed</b><p>You added a separate legacy block policy. That\'s the baseline real admins use.</p></div></div>':''}
   <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
   <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.lock?['Only use controls your own people can meet.']:[])).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
-  $('again').onclick=()=>{S.stage='console';S.edit=null;S.night++;save();render()};
-  if($('end'))$('end').onclick=()=>{p.innerHTML=`<div class="kicker">End of the demo</div><h2>The rest of the citadel</h2>
-    <ul class="facts"><li><b>Gatehouse</b>: PIM, app registrations, consent and managed identities. Raiders: a stolen admin session, a malicious consent request.</li><li><b>Vault</b>: Key Vault. Raiders: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raiders: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
-    <div class="next"><button class="ghost" id="bk" type="button">Back to the report</button></div>`;$('bk').onclick=()=>render();wick(`<b>Wick:</b> ${SK.length-S.lit.length} lanterns still dark. One night at a time.`)};
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="day2">Start day 2</button>':''}</div>`;
+  $('again').onclick=()=>{S.stage='console';S.edit=null;save();render()};
+  if($('day2'))$('day2').onclick=()=>{S.ch=2;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;S.report=null;save();render();$('pane').scrollTop=0};
+
   wick(R.win?'<b>Wick:</b> Two lanterns lit. That\'s two exam skills you can actually do, not just name.':'<b>Wick:</b> Breaches happen. What matters is you know exactly why this one did.');
 }
 
