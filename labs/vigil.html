@@ -224,8 +224,9 @@ code{font-family:var(--mono);font-size:.86em;background:var(--acc-soft);padding:
 .launcher button{display:flex;width:100%;gap:10px;align-items:center;padding:8px;border-radius:4px;font-size:12.5px;text-align:left;color:#222}
 .launcher button:hover{background:#f1efeb}
 .launcher button i{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:600;color:#fff}
-.hl{outline:2px solid var(--warn);outline-offset:-2px;animation:pulse 1.6s ease infinite}
-@keyframes pulse{0%,100%{outline-color:var(--warn)}50%{outline-color:rgba(224,112,26,.25)}}
+.hl{position:relative;outline:2px solid rgba(224,112,26,.25);outline-offset:-2px}
+.hl::after{content:"";position:absolute;inset:0;border:2px solid var(--warn);pointer-events:none;will-change:opacity;animation:hlpulse 1.6s ease infinite}
+@keyframes hlpulse{0%,100%{opacity:1}50%{opacity:0}}
 .dlg{position:absolute;inset:0;background:rgba(20,20,20,.28);display:grid;place-items:center;z-index:4}
 .dlg>div{width:min(460px,90%);background:#fff;border-radius:8px;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:20px 22px}
 .dlg h6{margin:0 0 8px;font-size:16px;font-weight:600}
@@ -422,8 +423,9 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .wpath{margin:8px 24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background-color:#fbfcfd;background-image:linear-gradient(#eef1f4 1px,transparent 1px),linear-gradient(90deg,#eef1f4 1px,transparent 1px);background-size:20px 20px}
 .wpath svg{display:block;width:100%;height:118px}
 .wpath text{font-family:var(--mono);letter-spacing:.08em}
-.wpath .pulse{transform-box:fill-box;transform-origin:center;animation:wpulse 1.8s ease-in-out infinite}
-@keyframes wpulse{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+.wpath .pulse{animation:wpulse 1.8s ease-in-out infinite}
+.wpath .pulse.p2{animation-delay:.45s}
+@keyframes wpulse{0%,100%{opacity:.15}50%{opacity:1}}
 .wbody{flex:1;min-height:0;overflow:auto;padding:16px 24px 22px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-content:start}
 .stn{align-self:start;border:1px solid var(--line);border-left:3px solid var(--warn);background:#fff;padding:16px 18px 18px;animation:fade .3s ease}
 .stn.done{border-left-color:var(--acc)}
@@ -444,6 +446,7 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .revs em{font-style:normal;margin-left:8px;letter-spacing:.04em;text-transform:none;font-size:11.5px}
 .wlist .eyebrow{margin-bottom:6px}
 .wmain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.wmain>.stn{align-self:stretch}
 .prize{border:1px solid var(--line);background:var(--soft);padding:12px 16px 12px}
 .pz{display:grid;grid-template-columns:repeat(3,1fr);margin-top:8px}
 .pz div{border-left:1px solid var(--line);padding-left:12px}.pz div:first-child{border-left:0;padding-left:0}
@@ -694,7 +697,8 @@ const PORTALS = [
     ["Health", [["health", "Service health", "incidents and advisories for every service, with email notifications"], ["mc", "Message center", "announcements of planned changes"], ["net", "Network connectivity", "connectivity scores and insights per office location"]]]
   ] },
   { id: "entra", name: "Microsoft Entra admin center", url: "entra.microsoft.com", tree: [
-    ["Entra ID", [["overview", "Overview", "the tenant overview: properties, licences and security defaults"], ["users", "Users", "all identities, their properties and sign-in settings"], ["groups", "Groups", "security and Microsoft 365 groups, expiration and naming policy"], ["roles", "Roles & admins", "every Entra role and its assignments"], ["entapps", "Enterprise applications", "apps used in the tenant and the permissions granted to them, such as Microsoft Graph Command Line Tools"], ["au", "Admin units", "administrative units"], ["agents", "Agents", "agent identities and agent blueprints (Microsoft Entra Agent ID)"], ["ca", "Conditional Access", "Conditional Access policies, the What If tool and authentication strengths"], ["authm", "Authentication methods", "the authentication methods policy and password protection"], ["sspr", "Password reset", "self-service password reset settings"], ["brand", "Custom branding", "the look of the sign-in page"], ["ext", "External Identities", "external collaboration and cross-tenant access settings"], ["signin", "Sign-in logs", "every sign-in with its result, error code and applied policies"]]],
+    ["Entra ID", [["overview", "Overview", "the tenant overview: properties, licences and security defaults"], ["users", "Users", "all identities, their properties and sign-in settings"], ["groups", "Groups", "security and Microsoft 365 groups, expiration and naming policy"], ["roles", "Roles & admins", "every Entra role and its assignments"], ["entapps", "Enterprise applications", "apps used in the tenant and the permissions granted to them, such as Microsoft Graph Command Line Tools"], ["au", "Admin units", "administrative units"], ["agents", "Agents", "agent identities and agent blueprints (Microsoft Entra Agent ID)"], ["ca", "Conditional Access", "Conditional Access policies, the What If tool and authentication strengths"], ["authm", "Authentication methods", "the authentication methods policy and password protection"], ["sspr", "Password reset", "self-service password reset settings"], ["brand", "Custom branding", "the look of the sign-in page"], ["ext", "External Identities", "external collaboration and cross-tenant access settings"]]],
+    ["Monitoring & health", [["signin", "Sign-in logs", "every sign-in with its result, error code and applied policies"]]],
     ["ID Protection", [["risk", "Risky users and sign-ins", "risk detections for users, sign-ins and agents"]]],
     ["ID Governance", [["pim", "Privileged Identity Management", "eligible and active role assignments, activation rules"], ["ent", "Entitlement management", "access packages and their policies"], ["lcw", "Lifecycle workflows", "automated joiner, mover and leaver tasks, also for agent sponsors"], ["rev", "Access reviews", "recurring reviews of membership and role assignments"]]]
   ] },
@@ -757,7 +761,7 @@ const GROUPS = [
     gloss: [["Cmdlet", "One PowerShell command, named verb-noun, like Get-MgUser."], ["Scope", "A right you ask for when you connect, like User.Read.All. It limits what this session can do."], ["CSV file", "A plain table saved as text, one row per user. Admin centers and scripts both read it."]] },
   { id: "auth", d: 2, builds: "Builds on step 2. The users and groups exist. Now you decide how they prove who they are and what they may reach.", gloss: [["MFA", "Multifactor authentication: a second proof after the password, like a code or a tap in an app."], ["Conditional Access", "If-then rules for sign-in: if this user signs in from there, then ask for MFA or block."], ["Risk", "Microsoft's guess that a sign-in or a user is compromised, rated low, medium or high."]], tag: "Sign-in", title: "Implement and manage authentication and access",
     intro: "This group is about how people prove who they are, and what they may reach once they have. It is the heaviest identity topic: authentication methods, password rules, self-service reset, sign-in troubleshooting and Conditional Access.",
-    where: [["Which methods people may use", "entra", "Entra ID > Authentication methods > Policies"], ["Custom banned passwords, smart lockout", "entra", "Entra ID > Authentication methods > Password protection"], ["Self-service password reset", "entra", "Entra ID > Password reset"], ["Why a sign-in failed", "entra", "Entra ID > Sign-in logs"], ["Policies that allow, block or ask for MFA", "entra", "Entra ID > Conditional Access"], ["Risky users and risky sign-ins", "entra", "ID Protection"]],
+    where: [["Which methods people may use", "entra", "Entra ID > Authentication methods > Policies"], ["Custom banned passwords, smart lockout", "entra", "Entra ID > Authentication methods > Password protection"], ["Self-service password reset", "entra", "Entra ID > Password reset"], ["Why a sign-in failed", "entra", "Entra ID > Monitoring & health > Sign-in logs"], ["Policies that allow, block or ask for MFA", "entra", "Entra ID > Conditional Access"], ["Risky users and risky sign-ins", "entra", "ID Protection"]],
     facts: ["The authentication methods policy turns each method on for chosen groups: passkeys (FIDO2), Microsoft Authenticator, Temporary Access Pass, SMS and more.", "Passkeys are phishing-resistant. SMS and voice are the weakest methods.", "A Temporary Access Pass is a time-limited code. Use it to set up a passwordless method or to recover an account.", "The global banned password list protects every tenant by itself. A custom banned list needs Entra ID P1.", "Smart lockout blocks the attacker and tries to leave the real user alone. By default it locks after 10 failed tries for one minute.", "Self-service password reset is set to None, Selected or All. Start with Selected and a pilot group. You choose whether one or two methods are needed.", "In a hybrid setup, password writeback sends the new password back to the on-premises Active Directory.", "The sign-in log shows the result, the error code and the Conditional Access policies that applied. Error 50126 is a wrong user name or password. 53003 is a block by Conditional Access. 50053 is a smart lockout. 50057 is a disabled account.", "Conditional Access needs Entra ID P1. Policies that use user risk or sign-in risk need P2.", "Security defaults and Conditional Access do not go together. Turn security defaults off first.", "Report-only mode shows what a policy would do without enforcing it. The What If tool tests one sign-in against your policies.", "Always leave emergency (break-glass) accounts out of blocking policies."],
     watch: ["Sign-in risk is answered with MFA. User risk is answered with a secure password change.", "A policy in report-only mode protects nobody yet.", "Admins always have self-service password reset, with two methods, whatever you set for users."],
     roles: "Authentication Policy Administrator for methods and password protection, Conditional Access Administrator for policies, Security Reader or Reports Reader for sign-in logs." },
@@ -1227,8 +1231,9 @@ function tickOrrery(now) {
   const hs = $("#hubspin"); if (hs) hs.setAttribute("transform", `rotate(${(t * 6) % 360} ${SCH.cx} ${SCH.cy})`);
 }
 const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
-let last = 0;
-function loop(now) { if (!document.hidden && now - last > 33) { last = now; if (cur === "obs" && orr.built) tickOrrery(reduce ? orr.t0 : now); } requestAnimationFrame(loop); }
+let last = 0, looping = false;
+function loop(now) { if (cur !== "obs" || !orr.built || reduce) { looping = false; return; } if (!document.hidden && now - last > 33) { last = now; tickOrrery(now); } requestAnimationFrame(loop); }
+function startLoop() { if (!looping && !reduce && cur === "obs") { looping = true; requestAnimationFrame(loop); } }
 
 function portalHTML(pid, sel, main, extra = "") {
   const P = PORT[pid];
@@ -1256,7 +1261,7 @@ function makeQ(G, L) {
   return { q: "Where do you go for this: " + lc1(r[0]) + "?", o: opts.map(w => PORT[w[1]].name + " › " + w[2]), a: opts.indexOf(r), why: PORT[r[1]].name + ", under " + r[2] + ".", ref: { g: G.id, w: G.where.indexOf(r) } };
 }
 function mkMiss(kind, g, t, ref, due) { return { id: kind + ":" + (ref ? JSON.stringify(ref) : t), kind, g, t, ref: ref || null, at: nowMs(), st: 0, due }; }
-function miss(kind, gid, t, ref) { S.miss = S.miss || []; const m = mkMiss(kind, gid, t, ref, dayNo() + 1); S.miss = [m, ...S.miss.filter(x => x.id !== m.id)].slice(0, 60); save(); }
+function miss(kind, gid, t, ref) { S.miss = S.miss || []; const m = mkMiss(kind, gid, t, ref, dayNo() + 1); S.miss = [m, ...S.miss.filter(x => x.id !== m.id)]; save(); }
 function renderLesson() {
   const G = GROUPS.find(g => g.id === school.g), D = DOMAINS[G.d - 1], n = LADDER.indexOf(G.id) + 1, L = lessonOf(G, school.l), last = school.l === L.n - 1;
   if (!S.pos || S.pos.g !== school.g || S.pos.l !== school.l) { S.pos = { g: school.g, l: school.l }; save(); }
@@ -2776,6 +2781,7 @@ function migrate() {
     S.nights = [...new Set([...S.nights, t - 2, t - 1])];
   }
   if (DEMO && !S.revDemo) { const t = dayNo(); S.rev = Object.assign({ tenant1: { st: 1, due: t, fade: false }, identities0: { st: 0, due: t + 2, fade: false }, auth1: { st: 0, due: t + 3, fade: true } }, S.rev || {}); S.revInit = 1; S.revDemo = 1; }
+  Object.entries(S.rev || {}).forEach(([k, r]) => { if (!r || !r.fade) return; const g = k.replace(/\d+$/, ""), l = +k.slice(g.length); if (!TYPED[g] || !TYPED[g][l]) return; if (!S.miss.some(m => m.kind === "typed" && m.ref && m.ref.g === g && m.ref.l === l)) S.miss.push(mkMiss("typed", g, TYPED[g][l].q, { g, l }, dayNo())); });
   S.loop = 1; save();
 }
 function streakOf() { const t = dayNo(), N = new Set(S.nights); let d = N.has(t) ? t : t - 1, n = 0; while (N.has(d)) { n++; d--; } let best = 0, run = 0, prev = null; [...N].sort((a, b) => a - b).forEach(x => { run = prev === x - 1 ? run + 1 : 1; prev = x; best = Math.max(best, run); }); return { n, best, today: N.has(t), last: Math.max(-Infinity, ...N) }; }
@@ -2822,7 +2828,7 @@ function ago(ms) { const d = dayNo() - dayNo(ms); return d <= 0 ? "today" : d ==
 function pathSVG(w, curI) {
   const VW = Math.max(560, Math.round(($("#wpath") || {}).clientWidth || 760)), n = w.items.length, x0 = 70, x1 = VW - 70, xs = w.items.map((_, i) => n === 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / (n - 1)), y = i => 62 - Math.sin((n === 1 ? .5 : i / (n - 1)) * Math.PI) * 10;
   const segs = xs.slice(1).map((x, i) => { const a = stDone(w.items[i]) && stDone(w.items[i + 1]); return `<line x1="${xs[i]}" y1="${y(i)}" x2="${x}" y2="${y(i + 1)}" stroke="${a ? "#0f8fa8" : "#9aa5b1"}" stroke-width="${a ? 1.4 : .9}" ${a ? "" : 'stroke-dasharray="3 4"'}/>`; }).join("");
-  const counts = {}, nodes = w.items.map((it, i) => { const d = stDone(it), on = i === curI, inf = itemInfo(it); counts[inf.short] = (counts[inf.short] || 0) + 1; const lab = inf.short + (it.k === "oops" || it.k === "rev" ? " " + counts[inf.short] : ""); return `<g>${on ? `<circle class="pulse" cx="${xs[i]}" cy="${y(i)}" r="13" fill="none" stroke="#e0701a" stroke-width="1.2"/>` : ""}<circle cx="${xs[i]}" cy="${y(i)}" r="${d ? 6 : on ? 6 : 4.5}" fill="${d ? "#0f8fa8" : on ? "#e0701a" : "#fff"}" stroke="${d ? "#0f8fa8" : on ? "#e0701a" : "#8a94a0"}"/><text x="${xs[i]}" y="${y(i) - 22}" text-anchor="middle" font-size="8.5" fill="#8a94a0">ST ${String(i + 1).padStart(2, "0")}</text><text x="${xs[i]}" y="${y(i) + 28}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${d || on ? "#232a31" : "#8a94a0"}">${lab}</text></g>`; }).join("");
+  const counts = {}, nodes = w.items.map((it, i) => { const d = stDone(it), on = i === curI, inf = itemInfo(it); counts[inf.short] = (counts[inf.short] || 0) + 1; const lab = inf.short + (it.k === "oops" || it.k === "rev" ? " " + counts[inf.short] : ""); return `<g>${on ? `<circle class="pulse" cx="${xs[i]}" cy="${y(i)}" r="13" fill="none" stroke="#e0701a" stroke-width="1.2"/><circle class="pulse p2" cx="${xs[i]}" cy="${y(i)}" r="17" fill="none" stroke="#e0701a" stroke-width=".8"/>` : ""}<circle cx="${xs[i]}" cy="${y(i)}" r="${d ? 6 : on ? 6 : 4.5}" fill="${d ? "#0f8fa8" : on ? "#e0701a" : "#fff"}" stroke="${d ? "#0f8fa8" : on ? "#e0701a" : "#8a94a0"}"/><text x="${xs[i]}" y="${y(i) - 22}" text-anchor="middle" font-size="8.5" fill="#8a94a0">ST ${String(i + 1).padStart(2, "0")}</text><text x="${xs[i]}" y="${y(i) + 28}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${d || on ? "#232a31" : "#8a94a0"}">${lab}</text></g>`; }).join("");
   const ticks = Array.from({ length: Math.floor((VW - 80) / 11) + 1 }, (_, i) => `<line x1="${40 + i * 11}" y1="108" x2="${40 + i * 11}" y2="${i % 5 ? 104 : 100}" stroke="#c4ccd4" stroke-width=".7"/>`).join("");
   return `<svg viewBox="0 0 ${VW} 118" preserveAspectRatio="xMidYMid meet"><line x1="40" y1="108" x2="${40 + Math.floor((VW - 80) / 11) * 11}" y2="108" stroke="#c4ccd4" stroke-width=".7"/>${ticks}<text x="40" y="18" font-size="8.5" fill="#8a94a0">NIGHT WATCH · ${n} STATIONS</text><text x="${VW - 40}" y="18" text-anchor="end" font-size="8.5" fill="#8a94a0">EXAM ${EXAM.code}</text>${segs}${nodes}</svg>`;
 }
@@ -2945,7 +2951,7 @@ let cur = "obs", booted = false;
 function go(v) {
   if (cur !== v && booted) snd("page");
   cur = v; $$("nav.tabs button").forEach(b => b.classList.toggle("on", b.dataset.view === v)); $$(".view").forEach(s => s.classList.toggle("on", s.id === "v-" + v));
-  if (v === "tonight") { W.last = null; renderTonight(); } if (v === "obs") renderObs(); if (v === "school") { renderStrip(); renderLesson(); } if (v === "case") renderCase(); if (v === "trial") renderExam(); if (v === "chart") renderChart();
+  if (v === "tonight") { W.last = null; renderTonight(); } if (v === "obs") { renderObs(); startLoop(); } if (v === "school") { renderStrip(); renderLesson(); } if (v === "case") renderCase(); if (v === "trial") renderExam(); if (v === "chart") renderChart();
   $("#tip").style.opacity = 0; try { history.replaceState(null, "", "#" + v); } catch (e) {}
 }
 
@@ -3010,7 +3016,7 @@ function init() {
   $("#ecode").textContent = "EXAM " + EXAM.code; $("#ename").textContent = EXAM.name; $("#emeta").textContent = "pass " + EXAM.pass + " / 1000 · " + EXAM.minutes + " min";
   migrate(); renderSkins(); applySkin(); renderSnd(); renderObs(); renderBadge();
   const h = location.hash.slice(1); go(["tonight", "obs", "school", "case", "trial", "chart"].includes(h) ? h : "tonight");
-  requestAnimationFrame(loop); booted = true;
+  startLoop(); booted = true;
 }
 init();
 </script>
