@@ -1,5 +1,5 @@
 STATUS: BUILD - she said "continue the build" on 24 Nov 2026.
-MERGE: WAIT - build on the vigil branch only. Nothing goes to main until this line says MERGE: GO (her call, after she reviews).
+MERGE: GO - she said "Merge and push live" on 25 Nov 2026. Vigil is on main; keep building on the vigil branch and merge each run.
 
 # Vigil - the lab for Exam AB-650
 
