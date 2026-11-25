@@ -11,36 +11,36 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. webble (23 Nov, third run; readability of briefs and lessons, home and School at both sizes)
-7. syncle (23 Nov, third run; readability of stories, blurbs and tasks; every suite after the rebuild)
-8. git-lab (23 Nov, fourth run; guided missions M-00 to M-07 autoplayed, revert check, briefing texts read)
-9. modle (23 Nov, fourth run; Learn pages read for long sentences, ceil page checked)
-10. opsle (23 Nov, fourth run; every mission story, step and expected result checked against the steps)
-11. codex (24 Nov, fifth run; Hexle and Passle rulebooks read line by line, search checked at both sizes)
-12. mscodex (24 Nov, fifth run; long explanations read and split, search at both sizes)
-13. junle (24 Nov, sixth run; field guides and recaps read, Virtual Chassis facts checked against Juniper)
-14. spelle (24 Nov, sixth run; learner texts read, nothing over 20 words left)
-15. shelle (24 Nov, third run; lessons and tasks read and split, weak-spots label checked)
-16. junos-lab (24 Nov, third run; long lesson, ticket and quiz explanations split)
-17. proxle (24 Nov, third run; scenario texts read, long sentences split, the 10 scenarios checked by test.py)
-18. meridian (24 Nov, third run; School lessons read, every tab at both sizes)
-19. hexle (24 Nov, third run; lesson texts read, every tab clicked at 1440)
+6. modle (23 Nov, fourth run; Learn pages read for long sentences, ceil page checked)
+7. opsle (23 Nov, fourth run; every mission story, step and expected result checked against the steps)
+8. codex (24 Nov, fifth run; Hexle and Passle rulebooks read line by line, search checked at both sizes)
+9. mscodex (24 Nov, fifth run; long explanations read and split, search at both sizes)
+10. junle (24 Nov, sixth run; field guides and recaps read, Virtual Chassis facts checked against Juniper)
+11. spelle (24 Nov, sixth run; learner texts read, nothing over 20 words left)
+12. shelle (24 Nov, third run; lessons and tasks read and split, weak-spots label checked)
+13. junos-lab (24 Nov, third run; long lesson, ticket and quiz explanations split)
+14. proxle (24 Nov, third run; scenario texts read, long sentences split, the 10 scenarios checked by test.py)
+15. meridian (24 Nov, third run; School lessons read, every tab at both sizes)
+16. hexle (24 Nov, third run; lesson texts read, every tab clicked at 1440)
+17. webble (25 Nov, fourth run; briefs and hints read, theme and save checked, School opened)
+18. syncle (25 Nov, fourth run; lesson texts read and split, every suite after the rebuild)
+19. git-lab (25 Nov, fifth run; all 12 guided missions autoplayed to the end, lessons and Desktop tours read)
 
-Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts. Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 23 Nov, fourth run: still blocked, 403); the next labs that can run are taken instead.
+Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts (checked again 25 Nov: still blocked). Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 23 Nov, fourth run: still blocked, 403); the next labs that can run are taken instead.
 
-## Pockle numbers (24 Nov, third run, 390x844, touch)
+## Pockle numbers (25 Nov, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
 | Juniper Oopsies | 22 (+ live mistakes) | 22 | 22 |
 | Junle | 112 (9 added 24 Nov) | 112 | 112 |
 | Junos Lab | 155 | 155 | 155 |
-| Proxle | 99 (13 added 24 Nov, third run) | 0 | 31 |
+| Proxle | 103 (4 added 25 Nov) | 0 | 35 |
 | Meridian | 109 (15 added 23 Nov, third run) | 0 | 33 |
-| Subnle Pocket | 106 (10 added 23 Nov, fourth run) | 0 | 38 |
+| Subnle Pocket | 112 (6 added 25 Nov) | 0 | 38 |
 | Pyle | 143 | 0 | 29 |
 | Pyle Pocket | 694 | 0 | 226 |
-| Sleeple | 106 (7 added 24 Nov) | 0 | 36 |
+| Sleeple | 118 (12 added 25 Nov) | 0 | 48 |
 | Passle | 155 | 0 | 40 |
 | Seqle | 110 (5 added 24 Nov, third run) | 0 | 38 |
 | Hexle | 124 (14 harbour cards added 23 Nov) | 0 | 10 |
@@ -52,11 +52,12 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 | Syncle | 126 (20 added 24 Nov, second run) | 0 | 11 |
 | Modle | 106 (16 added 23 Nov, second run) | 0 | 33 |
 
-- Total 2731 cards. A first visit on a phone reaches 289, all Juniper; with sample progress in every lab 962 are open (673 from 16 labs plus 289 Juniper; Today's reviews 0/19). The other cards stay locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
+- Total 2753 cards. A first visit on a phone reaches 289, all Juniper; with sample progress in every lab 978 are open (689 from 16 labs plus 289 Juniper; Today's reviews 0/19). The other cards stay locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
 - Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
 - No blank or dead-end states found. No horizontal scroll. No console errors. Sixteen of nineteen lab rows are greyed out on a first visit; their OPEN button links to the lab.
-- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 99, Sleeple 106, Modle 106, Subnle Pocket 106, Shelle 108. Modle and Shelle units already mirror their lessons one to one, so new cards there would repeat. Next run: Sleeple's thinnest journeys, then Subnle Pocket.
+- Launcher labs with no rehearsal set in Pockle: only the two Codex references. Fewest cards now: Proxle 103, Modle 106, Shelle 108, Spelle 109, Meridian 109. Modle and Shelle units already mirror their lessons one to one, so new cards there would repeat. Next run: Spelle's Delve unit (6) and Webble's thinnest chapters (6 each), then Pyle (6 per unit).
+- 25 Nov: Sleeple got 12 cards for its three thinnest journeys (single quotes print the same, main() without the guard never runs, __name__ is "__main__", the docstring; "12" + 1 is a TypeError, 3,5 makes a tuple, Train is not train, bags = bags + 3; 12 * 3.5 is 42.0, round to 2 decimals, f "..." with a space is a SyntaxError, // and % together). Proxle got 4 for Create (log in to pve1 first, what three servers without a cluster cannot do, pvecm status before a cluster exists, one vote per node). Subnle Pocket got 6 for Sizing (61 addresses, 130 devices, a /28 holds exactly 14, the 2 lost addresses, a /29, room to double). Every Python snippet run in python3, every prefix checked with Python's ipaddress. Five card explanations rewritten (Git Lab, Syncle 2, Webble 2).
 - 24 Nov, third run: Proxle got 13 cards for its thinnest units (dies: VM 102 stays down, qm stop with no quorum, fix quorum by bringing nodes back, 2 of 5 may fail; add: pvecm add on the new node, pveversion first, storage arrives by itself, 4 nodes still survive only 1 failure; move: qm migrate on the node where the VM runs; bkb: why a restore stays stopped, why backup-b is at another site, what a vzdump file name looks like, A before B). Seqle got 5 (COUNT gives one row, SUM for a total, MAX, AS for an alias, why ROUND). The Seqle "Spot the bug" card on `COUNT()` was wrong in real SQLite and now uses `COUNT *` (see the entry).
 - 24 Nov, second run: Syncle got 20 cards for its three thinnest units (connect: Get-Member and -MemberType Property, Exchange needs its own sign-in, -ShowBanner:$false, -ResultSize, Disconnect-ExchangeOnline -Confirm:$false, compare a bool with $false not 'false'; users: quotes around a title with spaces, 403 needs a write scope, no output after Update-MgUser is normal, a 0 count often means a typo, a filter value without single quotes is a 400, ne needs -ConsistencyLevel eventual; reports: sorting on a property you did not ask for, System.Object[] in a CSV, Export-Csv overwrites, .Group, Measure-Object -Sum, the e in a calculated column, AuditLog.Read.All for SignInActivity). Git Lab got 10 (ls, git init makes no commit, undo a wrong git init by deleting .git, .gitignore does not untrack a committed file, build/, # is a comment, the >>>>>>> line, git merge --abort, behind by 1 means pull, pull refuses to overwrite unsaved edits). Five long card explanations split (Meridian 3, Syncle 1, Proxle 1).
 - 24 Nov: Junle got 9 cards for its two thinnest drills (Virtual Chassis: both ends must be VC ports, default priority 128, no-split-detection for a pair, master/backup/linecard, one device to manage; Layer 2 security: rogue DHCP is stopped by snooping, a trust group with no interface trusts nothing, show dhcp-security binding, a full MAC table floods like a hub). They are open on a first visit. Spelle got 9 (the if branch when it IS a wall, an if with no else, "wall" === "Wall", steps = steps + 1, adding a property, hp + 5, reassigning a const is a TypeError, a line in the outer loop only, "ab".repeat(2)); every snippet run in node. Sleeple got 7 for Berth supplies and Guest welcome (len in an f-string, print with a comma, append adds one, any loop name works, the greet f-string, bag_fee returns 36, multiplying in any order); every snippet run in python3. The default priority was checked against Juniper's docs.
@@ -138,6 +139,34 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Junle: the room and the classic drill name the security VLAN `klanten` (Dutch for customers). Not a person name, so left.
 
 ## Entries
+
+### 2026-11-25
+
+Checked
+- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. LOG first line not HOLD. CDN still blocked, so pyle, sleeple, passle, seqle and rebble stay skipped; webble, syncle and git-lab taken.
+- Pockle: first visit and seeded visit at 390x844 with touch, home, the three tabs and a 10-card mix played on each. No errors, no typing fields, no sideways scroll. Numbers above. About 30 Webble, Git Lab and Syncle cards read; no sentence over 18 words in any bank.
+- Quick pass: 25 pages at 1440x900 and 390x844. No page errors. Only the two known Meridian 404s, fonts the sandbox cannot reach, and the known Junle room scene width (at 1440 the page is 1545 px wide, but html and body hide the overflow, so nobody can scroll it). Service worker: every precache entry exists (12 and 27).
+- Suites (after the changes): proxle ALL OK, pockle ALL OK, sync and typed clean, hexle assist ALL OK, opsle clean, junos-lab 6472 passed, no-emoji and soak 8000 clean, syncle test2 to test5, t_teams and t_clock FAIL 0, syncle test.js 1 known failure.
+- Deep pass: webble (briefs and hints read, theme switch survives a reload, School chapter 0 opened, 24 buttons clicked, no errors), syncle (lesson texts in all content files read, 60 map and sequence buttons clicked, no errors), git-lab (all 12 guided missions autoplayed to ALL MISSIONS COMPLETE in 93 commands, lessons and Desktop tours read).
+- CACHE now workshop-v125 (lab files and Pockle only, no js/ or css/ change).
+
+Fixed
+- Git Lab: `git push` a second time, with nothing new, printed "Enumerating objects... done." and pushed again. Real git says "Everything up-to-date". It does now. A push from a branch with no commits said "everything up-to-date (no commits yet)"; real git refuses with "error: src refspec main does not match any". It does now, with one line that says to commit first.
+- Pockle: 12 Sleeple, 4 Proxle and 6 Subnle Pocket cards (see Pockle numbers). Opsle rebuilt because it carries those banks.
+
+Readability: 35 rewrites
+- Git Lab 12 (untracking a file, detached HEAD, conflict markers, git clone, fast-forward, deleted files in history, the Desktop tours: Commit button, diff habit, History, local-only repo, the terminal echo, the 0 changes note). Syncle 13 (Get-MgUser -UserId, delegated tenant check, Where-Object, Select-Object before Export-Csv, look before you loop, a bad row in a loop, distribution list members, inbox rules, 429 throttling, running a script by path, parameter attributes, try/catch per item, reporting). Webble 5 (follow-the-mouse hint, tilt hint, SVG map brief, studio intro, Hero brief). Pockle 5. No test or check matches any of them; all suites green after the Syncle rebuild.
+- Git Lab, before: "To stop tracking it: git rm --cached secrets.env (out of the index, still on disk), commit, and from then on the rule does its job." After: "To stop tracking it, run git rm --cached secrets.env. That takes it out of the index but leaves it on disk. Then commit. From then on, the .gitignore rule does its job."
+- Syncle, before: "Decorate parameters so PowerShell checks input for you: [Parameter(Mandatory)] refuses to run without it, a type like [string] or [int] converts or refuses, a default ([int]$Top = 5) fills it in, ..." After: "Decorate parameters, and PowerShell checks the input for you. [Parameter(Mandatory)] refuses to run without it. A type like [string] or [int] converts the value or refuses it. A default ([int]$Top = 5) fills it in. ..."
+- Webble, before: "A studio intro: a thin orange bar fills from the left, then the whole dark loader screen lifts away to reveal the page." After: "A studio intro. A thin orange bar fills from the left. Then the whole dark loader screen lifts away and shows the page."
+
+Listed
+- No new art items: Webble (4), Git Lab (1) and Pockle (2) already have items waiting; Syncle's white Memory Corridor looks complete. 33 open.
+- Webble School, z-index: "higher number wins, inside the same parent". Strictly it is inside the same stacking context, which is not always the parent. A fair beginner shortcut, so left; her call if she wants the real term.
+- Git Lab: the output of a real push lists object counts and an `old..new main -> main` line; the lab prints a short `branch main -> origin/main`. Simplified on purpose, left.
+
+Needs her decision
+- Pockle ideas 1 and 5 (try any lab, bring my progress).
 
 ### 2026-11-24, daytime (asked by Kaatje)
 
@@ -433,54 +462,10 @@ Needs her decision
 - Pockle ideas 1 and 5 (try any lab, bring my progress).
 - Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
 
-### 2026-11-21, fourth run
-
-Checked
-- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. Catch-up already done. LOG first line not HOLD. CDN still blocked, so pyle, sleeple, passle, seqle and rebble stay skipped; mscodex, junle and spelle taken.
-- Pockle: first visit and seeded visit at 390x844 with touch, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
-- Quick pass: 25 pages at 1440x900 and 390x844. No page errors, no sideways scroll. Only the two known Meridian 404s and the clipped Junle mist.
-- Service worker: 12 precache entries exist; 20 launcher paths exist. CACHE now workshop-v100.
-- Suites: proxle ALL OK, pockle test, sync and typed clean, opsle clean, junos-lab 6465 passed, no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
-- Deep pass: mscodex (86 cmdlets and their parameters read, Get-MessageTraceV2 already current; search, read marks across a reload, theme at both sizes), junle (room and classic screens; the Virtual Chassis role outputs checked against Juniper's primary-role election page), spelle (spellbook bar and panes at ten widths from 360 to 1440 px, first quest with starter and hint).
-
-Fixed
-- Spelle, phone and tablet: the spellbook buttons did not wrap, so between 560 and 600 px and below 410 px the cast button ran past the edge, and on a phone every pane was 410 px wide in a 390 px screen. The buttons now wrap under the label and the panes fit the screen. Desktop unchanged.
-- Junle: the split-VC scenario and the sample `show virtual-chassis` output showed the second member of a two-member Virtual Chassis as `Linecard`. Juniper's election picks the backup with the same rules as the primary, so with two members the second one is `Backup`. Outputs and the verify task now say backup.
-- Pockle: 15 Proxle cards (install: flashing the stick, pulling it before reboot, A and B feeds, the BMC, choosing and fixing the address; switch: Amnesiac, `cli`, `show | compare`, a second address on me0, VLAN tags; `pvecm expected`, storage on a new node, quorum of 5, Backup B) and 16 Meridian cards (hypervisor types, .vswp, ssh to a host, CPU ready, EVC, DRS levels, Move-VM, what HA does not fix, snapshot age, Get-Snapshot, merge timing, Get-Datastore, System log, Level 2, events 4625 and 41).
-
-Listed
-- No new art items: Spelle's title screen and both Codex pages are already in the queue, and the Junle room is fully painted. 27 open.
-- Codex Microsoft licence or license search, Proxle certificate authority wording: see Open findings.
-
-Needs her decision
-- Pockle ideas 1 and 5 (try any lab, bring my progress).
-
-### 2026-11-21, third run
-
-Checked
-- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. Catch-up already done. LOG first line not HOLD. CDN still blocked (403), so pyle, sleeple, passle, seqle and rebble stay skipped; modle, opsle and codex taken instead.
-- Pockle: first visit and seeded visit at 390x844 with touch, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
-- Quick pass: 25 pages at 1440x900 and 390x844, plus the four Modle networking pages. No page errors, no sideways scroll. Only the two known Meridian 404s.
-- Service worker: 12 precache entries exist; 20 launcher paths exist. CACHE now workshop-v99.
-- Suites: proxle ALL OK, pockle test, sync and typed clean, opsle clean, junos-lab 6465 passed, no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
-- Deep pass: modle (5465 generated practice puzzles from all 13 categories evaluated by real Python 3 and compared with the lab's answers: all match; the answer checker; the networking hub and its four pages), opsle (all four missions, 18 stages, every expected output recomputed by hand, git pull and git init -b checked on git 2.43, seeded progress at both sizes), codex (five volumes read line by line, two claims tested on the command line).
-
-Fixed
-- Codex Git: `git pull` was said to make a merge commit when both sides committed. Current Git (2.33 and later, tested on 2.43) stops with "Need to specify how to reconcile divergent branches" unless you say `--no-rebase` or `--rebase`. The entry now says so, which also matches what Git Lab teaches.
-- Codex Python: "Four spaces, consistently, or Python refuses to run the file" read as if two spaces were an error. Four is the convention; what Python insists on is the same indentation for every line of a block (IndentationError otherwise). Checked with python3.
-- Opsle: the built page was out of step with its sources. Rebuilt; before and after give the same lock state for every stage, empty and seeded. Two hints added where a beginner gets stuck: `mkdir -p` for the first step of Ticket triage (plain mkdir fails when ~/megalab/ops does not exist yet), and that `await` needs an async function in a script loaded with defer (Site status board, Fill it with fetch).
-- Pockle: 15 Git Lab cards in a new GitHub Desktop unit (unlocks when a Desktop tour is finished) and 16 Shelle cards. Test now also checks that a finished Desktop tour unlocks that unit.
-
-Listed
-- One art item added to the ComfyUI queue (Modle networking hub icons, to replace typed symbols). 27 open.
-- Modle networking placeholders and fixed "1 mastered" text, the Modle "4 due" badge: see Open findings.
-
-Needs her decision
-- Pockle ideas 1 and 5 (try any lab, bring my progress).
-- Modle networking: build Terminal and Exam, or hide those two cards until they exist.
-
 ### Older (folded)
 
+- 2026-11-21, fourth run: Spelle spellbook buttons wrap on phones; Junle two-member Virtual Chassis shows Backup, not Linecard; 15 Proxle and 16 Meridian Pockle cards.
+- 2026-11-21, third run: Codex Git says pull stops on divergent branches (Git 2.33 and later); Codex Python indentation wording; Opsle rebuilt with two hints; 15 Git Lab Desktop and 16 Shelle Pockle cards.
 - 2026-11-21, second run: Webble warm-up survives a reload and explains a no-transition answer; Git Lab gives the real pathspec error for a missing file; 15 Sleeple and 15 Subnle Pocket Pockle cards.
 - 2026-11-21: Proxle answers pvesh, pveum and friends as real commands; Meridian takes four real w32tm forms; Hexle accepts attributes in any order and self-closing void tags; 15 Proxle and 14 Meridian Pockle cards.
 - 2026-11-20, evening run: Spelle checks ignore comments and find a loop's real closing brace; Shelle kill and sed now change what lsof, docker run and cat show; Junos Lab uplinks keep their names after a reload, Esc keeps the autosave, show interfaces terse ge-0/0/0 works; 17 Meridian Basics Pockle cards.

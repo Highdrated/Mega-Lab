@@ -1009,7 +1009,7 @@ const MISSIONS=[
 { name:'M-05 // REJOIN',
   steps:[
     {t:'The detour worked. <b>Merge</b> brings another branch\'s work into the one you are standing on.',
-     c:'git merge scenic-route', m:'Direction matters: you merge INTO your current branch. Main had not moved since you branched, so git just slid main forward to the detour commit: a fast-forward, no merge commit needed.'},
+     c:'git merge scenic-route', m:'Direction matters: you merge INTO your current branch. Main had not moved since you branched. So git just slid main forward to the detour commit. That is a fast-forward: no merge commit needed.'},
     {t:'Confirm main has it now.', c:'cat manifest.txt', m:'main and scenic-route now point at the same commit. A real merge commit, where two lanes join, comes in the next mission.'}
   ]},
 { name:'M-06 // COLLISION',
@@ -1097,7 +1097,7 @@ const MISSIONS=[
   steps:[
     {t:'So far you built a project from scratch. Far more often you will <b>join</b> one that already exists. Go somewhere sensible first.',
      c:'cd ..', m:'You want the new project as a sibling folder, not nested inside the old one.'},
-    {t:'<b>git clone</b> downloads an entire project from GitHub — every file AND the full history — and drops it in a new folder.',
+    {t:'<b>git clone</b> downloads a whole project from GitHub: every file AND the full history. It puts it in a new folder.',
      c:'git clone https://github.com/crew/handbook.git',
      m:'Heads up: this replaces the lab repo with the downloaded one, the way opening a different project would.'},
     {t:'Clone made a new folder named after the repo, but you are still standing outside it. Step in.',
@@ -1444,7 +1444,8 @@ function run(raw){
     if(!S.remote){ w('fatal: no remote linked — run <b>git remote add origin &lt;url&gt;</b>','err'); return; }
     const b=m[1]||S.head;
     if(!S.branches[b]){ w('error: src refspec '+esc(b)+' does not match any','err'); return; }
-    if(!S.branches[b].tip){ w('everything up-to-date (no commits yet)','warn'); return; }
+    if(!S.branches[b].tip){ w('error: src refspec '+esc(b)+' does not match any','err'); w('a branch with no commits has nothing to push: commit first','dim'); return; }
+    if(S.pushedBranches[b]===S.branches[b].tip){ w('Everything up-to-date','dim'); return after(c); }
     S.pushedBranches[b]=S.branches[b].tip;
     w('Enumerating objects... done.','dim');
     w('To '+esc(S.remote.url),'dim');
@@ -1912,7 +1913,7 @@ const TOURS=[
     body:'<p>This dropdown only shows repositories you have <b>added to Desktop</b> — created here, cloned here, or dragged in.</p>'+
          '<p>A repository that exists on github.com but was never cloned to this machine will not appear until you clone it. The list is "what is on this computer", not "everything I own".</p>' },
   { el:'#gd-body', title:'Local vs on GitHub',
-    body:'<p>A repository you create in Desktop is <b>local only</b> — a folder on a drive with a hidden <code>.git</code> folder inside. GitHub does not know it exists. That is why a new repo offers <b>Publish repository</b> rather than Push.</p>'+
+    body:'<p>A repository you create in Desktop is <b>local only</b>: a folder on your drive with a hidden <code>.git</code> folder inside. GitHub does not know it exists. That is why a new repo offers <b>Publish repository</b> rather than Push.</p>'+
          '<p>Your BeeStation counts as local. Desktop only cares about the folder path; it does not care that the drive is on the network.</p>'+
          '<div class="warn">Worth knowing: git on a network drive can be slow, and can corrupt a repo if the connection drops mid-write. Many people keep repos on the internal drive and let GitHub be the backup.</div>' }
 ]},
@@ -1935,7 +1936,7 @@ const TOURS=[
   steps:[
   { el:'#gd-tabs', title:'The Changes tab',
     body:'<p>This lists files you have edited but not yet recorded into git. The number badge is how many.</p>'+
-         '<p>If it says <b>0</b>, you have nothing to commit — that is the most common reason the green Commit button looks dead.</p>' },
+         '<p>If it says <b>0</b>, you have nothing to commit. That is the most common reason the green Commit button looks dead.</p>' },
   { el:'#gd-list', title:'The tick boxes',
     body:'<p>Every changed file appears with a tick box. <b>Ticked means it goes into the next commit.</b> Untick one to leave it out.</p>'+
          '<p>Green <b>+</b> is a brand-new file. Yellow <b>&#9679;</b> is an existing file that was modified.</p>' },
@@ -1950,7 +1951,7 @@ const TOURS=[
     body:'<p>Click any file on the left and this pane shows what actually changed inside it.</p>'+
          '<p><span style="color:#ffa198">Red</span> lines were removed. <span style="color:#7ee787">Green</span> lines were added. A modified line shows as both — the old version removed, the new one added.</p>' },
   { el:'#gd-main', title:'Read it before you commit',
-    body:'<p>This is the single best habit to build. Ten seconds reading the diff catches the file you edited by accident, the debug line you forgot to delete, the password you nearly committed.</p>'+
+    body:'<p>This is the single best habit to build. Ten seconds of reading the diff catches a lot: the file you edited by accident, the debug line you forgot to delete, the password you nearly committed.</p>'+
          '<p>Once something is committed and pushed, undoing it is possible but fiddly. Reading first is much cheaper.</p>' }
 ]},
 
@@ -1960,7 +1961,7 @@ const TOURS=[
     body:'<p><b>Summary</b> is required and short. <b>Description</b> is optional detail for anything that needs explaining.</p>'+
          '<p>That Summary box is exactly the same thing as <code>-m "..."</code> in the terminal. Same field, friendlier packaging.</p>' },
   { el:'#gd-commit-btn', title:'Commit to <branch>',
-    body:'<p>The button names the branch you are committing to — a small safety net so you notice if you are on the wrong one.</p>'+
+    body:'<p>The button names the branch you are committing to. It is a small safety net: you notice when you are on the wrong one.</p>'+
          '<p>Runs: <code>git add .</code> then <code>git commit -m "your summary"</code></p>' },
   { el:'#gd-commit-btn', title:'Committed is not uploaded',
     body:'<p>After committing, your snapshot is saved <b>on this machine only</b>. GitHub still knows nothing about it.</p>'+
@@ -1989,7 +1990,7 @@ const TOURS=[
   { el:'#gd-tabs', title:'The History tab',
     body:'<p>Switch to History and the sidebar becomes a list of every commit already recorded, newest at the top.</p>' },
   { el:'#gd-list', title:'Your record',
-    body:'<p>Click any commit to see what it changed. This is the payoff for committing regularly — you can walk back through the project one saved step at a time.</p>'+
+    body:'<p>Click any commit to see what it changed. This is the payoff for committing often. You can walk back through the project, one saved step at a time.</p>'+
          '<p>It is also why short, honest commit messages matter. "fixed stuff" tells future-you nothing.</p>' }
 ]},
 
@@ -1998,7 +1999,7 @@ const TOURS=[
   { el:'#gd-term', title:'Not part of real GitHub Desktop',
     body:'<p>This black strip does not exist in the real app. It is here so you learn what the buttons do underneath.</p>' },
   { el:'#gd-term', title:'Why it is worth watching',
-    body:'<p>Every click prints the actual git command. After a few sessions the terminal stops being intimidating, because you have already been running these commands by hand without realising it.</p>'+
+    body:'<p>Every click prints the actual git command. After a few sessions the terminal stops feeling scary. You have already been running these commands, without realising it.</p>'+
          '<p>That is the whole point of this lab: the buttons get you moving, the commands stick.</p>' }
 ]}
 ];
@@ -2143,7 +2144,7 @@ const CASES = [
   {t:"The commit was never saved because you didn't push.", why:"Commits are saved locally the moment you make them. Push only copies them to the remote."},
   {t:"Someone force-pushed main and removed it.", why:"The reflog shows your own HEAD moving. The commit was never on main in the first place."}
  ],
- lesson:"Checking out a commit hash puts you in 'detached HEAD': HEAD points at a commit instead of a branch. Commits you make there are real, but once you switch away nothing points at them, so they disappear from git log and git branch. The reflog is git's diary of where HEAD has been and keeps those commits findable for about 90 days. git branch rescue <hash> gives the commit a name again. Next time, run git switch -c experiment before you start changing things."},
+ lesson:"Checking out a commit hash puts you in 'detached HEAD': HEAD points at a commit instead of a branch. Commits you make there are real. But once you switch away, nothing points at them, so they vanish from git log and git branch. The reflog is git's diary of where HEAD has been and keeps those commits findable for about 90 days. git branch rescue <hash> gives the commit a name again. Next time, run git switch -c experiment before you start changing things."},
 {id:"secret", name:"The password is still on GitHub", sub:"Deleted, pushed, still visible",
  problem:"Last week someone committed <b>config.ini</b> with the database password and pushed it. You deleted the file in a new commit and pushed again. Security says the password is still visible on GitHub. How?",
  clues:[
@@ -2181,7 +2182,7 @@ const CASES = [
   {t:"The delete commit was never pushed.", why:"origin/main points at e41a9c0, the delete commit. It was pushed."},
   {t:"Adding config.ini to .gitignore would have removed it from GitHub.", why:".gitignore only keeps untracked files out of new commits. It never touches history."}
  ],
- lesson:"A commit is a snapshot of every file at that moment. Deleting a file makes a new snapshot without it, but every older snapshot keeps it, and so does every clone and fork. So the first move is always: treat the secret as leaked and change it. Only then clean up history (git filter-repo --path config.ini --invert-paths), force-push, and ask everyone to clone again. Prevention: keep secrets in a file that is in .gitignore from day one."},
+ lesson:"A commit is a snapshot of every file at that moment. Deleting a file makes a new snapshot without it. But every older snapshot still has it, and so does every clone and fork. So the first move is always: treat the secret as leaked and change it. Only then clean up history (git filter-repo --path config.ini --invert-paths), force-push, and ask everyone to clone again. Prevention: keep secrets in a file that is in .gitignore from day one."},
 {id:"rejected", name:"Push rejected", sub:"fetch first?",
  problem:"You committed your update on <b>main</b> and ran <b>git push</b>. Git refused. Nothing looks wrong on your side. What happened, and what is the safe fix?",
  clues:[
@@ -2260,7 +2261,7 @@ const CASES = [
   {t:".gitignore only works after you commit it.", why:"It works from the working folder straight away. Committing it just shares the rule with others."},
   {t:"The rule needs a folder, like config/secrets.env.", why:"A plain filename rule matches that name in every folder."}
  ],
- lesson:".gitignore is a filter for files git doesn't know yet. Once a file is tracked, git keeps watching it whatever .gitignore says. To stop tracking it: git rm --cached secrets.env (out of the index, still on disk), commit, and from then on the rule does its job. If the file held real secrets, they are still in the old commits: see the case about the password on GitHub."},
+ lesson:".gitignore is a filter for files git doesn't know yet. Once a file is tracked, git keeps watching it whatever .gitignore says. To stop tracking it, run git rm --cached secrets.env. That takes it out of the index but leaves it on disk. Then commit. From then on, the .gitignore rule does its job. If the file held real secrets, they are still in the old commits: see the case about the password on GitHub."},
 {id:"markers", name:"Weird arrows on the live site", sub:"<<<<<<< HEAD on the homepage",
  problem:"After yesterday's merge, the station homepage shows lines like <b>&lt;&lt;&lt;&lt;&lt;&lt;&lt; HEAD</b> and <b>&gt;&gt;&gt;&gt;&gt;&gt;&gt; header</b> above the menu. Nobody typed those on purpose. Where do they come from?",
  clues:[
@@ -2297,7 +2298,7 @@ const CASES = [
   {t:"Git adds those lines to every merge commit.", why:"Git only writes markers into conflicted files, and they are meant to be removed before committing."},
   {t:"The header branch was already broken before the merge.", why:"git show 5a1f3d9 shows a clean nav line without markers."}
  ],
- lesson:"When two branches change the same lines, git can't choose, so it writes both versions into the file between markers: <<<<<<< HEAD (yours), ======= and >>>>>>> header (theirs). Resolving means editing the file until it is right and deleting the three marker lines, then git add and git commit. git add checks nothing: a file full of markers stages without complaint. Before committing a merge, run git diff --check or search for <<<<<<<."}
+ lesson:"When two branches change the same lines, git can't choose. So it writes both versions into the file, between markers: <<<<<<< HEAD (yours), ======= and >>>>>>> header (theirs). To resolve it, edit the file until it is right and delete the three marker lines. Then run git add and git commit. git add checks nothing: a file full of markers stages without complaint. Before committing a merge, run git diff --check or search for <<<<<<<."}
 ];
 
 const SAVE_KEY='gitlab.v1', CASE_KEY='gitlab.cases';

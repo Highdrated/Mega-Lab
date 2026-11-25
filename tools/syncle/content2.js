@@ -220,7 +220,7 @@ MEMORIES.push(
   setup: "exo",
   brief: {
     what: [
-      "<b>Add-DistributionGroupMember</b> puts someone on a list; <b>Remove-DistributionGroupMember</b> takes them off. Adding someone who is already a member is an error, not a no-op, which is useful: it tells you the ticket had another cause.",
+      "<b>Add-DistributionGroupMember</b> puts someone on a list; <b>Remove-DistributionGroupMember</b> takes them off. Adding someone who is already a member gives an error; it does not quietly do nothing. That is useful: it tells you the ticket had another cause.",
       "Remove asks for confirmation, so scripts need <b>-Confirm:$false</b>. Add does not."
     ],
     daily: ["New joiners on team lists", "Leavers off every list", "Fixing \"I don't get the mails\""],

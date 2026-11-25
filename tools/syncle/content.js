@@ -54,7 +54,7 @@ const MEMORIES = [
   brief: {
     what: [
       "Get-MgContext shows the connection you are holding right now: which account signed in, which tenant you are in, and which scopes the token carries.",
-      "It is the PowerShell version of glancing at the badge on your lanyard before walking into a room. Admins who look after more than one tenant run it before every change, because the scariest mistake is the right command in the wrong tenant."
+      "It is the PowerShell version of glancing at the badge on your lanyard before walking into a room. Admins who look after more than one tenant run it before every change. The scariest mistake is the right command in the wrong tenant."
     ],
     daily: ["Before any change: am I in the right tenant?", "When a command answers 403: which scopes do I actually have?", "In scripts: stop early if the context is not what you expect"],
     parts: [["Get-MgContext", "show the current Graph connection"], ["( ... ).Scopes", "run it, then take one property from the result"], ["Account / TenantId", "who you are and which tenant you are in"]],
@@ -198,7 +198,7 @@ const MEMORIES = [
   setup: "read",
   brief: {
     what: [
-      "Most tickets start with one person: \"Can you check Corvin's account?\" Get-MgUser -UserId fetches exactly one user, by their <b>UPN</b> (UserPrincipalName, the sign-in name that looks like an email address) or by their object Id.",
+      "Most tickets start with one person: \"Can you check Corvin's account?\" Get-MgUser -UserId fetches exactly one user. You give it their <b>UPN</b> or their object Id. The UPN (UserPrincipalName) is the sign-in name that looks like an email address.",
       "At Halvard & Co every UPN follows the same pattern: <b>firstname.lastname@halvardco.onmicrosoft.com</b>. Most tenants have a pattern like this, so learning it saves you a search every time."
     ],
     daily: ["The first step of nearly every user ticket", "Checking that an account exists before you change it", "Getting the object Id other commands ask for"],

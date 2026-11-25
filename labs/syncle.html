@@ -3605,7 +3605,7 @@ const MEMORIES = [
   brief: {
     what: [
       "Get-MgContext shows the connection you are holding right now: which account signed in, which tenant you are in, and which scopes the token carries.",
-      "It is the PowerShell version of glancing at the badge on your lanyard before walking into a room. Admins who look after more than one tenant run it before every change, because the scariest mistake is the right command in the wrong tenant."
+      "It is the PowerShell version of glancing at the badge on your lanyard before walking into a room. Admins who look after more than one tenant run it before every change. The scariest mistake is the right command in the wrong tenant."
     ],
     daily: ["Before any change: am I in the right tenant?", "When a command answers 403: which scopes do I actually have?", "In scripts: stop early if the context is not what you expect"],
     parts: [["Get-MgContext", "show the current Graph connection"], ["( ... ).Scopes", "run it, then take one property from the result"], ["Account / TenantId", "who you are and which tenant you are in"]],
@@ -3749,7 +3749,7 @@ const MEMORIES = [
   setup: "read",
   brief: {
     what: [
-      "Most tickets start with one person: \"Can you check Corvin's account?\" Get-MgUser -UserId fetches exactly one user, by their <b>UPN</b> (UserPrincipalName, the sign-in name that looks like an email address) or by their object Id.",
+      "Most tickets start with one person: \"Can you check Corvin's account?\" Get-MgUser -UserId fetches exactly one user. You give it their <b>UPN</b> or their object Id. The UPN (UserPrincipalName) is the sign-in name that looks like an email address.",
       "At Halvard & Co every UPN follows the same pattern: <b>firstname.lastname@halvardco.onmicrosoft.com</b>. Most tenants have a pattern like this, so learning it saves you a search every time."
     ],
     daily: ["The first step of nearly every user ticket", "Checking that an account exists before you change it", "Getting the object Id other commands ask for"],
@@ -4273,7 +4273,7 @@ MEMORIES.push(
   setup: "exo",
   brief: {
     what: [
-      "<b>Add-DistributionGroupMember</b> puts someone on a list; <b>Remove-DistributionGroupMember</b> takes them off. Adding someone who is already a member is an error, not a no-op, which is useful: it tells you the ticket had another cause.",
+      "<b>Add-DistributionGroupMember</b> puts someone on a list; <b>Remove-DistributionGroupMember</b> takes them off. Adding someone who is already a member gives an error; it does not quietly do nothing. That is useful: it tells you the ticket had another cause.",
       "Remove asks for confirmation, so scripts need <b>-Confirm:$false</b>. Add does not."
     ],
     daily: ["New joiners on team lists", "Leavers off every list", "Fixing \"I don't get the mails\""],
@@ -4681,7 +4681,7 @@ MEMORIES.push(
   setup: "reports",
   brief: {
     what: [
-      "-Filter is fast but limited to what Graph understands. <b>Where-Object</b> runs on your own machine on objects you already have, so it can test anything: \"contains\", wildcards, regex, nested properties, several conditions at once.",
+      "-Filter is fast but limited to what Graph understands. <b>Where-Object</b> runs on your own machine, on objects you already have. So it can test anything: \"contains\", wildcards, regex, nested properties, several conditions at once.",
       "Inside the braces, <b>$_</b> is the object being tested. Comparison operators start with a dash: <b>-eq -ne -gt -lt -like -match</b>. Combine with <b>-and</b>, <b>-or</b>, and flip with <b>-not</b>. They ignore case by default."
     ],
     daily: ["\"Everyone with Manager in their title\"", "\"Accounts whose name contains a typo pattern\"", "Anything -Filter answers with Request_UnsupportedQuery"],
@@ -4783,7 +4783,7 @@ MEMORIES.push(
   setup: "reports",
   brief: {
     what: [
-      "<b>Export-Csv</b> writes objects to a CSV that opens in Excel. Always <b>Select-Object</b> the columns first: exporting raw Graph objects dumps every property, with lists showing up as <b>System.Object[]</b> and anything you did not request as empty cells.",
+      "<b>Export-Csv</b> writes objects to a CSV that opens in Excel. Always <b>Select-Object</b> the columns first. Raw Graph objects dump every property. Lists show up as <b>System.Object[]</b>, and anything you did not request shows up as empty cells.",
       "<b>-NoTypeInformation</b> drops an old header line (the default in PowerShell 7, but harmless and still common in scripts). Check the file with <b>Get-Content</b> or read it back as objects with <b>Import-Csv</b>."
     ],
     daily: ["Every report anyone asks for", "Before a bulk change: export what you are about to touch", "Evidence for audits"],
@@ -4836,7 +4836,7 @@ MEMORIES.push(
   brief: {
     what: [
       "Bulk tickets arrive as a spreadsheet: \"please move these 6 people\", \"create these 3 new hires\". Saved as CSV, <b>Import-Csv</b> turns it into objects: each row is an object, each column header a property.",
-      "Look before you loop: <b>Get-ChildItem</b> to see the files, <b>Get-Content</b> to see the raw text, <b>Import-Csv</b> to see the objects, and <b>.Count</b> to check the number of rows matches the ticket."
+      "Look before you loop. <b>Get-ChildItem</b> shows the files. <b>Get-Content</b> shows the raw text. <b>Import-Csv</b> shows the objects. <b>.Count</b> checks that the number of rows matches the ticket."
     ],
     daily: ["HR's list of new hires", "Department moves after a reorganisation", "Leaver lists"],
     parts: [["cd ~/Downloads", "go to the folder (Set-Location)"], ["Get-ChildItem", "which files are here"], ["Import-Csv ./deptmoves.csv", "rows as objects"], ["$rows = Import-Csv ...", "keep them in a variable"], ["$rows[0]", "the first row"], ["$rows.UPN", "one column from every row"]],
@@ -4891,7 +4891,7 @@ MEMORIES.push(
   brief: {
     what: [
       "After the Write-Host dry run, the next safety step is the real command with <b>-WhatIf</b> inside the loop. PowerShell walks the whole list and tells you what it would do, row by row, and changes nothing.",
-      "When a row is bad (a typo in a UPN), a normal error does not stop the loop: it prints red and continues with the next row. That is useful for -WhatIf runs, and dangerous for real ones. Next memory: handling it properly."
+      "When a row is bad (a typo in a UPN), a normal error does not stop the loop. It prints red and goes on with the next row. That is useful for -WhatIf runs, and dangerous for real ones. Next memory: handling it properly."
     ],
     daily: ["Every bulk change, before running it for real", "Showing a manager what will happen"],
     parts: [["Update-MgUser ... -WhatIf", "describe, don't change"], ["remove -WhatIf", "the real run"], ["red line, loop continues", "a non-terminating error"]],
@@ -5158,7 +5158,7 @@ MEMORIES.push(
   setup: "inv",
   brief: {
     what: [
-      "Once inside a mailbox, attackers create an <b>inbox rule</b> so the real user never sees the replies: anything with invoice, payment or bank gets moved to an obscure folder (RSS Subscriptions, Conversation History), marked read, or deleted. The rule names are often just <b>.</b> or <b>..</b>",
+      "Once inside a mailbox, attackers create an <b>inbox rule</b>, so the real user never sees the replies. Any mail with invoice, payment or bank in it is moved to a folder nobody opens (RSS Subscriptions, Conversation History), marked read, or deleted. The rule names are often just <b>.</b> or <b>..</b>",
       "<b>Get-InboxRule -Mailbox x</b> lists a mailbox's rules. The columns are true/false and folder paths; the <b>Description</b> property says the whole rule in plain English. It is an Exchange session command: Connect-ExchangeOnline first.",
       "To hunt across the tenant, loop: every mailbox, every rule, keep the suspicious ones."
     ],
@@ -5649,7 +5649,7 @@ MEMORIES.push(
   brief: {
     what: [
       "Everything you typed so far was gone when the window closed. A <b>script</b> is the same commands saved in a <b>.ps1</b> file, so you can run them again next month, give them to a colleague, or schedule them.",
-      "You run a script <b>by path</b>: <code>./Get-StaleUsers.ps1</code> from its folder, or <code>~/Documents/scripts/Get-StaleUsers.ps1</code> from anywhere. Just the name does <b>not</b> work, even in the right folder: PowerShell never runs things from the current folder by name, so a planted file can't hijack a command. Paths with spaces need quotes and the call operator: <code>&amp; '~/My Scripts/x.ps1'</code>.",
+      "You run a script <b>by path</b>: <code>./Get-StaleUsers.ps1</code> from its folder, or <code>~/Documents/scripts/Get-StaleUsers.ps1</code> from anywhere. Just the name does <b>not</b> work, even in the right folder. PowerShell never runs things from the current folder by name. That way, a planted file can't hijack a command. Paths with spaces need quotes and the call operator: <code>&amp; '~/My Scripts/x.ps1'</code>.",
       "A script runs in <b>its own scope</b>. Variables it creates are gone when it ends. <b>Dot-sourcing</b> (<code>. ./x.ps1</code>, a dot and a space) runs it in your scope instead, so its variables and functions stay.",
       "On a Mac the execution policy is Unrestricted, so scripts just run. On Windows you'll meet <code>Set-ExecutionPolicy RemoteSigned</code> first."
     ],
@@ -5709,7 +5709,7 @@ MEMORIES.push(
   brief: {
     what: [
       "A script with <code>'Finance'</code> written inside it only does Finance. A <b>param() block</b> at the very top turns that value into a parameter: <code>./Get-DeptUsers.ps1 -Department Sales</code>. Inside the script it is just <code>$Department</code>.",
-      "Decorate parameters so PowerShell checks input for you: <b>[Parameter(Mandatory)]</b> refuses to run without it, a <b>type</b> like [string] or [int] converts or refuses, a <b>default</b> (<code>[int]$Top = 5</code>) fills it in, <b>[ValidateSet('Sales','Finance')]</b> allows only those values, <b>[switch]</b> is an on/off flag with no value.",
+      "Decorate parameters, and PowerShell checks the input for you. <b>[Parameter(Mandatory)]</b> refuses to run without it. A <b>type</b> like [string] or [int] converts the value or refuses it. A <b>default</b> (<code>[int]$Top = 5</code>) fills it in. <b>[ValidateSet('Sales','Finance')]</b> allows only those values. <b>[switch]</b> is an on/off flag with no value.",
       "The real console asks you to type a missing mandatory value; scripts run unattended stop with an error. Either way, the bad run never starts."
     ],
     daily: ["One report script for every department", "A -WhatIf-style switch on your own tools", "Scripts other people run"],
@@ -5767,8 +5767,8 @@ MEMORIES.push(
   brief: {
     what: [
       "Many errors are <b>non-terminating</b>: PowerShell prints red and carries on, and try/catch never sees them. Put <code>$ErrorActionPreference = 'Stop'</code> at the top of a script (or -ErrorAction Stop on the command) to make them catchable.",
-      "Wrap <b>each item</b> in its own try/catch inside the loop, not the whole loop: one missing user must not stop the other 199. In catch, <b>$_</b> is the error; <b>$_.Exception.Message</b> is its text.",
-      "Report instead of hiding: <b>Write-Warning</b> for the screen, and output a result object per item (<code>[pscustomobject]@{ Upn = $upn; Found = $false }</code>) so the run ends with a list you can export. <b>throw 'reason'</b> stops the whole script on purpose, for example when a required file is missing."
+      "Wrap <b>each item</b> in its own try/catch inside the loop, not the whole loop. One missing user must not stop the other 199. In catch, <b>$_</b> is the error; <b>$_.Exception.Message</b> is its text.",
+      "Report instead of hiding. Use <b>Write-Warning</b> for the screen. Also output one result object per item (<code>[pscustomobject]@{ Upn = $upn; Found = $false }</code>). Then the run ends with a list you can export. <b>throw 'reason'</b> stops the whole script on purpose, for example when a required file is missing."
     ],
     daily: ["Every bulk script", "Leavers lists with typos", "Scheduled jobs nobody watches"],
     parts: [["$ErrorActionPreference = 'Stop'", "make errors catchable"], ["foreach ($r in $rows) { try { ... } catch { ... } }", "one try per item"], ["$_.Exception.Message", "the error's text"], ["throw 'No input file'", "stop on purpose"]],
@@ -5970,7 +5970,7 @@ MEMORIES.push(
   setup: "thr",
   brief: {
     what: [
-      "Graph protects itself: if one app writes too fast it answers <b>429 Too Many Requests</b> with a <b>Retry-After</b> header (seconds to wait). The Graph SDK quietly retries a 429 a few times on its own; a big loop still runs into it.",
+      "Graph protects itself. If one app writes too fast, it answers <b>429 Too Many Requests</b> with a <b>Retry-After</b> header: the seconds to wait. The Graph SDK quietly retries a 429 a few times on its own; a big loop still runs into it.",
       "This lab allows <b>10 writes per 10 seconds</b> so you meet it quickly. <b>Start-Sleep</b> here moves a lab clock forward instead of making you actually wait. In real life it really waits, which is fine: a script that takes 6 minutes and finishes beats one that takes 1 minute and skips 140 people.",
       "The pattern: per item, <b>try</b> the write; on a 429, <b>Start-Sleep</b>, then <b>try the same item again</b>, up to a limit. Anything else (404, bad value) is a real error: record it and move on."
     ],

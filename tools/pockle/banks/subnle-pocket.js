@@ -140,6 +140,12 @@ POCKET.register({
     { u: "ranges", q: "Is 100.100.1.1 a normal public address?", o: ["Yes", "No, it is loopback", "No, it is RFC 1918", "No, it is CGNAT"], a: 3, why: "100.64 to 100.127 is the shared ISP range." },
     { u: "ranges", q: "Wildcard mask for /30?", o: ["0.0.0.3", "255.255.255.252", "0.0.0.4", "0.0.0.252"], a: 0, why: "255 - 252 = 3." },
     { u: "ranges", q: "Wildcard mask for 255.255.240.0?", o: ["0.0.16.255", "0.0.15.255", "0.0.240.255", "0.0.15.0"], a: 1, why: "255 - 240 = 15, and 255 - 0 = 255." },
-    { u: "ranges", q: "Will a router forward traffic from 169.254.3.7?", o: ["Yes, like any address", "Only over VPN", "No, link-local stays on its own segment", "Only with NAT"], a: 2, why: "That is why an APIPA laptop cannot reach the internet." }
+    { u: "ranges", q: "Will a router forward traffic from 169.254.3.7?", o: ["Yes, like any address", "Only over VPN", "No, link-local stays on its own segment", "Only with NAT"], a: 2, why: "That is why an APIPA laptop cannot reach the internet." },
+    {"u": "sizing", "q": "60 devices plus a gateway. Smallest prefix?", "o": ["/26", "/27", "/25", "/28"], "a": 0, "why": "61 addresses needed. /27 = 30, too few. /26 = 62."},
+    {"u": "sizing", "q": "130 devices. Smallest prefix?", "o": ["/25", "/24", "/23", "/26"], "a": 1, "why": "/25 = 126, too few. /24 = 254."},
+    {"u": "sizing", "q": "Exactly 14 devices. Does a /28 fit?", "o": ["Yes, exactly 14 usable", "No, need a /27", "No, need a /29"], "a": 0, "why": "16 addresses - 2 = 14."},
+    {"u": "sizing", "q": "How many addresses does every subnet lose to network and broadcast?", "o": ["0", "1", "2", "4"], "a": 2, "why": "The first is the network, the last is the broadcast. Neither goes to a device."},
+    {"u": "sizing", "q": "Usable hosts in a /29?", "o": ["8", "6", "4", "14"], "a": 1, "why": "8 addresses - 2 = 6."},
+    {"u": "sizing", "q": "100 devices now, double that next year. Which prefix?", "o": ["/25", "/24", "/23", "/26"], "a": 1, "why": "200 needed. /25 = 126, too few. /24 = 254."}
   ]
 });

@@ -139,6 +139,18 @@ POCKET.register({
     {"u": "hold", "q": "In for item in supplies:, may you call it berth instead of item?", "o": ["Yes, any name works", "No, it must be item", "Only if berth is a list"], "a": 0, "why": "You pick the loop name. Choose one that reads well, like for berth in berths."},
     {"u": "roster", "q": "What does this print?", "code": "def greet(name):\n    print(f\"Welcome aboard, {name}.\")\n\ngreet(\"Brix\")", "o": ["Welcome aboard, {name}.", "Welcome aboard, name.", "Welcome aboard, Brix."], "a": 2, "why": "The call fills name with \"Brix\", and the f-string puts it in."},
     {"u": "roster", "q": "What does this print?", "code": "def bag_fee(bags, rate):\n    return bags * rate\n\nprint(bag_fee(12, 3))", "o": ["36", "None", "123"], "a": 0, "why": "return hands 12 * 3 back, and print shows it."},
-    {"u": "roster", "q": "Is return rate * bags the same as return bags * rate?", "o": ["No, the order flips the answer", "Yes, multiplying works in any order", "Only for whole numbers"], "a": 1, "why": "12 * 3 and 3 * 12 are both 36."}
+    {"u": "roster", "q": "Is return rate * bags the same as return bags * rate?", "o": ["No, the order flips the answer", "Yes, multiplying works in any order", "Only for whole numbers"], "a": 1, "why": "12 * 3 and 3 * 12 are both 36."},
+    {"u": "arrivals", "q": "What does this print?", "code": "print('Track 9')", "o": ["'Track 9'", "Track 9", "SyntaxError"], "a": 1, "why": "Single and double quotes do the same job. The quotes are not printed."},
+    {"u": "arrivals", "q": "This file has no guard at the bottom. When does main() run?", "code": "def main():\n    print(\"Hi\")", "o": ["When you run the file", "Never: nothing calls main()", "Only in VS Code"], "a": 1, "why": "def only defines main(). The guard at the bottom is what calls it."},
+    {"u": "arrivals", "q": "You run the file yourself. What is __name__ then?", "o": ["\"__main__\"", "\"main\"", "The file name"], "a": 0, "why": "So the guard test is True and main() starts."},
+    {"u": "arrivals", "q": "Which line is a docstring?", "o": ["# Platform announcement", "\"\"\"Platform announcement.\"\"\"", "print(\"Platform announcement\")"], "a": 1, "why": "A docstring sits in triple quotes on line 1. A # line is a comment."},
+    {"u": "tag", "q": "What does this print?", "code": "bags = \"12\"\nprint(bags + 1)", "o": ["13", "121", "TypeError"], "a": 2, "why": "\"12\" in quotes is text. Text plus a number is a TypeError."},
+    {"u": "tag", "q": "What does this print?", "code": "weight = 3,5\nprint(weight)", "o": ["3.5", "(3, 5)", "SyntaxError"], "a": 1, "why": "A comma does not make a decimal. Python stored two values. Use a dot: 3.5."},
+    {"u": "tag", "q": "What does this print?", "code": "train = \"Comet\"\nprint(Train)", "o": ["Comet", "Train", "NameError"], "a": 2, "why": "Names are case-sensitive. Train and train are two different names."},
+    {"u": "tag", "q": "What does this print?", "code": "bags = 12\nbags = bags + 3\nprint(bags)", "o": ["12", "15", "123"], "a": 1, "why": "The right side runs first with the old value. Then the box gets the new one."},
+    {"u": "loadsheet", "q": "What does this print?", "code": "print(12 * 3.5)", "o": ["42", "42.0", "36"], "a": 1, "why": "An int times a float gives a float."},
+    {"u": "loadsheet", "q": "What does this print?", "code": "print(round(3.14159, 2))", "o": ["3.14", "3.1", "3"], "a": 0, "why": "The 2 means: keep two decimals."},
+    {"u": "loadsheet", "q": "What does this line give?", "code": "print(f \"Total: {12}\")", "o": ["Total: 12", "Total: {12}", "SyntaxError"], "a": 2, "why": "No space between f and the quote. f\"...\" is one piece."},
+    {"u": "loadsheet", "q": "What does this print?", "code": "print(10 // 3, 10 % 3)", "o": ["3 1", "3.33 1", "3 0"], "a": 0, "why": "10 // 3 is 3 whole groups. 10 % 3 is the 1 left over."}
   ]
 });

@@ -11,7 +11,7 @@ MEMORIES.push(
   setup: "reports",
   brief: {
     what: [
-      "-Filter is fast but limited to what Graph understands. <b>Where-Object</b> runs on your own machine on objects you already have, so it can test anything: \"contains\", wildcards, regex, nested properties, several conditions at once.",
+      "-Filter is fast but limited to what Graph understands. <b>Where-Object</b> runs on your own machine, on objects you already have. So it can test anything: \"contains\", wildcards, regex, nested properties, several conditions at once.",
       "Inside the braces, <b>$_</b> is the object being tested. Comparison operators start with a dash: <b>-eq -ne -gt -lt -like -match</b>. Combine with <b>-and</b>, <b>-or</b>, and flip with <b>-not</b>. They ignore case by default."
     ],
     daily: ["\"Everyone with Manager in their title\"", "\"Accounts whose name contains a typo pattern\"", "Anything -Filter answers with Request_UnsupportedQuery"],
@@ -113,7 +113,7 @@ MEMORIES.push(
   setup: "reports",
   brief: {
     what: [
-      "<b>Export-Csv</b> writes objects to a CSV that opens in Excel. Always <b>Select-Object</b> the columns first: exporting raw Graph objects dumps every property, with lists showing up as <b>System.Object[]</b> and anything you did not request as empty cells.",
+      "<b>Export-Csv</b> writes objects to a CSV that opens in Excel. Always <b>Select-Object</b> the columns first. Raw Graph objects dump every property. Lists show up as <b>System.Object[]</b>, and anything you did not request shows up as empty cells.",
       "<b>-NoTypeInformation</b> drops an old header line (the default in PowerShell 7, but harmless and still common in scripts). Check the file with <b>Get-Content</b> or read it back as objects with <b>Import-Csv</b>."
     ],
     daily: ["Every report anyone asks for", "Before a bulk change: export what you are about to touch", "Evidence for audits"],
@@ -166,7 +166,7 @@ MEMORIES.push(
   brief: {
     what: [
       "Bulk tickets arrive as a spreadsheet: \"please move these 6 people\", \"create these 3 new hires\". Saved as CSV, <b>Import-Csv</b> turns it into objects: each row is an object, each column header a property.",
-      "Look before you loop: <b>Get-ChildItem</b> to see the files, <b>Get-Content</b> to see the raw text, <b>Import-Csv</b> to see the objects, and <b>.Count</b> to check the number of rows matches the ticket."
+      "Look before you loop. <b>Get-ChildItem</b> shows the files. <b>Get-Content</b> shows the raw text. <b>Import-Csv</b> shows the objects. <b>.Count</b> checks that the number of rows matches the ticket."
     ],
     daily: ["HR's list of new hires", "Department moves after a reorganisation", "Leaver lists"],
     parts: [["cd ~/Downloads", "go to the folder (Set-Location)"], ["Get-ChildItem", "which files are here"], ["Import-Csv ./deptmoves.csv", "rows as objects"], ["$rows = Import-Csv ...", "keep them in a variable"], ["$rows[0]", "the first row"], ["$rows.UPN", "one column from every row"]],
@@ -221,7 +221,7 @@ MEMORIES.push(
   brief: {
     what: [
       "After the Write-Host dry run, the next safety step is the real command with <b>-WhatIf</b> inside the loop. PowerShell walks the whole list and tells you what it would do, row by row, and changes nothing.",
-      "When a row is bad (a typo in a UPN), a normal error does not stop the loop: it prints red and continues with the next row. That is useful for -WhatIf runs, and dangerous for real ones. Next memory: handling it properly."
+      "When a row is bad (a typo in a UPN), a normal error does not stop the loop. It prints red and goes on with the next row. That is useful for -WhatIf runs, and dangerous for real ones. Next memory: handling it properly."
     ],
     daily: ["Every bulk change, before running it for real", "Showing a manager what will happen"],
     parts: [["Update-MgUser ... -WhatIf", "describe, don't change"], ["remove -WhatIf", "the real run"], ["red line, loop continues", "a non-terminating error"]],

@@ -70,7 +70,7 @@ MEMORIES.push(
   setup: "inv",
   brief: {
     what: [
-      "Once inside a mailbox, attackers create an <b>inbox rule</b> so the real user never sees the replies: anything with invoice, payment or bank gets moved to an obscure folder (RSS Subscriptions, Conversation History), marked read, or deleted. The rule names are often just <b>.</b> or <b>..</b>",
+      "Once inside a mailbox, attackers create an <b>inbox rule</b>, so the real user never sees the replies. Any mail with invoice, payment or bank in it is moved to a folder nobody opens (RSS Subscriptions, Conversation History), marked read, or deleted. The rule names are often just <b>.</b> or <b>..</b>",
       "<b>Get-InboxRule -Mailbox x</b> lists a mailbox's rules. The columns are true/false and folder paths; the <b>Description</b> property says the whole rule in plain English. It is an Exchange session command: Connect-ExchangeOnline first.",
       "To hunt across the tenant, loop: every mailbox, every rule, keep the suspicious ones."
     ],

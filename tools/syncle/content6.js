@@ -26,7 +26,7 @@ MEMORIES.push(
   brief: {
     what: [
       "Everything you typed so far was gone when the window closed. A <b>script</b> is the same commands saved in a <b>.ps1</b> file, so you can run them again next month, give them to a colleague, or schedule them.",
-      "You run a script <b>by path</b>: <code>./Get-StaleUsers.ps1</code> from its folder, or <code>~/Documents/scripts/Get-StaleUsers.ps1</code> from anywhere. Just the name does <b>not</b> work, even in the right folder: PowerShell never runs things from the current folder by name, so a planted file can't hijack a command. Paths with spaces need quotes and the call operator: <code>&amp; '~/My Scripts/x.ps1'</code>.",
+      "You run a script <b>by path</b>: <code>./Get-StaleUsers.ps1</code> from its folder, or <code>~/Documents/scripts/Get-StaleUsers.ps1</code> from anywhere. Just the name does <b>not</b> work, even in the right folder. PowerShell never runs things from the current folder by name. That way, a planted file can't hijack a command. Paths with spaces need quotes and the call operator: <code>&amp; '~/My Scripts/x.ps1'</code>.",
       "A script runs in <b>its own scope</b>. Variables it creates are gone when it ends. <b>Dot-sourcing</b> (<code>. ./x.ps1</code>, a dot and a space) runs it in your scope instead, so its variables and functions stay.",
       "On a Mac the execution policy is Unrestricted, so scripts just run. On Windows you'll meet <code>Set-ExecutionPolicy RemoteSigned</code> first."
     ],
@@ -86,7 +86,7 @@ MEMORIES.push(
   brief: {
     what: [
       "A script with <code>'Finance'</code> written inside it only does Finance. A <b>param() block</b> at the very top turns that value into a parameter: <code>./Get-DeptUsers.ps1 -Department Sales</code>. Inside the script it is just <code>$Department</code>.",
-      "Decorate parameters so PowerShell checks input for you: <b>[Parameter(Mandatory)]</b> refuses to run without it, a <b>type</b> like [string] or [int] converts or refuses, a <b>default</b> (<code>[int]$Top = 5</code>) fills it in, <b>[ValidateSet('Sales','Finance')]</b> allows only those values, <b>[switch]</b> is an on/off flag with no value.",
+      "Decorate parameters, and PowerShell checks the input for you. <b>[Parameter(Mandatory)]</b> refuses to run without it. A <b>type</b> like [string] or [int] converts the value or refuses it. A <b>default</b> (<code>[int]$Top = 5</code>) fills it in. <b>[ValidateSet('Sales','Finance')]</b> allows only those values. <b>[switch]</b> is an on/off flag with no value.",
       "The real console asks you to type a missing mandatory value; scripts run unattended stop with an error. Either way, the bad run never starts."
     ],
     daily: ["One report script for every department", "A -WhatIf-style switch on your own tools", "Scripts other people run"],
@@ -144,8 +144,8 @@ MEMORIES.push(
   brief: {
     what: [
       "Many errors are <b>non-terminating</b>: PowerShell prints red and carries on, and try/catch never sees them. Put <code>$ErrorActionPreference = 'Stop'</code> at the top of a script (or -ErrorAction Stop on the command) to make them catchable.",
-      "Wrap <b>each item</b> in its own try/catch inside the loop, not the whole loop: one missing user must not stop the other 199. In catch, <b>$_</b> is the error; <b>$_.Exception.Message</b> is its text.",
-      "Report instead of hiding: <b>Write-Warning</b> for the screen, and output a result object per item (<code>[pscustomobject]@{ Upn = $upn; Found = $false }</code>) so the run ends with a list you can export. <b>throw 'reason'</b> stops the whole script on purpose, for example when a required file is missing."
+      "Wrap <b>each item</b> in its own try/catch inside the loop, not the whole loop. One missing user must not stop the other 199. In catch, <b>$_</b> is the error; <b>$_.Exception.Message</b> is its text.",
+      "Report instead of hiding. Use <b>Write-Warning</b> for the screen. Also output one result object per item (<code>[pscustomobject]@{ Upn = $upn; Found = $false }</code>). Then the run ends with a list you can export. <b>throw 'reason'</b> stops the whole script on purpose, for example when a required file is missing."
     ],
     daily: ["Every bulk script", "Leavers lists with typos", "Scheduled jobs nobody watches"],
     parts: [["$ErrorActionPreference = 'Stop'", "make errors catchable"], ["foreach ($r in $rows) { try { ... } catch { ... } }", "one try per item"], ["$_.Exception.Message", "the error's text"], ["throw 'No input file'", "stop on purpose"]],

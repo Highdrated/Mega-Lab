@@ -80,7 +80,7 @@ MEMORIES.push(
   setup: "thr",
   brief: {
     what: [
-      "Graph protects itself: if one app writes too fast it answers <b>429 Too Many Requests</b> with a <b>Retry-After</b> header (seconds to wait). The Graph SDK quietly retries a 429 a few times on its own; a big loop still runs into it.",
+      "Graph protects itself. If one app writes too fast, it answers <b>429 Too Many Requests</b> with a <b>Retry-After</b> header: the seconds to wait. The Graph SDK quietly retries a 429 a few times on its own; a big loop still runs into it.",
       "This lab allows <b>10 writes per 10 seconds</b> so you meet it quickly. <b>Start-Sleep</b> here moves a lab clock forward instead of making you actually wait. In real life it really waits, which is fine: a script that takes 6 minutes and finishes beats one that takes 1 minute and skips 140 people.",
       "The pattern: per item, <b>try</b> the write; on a 429, <b>Start-Sleep</b>, then <b>try the same item again</b>, up to a limit. Anything else (404, bad value) is a real error: record it and move on."
     ],
