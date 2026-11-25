@@ -73,6 +73,7 @@ ERRANDS and CAST in data.js: 22 short typed requests from the household (2 per S
 - Published demo: https://claude.ai/artifact/SQanZ4NmczQjzyihJJR7jh
 
 ## Her feedback on the demo
+- 25 Nov 2026: asked for a place that tests what she already finished, "yes review is important". Added as stage 6d, Fading stars, built next.
 - 24 Nov 2026: "something feels missing" - she picked more life on screen and a daily loop, and asked for both to go into this daily run. Added as stages 2 and 3, right after making the lab real.
 - 24 Nov 2026: tenant page too long, too little typing, observatory too simple, self-review before sending. DONE 24 Nov: short lessons, typed checks, PowerShell window with real errors, typed site search, blueprint observatory with Paper and Night chart, oopsies log, tools/vigil/test.py (ALL OK).
 - 24 Nov 2026: "i like it but it feels heavy theme wise - i love minimal orbital was my favorite because of how minimal it was so could we keep that minimal theme going ... it does not have to match completely but same direction would be nice". DONE 24 Nov: restyled to the Orbital direction (white panels, hairlines, system sans, teal #0f8fa8 and orange #e0701a, charcoal chips with an orange underline, dot-grid background). Keep this direction for everything new.
@@ -100,6 +101,13 @@ ERRANDS and CAST in data.js: 22 short typed requests from the household (2 per S
 - [x] 6. (24 Nov 2026, daily run 4) Split: the casebook (case switcher, one engine for new cases, locks, Tonight and Observatory pick the next open case, case oopsies to Tonight, Pockle and the redo list) plus the first two identity and sign-in cases: 01 "The stablemaster's locked door" (sign-in logs, error 50057, Block sign-in) and 02 "A second proof for everyone" (security defaults off, a Conditional Access MFA policy in Report-only with the emergency account excluded, read the Report-only tab, then On).
 - [x] 6b. (24 Nov 2026, extra run 4) Split again: cases 03 "Keys for the copyists" (self-service password reset pilot) and 04 "A crown only when needed" (PIM eligible, time-bound role with activation rules). Five tiles in the casebook then; seven since 6c.
 - [x] 6c. (25 Nov 2026, daily run 5) Two more identity cases (05 and 06), strict, with typing: a guest invitation with external collaboration settings, and an administrative unit for one office with a scoped role. Verify every label on Microsoft Learn first. Use the casebook engine (NC in demo.template.html, CASEX in data.js).
+- [ ] 6d. Fading stars (her pick, 25 Nov 2026: "yes review is important"). Review of what she already got right, not only her mistakes.
+   - Every finished School lesson gets a review schedule in vigil.v1: back after about 3, 10 and 30 days, then every 60.
+   - Tonight shows at most two "old star" stations a night, sharing the station cap with oopsies (oopsies first). She types the lesson's check again from memory (TYPED in data.js), never multiple choice.
+   - Right: the star stays teal and the next review moves further out. Wrong: the star fades from teal to orange on the orrery, and the miss joins the oopsies (redo at 1, 3, 7 days). It turns teal again once the redo is cleared.
+   - Observatory and Star chart show faded stars plainly; readiness counts only stars still teal. Pockle cards for faded lessons come first, like oopsies.
+   - Old saves migrate: lessons already finished get their first review spread over the next week, so she never gets a pile on one night.
+   - Self-review and extend test.py (schedule dates, the cap, fade and recover, migration, readiness, Pockle order).
 - [ ] 7. Cases for Defender and Purview: 6 cases.
 - [ ] 8. Cases for Copilot, agents and Agent 365: 8 cases.
 - [ ] 9. Cases for tenant and workloads: 6 cases.
