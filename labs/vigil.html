@@ -231,8 +231,9 @@ code{font-family:var(--mono);font-size:.86em;background:var(--acc-soft);padding:
 .launcher button{display:flex;width:100%;gap:10px;align-items:center;padding:8px;border-radius:4px;font-size:12.5px;text-align:left;color:#222}
 .launcher button:hover{background:#f1efeb}
 .launcher button i{width:22px;height:22px;border-radius:4px;display:grid;place-items:center;font-style:normal;font-size:10px;font-weight:600;color:#fff}
-.hl{outline:2px solid var(--warn);outline-offset:-2px;animation:pulse 1.6s ease infinite}
-@keyframes pulse{0%,100%{outline-color:var(--warn)}50%{outline-color:rgba(224,112,26,.25)}}
+.hl{position:relative;outline:2px solid rgba(224,112,26,.25);outline-offset:-2px}
+.hl::after{content:"";position:absolute;inset:0;border:2px solid var(--warn);pointer-events:none;will-change:opacity;animation:hlpulse 1.6s ease infinite}
+@keyframes hlpulse{0%,100%{opacity:1}50%{opacity:0}}
 .dlg{position:absolute;inset:0;background:rgba(20,20,20,.28);display:grid;place-items:center;z-index:4}
 .dlg>div{width:min(460px,90%);background:#fff;border-radius:8px;box-shadow:0 20px 50px rgba(0,0,0,.25);padding:20px 22px}
 .dlg h6{margin:0 0 8px;font-size:16px;font-weight:600}
@@ -429,8 +430,9 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .wpath{margin:8px 24px 0;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background-color:#fbfcfd;background-image:linear-gradient(#eef1f4 1px,transparent 1px),linear-gradient(90deg,#eef1f4 1px,transparent 1px);background-size:20px 20px}
 .wpath svg{display:block;width:100%;height:118px}
 .wpath text{font-family:var(--mono);letter-spacing:.08em}
-.wpath .pulse{transform-box:fill-box;transform-origin:center;animation:wpulse 1.8s ease-in-out infinite}
-@keyframes wpulse{0%,100%{opacity:.25;transform:scale(1)}50%{opacity:1;transform:scale(1.25)}}
+.wpath .pulse{animation:wpulse 1.8s ease-in-out infinite}
+.wpath .pulse.p2{animation-delay:.45s}
+@keyframes wpulse{0%,100%{opacity:.15}50%{opacity:1}}
 .wbody{flex:1;min-height:0;overflow:auto;padding:16px 24px 22px;display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:18px;align-content:start}
 .stn{align-self:start;border:1px solid var(--line);border-left:3px solid var(--warn);background:#fff;padding:16px 18px 18px;animation:fade .3s ease}
 .stn.done{border-left-color:var(--acc)}
@@ -451,6 +453,7 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .revs em{font-style:normal;margin-left:8px;letter-spacing:.04em;text-transform:none;font-size:11.5px}
 .wlist .eyebrow{margin-bottom:6px}
 .wmain{display:flex;flex-direction:column;gap:14px;min-width:0}
+.wmain>.stn{align-self:stretch}
 .prize{border:1px solid var(--line);background:var(--soft);padding:12px 16px 12px}
 .pz{display:grid;grid-template-columns:repeat(3,1fr);margin-top:8px}
 .pz div{border-left:1px solid var(--line);padding-left:12px}.pz div:first-child{border-left:0;padding-left:0}
@@ -543,6 +546,13 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .wsteps li button.on{border-color:#0f6cbd;color:#0f6cbd;font-weight:600}
 .wsteps li button.off{color:#aaa}
 .wzb{min-width:0;max-width:600px}
+.ptog{width:40px;height:20px;border-radius:10px;border:1px solid #616161;background:#fff;position:relative;flex:none;padding:0;transition:background .15s}
+.ptog i{position:absolute;top:3px;left:3px;width:12px;height:12px;border-radius:50%;background:#424242;transition:left .15s}
+.ptog.on{background:#0f6cbd;border-color:#0f6cbd}.ptog.on i{left:23px;background:#fff}
+.prow{display:flex;align-items:center;gap:10px;margin:8px 0 6px;font-size:13px}
+.pchips{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0 0}
+.paddf{display:flex;gap:6px;max-width:420px}.paddf input{flex:1;min-width:0}
+.tpl{display:grid;gap:6px;max-width:520px}.tpl button{display:flex;justify-content:space-between;gap:10px;text-align:left;padding:8px 10px;border:1px solid #e6e3de;background:#fff;font-size:13px}.tpl button:hover{border-color:#0f6cbd}.tpl button em{font-style:normal;color:#666;font-size:12px}
 .gcl+.gcl{margin-top:6px}
 .gcond label,.wzb .note,.wzb .setting p{text-wrap:pretty}
 .wzb .setting>b{text-wrap:balance}
@@ -702,7 +712,8 @@ const PORTALS = [
     ["Health", [["health", "Service health", "incidents and advisories for every service, with email notifications"], ["mc", "Message center", "announcements of planned changes"], ["net", "Network connectivity", "connectivity scores and insights per office location"]]]
   ] },
   { id: "entra", name: "Microsoft Entra admin center", url: "entra.microsoft.com", tree: [
-    ["Entra ID", [["overview", "Overview", "the tenant overview: properties, licences and security defaults"], ["users", "Users", "all identities, their properties and sign-in settings"], ["groups", "Groups", "security and Microsoft 365 groups, expiration and naming policy"], ["roles", "Roles & admins", "every Entra role and its assignments"], ["entapps", "Enterprise applications", "apps used in the tenant and the permissions granted to them, such as Microsoft Graph Command Line Tools"], ["au", "Admin units", "administrative units"], ["agents", "Agents", "agent identities and agent blueprints (Microsoft Entra Agent ID)"], ["ca", "Conditional Access", "Conditional Access policies, the What If tool and authentication strengths"], ["authm", "Authentication methods", "the authentication methods policy and password protection"], ["sspr", "Password reset", "self-service password reset settings"], ["brand", "Custom branding", "the look of the sign-in page"], ["ext", "External Identities", "external collaboration and cross-tenant access settings"], ["signin", "Sign-in logs", "every sign-in with its result, error code and applied policies"]]],
+    ["Entra ID", [["overview", "Overview", "the tenant overview: properties, licences and security defaults"], ["users", "Users", "all identities, their properties and sign-in settings"], ["groups", "Groups", "security and Microsoft 365 groups, expiration and naming policy"], ["roles", "Roles & admins", "every Entra role and its assignments"], ["entapps", "Enterprise applications", "apps used in the tenant and the permissions granted to them, such as Microsoft Graph Command Line Tools"], ["au", "Admin units", "administrative units"], ["agents", "Agents", "agent identities and agent blueprints (Microsoft Entra Agent ID)"], ["ca", "Conditional Access", "Conditional Access policies, the What If tool and authentication strengths"], ["authm", "Authentication methods", "the authentication methods policy and password protection"], ["sspr", "Password reset", "self-service password reset settings"], ["brand", "Custom branding", "the look of the sign-in page"], ["ext", "External Identities", "external collaboration and cross-tenant access settings"]]],
+    ["Monitoring & health", [["signin", "Sign-in logs", "every sign-in with its result, error code and applied policies"]]],
     ["ID Protection", [["risk", "Risky users and sign-ins", "risk detections for users, sign-ins and agents"]]],
     ["ID Governance", [["pim", "Privileged Identity Management", "eligible and active role assignments, activation rules"], ["ent", "Entitlement management", "access packages and their policies"], ["lcw", "Lifecycle workflows", "automated joiner, mover and leaver tasks, also for agent sponsors"], ["rev", "Access reviews", "recurring reviews of membership and role assignments"]]]
   ] },
@@ -765,7 +776,7 @@ const GROUPS = [
     gloss: [["Cmdlet", "One PowerShell command, named verb-noun, like Get-MgUser."], ["Scope", "A right you ask for when you connect, like User.Read.All. It limits what this session can do."], ["CSV file", "A plain table saved as text, one row per user. Admin centers and scripts both read it."]] },
   { id: "auth", d: 2, builds: "Builds on step 2. The users and groups exist. Now you decide how they prove who they are and what they may reach.", gloss: [["MFA", "Multifactor authentication: a second proof after the password, like a code or a tap in an app."], ["Conditional Access", "If-then rules for sign-in: if this user signs in from there, then ask for MFA or block."], ["Risk", "Microsoft's guess that a sign-in or a user is compromised, rated low, medium or high."]], tag: "Sign-in", title: "Implement and manage authentication and access",
     intro: "This group is about how people prove who they are, and what they may reach once they have. It is the heaviest identity topic: authentication methods, password rules, self-service reset, sign-in troubleshooting and Conditional Access.",
-    where: [["Which methods people may use", "entra", "Entra ID > Authentication methods > Policies"], ["Custom banned passwords, smart lockout", "entra", "Entra ID > Authentication methods > Password protection"], ["Self-service password reset", "entra", "Entra ID > Password reset"], ["Why a sign-in failed", "entra", "Entra ID > Sign-in logs"], ["Policies that allow, block or ask for MFA", "entra", "Entra ID > Conditional Access"], ["Risky users and risky sign-ins", "entra", "ID Protection"]],
+    where: [["Which methods people may use", "entra", "Entra ID > Authentication methods > Policies"], ["Custom banned passwords, smart lockout", "entra", "Entra ID > Authentication methods > Password protection"], ["Self-service password reset", "entra", "Entra ID > Password reset"], ["Why a sign-in failed", "entra", "Entra ID > Monitoring & health > Sign-in logs"], ["Policies that allow, block or ask for MFA", "entra", "Entra ID > Conditional Access"], ["Risky users and risky sign-ins", "entra", "ID Protection"]],
     facts: ["The authentication methods policy turns each method on for chosen groups: passkeys (FIDO2), Microsoft Authenticator, Temporary Access Pass, SMS and more.", "Passkeys are phishing-resistant. SMS and voice are the weakest methods.", "A Temporary Access Pass is a time-limited code. Use it to set up a passwordless method or to recover an account.", "The global banned password list protects every tenant by itself. A custom banned list needs Entra ID P1.", "Smart lockout blocks the attacker and tries to leave the real user alone. By default it locks after 10 failed tries for one minute.", "Self-service password reset is set to None, Selected or All. Start with Selected and a pilot group. You choose whether one or two methods are needed.", "In a hybrid setup, password writeback sends the new password back to the on-premises Active Directory.", "The sign-in log shows the result, the error code and the Conditional Access policies that applied. Error 50126 is a wrong user name or password. 53003 is a block by Conditional Access. 50053 is a smart lockout. 50057 is a disabled account.", "Conditional Access needs Entra ID P1. Policies that use user risk or sign-in risk need P2.", "Security defaults and Conditional Access do not go together. Turn security defaults off first.", "Report-only mode shows what a policy would do without enforcing it. The What If tool tests one sign-in against your policies.", "Always leave emergency (break-glass) accounts out of blocking policies."],
     watch: ["Sign-in risk is answered with MFA. User risk is answered with a secure password change.", "A policy in report-only mode protects nobody yet.", "Admins always have self-service password reset, with two methods, whatever you set for users."],
     roles: "Authentication Policy Administrator for methods and password protection, Conditional Access Administrator for policies, Security Reader or Reports Reader for sign-in logs." },
@@ -1076,6 +1087,14 @@ const CASEX = {
     l_train: { q: "People who fall for a simulation must get training. Which training content preference is the default?", a: ["microsoft training experience", "microsoft training experience (recommended)"], show: "Microsoft training experience (Recommended)", why: "With Assign training for me (Recommended), Microsoft picks the training. No training assigns nothing.", no: ["No training", "Redirect to a custom URL", "Select training courses and modules myself"] },
     l_who: { q: "In a simulation report, who counts as compromised: the one who clicked the link, or the one who supplied credentials?", a: ["the one who supplied credentials", "supplied credentials", "who supplied credentials", "the one who entered their password", "the one who gave their password"], show: "The one who supplied credentials", why: "Clicked message link is risky, but only Supplied credentials makes a user compromised.", no: ["The one who clicked the link", "The one who read the message", "The one who reported it"] },
     l_rep: { q: "In a simulation report, which section shows Compromised users and Users who reported?", a: ["simulation impact"], show: "Simulation impact", why: "Simulation impact counts the compromised users and the users who reported the message. The Users tab names them.", no: ["Delivery status", "Training completion", "First & average instance"] }
+  } },
+  preset: { no: "11", t: "The council's strongest door", who: "varenne", needs: ["defender"], redo: {
+    p_scope: { q: "Strict protection must cover the council group only. Which option do you pick on Apply Exchange Online Protection?", a: ["specific recipients"], show: "Specific recipients", why: "Specific recipients lets you add users, groups or domains. All recipients puts everyone on Strict.", no: ["All recipients", "None", "Previously selected recipients"] },
+    p_mdo: { q: "On Apply Defender for Office 365 protection, which option reuses the people you chose on the page before?", a: ["previously selected recipients"], show: "Previously selected recipients", why: "Only the Defender for Office 365 page has it. None leaves out Safe Links, Safe Attachments and impersonation protection.", no: ["None", "All recipients", "Exclude these recipients"] },
+    p_imp: { q: "Lady Varenne fears letters that pretend to come from her. On which wizard page do you add her address?", a: ["add email addresses to flag when impersonated by attackers"], show: "Add email addresses to flag when impersonated by attackers", why: "That page lists the senders to protect. The trusted page does the opposite: it is never flagged.", no: ["Add domains to flag when impersonated by attackers", "Add trusted email addresses and domains to not flag as impersonation", "Apply Exchange Online Protection"] },
+    p_trust: { q: "You add an address to Add trusted email addresses and domains to not flag as impersonation. What happens to mail that pretends to be that address?", a: ["it is not flagged", "not flagged", "it is never flagged", "nothing", "it is not flagged as impersonation"], show: "It is not flagged as impersonation", why: "Trusted senders are left alone. Put a person you protect there and the forgeries walk in.", no: ["It is quarantined", "It is flagged twice", "It is deleted"] },
+    p_std: { q: "Standard protection must cover the whole household, and Strict already covers the council. Which option do you pick on Apply Exchange Online Protection?", a: ["all recipients"], show: "All recipients", why: "Strict is always applied first, so councillors keep Strict even when Standard covers all recipients.", no: ["Specific recipients", "None", "Previously selected recipients"] },
+    p_prec: { q: "A councillor is covered by Standard protection and by Strict protection. Which one applies to him?", a: ["strict", "strict protection", "the strict preset security policy", "strict preset security policy", "the strict one"], show: "Strict protection", why: "Strict first, then Standard, then evaluation policies, then custom policies, then built-in protection and the default policies.", no: ["Standard protection", "Built-in protection", "The custom policy with priority 0"] }
   } }
 };
 
@@ -1268,7 +1287,7 @@ function makeQ(G, L) {
   return { q: "Where do you go for this: " + lc1(r[0]) + "?", o: opts.map(w => PORT[w[1]].name + " › " + w[2]), a: opts.indexOf(r), why: PORT[r[1]].name + ", under " + r[2] + ".", ref: { g: G.id, w: G.where.indexOf(r) } };
 }
 function mkMiss(kind, g, t, ref, due) { return { id: kind + ":" + (ref ? JSON.stringify(ref) : t), kind, g, t, ref: ref || null, at: nowMs(), st: 0, due }; }
-function miss(kind, gid, t, ref) { S.miss = S.miss || []; const m = mkMiss(kind, gid, t, ref, dayNo() + 1), L = [m, ...S.miss.filter(x => x.id !== m.id)]; if (L.length > 60) { const w = S.watch, inW = new Set(w && w.day === dayNo() ? w.items.filter(it => it.k === "oops").map(it => it.id) : []); while (L.length > 60) { let i = L.findLastIndex(x => !inW.has(x.id) && !redoOf(x)); if (i < 1) i = L.findLastIndex(x => !inW.has(x.id)); if (i < 1) i = L.length - 1; L.splice(i, 1); } } S.miss = L; save(); }
+function miss(kind, gid, t, ref) { S.miss = S.miss || []; const m = mkMiss(kind, gid, t, ref, dayNo() + 1); S.miss = [m, ...S.miss.filter(x => x.id !== m.id)]; save(); }
 function renderLesson() {
   const G = GROUPS.find(g => g.id === school.g), D = DOMAINS[G.d - 1], n = LADDER.indexOf(G.id) + 1, L = lessonOf(G, school.l), last = school.l === L.n - 1;
   if (!S.pos || S.pos.g !== school.g || S.pos.l !== school.l) { S.pos = { g: school.g, l: school.l }; save(); }
@@ -1589,7 +1608,8 @@ const BOOK = [
   { id: "ledger", no: "07", t: "The salary ledger", who: "quillon", needs: CASE_NEEDS },
   { id: "defend", no: CASEX.defend.no, t: CASEX.defend.t, who: "thessaly", needs: CASEX.defend.needs },
   { id: "guard", no: CASEX.guard.no, t: CASEX.guard.t, who: "corwen", needs: CASEX.guard.needs },
-  { id: "lure", no: CASEX.lure.no, t: CASEX.lure.t, who: "quillon", needs: CASEX.lure.needs }
+  { id: "lure", no: CASEX.lure.no, t: CASEX.lure.t, who: "quillon", needs: CASEX.lure.needs },
+  { id: "preset", no: CASEX.preset.no, t: CASEX.preset.t, who: "varenne", needs: CASEX.preset.needs }
 ];
 const bookOf = id => BOOK.find(b => b.id === id) || BOOK[BOOK.length - 1];
 function stepsTxt(needs) { const n = needs.map(g => LADDER.indexOf(g) + 1); return "School step" + (n.length > 1 ? "s " + n.slice(0, -1).join(", ") + " and " + n[n.length - 1] : " " + n[0]); }
@@ -2673,6 +2693,128 @@ NC.lure = {
     return false;
   }
 };
+const PSTEPS = [["eop", "Apply Exchange Online Protection"], ["mdo", "Apply Defender for Office 365 protection"], ["imp", "Impersonation protection"], ["impu", "Add email addresses to flag when impersonated by attackers"], ["impd", "Add domains to flag when impersonated by attackers"], ["trust", "Add trusted email addresses and domains to not flag as impersonation"], ["rev", "Review and confirm your changes"]];
+const PREC = [["all", "All recipients"], ["some", "Specific recipients"], ["none", "None"]];
+const PMDO = [["all", "All recipients"], ["some", "Specific recipients"], ["prev", "Previously selected recipients"], ["none", "None"]];
+const PNAME = { std: "Standard protection", strict: "Strict protection" };
+const PLIST = { impu: ["Internal and external senders.", "name@domain", "kpimpu"], impd: ["Internal and external domains.", "domain", "kpimpd"], trust: ["Senders and domains that are never flagged as impersonation.", "name@domain or domain", "kptrust"] };
+NC.preset = {
+  gid: "defender",
+  letter: "Keeper, since the false seal from Goldmere, the council will not wait for the next one. Mirethil says Microsoft keeps two ready-made levels of mail protection, so nobody has to build the policies by hand. Give the council the strictest level: the Council group only, with every protection it offers. Forged letters in my name worry me most, so let it watch for anyone pretending to be me, varenne@halcyon.guild. Give the rest of the household the standard level. Then tell me: a councillor now falls under both. Which one protects him?",
+  first: "Ready-made mail protection is set up in the Microsoft Defender portal.",
+  nothingT: "Nothing here for the council's protection", nothingP: "This page is real, but it does not set the ready-made mail protection.",
+  kline: "The council sits behind Strict protection, the household behind Standard, and forged letters in Lady Varenne's name get flagged.",
+  closedH: "The council's strongest door", closedP: "You turned on Strict protection for the Council group with Lady Varenne's address flagged when impersonated, turned on Standard protection for all recipients, and told her that Strict is always applied first.",
+  goals: [
+    { id: "strict", t: "Turn on the strictest ready-made protection for the Council group only, with Lady Varenne's address watched for impersonation.", w: "Threat policies > Preset Security Policies: Strict protection On, Manage protection settings: Specific recipients > Groups > Council, Previously selected recipients, varenne@halcyon.guild on Add email addresses to flag when impersonated by attackers, Confirm.", s: ["s27"] },
+    { id: "std", t: "Turn on the standard ready-made protection for the rest of the household.", w: "Standard protection On, Manage protection settings: All recipients on both recipient pages, Confirm. Strict still comes first for the council.", s: ["s27"] },
+    { id: "prec", t: "Tell Lady Varenne which protection a councillor gets now.", w: "Strict. The Strict preset security policy is always applied first, then Standard, then custom policies, then built-in protection.", s: ["s27"] }
+  ],
+  hints: { strict: ["Ready-made protection lives under Email & collaboration > Policies & rules.", "Threat policies > Preset Security Policies. Slide Strict protection to On, then Manage protection settings.", "Specific recipients > Add groups > Council, then Previously selected recipients, then varenne@halcyon.guild on the page for email addresses to flag, then Confirm."], std: ["The other ready-made level is the one for most people.", "Slide Standard protection to On, then Manage protection settings.", "All recipients on Apply Exchange Online Protection and on Apply Defender for Office 365 protection, then Confirm."], prec: ["Microsoft applies the presets in a fixed order.", "The stricter one always goes first.", "Strict protection."] },
+  init() { return { pid: "defender", item: PORT.defender.tree[0][1][0][0], pv: "rules", prof: { std: { on: false, cfg: null }, strict: { on: false, cfg: null } }, wz: null, pk: false, pkSel: [], pkq: "", ans: "" }; },
+  form: {
+    prec: () => `<form class="tform" data-kf="ans"><label for="kpans">Reply to Lady Varenne · which one protects a councillor</label><div><input id="kpans" data-kv="ans" autocomplete="off" spellcheck="false" placeholder="the name of the protection" value="${esc(K.ans)}"><button class="btn solid">Send</button></div></form>`
+  },
+  submit(f) {
+    if (f.startsWith("pw:")) {
+      const W = K.wz, x = f.slice(3), v = (W.q[x] || "").trim().toLowerCase(); if (!W || !v) return;
+      const mail = /^[^@\s]+@[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v), dom = /^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(v);
+      if (x === "impu" && !mail || x === "impd" && !dom || x === "trust" && !mail && !dom) { nLog("info", x === "impd" ? "That is not a domain. A domain looks like halcyon.guild." : x === "impu" ? "That is not an email address. An address looks like name@domain." : "That is neither an email address nor a domain."); return nAct("pfocus:" + x); }
+      if (!W[x].includes(v)) W[x].push(v); W.q[x] = ""; return nAct("pfocus:" + x);
+    }
+    if (f !== "ans") return;
+    const v = norm(K.ans); if (!v) return;
+    if (["strict", "strict protection", "the strict preset security policy", "strict preset security policy", "the strict one", "the strict preset", "strict preset"].includes(v)) { nLog("info", "Sent to Lady Varenne: " + K.ans.trim()); nComplete("prec"); nSay("varenne", "Strict, always first. Then the council is safe even where Standard also reaches.", 1200); return; }
+    nBad(/standard/.test(v) ? "Standard does not win over Strict." : "That is not the one that protects a councillor.", "The Strict preset security policy is always applied first, then Standard. A councillor gets Strict protection.", "p_prec");
+  },
+  page(k) {
+    if (k !== "defender.policies") return null;
+    if (K.wz) return this.wizard();
+    const back = to => `<div class="tool" style="margin-top:14px"><button class="pbtn" data-k="pv:${to}">Back</button></div>`;
+    if (K.pv === "rules") return `<div class="crumb">Email & collaboration  ›  Policies & rules</div><h4>Policies & rules</h4><div class="tpl"><button data-k="pv:threat"><span>Threat policies</span><em>preset, anti-phishing, anti-spam, anti-malware, Safe Links, Safe Attachments</em></button><button data-k="pother:Alert policy"><span>Alert policy</span><em>alerts when activities happen</em></button></div>`;
+    if (K.pv === "threat") {
+      const sec = (h, list) => `<div class="eyebrow" style="margin:14px 0 6px">${h}</div><div class="tpl">${list.map(x => `<button data-k="${x[1]}"><span>${x[0]}</span><em>${x[2]}</em></button>`).join("")}</div>`;
+      return `<div class="crumb">Email & collaboration  ›  Policies & rules  ›  Threat policies</div><h4>Threat policies</h4>${sec("Templated policies", [["Preset Security Policies", "pv:preset", "ready-made Standard and Strict protection"], ["Configuration analyzer", "pother:Configuration analyzer", "compare your policies with Standard and Strict"]])}${sec("Policies", ["Anti-phishing", "Anti-spam", "Anti-malware", "Safe Attachments", "Safe Links"].map(n => [n, "pother:" + n, "default and custom policies"]))}` + back("rules");
+    }
+    const prof = (id, d) => { const P = K.prof[id]; return `<div class="setting"><b>${PNAME[id]}</b><p>${d}</p><div class="prow"><button class="ptog${P.on ? " on" : ""}" role="switch" aria-checked="${P.on}" aria-label="${PNAME[id]}" data-k="ptog:${id}"><i></i></button><span>${P.on ? "On" : "Off"}</span></div><button class="pbtn" data-k="pman:${id}">Manage protection settings</button></div>`; };
+    return `<div class="crumb">Email & collaboration  ›  Policies & rules  ›  Threat policies  ›  Preset security policies</div><h4>Preset security policies</h4><div style="max-width:600px"><div class="setting"><b>Built-in protection</b><p>Defender for Office 365 only. Safe Links and Safe Attachments for everyone that no other Safe Links or Safe Attachments policy covers.</p><button class="pbtn" data-k="pbx">Add exclusions (not recommended)</button></div>${prof("std", "A baseline protection profile for most users.")}${prof("strict", "A more aggressive protection profile for selected users, such as high value targets.")}</div>` + back("threat");
+  },
+  wizard() {
+    const W = K.wz, si = PSTEPS.findIndex(s => s[0] === W.step), grp = g => GDIR.find(d => d[0] === g)[1];
+    if (W.step === "done") return `<div class="crumb">Threat policies  ›  Preset security policies</div><h4>${PNAME[W.prof]} updated</h4><p class="sub">The settings are saved.</p><button class="pbtn pri" data-k="pdone">Done</button>`;
+    const nav = `<ol class="wsteps">${PSTEPS.map((s, i) => `<li><button class="${i === si ? "on" : ""}${i <= W.far ? "" : " off"}" ${i <= W.far && i !== si ? `data-k="pws:${s[0]}"` : "disabled"}>${s[1]}</button></li>`).join("")}</ol>`;
+    const spec = x => `<div style="margin:6px 0 0 24px"><dl class="kv"><dt>Users</dt><dd><button class="pbtn" data-k="pusr">Add users</button></dd><dt>Groups</dt><dd><button class="pbtn" data-k="padd:${x}">Add groups</button>${W[x + "G"].length ? `<div class="pchips">${W[x + "G"].map(g => `<span class="fchip">${esc(grp(g))}<button class="xrm" data-k="prm:${x}:${g}" title="Remove">×</button></span>`).join("")}</div>` : ""}</dd><dt>Domains</dt><dd><button class="pbtn" data-k="pdom">Add domains</button></dd></dl></div>`;
+    const exc = x => W[x] === "all" || W[x] === "some" ? `<div class="subopts" style="margin-left:0"><label><input type="checkbox" data-k="pexc">Exclude these recipients</label></div>` : "";
+    const who = x => W[x] === "some" ? esc(W[x + "G"].map(grp).join(", ") || "Not set") : W[x] ? (x === "eop" ? PREC : PMDO).find(o => o[0] === W[x])[1] : "Not set";
+    const lst = x => W[x].length ? W[x].map(esc).join("<br>") : "None";
+    let body = "";
+    if (W.step === "eop") body = `<div class="setting"><b>Apply Exchange Online Protection</b><p>Who gets the anti-spam, anti-malware and anti-phishing protection of this profile.</p>${kRadios("kpeop", PREC, W.eop, "peop")}${W.eop === "some" ? spec("eop") : ""}${exc("eop")}</div>`;
+    if (W.step === "mdo") body = `<div class="setting"><b>Apply Defender for Office 365 protection</b><p>Who gets Safe Links, Safe Attachments and impersonation protection.</p>${kRadios("kpmdo", PMDO, W.mdo, "pmdo")}${W.mdo === "some" ? spec("mdo") : ""}${exc("mdo")}</div>`;
+    if (W.step === "imp") body = `<div class="setting"><b>Impersonation protection</b><p>The next three pages name the senders and the domains attackers pretend to be, and the ones that are never flagged.</p></div>`;
+    if (PLIST[W.step]) { const x = W.step, L = PLIST[x]; body = `<div class="setting"><b>${PSTEPS[si][1]}</b><p>${L[0]}</p><form class="paddf" data-kf="pw:${x}"><input id="${L[2]}" data-kv="wz.q.${x}" class="psearch" autocomplete="off" spellcheck="false" placeholder="${L[1]}" value="${esc(W.q[x])}"><button class="pbtn">Add</button></form>${W[x].length ? `<div class="pchips">${W[x].map((v, i) => `<span class="fchip">${esc(v)}<button class="xrm" data-k="prmv:${x}:${i}" title="Remove">×</button></span>`).join("")}</div>` : `<p class="note" style="margin:8px 0 0">Nothing added.</p>`}</div>`; }
+    if (W.step === "rev") body = `<dl class="kv"><dt>Exchange Online Protection</dt><dd>${who("eop")}</dd><dt>Defender for Office 365 protection</dt><dd>${who("mdo")}</dd><dt>Senders to flag</dt><dd>${lst("impu")}</dd><dt>Domains to flag</dt><dd>${lst("impd")}</dd><dt>Trusted senders and domains</dt><dd>${lst("trust")}</dd></dl><p class="note">Select Back or a page on the left to change a setting.</p>${kSavebar().replace('class="pbar', 'style="margin:0 0 10px" class="pbar')}`;
+    const foot = `<div class="tool" style="margin-top:14px;flex-wrap:wrap">${W.step === "rev" ? `<button class="pbtn pri" data-k="pconfirm" ${K.saving === "busy" ? "disabled" : ""}>Confirm</button>` : `<button class="pbtn pri" data-k="pnext">Next</button>`}${si ? `<button class="pbtn" data-k="pback">Back</button>` : ""}<button class="pbtn" data-k="pcancel">Cancel</button></div>`;
+    return `<div class="crumb">Threat policies  ›  Preset security policies  ›  ${PNAME[W.prof]}</div><h4>Apply ${PNAME[W.prof]}</h4><div class="wz">${nav}<div class="wzb">${body}${foot}</div></div>`;
+  },
+  dlg() {
+    if (!K.pk) return "";
+    const n = norm(K.pkq), hits = n ? GDIR.filter(d => norm(d[1] + " " + d[2]).includes(n)) : GDIR;
+    return `<div class="dlg"><div class="pickd"><h6>Add groups</h6><input id="kpkq" class="psearch" style="width:100%" placeholder="Search" value="${esc(K.pkq)}" autocomplete="off" spellcheck="false"><div class="picks">${hits.length ? hits.map(d => `<label class="pk"><input type="checkbox" data-k="ppx:${d[0]}" ${K.pkSel.includes(d[0]) ? "checked" : ""}><span><b>${esc(d[1])}</b><em>${esc(d[2])}</em></span></label>`).join("") : `<p class="note">Nothing matches "${esc(K.pkq)}".</p>`}</div><div class="row"><span class="note" style="margin:0 auto 0 0">${K.pkSel.length} selected</span><button class="pbtn" data-k="ppcancel">Cancel</button><button class="pbtn pri" data-k="ppok" ${K.pkSel.length ? "" : "disabled"}>Add</button></div></div></div>`;
+  },
+  check(W) {
+    const vr = "varenne@halcyon.guild", grp = g => GDIR.find(d => d[0] === g)[1], only = x => W[x + "G"].length === 1 && W[x + "G"][0] === "council";
+    if (W.trust.some(t => t === vr || t === "halcyon.guild")) return nBad((W.trust.includes(vr) ? "Lady Varenne's address" : "halcyon.guild") + " is on the trusted list: letters pretending to be her would never be flagged.", "Remove it from Add trusted email addresses and domains to not flag as impersonation. Nothing was saved.", "p_trust"), false;
+    if (W.prof === "strict") {
+      if (W.eop !== "some" || !only("eop")) { const o = W.eop === "some" ? W.eopG.filter(g => g !== "council").map(grp) : []; return nBad(W.eop === "all" ? "All recipients puts the whole household on Strict." : W.eop === "none" ? "None gives the council no Strict protection at all." : o.length ? o.join(" and ") + (o.length > 1 ? " are" : " is") + " not the council." : "The Council group is not among the recipients.", "Lady Varenne asked for the council only: Specific recipients, Groups, Council. Nothing was saved.", "p_scope"), false; }
+      if (!(W.mdo === "prev" || W.mdo === "some" && only("mdo"))) return nBad(W.mdo === "none" ? "None leaves the council without Safe Links, Safe Attachments and impersonation protection." : W.mdo === "all" ? "All recipients puts the whole household on Strict for Defender for Office 365." : "Those are not the council's recipients.", "Pick Previously selected recipients on Apply Defender for Office 365 protection. Nothing was saved.", "p_mdo"), false;
+      if (!W.impu.includes(vr)) return nBad("Lady Varenne's address is not on the list of senders to flag.", "Add " + vr + " on Add email addresses to flag when impersonated by attackers. Nothing was saved.", "p_imp"), false;
+      return true;
+    }
+    if (W.eop !== "all") return nBad(W.eop === "none" ? "None leaves the household without Standard protection." : "Specific recipients leaves out everyone outside those groups.", "All recipients is simplest. Strict is always applied first, so the council keeps Strict. Nothing was saved.", "p_std"), false;
+    if (W.mdo !== "all" && W.mdo !== "prev") return nBad(W.mdo === "none" ? "None leaves the household without Safe Links, Safe Attachments and impersonation protection." : "Specific recipients leaves out everyone outside those groups.", "Pick Previously selected recipients or All recipients. Nothing was saved.", "p_mdo"), false;
+    return true;
+  },
+  act(a, el) {
+    const W = K.wz;
+    if (a.startsWith("pv:")) { K.pv = a.slice(3); K.pmKey = null; return true; }
+    if (a.startsWith("pother:")) { nLog("info", a.slice(7) + " is real, but not simulated here. Lady Varenne asked for the ready-made protection, not policies built by hand."); return true; }
+    if (a === "pbx") { nLog("info", "Add exclusions is real, but not simulated here, and Microsoft does not recommend it."); return true; }
+    if (a.startsWith("ptog:")) { const P = K.prof[a.slice(5)]; P.on = !P.on; snd("tick"); nLog("info", PNAME[a.slice(5)] + " is " + (P.on ? "On." : "Off.")); return true; }
+    if (a.startsWith("pman:")) {
+      const id = a.slice(5), P = K.prof[id];
+      if (!P.on) { nLog("info", "Vigil: slide the toggle of " + PNAME[id] + " to On first, then select Manage protection settings."); return true; }
+      const c = P.cfg ? JSON.parse(JSON.stringify(P.cfg)) : { eop: null, eopG: [], mdo: null, mdoG: [], impu: [], impd: [], trust: [] };
+      K.wz = Object.assign(c, { prof: id, step: "eop", far: P.cfg ? PSTEPS.length - 1 : 0, q: { impu: "", impd: "", trust: "" } }); K.saving = null; K.pmKey = null; return true;
+    }
+    if (a.startsWith("peop:")) { W.eop = a.slice(5); return true; }
+    if (a.startsWith("pmdo:")) { W.mdo = a.slice(5); return true; }
+    if (a === "pusr" || a === "pdom") { nLog("info", "Adding " + (a === "pusr" ? "users" : "domains") + " is real, but not simulated here. Lady Varenne thinks in groups: add the group."); return true; }
+    if (a === "pexc") { nLog("info", "Exclude these recipients is real, but not simulated here. Nobody has to be left out."); return true; }
+    if (a.startsWith("padd:")) { K.pk = a.slice(5); K.pkSel = W[K.pk + "G"].slice(); K.pkq = ""; K.focus = "kpkq"; return true; }
+    if (a.startsWith("ppx:")) { const x = a.slice(4); K.pkSel = el.checked ? [...new Set([...K.pkSel, x])] : K.pkSel.filter(y => y !== x); return true; }
+    if (a === "ppcancel") { K.pk = false; return true; }
+    if (a === "ppok") { W[K.pk + "G"] = K.pkSel.slice(); K.pk = false; return true; }
+    if (a.startsWith("prm:")) { const [, x, g] = a.split(":"); W[x + "G"] = W[x + "G"].filter(y => y !== g); return true; }
+    if (a.startsWith("prmv:")) { const [, x, i] = a.split(":"); W[x].splice(+i, 1); return true; }
+    if (a.startsWith("pws:")) { W.step = a.slice(4); K.saving = null; K.pmKey = null; if (PLIST[W.step]) K.focus = PLIST[W.step][2]; return true; }
+    if (a === "pcancel") { K.wz = null; K.saving = null; K.pk = false; return true; }
+    if (a === "pback") { W.step = PSTEPS[PSTEPS.findIndex(s => s[0] === W.step) - 1][0]; K.saving = null; K.pmKey = null; return true; }
+    if (a === "pnext") {
+      const i = PSTEPS.findIndex(s => s[0] === W.step);
+      for (const x of ["eop", "mdo"]) if (W.step === x && (!W[x] || W[x] === "some" && !W[x + "G"].length)) { nLog("info", !W[x] ? "Vigil: choose who gets this protection first." : "Vigil: add a group first, or pick another option."); return true; }
+      if (PLIST[W.step] && W.q[W.step].trim()) { nLog("info", "Vigil: " + W.q[W.step].trim() + " is still in the box. Select Add, or clear the box."); K.focus = PLIST[W.step][2]; return true; }
+      W.step = PSTEPS[i + 1][0]; W.far = Math.max(W.far, i + 1); K.pmKey = null; if (PLIST[W.step]) K.focus = PLIST[W.step][2]; return true;
+    }
+    if (a === "pconfirm") {
+      if (!this.check(W)) return true;
+      kSave(() => { const id = W.prof, c = {}; ["eop", "eopG", "mdo", "mdoG", "impu", "impd", "trust"].forEach(x => c[x] = JSON.parse(JSON.stringify(W[x]))); K.prof[id].cfg = c; W.step = "done"; nComplete(id); if (id === "strict" && !K.done.includes("std")) nSay("varenne", "The council is behind the strong door. Now the rest of the household.", 1200); });
+      return false;
+    }
+    if (a.startsWith("pfocus:")) { K.focus = PLIST[a.slice(7)][2]; return true; }
+    if (a === "pdone") { K.wz = null; K.saving = null; K.pmKey = null; return true; }
+    return false;
+  }
+};
 function nAct(a, el) { const r = nDef().act(a, el); if (r) nRender(); if (K && K.focus) { const i = $("#" + K.focus); K.focus = null; if (i) { i.focus(); i.setSelectionRange(i.value.length, i.value.length); } } }
 document.addEventListener("click", e => {
   if (cur !== "case") return;
@@ -2811,6 +2953,7 @@ function migrate() {
   }
   if (DEMO && !S.revDemo) { const t = dayNo(); S.rev = Object.assign({ tenant1: { st: 1, due: t, fade: false }, identities0: { st: 0, due: t + 2, fade: false }, auth1: { st: 0, due: t + 3, fade: true } }, S.rev || {}); S.revInit = 1; S.revDemo = 1; }
   if (S.rev) for (const k of Object.keys(S.rev)) if (!revOk(k)) delete S.rev[k];
+  Object.entries(S.rev || {}).forEach(([k, r]) => { if (!r || !r.fade) return; const g = k.replace(/\d+$/, ""), l = +k.slice(g.length); if (!TYPED[g] || !TYPED[g][l]) return; if (!S.miss.some(m => m.kind === "typed" && m.ref && m.ref.g === g && m.ref.l === l)) S.miss.push(mkMiss("typed", g, TYPED[g][l].q, { g, l }, dayNo())); });
   S.loop = 1; save();
 }
 function streakOf() { const t = dayNo(), N = new Set(S.nights); let d = N.has(t) ? t : t - 1, n = 0; while (N.has(d)) { n++; d--; } let best = 0, run = 0, prev = null; [...N].sort((a, b) => a - b).forEach(x => { run = prev === x - 1 ? run + 1 : 1; prev = x; best = Math.max(best, run); }); return { n, best, today: N.has(t), last: Math.max(-Infinity, ...N) }; }
@@ -2858,7 +3001,7 @@ function ago(ms) { const d = dayNo() - dayNo(ms); return d <= 0 ? "today" : d ==
 function pathSVG(w, curI) {
   const VW = Math.max(560, Math.round(($("#wpath") || {}).clientWidth || 760)), n = w.items.length, x0 = 70, x1 = VW - 70, xs = w.items.map((_, i) => n === 1 ? (x0 + x1) / 2 : x0 + (x1 - x0) * i / (n - 1)), y = i => 62 - Math.sin((n === 1 ? .5 : i / (n - 1)) * Math.PI) * 10;
   const segs = xs.slice(1).map((x, i) => { const a = stDone(w.items[i]) && stDone(w.items[i + 1]); return `<line x1="${xs[i]}" y1="${y(i)}" x2="${x}" y2="${y(i + 1)}" stroke="${a ? "#0f8fa8" : "#9aa5b1"}" stroke-width="${a ? 1.4 : .9}" ${a ? "" : 'stroke-dasharray="3 4"'}/>`; }).join("");
-  const counts = {}, nodes = w.items.map((it, i) => { const d = stDone(it), on = i === curI, inf = itemInfo(it); counts[inf.short] = (counts[inf.short] || 0) + 1; const lab = inf.short + (it.k === "oops" || it.k === "rev" ? " " + counts[inf.short] : ""); return `<g>${on ? `<circle class="pulse" cx="${xs[i]}" cy="${y(i)}" r="13" fill="none" stroke="#e0701a" stroke-width="1.2"/>` : ""}<circle cx="${xs[i]}" cy="${y(i)}" r="${d ? 6 : on ? 6 : 4.5}" fill="${d ? "#0f8fa8" : on ? "#e0701a" : "#fff"}" stroke="${d ? "#0f8fa8" : on ? "#e0701a" : "#8a94a0"}"/><text x="${xs[i]}" y="${y(i) - 22}" text-anchor="middle" font-size="8.5" fill="#8a94a0">ST ${String(i + 1).padStart(2, "0")}</text><text x="${xs[i]}" y="${y(i) + 28}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${d || on ? "#232a31" : "#8a94a0"}">${lab}</text></g>`; }).join("");
+  const counts = {}, nodes = w.items.map((it, i) => { const d = stDone(it), on = i === curI, inf = itemInfo(it); counts[inf.short] = (counts[inf.short] || 0) + 1; const lab = inf.short + (it.k === "oops" || it.k === "rev" ? " " + counts[inf.short] : ""); return `<g>${on ? `<circle class="pulse" cx="${xs[i]}" cy="${y(i)}" r="13" fill="none" stroke="#e0701a" stroke-width="1.2"/><circle class="pulse p2" cx="${xs[i]}" cy="${y(i)}" r="17" fill="none" stroke="#e0701a" stroke-width=".8"/>` : ""}<circle cx="${xs[i]}" cy="${y(i)}" r="${d ? 6 : on ? 6 : 4.5}" fill="${d ? "#0f8fa8" : on ? "#e0701a" : "#fff"}" stroke="${d ? "#0f8fa8" : on ? "#e0701a" : "#8a94a0"}"/><text x="${xs[i]}" y="${y(i) - 22}" text-anchor="middle" font-size="8.5" fill="#8a94a0">ST ${String(i + 1).padStart(2, "0")}</text><text x="${xs[i]}" y="${y(i) + 28}" text-anchor="middle" font-size="9.5" font-weight="600" fill="${d || on ? "#232a31" : "#8a94a0"}">${lab}</text></g>`; }).join("");
   const ticks = Array.from({ length: Math.floor((VW - 80) / 11) + 1 }, (_, i) => `<line x1="${40 + i * 11}" y1="108" x2="${40 + i * 11}" y2="${i % 5 ? 104 : 100}" stroke="#c4ccd4" stroke-width=".7"/>`).join("");
   return `<svg viewBox="0 0 ${VW} 118" preserveAspectRatio="xMidYMid meet"><line x1="40" y1="108" x2="${40 + Math.floor((VW - 80) / 11) * 11}" y2="108" stroke="#c4ccd4" stroke-width=".7"/>${ticks}<text x="40" y="18" font-size="8.5" fill="#8a94a0">NIGHT WATCH · ${n} ${n === 1 ? "STATION" : "STATIONS"}</text><text x="${VW - 40}" y="18" text-anchor="end" font-size="8.5" fill="#8a94a0">EXAM ${EXAM.code}</text>${segs}${nodes}</svg>`;
 }
