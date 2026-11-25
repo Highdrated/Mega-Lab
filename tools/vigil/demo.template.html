@@ -497,9 +497,9 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 @media (max-width:1599px){.examchip .meta{display:none}.crest small{display:none}}
 @media (max-width:1380px){.bar{gap:14px}nav.tabs button{padding:0 10px}nav.tabs button.on:after{left:10px;right:10px}.sndb .sl{display:none}.sndb{padding:7px 8px}}
 @media (max-height:820px){.side{gap:10px}.keeper{padding:12px 16px}.keeper .who{margin-bottom:6px}.keeper p{font-size:13px;line-height:1.5}.ready{padding:11px 16px 12px}.ready .top{margin:4px 0 6px}.ready .big{font-size:34px}.dbar{margin-top:7px}.next{padding:10px 16px 4px}.next .row{padding:7px 0}.rank{padding:9px 16px}}
-.cbook{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px;margin-bottom:14px}
-.cbook button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:7px 7px;border:1px solid var(--line);border-radius:2px;background:#fff;text-align:left;box-shadow:inset 0 -2px 0 transparent;transition:box-shadow .2s;min-width:0}
-.cbook button i{font-style:normal;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink);font-weight:600;white-space:nowrap}
+.cbook{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;margin-bottom:14px}
+.cbook button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;padding:7px 6px;border:1px solid var(--line);border-radius:2px;background:#fff;text-align:left;box-shadow:inset 0 -2px 0 transparent;transition:box-shadow .2s;min-width:0}
+.cbook button i{font-style:normal;font-size:10px;letter-spacing:.05em;text-transform:uppercase;color:var(--ink);font-weight:600;white-space:nowrap}
 .cbook button span{font-size:9px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);white-space:nowrap}
 .cbook button.on{background:var(--ink);border-color:var(--ink);box-shadow:inset 0 -2px 0 var(--warn)}
 .cbook button.on i{color:#fff}.cbook button.on span{color:#c9d0d7}
@@ -538,6 +538,7 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .wzb{min-width:0;max-width:600px}
 .gcl+.gcl{margin-top:6px}
 .gcond label,.wzb .note,.wzb .setting p{text-wrap:pretty}
+.wzb .setting>b{text-wrap:balance}
 .gcond{border-top:1px solid #efece7;padding:10px 0 4px;margin-top:8px}
 .gch{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;margin-bottom:8px}
 .gch b{font-size:12.5px;font-weight:600;margin:0}
@@ -1163,7 +1164,8 @@ const BOOK = [
   { id: "fence", no: CASEX.fence.no, t: CASEX.fence.t, who: "varenne", needs: CASEX.fence.needs },
   { id: "ledger", no: "07", t: "The salary ledger", who: "quillon", needs: CASE_NEEDS },
   { id: "defend", no: CASEX.defend.no, t: CASEX.defend.t, who: "thessaly", needs: CASEX.defend.needs },
-  { id: "guard", no: CASEX.guard.no, t: CASEX.guard.t, who: "corwen", needs: CASEX.guard.needs }
+  { id: "guard", no: CASEX.guard.no, t: CASEX.guard.t, who: "corwen", needs: CASEX.guard.needs },
+  { id: "lure", no: CASEX.lure.no, t: CASEX.lure.t, who: "quillon", needs: CASEX.lure.needs }
 ];
 const bookOf = id => BOOK.find(b => b.id === id) || BOOK[BOOK.length - 1];
 function stepsTxt(needs) { const n = needs.map(g => LADDER.indexOf(g) + 1); return "School step" + (n.length > 1 ? "s " + n.slice(0, -1).join(", ") + " and " + n[n.length - 1] : " " + n[0]); }
@@ -2104,6 +2106,135 @@ NC.guard = {
       kSave(() => { P.mode = W.mode; P.tips = W.tips; P.locs = W.locs.slice(); P.rule = W.rule; P.m = 0; K.wz = null; if (P.mode === "on") { K.turned = true; K.seenMode = false; nLog("info", "Saved. Guild bank numbers is turned on: mail with an IBAN to people outside the guild is now blocked."); } else nLog("info", "Saved. It runs in simulation mode again."); });
       return false;
     }
+    return false;
+  }
+};
+const LTECH = ["Credential Harvest", "Malware Attachment", "Link in Attachment", "Link to Malware", "Drive-by URL", "OAuth Consent Grant", "How-to Guide"];
+const LSTEPS = [["tech", "Select technique"], ["name", "Name simulation"], ["pay", "Select payload and login page"], ["tgt", "Target users"], ["exc", "Exclude users"], ["trn", "Assign training"], ["land", "Select phish landing page"], ["note", "Select end user notification"], ["launch", "Launch details"], ["rev", "Review simulation"]];
+const LTRAIN = [["ms", "Microsoft training experience (Recommended)"], ["url", "Redirect to a custom URL"], ["none", "No training"]];
+const LNOTE = [["none", "Do not deliver notifications"], ["def", "Microsoft default notification (recommended)"], ["cust", "Customized end user notifications"]];
+const LUSERS = [["Magister Thessaly", ["Read message", "Deleted message"]], ["Corwen Fallow", ["Read message", "Reported message"]], ["Tamsin Oakes", ["Read message", "Clicked message link"]], ["Odric Penn", ["Read message", "Clicked message link", "Supplied credentials"]], ["Bryn Calloway", ["Out of office"]]];
+NC.lure = {
+  gid: "defender",
+  letter: "Keeper, after the false Goldmere letter, Magister Thessaly and I want to know who in the Treasury would still fall for a false sign-in page. Send them a practice letter of that kind today. Only the Treasury group, not the whole household: we start small. Anyone who falls for it must get training. Then tell me who gave away their password, and who reported the letter, so I can thank them.",
+  first: "Practice phishing is set up in the Microsoft Defender portal.",
+  nothingT: "Nothing here for the practice letter", nothingP: "This page is real, but it does not send a practice phish or show who fell for one.",
+  kline: "The Treasury has had its practice letter, Odric Penn has his training, and Corwen has Quillon's thanks.",
+  closedH: "The counting room is tested", closedP: "You sent a Credential Harvest simulation to the Treasury only, with training for those who fall for it, then read the report and named who gave a password and who reported the letter.",
+  goals: [
+    { id: "launch", t: "Send a practice phish with a false sign-in page to the Treasury group only, with training for anyone who falls for it.", w: "Attack simulation training > Simulations > Launch a simulation: Credential Harvest, a name, a payload, Include only specific users and groups > Treasury, Microsoft training experience (Recommended), Launch this simulation as soon as I'm done, Submit, Done.", s: ["s29"] },
+    { id: "who", t: "Read the report, and tell Quillon who gave away their password.", w: "Select the simulation: Simulation impact shows one compromised user. The Users tab names Odric Penn: Supplied credentials. Tamsin Oakes only clicked.", s: ["s29"] },
+    { id: "rep", t: "Tell Quillon who reported the practice letter.", w: "Users tab: Corwen Fallow, Reported message. Simulation impact counts him under Users who reported.", s: ["s29"] }
+  ],
+  hints: { launch: ["Practice phishing lives under Email & collaboration.", "Attack simulation training > Simulations > Launch a simulation.", "Credential Harvest, a name, a tenant payload, Include only specific users and groups > Add users > Treasury, keep Microsoft training experience (Recommended), launch now, Submit, Done."], who: ["Open your simulation from the Simulations tab.", "The Report tab counts; the Users tab names.", "Look for Supplied credentials, not Clicked message link."], rep: ["The same report shows who reported it.", "Users tab: look for Reported message.", "Corwen Fallow reported it."] },
+  init() { return { pid: "defender", item: "attack", atab: "sims", sims: [{ id: "old", name: "Council winter drill", tech: "Credential Harvest", status: "Completed" }], wz: null, rep: null, rtab: "report", res: false, seenUsers: false, pk: false, pkSel: [], pkq: "", who: "", rp: "" }; },
+  form: {
+    who: () => `<form class="tform" data-kf="who"><label for="klw">Reply to Quillon · who gave a password</label><div><input id="klw" data-kv="who" autocomplete="off" spellcheck="false" placeholder="a name" value="${esc(K.who)}"><button class="btn solid">Send</button></div></form>`,
+    rep: () => `<form class="tform" data-kf="rep"><label for="klr">Reply to Quillon · who reported it</label><div><input id="klr" data-kv="rp" autocomplete="off" spellcheck="false" placeholder="a name" value="${esc(K.rp)}"><button class="btn solid">Send</button></div></form>`
+  },
+  submit(f) {
+    const v = norm(f === "who" ? K.who : K.rp); if (!v || (f !== "who" && f !== "rep")) return;
+    if (!K.seenUsers) { nLog("info", "Vigil: read the report first. Open your simulation and look at who did what."); return; }
+    if (f === "who") {
+      if (["odric", "odric penn"].includes(v)) { nLog("info", "Sent to Quillon: " + K.who.trim()); nComplete("who"); nSay("quillon", "Odric. Then he will do his training this week. And who warned us?", 1200); return; }
+      nBad(/tamsin/.test(v) ? "Tamsin Oakes clicked the link, but she gave no password." : "That is not who gave away a password.", "Compromised means Supplied credentials. The Users tab shows Odric Penn.", "l_who");
+      return;
+    }
+    if (["corwen", "corwen fallow"].includes(v)) { nLog("info", "Sent to Quillon: " + K.rp.trim()); nComplete("rep"); nSay("quillon", "Corwen! He learned from the Goldmere letter. I will thank him myself.", 1200); return; }
+    nBad("That is not who reported the letter.", "Users who reported, under Simulation impact, counts one. The Users tab shows Corwen Fallow: Reported message.", "l_rep");
+  },
+  page(k) {
+    if (k !== "defender.attack") return null;
+    if (K.wz) return this.wizard();
+    if (K.rep) return this.report();
+    const tabs = [["ov", "Overview"], ["sims", "Simulations"]];
+    const head = `<div class="crumb">Email & collaboration  ›  Attack simulation training</div><h4>Attack simulation training</h4><div class="ptabs" style="margin-bottom:14px;border-bottom:1px solid #e6e3de">${tabs.map(t => `<button class="${K.atab === t[0] ? "on" : ""}" data-k="lt:${t[0]}">${t[1]}</button>`).join("")}</div>`;
+    if (K.atab === "ov") return head + `<div class="pcard" style="max-width:520px"><b>Overview</b><p>Recent simulations and training at a glance. Real, but not simulated here: use the Simulations tab.</p></div>`;
+    return head + `<div class="tool">${kSavebar().replace('class="pbar', 'style="margin:0 10px 0 0" class="pbar')}<button class="pbtn pri" data-k="lnew">Launch a simulation</button><span style="font-size:12px;color:#666;margin-left:auto">${K.sims.length} simulation${K.sims.length === 1 ? "" : "s"}</span></div><table class="t"><tr><th>Name</th><th>Technique</th><th>Status</th></tr>${K.sims.slice().reverse().map(s => `<tr class="click" data-k="lopen:${s.id}"><td style="color:#0f5ea8;font-weight:500">${esc(s.name)}</td><td>${esc(s.tech)}</td><td>${esc(s.status)}</td></tr>`).join("")}</table>`;
+  },
+  report() {
+    const S0 = K.sims.find(s => s.id === K.rep), tabs = [["report", "Report"], ["users", "Users"], ["details", "Details"]], r = K.res;
+    const head = `<div class="crumb">Attack simulation training  ›  Simulations  ›  ${esc(S0.name)}</div><h4>${esc(S0.name)}</h4><p class="sub">Status: ${esc(S0.status)}</p><div class="ptabs" style="margin-bottom:14px;border-bottom:1px solid #e6e3de">${tabs.map(t => `<button class="${K.rtab === t[0] ? "on" : ""}" data-k="lrt:${t[0]}">${t[1]}</button>`).join("")}</div>`, back = `<div class="tool" style="margin-top:14px"><button class="pbtn" data-k="lback">Back to simulations</button></div>`;
+    const cnt = a => r ? LUSERS.filter(u => u[1].includes(a)).length : 0;
+    if (K.rtab === "report") return head + `<div class="lsecs"><div class="setting"><b>Simulation impact</b><dl class="kv"><dt>Compromised users</dt><dd>${cnt("Supplied credentials")}</dd><dt>Users who reported</dt><dd>${cnt("Reported message")}</dd></dl></div><div class="setting"><b>All user activity</b><dl class="kv">${["Clicked message link", "Supplied credentials", "Read message", "Deleted message", "Out of office"].map(a => `<dt>${a}</dt><dd>${cnt(a)}</dd>`).join("")}</dl></div><div class="setting"><b>Delivery status</b><dl class="kv"><dt>Successfully received message</dt><dd>${S0.status === "Scheduled" ? 0 : 5}</dd></dl></div></div><p class="note">Vigil runs the simulation days in a few seconds. Training completion and the other report sections are real, but not simulated here.</p>` + back;
+    if (K.rtab === "details") return head + `<dl class="kv"><dt>Technique</dt><dd>${esc(S0.tech)}</dd><dt>Target users</dt><dd>Treasury</dd><dt>Training</dt><dd>Microsoft training experience (Recommended)</dd></dl>` + back;
+    if (r) K.seenUsers = true;
+    return head + (r ? `<table class="t"><tr><th>User</th><th>Activity</th></tr>${LUSERS.map(u => `<tr><td style="white-space:nowrap">${esc(u[0])}</td><td>${u[1].map(esc).join(", ")}</td></tr>`).join("")}</table>` : `<p class="note">No activity yet. Activity shows here as people open the message.</p>`) + back;
+  },
+  wizard() {
+    const W = K.wz, si = LSTEPS.findIndex(s => s[0] === W.step);
+    const nav = `<ol class="wsteps">${LSTEPS.map((s, i) => `<li><button class="${i === si ? "on" : ""}${i <= W.far ? "" : " off"}" ${i <= W.far && i !== si ? `data-k="ls:${s[0]}"` : "disabled"}>${s[1]}</button></li>`).join("")}</ol>`;
+    const rad = (name, list, val, pre) => kRadios(name, list, val, pre);
+    let body = "";
+    if (W.step === "tech") body = `<div class="setting"><b>Select technique</b>${rad("kltech", LTECH.map(t => [t, t]), W.tech, "ltech")}</div>`;
+    if (W.step === "name") body = `<div class="setting"><b>Name</b><input id="kln" data-kv="wz.name" class="psearch" style="width:100%" autocomplete="off" spellcheck="false" value="${esc(W.name)}"></div><div class="setting"><b>Description</b><input id="kld" data-kv="wz.desc" class="psearch" style="width:100%" autocomplete="off" spellcheck="false" placeholder="Optional" value="${esc(W.desc)}"></div>`;
+    if (W.step === "pay") body = `<div class="ptabs" style="margin-bottom:12px;border-bottom:1px solid #e6e3de">${[["global", "Global payloads"], ["tenant", "Tenant payloads"]].map(t => `<button class="${W.ptab === t[0] ? "on" : ""}" data-k="lpt:${t[0]}">${t[1]}</button>`).join("")}</div>${W.ptab === "global" ? `<p class="note">The global payloads are real, but not simulated here. Use the tenant payload Keeper Mirethil made for this.</p>` : `<table class="t"><tr><th class="xck"></th><th>Payload</th><th>Technique</th></tr><tr><td class="xck"><input type="radio" name="klpay" data-k="lpay" ${W.pay ? "checked" : ""} aria-label="Select"></td><td>Treasury seal check</td><td>Credential Harvest</td></tr></table><p class="note">The login page that comes with the payload is kept as it is.</p>`}`;
+    if (W.step === "tgt") body = `<div class="setting"><b>Target users</b>${rad("kltgt", [["all", "Include all users in your organization"], ["some", "Include only specific users and groups"]], W.tmode, "ltm")}${W.tmode === "some" ? `<div style="margin:10px 0 0 24px"><div class="tool" style="flex-wrap:wrap"><button class="pbtn" data-k="ladd">Add users</button><button class="pbtn" data-k="limp">Import</button></div>${W.tsel.length ? `<div class="xconds">${W.tsel.map(g => `<span class="fchip">${esc(GDIR.find(d => d[0] === g)[1])}<button class="xrm" data-k="ltr:${g}" title="Remove">×</button></span>`).join("")}</div>` : `<p class="note" style="margin:0">Nobody added yet.</p>`}</div>` : ""}</div>`;
+    if (W.step === "exc") body = `<div class="setting"><div class="subopts" style="margin-left:0"><label><input type="checkbox" data-k="lexc" ${W.exc ? "checked" : ""}>Exclude some of the targeted users from this simulation</label></div></div>`;
+    if (W.step === "trn") body = `<div class="setting"><b>Select training content preference</b>${rad("kltrn", LTRAIN.slice(0, 1), W.train, "ltrn")}${W.train === "ms" ? `<div style="margin:4px 0 8px 24px">${rad("kltsub", [["auto", "Assign training for me (Recommended)"], ["self", "Select training courses and modules myself"]], W.tsub, "ltsub")}</div>` : ""}${rad("kltrn", LTRAIN.slice(1), W.train, "ltrn")}</div>${W.train === "ms" ? `<div class="setting"><b>Due date</b><select data-k="ldue">${["30 days after simulation ends", "15 days after simulation ends", "7 days after simulation ends"].map(d => `<option ${W.due === d ? "selected" : ""}>${d}</option>`).join("")}</select></div>` : ""}`;
+    if (W.step === "land") body = `<div class="setting"><b>Select phish landing page</b>${rad("klland", [["lib", "Use landing pages from library"], ["url", "Use a custom URL"]], W.land, "lland")}</div><p class="note">The landing page from the library is kept as it is.</p>`;
+    if (W.step === "note") body = `<div class="setting"><b>Select end user notification</b>${rad("klnote", LNOTE, W.note, "lnote")}</div>`;
+    if (W.step === "launch") body = `<div class="setting"><b>Launch details</b>${rad("kllaunch", [["now", "Launch this simulation as soon as I'm done"], ["later", "Schedule this simulation to be launched later"]], W.launch, "llaunch")}</div><div class="setting"><b>Configure number of days to end simulation after</b><input id="kldays" data-kv="wz.days" class="psearch" style="width:80px" autocomplete="off" spellcheck="false" value="${esc(W.days)}"></div>`;
+    if (W.step === "rev") body = `<dl class="kv"><dt>Technique</dt><dd>${esc(W.tech || "Not set")}</dd><dt>Name</dt><dd>${esc(W.name.trim())}</dd><dt>Payload</dt><dd>${W.pay ? "Treasury seal check" : "Not set"}</dd><dt>Target users</dt><dd>${W.tmode === "all" ? "Include all users in your organization" : esc(W.tsel.map(g => GDIR.find(d => d[0] === g)[1]).join(", ") || "Not set")}</dd><dt>Training</dt><dd>${esc(LTRAIN.find(t => t[0] === W.train)[1])}${W.train === "ms" ? "<br>" + esc(W.due) : ""}</dd><dt>Notification</dt><dd>${esc(LNOTE.find(n => n[0] === W.note)[1])}</dd><dt>Launch</dt><dd>${W.launch === "now" ? "Launch this simulation as soon as I'm done" : "Schedule this simulation to be launched later"}</dd><dt>Ends after</dt><dd>${esc(W.days)} days</dd></dl>${kSavebar().replace('class="pbar', 'style="margin:0 0 10px" class="pbar')}`;
+    if (W.step === "done") return `<div class="crumb">Attack simulation training  ›  Simulations</div><h4>Simulation has been scheduled for launch</h4><p class="sub">${esc(W.name.trim())} goes to the Treasury.</p><button class="pbtn pri" data-k="ldone">Done</button>`;
+    const foot = `<div class="tool" style="margin-top:14px;flex-wrap:wrap">${W.step === "rev" ? `<button class="pbtn" data-k="ltest">Send a test</button><button class="pbtn pri" data-k="lsubmit" ${K.saving === "busy" ? "disabled" : ""}>Submit</button>` : `<button class="pbtn pri" data-k="lnext">Next</button>`}${si ? `<button class="pbtn" data-k="lback2">Back</button>` : ""}<button class="pbtn" data-k="lsave">Save and close</button><button class="pbtn" data-k="lcancel">Cancel</button></div>`;
+    return `<div class="crumb">Attack simulation training  ›  Simulations  ›  Launch a simulation</div><h4>Launch a simulation</h4><div class="wz">${nav}<div class="wzb">${body}${foot}</div></div>`;
+  },
+  dlg() {
+    if (K.pk !== "tgt") return "";
+    const n = norm(K.pkq), hits = n ? GDIR.filter(d => norm(d[1] + " " + d[2]).includes(n)) : GDIR;
+    return `<div class="dlg"><div class="pickd"><h6>Add users</h6><input id="kpkq" class="psearch" style="width:100%" placeholder="Search" value="${esc(K.pkq)}" autocomplete="off" spellcheck="false"><div class="picks">${hits.length ? hits.map(d => `<label class="pk"><input type="checkbox" data-k="lpx:${d[0]}" ${K.pkSel.includes(d[0]) ? "checked" : ""}><span><b>${esc(d[1])}</b><em>${esc(d[2])}</em></span></label>`).join("") : `<p class="note">Nothing matches "${esc(K.pkq)}".</p>`}</div><div class="row"><span class="note" style="margin:0 auto 0 0">${K.pkSel.length} selected</span><button class="pbtn" data-k="lpcancel">Cancel</button><button class="pbtn pri" data-k="lpok" ${K.pkSel.length ? "" : "disabled"}>Add</button></div></div></div>`;
+  },
+  act(a, el) {
+    const W = K.wz;
+    if (a.startsWith("lt:")) { K.atab = a.slice(3); return true; }
+    if (a.startsWith("lopen:")) { const id = a.slice(6); if (id === "old") { nLog("info", "Council winter drill is an old simulation for the council. Not the Treasury."); return true; } K.rep = id; K.rtab = "report"; K.pmKey = null; return true; }
+    if (a.startsWith("lrt:")) { K.rtab = a.slice(4); return true; }
+    if (a === "lback") { K.rep = null; return true; }
+    if (a === "lnew") { if (K.sims.some(s => s.id === "trs")) { nLog("info", "The Treasury simulation is already running. Open it from the list."); return true; } K.wz = { step: "tech", far: 0, tech: null, name: "", desc: "", ptab: "global", pay: false, tmode: null, tsel: [], exc: false, train: "ms", tsub: "auto", due: "30 days after simulation ends", land: "lib", note: "def", launch: "now", days: "2" }; K.pmKey = null; return true; }
+    if (a === "lcancel") { K.wz = null; K.saving = null; return true; }
+    if (a === "lsave") { nLog("info", "Save and close keeps it as a Draft. Real, but not simulated here: Quillon asked for it to go out today."); return true; }
+    if (a.startsWith("ls:")) { W.step = a.slice(3); K.pmKey = null; return true; }
+    if (a === "lback2") { W.step = LSTEPS[LSTEPS.findIndex(s => s[0] === W.step) - 1][0]; K.saving = null; K.pmKey = null; return true; }
+    if (a === "lnext") {
+      const i = LSTEPS.findIndex(s => s[0] === W.step);
+      if (W.step === "tech" && !W.tech) { nLog("info", "Vigil: select a technique first."); return true; }
+      if (W.step === "name" && !W.name.trim()) { nLog("info", "Vigil: give the simulation a name first."); K.focus = "kln"; return true; }
+      if (W.step === "pay" && !W.pay) { nLog("info", "Vigil: select a payload first."); return true; }
+      if (W.step === "tgt" && (!W.tmode || W.tmode === "some" && !W.tsel.length)) { nLog("info", "Vigil: choose who gets the simulation first."); return true; }
+      if (W.step === "launch" && !(+W.days >= 2 && +W.days <= 30)) { nLog("info", "The number of days to end the simulation after is 2 at least and 30 at most."); return true; }
+      K.pmKey = null; W.step = LSTEPS[i + 1][0]; W.far = Math.max(W.far, i + 1); if (W.step === "name") K.focus = "kln"; return true;
+    }
+    if (a.startsWith("ltech:")) { W.tech = a.slice(6); return false; }
+    if (a.startsWith("lpt:")) { W.ptab = a.slice(4); return true; }
+    if (a === "lpay") { W.pay = true; return false; }
+    if (a.startsWith("ltm:")) { W.tmode = a.slice(4); return true; }
+    if (a === "limp") { nLog("info", "Import takes a CSV file of users. Real, but not simulated here: add the group with Add users."); return true; }
+    if (a === "ladd") { K.pk = "tgt"; K.pkSel = W.tsel.slice(); K.pkq = ""; K.focus = "kpkq"; return true; }
+    if (a.startsWith("lpx:")) { const x = a.slice(4); K.pkSel = el.checked ? [...new Set([...K.pkSel, x])] : K.pkSel.filter(y => y !== x); return true; }
+    if (a === "lpcancel") { K.pk = false; return true; }
+    if (a === "lpok") { W.tsel = K.pkSel.slice(); K.pk = false; return true; }
+    if (a.startsWith("ltr:")) { W.tsel = W.tsel.filter(g => g !== a.slice(4)); return true; }
+    if (a === "lexc") { W.exc = el.checked; if (W.exc) nLog("info", "Excluding some of the targeted users is real, but not simulated here. Quillon wants the whole Treasury tested."); return true; }
+    if (a.startsWith("ltrn:")) { W.train = a.slice(5); if (W.train === "url") nLog("info", "Redirect to a custom URL is real, but not simulated here. The household has no training site of its own."); return true; }
+    if (a.startsWith("ltsub:")) { W.tsub = a.slice(6); if (W.tsub === "self") nLog("info", "Select training courses and modules myself is real, but not simulated here. Assign training for me picks the training for you."); return true; }
+    if (a === "ldue") { W.due = el.value; return false; }
+    if (a.startsWith("lland:")) { W.land = a.slice(6); if (W.land === "url") nLog("info", "Use a custom URL is real, but not simulated here. Keep the landing page from the library."); return true; }
+    if (a.startsWith("lnote:")) { W.note = a.slice(6); if (W.note === "cust") nLog("info", "Customized end user notifications are real, but not simulated here."); return true; }
+    if (a.startsWith("llaunch:")) { W.launch = a.slice(8); if (W.launch === "later") nLog("info", "Scheduling for later is real, but Quillon asked for it to go out today."); return true; }
+    if (a === "ltest") { nLog("info", "Send a test mails the simulation to you first. Real, but not simulated here."); return true; }
+    if (a === "lsubmit") {
+      if (W.tech !== "Credential Harvest") { nBad(W.tech + " does not show a false sign-in page.", "Quillon asked for a practice letter with a false sign-in page: Credential Harvest. Nothing was launched.", "l_tech"); return true; }
+      if (W.tmode === "all") { nBad("Include all users in your organization sends it to the whole household.", "Quillon wants to start small: Include only specific users and groups, with the Treasury. Nothing was launched.", "l_all"); return true; }
+      if (W.tsel.length !== 1 || W.tsel[0] !== "treasury") { const o = W.tsel.filter(g => g !== "treasury").map(g => GDIR.find(d => d[0] === g)[1]); nBad(o.length ? o.join(" and ") + (o.length > 1 ? " are" : " is") + " not the Treasury." : "The Treasury is not among the target users.", "Target the Treasury group only. Nothing was launched.", "l_grp"); return true; }
+      if (W.train === "none") { nBad("No training means nobody who falls for it learns anything.", "Quillon asked for training for anyone who falls for it. Keep Microsoft training experience (Recommended). Nothing was launched.", "l_train"); return true; }
+      if (W.train === "url" || W.tsub === "self") { nLog("info", "Vigil: that training option is not simulated here. Pick Microsoft training experience with Assign training for me."); return true; }
+      if (W.launch === "later") { nLog("info", "Vigil: Quillon asked for today. Pick Launch this simulation as soon as I'm done."); return true; }
+      if (W.exc || W.land === "url" || W.note === "cust") { nLog("info", "Vigil: one of your choices is real but not simulated here. Untick Exclude users and keep the library landing page and a standard notification."); return true; }
+      kSave(() => { W.step = "done"; const S0 = { id: "trs", name: W.name.trim(), tech: W.tech, status: "Scheduled" }; K.sims.push(S0); nComplete("launch"); const k = K, up = () => { if (cur === "case" && K.item === "attack" && !K.wz) nGlass(); }; setTimeout(() => { if (K !== k) return; S0.status = "In progress"; up(); }, 2000); setTimeout(() => { if (K !== k) return; K.res = true; up(); }, 4000); setTimeout(() => { if (K !== k) return; S0.status = "Completed"; up(); }, 7000); });
+      return false;
+    }
+    if (a === "ldone") { K.wz = null; K.saving = null; nLog("info", "The simulation is on the Simulations tab. Vigil runs its days in a few seconds."); return true; }
     return false;
   }
 };
