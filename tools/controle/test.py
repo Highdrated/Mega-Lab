@@ -1,6 +1,7 @@
 import sys
-import os; os.makedirs('/tmp/controle-shots',exist_ok=True)
 from playwright.sync_api import sync_playwright
+import os
+os.makedirs('/tmp/controle-shots',exist_ok=True)
 url='file://'+os.path.join(os.path.dirname(os.path.abspath(__file__)),'controle-demo.html')
 errs=[]
 def lessons(pg,wrong=True):
@@ -52,13 +53,13 @@ with sync_playwright() as p:
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-editor.png')
         pg.click('#pf button[type=submit]')
         assert pg.locator('.pol').count()==2
-        pg.click('#hold');pg.wait_for_timeout(2200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-siege.png')
+        pg.click('#hold');pg.wait_for_timeout(2600);pg.screenshot(path=f'/tmp/controle-shots/{tag}-siege.png')
         pg.wait_for_selector('#again',timeout=15000)
         r=results(pg);print(tag,'win',r);assert r==['Held','Held','Held','Commended'],r
         assert 'citadel held' in pg.inner_text('#pane')
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-win.png')
-        lit=pg.locator('#lanterns .lan.lit').count();assert lit==2,lit
-        pg.hover('#lanterns .lan.lit >> nth=0');pg.wait_for_timeout(200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-tip.png')
+        lit=pg.locator('#wards .dot.lit').count();assert lit==2,lit
+        pg.click('.wcard[data-w="towers"]');pg.screenshot(path=f'/tmp/controle-shots/{tag}-towers.png')
         if tag=='1440':
             pg.click('#again')
             def f3(pg):

@@ -9,6 +9,7 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 - Loop: Day (short forge lessons) -> Night (siege: real attack patterns, set real controls) -> Morning (damage report, oopsies).
 - Helper: Wick, the lamplighter.
 - No mouse-follow or parallax.
+- SVG only for small icons, never large drawn buildings or scenes (25 Nov). Big scenery only as painted art.
 
 ## Map of the citadel
 | Part | Exam area |
@@ -22,7 +23,8 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 
 ## Status
 - [x] Demo 1: Gatehouse day (5 lessons) and night 1 (password spray, Conditional Access). tests: python3 tools/controle/test.py
-- [ ] Painted art (ComfyUI, see ART.md) to replace the drawn silhouette
+- [x] Big drawn citadel replaced by six icon cards with lantern dots, and three road rows for the siege
+- [ ] Optional painted backdrop (ComfyUI, see ART.md) once she wants one
 - [ ] Next nights: PIM / stolen admin session, consent phishing, Key Vault leaked secret
 - [ ] Into the Workshop, oopsies into Pockle
 
