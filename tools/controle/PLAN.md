@@ -5,7 +5,7 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 
 ## Direction (chosen 25 Nov 2026)
 - World: Duskhold, a citadel at dusk. Every lantern on its walls is one exam skill (87).
-- Look: deep violet, burnt orange, lantern gold, charcoal stone. Dark slim panels, gold hairlines.
+- Look (25 Nov, after she found the dark theme heavy): light warm paper, dark ink text, colour only where it means something (gold = lit lantern, ember = action or warning). No dark or blue backgrounds. Content first, theme quiet.
 - Loop: Day (short forge lessons) -> Night (siege: real attack patterns, set real controls) -> Morning (damage report, oopsies).
 - Helper: Wick, the lamplighter.
 - No mouse-follow or parallax.
