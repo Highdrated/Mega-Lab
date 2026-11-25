@@ -51,7 +51,7 @@ def night2(pg,tag):
     assert 'citadel held' in pg.inner_text('#pane')
     assert pg.locator('#wards .dot.lit').count()==3
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-report-win.png')
-    pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
+    assert pg.inner_text('#end')=='Start day 3'
     if tag=='1440':
         pg.click('#again')
         for x in ['ea1','ea2','maren']:
@@ -60,6 +60,39 @@ def night2(pg,tag):
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-report-lock.png')
         pg.click('#again');pg.select_option('select[data-p="maren"][data-k="r"]','none')
         hold(pg);r=results(pg);print('n2 blocked',r);assert 'Blocked work' in r,r
+
+CH3={"ch":3,"wing":"gate","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"studied":["ca","mfa","pim"],"lit":["ca","mfa","pim"],"oops":[],"pol":[],"edit":None,"night":3,"report":None}
+def night3(pg,tag):
+    import json
+    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH3));pg.reload()
+    for i,ans in enumerate(['consent phishing','Application','verified','admin consent workflow','Enabled for users to sign-in?']):
+        if i==0:
+            pg.fill('#si','phishing');pg.click('#sf button');assert 'Not quite' in pg.inner_text('#sfb')
+            pg.fill('#si',ans);pg.click('#sf button')
+            pg.click('.opt[data-i="2"]');assert 'Not that one' in pg.inner_text('#tfb')
+        else:
+            pg.fill('#si',ans);pg.click('#sf button')
+        assert 'Forged' in pg.inner_text('#strikeCard'),('n3 strike',i)
+        pg.click('.opt[data-i="0"]')
+        if i==4: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-lesson.png')
+        pg.click('#nx')
+    assert 'scouts are back' in pg.inner_text('#pane')
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-brief.png')
+    pg.click('#go');pg.wait_for_timeout(200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-console.png')
+    hold(pg);r=results(pg);print(tag,'n3 start',r);assert r==['Breached','Breached','Served'],r
+    pg.click('#again');pg.check('input[name=cs][value=verified]')
+    hold(pg);r=results(pg);print(tag,'n3 verified only',r);assert r==['Held','Breached','Blocked work'],r
+    pg.click('#again');pg.check('#pc-offline_access');pg.check('#pc-User\\.Read');pg.select_option('select[data-a="raven"]','no')
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-console-fixed.png')
+    hold(pg);r=results(pg);print(tag,'n3 win',r);assert r==['Held','Held','Served'],r
+    assert 'citadel held' in pg.inner_text('#pane')
+    assert pg.locator('#wards .dot.lit').count()==5
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-win.png')
+    pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
+    if tag=='1440':
+        pg.click('#again');pg.uncheck('#pc-User\\.Read');pg.check('#wf');pg.check('#pc-Mail\\.Read');pg.select_option('select[data-a="hr"]','no')
+        hold(pg);r=results(pg);print('n3 mistakes',r);assert 'Blocked work' in r and 'Risk' in r and 'Served' in r,r
+        pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-mistakes.png')
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
     for tag,(w,h) in {'1440':(1440,900),'1280':(1280,800),'1024':(1024,768),'390':(390,844)}.items():
@@ -111,6 +144,7 @@ with sync_playwright() as p:
             pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-lock.png')
             pg.click('#oopsBtn');pg.wait_for_timeout(300);pg.screenshot(path=f'/tmp/controle-shots/{tag}-oops.png')
         night2(pg,tag)
+        night3(pg,tag)
         sw=pg.evaluate('document.documentElement.scrollWidth');assert sw<=w,(tag,'overflow',sw)
         pg.close()
     b.close()

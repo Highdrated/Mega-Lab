@@ -61,7 +61,8 @@ main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(400px,560px);min
 .pim th{text-align:left;font-weight:600;color:var(--mute);font-size:13px;padding:6px 8px 6px 0;border-bottom:1px solid var(--line2)}
 .pim td{padding:8px 8px 8px 0;border-bottom:1px solid var(--line2);vertical-align:middle}
 .pim td small{display:block;color:var(--mute);font-size:12px}
-.pim select,.gs select{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:36px;max-width:100%}
+.pim select,.gs select,.gsel{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:36px;max-width:100%}
+.mlab{display:none;color:var(--mute);font-size:12px;margin-bottom:4px}
 .saved{font-size:13px;color:var(--gold);min-height:1.2em}
 .roll{overflow:auto;padding:14px 20px 18px;margin-top:14px;border-top:1px solid var(--line2)}
 .roll h3{font-size:16px;color:var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -150,7 +151,7 @@ label.ck input{accent-color:var(--gold);width:17px;height:17px;flex:none}
 @media (prefers-reduced-motion:reduce){.drawer,.stage{transition:none}}
 @media (max-width:1100px){main{grid-template-columns:minmax(0,1fr) minmax(360px,460px)}.wardgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.exam span{display:none}}
 @media (max-width:860px){.app{height:auto}main{grid-template-columns:1fr}.stage{display:contents}.citadel{order:1}.side{order:3}.roads{order:2;padding-bottom:14px}.roll{order:4;max-height:none}.side{min-height:60vh}.pane{padding:20px}.wick{padding:12px 20px}}
-@media (max-width:600px){.pim thead{display:none}.pim tr{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line2)}.pim td{border:0;padding:0}.pim td:first-child{grid-column:1/-1}.pim select{width:100%}.wardgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.road{grid-template-columns:24px minmax(0,1fr) 72px}.road .track{grid-column:1/-1;grid-row:2}.rl{grid-template-columns:1fr}header{flex-wrap:wrap;gap:8px 12px;padding:10px 14px}.exam{order:3;flex-basis:100%}.band{grid-template-columns:1fr}.pane h2{font-size:24px}}
+@media (max-width:600px){.mlab{display:block}.pim thead{display:none}.pim tr{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line2)}.pim td{border:0;padding:0}.pim td:first-child{grid-column:1/-1}.pim select{width:100%}.wardgrid{grid-template-columns:repeat(2,minmax(0,1fr))}.road{grid-template-columns:24px minmax(0,1fr) 72px}.road .track{grid-column:1/-1;grid-row:2}.rl{grid-template-columns:1fr}header{flex-wrap:wrap;gap:8px 12px;padding:10px 14px}.exam{order:3;flex-basis:100%}.band{grid-template-columns:1fr}.pane h2{font-size:24px}}
 </style>
 </head>
 <body>
@@ -193,8 +194,8 @@ const SK=[
  {w:'gate',d:1,n:'Configure Privileged Identity Management (PIM)',id:'pim'},
  {w:'gate',d:1,n:'Implement conditional access policies',id:'ca'},
  {w:'gate',d:1,n:'Configure authentication methods, including MFA and passwordless',id:'mfa'},
- {w:'gate',d:1,n:'Configure identity for applications: enterprise apps and app registrations'},
- {w:'gate',d:1,n:'Manage OAuth permission grants and consent settings'},
+ {w:'gate',d:1,n:'Configure identity for applications: enterprise apps and app registrations',id:'apps'},
+ {w:'gate',d:1,n:'Manage OAuth permission grants and consent settings',id:'consent'},
  {w:'gate',d:1,n:'Configure managed identities for Azure resources'},
  {w:'vault',d:1,n:'Deploy Key Vault'},{w:'vault',d:1,n:'Configure Key Vault settings'},{w:'vault',d:1,n:'Configure access to Key Vault'},{w:'vault',d:1,n:'Configure Key Vault firewall settings'},{w:'vault',d:1,n:'Manage keys, secrets and certificates'},{w:'vault',d:1,n:'Scan for secrets with Defender CSPM'},{w:'vault',d:1,n:'Implement Defender for Key Vault'},
  {w:'keep',d:1,n:'Security controls with Azure Policy (built-in and custom)'},{w:'keep',d:1,n:'Evaluate regulatory compliance in Defender for Cloud'},{w:'keep',d:1,n:'Security standards and recommendations in Defender for Cloud'},{w:'keep',d:1,n:'Implement resource locks'},{w:'keep',d:1,n:'Manage Azure built-in role assignments'},{w:'keep',d:1,n:'Manage custom Azure and Entra roles'},{w:'keep',d:1,n:'Remediate overprivileged access with Azure RBAC'},{w:'keep',d:1,n:'Azure Backup security features'},{w:'keep',d:1,n:'Security controls with infrastructure as code'},
@@ -272,7 +273,7 @@ const WAVES2=[
  {id:'A',name:'Stolen seal',icon:'key',who:'maren',how:'Maren\'s signed-in session, copied from her laptop'},
  {id:'B',name:'Fake sign-in page',icon:'mask',who:'tobin',how:'Tobin\'s session, caught by a lookalike sign-in page'}
 ];
-const wavesNow=()=>S.ch===2?WAVES2:WAVES;
+const wavesNow=()=>S.ch===3?WAVES3:S.ch===2?WAVES2:WAVES;
 function steal(pid){
   const a=S.pim.asg[pid],gs=S.pim.gs,nm=PEOPLE.find(x=>x.id===pid).n;
   if(a.r==='none')return {res:'held',msg:`${nm} holds no admin role, so the stolen session opens nothing.`};
@@ -323,13 +324,113 @@ function renderPim(p){
   $('hold').onclick=siege;
   wick('<b>Wick:</b> Ask two things for every row: does this person need the role all the time, and does it need to be this big?');
 }
+
+const L3=[
+ {t:'The lure letter',b:'Builds on: Standing access.',f:['In <b>consent phishing</b> the raider doesn\'t steal a password. A letter tricks someone into clicking <b>Accept</b> on an app\'s permission screen.','The user signs in and does MFA themselves, so MFA doesn\'t help. From then on the app reads their data with its own tokens.','A password reset alone doesn\'t remove that permission. The grant has to be revoked.'],
+  s:{q:'What is this attack called?',a:['consent phishing','illicit consent grant'],show:'consent phishing'},
+  c:{q:'Why doesn\'t MFA stop consent phishing?',o:['The user signs in and approves the app themselves','MFA is off for apps','The app guesses the password'],r:0,why:'The user is the one who says yes. MFA only proves it really was them.'}},
+ {t:'Delegated or application',b:'Builds on: The lure letter.',f:['A <b>delegated</b> permission lets an app act as the signed-in user, limited to what that user can reach.','An <b>application</b> permission lets an app act as itself, across the whole tenant, with no user signed in.','Application permissions always need admin consent. Users can only ever grant delegated ones.'],
+  s:{q:'Which permission type lets an app act as itself, without a user?',a:['application','application permission','application permissions'],show:'Application'},
+  c:{q:'A user clicks Accept for an app asking for Mail.Read (delegated). Whose mail can it read?',o:['Only that user\'s mail','Every mailbox in the tenant','None until an admin approves'],r:0,why:'Delegated means it acts as that one user, so it can reach what that user can reach.'}},
+ {t:'Who may say yes',b:'Builds on: Delegated or application.',f:['<b>User consent settings</b> live under Enterprise apps, then Consent and permissions.','The recommended choice: users may only consent to apps from <b>verified</b> publishers, and only for permissions you select. You can also switch user consent off, or let Microsoft manage it.','"Allow user consent for apps" lets anyone accept any app. That is the setting lure letters hope for.'],
+  s:{q:'Users may only consent to apps from ... publishers. Which word fills the gap?',a:['verified'],show:'verified'},
+  c:{q:'Your setting allows verified publishers only. An unverified app asks for Mail.Read. What does the user see?',o:['They can\'t consent and are told to ask an admin','They can consent, but get a warning','The app is installed silently'],r:0,why:'Outside the policy, users are blocked from consenting and pointed to an admin.'}},
+ {t:'The low impact list',b:'Builds on: Who may say yes.',f:['<b>Permission classifications</b> mark which delegated permissions count as low impact. With the recommended setting, users can only consent to those.','The basic sign-in set is openid, profile, email and offline_access. Mail and file permissions don\'t belong on the list.','The <b>admin consent workflow</b> lets users ask for approval from the consent screen instead of hitting a wall.'],
+  s:{q:'Which feature lets users ask an admin to approve an app from the consent screen?',a:['admin consent workflow','the admin consent workflow','admin consent request workflow'],show:'admin consent workflow'},
+  c:{q:'Someone adds Files.Read.All to the low impact list. What changes?',o:['Any verified app can now read a user\'s files without an admin','Nothing, the list is only a label','Users lose access to their own files'],r:0,why:'The list is exactly what users are allowed to grant. Keep it to basic sign-in.'}},
+ {t:'Old grants',b:'Builds on: The lure letter, The low impact list.',f:['Tightening consent settings doesn\'t remove grants users already gave.','Find them under Enterprise apps, then the app, then <b>Permissions</b>.','To cut an app off: set <b>Enabled for users to sign-in?</b> to No, revoke its permissions, or delete it.'],
+  s:{q:'Which app property, set to No, stops users signing in to it?',a:['enabled for users to sign-in?','enabled for users to sign-in','enabled for users to sign in','enabled for users to sign in?'],show:'Enabled for users to sign-in?'},
+  c:{q:'You switch user consent off today. A bad app got consent last spring. Is it stopped?',o:['No, its old grants still work until you revoke them','Yes, all old consents are removed','Yes, but only after 30 days'],r:0,why:'Settings only decide future consent. Existing grants stay until you remove them.'}}
+];
+const PERMS=[['openid','Sign users in'],['profile','View basic profile'],['email','View email address'],['offline_access','Keep access to data you gave it access to'],['User.Read','Sign in and read user profile'],['Mail.Read','Read user mail'],['Files.Read.All','Read all files the user can access']];
+const QUILL=['openid','profile','email','offline_access','User.Read'];
+const CSN={none:'Do not allow user consent',verified:'Allow user consent for apps from verified publishers, for selected permissions (Recommended)',all:'Allow user consent for apps'};
+const APPS3=[{id:'raven',n:'Raven Calendar Sync',d:'Unverified publisher · consented by 12 users last spring · Mail.ReadWrite, offline_access'},{id:'hr',n:'Duskhold HR Portal',d:'Registered in Duskhold · User.Read · used by everyone'}];
+function startCon(){return {cs:'all',low:['openid','profile','email'],wf:false,rev:'you',apps:{raven:{en:true,rv:false},hr:{en:true,rv:false}}}}
+const WAVES3=[
+ {id:'A',name:'Lure letter',icon:'mail',how:'A letter to every inbox: "Your files are waiting in DuskDocs Viewer". The app is unverified and asks for Mail.Read, Files.Read.All and offline_access'},
+ {id:'B',name:'Old raven',icon:'feather',how:'Raven Calendar Sync, consented by 12 people last spring, starts copying their mail tonight'}
+];
+function evaluate3(){
+  const C=S.con;const waves=[];const checks=[];let lock=false;
+  const who={you:'you',maren:'Maren',both:'you and Maren'}[C.rev]||'you';
+  const wf=C.wf?` They sent an admin consent request instead, and ${who==='you and Maren'?'Maren':who} denied it.`:'';
+  waves.push(C.cs==='all'?{w:WAVES3[0],held:false,res:'broke',msg:'Users could consent to any app. Nine people clicked Accept, and DuskDocs can now read their mail and files.'}
+   :{w:WAVES3[0],held:true,res:'held',msg:(C.cs==='none'?'User consent is off, so nobody could accept DuskDocs.':'DuskDocs\' publisher isn\'t verified, so users couldn\'t consent to it.')+wf});
+  const rv=C.apps.raven;
+  waves.push(!rv.en||rv.rv?{w:WAVES3[1],held:true,res:'held',msg:!rv.en&&rv.rv?'You set sign-in to No and revoked its permissions. Raven got nothing.':!rv.en?'Sign-in is set to No, so Raven couldn\'t get new tokens for those users.':'Its permissions are revoked, so Raven\'s requests for mail were refused.'}
+   :{w:WAVES3[1],held:false,res:'broke',msg:'Tightening consent settings doesn\'t touch grants that already exist. Raven kept reading 12 mailboxes.'});
+  const hr=C.apps.hr;
+  if(!hr.en||hr.rv){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Duskhold HR Portal is your own app. Cutting it off stopped everyone from reaching their payslips.'})}
+  const canConsent=C.cs==='all'||(C.cs==='verified'&&QUILL.every(x=>C.low.includes(x)));
+  if(canConsent)checks.push({k:'held',t:'Served',m:'Staff could use Quill Signer, a verified app asking only for sign-in permissions, without waiting for an admin.'});
+  else if(C.wf)checks.push({k:'held',t:'Served',m:'Staff couldn\'t consent to Quill Signer themselves, so they asked through the admin consent workflow and '+(who==='you and Maren'?'Maren':who)+' approved it.'});
+  else{lock=true;checks.push({k:'broke',t:'Blocked work',m:'Staff couldn\'t use Quill Signer and had no way to ask for it. Turn on the admin consent workflow, or classify its sign-in permissions as low impact.'})}
+  const risky=C.low.filter(x=>x==='Mail.Read'||x==='Files.Read.All');
+  if(risky.length)checks.push({k:'warnr',t:'Risk',m:`${risky.join(' and ')} on the low impact list means any verified app can read that data without an admin.`});
+  return {waves,checks,win:waves.every(v=>v.held)&&!lock,lock};
+}
+function renderApps(p){
+  const C=S.con;
+  const ck=(id,on,label,small)=>`<label class="ck"><input type="checkbox" id="${id}" ${on?'checked':''}> <span>${label}${small?` <span style="color:var(--mute);font-size:13px">· ${small}</span>`:''}</span></label>`;
+  p.innerHTML=`<div class="kicker">Night 3 · Gatehouse console</div><div class="crumb">Microsoft Entra admin center › Entra ID › Enterprise apps</div><h2>Consent and permissions</h2>
+  <form class="form" id="cf" style="margin-top:14px">
+  <fieldset><legend>User consent settings</legend>${Object.entries(CSN).map(([k,n])=>`<label class="ck"><input type="radio" name="cs" value="${k}" ${C.cs===k?'checked':''}> ${n}</label>`).join('')}
+   <div class="sub" style="margin-top:8px">The portal also offers "Let Microsoft manage your consent settings". Duskhold keeps its own setting tonight.</div></fieldset>
+  <fieldset><legend>Permission classifications · Low impact</legend>${PERMS.map(([k,d])=>ck('pc-'+k,C.low.includes(k),`<code>${k}</code>`,d)).join('')}</fieldset>
+  <fieldset><legend>Admin consent settings</legend>${ck('wf',C.wf,'Users can request admin consent to apps they are unable to consent to')}
+   <div style="padding-left:24px;${C.wf?'':'display:none'}"><div class="sub">Reviewers</div><select id="rv" class="gsel">${Object.entries({you:'You (warden)',maren:'Maren',both:'Maren and you'}).map(([k,n])=>`<option value="${k}" ${C.rev===k?'selected':''}>${n}</option>`).join('')}</select></div></fieldset>
+  </form>
+  <h3 style="font-size:16px;margin:18px 0 6px;color:var(--ink)">All applications</h3>
+  <table class="pim"><thead><tr><th>Application</th><th>Enabled for users to sign-in?</th><th>Permissions</th></tr></thead><tbody>
+  ${APPS3.map(a=>`<tr><td>${a.n}<small>${a.d}</small></td><td><small class="mlab">Enabled for users to sign-in?</small><select data-a="${a.id}" aria-label="Enabled for users to sign-in for ${a.n}"><option value="yes" ${C.apps[a.id].en?'selected':''}>Yes</option><option value="no" ${C.apps[a.id].en?'':'selected'}>No</option></select></td><td><label class="ck"><input type="checkbox" data-rv="${a.id}" ${C.apps[a.id].rv?'checked':''}> Revoke</label></td></tr>`).join('')}
+  </tbody></table>
+  <div class="saved" id="saved"></div>
+  <div class="next" style="border-top:1px solid var(--line2);padding-top:16px;margin-top:12px"><button class="btn" id="hold">Hold the night</button></div>`;
+  const flash=()=>{const e=$('saved');e.textContent='Changes saved';clearTimeout(flash.t);flash.t=setTimeout(()=>e.textContent='',1400)};
+  const redraw=()=>{save();const y=$('pane').scrollTop;renderApps(p);$('pane').scrollTop=y;flash()};
+  p.querySelectorAll('input[name=cs]').forEach(r=>r.onchange=()=>{C.cs=r.value;redraw()});
+  PERMS.forEach(([k])=>$('pc-'+k).onchange=e=>{C.low=e.target.checked?[...new Set([...C.low,k])]:C.low.filter(x=>x!==k);save();flash()});
+  $('wf').onchange=e=>{C.wf=e.target.checked;redraw()};
+  $('rv').onchange=e=>{C.rev=e.target.value;save();flash()};
+  p.querySelectorAll('select[data-a]').forEach(x=>x.onchange=()=>{C.apps[x.dataset.a].en=x.value==='yes';save();flash()});
+  p.querySelectorAll('input[data-rv]').forEach(x=>x.onchange=()=>{C.apps[x.dataset.rv].rv=x.checked;save();flash()});
+  $('hold').onclick=siege;
+  wick('<b>Wick:</b> Two jobs tonight: decide who may say yes from now on, and deal with the app that already got a yes.');
+}
+function renderBrief3(p){
+  p.innerHTML=`<div class="kicker">Dusk · Night 3</div><h2>The scouts are back</h2>
+  <p>No passwords, no stolen sessions. Tonight's raiders want your people to invite them in.</p>
+  <div class="bands">${WAVES3.map(w=>`<div class="band"><b>${w.name}</b><span>${w.how}.</span></div>`).join('')}</div>
+  <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">Duskhold apps</h3>
+  <dl class="tenant"><dt>Consent</dt><dd>Anyone may accept any app, set by the last warden</dd><dt>Raven Calendar Sync</dt><dd>12 users consented last spring</dd><dt>HR Portal</dt><dd>Your own app, everyone uses it</dd><dt>Quill Signer</dt><dd>Verified app for signing letters. Staff will want it tomorrow</dd></dl>
+  <div class="next"><button class="btn" id="go">Open Enterprise apps</button></div>`;
+  $('go').onclick=()=>{S.stage='console';save();render()};
+  wick('<b>Wick:</b> Nobody breaks a lock tonight. They\'ll be handed the key.');
+}
+function renderReport3(p){
+  setNight(false);
+  const R=S.report;if(!R){S.stage='console';render();return}
+  const fol=['Check the audit and sign-in logs for Raven Calendar Sync to see whose mail it read.','In PowerShell, remove a delegated grant with Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId <id>.'];
+  const tag={held:'Held',broke:'Breached'};
+  p.innerHTML=`<div class="kicker">Morning after night 3</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are blocked':'The walls were breached'}</h2>
+  <p style="color:var(--mute)">${R.win?'Two more Gatehouse lanterns are lit: consent and app identity.':'Read why below, fix Enterprise apps and try the night again. Every wrong turn went to your oopsies.'}</p>
+  ${R.waves.map(v=>`<div class="res ${v.held?'held':'broke'}"><span class="tag">${tag[v.res]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
+  ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
+  <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
+  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
+  $('again').onclick=()=>{S.stage='console';save();render()};
+  if($('end'))$('end').onclick=()=>endPanel(p);
+  wick(R.win?'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.':'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.');
+}
 const startPol=()=>[{id:'p1',name:'Gate - MFA for garrison',inc:'groups',incG:['garrison'],excG:[],res:'all',ca:false,apps:[],grant:'grant',ctrl:['mfa'],mode:'all',state:'report'}];
 
 let S;
 const KEY='controle.demo.v1';
-const fresh=()=>({ch:1,pim:startPim(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
+const fresh=()=>({ch:1,pim:startPim(),con:startCon(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
 try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
-if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();
+if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();if(!S.con)S.con=startCon();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 
 const $=id=>document.getElementById(id);
@@ -361,6 +462,8 @@ function drawWards(){
 }
 const RI={A:'road',B:'river',C:'door'};
 IC.key='<circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M16 6l2 2M14 8l2 2"/>';
+IC.mail='<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>';
+IC.feather='<path d="M20 4C12 4 6 9 5 17l-1 3"/><path d="M20 4c0 7-4 12-11 13M9 12h6"/>';
 IC.mask='<path d="M3 9c3-2 6-2 9 0 3-2 6-2 9 0-.5 5-3 7-5.5 7-1.6 0-2.6-1-3.5-2-.9 1-1.9 2-3.5 2C5 16 3.5 14 3 9z"/><path d="M7 11h2M15 11h2"/>';
 function drawRoads(res){
   const show=['console','siege','report'].includes(S.stage);
@@ -384,7 +487,7 @@ function render(){
     p.innerHTML=`<div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel on the left to read its skills.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
-    <p style="color:var(--mute);font-size:15px">This demo covers two days and two nights at the Gatehouse: Conditional Access and MFA, then Privileged Identity Management. Duskhold is a fictional tenant.</p>
+    <p style="color:var(--mute);font-size:15px">This demo covers three days and nights at the Gatehouse: Conditional Access and MFA, Privileged Identity Management, then consent and app permissions. Duskhold is a fictional tenant.</p>
     <div class="next"><button class="btn" id="go">Start day 1</button></div>`;
     $('go').onclick=()=>{S.ch=1;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;save();render()};
     wick('<b>Wick:</b> I light the lanterns. You keep the raiders out. Unlit lanterns are skills you haven\'t met yet.');
@@ -392,7 +495,7 @@ function render(){
   }
   if(S.stage==='lesson'){
     setNight(false);
-    const LL=S.ch===2?L2:L;const l=LL[S.li];
+    const LL=S.ch===3?L3:S.ch===2?L2:L;const l=LL[S.li];
     p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · Gatehouse</div>
     <div class="dots">${LL.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
     <h2>${l.t}</h2><div class="builds">${l.b}</div>
@@ -417,15 +520,17 @@ function render(){
     p.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(S.temper)return;const i=+b.dataset.i;
       if(i===l.c.r){S.temper=true;save();render();wick('<b>Wick:</b> '+(S.li===LL.length-1?'That\'s the day done. The scouts are back.':'Good. That one holds.'))}
       else{b.classList.add('wrong');addOops(`Lesson ${S.li+1}: ${l.t}`,l.c.o[i],l.c.o[l.c.r]);save();$('oopsN').textContent=S.oops.length;$('tfb').className='fb bad';$('tfb').textContent='Not that one. Read the facts above again and try another.'}});
-    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';(S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
+    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';(S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
     if($('back'))$('back').onclick=()=>{S.li--;S.strike=S.temper=true;save();render()};
     const W1=['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'];
     const W2=['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'];
-    if(!S.strike&&!S.temper)wick((S.ch===2?W2:W1)[S.li]);
+    const W3=['<b>Wick:</b> New night, new trick. Nobody guesses or steals anything tonight.','<b>Wick:</b> Delegated is the user\'s reach. Application is the whole castle.','<b>Wick:</b> Verified publisher, selected permissions. Two filters, both matter.','<b>Wick:</b> The low impact list is a promise: anything on it, users may hand out.','<b>Wick:</b> Last one today. Closing the door doesn\'t evict whoever is already inside.'];
+    if(!S.strike&&!S.temper)wick((S.ch===3?W3:S.ch===2?W2:W1)[S.li]);
     return;
   }
   if(S.stage==='brief'){
     setNight(false);resetDoors();
+    if(S.ch===3){renderBrief3(p);return}
     if(S.ch===2){renderBrief2(p);return}
     p.innerHTML=`<div class="kicker">Dusk · Night ${S.ch}</div><h2>The scouts are back</h2>
     <p>Three groups of raiders are moving on Duskhold. They carry lists of common passwords and will spray them at nightfall.</p>
@@ -440,6 +545,7 @@ function render(){
   }
   if(S.stage==='console'){
     setNight(true);resetDoors();
+    if(S.ch===3){renderApps(p);return}
     if(S.ch===2){renderPim(p);return}
     if(S.edit){renderEditor(p);return}
     p.innerHTML=`<div class="kicker">Night ${S.ch} · Gatehouse console</div><div class="crumb">Microsoft Entra admin center › Conditional Access › Policies</div><h2>Policies</h2>
@@ -452,7 +558,7 @@ function render(){
     wick('<b>Wick:</b> Night\'s here. Nothing is enforced until a policy says <b>On</b>.');
     return;
   }
-  if(S.stage==='report'){if(S.ch===2)renderReport2(p);else renderReport(p);return}
+  if(S.stage==='report'){if(S.ch===3)renderReport3(p);else if(S.ch===2)renderReport2(p);else renderReport(p);return}
 }
 
 function summary(x){
@@ -544,15 +650,16 @@ function evaluate(){
 }
 
 function siege(){
-  const R=S.ch===2?evaluate2():evaluate();if(S.ch===1)R.waves.forEach(v=>v.res=v.held?'held':'broke');S.report=R;S.stage='siege';save();
+  const R=S.ch===3?evaluate3():S.ch===2?evaluate2():evaluate();if(S.ch===1)R.waves.forEach(v=>v.res=v.held?'held':'broke');S.report=R;S.stage='siege';save();
   $('phase').textContent=phaseOf('siege');
-  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${S.ch===2?'role assignments':'policies'} decide what happens now.</p>`;
+  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${S.ch===3?'consent settings':S.ch===2?'role assignments':'policies'} decide what happens now.</p>`;
   wick('<b>Wick:</b> Steady. Your policies are doing the work now, not you.');
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const finish=()=>{S.stage='report';
-    if(R.win){(S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
-    if(S.ch===2){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 2: ${v.w.name}`,v.msg,'Eligible Global Administrator with approval, smallest role for daily work'));R.checks.forEach(c=>addOops(`Night 2: ${c.t}`,c.m,'See the morning report'))}
+    if(R.win){(S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
+    if(S.ch===3){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 3: ${v.w.name}`,v.msg,'Verified publishers only, sign-in permissions low impact, old grants revoked'));R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night 3: ${c.t}`,c.m,'See the morning report'))}
+    else if(S.ch===2){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 2: ${v.w.name}`,v.msg,'Eligible Global Administrator with approval, smallest role for daily work'));R.checks.forEach(c=>addOops(`Night 2: ${c.t}`,c.m,'See the morning report'))}
     else if(!R.win||R.eaIn){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 1: ${v.w.name}`,v.msg,'Every user covered by an MFA policy that is On'));if(R.eaIn)addOops(`Night 1: emergency access`,'Emergency access accounts inside a policy','Exclude them from every policy');if(R.lock)addOops(`Night 1: lockout`,'Own users locked out','Only controls your users can meet')}
     save();render();};
   drawRoads(null);
@@ -596,13 +703,13 @@ function renderReport2(p){
   ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
   <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
   <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">Start day 3</button>':''}</div>`;
   $('again').onclick=()=>{S.stage='console';save();render()};
-  if($('end'))$('end').onclick=()=>endPanel(p);
+  if($('end'))$('end').onclick=()=>{S.ch=3;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;S.report=null;save();render();$('pane').scrollTop=0};
   wick(R.win?'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.':'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.');
 }
 function endPanel(p){p.innerHTML=`<div class="kicker">End of the demo</div><h2>The rest of the citadel</h2>
-    <ul class="facts"><li><b>Gatehouse</b>: app registrations, consent and managed identities. Raider: a malicious consent request.</li><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
+    <ul class="facts"><li><b>Gatehouse</b>: managed identities, the last Gatehouse lantern.</li><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
     <div class="next"><button class="ghost" id="bk" type="button">Back to the report</button></div>`;$('bk').onclick=()=>render();wick(`<b>Wick:</b> ${SK.length-S.lit.length} lanterns still unlit. One night at a time.`)}
 function renderReport(p){
   setNight(false);

@@ -26,7 +26,8 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 - [x] Big drawn citadel replaced by six icon cards with lantern dots, and three road rows for the siege
 - [ ] Optional painted backdrop (ComfyUI, see ART.md) once she wants one
 - [x] Day 2 and night 2: PIM (eligible vs active, approval, least privilege, emergency keys) against stolen sessions. Outcomes: held, contained, breached
-- [ ] Next nights: consent phishing and app registrations (Gatehouse), Key Vault leaked secret (Vault)
+- [x] Day 3 and night 3: consent phishing, delegated vs application, user consent settings, permission classifications, admin consent workflow, old grants
+- [ ] Next: day 4 managed identities (last Gatehouse lantern), then the Vault (Key Vault, leaked secret)
 - [ ] Into the Workshop, oopsies into Pockle
 
 MERGE: WAIT (goes live when Kaatje says "merge Controle")
