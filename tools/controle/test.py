@@ -88,11 +88,47 @@ def night3(pg,tag):
     assert 'citadel held' in pg.inner_text('#pane')
     assert pg.locator('#wards .dot.lit').count()==5
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-win.png')
-    pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
+    assert pg.inner_text('#end')=='Start day 4'
     if tag=='1440':
         pg.click('#again');pg.uncheck('#pc-User\\.Read');pg.check('#wf');pg.check('#pc-Mail\\.Read');pg.select_option('select[data-a="hr"]','no')
         hold(pg);r=results(pg);print('n3 mistakes',r);assert 'Blocked work' in r and 'Risk' in r and 'Served' in r,r
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-mistakes.png')
+
+CH4={"ch":4,"wing":"gate","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"studied":["ca","mfa","pim","consent","apps"],"lit":["ca","mfa","pim","consent","apps"],"oops":[],"pol":[],"edit":None,"night":4,"report":None}
+def night4(pg,tag):
+    import json
+    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH4));pg.reload()
+    for i,ans in enumerate(['managed identity','System-assigned','Identity','Storage Blob Data Reader','container']):
+        pg.fill('#si',ans);pg.click('#sf button');assert 'Forged' in pg.inner_text('#strikeCard'),('n4 strike',i)
+        pg.click('.opt[data-i="0"]')
+        if i==3: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-lesson.png')
+        pg.click('#nx')
+    assert 'scouts are back' in pg.inner_text('#pane')
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-brief.png')
+    pg.click('#go');pg.wait_for_timeout(200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-console.png')
+    hold(pg);r=results(pg);print(tag,'n4 start',r);assert r==['Breached','Breached','Too much'],r
+    pg.click('#again');pg.check('#m-del')
+    hold(pg);r=results(pg);print(tag,'n4 secret deleted only',r);assert r==['Held','Held','Blocked work'],r
+    pg.click('#again');pg.check('input[name=auth][value=user]')
+    hold(pg);r=results(pg);print(tag,'n4 ua not attached',r);assert r==['Held','Held','Blocked work'],r
+    pg.click('#again');pg.check('#m-ua');pg.select_option('#m-role','owner')
+    hold(pg);r=results(pg);print(tag,'n4 owner',r);assert r==['Held','Breached','Blocked work'],r
+    pg.click('#again');pg.select_option('#m-role','sbdr');pg.select_option('#m-scope','acct')
+    hold(pg);r=results(pg);print(tag,'n4 account scope',r);assert r==['Held','Breached'],r
+    pg.click('#again');pg.select_option('#m-scope','cont')
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-console-fixed.png')
+    hold(pg);r=results(pg);print(tag,'n4 win',r);assert r==['Held','Contained'],r
+    assert 'citadel held' in pg.inner_text('#pane')
+    assert pg.locator('#wards .dot.lit').count()==6
+    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-win.png')
+    pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
+    if tag=='1440':
+        pg.click('#again');pg.check('input[name=auth][value=sys]');pg.uncheck('#m-del')
+        hold(pg);r=results(pg);print('n4 sys off',r);assert 'Blocked work' in r and 'Open door' in r,r
+        pg.click('#again');pg.select_option('#m-sys','on')
+        hold(pg);r=results(pg);print('n4 sys on, secret kept',r);assert r[:2]==['Contained','Contained'] and 'Next month' in r and 'Open door' in r,r
+        assert 'leaked secret still works' in pg.inner_text('#pane')
+        pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-warn.png')
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
     for tag,(w,h) in {'1440':(1440,900),'1280':(1280,800),'1024':(1024,768),'390':(390,844)}.items():
@@ -145,6 +181,7 @@ with sync_playwright() as p:
             pg.click('#oopsBtn');pg.wait_for_timeout(300);pg.screenshot(path=f'/tmp/controle-shots/{tag}-oops.png')
         night2(pg,tag)
         night3(pg,tag)
+        night4(pg,tag)
         sw=pg.evaluate('document.documentElement.scrollWidth');assert sw<=w,(tag,'overflow',sw)
         pg.close()
     b.close()

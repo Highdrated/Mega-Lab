@@ -196,9 +196,9 @@ const SK=[
  {w:'gate',d:1,n:'Configure authentication methods, including MFA and passwordless',id:'mfa'},
  {w:'gate',d:1,n:'Configure identity for applications: enterprise apps and app registrations',id:'apps'},
  {w:'gate',d:1,n:'Manage OAuth permission grants and consent settings',id:'consent'},
- {w:'gate',d:1,n:'Configure managed identities for Azure resources'},
+ {w:'gate',d:1,n:'Configure managed identities for Azure resources',id:'mi'},
  {w:'vault',d:1,n:'Deploy Key Vault'},{w:'vault',d:1,n:'Configure Key Vault settings'},{w:'vault',d:1,n:'Configure access to Key Vault'},{w:'vault',d:1,n:'Configure Key Vault firewall settings'},{w:'vault',d:1,n:'Manage keys, secrets and certificates'},{w:'vault',d:1,n:'Scan for secrets with Defender CSPM'},{w:'vault',d:1,n:'Implement Defender for Key Vault'},
- {w:'keep',d:1,n:'Security controls with Azure Policy (built-in and custom)'},{w:'keep',d:1,n:'Evaluate regulatory compliance in Defender for Cloud'},{w:'keep',d:1,n:'Security standards and recommendations in Defender for Cloud'},{w:'keep',d:1,n:'Implement resource locks'},{w:'keep',d:1,n:'Manage Azure built-in role assignments'},{w:'keep',d:1,n:'Manage custom Azure and Entra roles'},{w:'keep',d:1,n:'Remediate overprivileged access with Azure RBAC'},{w:'keep',d:1,n:'Azure Backup security features'},{w:'keep',d:1,n:'Security controls with infrastructure as code'},
+ {w:'keep',d:1,n:'Security controls with Azure Policy (built-in and custom)'},{w:'keep',d:1,n:'Evaluate regulatory compliance in Defender for Cloud'},{w:'keep',d:1,n:'Security standards and recommendations in Defender for Cloud'},{w:'keep',d:1,n:'Implement resource locks'},{w:'keep',d:1,n:'Manage Azure built-in role assignments',id:'rbac'},{w:'keep',d:1,n:'Manage custom Azure and Entra roles'},{w:'keep',d:1,n:'Remediate overprivileged access with Azure RBAC'},{w:'keep',d:1,n:'Azure Backup security features'},{w:'keep',d:1,n:'Security controls with infrastructure as code'},
  {w:'walls',d:2,n:'Secure storage accounts'},{w:'walls',d:2,n:'Azure Storage firewall rules'},{w:'walls',d:2,n:'Defender for Storage threat protection'},{w:'walls',d:2,n:'Manage storage access and access policies'},
  {w:'walls',d:2,n:'Platform-level security in Azure SQL'},{w:'walls',d:2,n:'Auditing for Azure SQL Database and Managed Instance'},{w:'walls',d:2,n:'Defender for Databases'},
  {w:'walls',d:2,n:'NSGs and application security groups'},{w:'walls',d:2,n:'Network access policies with Azure Virtual Network Manager'},{w:'walls',d:2,n:'Secure an Azure Virtual WAN'},{w:'walls',d:2,n:'Secure VPN connections'},{w:'walls',d:2,n:'Microsoft Entra Private Access'},{w:'walls',d:2,n:'Private endpoints for PaaS resources'},{w:'walls',d:2,n:'Azure Private Link services'},{w:'walls',d:2,n:'Azure Firewall'},{w:'walls',d:2,n:'Effective security rules with Network Watcher'},
@@ -273,7 +273,7 @@ const WAVES2=[
  {id:'A',name:'Stolen seal',icon:'key',who:'maren',how:'Maren\'s signed-in session, copied from her laptop'},
  {id:'B',name:'Fake sign-in page',icon:'mask',who:'tobin',how:'Tobin\'s session, caught by a lookalike sign-in page'}
 ];
-const wavesNow=()=>S.ch===3?WAVES3:S.ch===2?WAVES2:WAVES;
+const wavesNow=()=>S.ch===4?WAVES4:S.ch===3?WAVES3:S.ch===2?WAVES2:WAVES;
 function steal(pid){
   const a=S.pim.asg[pid],gs=S.pim.gs,nm=PEOPLE.find(x=>x.id===pid).n;
   if(a.r==='none')return {res:'held',msg:`${nm} holds no admin role, so the stolen session opens nothing.`};
@@ -419,18 +419,121 @@ function renderReport3(p){
   ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
   <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
   <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">Start day 4</button>':''}</div>`;
+  $('again').onclick=()=>{S.stage='console';save();render()};
+  if($('end'))$('end').onclick=()=>{S.ch=4;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;S.report=null;save();render();$('pane').scrollTop=0};
+  wick(R.win?'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.':'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.');
+}
+
+const L4=[
+ {t:'Secrets in pockets',b:'Builds on: Delegated or application.',f:['An app registration can sign in with a <b>client secret</b>: a password for the app, often pasted into a config file.','Config files end up in repos, backups and screenshots. Whoever holds the secret signs in as the app.','A <b>managed identity</b> gives an Azure resource its own identity. Azure handles the credential, so your code never holds a secret.'],
+  s:{q:'Which Azure feature gives a resource an identity without any secret in your code?',a:['managed identity','managed identities','a managed identity'],show:'managed identity'},
+  c:{q:'What does a raider need to sign in as an app that uses a client secret?',o:['Only the secret and the app\'s IDs','The app owner\'s MFA','Access to the VM'],r:0,why:'A client secret works from anywhere. That\'s what makes a leaked one so dangerous.'}},
+ {t:'Two kinds',b:'Builds on: Secrets in pockets.',f:['A <b>system-assigned</b> identity is switched on for one resource and deleted together with it. It can\'t be shared.','A <b>user-assigned</b> identity is its own Azure resource. You can attach it to several resources, and it lives on when they are deleted.','Several VMs that need the same access: one user-assigned identity. One resource with its own permissions: system-assigned.'],
+  s:{q:'Which type is deleted together with its resource?',a:['system-assigned','system assigned','system-assigned managed identity'],show:'system-assigned'},
+  c:{q:'Three VMs need the same access to one storage account. Which fits best?',o:['One user-assigned identity on all three','Three system-assigned identities sharing a secret','A client secret on each VM'],r:0,why:'One user-assigned identity means one set of role assignments for all three VMs.'}},
+ {t:'Switching it on',b:'Builds on: Two kinds.',f:['On a VM, managed identities live on the <b>Identity</b> page: set System assigned to <b>On</b>, or add a user-assigned identity.','Code on the VM asks a local Azure endpoint for a token. No password is stored on the machine.','An identity can do nothing until you give it a role. That\'s the next lesson.'],
+  s:{q:'Which page on a VM holds the managed identity settings?',a:['identity','the identity page'],show:'Identity'},
+  c:{q:'The app uses the VM\'s system-assigned identity, but Status is Off. What happens?',o:['The app can\'t get a token and fails','It falls back to a client secret','Azure turns it on automatically'],r:0,why:'Off means there is no identity to ask a token for.'}},
+ {t:'Control or data',b:'Builds on: Switching it on.',f:['<b>Owner</b> and <b>Contributor</b> manage resources: the control plane. They have no data actions, so with Entra sign-in they can\'t read a single blob.','They can list the storage account keys, though, which opens all the data another way. That\'s why they\'re dangerous to hand out.','Reading blobs with Entra sign-in needs a data role, such as <b>Storage Blob Data Reader</b>.'],
+  s:{q:'Which built-in role lets an identity read blobs and nothing more?',a:['storage blob data reader'],show:'Storage Blob Data Reader'},
+  c:{q:'An app signs in with Entra and holds Contributor on the storage account. It tries to read a blob. What happens?',o:['Access is denied, Contributor has no data actions','It reads the blob, Contributor covers everything','It can only read blobs in the portal'],r:0,why:'Control-plane roles manage the account. Data roles read what\'s inside.'}},
+ {t:'Smallest scope',b:'Builds on: Control or data.',f:['Scopes run from management group to subscription, resource group and resource. A role assignment flows down to everything below it.','For blobs you can go all the way down to a single <b>container</b>.','A leaked secret stays valid until you delete it under App registrations, Certificates and secrets. Removing it from the config file isn\'t enough.'],
+  s:{q:'What\'s the smallest scope you can give a blob data role?',a:['container','a container','a single container','the container'],show:'container'},
+  c:{q:'You removed a leaked client secret from the config file. Is it dead?',o:['No, it works until you delete it in the app registration','Yes, the app stops using it','Yes, after the next restart'],r:0,why:'The secret lives in Entra, not in your file. Delete it there.'}}
+];
+const MROLES={owner:'Owner',contrib:'Contributor',sbdc:'Storage Blob Data Contributor',sbdr:'Storage Blob Data Reader'};
+const MSCOPES={sub:'Subscription Duskhold-Prod',rg:'Resource group rg-ledger',acct:'Storage account duskledger',cont:'Container invoices'};
+const MAUTH={secret:'Client secret of app registration ledger-app (in appsettings.json)',sys:'System-assigned managed identity of ledger-vm',user:'User-assigned managed identity id-ledger'};
+function startMi(){return {auth:'secret',sysOn:false,uaOn:false,role:'sbdc',scope:'sub',secDel:false}}
+const WAVES4=[
+ {id:'A',name:'Leaked secret',icon:'file',how:'appsettings.json, with the ledger-app client secret in it, turned up in a public repo'},
+ {id:'B',name:'Poisoned plugin',icon:'bug',how:'A bad plugin lets a raider run code on ledger-vm and borrow whatever identity the ledger app uses'}
+];
+function evaluate4(){
+  const M=S.mi;const checks=[];let lock=false;
+  const idOk=M.auth==='secret'?!M.secDel:M.auth==='sys'?M.sysOn:M.uaOn;
+  const canRead=M.role==='sbdc'||M.role==='sbdr';
+  const appWorks=idOk&&canRead;
+  const R=MROLES[M.role],SC=MSCOPES[M.scope];
+  let a;
+  if(M.secDel)a={res:'held',msg:'You deleted the secret in the app registration. The copy in the leaked file is useless.'};
+  else if(M.auth==='secret')a={res:'broke',msg:`The leaked secret still works. The raider signed in as ledger-app from his own laptop and got ${R} on ${SC}.`};
+  else a={res:'contained',msg:'The secret still signs in as ledger-app, but that app no longer holds a role. Delete the secret anyway: the next role someone gives ledger-app is the raider\'s too.'};
+  let b;
+  if(!idOk)b={res:'held',msg:'The ledger app\'s identity isn\'t working, so there was nothing to borrow.'};
+  else if(M.role==='owner'||M.role==='contrib')b={res:'broke',msg:`${R} on ${SC} let the raider change or delete everything there, and list the storage keys to read all the data.`};
+  else if(M.scope==='sub'||M.scope==='rg')b={res:'broke',msg:`${R} on ${SC} covers every storage account in it. The raider ${M.role==='sbdr'?'read':'read, changed and deleted'} blobs far beyond the invoices.`};
+  else if(M.scope==='acct')b={res:'broke',msg:`${R} on the whole storage account includes the payroll container. The raider ${M.role==='sbdr'?'read':'read and changed'} everyone's pay slips.`};
+  else b={res:'contained',msg:`${R} on the invoices container only. The raider ${M.role==='sbdr'?'could read':'could read and change'} the invoices the app uses, and nothing else.`};
+  const waves=[{w:WAVES4[0],held:a.res!=='broke',...a},{w:WAVES4[1],held:b.res!=='broke',...b}];
+  if(!appWorks){lock=true;checks.push({k:'broke',t:'Blocked work',m:!idOk?(M.auth==='secret'?'You deleted the secret the app still signs in with. Switch the app to a managed identity first.':M.auth==='sys'?'The app uses the system-assigned identity, but its Status on ledger-vm is Off.':'id-ledger isn\'t attached to ledger-vm, so the app can\'t use it.'):`${R} is a control-plane role. It has no data actions, so the app couldn\'t read invoices with Entra sign-in. Use a Storage Blob Data role.`})}
+  if(M.role==='sbdc'&&appWorks)checks.push({k:'warnr',t:'Too much',m:'The app only reads invoices. Storage Blob Data Reader is enough, and a raider couldn\'t change anything.'});
+  if(M.auth==='sys'&&appWorks)checks.push({k:'warnr',t:'Next month',m:'ledger-vm2 joins next month and needs the same access. A system-assigned identity can\'t be shared, so one user-assigned identity would cover both VMs.'});
+  const open=a.res==='contained';
+  if(open)checks.push({k:'broke',t:'Open door',m:'A leaked secret that still works is a loaded crossbow left by the gate. Delete it in Certificates and secrets.'});
+  return {waves,checks,win:waves.every(v=>v.held)&&!lock&&!open,lock,open};
+}
+function renderMi(p){
+  const M=S.mi;
+  const opt=(o,v)=>Object.entries(o).map(([k,n])=>`<option value="${k}" ${k===v?'selected':''}>${n}</option>`).join('');
+  p.innerHTML=`<div class="kicker">Night 4 · Gatehouse console</div><div class="crumb">Azure portal › rg-ledger › ledger-vm</div><h2>The ledger app's identity</h2>
+  <form class="form" id="mf" style="margin-top:14px">
+  <fieldset><legend>ledger-vm › Identity</legend>
+   <label class="ck">System assigned · Status <select id="m-sys" class="gsel" style="margin-left:8px"><option value="off" ${M.sysOn?'':'selected'}>Off</option><option value="on" ${M.sysOn?'selected':''}>On</option></select></label>
+   <label class="ck"><input type="checkbox" id="m-ua" ${M.uaOn?'checked':''}> User assigned: id-ledger is added to this VM</label></fieldset>
+  <fieldset><legend>How the ledger app signs in</legend>${Object.entries(MAUTH).map(([k,n])=>`<label class="ck"><input type="radio" name="auth" value="${k}" ${M.auth===k?'checked':''}> ${n}</label>`).join('')}</fieldset>
+  <fieldset><legend>Access control (IAM) · the ledger identity's role</legend>
+   <div class="sub">Role</div><select id="m-role" class="gsel">${opt(MROLES,M.role)}</select>
+   <div class="sub" style="margin-top:8px">Scope</div><select id="m-scope" class="gsel">${opt(MSCOPES,M.scope)}</select></fieldset>
+  <fieldset><legend>App registrations › ledger-app › Certificates and secrets</legend>
+   <label class="ck"><input type="checkbox" id="m-del" ${M.secDel?'checked':''}> Delete client secret "appsettings-2025" (expires March 2027)</label></fieldset>
+  </form>
+  <div class="saved" id="saved"></div>
+  <div class="next" style="border-top:1px solid var(--line2);padding-top:16px;margin-top:12px"><button class="btn" id="hold">Hold the night</button></div>`;
+  const flash=()=>{const e=$('saved');e.textContent='Changes saved';clearTimeout(flash.t);flash.t=setTimeout(()=>e.textContent='',1400)};
+  $('m-sys').onchange=e=>{M.sysOn=e.target.value==='on';save();flash()};
+  $('m-ua').onchange=e=>{M.uaOn=e.target.checked;save();flash()};
+  p.querySelectorAll('input[name=auth]').forEach(r=>r.onchange=()=>{M.auth=r.value;save();flash()});
+  $('m-role').onchange=e=>{M.role=e.target.value;save();flash()};
+  $('m-scope').onchange=e=>{M.scope=e.target.value;save();flash()};
+  $('m-del').onchange=e=>{M.secDel=e.target.checked;save();flash()};
+  $('hold').onclick=siege;
+  wick('<b>Wick:</b> Three questions, in order: who does the app sign in as, what can that identity do, and where?');
+}
+function renderBrief4(p){
+  p.innerHTML=`<div class="kicker">Dusk · Night 4</div><h2>The scouts are back</h2>
+  <p>Tonight's raiders aren't after people. They're after the ledger app and whatever it is allowed to touch.</p>
+  <div class="bands">${WAVES4.map(w=>`<div class="band"><b>${w.name}</b><span>${w.how}.</span></div>`).join('')}</div>
+  <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">The ledger app</h3>
+  <dl class="tenant"><dt>Runs on</dt><dd>ledger-vm, an Azure VM in rg-ledger</dd><dt>Reads</dt><dd>The invoices container in storage account duskledger. Payroll lives in the same account</dd><dt>Signs in with</dt><dd>A client secret of app registration ledger-app, stored in appsettings.json</dd><dt>Role</dt><dd>Storage Blob Data Contributor on the whole subscription</dd><dt>Next month</dt><dd>ledger-vm2 joins and needs the same access</dd><dt>Ready</dt><dd>A user-assigned identity, id-ledger, already exists in rg-ledger</dd></dl>
+  <div class="next"><button class="btn" id="go">Open the Azure portal</button></div>`;
+  $('go').onclick=()=>{S.stage='console';save();render()};
+  wick('<b>Wick:</b> An app with too much access is a raider\'s favourite door. It never gets tired and nobody checks its MFA.');
+}
+function renderReport4(p){
+  setNight(false);
+  const R=S.report;if(!R){S.stage='console';render();return}
+  const fol=['Check the sign-in logs for ledger-app to see what the leaked secret was used for.','Remove appsettings.json from the repo history too. The deleted secret is useless, but nobody should find it.','In PowerShell: New-AzRoleAssignment -ObjectId <identity id> -RoleDefinitionName "Storage Blob Data Reader" -Scope <container scope>.'];
+  const tag={held:'Held',contained:'Contained',broke:'Breached'};
+  p.innerHTML=`<div class="kicker">Morning after night 4</div><h2>${R.win?'The citadel held':!R.waves.every(v=>v.held)?'The walls were breached':R.lock?'Held, but the ledger app is down':'Held, but the leaked secret still works'}</h2>
+  <p style="color:var(--mute)">${R.win?'The last Gatehouse lantern is lit. The whole Gatehouse is yours.':'Read why below, fix the portal and try the night again. Every wrong turn went to your oopsies.'}</p>
+  ${R.waves.map(v=>`<div class="res ${v.res==='broke'?'broke':v.res==='contained'?'contained':'held'}"><span class="tag">${tag[v.res]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
+  ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
+  <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
+  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the portal'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
   $('again').onclick=()=>{S.stage='console';save();render()};
   if($('end'))$('end').onclick=()=>endPanel(p);
-  wick(R.win?'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.':'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.');
+  wick(R.win?'<b>Wick:</b> Six of six. The Gatehouse burns bright tonight.':'<b>Wick:</b> Ask what the app needs, not what\'s easiest to give it.');
 }
 const startPol=()=>[{id:'p1',name:'Gate - MFA for garrison',inc:'groups',incG:['garrison'],excG:[],res:'all',ca:false,apps:[],grant:'grant',ctrl:['mfa'],mode:'all',state:'report'}];
 
 let S;
 const KEY='controle.demo.v1';
-const fresh=()=>({ch:1,pim:startPim(),con:startCon(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
+const fresh=()=>({ch:1,pim:startPim(),con:startCon(),mi:startMi(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
 try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
-if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();if(!S.con)S.con=startCon();
+if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();if(!S.con)S.con=startCon();if(!S.mi)S.mi=startMi();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 
 const $=id=>document.getElementById(id);
@@ -462,6 +565,8 @@ function drawWards(){
 }
 const RI={A:'road',B:'river',C:'door'};
 IC.key='<circle cx="8" cy="14" r="4"/><path d="M11 11l9-9M16 6l2 2M14 8l2 2"/>';
+IC.file='<path d="M6 3h8l4 4v14H6z"/><path d="M14 3v4h4M9 12h6M9 16h4"/>';
+IC.bug='<rect x="8" y="7" width="8" height="12" rx="4"/><path d="M12 7V5M9 4l1.5 2M15 4l-1.5 2M4 11h4M16 11h4M4 16h4M16 16h4"/>';
 IC.mail='<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 7l9 6 9-6"/>';
 IC.feather='<path d="M20 4C12 4 6 9 5 17l-1 3"/><path d="M20 4c0 7-4 12-11 13M9 12h6"/>';
 IC.mask='<path d="M3 9c3-2 6-2 9 0 3-2 6-2 9 0-.5 5-3 7-5.5 7-1.6 0-2.6-1-3.5-2-.9 1-1.9 2-3.5 2C5 16 3.5 14 3 9z"/><path d="M7 11h2M15 11h2"/>';
@@ -487,7 +592,7 @@ function render(){
     p.innerHTML=`<div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel on the left to read its skills.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
-    <p style="color:var(--mute);font-size:15px">This demo covers three days and nights at the Gatehouse: Conditional Access and MFA, Privileged Identity Management, then consent and app permissions. Duskhold is a fictional tenant.</p>
+    <p style="color:var(--mute);font-size:15px">This demo covers four days and nights at the Gatehouse: Conditional Access and MFA, Privileged Identity Management, consent and app permissions, then managed identities. Duskhold is a fictional tenant.</p>
     <div class="next"><button class="btn" id="go">Start day 1</button></div>`;
     $('go').onclick=()=>{S.ch=1;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;save();render()};
     wick('<b>Wick:</b> I light the lanterns. You keep the raiders out. Unlit lanterns are skills you haven\'t met yet.');
@@ -495,7 +600,7 @@ function render(){
   }
   if(S.stage==='lesson'){
     setNight(false);
-    const LL=S.ch===3?L3:S.ch===2?L2:L;const l=LL[S.li];
+    const LL=S.ch===4?L4:S.ch===3?L3:S.ch===2?L2:L;const l=LL[S.li];
     p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · Gatehouse</div>
     <div class="dots">${LL.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
     <h2>${l.t}</h2><div class="builds">${l.b}</div>
@@ -520,16 +625,18 @@ function render(){
     p.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(S.temper)return;const i=+b.dataset.i;
       if(i===l.c.r){S.temper=true;save();render();wick('<b>Wick:</b> '+(S.li===LL.length-1?'That\'s the day done. The scouts are back.':'Good. That one holds.'))}
       else{b.classList.add('wrong');addOops(`Lesson ${S.li+1}: ${l.t}`,l.c.o[i],l.c.o[l.c.r]);save();$('oopsN').textContent=S.oops.length;$('tfb').className='fb bad';$('tfb').textContent='Not that one. Read the facts above again and try another.'}});
-    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';(S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
+    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';(S.ch===4?['mi','rbac']:S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
     if($('back'))$('back').onclick=()=>{S.li--;S.strike=S.temper=true;save();render()};
     const W1=['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'];
     const W2=['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'];
     const W3=['<b>Wick:</b> New night, new trick. Nobody guesses or steals anything tonight.','<b>Wick:</b> Delegated is the user\'s reach. Application is the whole castle.','<b>Wick:</b> Verified publisher, selected permissions. Two filters, both matter.','<b>Wick:</b> The low impact list is a promise: anything on it, users may hand out.','<b>Wick:</b> Last one today. Closing the door doesn\'t evict whoever is already inside.'];
-    if(!S.strike&&!S.temper)wick((S.ch===3?W3:S.ch===2?W2:W1)[S.li]);
+    const W4=['<b>Wick:</b> Tonight the target isn\'t a person. It\'s an app with a password in its pocket.','<b>Wick:</b> One resource, one identity: system. Shared across many: user-assigned.','<b>Wick:</b> An identity with no role is a key to an empty room.','<b>Wick:</b> Managing the vault and opening the vault are two different keys.','<b>Wick:</b> Last one today. Hand out keys to one room, not the whole castle.'];
+    if(!S.strike&&!S.temper)wick((S.ch===4?W4:S.ch===3?W3:S.ch===2?W2:W1)[S.li]);
     return;
   }
   if(S.stage==='brief'){
     setNight(false);resetDoors();
+    if(S.ch===4){renderBrief4(p);return}
     if(S.ch===3){renderBrief3(p);return}
     if(S.ch===2){renderBrief2(p);return}
     p.innerHTML=`<div class="kicker">Dusk · Night ${S.ch}</div><h2>The scouts are back</h2>
@@ -545,6 +652,7 @@ function render(){
   }
   if(S.stage==='console'){
     setNight(true);resetDoors();
+    if(S.ch===4){renderMi(p);return}
     if(S.ch===3){renderApps(p);return}
     if(S.ch===2){renderPim(p);return}
     if(S.edit){renderEditor(p);return}
@@ -558,7 +666,7 @@ function render(){
     wick('<b>Wick:</b> Night\'s here. Nothing is enforced until a policy says <b>On</b>.');
     return;
   }
-  if(S.stage==='report'){if(S.ch===3)renderReport3(p);else if(S.ch===2)renderReport2(p);else renderReport(p);return}
+  if(S.stage==='report'){if(S.ch===4)renderReport4(p);else if(S.ch===3)renderReport3(p);else if(S.ch===2)renderReport2(p);else renderReport(p);return}
 }
 
 function summary(x){
@@ -650,15 +758,16 @@ function evaluate(){
 }
 
 function siege(){
-  const R=S.ch===3?evaluate3():S.ch===2?evaluate2():evaluate();if(S.ch===1)R.waves.forEach(v=>v.res=v.held?'held':'broke');S.report=R;S.stage='siege';save();
+  const R=S.ch===4?evaluate4():S.ch===3?evaluate3():S.ch===2?evaluate2():evaluate();if(S.ch===1)R.waves.forEach(v=>v.res=v.held?'held':'broke');S.report=R;S.stage='siege';save();
   $('phase').textContent=phaseOf('siege');
-  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${S.ch===3?'consent settings':S.ch===2?'role assignments':'policies'} decide what happens now.</p>`;
+  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${S.ch===4?'identity and roles':S.ch===3?'consent settings':S.ch===2?'role assignments':'policies'} decide what happens now.</p>`;
   wick('<b>Wick:</b> Steady. Your policies are doing the work now, not you.');
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   const finish=()=>{S.stage='report';
-    if(R.win){(S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
-    if(S.ch===3){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 3: ${v.w.name}`,v.msg,'Verified publishers only, sign-in permissions low impact, old grants revoked'));R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night 3: ${c.t}`,c.m,'See the morning report'))}
+    if(R.win){(S.ch===4?['mi']:S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
+    if(S.ch===4){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 4: ${v.w.name}`,v.msg,'Managed identity, Storage Blob Data Reader on the invoices container, leaked secret deleted'));R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night 4: ${c.t}`,c.m,'See the morning report'))}
+    else if(S.ch===3){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 3: ${v.w.name}`,v.msg,'Verified publishers only, sign-in permissions low impact, old grants revoked'));R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night 3: ${c.t}`,c.m,'See the morning report'))}
     else if(S.ch===2){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 2: ${v.w.name}`,v.msg,'Eligible Global Administrator with approval, smallest role for daily work'));R.checks.forEach(c=>addOops(`Night 2: ${c.t}`,c.m,'See the morning report'))}
     else if(!R.win||R.eaIn){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 1: ${v.w.name}`,v.msg,'Every user covered by an MFA policy that is On'));if(R.eaIn)addOops(`Night 1: emergency access`,'Emergency access accounts inside a policy','Exclude them from every policy');if(R.lock)addOops(`Night 1: lockout`,'Own users locked out','Only controls your users can meet')}
     save();render();};
@@ -709,7 +818,7 @@ function renderReport2(p){
   wick(R.win?'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.':'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.');
 }
 function endPanel(p){p.innerHTML=`<div class="kicker">End of the demo</div><h2>The rest of the citadel</h2>
-    <ul class="facts"><li><b>Gatehouse</b>: managed identities, the last Gatehouse lantern.</li><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
+    <ul class="facts"><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
     <div class="next"><button class="ghost" id="bk" type="button">Back to the report</button></div>`;$('bk').onclick=()=>render();wick(`<b>Wick:</b> ${SK.length-S.lit.length} lanterns still unlit. One night at a time.`)}
 function renderReport(p){
   setNight(false);
