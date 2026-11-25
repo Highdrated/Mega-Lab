@@ -21,6 +21,10 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 | Towers | AI security, servers and VMs, app platforms |
 | Watchtower | Defender for Cloud, Sentinel, Security Copilot |
 
+## Code map
+- One chapter table, CH, holds each night: lessons, waves, studied and lit lanterns, brief, console, evaluate, report texts. A new night is one CH entry plus its data, nothing else.
+- test.py plays every night at 4 sizes; probe.py checks edge cases (reset mid-siege, keyboard flow, answer typing, oopsie counting, old saves).
+
 ## Status
 - [x] Demo 1: Gatehouse day (5 lessons) and night 1 (password spray, Conditional Access). tests: python3 tools/controle/test.py
 - [x] Big drawn citadel replaced by six icon cards with lantern dots, and three road rows for the siege

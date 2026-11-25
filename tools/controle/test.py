@@ -162,7 +162,7 @@ with sync_playwright() as p:
         pg.click('#hold');pg.wait_for_timeout(2600);pg.screenshot(path=f'/tmp/controle-shots/{tag}-siege.png')
         pg.wait_for_selector('#again',timeout=15000)
         r=results(pg);print(tag,'win',r);assert r==['Held','Held','Held','Commended'],r
-        assert pg.locator('#day2').count()==1
+        assert pg.inner_text('#end')=='Start day 2'
         assert 'citadel held' in pg.inner_text('#pane')
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-win.png')
         lit=pg.locator('#wards .dot.lit').count();assert lit==2,lit

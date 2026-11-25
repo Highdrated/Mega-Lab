@@ -63,6 +63,7 @@ main{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(400px,560px);min
 .pim td small{display:block;color:var(--mute);font-size:12px}
 .pim select,.gs select,.gsel{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:36px;max-width:100%}
 .mlab{display:none;color:var(--mute);font-size:12px;margin-bottom:4px}
+.nw{white-space:nowrap}
 .saved{font-size:13px;color:var(--gold);min-height:1.2em}
 .roll{overflow:auto;padding:14px 20px 18px;margin-top:14px;border-top:1px solid var(--line2)}
 .roll h3{font-size:16px;color:var(--ink);margin-bottom:10px;display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
@@ -103,6 +104,7 @@ input[type=text]:focus{outline:none;border-color:var(--gold);box-shadow:0 0 0 3p
 .opts{display:grid;gap:6px}
 .opt{text-align:left;background:#ffffff;border:1px solid var(--line2);border-radius:4px;padding:8px 12px;cursor:pointer;min-height:42px}
 .opt:hover{border-color:var(--line)}
+.opt:disabled{cursor:default;color:inherit}
 .opt.right{border-color:var(--gold);color:var(--gold)}
 .opt.wrong{border-color:var(--red);color:#b3261e}
 .fb{font-size:14px;margin-top:8px;min-height:1.2em}
@@ -273,7 +275,7 @@ const WAVES2=[
  {id:'A',name:'Stolen seal',icon:'key',who:'maren',how:'Maren\'s signed-in session, copied from her laptop'},
  {id:'B',name:'Fake sign-in page',icon:'mask',who:'tobin',how:'Tobin\'s session, caught by a lookalike sign-in page'}
 ];
-const wavesNow=()=>S.ch===4?WAVES4:S.ch===3?WAVES3:S.ch===2?WAVES2:WAVES;
+const wavesNow=()=>CH[S.ch].waves;
 function steal(pid){
   const a=S.pim.asg[pid],gs=S.pim.gs,nm=PEOPLE.find(x=>x.id===pid).n;
   if(a.r==='none')return {res:'held',msg:`${nm} holds no admin role, so the stolen session opens nothing.`};
@@ -408,22 +410,6 @@ function renderBrief3(p){
   $('go').onclick=()=>{S.stage='console';save();render()};
   wick('<b>Wick:</b> Nobody breaks a lock tonight. They\'ll be handed the key.');
 }
-function renderReport3(p){
-  setNight(false);
-  const R=S.report;if(!R){S.stage='console';render();return}
-  const fol=['Check the audit and sign-in logs for Raven Calendar Sync to see whose mail it read.','In PowerShell, remove a delegated grant with Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId <id>.'];
-  const tag={held:'Held',broke:'Breached'};
-  p.innerHTML=`<div class="kicker">Morning after night 3</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are blocked':'The walls were breached'}</h2>
-  <p style="color:var(--mute)">${R.win?'Two more Gatehouse lanterns are lit: consent and app identity.':'Read why below, fix Enterprise apps and try the night again. Every wrong turn went to your oopsies.'}</p>
-  ${R.waves.map(v=>`<div class="res ${v.held?'held':'broke'}"><span class="tag">${tag[v.res]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
-  ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
-  <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
-  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">Start day 4</button>':''}</div>`;
-  $('again').onclick=()=>{S.stage='console';save();render()};
-  if($('end'))$('end').onclick=()=>{S.ch=4;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;S.report=null;save();render();$('pane').scrollTop=0};
-  wick(R.win?'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.':'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.');
-}
 
 const L4=[
  {t:'Secrets in pockets',b:'Builds on: Delegated or application.',f:['An app registration can sign in with a <b>client secret</b>: a password for the app, often pasted into a config file.','Config files end up in repos, backups and screenshots. Whoever holds the secret signs in as the app.','A <b>managed identity</b> gives an Azure resource its own identity. Azure handles the credential, so your code never holds a secret.'],
@@ -511,34 +497,18 @@ function renderBrief4(p){
   $('go').onclick=()=>{S.stage='console';save();render()};
   wick('<b>Wick:</b> An app with too much access is a raider\'s favourite door. It never gets tired and nobody checks its MFA.');
 }
-function renderReport4(p){
-  setNight(false);
-  const R=S.report;if(!R){S.stage='console';render();return}
-  const fol=['Check the sign-in logs for ledger-app to see what the leaked secret was used for.','Remove appsettings.json from the repo history too. The deleted secret is useless, but nobody should find it.','In PowerShell: New-AzRoleAssignment -ObjectId <identity id> -RoleDefinitionName "Storage Blob Data Reader" -Scope <container scope>.'];
-  const tag={held:'Held',contained:'Contained',broke:'Breached'};
-  p.innerHTML=`<div class="kicker">Morning after night 4</div><h2>${R.win?'The citadel held':!R.waves.every(v=>v.held)?'The walls were breached':R.lock?'Held, but the ledger app is down':'Held, but the leaked secret still works'}</h2>
-  <p style="color:var(--mute)">${R.win?'The last Gatehouse lantern is lit. The whole Gatehouse is yours.':'Read why below, fix the portal and try the night again. Every wrong turn went to your oopsies.'}</p>
-  ${R.waves.map(v=>`<div class="res ${v.res==='broke'?'broke':v.res==='contained'?'contained':'held'}"><span class="tag">${tag[v.res]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
-  ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
-  <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
-  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the portal'}</button>${R.win?'<button class="btn" id="end">What comes next</button>':''}</div>`;
-  $('again').onclick=()=>{S.stage='console';save();render()};
-  if($('end'))$('end').onclick=()=>endPanel(p);
-  wick(R.win?'<b>Wick:</b> Six of six. The Gatehouse burns bright tonight.':'<b>Wick:</b> Ask what the app needs, not what\'s easiest to give it.');
-}
 const startPol=()=>[{id:'p1',name:'Gate - MFA for garrison',inc:'groups',incG:['garrison'],excG:[],res:'all',ca:false,apps:[],grant:'grant',ctrl:['mfa'],mode:'all',state:'report'}];
 
 let S;
 const KEY='controle.demo.v1';
-const fresh=()=>({ch:1,pim:startPim(),con:startCon(),mi:startMi(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,night:1,report:null});
+const fresh=()=>({ch:1,pim:startPim(),con:startCon(),mi:startMi(),wing:'gate',stage:'intro',li:0,strike:false,temper:false,tries:0,studied:[],lit:[],oops:[],pol:startPol(),edit:null,report:null,maxLi:-1,note:false});
 try{S=JSON.parse(localStorage.getItem(KEY))||fresh()}catch(e){S=fresh()}
 if(S.stage==='siege')S.stage='console';if(!S.wing)S.wing='gate';if(!S.ch)S.ch=1;if(!S.pim)S.pim=startPim();if(!S.con)S.con=startCon();if(!S.mi)S.mi=startMi();
 const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
 
 const $=id=>document.getElementById(id);
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const norm=s=>s.trim().toLowerCase().replace(/\s+/g,' ');
+const norm=s=>s.trim().toLowerCase().replace(/[\u201c\u201d"'`]/g,'').replace(/[.,!;:]+$/,'').replace(/\s+/g,' ').trim();
 
 const IC={
  gate:'<path d="M4 21V9h3V6h3v3h4V6h3v3h3v12"/><path d="M9.5 21v-4.5a2.5 2.5 0 0 1 5 0V21"/><path d="M3 21h18"/>',
@@ -558,7 +528,7 @@ const stOf=x=>S.lit.includes(x.id)?'lit':S.studied.includes(x.id)?'ember':'dark'
 const stTxt={lit:'Lit: held in a siege',ember:'Ember: studied',dark:'Unlit: not studied yet'};
 function drawWards(){
   $('wards').innerHTML=WARDS.map(w=>{const all=SK.filter(s=>s.w===w);const lit=all.filter(s=>S.lit.includes(s.id)).length;
-    return `<button type="button" class="wcard ${S.wing===w?'sel':''}" data-w="${w}">${icon(w)}<b>${WN[w]}<i>${lit}/${all.length}</i></b><small>${WD[w]}</small><span class="dots2">${all.map(x=>`<span class="dot ${stOf(x)}" title="${esc(x.n)} (${stTxt[stOf(x)]})"></span>`).join('')}</span></button>`}).join('');
+    return `<button type="button" class="wcard ${S.wing===w?'sel':''}" data-w="${w}">${icon(w)}<b>${WN[w]}<i>${lit}/${all.length}</i></b><small>${WD[w].replace(/ · (.*)$/,' · <span class="nw">$1</span>')}</small><span class="dots2">${all.map(x=>`<span class="dot ${stOf(x)}" title="${esc(x.n)} (${stTxt[stOf(x)]})"></span>`).join('')}</span></button>`}).join('');
   $('wards').querySelectorAll('[data-w]').forEach(b=>b.onclick=()=>{S.wing=b.dataset.w;save();drawWards()});
   const all=SK.filter(s=>s.w===S.wing);
   $('roll').innerHTML=`<h3><span>${WN[S.wing]} · ${all.length} exam skills</span><small>Unlit: not studied · Ember: studied · Lit: held in a siege</small></h3><ul class="rl">${all.map(x=>`<li class="${stOf(x)}"><i></i><span>${esc(x.n)}</span></li>`).join('')}</ul>`;
@@ -576,8 +546,7 @@ function drawRoads(res){
   $('roads').innerHTML=wavesNow().map(w=>{const r=res&&res[w.id];return `<div class="road" id="r${w.id}">${icon(w.icon||RI[w.id])}<div><b>${w.name}</b></div><div class="track"><span class="mk"></span><span class="gt"></span></div><span class="rs ${r||''}">${r==='held'?'Held':r==='broke'?'Breached':r==='contained'?'Contained':S.stage==='siege'?'Coming':'Quiet'}</span></div>`}).join('');
 }
 function setNight(on){$('stage').classList.toggle('night',!!on)}
-function resetDoors(){}
-function addOops(where,was,is){S.oops.unshift({where,was,is,t:new Date().toISOString().slice(0,10)});$('oopsN').textContent=S.oops.length}
+function addOops(where,was,is){const t=new Date().toISOString().slice(0,10);const i=S.oops.findIndex(o=>o.where===where&&o.was===was);let o={where,was,is,t,n:0};if(i>=0)o=S.oops.splice(i,1)[0];o.n=(o.n||1)+(i>=0?1:0);o.t=t;S.oops.unshift(o);$('oopsN').textContent=S.oops.length;if($('drawer').classList.contains('open'))renderOops()}
 
 const phaseText={intro:'Arrival',lesson:'Day 1 · The forge',brief:'Dusk · Scouts report',console:'Night · Gatehouse console',siege:'Night · Siege',report:'Morning · Damage report'};
 const phaseOf=k=>phaseText[k].replace('Night ·','Night '+S.ch+' ·').replace('Day 1','Day '+S.ch);
@@ -585,60 +554,58 @@ function wick(t){$('wick').innerHTML=t}
 
 function render(){
   $('phase').textContent=phaseOf(S.stage);$('oopsN').textContent=S.oops.length;
-  drawWards();drawRoads(S.stage==='report'&&S.report?Object.fromEntries(S.report.waves.map(v=>[v.w.id,v.res||(v.held?'held':'broke')])):null);
-  const p=$('pane');
+  drawWards();drawRoads(S.stage==='report'&&S.report?Object.fromEntries(S.report.waves.map(v=>[v.w.id,resOf(v)])):null);
+  const p=$('pane'),C=CH[S.ch];
   if(S.stage==='intro'){
-    setNight(false);resetDoors();
+    setNight(false);
     p.innerHTML=`<div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel on the left to read its skills.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
     <p style="color:var(--mute);font-size:15px">This demo covers four days and nights at the Gatehouse: Conditional Access and MFA, Privileged Identity Management, consent and app permissions, then managed identities. Duskhold is a fictional tenant.</p>
     <div class="next"><button class="btn" id="go">Start day 1</button></div>`;
-    $('go').onclick=()=>{S.ch=1;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;save();render()};
+    $('go').onclick=()=>startDay(1);
     wick('<b>Wick:</b> I light the lanterns. You keep the raiders out. Unlit lanterns are skills you haven\'t met yet.');
     return;
   }
   if(S.stage==='lesson'){
     setNight(false);
-    const LL=S.ch===4?L4:S.ch===3?L3:S.ch===2?L2:L;const l=LL[S.li];
+    const LL=C.L,l=LL[S.li],locked=!S.strike;
     p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · Gatehouse</div>
     <div class="dots">${LL.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
     <h2>${l.t}</h2><div class="builds">${l.b}</div>
     <ul class="facts">${l.f.map(x=>`<li>${x}</li>`).join('')}</ul>
     <div class="card ${S.strike?'ok':''}" id="strikeCard"><h4>Strike it from memory</h4><p>${l.s.q}</p>
       <form class="row" id="sf"><input type="text" id="si" autocomplete="off" spellcheck="false" ${S.strike?'disabled value="'+esc(l.s.show)+'"':''} aria-label="Your answer"><button class="btn" ${S.strike?'disabled':''}>Strike</button></form>
-      <div class="fb ${S.strike?'good':''}" id="sfb">${S.strike?'Forged.':''}</div></div>
-    <div class="card ${S.temper?'ok':''}" id="temperCard" ${S.strike?'':'style="opacity:.45;pointer-events:none"'}><h4>Temper it</h4><p>${l.c.q}</p>
-      <div class="opts">${l.c.o.map((o,i)=>`<button class="opt ${S.temper&&i===l.c.r?'right':''}" data-i="${i}" type="button">${o}</button>`).join('')}</div>
+      <div class="fb ${S.strike?'good':''}" id="sfb">${S.strike?(S.note?`Forged. The portal writes it as "${esc(l.s.show)}".`:'Forged.'):''}</div></div>
+    <div class="card ${S.temper?'ok':''}" id="temperCard" ${locked?'style="opacity:.45"':''}><h4>Temper it</h4><p>${l.c.q}</p>
+      <div class="opts">${l.c.o.map((o,i)=>`<button class="opt ${S.temper&&i===l.c.r?'right':''}" data-i="${i}" type="button" ${locked?'disabled':''}>${o}</button>`).join('')}</div>
       <div class="fb ${S.temper?'good':''}" id="tfb">${S.temper?esc(l.c.why):''}</div></div>
     <div class="next">${S.li>0?'<button class="ghost" id="back" type="button">Back</button>':''}<button class="btn" id="nx" ${S.strike&&S.temper?'':'disabled'}>${S.li===LL.length-1?'Finish the day':'Next lesson'}</button></div>`;
-    const si=$('si');if(!S.strike)setTimeout(()=>si.focus({preventScroll:true}),30);
+    const si=$('si');
+    const focus=el=>setTimeout(()=>el&&el.focus({preventScroll:true}),30);
+    focus(!S.strike?si:!S.temper?p.querySelector('.opt'):$('nx'));
     $('sf').onsubmit=e=>{e.preventDefault();if(S.strike)return;const v=si.value;
       if(!v.trim()){$('sfb').textContent='Type your answer first.';$('sfb').className='fb bad';return}
-      if(l.s.a.includes(norm(v))){S.strike=true;S.tries=0;
-        if(norm(v)!==norm(l.s.show)){$('sfb').textContent=`Forged. The portal writes it as "${l.s.show}".`}
-        save();render();return}
-      S.tries++;addOops(`Lesson ${S.li+1}: ${l.t}`,v,l.s.show);save();
+      if(l.s.a.includes(norm(v))){S.strike=true;S.tries=0;S.note=norm(v)!==norm(l.s.show);save();render();return}
+      S.tries++;addOops(`Day ${S.ch}, lesson ${S.li+1}: ${l.t}`,v,l.s.show);save();
       const fb=$('sfb');fb.className='fb bad';
       fb.textContent=S.tries===1?`Not quite. It starts with "${l.s.show.slice(0,3)}".`:`It's "${l.s.show}". Type it once to forge it.`;
-      si.select();$('oopsN').textContent=S.oops.length;};
-    p.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(S.temper)return;const i=+b.dataset.i;
-      if(i===l.c.r){S.temper=true;save();render();wick('<b>Wick:</b> '+(S.li===LL.length-1?'That\'s the day done. The scouts are back.':'Good. That one holds.'))}
-      else{b.classList.add('wrong');addOops(`Lesson ${S.li+1}: ${l.t}`,l.c.o[i],l.c.o[l.c.r]);save();$('oopsN').textContent=S.oops.length;$('tfb').className='fb bad';$('tfb').textContent='Not that one. Read the facts above again and try another.'}});
-    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;S.strike=S.temper=false;S.tries=0}else{S.stage='brief';(S.ch===4?['mi','rbac']:S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
-    if($('back'))$('back').onclick=()=>{S.li--;S.strike=S.temper=true;save();render()};
-    const W1=['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'];
-    const W2=['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'];
-    const W3=['<b>Wick:</b> New night, new trick. Nobody guesses or steals anything tonight.','<b>Wick:</b> Delegated is the user\'s reach. Application is the whole castle.','<b>Wick:</b> Verified publisher, selected permissions. Two filters, both matter.','<b>Wick:</b> The low impact list is a promise: anything on it, users may hand out.','<b>Wick:</b> Last one today. Closing the door doesn\'t evict whoever is already inside.'];
-    const W4=['<b>Wick:</b> Tonight the target isn\'t a person. It\'s an app with a password in its pocket.','<b>Wick:</b> One resource, one identity: system. Shared across many: user-assigned.','<b>Wick:</b> An identity with no role is a key to an empty room.','<b>Wick:</b> Managing the vault and opening the vault are two different keys.','<b>Wick:</b> Last one today. Hand out keys to one room, not the whole castle.'];
-    if(!S.strike&&!S.temper)wick((S.ch===4?W4:S.ch===3?W3:S.ch===2?W2:W1)[S.li]);
+      si.select();};
+    p.querySelectorAll('.opt').forEach(b=>b.onclick=()=>{if(S.temper||!S.strike)return;const i=+b.dataset.i;
+      if(i===l.c.r){S.temper=true;S.maxLi=Math.max(S.maxLi||0,S.li);save();render();wick('<b>Wick:</b> '+(S.li===LL.length-1?'That\'s the day done. The scouts are back.':'Good. That one holds.'))}
+      else{b.classList.add('wrong');addOops(`Day ${S.ch}, lesson ${S.li+1}: ${l.t}`,l.c.o[i],l.c.o[l.c.r]);save();$('tfb').className='fb bad';$('tfb').textContent='Not that one. Read the facts above again and try another.'}});
+    $('nx').onclick=()=>{if(S.li<LL.length-1){S.li++;const seen=S.li<=(S.maxLi??-1);S.strike=S.temper=seen;S.note=false;S.tries=0}else{S.stage='brief';C.studied.forEach(x=>{if(!S.studied.includes(x))S.studied.push(x)})}save();render();$('pane').scrollTop=0};
+    if($('back'))$('back').onclick=()=>{S.li--;S.strike=S.temper=true;S.note=false;save();render()};
+    if(!S.strike&&!S.temper)wick(WICK[S.ch][S.li]);
     return;
   }
-  if(S.stage==='brief'){
-    setNight(false);resetDoors();
-    if(S.ch===4){renderBrief4(p);return}
-    if(S.ch===3){renderBrief3(p);return}
-    if(S.ch===2){renderBrief2(p);return}
+  if(S.stage==='brief'){setNight(false);C.brief(p);return}
+  if(S.stage==='console'){setNight(true);C.console(p);return}
+  if(S.stage==='report'){renderReport(p);return}
+}
+function startDay(n){S.ch=n;S.stage='lesson';S.li=0;S.maxLi=-1;S.strike=S.temper=S.note=false;S.tries=0;S.report=null;S.edit=null;save();render();$('pane').scrollTop=0}
+const resOf=v=>v.res||(v.held?'held':'broke');
+function renderBrief1(p){
     p.innerHTML=`<div class="kicker">Dusk · Night ${S.ch}</div><h2>The scouts are back</h2>
     <p>Three groups of raiders are moving on Duskhold. They carry lists of common passwords and will spray them at nightfall.</p>
     <div class="bands">${WAVES.map(w=>`<div class="band"><b>${w.name}</b><span>Spraying ${w.who} ${w.how}${w.app==='legacy'?' (Other clients in the sign-in logs)':''}.</span></div>`).join('')}</div>
@@ -648,13 +615,8 @@ function render(){
     <div class="next"><button class="btn" id="go">Open the gatehouse console</button></div>`;
     $('go').onclick=()=>{S.stage='console';S.edit=null;save();render()};
     wick('<b>Wick:</b> The last warden left in a hurry. I wouldn\'t trust his policy without reading every line.');
-    return;
-  }
-  if(S.stage==='console'){
-    setNight(true);resetDoors();
-    if(S.ch===4){renderMi(p);return}
-    if(S.ch===3){renderApps(p);return}
-    if(S.ch===2){renderPim(p);return}
+}
+function renderCA(p){
     if(S.edit){renderEditor(p);return}
     p.innerHTML=`<div class="kicker">Night ${S.ch} · Gatehouse console</div><div class="crumb">Microsoft Entra admin center › Conditional Access › Policies</div><h2>Policies</h2>
     <div style="margin:14px 0">${S.pol.map(x=>`<div class="pol"><div><div class="nm">${esc(x.name)}</div><div style="font-size:13px;color:var(--mute)">${summary(x)}</div></div><div class="row" style="flex-wrap:nowrap"><span class="state ${x.state}">${{report:'Report-only',on:'On',off:'Off'}[x.state]}</span><button class="ghost" data-e="${x.id}" type="button" style="min-height:36px;padding:5px 12px">Edit</button></div></div>`).join('')||'<p style="color:var(--mute)">No policies yet.</p>'}</div>
@@ -664,11 +626,7 @@ function render(){
     $('np').onclick=()=>{S.edit={id:'',name:'',inc:'none',incG:[],excG:[],res:'none',ca:false,apps:[],grant:'grant',ctrl:[],mode:'all',state:'report'};render()};
     $('hold').onclick=siege;
     wick('<b>Wick:</b> Night\'s here. Nothing is enforced until a policy says <b>On</b>.');
-    return;
-  }
-  if(S.stage==='report'){if(S.ch===4)renderReport4(p);else if(S.ch===3)renderReport3(p);else if(S.ch===2)renderReport2(p);else renderReport(p);return}
 }
-
 function summary(x){
   const who=x.inc==='all'?'All users':x.inc==='groups'&&x.incG.length?x.incG.map(g=>GROUPS[g]).join(', '):'No users';
   const ex=x.excG.length?' except '+x.excG.map(g=>GROUPS[g]).join(', '):'';
@@ -758,18 +716,15 @@ function evaluate(){
 }
 
 function siege(){
-  const R=S.ch===4?evaluate4():S.ch===3?evaluate3():S.ch===2?evaluate2():evaluate();if(S.ch===1)R.waves.forEach(v=>v.res=v.held?'held':'broke');S.report=R;S.stage='siege';save();
+  const C=CH[S.ch],run=S,R=C.evaluate();R.waves.forEach(v=>v.res=resOf(v));S.report=R;S.stage='siege';save();
   $('phase').textContent=phaseOf('siege');
-  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${S.ch===4?'identity and roles':S.ch===3?'consent settings':S.ch===2?'role assignments':'policies'} decide what happens now.</p>`;
-  wick('<b>Wick:</b> Steady. Your policies are doing the work now, not you.');
+  $('pane').innerHTML=`<div class="kicker">Night ${S.ch}</div><h2>The raiders are at the walls</h2><p style="color:var(--mute)">Watch the roads on the left. Your ${C.what} decide what happens now.</p>`;
+  wick(`<b>Wick:</b> Steady. Your ${C.what} are doing the work now, not you.`);
   const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  const finish=()=>{S.stage='report';
-    if(R.win){(S.ch===4?['mi']:S.ch===3?['consent','apps']:S.ch===2?['pim']:['ca','mfa']).forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)})}
-    if(S.ch===4){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 4: ${v.w.name}`,v.msg,'Managed identity, Storage Blob Data Reader on the invoices container, leaked secret deleted'));R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night 4: ${c.t}`,c.m,'See the morning report'))}
-    else if(S.ch===3){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 3: ${v.w.name}`,v.msg,'Verified publishers only, sign-in permissions low impact, old grants revoked'));R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night 3: ${c.t}`,c.m,'See the morning report'))}
-    else if(S.ch===2){R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night 2: ${v.w.name}`,v.msg,'Eligible Global Administrator with approval, smallest role for daily work'));R.checks.forEach(c=>addOops(`Night 2: ${c.t}`,c.m,'See the morning report'))}
-    else if(!R.win||R.eaIn){R.waves.filter(v=>!v.held).forEach(v=>addOops(`Night 1: ${v.w.name}`,v.msg,'Every user covered by an MFA policy that is On'));if(R.eaIn)addOops(`Night 1: emergency access`,'Emergency access accounts inside a policy','Exclude them from every policy');if(R.lock)addOops(`Night 1: lockout`,'Own users locked out','Only controls your users can meet')}
+  const finish=()=>{if(S!==run)return;S.stage='report';
+    if(R.win)C.lit.forEach(x=>{if(!S.lit.includes(x))S.lit.push(x)});
+    R.waves.filter(v=>v.res!=='held').forEach(v=>addOops(`Night ${S.ch}: ${v.w.name}`,v.msg,C.fix));
+    R.checks.filter(c=>c.k!=='held').forEach(c=>addOops(`Night ${S.ch}: ${c.t}`,c.m,'See the morning report'));
     save();render();};
   drawRoads(null);
   if(reduce){setTimeout(finish,300);return}
@@ -777,7 +732,7 @@ function siege(){
   R.waves.forEach((v,wi)=>{
     const row=$('r'+v.w.id),mk=row.querySelector('.mk'),rs=row.querySelector('.rs');
     const t0=performance.now()+wi*900,dur=2200;
-    const step=now=>{const t=(now-t0)/dur;
+    const step=now=>{if(S!==run)return;const t=(now-t0)/dur;
       if(t<0){requestAnimationFrame(step);return}
       const k=Math.min(1,t);mk.style.opacity=1;
       mk.style.left=`calc(${(v.res==='held'?Math.min(k,.94):k)*100}% - ${k*10}px)`;
@@ -800,50 +755,55 @@ function renderBrief2(p){
   $('go').onclick=()=>{S.stage='console';save();render()};
   wick('<b>Wick:</b> Five Global Administrators, all standing. Microsoft advises fewer than five. You know what to do.');
 }
-function renderReport2(p){
-  setNight(false);
-  const R=S.report;if(!R){S.stage='console';render();return}
-  const fol=['Revoke Maren\'s and Tobin\'s sessions and reset their passwords. In PowerShell: Revoke-MgUserSignInSession -UserId <their UPN>.','Check the PIM audit history for activations you don\'t recognise.'];
-  if(R.gaCount>=5)fol.push(`You still have ${R.gaCount} Global Administrators. Microsoft advises fewer than five.`);
-  const tag={held:'Held',contained:'Contained',broke:'Breached'};
-  p.innerHTML=`<div class="kicker">Morning after night 2</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are blocked':'The walls were breached'}</h2>
-  <p style="color:var(--mute)">${R.win?'The PIM lantern at the Gatehouse is lit.':'Read why below, fix the PIM console and try the night again. Every wrong turn went to your oopsies.'}</p>
-  ${R.waves.map(v=>`<div class="res ${v.res==='broke'?'broke':v.res==='contained'?'contained':'held'}"><span class="tag">${tag[v.res]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
-  ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
-  <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
-  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m))).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="end">Start day 3</button>':''}</div>`;
-  $('again').onclick=()=>{S.stage='console';save();render()};
-  if($('end'))$('end').onclick=()=>{S.ch=3;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;S.report=null;save();render();$('pane').scrollTop=0};
-  wick(R.win?'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.':'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.');
-}
 function endPanel(p){p.innerHTML=`<div class="kicker">End of the demo</div><h2>The rest of the citadel</h2>
     <ul class="facts"><li><b>Vault</b>: Key Vault. Raider: a secret leaked in a repo.</li><li><b>Walls</b>: storage, SQL and networking. Raiders: a public blob, open RDP.</li><li><b>Towers</b>: VMs, containers and AI agents. Raider: a prompt injection on an agent.</li><li><b>Watchtower</b>: Defender for Cloud, Sentinel and Security Copilot. You see the raids coming.</li></ul>
     <div class="next"><button class="ghost" id="bk" type="button">Back to the report</button></div>`;$('bk').onclick=()=>render();wick(`<b>Wick:</b> ${SK.length-S.lit.length} lanterns still unlit. One night at a time.`)}
+
 function renderReport(p){
   setNight(false);
-  const R=S.report;if(!R){S.stage='console';render();return}
-  const fol=[];
-  fol.push('Reset the guessed passwords for 3 Garrison accounts and 1 Envoy. MFA stopped the raiders at the gate, but they still know those passwords.');
-  if(!R.legacyBlock)fol.push('Add a separate "Block legacy authentication" policy for all users (Exchange ActiveSync clients and Other clients, Block access). Then the postern stays shut even if someone narrows the MFA policy later.');
-  if(S.pol.some(x=>x.state==='report'))fol.push('A policy is still in Report-only. Check its results in the sign-in logs, then switch it On or delete it.');
-  p.innerHTML=`<div class="kicker">Morning after night 1</div><h2>${R.win?'The citadel held':R.waves.every(v=>v.held)?'Held, but your own people are locked out':'The walls were breached'}</h2>
-  <p style="color:var(--mute)">${R.win?'Two lanterns at the Gatehouse are lit: Conditional Access and MFA. Look for the gold dots on the Gatehouse.':'Read why below, fix the console and try the night again. Every wrong turn went to your oopsies.'}</p>
-  ${R.waves.map(v=>`<div class="res ${v.held?'held':'broke'}"><span class="tag">${v.held?'Held':'Breached'}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`).join('')}
+  const C=CH[S.ch],R=S.report;if(!R){S.stage='console';render();return}
+  const tag={held:'Held',contained:'Contained',broke:'Breached'};
+  const title=R.win?'The citadel held':!R.waves.every(v=>v.held)?'The walls were breached':C.title(R);
+  const fails=R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.checks.filter(c=>c.k==='broke').map(c=>c.m));
+  p.innerHTML=`<div class="kicker">Morning after night ${S.ch}</div><h2>${title}</h2>
+  <p style="color:var(--mute)">${R.win?C.winLine:`Read why below, fix ${C.fixWhere} and try the night again. Every wrong turn went to your oopsies.`}</p>
+  ${R.waves.map(v=>{const r=resOf(v);return `<div class="res ${r}"><span class="tag">${tag[r]}</span><div><b>${v.w.name}</b><p>${esc(v.msg)}</p></div></div>`}).join('')}
   ${R.checks.map(c=>`<div class="res ${c.k}"><span class="tag">${c.t}</span><div><p style="color:var(--ink)">${esc(c.m)}</p></div></div>`).join('')}
-  ${R.legacyBlock?'<div class="res held"><span class="tag">Commended</span><div><b>Postern sealed</b><p>You added a separate legacy block policy. That\'s the baseline real admins use.</p></div></div>':''}
+  ${C.extra?C.extra(R):''}
   <h3 style="font-size:16px;margin:18px 0 8px;color:var(--ink)">${R.win?'Before you sleep':'What to fix'}</h3>
-  <ul class="list">${(R.win?fol:R.waves.filter(v=>!v.held).map(v=>v.msg).concat(R.lock?['Only use controls your own people can meet.']:[])).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
-  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to the console'}</button>${R.win?'<button class="btn" id="day2">Start day 2</button>':''}</div>`;
+  <ul class="list">${(R.win?C.fol(R):fails).map(x=>`<li>${esc(x)}</li>`).join('')}</ul>
+  <div class="next"><button class="ghost" id="again" type="button">${R.win?'Replay the night':'Back to '+C.backTo}</button>${R.win?`<button class="btn" id="end">${CH[S.ch+1]?'Start day '+(S.ch+1):'What comes next'}</button>`:''}</div>`;
   $('again').onclick=()=>{S.stage='console';S.edit=null;save();render()};
-  if($('day2'))$('day2').onclick=()=>{S.ch=2;S.stage='lesson';S.li=0;S.strike=S.temper=false;S.tries=0;S.report=null;save();render();$('pane').scrollTop=0};
-
-  wick(R.win?'<b>Wick:</b> Two lanterns lit. That\'s two exam skills you can actually do, not just name.':'<b>Wick:</b> Breaches happen. What matters is you know exactly why this one did.');
+  if($('end'))$('end').onclick=()=>CH[S.ch+1]?startDay(S.ch+1):endPanel(p);
+  wick(R.win?C.winWick:C.failWick);
 }
-
-function renderOops(){$('oopsList').innerHTML=S.oops.length?S.oops.map(o=>`<div class="oops"><small>${esc(o.where)} · ${esc(o.t)}</small><div class="was">You: ${esc(o.was)}</div><div class="is">Right: ${esc(o.is)}</div></div>`).join(''):'<p style="color:var(--mute)">No oopsies yet. Wrong answers and breaches land here, ready for practice in Pockle.</p>'}
-$('oopsBtn').onclick=()=>{renderOops();$('drawer').classList.add('open');$('drawer').setAttribute('aria-hidden','false')};
-$('closeOops').onclick=()=>{$('drawer').classList.remove('open');$('drawer').setAttribute('aria-hidden','true')};
+const WICK={1:['<b>Wick:</b> Read the three facts, then type the answer from memory. Typing it is what makes it stick.','<b>Wick:</b> This builds on the spray. A spray brings a password, the gate rule decides what happens next.','<b>Wick:</b> One control, scoped wide. Remember who\'s outside the scope.','<b>Wick:</b> Report-only is how real admins test. It just doesn\'t stop anyone.','<b>Wick:</b> Last one today. Old doors are easy to forget.'],2:['<b>Wick:</b> Last night was about who gets in. Tonight is about what they can do once they\'re in.','<b>Wick:</b> Eligible is the word to remember. It\'s a key you have to collect each time.','<b>Wick:</b> MFA proves who you are. Approval proves someone else agrees.','<b>Wick:</b> Small keys open small doors. That\'s the whole idea.','<b>Wick:</b> Last one today. Every rule needs one sealed exception.'],3:['<b>Wick:</b> New night, new trick. Nobody guesses or steals anything tonight.','<b>Wick:</b> Delegated is the user\'s reach. Application is the whole castle.','<b>Wick:</b> Verified publisher, selected permissions. Two filters, both matter.','<b>Wick:</b> The low impact list is a promise: anything on it, users may hand out.','<b>Wick:</b> Last one today. Closing the door doesn\'t evict whoever is already inside.'],4:['<b>Wick:</b> Tonight the target isn\'t a person. It\'s an app with a password in its pocket.','<b>Wick:</b> One resource, one identity: system. Shared across many: user-assigned.','<b>Wick:</b> An identity with no role is a key to an empty room.','<b>Wick:</b> Managing the vault and opening the vault are two different keys.','<b>Wick:</b> Last one today. Hand out keys to one room, not the whole castle.']};
+const CH={
+ 1:{L:L,waves:WAVES,studied:['ca','mfa'],lit:['ca','mfa'],brief:renderBrief1,console:renderCA,evaluate:evaluate,what:'policies',fixWhere:'the console',backTo:'the console',
+  fix:'Every user covered by an MFA policy that is On, emergency access excluded',title:()=>'Held, but your own people are locked out',
+  winLine:'Two lanterns at the Gatehouse are lit: Conditional Access and MFA. Look for the gold dots on the Gatehouse.',
+  fol:R=>['Reset the guessed passwords for 3 Garrison accounts and 1 Envoy. MFA stopped the raiders at the gate, but they still know those passwords.'].concat(R.legacyBlock?[]:['Add a separate "Block legacy authentication" policy for all users (Exchange ActiveSync clients and Other clients, Block access). Then the postern stays shut even if someone narrows the MFA policy later.']).concat(S.pol.some(x=>x.state==='report')?['A policy is still in Report-only. Check its results in the sign-in logs, then switch it On or delete it.']:[]),
+  extra:R=>R.legacyBlock?'<div class="res held"><span class="tag">Commended</span><div><b>Postern sealed</b><p>You added a separate legacy block policy. That\'s the baseline real admins use.</p></div></div>':'',
+  winWick:'<b>Wick:</b> Two lanterns lit. That\'s two exam skills you can actually do, not just name.',failWick:'<b>Wick:</b> Breaches happen. What matters is you know exactly why this one did.'},
+ 2:{L:L2,waves:WAVES2,studied:['pim'],lit:['pim'],brief:renderBrief2,console:renderPim,evaluate:evaluate2,what:'role assignments',fixWhere:'the PIM console',backTo:'the console',
+  fix:'Eligible Global Administrator with approval, smallest role for daily work',title:()=>'Held, but your own people are blocked',
+  winLine:'The PIM lantern at the Gatehouse is lit.',
+  fol:R=>['Revoke Maren\'s and Tobin\'s sessions and reset their passwords. In PowerShell: Revoke-MgUserSignInSession -UserId <their UPN>.','Check the PIM audit history for activations you don\'t recognise.'].concat(R.gaCount>=5?[`You still have ${R.gaCount} Global Administrators. Microsoft advises fewer than five.`]:[]),
+  winWick:'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.',failWick:'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.'},
+ 3:{L:L3,waves:WAVES3,studied:['consent','apps'],lit:['consent','apps'],brief:renderBrief3,console:renderApps,evaluate:evaluate3,what:'consent settings',fixWhere:'Enterprise apps',backTo:'the console',
+  fix:'Verified publishers only, sign-in permissions low impact, old grants revoked',title:()=>'Held, but your own people are blocked',
+  winLine:'Two more Gatehouse lanterns are lit: consent and app identity.',
+  fol:()=>['Check the audit and sign-in logs for Raven Calendar Sync to see whose mail it read.','In PowerShell, remove a delegated grant with Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId <id>.'],
+  winWick:'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.',failWick:'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.'},
+ 4:{L:L4,waves:WAVES4,studied:['mi','rbac'],lit:['mi'],brief:renderBrief4,console:renderMi,evaluate:evaluate4,what:'identity and roles',fixWhere:'the portal',backTo:'the portal',
+  fix:'Managed identity, Storage Blob Data Reader on the invoices container, leaked secret deleted',title:R=>R.lock?'Held, but the ledger app is down':'Held, but the leaked secret still works',
+  winLine:'The last Gatehouse lantern is lit. The whole Gatehouse is yours.',
+  fol:()=>['Check the sign-in logs for ledger-app to see what the leaked secret was used for.','Remove appsettings.json from the repo history too. The deleted secret is useless, but nobody should find it.','In PowerShell: New-AzRoleAssignment -ObjectId <identity id> -RoleDefinitionName "Storage Blob Data Reader" -Scope <container scope>.'],
+  winWick:'<b>Wick:</b> Six of six. The Gatehouse burns bright tonight.',failWick:'<b>Wick:</b> Ask what the app needs, not what\'s easiest to give it.'}
+};
+function renderOops(){$('oopsList').innerHTML=S.oops.length?S.oops.map(o=>`<div class="oops"><small>${esc(o.where)} · ${esc(o.t)}${o.n>1?` · ${o.n} times`:''}</small><div class="was">You: ${esc(o.was)}</div><div class="is">Right: ${esc(o.is)}</div></div>`).join(''):'<p style="color:var(--mute)">No oopsies yet. Wrong answers and breaches land here, ready for practice in Pockle.</p>'}
+$('oopsBtn').onclick=()=>{renderOops();$('drawer').classList.add('open');$('drawer').setAttribute('aria-hidden','false');setTimeout(()=>$('closeOops').focus(),50)};
+$('closeOops').onclick=()=>{const was=$('drawer').classList.contains('open');$('drawer').classList.remove('open');$('drawer').setAttribute('aria-hidden','true');if(was)$('oopsBtn').focus()};
 $('resetBtn').onclick=()=>{S=fresh();save();render()};
 document.addEventListener('keydown',e=>{if(e.key==='Escape')$('closeOops').click()});
 render();
