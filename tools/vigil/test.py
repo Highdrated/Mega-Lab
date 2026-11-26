@@ -141,7 +141,7 @@ async def tonight(b):
     check(await pg.evaluate("cur === 'school' && school.g === 'tenant' && school.l === 0"), "station opens the lesson")
     check(await pg.locator("#tyin").count() == 0, "the lesson page has no from-memory check of its own")
     check(await pg.locator("#lesson [data-view=tonight]").count() == 0, "no Back to Tonight while the place check is still open")
-    await pg.click("[data-reveal]")
+    await pg.click("[data-pfold]"); await pg.click("[data-reveal]")
     a = await pg.evaluate("school.qa.a")
     await pg.click(f"#lesson [data-o='{(a + 1) % 4}']")
     m = await pg.evaluate("S.miss.map(m => [m.kind, m.ref, m.due - dayNo(), m.st])")
@@ -235,7 +235,7 @@ async def pockle(b):
     await pg.reload()
     await pg.wait_for_timeout(300)
     await pg.evaluate("go('school')")
-    await pg.click("[data-reveal]")
+    await pg.click("[data-pfold]"); await pg.click("[data-reveal]")
     a = await pg.evaluate("school.qa.a")
     await pg.click(f"#lesson [data-o='{(a + 1) % 4}']")
     await pg.click("[data-lnext]")
@@ -495,7 +495,7 @@ async def suite(b, F, lab):
                 check(await pg.locator("#lesson .blk:not(.watch) > .facts li").count() <= 3, f"{g} lesson {l + 1} has at most 3 facts")
                 await recall_both(pg)
                 check(await pg.evaluate(f"(!school.rc || school.rc.k !== '{g}{l}') && !document.querySelector('#lesson .lbody.folded')"), f"{g} lesson {l + 1} is open after the recall and has no check of its own")
-                await pg.click("[data-reveal]")
+                await pg.click("[data-pfold]"); await pg.click("[data-reveal]")
                 a = await pg.evaluate("school.qa.a")
                 await pg.click(f"#lesson [data-o='{a}']")
                 rows = await pg.locator("#lesson .where tr").count()
@@ -1968,6 +1968,43 @@ async def viewports(b):
         await pg.close()
 
 
+async def place_fold(b):
+    pg = await b.new_page(viewport={"width": 1440, "height": 900})
+    await pg.goto(LAB_F)
+    await pg.evaluate("localStorage.clear()")
+    await pg.reload()
+    await pg.wait_for_timeout(300)
+    await pg.evaluate("go('school')")
+    body = await pg.inner_text("#lesson")
+    check("Where do you go for this" not in body and await pg.locator("[data-pfold]").count() == 1, "the place question stays hidden while the notes are open")
+    await pg.click("[data-pfold]")
+    body = await pg.inner_text("#lesson")
+    check(await pg.locator("#lesson .facts").count() == 0 and await pg.locator("#lesson table.where").count() == 0 and await pg.locator("#lesson .intro").count() == 0, "folding takes the notes off the page, not just out of view")
+    check("The Lens is covered" in await pg.inner_text("#lens") and await pg.locator("#lens .it").count() == 0, "the Lens shows no menu while the place check is open")
+    check("From this page" in body, "the very first lesson asks about its own page, with the notes folded")
+    await pg.click("[data-reveal]")
+    a = await pg.evaluate("school.qa.a")
+    await pg.click(f"#lesson [data-o='{a}']")
+    check(await pg.locator("#lesson table.where").count() == 1 and await pg.locator("#lens .it.on").count() == 1, "picking a place opens the notes and the Lens again")
+    for _ in range(12):
+        await pg.evaluate("S.read = ['tenant0', 'tenant1']; S.pend = []; save(); school.g = 'tenant'; school.l = 2; school.qa = null; renderLesson()")
+        await pg.click("[data-pfold]")
+        src = await pg.inner_text("#lesson .qc .rsrc")
+        bad = await pg.evaluate("(() => { const G = GROUPS.find(g => g.id === 'tenant'), here = LESSONS.tenant[2][1].map(i => G.where[i][2]); return here.some(h => school.qa.why.includes(', under ' + h + '.')); })()")
+        if not (src.startswith("From lesson 1") or src.startswith("From lesson 2")) or bad:
+            break
+    check(src.startswith("From lesson 1") or src.startswith("From lesson 2"), "a later lesson asks about an earlier lesson's place")
+    check(not bad, "the place asked is never on the page you just read")
+    await pg.evaluate("S.read = ['tenant0', 'tenant1', 'tenant2', 'tenant3', 'tenant4', 'tenant5']; save(); school.g = 'identities'; school.l = 0; school.qa = null; renderLesson()")
+    await pg.click("[data-pfold]")
+    check((await pg.inner_text("#lesson .qc .rsrc")).startswith("From step 1, "), "a new step asks about the step before it")
+    a = await pg.evaluate("school.qa.a")
+    await pg.click("[data-reveal]")
+    await pg.click(f"#lesson [data-o='{(a + 1) % 4}']")
+    check(await pg.evaluate("S.miss.some(m => m.kind === 'where' && m.g === 'tenant' && m.ref && m.ref.g === 'tenant')"), "a wrong place is saved under the step it came from")
+    await pg.close()
+
+
 async def review_fixes(b):
     ctx = await b.new_context(viewport={"width": 1920, "height": 1080})
     pg = await ctx.new_page()
@@ -2298,7 +2335,7 @@ async def recall_gap(b):
     await pg.wait_for_timeout(300)
     await pg.click("[data-wgo=lesson]")
     check(await pg.locator("#tyin").count() == 0 and "from memory" not in (await pg.inner_text("#lesson")).lower(), "lesson 1 asks nothing from memory on the page you just read")
-    await pg.click("[data-reveal]")
+    await pg.click("[data-pfold]"); await pg.click("[data-reveal]")
     a = await pg.evaluate("school.qa.a")
     await pg.click(f"#lesson [data-o='{a}']")
     check("comes at the start of the next one" in await pg.inner_text("#lesson"), "after the place check the page says when the recall comes")
@@ -2319,7 +2356,7 @@ async def recall_gap(b):
     check(await pg.evaluate("S.pend.includes('tenant0') && !S.read.includes('tenant0')") and await pg.evaluate("S.sl") == sl, "a wrong recall pays nothing and stays waiting")
     check(await pg.locator("#lesson .lbody.folded").count() == 0 and "company branding" in (await pg.inner_text("#lesson .blk.recall .why")).lower(), "after a wrong recall the answer shows and the new lesson opens")
     check(await pg.locator("#tyin[disabled]").count() == 1, "no second try on the same page, right after seeing the answer")
-    await pg.click("[data-reveal]")
+    await pg.click("[data-pfold]"); await pg.click("[data-reveal]")
     a = await pg.evaluate("school.qa.a")
     await pg.click(f"#lesson [data-o='{a}']")
     await pg.click("[data-lnext]")
@@ -2371,7 +2408,7 @@ async def main():
                 if os.environ.get("VIGIL_TIMES"):
                     print(f"  {fn.__name__} {time.time() - t0:.1f}s")
 
-        jobs = [("tonight", review_fixes), ("tonight", casebook), ("tonight", casebook_layout), ("lab", suite, LAB_F, True), ("demo", suite, DEMO_F, False), ("tonight", habits_errands), ("tonight", syncle), ("tonight", tonight), ("tonight", fading), ("fixes", fix_tonight), ("fixes", fix_cases), ("fixes", fix_ledger), ("tonight", pockle), ("tonight", demo_tonight), ("tonight", reduced), ("fixes", fix_obs), ("layout", viewports), ("tonight", seal_case), ("layout", seal_layout), ("tonight", recall_gap)]
+        jobs = [("tonight", review_fixes), ("tonight", casebook), ("tonight", casebook_layout), ("lab", suite, LAB_F, True), ("demo", suite, DEMO_F, False), ("tonight", habits_errands), ("tonight", syncle), ("tonight", tonight), ("tonight", fading), ("fixes", fix_tonight), ("fixes", fix_cases), ("fixes", fix_ledger), ("tonight", pockle), ("tonight", demo_tonight), ("tonight", reduced), ("fixes", fix_obs), ("layout", viewports), ("tonight", seal_case), ("layout", seal_layout), ("tonight", recall_gap), ("tonight", place_fold)]
         await asyncio.gather(*(lane(*j) for j in jobs))
         for g in ["tonight", "demo", "lab", "fixes", "layout"]:
             print(g, "ok" if not BY.get(g) else "FAILED")

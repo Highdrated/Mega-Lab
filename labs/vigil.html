@@ -138,7 +138,8 @@ code{font-family:var(--mono);font-size:.86em;background:var(--acc-soft);padding:
 .ldots{display:flex;gap:5px}
 .ld{width:22px;height:6px;border-radius:1px;background:#e3e7eb}
 .ld.done{background:var(--acc)}.ld.on{background:var(--ink);box-shadow:0 2px 0 var(--warn)}
-.stept{font-size:12px;color:var(--mute);margin-top:4px}
+.stept{font-size:12px;color:var(--mute);margin:4px 0 16px}
+.lbody>.rfold{margin-bottom:14px}
 .tyf{display:flex;gap:8px}
 .blk.recall{border-left:3px solid var(--warn);margin:14px 0}
 .blk.recall .hd{background:var(--warn-soft)}
@@ -1300,10 +1301,18 @@ const norm = t => String(t).toLowerCase().replace(/[“”"'`]/g, "").replace(/\
 function lessonOf(G, l) { const L = LESSONS[G.id][l]; return { t: L[0], w: L[1], f: L[2], x: L[3], ty: TYPED[G.id][l], n: LESSONS[G.id].length }; }
 function renderStrip() { $("#gstrip").innerHTML = GL.map((g, i) => `<button class="chip${g.id === school.g ? " on" : ""}" data-g="${g.id}"><span class="d">${i + 1}</span>${esc(g.tag)}</button>`).join(""); }
 const lc1 = s => /^(Copilot|Conditional)\b|^.[A-Z]/.test(s) ? s : s.charAt(0).toLowerCase() + s.slice(1);
+function placeSrc(G, L) {
+  const here = new Set(L.w.map(i => G.where[i][2])), cands = [];
+  (S.read || []).forEach(k => { const g = revG(k), l = revL(k), H = GROUPS.find(x => x.id === g); if (!H || !LESSONS[g] || !LESSONS[g][l] || g === G.id && l === school.l) return; LESSONS[g][l][1].forEach(i => { if (!here.has(H.where[i][2])) cands.push({ g, l, i }); }); });
+  if (cands.length) return cands[Math.floor(Math.random() * cands.length)];
+  return { g: G.id, l: school.l, i: L.w[Math.floor(Math.random() * L.w.length)] };
+}
 function makeQ(G, L) {
-  const rows = L.w.map(i => G.where[i]);
-  if (G.id === "copilot" && L.w.includes(2)) return { q: "A manager wants Copilot to stop using the public web. Where do you actually set the policy for web search in Copilot and Copilot Chat?", o: ["A switch on Copilot > Settings in the Microsoft 365 admin center", "The Allow web search in Copilot policy in the Cloud Policy service", "Settings > Search & intelligence in the Microsoft 365 admin center", "An Edge configuration policy"], a: 1, why: "The entry on the Copilot settings page is only a shortcut. The real control is one policy, Allow web search in Copilot, in the Cloud Policy service at config.office.com.", ref: { g: "copilot", web: 1 } };
-  const r = rows[Math.floor(Math.random() * rows.length)];
+  const P = placeSrc(G, L), H = GROUPS.find(x => x.id === P.g), r = H.where[P.i], src = P.g === G.id && P.l === school.l ? "" : P.g === G.id ? "lesson " + (P.l + 1) : "step " + (LADDER.indexOf(P.g) + 1) + ", " + H.tag + ", lesson " + (P.l + 1), from = src ? "From " + src + ": " + LESSONS[P.g][P.l][0] + "." : "From this page.";
+  return Object.assign(makeQ1(H, r), { from });
+}
+function makeQ1(G, r) {
+  if (G.id === "copilot" && G.where.indexOf(r) === 2) return { q: "A manager wants Copilot to stop using the public web. Where do you actually set the policy for web search in Copilot and Copilot Chat?", o: ["A switch on Copilot > Settings in the Microsoft 365 admin center", "The Allow web search in Copilot policy in the Cloud Policy service", "Settings > Search & intelligence in the Microsoft 365 admin center", "An Edge configuration policy"], a: 1, why: "The entry on the Copilot settings page is only a shortcut. The real control is one policy, Allow web search in Copilot, in the Cloud Policy service at config.office.com.", ref: { g: "copilot", web: 1 } };
   const pool = GROUPS.flatMap(x => x.where).filter(w => w[2] !== r[2] && w[0] !== r[0]);
   const others = []; pool.sort(() => Math.random() - .5).forEach(w => { if (others.length < 3 && !others.some(o => o[2] === w[2])) others.push(w); });
   const opts = [r, ...others].sort(() => Math.random() - .5);
@@ -1314,18 +1323,18 @@ function miss(kind, gid, t, ref) { S.miss = S.miss || []; const m = mkMiss(kind,
 function renderLesson() {
   const G = GROUPS.find(g => g.id === school.g), D = DOMAINS[G.d - 1], n = LADDER.indexOf(G.id) + 1, L = lessonOf(G, school.l), last = school.l === L.n - 1;
   if (!S.pos || S.pos.g !== school.g || S.pos.l !== school.l) { S.pos = { g: school.g, l: school.l }; save(); }
-  if (!school.qa || school.qa.key !== G.id + school.l) { school.qa = Object.assign(makeQ(G, L), { key: G.id + school.l }); school.picked = null; school.revealed = false; school.where = L.w[0]; const P = pendList().find(k => k !== G.id + school.l); school.rc = P ? { k: P, v: "", res: null } : null; }
+  if (!school.qa || school.qa.key !== G.id + school.l) { school.qa = Object.assign(makeQ(G, L), { key: G.id + school.l }); school.picked = null; school.revealed = false; school.fold = false; school.where = L.w[0]; const P = pendList().find(k => k !== G.id + school.l); school.rc = P ? { k: P, v: "", res: null } : null; }
   const Q = school.qa, T = L.ty, skills = SKILLS.filter(s => s[1] === G.id), sy = SYNCLE[G.id];
   const dots = Array.from({ length: L.n }, (_, i) => `<button class="ld${i === school.l ? " on" : ""}${(S.read || []).includes(G.id + i) ? " done" : ""}${school.justDone === G.id + i ? " fill" : ""}" data-l="${i}" title="${esc(LESSONS[G.id][i][0])}"></button>`).join("");
   $("#lesson").innerHTML = `<div class="lhead"><div class="eyebrow">Step ${n} of ${LADDER.length} · ${esc(G.tag)} · lesson ${school.l + 1} of ${L.n}</div><div class="ldots">${dots}</div></div>
   ${recallHTML(L)}<div class="lbody${school.rc && !school.rc.res ? " folded" : ""}"><h1>${esc(L.t)}</h1><div class="stept">${esc(G.title)} · Domain ${D.id}, ${D.weight} of the exam</div>
-  ${school.l === 0 ? `<div class="builds"><b>${n === 1 ? "Start here" : "Builds on"}</b>${esc(G.builds.replace(/^Start here\. |^Builds on [^.]+\. /, ""))}${n > 1 ? `<span>${esc((G.builds.match(/^Builds on ([^.]+)\./) || ["", ""])[1])}</span>` : ""}</div><p class="intro">${esc(G.intro)}</p>` : ""}
+  ${school.fold && school.picked == null ? `<div class="rfold"><b>Your notes are folded</b><span>Where it lives, Remember and the Lens open again after you pick a place.</span></div>` : `${school.l === 0 ? `<div class="builds"><b>${n === 1 ? "Start here" : "Builds on"}</b>${esc(G.builds.replace(/^Start here\. |^Builds on [^.]+\. /, ""))}${n > 1 ? `<span>${esc((G.builds.match(/^Builds on ([^.]+)\./) || ["", ""])[1])}</span>` : ""}</div><p class="intro">${esc(G.intro)}</p>` : ""}
   <div class="blk"><div class="hd"><span class="eyebrow">Where it lives</span><span class="eyebrow" style="font-weight:400">tap a row · it lights up in the Lens</span></div><table class="where">${L.w.map(i => { const w = G.where[i]; return `<tr data-w="${i}" class="${i === school.where ? "on" : ""}"><td>${esc(w[0])}</td><td><b>${esc(PORT[w[1]].name)}</b><br>${esc(w[2])}</td></tr>`; }).join("")}</table></div>
   <div class="blk"><div class="hd"><span class="eyebrow">Remember</span><span class="eyebrow" style="font-weight:400">${L.f.length} ${L.f.length === 1 ? "fact" : "facts"}</span></div><ul class="facts">${L.f.map(i => `<li>${md(G.facts[i])}</li>`).join("")}</ul></div>
   ${L.x.length ? `<div class="blk watch"><div class="hd"><span class="eyebrow">Watch out on the exam</span></div><ul class="facts">${L.x.map(i => `<li>${md(G.watch[i])}</li>`).join("")}</ul></div>` : ""}
   ${last ? `<div class="blk"><div class="hd"><span class="eyebrow">Who may do it</span></div><div class="roles">${esc(G.roles)}</div></div>` : ""}
-  ${last && sy ? `<div class="blk sy"><div class="hd"><span class="eyebrow">Practise the PowerShell side in Syncle</span><span class="eyebrow" style="font-weight:400">your mistakes here go there too</span></div><div class="roles">${sy.map(x => `<div class="syr"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("")}</div></div>` : ""}
-  <div class="blk"><div class="hd"><span class="eyebrow">Where would you go? · think first</span><span class="eyebrow" style="font-weight:400">+10 starlight</span></div><div class="qc"><p class="q">${esc(Q.q)}</p>${school.revealed ? Q.o.map((o, i) => `<button class="opt ${school.picked == null ? "" : i === Q.a ? "ok" : i === school.picked ? "no" : ""}" data-o="${i}">${esc(o)}</button>`).join("") + (school.picked != null ? `<div class="why ${school.picked === Q.a ? "" : "no"}">${school.picked === Q.a ? "Right. " : "Not quite. "}${esc(Q.why)}</div>${(S.read || []).includes(G.id + school.l) ? "" : `<p class="rnext">Your from-memory check for this lesson comes at the start of the next one, with this page out of sight.</p>`}` : "") : `<button class="reveal" data-reveal="1">Say your answer first, then show the choices</button>`}</div></div>
+  ${last && sy ? `<div class="blk sy"><div class="hd"><span class="eyebrow">Practise the PowerShell side in Syncle</span><span class="eyebrow" style="font-weight:400">your mistakes here go there too</span></div><div class="roles">${sy.map(x => `<div class="syr"><b>${esc(x[0])}</b><span>${esc(x[1])}</span></div>`).join("")}</div></div>` : ""}`}
+  <div class="blk"><div class="hd"><span class="eyebrow">Where would you go? · think first</span><span class="eyebrow" style="font-weight:400">+10 starlight</span></div><div class="qc">${!school.fold && school.picked == null ? `<button class="reveal" data-pfold="1">Done reading · fold my notes and ask me</button>` : `<div class="rsrc">${esc(Q.from)}${school.picked == null ? " Your notes are out of sight." : ""}</div><p class="q">${esc(Q.q)}</p>${school.revealed ? Q.o.map((o, i) => `<button class="opt ${school.picked == null ? "" : i === Q.a ? "ok" : i === school.picked ? "no" : ""}" data-o="${i}">${esc(o)}</button>`).join("") + (school.picked != null ? `<div class="why ${school.picked === Q.a ? "" : "no"}">${school.picked === Q.a ? "Right. " : "Not quite. "}${esc(Q.why)}</div>${(S.read || []).includes(G.id + school.l) ? "" : `<p class="rnext">Your from-memory check for this lesson comes at the start of the next one, with this page out of sight.</p>`}` : "") : `<button class="reveal" data-reveal="1">Say your answer first, then show the choices</button>`}`}</div></div>
   ${last ? `<div class="blk"><div class="hd"><span class="eyebrow">Stars in this step</span></div><div style="padding:8px 14px 12px">${skills.map(s => `<div class="sk"><i class="${status(s[0])}"></i><span>${esc(s[2])}</span></div>`).join("")}</div></div>` : ""}
   <div class="lnav"><button class="btn" data-lprev="1" ${school.l === 0 && n === 1 ? "disabled" : ""}>Back</button>${tonightLesson() ? `<button class="btn" data-view="tonight">Back to Tonight</button>` : `<span>${school.l + 1} / ${L.n}</span>`}<button class="btn solid" data-lnext="1">${last ? (n < LADDER.length ? "Next step: " + esc(GL[n].tag) : "Back to step 1") : "Next lesson"}</button></div></div>`;
   renderLumen(G);
@@ -1343,6 +1352,7 @@ function renderLumen(G) {
   $("#lumen").innerHTML = `<div class="lm"><svg width="22" height="16" viewBox="0 0 18 14" fill="none"><path d="M9 7C6 1 1 1 1.5 5S6 9 9 7zM9 7c3-6 8-6 7.5-2S12 9 9 7z" fill="#fdf3e4" stroke="#e0701a" stroke-width=".9"/><path d="M9 7c-2 2-3.5 4-3 6M9 7c2 2 3.5 4 3 6" stroke="#e0701a" stroke-width=".7"/></svg><b>Lumen</b><span>New words in this step. Tap one.</span></div><div class="gl">${G.gloss.map((w, i) => `<button class="gw${school.gw === i ? " on" : ""}" data-gw="${i}">${esc(w[0])}</button>`).join("")}</div>${school.gw != null && G.gloss[school.gw] ? `<div class="gdef"><b>${esc(G.gloss[school.gw][0])}</b>${esc(G.gloss[school.gw][1])}</div>` : ""}${school.say ? `<div class="lsay"><b>Lumen:</b> ${esc(school.say)}</div>` : ""}`;
 }
 function renderLens() {
+  if (cur === "school" && school.fold && school.picked == null) { $("#lens").innerHTML = `<div class="rfold" style="margin:14px"><b>The Lens is covered</b><span>It opens again after you pick a place.</span></div>`; return; }
   const G = GROUPS.find(g => g.id === school.g), w = G.where[school.where], r = resolvePath(w[1], w[2]), it = r.id ? itemOf(w[1], r.id) : null;
   const main = `<div class="crumb">${esc(w[2].split(/\s*>\s*/).join("  ›  "))}</div><h4>${esc(it ? it.lab : w[2])}</h4><p class="sub">${esc(it ? it.desc.charAt(0).toUpperCase() + it.desc.slice(1) + "." : "")}</p><div class="pcard" style="max-width:520px"><b>${esc(w[0])}</b><p>${esc(PORT[w[1]].name)} › <code>${esc(w[2])}</code></p><span class="pill">${esc(PORT[w[1]].url)}</span></div>`;
   $("#lens").innerHTML = portalHTML(w[1], r.id, main);
@@ -3366,7 +3376,7 @@ function go(v) {
 }
 
 document.addEventListener("click", e => {
-  const t = e.target.closest("[data-view],[data-go],[data-gw],[data-g],[data-l],[data-w],[data-reveal],[data-tyshow],[data-o],[data-lnext],[data-lprev],[data-skin],[data-pn],[data-pl],[data-pj],[data-site],[data-ct],[data-ca],[data-rep],[data-user],[data-mode],[data-app],[data-exam],[data-ea],[data-ej],[data-gg],[data-closed],[data-snd],[data-cpq],[data-wgo],[data-wnext],[data-book],[data-bsel],[data-bclose],#hint");
+  const t = e.target.closest("[data-view],[data-go],[data-gw],[data-g],[data-l],[data-w],[data-reveal],[data-pfold],[data-tyshow],[data-o],[data-lnext],[data-lprev],[data-skin],[data-pn],[data-pl],[data-pj],[data-site],[data-ct],[data-ca],[data-rep],[data-user],[data-mode],[data-app],[data-exam],[data-ea],[data-ej],[data-gg],[data-closed],[data-snd],[data-cpq],[data-wgo],[data-wnext],[data-book],[data-bsel],[data-bclose],#hint");
   if (!t) { if (C.launcher && !e.target.closest(".launcher")) { C.launcher = false; if (cur === "case") renderGlass(); } return; }
   const d = t.dataset;
   if (d.view) return go(d.view);
@@ -3385,7 +3395,8 @@ document.addEventListener("click", e => {
   if (d.l != null) { snd("page"); school.l = +d.l; school.qa = null; renderLesson(); $("#lesson").scrollTop = 0; return; }
   if (d.w != null) { school.where = +d.w; $$("#lesson .where tr").forEach(r => r.classList.toggle("on", +r.dataset.w === school.where)); renderLens(); return; }
   if (d.reveal) { school.revealed = true; return keepScroll(renderLesson); }
-  if (d.o != null && cur === "school") { if (school.picked != null) return; school.picked = +d.o; if (school.picked === school.qa.a) payOnce("wh:" + school.g + school.l, 10, "right place", school.g + school.l); else miss("where", school.g, school.qa.q, school.qa.ref); react(school.picked === school.qa.a); addPend(school.g + school.l); return keepScroll(renderLesson); }
+  if (t.dataset.pfold) { school.fold = true; snd("page"); renderLesson(); $("#lesson").scrollTop = 0; return; }
+  if (d.o != null && cur === "school") { if (school.picked != null) return; school.picked = +d.o; if (school.picked === school.qa.a) payOnce("wh:" + school.g + school.l, 10, "right place", school.g + school.l); else miss("where", school.qa.ref.g || school.g, school.qa.q, school.qa.ref); react(school.picked === school.qa.a); addPend(school.g + school.l); return keepScroll(renderLesson); }
   if (d.lnext || d.lprev) { snd("page"); const G = GROUPS.find(g => g.id === school.g), n = LESSONS[G.id].length, gi = LADDER.indexOf(G.id); if (d.lnext) { if (school.l < n - 1) school.l++; else { school.g = LADDER[(gi + 1) % LADDER.length]; school.l = 0; school.gw = null; } } else { if (school.l > 0) school.l--; else if (gi > 0) { school.g = LADDER[gi - 1]; school.l = LESSONS[school.g].length - 1; school.gw = null; } } school.qa = null; renderStrip(); renderLesson(); $("#lesson").scrollTop = 0; return; }
   if (t.closest("#lens")) return;
   if (d.pl) { C.launcher = !C.launcher; return renderGlass(); }
