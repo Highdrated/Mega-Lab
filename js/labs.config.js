@@ -20,6 +20,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="2" y="4" width="12" height="7" rx="1.5"/><path d="M4.5 7h2M9.5 7h2M1 14h14M5 11v1.5M11 11v1.5"/>'
   },
   {
+    id: "pyle-car",
+    name: "Lounge car",
+    tag: "Python",
+    sub: "python · lounge car, editor and terminal",
+    path: "labs/pyle-car/index.html",
+    ring: "ring-outer",
+    angle: 22.5,
+    glyph: '<rect x="1.5" y="3" width="13" height="8" rx="1"/><path d="M4 6l2 1.5L4 9M7.5 9h3M5 13.5h6M8 11v2.5"/>'
+  },
+  {
     id: "junle",
     name: "Junle",
     tag: "Networking",
