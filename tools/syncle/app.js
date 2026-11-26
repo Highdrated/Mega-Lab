@@ -70,7 +70,7 @@ const POS = [[30, 84, 1], [42, 72, .9], [54, 64, .82], [66, 56, .74], [77, 47, .
 function renderCorridor() {
   closeOverlay();
   R.view = "corridor";
-  $("corridor").classList.remove("hide"); $("memory").classList.add("hide"); $("desktop").classList.add("hide");
+  $("corridor").classList.remove("hide"); $("memory").classList.add("hide"); $("desktop").classList.add("hide"); $("drill").classList.add("hide");
   renderBreakAlert();
   $("crumb").textContent = "Memory corridor · PowerShell";
   const seq = S.seqSel;
@@ -207,7 +207,7 @@ function resetConsole(setup, pre) {
   tline(setup === "none" ? "Fresh pwsh window. Nothing is connected yet." : "Lab session. " + GRADER.describe(setup), "n");
   tstate();
 }
-function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/kaatje") + ">"; }
+function promptStr() { return "PS " + (R.ctx && R.ctx.cwd ? R.ctx.cwd : "/Users/veyra") + ">"; }
 function setPrompt() { const t = $("tprompt"); if (t) t.textContent = promptStr(); }
 function tstate() {
   setPrompt(); const c = R.ctx; const sc = c.mg ? c.mg.scopes.filter((s) => /\./.test(s) && s !== "User.Read").reverse() : []; $("tstate").title = sc.join(", "); $("tstate").textContent = (c.mg ? "GRAPH · " + sc.join(", ") : "NOT CONNECTED") + (c.exo ? " · EXCHANGE" : "") + (c.teams ? " · TEAMS" : "") + (c.spo ? " · SHAREPOINT" : ""); }
@@ -260,7 +260,7 @@ function openMemory(m, keepMix) {
   closeOverlay();
   if (!keepMix) R.mix = null;
   R.view = "memory"; R.gate = false; R.mem = m; R.hint = 0; R.watchStep = 0; R.pidx = keepMix ? R.pidx : firstOpenDrill(m);
-  $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
+  $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide"); $("drill").classList.add("hide"); if (typeof drStopRush === "function") drStopRush();
   $("crumb").textContent = SEQUENCES[m.seq].name + " · " + m.name;
   const dn = doneOf(m.id);
   R.phase = !dn.brief ? "brief" : !dn.watch ? "watch" : !dn.trace ? "trace" : !dn.recall ? "recall" : dueReview(m.id) ? "recall" : "brief";
@@ -555,7 +555,7 @@ function openGate(g) {
   g = g || GATE; R.gateObj = g;
   closeOverlay();
   R.view = "memory"; R.gate = true; R.mem = null; R.hint = 0; R.phase = "gate";
-  $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide");
+  $("corridor").classList.add("hide"); $("memory").classList.remove("hide"); $("desktop").classList.add("hide"); $("drill").classList.add("hide"); if (typeof drStopRush === "function") drStopRush();
   const gt = gtext();
   $("crumb").textContent = gt.crumb + g.name;
   flowband(gt.flow, gt.flowT);

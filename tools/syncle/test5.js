@@ -1,5 +1,5 @@
 const PS=require('./engine.js');const G=require('./grader.js');const {MEMORIES,AUTOMATE}=require('./content.node.js');
-const SC='/Users/kaatje/Documents/scripts/';const D='halvardco.onmicrosoft.com';
+const SC='/Users/veyra/Documents/scripts/';const D='halvardco.onmicrosoft.com';
 const SOL={
  runscript:{files:{},cmds:['~/Documents/scripts/Get-StaleUsers.ps1']},
  firstscript:{files:{'Get-FinanceList.ps1':`Get-MgUser -All -Filter "department eq 'Finance'" -Property DisplayName,JobTitle |\n    Select-Object DisplayName,JobTitle`},cmds:['./Get-FinanceList.ps1']},

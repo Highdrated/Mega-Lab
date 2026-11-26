@@ -3,10 +3,10 @@ const RW_SCOPES = ["User.ReadWrite.All", "Group.ReadWrite.All", "Organization.Re
 const THR = { throttle: { limit: 10, window: 10000 } };
 const LAT = { latency: { user: 20000, mailbox: 180000 } };
 Object.assign(GRADER.SETUPS, {
-  big: { scopes: ["User.Read.All", "Group.Read.All"], exo: false, cwd: "/Users/kaatje/Desktop", contractors: 240 },
-  thr: { scopes: RW_SCOPES, exo: false, cwd: "/Users/kaatje/Desktop", contractors: 240, quirks: THR },
-  lat: { scopes: RW_SCOPES, exo: true, cwd: "/Users/kaatje/Desktop", contractors: 240, quirks: LAT },
-  real: { scopes: RW_SCOPES, exo: true, cwd: "/Users/kaatje/Documents/scripts", contractors: 240, quirks: { throttle: THR.throttle, latency: LAT.latency } }
+  big: { scopes: ["User.Read.All", "Group.Read.All"], exo: false, cwd: "/Users/veyra/Desktop", contractors: 240 },
+  thr: { scopes: RW_SCOPES, exo: false, cwd: "/Users/veyra/Desktop", contractors: 240, quirks: THR },
+  lat: { scopes: RW_SCOPES, exo: true, cwd: "/Users/veyra/Desktop", contractors: 240, quirks: LAT },
+  real: { scopes: RW_SCOPES, exo: true, cwd: "/Users/veyra/Documents/scripts", contractors: 240, quirks: { throttle: THR.throttle, latency: LAT.latency } }
 });
 const CONQ = "\"department eq 'Contractors'\"";
 const contractors = (ctx) => ctx.t.users.filter((u) => u.Department === "Contractors");
@@ -139,7 +139,7 @@ Object.assign(DRILLS, {
     { q: "Contractors per city: Name and Count.", out: "Get-MgUser -All -Filter " + CONQ + " -Property City | Group-Object City | Select-Object Name,Count", hint: "-All, -Property City, Group-Object" },
     { q: "Show the trap: count contractors without -All.", fn: (ctx, res, hist) => res.out.length === 1 && res.out[0] === 100 && !/-All/i.test(hist[hist.length - 1] || ""), sol: ["(Get-MgUser -Filter " + CONQ + ").Count"], hint: "Same command, no -All." },
     { q: "A sample: 5 contractors, DisplayName and City.", out: "Get-MgUser -Top 5 -Filter " + CONQ + " -Property DisplayName,City | Select-Object DisplayName,City", hint: "-Top 5" },
-    { q: "Export every contractor (DisplayName, City) to ~/Desktop/contractors.csv for Belgian Excel.", fn: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/contractors.csv"); return !!c && c.rows.length === 240 && c.head.includes(";"); }, sol: ["Get-MgUser -All -Filter " + CONQ + " -Property DisplayName,City | Select-Object DisplayName,City | Export-Csv ~/Desktop/contractors.csv -NoTypeInformation -Delimiter ';'"], hint: "240 rows, not 100." },
+    { q: "Export every contractor (DisplayName, City) to ~/Desktop/contractors.csv for Belgian Excel.", fn: (ctx) => { const c = csvRows(ctx, "/Users/veyra/Desktop/contractors.csv"); return !!c && c.rows.length === 240 && c.head.includes(";"); }, sol: ["Get-MgUser -All -Filter " + CONQ + " -Property DisplayName,City | Select-Object DisplayName,City | Export-Csv ~/Desktop/contractors.csv -NoTypeInformation -Delimiter ';'"], hint: "240 rows, not 100." },
     { q: "Member DisplayNames of SG-Contractors in Zeebrugge? Count them.", fn: (ctx, res) => res.out.length === 1 && res.out[0] === 60, sol: [SGC + "; (Get-MgGroupMember -GroupId $g.Id -All | ForEach-Object { Get-MgUser -UserId $_.Id -Property City } | Where-Object City -eq 'Zeebrugge').Count"], hint: "-All on the members, then look each one up." }
   ],
   advquery: [
@@ -173,7 +173,7 @@ const POLDER = {
   text: { crumb: "Capstone · ", done: "Monday handled", flow: [["Count", "-All"], ["Change", "retry on 429"], ["Create", "poll for the mailbox"], ["Verify", "read it back"]], flowT: "CAPSTONE · BIG, SLOW AND THROTTLED", rules: "<h6>CAPSTONE RULES</h6>240 contractors, 10 writes per 10 seconds, mailboxes appear 3 minutes after licensing. You are already connected. Scripts in Code are welcome.", junie: "Same lessons, all at once: -All, retry on 429, poll with a cap. One ticket at a time." },
   tickets: [
     { id: "p1", from: "Garrion Penhale", title: "The full list", body: "Export every contractor (DisplayName, City) to ~/Desktop/polder.csv for Belgian Excel. All of them.", hint: "-All, Select-Object, Export-Csv -Delimiter ';'",
-      check: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/polder.csv"); return !!c && c.rows.length === 240 && /DisplayName/.test(c.head) && c.head.includes(";"); } },
+      check: (ctx) => { const c = csvRows(ctx, "/Users/veyra/Desktop/polder.csv"); return !!c && c.rows.length === 240 && /DisplayName/.test(c.head) && c.head.includes(";"); } },
     { id: "p2", from: "Garrion Penhale", title: "Everyone to the depot", body: "Set OfficeLocation 'Zeebrugge Depot' for all 240. Expect throttling; nobody may be skipped.", hint: "foreach + do/until retry with Start-Sleep after a 429.",
       check: (ctx) => contractors(ctx).length === 240 && contractors(ctx).every((u) => u.OfficeLocation === "Zeebrugge Depot") },
     { id: "p3", from: "Gate security", title: "New hire at the gate", body: "Lunet Verwyn (" + LUNET + ") starts now: create her in department Contractors, licence SPE_E3, add her to SG-Contractors, and once her mailbox exists, hide it from the address list.", hint: "Right after the bulk run Graph is still throttling you: even New-MgUser can get a 429, so wait or retry. Then create, retry the group add, licence, poll Get-EXOMailbox with -ErrorAction SilentlyContinue, and Set-Mailbox -HiddenFromAddressListsEnabled $true.",

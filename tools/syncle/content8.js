@@ -4,10 +4,10 @@ Object.assign(GRADER.SETUPS, {
   teamsOff: { scopes: ["User.Read.All", "Group.Read.All"], exo: false, teams: "seed" },
   teamsR: { scopes: ["User.Read.All", "Group.Read.All"], exo: false, teams: "on" },
   teamsW: { scopes: TW_SCOPES, exo: false, teams: "on" },
-  teamsCap: { scopes: TW_SCOPES, exo: false, teams: "on", cwd: "/Users/kaatje/Desktop" }
+  teamsCap: { scopes: TW_SCOPES, exo: false, teams: "on", cwd: "/Users/veyra/Desktop" }
 });
 const TQ = (n) => "$t = Get-Team -DisplayName '" + n + "'";
-const ADMIN_UPN = "kaatje@" + DOMAIN;
+const ADMIN_UPN = "veyra@" + DOMAIN;
 const teamOf = (ctx, n) => (ctx.t.teams || []).find((x) => x.DisplayName === n);
 const rosterOf = (ctx, n) => { const t = teamOf(ctx, n); return t ? t.roster : []; };
 const roleOf = (ctx, n, nick) => { const x = rosterOf(ctx, n).find((r) => r.upn === U(nick)); return x ? x.role : null; };
@@ -225,7 +225,7 @@ const SPRING = {
     { id: "s3", from: "Caius Merrowind", title: "A depot team, done right", body: "New private team 'Zeebrugge Depot', I'm the owner (you are not in it), with every enabled Operations colleague in Ghent. Plus a private channel 'Shift leads' for just me and Torin Ash.", hint: "New-Team -Owner, fill from Graph with a -Filter, New-TeamChannel -MembershipType Private -Owner, Add-TeamChannelUser.",
       check: (ctx) => { const t = teamOf(ctx, "Zeebrugge Depot"); if (!t || t.Visibility !== "Private" || t.roster.some((r) => r.upn === ADMIN_UPN)) return false; if (ownersOf(ctx, "Zeebrugge Depot").join() !== U("caius.merrowind")) return false; const ops = deptUsers(ctx, "Operations", (u) => u.City === "Ghent" && u.AccountEnabled); if (!ops.every((u) => t.roster.some((r) => r.upn === u.UserPrincipalName))) return false; const c = t.channels.find((x) => x.DisplayName === "Shift leads"); return !!c && c.MembershipType === "Private" && c.users.length === 2 && c.users.some((x) => x.upn === U("caius.merrowind") && x.role === "owner") && c.users.some((x) => x.upn === U("torin.ash")); } },
     { id: "s4", from: "Elowen Thistle", title: "The report for the directors", body: "Export every team with its owner count to ~/Desktop/teams-owners.csv for Belgian Excel: columns DisplayName, Archived and Owners.", hint: "Get-Team | Select-Object DisplayName,Archived,@{n='Owners';e={...}} | Export-Csv -Delimiter ';' -NoTypeInformation",
-      check: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/teams-owners.csv"); return !!c && c.rows.length === ctx.t.teams.length && c.head.includes(";") && /DisplayName/.test(c.head) && /Owners/.test(c.head) && /Archived/.test(c.head); } }
+      check: (ctx) => { const c = csvRows(ctx, "/Users/veyra/Desktop/teams-owners.csv"); return !!c && c.rows.length === ctx.t.teams.length && c.head.includes(";") && /DisplayName/.test(c.head) && /Owners/.test(c.head) && /Archived/.test(c.head); } }
   ]
 };
 GATES.push(SPRING);

@@ -730,13 +730,13 @@ class Ctx {
     this.scopes = [new Map()];
     this.funcs = {};
     this.mg = null; this.exo = false;
-    this.cwd = "/Users/kaatje";
-    this.dirs = new Set(["/", "/Users", "/Users/kaatje", "/Users/kaatje/Desktop", "/Users/kaatje/Documents", "/Users/kaatje/Documents/scripts", "/Users/kaatje/Downloads"]);
+    this.cwd = "/Users/veyra";
+    this.dirs = new Set(["/", "/Users", "/Users/veyra", "/Users/veyra/Desktop", "/Users/veyra/Documents", "/Users/veyra/Documents/scripts", "/Users/veyra/Downloads"]);
     this.fs = {
-      "/Users/kaatje/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hesper (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowenna is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(NOW.getTime() - 30 * 864e5) },
-      "/Users/kaatje/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNimue Clarthorn,nimue.clarthorn@halvardco.onmicrosoft.com,nimue.clarthorn,Sales,Inside Sales\nTamlin Jaspermoor,tamlin.jaspermoor@halvardco.onmicrosoft.com,tamlin.jaspermoor,Operations,Technician\nLiriel Maewood,liriel.maewood@halvardco.onmicrosoft.com,liriel.maewood,Marketing,Content Writer", at: new Date(NOW.getTime() - 36e5) },
-      "/Users/kaatje/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetrel.lindgrove@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(NOW.getTime() - 72e5) },
-      "/Users/kaatje/Downloads/leavers.csv": { text: "UPN,LastDay\nludovar.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.cranefeather@halvardco.onmicrosoft.com,2026-11-15\nisra.corvane@halvardco.onmicrosoft.com,2026-11-17", at: new Date(NOW.getTime() - 18e5) }
+      "/Users/veyra/Documents/halvard-handover.txt": { text: "Handover notes - Halvard & Co IT (written by the previous admin)\n\n- Global admins: Elowen + Lorcan + me + Hesper (finance needed it once, never removed)\n- Dorian asked to forward his mail 'temporarily'. Never checked back.\n- Rowenna is in the MFA exclusion group because of the old scanner. Scanner is gone now.\n- HR sends their lists as CSV. They always land in Downloads.\n- Power BI: 7 seats, all used. Lorcan barely opens it.\n\nGood luck.", at: new Date(NOW.getTime() - 30 * 864e5) },
+      "/Users/veyra/Downloads/newhires.csv": { text: "DisplayName,UPN,MailNickname,Department,JobTitle\nNimue Clarthorn,nimue.clarthorn@halvardco.onmicrosoft.com,nimue.clarthorn,Sales,Inside Sales\nTamlin Jaspermoor,tamlin.jaspermoor@halvardco.onmicrosoft.com,tamlin.jaspermoor,Operations,Technician\nLiriel Maewood,liriel.maewood@halvardco.onmicrosoft.com,liriel.maewood,Marketing,Content Writer", at: new Date(NOW.getTime() - 36e5) },
+      "/Users/veyra/Downloads/deptmoves.csv": { text: "UPN,Department\nbrannoc.vale@halvardco.onmicrosoft.com,Marketing\nmaelis.grey@halvardco.onmicrosoft.com,Sales\ntorin.ash@halvardco.onmicrosoft.com,Logistics\nisolde.fen@halvardco.onmicrosoft.com,Legal\npetrel.lindgrove@halvardco.onmicrosoft.com,Marketing\nkestrel.wade@halvardco.onmicrosoft.com,IT", at: new Date(NOW.getTime() - 72e5) },
+      "/Users/veyra/Downloads/leavers.csv": { text: "UPN,LastDay\nludovar.kerr@halvardco.onmicrosoft.com,2026-11-14\nbastian.cranefeather@halvardco.onmicrosoft.com,2026-11-15\nisra.corvane@halvardco.onmicrosoft.com,2026-11-17", at: new Date(NOW.getTime() - 18e5) }
     };
     this.host = [];
     this.errors = [];
@@ -748,8 +748,8 @@ class Ctx {
     if (l === "true") return true; if (l === "false") return false; if (l === "null") return null;
     if (l === "psitem") return this.getVar("_");
     if (l === "error") return this.errors.slice().reverse();
-    if (l === "home") return "/Users/kaatje";
-    if (l === "pwd") return this.cwd || "/Users/kaatje";
+    if (l === "home") return "/Users/veyra";
+    if (l === "pwd") return this.cwd || "/Users/veyra";
     for (let i = this.scopes.length - 1; i >= 0; i--) if (this.scopes[i].has(l)) return this.scopes[i].get(l);
     return null;
   }
@@ -764,7 +764,7 @@ class Ctx {
   pop() { this.scopes.pop(); }
   path(p) {
     p = String(p).trim().replace(/\\/g, "/");
-    if (p === "~") p = "/Users/kaatje"; else if (p.startsWith("~/")) p = "/Users/kaatje/" + p.slice(2); else if (!p.startsWith("/")) p = (this.cwd || "/Users/kaatje") + "/" + p;
+    if (p === "~") p = "/Users/veyra"; else if (p.startsWith("~/")) p = "/Users/veyra/" + p.slice(2); else if (!p.startsWith("/")) p = (this.cwd || "/Users/veyra") + "/" + p;
     const out = [];
     for (const seg of p.split("/")) { if (!seg || seg === ".") continue; if (seg === "..") out.pop(); else out.push(seg); }
     return "/" + out.join("/");
@@ -941,7 +941,7 @@ function runScriptFile(el, ctx, input) {
   }
   let ast;
   try { ast = parse("function ScriptBody {\n" + f.text + "\n}"); }
-  catch (e) { const m = e.message; throw new PSErr(m + "\n(in " + p.replace("/Users/kaatje", "~") + ")", { cmd: null, term: true, parse: true, kind: "parse" }); }
+  catch (e) { const m = e.message; throw new PSErr(m + "\n(in " + p.replace("/Users/veyra", "~") + ")", { cmd: null, term: true, parse: true, kind: "parse" }); }
   const fn = ast.stmts ? ast.stmts[0] : ast[0];
   const def = Object.assign({}, fn, { name: el.name });
   if (el.dot) return callFunction(def, el, ctx, input, true);
@@ -1287,11 +1287,11 @@ def("Connect-MgGraph", { module: "Microsoft.Graph.Authentication", ver: "2.25.0"
     const add = flat(b.Scopes).flatMap((s) => String(s).split(",")).map((s) => canon(s.trim())).filter(Boolean);
     const scopes = [];
     for (const s of (ctx.mg ? ctx.mg.scopes : ["openid", "profile", "User.Read", "email"]).concat(add)) if (!scopes.some((x) => x.toLowerCase() === s.toLowerCase())) scopes.push(s);
-    ctx.mg = { scopes, account: "kaatje@" + ctx.t.domain };
+    ctx.mg = { scopes, account: "veyra@" + ctx.t.domain };
     if (!b.NoWelcome) ctx.host.push({ text: "Welcome to Microsoft Graph!\n\nConnected via delegated access using 14d82eec-204b-4c2f-b7e8-296a70dab67e\nReadme: https://aka.ms/graph/sdk/powershell\nSDK Docs: https://aka.ms/graph/sdk/powershell/docs\nAPI Docs: https://aka.ms/graph/docs\n\nNOTE: You can use the -NoWelcome parameter to suppress this message." });
     return [];
   } });
-def("Disconnect-MgGraph", { module: "Microsoft.Graph.Authentication", ver: "2.25.0", ctype: "Cmdlet", run({ ctx }) { if (!ctx.mg) throw new PSErr("No application to sign out from.", { cmd: "Disconnect-MgGraph", term: true }); ctx.mg = null; return [obj("Microsoft.Graph.PowerShell.Authentication.AuthContext", { ClientId: "14d82eec-204b-4c2f-b7e8-296a70dab67e", TenantId: ctx.t.tenantId, Account: "kaatje@" + ctx.t.domain })]; } });
+def("Disconnect-MgGraph", { module: "Microsoft.Graph.Authentication", ver: "2.25.0", ctype: "Cmdlet", run({ ctx }) { if (!ctx.mg) throw new PSErr("No application to sign out from.", { cmd: "Disconnect-MgGraph", term: true }); ctx.mg = null; return [obj("Microsoft.Graph.PowerShell.Authentication.AuthContext", { ClientId: "14d82eec-204b-4c2f-b7e8-296a70dab67e", TenantId: ctx.t.tenantId, Account: "veyra@" + ctx.t.domain })]; } });
 def("Get-MgContext", { module: "Microsoft.Graph.Authentication", ver: "2.25.0", ctype: "Cmdlet", run({ ctx }) { if (!ctx.mg) return []; return [obj("Microsoft.Graph.PowerShell.Authentication.AuthContext", { ClientId: "14d82eec-204b-4c2f-b7e8-296a70dab67e", TenantId: ctx.t.tenantId, Scopes: ctx.mg.scopes.slice(), AuthType: "Delegated", Account: ctx.mg.account, AppName: "Microsoft Graph Command Line Tools", ContextScope: "CurrentUser", Environment: "Global" })]; } });
 
 const USER_READ = ["User.Read.All", "User.ReadWrite.All", "Directory.Read.All", "Directory.ReadWrite.All", "User.ReadBasic.All"];
@@ -1576,8 +1576,8 @@ def("Import-Csv", { module: "Microsoft.PowerShell.Utility", ver: "7.0.0.0", ctyp
 def("Get-Content", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0, { req: true }), TotalCount: P(null, { alias: ["First", "Head"] }), Tail: P(null) },
   run({ ctx, b, name }) { const p = ctx.path(b.Path); const f = ctx.fs[p]; if (!f) throw new PSErr("Cannot find path '" + p + "' because it does not exist.", { cmd: name, term: false, kind: "nofile" }); let l = f.text.split("\n"); if (b.TotalCount !== undefined) l = l.slice(0, +b.TotalCount); if (b.Tail !== undefined) l = l.slice(-(+b.Tail)); return l; } });
 function parentOf(p) { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); }
-function fileObj(ctx, p) { return obj("FileInfo", { UnixMode: "-rw-r--r--", User: "kaatje", Group: "staff", LastWriteTime: ctx.fs[p].at, Size: ctx.fs[p].text.length, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p, PSIsContainer: false }); }
-function dirObj2(ctx, p) { return obj("FileInfo", { UnixMode: "drwxr-xr-x", User: "kaatje", Group: "staff", LastWriteTime: new Date(NOW.getTime() - 86400000 * 3), Size: 96, Name: p.split("/").pop(), FullName: p, PSIsContainer: true }); }
+function fileObj(ctx, p) { return obj("FileInfo", { UnixMode: "-rw-r--r--", User: "veyra", Group: "staff", LastWriteTime: ctx.fs[p].at, Size: ctx.fs[p].text.length, Length: ctx.fs[p].text.length, Name: p.split("/").pop(), FullName: p, PSIsContainer: false }); }
+function dirObj2(ctx, p) { return obj("FileInfo", { UnixMode: "drwxr-xr-x", User: "veyra", Group: "staff", LastWriteTime: new Date(NOW.getTime() - 86400000 * 3), Size: 96, Name: p.split("/").pop(), FullName: p, PSIsContainer: true }); }
 function notFoundPath(p) { return "Cannot find path '" + p + "' because it does not exist."; }
 def("Get-ChildItem", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Filter: P(null), File: S(), Directory: S(), Name: S() },
   run({ ctx, b, name }) {
@@ -1598,7 +1598,7 @@ def("Get-ChildItem", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0"
   } });
 def("Set-Location", { module: "Microsoft.PowerShell.Management", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0) },
   run({ ctx, b, name }) {
-    if (b.Path === undefined) { ctx.prevCwd = ctx.cwd; ctx.cwd = "/Users/kaatje"; return []; }
+    if (b.Path === undefined) { ctx.prevCwd = ctx.cwd; ctx.cwd = "/Users/veyra"; return []; }
     if (String(b.Path) === "-") { const p = ctx.prevCwd || ctx.cwd; ctx.prevCwd = ctx.cwd; ctx.cwd = p; return []; }
     const p = ctx.path(b.Path);
     if (!ctx.dirs.has(p)) throw new PSErr(notFoundPath(p), { cmd: name, term: true, kind: "nopath" });
@@ -2040,7 +2040,7 @@ def("New-DistributionGroup", { module: "ExchangeOnlineManagement", ver: "3.6.0",
     const smtp = b.PrimarySmtpAddress !== undefined ? String(b.PrimarySmtpAddress) : alias + "@" + ctx.t.domain;
     const mem = flat(b.Members).map((x) => { const u = upnOf(ctx.t, x); if (!u) throw new PSErr(exoNotFound(x), { cmd: name, term: true, kind: "exo404" }); return u.UserPrincipalName; });
     if (b.WhatIf) { ctx.host.push({ text: "What if: Creating distribution group \"" + nm + "\"." }); return []; }
-    const d = { Name: nm, DisplayName: b.DisplayName !== undefined ? String(b.DisplayName) : nm, Alias: alias, PrimarySmtpAddress: smtp, GroupType: "Universal", ManagedBy: ["kaatje"], members: mem };
+    const d = { Name: nm, DisplayName: b.DisplayName !== undefined ? String(b.DisplayName) : nm, Alias: alias, PrimarySmtpAddress: smtp, GroupType: "Universal", ManagedBy: ["veyra"], members: mem };
     ctx.t.dls.push(d);
     return [obj(T_DG, { DisplayName: d.DisplayName, GroupType: d.GroupType, Alias: alias, ManagedBy: d.ManagedBy, Name: nm, PrimarySmtpAddress: smtp, RecipientTypeDetails: "MailUniversalDistributionGroup" })];
   } });
@@ -2166,8 +2166,8 @@ def("Restore-MgDirectoryDeletedItem", { module: "Microsoft.Graph.Identity.Direct
 def("Start-Transcript", { module: "Microsoft.PowerShell.Host", ver: "7.0.0.0", ctype: "Cmdlet", params: { Path: P(0), Append: S(), IncludeInvocationHeader: S() },
   run({ ctx, b, name }) {
     if (ctx.transcript) throw new PSErr("Transcription has already been started. Use the Stop-Transcript command to stop transcription.", { cmd: name, term: true });
-    const p = b.Path !== undefined ? ctx.path(b.Path) : "/Users/kaatje/Documents/PowerShell_transcript.halvard." + Date.now() + ".txt";
-    const head = "**********************\nPowerShell transcript start\nStart time: " + dateFmt(new Date(), "yyyyMMddHHmmss") + "\nUsername: HALVARD\\kaatje\nRunAs User: HALVARD\\kaatje\nMachine: kaatje-mbp (Unix 25.1.0)\nHost Application: /usr/local/microsoft/powershell/7/pwsh.dll\nPSVersion: 7.4.6\n**********************";
+    const p = b.Path !== undefined ? ctx.path(b.Path) : "/Users/veyra/Documents/PowerShell_transcript.halvard." + Date.now() + ".txt";
+    const head = "**********************\nPowerShell transcript start\nStart time: " + dateFmt(new Date(), "yyyyMMddHHmmss") + "\nUsername: HALVARD\\veyra\nRunAs User: HALVARD\\veyra\nMachine: veyra-mbp (Unix 25.1.0)\nHost Application: /usr/local/microsoft/powershell/7/pwsh.dll\nPSVersion: 7.4.6\n**********************";
     ctx.transcript = { path: p, lines: [b.Append && ctx.fs[p] ? ctx.fs[p].text : head] };
     ctx.fs[p] = { text: ctx.transcript.lines.join("\n"), at: new Date() };
     return ["Transcript started, output file is " + p];
@@ -2190,7 +2190,7 @@ def("ls", { module: null, ver: "", ctype: "Application", native: true, params: {
     if (ctx.fs[dir]) return [paths[0]];
     if (!ctx.dirs.has(dir)) { ctx.host.push({ err: "ls: " + (paths[0] || dir) + ": No such file or directory" }); return []; }
     const names = Array.from(ctx.dirs).filter((d) => d !== dir && parentOf(d) === dir).map((d) => ({ n: d.split("/").pop(), d: true })).concat(Object.keys(ctx.fs).filter((p) => parentOf(p) === dir).map((p) => ({ n: p.split("/").pop(), d: false, p }))).sort((a, b) => a.n.localeCompare(b.n));
-    if (/l/.test(flags)) { const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; const lines = ["total " + names.length * 8]; for (const x of names) { const at = x.d ? new Date(NOW.getTime() - 3 * 864e5) : ctx.fs[x.p].at; const sz = x.d ? 96 : ctx.fs[x.p].text.length; lines.push((x.d ? "drwxr-xr-x  4" : "-rw-r--r--  1") + " kaatje  staff  " + String(sz).padStart(5) + " " + mon[at.getMonth()] + " " + String(at.getDate()).padStart(2) + " " + String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0") + " " + x.n); } return lines; }
+    if (/l/.test(flags)) { const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; const lines = ["total " + names.length * 8]; for (const x of names) { const at = x.d ? new Date(NOW.getTime() - 3 * 864e5) : ctx.fs[x.p].at; const sz = x.d ? 96 : ctx.fs[x.p].text.length; lines.push((x.d ? "drwxr-xr-x  4" : "-rw-r--r--  1") + " veyra  staff  " + String(sz).padStart(5) + " " + mon[at.getMonth()] + " " + String(at.getDate()).padStart(2) + " " + String(at.getHours()).padStart(2, "0") + ":" + String(at.getMinutes()).padStart(2, "0") + " " + x.n); } return lines; }
     return [names.map((x) => x.n).join("\t")];
   } });
 def("cat", { module: null, ver: "", ctype: "Application", native: true, params: {},
@@ -2226,7 +2226,7 @@ function run(src, ctx) {
   result.out = out;
   result.host = ctx.host.slice();
   if (ctx.transcript && !/^\s*Start-Transcript/i.test(src)) {
-    const parts = ["PS /Users/kaatje> " + src];
+    const parts = ["PS /Users/veyra> " + src];
     for (const h of result.host) parts.push(h.err || h.text || "");
     const t = formatOut(out, 120).trim(); if (t) parts.push(t);
     if (result.error) parts.push(result.error.text ? result.error.text() : String(result.error.message));
@@ -2329,7 +2329,7 @@ function incident(t) {
   const T_UPN = theodwyn.UserPrincipalName;
   ev(atClock(1, 8, 4), T_UPN, "UserLoggedIn", "AzureActiveDirectoryStsLogon", { ClientIP: GATE_IP, ResultStatus: "Success" });
   ev(atClock(1, 8, 40), T_UPN, "New-InboxRule", "ExchangeAdmin", { ClientIP: GATE_IP + ":49822", ObjectId: "Theodwyn Gallow\\.", Parameters: [{ Name: "Name", Value: "." }, { Name: "SubjectContainsWords", Value: "voicemail;security;password;suspicious" }, { Name: "DeleteMessage", Value: "True" }, { Name: "StopProcessingRules", Value: "True" }] });
-  const K = "kaatje@" + t.domain;
+  const K = "veyra@" + t.domain;
   ev(atClock(6, 10, 2), K, "Set-Mailbox", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Support", Parameters: [{ Name: "Identity", Value: "Support" }, { Name: "HiddenFromAddressListsEnabled", Value: "False" }] });
   ev(atClock(5, 14, 20), K, "Add-MailboxPermission", "ExchangeAdmin", { ClientIP: "81.82.40.11", ObjectId: "Finance Inbox", Parameters: [{ Name: "Identity", Value: "Finance Inbox" }, { Name: "User", Value: "hesper.reedmire@" + t.domain }, { Name: "AccessRights", Value: "FullAccess" }] });
   ev(atClock(2, 11, 5), byName("Elara Wynn").UserPrincipalName, "New-InboxRule", "ExchangeAdmin", { ClientIP: "81.164.33.90:50110", ObjectId: "Elara Wynn\\Newsletters", Parameters: [{ Name: "Name", Value: "Newsletters" }, { Name: "SubjectContainsWords", Value: "newsletter" }, { Name: "MoveToFolder", Value: "Newsletters" }] });
@@ -2379,7 +2379,7 @@ function toDateV(v, cname, pname) {
 }
 function ruleObj(x) { const o = obj(T_RULE, {}); for (const k of ["Name", "Enabled", "Priority", "RuleIdentity", "Identity", "MailboxOwnerId", "Description", "From", "SubjectContainsWords", "SubjectOrBodyContainsWords", "MoveToFolder", "DeleteMessage", "MarkAsRead", "ForwardTo", "RedirectTo", "StopProcessingRules"]) o[k] = clone(x[k]); return o; }
 function rulesFor(ctx, mbx, name) {
-  if (mbx === undefined) throw new PSErr(exoNotFound("kaatje@" + ctx.t.domain), { cmd: name, term: true, kind: "exo404" });
+  if (mbx === undefined) throw new PSErr(exoNotFound("veyra@" + ctx.t.domain), { cmd: name, term: true, kind: "exo404" });
   const m = findMbx(ctx, mbx); if (!m) throw new PSErr(exoNotFound(mbx), { cmd: name, term: true, kind: "exo404" });
   return { m, rules: ctx.t.rules.filter((r) => r.mb === m.Name) };
 }
@@ -2562,7 +2562,7 @@ DISPLAY[T_CHAN] = ["Id", "DisplayName", "Description", "MembershipType"];
 DISPLAY[T_CHUSER] = ["UserId", "User", "Name", "Role"];
 DISPLAY[T_TCONN] = ["Account", "Environment", "Tenant", "TenantId"];
 const TEAMS_MOD = "MicrosoftTeams", TEAMS_VER = "7.4.0";
-const TEAM_ADMIN = "kaatje@halvardco.onmicrosoft.com";
+const TEAM_ADMIN = "veyra@halvardco.onmicrosoft.com";
 
 function seedTeams(ctx) {
   const t = ctx.t;
@@ -2618,7 +2618,7 @@ function rosterOut(ctx, x, type) {
   const guestName = /#EXT#/.test(x.upn) ? x.upn.split("#EXT#")[0].replace(/_([^_]+)$/, "@$1") : null;
   const g = !u && guestName ? ctx.t.users.find((z) => z.UserType === "Guest" && z.DisplayName && guestName.toLowerCase().startsWith(z.DisplayName.split(" ")[0].toLowerCase())) : null;
   const ref = u || g;
-  return obj(type, { UserId: ref ? ref.Id : (x.upn === TEAM_ADMIN ? "0f3a9c2e-1b4d-4e6f-8a7b-9c0d1e2f3a4b" : "00000000-0000-0000-0000-000000000000"), User: x.upn, Name: ref ? ref.DisplayName : x.upn === TEAM_ADMIN ? "Kaatje" : x.upn, Role: x.role });
+  return obj(type, { UserId: ref ? ref.Id : (x.upn === TEAM_ADMIN ? "0f3a9c2e-1b4d-4e6f-8a7b-9c0d1e2f3a4b" : "00000000-0000-0000-0000-000000000000"), User: x.upn, Name: ref ? ref.DisplayName : x.upn === TEAM_ADMIN ? "Veyra" : x.upn, Role: x.role });
 }
 function resolveTeamUser(ctx, name, who) {
   const s = String(who).toLowerCase();

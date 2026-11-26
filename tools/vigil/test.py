@@ -218,7 +218,7 @@ async def tonight(b):
         await pg.evaluate(f"SHIFT = {41 + n}; S.watch = null; ensureWatch(); S.watch.items.forEach(it => {{ if (it.k === 'oops') S.watch.done.push(it.id); if (it.k === 'lesson') S.read.push(it.g + it.l); if (it.k === 'trial') S.watch.trial = true; if (it.k === 'errand' || it.k === 'rev') S.watch.done.push(it.id); }}); watchCheck()")
     check(await pg.evaluate("streakOf().n === 7 && S.unlocks.includes('signed')"), "7 nights sign her name")
     await pg.evaluate("go('obs')")
-    check("KAATJE" in await pg.text_content("#orrery"), "her name is in the title block")
+    check("VEYRA" in await pg.text_content("#orrery"), "her name is in the title block")
     check(not errs, "no page errors on Tonight: " + "; ".join(errs[:3]))
     await pg.close()
 
