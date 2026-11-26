@@ -93,14 +93,19 @@ const OOPS = {
 const WJ = c => Object.assign(c, { o: c.o.map(x => x.replace(/ -(?=[A-Za-z])/g, " -\u2060").replace(/\.com\/(?=\S)/g, ".com/\u200b")) });
 Object.values(OOPS.ps).forEach(WJ);
 cards.forEach(c => { if (c.o.some(x => / -[A-Z]/.test(x))) WJ(c); });
-ERRANDS.forEach(e => { OOPS.errand[e.id] = errandCard("oops", e); });
-LADDER.forEach(gid => { OOPS.typed[gid] = TYPED[gid].map((_, l) => recallCard("oops", gid, l)); OOPS.where[gid] = G(gid).where.map((_, i) => whereCard("oops", gid, i)); });
+const same = (a, b) => a.q === b.q && a.a === b.a && a.why === b.why && JSON.stringify(a.o) === JSON.stringify(b.o);
+const ref = c => { const i = cards.findIndex(x => same(x, c)); return i >= 0 ? i : c; };
+ERRANDS.forEach(e => { OOPS.errand[e.id] = ref(errandCard("oops", e)); });
+LADDER.forEach(gid => { OOPS.typed[gid] = TYPED[gid].map((_, l) => ref(recallCard("oops", gid, l))); OOPS.where[gid] = G(gid).where.map((_, i) => ref(whereCard("oops", gid, i))); });
 const CASEC = {};
 Object.entries(CASEX).forEach(([cid, X]) => { CASEC[cid] = { t: "case " + X.no + ", " + X.t, c: {} }; Object.entries(X.redo).forEach(([rid, R]) => { CASEC[cid].c[rid] = mc("oops", R.q, R.show, R.no, R.why); }); });
 const PSK = { noconn: "connect", connect: "connect", tconn: "connect", site: "site", tget: "site", set: "set", bool: "set", param: "set", tset: "set", lock: "lock" };
 
 const sample = { "vigil.v1": JSON.stringify({ lit: [], seen: [], sl: 40, read: ["tenant0", "tenant1"], miss: [{ id: "typed:{\"g\":\"tenant\",\"l\":2}", kind: "typed", g: "tenant", t: TYPED.tenant[2].q, ref: { g: "tenant", l: 2 }, at: 1, st: 0, due: 1 }], skin: "paper" }) };
-const bank = `POCKET.register({
+const bank = `(() => {
+const O = ${JSON.stringify(OOPS)}, K = ${JSON.stringify(PSK)}, X = ${JSON.stringify(CASEC)}, CARDS = ${JSON.stringify(cards)};
+const card = v => typeof v === "number" ? CARDS[v] : v;
+POCKET.register({
   id: "vigil",
   name: "Vigil · Exam AB-650",
   topic: "Microsoft 365",
@@ -114,28 +119,29 @@ const bank = `POCKET.register({
     return [...new Set(s.read.filter(k => ids.has(k)))];
   },
   live(get) {
-    const s = get("vigil.v1"), O = ${JSON.stringify(OOPS)}, K = ${JSON.stringify(PSK)}, X = ${JSON.stringify(CASEC)};
+    const s = get("vigil.v1");
     if (!s || !Array.isArray(s.miss)) return [];
     const out = [], seen = new Set(), src = { typed: "a School check", where: "a School check", trial: "the Trial", "case": "the salary ledger case", ps: "the PowerShell window", errand: "an errand" };
     s.miss.forEach(m => {
       const r = m && m.ref; if (!r) return;
       let c = null;
-      if (m.kind === "typed" && O.typed[r.g]) c = O.typed[r.g][r.l];
-      if (m.kind === "where") c = r.web ? O.web : O.where[r.g] && O.where[r.g][r.w];
+      if (m.kind === "typed" && O.typed[r.g]) c = card(O.typed[r.g][r.l]);
+      if (m.kind === "where") c = r.web ? O.web : O.where[r.g] && card(O.where[r.g][r.w]);
       if (m.kind === "trial") c = O.trial[r.i];
       if (m.kind === "case") c = r.c ? X[r.c] && X[r.c].c[r.id] : O["case"][r.id];
       if (m.kind === "ps") c = O.ps[K[r.e]];
-      if (m.kind === "errand") c = O.errand[r.id];
-      if (!c || seen.has(c.o[c.a])) return;
-      seen.add(c.o[c.a]);
+      if (m.kind === "errand") c = card(O.errand[r.id]);
+      if (!c || seen.has("q:" + c.q) || seen.has("m:" + m.id)) return;
+      seen.add("q:" + c.q); seen.add("m:" + m.id);
       out.push(Object.assign({}, c, { u: "oops", ut: "Your oopsies", why: c.why + " You got this wrong in " + (m.kind === "case" && r.c && X[r.c] ? X[r.c].t : src[m.kind]) + ".", at: Math.max(1, m.st ? 1 : 2) }));
     });
     return out;
   },
   sample: ${JSON.stringify(sample)},
   sampleDone: ["tenant0", "tenant1"],
-  cards: ${JSON.stringify(cards)}
+  cards: CARDS
 });
+})();
 `;
 const out = path.join(__dirname, "..", "pockle", "banks", "vigil.js");
 fs.writeFileSync(out, bank);

@@ -2,6 +2,39 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## Run of 25 and 26 Nov 2026: all 35 placed
+
+Kaatje approved all 35 to go live on 26 Nov 2026. Where the result differs from the item below:
+
+- Meridian backdrops, ticket banner and lesson strip use the white Origin look she chose on 24 Nov, not the cream, brass and teal line. The lesson strip is a band of space (the earlier ship looked too much like a well-known franchise ship). The backdrop now fades out behind the reading column.
+- Hexle projects: I tarot cards (project-1), II grimoire journal (project-4, scroll), III potion brewing (project-2, shelf), IV herb quiz (project-3, sign). Painted in the grove ink-and-colour style, not pixel art.
+- Hexle orbital: hut, book, tower and drone are the grove art lightened; the rest are repainted line art.
+- Vigil: lock screen toned to the real page colours (#f7f9fb to #e9eef2), not warm paper. `tools/vigil/build.js` now copies `labs/img/vigil` next to the demo so the test finds the images.
+- Pockle home backdrop shows in the dark themes only (verdant, graphite). Cheering dragon shows on a 90%+ run when the top dragon is night.
+- Modle home hero is hidden in the minimal (white) theme.
+- Shelle backdrop is night theme only.
+- Method notes: shape guide drawn in Python, then image-to-image at 0.8 (see `D:\Small Apps\ComfyUI\output\megalab\COMFY-RUN-2026-11-25.md`).
+
+## 2026-11-26-1 · Vigil · portrait of Keeper Mirethil (needs her yes first)
+- file: `labs/img/vigil/mirethil.webp`
+- why: the Keeper speaks on Tonight and the Observatory, but a generic outline person icon (`svg.medal`) stands in for her face.
+- size: 256x256, transparent background (WEBP with alpha)
+- existing art to match: Vigil has no paintings yet. Its look is a technical blueprint: thin dark ink lines (#232a31) on warm off-white paper, pale grey grid, one orange accent (#e8772e) and one teal accent, degree scales and constellation line-work, crisp and calm. The portrait must read as a fine ink engraving that belongs on that drawing, not a painting.
+- positive: head and shoulders portrait of an elderly astronomer woman, calm watchful face, silver hair in a loose braid, a high-collared deep blue robe with a thin brass star clasp, a small round brass lens on a chain, fine ink line engraving with cross-hatching, technical drawing style, thin uniform dark lines on warm off-white paper, a faint circular frame of degree ticks behind the head, a single small orange accent on the clasp, centred, clean, high detail, isolated on a transparent background
+- negative: text, letters, numbers, logo, watermark, colour painting, heavy shading, photo, cartoon, anime, chibi, big eyes, glowing effects, busy background, frame border, cropped head, extra hands
+- placing: in `tools/vigil/demo.template.html`, the `.keeper .who` block (line with `svg class="medal"`) and the Keeper line on Tonight: replace the medal SVG with `<img class="medal" src="img/vigil/mirethil.webp" alt="Keeper Mirethil">`, same 40x40 circle; rebuild with `node tools/vigil/build.js`. Vigil's look is her own design, so ask before placing.
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
+
+## 2026-11-26-2 · Vigil · workstation lock screen backdrop (needs her yes first)
+- file: `labs/img/vigil/lockscreen.webp`
+- why: every case opens on the workstation lock screen, a plain grey dotted panel with a clock; it is the first thing she sees in a case and has no sense of the observatory.
+- size: 1600x1000, no transparency
+- existing art to match: Vigil's blueprint look (see 2026-11-26-1): ink line-work on warm off-white paper, pale grid, orange and teal accents, constellation lines and degree scales, the brass orrery as the centre of the world. The lock screen sits behind a large thin clock and a round initial badge, so the middle must stay quiet and light.
+- positive: a wide view through a tall arched observatory window at night, rendered as a soft technical blueprint drawing, a brass orrery silhouette on a desk at the lower left, constellation lines and a few stars drawn in thin teal ink across the window, degree scale arcs along the window frame, warm off-white paper tone, pale grid, one small orange accent on the orrery, very calm, low contrast, wide empty light area in the centre for a clock and text, clean line art, high detail at the edges
+- negative: text, letters, numbers, logo, watermark, people, dark heavy background, photo, painting with thick strokes, neon, busy centre, cartoon, anime, frame border, vignette
+- placing: `.lockscr` in `tools/vigil/demo.template.html` (about line 327): add `background:url(img/vigil/lockscreen.webp) center/cover` and keep the `:before` dot grid off or at low opacity; check the clock (`.tm`) still reads at 1280, 1440 and 1920; rebuild with `node tools/vigil/build.js`. Ask her first, since it changes Vigil's look.
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
+
 ## 2026-11-23-h4 · Hexle · harbour plot: Fishmonger stall
 - file: `labs/img/hexle/fishmonger.webp`
 - why: chapter II (the Harbour) has four new plots with no art yet; the scene is an empty fog pool while every other plot has a building.
@@ -10,7 +43,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small wooden fishmonger's stall on a stone quay, striped canvas awning faded teal and cream, crates of silver fish on ice, hanging nets and a brass scale, a lantern on a hook, a few gulls on the awning, wet cobbles, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
 - negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
 - placing: add `"fishmonger": "img/hexle/fishmonger.webp"` to `ART` in `labs/hexle.html` (Harbour IV, plot 16; `PLOTS` already uses art key `fishmonger`). For the finale card, also add `art:'fishmonger'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-23-h3 · Hexle · harbour plot: Salt Lantern tavern
 - file: `labs/img/hexle/tavern.webp`
@@ -20,7 +53,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a crooked two-storey harbour tavern of dark timber and stone, a hanging sign shaped like a lantern with no lettering, glowing round windows, barrels stacked by the door, a small rowing boat tied below on dark water, smoke from the chimney, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
 - negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
 - placing: add `"tavern": "img/hexle/tavern.webp"` to `ART` in `labs/hexle.html` (Harbour III, plot 15; `PLOTS` already uses art key `tavern`). For the finale card, also add `art:'tavern'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-23-h2 · Hexle · harbour plot: Ferry office
 - file: `labs/img/hexle/ferry.webp`
@@ -30,7 +63,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small stone ferry office at the end of a wooden pier, a ticket window with warm light, a timetable board with blank slates, coiled ropes and a bollard, a moored ferry boat's bow just visible, lantern posts along the pier, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
 - negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
 - placing: add `"ferry": "img/hexle/ferry.webp"` to `ART` in `labs/hexle.html` (Harbour II, plot 14; `PLOTS` already uses art key `ferry`). For the finale card, also add `art:'ferry'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-23-h1 · Hexle · harbour plot: Lighthouse
 - file: `labs/img/hexle/lighthouse.webp`
@@ -40,7 +73,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a tall slim stone lighthouse on a rocky outcrop, white and weathered grey bands, a glowing amber lamp room with a soft beam, a small keeper's cottage with ivy at its foot, waves breaking gently on dark rocks, single building isolated on a transparent background, three-quarter top-down view, semi-realistic painterly fantasy game art, soft brushwork, night, warm amber light from windows against cool grey-green and sea-blue shadows, mossy weathered materials, soft mist at the base, high detail, centred, matching a cosy witch village
 - negative: text, letters, runes that read as words, logo, watermark, people, characters, background scenery, sky, frame, border, cartoon, anime, flat vector, photo, oversaturated colours, harsh outlines, cropped building
 - placing: add `"lighthouse": "img/hexle/lighthouse.webp"` to `ART` in `labs/hexle.html` (Harbour I, plot 13; `PLOTS` already uses art key `lighthouse`). For the finale card, also add `art:'lighthouse'` to that harbour target. The Ink theme falls back to this picture until an ink version exists.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-23-1 · Spelle · dungeon panel backdrop
 - file: `labs/img/spelle/dungeon-depths.webp`
@@ -50,7 +83,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: top-down view into a deep dark dungeon chamber, rough grey stone walls with moss fading into shadow at every edge, a few distant braziers casting small warm pools of orange light near the corners, scattered rubble and old bones at the margins, faint blue magical haze drifting low, the centre an even calm dark stone floor with no objects, strong vignette to near black at the borders, painterly fantasy game art, soft brushwork, muted grey, moss green and ember orange palette, low contrast so tiles on top stay readable
 - negative: text, letters, runes that read as words, logo, watermark, characters, hero, monsters, doors, stairs, bright light in the centre, cartoon, anime, photo, high contrast, saturated colours, perspective side view, frame
 - placing: `#dungeon-sheet` in `labs/spelle.html`: keep `background: #0d0b09` as the fallback colour and add `url(img/spelle/dungeon-depths.webp) center / cover`. The grid (`#grid`) stays on top unchanged.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-22-1 · Proxle · Create the cluster scene
 - file: `labs/img/proxle/create.jpg`
@@ -60,7 +93,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: wide painted fantasy interior, a circular stone hall with a ring of tall dark teal carved pillars, only ONE pillar in front glows bright cyan from a crystal slot, with thin faint threads of cyan light reaching from it toward two dark unlit pillars waiting beside it, the rest of the ring in shadow, warm amber light from a high window, candle flames, sandstone dome, polished stone floor reflecting the single glow, low cinematic camera, soft volumetric haze, rich detail, semi-realistic painterly style
 - negative: text, letters, runes that read as words, logo, people, characters, modern computers, cables, cartoon, flat vector, emoji, blurry, oversaturated, every pillar lit, watermark, frame
 - placing: in `labs/proxle.html`, function `scenePick`, the map entry `create:['cluster', ...]` would become `create:['create', ...]` so the banner (`#scene`, layers `i` with `backgroundImage`) loads `img/proxle/create.jpg`. One-word code change when the image is placed.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-21-3 · Modle · networking hub card icons (set of 4, needs her yes first)
 - file: `labs/img/modle/net-terminal.webp`, `net-hardware.webp`, `net-exam.webp`, `net-scenarios.webp`
@@ -70,7 +103,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a single small object as a painterly fantasy icon, centred, slight three-quarter view (swap per file: a brass-framed glowing terminal slate with amber runes, a small rack-mounted network switch with softly glowing port lights and one patch cable, a wax-sealed scroll with an amber diamond seal, a cracked server rack lantern giving off a thin wisp of red smoke), soft brushwork, semi-realistic, warm amber glow against deep navy shadows, gold and violet accents, clean silhouette that reads at 48 px
 - negative: text, letters, numbers, logo, brand names, watermark, emoji style, flat vector, cartoon outlines, chibi, photo, background scenery, frame, border, drop shadow box
 - placing: would replace the `.app-glyph` div in each `a.app` card in `labs/modle/network/index.html`, styled in `labs/modle/network/net.css`; needs an `<img>` at about 40 px per card, so her yes first.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-21-2 · Webble · path step icons (set of 5, needs her yes first)
 - file: `labs/img/junie/step-school.webp`, `step-target.webp`, `step-seal.webp`, `step-replay.webp`, `step-toolbox.webp`
@@ -80,7 +113,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a single small object as a soft painted sticker, centred, slight three-quarter view (swap per file: an open book with a ribbon bookmark, a small round archery target with one arrow, a wax seal stamp pressing an orange-red seal, a looping ribbon arrow, a little wooden toolbox with brass corners), gentle storybook illustration, soft brush shading, warm light from the upper left, palette of sage green, cream and orange-red, clean silhouette that reads at 24 px
 - negative: text, letters, numbers, logo, watermark, emoji style, flat vector, thick black outlines, photo, background scenery, drop shadow box, clutter
 - placing: would replace the emoji in the `.how` cards (`labs/webble.html`, the `['📖','School',...]` list near "Your path", shown in `.how em`, font-size 20px) and the Toolbox button; needs a small wiring change to use `<img>` at about 28 px, so her yes first.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-21-1 · Meridian · ticket queue banner (needs her yes first)
 - file: `labs/img/meridian/banner-tickets.webp`
@@ -90,7 +123,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: the operations deck below the bridge of a long-haul starship seen in a wide low view, a long curved desk with soft teal status screens, brass rails, warm cream panels, a slow star field through a long window, ticket slips glowing faintly on a board, quiet early-shift light, wide empty calm area on the right for text, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette of cream, brass and teal, high detail
 - negative: text, letters, numbers, logo, watermark, people, faces, crowd, neon, harsh contrast, clutter, photo, dark gloomy mood
 - placing: not wired; would sit above `TICKET QUEUE` on the Tickets tab of `labs/meridian.html`, full width of the 900 px list column, about 180 px tall with `object-fit:cover`. Needs a small wiring change, so her yes first.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-12 · Junos Lab · front door backdrop (needs her yes first)
 - file: `labs/junos-lab/img/front-door.webp`
@@ -100,7 +133,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a quiet night watch room at the top of a stone tower, rows of softly glowing network racks built into carved alcoves like bookshelves, thin green status lights and a few amber ones, cables running in neat bundles along the vaulted ceiling, a large dark empty area in the centre for a card, moonlight through one narrow window, painterly fantasy illustration, soft brushwork, semi-realistic, near-black and deep teal palette with green and amber accents, very low contrast
 - negative: text, letters, logo, watermark, people, faces, real brand marks, neon, harsh contrast, photo, clutter, bright centre
 - placing: would sit under the front door card as the background of `#resume` in `labs/junos-lab/css/` (line with `#resume{position:fixed;inset:0;...}`), darkened so the card stays readable; not wired, look change.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-10 · Codex · volume header strips (set of 10, needs her yes first)
 - file: `labs/img/codex/vol-junos.webp`, `vol-python.webp`, `vol-web.webp`, `vol-js.webp`, `vol-php.webp`, `vol-git.webp`, `vol-shell.webp`, `vol-sql.webp`, `vol-hexle.webp`, `vol-passle.webp`
@@ -110,7 +143,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a wide shelf in an old wizard's library seen straight on, one large leather-bound book standing open in the middle with a single glowing emblem on its page (swap per volume: a small castle switch rack, a coiled garden snake, a stained glass window, a lightning rune, a copper cooking pot, a branching tree, a seashell, a stack of wooden drawers, a witch's hut, a bistro table), dust in a beam of light, painterly fantasy illustration, soft brushwork, semi-realistic, muted blue-grey palette with one warm accent colour, calm empty space on the right third, low contrast so text can sit above it
 - negative: text, letters, readable runes, logo, watermark, people, cartoon outlines, anime, photo, neon, harsh contrast, clutter
 - placing: would sit behind the title block of each volume (`.vol-head` in `labs/codex.html`), faded toward the text; not wired, look change.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-11 · Codex Microsoft · volume header strips (set of 10, needs her yes first)
 - file: `labs/img/mscodex/vol-connect.webp`, `vol-pipeline.webp`, `vol-entra.webp`, `vol-tap.webp`, `vol-exchange.webp`, `vol-script.webp`, `vol-sharepoint.webp`, `vol-incident.webp`, `vol-ircmd.webp`, `vol-formulas.webp`
@@ -120,7 +153,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a bright white corridor built from hexagonal cells, thin grey wireframe edges, pale blue glow from the far end, one floating geometric object in the middle distance (swap per volume: three doors, a glass pipe, a ring of small figures as plain pawns, an hourglass, an envelope, a scroll of lines, a folder stack, a cracked hexagon in red, a toolbox, a set of measuring rods), clean geometric 3D illustration, soft shadows, white and pale grey palette with a single blue accent, calm empty space on the right third
 - negative: text, letters, logo, watermark, real brand marks, people, faces, dark background, fantasy forest, clutter, photo, harsh contrast
 - placing: would sit behind the title block of each volume (`.vol-head` in `labs/mscodex.html`), faded toward the text; not wired, look change.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-7 · Git Lab · hangar backdrop (needs her yes first)
 - file: `labs/img/git-lab/hangar.webp`
@@ -130,7 +163,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: the inside of a quiet starship hangar seen from a raised control deck, one small courier ship resting on the pad, amber guide lights along the floor, soft haze, a large dark empty area in the upper centre for a diagram, painterly science fantasy illustration, soft brushwork, charcoal and deep navy palette with warm amber accents, low contrast
 - negative: text, letters, logo, watermark, people in the foreground, real brand marks, neon, harsh contrast, photo, clutter
 - placing: would sit behind the commit graph in the FLIGHT PATH panel of `labs/git-lab.html`, darkened so the graph stays readable; not wired, look change.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-8 · Opsle · mission banners (set of 4)
 - file: `labs/img/opsle/mission-ticket-triage.webp`, `mission-site-status.webp`, `mission-onboarding-intake.webp`, `mission-ops-portal.webp`
@@ -140,7 +173,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small sage-green axolotl with pink feathery gills at work (swap per card: sorting a pile of paper tickets into three trays; watching a wall of four glowing status lanterns, one red; welcoming new arrivals at a wooden desk with name tags; loading a crate onto a small cargo boat at a pier), wide banner composition with calm empty space on the right, soft painterly storybook illustration, gentle brushwork, light warm palette with sage and coral
 - negative: text, letters, logo, watermark, cartoon outlines, anime, photo, humans, dark background, clutter
 - placing: top of each mission card in `tools/opsle/template.html`; needs one `<img>` per card, so ask her first.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-9 · Modle · home screen hero
 - file: `labs/img/modle/home-hero.webp`
@@ -150,7 +183,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small golden-yellow cat sitting on a stack of old books in a wizard's study at night, glowing gold numbers and simple symbols floating up from an open book, a violet lantern, painterly fantasy illustration, soft brushwork, semi-realistic, deep navy and gold palette with violet accents, soft edges that fade out, transparent background
 - negative: text that reads as words, logo, watermark, cartoon outlines, chibi, anime, photo, harsh contrast, frame, border
 - placing: above the title on the home screen (`labs/modle/js/screens/home.js`); needs one `<img>`, so ask her first.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-1 · Hexle · orbital village plots (set of about 8)
 - file: `labs/img/hexle/<name>-orbital.webp`, one per plot that has no orbital art yet (use the plot names already in `ART`, line 589 of `labs/hexle.html`)
@@ -160,7 +193,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a single small witch-village building (swap per plot: herb hut, well, bridge, cauldron stall, owl tower, bakery, greenhouse, gate), isometric three-quarter view, clean dark grey line illustration, even line weight, flat, no fill, no shading, centred with a little margin, transparent background
 - negative: colour, shading, gradients, texture, pixel art, text, letters, watermark, people, ground plane, shadow, photo
 - placing: register each file in `ART_O` (line 590 of `labs/hexle.html`); the village already reads from it.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-2 · Hexle · Grimoire project cards I to IV
 - file: `labs/img/hexle/project-1.webp` to `project-4.webp`
@@ -170,7 +203,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small themed object for a witch's project (swap per card: a spread of tarot cards on a cloth, a potion shelf, a hanging shop sign, a spell scroll with a wax seal), detailed pixel art, isometric three-quarter view, moss green and stone grey palette with warm amber light, crisp pixels, transparent background
 - negative: text, letters, readable runes, watermark, people, smooth painting, blur, photo, background scene
 - placing: the `art` of each project target (`tg.art`, resolved through `ART`, line 589 of `labs/hexle.html`).
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-3 · Hexle · grove finale witch, cheering
 - file: `labs/img/hexle/witchcheer.webp`
@@ -180,7 +213,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: the same small witch in a moss green robe and pointed hat, full body, both arms raised in a cheer, a few amber sparks above her staff, detailed pixel art, isometric three-quarter view, crisp pixels, transparent background
 - negative: text, watermark, extra limbs, second character, smooth painting, blur, photo, background scene
 - placing: `.finale .fwitch` in `labs/hexle.html`.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-4 · Webble · gym hub header
 - file: `labs/img/webble/gym-hero.webp`
@@ -190,7 +223,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small sage-green axolotl with pink feathery gills and a cream belly lifting a tiny dumbbell made of two river pebbles, determined happy face, a few bubbles, soft painterly storybook illustration, gentle brushwork, warm off-white and coral accents, transparent background
 - negative: text, letters, watermark, cartoon outlines, anime, photo, human, gym machines, dark background
 - placing: the `.ghero` block of the gym hub (around line 5446 of `labs/webble.html`); needs one `<img>` there, so ask her first.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-5 · Webble · empty console
 - file: `labs/img/webble/console-empty.webp`
@@ -200,7 +233,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small sage-green axolotl with pink gills asleep on a smooth river stone, a tiny lantern beside it, soft painterly storybook illustration, muted warm palette, lots of empty space on the right, transparent background
 - negative: text, letters, watermark, cartoon outlines, anime, photo, bright saturated colours
 - placing: background of `#cons` when it has no lines (look change, ask her first).
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-20-6 · Webble · sharper Junie on Home
 - file: `labs/img/junie/junie-swim@2x.webp`
@@ -210,7 +243,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a small sage-green axolotl with pink feathery gills and a cream belly swimming to the left, tail curved, friendly face, soft painterly storybook illustration, gentle brushwork, transparent background
 - negative: text, watermark, cartoon outlines, anime, photo, different pose, background
 - placing: `.jnhero` image in `labs/webble.html` (line 81); swap the file name only.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-7 · Meridian · portrait of Lunelle
 - file: `labs/img/meridian/npc-linnea.webp`
@@ -220,7 +253,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: head and shoulders portrait of a ship's purser, a precise woman in her thirties, neat dark bob, crisp cream uniform jacket, holding a slim tablet, faint polite smile, plain dark backdrop, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, cartoon, anime, photo, extra people, hands near face, harsh contrast, neon
 - placing: already wired; `face()` in `labs/meridian.html` loads `img/meridian/npc-<id>.webp` and falls back to initials.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-8 · Meridian · portrait of Odran
 - file: `labs/img/meridian/npc-odran.webp`
@@ -230,7 +263,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: head and shoulders portrait of a starship chief engineer, a broad man in his forties with a short beard, rolled sleeves, a grease mark on his cheek, a headset around his neck, friendly but tired, plain dark backdrop, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, cartoon, anime, photo, extra people, hands near face, harsh contrast, neon
 - placing: already wired; `face()` in `labs/meridian.html` loads `img/meridian/npc-<id>.webp` and falls back to initials.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-9 · Meridian · portrait of Seraphine
 - file: `labs/img/meridian/npc-seraphine.webp`
@@ -240,7 +273,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: head and shoulders portrait of a starship captain, a composed woman in her fifties, silver hair tied back, dark navy uniform with a single brass pin, calm steady eyes, plain dark backdrop, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, cartoon, anime, photo, extra people, hands near face, harsh contrast, neon
 - placing: already wired; `face()` in `labs/meridian.html` loads `img/meridian/npc-<id>.webp` and falls back to initials.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-10 · Meridian · portrait of Tamsin
 - file: `labs/img/meridian/npc-tamsin.webp`
@@ -250,7 +283,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: head and shoulders portrait of a young starship comms officer with cropped auburn hair, a slim softly glowing earpiece, focused expression, layered grey uniform, plain dark backdrop, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, cartoon, anime, photo, extra people, hands near face, harsh contrast, neon
 - placing: already wired; `face()` in `labs/meridian.html` loads `img/meridian/npc-<id>.webp` and falls back to initials.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-11 · Meridian · night watch backdrop
 - file: `labs/img/meridian/backdrop-nightwatch.webp`
@@ -260,7 +293,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a starship observation promenade during the night watch, lights dimmed to deep charcoal, a few amber console glows, stars bright through tall windows, calm and focused, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, people, clutter, neon, photo
 - placing: already wired; the theme backdrop code loads `img/meridian/backdrop-nightwatch.webp`.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-12 · Meridian · bridge backdrop
 - file: `labs/img/meridian/backdrop-bridge.webp`
@@ -270,7 +303,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a starship engineering bridge in deep navy blue, rows of server racks behind glass with tiny status lights, a curved window showing a gas giant, cool and precise, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, people, clutter, neon, photo
 - placing: already wired; the theme backdrop code loads `img/meridian/backdrop-bridge.webp`.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-1 · Pockle · home screen backdrop
 - file: `labs/img/pockle/lair-night.webp`
@@ -280,7 +313,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a quiet dragon roost high in a stone tower at night, seen in portrait, a round window onto a deep blue starry sky, small perches and nests of woven rope along the walls, a few glowing teal lanterns, scattered scrolls and brass instruments, empty calm space in the upper two thirds for interface cards, painterly fantasy illustration, soft brushwork, semi-realistic, gentle rim light from the lanterns, palette of midnight blue, teal and warm brass, low contrast so text stays readable
 - negative: text, letters, logo, watermark, people, cartoon, chibi, anime, photo, harsh contrast, bright white, clutter, frame, border
 - placing: new `background-image` on `.app` (or `#home`) in `tools/pockle/pockle.template.html`, darkened with a gradient; needs her yes first because it changes the look (see Pockle ideas in LOG.md).
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-2 · Pockle · result screen dragon
 - file: `labs/img/pockle/dragon-night-cheer.webp`
@@ -290,7 +323,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: the same small, skinny night-blue dragon with teal wing membranes, wings half spread, head lifted, a tiny spark of teal fire at its mouth, proud and pleased, centred on a round badge with a deep starry sky behind it, painterly fantasy illustration, semi-realistic, soft brushwork, cool blue and teal palette with one warm highlight
 - negative: text, letters, watermark, cartoon, chibi, anime, big eyes, fat body, extra limbs, extra wings, photo, frame
 - placing: `#resImg` in `tools/pockle/pockle.template.html` when accuracy is 90% or more.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-3 · Meridian · promenade backdrop
 - file: `labs/img/meridian/backdrop-promenade.webp`
@@ -300,7 +333,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: the observation promenade of a long-haul starship, warm cream walls and brushed brass rails, tall windows onto a slow star field, a quiet systems console in the foreground, morning light, light and airy, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette, high detail
 - negative: text, letters, logo, watermark, people, crowd, clutter, neon, harsh contrast, photo
 - placing: already wired; the theme backdrop rule in `labs/meridian.html` loads `img/meridian/backdrop-promenade.webp`.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-4 · Meridian · lesson header strip
 - file: `labs/img/meridian/hero-school.webp`
@@ -310,7 +343,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a long horizontal view along the hull of a sleek long-haul carrier ship drifting past a pale planet, small lit windows along the side, wide empty space on the left for text, soft and minimal, painterly science fiction concept art, calm and elegant, soft cinematic light, muted palette
 - negative: text, letters, logo, watermark, people, busy detail on the left third, neon, photo
 - placing: already wired; `heroArt()` in `labs/meridian.html` uses `img/meridian/hero-school.webp`.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-5 · Spelle · title screen
 - file: `labs/img/spelle/title-grimoire.webp`
@@ -320,7 +353,7 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: an open spellbook on a worn stone lectern at the mouth of a dungeon stair, a green-hooded apprentice with a staff seen from behind looking down the steps, a faint swirling blue portal glow far below, torchlight on grey mossy stone, parchment and warm candle tones in the foreground, painterly fantasy illustration, soft brushwork, centre left kept calm for a title card
 - negative: text, letters, runes that read as words, logo, watermark, cartoon, anime, photo, gore, bright saturated colours
 - placing: `background-image` behind the title card (the first full-screen overlay in `labs/spelle.html`), under the existing parchment card.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)
 
 ## 2026-11-19-6 · Shelle · backdrop (needs her yes first)
 - file: `labs/img/shelle/backdrop-harbor.webp`
@@ -330,4 +363,4 @@ Prompts waiting for a session that can reach Kaatje's desktop and her local Comf
 - positive: a fantasy harbour at dusk seen from a harbourmaster's desk, wooden cranes lifting rune-marked cargo crates onto tall ships, lanterns along the quay, calm water, a large dark empty area in the centre for a terminal window, painterly fantasy illustration, soft brushwork, deep teal and amber palette, low contrast
 - negative: text, letters, logo, watermark, modern ships, real brand marks, people in the foreground, photo, harsh contrast
 - placing: would sit behind the terminal in night theme only; not wired.
-- status: todo
+- status: done (placed 26 Nov 2026, approved by Kaatje to go live)

@@ -20,6 +20,16 @@ const LABS_CONFIG = [
     glyph: '<rect x="2" y="4" width="12" height="7" rx="1.5"/><path d="M4.5 7h2M9.5 7h2M1 14h14M5 11v1.5M11 11v1.5"/>'
   },
   {
+    id: "pyle-car",
+    name: "Lounge car",
+    tag: "Python",
+    sub: "python · lounge car, editor and terminal",
+    path: "labs/pyle-car/index.html",
+    ring: "ring-outer",
+    angle: 22.5,
+    glyph: '<rect x="1.5" y="3" width="13" height="8" rx="1"/><path d="M4 6l2 1.5L4 9M7.5 9h3M5 13.5h6M8 11v2.5"/>'
+  },
+  {
     id: "junle",
     name: "Junle",
     tag: "Networking",
@@ -182,12 +192,22 @@ const LABS_CONFIG = [
   {
     id: "vigil",
     name: "Vigil",
-    tag: "Practice",
+    tag: "Exam Prep",
     sub: "exam AB-650 · microsoft 365 and ai admin",
     path: "labs/vigil.html",
     ring: "ring-mid",
     angle: 77,
     glyph: '<circle cx="8" cy="8" r="6.5"/><ellipse cx="8" cy="8" rx="6.5" ry="2.4" transform="rotate(-18 8 8)"/><circle cx="8" cy="8" r="1.5"/><circle cx="13.4" cy="6.1" r="1"/>'
+  },
+  {
+    id: "controle",
+    name: "Controle",
+    tag: "Exam Prep",
+    sub: "exam SC-500 · cloud and ai security",
+    path: "labs/controle.html",
+    ring: "ring-mid",
+    angle: 167,
+    glyph: '<path d="M3 14V6l2-1.5L7 6v2h2V6l2-1.5L13 6v8z"/><path d="M7 14v-3h2v3"/>'
   },
   {
     id: "codex",
@@ -202,7 +222,7 @@ const LABS_CONFIG = [
   {
     id: "mscodex",
     name: "Codex Microsoft",
-    tag: "Reference",
+    tag: "Exam Prep",
     sub: "powershell · microsoft 365",
     path: "labs/mscodex.html",
     ring: "ring-inner",

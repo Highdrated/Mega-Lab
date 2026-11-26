@@ -46,6 +46,24 @@ try:
         assert pg.evaluate("document.querySelectorAll('input,textarea').length") == 0, "typing field on home"
         empty = pg.evaluate("POOL.length")
 
+        assert pg.is_visible("#bring"), "a first visit must show the bring-my-progress card"
+        assert not pg.is_visible("#bringSteps"), "bring steps start folded"
+        pg.click("#howBring")
+        assert "Send to phone" in pg.inner_text("#bringSteps"), "bring steps do not explain Send to phone"
+        pg.click("#tryAllBtn")
+        every = pg.evaluate("POOL.length")
+        assert every == pg.evaluate("BANKS.reduce((n,b)=>n+b.cards.length,0)"), "every lab on must open every card"
+        assert not pg.is_visible("#bring"), "bring card stays after opening every lab"
+        assert pg.evaluate("dayLabs().length") == 3, "trying labs must not add warm-ups to Today's reviews"
+        assert pg.evaluate("document.documentElement.scrollWidth") <= 390, "home scrolls sideways with every lab on"
+        pg.reload()
+        assert pg.evaluate("POOL.length") == every, "every lab switch is not remembered"
+        pg.click("#allBtn")
+        assert pg.evaluate("POOL.length") == empty, "switching every lab off does not close them"
+        assert pg.is_visible("#bring"), "bring card does not come back"
+        pg.evaluate("localStorage.clear()")
+        pg.reload()
+
         for t in ("python", "subnet"):
             pg.click('nav.tabs button[data-tab="%s"]' % t)
             fr = pg.frame_locator("#pane-" + t)

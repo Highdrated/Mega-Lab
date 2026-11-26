@@ -34,6 +34,8 @@
 html, body { margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; transition: background .25s, color .25s; }
 button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+
+:root[data-theme="verdant"] body, :root[data-theme="graphite"] body { background: linear-gradient(rgba(8,12,18,.55), rgba(8,12,18,.8)), var(--bg) url(img/pockle/lair-night.webp) center top / cover fixed; }
 .app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); }
 .top { display: flex; align-items: center; gap: 8px; height: 38px; }
 .logo { font-family: var(--serif); font-size: 21px; white-space: nowrap; }
@@ -49,6 +51,12 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .sect { display: flex; justify-content: space-between; align-items: baseline; margin: 20px 0 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 600; }
 .welcome { display: grid; grid-template-columns: 64px 1fr; gap: 12px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.5; color: var(--muted); margin-bottom: 10px; }
 .welcome b { color: var(--text); }
+.bring { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 13px; font-size: 13px; line-height: 1.5; color: var(--muted); margin-bottom: 10px; }
+.bring b { color: var(--text); }
+.bring p { margin: 0 0 10px; }
+.bring .bacts { display: flex; gap: 8px; flex-wrap: wrap; }
+.bring ol { margin: 10px 0 0; padding-left: 20px; }
+.bring li { margin: 3px 0; }
 .junie { width: 64px; height: 64px; object-fit: cover; border-radius: 50%; border: 1px solid var(--line); transition: filter .4s; }
 .junie.sleep { filter: grayscale(1) brightness(.85); }
 .ticket .dg { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; vertical-align: -5px; margin-right: 6px; border: 1px solid var(--line); }
@@ -234,6 +242,15 @@ body.ext .pane.on { display: block; }
 
   <section class="screen on" id="home">
     <div class="welcome"><img class="junie" id="welcomeImg" src="img/pockle/dragon-night.webp" alt=""><div id="welcomeTxt"></div></div>
+    <div class="bring" id="bring" hidden>
+      <p><b>Your lab progress lives on the device where you studied.</b> Pick one:</p>
+      <div class="bacts"><button class="chipbtn on" id="tryAllBtn">Open every lab</button><button class="chipbtn" id="howBring">Bring my progress</button></div>
+      <ol id="bringSteps" hidden>
+        <li>On your computer, open the Workshop.</li>
+        <li>Tap <b>Send to phone</b> at the top.</li>
+        <li>Scan the code with this phone. Pockle opens and merges your progress in.</li>
+      </ol>
+    </div>
     <button class="nextup" id="mixBtn"><span><small id="mixSub">mix 10</small><strong>Pocket mix</strong></span><span class="go">start</span></button>
     <div class="quick">
       <button class="qbtn" id="missBtn"><strong>Mistakes</strong><small id="missSub">nothing yet</small></button>
@@ -241,7 +258,7 @@ body.ext .pane.on { display: block; }
     </div>
     <div class="sect"><span>Today's reviews</span><span><span id="dayCount"></span> <button class="chipbtn" id="dayAllBtn">do all</button></span></div>
     <div class="labs" id="dayList"></div>
-    <div class="sect"><span>Labs in the mix</span><span id="labCount"></span></div>
+    <div class="sect"><span>Labs in the mix</span><span><span id="labCount"></span> <button class="chipbtn" id="allBtn">every lab: off</button></span></div>
     <div class="labs" id="labList"></div>
     <div class="links">
       <a href="../index.html">Workshop</a>
@@ -341,6 +358,8 @@ function scan() {
     let done = [], weak = [];
     try { done = b.done(getter) || []; } catch (e) { done = []; }
     if (OPEN_LABS.includes(b.id)) done = b.units.map(u => u.id);
+    const real = new Set(done);
+    if (S.all) done = b.units.map(u => u.id);
     try { weak = (b.weak ? b.weak(getter) : []) || []; } catch (e) { weak = []; }
     const flagAt = {};
     weak.forEach(w => { if (w && w.u && b.units.some(u => u.id === w.u)) flagAt[w.u] = Math.max(flagAt[w.u] || 0, w.at || 1); });
@@ -355,7 +374,8 @@ function scan() {
       try { live = b.live(getter) || []; } catch (e) { live = []; }
       live.forEach(c => cards.unshift(Object.assign({}, c, { flagAt: c.at || 1, lab: b.id, labName: b.name, topic: b.topic, href: b.href, unitTitle: c.ut || "", id: b.id + ":live:" + hash(c.code + "|" + c.o[c.a]) })));
     }
-    LABSTATE.push({ b, units, cards });
+    weak.forEach(w => { if (w && w.u) real.add(w.u); });
+    LABSTATE.push({ b, units, cards, real: b.units.filter(u => real.has(u.id)).length });
     if (!S.off.includes(b.id)) POOL.push(...cards);
   }
 }
@@ -438,6 +458,10 @@ function paintHome() {
   const unlockedLabs = LABSTATE.filter(l => l.cards.length);
   const totalUnits = LABSTATE.reduce((n, l) => n + l.units.length, 0);
   const due = dueCards(POOL).length, miss = missCards(POOL).length;
+  const tryN = LABSTATE.filter(l => !l.real).length;
+  $("bring").hidden = !(tryN && !S.all && !LABSTATE.some(l => l.real && !OPEN_LABS.includes(l.b.id)));
+  $("allBtn").textContent = S.all ? "every lab: on" : "every lab: off";
+  $("allBtn").classList.toggle("on", !!S.all);
   if (!unlockedLabs.length) {
     $("welcomeImg").src = dragonImg("night"); $("welcomeImg").classList.add("sleep");
     $("welcomeTxt").innerHTML = "Nothing to quiz yet. Finish a lesson in any lab and its cards show up here. On another device? Use <b>Send to phone</b> in the Workshop and scan the code.";
@@ -445,7 +469,8 @@ function paintHome() {
     $("welcomeImg").src = dragonImg(topDragon(dueCards(POOL).length ? dueCards(POOL) : POOL)); $("welcomeImg").classList.remove("sleep");
     const openN = POOL.filter(c => OPEN_LABS.includes(c.lab)).length, doneN = POOL.length - openN;
     const doneLabs = unlockedLabs.filter(l => !OPEN_LABS.includes(l.b.id)).length;
-    $("welcomeTxt").innerHTML = (doneN ? "<b>" + doneN + " cards</b> from lessons you finished in <b>" + doneLabs + " lab" + (doneLabs === 1 ? "" : "s") + "</b>, plus " : "")
+    if (S.all) $("welcomeTxt").innerHTML = "Every lab is open: <b>" + POOL.length + " cards</b> to try. Lessons you have not done yet may ask things you have not learned. Tap only, no typing.";
+    else $("welcomeTxt").innerHTML = (doneN ? "<b>" + doneN + " cards</b> from lessons you finished in <b>" + doneLabs + " lab" + (doneLabs === 1 ? "" : "s") + "</b>, plus " : "")
       + "<b>" + openN + " Juniper rehearsal cards</b> that are always open. Tap only, no typing.";
   }
   $("mixBtn").disabled = !POOL.length;
@@ -467,7 +492,7 @@ function paintHome() {
     const row = document.createElement("div");
     row.className = "lab" + (locked ? " locked" : "") + (inMix ? " in" : "");
     row.innerHTML = '<button class="tog" aria-label="toggle"><svg viewBox="0 0 16 16"><path d="M3.5 8.5l3 3 6-7"/></svg></button>'
-      + '<div class="nm"><strong>' + esc(l.b.name) + '</strong><small>' + esc(l.b.topic) + " · " + (locked ? "nothing finished yet" : l.units.length + "/" + l.b.units.length + " lessons" + (fl ? ' · <b class="' + fl + '">' + fl + "</b>" : "")) + '</small>'
+      + '<div class="nm"><strong>' + esc(l.b.name) + '</strong><small>' + esc(l.b.topic) + " · " + (locked ? "nothing finished yet" : (S.all && l.real < l.b.units.length && !OPEN_LABS.includes(l.b.id) ? l.real + "/" + l.b.units.length + " done · trying" : l.units.length + "/" + l.b.units.length + " lessons") + (fl ? ' · <b class="' + fl + '">' + fl + "</b>" : "")) + '</small>'
       + (locked ? "" : '<small class="m2"><span class="mn">' + mc + "</span> of " + l.cards.length + " mastered</small>")
       + '<div class="meter"><i class="seen" style="width:' + (l.cards.length ? Math.round(seen / l.cards.length * 100) : 0) + '%"></i><i class="mast" style="width:' + (l.cards.length ? Math.round(mc / l.cards.length * 100) : 0) + '%"></i></div></div>'
       + (locked ? (TAB_OF[l.b.id] ? '<button class="solo" data-tab="' + TAB_OF[l.b.id] + '">open</button>' : '<a class="solo" href="' + esc(l.b.href) + '">open</a>') : '<button class="solo">solo</button>');
@@ -700,7 +725,8 @@ function finish() {
     if (R.newM) msg += " " + R.newM + " card" + (R.newM > 1 ? "s" : "") + " newly mastered.";
     if (R.guesses) msg += " " + R.guesses + " guess" + (R.guesses > 1 ? "es" : "") + " come" + (R.guesses > 1 ? "" : "s") + " back tomorrow.";
   }
-  $("resImg").src = dragonImg(topDragon(R.cards.slice(0, Math.max(answered, 1))));
+  const topD = topDragon(R.cards.slice(0, Math.max(answered, 1)));
+  $("resImg").src = (R.mode !== "sprint" && answered && R.ok / answered >= .9 && topD === "night") ? "img/pockle/dragon-night-cheer.webp" : dragonImg(topD);
   $("resNum").textContent = R.ok;
   $("resSub").textContent = R.mode === "sprint" ? "right in 60 seconds" : "correct of " + answered;
   $("resAcc").textContent = (answered ? Math.round(R.ok / answered * 100) : 0) + "%";
@@ -735,7 +761,7 @@ function missBody(c) {
 
 const DAILY_MAX = 8, DAILY_FRESH = 5;
 function dayState() { if (!S.day || S.day.d !== today()) S.day = { d: today(), done: [] }; return S.day; }
-function dayLabs() { dayState(); return LABSTATE.filter(l => l.cards.length && !S.off.includes(l.b.id)); }
+function dayLabs() { dayState(); return LABSTATE.filter(l => l.cards.length && !S.off.includes(l.b.id) && (l.real || dueCards(l.cards).length)); }
 function dailyCards(l) {
   const due = dueCards(l.cards).sort((a, b) => st(a).due - st(b).due);
   return due.length ? due.slice(0, DAILY_MAX) : pickMix(l.cards, DAILY_FRESH);
@@ -791,8 +817,12 @@ $("mixBtn").onclick = () => go("mix");
 $("missBtn").onclick = () => go("miss");
 $("sprintBtn").onclick = () => go("sprint");
 
-$("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0, recall: S.recall }; save(); paintHome(); } };
+$("resetBtn").onclick = () => { if (confirm("Reset Pockle xp, streak and review history? Your lab progress stays.")) { S = { xp: 0, streak: 0, last: null, theme: S.theme, off: [], cards: {}, best: 0, recall: S.recall, all: !!S.all }; save(); paintHome(); } };
 
+function setAll(on) { S.all = on; save(); paintHome(); toast(on ? "Every lab is open. Its cards join the mix." : "Back to the labs you have studied"); }
+$("allBtn").onclick = () => setAll(!S.all);
+$("tryAllBtn").onclick = () => setAll(true);
+$("howBring").onclick = () => { const o = $("bringSteps"); o.hidden = !o.hidden; };
 $("sendBtn").onclick = () => MegaSync.send().catch(e => toast("send failed: " + e.message));
 MegaSync.listen(() => { S = Object.assign({ xp: 0, streak: 0, last: null, theme: "orbital", off: [], cards: {}, best: 0, recall: true }, load()); setTheme(THEMES.includes(S.theme) ? S.theme : "orbital"); paintRecall(); paintHome(); });
 

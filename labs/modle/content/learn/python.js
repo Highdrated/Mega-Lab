@@ -114,10 +114,10 @@ return 1        # IndentationError</code></pre>
 <pre><code>17 % 5  ->  2</code></pre>
 <p>Why 2? Because 5 fits into 17 three times (that's 15), and 2 is left over.</p>
 <h4>What it's actually for</h4>
-<p>Modulo answers "is this a multiple of that?" — and the answer is yes when the remainder is <code>0</code>.</p>
+<p>Modulo answers one question: is this a multiple of that? The answer is yes when the remainder is <code>0</code>.</p>
 <pre><code>n % 2 == 0    even?
 n % 3 == 0    every third one?</code></pre>
-<p>It also <em>wraps</em> numbers around. On a 10-wide grid, <code>x % 10</code> keeps <code>x</code> between 0 and 9 forever — walk off the right edge and you reappear on the left. That's how Pac-Man works, and it's how clock faces work.</p>`
+<p>It also <em>wraps</em> numbers around. On a 10-wide grid, <code>x % 10</code> keeps <code>x</code> between 0 and 9 forever. Walk off the right edge and you come back on the left. That's how Pac-Man works, and it's how clock faces work.</p>`
   },
   {
     slug: "cycles",
@@ -174,7 +174,7 @@ round(3.5)  ->  4</code></pre>
 round(1234, -2)     ->  1200      negative = left of the dot</code></pre>
 <h4>The float trap</h4>
 <pre><code>0.1 + 0.2 == 0.3    ->  False</code></pre>
-<p>Computers store decimals in binary, and a tenth cannot be written exactly in binary (like 1/3 in decimal). Compare with <code>math.isclose()</code> or round first.</p>`
+<p>Computers store decimals in binary. A tenth cannot be written exactly in binary, just as 1/3 cannot be written exactly in decimal. Compare with <code>math.isclose()</code> or round first.</p>`
   },
   {
     slug: "subnets",

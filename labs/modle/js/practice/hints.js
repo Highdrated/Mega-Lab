@@ -48,7 +48,7 @@ export const hints = {
 <p><b>ceil means "round up, always".</b> Even 2.1 becomes 3. Even 2.0001 becomes 3.</p>
 <p><b>Why you need it:</b> you have 53 photos and fit 8 on a page. 53 ÷ 8 = 6.625 pages. But there is no such thing as 0.625 of a page — and those leftover photos still have to go somewhere. So you need <b>7</b> pages, the last one only part full.</p>
 <p>Round the normal way and you get 7 here, but 51 photos would round to 6 and three photos would silently vanish off the end of your website. This is a real bug people ship.</p>
-<p><b>Discounts: work out what is left, not what comes off.</b> 25% off means you still pay 75%. Rather than calculating the discount then subtracting it, just multiply by what remains:</p>
+<p><b>Discounts: work out what is left, not what comes off.</b> 25% off means you still pay 75%. Do not work out the discount and then subtract it. Just multiply by what remains:</p>
 <pre><code>price * (1 - 25/100)   is the same as   price * 0.75</code></pre>
 <p>One step instead of two, and much harder to get wrong.</p>`,
 
@@ -73,7 +73,7 @@ distance:  20 - 2  = 18
 steps:     18 / 3  = 6 numbers
 they are:  2, 5, 8, 11, 14, 17</code></pre>
 <p>If it does not divide evenly, round up — the last jump still counts.</p>
-<p><b>Two edge cases:</b> a step can be negative to count downwards, and if the start is already past the stop you get nothing at all — an empty range, length 0.</p>`,
+<p><b>Two edge cases.</b> A step can be negative, to count downwards. And if the start is already past the stop, you get nothing at all: an empty range, length 0.</p>`,
 
   indexing: `
 <p><b>A list is a numbered row of boxes.</b> The numbering starts at <b>0</b>.</p>
@@ -84,7 +84,7 @@ they are:  2, 5, 8, 11, 14, 17</code></pre>
 <p><b>Minus counts backwards from the end:</b><br>
 <code>arr[-1]</code> is the last item, 40<br>
 <code>arr[-2]</code> is the one before, 30</p>
-<p>Handy because you do not need to know how long the list is to grab the end of it.</p>
+<p>This is handy: you can grab the end of a list without knowing how long it is.</p>
 <p><b>Slices take a run:</b> <code>arr[1:3]</code> is "from 1, stop before 3" → 20 and 30. Two items, because 3 − 1 = 2.</p>`,
 
   stats: `
