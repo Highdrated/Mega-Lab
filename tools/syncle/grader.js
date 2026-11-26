@@ -9,10 +9,10 @@ const GRADER = (() => {
     groupsW: { scopes: ["User.Read.All", "Group.ReadWrite.All"], exo: false },
     lic: { scopes: ["User.Read.All", "Organization.Read.All"], exo: false },
     licW: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false },
-    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false, cwd: "/Users/kaatje/Desktop" },
-    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/kaatje/Downloads" },
-    inv: { scopes: ["User.Read.All", "AuditLog.Read.All", "UserAuthenticationMethod.Read.All", "Group.Read.All"], exo: true, cwd: "/Users/kaatje/Desktop" },
-    resp: { scopes: ["User.ReadWrite.All", "AuditLog.Read.All", "UserAuthenticationMethod.ReadWrite.All", "Group.ReadWrite.All"], exo: true, cwd: "/Users/kaatje/Desktop" }
+    reports: { scopes: ["User.Read.All", "Organization.Read.All", "AuditLog.Read.All"], exo: false, cwd: "/Users/veyra/Desktop" },
+    bulk: { scopes: ["User.ReadWrite.All", "Organization.Read.All"], exo: false, cwd: "/Users/veyra/Downloads" },
+    inv: { scopes: ["User.Read.All", "AuditLog.Read.All", "UserAuthenticationMethod.Read.All", "Group.Read.All"], exo: true, cwd: "/Users/veyra/Desktop" },
+    resp: { scopes: ["User.ReadWrite.All", "AuditLog.Read.All", "UserAuthenticationMethod.ReadWrite.All", "Group.ReadWrite.All"], exo: true, cwd: "/Users/veyra/Desktop" }
   };
   const HOOKS = [];
   function makeCtx(setup, pre) {
@@ -20,7 +20,7 @@ const GRADER = (() => {
     const ctx = new E.Ctx();
     if (s.scopes.length) E.run("Connect-MgGraph -Scopes " + s.scopes.join(",") + " -NoWelcome", ctx);
     if (s.exo) E.run("Connect-ExchangeOnline -ShowBanner:$false", ctx);
-    if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/kaatje"; }
+    if (s.cwd) { ctx.cwd = s.cwd; ctx.prevCwd = "/Users/veyra"; }
     if (s.contractors) E.seedContractors(ctx, s.contractors);
     if (s.teams) { E.seedTeams(ctx); if (s.teams === "on") E.run("Connect-MicrosoftTeams", ctx); }
     for (const h of HOOKS) h(ctx, s);
@@ -40,7 +40,7 @@ const GRADER = (() => {
   function describe(setup) {
     const s = SETUPS[setup] || SETUPS.none;
     if (!s.scopes.length && !s.exo && s.teams !== "on") return "Fresh window, nothing connected.";
-    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online" : "") + (s.teams === "on" ? ", and to Microsoft Teams." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/kaatje", "~") + "." : "");
+    return (s.scopes.length ? "Connected to Graph with " + s.scopes.join(", ") : "Graph not connected") + (s.exo ? ", and to Exchange Online" : "") + (s.teams === "on" ? ", and to Microsoft Teams." : ".") + (s.cwd ? " You are in " + s.cwd.replace("/Users/veyra", "~") + "." : "");
   }
   function text(res) { return E.formatOut(res.out, 120).replace(/[ \t]+$/gm, "").trim(); }
   const cache = {};

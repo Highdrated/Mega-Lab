@@ -1,5 +1,5 @@
-const DK = { prev: null, finder: "/Users/kaatje/Downloads", sel: null, z: 10, region: "BE", open: {} };
-const HOME = "/Users/kaatje";
+const DK = { prev: null, finder: "/Users/veyra/Downloads", sel: null, z: 10, region: "BE", open: {} };
+const HOME = "/Users/veyra";
 function dctx() { if (!R.ctx) R.ctx = GRADER.makeCtx("none"); return R.ctx; }
 function pparent(p) { const i = p.lastIndexOf("/"); return i <= 0 ? "/" : p.slice(0, i); }
 function pname(p) { return p.split("/").pop(); }
@@ -22,13 +22,14 @@ function icon(item, size) {
 function openDesktop() {
   if (R.view !== "desktop") DK.prev = R.view;
   R.view = "desktop";
-  $("corridor").classList.add("hide"); $("memory").classList.add("hide"); $("desktop").classList.remove("hide");
+  $("corridor").classList.add("hide"); $("memory").classList.add("hide"); $("drill").classList.add("hide"); $("desktop").classList.remove("hide"); if (typeof drStopRush === "function") drStopRush();
   $("crumb").textContent = "Lab Mac · " + (R.mem ? "files from this lesson" : "fresh desktop");
   renderDesk();
 }
 function closeDesktop() {
   $("desktop").classList.add("hide");
   if (DK.prev === "memory") { R.view = "memory"; $("memory").classList.remove("hide"); $("crumb").textContent = R.gate ? gtext().crumb + curGate().name : (R.mem ? SEQUENCES[R.mem.seq].name + " · " + R.mem.name : ""); setPrompt(); $("cmd").focus(); }
+  else if (DK.prev === "drill") openDrill();
   else renderCorridor();
 }
 function clock() { const d = new Date(); const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]; const mon = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]; return days[d.getDay()] + " " + d.getDate() + " " + mon[d.getMonth()] + "  " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0"); }
@@ -57,7 +58,7 @@ function showWin(id) { const w = $("w-" + id); w.classList.remove("hide"); DK.op
 function hideWin(id) { $("w-" + id).classList.add("hide"); DK.open[id] = false; }
 function renderFinder() {
   const dir = DK.finder;
-  const fav = [["Desktop", HOME + "/Desktop"], ["Documents", HOME + "/Documents"], ["Downloads", HOME + "/Downloads"], ["kaatje", HOME]];
+  const fav = [["Desktop", HOME + "/Desktop"], ["Documents", HOME + "/Documents"], ["Downloads", HOME + "/Downloads"], ["veyra", HOME]];
   $("fSide").innerHTML = "<small>Favourites</small>" + fav.map(([n, p]) => '<button type="button" class="' + (p === dir ? "on" : "") + '" data-go="' + p + '">' + esc(n) + "</button>").join("");
   $("fSide").querySelectorAll("[data-go]").forEach((b) => b.onclick = () => { DK.finder = b.dataset.go; renderFinder(); });
   $("fTitle").textContent = pname(dir) || "/";

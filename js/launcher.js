@@ -586,6 +586,14 @@ function todayItems() {
     if (n) add("seqle", n + (n === 1 ? " drill to review" : " drills to review"), "review", "review", 8);
   }
 
+  const sy = lsParse("syncle.v1"), dr = sy && sy.drl, vg = lsParse("vigil.v1");
+  const syDue = dr && dr.cards ? Object.values(dr.cards).filter((c) => c && c.n && c.due <= Date.now()).length : 0;
+  const VK = ["noconn", "connect", "tconn", "site", "tget", "set", "bool", "param", "tset", "lock"];
+  const vgPs = vg && Array.isArray(vg.miss) ? vg.miss.filter((m) => m && m.kind === "ps" && m.ref && VK.includes(m.ref.e) && !((dr && dr.vigDone) || []).includes(m.id)).length : 0;
+  if (vgPs) add("syncle", "Drill your Vigil PowerShell mistakes" + (syDue ? " · " + syDue + " due" : ""), "review", "drill", 7.5);
+  else if (syDue) add("syncle", syDue + (syDue === 1 ? " command to drill" : " commands to drill"), "review", "drill", 7);
+  else if (vg && !(dr && dr.cards && Object.keys(dr.cards).length)) add("syncle", "PowerShell drill · ghost, fade, blank", "next", "drill", 2);
+
   const md = lsParse("modle-profile");
   if (!(md && md.daily && md.daily.date === dayKey(0, true))) add("modle", "Daily challenge", "daily", "/practice/daily", 6);
   const mix = lsParse("junle_mix");

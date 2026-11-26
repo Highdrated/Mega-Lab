@@ -82,7 +82,7 @@ const BREAKS = [
       { id: "b-qr-1", from: "CCB alert", title: "Did it reach us?", body: "Find every mail this morning with 'mailbox storage full' in the subject.", hint: "Get-MessageTraceV2 -Subject 'mailbox storage full' -SubjectFilterType Contains (last 48 hours is the default).",
         check: (ctx, hist, res) => !!res && !res.error && res.out.length === 5 && res.out.every((o) => o && /storage full/.test(o.Subject || "")) },
       { id: "b-qr-2", from: "Awareness team", title: "Who got it in their inbox?", body: "Export only the delivered recipients (RecipientAddress) to ~/Desktop/qr-wave.csv for Belgian Excel.", hint: "-Status Delivered | Select-Object RecipientAddress | Export-Csv ~/Desktop/qr-wave.csv -NoTypeInformation -Delimiter ';'",
-        check: (ctx) => { const c = csvRows(ctx, "/Users/kaatje/Desktop/qr-wave.csv"); return !!c && /RecipientAddress/.test(c.head) && c.rows.length === 4; } },
+        check: (ctx) => { const c = csvRows(ctx, "/Users/veyra/Desktop/qr-wave.csv"); return !!c && /RecipientAddress/.test(c.head) && c.rows.length === 4; } },
       { id: "b-qr-3", from: "You", title: "Did anyone fall for it?", body: "For those four, check for successful sign-ins from outside Belgium. Nothing found is a valid answer, as long as you checked.", hint: "foreach ($r in $to) { Get-MgAuditLogSignIn -Filter \"userPrincipalName eq '$r' and status/errorCode eq 0 and location/countryOrRegion ne 'BE'\" }",
         check: (ctx, hist, res) => !!res && !res.error && ranCmd(hist, /get-mgauditlogsignin/i) && ranCmd(hist, /foreach|ForEach-Object|%/i) && ranCmd(hist, /countryOrRegion\s+ne\s+'BE'/i) }
     ]

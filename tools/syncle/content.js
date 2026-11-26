@@ -27,7 +27,7 @@ const MEMORIES = [
     ],
     daily: ["The first line of almost every admin session and script", "Re-run it with extra scopes when a command answers 403 Forbidden", "Read-only scopes for looking, ReadWrite scopes only when you are about to change something"],
     parts: [["Connect-MgGraph", "the command: sign in to Graph"], ["-Scopes", "the parameter that lists the permissions you want"], ["User.Read.All", "read every user. Resource . Action . Range"], ["-NoWelcome", "skip the welcome text (handy in scripts)"]],
-    flow: [["You", "kaatje@"], ["Browser sign-in", "password + MFA"], ["Token", "scopes inside"], ["Graph", "answers your commands"]],
+    flow: [["You", "veyra@"], ["Browser sign-in", "password + MFA"], ["Token", "scopes inside"], ["Graph", "answers your commands"]],
     traps: [
       ["Not connected", "Any Mg command before connecting answers: Authentication needed. Please call Connect-MgGraph."],
       ["Scope names are exact", "User.Read.All is a real scope. Users.Read.All is not, and sign-in will fail on it."],
