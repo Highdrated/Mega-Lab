@@ -140,6 +140,10 @@ POCKET.register({
     {"u": "objects", "q": "What does the hero say?", "code": "let hero = { hp: 10 };\nhero.hp = hero.hp + 5;\nsay(hero.hp);", "o": ["5", "105", "10", "15"], "a": 3, "why": "Read 10, add 5, store 15."},
     {"u": "modern", "q": "What happens here?", "code": "const steps = 3;\nsteps = 4;", "o": ["steps is 4", "steps is 7", "TypeError: Assignment to constant variable", "steps stays 3, no error"], "a": 2, "why": "A const can never be filled again. JavaScript stops you on purpose."},
     {"u": "nested", "q": "How many times does move(\"left\", 3) run?", "code": "for (let r = 0; r < 2; r++) {\n  for (let c = 0; c < 3; c++) {\n    move(\"right\");\n  }\n  move(\"left\", 3);\n}", "o": ["6", "2", "3", "1"], "a": 1, "why": "It sits in the outer loop only, so it runs once per row: twice."},
-    {"u": "nested", "q": "What is \"ab\".repeat(2)?", "o": ["\"ab2\"", "\"aabb\"", "\"abab\"", "[\"ab\", \"ab\"]"], "a": 2, "why": "repeat glues the whole string to itself that many times."}
+    {"u": "nested", "q": "What is \"ab\".repeat(2)?", "o": ["\"ab2\"", "\"aabb\"", "\"abab\"", "[\"ab\", \"ab\"]"], "a": 2, "why": "repeat glues the whole string to itself that many times."},
+    {"u": "delve", "q": "Facing right, f is 1. Which way is a right turn?", "code": "const dirs = [\"up\", \"right\", \"down\", \"left\"];\nlet f = 1;\nlook(dirs[(f + 1) % 4]);", "o": ["\"down\"", "\"up\"", "\"left\"", "\"right\""], "a": 0, "why": "(1 + 1) % 4 is 2, and dirs[2] is \"down\". Facing right, your right hand points down."},
+    {"u": "delve", "q": "Facing left, f is 3. What is (f + 1) % 4?", "o": ["4", "0", "3", "2"], "a": 1, "why": "4 % 4 is 0, so it wraps back to \"up\". The % keeps the index inside the array."},
+    {"u": "delve", "q": "In the wall follower, what does f = (f + 3) % 4 do?", "o": ["Turns the hero left", "Turns the hero right", "Takes three steps", "Turns around twice"], "a": 0, "why": "Three right turns make one left turn. The hero only turns; it does not move."},
+    {"u": "delve", "q": "Which line keeps the wall follower walking until it is done?", "o": ["while (here() !== \"stairs\") {", "for (let i = 0; i < 4; i++) {", "if (here() === \"stairs\") {", "while (true) {"], "a": 0, "why": "Each round it checks the tile under the hero. It stops on the stairs."}
 ]
 });

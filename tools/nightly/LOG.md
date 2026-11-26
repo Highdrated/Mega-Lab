@@ -11,47 +11,51 @@ Top three are next. Tonight's three move to the bottom. Pockle is not in the lis
 3. passle (needs the CDN)
 4. seqle (needs the CDN)
 5. rebble (needs the CDN)
-6. modle (23 Nov, fourth run; Learn pages read for long sentences, ceil page checked)
-7. opsle (23 Nov, fourth run; every mission story, step and expected result checked against the steps)
-8. codex (24 Nov, fifth run; Hexle and Passle rulebooks read line by line, search checked at both sizes)
-9. mscodex (24 Nov, fifth run; long explanations read and split, search at both sizes)
-10. junle (24 Nov, sixth run; field guides and recaps read, Virtual Chassis facts checked against Juniper)
-11. spelle (24 Nov, sixth run; learner texts read, nothing over 20 words left)
-12. shelle (24 Nov, third run; lessons and tasks read and split, weak-spots label checked)
-13. junos-lab (24 Nov, third run; long lesson, ticket and quiz explanations split)
-14. proxle (24 Nov, third run; scenario texts read, long sentences split, the 10 scenarios checked by test.py)
-15. meridian (24 Nov, third run; School lessons read, every tab at both sizes)
-16. hexle (24 Nov, third run; lesson texts read, every tab clicked at 1440)
-17. webble (25 Nov, fourth run; briefs and hints read, theme and save checked, School opened)
-18. syncle (25 Nov, fourth run; lesson texts read and split, every suite after the rebuild)
-19. git-lab (25 Nov, fifth run; all 12 guided missions autoplayed to the end, lessons and Desktop tours read)
+6. codex (24 Nov, fifth run; Hexle and Passle rulebooks read line by line, search checked at both sizes)
+7. mscodex (24 Nov, fifth run; long explanations read and split, search at both sizes)
+8. junle (24 Nov, sixth run; field guides and recaps read, Virtual Chassis facts checked against Juniper)
+9. spelle (24 Nov, sixth run; learner texts read, nothing over 20 words left)
+10. shelle (24 Nov, third run; lessons and tasks read and split, weak-spots label checked)
+11. junos-lab (24 Nov, third run; long lesson, ticket and quiz explanations split)
+12. proxle (24 Nov, third run; scenario texts read, long sentences split, the 10 scenarios checked by test.py)
+13. meridian (24 Nov, third run; School lessons read, every tab at both sizes)
+14. hexle (24 Nov, third run; lesson texts read, every tab clicked at 1440)
+15. webble (25 Nov, fourth run; briefs and hints read, theme and save checked, School opened)
+16. syncle (25 Nov, fourth run; lesson texts read and split, every suite after the rebuild)
+17. git-lab (25 Nov, fifth run; all 12 guided missions autoplayed to the end, lessons and Desktop tours read)
+18. modle (26 Nov, fifth run; Learn pages and hints read, practice played right and wrong)
+19. opsle (26 Nov, fifth run; every mission text read for long sentences)
+20. vigil (26 Nov, first run; new lab added to the rotation; every tab at 1440, the first lesson opened, School and case texts read)
 
 Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Google Fonts (checked again 25 Nov: still blocked). Pyle and Sleeple (pyodide), Passle and Rebble (php-wasm) and Seqle (sql.js) cannot run their code here, so a deep pass on them is limited to reading, layout and whatever works without the runtime. Those labs are skipped until a run can reach the CDN (checked again on 23 Nov, fourth run: still blocked, 403); the next labs that can run are taken instead.
 
-## Pockle numbers (25 Nov, 390x844, touch)
+## Pockle numbers (26 Nov, 390x844, touch)
 
 | Group | Cards | First visit can reach | With sample progress |
 |---|---|---|---|
 | Juniper Oopsies | 22 (+ live mistakes) | 22 | 22 |
-| Junle | 112 (9 added 24 Nov) | 112 | 112 |
+| Vigil | 142 (new, built by the Vigil sessions) | 0 | 6 |
+| Junle | 112 | 112 | 112 |
 | Junos Lab | 155 | 155 | 155 |
-| Proxle | 103 (4 added 25 Nov) | 0 | 35 |
-| Meridian | 109 (15 added 23 Nov, third run) | 0 | 33 |
-| Subnle Pocket | 112 (6 added 25 Nov) | 0 | 38 |
-| Pyle | 143 | 0 | 29 |
+| Proxle | 103 | 0 | 35 |
+| Meridian | 109 | 0 | 33 |
+| Subnle Pocket | 112 | 0 | 38 |
+| Pyle | 151 (8 added 26 Nov) | 0 | 29 |
 | Pyle Pocket | 694 | 0 | 226 |
-| Sleeple | 118 (12 added 25 Nov) | 0 | 48 |
+| Sleeple | 118 | 0 | 48 |
 | Passle | 155 | 0 | 40 |
-| Seqle | 110 (5 added 24 Nov, third run) | 0 | 38 |
-| Hexle | 124 (14 harbour cards added 23 Nov) | 0 | 10 |
-| Webble | 116 | 0 | 22 |
-| Spelle | 109 (9 added 24 Nov) | 0 | 24 |
+| Seqle | 110 | 0 | 38 |
+| Hexle | 124 | 0 | 10 |
+| Webble | 128 (12 added 26 Nov) | 0 | 22 |
+| Spelle | 113 (4 added 26 Nov) | 0 | 24 |
 | Rebble | 116 | 0 | 26 |
-| Git Lab | 115 (10 added 24 Nov, second run) | 0 | 33 |
-| Shelle | 108 (11 added 23 Nov, fourth run) | 0 | 24 |
-| Syncle | 126 (20 added 24 Nov, second run) | 0 | 11 |
-| Modle | 106 (16 added 23 Nov, second run) | 0 | 33 |
+| Git Lab | 115 | 0 | 39 |
+| Shelle | 108 | 0 | 24 |
+| Syncle | 126 | 0 | 24 |
+| Modle | 106 | 0 | 33 |
 
+- 26 Nov: total 2919 cards in 20 groups. A first visit on a phone still reaches 289, all Juniper; with sample progress in every lab 984 are open; Today's reviews 0/3 on a first visit, 0/20 with samples (10 due). Vigil is a new row: greyed out on a first visit, like the other labs that need progress on this device. No errors, no typing fields, no sideways scroll; a 10-card mix played to the result screen in 31 taps.
+- 26 Nov: 24 cards for units that sit later in their lab (they open when she gets there): Spelle Delve 4 (the right turn is (f + 1) % 4, the wrap to 0, (f + 3) % 4 is a left turn, the while (here() !== "stairs") loop); Webble 3D 4 (translateZ, rotateX, px is 0 in the middle, why the back face starts at 180 degrees), SVG 4 (stroke-dashoffset, offset 0 is drawn, the d attribute, the three clip-path shapes), Modern CSS 4 (the scrollbar is the clock, view() plays backwards, the sticky deck, why @supports); Pyle Errors 5 (read the traceback's last line, NameError for a typo, IndexError past the end, to_int("junk") is None, SyntaxError before anything runs) and Imports 3 (from random import randint leaves random undefined, why a random retry delay, math.sqrt). Every Python snippet run in python3. Next run: Shelle (6 in Start here, but it mirrors its 4 steps), Proxle and Modle are the smallest; Rebble and Passle units mirror their steps one to one.
 - Total 2753 cards. A first visit on a phone reaches 289, all Juniper; with sample progress in every lab 978 are open (689 from 16 labs plus 289 Juniper; Today's reviews 0/19). The other cards stay locked until that lab has progress on the same device, and lab progress lives per device. This is still why it feels empty on the go.
 - Due today on a first visit: 0. Today's reviews shows three 5-card warm-ups (15 cards, about three minutes), then nothing new is asked for; Pocket mix and Sprint stay available. After that she runs out of anything but Juniper.
 - Python tab: 16 lessons, 1 open on a first visit. Subnetting tab: 16 steps, 1 open. Both tap-only, no typing fields anywhere.
@@ -138,7 +142,39 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Junle: the Split Chassis scenario shows two masters while one of the two VC ports is still Up (`vcp-255/1/1 Up`). With a link still up the members can see each other, so a real stack would not split. Both outputs would need to show the VC links down. Changing the scenario's output is a story change: listed.
 - Junle: the room and the classic drill name the security VLAN `klanten` (Dutch for customers). Not a person name, so left.
 
+- Vigil names (her 23 Nov rule): several household names sound like ordinary real names: Idris, Lorcan, Pell Ambrose, Wren Thistlewood, Marigold Fenn, Brannoc Hale, Corwen Fallow (Quillon Ashgrove, Thessaly, Ysolde, Varenne, Mirethil and Oriel Danthe read as fantasy). Not renamed tonight: the names sit in about 200 places in the case pages, tests, Syncle oopsies and the Pockle bank, and saved oopsies and Pockle card ids are built from question text, so a rename here could orphan her saved mistakes. Best done by the next Vigil build session, with a save migration. Her call which names go.
+- Vigil: `tools/vigil/test.py` failed one check in the lab section once tonight while the quick pass ran at the same time; run alone it was ALL OK, before and after the changes. Probably a timing flake under load.
+- Modle: the Learn page on modulo mentions Pac-Man (a real game name). Not a person or a company, so left.
+
 ## Entries
+
+### 2026-11-26
+
+Checked
+- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. LOG first line not HOLD. CDN still blocked (403), so pyle, sleeple, passle, seqle and rebble stay skipped. Vigil is new since the last run (merged live on 25 Nov) and joined the rotation; vigil, modle and opsle taken.
+- Pockle: first visit and seeded visit at 390x844 with touch, home, the three tabs and a 10-card mix played to the result screen. No errors, no typing fields, no sideways scroll. Numbers above.
+- Quick pass: 26 pages at 1440x900 and 390x844. No page errors, no sideways scroll. Only the two known Meridian 404s and fonts and CDN files the sandbox cannot reach. Service worker: every precache entry exists (12 and 27). Launcher reaches all 21 labs.
+- Suites (after the changes): proxle ALL OK, pockle ALL OK, sync and typed clean, hexle assist ALL OK, opsle clean, junos-lab 6472 passed, no-emoji and soak 8000 clean, syncle test2 to test5, t_teams, t_clock and t_ab650 FAIL 0, syncle test.js 1 known failure, vigil ALL OK.
+- Deep pass: vigil (every tab at 1440, the first lesson opened, School facts, intros and case texts read; no page errors, no overflow), modle (every main screen clicked, practice answered right and wrong: each miss explains the answer; Learn pages and hints read), opsle (every mission story, step, hint and expected result read).
+- CACHE now workshop-v134 (lab files and Pockle only, no js/ or css/ change).
+
+Fixed
+- No lab bugs found tonight.
+- Pockle: 4 Spelle, 12 Webble and 8 Pyle cards (see Pockle numbers). Opsle rebuilt because it carries those banks.
+
+Readability: 25 rewrites
+- Vigil 14 (the Identities intro, the agent registry fact, the attack simulation fact, and 11 case texts: the closed-case summaries of the MFA, password reset, PIM, guest, phishing clean-up, DLP, simulation and preset policy cases, plus three case letters). Modle 7 (modulo, the grid wrap, the float trap twice, discounts, range edge cases, negative indexes). Opsle 4 (the log rows step, the status board step and its await hint, the intake expected result; each step stays one step, so saved ticks still line up). No test or check matches any of them; vigil and opsle suites green after the rebuild.
+- Vigil, before: "Every person, guest and admin is an identity in Microsoft Entra. This group covers creating them, grouping them, giving them only the admin rights they need, and doing it in bulk with Microsoft Graph PowerShell." After: "... This part of the exam covers four jobs. You create identities and put them in groups. You give admins only the rights they need. And you do it in bulk with Microsoft Graph PowerShell." ("This group" meant the skill group, in a lesson that is also about Entra groups.)
+- Modle, before: "Two edge cases: a step can be negative to count downwards, and if the start is already past the stop you get nothing at all — an empty range, length 0." After: "Two edge cases. A step can be negative, to count downwards. And if the start is already past the stop, you get nothing at all: an empty range, length 0."
+- Opsle, before: "Fetch status.json, await the JSON and build one card per host with the host name, disk % and the state as its class." After: "Fetch status.json and await the JSON. Build one card per host. Show the host name and disk %, and use the state as the card's class."
+
+Listed
+- Two art items added to the ComfyUI queue, both for Vigil and both "needs her yes first" (Vigil's look is her own design): a line-engraving portrait of Keeper Mirethil instead of the outline person icon, and a blueprint observatory window behind the case lock screen. Modle (2) and Opsle (1) already have items waiting. 35 open.
+- Vigil names and the one-off Vigil test flake (see Open findings).
+
+Needs her decision
+- Pockle ideas 1 and 5 (try any lab, bring my progress).
+- Vigil: which household names should get a more fantasy-sounding name.
 
 ### 2026-11-25
 
@@ -435,35 +471,9 @@ Needs her decision
 - Pockle ideas 1 and 5 (try any lab, bring my progress).
 - Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
 
-### 2026-11-22
-
-Checked
-- Setup: push access works (dry run accepted); remote set to Highdrated/Mega-Lab. Catch-up already done. LOG first line not HOLD. CDN still blocked (403), so pyle, sleeple, passle, seqle and rebble stay skipped; shelle, junos-lab and proxle taken.
-- Pockle: first visit and seeded visit at 390x844 with touch, every tab, no errors, no typing fields, no sideways scroll. Numbers above. `tools/pockle/test.py` ALL OK.
-- Quick pass: 29 pages at 1440x900 and 390x844 (58 loads). No page errors, no sideways scroll. Only the two known Meridian 404s, the clipped Junle mist, Google Fonts blocked by the sandbox, and a stray favicon request on Codex.
-- Service worker: 12 precache entries exist; 20 launcher paths exist. CACHE now workshop-v101. Junos Lab CACHE junoslab-v54, APP_VERSION 3.30.5.
-- Suites (after the fixes): proxle ALL OK (new dump-folder check), pockle test ALL OK, sync and typed clean, opsle clean, junos-lab 6472 passed (7 new), no-emoji clean, soak 8000 clean, syncle test2 to test5, t_teams and t_clock clean, syncle test.js 1 known failure.
-- Deep pass: shelle (all scenarios walked step by step by script, then again with 18 real-world variants), junos-lab (real-junos commit and typing during it, autosave on page close, the field-guide timer with the tablet open and closed), proxle (45 commands typed in Is this server ready, Create, Join and Backup A, beyond the walk scripts).
-
-Fixed
-- Shelle: "List what is there, one name per line" wanted plain `ls`, which prints columns in a real terminal, and showed the names out of alphabetical order. The step now wants `ls -1`, says why, and lists the names the way a Mac does.
-- Shelle: 18 real-world forms now count: `cut -d ' ' -f6` (no space before the number), `df -h`, `lsof -i tcp:8000`, `lsof -nP -i :8000`, `kill %1`, `rsync -anvz` and `--dry-run` at the end, `ping -c4`, `curl --head` (twice), `docker logs --tail=5 web`, `--tail=2 dash`, `docker compose logs --tail=20 app`. Wrong answers still fail (`ping -c 3` checked).
-- Junos Lab: in real-junos mode, Enter while a commit is still running ran the next command before "commit complete". Now Enter waits; the typed line stays in the prompt and runs once the commit is done, like a real terminal. New test.
-- Junos Lab: a change made less than 0.8 s before closing or reloading the page was lost. A pending autosave is now written when the page closes; nothing is written when no save is pending, so Cancel on "Resume previous lab?" still deletes the save. New test.
-- Junos Lab: the field-guide checklist re-ran every prerequisite check every 1.2 s with the tablet closed or the browser tab hidden. It now skips the work while nobody can see it.
-- Proxle: `ls /mnt/pve/backup-a/dump` said "No such file or directory", while vzdump had just written its archive there and printed that very path. The mount now lists the backup files with their logs, `ls /mnt/pve/<storage>` shows `dump` or `images` for what the storage allows, and an images-only share still has no dump folder. New check in `tools/proxle/test.py`.
-- Pockle: 15 Proxle cards and 15 Junle cards (see Pockle numbers).
-
-Listed
-- One art item added to the ComfyUI queue (Proxle Create scene: it reuses the all-lit cluster picture for a cluster of one). 28 open.
-- Proxle `ls -l`, `pveversion --verbose`, uptime/df/free; Shelle `ssh station`; Junos Lab predict modal focus: see Open findings.
-
-Needs her decision
-- Pockle ideas 1 and 5 (try any lab, bring my progress).
-- Codex Microsoft: swap `datacenterunited.com` and the two full names for `contoso.com`, yes or no.
-
 ### Older (folded)
 
+- 2026-11-22: Shelle wants ls -1 and takes 18 real-world forms; Junos Lab Enter waits for a running commit, a pending autosave is written on close, the field-guide checklist rests while hidden; Proxle lists vzdump files in the dump folder; 15 Proxle and 15 Junle Pockle cards.
 - 2026-11-21, fourth run: Spelle spellbook buttons wrap on phones; Junle two-member Virtual Chassis shows Backup, not Linecard; 15 Proxle and 16 Meridian Pockle cards.
 - 2026-11-21, third run: Codex Git says pull stops on divergent branches (Git 2.33 and later); Codex Python indentation wording; Opsle rebuilt with two hints; 15 Git Lab Desktop and 16 Shelle Pockle cards.
 - 2026-11-21, second run: Webble warm-up survives a reload and explains a no-transition answer; Git Lab gives the real pathspec error for a missing file; 15 Sleeple and 15 Subnle Pocket Pockle cards.
