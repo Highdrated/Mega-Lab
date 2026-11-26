@@ -15,7 +15,7 @@ Style: delicate ink line drawing with soft watercolour washes on warm cream pape
 ## Queue
 | file | status | subject |
 |---|---|---|
-| valley.jpg | done | Wide valley with citadel ruins, 1244x470. |
+| valley.jpg | done v2 | Ruined arches by a winding river at dusk, 1408x768, paper tinted to the page colour. |
 | gate.png | v1 placed, redo single | A fantasy citadel gatehouse with two round towers and a portcullis gate, lanterns hanging beside the arch, a winding road leading up to it. |
 | vault.png | v1 placed, redo single | A heavy round vault door set into a stone wall inside a citadel, iron bands and a large lock, a single lantern glowing beside it. |
 | keep.png | v1 placed, redo single | The tall central keep of a fantasy citadel, a council table visible through an arched window, banners hanging from the walls. |
