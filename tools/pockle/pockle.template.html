@@ -34,6 +34,8 @@
 html, body { margin: 0; padding: 0; }
 body { background: var(--bg); color: var(--text); font-family: var(--sans); -webkit-tap-highlight-color: transparent; -webkit-font-smoothing: antialiased; transition: background .25s, color .25s; }
 button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
+
+:root[data-theme="verdant"] body, :root[data-theme="graphite"] body { background: linear-gradient(rgba(8,12,18,.55), rgba(8,12,18,.8)), var(--bg) url(img/pockle/lair-night.webp) center top / cover fixed; }
 .app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; display: flex; flex-direction: column; padding: 12px 16px calc(16px + env(safe-area-inset-bottom)); }
 .top { display: flex; align-items: center; gap: 8px; height: 38px; }
 .logo { font-family: var(--serif); font-size: 21px; white-space: nowrap; }
@@ -723,7 +725,8 @@ function finish() {
     if (R.newM) msg += " " + R.newM + " card" + (R.newM > 1 ? "s" : "") + " newly mastered.";
     if (R.guesses) msg += " " + R.guesses + " guess" + (R.guesses > 1 ? "es" : "") + " come" + (R.guesses > 1 ? "" : "s") + " back tomorrow.";
   }
-  $("resImg").src = dragonImg(topDragon(R.cards.slice(0, Math.max(answered, 1))));
+  const topD = topDragon(R.cards.slice(0, Math.max(answered, 1)));
+  $("resImg").src = (R.mode !== "sprint" && answered && R.ok / answered >= .9 && topD === "night") ? "img/pockle/dragon-night-cheer.webp" : dragonImg(topD);
   $("resNum").textContent = R.ok;
   $("resSub").textContent = R.mode === "sprint" ? "right in 60 seconds" : "correct of " + answered;
   $("resAcc").textContent = (answered ? Math.round(R.ok / answered * 100) : 0) + "%";

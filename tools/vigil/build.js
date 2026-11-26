@@ -10,6 +10,7 @@ function write(out, demo) {
   const html = tpl.replace("/*DEMO*/true", demo ? "true" : "false").replace("<!--DATA-->", () => "<script>\n" + data.replace(/<\/script/gi, "<\\/script") + "\n</script>");
   fs.mkdirSync(path.dirname(out), { recursive: true });
   fs.writeFileSync(out, html);
+  if (demo) { const src = path.join(here, "..", "..", "labs", "img", "vigil"); if (fs.existsSync(src)) fs.cpSync(src, path.join(path.dirname(out), "img", "vigil"), { recursive: true }); }
   console.log("wrote", out, demo ? "(demo)" : "(lab)");
 }
 const arg = process.argv[2];

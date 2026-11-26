@@ -90,6 +90,10 @@ button{font:inherit;color:inherit;background:none;border:none;cursor:pointer}
 
 .page{flex:1;min-width:0;padding:34px 40px 140px;max-width:1180px}
 .vol-head{margin-bottom:28px;padding-bottom:18px;border-bottom:1px solid var(--line)}
+.vol-art{height:150px;margin:0 0 20px;border-radius:10px;overflow:hidden;border:1px solid var(--line)}
+.vol-art img{display:block;width:100%;height:100%;object-fit:cover;object-position:30% 50%}
+html[data-theme="night"] .vol-art img{filter:brightness(.55) saturate(.8)}
+body.print-one .vol-art{display:none}
 .vol-head h1{font-family:var(--serif);font-weight:600;font-size:34px;line-height:1.1;color:var(--strong)}
 .vol-head p{color:var(--muted);margin-top:7px;max-width:62ch;font-size:14.5px}
 .vol-head .count{color:var(--faint);font-size:12.5px;font-family:var(--mono);margin-top:10px;display:block}
@@ -2823,8 +2827,9 @@ function volProgress(vol){
   return { done: done, total: vol.groups.length };
 }
 
-function pageHead(title, blurb, count){
+function pageHead(title, blurb, count, art){
   const wrap = el("div", "vol-head");
+  if (art) { const a = el("div", "vol-art"); const im = document.createElement("img"); im.src = art; im.alt = ""; im.onerror = () => a.remove(); a.appendChild(im); wrap.appendChild(a); }
   wrap.appendChild(el("h1", null, title));
   if (blurb) wrap.appendChild(el("p", null, blurb));
   if (count) wrap.appendChild(el("span", "count", count));
@@ -2933,7 +2938,7 @@ function renderVolume(vol){
   const total = vol.groups.reduce((a, g) => a + g.e.length, 0);
   const p = volProgress(vol);
   pageEl.appendChild(pageHead(vol.name, vol.blurb,
-    vol.groups.length + " sections, " + total + " entries, " + p.done + " read"));
+    vol.groups.length + " sections, " + total + " entries, " + p.done + " read", "img/mscodex/vol-" + vol.id + ".webp"));
 
   if (resume && resume.vol === vol.id && resume.gi > 0 && resume.gi < vol.groups.length) {
     const bar = el("div", "resume");

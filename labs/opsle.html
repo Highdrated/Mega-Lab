@@ -48,7 +48,9 @@ button { font: inherit; color: inherit; cursor: pointer; touch-action: manipulat
 .welcome b { color: var(--text); }
 .welcome img { width: 64px; height: 64px; object-fit: contain; }
 .list { display: grid; gap: 8px; }
-.mis { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 13px 14px; display: grid; gap: 7px; }
+.mis { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 13px; padding: 13px 14px; display: grid; gap: 7px; overflow: hidden; }
+.mban { display: block; width: calc(100% + 28px); margin: -13px -14px 4px; aspect-ratio: 3 / 1; object-fit: cover; }
+.mis.locked .mban { filter: grayscale(.7); opacity: .55; }
 .mis .h { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; }
 .mis strong { font-family: var(--serif); font-weight: 500; font-size: 18px; }
 .mis .st { font-family: var(--mono); font-size: 11px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); white-space: nowrap; }
@@ -2600,7 +2602,7 @@ function paintHome() {
   $("list").innerHTML = MISSIONS.map((m, i) => {
     const st = missionState(m), n = m.stages.filter((_, j) => S.stages[skey(m, j)]).length;
     const lbl = st === "done" ? "done" : st === "ready" ? (n ? "continue" : "start") : "locked";
-    return '<button class="mis ' + (st === "locked" ? "locked" : "") + '" data-i="' + i + '"><div class="h"><strong>' + esc(m.title) + '</strong><span class="st ' + (st === "done" ? "done" : st === "ready" ? "go" : "") + '">' + lbl + " · " + n + "/" + m.stages.length + "</span></div><p>" + inl(m.story) + "</p>" + chainHtml(m) + "</button>";
+    return '<button class="mis ' + (st === "locked" ? "locked" : "") + '" data-i="' + i + '"><img class="mban" src="img/opsle/mission-' + esc(m.id) + '.webp" alt="" onerror="this.remove()"><div class="h"><strong>' + esc(m.title) + '</strong><span class="st ' + (st === "done" ? "done" : st === "ready" ? "go" : "") + '">' + lbl + " · " + n + "/" + m.stages.length + "</span></div><p>" + inl(m.story) + "</p>" + chainHtml(m) + "</button>";
   }).join("");
   $("list").querySelectorAll(".mis").forEach(b => b.onclick = () => openMission(+b.dataset.i));
 }
