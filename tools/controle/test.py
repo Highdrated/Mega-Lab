@@ -2,7 +2,8 @@ import sys
 from playwright.sync_api import sync_playwright
 import os
 os.makedirs('/tmp/controle-shots',exist_ok=True)
-url='file://'+os.path.join(os.path.dirname(os.path.abspath(__file__)),'controle-demo.html')
+url=os.environ.get('CONTROLE_URL') or 'file://'+os.path.join(os.path.dirname(os.path.abspath(__file__)),'controle-demo.html')
+KEY='controle.v1' if url.endswith('labs/controle.html') else 'controle.demo.v1'
 errs=[]
 def lessons(pg,wrong=True):
     for i in range(5):
@@ -27,7 +28,7 @@ def results(pg):
 CH2={"ch":2,"wing":"gate","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"studied":["ca","mfa"],"lit":["ca","mfa"],"oops":[],"pol":[],"edit":None,"night":2,"report":None}
 def night2(pg,tag):
     import json
-    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH2));pg.reload()
+    pg.evaluate("([k,s])=>localStorage.setItem(k,s)",(KEY,json.dumps(CH2)));pg.reload()
     for i,ans in enumerate(['Privileged Identity Management','Eligible','Require approval to activate','password administrator','Active']):
         if i==0:
             pg.fill('#si','PIN');pg.click('#sf button');assert 'Not quite' in pg.inner_text('#sfb')
@@ -64,7 +65,7 @@ def night2(pg,tag):
 CH3={"ch":3,"wing":"gate","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"studied":["ca","mfa","pim"],"lit":["ca","mfa","pim"],"oops":[],"pol":[],"edit":None,"night":3,"report":None}
 def night3(pg,tag):
     import json
-    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH3));pg.reload()
+    pg.evaluate("([k,s])=>localStorage.setItem(k,s)",(KEY,json.dumps(CH3)));pg.reload()
     for i,ans in enumerate(['consent phishing','Application','verified','admin consent workflow','Enabled for users to sign-in?']):
         if i==0:
             pg.fill('#si','phishing');pg.click('#sf button');assert 'Not quite' in pg.inner_text('#sfb')
@@ -97,7 +98,7 @@ def night3(pg,tag):
 CH4={"ch":4,"wing":"gate","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"studied":["ca","mfa","pim","consent","apps"],"lit":["ca","mfa","pim","consent","apps"],"oops":[],"pol":[],"edit":None,"night":4,"report":None}
 def night4(pg,tag):
     import json
-    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH4));pg.reload()
+    pg.evaluate("([k,s])=>localStorage.setItem(k,s)",(KEY,json.dumps(CH4)));pg.reload()
     for i,ans in enumerate(['managed identity','System-assigned','Identity','Storage Blob Data Reader','container']):
         pg.fill('#si',ans);pg.click('#sf button');assert 'Forged' in pg.inner_text('#strikeCard'),('n4 strike',i)
         pg.click('.opt[data-i="0"]')
@@ -133,7 +134,7 @@ def night4(pg,tag):
 CH5={"ch":5,"wing":"vault","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"maxLi":-1,"studied":["ca","mfa","pim","consent","apps","mi","rbac"],"lit":["ca","mfa","pim","consent","apps","mi"],"oops":[],"pol":[],"edit":None,"report":None}
 def night5(pg,tag):
     import json
-    pg.evaluate("s=>localStorage.setItem('controle.demo.v1',s)",json.dumps(CH5));pg.reload()
+    pg.evaluate("([k,s])=>localStorage.setItem(k,s)",(KEY,json.dumps(CH5)));pg.reload()
     assert 'Vault' in pg.inner_text('.kicker')
     pg.click('#askw');assert 'first fact' in pg.inner_text('#wick'),pg.inner_text('#wick')
     pg.click('#askw');pg.click('#askw');assert 'Key Vault' in pg.inner_text('#wick') and pg.locator('#askw').is_disabled()

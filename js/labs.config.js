@@ -192,12 +192,22 @@ const LABS_CONFIG = [
   {
     id: "vigil",
     name: "Vigil",
-    tag: "Practice",
+    tag: "Exam Prep",
     sub: "exam AB-650 · microsoft 365 and ai admin",
     path: "labs/vigil.html",
     ring: "ring-mid",
     angle: 77,
     glyph: '<circle cx="8" cy="8" r="6.5"/><ellipse cx="8" cy="8" rx="6.5" ry="2.4" transform="rotate(-18 8 8)"/><circle cx="8" cy="8" r="1.5"/><circle cx="13.4" cy="6.1" r="1"/>'
+  },
+  {
+    id: "controle",
+    name: "Controle",
+    tag: "Exam Prep",
+    sub: "exam SC-500 · cloud and ai security",
+    path: "labs/controle.html",
+    ring: "ring-mid",
+    angle: 167,
+    glyph: '<path d="M3 14V6l2-1.5L7 6v2h2V6l2-1.5L13 6v8z"/><path d="M7 14v-3h2v3"/>'
   },
   {
     id: "codex",
@@ -212,7 +222,7 @@ const LABS_CONFIG = [
   {
     id: "mscodex",
     name: "Codex Microsoft",
-    tag: "Reference",
+    tag: "Exam Prep",
     sub: "powershell · microsoft 365",
     path: "labs/mscodex.html",
     ring: "ring-inner",

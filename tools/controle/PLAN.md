@@ -35,6 +35,7 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 - [x] Day 5 and night 5 (Vault, part one): permission models, Key Vault roles, networking and private endpoint, soft delete, purge protection, Delete lock
 - [x] Ask Wick: a hint ladder in every lesson (where to look, first letters, answer) and every night (where to look, what to change, exact fix)
 - [ ] Next: Vault part two (keys, secrets and certificates incl. rotation, Defender for Key Vault, secret scanning with Defender CSPM)
-- [ ] Into the Workshop, oopsies into Pockle
+- [x] Into the Workshop (26 Nov 2026, her pick: "Merge Controle now"): labs/controle.html is built from controle-demo.html by python3 tools/controle/build.py (saved progress key controle.v1, demo wording swapped), registered in js/labs.config.js under the new first launcher category Exam Prep (mid ring, 167 degrees), tracked in js/station.js. Rebuild the lab after every change to the demo. Test the live file with CONTROLE_URL=file://.../labs/controle.html python3 tools/controle/test.py.
+- [ ] Oopsies into Pockle
 
-MERGE: WAIT (goes live when Kaatje says "merge Controle")
+MERGE: GO (she chose "Merge Controle now" on 26 Nov 2026; Controle is live in the Workshop. Keep building in controle-demo.html, run build.py, and push to main with a CACHE bump.)
