@@ -81,11 +81,10 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 
 ## Pockle ideas (max five, waiting for her yes or no)
 
-1. Open every lab on the phone. A "try any lab" switch so cards do not wait for lab progress on this device. She would feel: there is always something for the subject I feel like. Size: small.
-2. Dragons that grow. XP earned in a lab group feeds that group's dragon through a few stages, shown on the home screen. She would feel: every five minutes on the train makes something bigger. Size: medium (needs art, items go in the ComfyUI queue).
-3. A lair instead of a list. A painted roost as the home backdrop with the dragons perched in it, the lab list folded under one button. She would feel: a place to be, not a settings page. Size: medium (backdrop is item 2026-11-19-1 in the queue).
-4. Train ride run. One button, five minutes, a clear end, and a small chest of sparks that also counts at the Workshop station. She would feel: a short session that finishes and pays out. Size: small to medium.
-5. Bring my progress. When Pockle finds no lab progress on this device, one clear button that explains Send to phone, instead of sixteen greyed-out rows. She would feel: less locked out. Size: small.
+1. Dragons that grow. XP earned in a lab group feeds that group's dragon through a few stages, shown on the home screen. She would feel: every five minutes on the train makes something bigger. Size: medium (needs art, items go in the ComfyUI queue).
+2. A lair instead of a list. A painted roost as the home backdrop with the dragons perched in it, the lab list folded under one button. She would feel: a place to be, not a settings page. Size: medium (backdrop is item 2026-11-19-1 in the queue).
+3. Train ride run. One button, five minutes, a clear end, and a small chest of sparks that also counts at the Workshop station. She would feel: a short session that finishes and pays out. Size: small to medium.
+- Built 26 Nov (her "continue the build with your recommendations"): "every lab" switch (old idea 1) and the "bring my progress" card (old idea 5). See the 26 Nov daytime entry.
 
 ## Open findings (listed, not done)
 
@@ -142,11 +141,19 @@ Note for the rotation: the nightly sandbox cannot reach cdn.jsdelivr.net or Goog
 - Junle: the Split Chassis scenario shows two masters while one of the two VC ports is still Up (`vcp-255/1/1 Up`). With a link still up the members can see each other, so a real stack would not split. Both outputs would need to show the VC links down. Changing the scenario's output is a story change: listed.
 - Junle: the room and the classic drill name the security VLAN `klanten` (Dutch for customers). Not a person name, so left.
 
-- Vigil names (her 23 Nov rule): several household names sound like ordinary real names: Idris, Lorcan, Pell Ambrose, Wren Thistlewood, Marigold Fenn, Brannoc Hale, Corwen Fallow (Quillon Ashgrove, Thessaly, Ysolde, Varenne, Mirethil and Oriel Danthe read as fantasy). Not renamed tonight: the names sit in about 200 places in the case pages, tests, Syncle oopsies and the Pockle bank, and saved oopsies and Pockle card ids are built from question text, so a rename here could orphan her saved mistakes. Best done by the next Vigil build session, with a save migration. Her call which names go.
+- Vigil names: done 26 Nov (daytime). Kept on purpose: Lorcan, Wren and Brannoc as first names, because Syncle uses the same first names (Lorcan Ivers, Wren Ashdown, Brannoc Vale) and they passed her 23 Nov sweep; Ilsa (a movie name), Oriel, Quillon, Thessaly, Ysolde, Varenne, Mirethil.
 - Vigil: `tools/vigil/test.py` failed one check in the lab section once tonight while the quick pass ran at the same time; run alone it was ALL OK, before and after the changes. Probably a timing flake under load.
 - Modle: the Learn page on modulo mentions Pac-Man (a real game name). Not a person or a company, so left.
 
 ## Entries
+
+### 2026-11-26, daytime (asked by Kaatje: "continue the build with your recommendations")
+
+- Pockle, every lab: a switch "every lab: on / off" next to Labs in the mix. On opens every card of every lab (2919), whatever this phone knows about lab progress. Rows of labs with no progress here say "0/10 done · trying". Today's reviews only list labs with real progress or with reviews due, so trying a lab adds no warm-ups until she has answered its cards. Remembered as `all` in Pockle's own save (a new optional field; old saves load as off). Reset keeps it, like the theme.
+- Pockle, bring my progress: on a phone with no lab progress yet, a card under the welcome: "Your lab progress lives on the device where you studied. Pick one:" with Open every lab and Bring my progress (three steps: open the Workshop on the computer, tap Send to phone, scan the code). It hides once any lab has progress or every lab is on.
+- `tools/pockle/test.py` checks the card, the steps, every card opening, no extra warm-ups, no sideways scroll, the switch surviving a reload and switching off.
+- Vigil names: Brannoc Hale is Brannoc Halewyn, Corwen Fallow is Corwen Fallowmere, Pell Ambrose is Pell Ambrevale, Wren Thistlewood is Wren Thistlewyn, Idris is Idrevan, Marigold Fenn is Marigwen Fennoweth, Tobin Reed is Tobrin Reedmere (mail tobrin@), Tamsin Oakes is Tamsel Oakenrill, Odric Penn is Odric Pennowyn, Bryn Calloway is Brynwen Callowmere, Maren is Marenthe. First letters, initials, ids and mail names stay (except tobrin@), so saved case state still matches. Old oopsies are renamed on load (`RENAMED` in the template). The typed answers in case 10 now want the new names. Pockle cards for the five errands that name someone got new ids, so their review history starts again; every other card keeps its history.
+- Suites: vigil ALL OK (alone), pockle ALL OK, sync and typed clean, proxle, hexle, opsle, junos-lab (6472, no-emoji, soak 8000), syncle test2 to test5, t_teams, t_clock, t_ab650 FAIL 0, test.js its 1 known failure. Quick pass on the launcher, Pockle and Vigil: no errors. CACHE workshop-v136.
 
 ### 2026-11-26
 
