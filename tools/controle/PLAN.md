@@ -21,6 +21,12 @@ Purpose: pass SC-500. Nothing else carries over from Vigil: own look, own loop.
 | Towers | AI security, servers and VMs, app platforms |
 | Watchtower | Defender for Cloud, Sentinel, Security Copilot |
 
+## Layout (26 Nov)
+- Slim icon rail on the left: Days, then the six parts of the citadel with lit counts. Each opens a flyout (skills list, or the day picker).
+- Content sits in one calm centred column (max 780px). Roads appear above it during the console, siege and report.
+- Motion: screens glide in once per view (never on redraws), the forged answer glows, a rail icon lights up when a night is won. Off under reduced motion.
+- Day picker: replay lessons of any reached day, or the night of any day whose lessons are done.
+
 ## Code map
 - One chapter table, CH, holds each night: lessons, waves, studied and lit lanterns, brief, console, evaluate, report texts. A new night is one CH entry plus its data, nothing else.
 - test.py plays every night at 4 sizes; probe.py checks edge cases (reset mid-siege, keyboard flow, answer typing, oopsie counting, old saves).
