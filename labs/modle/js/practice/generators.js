@@ -725,7 +725,7 @@ export const generators = {
       return { code: pair[0] + " + " + pair[1] + " == " + pair[2], answer: yes ? "True" : "False", placeholder: "True or False", inputmode: "text",
         explain: (yes
           ? "Halves, quarters and eighths are stored <b>exactly</b> in binary, so the sum really does equal " + pair[2] + " → <b>True</b>."
-          : "Computers store decimals in binary, and tenths cannot be written exactly in binary — like 1/3 in decimal. So the sum is a hair off:" + box(pair[0] + " + " + pair[1] + " = " + (pair[0] + pair[1])) + "Not quite " + pair[2] + " → <b>False</b>.") +
+          : "Computers store decimals in binary. Tenths cannot be written exactly in binary, just as 1/3 cannot be written exactly in decimal. So the sum is a hair off:" + box(pair[0] + " + " + pair[1] + " = " + (pair[0] + pair[1])) + "Not quite " + pair[2] + " → <b>False</b>.") +
           "<br>Rule of thumb: never compare floats with <code>==</code>; use <code>math.isclose()</code> or round first.",
         viz: null };
     }

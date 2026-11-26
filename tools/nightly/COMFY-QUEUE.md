@@ -2,6 +2,26 @@
 
 Prompts waiting for a session that can reach Kaatje's desktop and her local ComfyUI. Newest on top. Mark an item `status: done` once the image is placed and she has approved it. Never name an artist, a copyrighted character or a game asset in a prompt.
 
+## 2026-11-26-1 · Vigil · portrait of Keeper Mirethil (needs her yes first)
+- file: `labs/img/vigil/mirethil.webp`
+- why: the Keeper speaks on Tonight and the Observatory, but a generic outline person icon (`svg.medal`) stands in for her face.
+- size: 256x256, transparent background (WEBP with alpha)
+- existing art to match: Vigil has no paintings yet. Its look is a technical blueprint: thin dark ink lines (#232a31) on warm off-white paper, pale grey grid, one orange accent (#e8772e) and one teal accent, degree scales and constellation line-work, crisp and calm. The portrait must read as a fine ink engraving that belongs on that drawing, not a painting.
+- positive: head and shoulders portrait of an elderly astronomer woman, calm watchful face, silver hair in a loose braid, a high-collared deep blue robe with a thin brass star clasp, a small round brass lens on a chain, fine ink line engraving with cross-hatching, technical drawing style, thin uniform dark lines on warm off-white paper, a faint circular frame of degree ticks behind the head, a single small orange accent on the clasp, centred, clean, high detail, isolated on a transparent background
+- negative: text, letters, numbers, logo, watermark, colour painting, heavy shading, photo, cartoon, anime, chibi, big eyes, glowing effects, busy background, frame border, cropped head, extra hands
+- placing: in `tools/vigil/demo.template.html`, the `.keeper .who` block (line with `svg class="medal"`) and the Keeper line on Tonight: replace the medal SVG with `<img class="medal" src="img/vigil/mirethil.webp" alt="Keeper Mirethil">`, same 40x40 circle; rebuild with `node tools/vigil/build.js`. Vigil's look is her own design, so ask before placing.
+- status: todo
+
+## 2026-11-26-2 · Vigil · workstation lock screen backdrop (needs her yes first)
+- file: `labs/img/vigil/lockscreen.webp`
+- why: every case opens on the workstation lock screen, a plain grey dotted panel with a clock; it is the first thing she sees in a case and has no sense of the observatory.
+- size: 1600x1000, no transparency
+- existing art to match: Vigil's blueprint look (see 2026-11-26-1): ink line-work on warm off-white paper, pale grid, orange and teal accents, constellation lines and degree scales, the brass orrery as the centre of the world. The lock screen sits behind a large thin clock and a round initial badge, so the middle must stay quiet and light.
+- positive: a wide view through a tall arched observatory window at night, rendered as a soft technical blueprint drawing, a brass orrery silhouette on a desk at the lower left, constellation lines and a few stars drawn in thin teal ink across the window, degree scale arcs along the window frame, warm off-white paper tone, pale grid, one small orange accent on the orrery, very calm, low contrast, wide empty light area in the centre for a clock and text, clean line art, high detail at the edges
+- negative: text, letters, numbers, logo, watermark, people, dark heavy background, photo, painting with thick strokes, neon, busy centre, cartoon, anime, frame border, vignette
+- placing: `.lockscr` in `tools/vigil/demo.template.html` (about line 327): add `background:url(img/vigil/lockscreen.webp) center/cover` and keep the `:before` dot grid off or at low opacity; check the clock (`.tm`) still reads at 1280, 1440 and 1920; rebuild with `node tools/vigil/build.js`. Ask her first, since it changes Vigil's look.
+- status: todo
+
 ## 2026-11-23-h4 · Hexle · harbour plot: Fishmonger stall
 - file: `labs/img/hexle/fishmonger.webp`
 - why: chapter II (the Harbour) has four new plots with no art yet; the scene is an empty fog pool while every other plot has a building.
