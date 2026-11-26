@@ -17,6 +17,8 @@ def lessons(pg,wrong=True):
         pg.click('.opt[data-i="0"]')
         if i==1: pg.screenshot(path=f'/tmp/controle-shots/{tag}-lesson.png')
         pg.click('#nx')
+def lit_total(pg):
+    return pg.evaluate("[...document.querySelectorAll('#rail [data-lit]')].reduce((a,b)=>a+(+b.dataset.lit),0)")
 def edit_first(pg,f):
     pg.click('[data-e="p1"]');f(pg);pg.click('#pf button[type=submit]')
 def hold(pg):
@@ -49,7 +51,7 @@ def night2(pg,tag):
     pg.wait_for_selector('#again',timeout=15000)
     r=results(pg);print(tag,'n2 win',r);assert r==['Held','Contained'],r
     assert 'citadel held' in pg.inner_text('#pane')
-    assert pg.locator('#wards .dot.lit').count()==3
+    assert lit_total(pg)==3
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-report-win.png')
     assert pg.inner_text('#end')=='Start day 3'
     if tag=='1440':
@@ -86,7 +88,7 @@ def night3(pg,tag):
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-console-fixed.png')
     hold(pg);r=results(pg);print(tag,'n3 win',r);assert r==['Held','Held','Served'],r
     assert 'citadel held' in pg.inner_text('#pane')
-    assert pg.locator('#wards .dot.lit').count()==5
+    assert lit_total(pg)==5
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-win.png')
     assert pg.inner_text('#end')=='Start day 4'
     if tag=='1440':
@@ -119,7 +121,7 @@ def night4(pg,tag):
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-console-fixed.png')
     hold(pg);r=results(pg);print(tag,'n4 win',r);assert r==['Held','Contained'],r
     assert 'citadel held' in pg.inner_text('#pane')
-    assert pg.locator('#wards .dot.lit').count()==6
+    assert lit_total(pg)==6
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-win.png')
     assert pg.inner_text('#end')=='Start day 5'
     if tag=='1440':
@@ -162,7 +164,7 @@ def night5(pg,tag):
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-console-fixed.png')
     hold(pg);r=results(pg);print(tag,'n5 win',r);assert r==['Held','Held','Contained'],r
     assert 'citadel held' in pg.inner_text('#pane')
-    assert pg.locator('#wards .dot.lit').count()==9
+    assert lit_total(pg)==9
     pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-report-win.png')
     pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
     if tag=='1440':
@@ -170,10 +172,23 @@ def night5(pg,tag):
         hold(pg);r=results(pg);print('n5 lock+adm+pe',r);assert r[:3]==['Held','Held','Held'] and 'Too much' in r,r
         pg.click('#again');pg.check('input[name=net][value=all]')
         hold(pg);r=results(pg);print('n5 pe but public open',r);assert r[1]=='Breached' and 'Risk' in r,r
+
+def daypicker(pg,tag):
+    pg.click('#daysBtn');pg.wait_for_timeout(450)
+    for n in range(1,6):
+        assert pg.locator(f'[data-day="{n}"]').is_enabled(),n
+        assert pg.locator(f'[data-night="{n}"]').is_enabled(),n
+    assert pg.locator('.tagd.won').count()==5
+    pg.click('[data-night="3"]');pg.wait_for_timeout(300)
+    assert 'Night 3' in pg.inner_text('#pane') and 'scouts are back' in pg.inner_text('#pane')
+    assert not pg.evaluate("document.getElementById('fly').classList.contains('open')")
+    pg.click('#daysBtn');pg.wait_for_timeout(450);pg.click('[data-day="2"]');pg.wait_for_timeout(300)
+    assert 'Lesson 1 of 5' in pg.inner_text('#pane') and 'Standing access' in pg.inner_text('#pane')
+    print(tag,'day picker ok')
 with sync_playwright() as p:
     b=p.chromium.launch(executable_path='/usr/bin/google-chrome',args=['--no-sandbox'])
     for tag,(w,h) in {'1440':(1440,900),'1280':(1280,800),'1024':(1024,768),'390':(390,844)}.items():
-        pg=b.new_page(viewport={'width':w,'height':h})
+        pg=b.new_page(viewport={'width':w,'height':h},reduced_motion='reduce')
         pg.on('pageerror',lambda e:errs.append(str(e)))
         pg.on('console',lambda m:errs.append(m.text) if m.type=='error' and 'fonts' not in m.text else None)
         pg.goto(url);pg.evaluate('localStorage.clear()');pg.reload()
@@ -206,8 +221,11 @@ with sync_playwright() as p:
         assert pg.inner_text('#end')=='Start day 2'
         assert 'citadel held' in pg.inner_text('#pane')
         pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-win.png')
-        lit=pg.locator('#wards .dot.lit').count();assert lit==2,lit
-        pg.click('.wcard[data-w="towers"]');pg.screenshot(path=f'/tmp/controle-shots/{tag}-towers.png')
+        lit=lit_total(pg);assert lit==2,lit
+        pg.click('#rail [data-w="towers"]');pg.wait_for_timeout(450);pg.screenshot(path=f'/tmp/controle-shots/{tag}-towers.png');pg.click('#flyX');pg.wait_for_timeout(400)
+        pg.click('#daysBtn');pg.wait_for_timeout(450);pg.screenshot(path=f'/tmp/controle-shots/{tag}-days.png')
+        assert pg.locator('[data-night="1"]').is_enabled() and pg.locator('[data-day="2"]').is_enabled() and not pg.locator('[data-night="2"]').is_enabled()
+        pg.keyboard.press('Escape');pg.wait_for_timeout(400)
         if tag=='1440':
             pg.click('#again')
             def f3(pg):
@@ -224,6 +242,7 @@ with sync_playwright() as p:
         night3(pg,tag)
         night4(pg,tag)
         night5(pg,tag)
+        daypicker(pg,tag)
         sw=pg.evaluate('document.documentElement.scrollWidth');assert sw<=w,(tag,'overflow',sw)
         pg.close()
     b.close()
