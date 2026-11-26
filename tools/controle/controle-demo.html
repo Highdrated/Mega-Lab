@@ -44,6 +44,11 @@ header{display:flex;align-items:center;gap:18px;padding:10px 20px;border-bottom:
 .pim select,.gs select,.gsel{font:inherit;font-size:14px;color:var(--ink);background:#fff;border:1px solid var(--line);border-radius:4px;padding:6px 8px;min-height:36px;max-width:100%}
 .mlab{display:none;color:var(--mute);font-size:12px;margin-bottom:4px}
 .nw{white-space:nowrap}
+.lhead{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:24px;align-items:start}
+.art{display:block;height:auto;border-radius:6px;border:1px solid var(--line2);box-shadow:0 8px 22px rgba(44,42,38,.10);background:var(--bg2)}
+.art.ward{width:170px}.art.scene{width:220px}
+.hero{display:block;width:100%;height:auto;border-radius:8px;margin:0 0 20px;box-shadow:0 10px 30px rgba(44,42,38,.08)}
+.fart{width:96px;height:auto;border-radius:6px;border:1px solid var(--line2);flex:none}
 .saved{font-size:13px;color:var(--gold);min-height:1.2em}
 .rl{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px 22px}
 .rl li{display:grid;grid-template-columns:12px 1fr;gap:10px;align-items:baseline;font-size:14px;padding:3px 0}
@@ -175,7 +180,7 @@ main{display:grid;grid-template-columns:92px minmax(0,1fr);min-height:0}
 @media (prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
 @media (max-width:1100px){.exam span{display:none}}
 @media (max-width:860px){.app{height:auto}main{grid-template-columns:1fr}.rail{flex-direction:row;border-right:0;border-bottom:1px solid var(--line);overflow-x:auto;padding:8px 10px}.rb{min-width:74px;flex:none}.rsep{width:1px;height:auto;margin:8px 4px}.mainc{min-height:75vh}.pane{padding:20px}.roads{padding:14px 20px 0}.wick{padding:12px 20px}}
-@media (max-width:600px){.mlab{display:block}.pim thead{display:none}.pim tr{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line2)}.pim td{border:0;padding:0}.pim td:first-child{grid-column:1/-1}.pim select{width:100%}.road{grid-template-columns:24px minmax(0,1fr) 72px}.road .track{grid-column:1/-1;grid-row:2}.rl{grid-template-columns:1fr}header{flex-wrap:wrap;gap:8px 12px;padding:10px 14px}.exam{order:3;flex-basis:100%}.band{grid-template-columns:1fr}.pane h2{font-size:24px}}
+@media (max-width:600px){.lhead{grid-template-columns:1fr;gap:14px}.lhead .art{order:-1}.art.ward{width:140px}.art.scene{width:min(240px,70%)}.mlab{display:block}.pim thead{display:none}.pim tr{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:6px 10px;padding:10px 0;border-bottom:1px solid var(--line2)}.pim td{border:0;padding:0}.pim td:first-child{grid-column:1/-1}.pim select{width:100%}.road{grid-template-columns:24px minmax(0,1fr) 72px}.road .track{grid-column:1/-1;grid-row:2}.rl{grid-template-columns:1fr}header{flex-wrap:wrap;gap:8px 12px;padding:10px 14px}.exam{order:3;flex-basis:100%}.band{grid-template-columns:1fr}.pane h2{font-size:24px}}
 </style>
 </head>
 <body>
@@ -636,6 +641,10 @@ const WARDS=['gate','vault','keep','walls','towers','watch'];
 const WD={gate:'Identity · 20–25%',vault:'Identity · 20–25%',keep:'Governance · 20–25%',walls:'Storage and network · 25–30%',towers:'Compute and AI · 20–25%',watch:'Posture · 20–25%'};
 const stOf=x=>S.lit.includes(x.id)?'lit':S.studied.includes(x.id)?'ember':'dark';
 const stTxt={lit:'Lit: held in a siege',ember:'Ember: studied',dark:'Unlit: not studied yet'};
+const ARTD={"gate": [240, 270], "vault": [216, 270], "keep": [202, 270], "walls": [184, 270], "towers": [151, 270], "watch": [157, 270], "night1": [235, 256], "night2": [233, 256], "night3": [234, 256], "night4": [233, 256], "night5": [234, 256], "valley": [1244, 470]};
+const ALT={gate:'The Gatehouse: two round towers and a portcullis gate',vault:'The Vault: a heavy round vault door with a lantern',keep:'The Keep: a tall tower with a council table behind an arched window',walls:'The Walls: curtain walls, a moat and a water gate',towers:'The Towers: two spired towers with glowing runes',watch:'The Watchtower: a beacon on a cliff',night1:'Hooded raiders with rings of keys walk toward the gate',night2:'A thief with a copied seal slips through a corridor',night3:'A letter with a forged seal on a desk by candlelight',night4:'A hand reaches for a brass key spilled from a satchel',night5:'A raider with a torch before the vault door'};
+const artImg=(k,cls)=>{const [w,h]=ARTD[k]||[1,1];return `<img class="art ${cls}" src="img/${k}.jpg" width="${w}" height="${h}" alt="${ALT[k]}" onerror="this.remove()">`};
+function withScene(p,n){const k=p.querySelector('.kicker'),h=k&&k.nextElementSibling,t=h&&h.nextElementSibling;if(!k||!h||!t||!ARTD['night'+n])return;const box=document.createElement('div');box.className='lhead';const col=document.createElement('div');const b=t.nextElementSibling;k.before(box);col.append(k,h,t);if(b&&b.classList.contains('bands'))col.append(b);box.append(col);box.insertAdjacentHTML('beforeend',artImg('night'+n,'scene'))}
 const DAYN={1:'Conditional Access and MFA',2:'Privileged Identity Management',3:'Consent and app permissions',4:'Managed identities',5:'Key Vault, part one'};
 let prevLit=null;
 function drawRail(){
@@ -655,7 +664,7 @@ function fillFly(){
   if(kind==='ward'){
     const all=SK.filter(s=>s.w===w),lit=all.filter(s=>S.lit.includes(s.id)).length;
     $('flyT').textContent=WN[w];
-    $('flyB').innerHTML=`<div class="fhead">${icon(w)}<span>${WD[w]} · ${lit} of ${all.length} lanterns lit</span></div><div class="fdots">${all.map(x=>`<span class="dot ${stOf(x)}" title="${esc(x.n)}"></span>`).join('')}</div>
+    $('flyB').innerHTML=`<div class="fhead"><img class="fart" src="img/${w}.jpg" alt="${ALT[w]}" onerror="this.remove()"><span>${WD[w]} · ${lit} of ${all.length} lanterns lit</span></div><div class="fdots">${all.map(x=>`<span class="dot ${stOf(x)}" title="${esc(x.n)}"></span>`).join('')}</div>
     <div class="roll" style="padding:0;margin:0;border:0"><h3><span>Exam skills</span><small>Unlit: not studied · Ember: studied · Lit: held in a siege</small></h3><ul class="rl">${all.map(x=>`<li class="${stOf(x)}"><i></i><span>${esc(x.n)}</span></li>`).join('')}</ul></div>`;
     return;
   }
@@ -719,7 +728,7 @@ function renderInner(){
   const p=$('pane'),C=CH[S.ch];queueMicrotask(showWick);
   if(S.stage==='intro'){
     setNight(false);
-    p.innerHTML=`<div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
+    p.innerHTML=`<img class="hero" src="img/valley.jpg" width="${ARTD.valley[0]}" height="${ARTD.valley[1]}" alt="A quiet valley at dusk with old ruins by a river" onerror="this.remove()"><div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel in the rail to read its skills, or open Days to jump between days.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
     <p style="color:var(--mute);font-size:15px">This demo covers five days and nights: four at the Gatehouse (Conditional Access and MFA, Privileged Identity Management, consent, managed identities), then the first night at the Vault. Duskhold is a fictional tenant.</p>
@@ -731,10 +740,10 @@ function renderInner(){
   if(S.stage==='lesson'){
     setNight(false);
     const LL=C.L,l=LL[S.li],locked=!S.strike;
-    p.innerHTML=`<div class="kicker">Lesson ${S.li+1} of ${LL.length} · ${WN[C.ward]}</div>
+    p.innerHTML=`<div class="lhead"><div><div class="kicker">Lesson ${S.li+1} of ${LL.length} · ${WN[C.ward]}</div>
     <div class="dots">${LL.map((_,i)=>`<i class="${i<S.li?'done':i===S.li?'now':''}"></i>`).join('')}</div>
     <h2>${l.t}</h2><div class="builds">${l.b}</div>
-    <ul class="facts">${l.f.map(x=>`<li>${x}</li>`).join('')}</ul>
+    <ul class="facts">${l.f.map(x=>`<li>${x}</li>`).join('')}</ul></div>${artImg(C.ward,'ward')}</div>
     <div class="card ${S.strike?'ok':''} ${justForged?'just':''}" id="strikeCard"><h4>Strike it from memory</h4><p>${l.s.q}</p>
       <form class="row" id="sf"><input type="text" id="si" autocomplete="off" spellcheck="false" ${S.strike?'disabled value="'+esc(l.s.show)+'"':''} aria-label="Your answer"><button class="btn" ${S.strike?'disabled':''}>Strike</button></form>
       <div class="fb ${S.strike?'good':''}" id="sfb">${S.strike?(S.note?`Forged. The portal writes it as "${esc(l.s.show)}".`:'Forged.'):''}</div></div>
@@ -760,7 +769,7 @@ function renderInner(){
     if(!S.strike&&!S.temper)wick(WICK[S.ch][S.li]);
     return;
   }
-  if(S.stage==='brief'){setNight(false);C.brief(p);return}
+  if(S.stage==='brief'){setNight(false);C.brief(p);withScene(p,S.ch);return}
   if(S.stage==='console'){setNight(true);C.console(p);return}
   if(S.stage==='report'){renderReport(p);return}
 }

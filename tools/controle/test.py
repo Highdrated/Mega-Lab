@@ -1,9 +1,11 @@
-import sys
+import sys,os
 from playwright.sync_api import sync_playwright
-import os
+url='file://'+os.path.abspath('.')+'/controle-demo.html'
 os.makedirs('/tmp/controle-shots',exist_ok=True)
-url='file://'+os.path.join(os.path.dirname(os.path.abspath(__file__)),'controle-demo.html')
 errs=[]
+def shot(pg,path):
+    pg.wait_for_function("[...document.images].every(i=>i.complete)");pg.wait_for_timeout(60);pg.screenshot(path=path)
+
 def lessons(pg,wrong=True):
     for i in range(5):
         if wrong and i<2:
@@ -15,7 +17,7 @@ def lessons(pg,wrong=True):
         if wrong and i==0:
             pg.click('.opt[data-i="1"]');assert 'Not that one' in pg.inner_text('#tfb')
         pg.click('.opt[data-i="0"]')
-        if i==1: pg.screenshot(path=f'/tmp/controle-shots/{tag}-lesson.png')
+        if i==1: shot(pg,f'/tmp/controle-shots/{tag}-lesson.png')
         pg.click('#nx')
 def lit_total(pg):
     return pg.evaluate("[...document.querySelectorAll('#rail [data-lit]')].reduce((a,b)=>a+(+b.dataset.lit),0)")
@@ -35,31 +37,31 @@ def night2(pg,tag):
             pg.fill('#si','PIN');pg.click('#sf button');assert 'Not quite' in pg.inner_text('#sfb')
         pg.fill('#si',ans);pg.click('#sf button');assert 'Forged' in pg.inner_text('#strikeCard'),('n2 strike',i)
         pg.click('.opt[data-i="0"]')
-        if i==2: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-lesson.png')
+        if i==2: shot(pg,f'/tmp/controle-shots/{tag}-n2-lesson.png')
         pg.click('#nx')
     assert 'scouts are back' in pg.inner_text('#pane')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-brief.png')
-    pg.click('#go');pg.wait_for_timeout(200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-console.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n2-brief.png')
+    pg.click('#go');pg.wait_for_timeout(200);shot(pg,f'/tmp/controle-shots/{tag}-n2-console.png')
     hold(pg);r=results(pg);print(tag,'n2 start',r);assert r==['Breached','Breached','Too much','Risk'],r
     pg.click('#again')
     pg.select_option('select[data-p="maren"][data-k="t"]','eligible')
     hold(pg);r=results(pg);print(tag,'n2 eligible no approval',r);assert r[0]=='Breached',r
     pg.click('#again')
     pg.check('#gs-appr');pg.select_option('select[data-p="tobin"][data-k="r"]','ha');pg.select_option('select[data-p="you"][data-k="t"]','eligible')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-console-fixed.png')
-    pg.click('#hold');pg.wait_for_timeout(1500);pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-siege.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n2-console-fixed.png')
+    pg.click('#hold');pg.wait_for_timeout(1500);shot(pg,f'/tmp/controle-shots/{tag}-n2-siege.png')
     pg.wait_for_selector('#again',timeout=15000)
     r=results(pg);print(tag,'n2 win',r);assert r==['Held','Contained'],r
     assert 'citadel held' in pg.inner_text('#pane')
     assert lit_total(pg)==3
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-report-win.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n2-report-win.png')
     assert pg.inner_text('#end')=='Start day 3'
     if tag=='1440':
         pg.click('#again')
         for x in ['ea1','ea2','maren']:
             pg.select_option(f'select[data-p="{x}"][data-k="t"]','eligible')
         hold(pg);r=results(pg);print('n2 lockout',r);assert 'Locked out' in r and 'Risk' in r,r
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-n2-report-lock.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-n2-report-lock.png')
         pg.click('#again');pg.select_option('select[data-p="maren"][data-k="r"]','none')
         hold(pg);r=results(pg);print('n2 blocked',r);assert 'Blocked work' in r,r
 
@@ -76,25 +78,25 @@ def night3(pg,tag):
             pg.fill('#si',ans);pg.click('#sf button')
         assert 'Forged' in pg.inner_text('#strikeCard'),('n3 strike',i)
         pg.click('.opt[data-i="0"]')
-        if i==4: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-lesson.png')
+        if i==4: shot(pg,f'/tmp/controle-shots/{tag}-n3-lesson.png')
         pg.click('#nx')
     assert 'scouts are back' in pg.inner_text('#pane')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-brief.png')
-    pg.click('#go');pg.wait_for_timeout(200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-console.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n3-brief.png')
+    pg.click('#go');pg.wait_for_timeout(200);shot(pg,f'/tmp/controle-shots/{tag}-n3-console.png')
     hold(pg);r=results(pg);print(tag,'n3 start',r);assert r==['Breached','Breached','Served'],r
     pg.click('#again');pg.check('input[name=cs][value=verified]')
     hold(pg);r=results(pg);print(tag,'n3 verified only',r);assert r==['Held','Breached','Blocked work'],r
     pg.click('#again');pg.check('#pc-offline_access');pg.check('#pc-User\\.Read');pg.select_option('select[data-a="raven"]','no')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-console-fixed.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n3-console-fixed.png')
     hold(pg);r=results(pg);print(tag,'n3 win',r);assert r==['Held','Held','Served'],r
     assert 'citadel held' in pg.inner_text('#pane')
     assert lit_total(pg)==5
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-win.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n3-report-win.png')
     assert pg.inner_text('#end')=='Start day 4'
     if tag=='1440':
         pg.click('#again');pg.uncheck('#pc-User\\.Read');pg.check('#wf');pg.check('#pc-Mail\\.Read');pg.select_option('select[data-a="hr"]','no')
         hold(pg);r=results(pg);print('n3 mistakes',r);assert 'Blocked work' in r and 'Risk' in r and 'Served' in r,r
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-n3-report-mistakes.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-n3-report-mistakes.png')
 
 CH4={"ch":4,"wing":"gate","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"studied":["ca","mfa","pim","consent","apps"],"lit":["ca","mfa","pim","consent","apps"],"oops":[],"pol":[],"edit":None,"night":4,"report":None}
 def night4(pg,tag):
@@ -103,11 +105,11 @@ def night4(pg,tag):
     for i,ans in enumerate(['managed identity','System-assigned','Identity','Storage Blob Data Reader','container']):
         pg.fill('#si',ans);pg.click('#sf button');assert 'Forged' in pg.inner_text('#strikeCard'),('n4 strike',i)
         pg.click('.opt[data-i="0"]')
-        if i==3: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-lesson.png')
+        if i==3: shot(pg,f'/tmp/controle-shots/{tag}-n4-lesson.png')
         pg.click('#nx')
     assert 'scouts are back' in pg.inner_text('#pane')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-brief.png')
-    pg.click('#go');pg.wait_for_timeout(200);pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-console.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n4-brief.png')
+    pg.click('#go');pg.wait_for_timeout(200);shot(pg,f'/tmp/controle-shots/{tag}-n4-console.png')
     hold(pg);r=results(pg);print(tag,'n4 start',r);assert r==['Breached','Breached','Too much'],r
     pg.click('#again');pg.check('#m-del')
     hold(pg);r=results(pg);print(tag,'n4 secret deleted only',r);assert r==['Held','Held','Blocked work'],r
@@ -118,11 +120,11 @@ def night4(pg,tag):
     pg.click('#again');pg.select_option('#m-role','sbdr');pg.select_option('#m-scope','acct')
     hold(pg);r=results(pg);print(tag,'n4 account scope',r);assert r==['Held','Breached'],r
     pg.click('#again');pg.select_option('#m-scope','cont')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-console-fixed.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n4-console-fixed.png')
     hold(pg);r=results(pg);print(tag,'n4 win',r);assert r==['Held','Contained'],r
     assert 'citadel held' in pg.inner_text('#pane')
     assert lit_total(pg)==6
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-win.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n4-report-win.png')
     assert pg.inner_text('#end')=='Start day 5'
     if tag=='1440':
         pg.click('#again');pg.check('input[name=auth][value=sys]');pg.uncheck('#m-del')
@@ -130,7 +132,7 @@ def night4(pg,tag):
         pg.click('#again');pg.select_option('#m-sys','on')
         hold(pg);r=results(pg);print('n4 sys on, secret kept',r);assert r[:2]==['Contained','Contained'] and 'Next month' in r and 'Open door' in r,r
         assert 'leaked secret still works' in pg.inner_text('#pane')
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-n4-report-warn.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-n4-report-warn.png')
 
 CH5={"ch":5,"wing":"vault","stage":"lesson","li":0,"strike":False,"temper":False,"tries":0,"maxLi":-1,"studied":["ca","mfa","pim","consent","apps","mi","rbac"],"lit":["ca","mfa","pim","consent","apps","mi"],"oops":[],"pol":[],"edit":None,"report":None}
 def night5(pg,tag):
@@ -144,14 +146,14 @@ def night5(pg,tag):
         if i==1:
             pg.click('#askw');assert 'hint 1 of 2' in pg.inner_text('#wick')
         pg.click('.opt[data-i="0"]')
-        if i==3: pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-lesson.png')
+        if i==3: shot(pg,f'/tmp/controle-shots/{tag}-n5-lesson.png')
         pg.click('#nx')
     assert 'scouts are back' in pg.inner_text('#pane')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-brief.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n5-brief.png')
     pg.click('#go');pg.wait_for_timeout(200)
     pg.click('#askw');pg.click('#askw');pg.select_option('#k-role','none')
     assert 'hint 2 of 3' in pg.inner_text('#wick'),pg.inner_text('#wick')
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-console.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n5-console.png')
     hold(pg);r=results(pg);print(tag,'n5 start',r);assert r==['Breached','Breached','Breached'],r
     pg.click('#again');pg.check('input[name=model][value=rbac]')
     hold(pg);r=results(pg);print(tag,'n5 rbac no role',r);assert r==['Held','Held','Breached','Blocked work'],r
@@ -161,11 +163,11 @@ def night5(pg,tag):
     hold(pg);r=results(pg);print(tag,'n5 firewall no vnet',r);assert r==['Held','Held','Breached','Blocked work'],r
     pg.click('#again');pg.check('#k-vnet');pg.check('#k-purge')
     assert pg.locator('#k-purge').is_disabled()
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-console-fixed.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n5-console-fixed.png')
     hold(pg);r=results(pg);print(tag,'n5 win',r);assert r==['Held','Held','Contained'],r
     assert 'citadel held' in pg.inner_text('#pane')
     assert lit_total(pg)==9
-    pg.screenshot(path=f'/tmp/controle-shots/{tag}-n5-report-win.png')
+    shot(pg,f'/tmp/controle-shots/{tag}-n5-report-win.png')
     pg.click('#end');assert 'rest of the citadel' in pg.inner_text('#pane');pg.click('#bk')
     if tag=='1440':
         pg.click('#again');pg.check('#k-lock');pg.select_option('#k-role','adm');pg.check('input[name=net][value=off]');pg.check('#k-pe')
@@ -192,13 +194,13 @@ with sync_playwright() as p:
         pg.on('pageerror',lambda e:errs.append(str(e)))
         pg.on('console',lambda m:errs.append(m.text) if m.type=='error' and 'fonts' not in m.text else None)
         pg.goto(url);pg.evaluate('localStorage.clear()');pg.reload()
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-intro.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-intro.png')
         pg.click('#go');lessons(pg,wrong=(tag=='1440'))
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-brief.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-brief.png')
         pg.click('#go');pg.wait_for_timeout(300)
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-console.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-console.png')
         hold(pg);r=results(pg);print(tag,'night1',r);assert r==['Breached']*3,r
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-fail.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-report-fail.png')
         pg.click('#again')
         def f1(pg):
             pg.check('input[name=state][value=on]')
@@ -212,18 +214,18 @@ with sync_playwright() as p:
         pg.check('input[name=inc][value=all]');pg.check('input[name=excG][value=ea]');pg.check('input[name=res][value=all]')
         pg.check('input[name=ca][value=yes]');pg.check('input[name=apps][value=eas]');pg.check('input[name=apps][value=other]')
         pg.check('input[name=grant][value=block]');pg.check('input[name=state][value=on]')
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-editor.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-editor.png')
         pg.click('#pf button[type=submit]')
         assert pg.locator('.pol').count()==2
-        pg.click('#hold');pg.wait_for_timeout(2600);pg.screenshot(path=f'/tmp/controle-shots/{tag}-siege.png')
+        pg.click('#hold');pg.wait_for_timeout(2600);shot(pg,f'/tmp/controle-shots/{tag}-siege.png')
         pg.wait_for_selector('#again',timeout=15000)
         r=results(pg);print(tag,'win',r);assert r==['Held','Held','Held','Commended'],r
         assert pg.inner_text('#end')=='Start day 2'
         assert 'citadel held' in pg.inner_text('#pane')
-        pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-win.png')
+        shot(pg,f'/tmp/controle-shots/{tag}-report-win.png')
         lit=lit_total(pg);assert lit==2,lit
-        pg.click('#rail [data-w="towers"]');pg.wait_for_timeout(450);pg.screenshot(path=f'/tmp/controle-shots/{tag}-towers.png');pg.click('#flyX');pg.wait_for_timeout(400)
-        pg.click('#daysBtn');pg.wait_for_timeout(450);pg.screenshot(path=f'/tmp/controle-shots/{tag}-days.png')
+        pg.click('#rail [data-w="towers"]');pg.wait_for_timeout(450);shot(pg,f'/tmp/controle-shots/{tag}-towers.png');pg.click('#flyX');pg.wait_for_timeout(400)
+        pg.click('#daysBtn');pg.wait_for_timeout(450);shot(pg,f'/tmp/controle-shots/{tag}-days.png')
         assert pg.locator('[data-night="1"]').is_enabled() and pg.locator('[data-day="2"]').is_enabled() and not pg.locator('[data-night="2"]').is_enabled()
         pg.keyboard.press('Escape');pg.wait_for_timeout(400)
         if tag=='1440':
@@ -236,8 +238,8 @@ with sync_playwright() as p:
             pg.click('#np');pg.fill('#pf input[name=name]','Compliant only')
             pg.check('input[name=inc][value=all]');pg.check('input[name=excG][value=ea]');pg.check('input[name=res][value=all]');pg.check('input[name=ctrl][value=compliant]');pg.check('input[name=state][value=on]');pg.click('#pf button[type=submit]')
             hold(pg);r=results(pg);print('lockout+ea',r);assert 'Locked out' in r and 'Risk' in r,r
-            pg.screenshot(path=f'/tmp/controle-shots/{tag}-report-lock.png')
-            pg.click('#oopsBtn');pg.wait_for_timeout(300);pg.screenshot(path=f'/tmp/controle-shots/{tag}-oops.png')
+            shot(pg,f'/tmp/controle-shots/{tag}-report-lock.png')
+            pg.click('#oopsBtn');pg.wait_for_timeout(300);shot(pg,f'/tmp/controle-shots/{tag}-oops.png')
         night2(pg,tag)
         night3(pg,tag)
         night4(pg,tag)
