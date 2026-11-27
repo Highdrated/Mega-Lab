@@ -260,7 +260,7 @@ const L=[
  {t:'Test before you lock',b:'Builds on: The second key.',f:['<b>Report-only</b> evaluates a policy and writes the result to the sign-in logs. It enforces nothing.','When the logs look right, set <b>Enable policy</b> to <b>On</b>.','Exclude your <b>emergency access</b> (break-glass) accounts from every policy, so a broken policy can\'t lock everyone out. Guard them with a strong sign-in method such as a passkey and alert on every sign-in.'],
   s:{q:'Which policy state logs the result but doesn\'t enforce it?',a:['report-only','report only'],show:'Report-only'},
   c:{q:'Which accounts do you exclude from all Conditional Access policies?',o:['Emergency access accounts','All global admins','All guest accounts'],r:0,why:'Excluding every admin would leave your most powerful accounts unprotected. Only the emergency accounts stay out.'}},
- {t:'The old postern',b:'Builds on: The second key, Test before you lock.',f:['<b>Legacy authentication</b> sends only a username and password, so it can\'t do MFA. Microsoft has switched it off for most Exchange Online protocols, but blocking it is still a baseline policy.','A Require MFA policy that covers all client apps blocks legacy sign-ins outright, because they can\'t complete the challenge.','The baseline is still a separate block policy: Conditions, Client apps, Configure <b>Yes</b>, tick only <b>Exchange ActiveSync clients</b> and <b>Other clients</b>, then Grant <b>Block access</b>.'],
+ {t:'The old postern',b:'Builds on: The second key, Test before you lock.',f:['<b>Legacy authentication</b> sends only a username and password, so it can\'t do MFA. Microsoft has switched it off for most Exchange Online protocols, but blocking it is still a baseline policy.','A Require MFA policy that covers all client apps blocks legacy sign-ins outright, because they can\'t complete the challenge.','The baseline is still a separate block policy. Under Conditions, open Client apps and set Configure to <b>Yes</b>. Tick only <b>Exchange ActiveSync clients</b> and <b>Other clients</b>. Then set Grant to <b>Block access</b>.'],
   s:{q:'Which client apps option covers legacy protocols other than ActiveSync?',a:['other clients'],show:'Other clients'},
   c:{q:'Your MFA policy has Client apps set to Browser only. A raider signs in with a legacy client. What happens?',o:['The policy doesn\'t apply, so a guessed password gets in','He gets an MFA prompt and fails it','Legacy clients are always blocked'],r:0,why:'Once you configure Client apps, the policy only covers the boxes you ticked.'}}
 ];
@@ -291,11 +291,11 @@ const L2=[
   c:{q:'Why aren\'t emergency accounts made eligible in PIM?',o:['They must work even when PIM or MFA is down','Eligible roles cost more','PIM can\'t manage Global Administrator'],r:0,why:'Break-glass accounts exist for the day your normal controls fail.'}}
 ];
 const ROLES={none:'No role',ga:'Global Administrator',pra:'Privileged Role Administrator',ua:'User Administrator',ha:'Helpdesk Administrator',pa:'Password Administrator'};
-const PEOPLE=[{id:'you',n:'You (warden)',d:'Runs Duskhold'},{id:'maren',n:'Maren',d:'Steward. Tenant changes about once a week'},{id:'tobin',n:'Tobin',d:'Helpdesk. Password resets every day'},{id:'ea1',n:'Emergency access 1',d:'Break-glass'},{id:'ea2',n:'Emergency access 2',d:'Break-glass'}];
+const PEOPLE=[{id:'you',n:'You (warden)',d:'Runs Duskhold'},{id:'maren',n:'Marenthe',d:'Steward. Tenant changes about once a week'},{id:'tobin',n:'Tobrin',d:'Helpdesk. Password resets every day'},{id:'ea1',n:'Emergency access 1',d:'Break-glass'},{id:'ea2',n:'Emergency access 2',d:'Break-glass'}];
 function startPim(){return {asg:{you:{r:'ga',t:'active'},maren:{r:'ga',t:'active'},tobin:{r:'ga',t:'active'},ea1:{r:'ga',t:'active'},ea2:{r:'ga',t:'active'}},gs:{dur:8,mfa:true,just:true,appr:false,apv:'default'}}}
 const WAVES2=[
- {id:'A',name:'Stolen seal',icon:'key',who:'maren',how:'Maren\'s signed-in session, copied from her laptop'},
- {id:'B',name:'Fake sign-in page',icon:'mask',who:'tobin',how:'Tobin\'s session, caught by a lookalike sign-in page'}
+ {id:'A',name:'Stolen seal',icon:'key',who:'maren',how:'Marenthe\'s signed-in session, copied from her laptop'},
+ {id:'B',name:'Fake sign-in page',icon:'mask',who:'tobin',how:'Tobrin\'s session, caught by a lookalike sign-in page'}
 ];
 const wavesNow=()=>CH[S.ch].waves;
 function steal(pid){
@@ -312,9 +312,9 @@ function evaluate2(){
   const A=S.pim.asg,gs=S.pim.gs;
   const waves=WAVES2.map(w=>{const r=steal(w.who);return {w,held:r.res!=='broke',res:r.res,msg:r.msg}});
   const checks=[];let lock=false;
-  if(A.maren.r!=='ga'){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Maren needs Global Administrator for her weekly tenant changes. Give her an eligible role instead of taking it away.'})}
-  if(!['ha','pa','ua','ga','pra'].includes(A.tobin.r)){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Tobin can\'t reset passwords any more. Helpdesk Administrator or Password Administrator is enough.'})}
-  else if(A.tobin.r==='ga'||A.tobin.r==='pra')checks.push({k:'warnr',t:'Too much',m:`Tobin only resets passwords. ${ROLES[A.tobin.r]} is far more than that job needs. Use Helpdesk Administrator.`});
+  if(A.maren.r!=='ga'){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Marenthe needs Global Administrator for her weekly tenant changes. Give her an eligible role instead of taking it away.'})}
+  if(!['ha','pa','ua','ga','pra'].includes(A.tobin.r)){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Tobrin can\'t reset passwords any more. Helpdesk Administrator or Password Administrator is enough.'})}
+  else if(A.tobin.r==='ga'||A.tobin.r==='pra')checks.push({k:'warnr',t:'Too much',m:`Tobrin only resets passwords. ${ROLES[A.tobin.r]} is far more than that job needs. Use Helpdesk Administrator.`});
   const ea=['ea1','ea2'].filter(x=>!(A[x].r==='ga'&&A[x].t==='active'));
   if(ea.length)checks.push({k:'warnr',t:'Risk',m:'Emergency access accounts must stay permanent active Global Administrators. They are for the day PIM or MFA fails.'});
   if(A.you.r==='ga'&&A.you.t==='active')checks.push({k:'warnr',t:'Risk',m:'Your own account is still a standing Global Administrator. A stolen session of yours would open everything. Make it eligible too.'});
@@ -336,7 +336,7 @@ function renderPim(p){
    <label class="ck"><input type="checkbox" id="gs-mfa" ${gs.mfa?'checked':''}> On activation, require multifactor authentication</label>
    <label class="ck"><input type="checkbox" id="gs-just" ${gs.just?'checked':''}> Require justification on activation</label>
    <label class="ck"><input type="checkbox" id="gs-appr" ${gs.appr?'checked':''}> Require approval to activate</label>
-   <div style="padding-left:24px;${gs.appr?'':'display:none'}"><div class="sub">Approvers</div><select id="gs-apv">${opt({default:'None selected (default approvers)',maren:'Maren',you:'You (warden)',both:'Maren and you'},gs.apv)}</select></div>
+   <div style="padding-left:24px;${gs.appr?'':'display:none'}"><div class="sub">Approvers</div><select id="gs-apv">${opt({default:'None selected (default approvers)',maren:'Marenthe',you:'You (warden)',both:'Marenthe and you'},gs.apv)}</select></div>
   </fieldset>
   <div class="saved" id="saved"></div>
   <div class="next" style="border-top:1px solid var(--line2);padding-top:16px;margin-top:12px"><button class="btn" id="hold">Hold the night</button></div>`;
@@ -346,7 +346,7 @@ function renderPim(p){
   ['mfa','just','appr'].forEach(k=>$('gs-'+k).onchange=e=>{gs[k]=e.target.checked;save();const y=$('pane').scrollTop;renderPim(p);$('pane').scrollTop=y;flash()});
   $('gs-apv').onchange=e=>{gs.apv=e.target.value;save();flash()};
   $('hold').onclick=siege;
-  wick('<b>Wick:</b> Ask two things for every row: does this person need the role all the time, and does it need to be this big?');
+  wick('<b>Wick:</b> Ask two things for every row. Does this person need the role all the time? And does it need to be this big?');
 }
 
 const L3=[
@@ -377,8 +377,8 @@ const WAVES3=[
 ];
 function evaluate3(){
   const C=S.con;const waves=[];const checks=[];let lock=false;
-  const who={you:'you',maren:'Maren',both:'you and Maren'}[C.rev]||'you';
-  const wf=C.wf?` They sent an admin consent request instead, and ${who==='you and Maren'?'Maren':who} denied it.`:'';
+  const who={you:'you',maren:'Marenthe',both:'you and Marenthe'}[C.rev]||'you';
+  const wf=C.wf?` They sent an admin consent request instead, and ${who==='you and Marenthe'?'Marenthe':who} denied it.`:'';
   waves.push(C.cs==='all'?{w:WAVES3[0],held:false,res:'broke',msg:'Users could consent to any app. Nine people clicked Accept, and DuskDocs can now read their mail and files.'}
    :{w:WAVES3[0],held:true,res:'held',msg:(C.cs==='none'?'User consent is off, so nobody could accept DuskDocs.':'DuskDocs\' publisher isn\'t verified, so users couldn\'t consent to it.')+wf});
   const rv=C.apps.raven;
@@ -388,7 +388,7 @@ function evaluate3(){
   if(!hr.en||hr.rv){lock=true;checks.push({k:'broke',t:'Blocked work',m:'Duskhold HR Portal is your own app. Cutting it off stopped everyone from reaching their payslips.'})}
   const canConsent=C.cs==='all'||(C.cs==='verified'&&QUILL.every(x=>C.low.includes(x)));
   if(canConsent)checks.push({k:'held',t:'Served',m:'Staff could use Quill Signer, a verified app asking only for sign-in permissions, without waiting for an admin.'});
-  else if(C.wf)checks.push({k:'held',t:'Served',m:'Staff couldn\'t consent to Quill Signer themselves, so they asked through the admin consent workflow and '+(who==='you and Maren'?'Maren':who)+' approved it.'});
+  else if(C.wf)checks.push({k:'held',t:'Served',m:'Staff couldn\'t consent to Quill Signer themselves, so they asked through the admin consent workflow and '+(who==='you and Marenthe'?'Marenthe':who)+' approved it.'});
   else{lock=true;checks.push({k:'broke',t:'Blocked work',m:'Staff couldn\'t use Quill Signer and had no way to ask for it. Turn on the admin consent workflow, or classify its sign-in permissions as low impact.'})}
   const risky=C.low.filter(x=>x==='Mail.Read'||x==='Files.Read.All');
   if(risky.length)checks.push({k:'warnr',t:'Risk',m:`${risky.join(' and ')} on the low impact list means any verified app can read that data without an admin.`});
@@ -403,7 +403,7 @@ function renderApps(p){
    <div class="sub" style="margin-top:8px">The portal also offers "Let Microsoft manage your consent settings". Duskhold keeps its own setting tonight.</div></fieldset>
   <fieldset><legend>Permission classifications · Low impact</legend>${PERMS.map(([k,d])=>ck('pc-'+k,C.low.includes(k),`<code>${k}</code>`,d)).join('')}</fieldset>
   <fieldset><legend>Admin consent settings</legend>${ck('wf',C.wf,'Users can request admin consent to apps they are unable to consent to')}
-   <div style="padding-left:24px;${C.wf?'':'display:none'}"><div class="sub">Reviewers</div><select id="rv" class="gsel">${Object.entries({you:'You (warden)',maren:'Maren',both:'Maren and you'}).map(([k,n])=>`<option value="${k}" ${C.rev===k?'selected':''}>${n}</option>`).join('')}</select></div></fieldset>
+   <div style="padding-left:24px;${C.wf?'':'display:none'}"><div class="sub">Reviewers</div><select id="rv" class="gsel">${Object.entries({you:'You (warden)',maren:'Marenthe',both:'Marenthe and you'}).map(([k,n])=>`<option value="${k}" ${C.rev===k?'selected':''}>${n}</option>`).join('')}</select></div></fieldset>
   </form>
   <h3 style="font-size:16px;margin:18px 0 6px;color:var(--ink)">All applications</h3>
   <table class="pim"><thead><tr><th>Application</th><th>Enabled for users to sign-in?</th><th>Permissions</th></tr></thead><tbody>
@@ -420,7 +420,7 @@ function renderApps(p){
   p.querySelectorAll('select[data-a]').forEach(x=>x.onchange=()=>{C.apps[x.dataset.a].en=x.value==='yes';save();flash()});
   p.querySelectorAll('input[data-rv]').forEach(x=>x.onchange=()=>{C.apps[x.dataset.rv].rv=x.checked;save();flash()});
   $('hold').onclick=siege;
-  wick('<b>Wick:</b> Two jobs tonight: decide who may say yes from now on, and deal with the app that already got a yes.');
+  wick('<b>Wick:</b> Two jobs tonight. Decide who may say yes from now on. Then deal with the app that already got a yes.');
 }
 function renderBrief3(p){
   p.innerHTML=`<div class="kicker">Dusk · Night 3</div><h2>The scouts are back</h2>
@@ -524,7 +524,7 @@ const L5=[
  {t:'The vault',b:'Builds on: Control or data.',f:['<b>Key Vault</b> stores secrets, keys and certificates, so apps don\'t keep them in config files.','Like storage, it has two planes: the <b>control plane</b> manages the vault itself, the <b>data plane</b> reads and writes what\'s inside.','Each plane has its own access control. Managing the vault doesn\'t have to mean reading its secrets.'],
   s:{q:'Which Azure service stores secrets, keys and certificates?',a:['key vault','azure key vault'],show:'Key Vault'},
   c:{q:'Someone can change the vault\'s network settings. Can they read its secrets?',o:['Not by itself: that\'s the control plane, secrets are the data plane','Yes, the two always go together','Only on weekends'],r:0,why:'Two planes, two permissions. Keep them apart.'}},
- {t:'Two permission models',b:'Builds on: The vault.',f:['The older model is <b>vault access policy</b>. The recommended one is <b>Azure role-based access control</b> (Azure RBAC).','With access policies, anyone who can edit the vault, such as a Contributor, can add a policy that grants themselves access to the secrets.','With Azure RBAC, only Owner and User Access Administrator can hand out access. A Contributor can manage the vault but can\'t read or grant secrets.'],
+ {t:'Two permission models',b:'Builds on: The vault.',f:['The older model is <b>vault access policy</b>. The recommended one is <b>Azure role-based access control</b> (Azure RBAC).','With access policies, anyone who can edit the vault can add a policy of their own. A Contributor, for example, can grant themselves access to the secrets.','With Azure RBAC, only Owner and User Access Administrator can hand out access. A Contributor can manage the vault but can\'t read or grant secrets.'],
   s:{q:'Which permission model does Microsoft recommend for Key Vault?',a:['azure rbac','rbac','azure role-based access control','role-based access control','azure role based access control'],show:'Azure RBAC'},
   c:{q:'A vault uses access policies. A developer has Contributor on it. What can they do?',o:['Give themselves access to every secret','Nothing inside the vault, ever','Only read secret names'],r:0,why:'Contributor can write access policies, and an access policy is the key to the data.'}},
  {t:'Key Vault roles',b:'Builds on: Two permission models.',f:['<b>Key Vault Reader</b> sees names and metadata, not secret values. <b>Key Vault Secrets User</b> reads secret values.','<b>Secrets Officer</b> manages secrets. <b>Key Vault Administrator</b> can do everything on the data plane.','Switching a vault to Azure RBAC means its access policies stop counting. Give the roles first, or apps break.'],
@@ -541,9 +541,9 @@ const KROLES={none:'No role',reader:'Key Vault Reader',su:'Key Vault Secrets Use
 const KNET={all:'Allow public access from all networks',sel:'Allow public access from specific virtual networks and IP addresses',off:'Disable public access'};
 function startKv(){return {model:'policy',role:'none',net:'all',vnet:false,pe:false,purge:false,lock:false}}
 const WAVES5=[
- {id:'A',name:'Vault looter',icon:'vault',how:'Orrin, a contractor with Contributor on rg-vault, had his account phished. The raider wants the secrets'},
+ {id:'A',name:'Vault looter',icon:'vault',how:'Orrivane, a contractor with Contributor on rg-vault, had his account phished. The raider wants the secrets'},
  {id:'B',name:'Stolen app key',icon:'key',how:'billing-app\'s sign-in credential was copied. The raider tries the vault from the internet'},
- {id:'C',name:'Scorched vault',icon:'flame',how:'With Orrin\'s account, the raider tries to delete the vault and purge it for good'}
+ {id:'C',name:'Scorched vault',icon:'flame',how:'With Orrivane\'s account, the raider tries to delete the vault and purge it for good'}
 ];
 function evaluate5(){
   const K=S.kv,checks=[];
@@ -607,7 +607,7 @@ function renderBrief5(p){
   <p>The Gatehouse holds. So tonight the raiders skip it and go straight for what Duskhold keeps locked away.</p>
   <div class="bands">${WAVES5.map(w=>`<div class="band"><b>${w.name}</b><span>${w.how}.</span></div>`).join('')}</div>
   <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">kv-duskhold</h3>
-  <dl class="tenant"><dt>Holds</dt><dd>billing-db-password and 30 other secrets</dd><dt>billing-app</dt><dd>Runs in vnet-app and reads billing-db-password</dd><dt>Orrin</dt><dd>Contractor, Contributor on rg-vault</dd><dt>Permissions</dt><dd>Vault access policy</dd><dt>Networking</dt><dd>Public access from all networks</dd><dt>Purge protection</dt><dd>Off</dd><dt>Locks</dt><dd>None</dd></dl>
+  <dl class="tenant"><dt>Holds</dt><dd>billing-db-password and 30 other secrets</dd><dt>billing-app</dt><dd>Runs in vnet-app and reads billing-db-password</dd><dt>Orrivane</dt><dd>Contractor, Contributor on rg-vault</dd><dt>Permissions</dt><dd>Vault access policy</dd><dt>Networking</dt><dd>Public access from all networks</dd><dt>Purge protection</dt><dd>Off</dd><dt>Locks</dt><dd>None</dd></dl>
   <div class="next"><button class="btn" id="go">Open kv-duskhold</button></div>`;
   $('go').onclick=()=>{S.stage='console';save();render()};
   wick('<b>Wick:</b> A vault is only as strong as the people allowed to rewrite its rules.');
@@ -731,7 +731,7 @@ function renderInner(){
     p.innerHTML=`<img class="hero" src="img/valley.jpg" width="${ARTD.valley[0]}" height="${ARTD.valley[1]}" alt="A quiet valley at dusk with old ruins by a river" onerror="this.remove()"><div class="kicker">Duskhold</div><h2>Hold the citadel through the night</h2>
     <p>You are the warden of Duskhold. Every lantern on its walls is one skill from Exam SC-500. Pick a part of the citadel in the rail to read its skills, or open Days to jump between days.</p>
     <ul class="facts"><li><b>Day</b>: short lessons at the forge, one control at a time.</li><li><b>Night</b>: raiders come. You set real Microsoft controls in the gatehouse console before they reach the walls.</li><li><b>Morning</b>: the damage report shows what held, what broke and why. Wrong turns go to your oopsies.</li></ul>
-    <p style="color:var(--mute);font-size:15px">This demo covers five days and nights: four at the Gatehouse (Conditional Access and MFA, Privileged Identity Management, consent, managed identities), then the first night at the Vault. Duskhold is a fictional tenant.</p>
+    <p style="color:var(--mute);font-size:15px">This demo covers five days and nights. Four are at the Gatehouse: Conditional Access and MFA, Privileged Identity Management, consent, and managed identities. The fifth is at the Vault. Duskhold is a fictional tenant.</p>
     <div class="next"><button class="btn" id="go">Start day 1</button></div>`;
     $('go').onclick=()=>startDay(1);
     wick('<b>Wick:</b> I light the lanterns. You keep the raiders out. Unlit lanterns are skills you haven\'t met yet.');
@@ -748,7 +748,7 @@ function renderInner(){
       <form class="row" id="sf"><input type="text" id="si" autocomplete="off" spellcheck="false" ${S.strike?'disabled value="'+esc(l.s.show)+'"':''} aria-label="Your answer"><button class="btn" ${S.strike?'disabled':''}>Strike</button></form>
       <div class="fb ${S.strike?'good':''}" id="sfb">${S.strike?(S.note?`Forged. The portal writes it as "${esc(l.s.show)}".`:'Forged.'):''}</div></div>
     <div class="card ${S.temper?'ok':''}" id="temperCard" ${locked?'style="opacity:.45"':''}><h4>Temper it</h4><p>${l.c.q}</p>
-      <div class="opts">${l.c.o.map((o,i)=>`<button class="opt ${S.temper&&i===l.c.r?'right':''}" data-i="${i}" type="button" ${locked?'disabled':''}>${o}</button>`).join('')}</div>
+      <div class="opts">${l.c.o.map((o,i)=>i).map((_,k,a)=>a[(k+((S.ch||1)*7+S.li*2+1))%a.length]).map(i=>`<button class="opt ${S.temper&&i===l.c.r?'right':''}" data-i="${i}" type="button" ${locked?'disabled':''}>${l.c.o[i]}</button>`).join('')}</div>
       <div class="fb ${S.temper?'good':''}" id="tfb">${S.temper?esc(l.c.why):''}</div></div>
     <div class="next">${S.li>0?'<button class="ghost" id="back" type="button">Back</button>':''}<button class="btn" id="nx" ${S.strike&&S.temper?'':'disabled'}>${S.li===LL.length-1?'Finish the day':'Next lesson'}</button></div>`;
     const si=$('si');
@@ -919,7 +919,7 @@ function renderBrief2(p){
   <p>No spraying tonight. This crew doesn't guess passwords. It steals sessions that are already signed in, MFA and all.</p>
   <div class="bands">${WAVES2.map(w=>`<div class="band"><b>${w.name}</b><span>${w.how}.</span></div>`).join('')}</div>
   <h3 style="font-size:16px;margin:16px 0 8px;color:var(--ink)">Duskhold admins</h3>
-  <dl class="tenant"><dt>Licence</dt><dd>Microsoft Entra ID P2 for the admins</dd><dt>Maren</dt><dd>Steward, needs Global Administrator about once a week</dd><dt>Tobin</dt><dd>Helpdesk, resets passwords every day</dd><dt>You</dt><dd>Warden</dd><dt>Emergency access</dt><dd>2 break-glass accounts</dd></dl>
+  <dl class="tenant"><dt>Licence</dt><dd>Microsoft Entra ID P2 for the admins</dd><dt>Marenthe</dt><dd>Steward, needs Global Administrator about once a week</dd><dt>Tobrin</dt><dd>Helpdesk, resets passwords every day</dd><dt>You</dt><dd>Warden</dd><dt>Emergency access</dt><dd>2 break-glass accounts</dd></dl>
   <p style="font-size:15px;color:var(--mute)">The last warden made everyone a permanent Global Administrator. Last night's Conditional Access policies still stand.</p>
   <div class="next"><button class="btn" id="go">Open the PIM console</button></div>`;
   $('go').onclick=()=>{S.stage='console';save();render()};
@@ -954,31 +954,31 @@ const CH={
   winLine:'Two lanterns at the Gatehouse are lit: Conditional Access and MFA. The Gatehouse in the rail now shows 2 of 6.',
   fol:R=>['Reset the guessed passwords for 3 Garrison accounts and 1 Envoy. MFA stopped the raiders at the gate, but they still know those passwords.'].concat(R.legacyBlock?[]:['Add a separate "Block legacy authentication" policy for all users (Exchange ActiveSync clients and Other clients, Block access). Then the postern stays shut even if someone narrows the MFA policy later.']).concat(S.pol.some(x=>x.state==='report')?['A policy is still in Report-only. Check its results in the sign-in logs, then switch it On or delete it.']:[]),
   extra:R=>R.legacyBlock?'<div class="res held"><span class="tag">Commended</span><div><b>Postern sealed</b><p>You added a separate legacy block policy. That\'s the baseline real admins use.</p></div></div>':'',
-  hints:['Start with the last warden\'s policy. Read its state and who it includes.','Report-only stops nothing, and the Envoys aren\'t in the Garrison group.','Edit the policy: Users All users, exclude Emergency access, Enable policy On. A second policy that blocks legacy authentication earns a commendation.'],
+  hints:['Start with the last warden\'s policy. Read its state and who it includes.','Report-only stops nothing, and the Envoys aren\'t in the Garrison group.','Edit the policy. Set Users to All users, exclude Emergency access, and set Enable policy to On. A second policy that blocks legacy authentication earns a commendation.'],
   winWick:'<b>Wick:</b> Two lanterns lit. That\'s two exam skills you can actually do, not just name.',failWick:'<b>Wick:</b> Breaches happen. What matters is you know exactly why this one did.'},
  2:{L:L2,ward:'gate',waves:WAVES2,studied:['pim'],lit:['pim'],brief:renderBrief2,console:renderPim,evaluate:evaluate2,what:'role assignments',fixWhere:'the PIM console',backTo:'the console',
   fix:'Eligible Global Administrator with approval, smallest role for daily work',title:()=>'Held, but your own people are blocked',
   winLine:'The PIM lantern at the Gatehouse is lit.',
-  fol:R=>['Revoke Maren\'s and Tobin\'s sessions and reset their passwords. In PowerShell: Revoke-MgUserSignInSession -UserId <their UPN>.','Check the PIM audit history for activations you don\'t recognise.'].concat(R.gaCount>=5?[`You still have ${R.gaCount} Global Administrators. Microsoft advises fewer than five.`]:[]),
-  hints:['Ask of each person: do they need this role all the time, and does it need to be this big?','Eligible alone isn\'t enough against a stolen session. Look at the Global Administrator role settings.','Maren and you: Global Administrator, Eligible. Tobin: Helpdesk Administrator. Tick Require approval to activate. Leave the emergency accounts Active.'],
+  fol:R=>['Revoke Marenthe\'s and Tobrin\'s sessions and reset their passwords. In PowerShell: Revoke-MgUserSignInSession -UserId <their UPN>.','Check the PIM audit history for activations you don\'t recognise.'].concat(R.gaCount>=5?[`You still have ${R.gaCount} Global Administrators. Microsoft advises fewer than five.`]:[]),
+  hints:['Ask of each person: do they need this role all the time, and does it need to be this big?','Eligible alone isn\'t enough against a stolen session. Look at the Global Administrator role settings.','Marenthe and you: Global Administrator, Eligible. Tobrin: Helpdesk Administrator. Tick Require approval to activate. Leave the emergency accounts Active.'],
   winWick:'<b>Wick:</b> Three lanterns lit. The Gatehouse is half done.',failWick:'<b>Wick:</b> A stolen session is the raider walking in as one of us. The role decides how far he gets.'},
  3:{L:L3,ward:'gate',waves:WAVES3,studied:['consent','apps'],lit:['consent','apps'],brief:renderBrief3,console:renderApps,evaluate:evaluate3,what:'consent settings',fixWhere:'Enterprise apps',backTo:'the console',
   fix:'Verified publishers only, sign-in permissions low impact, old grants revoked',title:()=>'Held, but your own people are blocked',
   winLine:'Two more Gatehouse lanterns are lit: consent and app identity.',
   fol:()=>['Check the audit and sign-in logs for Raven Calendar Sync to see whose mail it read.','In PowerShell, remove a delegated grant with Remove-MgOauth2PermissionGrant -OAuth2PermissionGrantId <id>.'],
-  hints:['Two jobs: who may say yes from now on, and the app that already got a yes.','Users should only consent to verified publishers. Quill Signer still needs its sign-in permissions on the low impact list, or a way to ask an admin.','Choose the verified-publishers setting, tick offline_access and User.Read as low impact, and set Raven to Enabled for users to sign-in: No.'],
+  hints:['Two jobs: who may say yes from now on, and the app that already got a yes.','Users should only consent to verified publishers. Quill Signer still needs its sign-in permissions on the low impact list, or a way to ask an admin.','Choose the verified-publishers setting. Tick offline_access and User.Read as low impact. Then set Raven\'s Enabled for users to sign-in to No.'],
   winWick:'<b>Wick:</b> Five of six Gatehouse lanterns lit. Only managed identities left.',failWick:'<b>Wick:</b> A raider who\'s invited in doesn\'t need to break anything.'},
  5:{L:L5,ward:'vault',waves:WAVES5,studied:['kvaccess','kvfw','kvset','locks'],lit:['kvaccess','kvfw','kvset'],brief:renderBrief5,console:renderKv,evaluate:evaluate5,what:'vault settings',fixWhere:'the vault',backTo:'the vault',
   fix:'Azure RBAC with Key Vault Secrets User, firewall limited to vnet-app or a private endpoint, purge protection or a Delete lock',title:()=>'Held, but the billing app is down',
   winLine:'Three Vault lanterns are lit: access, firewall and settings.',
-  fol:()=>['Revoke Orrin\'s sessions and reset his password, then check the vault\'s logs for every secret read tonight.','Rotate billing-db-password. Assume the raider knows it.','Turn on diagnostic settings for the vault (AuditEvent logs), so next time you can see who read what.'],
-  hints:['Three raids, three layers: who may open the vault, from where, and whether it can vanish.','Access policies let a Contributor rewrite the rules. After switching to Azure RBAC, billing-app needs a role of its own.','Pick Azure RBAC, give billing-app Key Vault Secrets User, allow only vnet-app (or add the private endpoint), and enable purge protection or add the Delete lock.'],
+  fol:()=>['Revoke Orrivane\'s sessions and reset his password, then check the vault\'s logs for every secret read tonight.','Rotate billing-db-password. Assume the raider knows it.','Turn on diagnostic settings for the vault (AuditEvent logs), so next time you can see who read what.'],
+  hints:['Three raids, three layers: who may open the vault, from where, and whether it can vanish.','Access policies let a Contributor rewrite the rules. After switching to Azure RBAC, billing-app needs a role of its own.','Pick Azure RBAC and give billing-app Key Vault Secrets User. Allow only vnet-app, or add the private endpoint. Then enable purge protection or add the Delete lock.'],
   winWick:'<b>Wick:</b> Three Vault lanterns lit. Four to go in there: rotation and watching for odd access.',failWick:'<b>Wick:</b> The lock was fine. The problem was who could rewrite the lock.'},
  4:{L:L4,ward:'gate',waves:WAVES4,studied:['mi','rbac'],lit:['mi'],brief:renderBrief4,console:renderMi,evaluate:evaluate4,what:'identity and roles',fixWhere:'the portal',backTo:'the portal',
   fix:'Managed identity, Storage Blob Data Reader on the invoices container, leaked secret deleted',title:R=>R.lock?'Held, but the ledger app is down':'Held, but the leaked secret still works',
   winLine:'The last Gatehouse lantern is lit. The whole Gatehouse is yours.',
   fol:()=>['Check the sign-in logs for ledger-app to see what the leaked secret was used for.','Remove appsettings.json from the repo history too. The deleted secret is useless, but nobody should find it.','In PowerShell: New-AzRoleAssignment -ObjectId <identity id> -RoleDefinitionName "Storage Blob Data Reader" -Scope <container scope>.'],
-  hints:['Three questions: who does the app sign in as, what can that identity do, and where?','A managed identity must be switched on or attached. Owner and Contributor can\'t read blobs. Payroll sits next to the invoices.','Tick id-ledger and pick the user-assigned option, give Storage Blob Data Reader on Container invoices, and delete the client secret.'],
+  hints:['Three questions: who does the app sign in as, what can that identity do, and where?','A managed identity must be switched on or attached. Owner and Contributor can\'t read blobs. Payroll sits next to the invoices.','Tick id-ledger and pick the user-assigned option. Give it Storage Blob Data Reader on Container invoices. Then delete the client secret.'],
   winWick:'<b>Wick:</b> Six of six. The Gatehouse burns bright tonight.',failWick:'<b>Wick:</b> Ask what the app needs, not what\'s easiest to give it.'}
 };
 function renderOops(){$('oopsList').innerHTML=S.oops.length?S.oops.map(o=>`<div class="oops"><small>${esc(o.where)} · ${esc(o.t)}${o.n>1?` · ${o.n} times`:''}</small><div class="was">You: ${esc(o.was)}</div><div class="is">Right: ${esc(o.is)}</div></div>`).join(''):'<p style="color:var(--mute)">No oopsies yet. Wrong answers and breaches land here, ready for practice in Pockle.</p>'}
