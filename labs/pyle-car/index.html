@@ -540,7 +540,7 @@ const shelf=[
   {t:"value",k:"noun",d:"The thing a name holds. Every value has a type: a whole number, a number with a point, a piece of text, or True and False.",ex:"4\n4.5\n\"table 3\"\nTrue",tip:"Text always sits between quotes. 4 and \"4\" are different values."},
   {t:"int and float",k:"types",d:"An int is a whole number. A float has a decimal point. Dividing with / always gives a float, even when it comes out even.",ex:"print(8 / 2)\nprint(8 // 2)",out:"4.0\n4",tip:"// divides and drops the part after the point."},
   {t:"string",k:"type",d:"Text, written between quotes. Plus joins two strings; it cannot join a string and a number.",ex:"name = \"Brasswick\"\nprint(\"Hello \" + name)",out:"Hello Brasswick",slip:["Joining text and a number.","print(\"Total: \" + 12)","TypeError: can only concatenate str (not \"int\") to str"],tip:"An f-string mixes both: f\"Total: {12}\"."},
-  {t:"print()",k:"function",d:"Shows a value in the terminal. It does not store or change anything; the value is gone from view once printed unless a name holds it.",ex:"tip = 2\nprint(tip)\nprint(tip * 3)",out:"2\n6"},
+  {t:"print()",k:"function",d:"Shows a value in the terminal. It does not store or change anything. Once printed, the value is gone from view, unless a name holds it.",ex:"tip = 2\nprint(tip)\nprint(tip * 3)",out:"2\n6"},
   {t:"expression",k:"noun",d:"Anything Python can work out to a single value: a number, a name, or a calculation built from them.",ex:"price = 4\ndrinks = 3\nprint(price * drinks + 2)",out:"14"},
   {t:"traceback",k:"noun",d:"Python's report when a line fails. It lists where it went wrong, top to bottom. The last line names the error and says why.",ex:"Traceback (most recent call last):\n  File \"order.py\", line 3\n    print(totl)\nNameError: name 'totl' is not defined",tip:"Read the last line first, then the line number above it."}]},
  {book:"Reference",items:[
@@ -571,12 +571,12 @@ const tasks=[
  {by:"holo",who:"Pip, courier",say:"Message from the dining car. Brasswick needs the bill for table 3.",
   brief:"Table 3 had 3 drinks. Each drink costs 4 coins. Store both numbers under clear names, then print what the table owes.",
   title:"Names that hold values",
-  html:"<p>A <b>variable</b> is a name that holds a value. A single equals sign stores the value under the name.</p><pre>bottles = 2\nprice = 5\nprint(bottles * price)</pre><p>Python reads from the top down. Line 1 stores 2 under <b>bottles</b>. Line 2 stores 5 under <b>price</b>. Line 3 multiplies the two and <b>print()</b> shows the result.</p><p>You work the way you would on any machine: write in <b>order.py</b>, save with <b>Ctrl S</b>, then run the saved file in the terminal with <b>python order.py</b>.</p>",
-  ask:"What will line 3 print?",ans:"10",why:"2 times 5 is 10. print() shows the result of the sum, not the sum itself.",
+  html:"<p>A <b>variable</b> is a name that holds a value. A single equals sign stores the value under the name.</p><pre>bottles = 2\nprice = 5\nprint(bottles * price)</pre><p>Python reads from the top down. Line 1 stores 2 under <b>bottles</b>. Line 2 stores 5 under <b>price</b>. Line 3 multiplies the two and <b>print()</b> shows the result.</p><p>You work the way you would on any machine. Write in <b>order.py</b> and save with <b>Ctrl S</b>. Then run the saved file in the terminal with <b>python order.py</b>.</p>",
+  ask:"What will line 3 print?",ans:"10",why:"2 times 5 is 10. print() shows the result, not the calculation you typed.",
   hints:["You need two names: one for the price of a drink and one for how many drinks there were.","Each name gets one line with a single equals sign, like the bottles example. The number goes on the right.","The last line is print() with the two names multiplied inside the brackets, using the star sign."],
   expect:"12",need:2,reward:10,done:"Total received. Thank you."},
  {by:"npc",who:"Brasswick, bartender",say:"Evening. The guest at table 3 left a tip of 2 coins. I need the new total for my ledger.",
-  brief:"The guest left a tip of 2 coins. Keep your two names, add one for the tip, store the full amount under a new name, and print that name.",
+  brief:"The guest left a tip of 2 coins. Keep your two names and add one for the tip. Store the full amount under a new name. Then print that name.",
   title:"Build on what you have",
   html:"<p>Good code grows in small steps. You keep the names you have and add what is new.</p><pre>apples = 3\ncost = 2\nbag = 1\ntotal = apples * cost + bag\nprint(total)</pre><p>Line 4 does a sum and stores the answer under a new name. Python multiplies before it adds, as in school.</p>",
   ask:"What will line 5 print?",ans:"7",why:"3 times 2 is 6, then plus 1 makes 7. The answer was stored in total, and print(total) shows it.",
@@ -607,19 +607,66 @@ function showTask(){
 }
 function pyErr(kind,msg,line){const e=new Error(msg);e.kind=kind;e.line=line;return e}
 function splitArgs(s){const out=[];let d=0,q=null,cur="";for(const ch of s){if(q){cur+=ch;if(ch===q)q=null;continue}if(ch==='"'||ch==="'"){q=ch;cur+=ch;continue}if(ch==="(")d++;if(ch===")")d--;if(ch===","&&d===0){out.push(cur);cur="";continue}cur+=ch}if(cur.trim()!==""||out.length)out.push(cur);return out}
+const pyT=x=>x.t==="str"?"str":x.t==="float"?"float":"int",pyNum=x=>x.t!=="str";
+function pyStr(x){if(x.t==="str")return x.v;if(x.t==="float"){if(!isFinite(x.v))return x.v>0?"inf":x.v<0?"-inf":"nan";return Number.isInteger(x.v)&&Math.abs(x.v)<1e16?x.v.toFixed(1):String(x.v)}return String(x.v)}
+function pyRepr(x){return x.t==="str"?(x.v.includes("'")&&!x.v.includes('"')?'"'+x.v+'"':"'"+x.v.replace(/'/g,"\\'")+"'"):pyStr(x)}
+function stripComment(raw){let q=null;for(let i=0;i<raw.length;i++){const c=raw[i];if(q){if(c==="\\")i++;else if(c===q)q=null}else if(c==='"'||c==="'")q=c;else if(c==="#")return raw.slice(0,i)}return raw}
 function ev(expr,scope,line){
-  if(!/^[\w\s+\-*\/().,"'%]*$/.test(expr)||expr.includes("//"))throw pyErr("SyntaxError","invalid syntax",line);
-  const bare=expr.replace(/"[^"]*"|'[^']*'/g,"");
-  for(const id of bare.match(/[A-Za-z_]\w*/g)||[])if(!(id in scope))throw pyErr("NameError","name '"+id+"' is not defined",line);
-  try{return Function(...Object.keys(scope),'"use strict";return ('+expr+")")(...Object.values(scope))}catch(_){throw pyErr("SyntaxError","invalid syntax",line)}
+  const T=[],syn=()=>pyErr("SyntaxError","invalid syntax",line),typ=m=>pyErr("TypeError",m,line);let s=expr,m;
+  while((s=s.replace(/^\s+/,""))){
+    if((m=s.match(/^([fF]?)("((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/)))T.push({k:m[1]?"f":"s",v:(m[3]!==undefined?m[3]:m[4]).replace(/\\n/g,"\n").replace(/\\t/g,"\t").replace(/\\(.)/g,"$1")});
+    else if((m=s.match(/^(\d+\.\d*|\.\d+|\d+)/)))T.push({k:"n",v:m[0]});
+    else if((m=s.match(/^[A-Za-z_]\w*/)))T.push({k:"id",v:m[0]});
+    else if((m=s.match(/^(\*\*|\/\/|[+\-*\/%(),])/)))T.push({k:"op",v:m[0]});
+    else throw syn();
+    s=s.slice(m[0].length)}
+  let i=0;const peek=()=>T[i],take=v=>{if(T[i]&&T[i].k==="op"&&T[i].v===v){i++;return true}return false};
+  const num=(v,f)=>({t:f?"float":"int",v});
+  function bin(op,a,b){
+    if(op==="+"){if(a.t==="str"&&b.t==="str")return{t:"str",v:a.v+b.v};if(a.t==="str")throw typ('can only concatenate str (not "'+pyT(b)+'") to str');if(b.t==="str")throw typ("unsupported operand type(s) for +: '"+pyT(a)+"' and 'str'");return num(a.v+b.v,a.t==="float"||b.t==="float")}
+    if(op==="*"&&(a.t==="str"||b.t==="str")){const st=a.t==="str"?a:b,n=a.t==="str"?b:a;if(n.t!=="int")throw typ("can't multiply sequence by non-int of type '"+pyT(n)+"'");return{t:"str",v:n.v>0?st.v.repeat(n.v):""}}
+    if(!pyNum(a)||!pyNum(b))throw typ("unsupported operand type(s) for "+op+": '"+pyT(a)+"' and '"+pyT(b)+"'");
+    const f=a.t==="float"||b.t==="float";
+    if(op==="-")return num(a.v-b.v,f);if(op==="*")return num(a.v*b.v,f);
+    if(op==="**")return num(Math.pow(a.v,b.v),f||b.v<0);
+    if(b.v===0)throw pyErr("ZeroDivisionError",op==="/"?(f?"float division by zero":"division by zero"):op==="//"?(f?"float floor division by zero":"integer division or modulo by zero"):(f?"float modulo":"integer modulo by zero"),line);
+    if(op==="/")return num(a.v/b.v,true);if(op==="//")return num(Math.floor(a.v/b.v),f);
+    return num(a.v-b.v*Math.floor(a.v/b.v),f)}
+  const BUILT={
+    str:x=>({t:"str",v:pyStr(x)}),
+    int:x=>{if(x.t==="str"){if(!/^\s*[+-]?\d+\s*$/.test(x.v))throw pyErr("ValueError","invalid literal for int() with base 10: "+pyRepr(x),line);return num(parseInt(x.v,10))}return num(Math.trunc(x.v))},
+    float:x=>{if(x.t==="str"){if(!/^\s*[+-]?(\d+\.?\d*|\.\d+)\s*$/.test(x.v))throw pyErr("ValueError","could not convert string to float: "+pyRepr(x),line);return num(parseFloat(x.v),true)}return num(x.v,true)},
+    len:x=>{if(x.t!=="str")throw typ("object of type '"+pyT(x)+"' has no len()");return num([...x.v].length)},
+    abs:x=>{if(x.t==="str")throw typ("bad operand type for abs(): 'str'");return num(Math.abs(x.v),x.t==="float")},
+    round:(x,n)=>{if(x.t==="str")throw typ("type str doesn't define __round__ method");if(n===undefined){const r=Math.round(x.v);return num(Math.abs(x.v%1)===0.5?2*Math.round(x.v/2):r)}return num(x.t==="float"?Number(x.v.toFixed(Math.max(0,Math.min(n.v,20)))):x.v,x.t==="float")}};
+  function atom(){
+    const t=T[i++];if(!t)throw syn();
+    if(t.k==="n")return num(Number(t.v),t.v.includes("."));
+    if(t.k==="s")return{t:"str",v:t.v};
+    if(t.k==="f")return{t:"str",v:t.v.replace(/\{\{|\}\}|\{([^{}]*)\}/g,(w,e)=>w==="{{"?"{":w==="}}"?"}":pyStr(ev(e,scope,line)))};
+    if(t.k==="op"&&t.v==="("){const v=expr0();if(!take(")"))throw syn();return v}
+    if(t.k==="id"){
+      if(take("(")){const args=[];if(!take(")")){do args.push(expr0());while(take(","));if(!take(")"))throw syn()}
+        if(t.v in scope)throw typ("'"+pyT(scope[t.v])+"' object is not callable");
+        if(!BUILT[t.v])throw pyErr("NameError","name '"+t.v+"' is not defined",line);
+        if(!args.length||args.length>(t.v==="round"?2:1))throw typ(t.v+"() takes "+(t.v==="round"?"1 or 2 arguments":"exactly one argument")+" ("+args.length+" given)");
+        return BUILT[t.v](...args)}
+      if(!(t.v in scope))throw pyErr("NameError","name '"+t.v+"' is not defined",line);return scope[t.v]}
+    throw syn()}
+  function power(){const a=atom();if(take("**"))return bin("**",a,unary());return a}
+  function unary(){if(take("-")){const a=unary();if(!pyNum(a))throw typ("bad operand type for unary -: 'str'");return num(-a.v,a.t==="float")}if(take("+")){const a=unary();if(!pyNum(a))throw typ("bad operand type for unary +: 'str'");return a}return power()}
+  function term(){let a=unary();for(;;){const o=peek();if(o&&o.k==="op"&&["*","/","//","%"].includes(o.v)){i++;a=bin(o.v,a,unary())}else return a}}
+  function expr0(){let a=term();for(;;){const o=peek();if(o&&o.k==="op"&&(o.v==="+"||o.v==="-")){i++;a=bin(o.v,a,term())}else return a}}
+  if(!T.length)throw syn();
+  const v=expr0();if(i<T.length)throw syn();return v;
 }
 function interpret(src){
   const scope={},out=[],assigned=[];let literalPrint=false;
   src.split("\n").forEach((raw,i)=>{
-    const line=raw.replace(/#.*$/,"").trimEnd();if(!line.trim())return;
+    const line=stripComment(raw).trimEnd();if(!line.trim())return;
     if(/^\s/.test(line))throw pyErr("IndentationError","unexpected indent",i+1);
     let m=line.match(/^print\((.*)\)$/);
-    if(m){const args=splitArgs(m[1]);if(args.length&&args.every(a=>/^\s*[\d.]+\s*$/.test(a)))literalPrint=true;out.push(args.map(a=>ev(a.trim(),scope,i+1)).join(" "));return}
+    if(m){const args=splitArgs(m[1]);if(args.length&&args.every(a=>/^\s*[\d.]+\s*$/.test(a)))literalPrint=true;out.push(args.map(a=>pyStr(ev(a.trim(),scope,i+1))).join(" "));return}
     m=line.match(/^([A-Za-z_]\w*)\s*=(?!=)\s*(.+)$/);
     if(m){scope[m[1]]=ev(m[2],scope,i+1);assigned.push(m[1]);return}
     throw pyErr("SyntaxError","invalid syntax",i+1)
@@ -640,7 +687,7 @@ function run(){
   const names=runs&&uniq.length>=t.need&&uniq.every(n=>n.length>=3);
   const calc=runs&&!res.literalPrint&&uniq.length>=t.need;
   mark("runs",runs);mark("out",out);mark("names",names);mark("calc",calc);
-  $("names").innerHTML=runs&&res.assigned.length?[...new Set(res.assigned)].map(n=>esc(n)+" <i>=</i> "+esc(String(res.scope[n]))).join("\n"):"<i>none yet</i>";
+  $("names").innerHTML=runs&&res.assigned.length?[...new Set(res.assigned)].map(n=>esc(n)+" <i>=</i> "+esc(pyRepr(res.scope[n]))).join("\n"):"<i>none yet</i>";
   if(runs&&out&&names&&calc){
     coins+=t.reward;$("coins").textContent=coins;
     say(t.who,t.done);
@@ -654,7 +701,7 @@ function next(){
   if(ti<tasks.length)showTask();
   else{
     holoOn=0;$("call").innerHTML="<b>No one on the line</b>";
-    $("vLesson").innerHTML="<h2>End of the demo</h2><p>Lean back with <b>Esc</b>. Then turn to the window with <b>W</b>, or walk to the library car with <b>L</b> or the glowing dot above the screen.</p>";
+    $("vLesson").innerHTML="<h2>End of the demo</h2><p>Lean back with <b>Esc</b>. Then press <b>W</b> to turn to the window. Or walk to the library car: press <b>L</b>, or click the glowing dot above the screen.</p>";
     showView("lesson");
   }
 }
