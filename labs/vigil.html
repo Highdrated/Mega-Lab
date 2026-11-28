@@ -585,7 +585,7 @@ nav.tabs button .tb{display:inline-grid;place-items:center;min-width:16px;height
 .chk{display:flex;gap:8px;align-items:center;font-size:12.5px;cursor:pointer}
 .pmain .kv{font-size:13px}
 .sdst{font-size:12.5px;color:#333!important}.sdst span{font-weight:600}.sdst span.on{color:#0e5c0e}
-.pickd{width:min(420px,90%)!important}.pickd .picks{max-height:220px;margin:8px 0 4px}
+.pickd{width:min(420px,90%)!important}.pickd.wide{width:min(540px,92%)!important}.pickd.wide td:nth-child(2){white-space:nowrap}.pickd .picks{max-height:220px;margin:8px 0 4px}
 .panel.wide{width:min(640px,96%)}
 .panel.wide .ph{padding:18px 16px 0}
 .panel.wide .ptabs{gap:11px;flex-wrap:nowrap;overflow-x:auto}
@@ -1131,6 +1131,15 @@ const CASEX = {
     k_len: { q: "In retention settings, how many days does one year count as?", a: ["365", "365 days"], show: "365 days", why: "A month counts as 30 days and a year as 365. So 84 months is 2,520 days, 35 days short of seven years.", no: ["360 days", "366 days", "372 days"] },
     k_who: { q: "In DSPM for AI Activity explorer, which activity type shows that a prompt carried sensitive data?", a: ["sensitive info types", "sensitive info type", "sensitive information types"], show: "Sensitive info types", why: "AI interaction is every prompt and response. Sensitive info types marks the ones where Purview found sensitive data, and names the type.", no: ["AI interaction", "AI website visit", "Web queries"] },
     k_why: { q: "A user deletes a Copilot chat that a retention policy still keeps. Which principle of retention decides what happens?", a: ["retention wins over deletion", "retention wins", "retention wins over delete"], show: "Retention wins over deletion", why: "The chat leaves the user's sight, but Purview keeps its copy in the hidden SubstrateHolds folder until the period ends.", no: ["The longest retention period wins", "The shortest deletion period wins", "Explicit wins over implicit for deletions"] }
+  } },
+  web: { no: "14", t: "The council's closed shutters", who: "varenne", needs: ["copilot"], redo: {
+    w_scope: { q: "Web search must go for the council only. Which scope does the policy configuration get?", a: ["specific groups", "the council group", "council", "the council", "users in specific groups", "a specific group"], show: "Specific groups: the Council", why: "All users would take web search from the whole household. Choose specific groups, then Add Groups.", no: ["All users", "Users who anonymously access documents using Office for the web", "Every device"] },
+    w_grp: { q: "Lady Varenne asked for the council only. Which group do you add to the policy configuration?", a: ["council", "the council", "council group", "the council group"], show: "Council", why: "Add exactly the group that asked. Every member of an added group gets the setting.", no: ["Treasury", "Library staff", "Copyists"] },
+    w_en: { q: "Nobody configured Allow web search in Copilot. Can people use web search in Copilot?", a: ["yes", "yes, it is on", "yes it is on", "it is on", "on", "yes, web search is available", "web search is available"], show: "Yes, web search is available", why: "Not configured means web search is on, unless optional connected experiences are switched off. So Enabled changes nothing for the council.", no: ["No, it is off", "Only in Copilot Chat", "Only for admins"] },
+    w_mode: { q: "Web search must stop in Copilot and in Copilot Chat. Which value of Allow web search in Copilot do you pick?", a: ["disabled in microsoft copilot and microsoft copilot chat", "disabled in copilot and copilot chat", "disabled"], show: "Disabled in Microsoft Copilot and Microsoft Copilot Chat", why: "The third value turns it off only in Work mode and leaves it on in Web mode and Copilot Chat.", no: ["Disabled in Microsoft Copilot Work mode; Enabled in Microsoft Copilot Web mode and Microsoft Copilot Chat", "Enabled in Microsoft Copilot and Microsoft Copilot Chat", "Not configured"] },
+    w_oce: { q: "Why not turn off Allow the use of additional optional connected experiences in Office to stop web search?", a: ["it switches off copilot too", "it turns off copilot too", "it also turns off copilot", "it also switches off copilot", "it turns off much more", "it switches off much more", "it stops copilot chat too", "it also stops copilot chat", "it restricts copilot too", "too much"], show: "It also switches off Copilot, Copilot Chat and more", why: "Disabled restricts Copilot Chat, Microsoft Copilot and many other experiences across Microsoft 365. Allow web search in Copilot touches only web search.", no: ["It does nothing to web search", "It needs a Copilot licence", "It applies to devices only"] },
+    w_prio: { q: "A user is in two groups whose policy configurations disagree. Which priority number wins?", a: ["0", "zero", "priority 0", "the lowest number", "lowest number", "the lowest"], show: "0, the highest priority", why: "The highest priority applies, and 0 is the highest you can assign. Change it with Reorder priority.", no: ["The highest number", "The newest configuration", "The one with more settings"] },
+    w_rest: { q: "A Cloud Policy setting changed while Word was open. What must happen before Word uses it?", a: ["restart word", "restart the app", "restart it", "restart", "restart the office app", "close and reopen word", "close and open word", "reopen word", "reopen it", "close and reopen it", "open word again", "close word and open it again", "word restarts", "the app restarts"], show: "Restart Word", why: "Cloud Policy settings are applied only when the Office app restarts. Word checks in about every 90 minutes, but it waits for a restart to apply them.", no: ["Nothing, it applies at once", "Sign out of Windows", "Wait 24 hours"] }
   } }
 };
 
@@ -1663,7 +1672,8 @@ const BOOK = [
   { id: "lure", no: CASEX.lure.no, t: CASEX.lure.t, who: "quillon", needs: CASEX.lure.needs },
   { id: "preset", no: CASEX.preset.no, t: CASEX.preset.t, who: "varenne", needs: CASEX.preset.needs },
   { id: "seal", no: CASEX.seal.no, t: CASEX.seal.t, who: "thessaly", needs: CASEX.seal.needs },
-  { id: "keep", no: CASEX.keep.no, t: CASEX.keep.t, who: "ysolde", needs: CASEX.keep.needs }
+  { id: "keep", no: CASEX.keep.no, t: CASEX.keep.t, who: "ysolde", needs: CASEX.keep.needs },
+  { id: "web", no: CASEX.web.no, t: CASEX.web.t, who: "varenne", needs: CASEX.web.needs }
 ];
 const bookOf = id => BOOK.find(b => b.id === id) || BOOK[BOOK.length - 1];
 function stepsTxt(needs) { const n = needs.map(g => LADDER.indexOf(g) + 1); return "School step" + (n.length > 1 ? "s " + n.slice(0, -1).join(", ") + " and " + n[n.length - 1] : " " + n[0]); }
@@ -3205,6 +3215,133 @@ NC.keep = {
     return false;
   }
 };
+const WSTEPS = [["basic", "Basics"], ["scope", "Scope"], ["set", "Settings"], ["rev", "Review"]];
+const WPOL = [["ws", "Allow web search in Copilot", [["nc", "Not configured"], ["en", "Enabled in Microsoft Copilot and Microsoft Copilot Chat"], ["dis", "Disabled in Microsoft Copilot and Microsoft Copilot Chat"], ["work", "Disabled in Microsoft Copilot Work mode; Enabled in Microsoft Copilot Web mode and Microsoft Copilot Chat"]]], ["oce", "Allow the use of additional optional connected experiences in Office", [["nc", "Not configured"], ["en", "Enabled"], ["dis", "Disabled"]]]];
+const wVal = (p, v) => WPOL.find(x => x[0] === p)[2].find(o => o[0] === v)[1];
+const wScopeTxt = W => W.scope === "all" ? "All users" : W.scope === "anon" ? "Users who anonymously access documents using Office for the web" : W.scope === "some" ? (W.grps.map(g => GDIR.find(d => d[0] === g)[1]).join(", ") || "No groups added") : "Not set";
+NC.web = {
+  gid: "copilot",
+  letter: "Keeper, the council talks treaties with Copilot, and I will not have it reaching out to the open web for us: not in Copilot, and not in Copilot Chat. The rest of the household keep their web search; the Treasury needs it for the coin rates. Name the rule Council no web search. Mirethil says the real switch is not on the Copilot page itself.",
+  first: "Look before you change: the Copilot settings page is open. Is the switch really here?",
+  nothingT: "No shutters here", nothingP: "This page is real, but web search for Copilot is not set here.",
+  kline: "The council's Copilot no longer looks out at the open web, and the rest of the household still can.",
+  closedH: "The council's closed shutters", closedP: "You took web search from the council's Copilot and Copilot Chat with Allow web search in Copilot, set in the Cloud Policy service for the Council group only. You gave it priority 0 so it wins for Thessaly, and told Lady Varenne to restart Word.",
+  goals: [
+    { id: "make", t: "Turn web search off in Copilot and Copilot Chat for the Council group only, in a policy configuration named Council no web search.", w: "Microsoft 365 Apps admin center > Customization > Policy Management > Create: the name, specific groups > Add Groups > Council, Allow web search in Copilot: Disabled in Microsoft Copilot and Microsoft Copilot Chat, then Create.", s: ["s37"] },
+    { id: "prio", t: "Magister Thessaly sits on the council and in the Treasury, whose configuration keeps web search on. Make the council's rule win for her, and tell her which priority number wins.", w: "Reorder priority: Council no web search to the top. The highest priority applies, and 0 is the highest you can assign.", s: ["s37"] },
+    { id: "rest", t: "Lady Varenne's Word has been open since dawn. Tell her what must happen before her Copilot loses web search.", w: "Restart Word. Cloud Policy settings are applied only when the Office app restarts.", s: ["s37"] }
+  ],
+  hints: {
+    make: ["The entry on Copilot > Settings is only a shortcut. The real policy lives with the other Office app policies.", "Microsoft 365 Apps admin center > Customization > Policy Management > Create. Choose specific groups and add the Council.", "Search the policies for web search. Allow web search in Copilot: Disabled in Microsoft Copilot and Microsoft Copilot Chat."],
+    prio: ["Two configurations disagree for Thessaly. One number decides.", "Policy configurations > Reorder priority. Move Council no web search to the top, then Save.", "The highest priority applies, and 0 is the highest. Tell her 0."],
+    rest: ["Office apps fetch new policies on their own, but they apply them at one moment only.", "Policies from the Cloud Policy service are applied only when the app starts again.", "Tell her to restart Word."]
+  },
+  init() { return { pid: "m365", item: "cop.settings", cfgs: [{ id: "treas", name: "Treasury apps", scope: "Treasury", set: "Allow web search in Copilot: Enabled in Microsoft Copilot and Microsoft Copilot Chat" }], wz: null, ro: null, view: null, pr: "", rs: "" }; },
+  form: {
+    prio: () => `<form class="tform" data-kf="pr"><label for="kwpr">Reply to Thessaly · which number wins</label><div><input id="kwpr" data-kv="pr" autocomplete="off" spellcheck="false" placeholder="a number" value="${esc(K.pr)}"><button class="btn solid">Send</button></div></form>`,
+    rest: () => `<form class="tform" data-kf="rs"><label for="kwrs">Reply to Lady Varenne · what first</label><div><input id="kwrs" data-kv="rs" autocomplete="off" spellcheck="false" placeholder="what she must do" value="${esc(K.rs)}"><button class="btn solid">Send</button></div></form>`
+  },
+  submit(f) {
+    if (f === "pr") {
+      const v = norm(K.pr); if (!v) return;
+      if (!K.done.includes("make")) { nLog("info", "Vigil: Lady Varenne asked for the council's rule first."); return; }
+      if (!CASEX.web.redo.w_prio.a.includes(v)) { nBad(/^\d+$/.test(v) ? "Priority " + v + " does not win. The highest priority applies, and 0 is the highest you can assign." : "That is not how the Cloud Policy service decides.", "When two configurations disagree for one user, the one with priority 0 wins.", "w_prio"); return; }
+      if (K.cfgs[0].id !== "council") { nLog("info", "Vigil: right, 0 wins. But Treasury apps still holds 0, so Thessaly keeps web search. Use Reorder priority first."); return; }
+      nLog("info", "Sent to Thessaly: " + K.pr.trim()); nComplete("prio");
+      nSay("thessaly", "So the council's shutters win over the Treasury's window, for me at least. Very well.", 1000);
+      nSay("varenne", "Keeper, my Word has been open since dawn. Is web search gone from my Copilot already, or must I do something first?", 2400);
+      return;
+    }
+    if (f === "rs") {
+      const v = norm(K.rs); if (!v) return;
+      if (!K.done.includes("prio")) { nLog("info", "Vigil: Lady Varenne has not asked this yet."); return; }
+      if (/restart|re-?open|close.*open|open.*again|start.*again/.test(v)) { nLog("info", "Sent to Lady Varenne: " + K.rs.trim()); nComplete("rest"); nSay("varenne", "I closed Word and opened it again. The web is gone from Copilot. Good.", 1200); return; }
+      nBad(/90|minute|wait/.test(v) ? "Word checks in about every 90 minutes, but it applies new settings only when it restarts." : /now|already|nothing|at once/.test(v) ? "Not yet. A Word that was open before the change still has the old setting." : /sign|log|reboot|windows|device/.test(v) ? "That is more than it takes. The Office app itself must start again." : "That is not what makes Word take the new setting.", "Cloud Policy settings are applied only when the Office app restarts: restart Word.", "w_rest");
+    }
+  },
+  page(k) {
+    if (k === "m365.cop.settings") return `<div class="crumb">Copilot  ›  Settings</div><h4>Copilot settings</h4><div class="ptabs" style="margin-bottom:14px;border-bottom:1px solid #e6e3de"><button data-k="wct:user">User access</button><button class="on">Data access</button><button data-k="wct:act">Copilot actions</button><button data-k="wct:oth">Other settings</button></div><table class="t"><tr class="click" data-k="wsc"><td style="color:#0f5ea8">Web search for Microsoft 365 Copilot and Microsoft 365 Copilot Chat</td><td>Shortcut</td></tr><tr class="click" data-k="wai"><td style="color:#0f5ea8">AI providers for other large language models</td><td>On</td></tr></table><p class="note">The other tabs are real, but not simulated in this case.</p>`;
+    if (k === "apps.policy") return K.wz ? this.wizard() : this.list();
+    return null;
+  },
+  list() {
+    const v = K.view && K.cfgs.find(c => c.id === K.view);
+    if (v) K.panel = "wview";
+    const panel = v ? `<div class="panel${kPanelEnter()}"><div class="ph"><h5>${esc(v.name)}</h5><div class="u">Applies to ${esc(v.scope)}</div></div><div class="pb"><dl class="kv"><dt>Priority</dt><dd>${K.cfgs.indexOf(v)}</dd><dt>Scope</dt><dd>${esc(v.scope)}</dd><dt>Configured policies</dt><dd>${esc(v.set)}</dd></dl><p class="note">Changing a configuration is real, but not simulated here.</p></div><div class="pf"><button class="pbtn" data-k="wvclose">Close</button></div></div>` : "";
+    return `<div class="crumb">Customization  ›  Policy Management</div><h4>Policy configurations</h4><p class="sub">Settings for the Microsoft 365 apps, for all users or for chosen groups.</p><div class="tool" style="flex-wrap:wrap">${kSavebar().replace('class="pbar', 'style="margin:0 10px 0 0" class="pbar')}<button class="pbtn pri" data-k="wnew">Create</button><button class="pbtn" data-k="wro">Reorder priority</button></div><table class="t"><tr><th>Priority</th><th>Name</th><th>Scope</th></tr>${K.cfgs.map((c, i) => `<tr class="click${c.id === "council" ? " fresh" : ""}" data-k="wv:${c.id}"><td>${i}</td><td style="color:#0f5ea8">${esc(c.name)}</td><td>${esc(c.scope)}</td></tr>`).join("")}</table><p class="note">When a user is in more than one group and the settings disagree, the highest priority applies. 0 is the highest. Copy and Export are real, but not simulated here.</p>` + panel;
+  },
+  wizard() {
+    const W = K.wz;
+    let body = "";
+    if (W.step === "basic") body = `<div class="setting"><b>Start with the basics</b><p>Name (required)</p><input id="kwn" data-kv="wz.name" class="psearch" style="width:100%" autocomplete="off" spellcheck="false" value="${esc(W.name)}"></div><p class="note">The description box is real, but not simulated here.</p>`;
+    if (W.step === "scope") body = `<div class="setting"><b>Choose the scope</b><p>Who this policy configuration applies to.</p>${kRadios("kwsc", [["all", "All users"], ["some", "Specific groups"], ["anon", "Users who anonymously access documents using Office for the web"]], W.scope, "wsc")}${W.scope === "some" ? `<div style="margin:8px 0 0 24px"><button class="pbtn" data-k="wgpk">Add Groups</button>${W.grps.length ? `<div class="pchips">${W.grps.map(g => `<span class="fchip">${esc(GDIR.find(d => d[0] === g)[1])}<button class="xrm" data-k="wgrm:${g}" title="Remove">×</button></span>`).join("")}</div>` : `<p class="note" style="margin:8px 0 0">No groups added.</p>`}</div>` : ""}</div><p class="note">Policies apply to users in the groups, not to devices. Nested groups count up to three levels deep.</p>`;
+    if (W.step === "set") {
+      const q = norm(W.q), rows = WPOL.filter(p => !q || norm(p[1]).includes(q));
+      body = `<div class="setting"><b>Configure Settings</b><p>Search for a policy by name, then set it.</p><input id="kwsq" class="psearch" style="width:100%" placeholder="Search for a policy" value="${esc(W.q)}" autocomplete="off" spellcheck="false"></div>${q ? (rows.length ? `<table class="t"><tr><th>Policy</th><th>Status</th></tr>${rows.map(p => `<tr class="click" data-k="wpo:${p[0]}"><td style="color:#0f5ea8">${esc(p[1])}</td><td>${W.vals[p[0]] === "nc" ? "Not configured" : "Configured"}</td></tr>`).join("")}</table>` : `<p class="note">No policy here matches "${esc(W.q)}".</p>`) : `<p class="note">Type a few words of the policy's name.</p>`}<p class="note">Custom filters and many more policies are real, but not simulated here.</p>`;
+    }
+    if (W.step === "rev") body = `<dl class="kv"><dt>Name</dt><dd>${esc(W.name.trim())}</dd><dt>Scope</dt><dd>${esc(wScopeTxt(W))}</dd><dt>Configured policies</dt><dd>${WPOL.filter(p => W.vals[p[0]] !== "nc").map(p => esc(p[1] + ": " + wVal(p[0], W.vals[p[0]]))).join("<br>") || "None"}</dd></dl><p class="note">Select Back or a page on the left to change a setting.</p>${kSavebar().replace('class="pbar', 'style="margin:0 0 10px" class="pbar')}`;
+    const si = WSTEPS.findIndex(s => s[0] === W.step);
+    const po = W.open && WPOL.find(p => p[0] === W.open);
+    if (po) K.panel = "wpol"; else if (K.panel === "wpol") K.panel = null;
+    const panel = po ? `<div class="panel${kPanelEnter()}"><div class="ph"><h5>${esc(po[1])}</h5><div class="u">User policy · Microsoft 365 apps</div></div><div class="pb"><div class="setting"><b>Setting</b><select data-k="wval" aria-label="Setting" style="width:100%">${po[2].map(o => `<option value="${o[0]}" ${W.vals[po[0]] === o[0] ? "selected" : ""}>${esc(o[1])}</option>`).join("")}</select></div>${po[0] === "ws" ? `<p class="note">Not configured: web search stays available in Microsoft Copilot and Microsoft Copilot Chat.</p>` : `<p class="note">Disabled restricts Microsoft Copilot Chat, Microsoft Copilot and many other experiences across Microsoft 365.</p>`}</div><div class="pf"><button class="pbtn" data-k="wpclose">Close</button></div></div>` : "";
+    return `<div class="crumb">Customization  ›  Policy Management  ›  Create</div><h4>Create policy configuration</h4><div class="wz">${NC.seal.nav(WSTEPS, W, "wst")}<div class="wzb">${body}<div class="tool" style="margin-top:14px;flex-wrap:wrap">${W.step === "rev" ? `<button class="pbtn pri" data-k="wcreate" ${K.saving === "busy" ? "disabled" : ""}>Create</button>` : `<button class="pbtn pri" data-k="wnext">Next</button>`}${si ? `<button class="pbtn" data-k="wback">Back</button>` : ""}<button class="pbtn" data-k="wcancel">Cancel</button></div></div></div>` + panel;
+  },
+  dlg() {
+    if (K.pk === "wg") { const n = norm(K.pkq), hits = n ? GDIR.filter(d => norm(d[1] + " " + d[2]).includes(n)) : GDIR; return `<div class="dlg"><div class="pickd"><h6>Add Groups</h6><input id="kpkq" class="psearch" style="width:100%" placeholder="Search" value="${esc(K.pkq)}" autocomplete="off" spellcheck="false"><div class="picks">${hits.length ? hits.map(d => `<label class="pk"><input type="checkbox" data-k="wgx:${d[0]}" ${K.pkSel.includes(d[0]) ? "checked" : ""}><span><b>${esc(d[1])}</b><em>${esc(d[2])}</em></span></label>`).join("") : `<p class="note">Nothing matches "${esc(K.pkq)}".</p>`}</div><div class="row"><span class="note" style="margin:0 auto 0 0">${K.pkSel.length} selected</span><button class="pbtn" data-k="wgcancel">Cancel</button><button class="pbtn pri" data-k="wgok" ${K.pkSel.length ? "" : "disabled"}>Add</button></div></div></div>`; }
+    if (K.ro) return `<div class="dlg"><div class="pickd wide"><h6>Reorder priority</h6><p class="note" style="margin:0 0 8px">0 is the highest priority. Move a configuration up to raise it.</p><table class="t"><tr><th>Priority</th><th>Name</th><th></th></tr>${K.ro.map((id, i) => `<tr><td>${i}</td><td>${esc(K.cfgs.find(c => c.id === id).name)}</td><td style="white-space:nowrap;text-align:right"><button class="pbtn" data-k="wrup:${i}" ${i ? "" : "disabled"}>Move up</button> <button class="pbtn" data-k="wrdn:${i}" ${i < K.ro.length - 1 ? "" : "disabled"}>Move down</button></td></tr>`).join("")}</table><div class="row"><button class="pbtn" data-k="wrocancel">Cancel</button><button class="pbtn pri" data-k="wrosave">Save</button></div></div></div>`;
+    return "";
+  },
+  check(W) {
+    if (W.scope === "all") return nBad("All users would take web search from the whole household, and the Treasury needs it.", "Choose Specific groups and add the Council only. Nothing was created.", "w_scope"), false;
+    if (W.scope === "anon") return nBad("That scope is for people who open documents anonymously in Office for the web, not for the council.", "Choose Specific groups and add the Council only. Nothing was created.", "w_scope"), false;
+    if (!W.grps.includes("council") || W.grps.length !== 1) return nBad(W.grps.filter(g => g !== "council").map(g => GDIR.find(d => d[0] === g)[1]).join(" and ") + (W.grps.includes("council") ? " would lose web search too." : " is not the council."), "Lady Varenne asked for the Council group only. Nothing was created.", "w_grp"), false;
+    if (W.vals.oce === "dis") return nBad("Turning off optional connected experiences stops web search, but it also restricts Copilot Chat, Microsoft Copilot and many other experiences for the council.", "Leave it Not configured and use Allow web search in Copilot. Nothing was created.", "w_oce"), false;
+    if (W.vals.oce === "en") return nLog("info", "Vigil: Lady Varenne asked about web search only. Set optional connected experiences back to Not configured."), false;
+    if (W.vals.ws === "nc" || W.vals.ws === "en") return nBad(W.vals.ws === "nc" ? "Allow web search in Copilot is still Not configured, so web search stays on for the council." : "Enabled keeps web search on, and it is already on when nobody configures the policy.", "Set Allow web search in Copilot to Disabled in Microsoft Copilot and Microsoft Copilot Chat. Nothing was created.", "w_en"), false;
+    if (W.vals.ws === "work") return nBad("That value turns web search off only in Work mode. It stays on in Web mode and in Copilot Chat.", "Lady Varenne said not in Copilot Chat either: Disabled in Microsoft Copilot and Microsoft Copilot Chat. Nothing was created.", "w_mode"), false;
+    return true;
+  },
+  act(a, el) {
+    const W = K.wz;
+    if (a === "wsc") { nLog("info", "This entry is only a shortcut. The real policy, Allow web search in Copilot, lives in the Cloud Policy service: Microsoft 365 Apps admin center > Customization > Policy Management."); K.pid = "apps"; K.item = "policy"; K.panel = null; return true; }
+    if (a === "wai") { nLog("info", "Third-party AI providers decide which models Copilot may use. They do not touch web search."); return false; }
+    if (a.startsWith("wct:")) { nLog("info", "That tab is real, but it holds no web search setting."); return false; }
+    if (a.startsWith("wv:")) { K.view = a.slice(3); return true; }
+    if (a === "wvclose") { K.view = null; K.panel = null; return true; }
+    if (a === "wnew") { if (K.cfgs.some(c => c.id === "council")) { nLog("info", "Council no web search already exists. Changing it is real, but not simulated here."); return true; } K.view = null; K.panel = null; K.wz = { step: "basic", far: 0, name: "", scope: null, grps: [], q: "", vals: { ws: "nc", oce: "nc" }, open: null }; K.saving = null; K.focus = "kwn"; return true; }
+    if (a === "wro") { if (!K.done.includes("make")) { nLog("info", "Vigil: there is only one configuration so far. Make the council's first."); return false; } K.ro = K.cfgs.map(c => c.id); return true; }
+    if (a.startsWith("wrup:") || a.startsWith("wrdn:")) { const i = +a.slice(5), j = a.startsWith("wrup:") ? i - 1 : i + 1; [K.ro[i], K.ro[j]] = [K.ro[j], K.ro[i]]; return true; }
+    if (a === "wrocancel") { K.ro = null; return true; }
+    if (a === "wrosave") { const same = K.ro.every((id, i) => K.cfgs[i].id === id); const ro = K.ro; K.ro = null; if (same) { nLog("info", "Saved. Nothing changed."); return true; } kSave(() => { K.cfgs = ro.map(id => K.cfgs.find(c => c.id === id)); nLog("info", K.cfgs[0].name + " now has priority 0."); }); return false; }
+    if (!W) return false;
+    if (a.startsWith("wst:")) { W.step = a.slice(4); W.open = null; K.saving = null; K.pmKey = null; return true; }
+    if (a.startsWith("wsc:")) { W.scope = a.slice(4); return true; }
+    if (a === "wgpk") { K.pk = "wg"; K.pkSel = W.grps.slice(); K.pkq = ""; K.focus = "kpkq"; return true; }
+    if (a.startsWith("wgx:")) { const g = a.slice(4); K.pkSel = K.pkSel.includes(g) ? K.pkSel.filter(x => x !== g) : [...K.pkSel, g]; return true; }
+    if (a === "wgcancel") { K.pk = null; return true; }
+    if (a === "wgok") { W.grps = K.pkSel.slice(); K.pk = null; return true; }
+    if (a.startsWith("wgrm:")) { W.grps = W.grps.filter(g => g !== a.slice(5)); return true; }
+    if (a.startsWith("wpo:")) { W.open = a.slice(4); return true; }
+    if (a === "wval") { W.vals[W.open] = el.value; return true; }
+    if (a === "wpclose") { W.open = null; K.panel = null; return true; }
+    if (a === "wcancel") { K.wz = null; K.panel = null; K.saving = null; return true; }
+    if (a === "wback") { W.step = WSTEPS[WSTEPS.findIndex(s => s[0] === W.step) - 1][0]; W.open = null; K.saving = null; K.pmKey = null; return true; }
+    if (a === "wnext") {
+      const i = WSTEPS.findIndex(s => s[0] === W.step);
+      if (W.step === "basic" && !W.name.trim()) { nLog("info", "Vigil: the name is required."); K.focus = "kwn"; return true; }
+      if (W.step === "basic" && norm(W.name) !== "council no web search") { nLog("info", "Vigil: Lady Varenne named the rule Council no web search. Type that name."); K.focus = "kwn"; return true; }
+      if (W.step === "scope" && !W.scope) { nLog("info", "Vigil: choose who the configuration applies to first."); return true; }
+      if (W.step === "scope" && W.scope === "some" && !W.grps.length) { nLog("info", "Vigil: add a group first. No groups added means nobody gets it."); return true; }
+      W.step = WSTEPS[i + 1][0]; W.far = Math.max(W.far, i + 1); W.open = null; K.panel = null; K.pmKey = null; if (W.step === "set") K.focus = "kwsq"; return true;
+    }
+    if (a === "wcreate") {
+      if (!this.check(W)) return true;
+      kSave(() => { K.cfgs.push({ id: "council", name: "Council no web search", scope: "Council", set: "Allow web search in Copilot: Disabled in Microsoft Copilot and Microsoft Copilot Chat" }); K.wz = null; K.panel = null; nComplete("make"); nSay("varenne", "Good. The shutters are closed for the council.", 1000); nSay("thessaly", "Keeper, I sit on the council and in the Treasury, and the Treasury's configuration keeps web search on. Which one do I get? Make the council's rule win for me, and tell me which priority number wins.", 2600); });
+      return false;
+    }
+    return false;
+  }
+};
 function nAct(a, el) { const r = nDef().act(a, el); if (r) nRender(); if (K && K.focus) { const i = $("#" + K.focus); K.focus = null; if (i) { i.focus(); if (i.tagName === "INPUT") i.setSelectionRange(i.value.length, i.value.length); } } }
 document.addEventListener("click", e => {
   if (cur !== "case") return;
@@ -3230,6 +3367,7 @@ document.addEventListener("input", e => {
   if (t.id === "kurl") { K.url = t.value; return; }
   if (t.id === "kwhere") { K.wq = t.value; return; }
   if (t.id === "kraq") { K.aq = t.value; K.asel = null; K.panel = null; const pos = t.selectionStart; nGlass(); const n = $("#kraq"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } return; }
+  if (t.id === "kwsq" && K.wz) { K.wz.q = t.value; const pos = t.selectionStart; nGlass(); const n = $("#kwsq"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } return; }
   if (t.id === "kpkq") { K.pkq = t.value; const pos = t.selectionStart; nGlass(); const n = $("#kpkq"); if (n) { n.focus(); n.setSelectionRange(pos, pos); } return; }
   if (t.id === "kname" && K.ed) { K.ed.name = t.value; return; }
   if (t.id === "kfil" || t.id === "kexs") { if (t.id === "kfil") K.fq = t.value; else K.ed.q = t.value; const id = t.id, pos = t.selectionStart; nGlass(); const n = $("#" + id); if (n) { n.focus(); n.setSelectionRange(pos, pos); } }
