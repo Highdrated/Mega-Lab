@@ -2201,7 +2201,7 @@ const ACT2 = [
   { id: "010", title: "AUDIT", giver: "garrick", dev: "bwa",
     intro: "The Brightwater Apothecary keeps the prescriptions of half the valley. Their auditor, a very thin gnome called Pell, sent a list. Right now anyone with the root password could walk into that switch from anywhere. Do every item on Pell's list. And make the change the safe way: commit confirmed, then confirm.",
     outro: "Pell read your configuration twice and found nothing to complain about, which for Pell is a standing ovation. And you used commit confirmed. Good habit. One day it will save you.",
-    done: "bwa-sw1 refuses root over SSH, syncs its clock, sends logs off the box, warns at login, and the change was committed safely.",
+    done: "bwa-sw1 refuses root over SSH, syncs its clock and sends its logs off the box. It warns at login, and the change was committed safely.",
     steps: [
       { id: "b1", t: "Log in", why: "Find it in /etc/hosts if you need to.", c: ["ssh bwa-sw1"], ok: () => ranOn("ssh-ok", "bwa") },
       { id: "b2", t: "Read what is there first", why: "Before touching security settings, see the current ones. | display set shows the config as set commands, one per line.", c: ["show configuration system | display set"], ok: () => ranOn("show configuration", "bwa") },
@@ -2215,7 +2215,7 @@ const ACT2 = [
   { id: "011", title: "LOST SCREEN", giver: "odile", dev: "ggr",
     intro: "Tansy again, and the butter seal is cracked. 'Since the cellar flooded and was mopped, the kitchen screen shows nothing. The cook is shouting orders up the stairs like the old days. The cleaners swear they put every cable back.' Find out where that screen really is, and fix it so it stays fixed.",
     outro: "Port 22, not port 20. The cleaners were honest, just not careful. Next time a cable moves, you will find it in a minute: names and MAC addresses do not lie.",
-    done: "The kitchen screen is found on ge-0/0/22, which is now a labelled kitchen port, and the empty old port is disabled.",
+    done: "The kitchen screen is found on ge-0/0/22. That port is now labelled for the kitchen, and the empty old port is disabled.",
     setup: () => { st.links = st.links || {}; delete st.links["ge-0/0/20"]; st.links["ge-0/0/22"] = "kds-kitchen"; },
     steps: [
       { id: "k1", t: "Log in", why: "The inn: ggr-sw1.", c: ["ssh ggr-sw1"], ok: () => ranOn("ssh-ok", "ggr") },
@@ -2226,7 +2226,7 @@ const ACT2 = [
       { id: "k6", t: "See the screen learned", why: "The MAC table should now show the screen in kitchen, on ge-0/0/22.", c: ["run show ethernet-switching table"], ok: () => accOn("ggr", 22, "kitchen") && ranAfter("show ethernet-switching table", "ggr", lastCommit("ggr") - 1) }
     ] },
   { id: "012", title: "SPLIT BRIDGE", giver: "maren", dev: "hlm2",
-    intro: "Gorm called, and not politely. The two new barrier cameras on the far bank have recorded nothing since Thursday, and a hay cart crossed without paying. The recorder hangs off hlm-sw1, the cameras off hlm-sw2, a trunk across the bridge joins them. Someone helped on hlm-sw2 last week. Do not guess. Compare both sides.",
+    intro: "Gorm called, and not politely. The two new barrier cameras on the far bank have recorded nothing since Thursday. And a hay cart crossed without paying. The recorder hangs off hlm-sw1, the cameras off hlm-sw2, a trunk across the bridge joins them. Someone helped on hlm-sw2 last week. Do not guess. Compare both sides.",
     outro: "Thirty on one side, thirty-one on the other. One digit, five days of nothing. Now you know why we compare both ends of a trunk before touching anything. Gorm says thank you. In troll, that sounds like a rockslide.",
     done: "The cameras VLAN tag matches on both sides of the bridge, and the recorder sees the cameras again.",
     setup: () => {

@@ -714,7 +714,7 @@ const DATA = [
      {
       "c": "isUsableOnce",
       "d": "One-time or reusable",
-      "n": "$true: the code dies after the first sign-in. $false: it keeps working until the lifetime ends, handy when someone needs to sign in on a laptop and a phone."
+      "n": "$true: the code dies after the first sign-in. $false: it keeps working until the lifetime ends. Handy when someone must sign in on a laptop and on a phone."
      },
      {
       "c": "One TAP per user",
@@ -795,13 +795,13 @@ const DATA = [
      {
       "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false }",
       "d": "Mistake 3: the code is not visible",
-      "n": "The pass is created (IsUsable True, EnabledByPolicy) but the table is so wide that the TemporaryAccessPass column falls off the screen.",
+      "n": "The pass is created (IsUsable True, EnabledByPolicy). But the table is so wide that the TemporaryAccessPass column falls off the screen.",
       "x": "Id                                   IsUsable LifetimeInMinutes MethodUsabilityReason ...\n7c1e2a90-4b3d-4f8e-9a61-2d5b8e0f13aa True     480               EnabledByPolicy       ..."
      },
      {
       "c": "Remove-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -TemporaryAccessPassAuthenticationMethodId \"7c1e2a90-4b3d-4f8e-9a61-2d5b8e0f13aa\"",
       "d": "Fix part 1: remove the invisible pass",
-      "n": "Only one TAP per user, and the code is shown only once, so the clean way out is delete and recreate."
+      "n": "A user can have only one TAP, and its code is shown only once. So the clean way out is to delete it and create a new one."
      },
      {
       "c": "New-MgUserAuthenticationTemporaryAccessPassMethod -UserId $u -BodyParameter @{ lifetimeInMinutes = 480; isUsableOnce = $false } | Select-Object TemporaryAccessPass",
@@ -1182,7 +1182,7 @@ const DATA = [
   "name": "Incident response",
   "sub": "Compromised mailbox",
   "color": "#b42318",
-  "blurb": "What to understand when a mailbox gets taken over: how the attacker got in, where the evidence lives, what you may and must do, and the order to do it in.",
+  "blurb": "When a mailbox gets taken over, you need to know four things. How the attacker got in, where the evidence lives, what you may and must do, and in which order.",
   "groups": [
    {
     "t": "The playbook",
@@ -1190,7 +1190,7 @@ const DATA = [
      {
       "c": "Detect",
       "d": "Something looks wrong",
-      "n": "Usually a sign-in from an IP or country that does not fit the user, or a colleague asking about a strange mail.",
+      "n": "Usually it is a sign-in from an IP or country that does not fit the user. Or a colleague asks about a strange mail.",
       "x": "Sign-in for user@ashvale.com from 203.0.113.10 at 03:12, while the user was asleep"
      },
      {
@@ -1261,7 +1261,7 @@ const DATA = [
      {
       "c": "Phishing-resistant MFA",
       "d": "The real fix against AiTM",
-      "n": "Passkeys, FIDO2 keys and Windows Hello are tied to the real Microsoft domain, so they refuse to sign in on a fake page.",
+      "n": "Passkeys, FIDO2 keys and Windows Hello are tied to the real Microsoft domain. So they refuse to sign in on a fake page.",
       "x": "Fake page login.ashvale-secure.example asks for a passkey -> the passkey refuses, the domain does not match"
      }
     ]
@@ -1360,7 +1360,7 @@ const DATA = [
      {
       "c": "Excel turns IPs into numbers",
       "d": "Opening a CSV directly can mangle IP addresses",
-      "n": "Use Export-Excel (ImportExcel module) instead of a CSV, or import via Data > From Text and set the column to Text.",
+      "n": "Use Export-Excel (from the ImportExcel module) instead of a CSV. Or import with Data > From Text and set the column to Text.",
       "x": "203.0.113.10 in CSV -> Excel shows a number\nExport-Excel        -> stays 203.0.113.10"
      }
     ]
@@ -1746,7 +1746,7 @@ const DATA = [
 const LAB_LINKS = {};
 const AUG = {
  "connect::Open and close a session": {
-  "concept": "Microsoft 365 is not one system you talk to, it is several services behind one login. Microsoft Graph answers questions about identity: users, sign-in names, groups, licences. Exchange Online answers questions about mail: mailboxes, addresses, permissions, mail flow. Each has its own module and its own Connect command, and a session only lets you use the commands of the door you opened. That is why the rename needed both: Update-MgUser changed the sign-in name in Entra, and Set-Mailbox changed the email address in Exchange. Scopes are a second layer. Even as Global Admin, a Graph session only has the permissions you asked for when you connected. That way a read-only report cannot change anything by accident.",
+  "concept": "Microsoft 365 is not one system you talk to. It is several services behind one login. Microsoft Graph answers questions about identity: users, sign-in names, groups, licences. Exchange Online answers questions about mail: mailboxes, addresses, permissions, mail flow. Each has its own module and its own Connect command. A session only lets you use the commands of the door you opened. That is why the rename needed both. Update-MgUser changed the sign-in name in Entra. Set-Mailbox changed the email address in Exchange. Scopes are a second layer. Even as Global Admin, a Graph session only has the permissions you asked for when you connected. That way a read-only report cannot change anything by accident.",
   "figure": "            you (PowerShell)\n           /                \\\n Connect-MgGraph       Connect-ExchangeOnline\n        |                        |\n  Entra ID (Graph)         Exchange Online\n  users, UPN, groups,      mailboxes, SMTP,\n  licences                 aliases, permissions",
   "traps": [
    "Running Set-Mailbox in a Graph-only session: 'term not recognized'. You opened the wrong door.",
@@ -1845,7 +1845,7 @@ const AUG = {
   ]
  },
  "tap::What a TAP is": {
-  "concept": "A password proves who you are with something you know. MFA adds something you have, like the Authenticator app. But a brand-new user, or someone with a new phone, has neither set up yet, so how do they prove who they are the first time? The Temporary Access Pass solves that chicken-and-egg problem. You, as admin, create a short code with an expiry time and hand it over in person or by phone. Entra treats that code as a strong sign-in, so the user can log in and immediately register the Authenticator app or a passkey. After the lifetime ends the code is useless, so even if it ends up on a sticky note it cannot be used tomorrow.",
+  "concept": "A password proves who you are with something you know. MFA adds something you have, like the Authenticator app. But a brand-new user, or someone with a new phone, has no app set up yet. So how do they prove who they are the first time? The Temporary Access Pass solves that chicken-and-egg problem. You, as admin, create a short code with an expiry time and hand it over in person or by phone. Entra treats that code as a strong sign-in. So the user can log in and right away register the Authenticator app or a passkey. After the lifetime ends, the code is useless. Even if it ends up on a sticky note, nobody can use it tomorrow.",
   "figure": "  admin creates TAP --hands over code--> user signs in with TAP\n         |                                        |\n   lifetime 480 min                     registers Authenticator\n         |                                        |\n   expires by itself                normal MFA sign-in from now on",
   "traps": [
    "Sending the TAP in an email to the same mailbox the user cannot open yet. Hand it over in person, by phone or via the manager.",
@@ -1864,7 +1864,7 @@ const AUG = {
   ]
  },
  "tap::Real-life example": {
-  "concept": "This is a real session, with the name changed. Three small mistakes happened in a row, and each one teaches something that comes back in every PowerShell job. First, two pasted commands stuck together on one line, so PowerShell could not tell where one ended and the next began. Second, because that line failed, the variable $u was never filled, and the next command complained about an empty UserId. The error was not about TAP at all: it was about the failed line before it. Third, the pass was created fine but the output table was wider than the window, so the code itself was cut off. A TAP is shown only once, and only one can exist. So the fix was to remove it and create it again. This time the output went through Select-Object TemporaryAccessPass, so only the code was printed.",
+  "concept": "This is a real session, with the name changed. Three small mistakes happened in a row, and each one teaches something that comes back in every PowerShell job. First, two pasted commands stuck together on one line. PowerShell could not tell where one ended and the next began. Second, because that line failed, the variable $u was never filled, and the next command complained about an empty UserId. The error was not about TAP at all: it was about the failed line before it. Third, the pass was created fine. But the output table was wider than the window, so the code itself was cut off. A TAP is shown only once, and only one can exist. So the fix was to remove it and create it again. This time the output went through Select-Object TemporaryAccessPass, so only the code was printed.",
   "figure": "  $u = \"..\"Connect-MgGraph   -> ParserError (two commands, one line)\n          |\n  $u is empty               -> 'UserId is an empty string'\n          |\n  $u = \"jpe@..\"             -> fixed\n          |\n  New-...TAP                -> created, code off-screen\n          |\n  Remove-...TAP + New-... | Select-Object TemporaryAccessPass\n          |\n  Rq4#mT9z                  -> hand it to Jan",
   "traps": [
    "Reading the last error only. 'Empty string' was caused by the line before it, not by the TAP command.",
@@ -1884,7 +1884,7 @@ const AUG = {
   "lab": "tap"
  },
  "incident::The playbook": {
-  "concept": "During an incident the instinct is to start digging to find out what happened. Resist it. Every minute you investigate while the attacker still has a valid token, they keep reading and sending. So the order is fixed: contain first, then investigate. Investigation has its own order too. First the sign-ins: how did they get in? Then the audit log: what did they do inside? Then the message trace: what left? Last, inbox rules and app consents: what did they leave behind to come back? Scope turns that evidence into a list of mails and recipients, which is what clients and the authority need to hear about. Harden closes the door so it cannot happen the same way again.",
+  "concept": "During an incident the instinct is to start digging to find out what happened. Resist it. Every minute you investigate while the attacker still has a valid token, they keep reading and sending. So the order is fixed: contain first, then investigate. Investigation has its own order too. First the sign-ins: how did they get in? Then the audit log: what did they do inside? Then the message trace: what left? Last, inbox rules and app consents: what did they leave behind to come back? Scope turns that evidence into a list of mails and recipients. That list is what clients and the authority need to hear about. Harden closes the door so it cannot happen the same way again.",
   "figure": "  DETECT        strange sign-in IP\n     |\n     v\n  CONTAIN       disable account . revoke sessions . reset password\n     |\n     v\n  INVESTIGATE   sign-ins . audit log . message trace\n                inbox rules . OAuth apps\n     |\n     v\n  SCOPE         mails read . mails sent . recipients\n     |\n     v\n  NOTIFY        clients . GDPR (72h)\n     |\n     v\n  HARDEN        phishing-resistant MFA . Conditional Access policies",
   "traps": [
    "Resetting the password but not revoking sessions. The stolen token keeps working.",
@@ -1905,7 +1905,7 @@ const AUG = {
   "lab": "contain"
  },
  "incident::How the attack works": {
-  "concept": "Normal MFA protects the moment of signing in. AiTM phishing skips that moment. The fake page passes everything to the real Microsoft login, so the user really does complete MFA. Microsoft hands back a session token, and the proxy keeps a copy. From then on the attacker replays that token. Microsoft sees a session where MFA is already done. That is why the sign-in log says 'MFA requirement satisfied by claim in the token'. Two defences break this. Token protection makes a token useless on another device, but only for native apps. Phishing-resistant MFA like passkeys stops it earlier, because a passkey checks the website's real domain and will not sign in on a fake one.",
+  "concept": "Normal MFA protects the moment of signing in. AiTM phishing skips that moment. The fake page passes everything to the real Microsoft login, so the user really does complete MFA. Microsoft hands back a session token, and the proxy keeps a copy. From then on the attacker replays that token. Microsoft sees a session where MFA is already done. That is why the sign-in log says 'MFA requirement satisfied by claim in the token'. Two defences break this. Token protection makes a token useless on another device, but only for native apps. Phishing-resistant MFA, like a passkey, stops it earlier. A passkey checks the website's real domain and will not sign in on a fake one.",
   "figure": "  user --> fake page (proxy) --> real Microsoft login\n                 |                     |\n                 |<---- session token ---+\n                 |\n          attacker keeps a copy --> replays it from 203.0.113.10",
   "traps": [
    "Thinking 'they had MFA, so it cannot be phishing'. AiTM works because MFA happens for real.",
@@ -1938,7 +1938,7 @@ const AUG = {
   "lab": "investigate"
  },
  "connect::Why Graph and Exchange fight": {
-  "concept": "Signing in to Microsoft 365 is done by a library called MSAL (Microsoft.Identity.Client). The Graph module and the Exchange module each carry their own copy, and the copies are not always the same version. One PowerShell window can only load one version of a library. The first module that loads wins, and the second module has to live with that version. When Exchange wins, Graph calls a method its own version has and the Exchange version does not, and Connect-MgGraph dies with 'Method not found ... WithLogging'. The trap: you do not have to connect to Exchange for this to happen. PowerShell loads a module the moment you run any of its commands. Even a command that fails with 'call Connect-ExchangeOnline first' loads it. The fix is order, not reinstalling: a fresh window, Graph first, Exchange second.",
+  "concept": "Signing in to Microsoft 365 is done by a library called MSAL (Microsoft.Identity.Client). The Graph module and the Exchange module each carry their own copy. The copies are not always the same version. One PowerShell window can only load one version of a library. The first module that loads wins, and the second module has to live with that version. Say Exchange wins. Graph then calls a method that only its own version has, and Connect-MgGraph dies with 'Method not found ... WithLogging'. The trap: you do not have to connect to Exchange for this to happen. PowerShell loads a module the moment you run any of its commands. Even a command that fails with 'call Connect-ExchangeOnline first' loads it. The fix is order, not reinstalling: a fresh window, Graph first, Exchange second.",
   "figure": "  one PowerShell window = room for ONE copy of MSAL\n\n  Get-EXOMailbox (even failing)          Connect-MgGraph\n          |                                     |\n          v                                     v\n  Exchange module loads                 Graph module loads\n  + MSAL 4.61 (Exchange copy)  ------>  finds MSAL already loaded\n          WINS                          'Method not found ... WithLogging'\n\n  fix:  close window -> new window -> Connect-MgGraph -> Connect-ExchangeOnline",
   "traps": [
    "Testing one Exchange command 'just to check' before connecting Graph. It loads the Exchange module anyway.",
@@ -1978,7 +1978,7 @@ const AUG = {
   "lab": "case:vanished"
  },
  "entra::Licence names (SKUs)": {
-  "concept": "PowerShell never shows the product name you see in the admin center. It shows the SkuPartNumber, a code that was picked years ago and never renamed. In 2020 Office 365 Business Essentials became Microsoft 365 Business Basic and Office 365 Business Premium became Business Standard, but the codes kept the old words. That is how a licence called PREMIUM ends up being Standard. When a code is unclear, look at what is inside: the ServicePlans list. Desktop apps (OFFICESUBSCRIPTION) separate Basic from Standard, and Intune plus Entra ID P1 separate Standard from Premium.",
+  "concept": "PowerShell never shows the product name you see in the admin center. It shows the SkuPartNumber, a code that was picked years ago and never renamed. In 2020 Office 365 Business Essentials became Microsoft 365 Business Basic. Office 365 Business Premium became Business Standard. But the codes kept the old words. That is how a licence called PREMIUM ends up being Standard. When a code is unclear, look at what is inside: the ServicePlans list. Desktop apps (OFFICESUBSCRIPTION) separate Basic from Standard, and Intune plus Entra ID P1 separate Standard from Premium.",
   "figure": "  SkuPartNumber              Product name                       Tell-tale service plan\n  ------------------------   --------------------------------   -----------------------\n  O365_BUSINESS_ESSENTIALS   Microsoft 365 Business Basic       no OFFICESUBSCRIPTION\n  O365_BUSINESS_PREMIUM      Microsoft 365 Business Standard    OFFICESUBSCRIPTION\n  SPB                        Microsoft 365 Business Premium     INTUNE_A, AAD_PREMIUM\n  FLOW_FREE                  Power Automate Free (self-service) FLOW_P2_VIRAL",
   "traps": [
    "Reading O365_BUSINESS_PREMIUM as Business Premium. It is Business Standard.",
@@ -2281,7 +2281,7 @@ const RECIPES = [
  {
   "vol": "entra",
   "t": "Bulk rename with preview, dry run and timed run",
-  "why": "Give a whole team a new address format (here firstname.lastname.security@ashvale.com) without surprises: look first, test without changing, change after hours, then verify.",
+  "why": "Give a whole team a new address format (here firstname.lastname.security@ashvale.com) without surprises. Look first, test without changing, change after hours, then verify.",
   "steps": [
    {
     "c": "Connect-MgGraph -Scopes \"User.ReadWrite.All\" -NoWelcome\nConnect-ExchangeOnline -ShowBanner:$false",
@@ -2289,7 +2289,7 @@ const RECIPES = [
    },
    {
     "c": "function ConvertTo-NamePart($s) {\n    $t = $s.Normalize([Text.NormalizationForm]::FormD) -replace '\\p{Mn}', ''\n    ($t -replace '[^a-zA-Z]', '').ToLower()\n}",
-    "n": "FormD splits ë into e plus a separate accent mark, \\p{Mn} removes the marks, then everything that is not a letter goes. Zoë Van den Broeck becomes zoe and vandenbroeck."
+    "n": "FormD splits ë into e plus a separate accent mark. \\p{Mn} removes the marks. Then everything that is not a letter goes. Zaëlith Van den Brael becomes zaelith and vandenbrael."
    },
    {
     "c": "$users = Get-MgUser -All -Property Id,GivenName,Surname,UserPrincipalName,Department\n$taken = $users.UserPrincipalName.ToLower()",
@@ -2317,7 +2317,7 @@ const RECIPES = [
    },
    {
     "c": "& {\n    $wait = (Get-Date \"18:00\") - (Get-Date)\n    if ($wait.TotalSeconds -gt 0) { Start-Sleep -Seconds $wait.TotalSeconds }\n    $log = foreach ($r in $rows) {\n        try {\n            Set-Mailbox -Identity $r.OldUPN -WindowsEmailAddress $r.NewUPN -ErrorAction Stop\n            Update-MgUser -UserId $r.OldUPN -UserPrincipalName $r.NewUPN -ErrorAction Stop\n            $status = \"OK\"\n        } catch { $status = $_.Exception.Message }\n        [pscustomobject]@{ OldUPN = $r.OldUPN; NewUPN = $r.NewUPN; Status = $status }\n    }\n    $log | Export-Csv ~/Desktop/security-log.csv -NoTypeInformation -Encoding UTF8\n}",
-    "n": "The timed run. & { } makes it one block, Start-Sleep waits until 18:00, -ErrorAction Stop lets catch see every failure, and the log is your receipt."
+    "n": "The timed run. & { } makes it one block. Start-Sleep waits until 18:00. -ErrorAction Stop lets catch see every failure. The log is your receipt."
    },
    {
     "c": "$check = foreach ($r in $rows) {\n    $m = Get-EXOMailbox -Identity $r.NewUPN -Properties EmailAddresses -ErrorAction SilentlyContinue\n    [pscustomobject]@{\n        NewUPN = $r.NewUPN\n        Found = [bool]$m\n        Primary = $m.PrimarySmtpAddress -eq $r.NewUPN\n        OldKept = $m.EmailAddresses -contains \"smtp:$($r.OldUPN)\"\n    }\n}\n$check | Format-Table",
@@ -2336,7 +2336,7 @@ const RECIPES = [
    },
    {
     "c": "Set-Mailbox jorin.pellam.security@ashvale.com -EmailAddresses @{Add=\"SMTP:jorin.pellam.security@ashvale.com\"}",
-    "n": "Does nothing: Exchange ignores case when it checks whether an address exists, sees it already has it, and leaves it alone."
+    "n": "Does nothing. Exchange ignores case when it checks whether an address exists. It sees the address is already there and leaves it alone."
    },
    {
     "c": "$list = (Get-Mailbox jorin.pellam.security@ashvale.com).EmailAddresses | ForEach-Object {\n    if ($_ -ceq \"SMTP:jp@ashvale.com\") { \"smtp:jp@ashvale.com\" }\n    elseif ($_ -ceq \"smtp:jorin.pellam.security@ashvale.com\") { \"SMTP:jorin.pellam.security@ashvale.com\" }\n    else { $_ }\n}",

@@ -81,7 +81,7 @@ POCKET.register({
     {"u":"master2","q":"Spot the bug: nothing animates.","code":"@keyframes flicker { ... }\n.lamp {\n  animation: flick 2s infinite;\n}","o":["The animation name does not match","2s needs ms","infinite needs a number","Nothing is wrong"],"a":0,"why":"flick is not flicker."},
     {"u":"master2","q":"Which button needs an aria-label?","o":["<button>Order</button>","<button>Book a table</button>","<button>Send</button>","<button>×</button>"],"a":3,"why":"An icon-only button has no readable name."},
     {"u":"master2","q":"What alt does a purely decorative image get?","o":["No alt at all","alt=\"decoration\"","alt=\"\"","alt=\"image\""],"a":2,"why":"Empty alt tells screen readers to skip it."},
-    {"u":"master2","q":"Where does caption go in a table?","o":["Above the table","In thead","First inside the table","In tfoot"],"a":2,"why":"caption names the table."},
+    {"u":"master2","q":"Where does caption go in a table?","o":["Above the table","In thead","First inside the table","In tfoot"],"a":2,"why":"caption gives the table a title. It goes first inside the table."},
     {"u":"master2","q":"A th labels the cells to its right. Which scope?","o":["scope=\"col\"","scope=\"right\"","scope=\"all\"","scope=\"row\""],"a":3,"why":"It labels a row."},
     {"u":"master3","q":"A badge with position: absolute flies to the page corner. What is missing?","o":["z-index","display: block","a width","position: relative on its parent"],"a":3,"why":"absolute measures from the nearest positioned parent."},
     {"u":"master3","q":"Does an absolute element still take up space in the flow?","o":["No","Yes","Only its height","Only on phones"],"a":0,"why":"It is taken out of the flow."},

@@ -45,6 +45,9 @@ try:
         assert pg.evaluate("document.documentElement.scrollWidth") <= 390, "home scrolls sideways"
         assert pg.evaluate("document.querySelectorAll('input,textarea').length") == 0, "typing field on home"
         empty = pg.evaluate("POOL.length")
+        oops = pg.evaluate("BANKS.find(b=>b.id==='junos-oops').cards.length")
+        assert oops >= 39, "Juniper oopsies lost cards: %d" % oops
+        assert pg.evaluate("LABSTATE.find(l=>l.b.id==='junos-oops').cards.length") >= oops, "Juniper oopsies are not all open on a first visit"
 
         assert pg.is_visible("#bring"), "a first visit must show the bring-my-progress card"
         assert not pg.is_visible("#bringSteps"), "bring steps start folded"
